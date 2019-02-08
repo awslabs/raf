@@ -178,6 +178,9 @@ public:
     assert(-Ndim() <= axis && axis < Ndim());
     return data_[axis < 0 ? axis + Ndim() : axis];
   }
+  std::vector<dim_t> get() const {
+    return data_;
+  }
 private:
   template<typename IterType>
   void Assign(IterType begin, IterType end) {
