@@ -2,11 +2,11 @@
 
 #include <vector>
 #include <limits>
-#include <cassert>
 #include <ostream>
 #include <sstream>
+#include <dmlc/logging.h>
 
-// TODO(@junrushao1994): replace assert with dmlc-core's CHECK
+// TODO(@junrushao1994): replace CHECK with detailed errors
 // TODO(@junrushao1994): should we enable overflow checks only in DEBUG mode?
 
 namespace mnm {
@@ -17,7 +17,8 @@ namespace details {
   {                                                           \
     constexpr int64_t min = std::numeric_limits<U>::min();    \
     constexpr int64_t max = std::numeric_limits<U>::max();    \
-    assert(min <= v && v <= max);                             \
+    CHECK(v >= min) << "Underflow";                           \
+    CHECK(v <= max) << "Overflow";                            \
   }
 #define MNM_DIM_T_DEFINE_UNARY(op)                            \
   TSelf operator op () const {                                \
@@ -175,7 +176,7 @@ public:
     return result;
   }
   dim_t operator [] (const int axis) const {
-    assert(-Ndim() <= axis && axis < Ndim());
+    CHECK(-Ndim() <= axis && axis < Ndim()) << "Index out of range";
     return data_[axis < 0 ? axis + Ndim() : axis];
   }
   std::vector<dim_t> get() const {

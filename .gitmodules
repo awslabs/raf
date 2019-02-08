@@ -1,7 +1,6 @@
-[submodule "3rdparty/dmlc-core"]
-	path = 3rdparty/dmlc-core
-	url = https://github.com/dmlc/dmlc-core.git
 [submodule "3rdparty/tvm"]
 	path = 3rdparty/tvm
 	url = https://github.com/dmlc/tvm
-
+[submodule "3rdparty/dmlc-core"]
+	path = 3rdparty/dmlc-core
+	url = https://github.com/dmlc/dmlc-core
