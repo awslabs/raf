@@ -123,8 +123,8 @@ using dim_t = mnm::types::details::dim_t;
 
 class shape_t final {
 public:
-  shape_t(): data_() {}
-  shape_t(shape_t &&other): data_(std::move(other.data_)) {}
+  shape_t() : data_() {}
+  shape_t(shape_t &&other) : data_(std::move(other.data_)) {}
   shape_t(const shape_t &other) : data_(other.data_) {}
   shape_t& operator = (shape_t &&other) {
     data_ = std::move(other.data_);
@@ -133,10 +133,6 @@ public:
   shape_t& operator = (const shape_t &other) {
     data_ = other.data_;
     return *this;
-  }
-  template<typename IterType>
-  shape_t(IterType begin, IterType end) {
-    Assign(begin, end);
   }
   template <typename T>
   shape_t(const std::vector<T> &init) {
@@ -176,11 +172,46 @@ public:
     return result;
   }
   dim_t operator [] (const int axis) const {
-    CHECK(-Ndim() <= axis && axis < Ndim()) << "Index out of range";
-    return data_[axis < 0 ? axis + Ndim() : axis];
+    CHECK(0 <= axis && axis < Ndim()) << "InternalError: please call shape_t::NormalizeAxis before indexing";
+    return data_[axis];
   }
   std::vector<dim_t> get() const {
     return data_;
+  }
+public:
+  int NormalizeAxis(const int axis) const {
+    const int ndim = Ndim();
+    if (axis < -ndim || axis >= ndim) {
+      LOG(FATAL) << "IndexError: indexing shape " << std::string(*this) << " with axis " << axis;
+    }
+    return axis < 0 ? axis + ndim : axis;
+  }
+  static shape_t Broadcast(const shape_t &a, const shape_t &b) {
+    const int a_ndim = a.Ndim();
+    const int b_ndim = b.Ndim();
+    const int ndim = std::max(a_ndim, b_ndim);
+    std::vector<dim_t> result;
+    result.reserve(ndim);
+    int a_axis = a_ndim - ndim;
+    int b_axis = b_ndim - ndim;
+    for (int i = 0; i < ndim; ++i, ++a_axis, ++b_axis) {
+      const dim_t a_val = (a_axis >= 0) ? a.data_[a_axis] : dim_t(1);
+      const dim_t b_val = (b_axis >= 0) ? b.data_[b_axis] : dim_t(1);
+      if (a_val == b_val) {
+        result.emplace_back(a_val);
+      } else if (a_val == dim_t(1)) {
+        result.emplace_back(b_val);
+      } else if (b_val == dim_t(1)) {
+        result.emplace_back(a_val);
+      } else {
+        LOG(FATAL) << "ValueError: could not be broadcast together with shapes: "
+                   << std::string(a)
+                   << ", "
+                   << std::string(b)
+                   << "]";
+      }
+    }
+    return shape_t(result);
   }
 private:
   template<typename IterType>
