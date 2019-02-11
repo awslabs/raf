@@ -1,2 +1,2 @@
-MNM is Not MXNet
+MNM
 ================
