@@ -1,10 +1,10 @@
 #pragma once
 
-#include <vector>
+#include <dmlc/logging.h>
 #include <limits>
 #include <ostream>
 #include <sstream>
-#include <dmlc/logging.h>
+#include <vector>
 
 // TODO(@junrushao1994): replace CHECK with detailed errors
 // TODO(@junrushao1994): should we enable overflow checks only in DEBUG mode?
@@ -13,55 +13,53 @@ namespace mnm {
 namespace types {
 namespace details {
 
-#define MNM_DIM_T_CHECK_OOB(U, v)                             \
-  {                                                           \
-    constexpr int64_t min = std::numeric_limits<U>::min();    \
-    constexpr int64_t max = std::numeric_limits<U>::max();    \
-    CHECK(v >= min) << "Underflow";                           \
-    CHECK(v <= max) << "Overflow";                            \
+#define MNM_DIM_T_CHECK_OOB(U, v)                          \
+  {                                                        \
+    constexpr int64_t min = std::numeric_limits<U>::min(); \
+    constexpr int64_t max = std::numeric_limits<U>::max(); \
+    CHECK(v >= min) << "Underflow";                        \
+    CHECK(v <= max) << "Overflow";                         \
   }
-#define MNM_DIM_T_DEFINE_UNARY(op)                            \
-  TSelf operator op () const {                                \
-    MNM_DIM_T_CHECK_OOB(T, (op v_));                          \
-    return TSelf(op v_);                                      \
-  }
-
-#define MNM_DIM_T_DEFINE_BINARY(op)                           \
-  TSelf operator op (const TSelf &rhs) const {                \
-    MNM_DIM_T_CHECK_OOB(T, (v_ op rhs.v_));                   \
-    return TSelf(v_ op rhs.v_);                               \
+#define MNM_DIM_T_DEFINE_UNARY(op)   \
+  TSelf operator op() const {        \
+    MNM_DIM_T_CHECK_OOB(T, (op v_)); \
+    return TSelf(op v_);             \
   }
 
-#define MNM_DIM_T_DEFINE_ASSIGN(op, base_op)                  \
-  TSelf& operator op (const TSelf &rhs) {                     \
-    MNM_DIM_T_CHECK_OOB(T, (v_ base_op rhs.v_));              \
-    v_ op rhs.v_;                                             \
-    return *this;                                             \
+#define MNM_DIM_T_DEFINE_BINARY(op)           \
+  TSelf operator op(const TSelf &rhs) const { \
+    MNM_DIM_T_CHECK_OOB(T, (v_ op rhs.v_));   \
+    return TSelf(v_ op rhs.v_);               \
   }
 
-#define MNM_DIM_T_DEFINE_BOOL_UNARY(op)                       \
-  bool operator op () const {                                 \
-    return op v_;                                             \
+#define MNM_DIM_T_DEFINE_ASSIGN(op, base_op)     \
+  TSelf &operator op(const TSelf &rhs) {         \
+    MNM_DIM_T_CHECK_OOB(T, (v_ base_op rhs.v_)); \
+    v_ op rhs.v_;                                \
+    return *this;                                \
   }
 
-#define MNM_DIM_T_DEFINE_BOOL_BINARY(op)                      \
-  bool operator op (const TSelf &rhs) const {                 \
-    return v_ op rhs.v_;                                      \
-  }
+#define MNM_DIM_T_DEFINE_BOOL_UNARY(op) \
+  bool operator op() const { return op v_; }
+
+#define MNM_DIM_T_DEFINE_BOOL_BINARY(op) \
+  bool operator op(const TSelf &rhs) const { return v_ op rhs.v_; }
 
 template <typename T>
 class dim_t_base final {
   using TSelf = dim_t_base<T>;
-public:
+
+ public:
   template <typename U>
   explicit dim_t_base(const U &v) = delete;
   explicit dim_t_base(const T &v) : v_(v) {}
   explicit dim_t_base(const int &v) : v_(v) {}
   dim_t_base(const TSelf &) = default;
   dim_t_base(TSelf &&) = default;
-  TSelf& operator = (const TSelf &) = default;
-  TSelf& operator = (TSelf &&) = default;
-public:
+  TSelf &operator=(const TSelf &) = default;
+  TSelf &operator=(TSelf &&) = default;
+
+ public:
   template <typename U>
   U As() const {
     MNM_DIM_T_CHECK_OOB(U, v_);
@@ -93,15 +91,14 @@ public:
   MNM_DIM_T_DEFINE_ASSIGN(&=, &);
   MNM_DIM_T_DEFINE_ASSIGN(|=, |);
   MNM_DIM_T_DEFINE_ASSIGN(^=, ^);
-  operator std::string() const {
-    return std::to_string(v_);
-  }
-  friend std::ostream& operator << (std::ostream &os, const TSelf &self) {
+  operator std::string() const { return std::to_string(v_); }
+  friend std::ostream &operator<<(std::ostream &os, const TSelf &self) {
     return os << std::to_string(self.v_);
   }
-private:
+
+ private:
   T v_;
-}; // dim_t_base
+};  // dim_t_base
 #undef MNM_CHECK_OOB
 #undef MNM_DEFINE_UNARY
 #undef MNM_DEFINE_BINARY
@@ -111,9 +108,9 @@ private:
 
 using dim_t = dim_t_base<int64_t>;
 
-} // details
-} // types
-} // mnm
+}  // namespace details
+}  // namespace types
+}  // namespace mnm
 
 namespace mnm {
 namespace types {
@@ -122,15 +119,15 @@ namespace details {
 using dim_t = mnm::types::details::dim_t;
 
 class shape_t final {
-public:
+ public:
   shape_t() : data_() {}
   shape_t(shape_t &&other) : data_(std::move(other.data_)) {}
   shape_t(const shape_t &other) : data_(other.data_) {}
-  shape_t& operator = (shape_t &&other) {
+  shape_t &operator=(shape_t &&other) {
     data_ = std::move(other.data_);
     return *this;
   }
-  shape_t& operator = (const shape_t &other) {
+  shape_t &operator=(const shape_t &other) {
     data_ = other.data_;
     return *this;
   }
@@ -138,11 +135,11 @@ public:
   shape_t(const std::vector<T> &init) {
     Assign(init.begin(), init.end());
   }
-  template<typename T>
+  template <typename T>
   shape_t(std::initializer_list<T> init) {
     Assign(init.begin(), init.end());
   }
-  friend std::ostream& operator << (std::ostream &os, const shape_t &self) {
+  friend std::ostream &operator<<(std::ostream &os, const shape_t &self) {
     os << '(';
     bool is_first = true;
     for (const dim_t v : self.data_) {
@@ -161,9 +158,7 @@ public:
     os << *this;
     return os.str();
   }
-  int Ndim() const {
-    return static_cast<int>(data_.size());
-  }
+  int Ndim() const { return static_cast<int>(data_.size()); }
   dim_t Numel() const {
     dim_t result(1);
     for (const dim_t x : data_) {
@@ -171,14 +166,14 @@ public:
     }
     return result;
   }
-  dim_t operator [] (const int axis) const {
-    CHECK(0 <= axis && axis < Ndim()) << "InternalError: please call shape_t::NormalizeAxis before indexing";
+  dim_t operator[](const int axis) const {
+    CHECK(0 <= axis && axis < Ndim())
+        << "InternalError: please call shape_t::NormalizeAxis before indexing";
     return data_[axis];
   }
-  std::vector<dim_t> get() const {
-    return data_;
-  }
-public:
+  std::vector<dim_t> get() const { return data_; }
+
+ public:
   int NormalizeAxis(const int axis) const {
     const int ndim = Ndim();
     if (axis < -ndim || axis >= ndim) {
@@ -204,17 +199,15 @@ public:
       } else if (b_val == dim_t(1)) {
         result.emplace_back(a_val);
       } else {
-        LOG(FATAL) << "ValueError: could not be broadcast together with shapes: "
-                   << std::string(a)
-                   << ", "
-                   << std::string(b)
-                   << "]";
+        LOG(FATAL) << "ValueError: could not be broadcast together with shapes: " << std::string(a)
+                   << ", " << std::string(b) << "]";
       }
     }
     return shape_t(result);
   }
-private:
-  template<typename IterType>
+
+ private:
+  template <typename IterType>
   void Assign(IterType begin, IterType end) {
     std::vector<dim_t> result;
     for (IterType it = begin; it != end; ++it) {
@@ -222,12 +215,13 @@ private:
     }
     data_ = std::move(result);
   }
-private:
+
+ private:
   std::vector<dim_t> data_;
-}; // shape_t
-} // details
-} // types
-} // mnm
+};  // shape_t
+}  // namespace details
+}  // namespace types
+}  // namespace mnm
 
 namespace mnm {
 namespace types {
@@ -235,5 +229,5 @@ namespace types {
 using dim_t = mnm::types::details::dim_t;
 using shape_t = mnm::types::details::shape_t;
 
-} // types
-} // mnm
+}  // namespace types
+}  // namespace mnm

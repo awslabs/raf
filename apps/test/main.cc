@@ -1,12 +1,10 @@
-#include <iostream>
-#include <cassert>
+#include <dmlc/logging.h>
 #include <mnm/test.h>
 #include <mnm/types.h>
-#include <dmlc/logging.h>
+#include <cassert>
+#include <iostream>
 
-void test_print_hello() {
-  print_hello();
-}
+void test_print_hello() { print_hello(); }
 
 void test_dim_type() {
   using dim_t = mnm::types::dim_t;
@@ -57,7 +55,6 @@ void test_broadcast() {
   CHECK(std::string(shape_t::Broadcast(shape_b, shape_c)) == "(10, 1, 15, 1)");
   CHECK(std::string(shape_t::Broadcast(shape_c, shape_c)) == "()");
 }
-
 
 int main() {
   test_print_hello();
