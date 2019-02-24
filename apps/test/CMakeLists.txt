@@ -1,6 +1,0 @@
-add_executable(test main.cc)
-target_link_libraries(test mnm)
-target_link_libraries(test dmlc)
-target_compile_features(test PRIVATE cxx_std_14)
-target_include_directories(test PRIVATE ${MNM_HEADER_FILES})
-target_include_directories(test PRIVATE ${MNM_3RD_PARTY_INCLUDE_DIRS})

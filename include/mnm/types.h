@@ -1,11 +1,11 @@
 #pragma once
 
 #include <dmlc/logging.h>
+#include <tvm/runtime/c_runtime_api.h>
 #include <limits>
 #include <ostream>
 #include <sstream>
 #include <vector>
-
 // TODO(@junrushao1994): replace CHECK with detailed errors
 // TODO(@junrushao1994): should we enable overflow checks only in DEBUG mode?
 
@@ -228,6 +228,10 @@ namespace types {
 
 using dim_t = mnm::types::details::dim_t;
 using shape_t = mnm::types::details::shape_t;
+// TODO(@junrushao1994): make it enum class
+using DataType = TVMType;
+// TODO(@junrushao1994): make it enum class
+using Context = TVMContext;
 
 }  // namespace types
 }  // namespace mnm
