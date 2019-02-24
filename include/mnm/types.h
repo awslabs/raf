@@ -2,6 +2,9 @@
 
 #include <dmlc/logging.h>
 #include <tvm/runtime/c_runtime_api.h>
+#include <tvm/runtime/packed_func.h>
+#include <tvm/runtime/device_api.h>
+#include <dlpack/dlpack.h>
 #include <limits>
 #include <ostream>
 #include <sstream>
@@ -228,10 +231,13 @@ namespace types {
 
 using dim_t = mnm::types::details::dim_t;
 using shape_t = mnm::types::details::shape_t;
-// TODO(@junrushao1994): make it enum class
+// TODO(@junrushao1994): make these enum strong-typed with std::string overloaded
 using DataType = TVMType;
-// TODO(@junrushao1994): make it enum class
 using Context = TVMContext;
+using DeviceType = DLDeviceType;
+using Args = tvm::runtime::TVMArgs;
+using RetValue = tvm::runtime::TVMRetValue;
 
+auto DeviceName =  tvm::runtime::DeviceName;
 }  // namespace types
 }  // namespace mnm

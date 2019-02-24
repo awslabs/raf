@@ -1,4 +1,5 @@
 #include <dmlc/logging.h>
+#include <mnm/device_api.h>
 #include <mnm/test.h>
 #include <mnm/types.h>
 #include <cassert>
