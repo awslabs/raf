@@ -1,6 +1,7 @@
 BasedOnStyle: Google
 ColumnLimit: 100
-PointerAlignment: Right
+PointerAlignment: Left
 IndentWidth: 2
 DerivePointerAlignment: false
 AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
