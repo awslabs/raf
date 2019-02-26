@@ -1,10 +1,10 @@
 #pragma once
 
+#include <dlpack/dlpack.h>
 #include <dmlc/logging.h>
 #include <tvm/runtime/c_runtime_api.h>
-#include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/device_api.h>
-#include <dlpack/dlpack.h>
+#include <tvm/runtime/packed_func.h>
 #include <limits>
 #include <ostream>
 #include <sstream>
@@ -30,23 +30,27 @@ namespace details {
   }
 
 #define MNM_DIM_T_DEFINE_BINARY(op)           \
-  TSelf operator op(const TSelf &rhs) const { \
+  TSelf operator op(const TSelf& rhs) const { \
     MNM_DIM_T_CHECK_OOB(T, (v_ op rhs.v_));   \
     return TSelf(v_ op rhs.v_);               \
   }
 
 #define MNM_DIM_T_DEFINE_ASSIGN(op, base_op)     \
-  TSelf &operator op(const TSelf &rhs) {         \
+  TSelf& operator op(const TSelf& rhs) {         \
     MNM_DIM_T_CHECK_OOB(T, (v_ base_op rhs.v_)); \
     v_ op rhs.v_;                                \
     return *this;                                \
   }
 
 #define MNM_DIM_T_DEFINE_BOOL_UNARY(op) \
-  bool operator op() const { return op v_; }
+  bool operator op() const {            \
+    return op v_;                       \
+  }
 
-#define MNM_DIM_T_DEFINE_BOOL_BINARY(op) \
-  bool operator op(const TSelf &rhs) const { return v_ op rhs.v_; }
+#define MNM_DIM_T_DEFINE_BOOL_BINARY(op)     \
+  bool operator op(const TSelf& rhs) const { \
+    return v_ op rhs.v_;                     \
+  }
 
 template <typename T>
 class dim_t_base final {
@@ -54,13 +58,15 @@ class dim_t_base final {
 
  public:
   template <typename U>
-  explicit dim_t_base(const U &v) = delete;
-  explicit dim_t_base(const T &v) : v_(v) {}
-  explicit dim_t_base(const int &v) : v_(v) {}
-  dim_t_base(const TSelf &) = default;
-  dim_t_base(TSelf &&) = default;
-  TSelf &operator=(const TSelf &) = default;
-  TSelf &operator=(TSelf &&) = default;
+  explicit dim_t_base(const U& v) = delete;
+  explicit dim_t_base(const T& v) : v_(v) {
+  }
+  explicit dim_t_base(const int& v) : v_(v) {
+  }
+  dim_t_base(const TSelf&) = default;
+  dim_t_base(TSelf&&) = default;
+  TSelf& operator=(const TSelf&) = default;
+  TSelf& operator=(TSelf&&) = default;
 
  public:
   template <typename U>
@@ -94,8 +100,10 @@ class dim_t_base final {
   MNM_DIM_T_DEFINE_ASSIGN(&=, &);
   MNM_DIM_T_DEFINE_ASSIGN(|=, |);
   MNM_DIM_T_DEFINE_ASSIGN(^=, ^);
-  operator std::string() const { return std::to_string(v_); }
-  friend std::ostream &operator<<(std::ostream &os, const TSelf &self) {
+  operator std::string() const {
+    return std::to_string(v_);
+  }
+  friend std::ostream& operator<<(std::ostream& os, const TSelf& self) {
     return os << std::to_string(self.v_);
   }
 
@@ -123,26 +131,29 @@ using dim_t = mnm::types::details::dim_t;
 
 class shape_t final {
  public:
-  shape_t() : data_() {}
-  shape_t(shape_t &&other) : data_(std::move(other.data_)) {}
-  shape_t(const shape_t &other) : data_(other.data_) {}
-  shape_t &operator=(shape_t &&other) {
+  shape_t() : data_() {
+  }
+  shape_t(shape_t&& other) : data_(std::move(other.data_)) {
+  }
+  shape_t(const shape_t& other) : data_(other.data_) {
+  }
+  shape_t& operator=(shape_t&& other) {
     data_ = std::move(other.data_);
     return *this;
   }
-  shape_t &operator=(const shape_t &other) {
+  shape_t& operator=(const shape_t& other) {
     data_ = other.data_;
     return *this;
   }
   template <typename T>
-  shape_t(const std::vector<T> &init) {
+  shape_t(const std::vector<T>& init) {
     Assign(init.begin(), init.end());
   }
   template <typename T>
   shape_t(std::initializer_list<T> init) {
     Assign(init.begin(), init.end());
   }
-  friend std::ostream &operator<<(std::ostream &os, const shape_t &self) {
+  friend std::ostream& operator<<(std::ostream& os, const shape_t& self) {
     os << '(';
     bool is_first = true;
     for (const dim_t v : self.data_) {
@@ -161,7 +172,9 @@ class shape_t final {
     os << *this;
     return os.str();
   }
-  int Ndim() const { return static_cast<int>(data_.size()); }
+  int Ndim() const {
+    return static_cast<int>(data_.size());
+  }
   dim_t Numel() const {
     dim_t result(1);
     for (const dim_t x : data_) {
@@ -174,7 +187,9 @@ class shape_t final {
         << "InternalError: please call shape_t::NormalizeAxis before indexing";
     return data_[axis];
   }
-  std::vector<dim_t> get() const { return data_; }
+  std::vector<dim_t> get() const {
+    return data_;
+  }
 
  public:
   int NormalizeAxis(const int axis) const {
@@ -184,7 +199,7 @@ class shape_t final {
     }
     return axis < 0 ? axis + ndim : axis;
   }
-  static shape_t Broadcast(const shape_t &a, const shape_t &b) {
+  static shape_t Broadcast(const shape_t& a, const shape_t& b) {
     const int a_ndim = a.Ndim();
     const int b_ndim = b.Ndim();
     const int ndim = std::max(a_ndim, b_ndim);
@@ -238,6 +253,6 @@ using DeviceType = DLDeviceType;
 using Args = tvm::runtime::TVMArgs;
 using RetValue = tvm::runtime::TVMRetValue;
 
-auto DeviceName =  tvm::runtime::DeviceName;
+auto DeviceName = tvm::runtime::DeviceName;
 }  // namespace types
 }  // namespace mnm

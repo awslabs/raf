@@ -1,0 +1,22 @@
+#!/bin/sh
+# This script enables pre-commit lint check.
+# Put it to .git/hook/pre-commit to enable it!
+
+clang_format=`which clang-format`
+
+if [ $? -eq "0" ]; then
+  cached=`git diff --cached --name-only | grep "\.[c$|cc$|h$]"`
+  for i in $cached; do
+    clang-format $i -output-replacements-xml | grep "<replacement " > /dev/null
+    if [ $? -ne "1" ]; then
+      echo $i mismatch the result of clang-format.
+      echo Please run scripts/clang-format to correct it!
+      exit 1
+    fi
+  done
+  echo Lint check pass! Commit the changes!
+else
+  echo "[Warning] You have not installed a clang-format"
+  echo "          Pre-commit code format is skipped"
+  echo "          It is recommended to have it installed"
+fi

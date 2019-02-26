@@ -1,9 +1,9 @@
 #pragma once
 
-#include <mnm/types.h>
 #include <mnm/registry.h>
-#include <mutex>
+#include <mnm/types.h>
 #include <tvm/runtime/device_api.h>
+#include <mutex>
 
 namespace mnm {
 namespace device_api {
@@ -31,11 +31,12 @@ class DeviceAPI {
    * TODO(@junrushao1994): many interfaces are not implemented
    */
  public:
-  virtual ~DeviceAPI() {}
+  virtual ~DeviceAPI() {
+  }
   virtual void SetDevice(mnm::types::Context ctx) = 0;
-  virtual void *AllocDataSpace(mnm::types::Context ctx, size_t nbytes, size_t alignment,
+  virtual void* AllocDataSpace(mnm::types::Context ctx, size_t nbytes, size_t alignment,
                                mnm::types::DataType type_hint) = 0;
-  virtual void FreeDataSpace(mnm::types::Context ctx, void *ptr) = 0;
+  virtual void FreeDataSpace(mnm::types::Context ctx, void* ptr) = 0;
 };
 
 class DeviceAPIManager {
@@ -55,7 +56,8 @@ class DeviceAPIManager {
     return &inst;
   }
 
-  std::shared_ptr<DeviceAPI> GetAPI(mnm::types::DeviceType device_type, bool allow_missing = false) {
+  std::shared_ptr<DeviceAPI> GetAPI(mnm::types::DeviceType device_type,
+                                    bool allow_missing = false) {
     if (api_[device_type] == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
       if (api_[device_type] == nullptr) {
@@ -76,7 +78,7 @@ class DeviceAPIManager {
       CHECK(allow_missing) << "ValueError: DeviceAPI " << creator_name << " is not enabled.";
       return nullptr;
     }
-    void *ret = (*creator)();
+    void* ret = (*creator)();
     return static_cast<DeviceAPI*>(ret);
   }
 };

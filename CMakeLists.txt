@@ -8,6 +8,8 @@ add_definitions(-DDMLC_USE_FOPEN64=0)
 
 ################# Utilities #################
 include(cmake/Util.cmake)
+include(cmake/ClangFormat.cmake)
+clangformat()
 
 ################# User-defined configurations #################
 # TODO(@junrushao1994): improve it
@@ -51,25 +53,4 @@ target_link_libraries(mnm tvm)
 
 ################# Apps #################
 add_subdirectory(apps)
-
-# Tests
-set(TEST_EXECS "")
-file(GLOB TEST_SRCS tests/cpp/*.cc)
-find_library(GTEST_LIB gtest "$ENV{GTEST_LIB}")
-
-if(GTEST_LIB)
-  foreach(__srcpath ${TEST_SRCS})
-    get_filename_component(__srcname ${__srcpath} NAME)
-    string(REPLACE ".cc" "" __execname ${__srcname})
-    add_executable(${__execname} ${__srcpath})
-    list(APPEND TEST_EXECS ${__execname})
-    target_link_libraries(${__execname} tvm mnm ${GTEST_LIB} pthread)
-    target_include_directories(${__execname} PUBLIC ${MNM_HEADER_FILES})
-    target_include_directories(${__execname} PUBLIC ${MNM_3RD_PARTY_INCLUDE_DIRS})
-    target_compile_features(${__execname} PRIVATE cxx_std_14)
-    set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_ALL 1)
-    set_target_properties(${__execname} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
-    set_target_properties(${__execname} PROPERTIES CXX_STANDARD 14)
-  endforeach()
-  add_custom_target(mnm-cpptest DEPENDS ${TEST_EXECS})
-endif()
+add_subdirectory(tests/cpp)

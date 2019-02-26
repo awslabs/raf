@@ -4,6 +4,6 @@
 
 namespace mnm {
 namespace registry {
-  using Registry = tvm::runtime::Registry;
-} // namespace registry
-} // namespace mnm
+using Registry = tvm::runtime::Registry;
+}  // namespace registry
+}  // namespace mnm

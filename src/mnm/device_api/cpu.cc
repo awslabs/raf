@@ -7,13 +7,17 @@ namespace device_api {
 
 class CPUDeviceAPI final : public mnm::device_api::DeviceAPI {
  public:
-  CPUDeviceAPI() {}
-  ~CPUDeviceAPI() override {}
-  void SetDevice(mnm::types::Context ctx) override { CheckContext(ctx); }
-  void *AllocDataSpace(mnm::types::Context ctx, size_t nbytes, size_t alignment,
-                               mnm::types::DataType type_hint) override {
+  CPUDeviceAPI() {
+  }
+  ~CPUDeviceAPI() override {
+  }
+  void SetDevice(mnm::types::Context ctx) override {
     CheckContext(ctx);
-    void *ptr = nullptr;
+  }
+  void* AllocDataSpace(mnm::types::Context ctx, size_t nbytes, size_t alignment,
+                       mnm::types::DataType type_hint) override {
+    CheckContext(ctx);
+    void* ptr = nullptr;
     // TODO(@junrushao1994): do not throw like this
     // TODO(@junrushao1994): recover the SGX and Android part
 #if _MSC_VER
@@ -29,7 +33,7 @@ class CPUDeviceAPI final : public mnm::device_api::DeviceAPI {
 #endif
     return ptr;
   }
-  void FreeDataSpace(mnm::types::Context ctx, void *ptr) override {
+  void FreeDataSpace(mnm::types::Context ctx, void* ptr) override {
     CheckContext(ctx);
 #if _MSC_VER
     _aligned_free(ptr);
@@ -48,12 +52,13 @@ class CPUDeviceAPI final : public mnm::device_api::DeviceAPI {
   }
 };
 
-MNM_REGISTER_GLOBAL("mnm.device_api.cpu").set_body([](mnm::types::Args args, mnm::types::RetValue *rv) {
-  // While it is relatively unsafe to directly "new" an object
-  // we expect this object to be correctly managed by a shared_ptr in DeviceAPIManager
-  DeviceAPI *ptr = new CPUDeviceAPI();
-  *rv = static_cast<void *>(ptr);
-});
+MNM_REGISTER_GLOBAL("mnm.device_api.cpu")
+    .set_body([](mnm::types::Args args, mnm::types::RetValue* rv) {
+      // While it is relatively unsafe to directly "new" an object
+      // we expect this object to be correctly managed by a shared_ptr in DeviceAPIManager
+      DeviceAPI* ptr = new CPUDeviceAPI();
+      *rv = static_cast<void*>(ptr);
+    });
 
 }  // namespace device_api
 }  // namespace mnm

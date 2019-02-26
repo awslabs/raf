@@ -5,7 +5,9 @@
 #include <cassert>
 #include <iostream>
 
-void test_print_hello() { print_hello(); }
+void test_print_hello() {
+  print_hello();
+}
 
 void test_dim_type() {
   using dim_t = mnm::types::dim_t;
@@ -40,7 +42,7 @@ void test_normalize_axis() {
   bool caught = false;
   try {
     std::cout << shape[shape.NormalizeAxis(-4)] << std::endl;
-  } catch (const dmlc::Error &e) {
+  } catch (const dmlc::Error& e) {
     caught = true;
   }
   CHECK(caught);
