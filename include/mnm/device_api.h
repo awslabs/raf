@@ -1,8 +1,8 @@
 #pragma once
 
-#include <mnm/registry.h>
 #include <mnm/types.h>
-#include <tvm/runtime/device_api.h>
+#include <array>
+#include <memory>
 #include <mutex>
 
 namespace mnm {
@@ -20,8 +20,8 @@ class DeviceAPI {
    * 4) Data movement on the same or different devices
    *
    * For a certain device, developers are required to wrap their own low-level C API into the
-   * interface of DeviceAPI, so that the resources could be better managed via upstream manager like
-   * memory pool.
+   * interface of DeviceAPI, so that the resources could be better managed via upstream manager
+   * like memory pool.
    *
    * Note for developers:
    * 1) All DeviceAPIs will be used as singletons inside the DeviceAPIManager singleton.
@@ -29,58 +29,49 @@ class DeviceAPI {
    * 3) We suggest not to keep any state in this class.
    *
    * TODO(@junrushao1994): many interfaces are not implemented
+   * TODO(@junrushao1994): don't use size_t
    */
+  friend DeviceAPIManager;
+
+ protected:
+  using DataType = mnm::types::DataType;
+  using DeviceType = mnm::types::DeviceType;
+
  public:
-  virtual ~DeviceAPI() {
-  }
-  virtual void SetDevice(mnm::types::Context ctx) = 0;
-  virtual void* AllocDataSpace(mnm::types::Context ctx, size_t nbytes, size_t alignment,
-                               mnm::types::DataType type_hint) = 0;
-  virtual void FreeDataSpace(mnm::types::Context ctx, void* ptr) = 0;
+  virtual ~DeviceAPI() = default;
+  virtual int GetNDevices() = 0;
+  virtual void* AllocMemory(int device_id, size_t nbytes, size_t alignment, DataType type_hint) = 0;
+  virtual void DeallocMemory(int device_id, void* ptr) = 0;
+
+ private:
+  static DeviceAPI* Create(DeviceType device_type, bool allow_missing);
 };
 
-class DeviceAPIManager {
+class DeviceAPIManager final {
   /*
    * The manager is a global singleton, which has ownership of all DeviceAPI singletons.
    * It shares the ownership with upstream managers like memory pool.
    */
+  using DeviceType = mnm::types::DeviceType;
+  using APIPtr = std::unique_ptr<DeviceAPI>;
+
  public:
   static const int kMaxDeviceAPI = 32;
 
-  DeviceAPIManager() {
-    std::fill(api_.begin(), api_.end(), nullptr);
-  }
+  DeviceAPIManager() = default;
+  ~DeviceAPIManager() = default;
 
-  static DeviceAPIManager* Global() {
-    static DeviceAPIManager inst;
-    return &inst;
-  }
+  DeviceAPI* GetAPI(DeviceType device_type, bool allow_missing);
 
-  std::shared_ptr<DeviceAPI> GetAPI(mnm::types::DeviceType device_type,
-                                    bool allow_missing = false) {
-    if (api_[device_type] == nullptr) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (api_[device_type] == nullptr) {
-        api_[device_type].reset(Create(device_type, allow_missing));
-      }
-    }
-    return api_[device_type];
+ public:
+  static std::shared_ptr<DeviceAPIManager> Global() {
+    static std::shared_ptr<DeviceAPIManager> inst = std::make_shared<DeviceAPIManager>();
+    return inst;
   }
 
  private:
-  std::array<std::shared_ptr<DeviceAPI>, kMaxDeviceAPI> api_;
+  std::array<APIPtr, kMaxDeviceAPI> api_;
   std::mutex mutex_;
-
-  inline DeviceAPI* Create(mnm::types::DeviceType device_type, bool allow_missing = false) {
-    std::string creator_name = std::string("mnm.device_api.") + mnm::types::DeviceName(device_type);
-    auto creator = mnm::registry::Registry::Get(creator_name);
-    if (creator == nullptr) {
-      CHECK(allow_missing) << "ValueError: DeviceAPI " << creator_name << " is not enabled.";
-      return nullptr;
-    }
-    void* ret = (*creator)();
-    return static_cast<DeviceAPI*>(ret);
-  }
 };
 
 }  // namespace device_api

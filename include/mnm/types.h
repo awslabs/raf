@@ -253,6 +253,35 @@ using DeviceType = DLDeviceType;
 using Args = tvm::runtime::TVMArgs;
 using RetValue = tvm::runtime::TVMRetValue;
 
-auto DeviceName = tvm::runtime::DeviceName;
+inline const char* DeviceName(int type) {
+  switch (type) {
+    case kDLCPU:
+      return "cpu";
+    case kDLGPU:
+      return "gpu";
+    case kDLOpenCL:
+      return "opencl";
+    case kDLSDAccel:
+      return "sdaccel";
+    case kDLAOCL:
+      return "aocl";
+    case kDLVulkan:
+      return "vulkan";
+    case kDLMetal:
+      return "metal";
+    case kDLVPI:
+      return "vpi";
+    case kDLROCM:
+      return "rocm";
+    case kOpenGL:
+      return "opengl";
+    case kDLExtDev:
+      return "ext_dev";
+    default:
+      LOG(FATAL) << "unknown type =" << type;
+      return "Unknown";
+  }
+}
+
 }  // namespace types
 }  // namespace mnm

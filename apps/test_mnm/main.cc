@@ -2,6 +2,7 @@
 #include <mnm/device_api.h>
 #include <mnm/test.h>
 #include <mnm/types.h>
+#include <mnm/memory_pool.h>
 #include <cassert>
 #include <iostream>
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <tvm/runtime/registry.h>
 
 #define MNM_REGISTER_GLOBAL TVM_REGISTER_GLOBAL

@@ -1,22 +1,20 @@
 #include <dmlc/logging.h>
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
+#include <mnm/types.h>
 
 namespace mnm {
 namespace device_api {
 
-class CPUDeviceAPI final : public mnm::device_api::DeviceAPI {
+class CPUDeviceAPI final : public DeviceAPI {
  public:
-  CPUDeviceAPI() {
+  CPUDeviceAPI() = default;
+  ~CPUDeviceAPI() override = default;
+  int GetNDevices() override {
+    return 1;
   }
-  ~CPUDeviceAPI() override {
-  }
-  void SetDevice(mnm::types::Context ctx) override {
-    CheckContext(ctx);
-  }
-  void* AllocDataSpace(mnm::types::Context ctx, size_t nbytes, size_t alignment,
-                       mnm::types::DataType type_hint) override {
-    CheckContext(ctx);
+  void* AllocMemory(int device_id, size_t nbytes, size_t alignment, DataType type_hint) override {
+    CHECK_EQ(device_id, 0) << "InternalError: CPU expect device_id = 0, but got" << device_id;
     void* ptr = nullptr;
     // TODO(@junrushao1994): do not throw like this
     // TODO(@junrushao1994): recover the SGX and Android part
@@ -33,32 +31,23 @@ class CPUDeviceAPI final : public mnm::device_api::DeviceAPI {
 #endif
     return ptr;
   }
-  void FreeDataSpace(mnm::types::Context ctx, void* ptr) override {
-    CheckContext(ctx);
+  void DeallocMemory(int device_id, void* ptr) override {
+    CHECK_EQ(device_id, 0) << "InternalError: CPU expect device_id = 0, but got" << device_id;
 #if _MSC_VER
     _aligned_free(ptr);
 #else
     free(ptr);
 #endif
   }
-
- private:
-  static void CheckContext(mnm::types::Context ctx) {
-    // TODO(@junrushao1994): too lazy to convert ctx.device_type to std::string;
-    CHECK_EQ(ctx.device_type, kDLCPU)
-        << "InternalError: CPU device API expect context is kCPU, but got" << ctx.device_type;
-    CHECK_EQ(ctx.device_id, 0) << "InternalError: CPU device API expect device_id = 0, but got"
-                               << ctx.device_id;
-  }
 };
 
-MNM_REGISTER_GLOBAL("mnm.device_api.cpu")
-    .set_body([](mnm::types::Args args, mnm::types::RetValue* rv) {
-      // While it is relatively unsafe to directly "new" an object
-      // we expect this object to be correctly managed by a shared_ptr in DeviceAPIManager
-      DeviceAPI* ptr = new CPUDeviceAPI();
-      *rv = static_cast<void*>(ptr);
-    });
+using mnm::types::Args;
+using mnm::types::RetValue;
+
+MNM_REGISTER_GLOBAL("mnm.device_api.cpu").set_body([](Args args, RetValue* rv) {
+  DeviceAPI* ptr = new CPUDeviceAPI();
+  *rv = static_cast<void*>(ptr);
+});
 
 }  // namespace device_api
 }  // namespace mnm
