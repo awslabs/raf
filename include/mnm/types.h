@@ -137,21 +137,28 @@ class shape_t final {
   }
   shape_t(const shape_t& other) : data_(other.data_) {
   }
+  shape_t(std::vector<dim_t>&& other) : data_(std::move(other)) {
+  }
+  shape_t(const std::vector<dim_t>& other) : data_(other) {
+  }
+  static shape_t Create(std::initializer_list<int64_t> l) {
+    std::vector<dim_t> data;
+    data.reserve(l.size());
+    for (int64_t v : l) {
+      data.emplace_back(dim_t(v));
+    }
+    return shape_t(std::move(data));
+  }
+  void swap(shape_t& other) {
+    std::swap(data_, other.data_);
+  }
   shape_t& operator=(shape_t&& other) {
-    data_ = std::move(other.data_);
+    shape_t(other).swap(*this);
     return *this;
   }
   shape_t& operator=(const shape_t& other) {
-    data_ = other.data_;
+    shape_t(other).swap(*this);
     return *this;
-  }
-  template <typename T>
-  shape_t(const std::vector<T>& init) {
-    Assign(init.begin(), init.end());
-  }
-  template <typename T>
-  shape_t(std::initializer_list<T> init) {
-    Assign(init.begin(), init.end());
   }
   friend std::ostream& operator<<(std::ostream& os, const shape_t& self) {
     os << '(';
@@ -169,8 +176,26 @@ class shape_t final {
   }
   operator std::string() const {
     std::ostringstream os;
-    os << *this;
+    os << '(';
+    bool is_first = true;
+    for (const dim_t v : data_) {
+      if (is_first) {
+        is_first = false;
+      } else {
+        os << ", ";
+      }
+      os << v;
+    }
+    os << ')';
     return os.str();
+  }
+  explicit operator std::vector<int64_t>() const {
+    std::vector<int64_t> ret;
+    ret.reserve(data_.size());
+    for (dim_t v : data_) {
+      ret.emplace_back(v.As<int64_t>());
+    }
+    return ret;
   }
   int Ndim() const {
     return static_cast<int>(data_.size());

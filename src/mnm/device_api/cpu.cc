@@ -6,6 +6,8 @@
 namespace mnm {
 namespace device_api {
 
+using mnm::types::DataType;
+
 class CPUDeviceAPI final : public DeviceAPI {
  public:
   CPUDeviceAPI() = default;

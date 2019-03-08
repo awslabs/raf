@@ -5,6 +5,8 @@
 namespace mnm {
 namespace memory_pool {
 
+using mnm::types::DataType;
+
 class NoPool final : public MemoryPool {
  public:
   MemoryChunk* Alloc(size_t nbytes, size_t alignment, DataType type_hint) override {

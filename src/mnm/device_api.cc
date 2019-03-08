@@ -1,11 +1,12 @@
-#include <mnm/commons.h>
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
+#include "./commons.h"
 
 namespace mnm {
 namespace device_api {
 
-using Registry = mnm::registry::Registry;
+using mnm::registry::Registry;
+using mnm::types::DeviceType;
 
 DeviceAPI* DeviceAPI::Create(DeviceType device_type, bool allow_missing) {
   static const std::string prefix("mnm.device_api.");
