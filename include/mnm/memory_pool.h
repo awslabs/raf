@@ -25,7 +25,7 @@ namespace memory_pool {
  * 3) A memory pool could be released and replaced with another memory pool, as long as all of its
  * managed memory is released.
  *
- * TODO(@junrushao1994): replace size_t with dim_t.
+ * TODO(@junrushao1994): replace size_t with index_t.
  *
  * TODO(@junrushao1994): thread safety will be an issue with ReplacePool
  *

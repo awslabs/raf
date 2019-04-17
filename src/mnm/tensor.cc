@@ -1,17 +1,16 @@
 #include <mnm/memory_pool.h>
-#include <mnm/ndarray.h>
+#include <mnm/tensor.h>
 #include <tvm/runtime/ndarray.h>
 
 namespace mnm {
-namespace ndarray {
+namespace tensor {
 
-using TSelf = mnm::ndarray::NDArray;
+using TSelf = mnm::tensor::Tensor;
 using TSuper = tvm::runtime::NDArray;
 using mnm::memory_pool::MemoryPoolManager;
 using mnm::types::Context;
 using mnm::types::DataType;
-using mnm::types::dim_t;
-using mnm::types::shape_t;
+using mnm::types::index_t;
 
 static std::shared_ptr<MemoryPoolManager> mem_mgr = MemoryPoolManager::Global();
 
@@ -20,6 +19,14 @@ constexpr int kAllocAlignment = 64;
 
 inline bool IsBoolean(mnm::types::DataType dtype) {
   return dtype.code == kDLUInt && dtype.bits == 1;
+}
+
+inline index_t Numel(const std::vector<int64_t>& shape) {
+  index_t result(1);
+  for (int64_t x : shape) {
+    result *= index_t(x);
+  }
+  return result;
 }
 
 inline void VerifyDataType(mnm::types::DataType dtype) {
@@ -35,11 +42,11 @@ inline void VerifyDataType(mnm::types::DataType dtype) {
   CHECK_EQ(dtype.bits & (dtype.bits - 1), 0);
 }
 
-inline dim_t GetDataAlignment(const DLTensor& arr) {
+inline index_t GetDataAlignment(const DLTensor& arr) {
   if (IsBoolean(arr.dtype)) {
-    return dim_t(kAllocAlignment);
+    return index_t(kAllocAlignment);
   }
-  return dim_t(std::max(                       //
+  return index_t(std::max(                     //
       (arr.dtype.bits / 8) * arr.dtype.lanes,  //  dtype.bits must be divisible by 8
       kAllocAlignment));
 }
@@ -57,7 +64,7 @@ class TSelf::Container::Impl {
     delete ptr;
   }
 
-  static TSelf CreateMeta(shape_t shape, DataType dtype, Context ctx) {
+  static TSelf CreateMeta(std::vector<int64_t> shape, DataType dtype, Context ctx) {
     VerifyDataType(dtype);
     // critical zone begins, couldn't fail
     TSelf::Container* data = new TSelf::Container();
@@ -67,7 +74,7 @@ class TSelf::Container::Impl {
     data->shape_ = std::vector<int64_t>(shape);
     data->dl_tensor.data = nullptr;
     data->dl_tensor.ctx = ctx;
-    data->dl_tensor.ndim = shape.Ndim();
+    data->dl_tensor.ndim = shape.size();
     data->dl_tensor.dtype = dtype;
     data->dl_tensor.shape = dmlc::BeginPtr(data->shape_);
     data->dl_tensor.strides = nullptr;
@@ -84,16 +91,16 @@ class TSelf::Container::Impl {
   }
 
   static void NDArrayDecRefDeleter(DLManagedTensor* tensor) {
-    static_cast<NDArray::Container*>(tensor->manager_ctx)->DecRef();
+    static_cast<TSelf::Container*>(tensor->manager_ctx)->DecRef();
     delete tensor;
   }
 
-  static TSelf Empty(shape_t shape, DataType dtype, Context ctx) {
+  static TSelf Empty(std::vector<int64_t> shape, DataType dtype, Context ctx) {
     TSelf ret(CreateMeta(shape, dtype, ctx));
     TSelf::Container* data = static_cast<TSelf::Container*>(ret.data_);
     // TODO(@junrushao1994)
-    dim_t align = GetDataAlignment(data->dl_tensor);
-    dim_t nbytes = shape.Numel() * align;
+    index_t align = GetDataAlignment(data->dl_tensor);
+    index_t nbytes = Numel(shape) * align;
     mem_mgr->Alloc(ctx, nbytes.As<size_t>(), align.As<size_t>(), dtype);
     return ret;
   }
@@ -119,7 +126,8 @@ class TSelf::Container::Impl {
   }
 };
 
-TSelf TSelf::Empty(mnm::types::shape_t shape, mnm::types::DataType dtype, mnm::types::Context ctx) {
+TSelf TSelf::Empty(std::vector<int64_t> shape, mnm::types::DataType dtype,
+                   mnm::types::Context ctx) {
   return TSelf::Container::Impl::Empty(shape, dtype, ctx);
 }
 
@@ -180,5 +188,5 @@ DLManagedTensor TSelf::CreateToDLManagedTensor() const {
   return ret;
 }
 
-}  // namespace ndarray
+}  // namespace tensor
 }  // namespace mnm

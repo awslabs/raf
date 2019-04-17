@@ -5,9 +5,9 @@
 #include <iostream>
 
 TEST(DimensionType, TextFormat) {
-  using dim_t = mnm::types::dim_t;
-  mnm::types::dim_t a(-1);
-  mnm::types::dim_t b(-2);
+  using index_t = mnm::types::index_t;
+  index_t a(-1);
+  index_t b(-2);
   auto c = a + b;
   (a += b) += c;
   ASSERT_STREQ(std::string(a).c_str(), "-6");

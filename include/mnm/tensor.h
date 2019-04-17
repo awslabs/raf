@@ -5,32 +5,32 @@
 #include <tvm/runtime/ndarray.h>
 
 namespace mnm {
-namespace ndarray {
-class NDArray;
-}  // namespace ndarray
+namespace tensor {
+class Tensor;
+}  // namespace tensor
 }  // namespace mnm
 
 namespace tvm {
 namespace runtime {
 template <>
-struct array_type_info<mnm::ndarray::NDArray> {
+struct array_type_info<mnm::tensor::Tensor> {
   static const int code = 1;
 };
 }  // namespace runtime
 }  // namespace tvm
 
 namespace mnm {
-namespace ndarray {
+namespace tensor {
 
-class NDArray : private tvm::runtime::NDArray {
-  using TSelf = mnm::ndarray::NDArray;
+class Tensor : private tvm::runtime::NDArray {
+  using TSelf = mnm::tensor::Tensor;
   using TSuper = tvm::runtime::NDArray;
 
  public:
   class Container : private TSuper::Container {
     class Impl;
-    friend class mnm::ndarray::NDArray;
-    friend class mnm::ndarray::NDArray::Container::Impl;
+    friend class mnm::tensor::Tensor;
+    friend class mnm::tensor::Tensor::Container::Impl;
 
    public:
     Container() : TSuper::Container() {
@@ -51,11 +51,11 @@ class NDArray : private tvm::runtime::NDArray {
     }
 
    private:
-    // DLTensor dl_tensor;
-    // void* manager_ctx{nullptr};
-    // void (*deleter)(Container* self);
-    // int32_t array_type_code_{0};
-    // std::vector<int64_t> shape_;
+    using TSuper::Container::array_type_code_;
+    using TSuper::Container::deleter;
+    using TSuper::Container::dl_tensor;
+    using TSuper::Container::manager_ctx;
+    using TSuper::Container::shape_;
 
     // For dlpack compatibility, we broke the strongly-typed members
     std::vector<int64_t> strides_{};
@@ -65,16 +65,16 @@ class NDArray : private tvm::runtime::NDArray {
 
  public:
   // Constructors from TSelf
-  NDArray() : TSuper() {
+  Tensor() : TSuper() {
   }
-  NDArray(TSelf&& other) : TSuper(other) {
+  Tensor(TSelf&& other) : TSuper(other) {
   }
-  NDArray(const TSelf& other) : TSuper(other) {
+  Tensor(const TSelf& other) : TSuper(other) {
   }
-  explicit NDArray(TSelf::Container* data) : TSuper(data) {
+  explicit Tensor(TSelf::Container* data) : TSuper(data) {
   }
   // Destructor: call superclass's destructor, and everything will just be fine.
-  ~NDArray() = default;
+  ~Tensor() = default;
   // Swap and copies
   void swap(TSelf& other) {
     std::swap(data_, other.data_);
@@ -104,7 +104,7 @@ class NDArray : private tvm::runtime::NDArray {
     return TSuper::use_count();
   }
   // Creation
-  static TSelf Empty(mnm::types::shape_t shape, mnm::types::DataType dtype,
+  static TSelf Empty(std::vector<int64_t> shape, mnm::types::DataType dtype,
                      mnm::types::Context ctx);
   // TODO(@junrushao1994): Serialization
   bool Load(dmlc::Stream* stream);
@@ -139,11 +139,11 @@ class NDArray : private tvm::runtime::NDArray {
  private:
   // Only for internal use, external users should explicitly call CreateFromSuper or MoveFromSuper
   // to enable extra checkings, and avoid throwing errors inside constructors.
-  NDArray(TSuper&& other) : TSuper(other) {
+  Tensor(TSuper&& other) : TSuper(other) {
   }
-  NDArray(const TSuper& other) : TSuper(other) {
+  Tensor(const TSuper& other) : TSuper(other) {
   }
 };  // namespace ndarray
 
-}  // namespace ndarray
+}  // namespace tensor
 }  // namespace mnm
