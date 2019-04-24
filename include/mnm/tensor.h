@@ -22,7 +22,7 @@ struct array_type_info<mnm::tensor::Tensor> {
 namespace mnm {
 namespace tensor {
 
-class Tensor : private tvm::runtime::NDArray {
+class Tensor : public tvm::runtime::NDArray {
   using TSelf = mnm::tensor::Tensor;
   using TSuper = tvm::runtime::NDArray;
 
@@ -71,7 +71,12 @@ class Tensor : private tvm::runtime::NDArray {
   }
   Tensor(const TSelf& other) : TSuper(other) {
   }
+  explicit Tensor(std::nullptr_t null) : TSuper(nullptr) {
+  }
   explicit Tensor(TSelf::Container* data) : TSuper(data) {
+  }
+  explicit Tensor(TSuper::Container* data) : TSuper(data) {
+    static_cast<TSelf::Container*>(data_)->SwitchFromSuper();
   }
   // Destructor: call superclass's destructor, and everything will just be fine.
   ~Tensor() = default;

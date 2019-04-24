@@ -13,6 +13,10 @@ namespace mnm {
 namespace rly {
 
 using Node = tvm::Node;
+// template <class T>
+// using NodePtr = tvm::NodePtr<T>;
+using tvm::make_node;
+using tvm::NodePtr;
 using NodeRef = tvm::relay::NodeRef;
 using NodeHash = tvm::relay::NodeHash;
 using NodeEqual = tvm::relay::NodeEqual;
@@ -118,19 +122,11 @@ using TypeRelationNode = tvm::relay::TypeRelationNode;
 }  // namespace rly
 }  // namespace mnm
 
-#define MNM_DEF_NODE_REF(TypeName, NodeClassName, NodeRefBase)          \
-  ASSERT_DERIVED_FROM(NodeRefBase, NodeRef);                            \
-  class TypeName : public NodeRefBase {                                 \
-   public:                                                              \
-    TypeName() {                                                        \
-    }                                                                   \
-    explicit TypeName(::tvm::NodePtr<::tvm::Node> n) : NodeRefBase(n) { \
-    }                                                                   \
-    const NodeClassName* operator->() const {                           \
-      return static_cast<const NodeClassName*>(node_.get());            \
-    }                                                                   \
-    operator bool() {                                                   \
-      return this->defined();                                           \
-    }                                                                   \
-    using ContainerType = NodeClassName;                                \
-  };
+#define MNM_DEF_NODE_REF(TypeName, NodeName, NodeRefBase) \
+  RELAY_DEFINE_NODE_REF(TypeName, NodeName, NodeRefBase)
+
+#define MNM_DEF_NODE_TYPE_INFO(TypeName, Parent) TVM_DECLARE_NODE_TYPE_INFO(TypeName, Parent)
+
+#define MNM_DEF_BASE_NODE_INFO(TypeName, Parent) TVM_DECLARE_BASE_NODE_INFO(TypeName, Parent)
+
+#define MNM_REGISTER_NODE_TYPE(TypeName) TVM_REGISTER_NODE_TYPE(TypeName)
