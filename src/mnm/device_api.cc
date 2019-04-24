@@ -1,5 +1,6 @@
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
+
 #include "./commons.h"
 
 namespace mnm {

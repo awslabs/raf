@@ -9,6 +9,10 @@ using mnm::types::DataType;
 
 class NoPool final : public MemoryPool {
  public:
+  NoPool() = default;
+  // FIXME(@junrushao1994): this is not actually correct.
+  virtual ~NoPool() = default;
+
   MemoryChunk* Alloc(size_t nbytes, size_t alignment, DataType type_hint) override {
     CHECK(f_alloc_ != nullptr) << "f_alloc_ is not defined";
     MemoryChunk* mem = new MemoryChunk();
@@ -30,17 +34,15 @@ class NoPool final : public MemoryPool {
         << "Cannot release the memory pool, because some memory chunks are not released";
   }
 
+  static void* make() {
+    return new NoPool();
+  }
+
  private:
-  std::atomic<int> n_chunks_;
+  std::atomic<int> n_chunks_{0};
 };
 
-using mnm::types::Args;
-using mnm::types::RetValue;
-
-MNM_REGISTER_GLOBAL("mnm.memory_pool.no_pool").set_body([](Args args, RetValue* rv) {
-  NoPool* ptr = new NoPool();
-  *rv = static_cast<void*>(ptr);
-});
+MNM_REGISTER_GLOBAL("mnm.memory_pool.no_pool").set_body_typed(NoPool::make);
 
 }  // namespace memory_pool
 }  // namespace mnm

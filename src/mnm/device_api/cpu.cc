@@ -41,15 +41,12 @@ class CPUDeviceAPI final : public DeviceAPI {
     free(ptr);
 #endif
   }
+  static void* make() {
+    return new CPUDeviceAPI();
+  }
 };
 
-using mnm::types::Args;
-using mnm::types::RetValue;
-
-MNM_REGISTER_GLOBAL("mnm.device_api.cpu").set_body([](Args args, RetValue* rv) {
-  DeviceAPI* ptr = new CPUDeviceAPI();
-  *rv = static_cast<void*>(ptr);
-});
+MNM_REGISTER_GLOBAL("mnm.device_api.cpu").set_body_typed(CPUDeviceAPI::make);
 
 }  // namespace device_api
 }  // namespace mnm

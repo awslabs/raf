@@ -1,8 +1,9 @@
+#include <cassert>
+#include <iostream>
+
 #include <gtest/gtest.h>
 #include <mnm/device_api.h>
 #include <mnm/types.h>
-#include <cassert>
-#include <iostream>
 
 TEST(DimensionType, TextFormat) {
   using index_t = mnm::types::index_t;

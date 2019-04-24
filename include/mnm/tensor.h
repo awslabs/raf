@@ -143,7 +143,7 @@ class Tensor : private tvm::runtime::NDArray {
   }
   Tensor(const TSuper& other) : TSuper(other) {
   }
-};  // namespace ndarray
+};
 
 }  // namespace tensor
 }  // namespace mnm

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <mnm/device_api.h>
-#include <mnm/types.h>
 #include <array>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <vector>
+
+#include <mnm/device_api.h>
+#include <mnm/types.h>
 
 namespace mnm {
 namespace memory_pool {
@@ -87,6 +88,7 @@ class MemoryPool {
   using FDealloc = std::function<void(void*)>;
 
  public:
+  MemoryPool() = default;
   virtual ~MemoryPool() = default;
   virtual MemoryChunk* Alloc(size_t nbytes, size_t alignment, mnm::types::DataType type_hint) = 0;
   virtual void Dealloc(MemoryChunk* mem) = 0;

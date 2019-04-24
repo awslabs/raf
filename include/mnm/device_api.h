@@ -1,9 +1,10 @@
 #pragma once
 
-#include <mnm/types.h>
 #include <array>
 #include <memory>
 #include <mutex>
+
+#include <mnm/types.h>
 
 namespace mnm {
 namespace device_api {
