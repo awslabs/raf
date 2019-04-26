@@ -9,7 +9,8 @@ using TSelf = mnm::tensor::Tensor;
 using TSuper = tvm::runtime::NDArray;
 using mnm::memory_pool::MemoryPoolManager;
 using mnm::types::Context;
-using mnm::types::DataType;
+using mnm::types::DType;
+using mnm::types::DTypeCode;
 using mnm::types::index_t;
 
 static std::shared_ptr<MemoryPoolManager> mem_mgr = MemoryPoolManager::Global();
@@ -17,8 +18,8 @@ static std::shared_ptr<MemoryPoolManager> mem_mgr = MemoryPoolManager::Global();
 // TODO(@junrushao1994): put this in better place
 constexpr int kAllocAlignment = 64;
 
-inline bool IsBoolean(mnm::types::DataType dtype) {
-  return dtype.code == kDLUInt && dtype.bits == 1;
+inline bool IsBoolean(DType dtype) {
+  return dtype.code == DTypeCode::kUInt() && dtype.bits == 1;
 }
 
 inline index_t Numel(const std::vector<int64_t>& shape) {
@@ -29,7 +30,7 @@ inline index_t Numel(const std::vector<int64_t>& shape) {
   return result;
 }
 
-inline void VerifyDataType(mnm::types::DataType dtype) {
+inline void VerifyDataType(DType dtype) {
   // dtype.lanes >= 1
   CHECK_GE(dtype.lanes, 1);
   // special case: bool
@@ -64,7 +65,7 @@ class TSelf::Container::Impl {
     delete ptr;
   }
 
-  static TSelf CreateMeta(std::vector<int64_t> shape, DataType dtype, Context ctx) {
+  static TSelf CreateMeta(std::vector<int64_t> shape, DType dtype, Context ctx) {
     VerifyDataType(dtype);
     // critical zone begins, couldn't fail
     TSelf::Container* data = new TSelf::Container();
@@ -95,7 +96,7 @@ class TSelf::Container::Impl {
     delete tensor;
   }
 
-  static TSelf Empty(std::vector<int64_t> shape, DataType dtype, Context ctx) {
+  static TSelf Empty(std::vector<int64_t> shape, DType dtype, Context ctx) {
     TSelf ret(CreateMeta(shape, dtype, ctx));
     TSelf::Container* data = static_cast<TSelf::Container*>(ret.data_);
     // TODO(@junrushao1994)
@@ -126,8 +127,7 @@ class TSelf::Container::Impl {
   }
 };
 
-TSelf TSelf::Empty(std::vector<int64_t> shape, mnm::types::DataType dtype,
-                   mnm::types::Context ctx) {
+TSelf TSelf::Empty(std::vector<int64_t> shape, DType dtype, Context ctx) {
   return TSelf::Container::Impl::Empty(shape, dtype, ctx);
 }
 

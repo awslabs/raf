@@ -5,7 +5,7 @@
 namespace mnm {
 namespace memory_pool {
 
-using mnm::types::DataType;
+using mnm::types::DType;
 
 class NoPool final : public MemoryPool {
  public:
@@ -13,7 +13,7 @@ class NoPool final : public MemoryPool {
   // FIXME(@junrushao1994): this is not actually correct.
   virtual ~NoPool() = default;
 
-  MemoryChunk* Alloc(size_t nbytes, size_t alignment, DataType type_hint) override {
+  MemoryChunk* Alloc(size_t nbytes, size_t alignment, DType type_hint) override {
     CHECK(f_alloc_ != nullptr) << "f_alloc_ is not defined";
     MemoryChunk* mem = new MemoryChunk();
     mem->data = f_alloc_(nbytes, alignment, type_hint);

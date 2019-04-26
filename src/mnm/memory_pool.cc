@@ -10,8 +10,8 @@ using mnm::device_api::DeviceAPI;
 using mnm::device_api::DeviceAPIManager;
 using mnm::registry::Registry;
 using mnm::types::Context;
-using mnm::types::DataType;
 using mnm::types::DeviceType;
+using mnm::types::DType;
 using PoolPtr = std::unique_ptr<MemoryPool>;
 
 MemoryPool* MemoryPool::Create(const char* name) {
@@ -24,12 +24,10 @@ MemoryPool* MemoryPool::Create(const char* name) {
 }
 
 inline const char* GetDefaultPool(DeviceType device_type) {
-  switch (device_type) {
-    case DeviceType::kDLCPU:
-      return "no_pool";
-    default:
-      LOG(FATAL) << "InternalError: Default memory pool is not defined for " << device_type;
+  if (device_type == DeviceType::kCPU()) {
+    return "no_pool";
   }
+  LOG(FATAL) << "InternalError: Default memory pool is not defined for " << device_type.c_str();
   return nullptr;
 }
 
@@ -40,7 +38,7 @@ class MemoryPoolManager::Impl {
     CHECK(api != nullptr) << "InternalError: device api does not exist";
     int device_id = ctx.device_id;
     pool->ctx_hint_ = ctx;
-    pool->f_alloc_ = [api, device_id](size_t nbytes, size_t alignment, DataType type_hint) {
+    pool->f_alloc_ = [api, device_id](size_t nbytes, size_t alignment, DType type_hint) {
       return api->AllocMemory(device_id, nbytes, alignment, type_hint);
     };
     pool->f_dealloc_ = [api, device_id](void* ptr) { api->DeallocMemory(device_id, ptr); };
@@ -48,7 +46,7 @@ class MemoryPoolManager::Impl {
 
   static inline PoolPtr& GetPoolPtr(MemoryPoolManager* self, Context ctx, const char* name,
                                     bool create_if_missing) {
-    int device_type = int(ctx.device_type);
+    int device_type = ctx.device_type;
     int device_id = ctx.device_id;
     std::vector<PoolPtr>& pool_vec = self->pools_[device_type];
     LOCKED_IF(pool_vec.empty(), self->mutex_, {
@@ -93,7 +91,7 @@ MemoryPool* MemoryPoolManager::Replace(Context ctx, const char* name) {
 }
 
 MemoryChunk* MemoryPoolManager::Alloc(Context ctx, size_t nbytes, size_t alignment,
-                                      DataType type_hint) {
+                                      DType type_hint) {
   return Impl::GetPoolPtr(this, ctx, nullptr, true)->Alloc(nbytes, alignment, type_hint);
 }
 

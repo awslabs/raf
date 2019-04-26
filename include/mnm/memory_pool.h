@@ -56,7 +56,7 @@ class MemoryPoolManager final {
   ~MemoryPoolManager();
   // Return a memory chunk without any ownership
   MemoryChunk* Alloc(mnm::types::Context ctx, size_t nbytes, size_t alignment,
-                     mnm::types::DataType type_hint);
+                     mnm::types::DType type_hint);
   // Find the correct memory pool, and call the dealloc method of the pool
   void Dealloc(mnm::types::Context ctx, MemoryChunk* mem);
   // Replace the memory pool with one with the given name
@@ -84,13 +84,13 @@ class MemoryPool {
 
  protected:
   // TODO(@junrushao1994): try use function pointers / structs if possible
-  using FAlloc = std::function<void*(size_t, size_t, mnm::types::DataType)>;
+  using FAlloc = std::function<void*(size_t, size_t, mnm::types::DType)>;
   using FDealloc = std::function<void(void*)>;
 
  public:
   MemoryPool() = default;
   virtual ~MemoryPool() = default;
-  virtual MemoryChunk* Alloc(size_t nbytes, size_t alignment, mnm::types::DataType type_hint) = 0;
+  virtual MemoryChunk* Alloc(size_t nbytes, size_t alignment, mnm::types::DType type_hint) = 0;
   virtual void Dealloc(MemoryChunk* mem) = 0;
   virtual void DeallocAll() = 0;
 

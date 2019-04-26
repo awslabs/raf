@@ -10,8 +10,8 @@ using mnm::registry::Registry;
 using mnm::types::DeviceType;
 
 DeviceAPI* DeviceAPI::Create(DeviceType device_type, bool allow_missing) {
-  static const std::string prefix("mnm.device_api.");
-  std::string creator_name = prefix + mnm::types::DeviceName(device_type);
+  thread_local char creator_name[128];
+  sprintf(creator_name, "mnm.device_api.%s", device_type.c_str());
   auto creator = Registry::Get(creator_name);
   if (creator == nullptr) {
     CHECK(allow_missing) << "ValueError: DeviceAPI " << creator_name << " is not enabled.";

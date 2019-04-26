@@ -64,7 +64,7 @@ class DeviceAPI {
   virtual ~DeviceAPI() = default;
   virtual int GetNDevices() = 0;
   virtual void* AllocMemory(int device_id, size_t nbytes, size_t alignment,
-                            mnm::types::DataType type_hint) = 0;
+                            mnm::types::DType type_hint) = 0;
   virtual void DeallocMemory(int device_id, void* ptr) = 0;
 
  private:

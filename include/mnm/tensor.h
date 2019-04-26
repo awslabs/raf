@@ -109,8 +109,7 @@ class Tensor : public tvm::runtime::NDArray {
     return TSuper::use_count();
   }
   // Creation
-  static TSelf Empty(std::vector<int64_t> shape, mnm::types::DataType dtype,
-                     mnm::types::Context ctx);
+  static TSelf Empty(std::vector<int64_t> shape, mnm::types::DType dtype, mnm::types::Context ctx);
   // TODO(@junrushao1994): Serialization
   bool Load(dmlc::Stream* stream);
   void Save(dmlc::Stream* stream) const;

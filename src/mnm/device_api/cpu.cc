@@ -6,7 +6,7 @@
 namespace mnm {
 namespace device_api {
 
-using mnm::types::DataType;
+using mnm::types::DType;
 
 class CPUDeviceAPI final : public DeviceAPI {
  public:
@@ -15,7 +15,7 @@ class CPUDeviceAPI final : public DeviceAPI {
   int GetNDevices() override {
     return 1;
   }
-  void* AllocMemory(int device_id, size_t nbytes, size_t alignment, DataType type_hint) override {
+  void* AllocMemory(int device_id, size_t nbytes, size_t alignment, DType type_hint) override {
     CHECK_EQ(device_id, 0) << "InternalError: CPU expect device_id = 0, but got" << device_id;
     void* ptr = nullptr;
     // TODO(@junrushao1994): do not throw like this
