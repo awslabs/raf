@@ -71,7 +71,7 @@ class Tensor : public tvm::runtime::NDArray {
   }
   Tensor(const TSelf& other) : TSuper(other) {
   }
-  explicit Tensor(std::nullptr_t null) : TSuper(nullptr) {
+  Tensor(std::nullptr_t null) : TSuper(nullptr) {
   }
   explicit Tensor(TSelf::Container* data) : TSuper(data) {
   }

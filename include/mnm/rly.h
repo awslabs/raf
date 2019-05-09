@@ -4,6 +4,7 @@
 // We will borrow basically everything from TVM/Relay to here.
 // TODO(@junrushao1994): adt & patterns, op, functors, pass
 
+#include <tvm/node/container.h>
 #include <tvm/relay/base.h>
 #include <tvm/relay/expr.h>
 #include <tvm/relay/module.h>
@@ -13,15 +14,19 @@ namespace mnm {
 namespace rly {
 
 using Node = tvm::Node;
-// template <class T>
-// using NodePtr = tvm::NodePtr<T>;
-using tvm::make_node;
-using tvm::NodePtr;
+template <class T>
+using NodePtr = tvm::NodePtr<T>;
 using NodeRef = tvm::relay::NodeRef;
 using NodeHash = tvm::relay::NodeHash;
 using NodeEqual = tvm::relay::NodeEqual;
 using IndexExpr = tvm::relay::IndexExpr;
 using DataType = tvm::relay::DataType;
+
+using tvm::Array;
+using tvm::Map;
+using Integer = tvm::Integer;
+
+using tvm::make_node;
 
 using SourceName = tvm::relay::SourceName;
 using SourceNameNode = tvm::relay::SourceNameNode;
