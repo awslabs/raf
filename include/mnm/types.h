@@ -8,8 +8,6 @@
 #include <dlpack/dlpack.h>
 #include <dmlc/logging.h>
 #include <tvm/runtime/c_runtime_api.h>
-#include <tvm/runtime/device_api.h>
-#include <tvm/runtime/packed_func.h>
 
 #include <mnm/enum_base.h>
 // TODO(@junrushao1994): replace CHECK with detailed errors
@@ -65,9 +63,13 @@ class Context {
   operator TVMContext() const {
     return TVMContext{DLDeviceType(device_type), device_id};
   }
-  const char* c_str() const {
+  const char* c_str(bool allow_abbr_cpu = false) const {
     thread_local char buffer[128];
-    sprintf(buffer, "%s(%d)", device_type.c_str(), device_id);
+    if (allow_abbr_cpu && device_type == DeviceType::kCPU() && device_id == 0) {
+      sprintf(buffer, "%s", device_type.c_str());
+    } else {
+      sprintf(buffer, "%s(%d)", device_type.c_str(), device_id);
+    }
     return buffer;
   }
 
@@ -79,7 +81,7 @@ class Context {
 class DType {
  public:
   DType() = default;
-  DType(DTypeCode code, int bits, int lanes) : code(code), bits(bits), lanes(lanes) {
+  DType(DTypeCode code, int bits, int lanes = 1) : code(code), bits(bits), lanes(lanes) {
   }
   DType(DLDataType dtype)
       : code(static_cast<DLDataTypeCode>(dtype.code)), bits(dtype.bits), lanes(dtype.lanes) {
@@ -93,7 +95,11 @@ class DType {
   }
   const char* c_str() const {
     thread_local char buffer[128];
-    sprintf(buffer, "%s(bits = %d, lanes = %d)", code.c_str(), bits, lanes);
+    if (lanes == 1) {
+      sprintf(buffer, "%s%d", code.c_str(), bits);
+    } else {
+      sprintf(buffer, "%s%dx%d", code.c_str(), bits, lanes);
+    }
     return buffer;
   }
 
@@ -164,7 +170,7 @@ class index_t_base final {
 
  public:
   template <typename U>
-  U As() const {
+  U as() const {
     MNM_IDX_T_CHECK_OOB(U, v_);
     return static_cast<U>(v_);
   }
@@ -214,6 +220,35 @@ class index_t_base final {
 }  // namespace details
 
 using index_t = details::index_t_base<int64_t>;
+
+inline std::vector<index_t> MakeShape(const std::vector<int64_t>& shape) {
+  int ndim = shape.size();
+  std::vector<index_t> result(ndim, index_t(0));
+  for (int i = 0; i < ndim; ++i) {
+    result[i] = index_t(shape[i]);
+  }
+  return result;
+}
+
+inline std::vector<int64_t> MakePODShape(const std::vector<index_t>& shape) {
+  int ndim = shape.size();
+  std::vector<int64_t> result(ndim);
+  for (int i = 0; i < ndim; ++i) {
+    result[i] = shape[i].as<int64_t>();
+  }
+  return result;
+}
+
+inline std::vector<int64_t> Shape2Strides(const std::vector<int64_t>& shape) {
+  int ndim = shape.size();
+  std::vector<int64_t> strides(ndim);
+  index_t carry{1};
+  for (int i = ndim - 1; i >= 0; --i) {
+    strides[i] = carry.as<int64_t>();
+    carry *= index_t(shape[i]);
+  }
+  return strides;
+}
 
 }  // namespace types
 }  // namespace mnm

@@ -4,6 +4,7 @@
 // We will borrow basically everything from TVM/Relay to here.
 // TODO(@junrushao1994): adt & patterns, op, functors, pass
 
+#include <tvm/attrs.h>
 #include <tvm/node/container.h>
 #include <tvm/relay/base.h>
 #include <tvm/relay/expr.h>
@@ -19,6 +20,9 @@ using NodePtr = tvm::NodePtr<T>;
 using NodeRef = tvm::relay::NodeRef;
 using NodeHash = tvm::relay::NodeHash;
 using NodeEqual = tvm::relay::NodeEqual;
+
+using Attrs = tvm::Attrs;
+
 using IndexExpr = tvm::relay::IndexExpr;
 using DataType = tvm::relay::DataType;
 
@@ -127,11 +131,9 @@ using TypeRelationNode = tvm::relay::TypeRelationNode;
 }  // namespace rly
 }  // namespace mnm
 
-#define MNM_DEF_NODE_REF(TypeName, NodeName, NodeRefBase) \
-  RELAY_DEFINE_NODE_REF(TypeName, NodeName, NodeRefBase)
-
 #define MNM_DEF_NODE_TYPE_INFO(TypeName, Parent) TVM_DECLARE_NODE_TYPE_INFO(TypeName, Parent)
 
 #define MNM_DEF_BASE_NODE_INFO(TypeName, Parent) TVM_DECLARE_BASE_NODE_INFO(TypeName, Parent)
 
-#define MNM_REGISTER_NODE_TYPE(TypeName) TVM_REGISTER_NODE_TYPE(TypeName)
+#define MNM_DEF_NODE_REF_METHODS(TypeName, BaseTypeName, NodeName) \
+  TVM_DEFINE_NODE_REF_METHODS(TypeName, BaseTypeName, NodeName)

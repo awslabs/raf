@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <gtest/gtest.h>
-#include <mnm/device_api.h>
+
 #include <mnm/types.h>
 
 TEST(DimensionType, TextFormat) {

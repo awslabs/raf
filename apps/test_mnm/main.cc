@@ -1,10 +1,15 @@
-#include <dmlc/logging.h>
-#include <mnm/device_api.h>
-#include <mnm/memory_pool.h>
-#include <mnm/tensor.h>
-#include <mnm/types.h>
 #include <cassert>
 #include <iostream>
+
+#include <dmlc/logging.h>
+
+#include <mnm/device_api.h>
+#include <mnm/memory_pool.h>
+#include <mnm/op.h>
+#include <mnm/tensor.h>
+#include <mnm/traced_entry.h>
+#include <mnm/types.h>
+#include <mnm/value.h>
 
 void test_index_type() {
   using index_t = mnm::types::index_t;
