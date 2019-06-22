@@ -19,6 +19,7 @@ class Value : public mnm::rly::NodeRef {
  public:
   MNM_DEF_NODE_REF_METHODS(Value, mnm::rly::NodeRef, ValueNode);
   inline operator const DLTensor*() const;
+  inline operator const mnm::tensor::Tensor&() const;
 };
 
 /* mnm::value::OpaqueValue, used for saving extra opaque states. */
@@ -57,12 +58,12 @@ class ScalarValue final : public Value {
 /* mnm::value::TensorValue */
 class TensorValueNode final : public ValueNode {
  public:
-  mnm::tensor::Tensor data;
+  mnm::tensor::Tensor tensor;
 
   TensorValueNode() = default;
 
   void VisitAttrs(tvm::AttrVisitor* v) final {
-    v->Visit("data", &data);
+    v->Visit("tensor", &tensor);
   }
 
   static constexpr const char* _type_key = "mnm.value.TensorValue";
@@ -72,14 +73,16 @@ class TensorValueNode final : public ValueNode {
 class TensorValue final : public Value {
  public:
   MNM_DEF_NODE_REF_METHODS(TensorValue, Value, TensorValueNode);
+  static TensorValue Assemble(mnm::types::Context ctx,            //
+                              mnm::types::DType dtype,            //
+                              std::vector<int64_t> shape,         //
+                              std::vector<int64_t> strides = {},  //
+                              void* data = nullptr);
 };
 
-/* mnm::value::TupleValue */
 class TupleValueNode final : public ValueNode {
  public:
   mnm::rly::Array<Value> fields;
-
-  TupleValueNode() = default;
 
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("fields", &fields);
@@ -89,7 +92,6 @@ class TupleValueNode final : public ValueNode {
 };
 
 class TupleValue final : public Value {
- public:
   MNM_DEF_NODE_REF_METHODS(TupleValue, Value, TupleValueNode);
 };
 
@@ -107,8 +109,16 @@ class ConstructorValueNode;
 
 inline Value::operator const DLTensor*() const {
   if (auto tensor_value = this->as<TensorValueNode>()) {
-    const DLTensor* dl_tensor_ref = tensor_value->data.operator->();
+    const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
     return dl_tensor_ref;
+  }
+  LOG(FATAL) << "InternalError: cannot convert to TensorValue";
+  throw;
+}
+
+inline Value::operator const mnm::tensor::Tensor&() const {
+  if (const auto* tensor_value = this->as<TensorValueNode>()) {
+    return tensor_value->tensor;
   }
   LOG(FATAL) << "InternalError: cannot convert to TensorValue";
   throw;

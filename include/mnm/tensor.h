@@ -26,8 +26,6 @@ class Tensor : private tvm::runtime::NDArray {
   class TensorContainer;
   class Impl;
 
-  friend TensorContainer;
-  friend Impl;
   friend MNMTester;
   friend mnm::value::TensorValueNode;
 
@@ -57,10 +55,11 @@ class Tensor : private tvm::runtime::NDArray {
   }
 
   // Empty strides indicates contiguous, will generate correct strides automatically
-  static Tensor make(mnm::types::Context ctx,                        //
-                     mnm::types::DType dtype,                        //
-                     std::vector<mnm::types::index_t> shape,         //
-                     std::vector<mnm::types::index_t> strides = {},  //
+  // TODO(@junrushao1994): make it compatible with packed function
+  static Tensor make(mnm::types::Context ctx,            //
+                     mnm::types::DType dtype,            //
+                     std::vector<int64_t> shape,         //
+                     std::vector<int64_t> strides = {},  //
                      void* data = nullptr);
 
  public:

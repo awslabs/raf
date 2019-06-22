@@ -17,6 +17,11 @@ class Executor;
 namespace mnm {
 namespace op {
 
+using Op = tvm::relay::Op;
+
+using FOpMakeOutput = mnm::rly::TypedPackedFunc<mnm::value::Value(
+    const mnm::rly::Array<mnm::value::Value>&, const mnm::rly::Attrs& attrs)>;
+
 class OpBackend {
   using TRegistry = ::dmlc::Registry<OpBackend>;
   using TDeviceRegistry = mnm::registry::PerDeviceTypeStorage<std::vector<OpBackend*>>;

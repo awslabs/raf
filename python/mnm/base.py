@@ -1,3 +1,5 @@
+import sys
+
 from ._ffi import _tvm
 
 
@@ -11,3 +13,18 @@ def register_mnm_node(type_key=None):
         raise ValueError("Unsupported type of type_key: ",
                          type(type_key).__name__)
     return result
+
+
+def set_module(module):
+    def decorator(func):
+        if module is not None:
+            func.__module__ = module
+        return func
+    return decorator
+
+
+def import_to_module(module_name):
+    def decorator(func):
+        module = sys.modules[module_name]
+        setattr(module, func.__name__, func)
+    return decorator

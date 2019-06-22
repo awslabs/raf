@@ -4,14 +4,14 @@
 
 #include <mnm/tensor.h>
 
+#include "./shape_utils.h"
+
 namespace mnm {
 namespace tensor {
 
+using mnm::shape_utils::Shape2Strides;
 using mnm::types::Context;
 using mnm::types::DType;
-using mnm::types::index_t;
-using mnm::types::MakePODShape;
-using mnm::types::Shape2Strides;
 
 class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
  public:
@@ -45,29 +45,22 @@ class Tensor::Impl {
     if (ptr->manager_ctx != nullptr) {
       // View of other tensors
       static_cast<TSuper::Container*>(ptr->manager_ctx)->DecRef();
-    } else if (ptr->array_type_code_ == 0) {
-      // TVM tensor
-      tvm::runtime::DeviceAPI::Get(ptr->dl_tensor.ctx)
-          ->FreeDataSpace(ptr->dl_tensor.ctx, ptr->dl_tensor.data);
     } else {
-      // It must be MNM tensor
       CHECK_EQ(ptr->array_type_code_, kArrayTypeCode);
       // Memory is not owned by MNM tensor, so do nothing
     }
     delete ptr;
   }
 
-  static Tensor Make(Context ctx, DType dtype, std::vector<index_t> shape,
-                     std::vector<index_t> strides, void* data) {
+  static Tensor Make(Context ctx, DType dtype, std::vector<int64_t> shape,
+                     std::vector<int64_t> strides, void* data) {
     if (!strides.empty()) {
       CHECK_EQ(shape.size(), strides.size());
     }
     TensorContainer* container = new TensorContainer(DefaultDeleter);
     Tensor ret(container);
-    container->shape_ = MakePODShape(shape);
-    container->strides_ = strides.size() == 0                     //
-                              ? Shape2Strides(container->shape_)  //
-                              : MakePODShape(strides);
+    container->shape_ = shape;
+    container->strides_ = !strides.empty() ? strides : Shape2Strides(container->shape_);
     container->dl_tensor.data = data;
     container->dl_tensor.ctx = ctx;
     container->dl_tensor.ndim = shape.size();
@@ -86,8 +79,8 @@ int Tensor::array_type_code() const {
   return data_ == nullptr ? -1 : static_cast<Tensor::TensorContainer*>(data_)->array_type_code_;
 }
 
-Tensor Tensor::make(Context ctx, DType dtype, std::vector<index_t> shape,
-                    std::vector<index_t> strides, void* data) {
+Tensor Tensor::make(Context ctx, DType dtype, std::vector<int64_t> shape,
+                    std::vector<int64_t> strides, void* data) {
   return Tensor::Impl::Make(ctx, dtype, shape, strides, data);
 }
 

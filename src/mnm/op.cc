@@ -1,13 +1,19 @@
 #include <dmlc/registry.h>
 
 #include <mnm/op.h>
+#include <mnm/registry.h>
+#include <mnm/rly.h>
 #include <mnm/types.h>
+#include <mnm/value.h>
 
 #include "./requests.h"
 
 using mnm::executor::Executor;
 using mnm::requests::Requests;
+using mnm::rly::Array;
+using mnm::rly::Attrs;
 using mnm::types::Context;
+using mnm::value::Value;
 
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mnm::op::OpBackend);
@@ -119,5 +125,18 @@ void* OpEnv::SetExecutor(Executor* executor) {
   return impl->SetExecutor(executor);
 }
 
+Value MakeOutput(std::string op_name, Array<Value> args, Attrs attrs) {
+  static const auto f_op_make_output = Op::GetAttr<FOpMakeOutput>("FOpMakeOutput");
+  const auto& f = f_op_make_output[Op::Get(op_name)];
+  return f(args, attrs);
+}
+
+Attrs MakeDummyAttrs() {
+  return Attrs();
+}
+
 }  // namespace op
 }  // namespace mnm
+
+MNM_REGISTER_GLOBAL("mnm.op.MakeOutput").set_body_typed(mnm::op::MakeOutput);
+MNM_REGISTER_GLOBAL("mnm.attrs._make.Dummy").set_body_typed(mnm::op::MakeDummyAttrs);

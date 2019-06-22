@@ -9,10 +9,17 @@
 #include <tvm/relay/base.h>
 #include <tvm/relay/expr.h>
 #include <tvm/relay/module.h>
+#include <tvm/relay/op.h>
 #include <tvm/relay/type.h>
 
 namespace mnm {
 namespace rly {
+
+using tvm::Int;
+using tvm::IntImm;
+using tvm::make_const;
+using tvm::make_node;
+using tvm::runtime::TypedPackedFunc;
 
 using Node = tvm::Node;
 template <class T>
@@ -21,6 +28,8 @@ using NodeRef = tvm::relay::NodeRef;
 using NodeHash = tvm::relay::NodeHash;
 using NodeEqual = tvm::relay::NodeEqual;
 
+template <class T>
+using AttrsNode = tvm::AttrsNode<T>;
 using Attrs = tvm::Attrs;
 
 using IndexExpr = tvm::relay::IndexExpr;
@@ -128,6 +137,8 @@ using TypeConstraintNode = tvm::relay::TypeConstraintNode;
 using TypeRelation = tvm::relay::TypeRelation;
 using TypeRelationNode = tvm::relay::TypeRelationNode;
 
+using TypeReporter = tvm::relay::TypeReporter;
+
 }  // namespace rly
 }  // namespace mnm
 
@@ -137,3 +148,13 @@ using TypeRelationNode = tvm::relay::TypeRelationNode;
 
 #define MNM_DEF_NODE_REF_METHODS(TypeName, BaseTypeName, NodeName) \
   TVM_DEFINE_NODE_REF_METHODS(TypeName, BaseTypeName, NodeName)
+
+#define MNM_DECLARE_ATTRS TVM_DECLARE_ATTRS
+
+#define MNM_ATTR_FIELD TVM_ATTR_FIELD
+
+#define MNM_REGISTER_NODE_TYPE TVM_REGISTER_NODE_TYPE
+
+#define MNM_REGISTER_OP RELAY_REGISTER_OP
+
+#define MNM_ADD_FILELINE TVM_ADD_FILELINE

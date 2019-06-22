@@ -1,3 +1,4 @@
 [submodule "3rdparty/tvm"]
 	path = 3rdparty/tvm
-	url = https://github.com/dmlc/tvm
+	url = https://github.com/junrushao1994/tvm
+	branch = fork-2019-06-20
