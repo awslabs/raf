@@ -4,7 +4,7 @@
 
 #include <tvm/runtime/ndarray.h>
 
-#include <mnm/types.h>
+#include <mnm/base.h>
 
 class MNMTester;
 
@@ -20,14 +20,14 @@ namespace tensor {
 constexpr int kArrayTypeCode = 1;
 
 class Tensor : private tvm::runtime::NDArray {
-  using TSelf = mnm::tensor::Tensor;
-  using TSuper = tvm::runtime::NDArray;
+  using TSelf = ::mnm::tensor::Tensor;
+  using TSuper = ::tvm::runtime::NDArray;
 
   class TensorContainer;
   class Impl;
 
   friend MNMTester;
-  friend mnm::value::TensorValueNode;
+  friend value::TensorValueNode;
 
  public:
   inline Tensor() = default;
@@ -56,11 +56,8 @@ class Tensor : private tvm::runtime::NDArray {
 
   // Empty strides indicates contiguous, will generate correct strides automatically
   // TODO(@junrushao1994): make it compatible with packed function
-  static Tensor make(mnm::types::Context ctx,            //
-                     mnm::types::DType dtype,            //
-                     std::vector<int64_t> shape,         //
-                     std::vector<int64_t> strides = {},  //
-                     void* data = nullptr);
+  static Tensor make(Context ctx, DType dtype, std::vector<int64_t> shape,
+                     std::vector<int64_t> strides = {}, void* data = nullptr);
 
  public:
   // const DLTensor* operator->() const;

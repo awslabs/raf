@@ -38,7 +38,9 @@ class EnumBase {
   using plain_t = _plain_t;
   static constexpr int numel = _numel;
   EnumBase(_underlying _v) : v(_v) {
-    CHECK(0 <= v && v < numel);
+    if (!(0 <= v && v < numel)) {
+      throw;
+    }
   }
   int v;
 
@@ -96,7 +98,7 @@ class EnumBase {
     return plain();                                      \
   }
 
-#define ENUM_DEF_ENTRY_WITH_NAME(type, name, value, plain_value, name_str) \
+#define ENUM_DEF_ENTRY_WITH_NAME(type, value, name, plain_value, name_str) \
   type(_integral_constant<value>) : EnumBase(value) {                      \
   }                                                                        \
   using name = _integral_constant<value>;                                  \

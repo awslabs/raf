@@ -1,12 +1,9 @@
 #include <dmlc/logging.h>
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
-#include <mnm/types.h>
 
 namespace mnm {
 namespace device_api {
-
-using mnm::types::DType;
 
 class CPUDeviceAPI final : public DeviceAPI {
  public:

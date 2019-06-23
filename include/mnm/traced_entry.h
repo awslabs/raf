@@ -6,11 +6,11 @@
 namespace mnm {
 namespace trace_entry {
 
-class TraceEntryNode : public mnm::rly::Node {
+class TraceEntryNode : public rly::Node {
  public:
-  mnm::rly::Expr expr;
-  mnm::value::Value value;
-  mnm::rly::Array<mnm::rly::NodeRef> dep;
+  rly::Expr expr;
+  value::Value value;
+  rly::Array<rly::NodeRef> dep;
   // TODO(@junrushao1994): maybe fine-grained lock here for multi-threaded inference
 
   void VisitAttrs(tvm::AttrVisitor* v) final {
@@ -20,12 +20,12 @@ class TraceEntryNode : public mnm::rly::Node {
   }
 
   static constexpr const char* _type_key = "mnm.trace_entry.TraceEntry";
-  MNM_DEF_NODE_TYPE_INFO(TraceEntryNode, mnm::rly::Node);
+  MNM_DEF_NODE_TYPE_INFO(TraceEntryNode, rly::Node);
 };
 
-class TraceEntry final : public mnm::rly::NodeRef {
+class TraceEntry final : public rly::NodeRef {
  public:
-  MNM_DEF_NODE_REF_METHODS(TraceEntry, mnm::rly::NodeRef, TraceEntryNode);
+  MNM_DEF_NODE_REF_METHODS(TraceEntry, rly::NodeRef, TraceEntryNode);
 };
 
 }  // namespace trace_entry

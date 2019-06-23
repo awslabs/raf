@@ -1,7 +1,6 @@
 #include <mnm/op.h>
 #include <mnm/rly.h>
 #include <mnm/tensor.h>
-#include <mnm/types.h>
 #include <mnm/value.h>
 
 /*
@@ -14,18 +13,18 @@ namespace mnm {
 namespace op {
 namespace batch_flatten {
 
-using mnm::rly::Array;
-using mnm::rly::Attrs;
-using mnm::rly::AttrsNode;
-using mnm::rly::Int;
-using mnm::rly::make_const;
-using mnm::rly::make_node;
-using mnm::rly::TensorTypeNode;
-using mnm::rly::Type;
-using mnm::rly::TypeReporter;
-using mnm::tensor::Tensor;
-using mnm::value::TensorValue;
-using mnm::value::Value;
+using rly::Array;
+using rly::Attrs;
+using rly::AttrsNode;
+using rly::Int;
+using rly::make_const;
+using rly::make_node;
+using rly::TensorTypeNode;
+using rly::Type;
+using rly::TypeReporter;
+using tensor::Tensor;
+using value::TensorValue;
+using value::Value;
 
 bool BatchFlattenRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
                      const TypeReporter& reporter) {

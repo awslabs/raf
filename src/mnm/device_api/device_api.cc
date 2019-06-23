@@ -1,15 +1,12 @@
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
 
-#include "./commons.h"
-
 namespace mnm {
 namespace device_api {
 
-using mnm::registry::Registry;
-using mnm::types::DeviceType;
+using registry::Registry;
 
-DeviceAPI* DeviceAPI::Create(DeviceType device_type, bool allow_missing) {
+DeviceAPI* DeviceAPI::Create(DevType device_type, bool allow_missing) {
   thread_local char creator_name[128];
   sprintf(creator_name, "mnm.device_api.%s", device_type.c_str());
   auto creator = Registry::Get(creator_name);
@@ -21,9 +18,11 @@ DeviceAPI* DeviceAPI::Create(DeviceType device_type, bool allow_missing) {
   return static_cast<DeviceAPI*>(ret);
 }
 
-DeviceAPI* DeviceAPIManager::GetAPI(DeviceType device_type, bool allow_missing) {
+DeviceAPI* DeviceAPIManager::GetAPI(DevType device_type, bool allow_missing) {
   APIPtr& api = api_[int(device_type)];
-  LOCKED_IF(api == nullptr, mutex_, api.reset(DeviceAPI::Create(device_type, allow_missing)));
+  if (api == nullptr) {
+    api.reset(DeviceAPI::Create(device_type, allow_missing));
+  }
   return api.get();
 }
 

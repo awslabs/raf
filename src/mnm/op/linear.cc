@@ -1,10 +1,7 @@
 #include <mnm/op.h>
 #include <mnm/rly.h>
 #include <mnm/tensor.h>
-#include <mnm/types.h>
 #include <mnm/value.h>
-
-#include "../shape_utils.h"
 
 /*
  * See also:
@@ -19,16 +16,15 @@ namespace mnm {
 namespace op {
 namespace linear {
 
-using mnm::rly::Array;
-using mnm::rly::Attrs;
-using mnm::rly::IndexExpr;
-using mnm::rly::TensorTypeNode;
-using mnm::rly::Type;
-using mnm::rly::TypeReporter;
-using mnm::shape_utils::MakeShape;
-using mnm::tensor::Tensor;
-using mnm::value::TensorValue;
-using mnm::value::Value;
+using rly::Array;
+using rly::Attrs;
+using rly::IndexExpr;
+using rly::TensorTypeNode;
+using rly::Type;
+using rly::TypeReporter;
+using tensor::Tensor;
+using value::TensorValue;
+using value::Value;
 
 bool LinearRel(const Array<Type>& types,  //
                int num_inputs,            //

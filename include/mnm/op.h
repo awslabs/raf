@@ -3,9 +3,9 @@
 #include <utility>
 #include <vector>
 
+#include <mnm/base.h>
 #include <mnm/registry.h>
 #include <mnm/rly.h>
-#include <mnm/types.h>
 #include <mnm/value.h>
 
 namespace mnm {
@@ -19,23 +19,23 @@ namespace op {
 
 using Op = tvm::relay::Op;
 
-using FOpMakeOutput = mnm::rly::TypedPackedFunc<mnm::value::Value(
-    const mnm::rly::Array<mnm::value::Value>&, const mnm::rly::Attrs& attrs)>;
+using FOpMakeOutput =
+    rly::TypedPackedFunc<value::Value(const rly::Array<value::Value>&, const rly::Attrs& attrs)>;
 
 class OpBackend {
   using TRegistry = ::dmlc::Registry<OpBackend>;
-  using TDeviceRegistry = mnm::registry::PerDeviceTypeStorage<std::vector<OpBackend*>>;
+  using TDeviceRegistry = registry::PerDeviceTypeStorage<std::vector<OpBackend*>>;
 
  public:
   OpBackend() = default;
 
-  inline OpBackend& set_name(const std::string& name);
+  OpBackend& set_name(const std::string& name);
 
   // For heteregenous, make device = kExtDev
-  inline OpBackend& set_device(mnm::types::DeviceType device);
+  OpBackend& set_device(DevType device);
 
   // TODO(@junrushao1994): this is not good to allow the library itself to set its own priority
-  inline OpBackend& set_priority(int priority);
+  OpBackend& set_priority(int priority);
 
  public:
   static TRegistry* Registry();
@@ -46,32 +46,31 @@ class OpBackend {
 
  public:
   std::string name;
-  mnm::types::DeviceType device = mnm::types::DeviceType::kUnknown();
+  DevType device = DevType::kUnknown();
   int priority = 0;
 };
 
 class OpDispatch {
-  using FMakeOpEnv = std::function<void*(mnm::rly::Array<mnm::value::Value>, mnm::rly::Attrs)>;
+  using FMakeOpEnv = std::function<void*(rly::Array<value::Value>, rly::Attrs)>;
   using TDispatchList = std::vector<std::pair<OpBackend*, FMakeOpEnv>>;
   using TRegistry = ::dmlc::Registry<OpDispatch>;
 
  public:
   OpDispatch() = default;
 
-  inline OpDispatch& set_name(const std::string& name);
+  OpDispatch& set_name(const std::string& name);
 
-  inline OpDispatch& add_dispatch(mnm::types::DeviceType device_type,  //
-                                  const std::string& backend_name,     //
-                                  const FMakeOpEnv& op_env_maker);
+  OpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
+                           const FMakeOpEnv& op_env_maker);
 
  public:
   static TRegistry* Registry();
 
-  static TDispatchList& Get(const std::string& op_name, mnm::types::DeviceType device_type);
+  static TDispatchList& Get(const std::string& op_name, DevType device_type);
 
  public:
   std::string name;
-  mnm::registry::PerDeviceTypeStorage<TDispatchList> dispatch;
+  registry::PerDeviceTypeStorage<TDispatchList> dispatch;
 };
 
 class OpEnv {
@@ -91,21 +90,21 @@ class OpEnv {
   OpEnv();
   virtual ~OpEnv();
 
-  void RequestMemory(void** dest, mnm::types::Context ctx, int64_t nbytes);
-  void RequestWorkspace(void** dest, mnm::types::Context ctx, int64_t nbytes);
-  void RequestStream(void** dest, mnm::types::Context ctx);
+  void RequestMemory(void** dest, Context ctx, int64_t nbytes);
+  void RequestWorkspace(void** dest, Context ctx, int64_t nbytes);
+  void RequestStream(void** dest, Context ctx);
   void RequestDistributed(void** dest);
 
  public:
   // TODO: try TVMArgs
-  virtual void Execute(mnm::rly::Array<mnm::value::Value> args, mnm::rly::Attrs attrs) = 0;
+  virtual void Execute(rly::Array<value::Value> args, rly::Attrs attrs) = 0;
 
  private:
   /*
    * When executor is nullptr, resource allocation is in lazy phase; Otherwise it is eager.
-   * Returns type-erased `mnm::requests::Requests *` because don't want to expose it in header
+   * Returns type-erased `requests::Requests *` because don't want to expose it in header
    */
-  void* SetExecutor(mnm::executor::Executor* executor);
+  void* SetExecutor(executor::Executor* executor);
 
   class Impl;
   std::unique_ptr<Impl> impl;
@@ -132,50 +131,3 @@ class OpEnv {
           ->__REGISTER_OR_GET__(op_name)                                   \
           .set_name(op_name)                                               \
           .add_dispatch(ctx, backend_name, op_env_maker)
-
-// implementation
-
-namespace mnm {
-namespace op {
-
-inline OpBackend& OpBackend::set_name(const std::string& name) {
-  this->name = name;
-  return *this;
-}
-
-inline OpBackend& OpBackend::set_device(mnm::types::DeviceType device) {
-  CHECK(this->device == mnm::types::DeviceType::kUnknown()) << "Cannot set backend's device twice";
-  this->device = device;
-  DeviceRegistry()->Write(device.operator int(),
-                          [this](auto list) -> void { list->push_back(this); });
-  return *this;
-}
-
-inline OpBackend& OpBackend::set_priority(int priority) {
-  this->priority = priority;
-  return *this;
-}
-
-inline OpDispatch& OpDispatch::set_name(const std::string& name) {
-  this->name = name;
-  return *this;
-}
-
-inline OpDispatch& OpDispatch::add_dispatch(mnm::types::DeviceType device_type,  //
-                                            const std::string& backend_name,     //
-                                            const FMakeOpEnv& op_env_maker) {
-  OpBackend* backend = OpBackend::Get(backend_name);
-  dispatch.Write(device_type, [&](TDispatchList* list) {
-    for (const auto& e : *list) {
-      if (e.first == backend) {
-        LOG(FATAL) << "InternalError: operator " << name
-                   << " already has an implementation on backend " << backend_name;
-      }
-    }
-    list->push_back(std::make_pair(backend, op_env_maker));
-  });
-  return *this;
-}
-
-}  // namespace op
-}  // namespace mnm

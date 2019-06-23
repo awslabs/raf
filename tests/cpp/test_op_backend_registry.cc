@@ -3,15 +3,17 @@
 
 #include <gtest/gtest.h>
 
+#include <mnm/base.h>
 #include <mnm/op.h>
-#include <mnm/types.h>
+
+using mnm::DevType;
 
 MNM_REGISTER_OP_BACKEND("cuShallowNN")  //
-    .set_device(mnm::types::DeviceType::kGPU())
+    .set_device(DevType::kGPU())
     .set_priority(10);
 
 MNM_REGISTER_OP_BACKEND("mklShallowNN")  //
-    .set_device(mnm::types::DeviceType::kCPU())
+    .set_device(DevType::kCPU())
     .set_priority(20);
 
 TEST(OpBackend, Registry) {

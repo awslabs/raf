@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mnm/types.h>
+#include <mnm/base.h>
 
 namespace mnm {
 namespace requests {
@@ -9,19 +9,19 @@ class Requests {
  public:
   struct MemoryRequest {
     void** dest;
-    mnm::types::Context ctx;
+    Context ctx;
     int64_t nbytes;
   };
 
   struct WorkspaceRequest {
     void** dest;
-    mnm::types::Context ctx;
+    Context ctx;
     int64_t nbytes;
   };
 
   struct StreamRequest {
     void** dest;
-    mnm::types::Context ctx;
+    Context ctx;
   };
 
   struct DistRequest {

@@ -2,27 +2,28 @@
 
 #include <dlpack/dlpack.h>
 
+#include <mnm/base.h>
 #include <mnm/rly.h>
 #include <mnm/tensor.h>
 
 namespace mnm {
 namespace value {
 
-/* mnm::value::Value */
-class ValueNode : public mnm::rly::Node {
+/* Value */
+class ValueNode : public rly::Node {
  public:
   static constexpr const char* _type_key = "mnm.value.Value";
-  MNM_DEF_BASE_NODE_INFO(ValueNode, mnm::rly::Node);
+  MNM_DEF_BASE_NODE_INFO(ValueNode, rly::Node);
 };
 
-class Value : public mnm::rly::NodeRef {
+class Value : public rly::NodeRef {
  public:
-  MNM_DEF_NODE_REF_METHODS(Value, mnm::rly::NodeRef, ValueNode);
-  inline operator const DLTensor*() const;
-  inline operator const mnm::tensor::Tensor&() const;
+  MNM_DEF_NODE_REF_METHODS(Value, rly::NodeRef, ValueNode);
+  operator const DLTensor*() const;
+  operator const tensor::Tensor&() const;
 };
 
-/* mnm::value::OpaqueValue, used for saving extra opaque states. */
+/* OpaqueValue */
 class OpaqueValueNode : public ValueNode {
  public:
   static constexpr const char* _type_key = "mnm.value.OpaqueValue";
@@ -34,11 +35,11 @@ class OpaqueValue : public Value {
   MNM_DEF_NODE_REF_METHODS(OpaqueValue, Value, ValueNode);
 };
 
-/* mnm::value::ScalarValue */
+/* ScalarValue */
 class ScalarValueNode final : public ValueNode {
  public:
   // TODO(@junrushao1994): we need both int64 and float64, probably string?
-  mnm::rly::Integer data;
+  rly::Integer data;
 
   ScalarValueNode() = default;
 
@@ -55,10 +56,10 @@ class ScalarValue final : public Value {
   MNM_DEF_NODE_REF_METHODS(ScalarValue, Value, ScalarValueNode);
 };
 
-/* mnm::value::TensorValue */
+/* TensorValue */
 class TensorValueNode final : public ValueNode {
  public:
-  mnm::tensor::Tensor tensor;
+  tensor::Tensor tensor;
 
   TensorValueNode() = default;
 
@@ -73,16 +74,17 @@ class TensorValueNode final : public ValueNode {
 class TensorValue final : public Value {
  public:
   MNM_DEF_NODE_REF_METHODS(TensorValue, Value, TensorValueNode);
-  static TensorValue Assemble(mnm::types::Context ctx,            //
-                              mnm::types::DType dtype,            //
+  static TensorValue Assemble(Context ctx,                        //
+                              DType dtype,                        //
                               std::vector<int64_t> shape,         //
                               std::vector<int64_t> strides = {},  //
                               void* data = nullptr);
 };
 
+/* TupleValue */
 class TupleValueNode final : public ValueNode {
  public:
-  mnm::rly::Array<Value> fields;
+  rly::Array<Value> fields;
 
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("fields", &fields);
@@ -95,34 +97,17 @@ class TupleValue final : public Value {
   MNM_DEF_NODE_REF_METHODS(TupleValue, Value, TupleValueNode);
 };
 
-/* mnm::value::ClosureValue */
+/* ClosureValue */
 class ClosureValue;
 class ClosureValueNode;
 
-/* mnm::value::RefValue */
+/* RefValue */
 class RefValue;
 class RefValueNode;
 
-/* mnm::value::ConstructorValue */
+/* ConstructorValue */
 class ConstructorValue;
 class ConstructorValueNode;
-
-inline Value::operator const DLTensor*() const {
-  if (auto tensor_value = this->as<TensorValueNode>()) {
-    const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
-    return dl_tensor_ref;
-  }
-  LOG(FATAL) << "InternalError: cannot convert to TensorValue";
-  throw;
-}
-
-inline Value::operator const mnm::tensor::Tensor&() const {
-  if (const auto* tensor_value = this->as<TensorValueNode>()) {
-    return tensor_value->tensor;
-  }
-  LOG(FATAL) << "InternalError: cannot convert to TensorValue";
-  throw;
-}
 
 }  // namespace value
 }  // namespace mnm

@@ -3,17 +3,9 @@
 #include <mnm/op.h>
 #include <mnm/registry.h>
 #include <mnm/rly.h>
-#include <mnm/types.h>
 #include <mnm/value.h>
 
-#include "./requests.h"
-
-using mnm::executor::Executor;
-using mnm::requests::Requests;
-using mnm::rly::Array;
-using mnm::rly::Attrs;
-using mnm::types::Context;
-using mnm::value::Value;
+#include "../requests.h"
 
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mnm::op::OpBackend);
@@ -22,6 +14,51 @@ DMLC_REGISTRY_ENABLE(::mnm::op::OpDispatch);
 
 namespace mnm {
 namespace op {
+
+using executor::Executor;
+using requests::Requests;
+using rly::Array;
+using rly::Attrs;
+using value::Value;
+
+OpBackend& OpBackend::set_name(const std::string& name) {
+  this->name = name;
+  return *this;
+}
+
+OpBackend& OpBackend::set_device(DevType device) {
+  CHECK(this->device == DevType::kUnknown()) << "Cannot set backend's device twice";
+  this->device = device;
+  DeviceRegistry()->Write(device.operator int(),
+                          [this](auto list) -> void { list->push_back(this); });
+  return *this;
+}
+
+OpBackend& OpBackend::set_priority(int priority) {
+  this->priority = priority;
+  return *this;
+}
+
+OpDispatch& OpDispatch::set_name(const std::string& name) {
+  this->name = name;
+  return *this;
+}
+
+OpDispatch& OpDispatch::add_dispatch(DevType device_type,              //
+                                     const std::string& backend_name,  //
+                                     const FMakeOpEnv& op_env_maker) {
+  OpBackend* backend = OpBackend::Get(backend_name);
+  dispatch.Write(device_type, [&](TDispatchList* list) {
+    for (const auto& e : *list) {
+      if (e.first == backend) {
+        LOG(FATAL) << "InternalError: operator " << name
+                   << " already has an implementation on backend " << backend_name;
+      }
+    }
+    list->push_back(std::make_pair(backend, op_env_maker));
+  });
+  return *this;
+}
 
 OpBackend::TDeviceRegistry* OpBackend::DeviceRegistry() {
   static OpBackend::TDeviceRegistry* registry = new OpBackend::TDeviceRegistry();
@@ -32,8 +69,7 @@ OpBackend* OpBackend::Get(const std::string& name) {
   return &Registry()->__REGISTER_OR_GET__(name);
 }
 
-OpDispatch::TDispatchList& OpDispatch::Get(const std::string& op_name,
-                                           mnm::types::DeviceType device_type) {
+OpDispatch::TDispatchList& OpDispatch::Get(const std::string& op_name, DevType device_type) {
   OpDispatch& op_dispatch = Registry()->__REGISTER_OR_GET__(op_name);
   TDispatchList* ret = nullptr;
   op_dispatch.dispatch.Read(device_type, [&ret](TDispatchList* list) { ret = list; });
@@ -135,8 +171,8 @@ Attrs MakeDummyAttrs() {
   return Attrs();
 }
 
+MNM_REGISTER_GLOBAL("mnm.op.MakeOutput").set_body_typed(MakeOutput);
+MNM_REGISTER_GLOBAL("mnm.attrs._make.Dummy").set_body_typed(MakeDummyAttrs);
+
 }  // namespace op
 }  // namespace mnm
-
-MNM_REGISTER_GLOBAL("mnm.op.MakeOutput").set_body_typed(mnm::op::MakeOutput);
-MNM_REGISTER_GLOBAL("mnm.attrs._make.Dummy").set_body_typed(mnm::op::MakeDummyAttrs);

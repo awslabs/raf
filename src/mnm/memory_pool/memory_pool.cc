@@ -1,17 +1,12 @@
 #include <mnm/memory_pool.h>
 #include <mnm/registry.h>
 
-#include "./commons.h"
-
 namespace mnm {
 namespace memory_pool {
 
-using mnm::device_api::DeviceAPI;
-using mnm::device_api::DeviceAPIManager;
-using mnm::registry::Registry;
-using mnm::types::Context;
-using mnm::types::DeviceType;
-using mnm::types::DType;
+using device_api::DeviceAPI;
+using device_api::DeviceAPIManager;
+using registry::Registry;
 using PoolPtr = std::unique_ptr<MemoryPool>;
 
 MemoryPool* MemoryPool::Create(const char* name) {
@@ -23,8 +18,8 @@ MemoryPool* MemoryPool::Create(const char* name) {
   return static_cast<MemoryPool*>(ret);
 }
 
-inline const char* GetDefaultPool(DeviceType device_type) {
-  if (device_type == DeviceType::kCPU()) {
+inline const char* GetDefaultPool(DevType device_type) {
+  if (device_type == DevType::kCPU()) {
     return "no_pool";
   }
   LOG(FATAL) << "InternalError: Default memory pool is not defined for " << device_type.c_str();
@@ -49,22 +44,22 @@ class MemoryPoolManager::Impl {
     int device_type = ctx.device_type;
     int device_id = ctx.device_id;
     std::vector<PoolPtr>& pool_vec = self->pools_[device_type];
-    LOCKED_IF(pool_vec.empty(), self->mutex_, {
+    if (pool_vec.empty()) {
       DeviceAPI* api = self->device_api_manager_->GetAPI(ctx.device_type, false);
       int n_devices = api->GetNDevices();
       CHECK_LT(device_id, n_devices) << "ValueError: Device " << device_id << " not found.";
       pool_vec.resize(n_devices);
-    });
+    }
     int n_devices = pool_vec.size();
     CHECK_LT(device_id, n_devices) << "ValueError: Device " << device_id << " not found.";
     PoolPtr& ptr = pool_vec[device_id];
-    LOCKED_IF(create_if_missing && ptr == nullptr, self->mutex_, {
+    if (create_if_missing && ptr == nullptr) {
       if (name == nullptr) {
         name = GetDefaultPool(ctx.device_type);
       }
       ptr.reset(MemoryPool::Create(name));
       MemoryPoolManager::Impl::SetMemoryPool(self, ptr.get(), ctx);
-    });
+    }
     return ptr;
   }
 };

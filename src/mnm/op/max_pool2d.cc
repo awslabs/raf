@@ -1,10 +1,7 @@
 #include <mnm/op.h>
 #include <mnm/rly.h>
 #include <mnm/tensor.h>
-#include <mnm/types.h>
 #include <mnm/value.h>
-
-#include "../shape_utils.h"
 
 /*
  * See also:
@@ -18,22 +15,21 @@ namespace mnm {
 namespace op {
 namespace max_pool2d {
 
-using mnm::rly::Array;
-using mnm::rly::Attrs;
-using mnm::rly::AttrsNode;
-using mnm::rly::IndexExpr;
-using mnm::rly::Int;
-using mnm::rly::Integer;
-using mnm::rly::make_const;
-using mnm::rly::make_node;
-using mnm::rly::TensorTypeNode;
-using mnm::rly::Type;
-using mnm::rly::TypeReporter;
-using mnm::shape_utils::MakeShape;
-using mnm::tensor::Tensor;
-using mnm::value::TensorValue;
-using mnm::value::TensorValueNode;
-using mnm::value::Value;
+using rly::Array;
+using rly::Attrs;
+using rly::AttrsNode;
+using rly::IndexExpr;
+using rly::Int;
+using rly::Integer;
+using rly::make_const;
+using rly::make_node;
+using rly::TensorTypeNode;
+using rly::Type;
+using rly::TypeReporter;
+using tensor::Tensor;
+using value::TensorValue;
+using value::TensorValueNode;
+using value::Value;
 
 class MaxPool2DAttrs : public AttrsNode<MaxPool2DAttrs> {
  public:
@@ -135,7 +131,7 @@ Value MaxPool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
     w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
   }
   return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype,
-                               /*shape=*/MakeShape({n_in, c_in, h_out, w_out}));
+                               /*shape=*/{n_in, c_in, h_out, w_out});
 }
 
 MNM_REGISTER_NODE_TYPE(MaxPool2DAttrs);

@@ -3,14 +3,14 @@
 
 #include <gtest/gtest.h>
 
+#include <mnm/base.h>
 #include <mnm/op.h>
-#include <mnm/types.h>
 
+using mnm::DevType;
 using mnm::op::OpDispatch;
 using mnm::op::OpEnv;
 using mnm::rly::Array;
 using mnm::rly::Attrs;
-using mnm::types::DeviceType;
 using mnm::value::Value;
 
 class Conv2d : public OpEnv {
@@ -40,7 +40,7 @@ class Conv2dX : public Conv2d {
   }
 };
 
-MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DeviceType::kCPU(), "mklShallowNN", Conv2dX::make);
+MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DevType::kCPU(), "mklShallowNN", Conv2dX::make);
 
 // Implement 1 of "mnm.conv2d"
 class Conv2dY : public Conv2d {
@@ -56,10 +56,10 @@ class Conv2dY : public Conv2d {
   }
 };
 
-MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DeviceType::kCPU(), "sshadow", Conv2dY::make);
+MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DevType::kCPU(), "sshadow", Conv2dY::make);
 
 TEST(OpDispatch, Registry) {
-  const auto& dispatch_list = OpDispatch::Get("mnm.conv2d", DeviceType::kCPU());
+  const auto& dispatch_list = OpDispatch::Get("mnm.conv2d", DevType::kCPU());
   ASSERT_EQ(dispatch_list.size(), 2);
   Array<Value> args;
   Attrs attrs;

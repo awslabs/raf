@@ -6,8 +6,8 @@
 #include <mutex>
 #include <vector>
 
+#include <mnm/base.h>
 #include <mnm/device_api.h>
-#include <mnm/types.h>
 
 namespace mnm {
 namespace memory_pool {
@@ -39,7 +39,7 @@ struct MemoryChunk {
 
 class MemoryPoolManager final {
   // TODO(@junrushao1994): put it to a better place
-  static constexpr int kMaxDeviceAPI = mnm::device_api::DeviceAPIManager::kMaxDeviceAPI;
+  static constexpr int kMaxDeviceAPI = device_api::DeviceAPIManager::kMaxDeviceAPI;
   // Manager has exclusive ownership over the pools.
   using PoolPtr = std::unique_ptr<MemoryPool>;
 
@@ -53,12 +53,11 @@ class MemoryPoolManager final {
   // deallocator specifies the destruction order
   ~MemoryPoolManager();
   // Return a memory chunk without any ownership
-  MemoryChunk* Alloc(mnm::types::Context ctx, size_t nbytes, size_t alignment,
-                     mnm::types::DType type_hint);
+  MemoryChunk* Alloc(Context ctx, size_t nbytes, size_t alignment, DType type_hint);
   // Find the correct memory pool, and call the dealloc method of the pool
-  void Dealloc(mnm::types::Context ctx, MemoryChunk* mem);
+  void Dealloc(Context ctx, MemoryChunk* mem);
   // Replace the memory pool with one with the given name
-  MemoryPool* Replace(mnm::types::Context ctx, const char* name);
+  MemoryPool* Replace(Context ctx, const char* name);
 
  public:
   // Global singleton
@@ -72,8 +71,8 @@ class MemoryPoolManager final {
   std::mutex mutex_;
 
  private:
-  std::shared_ptr<mnm::device_api::DeviceAPIManager> device_api_manager_{
-      mnm::device_api::DeviceAPIManager::Global()};
+  std::shared_ptr<device_api::DeviceAPIManager> device_api_manager_{
+      device_api::DeviceAPIManager::Global()};
 };
 
 class MemoryPool {
@@ -82,13 +81,13 @@ class MemoryPool {
 
  protected:
   // TODO(@junrushao1994): try use function pointers / structs if possible
-  using FAlloc = std::function<void*(size_t, size_t, mnm::types::DType)>;
+  using FAlloc = std::function<void*(size_t, size_t, DType)>;
   using FDealloc = std::function<void(void*)>;
 
  public:
   MemoryPool() = default;
   virtual ~MemoryPool() = default;
-  virtual MemoryChunk* Alloc(size_t nbytes, size_t alignment, mnm::types::DType type_hint) = 0;
+  virtual MemoryChunk* Alloc(size_t nbytes, size_t alignment, DType type_hint) = 0;
   virtual void Dealloc(MemoryChunk* mem) = 0;
   virtual void DeallocAll() = 0;
 
@@ -96,7 +95,7 @@ class MemoryPool {
   static MemoryPool* Create(const char* name);
 
  protected:
-  mnm::types::Context ctx_hint_;
+  Context ctx_hint_;
   FAlloc f_alloc_{nullptr};
   FDealloc f_dealloc_{nullptr};
 };

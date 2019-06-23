@@ -1,12 +1,12 @@
 #include <vector>
 
 #include <mnm/rly.h>
-#include <mnm/types.h>
 
 namespace mnm {
+namespace common {
 namespace shape_utils {
 
-inline std::vector<int64_t> MakeShape(const mnm::rly::Array<mnm::rly::Integer>& shape) {
+inline std::vector<int64_t> MakeShape(const rly::Array<rly::Integer>& shape) {
   int ndim = shape.size();
   std::vector<int64_t> result(ndim);
   for (int i = 0; i < ndim; ++i) {
@@ -27,4 +27,5 @@ inline std::vector<int64_t> Shape2Strides(const std::vector<int64_t>& shape) {
 }
 
 }  // namespace shape_utils
+}  // namespace common
 }  // namespace mnm

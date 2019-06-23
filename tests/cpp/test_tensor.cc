@@ -6,14 +6,14 @@
 
 #include <dlpack/dlpack.h>
 
+#include <mnm/base.h>
 #include <mnm/tensor.h>
-#include <mnm/types.h>
 
+using mnm::Context;
+using mnm::DevType;
+using mnm::DType;
+using mnm::DTypeCode;
 using mnm::tensor::Tensor;
-using mnm::types::Context;
-using mnm::types::DeviceType;
-using mnm::types::DType;
-using mnm::types::DTypeCode;
 
 class MNMTester {
  public:
@@ -42,7 +42,7 @@ class MNMTester {
 
 TEST(Tensor, make_no_strides_no_data) {
   const int ndim = 3;
-  Context ctx(DeviceType::kCPU(), 0);    // cpu(0)
+  Context ctx(DevType::kCPU(), 0);       // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
   std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
   std::vector<int64_t> strides = MNMTester::CalcStrides(shape);
@@ -74,7 +74,7 @@ TEST(Tensor, make_no_strides_no_data) {
 TEST(Tensor, make_no_strides) {
   const int ndim = 3;
   void* data = (void*)0x0001;
-  Context ctx(DeviceType::kCPU(), 0);    // cpu(0)
+  Context ctx(DevType::kCPU(), 0);       // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
   std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
   std::vector<int64_t> strides = MNMTester::CalcStrides(shape);
@@ -106,7 +106,7 @@ TEST(Tensor, make_no_strides) {
 TEST(Tensor, make_given_all_fields) {
   const int ndim = 3;
   void* data = (void*)0x0001;
-  Context ctx(DeviceType::kCPU(), 0);    // cpu(0)
+  Context ctx(DevType::kCPU(), 0);       // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
   std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
   std::vector<int64_t> strides = MNMTester::RandomShape(ndim);

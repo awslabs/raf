@@ -4,7 +4,7 @@
 #include <memory>
 #include <mutex>
 
-#include <mnm/types.h>
+#include <mnm/base.h>
 
 namespace mnm {
 namespace device_api {
@@ -44,7 +44,7 @@ class DeviceAPIManager final {
   DeviceAPIManager() = default;
   ~DeviceAPIManager() = default;
 
-  DeviceAPI* GetAPI(mnm::types::DeviceType device_type, bool allow_missing);
+  DeviceAPI* GetAPI(DevType device_type, bool allow_missing);
 
  public:
   static std::shared_ptr<DeviceAPIManager> Global() {
@@ -63,12 +63,11 @@ class DeviceAPI {
  public:
   virtual ~DeviceAPI() = default;
   virtual int GetNDevices() = 0;
-  virtual void* AllocMemory(int device_id, size_t nbytes, size_t alignment,
-                            mnm::types::DType type_hint) = 0;
+  virtual void* AllocMemory(int device_id, size_t nbytes, size_t alignment, DType type_hint) = 0;
   virtual void DeallocMemory(int device_id, void* ptr) = 0;
 
  private:
-  static DeviceAPI* Create(mnm::types::DeviceType device_type, bool allow_missing);
+  static DeviceAPI* Create(DevType device_type, bool allow_missing);
 };
 
 }  // namespace device_api

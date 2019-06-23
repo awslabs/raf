@@ -4,14 +4,12 @@
 
 #include <mnm/tensor.h>
 
-#include "./shape_utils.h"
+#include "./common/shape_utils.h"
 
 namespace mnm {
 namespace tensor {
 
-using mnm::shape_utils::Shape2Strides;
-using mnm::types::Context;
-using mnm::types::DType;
+using common::shape_utils::Shape2Strides;
 
 class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
  public:

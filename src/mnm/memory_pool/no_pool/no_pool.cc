@@ -5,8 +5,6 @@
 namespace mnm {
 namespace memory_pool {
 
-using mnm::types::DType;
-
 class NoPool final : public MemoryPool {
  public:
   NoPool() = default;

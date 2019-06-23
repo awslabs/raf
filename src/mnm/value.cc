@@ -3,19 +3,34 @@
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
-#include "./shape_utils.h"
+#include "./common/shape_utils.h"
 
 namespace mnm {
 namespace value {
 
-using mnm::rly::Array;
-using mnm::rly::Integer;
-using mnm::rly::make_node;
-using mnm::rly::NodePtr;
-using mnm::shape_utils::MakeShape;
-using mnm::tensor::Tensor;
-using mnm::types::Context;
-using mnm::types::DType;
+using common::shape_utils::MakeShape;
+using rly::Array;
+using rly::Integer;
+using rly::make_node;
+using rly::NodePtr;
+using tensor::Tensor;
+
+Value::operator const DLTensor*() const {
+  if (auto tensor_value = this->as<TensorValueNode>()) {
+    const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
+    return dl_tensor_ref;
+  }
+  LOG(FATAL) << "InternalError: cannot convert to TensorValue";
+  throw;
+}
+
+Value::operator const tensor::Tensor&() const {
+  if (const auto* tensor_value = this->as<TensorValueNode>()) {
+    return tensor_value->tensor;
+  }
+  LOG(FATAL) << "InternalError: cannot convert to TensorValue";
+  throw;
+}
 
 TensorValue TensorValue::Assemble(Context ctx,                   //
                                   DType dtype,                   //
@@ -27,12 +42,12 @@ TensorValue TensorValue::Assemble(Context ctx,                   //
   return TensorValue(n);
 }
 
-TensorValue AssembleTensorValue(DLContext ctx,            //
-                                DLDataType dtype,         //
-                                Array<Integer> _shape,    //
-                                Array<Integer> _strides,  //
+TensorValue AssembleTensorValue(DLContext ctx,           //
+                                DLDataType dtype,        //
+                                Array<Integer> shape,    //
+                                Array<Integer> strides,  //
                                 void* data) {
-  return TensorValue::Assemble(ctx, dtype, MakeShape(_shape), MakeShape(_strides), data);
+  return TensorValue::Assemble(ctx, dtype, MakeShape(shape), MakeShape(strides), data);
 }
 
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);
