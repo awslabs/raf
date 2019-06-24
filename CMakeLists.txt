@@ -1,10 +1,4 @@
 cmake_minimum_required(VERSION 3.8)
-project(mnm C CXX)
-
-################# Basic requirement #################
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
-add_definitions(-DDMLC_USE_FOPEN64=0)
 
 ################# Utilities #################
 include(cmake/Util.cmake)
@@ -12,23 +6,27 @@ include(cmake/ClangFormat.cmake)
 clangformat()
 
 ################# User-defined configurations #################
-# TODO(@junrushao1994): improve it
 if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
   include(${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
   message(STATUS "Found ${CMAKE_CURRENT_BINARY_DIR}/config.cmake")
 else()
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
-  message(STATUS "Found ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake")
-  else()
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.cmake)
-      include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.cmake)
-      message(STATUS "Found ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.cmake")
-    else()
-      message(WARNING "config.cmake is not found")
-    endif()
-  endif()
+  message(WARNING "config.cmake is not found")
 endif()
+
+mnm_option(MNM_USE_CUDA "The path to CUDA prefix" OFF)
+mnm_option(MNM_USE_CUDNN "The path to CUDNN prefix" OFF)
+mnm_option(MNM_USE_GTEST "The path to GTEST prefix" OFF)
+
+if (NOT MNM_USE_CUDA)
+  project(mnm C CXX)
+else()
+  project(mnm C CXX CUDA)
+endif()
+
+################# Basic requirement #################
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
+add_definitions(-DDMLC_USE_FOPEN64=0)
 
 ################# Thrid-party libraries #################
 add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/tvm)
@@ -54,3 +52,5 @@ target_link_libraries(mnm tvm)
 ################# Apps #################
 add_subdirectory(apps)
 add_subdirectory(tests/cpp)
+add_subdirectory(tests/cuda)
+add_subdirectory(tests/cudnn)

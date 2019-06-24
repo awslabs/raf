@@ -22,7 +22,7 @@ if (CLANG_FORMAT_FOUND)
   string(STRIP ${REPO_DIR} REPO_DIR)
   if (NOT EXISTS ${GIT_DIR}/hooks/pre-commit)
     message(STATUS "Enable pre-commit code linting.")
-    execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/scripts/pre-commit)
+    execute_process(COMMAND ln -sfn ${CMAKE_SOURCE_DIR}/scripts/pre-commit)
   else()
     execute_process(
       COMMAND find ${GIT_DIR}/hooks -type l -ls
