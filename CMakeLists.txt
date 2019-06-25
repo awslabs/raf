@@ -38,7 +38,7 @@ set(MNM_3RD_PARTY_INCLUDE_DIRS
 )
 
 ################# Target: MNM #################
-file(GLOB_RECURSE MNM_SRC_FILES ${CMAKE_SOURCE_DIR}/src/mnm/*.cc)
+file(GLOB_RECURSE MNM_SRC_FILES ${CMAKE_SOURCE_DIR}/src/*.cc)
 set(MNM_HEADER_FILES ${CMAKE_SOURCE_DIR}/include)
 
 add_library(mnm SHARED ${MNM_SRC_FILES})
