@@ -1,97 +1,50 @@
+#include <unordered_map>
+
+#include <mnm/base.h>
 #include <mnm/memory_pool.h>
 #include <mnm/registry.h>
 
 namespace mnm {
 namespace memory_pool {
 
-using device_api::DeviceAPI;
-using device_api::DeviceAPIManager;
+using registry::PerContextStore;
 using registry::Registry;
-using PoolPtr = std::unique_ptr<MemoryPool>;
 
-MemoryPool* MemoryPool::Create(const char* name) {
-  static const std::string prefix("mnm.memory_pool.");
-  std::string creator_name = prefix + name;
-  auto creator = Registry::Get(creator_name);
-  CHECK(creator != nullptr) << "ValueError: MemoryPool " << creator_name << " is not enabled.";
-  void* ret = (*creator)();
-  return static_cast<MemoryPool*>(ret);
-}
-
-inline const char* GetDefaultPool(DevType device_type) {
-  if (device_type == DevType::kCPU()) {
-    return "no_pool";
-  }
-  LOG(FATAL) << "InternalError: Default memory pool is not defined for " << device_type.c_str();
-  return nullptr;
-}
-
-class MemoryPoolManager::Impl {
- public:
-  static inline void SetMemoryPool(MemoryPoolManager* self, MemoryPool* pool, Context ctx) {
-    DeviceAPI* api = self->device_api_manager_->GetAPI(ctx.device_type, false);
-    CHECK(api != nullptr) << "InternalError: device api does not exist";
-    int device_id = ctx.device_id;
-    pool->ctx_hint_ = ctx;
-    pool->f_alloc_ = [api, device_id](size_t nbytes, size_t alignment, DType type_hint) {
-      return api->AllocMemory(device_id, nbytes, alignment, type_hint);
-    };
-    pool->f_dealloc_ = [api, device_id](void* ptr) { api->DeallocMemory(device_id, ptr); };
-  }
-
-  static inline PoolPtr& GetPoolPtr(MemoryPoolManager* self, Context ctx, const char* name,
-                                    bool create_if_missing) {
-    int device_type = ctx.device_type;
-    int device_id = ctx.device_id;
-    std::vector<PoolPtr>& pool_vec = self->pools_[device_type];
-    if (pool_vec.empty()) {
-      DeviceAPI* api = self->device_api_manager_->GetAPI(ctx.device_type, false);
-      int n_devices = api->GetNDevices();
-      CHECK_LT(device_id, n_devices) << "ValueError: Device " << device_id << " not found.";
-      pool_vec.resize(n_devices);
-    }
-    int n_devices = pool_vec.size();
-    CHECK_LT(device_id, n_devices) << "ValueError: Device " << device_id << " not found.";
-    PoolPtr& ptr = pool_vec[device_id];
-    if (create_if_missing && ptr == nullptr) {
-      if (name == nullptr) {
-        name = GetDefaultPool(ctx.device_type);
-      }
-      ptr.reset(MemoryPool::Create(name));
-      MemoryPoolManager::Impl::SetMemoryPool(self, ptr.get(), ctx);
-    }
-    return ptr;
-  }
+static std::unordered_map<int, std::string> default_strategies = {
+    {DevType(DevType::kCPU()), "no_pool"},
+    {DevType(DevType::kGPU()), "no_pool"},
 };
 
-MemoryPoolManager::~MemoryPoolManager() {
-  for (std::vector<PoolPtr>& pools : pools_) {
-    for (PoolPtr& pool : pools) {
-      pool->DeallocAll();
-      pool = nullptr;
+class MemoryPoolManager {
+ public:
+  static MemoryPoolManager* Get() {
+    static MemoryPoolManager* instance = new MemoryPoolManager();
+    return instance;
+  }
+
+  static MemoryPool* CreateMemoryPool(Context ctx, const std::string& name) {
+    thread_local char creator_name[128];
+    sprintf(creator_name, "mnm.memory_pool._make.%s", name.c_str());
+    auto creator = Registry::Get(creator_name);
+    CHECK(creator != nullptr);
+    void* ret = (*creator)(ctx.operator DLContext());
+    return static_cast<MemoryPool*>(ret);
+  }
+
+ public:
+  PerContextStore<MemoryPool, false> reg;
+};
+
+std::shared_ptr<MemoryPool> MemoryPool::Get(Context ctx) {
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  std::shared_ptr<MemoryPool>& result = mgr->reg.Get(ctx);
+  if (result == nullptr) {
+    std::unique_lock<std::mutex> lock(mgr->reg.GrabLock());
+    if (result == nullptr) {
+      result.reset(MemoryPoolManager::CreateMemoryPool(ctx, default_strategies[ctx.device_type]));
     }
   }
-  device_api_manager_ = nullptr;
-}
-
-MemoryPool* MemoryPoolManager::Replace(Context ctx, const char* name) {
-  PoolPtr& ptr = Impl::GetPoolPtr(this, ctx, name, false);
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (ptr != nullptr) {
-    ptr->DeallocAll();
-    ptr = nullptr;
-  }
-  ptr.reset(MemoryPool::Create(name));
-  return ptr.get();
-}
-
-MemoryChunk* MemoryPoolManager::Alloc(Context ctx, size_t nbytes, size_t alignment,
-                                      DType type_hint) {
-  return Impl::GetPoolPtr(this, ctx, nullptr, true)->Alloc(nbytes, alignment, type_hint);
-}
-
-void MemoryPoolManager::Dealloc(Context ctx, MemoryChunk* mem) {
-  return Impl::GetPoolPtr(this, ctx, nullptr, false)->Dealloc(mem);
+  return result;
 }
 
 }  // namespace memory_pool

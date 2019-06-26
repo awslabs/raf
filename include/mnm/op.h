@@ -1,6 +1,8 @@
 #pragma once
 
-#include <utility>
+#include <functional>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include <mnm/base.h>
@@ -24,18 +26,24 @@ using FOpMakeOutput =
 
 class OpBackend {
   using TRegistry = ::dmlc::Registry<OpBackend>;
-  using TDeviceRegistry = registry::PerDeviceTypeStorage<std::vector<OpBackend*>>;
+  using TDeviceRegistry = registry::PerDevTypeStore<std::vector<OpBackend*>>;
 
  public:
   OpBackend() = default;
 
-  OpBackend& set_name(const std::string& name);
+  OpBackend& set_name(const std::string& name) {
+    this->name = name;
+    return *this;
+  }
+
+  // TODO(@junrushao1994): this is not good to allow the library itself to set its own priority
+  OpBackend& set_priority(int priority) {
+    this->priority = priority;
+    return *this;
+  }
 
   // For heteregenous, make device = kExtDev
   OpBackend& set_device(DevType device);
-
-  // TODO(@junrushao1994): this is not good to allow the library itself to set its own priority
-  OpBackend& set_priority(int priority);
 
  public:
   static TRegistry* Registry();
@@ -46,8 +54,8 @@ class OpBackend {
 
  public:
   std::string name;
-  DevType device = DevType::kUnknown();
   int priority = 0;
+  DevType device = DevType::kUnknown();
 };
 
 class OpDispatch {
@@ -58,7 +66,10 @@ class OpDispatch {
  public:
   OpDispatch() = default;
 
-  OpDispatch& set_name(const std::string& name);
+  OpDispatch& set_name(const std::string& name) {
+    this->name = name;
+    return *this;
+  }
 
   OpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
                            const FMakeOpEnv& op_env_maker);
@@ -66,11 +77,11 @@ class OpDispatch {
  public:
   static TRegistry* Registry();
 
-  static TDispatchList& Get(const std::string& op_name, DevType device_type);
+  static TDispatchList* Get(const std::string& op_name, DevType device_type);
 
  public:
   std::string name;
-  registry::PerDeviceTypeStorage<TDispatchList> dispatch;
+  registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
 class OpEnv {

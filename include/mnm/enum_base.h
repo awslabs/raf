@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 namespace enum_base_details {
 
 template <class T, class underlying, int n>

@@ -21,42 +21,16 @@ using rly::Array;
 using rly::Attrs;
 using value::Value;
 
-OpBackend& OpBackend::set_name(const std::string& name) {
-  this->name = name;
-  return *this;
-}
+// Implementation: OpBackend
 
 OpBackend& OpBackend::set_device(DevType device) {
   CHECK(this->device == DevType::kUnknown()) << "Cannot set backend's device twice";
   this->device = device;
-  DeviceRegistry()->Write(device.operator int(),
-                          [this](auto list) -> void { list->push_back(this); });
-  return *this;
-}
-
-OpBackend& OpBackend::set_priority(int priority) {
-  this->priority = priority;
-  return *this;
-}
-
-OpDispatch& OpDispatch::set_name(const std::string& name) {
-  this->name = name;
-  return *this;
-}
-
-OpDispatch& OpDispatch::add_dispatch(DevType device_type,              //
-                                     const std::string& backend_name,  //
-                                     const FMakeOpEnv& op_env_maker) {
-  OpBackend* backend = OpBackend::Get(backend_name);
-  dispatch.Write(device_type, [&](TDispatchList* list) {
-    for (const auto& e : *list) {
-      if (e.first == backend) {
-        LOG(FATAL) << "InternalError: operator " << name
-                   << " already has an implementation on backend " << backend_name;
-      }
-    }
-    list->push_back(std::make_pair(backend, op_env_maker));
-  });
+  TDeviceRegistry::EntryPtr& ptr = DeviceRegistry()->Get(device);
+  {
+    std::unique_lock<std::mutex> lock = DeviceRegistry()->GrabLock();
+    ptr->push_back(this);
+  }
   return *this;
 }
 
@@ -69,20 +43,41 @@ OpBackend* OpBackend::Get(const std::string& name) {
   return &Registry()->__REGISTER_OR_GET__(name);
 }
 
-OpDispatch::TDispatchList& OpDispatch::Get(const std::string& op_name, DevType device_type) {
-  OpDispatch& op_dispatch = Registry()->__REGISTER_OR_GET__(op_name);
-  TDispatchList* ret = nullptr;
-  op_dispatch.dispatch.Read(device_type, [&ret](TDispatchList* list) { ret = list; });
-  return *ret;
-}
-
 OpBackend::TRegistry* OpBackend::Registry() {
   return TRegistry::Get();
+}
+
+// Implementation: OpDispatch
+
+OpDispatch::TDispatchList* OpDispatch::Get(const std::string& op_name, DevType device_type) {
+  OpDispatch& op_dispatch = Registry()->__REGISTER_OR_GET__(op_name);
+  std::shared_ptr<TDispatchList>& list = op_dispatch.dispatch.Get(device_type);
+  return list.get();
 }
 
 OpDispatch::TRegistry* OpDispatch::Registry() {
   return TRegistry::Get();
 }
+
+OpDispatch& OpDispatch::add_dispatch(DevType device_type,              //
+                                     const std::string& backend_name,  //
+                                     const FMakeOpEnv& op_env_maker) {
+  OpBackend* backend = OpBackend::Get(backend_name);
+  auto& list = dispatch.Get(device_type);
+  {
+    std::unique_lock<std::mutex> lock = dispatch.GrabLock();
+    for (const auto& e : *list) {
+      if (e.first == backend) {
+        LOG(FATAL) << "InternalError: operator " << name
+                   << " already has an implementation on backend " << backend_name;
+      }
+    }
+    list->push_back(std::make_pair(backend, op_env_maker));
+  }
+  return *this;
+}
+
+// Implementation: OpEnv
 
 class OpEnv::Impl {
  public:

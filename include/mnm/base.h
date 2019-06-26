@@ -1,9 +1,6 @@
 #pragma once
 
-#include <limits>
-#include <ostream>
-#include <sstream>
-#include <vector>
+#include <cstdio>
 
 #include <dlpack/dlpack.h>
 #include <tvm/runtime/c_runtime_api.h>

@@ -59,11 +59,11 @@ class Conv2dY : public Conv2d {
 MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DevType::kCPU(), "sshadow", Conv2dY::make);
 
 TEST(OpDispatch, Registry) {
-  const auto& dispatch_list = OpDispatch::Get("mnm.conv2d", DevType::kCPU());
-  ASSERT_EQ(dispatch_list.size(), 2);
+  const auto* dispatch_list = OpDispatch::Get("mnm.conv2d", DevType::kCPU());
+  ASSERT_EQ(dispatch_list->size(), 2);
   Array<Value> args;
   Attrs attrs;
-  for (const auto& e : dispatch_list) {
+  for (const auto& e : *dispatch_list) {
     const auto* op = static_cast<Conv2d*>(e.second(args, attrs));
     ASSERT_NE(op, nullptr);
     if (e.first->name == "mklShallowNN") {
