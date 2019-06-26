@@ -47,13 +47,18 @@ class PerDevTypeStore {
   }
 
  protected:
-  void CreateMissing(EntryPtr& ret) {
-    if (ret == nullptr) {
+  template <bool b = create_default>
+  void CreateMissing(EntryPtr& p, typename std::enable_if_t<b, int> = 0) {
+    if (p == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (ret == nullptr) {
-        ret = std::make_shared<EntryType>();
+      if (p == nullptr) {
+        p = std::make_shared<EntryType>();
       }
     }
+  }
+
+  template <bool b = create_default>
+  void CreateMissing(EntryPtr& p, typename std::enable_if_t<!b, int> = 0) {
   }
 
   void EnsureCapacity(int i) {
@@ -106,13 +111,18 @@ class PerContextStore {
   }
 
  protected:
-  void CreateMissing(EntryPtr& ret) {
-    if (ret == nullptr) {
+  template <bool b = create_default>
+  void CreateMissing(EntryPtr& p, typename std::enable_if_t<b, int> = 0) {
+    if (p == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (ret == nullptr) {
-        ret = std::make_shared<EntryType>();
+      if (p == nullptr) {
+        p = std::make_shared<EntryType>();
       }
     }
+  }
+
+  template <bool b = create_default>
+  void CreateMissing(EntryPtr& p, typename std::enable_if_t<!b, int> = 0) {
   }
 
   void EnsureCapacity(int i, int j) {
@@ -127,7 +137,7 @@ class PerContextStore {
   }
 
  public:
-  std::vector<std::vector<EntryPtr>> entries_;
+  std::vector<std::vector<EntryPtr> > entries_;
   std::mutex mutex_;
 };
 

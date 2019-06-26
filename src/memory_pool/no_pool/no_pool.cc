@@ -4,12 +4,15 @@
 
 namespace mnm {
 namespace memory_pool {
+namespace no_pool {
 
 using device_api::DeviceAPI;
 
 class NoPool final : public MemoryPool {
  public:
   NoPool(Context ctx) {
+    this->ctx_ = ctx;
+    this->api_ = DeviceAPI::Get(ctx.device_type);
   }
 
   virtual ~NoPool() = default;
@@ -33,5 +36,6 @@ class NoPool final : public MemoryPool {
 
 MNM_REGISTER_GLOBAL("mnm.memory_pool.no_pool").set_body_typed(NoPool::make);
 
+}  // namespace no_pool
 }  // namespace memory_pool
 }  // namespace mnm

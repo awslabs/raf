@@ -26,7 +26,7 @@ using FOpMakeOutput =
 
 class OpBackend {
   using TRegistry = ::dmlc::Registry<OpBackend>;
-  using TDeviceRegistry = registry::PerDevTypeStore<std::vector<OpBackend*>>;
+  using TDeviceRegistry = registry::PerDevTypeStore<std::vector<OpBackend*> >;
 
  public:
   OpBackend() = default;
@@ -60,7 +60,7 @@ class OpBackend {
 
 class OpDispatch {
   using FMakeOpEnv = std::function<void*(rly::Array<value::Value>, rly::Attrs)>;
-  using TDispatchList = std::vector<std::pair<OpBackend*, FMakeOpEnv>>;
+  using TDispatchList = std::vector<std::pair<OpBackend*, FMakeOpEnv> >;
   using TRegistry = ::dmlc::Registry<OpDispatch>;
 
  public:

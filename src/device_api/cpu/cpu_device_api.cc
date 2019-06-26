@@ -3,6 +3,7 @@
 
 namespace mnm {
 namespace device_api {
+namespace cpu_device_api {
 
 class CPUDeviceAPI final : public DeviceAPI {
  public:
@@ -44,5 +45,6 @@ class CPUDeviceAPI final : public DeviceAPI {
 
 MNM_REGISTER_GLOBAL("mnm.device_api._make.cpu").set_body_typed(CPUDeviceAPI::make);
 
+}  // namespace cpu_device_api
 }  // namespace device_api
 }  // namespace mnm
