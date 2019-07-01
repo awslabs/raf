@@ -11,7 +11,7 @@ class MemoryPool {
  public:
   virtual ~MemoryPool() = default;
 
-  virtual void* Alloc(int64_t nbytes, int64_t alignment, DType type_hint) = 0;
+  virtual void* Alloc(int64_t nbytes, int64_t alignment) = 0;
 
   virtual void Dealloc(void* mem) = 0;
 

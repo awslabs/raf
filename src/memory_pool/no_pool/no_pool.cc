@@ -17,12 +17,14 @@ class NoPool final : public MemoryPool {
 
   virtual ~NoPool() = default;
 
-  void* Alloc(int64_t nbytes, int64_t alignment, DType type_hint) override {
-    return api_->AllocMemory(ctx_.device_id, nbytes, alignment, type_hint);
+  void* Alloc(int64_t nbytes, int64_t alignment) override {
+    api_->SetDevice(ctx_.device_id);
+    return api_->AllocMemory(nbytes, alignment);
   }
 
   void Dealloc(void* mem) override {
-    api_->DeallocMemory(ctx_.device_id, mem);
+    api_->SetDevice(ctx_.device_id);
+    api_->FreeMemory(mem);
   }
 
   static void* make(DLContext ctx) {

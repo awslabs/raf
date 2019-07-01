@@ -1,5 +1,3 @@
-#include <dmlc/thread_local.h>
-
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
 
@@ -12,7 +10,15 @@ class CPUDeviceAPI final : public DeviceAPI {
   CPUDeviceAPI() = default;
   ~CPUDeviceAPI() = default;
 
-  void* AllocMemory(int device_id, int64_t nbytes, int64_t alignment, DType type_hint) override {
+  void SetDevice(int device_id) override {
+    CHECK_EQ(device_id, 0);
+  }
+
+  int GetDevice() override {
+    return 0;
+  }
+
+  void* AllocMemory(int64_t nbytes, int64_t alignment) override {
     void* ptr = nullptr;
     // TODO(@junrushao1994): do not throw like this
     // TODO(@junrushao1994): recover the SGX and Android part
@@ -30,13 +36,32 @@ class CPUDeviceAPI final : public DeviceAPI {
     return ptr;
   }
 
-  void DeallocMemory(int device_id, void* ptr) override {
-    CHECK_EQ(device_id, 0) << "InternalError: CPU expect device_id = 0, but got" << device_id;
+  void FreeMemory(void* ptr) override {
 #if _MSC_VER
     _aligned_free(ptr);
 #else
     free(ptr);
 #endif
+  }
+
+  void* CreateStream() override {
+    throw;
+  }
+
+  void FreeStream(void* stream) override {
+    throw;
+  }
+
+  void SyncStream(const Context& prev_ctx, void* prev, void* next) override {
+    throw;
+  }
+
+  void WaitDevice() override {
+    throw;
+  }
+
+  void WaitStream(void* stream) override {
+    throw;
   }
 
   static void* make() {

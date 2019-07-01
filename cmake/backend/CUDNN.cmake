@@ -5,8 +5,8 @@ if (MNM_USE_CUDNN)
   include(${CMAKE_SOURCE_DIR}/cmake/FindCUDA.cmake)
   find_cuda_and_cudnn(${MNM_USE_CUDA} ${MNM_USE_CUDNN})
 
-  # TODO(@junrushao1994): After adding cuda device api, uncomment the line below.
-  # list(APPEND MNM_SRC_FILES ${CMAKE_SOURCE_DIR}/src/device_api/cuda/*.cc)
+  file(GLOB_RECURSE CUDA_DEVICE_API_SRCS ${CMAKE_SOURCE_DIR}/src/device_api/cuda/*.cc)
+  list(APPEND MNM_SRC_FILES ${CUDA_DEVICE_API_SRCS})
 
   if (MNM_USE_CUDNN)
     file(GLOB_RECURSE CUDNN_SRCS ${CMAKE_SOURCE_DIR}/src/op/backend/cudnn/*.cc)
