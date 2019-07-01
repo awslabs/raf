@@ -18,6 +18,14 @@ macro(find_cuda_and_cudnn use_cuda use_cudnn)
 # - CUDA_CUBLAS_LIBRARY
 #
 
+if (${use_cuda} STREQUAL "OFF")
+  set(CUDA_FOUND OFF)
+  if (${use_cudnn})
+    message(WARNING "CUDNN is enabled without enabling CUDA! Give up!")
+  endif()
+  return()
+endif()
+
 set(CUDA_CUDNN_LIBRARY "CUDA_CUDNN_LIBRARY-NOTFOUND")
 
 include(${CMAKE_SOURCE_DIR}/3rdparty/tvm/cmake/util/FindCUDA.cmake)

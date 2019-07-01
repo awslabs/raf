@@ -2,6 +2,7 @@
 #include <mnm/rly.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
+#include <mnm/opattrs/conv.h>
 
 /*
  * See also:
@@ -13,47 +14,26 @@
 
 namespace mnm {
 namespace op {
+
+namespace attrs {
+
+MNM_REGISTER_NODE_TYPE(Conv2DAttrs);
+MNM_REGISTER_GLOBAL("mnm.attrs._make.Conv2DAttrs").set_body_typed(Conv2DAttrs::make);
+
+} // attrs
+
 namespace conv2d {
 
 using rly::Array;
 using rly::Attrs;
 using rly::AttrsNode;
 using rly::IndexExpr;
-using rly::Integer;
-using rly::make_node;
 using rly::TensorTypeNode;
 using rly::Type;
 using rly::TypeReporter;
 using tensor::Tensor;
 using value::TensorValue;
 using value::Value;
-
-class Conv2DAttrs : public AttrsNode<Conv2DAttrs> {
- public:
-  Array<Integer> stride;
-  Array<Integer> padding;
-  Array<Integer> dilation;
-  Integer groups;
-
-  MNM_DECLARE_ATTRS(Conv2DAttrs, "mnm.attrs.Conv2DAttrs") {
-    MNM_ATTR_FIELD(stride);    // {h, w}
-    MNM_ATTR_FIELD(padding);   // {h, w}
-    MNM_ATTR_FIELD(dilation);  // {h, w}
-    MNM_ATTR_FIELD(groups);
-  }
-
-  static Attrs make(Array<Integer> stride,    //
-                    Array<Integer> padding,   //
-                    Array<Integer> dilation,  //
-                    Integer groups) {
-    auto n = make_node<Conv2DAttrs>();
-    n->stride = std::move(stride);
-    n->padding = std::move(padding);
-    n->dilation = std::move(dilation);
-    n->groups = std::move(groups);
-    return Attrs(n);
-  }
-};
 
 bool Conv2DRel(const Array<Type>& types,  //
                int num_inputs,            //
@@ -62,7 +42,7 @@ bool Conv2DRel(const Array<Type>& types,  //
   CHECK_EQ(types.size(), 3);
   const auto* data = types[0].as<TensorTypeNode>();
   const auto* weight = types[1].as<TensorTypeNode>();
-  const auto* param = attrs.as<Conv2DAttrs>();
+  const auto* param = attrs.as<attrs::Conv2DAttrs>();
   CHECK(data != nullptr);
   CHECK(weight != nullptr);
   CHECK(param != nullptr);
@@ -97,7 +77,7 @@ Value Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 2);
   const Tensor& data = values[0];
   const Tensor& weight = values[1];
-  const auto* param = attrs.as<Conv2DAttrs>();
+  const auto* param = attrs.as<attrs::Conv2DAttrs>();
   CHECK(param != nullptr);
   CHECK_EQ(data->ndim, 4);
   CHECK_EQ(weight->ndim, 4);
@@ -124,9 +104,6 @@ Value Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype,
                                /*shape=*/{n_in, out, h_out, w_out});
 }
-
-MNM_REGISTER_NODE_TYPE(Conv2DAttrs);
-MNM_REGISTER_GLOBAL("mnm.attrs._make.Conv2DAttrs").set_body_typed(Conv2DAttrs::make);
 
 // TODO(@were): why clang-format aligns me like that? its inhumane.
 MNM_REGISTER_OP("mnm.op.conv2d")

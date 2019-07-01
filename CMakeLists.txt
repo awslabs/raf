@@ -38,16 +38,30 @@ set(MNM_3RD_PARTY_INCLUDE_DIRS
 )
 
 ################# Target: MNM #################
-file(GLOB_RECURSE MNM_SRC_FILES ${CMAKE_SOURCE_DIR}/src/*.cc)
-set(MNM_HEADER_FILES ${CMAKE_SOURCE_DIR}/include)
+file(GLOB_RECURSE MNM_SRC_FILES
+  ${CMAKE_SOURCE_DIR}/src/common/*.cc
+  ${CMAKE_SOURCE_DIR}/src/device_api/cpu/*.cc
+  ${CMAKE_SOURCE_DIR}/src/memory_pool/*.cc
+  ${CMAKE_SOURCE_DIR}/src/op/*.cc
+  ${CMAKE_SOURCE_DIR}/src/impl/*.cc
+)
 
+set(MNM_HEADER_FILES ${CMAKE_SOURCE_DIR}/include)
+set(MNM_LINK_LIBRARIES "")
+
+list(APPEND MNM_LINK_LIBRARIES "dmlc")
+list(APPEND MNM_LINK_LIBRARIES "tvm")
+
+################# Backends #################
+include(${CMAKE_SOURCE_DIR}/cmake/backend/CUDNN.cmake)
+
+# Finalize the compilation target here
 add_library(mnm SHARED ${MNM_SRC_FILES})
 set_target_properties(mnm PROPERTIES CXX_STANDARD 14)
 target_compile_features(mnm PRIVATE cxx_std_14)
 target_include_directories(mnm PRIVATE ${MNM_HEADER_FILES})
 target_include_directories(mnm PRIVATE ${MNM_3RD_PARTY_INCLUDE_DIRS})
-target_link_libraries(mnm dmlc)
-target_link_libraries(mnm tvm)
+target_link_libraries(mnm ${MNM_LINK_LIBRARIES})
 
 ################# Apps #################
 add_subdirectory(apps)

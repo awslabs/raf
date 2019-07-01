@@ -4,7 +4,7 @@
 
 #include <mnm/tensor.h>
 
-#include "./common/shape_utils.h"
+#include "../common/shape_utils.h"
 
 namespace mnm {
 namespace tensor {
