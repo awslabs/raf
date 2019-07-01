@@ -15,10 +15,8 @@ namespace batch_flatten {
 
 using rly::Array;
 using rly::Attrs;
-using rly::AttrsNode;
 using rly::Int;
 using rly::make_const;
-using rly::make_node;
 using rly::TensorTypeNode;
 using rly::Type;
 using rly::TypeReporter;

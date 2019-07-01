@@ -17,11 +17,11 @@ if (CUDA_FOUND)
   file(GLOB_RECURSE SRCS ./*.cu)
   file(GLOB_RECURSE CC_SRCS ./*.cc)
   list(APPEND SRCS ${CC_SRCS})
-  
+
   foreach(__src ${SRCS})
     get_filename_component(__name ${__src} NAME)
     string(FIND ${__name} ".cc" __pos REVERSE)
-  
+
     if (__pos EQUAL -1)
       string(REPLACE ".cu" "" __exec ${__name})
     else()
@@ -29,7 +29,7 @@ if (CUDA_FOUND)
     endif()
 
     add_executable(${__exec} ${__src})
-  
+
     list(APPEND EXECS ${__exec})
     # TODO(@were): try something that could compile on Windows
     target_link_libraries(${__exec} mnm)
@@ -38,11 +38,11 @@ if (CUDA_FOUND)
     target_link_libraries(${__exec} ${GTEST_LIBRARY})
     target_link_libraries(${__exec} ${CUDA_CUDA_LIBRARY})
     target_link_libraries(${__exec} ${CUDA_CUDART_LIBRARY})
-  
+
     target_include_directories(${__exec} PRIVATE ${MNM_HEADER_FILES})
     target_include_directories(${__exec} PRIVATE ${MNM_3RD_PARTY_INCLUDE_DIRS})
     target_include_directories(${__exec} PRIVATE ${GTEST_INCLUDE_DIR})
-  
+
     target_compile_features(${__exec} PRIVATE cxx_std_14)
     set_target_properties(${__exec} PROPERTIES EXCLUDE_FROM_ALL 1)
     set_target_properties(${__exec} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)

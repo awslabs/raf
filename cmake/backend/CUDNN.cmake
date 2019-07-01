@@ -9,7 +9,7 @@ if (MNM_USE_CUDNN)
   # list(APPEND MNM_SRC_FILES ${CMAKE_SOURCE_DIR}/src/device_api/cuda/*.cc)
 
   if (MNM_USE_CUDNN)
-    file(GLOB_RECURSE CUDNN_SRCS ${CMAKE_SOURCE_DIR}/src/backend/cudnn/*.cc)
+    file(GLOB_RECURSE CUDNN_SRCS ${CMAKE_SOURCE_DIR}/src/op/backend/cudnn/*.cc)
     list(APPEND MNM_SRC_FILES ${CUDNN_SRCS})
     list(APPEND MNM_LINK_LIBRARIES ${CUDA_CUDNN_LIBRARY})
     list(APPEND MNM_3RD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIR})

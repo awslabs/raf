@@ -42,7 +42,8 @@ file(GLOB_RECURSE MNM_SRC_FILES
   ${CMAKE_SOURCE_DIR}/src/common/*.cc
   ${CMAKE_SOURCE_DIR}/src/device_api/cpu/*.cc
   ${CMAKE_SOURCE_DIR}/src/memory_pool/*.cc
-  ${CMAKE_SOURCE_DIR}/src/op/*.cc
+  ${CMAKE_SOURCE_DIR}/src/op/attrs/*.cc
+  ${CMAKE_SOURCE_DIR}/src/op/generics/*.cc
   ${CMAKE_SOURCE_DIR}/src/impl/*.cc
 )
 

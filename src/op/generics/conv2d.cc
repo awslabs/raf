@@ -2,7 +2,8 @@
 #include <mnm/rly.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
-#include <mnm/opattrs/conv.h>
+
+#include "../attrs/conv.h"
 
 /*
  * See also:
@@ -14,19 +15,11 @@
 
 namespace mnm {
 namespace op {
-
-namespace attrs {
-
-MNM_REGISTER_NODE_TYPE(Conv2DAttrs);
-MNM_REGISTER_GLOBAL("mnm.attrs._make.Conv2DAttrs").set_body_typed(Conv2DAttrs::make);
-
-} // attrs
-
 namespace conv2d {
 
+using attrs::Conv2DAttrs;
 using rly::Array;
 using rly::Attrs;
-using rly::AttrsNode;
 using rly::IndexExpr;
 using rly::TensorTypeNode;
 using rly::Type;

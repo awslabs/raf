@@ -21,20 +21,8 @@ class Conv2DAttrs : public rly::AttrsNode<Conv2DAttrs> {
     MNM_ATTR_FIELD(dilation);  // {h, w}
     MNM_ATTR_FIELD(groups);
   }
-
-  static rly::Attrs make(rly::Array<rly::Integer> stride,    //
-                    rly::Array<rly::Integer> padding,   //
-                    rly::Array<rly::Integer> dilation,  //
-                    rly::Integer groups) {
-    auto n = rly::make_node<Conv2DAttrs>();
-    n->stride = std::move(stride);
-    n->padding = std::move(padding);
-    n->dilation = std::move(dilation);
-    n->groups = std::move(groups);
-    return rly::Attrs(n);
-  }
 };
 
-}  // namespace attr
+}  // namespace attrs
 }  // namespace op
 }  // namespace mnm

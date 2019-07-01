@@ -12,7 +12,7 @@ using registry::Registry;
 
 static std::unordered_map<int, std::string> default_strategies = {
     {DevType(DevType::kCPU()), "no_pool"},
-    {DevType(DevType::kGPU()), "no_pool"},
+    {DevType(DevType::kCUDA()), "no_pool"},
 };
 
 class MemoryPoolManager {

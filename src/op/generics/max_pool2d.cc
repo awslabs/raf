@@ -3,6 +3,8 @@
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
+#include "../attrs/pooling.h"
+
 /*
  * See also:
  *   PyTorch: https://pytorch.org/docs/stable/nn.html#torch.nn.MaxPool2d
@@ -15,52 +17,16 @@ namespace mnm {
 namespace op {
 namespace max_pool2d {
 
+using attrs::MaxPool2DAttrs;
 using rly::Array;
 using rly::Attrs;
-using rly::AttrsNode;
 using rly::IndexExpr;
-using rly::Int;
-using rly::Integer;
-using rly::make_const;
-using rly::make_node;
 using rly::TensorTypeNode;
 using rly::Type;
 using rly::TypeReporter;
 using tensor::Tensor;
 using value::TensorValue;
-using value::TensorValueNode;
 using value::Value;
-
-class MaxPool2DAttrs : public AttrsNode<MaxPool2DAttrs> {
- public:
-  Array<Integer> kernel_size;
-  Array<Integer> stride;
-  Array<Integer> padding;
-  Array<Integer> dilation;
-  bool ceil_mode;
-
-  MNM_DECLARE_ATTRS(MaxPool2DAttrs, "mnm.attrs.MaxPool2DAttrs") {
-    MNM_ATTR_FIELD(kernel_size);  // {h, w}
-    MNM_ATTR_FIELD(stride);       // {h, w}
-    MNM_ATTR_FIELD(padding);      // {h, w}
-    MNM_ATTR_FIELD(dilation);     // {h, w}
-    MNM_ATTR_FIELD(ceil_mode);
-  }
-
-  static Attrs make(Array<Integer> kernel_size,  //
-                    Array<Integer> stride,       //
-                    Array<Integer> padding,      //
-                    Array<Integer> dilation,     //
-                    bool ceil_mode) {
-    auto n = make_node<MaxPool2DAttrs>();
-    n->kernel_size = std::move(kernel_size);
-    n->stride = std::move(stride);
-    n->padding = std::move(padding);
-    n->dilation = std::move(dilation);
-    n->ceil_mode = std::move(ceil_mode);
-    return Attrs(n);
-  }
-};
 
 bool MaxPool2DRel(const Array<Type>& types,  //
                   int num_inputs,            //
@@ -68,7 +34,7 @@ bool MaxPool2DRel(const Array<Type>& types,  //
                   const TypeReporter& reporter) {
   CHECK_EQ(types.size(), 2);
   const auto* data = types[0].as<TensorTypeNode>();
-  const auto* param = attrs.as<MaxPool2DAttrs>();
+  const auto* param = attrs.as<attrs::MaxPool2DAttrs>();
   CHECK(data != nullptr);
   CHECK(param != nullptr);
   CHECK_EQ(data->shape.size(), 4);
@@ -103,7 +69,7 @@ bool MaxPool2DRel(const Array<Type>& types,  //
 Value MaxPool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 1);
   const Tensor& data = values[0];
-  const auto* param = attrs.as<MaxPool2DAttrs>();
+  const auto* param = attrs.as<attrs::MaxPool2DAttrs>();
   CHECK(param != nullptr);
   CHECK_EQ(data->ndim, 4);
   CHECK_EQ(param->kernel_size.size(), 2);
@@ -133,9 +99,6 @@ Value MaxPool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype,
                                /*shape=*/{n_in, c_in, h_out, w_out});
 }
-
-MNM_REGISTER_NODE_TYPE(MaxPool2DAttrs);
-MNM_REGISTER_GLOBAL("mnm.attrs._make.MaxPool2DAttrs").set_body_typed(MaxPool2DAttrs::make);
 
 // TODO(@were): why clang-format aligns me like that? its inhumane.
 MNM_REGISTER_OP("mnm.op.max_pool2d")

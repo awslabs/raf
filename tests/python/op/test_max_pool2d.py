@@ -19,8 +19,10 @@ def test_max_pool2d():
                        dilation, False, ceil_mode)
     torch_shape = tuple(out.shape)
     data = TensorValue.assemble((n, c, h, w), "float32", cpu())
-    out = invoke_make_output("mnm.op.max_pool2d", "MaxPool2DAttrs",
-                             data, (kh, kw), stride, padding, dilation, ceil_mode)
+    out = invoke_make_output("mnm.op.max_pool2d", "mnm.attrs.MaxPool2DAttrs", data,
+                             kernel_size=(kh, kw),
+                             stride=stride, padding=padding,
+                             dilation=dilation, ceil_mode=ceil_mode)
     mnm_shape = out.shape
     assert(mnm_shape == torch_shape)
 

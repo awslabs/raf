@@ -162,12 +162,7 @@ Value MakeOutput(std::string op_name, Array<Value> args, Attrs attrs) {
   return f(args, attrs);
 }
 
-Attrs MakeDummyAttrs() {
-  return Attrs();
-}
-
 MNM_REGISTER_GLOBAL("mnm.op.MakeOutput").set_body_typed(MakeOutput);
-MNM_REGISTER_GLOBAL("mnm.attrs._make.Dummy").set_body_typed(MakeDummyAttrs);
 
 }  // namespace op
 }  // namespace mnm

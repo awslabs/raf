@@ -9,7 +9,7 @@
 using mnm::DevType;
 
 MNM_REGISTER_OP_BACKEND("cuShallowNN")  //
-    .set_device(DevType::kGPU())
+    .set_device(DevType::kCUDA())
     .set_priority(10);
 
 MNM_REGISTER_OP_BACKEND("mklShallowNN")  //
@@ -21,7 +21,7 @@ TEST(OpBackend, Registry) {
   OpBackend* cuSNN = OpBackend::Get("cuShallowNN");
   ASSERT_EQ(cuSNN->name, std::string("cuShallowNN"));
   ASSERT_EQ(cuSNN->priority, 10);
-  ASSERT_STREQ(cuSNN->device.c_str(), "gpu");
+  ASSERT_STREQ(cuSNN->device.c_str(), "cuda");
   OpBackend* mklSNN = OpBackend::Get("mklShallowNN");
   ASSERT_EQ(mklSNN->name, std::string("mklShallowNN"));
   ASSERT_EQ(mklSNN->priority, 20);

@@ -30,3 +30,5 @@ from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
 from tvm._ffi.runtime_ctypes import TVMArray as _DLTensor
 from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
+
+from tvm.make import node as make_node

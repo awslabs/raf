@@ -1,9 +1,11 @@
+#include <dmlc/thread_local.h>
+
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
 
 namespace mnm {
 namespace device_api {
-namespace cpu_device_api {
+namespace cpu {
 
 class CPUDeviceAPI final : public DeviceAPI {
  public:
@@ -11,7 +13,6 @@ class CPUDeviceAPI final : public DeviceAPI {
   ~CPUDeviceAPI() = default;
 
   void* AllocMemory(int device_id, int64_t nbytes, int64_t alignment, DType type_hint) override {
-    CHECK_EQ(device_id, 0) << "InternalError: CPU expect device_id = 0, but got" << device_id;
     void* ptr = nullptr;
     // TODO(@junrushao1994): do not throw like this
     // TODO(@junrushao1994): recover the SGX and Android part
@@ -41,10 +42,10 @@ class CPUDeviceAPI final : public DeviceAPI {
   static void* make() {
     return new CPUDeviceAPI();
   }
-};  // namespace device_api
+};
 
 MNM_REGISTER_GLOBAL("mnm.device_api._make.cpu").set_body_typed(CPUDeviceAPI::make);
 
-}  // namespace cpu_device_api
+}  // namespace cpu
 }  // namespace device_api
 }  // namespace mnm

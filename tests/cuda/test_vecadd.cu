@@ -2,7 +2,6 @@
 
 #define N 1000
 
-
 __global__ void vecadd(int a[N], int b[N], int c[N]) {
   int i = threadIdx.x;
   c[i] = a[i] + b[i];
@@ -29,12 +28,12 @@ TEST(Cuda, VecAdd) {
 
   cudaMemcpy(c, cuda_c, sizeof c, cudaMemcpyDeviceToHost);
 
-  for (int i = 0; i < N; ++i)
+  for (int i = 0; i < N; ++i) {
     ASSERT_EQ(c[i], ref[i]);
-
+  }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
