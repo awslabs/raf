@@ -17,7 +17,7 @@ class DeviceAPI {
   virtual int GetDevice() = 0;
 
   // Memory
-  virtual void* AllocMemory(int64_t nbytes, int64_t alignment) = 0;
+  virtual void* AllocMemory(int64_t nbytes, int64_t alignment = kDefaultMemoryAlignment) = 0;
 
   virtual void FreeMemory(void* ptr) = 0;
 

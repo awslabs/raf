@@ -10,7 +10,14 @@ namespace cuda {
 class CUDADeviceAPI final : public DeviceAPI {
  public:
   CUDADeviceAPI() = default;
+
   ~CUDADeviceAPI() = default;
+
+  int GetDeviceCount() {
+    int count = 0;
+    CUDA_CALL(cudaGetDeviceCount(&count));
+    return count;
+  }
 
   void SetDevice(int device_id) override {
     CUDA_CALL(cudaSetDevice(device_id));

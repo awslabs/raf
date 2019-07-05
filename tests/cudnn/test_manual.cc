@@ -43,11 +43,11 @@ TEST(CuDNN, RegisterConvCudnn) {
   auto fil = TensorValue::Assemble(ctx, dt, b_dims, {}, b_data);
 
   Array<Value> args{img, fil};
-  Attrs attrs = (*MakeNode)(std::string("mnm.attrs.Conv2DAttrs"),           //
-                            std::string("stride"), Array<Integer>{1, 1},    //
-                            std::string("padding"), Array<Integer>{0, 0},   //
-                            std::string("dilation"), Array<Integer>{1, 1},  //
-                            std::string("groups"), Integer{1});
+  Attrs attrs = (*MakeNode)("mnm.attrs.Conv2DAttrs",           //
+                            "stride", Array<Integer>{1, 1},    //
+                            "padding", Array<Integer>{0, 0},   //
+                            "dilation", Array<Integer>{1, 1},  //
+                            "groups", Integer{1});
   for (const auto& e : *dispatch_list) {
     OpEnv* op = (OpEnv*)e.second(args, attrs);
     op->Execute(args, attrs);

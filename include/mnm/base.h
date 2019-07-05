@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdio>
+#include <string>
 
 #include <dlpack/dlpack.h>
 #include <tvm/runtime/c_runtime_api.h>
@@ -8,6 +8,8 @@
 #include <mnm/enum_base.h>
 
 namespace mnm {
+
+constexpr int64_t kDefaultMemoryAlignment = 64;
 
 class DTypeCode final : public EnumBase<DTypeCode, 4, int32_t, DLDataTypeCode> {
  public:
@@ -96,6 +98,15 @@ class DType {
   DTypeCode code{DTypeCode::kUnknown()};
   int bits{-1};
   int lanes{-1};
+};
+
+struct TemplateToken {
+  constexpr TemplateToken(const char* data) : data(data) {
+  }
+  operator std::string() const {
+    return std::string(data);
+  }
+  const char* data;
 };
 
 }  // namespace mnm
