@@ -18,6 +18,14 @@ namespace op {
 namespace backend {
 namespace cudnn {
 
+class CUDNNThreadEntry {
+ public:
+  CUDNNThreadEntry();
+  static CUDNNThreadEntry* ThreadLocal();
+ public:
+  cudnnHandle_t handle{nullptr};
+};
+
 /*
  * Make stride and calculate the size of the given array.
  * The stride can be null. In this case, compute the array size only.

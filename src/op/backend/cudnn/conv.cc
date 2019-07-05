@@ -29,6 +29,7 @@ class Conv2dCUDNN : public mnm::op::OpEnv {
   void* out_data;
 
   Conv2dCUDNN() {
+    handle = CUDNNThreadEntry::ThreadLocal()->handle;
   }
   void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs);
   void RequestMemory(void** dest, Context ctx, int64_t nb);
@@ -37,7 +38,6 @@ class Conv2dCUDNN : public mnm::op::OpEnv {
   void Execute(rly::Array<value::Value> args, rly::Attrs) override final;
 
   ~Conv2dCUDNN() {
-    cudnnDestroy(handle);
     cudnnDestroyTensorDescriptor(in_desc);
     cudnnDestroyFilterDescriptor(ker_desc);
     cudnnDestroyTensorDescriptor(out_desc);
@@ -59,8 +59,6 @@ void Conv2dCUDNN::Execute(Array<Value> args, Attrs) {
 }
 
 void Conv2dCUDNN::PreAllocate(Array<Value> args, Attrs attrs) {
-  CUDNN_CALL(cudnnCreate(&handle));
-
   cudnnDataType_t dt;
 
   CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc));
