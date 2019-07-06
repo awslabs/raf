@@ -22,6 +22,7 @@ class CUDNNThreadEntry {
  public:
   CUDNNThreadEntry();
   static CUDNNThreadEntry* ThreadLocal();
+
  public:
   cudnnHandle_t handle{nullptr};
 };

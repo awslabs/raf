@@ -39,54 +39,29 @@ using tvm::Array;
 using tvm::Map;
 using Integer = tvm::Integer;
 
-/*!
- * TODO(@were): Merge this to TVM upstream.
- * \brief Container of constant integer (FloatImm).
- *
- * This is used to store and automate type check
- * attributes that must be constant float.
- */
 class Float : public HalideIR::Expr {
  public:
-  Float() : HalideIR::Expr() {}
-  /*!
-   * \brief constructor from node.
-   */
-  explicit Float(NodePtr<Node> node) : HalideIR::Expr(node) {}
-  /*!
-   * \brief Construct float from int value.
-   */
-  Float(double value) : HalideIR::Expr(value) {}  // NOLINT(*)
-  Float(float value) : HalideIR::Expr(value) {}  // NOLINT(*)
-  /*!
-   * \brief Assign an expression to fp number.
-   * \param other another expression.
-   */
+  Float() : HalideIR::Expr() {
+  }
+  explicit Float(NodePtr<Node> node) : HalideIR::Expr(node) {
+  }
+  Float(double value) : HalideIR::Expr(value) {
+  }
+  Float(float value) : HalideIR::Expr(value) {
+  }
   Float& operator=(const Float& other) {
     node_ = other.node_;
     return *this;
   }
-  /*!
-   * \brief Get pointer to the internal value.
-   * \return the content of the fp number.
-   */
   const HalideIR::Internal::FloatImm* operator->() const {
     return static_cast<const HalideIR::Internal::FloatImm*>(node_.get());
   }
-  /*!
-   * \brief convert to double
-   */
   operator double() const {
-    CHECK(node_ != nullptr)
-        << " Trying get reference a null Integer";
+    CHECK(node_ != nullptr) << " Trying get reference a null Integer";
     return (*this)->value;
   }
-  /*!
-   * \brief convert to float
-   */
   operator float() const {
-    CHECK(node_ != nullptr)
-        << " Trying get reference a null Integer";
+    CHECK(node_ != nullptr) << " Trying get reference a null Integer";
     return (*this)->value;
   }
   /*! \brief type indicate the container type */

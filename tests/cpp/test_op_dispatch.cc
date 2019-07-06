@@ -23,7 +23,8 @@ class Conv2d : public OpEnv {
   void PreAlloc(Array<Value> args, Attrs attrs) {
   }
 
-  void Execute(Array<Value> args, Attrs attrs) override final {}
+  void Execute(Array<Value> args, Attrs attrs) override final {
+  }
 };
 
 // Implement 0 of "mnm.conv2d"

@@ -6,15 +6,14 @@ namespace enum_base_details {
 
 template <class T, class underlying, int n>
 struct collect {
+  using integral_constant_t = typename T::template _integral_constant<n - 1>;
   static std::vector<const char*> c_str() {
-    using integral_constant_t = typename T::template _integral_constant<n - 1>;
     std::vector<const char*> result = collect<T, underlying, n - 1>::c_str();
     result.push_back(T::_c_str(integral_constant_t()));
     return result;
   }
   template <class plain_t>
   static std::vector<plain_t> plain() {
-    using integral_constant_t = typename T::template _integral_constant<n - 1>;
     std::vector<plain_t> result = collect<T, underlying, n - 1>::template plain<plain_t>();
     result.push_back(T::_plain(integral_constant_t()));
     return result;
@@ -48,13 +47,12 @@ class EnumBase {
 
  public:
   const char* c_str() const {
-    static std::vector<const char*> c_strs = collect<TSelf, underlying, numel>::c_str();
-    return c_strs[v];
+    static std::vector<const char*> ret = collect<TSelf, underlying, numel>::c_str();
+    return ret[v];
   }
   plain_t plain() const {
-    static std::vector<plain_t> c_strs =
-        collect<TSelf, underlying, numel>::template plain<plain_t>();
-    return c_strs[v];
+    static std::vector<plain_t> ret = collect<TSelf, underlying, numel>::template plain<plain_t>();
+    return ret[v];
   }
 };
 
@@ -76,6 +74,9 @@ class EnumBase {
     }                                                    \
     bool operator!=(type other) const {                  \
       return v != other.v;                               \
+    }                                                    \
+    operator plain_t() const {                           \
+      return type(_integral_constant<v>()).plain();      \
     }                                                    \
   };                                                     \
   type() : EnumBase(default_value) {                     \
@@ -104,10 +105,10 @@ class EnumBase {
   type(_integral_constant<value>) : EnumBase(value) {                      \
   }                                                                        \
   using name = _integral_constant<value>;                                  \
-  static constexpr plain_t _plain(_integral_constant<value>) {             \
+  static constexpr plain_t _plain(name) {                                  \
     return plain_value;                                                    \
   }                                                                        \
-  static const char* _c_str(_integral_constant<value>) {                   \
+  static const char* _c_str(name) {                                        \
     static constexpr const char* result = name_str;                        \
     return result;                                                         \
   }
