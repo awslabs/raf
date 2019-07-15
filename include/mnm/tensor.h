@@ -56,8 +56,8 @@ class Tensor : private tvm::runtime::NDArray {
 
   // Empty strides indicates contiguous, will generate correct strides automatically
   // TODO(@junrushao1994): make it compatible with packed function
-  static Tensor make(Context ctx, DType dtype, std::vector<int64_t> shape,
-                     std::vector<int64_t> strides = {}, void* data = nullptr);
+  static Tensor make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
+                     const std::vector<int64_t>& strides = {}, void* data = nullptr);
 
  public:
   // const DLTensor* operator->() const;

@@ -50,8 +50,8 @@ class Tensor::Impl {
     delete ptr;
   }
 
-  static Tensor Make(Context ctx, DType dtype, std::vector<int64_t> shape,
-                     std::vector<int64_t> strides, void* data) {
+  static Tensor Make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
+                     const std::vector<int64_t>& strides, void* data) {
     if (!strides.empty()) {
       CHECK_EQ(shape.size(), strides.size());
     }
@@ -77,8 +77,8 @@ int Tensor::array_type_code() const {
   return data_ == nullptr ? -1 : static_cast<Tensor::TensorContainer*>(data_)->array_type_code_;
 }
 
-Tensor Tensor::make(Context ctx, DType dtype, std::vector<int64_t> shape,
-                    std::vector<int64_t> strides, void* data) {
+Tensor Tensor::make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
+                    const std::vector<int64_t>& strides, void* data) {
   return Tensor::Impl::Make(ctx, dtype, shape, strides, data);
 }
 

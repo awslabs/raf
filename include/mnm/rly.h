@@ -19,6 +19,7 @@ using tvm::Int;
 using tvm::IntImm;
 using tvm::make_const;
 using tvm::make_node;
+using tvm::runtime::PackedFunc;
 using tvm::runtime::TypedPackedFunc;
 
 using Node = tvm::Node;

@@ -12,7 +12,11 @@
 
 namespace mnm {
 namespace registry {
+
 using Registry = tvm::runtime::Registry;
+
+const tvm::runtime::PackedFunc& GetPackedFunc(const std::string& name);
+
 }  // namespace registry
 }  // namespace mnm
 

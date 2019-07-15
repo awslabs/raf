@@ -4,8 +4,8 @@
 namespace mnm {
 namespace device_api {
 
+using registry::GetPackedFunc;
 using registry::PerDevTypeStore;
-using registry::Registry;
 
 class DeviceAPIManager {
  public:
@@ -17,9 +17,7 @@ class DeviceAPIManager {
   static DeviceAPI* CreateDeviceAPI(DevType device_type) {
     thread_local char creator_name[128];
     sprintf(creator_name, "mnm.device_api._make.%s", device_type.c_str());
-    auto creator = Registry::Get(creator_name);
-    CHECK(creator != nullptr);
-    void* ret = (*creator)();
+    void* ret = GetPackedFunc(creator_name)();
     return static_cast<DeviceAPI*>(ret);
   }
 

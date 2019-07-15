@@ -7,8 +7,8 @@
 namespace mnm {
 namespace memory_pool {
 
+using registry::GetPackedFunc;
 using registry::PerContextStore;
-using registry::Registry;
 
 static std::unordered_map<int, std::string> default_strategies = {
     {DevType(DevType::kCPU()), "no_pool"},
@@ -35,9 +35,7 @@ class MemoryPoolManager {
         } else {
           sprintf(maker_name, "mnm.memory_pool._make.%s", name.c_str());
         }
-        const auto* creator = Registry::Get(maker_name);
-        CHECK(creator != nullptr);
-        void* ret = (*creator)(ctx.operator DLContext());
+        void* ret = GetPackedFunc(maker_name)(ctx.operator DLContext());
         result.reset(static_cast<MemoryPool*>(ret));
         return result.get();
       }

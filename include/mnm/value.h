@@ -18,74 +18,35 @@ class ValueNode : public rly::Node {
 
 class Value : public rly::NodeRef {
  public:
-  MNM_DEF_NODE_REF_METHODS(Value, rly::NodeRef, ValueNode);
   operator const DLTensor*() const;
   operator const tensor::Tensor&() const;
-};
-
-/* OpaqueValue */
-class OpaqueValueNode : public ValueNode {
- public:
-  static constexpr const char* _type_key = "mnm.value.OpaqueValue";
-  MNM_DEF_BASE_NODE_INFO(OpaqueValueNode, ValueNode);
-};
-
-class OpaqueValue : public Value {
- public:
-  MNM_DEF_NODE_REF_METHODS(OpaqueValue, Value, ValueNode);
-};
-
-/* ScalarValue */
-class ScalarValueNode final : public ValueNode {
- public:
-  // TODO(@junrushao1994): we need both int64 and float64, probably string?
-  rly::Integer data;
-
-  ScalarValueNode() = default;
-
-  void VisitAttrs(tvm::AttrVisitor* v) final {
-    v->Visit("data", &data);
-  }
-
-  static constexpr const char* _type_key = "mnm.value.ScalarValue";
-  MNM_DEF_NODE_TYPE_INFO(ScalarValueNode, ValueNode);
-};
-
-class ScalarValue final : public Value {
- public:
-  MNM_DEF_NODE_REF_METHODS(ScalarValue, Value, ScalarValueNode);
+  MNM_DEF_NODE_REF_METHODS(Value, rly::NodeRef, ValueNode);
 };
 
 /* TensorValue */
 class TensorValueNode final : public ValueNode {
  public:
   tensor::Tensor tensor;
-
-  TensorValueNode() = default;
-
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("tensor", &tensor);
   }
-
   static constexpr const char* _type_key = "mnm.value.TensorValue";
   MNM_DEF_NODE_TYPE_INFO(TensorValueNode, ValueNode);
 };
 
 class TensorValue final : public Value {
  public:
+  static TensorValue make(tensor::Tensor tensor);
+  static TensorValue Assemble(const Context& ctx, const DType& dtype,
+                              const std::vector<int64_t>& shape,
+                              const std::vector<int64_t>& strides = {}, void* data = nullptr);
   MNM_DEF_NODE_REF_METHODS(TensorValue, Value, TensorValueNode);
-  static TensorValue Assemble(Context ctx,                        //
-                              DType dtype,                        //
-                              std::vector<int64_t> shape,         //
-                              std::vector<int64_t> strides = {},  //
-                              void* data = nullptr);
 };
 
 /* TupleValue */
 class TupleValueNode final : public ValueNode {
  public:
   rly::Array<Value> fields;
-
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("fields", &fields);
   }
@@ -94,20 +55,63 @@ class TupleValueNode final : public ValueNode {
 };
 
 class TupleValue final : public Value {
+ public:
+  static TupleValue make(rly::Array<Value> fields);
   MNM_DEF_NODE_REF_METHODS(TupleValue, Value, TupleValueNode);
 };
 
 /* ClosureValue */
-class ClosureValue;
-class ClosureValueNode;
+class ClosureValueNode final : public ValueNode {
+ public:
+  rly::Map<rly::Var, Value> env;
+  rly::Function func;
+  void VisitAttrs(tvm::AttrVisitor* v) final {
+    v->Visit("env", &env);
+    v->Visit("func", &func);
+  }
+  static constexpr const char* _type_key = "mnm.value.ClosureValueNode";
+  MNM_DEF_NODE_TYPE_INFO(ClosureValueNode, ValueNode);
+};
+
+class ClosureValue final : public Value {
+ public:
+  static ClosureValue make(rly::Map<rly::Var, Value> value, rly::Function func);
+  MNM_DEF_NODE_REF_METHODS(ClosureValue, Value, ClosureValueNode);
+};
 
 /* RefValue */
-class RefValue;
-class RefValueNode;
+class RefValueNode final : public ValueNode {
+ public:
+  mutable Value value;
+  void VisitAttrs(tvm::AttrVisitor* v) final {
+    v->Visit("value", &value);
+  }
+  static constexpr const char* _type_key = "mnm.value.RefValue";
+  MNM_DEF_NODE_TYPE_INFO(RefValueNode, ValueNode);
+};
+
+class RefValue final : public Value {
+ public:
+  static RefValue make(Value value);
+  MNM_DEF_NODE_REF_METHODS(RefValue, Value, RefValueNode);
+};
 
 /* ConstructorValue */
-class ConstructorValue;
 class ConstructorValueNode;
+class ConstructorValue;
+
+/* OpaqueValue */
+class OpaqueValueNode : public ValueNode {
+ public:
+  mutable void* data = nullptr;
+  static constexpr const char* _type_key = "mnm.value.OpaqueValue";
+  MNM_DEF_BASE_NODE_INFO(OpaqueValueNode, ValueNode);
+};
+
+class OpaqueValue : public Value {
+ public:
+  MNM_DEF_NODE_REF_METHODS(OpaqueValue, Value, ValueNode);
+};
 
 }  // namespace value
 }  // namespace mnm
