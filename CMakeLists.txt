@@ -54,7 +54,7 @@ list(APPEND MNM_LINK_LIBRARIES "dmlc")
 list(APPEND MNM_LINK_LIBRARIES "tvm")
 
 ################# Backends #################
-include(${CMAKE_SOURCE_DIR}/cmake/backend/CUDNN.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/backend/CUDA.cmake)
 
 # Finalize the compilation target here
 add_library(mnm SHARED ${MNM_SRC_FILES})

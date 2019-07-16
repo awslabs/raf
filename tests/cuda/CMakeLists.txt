@@ -38,6 +38,7 @@ if (CUDA_FOUND)
     target_link_libraries(${__exec} ${GTEST_LIBRARY})
     target_link_libraries(${__exec} ${CUDA_CUDA_LIBRARY})
     target_link_libraries(${__exec} ${CUDA_CUDART_LIBRARY})
+    target_link_libraries(${__exec} ${CUDA_CUBLAS_LIBRARY})
 
     target_include_directories(${__exec} PRIVATE ${MNM_HEADER_FILES})
     target_include_directories(${__exec} PRIVATE ${MNM_3RD_PARTY_INCLUDE_DIRS})

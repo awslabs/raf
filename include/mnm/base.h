@@ -63,6 +63,12 @@ class Context {
     sprintf(buffer, "%s(%d)", device_type.c_str(), device_id);
     return buffer;
   }
+  bool operator==(const Context& other) {
+    return device_type == other.device_type && device_id == other.device_id;
+  }
+  bool operator!=(const Context& other) {
+    return !(*this == other);
+  }
 
  public:
   DevType device_type{DevType::kUnknown()};
@@ -94,10 +100,21 @@ class DType {
     return buffer;
   }
 
+  bool operator==(const DType& other) {
+    return code == other.code && bits == other.bits && lanes == other.lanes;
+  }
+
+  bool operator!=(const DType& other) {
+    return !(*this == (other));
+  }
+
  public:
   DTypeCode code{DTypeCode::kUnknown()};
   int bits{-1};
   int lanes{-1};
+
+  template <typename T>
+  inline operator T() const;
 };
 
 struct TemplateToken {

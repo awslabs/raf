@@ -66,7 +66,6 @@ Value LinearMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape);
 }
 
-// TODO(@were): why clang-format aligns me like that? its inhumane.
 MNM_REGISTER_OP("mnm.op.linear")
     .describe(R"code(This is Linear. Have a nice day.
 )code" MNM_ADD_FILELINE)

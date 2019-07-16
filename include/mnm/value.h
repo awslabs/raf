@@ -69,7 +69,7 @@ class ClosureValueNode final : public ValueNode {
     v->Visit("env", &env);
     v->Visit("func", &func);
   }
-  static constexpr const char* _type_key = "mnm.value.ClosureValueNode";
+  static constexpr const char* _type_key = "mnm.value.ClosureValue";
   MNM_DEF_NODE_TYPE_INFO(ClosureValueNode, ValueNode);
 };
 
@@ -103,14 +103,14 @@ class ConstructorValue;
 /* OpaqueValue */
 class OpaqueValueNode : public ValueNode {
  public:
-  mutable void* data = nullptr;
+  mutable rly::NodeRef data{nullptr};
   static constexpr const char* _type_key = "mnm.value.OpaqueValue";
-  MNM_DEF_BASE_NODE_INFO(OpaqueValueNode, ValueNode);
+  MNM_DEF_NODE_TYPE_INFO(OpaqueValueNode, ValueNode);
 };
 
 class OpaqueValue : public Value {
  public:
-  MNM_DEF_NODE_REF_METHODS(OpaqueValue, Value, ValueNode);
+  MNM_DEF_NODE_REF_METHODS(OpaqueValue, Value, OpaqueValueNode);
 };
 
 }  // namespace value

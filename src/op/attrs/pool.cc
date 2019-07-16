@@ -1,12 +1,13 @@
 #include <mnm/rly.h>
 
-#include "./pooling.h"
+#include "./pool.h"
 
 namespace mnm {
 namespace op {
 namespace attrs {
 
-MNM_REGISTER_NODE_TYPE(MaxPool2DAttrs);
+MNM_REGISTER_NODE_TYPE(MaxPoolAttrs);
+MNM_REGISTER_NODE_TYPE(AvgPoolAttrs);
 
 }  // namespace attrs
 }  // namespace op

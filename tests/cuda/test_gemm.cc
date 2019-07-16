@@ -2,8 +2,8 @@
 #include <cassert>
 #include <iostream>
 
+#include <cublas.h>
 #include <cuda.h>
-#include <cudnn.h>
 #include <gtest/gtest.h>
 
 #include <mnm/base.h>
@@ -24,30 +24,30 @@ using mnm::rly::Integer;
 using mnm::value::TensorValue;
 using mnm::value::Value;
 
-TEST(CuDNN, RegisterConvCudnn) {
-  const auto* dispatch_list = OpDispatch::Get("mnm.conv2d", DevType::kCUDA());
-  const auto* MakeNode = Registry::Get("make._Node");
+TEST(cuBlas, Gemm) {
+  const auto* dispatch_list = OpDispatch::Get("mnm.op.linear", DevType::kCUDA());
   ASSERT_EQ(dispatch_list->size(), 1);
 
   Context ctx(DevType::kCUDA(), 0);
   DType dt(DTypeCode::kFloat(), 32, 1);
 
-  std::vector<int64_t> a_dims{3, 128, 128};
+  std::vector<int64_t> a_dims{32, 128};
   void* a_data = nullptr;
-  cudaMalloc(&a_data, 3 * 1440 * 900 * sizeof(float));
-  auto img = TensorValue::Assemble(ctx, dt, a_dims, {}, a_data);
+  cudaMalloc(&a_data, 32 * 128 * sizeof(float));
+  auto data = TensorValue::Assemble(ctx, dt, a_dims, {}, a_data);
 
-  std::vector<int64_t> b_dims{512, 3, 3, 3};
+  std::vector<int64_t> b_dims{512, 128};
   void* b_data = nullptr;
-  cudaMalloc(&b_data, 512 * 3 * 3 * 3 * sizeof(float));
-  auto fil = TensorValue::Assemble(ctx, dt, b_dims, {}, b_data);
+  cudaMalloc(&b_data, 128 * 512 * sizeof(float));
+  auto weight = TensorValue::Assemble(ctx, dt, b_dims, {}, b_data);
 
-  Array<Value> args{img, fil};
-  Attrs attrs = (*MakeNode)("mnm.attrs.Conv2DAttrs",           //
-                            "stride", Array<Integer>{1, 1},    //
-                            "padding", Array<Integer>{0, 0},   //
-                            "dilation", Array<Integer>{1, 1},  //
-                            "groups", Integer{1});
+  std::vector<int64_t> o_dims{32, 512};
+  void* o_data = nullptr;
+  cudaMalloc(&o_data, 32 * 512 * sizeof(float));
+  auto output = TensorValue::Assemble(ctx, dt, o_dims, {}, o_data);
+
+  Array<Value> args{data, weight, output};
+  Attrs attrs;
   for (const auto& e : *dispatch_list) {
     OpEnv* op = (OpEnv*)e.second(args, attrs);
     op->Execute(args, attrs);

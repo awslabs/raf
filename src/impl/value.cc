@@ -68,7 +68,8 @@ TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
 
 TensorValue AssembleTensorValue(DLContext ctx, DLDataType dtype, Array<Integer> shape,
                                 Array<Integer> strides, void* data) {
-  return TensorValue::make(Tensor::make(ctx, dtype, MakeShape(shape), MakeShape(strides), data));
+  return TensorValue::make(
+      Tensor::make(ctx, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
 }
 
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);

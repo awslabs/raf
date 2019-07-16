@@ -58,7 +58,7 @@ class Tensor::Impl {
     TensorContainer* container = new TensorContainer(DefaultDeleter);
     Tensor ret(container);
     container->shape_ = shape;
-    container->strides_ = !strides.empty() ? strides : Shape2Strides(container->shape_);
+    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
     container->dl_tensor.data = data;
     container->dl_tensor.ctx = ctx;
     container->dl_tensor.ndim = shape.size();

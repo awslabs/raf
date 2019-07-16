@@ -98,7 +98,6 @@ Value Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
                                /*shape=*/{n_in, out, h_out, w_out});
 }
 
-// TODO(@were): why clang-format aligns me like that? its inhumane.
 MNM_REGISTER_OP("mnm.op.conv2d")
     .describe(R"code(This is Conv2d. Have a nice day.
 )code" MNM_ADD_FILELINE)

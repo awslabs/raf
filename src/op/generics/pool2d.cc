@@ -3,7 +3,7 @@
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
-#include "../attrs/pooling.h"
+#include "../attrs/pool.h"
 
 /*
  * See also:
@@ -17,7 +17,8 @@ namespace mnm {
 namespace op {
 namespace max_pool2d {
 
-using attrs::MaxPool2DAttrs;
+using attrs::AvgPoolAttrs;
+using attrs::MaxPoolAttrs;
 using rly::Array;
 using rly::Attrs;
 using rly::IndexExpr;
@@ -28,13 +29,14 @@ using tensor::Tensor;
 using value::TensorValue;
 using value::Value;
 
-bool MaxPool2DRel(const Array<Type>& types,  //
-                  int num_inputs,            //
-                  const Attrs& attrs,        //
-                  const TypeReporter& reporter) {
+template <typename T>
+bool Pool2DRel(const Array<Type>& types,  //
+               int num_inputs,            //
+               const Attrs& attrs,        //
+               const TypeReporter& reporter) {
   CHECK_EQ(types.size(), 2);
   const auto* data = types[0].as<TensorTypeNode>();
-  const auto* param = attrs.as<attrs::MaxPool2DAttrs>();
+  const auto* param = attrs.as<T>();
   CHECK(data != nullptr);
   CHECK(param != nullptr);
   CHECK_EQ(data->shape.size(), 4);
@@ -66,10 +68,11 @@ bool MaxPool2DRel(const Array<Type>& types,  //
   return true;
 }
 
-Value MaxPool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+template <typename T>
+Value Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 1);
   const Tensor& data = values[0];
-  const auto* param = attrs.as<attrs::MaxPool2DAttrs>();
+  const auto* param = attrs.as<T>();
   CHECK(param != nullptr);
   CHECK_EQ(data->ndim, 4);
   CHECK_EQ(param->kernel_size.size(), 2);
@@ -100,15 +103,23 @@ Value MaxPool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
                                /*shape=*/{n_in, c_in, h_out, w_out});
 }
 
-// TODO(@were): why clang-format aligns me like that? its inhumane.
 MNM_REGISTER_OP("mnm.op.max_pool2d")
     .describe(R"code(This is MaxPool2D. Have a nice day.
 )code" MNM_ADD_FILELINE)
-    .set_attrs_type_key("mnm.attrs.MaxPool2DAttrs")
-    .set_num_inputs(2)
+    .set_attrs_type_key("mnm.attrs.PoolingAttrs")
+    .set_num_inputs(1)
     .add_argument("data", "4D Tensor", "Input data.")
-    .add_type_rel("MaxPool2DRel", MaxPool2DRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", MaxPool2DMakeOutput);
+    .add_type_rel("Pool2DRel", Pool2DRel<MaxPoolAttrs>)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", Pool2DMakeOutput<MaxPoolAttrs>);
+
+MNM_REGISTER_OP("mnm.op.avg_pool2d")
+    .describe(R"code(This is AvgPool2D. Have a nice day.
+)code" MNM_ADD_FILELINE)
+    .set_attrs_type_key("mnm.attrs.PoolingAttrs")
+    .set_num_inputs(1)
+    .add_argument("data", "4D Tensor", "Input data.")
+    .add_type_rel("Pool2DRel", Pool2DRel<AvgPoolAttrs>)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", Pool2DMakeOutput<AvgPoolAttrs>);
 
 }  // namespace max_pool2d
 }  // namespace op

@@ -3,17 +3,50 @@
 #include <cudnn.h>
 
 #include <mnm/base.h>
+#include <mnm/enum_base.h>
 #include <mnm/rly.h>
 
 #include "../../../common/cuda.h"
+#include "../../../common/shape_utils.h"
 
 #define CUDNN_CALL(func)                                                      \
-  {                                                                           \
+  do {                                                                        \
     cudnnStatus_t e = (func);                                                 \
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
-  }
+  } while (false)
+
+#define FORM_SHAPE(def, dl_tensor)                                   \
+  std::vector<int> def = common::shape_utils::PadDims<int, int64_t>( \
+      std::vector<int64_t>((dl_tensor)->shape, (dl_tensor)->shape + (dl_tensor)->ndim), 4)
+
+#define FORM_STRIDE(def, shape) \
+  std::vector<int> def = common::shape_utils::Shape2Strides<int>(shape)
 
 namespace mnm {
+
+template <>
+inline DType::operator cudnnDataType_t() const {
+  switch (code) {
+    case kDLInt: {
+      if (bits == 8)
+        return CUDNN_DATA_INT8;
+      else if (bits == 32)
+        return CUDNN_DATA_INT32;
+      LOG(FATAL) << "NotImplementedError: " << c_str();
+    }
+    case kDLUInt:
+      if (bits == 8) return CUDNN_DATA_UINT8;
+      LOG(FATAL) << "NotImplementedError: " << c_str();
+    case kDLFloat:
+      if (bits == 16) return CUDNN_DATA_HALF;
+      if (bits == 32) return CUDNN_DATA_FLOAT;
+      if (bits == 64) return CUDNN_DATA_DOUBLE;
+      LOG(FATAL) << "NotImplementedError: " << c_str();
+  }
+  LOG(FATAL) << "NotImplementedError: " << c_str();
+  throw;
+}
+
 namespace op {
 namespace backend {
 namespace cudnn {
@@ -27,57 +60,176 @@ class CUDNNThreadEntry {
   cudnnHandle_t handle{nullptr};
 };
 
-/*
- * Make stride and calculate the size of the given array.
- * The stride can be null. In this case, compute the array size only.
- */
-int MakeStride(int n, int* dims, int* stride);
+#if CUDNN_VERSION >= 7100
 
-cudnnDataType_t DType2CudnnType(DType dt);
+class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t> {
+ public:
+  ENUM_DEF_HEADER(CUDNNDType, 0, plain);
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 0, Float, CUDNN_DATA_FLOAT, "float32");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 1, Double, CUDNN_DATA_DOUBLE, "float64");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 2, Half, CUDNN_DATA_FLOAT, "float16");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 3, Char, CUDNN_DATA_INT8, "int8");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 4, Int, CUDNN_DATA_INT32, "int32");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 5, Charx4, CUDNN_DATA_INT8x4, "int8x4");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 6, UChar, CUDNN_DATA_UINT8, "uint8");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 7, UCharx4, CUDNN_DATA_INT8x4, "uint8x4");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 8, UCharx32, CUDNN_DATA_INT8x32, "uint8x32");
 
-struct cudnnMoreThan4DTensor {
-  cudnnMoreThan4DTensor() {
+  CUDNNDType(DType dt) : EnumBase(cudnnDataType_t(dt)) {
   }
-  cudnnMoreThan4DTensor(const DLTensor* dl);
 
-  cudnnDataType_t dt;
-  int n;
-  int dims[8];
-  int strides[8];
+ public:
+  template <int value>
+  inline const void* const_addr() {
+    cudnnDataType_t dt(*this);
+    switch (dt) {
+      case CUDNN_DATA_FLOAT:
+        return common::cuda::const_addr<float, value>();
+      case CUDNN_DATA_HALF:
+        return common::cuda::const_addr<float, value>();
+      case CUDNN_DATA_DOUBLE:
+        return common::cuda::const_addr<double, value>();
+      case CUDNN_DATA_INT8:
+        return common::cuda::const_addr<char, value>();
+      case CUDNN_DATA_INT8x32:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+      case CUDNN_DATA_UINT8:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+      case CUDNN_DATA_UINT8x4:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+      case CUDNN_DATA_INT32:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+      default:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+    }
+    throw;
+  }
 };
 
-void ArrayIntegerToIntPtr(mnm::rly::Array<mnm::rly::Integer> src, int* dest);
+#else
 
-template <typename T, int value>
-const void* const_addr() {
-  static const T a = static_cast<T>(value);
-  return static_cast<const void*>(&a);
+class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t> {
+ public:
+  ENUM_DEF_HEADER(CUDNNDType, 0, plain);
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 0, Float, CUDNN_DATA_FLOAT, "float32");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 1, Double, CUDNN_DATA_DOUBLE, "float64");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 2, Half, CUDNN_DATA_FLOAT, "float16");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 3, Char, CUDNN_DATA_INT8, "int8");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 4, Int, CUDNN_DATA_INT32, "int32");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 5, Charx4, CUDNN_DATA_INT8x4, "int8x4");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 6, UChar8x4, CUDNN_DATA_INT8x32, "uint8x32");
+
+  CUDNNDType(DType dt) : EnumBase(cudnnDataType_t(dt)) {
+  }
+
+ public:
+  template <int value>
+  inline const void* const_addr() {
+    cudnnDataType_t dt(*this);
+    switch (dt) {
+      case CUDNN_DATA_FLOAT:
+        return common::cuda::const_addr<float, value>();
+      case CUDNN_DATA_HALF:
+        return common::cuda::const_addr<float, value>();
+      case CUDNN_DATA_DOUBLE:
+        return common::cuda::const_addr<double, value>();
+      case CUDNN_DATA_INT8:
+        return common::cuda::const_addr<char, value>();
+      case CUDNN_DATA_INT8x32:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+      case CUDNN_DATA_INT32:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+      default:
+        LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
+    }
+    throw;
+  }
+};
+
+#endif
+
+template <typename T>
+class AlgorithmCache {
+  std::map<std::vector<int>, T> cached_results;
+
+  static std::string Key2String(const std::vector<int>& key) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < key.size(); ++i) {
+      oss << key[i];
+      if (i != key.size() - 1) {
+        oss << " ";
+      }
+    }
+    return oss.str();
+  }
+
+ public:
+  // TODO(@were): serialize and dump the cached results when exiting.
+  ~AlgorithmCache() {
+  }
+
+  bool has(const std::vector<int>& key) {
+    return cached_results.count(key);
+  }
+
+  T get(const std::vector<int>& key) {
+    if (!has(key)) {
+      LOG(FATAL) << "KeyError: The cached results have no key: " << AlgorithmCache::Key2String(key)
+                 << "\n";
+      throw;
+    }
+    return cached_results[key];
+  }
+
+  void set(const std::vector<int>& key, T val) {
+    if (has(key)) {
+      LOG(FATAL) << "KeyError: The result is already cached: " << AlgorithmCache::Key2String(key)
+                 << "\n";
+      throw;
+    }
+    cached_results[key] = val;
+  }
+};
+
+inline std::vector<int> ConcatVecs(rly::Integer v) {
+  std::vector<int> res{0, (int)v};
+  return res;
 }
 
-template <int value>
-const void* getAlphaBeta(cudnnDataType_t dt) {
-  switch (dt) {
-    case CUDNN_DATA_FLOAT:
-      return const_addr<float, value>();
-    case CUDNN_DATA_HALF:
-      return const_addr<float, value>();
-    case CUDNN_DATA_DOUBLE:
-      return const_addr<double, value>();
-    case CUDNN_DATA_INT8:
-      return const_addr<char, value>();
-    case CUDNN_DATA_INT8x32:
-#if CUDNN_VERSION >= 710
-    case CUDNN_DATA_UINT8:
-      LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
-    case CUDNN_DATA_UINT8x4:
-      LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
-#endif
-    case CUDNN_DATA_INT32:
-      LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
-    default:
-      LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
-  }
-  throw;
+inline std::vector<int> ConcatVecs(const std::vector<int>& v) {
+  std::vector<int> res;
+  res.push_back(v.size());
+  res.insert(res.end(), v.begin(), v.end());
+  return res;
+}
+
+inline std::vector<int> ConcatVecs(rly::Array<rly::Integer> a) {
+  return ConcatVecs(common::shape_utils::MakeShape<int>(a));
+}
+
+template <typename... Targs>
+inline std::vector<int> ConcatVecs(rly::Array<rly::Integer> a, Targs... args);
+
+template <typename... Targs>
+inline std::vector<int> ConcatVecs(const std::vector<int>& v, Targs... args) {
+  std::vector<int> res;
+  std::vector<int> append(ConcatVecs(args...));
+  res.push_back(v.size());
+  res.insert(res.end(), v.begin(), v.end());
+  res.insert(res.end(), append.begin(), append.end());
+  return res;
+}
+
+template <typename... Targs>
+inline std::vector<int> ConcatVecs(rly::Array<rly::Integer> a, Targs... args) {
+  std::vector<int> v(common::shape_utils::MakeShape<int>(a));
+  // return ConcatVecs(v, args...);
+  std::vector<int> res;
+  std::vector<int> append(ConcatVecs(args...));
+  res.push_back(v.size());
+  res.insert(res.end(), v.begin(), v.end());
+  res.insert(res.end(), append.begin(), append.end());
+  return res;
 }
 
 }  // namespace cudnn

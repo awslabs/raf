@@ -41,7 +41,7 @@ class Conv2dX : public Conv2d {
   }
 };
 
-MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DevType::kCPU(), "mklShallowNN", Conv2dX::make);
+MNM_REGISTER_OP_DISPATCH("mnm.op.conv2d", DevType::kCPU(), "mklShallowNN", Conv2dX::make);
 
 // Implement 1 of "mnm.conv2d"
 class Conv2dY : public Conv2d {
@@ -57,10 +57,10 @@ class Conv2dY : public Conv2d {
   }
 };
 
-MNM_REGISTER_OP_DISPATCH("mnm.conv2d", DevType::kCPU(), "sshadow", Conv2dY::make);
+MNM_REGISTER_OP_DISPATCH("mnm.op.conv2d", DevType::kCPU(), "sshadow", Conv2dY::make);
 
 TEST(OpDispatch, Registry) {
-  const auto* dispatch_list = OpDispatch::Get("mnm.conv2d", DevType::kCPU());
+  const auto* dispatch_list = OpDispatch::Get("mnm.op.conv2d", DevType::kCPU());
   ASSERT_EQ(dispatch_list->size(), 2);
   Array<Value> args;
   Attrs attrs;
