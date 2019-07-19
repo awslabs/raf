@@ -6,6 +6,7 @@
 
 #include <tvm/attrs.h>
 #include <tvm/node/container.h>
+#include <tvm/ir.h>
 #include <tvm/relay/base.h>
 #include <tvm/relay/expr.h>
 #include <tvm/relay/module.h>
@@ -40,22 +41,22 @@ using tvm::Array;
 using tvm::Map;
 using Integer = tvm::Integer;
 
-class Float : public HalideIR::Expr {
+class Float : public tvm::Expr {
  public:
-  Float() : HalideIR::Expr() {
+  Float() : tvm::Expr() {
   }
-  explicit Float(NodePtr<Node> node) : HalideIR::Expr(node) {
+  explicit Float(NodePtr<Node> node) : tvm::Expr(node) {
   }
-  Float(double value) : HalideIR::Expr(value) {
+  Float(double value) : tvm::Expr(tvm::ir::FloatImm::make(tvm::Float(64), value)) {
   }
-  Float(float value) : HalideIR::Expr(value) {
+  Float(float value) : tvm::Expr(value) {
   }
   Float& operator=(const Float& other) {
     node_ = other.node_;
     return *this;
   }
-  const HalideIR::Internal::FloatImm* operator->() const {
-    return static_cast<const HalideIR::Internal::FloatImm*>(node_.get());
+  const tvm::ir::FloatImm* operator->() const {
+    return static_cast<const tvm::ir::FloatImm*>(node_.get());
   }
   operator double() const {
     CHECK(node_ != nullptr) << " Trying get reference a null Integer";
@@ -66,7 +67,7 @@ class Float : public HalideIR::Expr {
     return (*this)->value;
   }
   /*! \brief type indicate the container type */
-  using ContainerType = HalideIR::Internal::FloatImm;
+  using ContainerType = tvm::ir::FloatImm;
 };
 
 using tvm::make_node;
