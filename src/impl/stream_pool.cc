@@ -61,7 +61,9 @@ class StreamPool {
 
  public:
   static std::shared_ptr<StreamPool> Get(const Context& ctx) {
-    static auto per_device = std::make_shared<PerContextStore<StreamPool, false>>();
+    static PerContextStore<StreamPool, false>* per_device =
+        new PerContextStore<StreamPool, false>();
+    // static auto per_device = std::make_shared<PerContextStore<StreamPool, false>>();
     std::shared_ptr<StreamPool>& ret = per_device->Get(ctx);
     if (ret == nullptr) {
       auto lock = per_device->GrabLock();

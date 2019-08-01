@@ -17,8 +17,9 @@ static std::unordered_map<int, std::string> default_strategies = {
 
 class MemoryPoolManager {
  public:
-  static std::shared_ptr<MemoryPoolManager> Get() {
-    static std::shared_ptr<MemoryPoolManager> instance = std::make_shared<MemoryPoolManager>();
+  static MemoryPoolManager* Get() {
+    // static std::shared_ptr<MemoryPoolManager> instance = std::make_shared<MemoryPoolManager>();
+    static MemoryPoolManager* instance = new MemoryPoolManager();
     return instance;
   }
 
@@ -57,29 +58,29 @@ class MemoryPoolManager {
 };
 
 std::shared_ptr<Memory> Memory::Alloc(const Context& ctx, int64_t nbytes, int64_t alignment) {
-  static std::shared_ptr<MemoryPoolManager> mgr = MemoryPoolManager::Get();
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(ctx, "")->Alloc(nbytes, alignment);
 }
 
 std::vector<std::shared_ptr<Memory> > Memory::AllocMany(const Context& ctx,
                                                         const std::vector<int64_t>& nbytes,
                                                         int64_t alignment) {
-  static std::shared_ptr<MemoryPoolManager> mgr = MemoryPoolManager::Get();
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(ctx, "")->AllocMany(nbytes, alignment);
 }
 
 void Memory::RemovePool(const Context& ctx) {
-  static std::shared_ptr<MemoryPoolManager> mgr = MemoryPoolManager::Get();
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
   mgr->Remove(ctx);
 }
 
 MemoryPool* Memory::GetPool(const Context& ctx) {
-  static std::shared_ptr<MemoryPoolManager> mgr = MemoryPoolManager::Get();
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(ctx, "");
 }
 
 MemoryPool* Memory::InitPool(const Context& ctx, const std::string& name) {
-  static std::shared_ptr<MemoryPoolManager> mgr = MemoryPoolManager::Get();
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(ctx, name);
 }
 
