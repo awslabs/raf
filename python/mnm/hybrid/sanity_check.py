@@ -88,10 +88,8 @@ SUPPORTED = {
 class SanityCheck(NodeVisitor):
 
     def __init__(self):
-        super(SanityCheck, self).__init__()
+        super(SanityCheck, self).__init__(strict=True)
         self.n_func_defs = 0
-        self.loop_nest_depth = 0
-        self.return_in_loop = False
 
     def run(self, node: ast.AST) -> None:
         self.visit(node)
@@ -122,9 +120,7 @@ class SanityCheck(NodeVisitor):
         if node.orelse:
             raise NotImplementedError(
                 "While loop with else branch is not supported.")
-        self.loop_nest_depth += 1
         self.generic_visit(node)
-        self.loop_nest_depth -= 1
 
     def check_FunctionDef(self, node: ast.FunctionDef):
         if self.n_func_defs > 0:
@@ -160,13 +156,10 @@ class SanityCheck(NodeVisitor):
         self.generic_visit(node)
 
     def check_Return(self, node: ast.Return):
-        if self.loop_nest_depth > 0 and not self.return_in_loop:
-            self.return_in_loop = True
-            # TODO: replace with logger
-            print("Warning: return statement in loops may affect performance.")
         self.generic_visit(node)
 
 
-def sanity_check(node: ast.AST) -> None:
+def sanity_check(node: ast.AST) -> ast.AST:
     assert version_info >= (3, 5), "Only support Python >= 3.5."
     SanityCheck().run(node)
+    return node

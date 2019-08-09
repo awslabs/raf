@@ -89,3 +89,17 @@ class NodeTransformer(NodeVisitor):
                 else:
                     setattr(node, field, new_node)
         return node
+
+
+def top_type():
+    # TODO(@junrushao1994): fake it until you make it
+    return relay.TensorType(shape=(), dtype="int64")
+
+
+def unbound_value():
+    # TODO(@junrushao1994): fake it until you make it
+    return relay.const(0, dtype="int64")
+
+
+def get_func_name(pyfunc):
+    return pyfunc.__module__ + "$" + pyfunc.__qualname__

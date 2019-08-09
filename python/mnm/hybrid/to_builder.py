@@ -1,8 +1,8 @@
 import ast
 import inspect
+from typing import List, Set, Tuple
 
-from typing import Set, List
-from .utils import NodeVisitor, NodeTransformer, SUPPORTED_OPS
+from .utils import SUPPORTED_OPS, NodeTransformer, NodeVisitor
 
 
 class LocalNames(NodeVisitor):
@@ -29,6 +29,71 @@ class LocalNames(NodeVisitor):
         if node.id not in self.free_names:
             self.local_names.add(node.id)
 
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self.visit(node.args)
+        for stmt in node.body:
+            self.visit(stmt)
+
+
+class DeadCodeEliminationLite(NodeTransformer):
+
+    def __init__(self):
+        super(DeadCodeEliminationLite, self).__init__(strict=False)
+
+    def _canonicalize(self, stmts: List[ast.AST]):
+        new_stmts = []
+        for stmt in stmts:
+            if isinstance(stmt, (ast.Pass, ast.Ellipsis)):
+                continue
+            if isinstance(stmt, (ast.Break, ast.Continue, ast.Return)):
+                new_stmts.append(stmt)
+                break
+            new_stmts.append(self.visit(stmt))
+        else:
+            new_stmts.append(ast.Pass())
+        assert len(new_stmts) > 0
+        return new_stmts
+
+    def run(self, node: ast.AST) -> ast.AST:
+        return self.visit(node)
+
+    def visit_If(self, node: ast.If):
+        return ast.If(test=node.test,
+                      body=self._canonicalize(node.body),
+                      orelse=self._canonicalize(node.orelse))
+
+    def visit_While(self, node: ast.While):
+        return ast.While(test=node.test,
+                         body=self._canonicalize(node.body),
+                         orelse=[])
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        return ast.FunctionDef(name=node.name,
+                               args=node.args,
+                               body=self._canonicalize(node.body),
+                               decorator_list=node.decorator_list,
+                               returns=node.returns)
+
+
+def _call(name, *args):
+    func = ast.Attribute(value=ast.Name(
+        id='ib', ctx=ast.Load()), attr=name, ctx=ast.Load())
+    call = ast.Call(func=func, args=list(args), keywords=[])
+    return call
+
+
+def _with(node: ast.AST, body: List[ast.AST]):
+    item = ast.withitem(context_expr=node, optional_vars=None)
+    return ast.With(items=[item], body=body)
+
+
+def _op(category: str, node: ast.AST, *args):
+    op_name = node.__class__.__name__
+    category = ast.Str(s=category)
+    ast_name = ast.Name(id="ast", ctx=ast.Load())
+    op = ast.Attribute(ast_name, op_name, ctx=ast.Load())
+    return _call("op", category, op, *args)
+
 
 class ToBuilder(NodeTransformer):
 
@@ -36,28 +101,9 @@ class ToBuilder(NodeTransformer):
         super(ToBuilder, self).__init__(strict=True)
         self.local_names = local_names
 
-    def run(self, node: ast.AST) -> ast.AST:
+    def run(self, node: ast.AST, name: str) -> ast.AST:
+        self.name = name
         return self.visit(node)
-
-    @staticmethod
-    def _call(name, *args):
-        func = ast.Attribute(value=ast.Name(
-            id='ib', ctx=ast.Load()), attr=name, ctx=ast.Load())
-        call = ast.Call(func=func, args=args, keywords=[])
-        return call
-
-    @staticmethod
-    def _with(node: ast.AST, body: List[ast.AST]):
-        item = ast.withitem(context_expr=node, optional_vars=None)
-        return ast.With(items=[item], body=body)
-
-    @staticmethod
-    def _op(category: str, node: ast.AST, *args):
-        op_name = node.__class__.__name__
-        category = ast.Str(s=category)
-        ast_name = ast.Name(id="ast", ctx=ast.Load())
-        op = ast.Attribute(ast_name, op_name, ctx=ast.Load())
-        return ToBuilder._call("op", category, op, *args)
 
     def generic_visit(self, node: ast.AST) -> ast.AST:
         return super(ToBuilder, self).generic_visit(node)
@@ -72,7 +118,7 @@ class ToBuilder(NodeTransformer):
         if node.id not in self.local_names:
             return node
         name = ast.Str(s=node.id)
-        return ToBuilder._call("sym_get", name)
+        return _call("sym_get", name)
 
     def visit_Assign(self, node: ast.Assign) -> ast.AST:
         assert len(node.targets) == 1
@@ -84,71 +130,72 @@ class ToBuilder(NodeTransformer):
         assert lhs.id in self.local_names
         name = ast.Str(s=lhs.id)
         rhs = self.visit(rhs)
-        call = ToBuilder._call("sym_set", name, rhs)
+        call = _call("sym_set", name, rhs)
         return ast.Expr(value=call)
 
     def visit_Pass(self, node: ast.Pass):
-        call = ToBuilder._call("add_pass")
+        call = _call("add_pass")
         return ast.Expr(value=call)
 
     def visit_Return(self, node: ast.Return):
         value = self.visit(node.value)
-        call = ToBuilder._call("add_return", value)
+        call = _call("add_return", value)
         return ast.Expr(value=call)
 
     def visit_Break(self, node: ast.Break):
-        call = ToBuilder._call("add_break")
+        call = _call("add_break")
         return ast.Expr(value=call)
 
     def visit_Continue(self, node: ast.Continue):
-        call = ToBuilder._call("add_continue")
+        call = _call("add_continue")
         return ast.Expr(value=call)
 
     def visit_If(self, node: ast.If):
         test = self.visit(node.test)
         body = [self.visit(stmt) for stmt in node.body]
         orelse = [self.visit(stmt) for stmt in node.orelse]
-        with_if = ToBuilder._with(
-            node=ToBuilder._call("add_if", test),
-            body=[ToBuilder._with(ToBuilder._call("add_then"), body=body),
-                  ToBuilder._with(ToBuilder._call("add_else"), body=orelse)])
+        with_if = _with(
+            node=_call("add_if", test),
+            body=[_with(_call("add_then"), body=body),
+                  _with(_call("add_else"), body=orelse)])
         return with_if
 
     def visit_While(self, node: ast.While):
         assert not node.orelse
         test = self.visit(node.test)
         body = [self.visit(stmt) for stmt in node.body]
-        return ToBuilder._with(ToBuilder._call("add_while", test), body=body)
+        return _with(_call("add_while", test), body=body)
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
-        name = "__build_" + node.name
-        args = [ast.arg(arg="ib", annotation=None)]
+        args = [ast.arg(arg="ib", annotation=None),
+                ast.arg(arg="ast", annotation=None)]
         arguments = ast.arguments(
-            args=args, vararg=None, kwonlyargs=None, kwarg=None, defaults=[], kw_defaults=None)
-        body = [self.visit(stmt) for stmt in node.body]
-        return ast.FunctionDef(name=name, args=arguments, body=body, decorator_list=[], returns=None)
+            args=args, vararg=None, kwonlyargs=[], kwarg=None, defaults=[], kw_defaults=[])
+        body = [ast.Expr(value=_call("add_sym", ast.Str(s=name)))
+                for name in self.local_names] + [self.visit(stmt) for stmt in node.body]
+        return ast.FunctionDef(name=self.name, args=arguments, body=body, decorator_list=[], returns=None)
 
     def visit_UnaryOp(self, node: ast.UnaryOp):
         operand = self.visit(node.operand)
-        return ToBuilder._op("unary_op", node.op, operand)
+        return _op("unary_op", node.op, operand)
 
     def visit_BinOp(self, node: ast.BinOp):
         lhs = self.visit(node.left)
         rhs = self.visit(node.right)
-        return ToBuilder._op("bin_op", node.op, lhs, rhs)
+        return _op("bin_op", node.op, lhs, rhs)
 
     def visit_BoolOp(self, node: ast.BinOp):
         assert len(node.values) >= 2
         values = [self.visit(value) for value in node.values]
-        result = ToBuilder._op("bool_op", node.op, values[0], values[1])
+        result = _op("bool_op", node.op, values[0], values[1])
         for value in values[2:]:
-            result = ToBuilder._op("bool_op", node.op, result, value)
+            result = _op("bool_op", node.op, result, value)
         return result
 
     def visit_Compare(self, node: ast.Compare):
         lhs = self.visit(node.left)
         rhs = self.visit(node.comparators[0])
-        return ToBuilder._op("compare", node.ops[0], lhs, rhs)
+        return _op("compare", node.ops[0], lhs, rhs)
 
     ########## Module ##########
     visit_Module = generic_visit
@@ -176,7 +223,9 @@ class ToBuilder(NodeTransformer):
     visit_FunctionDef
 
 
-def to_builder(node: ast.AST, pyfunc) -> ast.AST:
+def to_builder(node: ast.AST, pyfunc, name: str) -> Tuple[ast.AST, Set[str]]:
+    node = DeadCodeEliminationLite().run(node)
     local_names = LocalNames().run(node, pyfunc)
-    node = ToBuilder(local_names).run(node)
-    return node
+    node = ToBuilder(local_names).run(node, name)
+    ast.fix_missing_locations(node)
+    return node, local_names
