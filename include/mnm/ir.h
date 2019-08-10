@@ -5,8 +5,8 @@
 // TODO(@junrushao1994): adt & patterns, op, functors, pass
 
 #include <tvm/attrs.h>
-#include <tvm/node/container.h>
 #include <tvm/ir.h>
+#include <tvm/node/container.h>
 #include <tvm/relay/base.h>
 #include <tvm/relay/expr.h>
 #include <tvm/relay/module.h>
@@ -14,77 +14,27 @@
 #include <tvm/relay/type.h>
 
 namespace mnm {
-namespace rly {
+namespace ir {
 
+using tvm::Array;
+using tvm::Attrs;
+using tvm::AttrsNode;
 using tvm::Int;
+using tvm::Integer;
 using tvm::IntImm;
 using tvm::make_const;
 using tvm::make_node;
+using tvm::Map;
+using tvm::Node;
+using tvm::NodePtr;
 using tvm::runtime::PackedFunc;
 using tvm::runtime::TypedPackedFunc;
 
-using Node = tvm::Node;
-template <class T>
-using NodePtr = tvm::NodePtr<T>;
 using NodeRef = tvm::relay::NodeRef;
 using NodeHash = tvm::relay::NodeHash;
 using NodeEqual = tvm::relay::NodeEqual;
-
-template <class T>
-using AttrsNode = tvm::AttrsNode<T>;
-using Attrs = tvm::Attrs;
-
 using IndexExpr = tvm::relay::IndexExpr;
 using DataType = tvm::relay::DataType;
-
-using tvm::Array;
-using tvm::Map;
-using Integer = tvm::Integer;
-
-class Float : public tvm::Expr {
- public:
-  Float() : tvm::Expr() {
-  }
-  explicit Float(NodePtr<Node> node) : tvm::Expr(node) {
-  }
-  Float(double value) : tvm::Expr(tvm::ir::FloatImm::make(tvm::Float(64), value)) {
-  }
-  Float(float value) : tvm::Expr(value) {
-  }
-  Float& operator=(const Float& other) {
-    node_ = other.node_;
-    return *this;
-  }
-  const tvm::ir::FloatImm* operator->() const {
-    return static_cast<const tvm::ir::FloatImm*>(node_.get());
-  }
-  operator double() const {
-    CHECK(node_ != nullptr) << " Trying get reference a null Integer";
-    return (*this)->value;
-  }
-  operator float() const {
-    CHECK(node_ != nullptr) << " Trying get reference a null Integer";
-    return (*this)->value;
-  }
-  /*! \brief type indicate the container type */
-  using ContainerType = tvm::ir::FloatImm;
-};
-
-using tvm::make_node;
-
-using SourceName = tvm::relay::SourceName;
-using SourceNameNode = tvm::relay::SourceNameNode;
-
-using Span = tvm::relay::Span;
-using SpanNode = tvm::relay::SpanNode;
-
-using Id = tvm::relay::Id;
-using IdNode = tvm::relay::IdNode;
-
-using RelayNode = tvm::relay::RelayNode;
-
-using Module = tvm::relay::Module;
-using ModuleNode = tvm::relay::ModuleNode;
 
 // Relay Expression
 using Expr = tvm::relay::Expr;
@@ -170,7 +120,7 @@ using TypeRelationNode = tvm::relay::TypeRelationNode;
 
 using TypeReporter = tvm::relay::TypeReporter;
 
-}  // namespace rly
+}  // namespace ir
 }  // namespace mnm
 
 #define MNM_DEF_NODE_TYPE_INFO(TypeName, Parent) TVM_DECLARE_NODE_TYPE_INFO(TypeName, Parent)
@@ -189,3 +139,5 @@ using TypeReporter = tvm::relay::TypeReporter;
 #define MNM_REGISTER_OP RELAY_REGISTER_OP
 
 #define MNM_ADD_FILELINE TVM_ADD_FILELINE
+
+#include <mnm/ir_ext.h>

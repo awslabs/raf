@@ -2,14 +2,14 @@
 
 #include <vector>
 
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 
 namespace mnm {
 namespace common {
 namespace shape_utils {
 
 template <typename T>
-inline std::vector<T> MakeShape(const rly::Array<rly::Integer>& shape) {
+inline std::vector<T> MakeShape(const ir::Array<ir::Integer>& shape) {
   int ndim = shape.size();
   std::vector<T> result(ndim);
   for (int i = 0; i < ndim; ++i) {

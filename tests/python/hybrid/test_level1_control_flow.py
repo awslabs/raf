@@ -34,6 +34,8 @@ def level1_cfg1(x1):
 
 def test_level1_cfg1():
     ans = level1_cfg1(3)
+    import ipdb
+    ipdb.set_trace()
     assert ans.asnumpy() == 9
 
 

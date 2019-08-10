@@ -1,7 +1,7 @@
-from . import _ffi
-from . import context
 from ._ffi._tvm import _NodeBase
+from ._ffi.value import AssembleTensorValue
 from .base import register_mnm_node
+from .context import Context
 
 
 @register_mnm_node("mnm.value.Value")
@@ -25,7 +25,7 @@ class TensorValue(Value):
     def ctx(self):
         handle = self.dltensor_handle
         ctx = handle.contents.ctx
-        return context.Context(ctx.device_type, ctx.device_id)
+        return Context(ctx.device_type, ctx.device_id)
 
     @property
     def ndim(self):
@@ -56,4 +56,4 @@ class TensorValue(Value):
 
     @staticmethod
     def assemble(shape, dtype, ctx, strides=None, data=None):
-        return _ffi.value.AssembleTensorValue(ctx, dtype, shape, strides, data)
+        return AssembleTensorValue(ctx, dtype, shape, strides, data)

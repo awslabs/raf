@@ -2,7 +2,8 @@ import ast
 import inspect
 from typing import Callable, Dict
 
-import tvm
+from mnm import Module, cpu
+from mnm.base import set_module
 from tvm import relay
 
 from .cfg import ast2cfg
@@ -14,6 +15,7 @@ from .utils import get_func_name
 
 FUNC_TAB: Dict[Callable, Callable] = {}
 FUNC_VAR: Dict[Callable, relay.GlobalVar] = {}
+MNM_MODULE = Module()
 
 
 def find_invoker_name(namespace) -> str:
@@ -50,17 +52,21 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     # build relay module
     # TODO(@junrushao1994): this does not work for mutual function calls
     relay_module = relay.Module(hybrid_module)
+    for global_var, func in hybrid_module.items():
+        MNM_MODULE[global_var] = func
 
     def call(*args):
-        code = relay.Call(op=entry, args=[relay.const(arg, dtype="int64") for arg in args])
-        ctx = tvm.context("llvm", 0)
-        intrp = relay.create_executor(mod=relay_module, ctx=ctx, target="llvm")
+        code = relay.Call(op=entry, args=[relay.const(
+            arg, dtype="int64") for arg in args])
+        intrp = relay.create_executor(
+            mod=relay_module, ctx=cpu(), target="llvm")
         result = intrp.evaluate(code)
         return result
 
     return call
 
 
+@set_module("mnm")
 def hybrid(python=False):
 
     def hybrid_no_python(pyfunc):

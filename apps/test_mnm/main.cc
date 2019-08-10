@@ -1,12 +1,15 @@
 #include <cassert>
 #include <iostream>
 
-#include <dmlc/logging.h>
-
 #include <mnm/base.h>
 #include <mnm/device_api.h>
+#include <mnm/enum_base.h>
+#include <mnm/ir.h>
+#include <mnm/ir_ext.h>
 #include <mnm/memory_pool.h>
 #include <mnm/op.h>
+#include <mnm/registry.h>
+#include <mnm/stream_pool.h>
 #include <mnm/tensor.h>
 #include <mnm/traced_entry.h>
 #include <mnm/value.h>

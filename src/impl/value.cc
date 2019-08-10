@@ -1,5 +1,5 @@
+#include <mnm/ir.h>
 #include <mnm/registry.h>
-#include <mnm/rly.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
@@ -9,13 +9,13 @@ namespace mnm {
 namespace value {
 
 using common::shape_utils::MakeShape;
-using rly::Array;
-using rly::Function;
-using rly::Integer;
-using rly::make_node;
-using rly::Map;
-using rly::NodePtr;
-using rly::Var;
+using ir::Array;
+using ir::Function;
+using ir::Integer;
+using ir::make_node;
+using ir::Map;
+using ir::NodePtr;
+using ir::Var;
 using tensor::Tensor;
 
 TensorValue TensorValue::make(tensor::Tensor tensor) {

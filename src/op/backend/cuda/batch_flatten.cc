@@ -22,7 +22,7 @@ class BatchFlattenCUDA : public mnm::op::OpEnv {
   BatchFlattenCUDA() {
   }
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = AsVector(args);
     dtype = DeduceDLType(dlts);
     ctx = DeduceCtx(dlts);
@@ -30,12 +30,12 @@ class BatchFlattenCUDA : public mnm::op::OpEnv {
     RequestMemory(const_cast<void**>(&dlts[1]->data), ctx, size);
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override {
     auto dlts = AsVector(args);
     CUDA_CALL(cudaMemcpy(dlts[1]->data, dlts[0]->data, size, cudaMemcpyDeviceToDevice));
   }
 
-  static mnm::op::OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static mnm::op::OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<BatchFlattenCUDA> res = std::make_unique<BatchFlattenCUDA>();
     res->PreAllocate(args, attrs);
     return res.release();

@@ -171,7 +171,7 @@ class ConvolutionForward_for_op_conv2d : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   void* workSpace;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -225,14 +225,14 @@ class ConvolutionForward_for_op_conv2d : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<ConvolutionForward_for_op_conv2d> res =
         std::make_unique<ConvolutionForward_for_op_conv2d>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnConvolutionForward(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(dtype).const_addr<1>(), xDesc,
@@ -270,7 +270,7 @@ class AddTensor_for_op_add : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t aDesc;
   cudnnTensorDescriptor_t cDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -296,13 +296,13 @@ class AddTensor_for_op_add : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(cDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<AddTensor_for_op_add> res = std::make_unique<AddTensor_for_op_add>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnAddTensor(CUDNNThreadEntry::ThreadLocal()->handle,
                               CUDNNDType(dtype).const_addr<1>(), aDesc, dlts[0]->data,
@@ -341,7 +341,7 @@ class ActivationForward_for_op_relu : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -373,14 +373,14 @@ class ActivationForward_for_op_relu : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<ActivationForward_for_op_relu> res =
         std::make_unique<ActivationForward_for_op_relu>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                       CUDNNDType(dtype).const_addr<1>(), xDesc, dlts[0]->data,
@@ -419,7 +419,7 @@ class ActivationForward_for_op_tanh : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -451,14 +451,14 @@ class ActivationForward_for_op_tanh : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<ActivationForward_for_op_tanh> res =
         std::make_unique<ActivationForward_for_op_tanh>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                       CUDNNDType(dtype).const_addr<1>(), xDesc, dlts[0]->data,
@@ -497,7 +497,7 @@ class ActivationForward_for_op_sigmoid : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -529,14 +529,14 @@ class ActivationForward_for_op_sigmoid : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<ActivationForward_for_op_sigmoid> res =
         std::make_unique<ActivationForward_for_op_sigmoid>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                       CUDNNDType(dtype).const_addr<1>(), xDesc, dlts[0]->data,
@@ -577,7 +577,7 @@ class SoftmaxForward_for_op_softmax : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -606,14 +606,14 @@ class SoftmaxForward_for_op_softmax : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<SoftmaxForward_for_op_softmax> res =
         std::make_unique<SoftmaxForward_for_op_softmax>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, algo, mode,
                                    CUDNNDType(dtype).const_addr<1>(), xDesc, dlts[0]->data,
@@ -652,7 +652,7 @@ class PoolingForward_for_op_max_pool2d : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -688,14 +688,14 @@ class PoolingForward_for_op_max_pool2d : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<PoolingForward_for_op_max_pool2d> res =
         std::make_unique<PoolingForward_for_op_max_pool2d>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
                                    CUDNNDType(dtype).const_addr<1>(), xDesc, dlts[0]->data,
@@ -734,7 +734,7 @@ class PoolingForward_for_op_avg_pool2d : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -773,14 +773,14 @@ class PoolingForward_for_op_avg_pool2d : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<PoolingForward_for_op_avg_pool2d> res =
         std::make_unique<PoolingForward_for_op_avg_pool2d>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
                                    CUDNNDType(dtype).const_addr<1>(), xDesc, dlts[0]->data,
@@ -822,7 +822,7 @@ class DropoutForward_for_op_dropout : public mnm::op::OpEnv {
   void* state;
   void* reserveSpace;
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs) {
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs) {
     auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
     auto ctx = common::arg_utils::DeduceCtx(dlts);
@@ -863,14 +863,14 @@ class DropoutForward_for_op_dropout : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(ydesc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<DropoutForward_for_op_dropout> res =
         std::make_unique<DropoutForward_for_op_dropout>();
     res->PreAllocate(args, attrs);
     return res.release();
   }
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs attrs) override final {
+  void Execute(ir::Array<value::Value> args, ir::Attrs attrs) override final {
     auto dlts = common::arg_utils::AsVector(args);
     CUDNN_CALL(cudnnDropoutForward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, xdesc,
                                    dlts[0]->data, ydesc, dlts[1]->data, reserveSpace,

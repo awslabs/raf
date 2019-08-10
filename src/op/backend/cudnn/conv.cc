@@ -13,8 +13,8 @@ namespace cudnn {
 namespace manual {
 
 using common::shape_utils::MakeShape;
-using rly::Array;
-using rly::Attrs;
+using ir::Array;
+using ir::Attrs;
 using value::Value;
 
 class ConvolutionModeEnum final
@@ -46,11 +46,11 @@ class Conv2dCUDNN : public mnm::op::OpEnv {
   Conv2dCUDNN() {
     handle = CUDNNThreadEntry::ThreadLocal()->handle;
   }
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs);
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs);
   void RequestMemory(void** dest, Context ctx, int64_t nb);
   void RequestWorkspace(void** dest, Context ctx, int64_t nb);
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs) override final;
+  void Execute(ir::Array<value::Value> args, ir::Attrs) override final;
 
   ~Conv2dCUDNN() {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc));
@@ -59,7 +59,7 @@ class Conv2dCUDNN : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(conv_desc));
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<Conv2dCUDNN> res = std::make_unique<Conv2dCUDNN>();
     res->PreAllocate(args, attrs);
     return res.release();

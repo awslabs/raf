@@ -1,5 +1,5 @@
+#include <mnm/ir.h>
 #include <mnm/op.h>
-#include <mnm/rly.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
@@ -11,13 +11,13 @@ namespace mnm {
 namespace op {
 namespace dropout {
 
-using rly::Array;
-using rly::Attrs;
-using rly::DataType;
-using rly::TensorTypeNode;
-using rly::TupleType;
-using rly::Type;
-using rly::TypeReporter;
+using ir::Array;
+using ir::Attrs;
+using ir::DataType;
+using ir::TensorTypeNode;
+using ir::TupleType;
+using ir::Type;
+using ir::TypeReporter;
 using tensor::Tensor;
 using tvm::make_node;
 using value::OpaqueValue;
@@ -31,7 +31,7 @@ bool DropoutRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
   CHECK_EQ(types.size(), 2);
   // TODO(@were): For now, we use 0-dom tensor as the type placeholder of the opaque values.
   Type empty_tensor = TensorTypeNode::make({}, DataType());
-  TupleType res = rly::TupleTypeNode::make({types[0], empty_tensor});
+  TupleType res = ir::TupleTypeNode::make({types[0], empty_tensor});
   reporter->Assign(types[1], res);
   return true;
 }

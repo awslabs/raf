@@ -1,19 +1,19 @@
 #pragma once
 
 #include <mnm/base.h>
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 #include <mnm/value.h>
 
 namespace mnm {
 namespace op {
 namespace attrs {
 
-class Conv2DAttrs : public rly::AttrsNode<Conv2DAttrs> {
+class Conv2DAttrs : public ir::AttrsNode<Conv2DAttrs> {
  public:
-  rly::Array<rly::Integer> stride;
-  rly::Array<rly::Integer> padding;
-  rly::Array<rly::Integer> dilation;
-  rly::Integer groups;
+  ir::Array<ir::Integer> stride;
+  ir::Array<ir::Integer> padding;
+  ir::Array<ir::Integer> dilation;
+  ir::Integer groups;
 
   MNM_DECLARE_ATTRS(Conv2DAttrs, "mnm.attrs.Conv2DAttrs") {
     MNM_ATTR_FIELD(stride);    // {h, w}

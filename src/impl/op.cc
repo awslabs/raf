@@ -1,8 +1,8 @@
 #include <dmlc/registry.h>
 
+#include <mnm/ir.h>
 #include <mnm/op.h>
 #include <mnm/registry.h>
-#include <mnm/rly.h>
 #include <mnm/value.h>
 
 #include "../requests.h"
@@ -17,8 +17,8 @@ namespace op {
 
 using executor::Executor;
 using requests::Requests;
-using rly::Array;
-using rly::Attrs;
+using ir::Array;
+using ir::Attrs;
 using value::Value;
 
 // Implementation: OpBackend

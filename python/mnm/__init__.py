@@ -1,11 +1,13 @@
-"""MNM is Not MXNet, it's MXNet 2.0."""
+"""MNM is Not MXNet, it's MXNet 3.0."""
 
-import readline
-# from . import _ffi
-# from ._ffi.libinfo import __version__
+__version__ = "0.0.dev"
 
-# from . import base
-# from . import context
+import readline as _
 
-# from . import value
+from . import base as _base
+from . import _ffi
+from .context import cpu, gpu
+from .module import Module
+from . import value
+
 from .hybrid import hybrid

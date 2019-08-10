@@ -13,8 +13,8 @@ namespace cublas {
 namespace manual {
 
 using common::shape_utils::MakeShape;
-using rly::Array;
-using rly::Attrs;
+using ir::Array;
+using ir::Attrs;
 using value::Value;
 
 class GemmCUBLAS : public mnm::op::OpEnv {
@@ -25,16 +25,16 @@ class GemmCUBLAS : public mnm::op::OpEnv {
   GemmCUBLAS() {
   }
 
-  void PreAllocate(rly::Array<value::Value> args, rly::Attrs attrs);
+  void PreAllocate(ir::Array<value::Value> args, ir::Attrs attrs);
   void RequestMemory(void** dest, Context ctx, int64_t nb);
   void RequestWorkspace(void** dest, Context ctx, int64_t nb);
 
-  void Execute(rly::Array<value::Value> args, rly::Attrs) override final;
+  void Execute(ir::Array<value::Value> args, ir::Attrs) override final;
 
   ~GemmCUBLAS() {
   }
 
-  static OpEnv* make(rly::Array<value::Value> args, rly::Attrs attrs) {
+  static OpEnv* make(ir::Array<value::Value> args, ir::Attrs attrs) {
     std::unique_ptr<GemmCUBLAS> res = std::make_unique<GemmCUBLAS>();
     res->PreAllocate(args, attrs);
     return res.release();

@@ -1,16 +1,16 @@
 #pragma once
 
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 #include <mnm/value.h>
 
 namespace mnm {
 namespace trace_entry {
 
-class TraceEntryNode : public rly::Node {
+class TraceEntryNode : public ir::Node {
  public:
-  rly::Expr expr;
+  ir::Expr expr;
   value::Value value;
-  rly::Array<rly::NodeRef> dep;
+  ir::Array<ir::NodeRef> dep;
   // TODO(@junrushao1994): maybe fine-grained lock here for multi-threaded inference
 
   void VisitAttrs(tvm::AttrVisitor* v) final {
@@ -20,12 +20,12 @@ class TraceEntryNode : public rly::Node {
   }
 
   static constexpr const char* _type_key = "mnm.trace_entry.TraceEntry";
-  MNM_DEF_NODE_TYPE_INFO(TraceEntryNode, rly::Node);
+  MNM_DEF_NODE_TYPE_INFO(TraceEntryNode, ir::Node);
 };
 
-class TraceEntry final : public rly::NodeRef {
+class TraceEntry final : public ir::NodeRef {
  public:
-  MNM_DEF_NODE_REF_METHODS(TraceEntry, rly::NodeRef, TraceEntryNode);
+  MNM_DEF_NODE_REF_METHODS(TraceEntry, ir::NodeRef, TraceEntryNode);
 };
 
 }  // namespace trace_entry

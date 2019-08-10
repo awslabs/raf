@@ -4,7 +4,7 @@
 
 #include <mnm/base.h>
 #include <mnm/enum_base.h>
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 
 #include "../../../common/cuda.h"
 

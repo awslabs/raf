@@ -6,8 +6,8 @@
 #include <vector>
 
 #include <mnm/base.h>
+#include <mnm/ir.h>
 #include <mnm/registry.h>
-#include <mnm/rly.h>
 #include <mnm/value.h>
 
 namespace mnm {
@@ -22,7 +22,7 @@ namespace op {
 using Op = tvm::relay::Op;
 
 using FOpMakeOutput =
-    rly::TypedPackedFunc<value::Value(const rly::Array<value::Value>&, const rly::Attrs& attrs)>;
+    ir::TypedPackedFunc<value::Value(const ir::Array<value::Value>&, const ir::Attrs& attrs)>;
 
 class OpBackend {
   using TRegistry = ::dmlc::Registry<OpBackend>;
@@ -59,7 +59,7 @@ class OpBackend {
 };
 
 class OpDispatch {
-  using FMakeOpEnv = std::function<void*(rly::Array<value::Value>, rly::Attrs)>;
+  using FMakeOpEnv = std::function<void*(ir::Array<value::Value>, ir::Attrs)>;
   using TDispatchList = std::vector<std::pair<OpBackend*, FMakeOpEnv> >;
   using TRegistry = ::dmlc::Registry<OpDispatch>;
 
@@ -108,7 +108,7 @@ class OpEnv {
 
  public:
   // TODO: try TVMArgs
-  virtual void Execute(rly::Array<value::Value> args, rly::Attrs attrs) = 0;
+  virtual void Execute(ir::Array<value::Value> args, ir::Attrs attrs) = 0;
 
  private:
   /*

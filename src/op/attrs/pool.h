@@ -1,19 +1,19 @@
 #pragma once
 
 #include <mnm/base.h>
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 #include <mnm/value.h>
 
 namespace mnm {
 namespace op {
 namespace attrs {
 
-class MaxPoolAttrs : public rly::AttrsNode<MaxPoolAttrs> {
+class MaxPoolAttrs : public ir::AttrsNode<MaxPoolAttrs> {
  public:
-  rly::Array<rly::Integer> kernel_size;
-  rly::Array<rly::Integer> stride;
-  rly::Array<rly::Integer> padding;
-  rly::Array<rly::Integer> dilation;
+  ir::Array<ir::Integer> kernel_size;
+  ir::Array<ir::Integer> stride;
+  ir::Array<ir::Integer> padding;
+  ir::Array<ir::Integer> dilation;
   bool ceil_mode;
 
   MNM_DECLARE_ATTRS(MaxPoolAttrs, "mnm.attrs.MaxPoolAttrs") {
@@ -25,12 +25,12 @@ class MaxPoolAttrs : public rly::AttrsNode<MaxPoolAttrs> {
   }
 };
 
-class AvgPoolAttrs : public rly::AttrsNode<AvgPoolAttrs> {
+class AvgPoolAttrs : public ir::AttrsNode<AvgPoolAttrs> {
  public:
-  rly::Array<rly::Integer> kernel_size;
-  rly::Array<rly::Integer> stride;
-  rly::Array<rly::Integer> padding;
-  rly::Array<rly::Integer> dilation;
+  ir::Array<ir::Integer> kernel_size;
+  ir::Array<ir::Integer> stride;
+  ir::Array<ir::Integer> padding;
+  ir::Array<ir::Integer> dilation;
   bool ceil_mode;
   bool include_pad;
 

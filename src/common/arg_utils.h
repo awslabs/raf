@@ -3,14 +3,14 @@
 #include <vector>
 
 #include <mnm/base.h>
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 #include <mnm/value.h>
 
 namespace mnm {
 namespace common {
 namespace arg_utils {
 
-inline std::vector<const DLTensor*> AsVector(rly::Array<value::Value> a) {
+inline std::vector<const DLTensor*> AsVector(ir::Array<value::Value> a) {
   int n = a.size();
   std::vector<const DLTensor*> res(n);
   for (int i = 0; i < n; ++i) {

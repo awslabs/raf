@@ -4,7 +4,7 @@
 
 #include <mnm/base.h>
 #include <mnm/enum_base.h>
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 
 #include "../../../common/cuda.h"
 #include "../../../common/shape_utils.h"
@@ -191,7 +191,7 @@ class AlgorithmCache {
   }
 };
 
-inline std::vector<int> ConcatVecs(rly::Integer v) {
+inline std::vector<int> ConcatVecs(ir::Integer v) {
   std::vector<int> res{0, (int)v};
   return res;
 }
@@ -203,12 +203,12 @@ inline std::vector<int> ConcatVecs(const std::vector<int>& v) {
   return res;
 }
 
-inline std::vector<int> ConcatVecs(rly::Array<rly::Integer> a) {
+inline std::vector<int> ConcatVecs(ir::Array<ir::Integer> a) {
   return ConcatVecs(common::shape_utils::MakeShape<int>(a));
 }
 
 template <typename... Targs>
-inline std::vector<int> ConcatVecs(rly::Array<rly::Integer> a, Targs... args);
+inline std::vector<int> ConcatVecs(ir::Array<ir::Integer> a, Targs... args);
 
 template <typename... Targs>
 inline std::vector<int> ConcatVecs(const std::vector<int>& v, Targs... args) {
@@ -221,7 +221,7 @@ inline std::vector<int> ConcatVecs(const std::vector<int>& v, Targs... args) {
 }
 
 template <typename... Targs>
-inline std::vector<int> ConcatVecs(rly::Array<rly::Integer> a, Targs... args) {
+inline std::vector<int> ConcatVecs(ir::Array<ir::Integer> a, Targs... args) {
   std::vector<int> v(common::shape_utils::MakeShape<int>(a));
   // return ConcatVecs(v, args...);
   std::vector<int> res;

@@ -1,9 +1,7 @@
 import torch
 import torch.nn.functional as F
-
 from mnm import cpu
 from mnm.value import TensorValue
-
 from utils import invoke_make_output
 
 
@@ -19,7 +17,7 @@ def test_max_pool2d():
                        dilation, False, ceil_mode)
     torch_shape = tuple(out.shape)
     data = TensorValue.assemble((n, c, h, w), "float32", cpu())
-    out = invoke_make_output("mnm.op.max_pool2d", "mnm.attrs.MaxPool2DAttrs", data,
+    out = invoke_make_output("mnm.op.max_pool2d", "mnm.attrs.MaxPoolAttrs", data,
                              kernel_size=(kh, kw),
                              stride=stride, padding=padding,
                              dilation=dilation, ceil_mode=ceil_mode)

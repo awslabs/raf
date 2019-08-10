@@ -86,7 +86,4 @@ def _load_lib():
     return lib, os.path.basename(lib_path[0])
 
 
-# version number
-__version__ = "0.0.dev"
-# library instance of nnvm
 _LIB, _LIB_NAME = _load_lib()

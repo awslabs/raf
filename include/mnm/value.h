@@ -3,24 +3,24 @@
 #include <dlpack/dlpack.h>
 
 #include <mnm/base.h>
-#include <mnm/rly.h>
+#include <mnm/ir.h>
 #include <mnm/tensor.h>
 
 namespace mnm {
 namespace value {
 
 /* Value */
-class ValueNode : public rly::Node {
+class ValueNode : public ir::Node {
  public:
   static constexpr const char* _type_key = "mnm.value.Value";
-  MNM_DEF_BASE_NODE_INFO(ValueNode, rly::Node);
+  MNM_DEF_BASE_NODE_INFO(ValueNode, ir::Node);
 };
 
-class Value : public rly::NodeRef {
+class Value : public ir::NodeRef {
  public:
   operator const DLTensor*() const;
   operator const tensor::Tensor&() const;
-  MNM_DEF_NODE_REF_METHODS(Value, rly::NodeRef, ValueNode);
+  MNM_DEF_NODE_REF_METHODS(Value, ir::NodeRef, ValueNode);
 };
 
 /* TensorValue */
@@ -46,7 +46,7 @@ class TensorValue final : public Value {
 /* TupleValue */
 class TupleValueNode final : public ValueNode {
  public:
-  rly::Array<Value> fields;
+  ir::Array<Value> fields;
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("fields", &fields);
   }
@@ -56,15 +56,15 @@ class TupleValueNode final : public ValueNode {
 
 class TupleValue final : public Value {
  public:
-  static TupleValue make(rly::Array<Value> fields);
+  static TupleValue make(ir::Array<Value> fields);
   MNM_DEF_NODE_REF_METHODS(TupleValue, Value, TupleValueNode);
 };
 
 /* ClosureValue */
 class ClosureValueNode final : public ValueNode {
  public:
-  rly::Map<rly::Var, Value> env;
-  rly::Function func;
+  ir::Map<ir::Var, Value> env;
+  ir::Function func;
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("env", &env);
     v->Visit("func", &func);
@@ -75,7 +75,7 @@ class ClosureValueNode final : public ValueNode {
 
 class ClosureValue final : public Value {
  public:
-  static ClosureValue make(rly::Map<rly::Var, Value> value, rly::Function func);
+  static ClosureValue make(ir::Map<ir::Var, Value> value, ir::Function func);
   MNM_DEF_NODE_REF_METHODS(ClosureValue, Value, ClosureValueNode);
 };
 
@@ -103,7 +103,7 @@ class ConstructorValue;
 /* OpaqueValue */
 class OpaqueValueNode : public ValueNode {
  public:
-  mutable rly::NodeRef data{nullptr};
+  mutable ir::NodeRef data{nullptr};
   static constexpr const char* _type_key = "mnm.value.OpaqueValue";
   MNM_DEF_NODE_TYPE_INFO(OpaqueValueNode, ValueNode);
 };

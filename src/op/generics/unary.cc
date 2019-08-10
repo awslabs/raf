@@ -1,5 +1,5 @@
+#include <mnm/ir.h>
 #include <mnm/op.h>
-#include <mnm/rly.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
@@ -12,10 +12,10 @@ namespace mnm {
 namespace op {
 namespace identical {
 
-using rly::Array;
-using rly::Attrs;
-using rly::Type;
-using rly::TypeReporter;
+using ir::Array;
+using ir::Attrs;
+using ir::Type;
+using ir::TypeReporter;
 using tensor::Tensor;
 using value::TensorValue;
 using value::Value;

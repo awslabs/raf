@@ -1,5 +1,5 @@
+#include <mnm/ir.h>
 #include <mnm/op.h>
-#include <mnm/rly.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
 
@@ -13,13 +13,13 @@ namespace mnm {
 namespace op {
 namespace batch_flatten {
 
-using rly::Array;
-using rly::Attrs;
-using rly::Int;
-using rly::make_const;
-using rly::TensorTypeNode;
-using rly::Type;
-using rly::TypeReporter;
+using ir::Array;
+using ir::Attrs;
+using ir::Int;
+using ir::make_const;
+using ir::TensorTypeNode;
+using ir::Type;
+using ir::TypeReporter;
 using tensor::Tensor;
 using value::TensorValue;
 using value::Value;

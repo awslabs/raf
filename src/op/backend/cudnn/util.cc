@@ -11,9 +11,9 @@ namespace op {
 namespace backend {
 namespace cudnn {
 
-using rly::Array;
-using rly::Attrs;
-using rly::Integer;
+using ir::Array;
+using ir::Attrs;
+using ir::Integer;
 using value::Value;
 
 using CUDNNThreadStore = dmlc::ThreadLocalStore<CUDNNThreadEntry>;

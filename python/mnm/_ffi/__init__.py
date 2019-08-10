@@ -1,6 +1,4 @@
-"""MNM is Not MXNet, it's MXNet 2.0.
-
-C interfacing code.
+"""C interfacing code.
 
 This namespace contains everything that interacts with C code,
 most of which are borrowed or directly imported from TVM.
