@@ -11,7 +11,6 @@
 #include <mnm/registry.h>
 #include <mnm/stream_pool.h>
 #include <mnm/tensor.h>
-#include <mnm/traced_entry.h>
 #include <mnm/value.h>
 
 int main() {

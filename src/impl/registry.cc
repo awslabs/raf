@@ -3,8 +3,8 @@
 namespace mnm {
 namespace registry {
 
-const tvm::runtime::PackedFunc& GetPackedFunc(const std::string& name) {
-  const tvm::runtime::PackedFunc* pf = Registry::Get(name);
+const PackedFunc& GetPackedFunc(const std::string& name) {
+  const PackedFunc* pf = Registry::Get(name);
   CHECK(pf != nullptr) << "Cannot find function " << name << " in registry";
   return *pf;
 }

@@ -1,8 +1,8 @@
 import torch
 import torch.nn.functional as F
-from mnm import cpu
-from mnm.value import TensorValue
-from utils import invoke_make_output
+
+from mnm._ffi.op import invoke_make_output
+from mnm._ffi.value import TensorValue
 
 
 def test_conv2d():
@@ -16,8 +16,8 @@ def test_conv2d():
     weight = torch.empty(c_out, c_in, kh, kw)
     out = F.conv2d(data, weight, None, stride, padding, dilation, groups)
     torch_shape = tuple(out.shape)
-    data = TensorValue.assemble((n, c, h, w), "float32", cpu())
-    weight = TensorValue.assemble((c_out, c_in, kh, kw), "float32", cpu())
+    data = TensorValue.assemble((n, c, h, w), "float32", "cpu")
+    weight = TensorValue.assemble((c_out, c_in, kh, kw), "float32", "cpu")
     out = invoke_make_output("mnm.op.conv2d", "mnm.attrs.Conv2DAttrs",
                              args=(data, weight),
                              stride=stride, padding=padding, dilation=dilation, groups=groups)

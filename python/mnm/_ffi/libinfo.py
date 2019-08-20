@@ -2,9 +2,9 @@
 
 This file is borrowed from TVM with minor modification that allows us to load MNM libraries.
 """
-import sys
-import os
 import ctypes
+import os
+import sys
 
 
 def find_lib_path(name=None, search_path=None):

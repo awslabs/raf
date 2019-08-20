@@ -117,13 +117,4 @@ class DType {
   inline operator T() const;
 };
 
-struct TemplateToken {
-  constexpr TemplateToken(const char* data) : data(data) {
-  }
-  operator std::string() const {
-    return std::string(data);
-  }
-  const char* data;
-};
-
 }  // namespace mnm

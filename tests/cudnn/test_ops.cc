@@ -15,13 +15,13 @@ using mnm::Context;
 using mnm::DevType;
 using mnm::DType;
 using mnm::DTypeCode;
+using mnm::ir::Array;
+using mnm::ir::Attrs;
+using mnm::ir::Float;
+using mnm::ir::Integer;
 using mnm::op::OpDispatch;
 using mnm::op::OpEnv;
 using mnm::registry::Registry;
-using mnm::rly::Array;
-using mnm::rly::Attrs;
-using mnm::rly::Float;
-using mnm::rly::Integer;
 using mnm::value::TensorValue;
 using mnm::value::Value;
 

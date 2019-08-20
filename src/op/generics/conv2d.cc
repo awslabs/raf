@@ -66,7 +66,7 @@ bool Conv2DRel(const Array<Type>& types,  //
   return true;
 }
 
-Value Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+OpInfo Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 2);
   const Tensor& data = values[0];
   const Tensor& weight = values[1];
@@ -94,8 +94,10 @@ Value Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   int64_t h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
   int64_t w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   CHECK_EQ(c_in, in);
-  return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype,
-                               /*shape=*/{n_in, out, h_out, w_out});
+  return OpInfo::make(TensorValue::Assemble(/*ctx=*/data->ctx,
+                                            /*dtype=*/data->dtype,
+                                            /*shape=*/{n_in, out, h_out, w_out}),
+                      data->ctx);
 }
 
 MNM_REGISTER_OP("mnm.op.conv2d")

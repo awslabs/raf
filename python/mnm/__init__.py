@@ -4,10 +4,10 @@ __version__ = "0.0.dev"
 
 import readline as _
 
-from . import base as _base
+from . import _base
 from . import _ffi
-from .context import cpu, gpu
-from .module import Module
-from . import value
+from . import _context
 
+from ._context import cpu, gpu
+from ._ndarray import ndarray
 from .hybrid import hybrid

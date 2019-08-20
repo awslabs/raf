@@ -17,12 +17,13 @@ class Executor;
 }  // namespace mnm
 
 namespace mnm {
+namespace requests {
+class Requests;
+}  // namespace requests
+}  // namespace mnm
+
+namespace mnm {
 namespace op {
-
-using Op = tvm::relay::Op;
-
-using FOpMakeOutput =
-    ir::TypedPackedFunc<value::Value(const ir::Array<value::Value>&, const ir::Attrs& attrs)>;
 
 class OpBackend {
   using TRegistry = ::dmlc::Registry<OpBackend>;
@@ -58,30 +59,25 @@ class OpBackend {
   DevType device = DevType::kUnknown();
 };
 
-class OpDispatch {
-  using FMakeOpEnv = std::function<void*(ir::Array<value::Value>, ir::Attrs)>;
-  using TDispatchList = std::vector<std::pair<OpBackend*, FMakeOpEnv> >;
-  using TRegistry = ::dmlc::Registry<OpDispatch>;
-
+class OpInfoNode : public ir::Node {
  public:
-  OpDispatch() = default;
+  value::Value output;
+  Context ctx;
+  // can be extended to expose more information
 
-  OpDispatch& set_name(const std::string& name) {
-    this->name = name;
-    return *this;
+  void VisitAttrs(tvm::AttrVisitor* v) final {
+    v->Visit("output", &output);
   }
 
-  OpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
-                           const FMakeOpEnv& op_env_maker);
-
  public:
-  static TRegistry* Registry();
+  static constexpr const char* _type_key = "mnm.op.OpInfo";
+  MNM_DEF_NODE_TYPE_INFO(OpInfoNode, Node);
+};
 
-  static TDispatchList* Get(const std::string& op_name, DevType device_type);
-
+class OpInfo : public ir::NodeRef {
  public:
-  std::string name;
-  registry::PerDevTypeStore<TDispatchList> dispatch;
+  MNM_DEF_NODE_REF_METHODS(OpInfo, NodeRef, OpInfoNode);
+  static OpInfo make(value::Value output, Context ctx);
 };
 
 class OpEnv {
@@ -101,27 +97,67 @@ class OpEnv {
   OpEnv();
   virtual ~OpEnv();
 
-  void RequestMemory(void** dest, Context ctx, int64_t nbytes);
-  void RequestWorkspace(void** dest, Context ctx, int64_t nbytes);
-  void RequestStream(void** dest, Context ctx);
-  void RequestDistributed(void** dest);
+  void RequestMemory(value::Value& value, const Context& ctx, int64_t nbytes);
+  void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
+  void RequestStream(void** dest, const Context& ctx, int tag_idx, int index);
+  void RequestDistributed(void** dest) {
+    LOG(FATAL) << "NotImplementedError: RequestDistributed";
+    throw;
+  }
 
  public:
   // TODO: try TVMArgs
-  virtual void Execute(ir::Array<value::Value> args, ir::Attrs attrs) = 0;
+  virtual void Execute(ir::Array<value::Value> args, value::Value output, ir::Attrs attrs) = 0;
 
  private:
   /*
    * When executor is nullptr, resource allocation is in lazy phase; Otherwise it is eager.
    * Returns type-erased `requests::Requests *` because don't want to expose it in header
    */
-  void* SetExecutor(executor::Executor* executor);
+  std::unique_ptr<requests::Requests> SetExecutor(executor::Executor* executor);
 
   class Impl;
   std::unique_ptr<Impl> impl;
 
   friend ::mnm::executor::Executor;
 };
+
+class OpDispatch {
+  using FMakeOpEnv = std::function<OpEnv*(ir::Array<value::Value>, value::Value, ir::Attrs)>;
+  using TDispatchList = std::vector<std::pair<OpBackend*, FMakeOpEnv> >;
+  using TRegistry = ::dmlc::Registry<OpDispatch>;
+
+ public:
+  OpDispatch() = default;
+
+  OpDispatch& set_name(const std::string& name) {
+    this->name = name;
+    return *this;
+  }
+
+  OpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
+                           const FMakeOpEnv& op_env_maker);
+
+ public:
+  static TRegistry* Registry();
+
+  static TDispatchList* Get(const std::string& op_name, DevType device_type);
+
+  static TDispatchList* Get(const ir::Op& op, DevType device_type);
+
+  static std::unique_ptr<OpEnv> Dispatch(const ir::Op& op, const OpInfo& info,
+                                         const ir::Array<value::Value>& args,
+                                         const ir::Attrs& attrs);
+
+ public:
+  std::string name;
+  registry::PerDevTypeStore<TDispatchList> dispatch;
+};
+
+using FOpMakeOutput =
+    registry::TypedPackedFunc<OpInfo(const ir::Array<value::Value>&, const ir::Attrs& attrs)>;
+
+OpInfo MakeOutput(const ir::Op& op, const ir::Array<value::Value>& args, const ir::Attrs& attrs);
 
 }  // namespace op
 }  // namespace mnm

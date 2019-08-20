@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mnm/base.h>
+#include <mnm/value.h>
 
 namespace mnm {
 namespace requests {
@@ -8,7 +9,7 @@ namespace requests {
 class Requests {
  public:
   struct MemoryRequest {
-    void** dest;
+    value::Value& value;
     Context ctx;
     int64_t nbytes;
   };
@@ -22,17 +23,14 @@ class Requests {
   struct StreamRequest {
     void** dest;
     Context ctx;
-  };
-
-  struct DistRequest {
-    void** dest;
+    int tag_idx;
+    int index;
   };
 
  public:
   std::vector<MemoryRequest> memory;
   std::vector<WorkspaceRequest> workspace;
   std::vector<StreamRequest> stream;
-  std::vector<DistRequest> dist;
 };
 
 }  // namespace requests

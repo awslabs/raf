@@ -36,14 +36,14 @@ bool DropoutRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
   return true;
 }
 
-Value DropoutMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+OpInfo DropoutMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 1);
   const Tensor& data = values[0];
   std::vector<int64_t> oshape(data->shape, data->shape + data->ndim);
   TensorValue out = TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype,
                                           /*shape=*/oshape);
   OpaqueValue states(make_node<OpaqueValueNode>());
-  return TupleValue::make({out, states});
+  return OpInfo::make(TupleValue::make({out, states}), data->ctx);
 }
 
 MNM_REGISTER_OP("mnm.op.dropout")

@@ -13,9 +13,13 @@
 namespace mnm {
 namespace registry {
 
-using Registry = tvm::runtime::Registry;
+using tvm::runtime::PackedFunc;
+using tvm::runtime::Registry;
+using tvm::runtime::TVMArgs;
+using tvm::runtime::TVMRetValue;
+using tvm::runtime::TypedPackedFunc;
 
-const tvm::runtime::PackedFunc& GetPackedFunc(const std::string& name);
+const PackedFunc& GetPackedFunc(const std::string& name);
 
 }  // namespace registry
 }  // namespace mnm

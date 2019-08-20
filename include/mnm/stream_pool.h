@@ -7,6 +7,20 @@
 namespace mnm {
 namespace stream_pool {
 
+class Tag final {
+ public:
+  Tag(const std::string& data) : data(data) {
+    index = GetTagIndex_(data);
+  }
+
+ public:
+  std::string data;
+  int index;
+
+ private:
+  static int GetTagIndex_(const std::string& tag);
+};
+
 class Stream final {
  public:
   class Impl;
@@ -19,21 +33,9 @@ class Stream final {
 
   ~Stream();
 
-  template <const TemplateToken& tag>
-  static std::shared_ptr<Stream> Get(const Context& ctx, int index) {
-    static int tag_index = GetTagIndex(tag);
-    return Get(ctx, index, tag_index);
-  }
+  void* data() const;
 
-  static std::shared_ptr<Stream> Get(const Context& ctx, int index) {
-    static int tag_index = GetTagIndex("");
-    return Get(ctx, index, tag_index);
-  }
-
- private:
-  static int GetTagIndex(const std::string& tag);
-
-  static std::shared_ptr<Stream> Get(const Context& ctx, int tag_index, int index);
+  static std::shared_ptr<Stream> Get(const Context& ctx, int tag_idx, int index);
 
  private:
   std::unique_ptr<Impl> impl;

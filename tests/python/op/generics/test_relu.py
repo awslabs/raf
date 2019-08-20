@@ -1,22 +1,21 @@
-from mnm import cpu
-from mnm.value import TensorValue
-from utils import invoke_make_output
+from mnm._ffi.op import invoke_make_output
+from mnm._ffi.value import TensorValue
 
 
 def test_0d():
-    data = TensorValue.assemble((), "float32", cpu(0))
+    data = TensorValue.assemble((), "float32", "cpu")
     out = invoke_make_output("mnm.op.relu", "", data)
     assert data.shape == out.shape
 
 
 def test_1d():
-    data = TensorValue.assemble((5, 3), "float32", cpu(0))
+    data = TensorValue.assemble((5, 3), "float32", "cpu")
     out = invoke_make_output("mnm.op.relu", "", data)
     assert data.shape == out.shape
 
 
 def test_2d():
-    data = TensorValue.assemble((5, 3, 2), "float32", cpu(0))
+    data = TensorValue.assemble((5, 3, 2), "float32", "cpu")
     out = invoke_make_output("mnm.op.relu", "", data)
     assert data.shape == out.shape
 

@@ -7,10 +7,10 @@
 #include <mnm/op.h>
 
 using mnm::DevType;
+using mnm::ir::Array;
+using mnm::ir::Attrs;
 using mnm::op::OpDispatch;
 using mnm::op::OpEnv;
-using mnm::rly::Array;
-using mnm::rly::Attrs;
 using mnm::value::Value;
 
 class Conv2d : public OpEnv {
@@ -23,7 +23,7 @@ class Conv2d : public OpEnv {
   void PreAlloc(Array<Value> args, Attrs attrs) {
   }
 
-  void Execute(Array<Value> args, Attrs attrs) override final {
+  void Execute(Array<Value> args, Value output, Attrs attrs) override final {
   }
 };
 
@@ -34,7 +34,7 @@ class Conv2dX : public Conv2d {
     type = 0;
   }
   virtual ~Conv2dX() = default;
-  static OpEnv* make(Array<Value> args, Attrs attrs) {
+  static OpEnv* make(Array<Value> args, Value output, Attrs attrs) {
     std::unique_ptr<Conv2dX> ret(new Conv2dX());
     ret->PreAlloc(args, attrs);
     return ret.release();
@@ -50,7 +50,7 @@ class Conv2dY : public Conv2d {
     type = 1;
   }
   virtual ~Conv2dY() = default;
-  static OpEnv* make(Array<Value> args, Attrs attrs) {
+  static OpEnv* make(Array<Value> args, Value output, Attrs attrs) {
     std::unique_ptr<Conv2dY> ret(new Conv2dY());
     ret->PreAlloc(args, attrs);
     return ret.release();
@@ -63,9 +63,10 @@ TEST(OpDispatch, Registry) {
   const auto* dispatch_list = OpDispatch::Get("mnm.op.conv2d", DevType::kCPU());
   ASSERT_EQ(dispatch_list->size(), 2);
   Array<Value> args;
+  Value output;
   Attrs attrs;
   for (const auto& e : *dispatch_list) {
-    const auto* op = static_cast<Conv2d*>(e.second(args, attrs));
+    const auto* op = static_cast<Conv2d*>(e.second(args, output, attrs));
     ASSERT_NE(op, nullptr);
     if (e.first->name == "mklShallowNN") {
       ASSERT_EQ(op->type, 0);

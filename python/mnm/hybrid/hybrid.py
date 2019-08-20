@@ -2,8 +2,9 @@ import ast
 import inspect
 from typing import Callable, Dict
 
-from mnm import Module, cpu
-from mnm.base import set_module
+from mnm import cpu
+from mnm._base import set_module
+from mnm._ffi.ir import Module
 from tvm import relay
 
 from .cfg import ast2cfg

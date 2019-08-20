@@ -27,11 +27,12 @@ bool IdenticalRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
   return true;
 }
 
-Value IdenticalMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+OpInfo IdenticalMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 1);
   const Tensor& data = values[0];
   std::vector<int64_t> oshape(data->shape, data->shape + data->ndim);
-  return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape);
+  return OpInfo::make(
+      TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape), data->ctx);
 }
 
 MNM_REGISTER_OP("mnm.op.add")

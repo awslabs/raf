@@ -69,7 +69,7 @@ bool Pool2DRel(const Array<Type>& types,  //
 }
 
 template <typename T>
-Value Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+OpInfo Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 1);
   const Tensor& data = values[0];
   const auto* param = attrs.as<T>();
@@ -99,8 +99,10 @@ Value Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
     h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
     w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
   }
-  return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype,
-                               /*shape=*/{n_in, c_in, h_out, w_out});
+  return OpInfo::make(TensorValue::Assemble(/*ctx=*/data->ctx,
+                                            /*dtype=*/data->dtype,
+                                            /*shape=*/{n_in, c_in, h_out, w_out}),
+                      data->ctx);
 }
 
 MNM_REGISTER_OP("mnm.op.max_pool2d")

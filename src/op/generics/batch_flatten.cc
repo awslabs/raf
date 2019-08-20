@@ -38,7 +38,7 @@ bool BatchFlattenRel(const Array<Type>& types, int num_inputs, const Attrs& attr
   return true;
 }
 
-Value BatchFlattenMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+OpInfo BatchFlattenMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 1);
   const Tensor& data = values[0];
   const int64_t* dshape = data->shape;
@@ -49,7 +49,9 @@ Value BatchFlattenMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   for (int i = 1; i < ndim; ++i) {
     flat = flat * int64_t{dshape[i]};
   }
-  return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/{nbatch, flat});
+  return OpInfo::make(
+      TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/{nbatch, flat}),
+      data->ctx);
 }
 
 MNM_REGISTER_OP("mnm.op.batch_flatten")

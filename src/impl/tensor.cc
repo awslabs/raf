@@ -1,7 +1,6 @@
 #include <vector>
 
-#include <tvm/runtime/device_api.h>
-
+#include <mnm/registry.h>
 #include <mnm/tensor.h>
 
 #include "../common/shape_utils.h"
@@ -34,6 +33,11 @@ class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
     deleter = del;
     array_type_code_ = kArrayTypeCode;
   }
+
+  void CheckTypeCode() {
+    CHECK_EQ(array_type_code_, kArrayTypeCode)
+        << "InternalError: type code error " << array_type_code_;
+  }
 };
 
 class Tensor::Impl {
@@ -47,6 +51,14 @@ class Tensor::Impl {
       CHECK_EQ(ptr->array_type_code_, kArrayTypeCode);
       // Memory is not owned by MNM tensor, so do nothing
     }
+    delete ptr;
+  }
+
+  static void NumpyArrayDeleter(Container* super_ptr) {
+    static const auto& deleter = registry::GetPackedFunc("mnm._numpy_array_deleter");
+    TensorContainer* ptr = static_cast<TensorContainer*>(super_ptr);
+    CHECK(ptr->manager_ctx != nullptr);
+    deleter(ptr->manager_ctx);
     delete ptr;
   }
 
@@ -68,9 +80,18 @@ class Tensor::Impl {
     container->dl_tensor.byte_offset = 0;
     return ret;
   }
+
+  static void MarkNumpy(Tensor tensor, void* manager_ctx) {
+    tensor.data_->manager_ctx = manager_ctx;
+    tensor.data_->deleter = NumpyArrayDeleter;
+  }
 };
 
-Tensor::Tensor(TensorContainer* data) : TSuper(data) {
+Tensor::Tensor(tvm::runtime::NDArray::Container* data) : TSuper(data) {
+}
+
+Tensor::Tensor(const tvm::runtime::NDArray& other) : TSuper(other) {
+  static_cast<Tensor::TensorContainer*>(data_)->CheckTypeCode();
 }
 
 int Tensor::array_type_code() const {
@@ -81,6 +102,8 @@ Tensor Tensor::make(const Context& ctx, const DType& dtype, const std::vector<in
                     const std::vector<int64_t>& strides, void* data) {
   return Tensor::Impl::Make(ctx, dtype, shape, strides, data);
 }
+
+MNM_REGISTER_GLOBAL("mnm.tensor.MarkNumpy").set_body_typed(Tensor::Impl::MarkNumpy);
 
 }  // namespace tensor
 }  // namespace mnm

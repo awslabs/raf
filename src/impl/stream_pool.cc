@@ -12,6 +12,18 @@ namespace stream_pool {
 using device_api::DeviceAPI;
 using registry::PerContextStore;
 
+int Tag::GetTagIndex_(const std::string& tag) {
+  static std::mutex mutex;
+  static std::unordered_map<std::string, int> map;
+  std::lock_guard<std::mutex> lock(mutex);
+  if (map.count(tag)) {
+    return map[tag];
+  }
+  int value = map.size();
+  map[tag] = value;
+  return value;
+}
+
 class Stream::Impl {
  public:
   Impl(const Context& ctx) : ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
@@ -86,16 +98,8 @@ Stream::Stream(Stream::Impl* impl) : impl(impl) {
 
 Stream::~Stream() = default;
 
-int Stream::GetTagIndex(const std::string& tag) {
-  static std::mutex mutex;
-  static std::unordered_map<std::string, int> map;
-  std::lock_guard<std::mutex> lock(mutex);
-  if (map.count(tag)) {
-    return map[tag];
-  }
-  int value = map.size();
-  map[tag] = value;
-  return value;
+void* Stream::data() const {
+  return impl ? impl->stream : nullptr;
 }
 
 std::shared_ptr<Stream> Stream::Get(const Context& ctx, int tag_index, int index) {

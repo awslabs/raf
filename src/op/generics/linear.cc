@@ -50,7 +50,7 @@ bool LinearRel(const Array<Type>& types,  //
   return true;
 }
 
-Value LinearMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+OpInfo LinearMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 2);
   const Tensor& data = values[0];
   const Tensor& weight = values[1];
@@ -63,7 +63,8 @@ Value LinearMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(in_units, _in_units);
   std::vector<int64_t> oshape(data->shape, data->shape + ndim);
   oshape[ndim - 1] = out_units;
-  return TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape);
+  return OpInfo::make(
+      TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape), data->ctx);
 }
 
 MNM_REGISTER_OP("mnm.op.linear")

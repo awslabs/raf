@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <tvm/runtime/ndarray.h>
+#include <tvm/runtime/packed_func.h>
 
 #include <mnm/base.h>
 
@@ -23,34 +24,34 @@ class Tensor : private tvm::runtime::NDArray {
   using TSelf = ::mnm::tensor::Tensor;
   using TSuper = ::tvm::runtime::NDArray;
 
-  class TensorContainer;
-  class Impl;
-
-  friend MNMTester;
   friend value::TensorValueNode;
+  friend MNMTester;
+  friend ::tvm::runtime::TVMPODValue_;
 
  public:
-  inline Tensor() = default;
+  Tensor() = default;
 
-  inline ~Tensor() = default;
+  ~Tensor() = default;
 
-  inline Tensor(TSelf&& other) : TSuper(other) {
+  Tensor(TSelf&& other) : TSuper(other) {
   }
 
-  inline Tensor(const TSelf& other) : TSuper(other) {
+  Tensor(const TSelf& other) : TSuper(other) {
   }
 
-  inline TSelf& operator=(TSelf&& other) {
+  Tensor(const TSuper& other);
+
+  TSelf& operator=(TSelf&& other) {
     TSelf(std::move(other)).swap(*this);
     return *this;
   }
 
-  inline TSelf& operator=(const TSelf& other) {
+  TSelf& operator=(const TSelf& other) {
     TSelf(other).swap(*this);
     return *this;
   }
 
-  inline void swap(TSelf& other) {
+  void swap(TSelf& other) {
     std::swap(data_, other.data_);
   }
 
@@ -63,8 +64,12 @@ class Tensor : private tvm::runtime::NDArray {
   // const DLTensor* operator->() const;
   using TSuper::operator->;
 
+  class Impl;
+  class TensorContainer;
+
  private:
-  Tensor(TensorContainer* data);
+  Tensor(tvm::runtime::NDArray::Container* data);
+
   int array_type_code() const;
 };
 
