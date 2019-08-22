@@ -9,6 +9,7 @@
 using mnm::DevType;
 using mnm::ir::Array;
 using mnm::ir::Attrs;
+using mnm::ir::Op;
 using mnm::op::OpDispatch;
 using mnm::op::OpEnv;
 using mnm::value::Value;
@@ -60,7 +61,7 @@ class Conv2dY : public Conv2d {
 MNM_REGISTER_OP_DISPATCH("mnm.op.conv2d", DevType::kCPU(), "sshadow", Conv2dY::make);
 
 TEST(OpDispatch, Registry) {
-  const auto* dispatch_list = OpDispatch::Get("mnm.op.conv2d", DevType::kCPU());
+  const auto* dispatch_list = OpDispatch::Get(Op::Get("mnm.op.conv2d"), DevType::kCPU());
   ASSERT_EQ(dispatch_list->size(), 2);
   Array<Value> args;
   Value output;
@@ -68,9 +69,9 @@ TEST(OpDispatch, Registry) {
   for (const auto& e : *dispatch_list) {
     const auto* op = static_cast<Conv2d*>(e.second(args, output, attrs));
     ASSERT_NE(op, nullptr);
-    if (e.first->name == "mklShallowNN") {
+    if (e.first == "mklShallowNN") {
       ASSERT_EQ(op->type, 0);
-    } else if (e.first->name == "sshadow") {
+    } else if (e.first == "sshadow") {
       ASSERT_EQ(op->type, 1);
     } else {
       ASSERT_TRUE(false);

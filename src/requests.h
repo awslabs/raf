@@ -1,7 +1,8 @@
 #pragma once
 
 #include <mnm/base.h>
-#include <mnm/value.h>
+#include <mnm/memory_pool.h>
+#include <mnm/stream_pool.h>
 
 namespace mnm {
 namespace requests {
@@ -9,22 +10,25 @@ namespace requests {
 class Requests {
  public:
   struct MemoryRequest {
-    value::Value& value;
+    void** dest;
     Context ctx;
     int64_t nbytes;
+    std::shared_ptr<memory_pool::Memory> memory;
   };
 
   struct WorkspaceRequest {
     void** dest;
     Context ctx;
     int64_t nbytes;
+    std::shared_ptr<memory_pool::Memory> memory;
   };
 
   struct StreamRequest {
     void** dest;
     Context ctx;
     int tag_idx;
-    int index;
+    int stream_idx;
+    std::shared_ptr<stream_pool::Stream> stream;
   };
 
  public:

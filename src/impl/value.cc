@@ -24,10 +24,9 @@ using ir::Op;
 using ir::Var;
 using tensor::Tensor;
 
-ValueNode::~ValueNode() {
-  if (executor != nullptr) {
-    executor->OnDestruct(this);
-  }
+ir::Type ValueNode::GetType() const {
+  LOG(FATAL) << "NotImplementedError: " << type_key() << "::GetType()";
+  throw;
 }
 
 TensorValue TensorValue::make(tensor::Tensor tensor) {
@@ -128,6 +127,9 @@ NodeRef DeTuple(Value value) {
   if (const auto* tuple = value.as<TupleValueNode>()) {
     Array<NodeRef> result;
     for (Value sub_value : tuple->fields) {
+      if (sub_value->op_env == nullptr) {
+        sub_value->op_env = tuple->op_env;
+      }
       result.push_back(DeTuple(sub_value));
     }
     return std::move(result);

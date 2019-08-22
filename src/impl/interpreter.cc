@@ -66,9 +66,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   Module mod;
   Stack stack;
   std::unordered_map<const ExprNode*, const BoundExprNode*> bindings;
-  std::unordered_map<const ValueNode*, std::shared_ptr<Memory> > resources;
-  std::vector<std::shared_ptr<Memory> > workspace;
-  std::vector<std::shared_ptr<Stream> > streams;
 
  public:
   Interpreter(Module mod) : mod(mod) {
@@ -139,12 +136,12 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const IfNode* node) override {
+    // TODO(@junrushao1994): let's switch to bool scalar
     static const DType dtype_bool = DType(DTypeCode::kUInt(), 1);
     const Tensor& v = Downcast<TensorValue>(Eval(node->cond))->tensor;
     // check bool scalar
     CHECK(DType(v->dtype) == dtype_bool);
     CHECK(v->ndim == 0);
-    // TODO(@junrushao1994): don't assume the result has been calculated.
     uint8_t result = *reinterpret_cast<uint8_t*>(v->data);
     return result ? Eval(node->true_branch) : Eval(node->false_branch);
   }
@@ -158,11 +155,15 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const TupleGetItemNode* node) override {
-    TupleValue v = Downcast<TupleValue>(Eval(node->tuple));
+    TupleValue tuple = Downcast<TupleValue>(Eval(node->tuple));
     int index = node->index;
-    int size = static_cast<int>(v->fields.size());
+    int size = static_cast<int>(tuple->fields.size());
     CHECK(0 <= index && index < size) << "IndexError: tuple index out of range";
-    return v->fields[index];
+    Value sub_value = tuple->fields[index];
+    if (sub_value->op_env == nullptr) {
+      sub_value->op_env = tuple->op_env;
+    }
+    return sub_value;
   }
 
   Value VisitExpr_(const RefCreateNode* node) override {
@@ -179,44 +180,30 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
  public:
-  class OpEnvRunner {
-   public:
-    Interpreter* self;
-    OpEnvRunner(Interpreter* self) : self(self) {
-      CHECK_EQ(self->workspace.size(), 0U);
-      CHECK_EQ(self->streams.size(), 0U);
-    }
-    ~OpEnvRunner() {
-      self->workspace.clear();
-      self->workspace.shrink_to_fit();
-      self->streams.clear();
-      self->streams.shrink_to_fit();
-    }
-    void PreInvoke(OpEnv* op_env) {
-      std::unique_ptr<Requests> req = self->AttachOpEnv(op_env);
-      for (const auto& item : req->memory) {
-        self->RequestMemory(item.value, item.ctx, item.nbytes);
-      }
-      for (const auto& item : req->workspace) {
-        self->RequestWorkspace(item.dest, item.ctx, item.nbytes);
-      }
-      for (const auto& item : req->stream) {
-        self->RequestStream(item.dest, item.ctx, item.tag_idx, item.index);
-      }
-    }
-  };
-
   Value InvokePrimitive(const OpValueNode* node, Array<Value> args, const Attrs& attrs) {
     const Op& op = node->op;
-    DevType device_type;
     OpInfo info = MakeOutput(op, args, attrs);
     std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(op, info, args, attrs);
+    std::shared_ptr<Requests> req = op_env->GetRequests();
     {
-      OpEnvRunner runner(this);
-      runner.PreInvoke(op_env.get());
-      op_env->Execute(args, info->output, attrs);
+      for (int i = 0, n = req->memory.size(); i < n; ++i) {
+        this->RequestMemory(req.get(), i);
+      }
+      for (int i = 0, n = req->workspace.size(); i < n; ++i) {
+        this->RequestWorkspace(req.get(), i);
+      }
+      for (int i = 0, n = req->stream.size(); i < n; ++i) {
+        this->RequestStream(req.get(), i);
+      }
     }
-    return args[static_cast<int>(args.size()) - 1];
+    op_env->Execute(args, info->output, attrs);
+    {
+      req->workspace.clear();
+      req->workspace.shrink_to_fit();
+      req->stream.clear();
+      req->stream.shrink_to_fit();
+    }
+    return info->output;
   }
 
   Value InvokeClosure(const ClosureValueNode* node, Array<Value> args, const Attrs& attrs) {
@@ -237,15 +224,15 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
  public:
+  void OnBind(const op::OpEnv* op_env) override {
+  }
+  void OnDestruct(const op::OpEnv* op_env) override {
+  }
+
   void OnBind(const BoundExprNode* bound_expr) override {
     const ExprNode* expr = bound_expr->expr.as<ExprNode>();
     CHECK_EQ(bindings.count(expr), 0);
     bindings[expr] = bound_expr;
-  }
-
-  void OnDestruct(const ValueNode* value) override {
-    CHECK_NE(resources.count(value), 0);
-    resources.erase(value);
   }
 
   void OnDestruct(const BoundExprNode* bound_expr) override {
@@ -254,25 +241,27 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     bindings.erase(expr);
   }
 
-  void RequestMemory(Value& value, const Context& ctx, int64_t nbytes) override {
-    std::shared_ptr<Memory> memory = Memory::Alloc(ctx, nbytes);
-    const ValueNode* node = value.as<ValueNode>();
-    CHECK_EQ(resources.count(node), 0);
-    resources[node] = memory;
-    value->executor = this;
-    *value->Buffer() = memory->data;
+  void RequestMemory(Requests* req, int index) override {
+    Requests::MemoryRequest& entry = req->memory[index];
+    CHECK(entry.memory == nullptr);
+    std::shared_ptr<Memory> memory = Memory::Alloc(entry.ctx, entry.nbytes);
+    *entry.dest = memory->data;
+    entry.memory = memory;
   }
 
-  void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes) override {
-    std::shared_ptr<Memory> memory = Memory::Alloc(ctx, nbytes);
-    workspace.push_back(memory);
-    *dest = memory->data;
+  void RequestWorkspace(Requests* req, int index) override {
+    Requests::WorkspaceRequest& entry = req->workspace[index];
+    CHECK(entry.memory == nullptr);
+    std::shared_ptr<Memory> memory = Memory::Alloc(entry.ctx, entry.nbytes);
+    *entry.dest = memory->data;
+    entry.memory = memory;
   }
 
-  void RequestStream(void** dest, const Context& ctx, int tag_idx, int index) override {
-    std::shared_ptr<Stream> stream = Stream::Get(ctx, tag_idx, index);
-    streams.push_back(stream);
-    *dest = stream->data();
+  void RequestStream(Requests* req, int index) override {
+    Requests::StreamRequest& entry = req->stream[index];
+    std::shared_ptr<Stream> stream = Stream::Get(entry.ctx, entry.tag_idx, entry.stream_idx);
+    *entry.dest = stream->data();
+    entry.stream = stream;
   }
 };
 
@@ -289,6 +278,9 @@ static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor)
     for (int i = 0; i < n; ++i) {
       Expr sub_expr = ir::TupleGetItemNode::make(expr, i);
       Value sub_value = tuple->fields[i];
+      if (sub_value->op_env == nullptr) {
+        sub_value->op_env = tuple->op_env;
+      }
       result.push_back(DeTuple(expr, value, executor));
     }
     return std::move(result);

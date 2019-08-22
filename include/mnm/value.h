@@ -7,6 +7,9 @@
 #include <mnm/tensor.h>
 
 namespace mnm {
+namespace op {
+class OpEnv;
+}  // namespace op
 namespace executor {
 class Executor;
 }  // namespace executor
@@ -19,20 +22,10 @@ namespace value {
 /* Value */
 class ValueNode : public ir::Node {
  public:
-  virtual ~ValueNode();
-  virtual void** Buffer() const {
-    LOG(FATAL) << "NotImplementedError: " << type_key() << "::Buffer()";
-    throw;
-  }
-  virtual ir::Type GetType() const {
-    LOG(FATAL) << "NotImplementedError: " << type_key() << "::GetType()";
-    throw;
-  }
+  virtual ir::Type GetType() const;
 
  public:
-  mutable executor::Executor* executor{nullptr};
-
- public:
+  mutable std::shared_ptr<op::OpEnv> op_env{nullptr};
   static constexpr const char* _type_key = "mnm.value.Value";
   MNM_DEF_BASE_NODE_INFO(ValueNode, ir::Node);
 };
@@ -48,9 +41,6 @@ class Value : public ir::NodeRef {
 class TensorValueNode final : public ValueNode {
  public:
   tensor::Tensor tensor;
-  void** Buffer() const override {
-    return const_cast<void**>(&tensor->data);
-  }
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("_tensor", &tensor);
   }
@@ -145,9 +135,6 @@ class ConstructorValue;
 class OpaqueValueNode : public ValueNode {
  public:
   mutable Value data{nullptr};
-  void** Buffer() const override {
-    return data.defined() ? data->Buffer() : nullptr;
-  }
   static constexpr const char* _type_key = "mnm.value.OpaqueValue";
   MNM_DEF_NODE_TYPE_INFO(OpaqueValueNode, ValueNode);
 };
