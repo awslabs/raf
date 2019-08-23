@@ -29,6 +29,8 @@ class OpInfoNode : public ir::Node {
  public:
   value::Value output;
   Context ctx;
+  bool computational = true;
+
   static constexpr const char* _type_key = "mnm.op.OpInfo";
   MNM_DEF_NODE_TYPE_INFO(OpInfoNode, Node);
 };
@@ -36,7 +38,7 @@ class OpInfoNode : public ir::Node {
 class OpInfo : public ir::NodeRef {
  public:
   MNM_DEF_NODE_REF_METHODS(OpInfo, NodeRef, OpInfoNode);
-  static OpInfo make(value::Value output, Context ctx);
+  static OpInfo make(value::Value output, Context ctx, bool computational = true);
 };
 
 class OpEnv {

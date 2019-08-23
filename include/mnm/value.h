@@ -152,38 +152,55 @@ class OpaqueValue : public Value {
 namespace mnm {
 namespace value {
 
+class IntValue;
+class FloatValue;
+
+/* ScalarValue */
+class ScalarValueNode : public ValueNode {
+ public:
+  static constexpr const char* _type_key = "mnm.value.ScalarValue";
+  MNM_DEF_BASE_NODE_INFO(ScalarValueNode, ValueNode);
+};
+
+class ScalarValue : public Value {
+ public:
+  static IntValue make(int64_t data);
+  static FloatValue make(double data);
+  MNM_DEF_NODE_REF_METHODS(ScalarValue, Value, ScalarValueNode);
+};
+
 /* IntValue */
-class IntValueNode : public ValueNode {
+class IntValueNode : public ScalarValueNode {
  public:
   int64_t data;
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("data", &data);
   }
   static constexpr const char* _type_key = "mnm.value.IntValue";
-  MNM_DEF_NODE_TYPE_INFO(IntValueNode, ValueNode);
+  MNM_DEF_NODE_TYPE_INFO(IntValueNode, ScalarValueNode);
 };
 
-class IntValue : public Value {
+class IntValue : public ScalarValue {
  public:
   static IntValue make(int64_t data);
-  MNM_DEF_NODE_REF_METHODS(IntValue, Value, IntValueNode);
+  MNM_DEF_NODE_REF_METHODS(IntValue, ScalarValue, IntValueNode);
 };
 
 /* FloatValue */
-class FloatValueNode : public ValueNode {
+class FloatValueNode : public ScalarValueNode {
  public:
   double data;
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("data", &data);
   }
   static constexpr const char* _type_key = "mnm.value.FloatValue";
-  MNM_DEF_NODE_TYPE_INFO(FloatValueNode, ValueNode);
+  MNM_DEF_NODE_TYPE_INFO(FloatValueNode, ScalarValueNode);
 };
 
-class FloatValue : public Value {
+class FloatValue : public ScalarValue {
  public:
   static FloatValue make(double data);
-  MNM_DEF_NODE_REF_METHODS(FloatValue, Value, FloatValueNode);
+  MNM_DEF_NODE_REF_METHODS(FloatValue, ScalarValue, FloatValueNode);
 };
 
 }  // namespace value

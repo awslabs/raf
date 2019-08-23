@@ -60,6 +60,14 @@ OpValue OpValue::make(Op op) {
   return OpValue(n);
 }
 
+IntValue ScalarValue::make(int64_t data) {
+  return IntValue::make(data);
+}
+
+FloatValue ScalarValue::make(double data) {
+  return FloatValue::make(data);
+}
+
 IntValue IntValue::make(int64_t data) {
   NodePtr<IntValueNode> n = make_node<IntValueNode>();
   n->data = std::move(data);

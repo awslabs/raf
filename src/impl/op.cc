@@ -65,10 +65,11 @@ OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& bac
 }
 
 // Implementation: OpInfo
-OpInfo OpInfo::make(Value output, Context ctx) {
+OpInfo OpInfo::make(Value output, Context ctx, bool computational) {
   NodePtr<OpInfoNode> n = make_node<OpInfoNode>();
   n->output = std::move(output);
   n->ctx = std::move(ctx);
+  n->computational = computational;
   return OpInfo(n);
 }
 

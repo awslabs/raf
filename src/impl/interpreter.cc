@@ -183,7 +183,11 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   Value InvokePrimitive(const OpValueNode* node, Array<Value> args, const Attrs& attrs) {
     const Op& op = node->op;
     OpInfo info = MakeOutput(op, args, attrs);
-    std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(op, info, args, attrs);
+    if (!info->computational) {
+      return info->output;
+    }
+    // TODO(@junrushao1994): resources with non-computational ops
+    std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(op, info, args, attrs);
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
       for (int i = 0, n = req->memory.size(); i < n; ++i) {
@@ -203,6 +207,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       req->stream.clear();
       req->stream.shrink_to_fit();
     }
+    info->output->op_env = std::move(op_env);
     return info->output;
   }
 
