@@ -1,9 +1,9 @@
 import numpy as np
 
-from ._tvm import relay
 from .base import register_mnm_node
-from .value import FloatValue, IntValue, TensorValue, Value
-from .ir import Constant
+from .value import Value, IntValue, FloatValue, TensorValue
+from .._ffi.ir import _make as ir_make
+from .._ffi.value import _make as value_make
 
 
 @register_mnm_node("mnm.value.BoundExpr")
@@ -11,7 +11,7 @@ class BoundExpr(Value):
 
     def __init__(self, expr, value, executor=None):
         self.__init_handle_by_constructor__(
-            value._make.BoundExpr, expr, value, executor)
+            value_make.BoundExpr, expr, value, executor)
 
     @staticmethod
     def const(a):
@@ -23,5 +23,5 @@ class BoundExpr(Value):
             value = FloatValue(a)
         else:
             raise NotImplementedError(str(type(a)))
-        expr = Constant(value)
+        expr = ir_make.Constant(value)
         return BoundExpr(expr=expr, value=value)

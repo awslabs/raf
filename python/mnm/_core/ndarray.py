@@ -1,8 +1,8 @@
 import numpy as np
 
-from ._base import set_module
-from ._ffi import BoundExpr
-from ._ffi.context import Context
+from .base import set_module
+from .bound_expr import BoundExpr
+from .context import Context
 
 
 @set_module("mnm")

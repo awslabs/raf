@@ -1,2 +1,8 @@
-from ._make import Constant
-from ._constant import ExtractValue
+from .._tvm import _init_api
+
+
+def ExtractValue(self):
+    pass
+
+
+_init_api("mnm.ir.constant", "mnm._ffi.ir.constant")

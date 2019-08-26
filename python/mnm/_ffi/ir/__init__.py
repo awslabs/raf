@@ -1,2 +1,1 @@
-from .constant import Constant
-from .module import Module
+from . import _make, constant, module

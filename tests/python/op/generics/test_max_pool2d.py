@@ -1,8 +1,8 @@
 import torch
 import torch.nn.functional as F
 
-from mnm._ffi.op import invoke_make_output
-from mnm._ffi.value import TensorValue
+from mnm._core.op import invoke_make_output
+from mnm._core.value import TensorValue
 
 
 def test_max_pool2d():

@@ -1,4 +1,4 @@
-from mnm._ffi.value import TensorValue, TupleValue
+from mnm._core.value import TensorValue, TupleValue
 
 
 def test_nested():

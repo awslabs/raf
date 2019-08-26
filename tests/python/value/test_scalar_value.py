@@ -1,4 +1,4 @@
-from mnm._ffi.value import FloatValue, IntValue
+from mnm._core.value import FloatValue, IntValue
 
 
 def test_int_value():

@@ -5,4 +5,4 @@ def MarkNumpy(tensor, manager_ctx):
     pass
 
 
-_init_api("mnm.tensor", "mnm._ffi._tensor")
+_init_api("mnm.tensor", "mnm._ffi.tensor")

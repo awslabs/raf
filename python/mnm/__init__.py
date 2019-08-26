@@ -2,12 +2,8 @@
 
 __version__ = "0.0.dev"
 
-import readline as _
+import readline
 
-from . import _base
 from . import _ffi
-from . import _context
-
-from ._context import cpu, gpu
-from ._ndarray import ndarray
+from . import _core
 from .hybrid import hybrid

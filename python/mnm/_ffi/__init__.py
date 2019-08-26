@@ -18,9 +18,8 @@ This is because not every editor recognize them properly.
 from . import _tvm
 from . import libinfo
 
-from . import base
-from . import context
-from . import op
-from . import value
 from . import ir
-from .bound_expr import BoundExpr
+from . import value
+from . import executor
+from . import op
+from . import tensor

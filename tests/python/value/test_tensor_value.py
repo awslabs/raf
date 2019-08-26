@@ -1,6 +1,6 @@
 import numpy as np
 
-from mnm._ffi.value import TensorValue
+from mnm._core.value import TensorValue
 
 
 def test_assemble_0d():

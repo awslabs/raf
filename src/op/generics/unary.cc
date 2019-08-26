@@ -35,13 +35,13 @@ OpInfo IdenticalMakeOutput(const Array<Value>& values, const Attrs& attrs) {
       TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape), data->ctx);
 }
 
-MNM_REGISTER_OP("mnm.op.add")
-    .describe(R"code(This is Add.
-)code" MNM_ADD_FILELINE)
-    .set_num_inputs(1)
-    .add_argument("data", "Any Tensor", "Input data.")
-    .add_type_rel("AddRel", IdenticalRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
+// MNM_REGISTER_OP("mnm.op.add")
+//     .describe(R"code(This is Add.
+// )code" MNM_ADD_FILELINE)
+//     .set_num_inputs(1)
+//     .add_argument("data", "Any Tensor", "Input data.")
+//     .add_type_rel("AddRel", IdenticalRel)
+//     .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
 
 MNM_REGISTER_OP("mnm.op.relu")
     .describe(R"code(Apply a relu elmentwisely on the given tensor.

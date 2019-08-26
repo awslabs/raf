@@ -1,11 +1,11 @@
 import ctypes
 
-from .._tensor import MarkNumpy
-from .._tvm import _DLManagedTensor, _NodeBase, _register_func
-from .._value import AssembleTensorValue, DeTuple
+from ..._ffi._tvm import _DLManagedTensor, _register_func
+from ..._ffi.tensor import MarkNumpy
+from ..._ffi.value import AssembleTensorValue
 from ..base import register_mnm_node
 from ..context import Context
-from . import _make
+from .value import Value
 
 _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)
 
@@ -16,11 +16,6 @@ def numpy_array_deleter(handle):
     void_p = handle.contents.manager_ctx
     pyobj = ctypes.cast(void_p, ctypes.py_object)
     ctypes.pythonapi.Py_DecRef(pyobj)
-
-
-@register_mnm_node("mnm.value.Value")
-class Value(_NodeBase):
-    pass
 
 
 @register_mnm_node("mnm.value.TensorValue")
@@ -96,41 +91,3 @@ class TensorValue(Value):
         result = _tensor_value(a)
         MarkNumpy(result._tensor, _manager_ctx(a))
         return result
-
-
-@register_mnm_node("mnm.value.TupleValue")
-class TupleValue(Value):
-
-    def __init__(self, values):
-        if isinstance(values, list):
-            values = tuple(values)
-        assert isinstance(values, tuple)
-        for value in values:
-            assert isinstance(value, Value)
-        self.__init_handle_by_constructor__(_make.TupleValue, values)
-
-    def __getitem__(self, index: int):
-        return self._de_tuple[index]
-
-    def __len__(self):
-        return len(self._de_tuple)
-
-    @property
-    def _de_tuple(self):
-        return DeTuple(self)
-
-
-@register_mnm_node("mnm.value.IntValue")
-class IntValue(Value):
-
-    def __init__(self, data):
-        assert isinstance(data, int)
-        self.__init_handle_by_constructor__(_make.IntValue, data)
-
-
-@register_mnm_node("mnm.value.FloatValue")
-class FloatValue(Value):
-
-    def __init__(self, data):
-        assert isinstance(data, float)
-        self.__init_handle_by_constructor__(_make.FloatValue, data)

@@ -24,4 +24,4 @@ from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
 from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
 from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
-from tvm.make import node as make_node
+from tvm.make import node as _make_node

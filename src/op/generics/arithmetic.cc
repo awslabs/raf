@@ -73,37 +73,37 @@ OpInfo Negative(const Array<Value>& values, const Attrs& attrs) {
   throw;
 }
 
-MNM_REGISTER_OP("mnm.op.Add")
+MNM_REGISTER_OP("mnm.op.add")
     .describe(R"code(This is Add.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(2)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Add);
 
-MNM_REGISTER_OP("mnm.op.Subtract")
+MNM_REGISTER_OP("mnm.op.subtract")
     .describe(R"code(This is Subtract.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(2)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Subtract);
 
-MNM_REGISTER_OP("mnm.op.Multiply")
+MNM_REGISTER_OP("mnm.op.multiply")
     .describe(R"code(This is Multiply.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(2)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Multiply);
 
-MNM_REGISTER_OP("mnm.op.Divide")
+MNM_REGISTER_OP("mnm.op.divide")
     .describe(R"code(This is Divide.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(2)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Divide);
 
-MNM_REGISTER_OP("mnm.op.Mod")
+MNM_REGISTER_OP("mnm.op.mod")
     .describe(R"code(This is Mod.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(2)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Mod);
 
-MNM_REGISTER_OP("mnm.op.Negative")
+MNM_REGISTER_OP("mnm.op.negative")
     .describe(R"code(This is Negative.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(1)

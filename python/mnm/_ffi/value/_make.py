@@ -1,6 +1,14 @@
 from .._tvm import _init_api
 
 
+def IntValue(data):
+    pass
+
+
+def FloatValue(data):
+    pass
+
+
 def TupleValue(fields):
     pass
 
