@@ -2,6 +2,7 @@ import numpy as np
 
 from mnm._core.ir.constant import Constant, ExtractValue
 from mnm._core.value import FloatValue, IntValue, TensorValue
+from mnm._ffi._tvm import tvm
 
 
 def test_constant_int():

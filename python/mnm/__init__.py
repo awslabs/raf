@@ -7,3 +7,5 @@ import readline
 from . import _ffi
 from . import _core
 from .hybrid import hybrid
+
+from .op.imports import array

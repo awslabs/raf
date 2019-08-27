@@ -51,6 +51,22 @@ inline std::vector<TDest> PadDims(const std::vector<TSrc>& shape, int at_least_n
   return res;
 }
 
+inline bool IsCompact(const DLTensor& dl_tensor) {
+  int ndim = dl_tensor.ndim;
+  if (dl_tensor.byte_offset != 0) {
+    return false;
+  }
+  if (dl_tensor.strides[ndim - 1] != 1) {
+    return false;
+  }
+  for (int i = 0; i < ndim - 1; ++i) {
+    if (dl_tensor.strides[i] != dl_tensor.strides[i + 1] * dl_tensor.shape[i + 1]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace shape_utils
 }  // namespace common
 }  // namespace mnm

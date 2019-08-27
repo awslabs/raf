@@ -1,3 +1,5 @@
+#include <tvm/runtime/ndarray.h>
+
 #include <mnm/executor.h>
 #include <mnm/ir.h>
 #include <mnm/registry.h>
@@ -128,6 +130,20 @@ TensorValue AssembleTensorValue(DLContext ctx, DLDataType dtype, Array<Integer> 
       Tensor::make(ctx, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
 }
 
+TensorValue FromTVM(tvm::runtime::NDArray array) {
+  return TensorValue::make(Tensor::FromDLPack(array.ToDLPack()));
+}
+
+tvm::runtime::NDArray ToTVM(TensorValue value) {
+  DLManagedTensor* tensor = value->tensor.ToDLPack();
+  if (tensor->dl_tensor.strides != nullptr) {
+    tensor->deleter(tensor);
+    LOG(FATAL) << "NotImplementedError: strided tensor not supported";
+    throw;
+  }
+  return tvm::runtime::NDArray::FromDLPack(tensor);
+}
+
 NodeRef DeTuple(Value value) {
   if (const auto* _ = value.as<TensorValueNode>()) {
     return std::move(value);
@@ -149,6 +165,10 @@ NodeRef DeTuple(Value value) {
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);
 
 MNM_REGISTER_GLOBAL("mnm.value.DeTuple").set_body_typed(DeTuple);
+
+MNM_REGISTER_GLOBAL("mnm.value.FromTVM").set_body_typed(FromTVM);
+
+MNM_REGISTER_GLOBAL("mnm.value.ToTVM").set_body_typed(ToTVM);
 
 MNM_REGISTER_GLOBAL("mnm.value._make.TupleValue").set_body_typed(TupleValue::make);
 

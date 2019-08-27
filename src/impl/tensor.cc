@@ -8,6 +8,7 @@
 namespace mnm {
 namespace tensor {
 
+using common::shape_utils::IsCompact;
 using common::shape_utils::Shape2Strides;
 
 class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
@@ -62,6 +63,19 @@ class Tensor::Impl {
     delete ptr;
   }
 
+  static void ToDLPackDeleter(DLManagedTensor* tensor) {
+    static_cast<NDArray::Container*>(tensor->manager_ctx)->DecRef();
+    delete tensor;
+  }
+
+  static void FromDLPackDeleter(Container* super_ptr) {
+    DLManagedTensor* tensor = static_cast<DLManagedTensor*>(super_ptr->manager_ctx);
+    if (tensor->deleter != nullptr) {
+      (*tensor->deleter)(tensor);
+    }
+    delete super_ptr;
+  }
+
   static Tensor Make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
                      const std::vector<int64_t>& strides, void* data) {
     if (!strides.empty()) {
@@ -78,6 +92,20 @@ class Tensor::Impl {
     container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     container->dl_tensor.byte_offset = 0;
+    return ret;
+  }
+
+  static Tensor FromDLPack(DLManagedTensor* tensor) {
+    TensorContainer* container = new TensorContainer(FromDLPackDeleter);
+    Tensor ret(container);
+    container->manager_ctx = tensor;
+    container->dl_tensor = tensor->dl_tensor;
+    std::vector<int64_t> shape(tensor->dl_tensor.shape,
+                               tensor->dl_tensor.shape + tensor->dl_tensor.ndim);
+    container->strides_ = Shape2Strides<int64_t>(shape);
+    container->shape_ = std::move(shape);
+    container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
+    container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     return ret;
   }
 
@@ -101,6 +129,22 @@ int Tensor::array_type_code() const {
 Tensor Tensor::make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
                     const std::vector<int64_t>& strides, void* data) {
   return Tensor::Impl::Make(ctx, dtype, shape, strides, data);
+}
+
+Tensor Tensor::FromDLPack(DLManagedTensor* tensor) {
+  return Tensor::Impl::FromDLPack(tensor);
+}
+
+DLManagedTensor* Tensor::ToDLPack() const {
+  DLManagedTensor* ret = new DLManagedTensor();
+  ret->deleter = Tensor::Impl::ToDLPackDeleter;
+  ret->manager_ctx = data_;
+  ret->dl_tensor = data_->dl_tensor;
+  if (IsCompact(data_->dl_tensor)) {
+    ret->dl_tensor.strides = nullptr;
+  }
+  data_->IncRef();
+  return ret;
 }
 
 MNM_REGISTER_GLOBAL("mnm.tensor.MarkNumpy").set_body_typed(Tensor::Impl::MarkNumpy);

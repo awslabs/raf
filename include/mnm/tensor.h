@@ -60,6 +60,10 @@ class Tensor : private tvm::runtime::NDArray {
   static Tensor make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
                      const std::vector<int64_t>& strides = {}, void* data = nullptr);
 
+  static Tensor FromDLPack(DLManagedTensor* tensor);
+
+  DLManagedTensor* ToDLPack() const;
+
  public:
   // const DLTensor* operator->() const;
   using TSuper::operator->;

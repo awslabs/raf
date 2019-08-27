@@ -1,21 +1,8 @@
-import ctypes
-
-from ..._ffi._tvm import _DLManagedTensor, _register_func
-from ..._ffi.tensor import MarkNumpy
-from ..._ffi.value import AssembleTensorValue
+from ..._ffi.value import AssembleTensorValue, FromTVM
 from ..base import register_mnm_node
 from ..context import Context
 from .value import Value
-
-_DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)
-
-
-@_register_func("mnm._numpy_array_deleter")
-def numpy_array_deleter(handle):
-    handle = ctypes.cast(handle, _DL_MANAGED_TENSOR_PTR)
-    void_p = handle.contents.manager_ctx
-    pyobj = ctypes.cast(void_p, ctypes.py_object)
-    ctypes.pythonapi.Py_DecRef(pyobj)
+from mnm._ffi._tvm import tvm
 
 
 @register_mnm_node("mnm.value.TensorValue")
@@ -71,23 +58,9 @@ class TensorValue(Value):
         return AssembleTensorValue(ctx, dtype, shape, strides, data)
 
     @staticmethod
-    def from_numpy(a):
+    def from_tvm(tvm_array):
+        return FromTVM(tvm_array)
 
-        def _tensor_value(obj):
-            ctx = Context("cpu")
-            dtype = str(obj.dtype)
-            shape = [x for x in obj.shape]
-            strides = [x // obj.itemsize for x in obj.strides]
-            data = obj.ctypes.data_as(ctypes.c_void_p)
-            assert len(shape) == len(strides)
-            return TensorValue.assemble(ctx=ctx, dtype=dtype, shape=shape, strides=strides, data=data)
-
-        def _manager_ctx(obj):
-            pyobj = ctypes.py_object(obj)
-            void_p = ctypes.c_void_p.from_buffer(pyobj)
-            ctypes.pythonapi.Py_IncRef(pyobj)
-            return void_p
-
-        result = _tensor_value(a)
-        MarkNumpy(result._tensor, _manager_ctx(a))
-        return result
+    @staticmethod
+    def from_numpy(np_array):
+        return TensorValue.from_tvm(tvm.ndarray.array(np_array))
