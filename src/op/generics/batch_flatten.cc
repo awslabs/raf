@@ -15,8 +15,6 @@ namespace batch_flatten {
 
 using ir::Array;
 using ir::Attrs;
-using ir::Int;
-using ir::make_const;
 using ir::TensorTypeNode;
 using ir::Type;
 using ir::TypeReporter;
@@ -26,11 +24,14 @@ using value::Value;
 
 bool BatchFlattenRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
                      const TypeReporter& reporter) {
+  using tvm::Int;
+  using tvm::make_const;
   CHECK_EQ(types.size(), 2);
   const auto* data = types[0].as<TensorTypeNode>();
   CHECK(data != nullptr);
   CHECK_GE(data->shape.size(), 2);
   auto target_dim = make_const(Int(64), 1);
+  // auto target_dim = TVMIntImm::make(DType(DTypeCode::kInt(), 64), (int64_t)1);
   for (int i = 1; i < static_cast<int>(data->shape.size()); ++i) {
     target_dim = target_dim * data->shape[i];
   }

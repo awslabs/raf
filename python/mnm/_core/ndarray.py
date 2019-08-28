@@ -1,7 +1,7 @@
-from .base import set_module
-from .context import Context
-from .bound_expr import BoundExpr
 from .._ffi.value import ToTVM
+from .base import set_module
+from .bound_expr import BoundExpr
+from .context import Context
 
 
 @set_module("mnm")
@@ -40,3 +40,7 @@ class ndarray(object):
 
 def _create_by_pair(expr, value):
     return ndarray(BoundExpr(expr=expr, value=value))
+
+
+def _create_by_bind(bound_expr):
+    return ndarray(bound_expr)

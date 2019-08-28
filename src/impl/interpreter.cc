@@ -271,7 +271,14 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 };
 
 static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor) {
+  // TODO(@junrushao1994): dispatch by type key?
   // make nested lists of BoundExpr
+  if (const auto* int_value = value.as<IntValueNode>()) {
+    return ir::Integer(int_value->data);
+  }
+  if (const auto* float_value = value.as<FloatValueNode>()) {
+    return ir::Float(float_value->data);
+  }
   if (const auto* _ = value.as<TensorValueNode>()) {
     BoundExpr ret = BoundExpr::make(expr, value);
     ret->BindExecutor(executor);

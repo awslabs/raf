@@ -2,6 +2,8 @@ from .._ffi._tvm import _get_global_func, _make_node, _NodeBase
 from .._ffi.op import MakeOutput
 from .base import register_mnm_node
 
+OP_DICT = {}
+
 
 @register_mnm_node("mnm.op.OpInfo")
 class OpInfo(_NodeBase):
@@ -30,4 +32,17 @@ def _get_op_dict():
     return op_dict
 
 
-OP_DICT = _get_op_dict()
+def get_op(op_name):
+    global OP_DICT
+    # first pass
+    op = OP_DICT.get(op_name, None)
+    if op is not None:
+        return op
+    # refresh
+    OP_DICT = _get_op_dict()
+    # second pass
+    op = OP_DICT.get(op_name, None)
+    if op is not None:
+        return op
+    # not found
+    raise NotImplementedError("Operator {} is not found".format(op_name))

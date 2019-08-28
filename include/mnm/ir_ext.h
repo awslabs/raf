@@ -6,7 +6,8 @@
 namespace mnm {
 namespace ir {
 
-// TODO(@were): not sure it is necessary, let's discuss later.
+using tvm::ir::FloatImm;
+
 class Float : public tvm::Expr {
  public:
   Float() : tvm::Expr() {
