@@ -4,8 +4,8 @@ from inspect import isfunction
 from numbers import Number
 from typing import Callable, Dict
 
-from tvm import relay
-
+from .._core.ir import ConstantExpr
+from .._ffi._tvm import relay
 from .utils import OP_MAKER, NodeTransformer
 
 SymTab = Dict[str, relay.Var]
@@ -24,7 +24,7 @@ def _convert(expr, debug):
         if isfunction(expr):
             return expr
         if isinstance(expr, Number):
-            return lambda _: relay.const(expr, dtype="int64")
+            return lambda _: ConstantExpr(expr)
         raise NotImplementedError(expr)
 
 
@@ -49,16 +49,15 @@ class IRBuilder(object):
             return ast.Name(id=name, ctx=ast.Load())
         return lambda sym_tab: sym_tab[name]
 
-
     def op(self, category: str, node_t: type, *args) -> Callable[[SymTab], relay.Expr]:
         if self.debug:
             args = [_convert(arg, debug=True) for arg in args]
             DEBUG_RULES = {
-                    'unary_op': (1, lambda args: ast.UnaryOp(op=node_t(), operand=args[0])),
-                    'bin_op'  : (2, lambda args: ast.BinOp(left=args[0], op=node_t(), right=args[1])),
-                    'bool_op' : (2, lambda args: ast.BoolOp(op=node_t(), values=args)),
-                    'compare' : (2, lambda args: ast.Compare(left=args[0], ops=[node_t()], \
-                        comparators=[args[1]]))
+                'unary_op': (1, lambda args: ast.UnaryOp(op=node_t(), operand=args[0])),
+                'bin_op': (2, lambda args: ast.BinOp(left=args[0], op=node_t(), right=args[1])),
+                'bool_op': (2, lambda args: ast.BoolOp(op=node_t(), values=args)),
+                'compare': (2, lambda args: ast.Compare(left=args[0], ops=[node_t()],
+                                                        comparators=[args[1]]))
             }
             assert category in DEBUG_RULES.keys(), "{} is not defined".format(category)
             cnt, constructor = DEBUG_RULES[category]

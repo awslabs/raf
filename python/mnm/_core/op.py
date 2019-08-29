@@ -1,6 +1,7 @@
-from .._ffi._tvm import _get_global_func, _make_node, _NodeBase
+from .._ffi._tvm import _get_global_func, _make_node, _NodeBase, relay
 from .._ffi.op import MakeOutput
 from .base import register_mnm_node
+from .executor import Interpreter
 
 OP_DICT = {}
 
@@ -46,3 +47,19 @@ def get_op(op_name):
         return op
     # not found
     raise NotImplementedError("Operator {} is not found".format(op_name))
+
+
+def create_op(op_name: str, eager: bool = True):
+    op = get_op(op_name)
+
+    if eager:
+        def body(args, attrs):
+            args = tuple(arg._expr for arg in args)
+            expr = relay.Call(op=op, args=args, attrs=attrs)
+            return Interpreter.GLOBAL(expr)
+    else:
+        def body(args, attrs):
+            expr = relay.Call(op=op, args=args, attrs=attrs)
+            return expr
+
+    return body

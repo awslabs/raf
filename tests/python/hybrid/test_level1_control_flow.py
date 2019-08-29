@@ -20,7 +20,7 @@ def program_0(x1):
 
 def test_program_0():
     ans = program_0(7)
-    assert ans.asnumpy() == 50740
+    assert ans == 50740
 
 
 @hybrid
@@ -51,7 +51,7 @@ def program_1(x1, x2, g1):
 
 def test_program_1():
     ans = program_1(9, 10, 0)
-    assert ans.asnumpy() == 560
+    assert ans == 560
 
 
 @hybrid
@@ -104,7 +104,7 @@ def program_2(x1, x2):
 
 def test_program_2():
     ans = program_2(10, 8)
-    assert ans.asnumpy() == 312
+    assert ans == 312
 
 
 @hybrid
@@ -127,7 +127,7 @@ def program_3(x1, g1):
 
 def test_program_3():
     ans = program_3(6, 0)
-    assert ans.asnumpy() == 423
+    assert ans == 423
 
 
 @hybrid
@@ -146,7 +146,7 @@ def program_4(x1, x2):
 
 def test_program_4():
     ans = program_4(8, 6)
-    assert ans.asnumpy() == 594
+    assert ans == 594
 
 
 @hybrid
@@ -171,7 +171,7 @@ def program_5(x1):
 
 def test_program_5():
     ans = program_5(6)
-    assert ans.asnumpy() == 216
+    assert ans == 216
 
 
 @hybrid
@@ -193,7 +193,7 @@ def program_6(x1):
 
 def test_program_6():
     ans = program_6(7)
-    assert ans.asnumpy() == 122
+    assert ans == 122
 
 
 @hybrid
@@ -211,7 +211,7 @@ def program_7(x1):
 
 def test_program_7():
     ans = program_7(9)
-    assert ans.asnumpy() == 432450
+    assert ans == 432450
 
 
 @hybrid
@@ -232,7 +232,7 @@ def program_8(x1, g1):
 
 def test_program_8():
     ans = program_8(4, 0)
-    assert ans.asnumpy() == 420
+    assert ans == 420
 
 
 @hybrid
@@ -266,7 +266,7 @@ def program_9(x1):
 
 def test_program_9():
     ans = program_9(9)
-    assert ans.asnumpy() == 200
+    assert ans == 200
 
 
 @hybrid
@@ -280,7 +280,7 @@ def program_10(x1, x2):
 
 def test_program_10():
     ans = program_10(5, 6)
-    assert ans.asnumpy() == 864
+    assert ans == 864
 
 
 @hybrid
@@ -294,7 +294,7 @@ def program_11(x1):
 
 def test_program_11():
     ans = program_11(7)
-    assert ans.asnumpy() == 123
+    assert ans == 123
 
 
 @hybrid
@@ -320,7 +320,7 @@ def program_12(x1, x2):
 
 def test_program_12():
     ans = program_12(4, 1)
-    assert ans.asnumpy() == 1498
+    assert ans == 1498
 
 
 @hybrid
@@ -381,7 +381,7 @@ def program_13():
 
 def test_program_13():
     ans = program_13()
-    assert ans.asnumpy() == 3114
+    assert ans == 3114
 
 
 @hybrid
@@ -447,7 +447,7 @@ def program_14(x1, x2, g1):
 
 def test_program_14():
     ans = program_14(1, 10, 0)
-    assert ans.asnumpy() == 87974
+    assert ans == 87974
 
 
 @hybrid
@@ -469,7 +469,7 @@ def program_15(x1, x2, g1):
 
 def test_program_15():
     ans = program_15(10, 4, 0)
-    assert ans.asnumpy() == 2000
+    assert ans == 2000
 
 
 @hybrid
@@ -487,7 +487,7 @@ def program_16(x1):
 
 def test_program_16():
     ans = program_16(3)
-    assert ans.asnumpy() == 328
+    assert ans == 328
 
 
 @hybrid
@@ -523,7 +523,7 @@ def program_17(x1):
 
 def test_program_17():
     ans = program_17(7)
-    assert ans.asnumpy() == 551286
+    assert ans == 551286
 
 
 @hybrid
@@ -563,7 +563,7 @@ def program_18(x1):
 
 def test_program_18():
     ans = program_18(9)
-    assert ans.asnumpy() == 120
+    assert ans == 120
 
 
 @hybrid
@@ -584,7 +584,7 @@ def program_19(g1):
 
 def test_program_19():
     ans = program_19(0)
-    assert ans.asnumpy() == 1728
+    assert ans == 1728
 
 
 @hybrid
@@ -617,7 +617,7 @@ def program_20(x1, g1, g2):
 
 def test_program_20():
     ans = program_20(5, 0, 0)
-    assert ans.asnumpy() == 393
+    assert ans == 393
 
 
 @hybrid
@@ -639,7 +639,7 @@ def program_21(x1):
 
 def test_program_21():
     ans = program_21(8)
-    assert ans.asnumpy() == 2890
+    assert ans == 2890
 
 
 @hybrid
@@ -660,7 +660,7 @@ def program_22(g1):
 
 def test_program_22():
     ans = program_22(0)
-    assert ans.asnumpy() == 5500
+    assert ans == 5500
 
 
 @hybrid
@@ -698,7 +698,7 @@ def program_23(x1, x2, g1, g2):
 
 def test_program_23():
     ans = program_23(8, 9, 0, 0)
-    assert ans.asnumpy() == 260
+    assert ans == 260
 
 
 @hybrid
@@ -723,7 +723,7 @@ def program_24(x1, g1):
 
 def test_program_24():
     ans = program_24(3, 0)
-    assert ans.asnumpy() == 100
+    assert ans == 100
 
 
 @hybrid
@@ -749,7 +749,7 @@ def program_25():
 
 def test_program_25():
     ans = program_25()
-    assert ans.asnumpy() == 120
+    assert ans == 120
 
 
 @hybrid
@@ -763,7 +763,7 @@ def program_26(x1):
 
 def test_program_26():
     ans = program_26(9)
-    assert ans.asnumpy() == 124416
+    assert ans == 124416
 
 
 @hybrid
@@ -788,7 +788,7 @@ def program_27(x1, x2, g1, g2):
 
 def test_program_27():
     ans = program_27(2, 7, 0, 0)
-    assert ans.asnumpy() == 540
+    assert ans == 540
 
 
 @hybrid
@@ -834,7 +834,7 @@ def program_28():
 
 def test_program_28():
     ans = program_28()
-    assert ans.asnumpy() == 3270
+    assert ans == 3270
 
 
 @hybrid
@@ -870,7 +870,7 @@ def program_29(x1, x2):
 
 def test_program_29():
     ans = program_29(9, 2)
-    assert ans.asnumpy() == 225
+    assert ans == 225
 
 
 @hybrid
@@ -922,7 +922,7 @@ def program_30(x1, g1):
 
 def test_program_30():
     ans = program_30(3, 0)
-    assert ans.asnumpy() == 387
+    assert ans == 387
 
 
 @hybrid
@@ -953,7 +953,7 @@ def program_31(x1, x2, g1):
 
 def test_program_31():
     ans = program_31(7, 1, 0)
-    assert ans.asnumpy() == 190
+    assert ans == 190
 
 
 @hybrid
@@ -991,7 +991,7 @@ def program_32():
 
 def test_program_32():
     ans = program_32()
-    assert ans.asnumpy() == 260
+    assert ans == 260
 
 
 @hybrid
@@ -1004,7 +1004,7 @@ def program_33(x1, x2):
 
 def test_program_33():
     ans = program_33(7, 1)
-    assert ans.asnumpy() == 363
+    assert ans == 363
 
 
 @hybrid
@@ -1032,7 +1032,7 @@ def program_34(x1):
 
 def test_program_34():
     ans = program_34(1)
-    assert ans.asnumpy() == 3318
+    assert ans == 3318
 
 
 @hybrid
@@ -1089,7 +1089,7 @@ def program_35(x1, x2):
 
 def test_program_35():
     ans = program_35(0, 0)
-    assert ans.asnumpy() == 1337
+    assert ans == 1337
 
 
 @hybrid
@@ -1129,7 +1129,7 @@ def program_36(x1, x2, g1):
 
 def test_program_36():
     ans = program_36(4, 9, 0)
-    assert ans.asnumpy() == 125
+    assert ans == 125
 
 
 @hybrid
@@ -1142,7 +1142,7 @@ def program_37(x1, x2, g1):
 
 def test_program_37():
     ans = program_37(10, 5, 0)
-    assert ans.asnumpy() == 155
+    assert ans == 155
 
 
 @hybrid
@@ -1177,7 +1177,7 @@ def program_38(g1, g2):
 
 def test_program_38():
     ans = program_38(0, 0)
-    assert ans.asnumpy() == 100
+    assert ans == 100
 
 
 @hybrid
@@ -1191,7 +1191,7 @@ def program_39(x1, x2):
 
 def test_program_39():
     ans = program_39(5, 6)
-    assert ans.asnumpy() == 1125
+    assert ans == 1125
 
 
 @hybrid
@@ -1214,7 +1214,7 @@ def program_40(x1, g1, g2):
 
 def test_program_40():
     ans = program_40(5, 0, 0)
-    assert ans.asnumpy() == 321
+    assert ans == 321
 
 
 @hybrid
@@ -1236,7 +1236,7 @@ def program_41():
 
 def test_program_41():
     ans = program_41()
-    assert ans.asnumpy() == 1596
+    assert ans == 1596
 
 
 @hybrid
@@ -1259,7 +1259,7 @@ def program_42():
 
 def test_program_42():
     ans = program_42()
-    assert ans.asnumpy() == 41472
+    assert ans == 41472
 
 
 @hybrid
@@ -1314,7 +1314,7 @@ def program_43(x1, x2):
 
 def test_program_43():
     ans = program_43(1, 10)
-    assert ans.asnumpy() == 71788
+    assert ans == 71788
 
 
 @hybrid
@@ -1336,7 +1336,7 @@ def program_44(g1, g2):
 
 def test_program_44():
     ans = program_44(0, 0)
-    assert ans.asnumpy() == 26990
+    assert ans == 26990
 
 
 @hybrid
@@ -1368,7 +1368,7 @@ def program_45(g1):
 
 def test_program_45():
     ans = program_45(0)
-    assert ans.asnumpy() == 11250
+    assert ans == 11250
 
 
 @hybrid
@@ -1381,7 +1381,7 @@ def program_46(x1):
 
 def test_program_46():
     ans = program_46(6)
-    assert ans.asnumpy() == 5886
+    assert ans == 5886
 
 
 @hybrid
@@ -1394,7 +1394,7 @@ def program_47(x1):
 
 def test_program_47():
     ans = program_47(8)
-    assert ans.asnumpy() == 1024
+    assert ans == 1024
 
 
 @hybrid
@@ -1420,7 +1420,7 @@ def program_48(g1):
 
 def test_program_48():
     ans = program_48(0)
-    assert ans.asnumpy() == 294
+    assert ans == 294
 
 
 @hybrid
@@ -1447,7 +1447,7 @@ def program_49(g1):
 
 def test_program_49():
     ans = program_49(0)
-    assert ans.asnumpy() == 1115
+    assert ans == 1115
 
 
 @hybrid
@@ -1469,7 +1469,7 @@ def program_50(x1):
 
 def test_program_50():
     ans = program_50(1)
-    assert ans.asnumpy() == 297
+    assert ans == 297
 
 
 @hybrid
@@ -1495,7 +1495,7 @@ def program_51():
 
 def test_program_51():
     ans = program_51()
-    assert ans.asnumpy() == 509
+    assert ans == 509
 
 
 @hybrid
@@ -1526,7 +1526,7 @@ def program_52(x1, x2, g1, g2):
 
 def test_program_52():
     ans = program_52(10, 10, 0, 0)
-    assert ans.asnumpy() == 165
+    assert ans == 165
 
 
 @hybrid
@@ -1559,7 +1559,7 @@ def program_53():
 
 def test_program_53():
     ans = program_53()
-    assert ans.asnumpy() == 283
+    assert ans == 283
 
 
 @hybrid
@@ -1582,7 +1582,7 @@ def program_54(x1):
 
 def test_program_54():
     ans = program_54(6)
-    assert ans.asnumpy() == 136
+    assert ans == 136
 
 
 @hybrid
@@ -1613,7 +1613,7 @@ def program_55(g1, g2):
 
 def test_program_55():
     ans = program_55(0, 0)
-    assert ans.asnumpy() == 1008
+    assert ans == 1008
 
 
 @hybrid
@@ -1642,7 +1642,7 @@ def program_56():
 
 def test_program_56():
     ans = program_56()
-    assert ans.asnumpy() == 695526
+    assert ans == 695526
 
 
 @hybrid
@@ -1667,7 +1667,7 @@ def program_57(x1):
 
 def test_program_57():
     ans = program_57(7)
-    assert ans.asnumpy() == 290
+    assert ans == 290
 
 
 @hybrid
@@ -1681,7 +1681,7 @@ def program_58(x1, x2):
 
 def test_program_58():
     ans = program_58(8, 10)
-    assert ans.asnumpy() == 352
+    assert ans == 352
 
 
 @hybrid
@@ -1729,7 +1729,7 @@ def program_59(g1):
 
 def test_program_59():
     ans = program_59(0)
-    assert ans.asnumpy() == 3078
+    assert ans == 3078
 
 
 @hybrid
@@ -1774,7 +1774,7 @@ def program_60(g1, g2):
 
 def test_program_60():
     ans = program_60(0, 0)
-    assert ans.asnumpy() == 322
+    assert ans == 322
 
 
 @hybrid
@@ -1796,7 +1796,7 @@ def program_61(x1, x2):
 
 def test_program_61():
     ans = program_61(10, 2)
-    assert ans.asnumpy() == 165
+    assert ans == 165
 
 
 @hybrid
@@ -1818,7 +1818,7 @@ def program_62(x1):
 
 def test_program_62():
     ans = program_62(9)
-    assert ans.asnumpy() == 164492
+    assert ans == 164492
 
 
 @hybrid
@@ -1844,7 +1844,7 @@ def program_63(x1, x2, g1):
 
 def test_program_63():
     ans = program_63(0, 10, 0)
-    assert ans.asnumpy() == 87020
+    assert ans == 87020
 
 
 @hybrid
@@ -1858,7 +1858,7 @@ def program_64(x1, x2, g1, g2):
 
 def test_program_64():
     ans = program_64(2, 10, 0, 0)
-    assert ans.asnumpy() == 143
+    assert ans == 143
 
 
 @hybrid
@@ -1894,7 +1894,7 @@ def program_65(x1, x2):
 
 def test_program_65():
     ans = program_65(6, 8)
-    assert ans.asnumpy() == 7920
+    assert ans == 7920
 
 
 @hybrid
@@ -1907,7 +1907,7 @@ def program_66(x1):
 
 def test_program_66():
     ans = program_66(8)
-    assert ans.asnumpy() == 576
+    assert ans == 576
 
 
 @hybrid
@@ -1927,7 +1927,7 @@ def program_67(x1, x2, g1):
 
 def test_program_67():
     ans = program_67(10, 6, 0)
-    assert ans.asnumpy() == 3600
+    assert ans == 3600
 
 
 @hybrid
@@ -1939,7 +1939,7 @@ def program_68(x1):
 
 def test_program_68():
     ans = program_68(9)
-    assert ans.asnumpy() == 4158
+    assert ans == 4158
 
 
 @hybrid
@@ -1969,7 +1969,7 @@ def program_69(x1, x2):
 
 def test_program_69():
     ans = program_69(6, 5)
-    assert ans.asnumpy() == 240
+    assert ans == 240
 
 
 @hybrid
@@ -1993,7 +1993,7 @@ def program_70(x1, x2, g1):
 
 def test_program_70():
     ans = program_70(9, 6, 0)
-    assert ans.asnumpy() == 121
+    assert ans == 121
 
 
 @hybrid
@@ -2013,7 +2013,7 @@ def program_71(g1):
 
 def test_program_71():
     ans = program_71(0)
-    assert ans.asnumpy() == 3210
+    assert ans == 3210
 
 
 @hybrid
@@ -2036,7 +2036,7 @@ def program_72(x1, x2):
 
 def test_program_72():
     ans = program_72(0, 6)
-    assert ans.asnumpy() == 204
+    assert ans == 204
 
 
 @hybrid
@@ -2066,7 +2066,7 @@ def program_73(g1):
 
 def test_program_73():
     ans = program_73(0)
-    assert ans.asnumpy() == 3645
+    assert ans == 3645
 
 
 @hybrid
@@ -2080,7 +2080,7 @@ def program_74(x1):
 
 def test_program_74():
     ans = program_74(4)
-    assert ans.asnumpy() == 2668
+    assert ans == 2668
 
 
 @hybrid
@@ -2094,7 +2094,7 @@ def program_75(x1):
 
 def test_program_75():
     ans = program_75(1)
-    assert ans.asnumpy() == 5254
+    assert ans == 5254
 
 
 @hybrid
@@ -2117,7 +2117,7 @@ def program_76(g1, g2):
 
 def test_program_76():
     ans = program_76(0, 0)
-    assert ans.asnumpy() == 120
+    assert ans == 120
 
 
 @hybrid
@@ -2130,7 +2130,7 @@ def program_77(x1, g1):
 
 def test_program_77():
     ans = program_77(7, 0)
-    assert ans.asnumpy() == 323
+    assert ans == 323
 
 
 @hybrid
@@ -2165,7 +2165,7 @@ def program_78(g1):
 
 def test_program_78():
     ans = program_78(0)
-    assert ans.asnumpy() == 237168
+    assert ans == 237168
 
 
 @hybrid
@@ -2184,7 +2184,7 @@ def program_79(x1, x2):
 
 def test_program_79():
     ans = program_79(6, 9)
-    assert ans.asnumpy() == 11385
+    assert ans == 11385
 
 
 @hybrid
@@ -2206,7 +2206,7 @@ def program_80():
 
 def test_program_80():
     ans = program_80()
-    assert ans.asnumpy() == 1199
+    assert ans == 1199
 
 
 @hybrid
@@ -2236,7 +2236,7 @@ def program_81():
 
 def test_program_81():
     ans = program_81()
-    assert ans.asnumpy() == 7200
+    assert ans == 7200
 
 
 @hybrid
@@ -2260,7 +2260,7 @@ def program_82(g1, g2):
 
 def test_program_82():
     ans = program_82(0, 0)
-    assert ans.asnumpy() == 10802
+    assert ans == 10802
 
 
 @hybrid
@@ -2302,7 +2302,7 @@ def program_83(g1, g2):
 
 def test_program_83():
     ans = program_83(0, 0)
-    assert ans.asnumpy() == 1540
+    assert ans == 1540
 
 
 @hybrid
@@ -2325,7 +2325,7 @@ def program_84(x1):
 
 def test_program_84():
     ans = program_84(2)
-    assert ans.asnumpy() == 1316
+    assert ans == 1316
 
 
 @hybrid
@@ -2357,7 +2357,7 @@ def program_85(g1, g2):
 
 def test_program_85():
     ans = program_85(0, 0)
-    assert ans.asnumpy() == 260
+    assert ans == 260
 
 
 @hybrid
@@ -2376,7 +2376,7 @@ def program_86(x1, g1):
 
 def test_program_86():
     ans = program_86(8, 0)
-    assert ans.asnumpy() == 334
+    assert ans == 334
 
 
 @hybrid
@@ -2399,7 +2399,7 @@ def program_87(x1, g1, g2):
 
 def test_program_87():
     ans = program_87(4, 0, 0)
-    assert ans.asnumpy() == 320
+    assert ans == 320
 
 
 @hybrid
@@ -2422,7 +2422,7 @@ def program_88(g1):
 
 def test_program_88():
     ans = program_88(0)
-    assert ans.asnumpy() == 182
+    assert ans == 182
 
 
 @hybrid
@@ -2444,7 +2444,7 @@ def program_89(x1, x2):
 
 def test_program_89():
     ans = program_89(5, 3)
-    assert ans.asnumpy() == 162
+    assert ans == 162
 
 
 @hybrid
@@ -2475,7 +2475,7 @@ def program_90():
 
 def test_program_90():
     ans = program_90()
-    assert ans.asnumpy() == 11232
+    assert ans == 11232
 
 
 @hybrid
@@ -2504,7 +2504,7 @@ def program_91(g1):
 
 def test_program_91():
     ans = program_91(0)
-    assert ans.asnumpy() == 800
+    assert ans == 800
 
 
 @hybrid
@@ -2526,7 +2526,7 @@ def program_92(x1, x2, g1, g2):
 
 def test_program_92():
     ans = program_92(10, 5, 0, 0)
-    assert ans.asnumpy() == 107
+    assert ans == 107
 
 
 @hybrid
@@ -2546,7 +2546,7 @@ def program_93(x1, g1):
 
 def test_program_93():
     ans = program_93(7, 0)
-    assert ans.asnumpy() == 285
+    assert ans == 285
 
 
 @hybrid
@@ -2569,7 +2569,7 @@ def program_94():
 
 def test_program_94():
     ans = program_94()
-    assert ans.asnumpy() == 766
+    assert ans == 766
 
 
 @hybrid
@@ -2589,7 +2589,7 @@ def program_95(x1, x2, g1):
 
 def test_program_95():
     ans = program_95(3, 4, 0)
-    assert ans.asnumpy() == 1485
+    assert ans == 1485
 
 
 @hybrid
@@ -2623,7 +2623,7 @@ def program_96(x1, x2, g1):
 
 def test_program_96():
     ans = program_96(9, 9, 0)
-    assert ans.asnumpy() == 249
+    assert ans == 249
 
 
 @hybrid
@@ -2656,7 +2656,7 @@ def program_97(x1):
 
 def test_program_97():
     ans = program_97(2)
-    assert ans.asnumpy() == 1188
+    assert ans == 1188
 
 
 @hybrid
@@ -2682,7 +2682,7 @@ def program_98(g1):
 
 def test_program_98():
     ans = program_98(0)
-    assert ans.asnumpy() == 100000
+    assert ans == 100000
 
 
 @hybrid
@@ -2717,7 +2717,7 @@ def program_99(x1, g1, g2):
 
 def test_program_99():
     ans = program_99(3, 0, 0)
-    assert ans.asnumpy() == 170
+    assert ans == 170
 
 
 if __name__ == "__main__":

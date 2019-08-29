@@ -1,5 +1,5 @@
 from .._ffi.executor import CreateInterpreter
-from .ir import module
+from .ir import Module
 
 
 class Interpreter(object):
@@ -8,7 +8,7 @@ class Interpreter(object):
 
     def __init__(self, module=None):
         if module is None:
-            module = module.GLOBAL
+            module = Module.GLOBAL
         self.module = module
         self.runner = CreateInterpreter(module)
 
@@ -16,4 +16,4 @@ class Interpreter(object):
         return self.runner(expr)
 
 
-Interpreter.GLOBAL = Interpreter(module.GLOBAL)
+Interpreter.GLOBAL = Interpreter(Module.GLOBAL)

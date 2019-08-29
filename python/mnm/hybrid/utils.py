@@ -1,36 +1,45 @@
 import ast
-from tvm import relay
+
+from .._core.op import create_op
+from .._core.ir import ConstantExpr
+from .._core.value import IntValue
+
+
+def _wrap_op(name):
+    op = create_op(name, False)
+    return lambda *args: op(args=args, attrs=None)
+
 
 OP_MAKER = {
     ### UnaryOp ###
-    ast.UAdd: None,  # TODO
-    ast.USub: relay.negative,
-    ast.Not: relay.logical_not,
+    ast.UAdd: None,
+    ast.USub: _wrap_op("mnm.op.negative"),
+    ast.Not: None,
     ast.Invert: None,
     ### BinOp ###
-    ast.Add: relay.add,
-    ast.Sub: relay.subtract,
-    ast.Mult: relay.multiply,
-    ast.Div: relay.divide,
-    ast.FloorDiv: relay.divide,  # FIXME
-    ast.Mod: relay.mod,
-    ast.Pow: None,  # TODO
+    ast.Add: _wrap_op("mnm.op.add"),
+    ast.Sub: _wrap_op("mnm.op.subtract"),
+    ast.Mult: _wrap_op("mnm.op.multiply"),
+    ast.Div: _wrap_op("mnm.op.divide"),
+    ast.FloorDiv: _wrap_op("mnm.op.divide"),  # FIXME
+    ast.Mod: _wrap_op("mnm.op.mod"),
+    ast.Pow: None,
     ast.LShift: None,
     ast.RShift: None,
     ast.BitOr: None,
     ast.BitXor: None,
     ast.BitAnd: None,
-    ast.MatMult: None,  # TODO
+    ast.MatMult: None,
     ### BoolOp ###
-    ast.And: relay.logical_and,
-    ast.Or: relay.logical_or,
+    ast.And: None,
+    ast.Or: None,
     ### Compare ###
-    ast.Gt: relay.greater,
-    ast.GtE: relay.greater_equal,
-    ast.Lt: relay.less,
-    ast.LtE: relay.less_equal,
-    ast.Eq: relay.equal,
-    ast.NotEq: relay.not_equal,
+    ast.Gt: _wrap_op("mnm.op.greater"),
+    ast.GtE: _wrap_op("mnm.op.greater_equal"),
+    ast.Lt: _wrap_op("mnm.op.less"),
+    ast.LtE: _wrap_op("mnm.op.less_equal"),
+    ast.Eq: _wrap_op("mnm.op.equal"),
+    ast.NotEq: _wrap_op("mnm.op.not_equal"),
     ast.Is: None,
     ast.IsNot: None,
     ast.In: None,
@@ -91,14 +100,9 @@ class NodeTransformer(NodeVisitor):
         return node
 
 
-def top_type():
+def unbound_constant_expr():
     # TODO(@junrushao1994): fake it until you make it
-    return relay.TensorType(shape=(), dtype="int64")
-
-
-def unbound_value():
-    # TODO(@junrushao1994): fake it until you make it
-    return relay.const(0, dtype="int64")
+    return ConstantExpr(IntValue(0))
 
 
 def get_func_name(pyfunc):

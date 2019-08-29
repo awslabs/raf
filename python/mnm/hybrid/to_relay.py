@@ -2,10 +2,9 @@ import ast
 import inspect
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from tvm import relay
-
+from .._ffi._tvm import relay
 from .cfg import CFG, BasicBlock
-from .utils import NodeVisitor, top_type, unbound_value, get_func_name
+from .utils import NodeVisitor, get_func_name, unbound_constant_expr
 
 SymTab = Dict[str, relay.Var]
 FuncTab = Dict[BasicBlock, relay.GlobalVar]
@@ -17,7 +16,7 @@ class BB2Relay(NodeVisitor):
     def __init__(self):
         super(BB2Relay, self).__init__(strict=True)
 
-    def _serialize(self, sym_tab : SymTab):
+    def _serialize(self, sym_tab: SymTab):
         ret = []
         for arg in self.local_names:
             ret.append(sym_tab[arg])
@@ -44,7 +43,7 @@ class BB2Relay(NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign, sym_tab: SymTab):
         target, = node.targets
-        lhs = relay.var(name_hint=target.id)
+        lhs = relay.Var(name_hint=target.id)
         rhs = node.value(sym_tab)
         sym_tab[target.id] = lhs
         return lambda body: relay.Let(lhs, rhs, body)
@@ -75,24 +74,24 @@ def cfg2relay(cfg: CFG, pyfunc: Callable, local_names: List[str], entry: relay.G
     # make function bodies
     hybrid_module: HybridModule = {}
     for bb in cfg.bbs:
-        sym_tab = {name: relay.Var(name, top_type()) for name in local_names}
+        sym_tab = {name: relay.Var(name) for name in local_names}
         body = BB2Relay().run(bb=bb, sym_tab=dict(sym_tab),
                               local_names=local_names, func_tab=func_tab)
         params = [sym_tab[name] for name in local_names]
-        func = relay.Function(params=params, body=body, ret_type=top_type())
+        func = relay.Function(params=params, body=body)
         global_var = func_tab[bb]
         hybrid_module[global_var] = func
 
     # make the entry function
     pyargs = list(inspect.signature(pyfunc).parameters.keys())
-    named_params = {name: relay.Var(name, top_type()) for name in pyargs}
+    named_params = {name: relay.Var(name) for name in pyargs}
     # params: arguments to the wrapper's entry point
     params = [named_params[name] for name in pyargs]
     # args: arguments to feed CFG's entry point
-    args = [unbound_value() if name not in pyargs else named_params[name]
+    args = [unbound_constant_expr() if name not in pyargs else named_params[name]
             for name in local_names]
     # realize the entry function
     body = relay.Call(func_tab[cfg.entry], args=args)
-    func = relay.Function(params=params, body=body, ret_type=top_type())
+    func = relay.Function(params=params, body=body)
     hybrid_module[entry] = func
     return hybrid_module

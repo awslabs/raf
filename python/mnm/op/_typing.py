@@ -5,9 +5,9 @@ from typing import Any, List, Tuple, Union
 import numpy as np
 
 from .._core.bound_expr import BoundExpr
-from .._core.ir import Constant
+from .._core.ir import ConstantExpr
 from .._core.ndarray import ndarray as NDArray
-from .._core.value import FloatValue, IntValue, TensorValue, BoolValue
+from .._core.value import BoolValue, FloatValue, IntValue, TensorValue
 
 scalar = Union[int, float, bool]
 
@@ -23,15 +23,15 @@ def _make_array_like(a, name):
         return TensorValue.from_numpy(a)
     if isinstance(a, int):
         value = IntValue(a)
-        return BoundExpr(expr=Constant(value), value=value)
+        return BoundExpr(expr=ConstantExpr(value), value=value)
     if isinstance(a, float):
         value = FloatValue(a)
-        return BoundExpr(expr=Constant(value), value=value)
+        return BoundExpr(expr=ConstantExpr(value), value=value)
     if isinstance(a, bool):
         value = BoolValue(a)
-        return BoundExpr(expr=Constant(value), value=value)
+        return BoundExpr(expr=ConstantExpr(value), value=value)
     value = TensorValue.from_numpy(np.array(a))
-    return BoundExpr(expr=Constant(value), value=value)
+    return BoundExpr(expr=ConstantExpr(value), value=value)
 
 
 def _make_int(a, name):

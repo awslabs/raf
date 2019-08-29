@@ -7,6 +7,8 @@ from ..base import register_mnm_node
 @register_mnm_node("mnm.ir.Module")
 class Module(_NodeBase):
 
+    GLOBAL = None
+
     def __init__(self, functions=None):
         if functions is None:
             functions = {}
@@ -19,4 +21,4 @@ class Module(_NodeBase):
         return Lookup(self, var)
 
 
-GLOBAL = Module()
+Module.GLOBAL = Module()

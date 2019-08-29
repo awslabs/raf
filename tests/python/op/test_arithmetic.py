@@ -1,25 +1,53 @@
+from itertools import product
+
 import mnm
+
+TYPES = (int, float, bool)
+
+TYPE_TABLE = {
+    int: int,
+    float: float,
+    bool: int,
+    (int, int): int,
+    (int, float): float,
+    (int, bool): int,
+    (float, int): float,
+    (float, float): float,
+    (float, bool): float,
+    (bool, int): int,
+    (bool, float): float,
+    (bool, bool): int
+}
 
 
 def test_add():
-    for x1 in range(-5, 5):
-        for x2 in range(-5, 5):
-            assert mnm.add(x1, x2) == x1 + x2
-            assert mnm.add(float(x1), float(x2)) == x1 + x2
+    for x1, x2 in product(range(-5, 5), range(-5, 5)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.add(x1, x2)
+            expected = x1 + x2
+            assert result == expected
+            assert isinstance(result, TYPE_TABLE[(t1, t2)])
 
 
 def test_subtract():
-    for x1 in range(-5, 5):
-        for x2 in range(-5, 5):
-            assert mnm.subtract(x1, x2) == x1 - x2
-            assert mnm.subtract(float(x1), float(x2)) == x1 - x2
+    for x1, x2 in product(range(-5, 5), range(-5, 5)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.subtract(x1, x2)
+            expected = x1 - x2
+            assert result == expected
+            assert isinstance(result, TYPE_TABLE[(t1, t2)])
 
 
 def test_multiply():
-    for x1 in range(-5, 5):
-        for x2 in range(-5, 5):
-            assert mnm.multiply(x1, x2) == x1 * x2
-            assert mnm.multiply(float(x1), float(x2)) == x1 * x2
+    for x1, x2 in product(range(-5, 5), range(-5, 5)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.multiply(x1, x2)
+            expected = x1 * x2
+            assert result == expected
+            assert isinstance(result, TYPE_TABLE[(t1, t2)])
 
 
 def test_divide():
@@ -37,50 +65,72 @@ def test_mod():
 
 def test_negative():
     for x1 in range(10):
-        assert mnm.negative(x1) == -x1
-        assert mnm.negative(float(x1)) == -x1
+        for t1 in TYPES:
+            x1 = t1(x1)
+            result = mnm.negative(x1)
+            expected = -x1
+            assert result == expected
+            assert isinstance(result, TYPE_TABLE[t1])
 
 
 def test_less():
-    for x1 in range(3):
-        for x2 in range(3):
-            assert mnm.less(x1, x2) == (x1 < x2)
-            assert mnm.less(float(x1), float(x2)) == (x1 < x2)
+    for x1, x2 in product(range(3), range(3)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.less(x1, x2)
+            expected = x1 < x2
+            assert result == expected
+            assert isinstance(result, bool)
 
 
 def test_greater():
-    for x1 in range(3):
-        for x2 in range(3):
-            assert mnm.greater(x1, x2) == (x1 > x2)
-            assert mnm.greater(float(x1), float(x2)) == (x1 > x2)
+    for x1, x2 in product(range(3), range(3)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.greater(x1, x2)
+            expected = x1 > x2
+            assert result == expected
+            assert isinstance(result, bool)
 
 
 def test_less_equal():
-    for x1 in range(3):
-        for x2 in range(3):
-            assert mnm.less_equal(x1, x2) == (x1 <= x2)
-            assert mnm.less_equal(float(x1), float(x2)) == (x1 <= x2)
+    for x1, x2 in product(range(3), range(3)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.less_equal(x1, x2)
+            expected = x1 <= x2
+            assert result == expected
+            assert isinstance(result, bool)
 
 
 def test_greater_equal():
-    for x1 in range(3):
-        for x2 in range(3):
-            assert mnm.greater_equal(x1, x2) == (x1 >= x2)
-            assert mnm.greater_equal(float(x1), float(x2)) == (x1 >= x2)
+    for x1, x2 in product(range(3), range(3)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.greater_equal(x1, x2)
+            expected = x1 >= x2
+            assert result == expected
+            assert isinstance(result, bool)
 
 
 def test_equal():
-    for x1 in range(3):
-        for x2 in range(3):
-            assert mnm.equal(x1, x2) == (x1 == x2)
-            assert mnm.equal(float(x1), float(x2)) == (x1 == x2)
+    for x1, x2 in product(range(3), range(3)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.equal(x1, x2)
+            expected = x1 == x2
+            assert result == expected
+            assert isinstance(result, bool)
 
 
 def test_not_equal():
-    for x1 in range(3):
-        for x2 in range(3):
-            assert mnm.not_equal(x1, x2) == (x1 != x2)
-            assert mnm.not_equal(float(x1), float(x2)) == (x1 != x2)
+    for x1, x2 in product(range(3), range(3)):
+        for t1, t2 in product(TYPES, TYPES):
+            x1, x2 = t1(x1), t2(x2)
+            result = mnm.not_equal(x1, x2)
+            expected = x1 != x2
+            assert result == expected
+            assert isinstance(result, bool)
 
 
 if __name__ == "__main__":

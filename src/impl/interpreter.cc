@@ -137,12 +137,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
   Value VisitExpr_(const IfNode* node) override {
     // TODO(@junrushao1994): let's switch to bool scalar
-    static const DType dtype_bool = DType(DTypeCode::kUInt(), 1);
-    const Tensor& v = Downcast<TensorValue>(Eval(node->cond))->tensor;
-    // check bool scalar
-    CHECK(DType(v->dtype) == dtype_bool);
-    CHECK(v->ndim == 0);
-    uint8_t result = *reinterpret_cast<uint8_t*>(v->data);
+    bool result = Downcast<BoolValue>(Eval(node->cond))->data;
     return result ? Eval(node->true_branch) : Eval(node->false_branch);
   }
 

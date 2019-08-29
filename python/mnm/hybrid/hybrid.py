@@ -1,12 +1,17 @@
 import ast
 import inspect
+import numpy as np
+
 from typing import Callable, Dict
 
-from mnm._core.context import cpu
-from mnm._core.base import set_module
-from mnm._core.ir import Module
-from tvm import relay
-
+from .._core.base import set_module
+from .._core.context import cpu
+from .._core.ndarray import ndarray as NDArray
+from .._core.ir import Module, ConstantExpr
+from .._core.value import IntValue, FloatValue, BoolValue, TensorValue
+from .._core.bound_expr import BoundExpr
+from .._core.executor import Interpreter
+from .._ffi._tvm import relay
 from .cfg import ast2cfg
 from .ir_builder import build_ir
 from .sanity_check import sanity_check
@@ -16,7 +21,7 @@ from .utils import get_func_name
 
 FUNC_TAB: Dict[Callable, Callable] = {}
 FUNC_VAR: Dict[Callable, relay.GlobalVar] = {}
-MNM_MODULE = Module()
+MNM_MODULE = Module.GLOBAL
 
 
 def find_invoker_name(namespace) -> str:
@@ -29,6 +34,37 @@ def find_invoker_name(namespace) -> str:
         if new_name not in namespace:
             return new_name
         i += 1
+
+
+ARG_MAKERS = {
+    int: ConstantExpr,
+    float: ConstantExpr,
+    bool: ConstantExpr,
+    np.ndarray: ConstantExpr,
+    NDArray: None,  # TODO
+}
+
+
+def _make_argument(a):
+    if type(a) not in ARG_MAKERS:
+        raise NotImplementedError
+    return ARG_MAKERS[type(a)](a)
+
+
+def _unwrap(a):
+    if isinstance(a, IntValue):
+        return a.data
+    if isinstance(a, FloatValue):
+        return a.data
+    if isinstance(a, BoolValue):
+        return bool(a.data)
+    if isinstance(a, BoundExpr):
+        return NDArray(a)
+    if isinstance(a, list):
+        return [_unwrap(item) for item in a]
+    if isinstance(a, tuple):
+        return tuple(_unwrap(item) for item in a)
+    raise NotImplementedError
 
 
 def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
@@ -51,18 +87,13 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     local_names = list(local_names)
     hybrid_module = cfg2relay(cfg, pyfunc, local_names, entry)
     # build relay module
-    # TODO(@junrushao1994): this does not work for mutual function calls
-    relay_module = relay.Module(hybrid_module)
     for global_var, func in hybrid_module.items():
         MNM_MODULE[global_var] = func
 
     def call(*args):
-        code = relay.Call(op=entry, args=[relay.const(
-            arg, dtype="int64") for arg in args])
-        intrp = relay.create_executor(
-            mod=relay_module, ctx=cpu(), target="llvm")
-        result = intrp.evaluate(code)
-        return result
+        code = relay.Call(op=entry, args=[_make_argument(arg) for arg in args])
+        result = Interpreter.GLOBAL(code)
+        return _unwrap(result)
 
     return call
 

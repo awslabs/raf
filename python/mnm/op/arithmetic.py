@@ -1,8 +1,9 @@
 from typing import Union
 
 from .._core.ndarray import ndarray
+from .._core.op import create_op
 from ._typing import array_like, scalar, type_check
-from .base import create_op
+
 
 _add = create_op("mnm.op.add")
 _subtract = create_op("mnm.op.subtract")

@@ -4,7 +4,7 @@ import ast
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union
 
-from .utils import NodeVisitor, unbound_value
+from .utils import NodeVisitor, unbound_constant_expr
 
 # Tuple[()] : Return
 # Tuple[ast.AST]: unconditional jump
@@ -24,7 +24,7 @@ class FingerFinder(NodeVisitor):
             return self.visit(stmts[0], stmts[1:], break_point, continue_point)
         elif continue_point:
             return continue_point
-        return unbound_value()
+        return unbound_constant_expr()
 
     def visit_Return(self, node: ast.Return, stmts, break_point, continue_point):
         self.finger[node] = tuple()
