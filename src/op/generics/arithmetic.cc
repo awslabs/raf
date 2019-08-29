@@ -9,6 +9,8 @@ namespace arith {
 
 using ir::Array;
 using ir::Attrs;
+using value::BoolValue;
+using value::BoolValueNode;
 using value::FloatValue;
 using value::FloatValueNode;
 using value::IntValue;
@@ -21,6 +23,8 @@ using value::Value;
     if (const auto* var = value.as<IntValueNode>()) {          \
       body;                                                    \
     } else if (const auto* var = value.as<FloatValueNode>()) { \
+      body;                                                    \
+    } else if (const auto* var = value.as<BoolValueNode>()) {  \
       body;                                                    \
     }                                                          \
   while (0);
@@ -72,6 +76,23 @@ OpInfo Negative(const Array<Value>& values, const Attrs& attrs) {
   LOG(FATAL) << "NotImplementedError";
   throw;
 }
+
+#define MAKE_CMP(op_name, func_name, op)                                               \
+  OpInfo func_name(const Array<Value>& values, const Attrs& attrs) {                   \
+    CHECK_EQ(values.size(), 2);                                                        \
+    SWITCH_SCALAR(x1, values[0],                                                       \
+                  SWITCH_SCALAR(x2, values[1], return SCALAR(x1->data op x2->data);)); \
+    LOG(FATAL) << "NotImplementedError";                                               \
+    throw;                                                                             \
+  }                                                                                    \
+  MNM_REGISTER_OP(op_name).set_num_inputs(2).set_attr<FOpMakeOutput>("FOpMakeOutput", func_name);
+
+MAKE_CMP("mnm.op.less", Less, <);
+MAKE_CMP("mnm.op.greater", Greater, >);
+MAKE_CMP("mnm.op.less_equal", LessEqual, <=);
+MAKE_CMP("mnm.op.greater_equal", GreaterEqual, >=);
+MAKE_CMP("mnm.op.equal", Equal, ==);
+MAKE_CMP("mnm.op.not_equal", NotEqual, !=);
 
 MNM_REGISTER_OP("mnm.op.add")
     .describe(R"code(This is Add.

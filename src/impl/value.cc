@@ -62,6 +62,10 @@ OpValue OpValue::make(Op op) {
   return OpValue(n);
 }
 
+IntValue ScalarValue::make(int data) {
+  return IntValue::make(data);
+}
+
 IntValue ScalarValue::make(int64_t data) {
   return IntValue::make(data);
 }
@@ -70,16 +74,26 @@ FloatValue ScalarValue::make(double data) {
   return FloatValue::make(data);
 }
 
+BoolValue ScalarValue::make(bool data) {
+  return BoolValue::make(data);
+}
+
 IntValue IntValue::make(int64_t data) {
   NodePtr<IntValueNode> n = make_node<IntValueNode>();
-  n->data = std::move(data);
+  n->data = data;
   return IntValue(n);
 }
 
 FloatValue FloatValue::make(double data) {
   NodePtr<FloatValueNode> n = make_node<FloatValueNode>();
-  n->data = std::move(data);
+  n->data = data;
   return FloatValue(n);
+}
+
+BoolValue BoolValue::make(bool data) {
+  NodePtr<BoolValueNode> n = make_node<BoolValueNode>();
+  n->data = data;
+  return BoolValue(n);
 }
 
 BoundExpr BoundExpr::make(Expr expr, Value value) {
@@ -175,6 +189,8 @@ MNM_REGISTER_GLOBAL("mnm.value._make.TupleValue").set_body_typed(TupleValue::mak
 MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
 
 MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
+
+MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
 
 MNM_REGISTER_GLOBAL("mnm.value._make.BoundExpr").set_body_typed(BoundExpr::make);
 

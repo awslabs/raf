@@ -154,6 +154,7 @@ namespace value {
 
 class IntValue;
 class FloatValue;
+class BoolValue;
 
 /* ScalarValue */
 class ScalarValueNode : public ValueNode {
@@ -164,8 +165,10 @@ class ScalarValueNode : public ValueNode {
 
 class ScalarValue : public Value {
  public:
+  static IntValue make(int data);
   static IntValue make(int64_t data);
   static FloatValue make(double data);
+  static BoolValue make(bool data);
   MNM_DEF_NODE_REF_METHODS(ScalarValue, Value, ScalarValueNode);
 };
 
@@ -201,6 +204,23 @@ class FloatValue : public ScalarValue {
  public:
   static FloatValue make(double data);
   MNM_DEF_NODE_REF_METHODS(FloatValue, ScalarValue, FloatValueNode);
+};
+
+/* BoolValue */
+class BoolValueNode : public ScalarValueNode {
+ public:
+  bool data;
+  void VisitAttrs(tvm::AttrVisitor* v) final {
+    v->Visit("data", &data);
+  }
+  static constexpr const char* _type_key = "mnm.value.BoolValue";
+  MNM_DEF_NODE_TYPE_INFO(BoolValueNode, ScalarValueNode);
+};
+
+class BoolValue : public ScalarValue {
+ public:
+  static BoolValue make(bool data);
+  MNM_DEF_NODE_REF_METHODS(BoolValue, ScalarValue, BoolValueNode);
 };
 
 }  // namespace value

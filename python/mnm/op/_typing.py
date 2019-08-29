@@ -7,8 +7,7 @@ import numpy as np
 from .._core.bound_expr import BoundExpr
 from .._core.ir import Constant
 from .._core.ndarray import ndarray as NDArray
-from .._core.value import FloatValue, IntValue, TensorValue
-from .._ffi._tvm import IntImm
+from .._core.value import FloatValue, IntValue, TensorValue, BoolValue
 
 scalar = Union[int, float, bool]
 
@@ -29,7 +28,8 @@ def _make_array_like(a, name):
         value = FloatValue(a)
         return BoundExpr(expr=Constant(value), value=value)
     if isinstance(a, bool):
-        raise NotImplementedError
+        value = BoolValue(a)
+        return BoundExpr(expr=Constant(value), value=value)
     value = TensorValue.from_numpy(np.array(a))
     return BoundExpr(expr=Constant(value), value=value)
 
@@ -55,8 +55,12 @@ def _make_str(a, name):
 def _make_ndarray_or_scalar(a, name):
     if isinstance(a, (int, float, bool)):
         return a
-    if isinstance(a, IntImm):
-        return a.value
+    if isinstance(a, IntValue):
+        return a.data
+    if isinstance(a, FloatValue):
+        return a.data
+    if isinstance(a, BoolValue):
+        return bool(a.data)
     if isinstance(a, NDArray):
         return a
     raise NotImplementedError(

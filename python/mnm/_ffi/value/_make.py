@@ -9,6 +9,10 @@ def FloatValue(data):
     pass
 
 
+def BoolValue(data):
+    pass
+
+
 def TupleValue(fields):
     pass
 
