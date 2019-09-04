@@ -74,7 +74,8 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   ~Interpreter() = default;
 
   Value Eval(const Expr& expr) {
-    const ExprNode* node = expr.as<ExprNode>();
+    const ExprNode* node = expr.as_derived<ExprNode>();
+    CHECK(node != nullptr);
     if (bindings.count(node)) {
       return bindings[node]->value;
     }
@@ -229,13 +230,15 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   void OnBind(const BoundExprNode* bound_expr) override {
-    const ExprNode* expr = bound_expr->expr.as<ExprNode>();
+    const ExprNode* expr = bound_expr->expr.as_derived<ExprNode>();
+    CHECK(expr != nullptr);
     CHECK_EQ(bindings.count(expr), 0);
     bindings[expr] = bound_expr;
   }
 
   void OnDestruct(const BoundExprNode* bound_expr) override {
-    const ExprNode* expr = bound_expr->expr.as<ExprNode>();
+    const ExprNode* expr = bound_expr->expr.as_derived<ExprNode>();
+    CHECK(expr != nullptr);
     CHECK_NE(bindings.count(expr), 0);
     bindings.erase(expr);
   }

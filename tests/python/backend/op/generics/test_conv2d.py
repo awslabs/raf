@@ -18,7 +18,7 @@ def test_conv2d():
     torch_shape = tuple(out.shape)
     data = TensorValue.assemble((n, c, h, w), "float32", "cpu")
     weight = TensorValue.assemble((c_out, c_in, kh, kw), "float32", "cpu")
-    out = invoke_make_output("mnm.op.conv2d", "mnm.attrs.Conv2DAttrs",
+    out = invoke_make_output("mnm.op.conv2d", "mnm.attrs.ConvAttrs",
                              args=(data, weight),
                              stride=stride, padding=padding, dilation=dilation, groups=groups)
     mnm_shape = out.shape
