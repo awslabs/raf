@@ -9,6 +9,7 @@ from . import _core
 from .hybrid import hybrid
 
 from . import op
+from .op import nn
 
 array = op.imports.array
 

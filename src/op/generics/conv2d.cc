@@ -17,7 +17,7 @@ namespace mnm {
 namespace op {
 namespace conv2d {
 
-using attrs::Conv2DAttrs;
+using attrs::ConvAttrs;
 using ir::Array;
 using ir::Attrs;
 using ir::IndexExpr;
@@ -35,7 +35,7 @@ bool Conv2DRel(const Array<Type>& types,  //
   CHECK_EQ(types.size(), 3);
   const auto* data = types[0].as<TensorTypeNode>();
   const auto* weight = types[1].as<TensorTypeNode>();
-  const auto* param = attrs.as<attrs::Conv2DAttrs>();
+  const auto* param = attrs.as<attrs::ConvAttrs>();
   CHECK(data != nullptr);
   CHECK(weight != nullptr);
   CHECK(param != nullptr);
@@ -70,7 +70,7 @@ OpInfo Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   CHECK_EQ(values.size(), 2);
   const Tensor& data = values[0];
   const Tensor& weight = values[1];
-  const auto* param = attrs.as<attrs::Conv2DAttrs>();
+  const auto* param = attrs.as<attrs::ConvAttrs>();
   CHECK(param != nullptr);
   CHECK_EQ(data->ndim, 4);
   CHECK_EQ(weight->ndim, 4);
@@ -103,7 +103,7 @@ OpInfo Conv2dMakeOutput(const Array<Value>& values, const Attrs& attrs) {
 MNM_REGISTER_OP("mnm.op.conv2d")
     .describe(R"code(This is Conv2d. Have a nice day.
 )code" MNM_ADD_FILELINE)
-    .set_attrs_type_key("mnm.attrs.Conv2dAttrs")
+    .set_attrs_type_key("mnm.attrs.ConvAttrs")
     .set_num_inputs(2)
     .add_argument("data", "4D Tensor", "Input data.")
     .add_argument("weight", "4D Tensor", "Filter.")

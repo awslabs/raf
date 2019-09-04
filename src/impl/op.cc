@@ -36,7 +36,7 @@ std::unique_ptr<OpEnv> OpDispatch::Dispatch(const Op& op, const OpInfo& info,
                                             const Array<Value>& args, const Attrs& attrs) {
   for (const auto& e : *OpDispatch::Get(op, info->ctx.device_type)) {
     const auto& maker = e.second;
-    std::unique_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(args, info->output, attrs)));
+    std::unique_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(args, info, attrs)));
     if (op_env) {
       return op_env;
     }
@@ -64,6 +64,10 @@ OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& bac
   return *this;
 }
 
+OpDispatch::TRegistry *OpDispatch::Registry() {
+  return TRegistry::Get();
+}
+
 // Implementation: OpInfo
 OpInfo OpInfo::make(Value output, Context ctx, bool computational) {
   NodePtr<OpInfoNode> n = make_node<OpInfoNode>();
@@ -74,7 +78,6 @@ OpInfo OpInfo::make(Value output, Context ctx, bool computational) {
 }
 
 // Implementation: OpEnv
-
 class OpEnv::Impl : public Requests {
  public:
   executor::Executor* executor = nullptr;

@@ -136,7 +136,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const IfNode* node) override {
-    // TODO(@junrushao1994): let's switch to bool scalar
     bool result = Downcast<BoolValue>(Eval(node->cond))->data;
     return result ? Eval(node->true_branch) : Eval(node->false_branch);
   }
@@ -195,7 +194,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
         this->RequestStream(req.get(), i);
       }
     }
-    op_env->Execute(args, info->output, attrs);
+    op_env->Execute(args, info, attrs);
     {
       req->workspace.clear();
       req->workspace.shrink_to_fit();

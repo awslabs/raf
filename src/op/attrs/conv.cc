@@ -6,7 +6,7 @@ namespace mnm {
 namespace op {
 namespace attrs {
 
-MNM_REGISTER_NODE_TYPE(Conv2DAttrs);
+MNM_REGISTER_NODE_TYPE(ConvAttrs);
 
 }  // namespace attrs
 }  // namespace op

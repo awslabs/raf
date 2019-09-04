@@ -21,6 +21,7 @@ if (NOT MNM_USE_CUDA)
   project(mnm C CXX)
 else()
   project(mnm C CXX CUDA)
+  set(USE_CUDA ${MNM_USE_CUDA})
 endif()
 
 ################# Basic requirement #################

@@ -8,6 +8,8 @@ from .._core.bound_expr import BoundExpr
 from .._core.ir import ConstantExpr
 from .._core.ndarray import ndarray as NDArray
 from .._core.value import BoolValue, FloatValue, IntValue, TensorValue
+from .._ffi.value import ToTVM
+from .._ffi.ir.constant import ExtractValue
 
 scalar = Union[int, float, bool]
 
@@ -18,7 +20,7 @@ array_like = Union[int, float, bool,
 
 def _make_array_like(a, name):
     if isinstance(a, NDArray):
-        return a
+        return a._ndarray__handle
     if isinstance(a, np.ndarray):
         return TensorValue.from_numpy(a)
     if isinstance(a, int):
@@ -52,7 +54,7 @@ def _make_str(a, name):
     raise NotImplementedError("Conversion {} from {} to str".format(name, a))
 
 
-def _make_ndarray_or_scalar(a, name):
+def _ret_make_ndarray_or_scalar(a, name):
     if isinstance(a, (int, float, bool)):
         return a
     if isinstance(a, IntValue):
@@ -67,15 +69,35 @@ def _make_ndarray_or_scalar(a, name):
         "Conversion {} from {} to ndarray or scalar".format(name, a))
 
 
+def _ret_make_ndarray(a, name):
+    if isinstance(a, NDArray):
+        return a
+    if isinstance(a, BoundExpr):
+        return NDArray(a)
+    raise NotImplementedError(
+        "Conversion {} from {} to ndarray or scalar".format(name, a))
+
+
+def _make_ndarray(a, name):
+    if isinstance(a, NDArray):
+        return a._ndarray__handle
+    raise NotImplementedError(
+        "Conversion {} to ndarray".format(name, a))
+
+
 _TYPE_GUARDS = {
     array_like: _make_array_like,
     int: _make_int,
     float: _make_float,
     str: _make_str,
     bool: None,  # TODO
-    Union[NDArray, scalar]: _make_ndarray_or_scalar,
+    NDArray: _make_ndarray,
 }
 
+_RET_TYPE_GUARDS = {
+    Union[NDArray, scalar]: _ret_make_ndarray_or_scalar,
+    NDArray: _ret_make_ndarray,
+}
 
 def type_check(f):
     sig = inspect.signature(f)
@@ -91,7 +113,7 @@ def type_check(f):
         ann = sig.return_annotation
         assert ann is not inspect.Parameter.empty
         ret = f(*bound.args, **bound.kwargs)
-        ret = _TYPE_GUARDS[ann](ret, "return value")
+        ret = _RET_TYPE_GUARDS[ann](ret, "return value")
         return ret
 
     return checked_f

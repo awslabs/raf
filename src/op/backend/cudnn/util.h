@@ -191,45 +191,18 @@ class AlgorithmCache {
   }
 };
 
-inline std::vector<int> ConcatVecs(ir::Integer v) {
-  std::vector<int> res{0, (int)v};
-  return res;
+inline void VecAppend(std::vector<int>& res, ir::Integer v) {
+  res.push_back(1);
+  res.push_back(v);
 }
 
-inline std::vector<int> ConcatVecs(const std::vector<int>& v) {
-  std::vector<int> res;
+inline void VecAppend(std::vector<int>& res, const std::vector<int>& v) {
   res.push_back(v.size());
   res.insert(res.end(), v.begin(), v.end());
-  return res;
 }
 
-inline std::vector<int> ConcatVecs(ir::Array<ir::Integer> a) {
-  return ConcatVecs(common::shape_utils::MakeShape<int>(a));
-}
-
-template <typename... Targs>
-inline std::vector<int> ConcatVecs(ir::Array<ir::Integer> a, Targs... args);
-
-template <typename... Targs>
-inline std::vector<int> ConcatVecs(const std::vector<int>& v, Targs... args) {
-  std::vector<int> res;
-  std::vector<int> append(ConcatVecs(args...));
-  res.push_back(v.size());
-  res.insert(res.end(), v.begin(), v.end());
-  res.insert(res.end(), append.begin(), append.end());
-  return res;
-}
-
-template <typename... Targs>
-inline std::vector<int> ConcatVecs(ir::Array<ir::Integer> a, Targs... args) {
-  std::vector<int> v(common::shape_utils::MakeShape<int>(a));
-  // return ConcatVecs(v, args...);
-  std::vector<int> res;
-  std::vector<int> append(ConcatVecs(args...));
-  res.push_back(v.size());
-  res.insert(res.end(), v.begin(), v.end());
-  res.insert(res.end(), append.begin(), append.end());
-  return res;
+inline void VecAppend(std::vector<int>& res, ir::Array<ir::Integer> a) {
+  return VecAppend(res, common::shape_utils::MakeShape<int>(a));
 }
 
 }  // namespace cudnn
