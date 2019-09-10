@@ -1,13 +1,13 @@
 import ast
 
-from .._core.op import create_op
+from .._core.op import get_op
 from .._core.ir import ConstantExpr
 from .._core.value import IntValue
 
 
 def _wrap_op(name):
-    op = create_op(name, False)
-    return lambda *args: op(args=args, attrs=None)
+    op = get_op(name)
+    return lambda *args: op(eager=False, args=args, attrs=None)
 
 
 OP_MAKER = {

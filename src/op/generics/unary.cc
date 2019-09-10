@@ -10,10 +10,11 @@
  */
 namespace mnm {
 namespace op {
-namespace identical {
+namespace unary {
 
 using ir::Array;
 using ir::Attrs;
+using ir::TensorTypeNode;
 using ir::Type;
 using ir::TypeReporter;
 using tensor::Tensor;
@@ -34,14 +35,6 @@ OpInfo IdenticalMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   return OpInfo::make(
       TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape), data->ctx);
 }
-
-// MNM_REGISTER_OP("mnm.op.add")
-//     .describe(R"code(This is Add.
-// )code" MNM_ADD_FILELINE)
-//     .set_num_inputs(1)
-//     .add_argument("data", "Any Tensor", "Input data.")
-//     .add_type_rel("AddRel", IdenticalRel)
-//     .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
 
 MNM_REGISTER_OP("mnm.op.relu")
     .describe(R"code(Apply a relu elmentwisely on the given tensor.
@@ -73,14 +66,62 @@ MNM_REGISTER_OP("mnm.op.sigmoid")
     .add_type_rel("SigmoidRel", IdenticalRel)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
 
-MNM_REGISTER_OP("mnm.op.softmax")
-    .describe(R"code(This is softmax.
-)code" MNM_ADD_FILELINE)
-    .set_num_inputs(1)
-    .add_argument("data", "Any Tensor", "Input data.")
-    .add_type_rel("SoftmaxRel", IdenticalRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
+bool ActivationBackRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
+                       const TypeReporter& reporter) {
+  int n = types.size();
+  CHECK_EQ(n, num_inputs + 1);  // y, dy, x, dx
+  const auto* out = types[0].as<TensorTypeNode>();
+  CHECK(out != nullptr);
+  for (int i = 1; i < n; ++i) {
+    const auto* arg = types[i].as<TensorTypeNode>();
+    CHECK_EQ(arg->shape.size(), out->shape.size());
+    int m = arg->shape.size();
+    for (int j = 0; j < m; ++j) {
+      reporter->AssertEQ(arg->shape[j], out->shape[j]);
+    }
+  }
+  reporter->Assign(types[3], types[0]);
+  return true;
+}
 
-}  // namespace identical
+template <int NInputs>
+OpInfo IdenticalBackMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+  CHECK_EQ(values.size(), NInputs);  // y, dy, x
+  const Tensor& y = values[0];
+  for (int i = 1; i < NInputs; ++i) {
+    const Tensor& arg = values[i];
+    CHECK_EQ(arg->ndim, y->ndim);
+    int m = arg->ndim;
+    for (int j = 0; j < m; ++j) {
+      CHECK_EQ(arg->shape[j], y->shape[j]);
+    }
+  }
+  std::vector<int64_t> oshape(y->shape, y->shape + y->ndim);
+  return OpInfo::make(TensorValue::Assemble(/*ctx=*/y->ctx, /*dtype=*/y->dtype, /*shape=*/oshape),
+                      y->ctx);
+}
+
+MNM_REGISTER_OP("mnm.op.grad.relu")
+    .describe(R"code(This backward relu.
+)code" MNM_ADD_FILELINE)
+    .set_num_inputs(3)
+    .add_type_rel("ReLUBackRel", ActivationBackRel)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalBackMakeOutput<3>);
+
+MNM_REGISTER_OP("mnm.op.grad.tanh")
+    .describe(R"code(This is backward tanh.
+)code" MNM_ADD_FILELINE)
+    .set_num_inputs(3)
+    .add_type_rel("TanHBackRel", ActivationBackRel)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalBackMakeOutput<3>);
+
+MNM_REGISTER_OP("mnm.op.grad.sigmoid")
+    .describe(R"code(This is backward sigmoid.
+)code" MNM_ADD_FILELINE)
+    .set_num_inputs(3)
+    .add_type_rel("SigmoidBackRel", ActivationBackRel)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalBackMakeOutput<3>);
+
+}  // namespace unary
 }  // namespace op
 }  // namespace mnm

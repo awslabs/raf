@@ -5,6 +5,7 @@
 #include <mnm/base.h>
 #include <mnm/enum_base.h>
 #include <mnm/ir.h>
+#include <mnm/value.h>
 
 #include "../../../common/cuda.h"
 #include "../../../common/shape_utils.h"
@@ -150,9 +151,9 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
 
 template <typename T>
 class AlgorithmCache {
-  std::map<std::vector<int>, T> cached_results;
+  std::map<std::vector<int64_t>, T> cached_results;
 
-  static std::string Key2String(const std::vector<int>& key) {
+  static std::string Key2String(const std::vector<int64_t>& key) {
     std::ostringstream oss;
     for (size_t i = 0; i < key.size(); ++i) {
       oss << key[i];
@@ -168,11 +169,11 @@ class AlgorithmCache {
   ~AlgorithmCache() {
   }
 
-  bool has(const std::vector<int>& key) {
+  bool has(const std::vector<int64_t>& key) {
     return cached_results.count(key);
   }
 
-  T get(const std::vector<int>& key) {
+  T get(const std::vector<int64_t>& key) {
     if (!has(key)) {
       LOG(FATAL) << "KeyError: The cached results have no key: " << AlgorithmCache::Key2String(key)
                  << "\n";
@@ -181,7 +182,7 @@ class AlgorithmCache {
     return cached_results[key];
   }
 
-  void set(const std::vector<int>& key, T val) {
+  void set(const std::vector<int64_t>& key, T val) {
     if (has(key)) {
       LOG(FATAL) << "KeyError: The result is already cached: " << AlgorithmCache::Key2String(key)
                  << "\n";
@@ -191,19 +192,34 @@ class AlgorithmCache {
   }
 };
 
-inline void VecAppend(std::vector<int>& res, ir::Integer v) {
+inline void VecAppend(std::vector<int64_t>& res, int64_t v) {
   res.push_back(1);
   res.push_back(v);
 }
 
-inline void VecAppend(std::vector<int>& res, const std::vector<int>& v) {
+inline void VecAppend(std::vector<int64_t>& res, const std::vector<int>& v) {
   res.push_back(v.size());
-  res.insert(res.end(), v.begin(), v.end());
+  for (auto elem : v) {
+    res.push_back(elem);
+  }
 }
 
-inline void VecAppend(std::vector<int>& res, ir::Array<ir::Integer> a) {
+inline void VecAppend(std::vector<int64_t>& res, ir::Array<ir::Integer> a) {
   return VecAppend(res, common::shape_utils::MakeShape<int>(a));
 }
+
+class BufferNode : public value::ValueNode {
+ public:
+  mutable void* data{nullptr};
+  mutable int64_t size_in_bytes{0};
+  static constexpr const char* _type_key = "mnm.value.BufferNode";
+  MNM_DEF_NODE_TYPE_INFO(BufferNode, ValueNode);
+};
+
+class BufferValue : public value::Value {
+ public:
+  MNM_DEF_NODE_REF_METHODS(BufferValue, Value, BufferNode);
+};
 
 }  // namespace cudnn
 }  // namespace backend

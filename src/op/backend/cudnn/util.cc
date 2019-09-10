@@ -17,7 +17,7 @@ CUDNNThreadEntry* CUDNNThreadEntry::ThreadLocal() {
   return CUDNNThreadStore::Get();
 }
 
-}
-}
-}
-}
+}  // namespace cudnn
+}  // namespace backend
+}  // namespace op
+}  // namespace mnm

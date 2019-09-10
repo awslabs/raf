@@ -41,6 +41,9 @@ class Tensor : private tvm::runtime::NDArray {
 
   Tensor(const TSuper& other);
 
+  TSelf CreateView(const std::vector<int64_t>& shape = {}, const std::vector<int64_t>& strides = {},
+                   void* data = nullptr) const;
+
   TSelf& operator=(TSelf&& other) {
     TSelf(std::move(other)).swap(*this);
     return *this;

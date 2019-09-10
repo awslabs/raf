@@ -1,3 +1,3 @@
 from . import imports
-from . import arithmetic
+from . import arith
 from . import nn

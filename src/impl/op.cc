@@ -64,7 +64,7 @@ OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& bac
   return *this;
 }
 
-OpDispatch::TRegistry *OpDispatch::Registry() {
+OpDispatch::TRegistry* OpDispatch::Registry() {
   return TRegistry::Get();
 }
 

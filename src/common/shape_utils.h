@@ -8,6 +8,11 @@ namespace mnm {
 namespace common {
 namespace shape_utils {
 
+template <class T>
+inline std::vector<T> GetShape(const DLTensor& tensor) {
+  return std::vector<T>(tensor.shape, tensor.shape + tensor.ndim);
+}
+
 template <typename T>
 inline std::vector<T> MakeShape(const ir::Array<ir::Integer>& shape) {
   int ndim = shape.size();
@@ -65,6 +70,11 @@ inline bool IsCompact(const DLTensor& dl_tensor) {
     }
   }
   return true;
+}
+
+inline int64_t BytesCompactTensor(const DLTensor& dl_tensor) {
+  CHECK(IsCompact(dl_tensor));
+  return (dl_tensor.shape[0] * dl_tensor.strides[0] * dl_tensor.dtype.bits - 1) / 8 + 1;
 }
 
 }  // namespace shape_utils

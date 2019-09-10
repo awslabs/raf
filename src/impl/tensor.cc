@@ -8,6 +8,7 @@
 namespace mnm {
 namespace tensor {
 
+using common::shape_utils::GetShape;
 using common::shape_utils::IsCompact;
 using common::shape_utils::Shape2Strides;
 
@@ -113,6 +114,29 @@ class Tensor::Impl {
     tensor.data_->manager_ctx = manager_ctx;
     tensor.data_->deleter = NumpyArrayDeleter;
   }
+
+  static Tensor CreateView(const Tensor& self,
+                           const std::vector<int64_t>& shape,    //
+                           const std::vector<int64_t>& strides,  //
+                           void* data) {
+    if (!shape.empty() && !strides.empty()) {
+      CHECK_EQ(shape.size(), strides.size());
+    }
+    TensorContainer* container = new TensorContainer(DefaultDeleter);
+    Tensor ret(container);
+    container->shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
+    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
+    container->dl_tensor.ctx = self->ctx;
+    container->dl_tensor.ndim = shape.size();
+    container->dl_tensor.dtype = self->dtype;
+    container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
+    container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
+    container->dl_tensor.byte_offset = 0;
+    self.data_->IncRef();
+    container->manager_ctx = self.data_;
+    container->dl_tensor.data = data ? data : self->data;
+    return ret;
+  }
 };
 
 Tensor::Tensor(tvm::runtime::NDArray::Container* data) : TSuper(data) {
@@ -120,6 +144,11 @@ Tensor::Tensor(tvm::runtime::NDArray::Container* data) : TSuper(data) {
 
 Tensor::Tensor(const tvm::runtime::NDArray& other) : TSuper(other) {
   static_cast<Tensor::TensorContainer*>(data_)->CheckTypeCode();
+}
+
+Tensor Tensor::CreateView(const std::vector<int64_t>& shape, const std::vector<int64_t>& strides,
+                          void* data) const {
+  return Tensor::Impl::CreateView(*this, shape, strides, data);
 }
 
 int Tensor::array_type_code() const {

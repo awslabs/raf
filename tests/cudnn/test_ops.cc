@@ -44,7 +44,7 @@ TEST(CUDNN, Convolution) {
   auto out = MakeTensor({1, 512, 126, 126}, false);
 
   const auto* MakeNode = Registry::Get("make._Node");
-  Attrs attrs = (*MakeNode)("mnm.attrs.Conv2DAttrs",           //
+  Attrs attrs = (*MakeNode)("mnm.attrs.ConvAttrs",             //
                             "stride", Array<Integer>{1, 1},    //
                             "padding", Array<Integer>{0, 0},   //
                             "dilation", Array<Integer>{1, 1},  //

@@ -12,6 +12,7 @@ namespace backend {
 namespace cudnn {
 namespace manual {
 
+using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::MakeShape;
 using ir::Array;
 using ir::Attrs;
@@ -21,7 +22,7 @@ using value::Value;
 
 static AlgorithmCache<cudnnConvolutionFwdAlgo_t> _conv_fwd_alg_cache;
 
-cudnnConvolutionFwdAlgo_t FindConvolutionForwardAlgorithm(const std::vector<int>& key,
+cudnnConvolutionFwdAlgo_t FindConvolutionForwardAlgorithm(const std::vector<int64_t>& key,
                                                           cudnnTensorDescriptor_t xDesc,
                                                           cudnnFilterDescriptor_t wDesc,
                                                           cudnnConvolutionDescriptor_t convDesc,
@@ -51,7 +52,7 @@ class Conv2DCUDNN : public mnm::op::OpEnv {
   const void* beta;
   cudnnTensorDescriptor_t out_desc;
 
-  Conv2DCUDNN(ir::Array<value::Value> args, const OpInfo &info, ir::Attrs attrs) {
+  Conv2DCUDNN(ir::Array<value::Value> args, const OpInfo& info, ir::Attrs attrs) {
     const auto dlts = common::arg_utils::AsVector(args);
     dtype = common::arg_utils::DeduceDLType(dlts);
 
@@ -75,17 +76,16 @@ class Conv2DCUDNN : public mnm::op::OpEnv {
         CUDNN_CROSS_CORRELATION, CUDNNDType(dtype)));
 
     const DLTensor* out = info->output;
-    int ndims = out->ndim;
     FORM_SHAPE(out_shape, out);
     FORM_STRIDE(out_stride, out_shape);
-    int out_size = (out_stride[0] * out_shape[0] * out->dtype.bits - 1) / 8 + 1;
+    int out_size = BytesCompactTensor(*out);
     CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc));
     CUDNN_CALL(cudnnSetTensorNdDescriptor(out_desc, CUDNNDType(dtype), out->ndim,
                                           dmlc::BeginPtr(out_shape), dmlc::BeginPtr(out_stride)));
 
     RequestMemory(const_cast<void**>(&out->data), info->ctx, out_size);
 
-    std::vector<int> key;
+    std::vector<int64_t> key;
     VecAppend(key, in_shape);
     VecAppend(key, ker_shape);
     VecAppend(key, out_shape);
@@ -100,8 +100,6 @@ class Conv2DCUDNN : public mnm::op::OpEnv {
     beta = CUDNNDType(dtype).const_addr<0>();
   }
 
-  void Execute(ir::Array<value::Value> args, const OpInfo &, ir::Attrs) override final;
-
   ~Conv2DCUDNN() {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc));
     CUDNN_CALL(cudnnDestroyFilterDescriptor(ker_desc));
@@ -109,25 +107,22 @@ class Conv2DCUDNN : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(conv_desc));
   }
 
-  static OpEnv* make(ir::Array<value::Value> args, const OpInfo &info, ir::Attrs attrs); 
+  void Execute(Array<Value> args, const OpInfo& info, Attrs) override final {
+    const DLTensor* in = args[0];
+    const DLTensor* fil = args[1];
+    const DLTensor* out = info->output;
+
+    CUDNN_CALL(cudnnConvolutionForward(CUDNNThreadEntry::ThreadLocal()->handle, alpha, in_desc,
+                                       in->data, ker_desc, fil->data, conv_desc, algo, ws, ws_size,
+                                       beta, out_desc, out->data));
+    CUDA_CALL(cudaDeviceSynchronize());
+  }
+
+  static OpEnv* make(ir::Array<value::Value> args, const OpInfo& info, ir::Attrs attrs) {
+    std::unique_ptr<Conv2DCUDNN> res = std::make_unique<Conv2DCUDNN>(args, info, attrs);
+    return res.release();
+  }
 };
-
-OpEnv* Conv2DCUDNN::make(ir::Array<value::Value> args, const OpInfo &info, ir::Attrs attrs) {
-  std::unique_ptr<Conv2DCUDNN> res = std::make_unique<Conv2DCUDNN>(args, info, attrs);
-  return res.release();
-}
-
-void Conv2DCUDNN::Execute(Array<Value> args, const OpInfo &info, Attrs) {
-  const DLTensor* in = args[0];
-  const DLTensor* fil = args[1];
-  const DLTensor* out = info->output;
-
-  CUDNN_CALL(cudnnConvolutionForward(CUDNNThreadEntry::ThreadLocal()->handle, alpha, in_desc,
-                                     in->data, ker_desc, fil->data, conv_desc, algo, ws, ws_size,
-                                     beta, out_desc, out->data));
-  CUDA_CALL(cudaDeviceSynchronize());
-
-}
 
 MNM_REGISTER_OP_DISPATCH("mnm.op.conv2d", DevType::kCUDA(), "manual_cudnn", Conv2DCUDNN::make);
 

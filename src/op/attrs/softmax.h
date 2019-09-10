@@ -8,14 +8,12 @@ namespace mnm {
 namespace op {
 namespace attrs {
 
-class DropoutAttrs : public ir::AttrsNode<DropoutAttrs> {
+class SoftmaxAttrs : public ir::AttrsNode<SoftmaxAttrs> {
  public:
-  double dropout;
-  int64_t seed;
+  mutable int64_t axis;
 
-  MNM_DECLARE_ATTRS(DropoutAttrs, "mnm.attrs.DropoutAttrs") {
-    MNM_ATTR_FIELD(dropout);
-    MNM_ATTR_FIELD(seed);
+  MNM_DECLARE_ATTRS(SoftmaxAttrs, "mnm.attrs.SoftmaxAttrs") {
+    MNM_ATTR_FIELD(axis);
   }
 };
 

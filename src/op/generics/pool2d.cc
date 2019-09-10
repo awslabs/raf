@@ -18,7 +18,9 @@ namespace op {
 namespace max_pool2d {
 
 using attrs::AvgPoolAttrs;
+using attrs::AvgPoolBackAttrs;
 using attrs::MaxPoolAttrs;
+using attrs::MaxPoolBackAttrs;
 using ir::Array;
 using ir::Attrs;
 using ir::IndexExpr;
@@ -40,7 +42,7 @@ bool Pool2DRel(const Array<Type>& types,  //
   CHECK(data != nullptr);
   CHECK(param != nullptr);
   CHECK_EQ(data->shape.size(), 4);
-  CHECK_EQ(param->kernel_size.size(), 2);
+  CHECK_EQ(param->kernel.size(), 2);
   CHECK_EQ(param->stride.size(), 2);
   CHECK_EQ(param->padding.size(), 2);
   CHECK_EQ(param->dilation.size(), 2);
@@ -48,8 +50,8 @@ bool Pool2DRel(const Array<Type>& types,  //
   const IndexExpr& c_in = data->shape[1];
   const IndexExpr& h_in = data->shape[2];
   const IndexExpr& w_in = data->shape[3];
-  const IndexExpr& kernel_h = param->kernel_size[0];
-  const IndexExpr& kernel_w = param->kernel_size[1];
+  const IndexExpr& kernel_h = param->kernel[0];
+  const IndexExpr& kernel_w = param->kernel[1];
   const IndexExpr& stride_h = param->stride[0];
   const IndexExpr& stride_w = param->stride[1];
   const IndexExpr& pad_h = param->padding[0];
@@ -75,7 +77,7 @@ OpInfo Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   const auto* param = attrs.as<T>();
   CHECK(param != nullptr);
   CHECK_EQ(data->ndim, 4);
-  CHECK_EQ(param->kernel_size.size(), 2);
+  CHECK_EQ(param->kernel.size(), 2);
   CHECK_EQ(param->stride.size(), 2);
   CHECK_EQ(param->padding.size(), 2);
   CHECK_EQ(param->dilation.size(), 2);
@@ -83,8 +85,8 @@ OpInfo Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
   int64_t c_in = data->shape[1];
   int64_t h_in = data->shape[2];
   int64_t w_in = data->shape[3];
-  int64_t kernel_h = param->kernel_size[0]->value;
-  int64_t kernel_w = param->kernel_size[1]->value;
+  int64_t kernel_h = param->kernel[0]->value;
+  int64_t kernel_w = param->kernel[1]->value;
   int64_t stride_h = param->stride[0]->value;
   int64_t stride_w = param->stride[1]->value;
   int64_t pad_h = param->padding[0]->value;
@@ -106,22 +108,123 @@ OpInfo Pool2DMakeOutput(const Array<Value>& values, const Attrs& attrs) {
 }
 
 MNM_REGISTER_OP("mnm.op.max_pool2d")
-    .describe(R"code(This is MaxPool2D. Have a nice day.
+    .describe(R"code(This is MaxPool2D.
 )code" MNM_ADD_FILELINE)
-    .set_attrs_type_key("mnm.attrs.PoolingAttrs")
+    .set_attrs_type_key("mnm.attrs.MaxPoolAttrs")
     .set_num_inputs(1)
     .add_argument("data", "4D Tensor", "Input data.")
     .add_type_rel("Pool2DRel", Pool2DRel<MaxPoolAttrs>)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Pool2DMakeOutput<MaxPoolAttrs>);
 
 MNM_REGISTER_OP("mnm.op.avg_pool2d")
-    .describe(R"code(This is AvgPool2D. Have a nice day.
+    .describe(R"code(This is AvgPool2D.
 )code" MNM_ADD_FILELINE)
-    .set_attrs_type_key("mnm.attrs.PoolingAttrs")
+    .set_attrs_type_key("mnm.attrs.AvgPoolAttrs")
     .set_num_inputs(1)
     .add_argument("data", "4D Tensor", "Input data.")
     .add_type_rel("Pool2DRel", Pool2DRel<AvgPoolAttrs>)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", Pool2DMakeOutput<AvgPoolAttrs>);
+
+template <typename T>
+bool Pool2DBackRel(const Array<Type>& types,  //
+                   int num_inputs,            //
+                   const Attrs& attrs,        //
+                   const TypeReporter& reporter) {
+  CHECK_EQ(types.size(), 2);
+  const auto* dy = types[0].as<TensorTypeNode>();
+  const auto* param = attrs.as<T>();
+  CHECK(dy != nullptr);
+  CHECK(param != nullptr);
+  CHECK_EQ(dy->shape.size(), 4);
+  CHECK_EQ(param->kernel.size(), 2);
+  CHECK_EQ(param->stride.size(), 2);
+  CHECK_EQ(param->padding.size(), 2);
+  CHECK_EQ(param->dilation.size(), 2);
+  const IndexExpr& n_in = param->shape[0];
+  const IndexExpr& c_in = param->shape[1];
+  const IndexExpr& h_in = param->shape[2];
+  const IndexExpr& w_in = param->shape[3];
+  const IndexExpr& kernel_h = param->kernel[0];
+  const IndexExpr& kernel_w = param->kernel[1];
+  const IndexExpr& stride_h = param->stride[0];
+  const IndexExpr& stride_w = param->stride[1];
+  const IndexExpr& pad_h = param->padding[0];
+  const IndexExpr& pad_w = param->padding[1];
+  const IndexExpr& dilate_h = param->dilation[0];
+  const IndexExpr& dilate_w = param->dilation[1];
+  IndexExpr h_out, w_out;
+  if (!param->ceil_mode) {
+    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
+    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+  } else {
+    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
+    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
+  }
+  reporter->AssertEQ(n_in, dy->shape[0]);
+  reporter->AssertEQ(c_in, dy->shape[1]);
+  reporter->AssertEQ(h_out, dy->shape[2]);
+  reporter->AssertEQ(w_out, dy->shape[3]);
+  reporter->Assign(types[1], TensorTypeNode::make({n_in, c_in, h_in, w_in}, dy->dtype));
+  return true;
+}
+
+template <typename T>
+OpInfo Pool2DBackMakeOutput(const Array<Value>& values, const Attrs& attrs) {
+  CHECK_EQ(values.size(), 1);
+  const Tensor& dy = values[0];
+  const auto* param = attrs.as<T>();
+  CHECK(param != nullptr);
+  CHECK_EQ(dy->ndim, 4);
+  CHECK_EQ(param->kernel.size(), 2);
+  CHECK_EQ(param->stride.size(), 2);
+  CHECK_EQ(param->padding.size(), 2);
+  CHECK_EQ(param->dilation.size(), 2);
+  int64_t n_in = param->shape[0];
+  int64_t c_in = param->shape[1];
+  int64_t h_in = param->shape[2];
+  int64_t w_in = param->shape[3];
+  int64_t kernel_h = param->kernel[0]->value;
+  int64_t kernel_w = param->kernel[1]->value;
+  int64_t stride_h = param->stride[0]->value;
+  int64_t stride_w = param->stride[1]->value;
+  int64_t pad_h = param->padding[0]->value;
+  int64_t pad_w = param->padding[1]->value;
+  int64_t dilate_h = param->dilation[0]->value;
+  int64_t dilate_w = param->dilation[1]->value;
+  int64_t h_out, w_out;
+  if (!param->ceil_mode) {
+    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
+    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+  } else {
+    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
+    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
+  }
+  CHECK_EQ(n_in, dy->shape[0]);
+  CHECK_EQ(c_in, dy->shape[1]);
+  CHECK_EQ(h_out, dy->shape[2]);
+  CHECK_EQ(w_out, dy->shape[3]);
+  return OpInfo::make(TensorValue::Assemble(/*ctx=*/dy->ctx, /*dtype=*/dy->dtype,
+                                            /*shape=*/{n_in, c_in, h_in, w_in}),
+                      dy->ctx);
+}
+
+MNM_REGISTER_OP("mnm.op.grad.max_pool2d")
+    .describe(R"code(This is Backward MaxPool2D.
+)code" MNM_ADD_FILELINE)
+    .set_attrs_type_key("mnm.attrs.MaxPoolBackAttrs")
+    .set_num_inputs(1)
+    .add_argument("data", "4D Tensor", "Input data.")
+    .add_type_rel("Pool2DBackRel", Pool2DBackRel<MaxPoolBackAttrs>)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", Pool2DBackMakeOutput<MaxPoolBackAttrs>);
+
+MNM_REGISTER_OP("mnm.op.grad.avg_pool2d")
+    .describe(R"code(This is Backward AvgPool2D.
+)code" MNM_ADD_FILELINE)
+    .set_attrs_type_key("mnm.attrs.AvgPoolBackAttrs")
+    .set_num_inputs(1)
+    .add_argument("data", "4D Tensor", "Input data.")
+    .add_type_rel("Pool2DBackRel", Pool2DBackRel<AvgPoolBackAttrs>)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", Pool2DBackMakeOutput<AvgPoolBackAttrs>);
 
 }  // namespace max_pool2d
 }  // namespace op

@@ -159,7 +159,7 @@ tvm::runtime::NDArray ToTVM(TensorValue value) {
 }
 
 NodeRef DeTuple(Value value) {
-  if (const auto* _ = value.as<TensorValueNode>()) {
+  if (value->is_type<TensorValueNode>()) {
     return std::move(value);
   }
   if (const auto* tuple = value.as<TupleValueNode>()) {

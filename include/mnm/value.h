@@ -40,7 +40,7 @@ class Value : public ir::NodeRef {
 /* TensorValue */
 class TensorValueNode final : public ValueNode {
  public:
-  tensor::Tensor tensor;
+  mutable tensor::Tensor tensor;
   void VisitAttrs(tvm::AttrVisitor* v) final {
     v->Visit("_tensor", &tensor);
   }

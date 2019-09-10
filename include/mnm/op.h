@@ -48,7 +48,7 @@ class OpEnv {
  public:
   OpEnv();
   virtual ~OpEnv();
-  virtual void Execute(ir::Array<value::Value> args, const OpInfo &info, ir::Attrs attrs) = 0;
+  virtual void Execute(ir::Array<value::Value> args, const OpInfo& info, ir::Attrs attrs) = 0;
 
   void RequestMemory(void** dest, const Context& ctx, int64_t nbytes);
   void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
@@ -63,7 +63,7 @@ class OpEnv {
 };
 
 class OpDispatch {
-  using FMakeOpEnv = std::function<OpEnv*(ir::Array<value::Value>, const OpInfo &, ir::Attrs)>;
+  using FMakeOpEnv = std::function<OpEnv*(ir::Array<value::Value>, const OpInfo&, ir::Attrs)>;
   using TDispatchList = std::unordered_map<std::string, FMakeOpEnv>;
   using TRegistry = ::dmlc::Registry<OpDispatch>;
 
@@ -74,7 +74,7 @@ class OpDispatch {
                            const FMakeOpEnv& op_env_maker);
 
  public:
-  static TRegistry *Registry();
+  static TRegistry* Registry();
   static TDispatchList* Get(const ir::Op& op, DevType device_type);
   static std::unique_ptr<OpEnv> Dispatch(const ir::Op& op, const OpInfo& info,
                                          const ir::Array<value::Value>& args,

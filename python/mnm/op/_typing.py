@@ -1,5 +1,5 @@
 import inspect
-from functools import wraps
+from functools import wraps, partial
 from typing import Any, List, Tuple, Union
 
 import numpy as np
@@ -18,53 +18,35 @@ array_like = Union[int, float, bool,
                    List[Any], Tuple[Any]]
 
 
+_PY2VALUE = {
+     np.ndarray: lambda x: TensorValue.from_numpy(x),
+     int: IntValue, float: FloatValue, bool: BoolValue,
+     list: lambda x: TensorValue.from_numpy(np.array(x)),
+     tuple: lambda x: TensorValue.from_numpy(np.array(x)),
+}
+
 def _make_array_like(a, name):
     if isinstance(a, NDArray):
         return a._ndarray__handle
-    if isinstance(a, np.ndarray):
-        return TensorValue.from_numpy(a)
-    if isinstance(a, int):
-        value = IntValue(a)
-        return BoundExpr(expr=ConstantExpr(value), value=value)
-    if isinstance(a, float):
-        value = FloatValue(a)
-        return BoundExpr(expr=ConstantExpr(value), value=value)
-    if isinstance(a, bool):
-        value = BoolValue(a)
-        return BoundExpr(expr=ConstantExpr(value), value=value)
-    value = TensorValue.from_numpy(np.array(a))
+    if type(a) not in _PY2VALUE.keys():
+        raise NotImplementedError("Conversion {} from {} to array_like".format(name, a))
+    value = _PY2VALUE[type(a)](a)
     return BoundExpr(expr=ConstantExpr(value), value=value)
 
 
-def _make_int(a, name):
-    if isinstance(a, int):
+def _make_scalar(ty, a, name):
+    if isinstance(a, ty):
         return a
-    raise NotImplementedError("Conversion {} from {} to int".format(name, a))
-
-
-def _make_float(a, name):
-    if isinstance(a, float):
-        return a
-    raise NotImplementedError("Conversion {} from {} to float".format(name, a))
-
-
-def _make_str(a, name):
-    if isinstance(a, str):
-        return a
-    raise NotImplementedError("Conversion {} from {} to str".format(name, a))
+    raise NotImplementedError("Conversion {} from {} to int".format(name, ty.__name__))
 
 
 def _ret_make_ndarray_or_scalar(a, name):
-    if isinstance(a, (int, float, bool)):
+    if isinstance(a, (int, float, bool, NDArray)):
         return a
-    if isinstance(a, IntValue):
-        return a.data
-    if isinstance(a, FloatValue):
+    if isinstance(a, (IntValue, FloatValue)):
         return a.data
     if isinstance(a, BoolValue):
         return bool(a.data)
-    if isinstance(a, NDArray):
-        return a
     raise NotImplementedError(
         "Conversion {} from {} to ndarray or scalar".format(name, a))
 
@@ -85,12 +67,12 @@ def _make_ndarray(a, name):
         "Conversion {} to ndarray".format(name, a))
 
 
-_TYPE_GUARDS = {
+_ARG_TYPE_GUARDS = {
     array_like: _make_array_like,
-    int: _make_int,
-    float: _make_float,
-    str: _make_str,
-    bool: None,  # TODO
+    int: partial(_make_scalar, int),
+    str: partial(_make_scalar, str),
+    bool: partial(_make_scalar, bool),
+    float: partial(_make_scalar, float),
     NDArray: _make_ndarray,
 }
 
@@ -98,22 +80,3 @@ _RET_TYPE_GUARDS = {
     Union[NDArray, scalar]: _ret_make_ndarray_or_scalar,
     NDArray: _ret_make_ndarray,
 }
-
-def type_check(f):
-    sig = inspect.signature(f)
-
-    @wraps(f)
-    def checked_f(*args, **kwargs):
-        bound = sig.bind(*args, **kwargs)
-        for name, param in bound.arguments.items():
-            ann = sig.parameters[name].annotation
-            if ann is inspect.Parameter.empty:
-                continue
-            bound.arguments[name] = _TYPE_GUARDS[ann](param, name)
-        ann = sig.return_annotation
-        assert ann is not inspect.Parameter.empty
-        ret = f(*bound.args, **bound.kwargs)
-        ret = _RET_TYPE_GUARDS[ann](ret, "return value")
-        return ret
-
-    return checked_f
