@@ -27,14 +27,12 @@ int Tag::GetTagIndex_(const std::string& tag) {
 class Stream::Impl {
  public:
   Impl(const Context& ctx) : ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
-    api->SetDevice(ctx.device_id);
-    this->stream = api->CreateStream();
+    this->stream = api->CreateStream(ctx);
   }
 
   ~Impl() {
     if (stream != nullptr && api != nullptr) {
-      api->SetDevice(ctx.device_id);
-      api->FreeStream(stream);
+      api->FreeStream(ctx, stream);
     }
   }
 
@@ -75,7 +73,6 @@ class StreamPool {
   static std::shared_ptr<StreamPool> Get(const Context& ctx) {
     static PerContextStore<StreamPool, false>* per_device =
         new PerContextStore<StreamPool, false>();
-    // static auto per_device = std::make_shared<PerContextStore<StreamPool, false>>();
     std::shared_ptr<StreamPool>& ret = per_device->Get(ctx);
     if (ret == nullptr) {
       auto lock = per_device->GrabLock();
@@ -100,6 +97,10 @@ Stream::~Stream() = default;
 
 void* Stream::data() const {
   return impl ? impl->stream : nullptr;
+}
+
+void Stream::Wait() const {
+  impl->api->WaitStream(impl->ctx, data());
 }
 
 std::shared_ptr<Stream> Stream::Get(const Context& ctx, int tag_index, int index) {

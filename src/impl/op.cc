@@ -108,7 +108,7 @@ void OpEnv::RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes) {
   }
 }
 
-void OpEnv::RequestStream(void** dest, const Context& ctx, int tag_idx, int stream_index) {
+void OpEnv::RequestStream(void** dest, const Context& ctx, int tag_idx) {
   int index = impl->stream.size();
   impl->stream.push_back({dest, ctx, tag_idx, index, nullptr});
   if (impl->executor != nullptr) {

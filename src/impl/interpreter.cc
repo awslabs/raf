@@ -181,7 +181,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     if (!info->computational) {
       return info->output;
     }
-    // TODO(@junrushao1994): resources with non-computational ops
     std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(op, info, args, attrs);
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
@@ -197,6 +196,9 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     }
     op_env->Execute(args, info, attrs);
     {
+      for (int i = 0, n = req->stream.size(); i < n; ++i) {
+        req->stream[i].stream->Wait();
+      }
       req->workspace.clear();
       req->workspace.shrink_to_fit();
       req->stream.clear();

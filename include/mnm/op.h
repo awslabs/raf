@@ -52,7 +52,7 @@ class OpEnv {
 
   void RequestMemory(void** dest, const Context& ctx, int64_t nbytes);
   void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
-  void RequestStream(void** dest, const Context& ctx, int tag_idx, int index);
+  void RequestStream(void** dest, const Context& ctx, int tag_idx);
   void RequestDistributed(void** dest) {
     LOG(FATAL) << "NotImplementedError: RequestDistributed";
     throw;

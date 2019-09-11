@@ -20,7 +20,6 @@ class NonOwnedMemory final : public Memory {
 
   ~NonOwnedMemory() {
     if (data != nullptr) {
-      api->SetDevice(ctx.device_id);
       api->FreeMemory(data);
     }
   }
@@ -40,7 +39,6 @@ class NoPool final : public MemoryPool {
     CHECK(nbytes >= 0);
     void* data = nullptr;
     if (nbytes > 0) {
-      api->SetDevice(ctx.device_id);
       data = api->AllocMemory(nbytes, alignment);
     }
     return std::make_shared<NonOwnedMemory>(data, ctx, api);

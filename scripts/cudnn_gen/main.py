@@ -201,12 +201,46 @@ rules = [
     algo       = 'CUDNN_SOFTMAX_LOG',
     mode       = ('center == 1 && right == 1', 'CUDNN_SOFTMAX_MODE_INSTANCE', 'CUDNN_SOFTMAX_MODE_CHANNEL'),
 )),
-('grad.softmax', {
-    'callee' : 'cudnnSoftmaxBackward',
-    'attrs_t': 'SoftmaxAttrs',
-    'algo'   : 'CUDNN_SOFTMAX_ACCURATE',
-    'mode'   : ('casted_ptr->axis == 0', 'CUDNN_SOFTMAX_MODE_INSTANCE', 'CUDNN_SOFTMAX_MODE_CHANNEL'),
-}),
+('grad.softmax', OrderedDict(
+    callee     = 'cudnnSoftmaxBackward',
+    attrs_t    = 'SoftmaxAttrs',
+    init_extra = """
+    int axis = casted_ptr->axis;
+    int left = 1, center = dlts[0]->shape[axis], right = 1;
+    for (int i = 0; i < axis; ++i) {
+      left *= dlts[0]->shape[i];
+    }
+    for (int i = axis + 1; i < dlts[0]->ndim; ++i) {
+      right *= dlts[0]->shape[i];
+    }
+""",
+    shapes     = {
+        0: 'left, center, right, 1',
+        1: 'left, center, right, 1',
+    },
+    algo       = 'CUDNN_SOFTMAX_ACCURATE',
+    mode       = ('center == 1 && right == 1', 'CUDNN_SOFTMAX_MODE_INSTANCE', 'CUDNN_SOFTMAX_MODE_CHANNEL'),
+)),
+('grad.log_softmax', OrderedDict(
+    callee     = 'cudnnSoftmaxBackward',
+    attrs_t    = 'SoftmaxAttrs',
+    init_extra = """
+    int axis = casted_ptr->axis;
+    int left = 1, center = dlts[0]->shape[axis], right = 1;
+    for (int i = 0; i < axis; ++i) {
+      left *= dlts[0]->shape[i];
+    }
+    for (int i = axis + 1; i < dlts[0]->ndim; ++i) {
+      right *= dlts[0]->shape[i];
+    }
+""",
+    shapes     = {
+        0: 'left, center, right, 1',
+        1: 'left, center, right, 1',
+    },
+    algo       = 'CUDNN_SOFTMAX_ACCURATE',
+    mode       = ('center == 1 && right == 1', 'CUDNN_SOFTMAX_MODE_INSTANCE', 'CUDNN_SOFTMAX_MODE_CHANNEL'),
+)),
 ('max_pool2d', {
     'callee'     : 'cudnnPoolingForward',
     'attrs_t'    : 'MaxPoolAttrs',
@@ -305,18 +339,14 @@ rules = [
     'callee'                   : 'cudnnBatchNormalizationForwardTraining',
     'attrs_t'                  : 'BatchNormAttrs',
     'order'                    : [0, 5, 1, 2, 3, 4],
-    'shapes'                   : {
-        1: '1, (int) dlts[1]->shape[0], 1, 1',
-    },
+    'shapes'                   : { 1: '1, (int) dlts[1]->shape[0], 1, 1', },
     'mode'                     : 'CUDNN_BATCHNORM_SPATIAL',
     'exponentialAverageFactor' : 'casted_ptr->momentum',
     'epsilon'                  : 'casted_ptr->eps',
-    #'x'                        : 'dlts[0]->data',
-    #'y'                        : 'dlts[5]->data',
-    'resultRunningMean'        : 'dlts[1]->data',
-    'resultRunningVariance'    : 'dlts[2]->data',
-    'bnScale'                  : 'dlts[3]->data',
-    'bnBias'                   : 'dlts[4]->data',
+    'resultRunningMean'        : 'DLTensor:dlts[1]',
+    'resultRunningVariance'    : 'DLTensor:dlts[2]',
+    'bnScale'                  : 'DLTensor:dlts[3]',
+    'bnBias'                   : 'DLTensor:dlts[4]',
     'resultSaveMean'           : 'nullptr',
     'resultSaveInvVariance'    : 'nullptr',
 },
@@ -324,19 +354,43 @@ rules = [
     'callee'                   : 'cudnnBatchNormalizationForwardInference',
     'attrs_t'                  : 'BatchNormAttrs',
     'order'                    : [0, 5, 1, 2, 3, 4],
-    'shapes'                   : {
-        1: '1, (int) dlts[1]->shape[0], 1, 1',
-    },
+    'shapes'                   : { 1: '1, (int) dlts[1]->shape[0], 1, 1', },
     'mode'                     : 'CUDNN_BATCHNORM_SPATIAL',
     'exponentialAverageFactor' : 'casted_ptr->momentum',
     'epsilon'                  : 'casted_ptr->eps',
-    #'x'                        : 'dlts[0]->data',
-    #'y'                        : 'dlts[5]->data',
-    'estimatedMean'            : 'dlts[1]->data',
-    'estimatedVariance'        : 'dlts[2]->data',
-    'bnScale'                  : 'dlts[3]->data',
-    'bnBias'                   : 'dlts[4]->data',
-}))
+    'estimatedMean'            : 'DLTensor:dlts[1]',
+    'estimatedVariance'        : 'DLTensor:dlts[2]',
+    'bnScale'                  : 'DLTensor:dlts[3]',
+    'bnBias'                   : 'DLTensor:dlts[4]',
+})),
+('grad.batch_norm2d', {
+    'dlts'             : """
+    int n = args.size();
+    std::vector<const DLTensor*> dlts(n + 3);
+    for (int i = 0; i < n; ++i) {
+      dlts[i] = args[i];
+    }
+    value::TupleValue tv = Downcast<TupleValue>(info->output);
+    for (int i = 0; i < 3; ++i) {
+      dlts[n + i] = tv->fields[i];
+    }
+""",
+    'callee'           : 'cudnnBatchNormalizationBackward',
+    'attrs_t'          : 'BatchNormAttrs',
+    'order'            : [0, 1, 3, 2, 4, 5],
+    'mode'             : 'CUDNN_BATCHNORM_SPATIAL',
+    'alphaDataDiff'    : 'CUDNNDType(dtype).const_addr<1>()',
+    'betaDataDiff'     : 'CUDNNDType(dtype).const_addr<0>()',
+    'alphaParamDiff'   : 'CUDNNDType(dtype).const_addr<1>()',
+    'betaParamDiff'    : 'CUDNNDType(dtype).const_addr<0>()',
+    'shapes'           : { 2: '1, (int) dlts[2]->shape[0], 1, 1' },
+    'dBnScaleResult'   : 'DLTensor:dlts[4]',
+    'dBnBiasResult'    : 'DLTensor:dlts[5]',
+    'bnScale'          : 'DLTensor:dlts[2]',
+    'savedMean'        : 'nullptr',
+    'savedInvVariance' : 'nullptr',
+    'epsilon'          : 'casted_ptr->eps',
+})
 ]
 
 import emitter

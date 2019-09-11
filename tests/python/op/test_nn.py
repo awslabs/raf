@@ -6,10 +6,10 @@ import pytest
 import mnm
 
 
-def test_mnm_conv2d():
+def test_conv2d():
 
     img_ = np.random.randn(1, 3, 128, 128).astype('float32')
-    ker_ = np.random.randn(128, 3, 3, 3).astype('float32')
+    ker_ = np.random.randn(128, 3, 6, 6).astype('float32')
 
     img = mnm.array(img_, dtype='float32', ctx='cuda')
     ker = mnm.array(ker_, dtype='float32', ctx='cuda')
@@ -23,7 +23,7 @@ def test_mnm_conv2d():
                 out = mnm.nn.conv2d(img, ker, stride=stride,
                                     dilation=dilation, padding=padding)
                 np.testing.assert_allclose(
-                    out.asnumpy(), ref.numpy(), rtol=1e-5, atol=1e-5)
+                    out.asnumpy(), ref.numpy(), rtol=1e-4, atol=1e-4)
 
 
 def test_pool2d():
@@ -95,6 +95,29 @@ def test_softmax():
                 out.asnumpy(), ref.numpy(), rtol=1e-5, atol=1e-5)
 
 
+def test_log_softmax():
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
+
+    shapes = [
+            [2, 2, 2, 2],
+            [2, 2, 2],
+            [2, 2],
+            [2, 3, 4, 5],
+    ]
+
+    for shape in shapes:
+
+        img_ = np.random.randn(*shape).astype('float32')
+        img = mnm.array(img_, dtype='float32', ctx='cuda')
+
+        for i in range(-len(shape), len(shape)):
+            out = mnm.nn.log_softmax(img, axis=i)
+            ref = F.log_softmax(torch.Tensor(img_), dim=i)
+            np.testing.assert_allclose(
+                out.asnumpy(), ref.numpy(), rtol=1e-5, atol=1e-5)
+
+
 def test_batch_flatten():
     img_ = np.random.randn(128, 2, 2, 2).astype('float32')
     out_ = mnm.nn.batch_flatten(mnm.array(img_, dtype='float32', ctx='cpu'))
@@ -144,11 +167,12 @@ def test_batchnorm():
     np.testing.assert_allclose(out_.asnumpy(), ref.numpy(), atol=1e-5, rtol=1e-5)
 
 if __name__ == '__main__':
-    test_mnm_conv2d()
+    test_conv2d()
     test_pool2d()
     test_relu()
     test_sigmoid()
     test_tanh()
     test_softmax()
+    test_log_softmax()
     test_batch_flatten()
     test_batchnorm()

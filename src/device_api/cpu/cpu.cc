@@ -10,14 +10,6 @@ class CPUDeviceAPI final : public DeviceAPI {
   CPUDeviceAPI() = default;
   ~CPUDeviceAPI() = default;
 
-  void SetDevice(int device_id) override {
-    CHECK_EQ(device_id, 0);
-  }
-
-  int GetDevice() override {
-    return 0;
-  }
-
   void* AllocMemory(int64_t nbytes, int64_t alignment) override {
     void* ptr = nullptr;
     // TODO(@junrushao1994): do not throw like this
@@ -44,11 +36,11 @@ class CPUDeviceAPI final : public DeviceAPI {
 #endif
   }
 
-  void* CreateStream() override {
+  void* CreateStream(const Context&) override {
     throw;
   }
 
-  void FreeStream(void* stream) override {
+  void FreeStream(const Context&, void* stream) override {
     throw;
   }
 
@@ -56,11 +48,11 @@ class CPUDeviceAPI final : public DeviceAPI {
     throw;
   }
 
-  void WaitDevice() override {
+  void WaitDevice(const Context&) override {
     throw;
   }
 
-  void WaitStream(void* stream) override {
+  void WaitStream(const Context&, void* stream) override {
     throw;
   }
 

@@ -63,7 +63,7 @@ MNM_REGISTER_OP("mnm.op.softmax")
     .set_attr<FOpMakeOutput>("FOpMakeOutput", SoftmaxMakeOutput<1>);
 
 MNM_REGISTER_OP("mnm.op.log_softmax")
-    .describe(R"code(This is softmax.
+    .describe(R"code(This is log_softmax.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(1)
     .set_attrs_type_key("mnm.attrs.SoftmaxAttrs")
@@ -72,6 +72,14 @@ MNM_REGISTER_OP("mnm.op.log_softmax")
 
 MNM_REGISTER_OP("mnm.op.grad.softmax")
     .describe(R"code(This is backward softmax.
+)code" MNM_ADD_FILELINE)
+    .set_num_inputs(2)
+    .set_attrs_type_key("mnm.attrs.SoftmaxAttrs")
+    .add_type_rel("SoftmaxBackRel", SoftmaxRel)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", SoftmaxMakeOutput<2>);
+
+MNM_REGISTER_OP("mnm.op.grad.log_softmax")
+    .describe(R"code(This is backward log_softmax.
 )code" MNM_ADD_FILELINE)
     .set_num_inputs(2)
     .set_attrs_type_key("mnm.attrs.SoftmaxAttrs")

@@ -19,16 +19,6 @@ class CUDADeviceAPI final : public DeviceAPI {
     return count;
   }
 
-  void SetDevice(int device_id) override {
-    CUDA_CALL(cudaSetDevice(device_id));
-  }
-
-  int GetDevice() override {
-    int device_id = -1;
-    CUDA_CALL(cudaGetDevice(&device_id));
-    return device_id;
-  }
-
   void* AllocMemory(int64_t nbytes, int64_t alignment) override {
     void* ptr = nullptr;
     // TODO(@junrushao1994): make sure it is correct
@@ -41,13 +31,17 @@ class CUDADeviceAPI final : public DeviceAPI {
     CUDA_CALL(cudaFree(ptr));
   }
 
-  void* CreateStream() override {
+  void* CreateStream(const Context& ctx) override {
+    CHECK_EQ(ctx.device_type, DevType::kCUDA());
+    CUDA_CALL(cudaSetDevice(ctx.device_id));
     cudaStream_t ret = nullptr;
     CUDA_CALL(cudaStreamCreate(&ret));
     return ret;
   }
 
-  void FreeStream(void* stream) override {
+  void FreeStream(const Context& ctx, void* stream) override {
+    CHECK_EQ(ctx.device_type, DevType::kCUDA());
+    CUDA_CALL(cudaSetDevice(ctx.device_id));
     CUDA_CALL(cudaStreamDestroy(static_cast<cudaStream_t>(stream)));
   }
 
@@ -55,11 +49,16 @@ class CUDADeviceAPI final : public DeviceAPI {
     throw;
   }
 
-  void WaitDevice() override {
+  void WaitDevice(const Context& ctx) override {
+    CHECK_EQ(ctx.device_type, DevType::kCUDA());
+    CUDA_CALL(cudaSetDevice(ctx.device_id));
     CUDA_CALL(cudaDeviceSynchronize());
   }
 
-  void WaitStream(void* stream) override {
+  void WaitStream(const Context& ctx, void* stream) override {
+    CHECK_EQ(ctx.device_type, DevType::kCUDA());
+    CHECK(stream != nullptr) << "Cannot sync a null stream";
+    CUDA_CALL(cudaSetDevice(ctx.device_id));
     CUDA_CALL(cudaStreamSynchronize(static_cast<cudaStream_t>(stream)));
   }
 

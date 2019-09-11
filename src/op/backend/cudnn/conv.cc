@@ -124,7 +124,8 @@ class Conv2DCUDNN : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_OP_DISPATCH("mnm.op.conv2d", DevType::kCUDA(), "manual_cudnn", Conv2DCUDNN::make);
+// We now have generated version, this poc is not useful for now.
+// MNM_REGISTER_OP_DISPATCH("mnm.op.conv2d", DevType::kCUDA(), "manual_cudnn", Conv2DCUDNN::make);
 
 }  // namespace manual
 }  // namespace cudnn
