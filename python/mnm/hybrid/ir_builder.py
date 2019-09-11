@@ -49,6 +49,20 @@ class IRBuilder(object):
             return ast.Name(id=name, ctx=ast.Load())
         return lambda sym_tab: sym_tab[name]
 
+    def make_tuple(self, *args):
+        makers = [_convert(arg, debug=self.debug) for arg in args]
+        return lambda sym_tab: relay.Tuple([maker(sym_tab) for maker in makers])
+
+    def sym_slice_index(self, value: Callable[[SymTab], relay.Expr], index: int):
+        return lambda sym_tab: relay.TupleGetItem(value(sym_tab), index)
+
+    def sym_slice_strided(self, value: Callable[[SymTab], relay.Expr], lower: int, upper: int, step: int):
+        def _sym_slice_strided(sym_tab: SymTab):
+            content = value(sym_tab)
+            return relay.Tuple([relay.TupleGetItem(content, i)
+                                for i in range(lower, upper, step)])
+        return _sym_slice_strided
+
     def op(self, category: str, node_t: type, *args) -> Callable[[SymTab], relay.Expr]:
         if self.debug:
             args = [_convert(arg, debug=True) for arg in args]

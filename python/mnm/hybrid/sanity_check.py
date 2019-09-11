@@ -14,7 +14,7 @@ SUPPORTED = {
     # ast.JoinedStr,
     # ast.Bytes,
     # ast.List,
-    # ast.Tuple,
+    ast.Tuple: "generic_visit",
     # ast.Set,
     # ast.Dict,
     ast.Ellipsis: "generic_visit",
@@ -35,9 +35,9 @@ SUPPORTED = {
     # ast.keyword,
     # ast.IfExp,
     # ast.Attribute,
-    # ast.Subscript,
-    # ast.Index,
-    # ast.Slice,
+    ast.Subscript: "check_Subscript",
+    ast.Index: "check_Index",
+    ast.Slice: "check_Slice",
     # ast.ExtSlice,
     ########## Comprehensions ##########
     # ast.ListComp,
@@ -156,6 +156,33 @@ class SanityCheck(NodeVisitor):
         self.generic_visit(node)
 
     def check_Return(self, node: ast.Return):
+        self.generic_visit(node)
+
+    def check_Subscript(self, node: ast.Subscript):
+        if isinstance(node.ctx, ast.Store):
+            raise NotImplementedError("Slice modification is not supported.")
+        if isinstance(node.ctx, ast.Del):
+            raise NotImplementedError("Deleting a slice is not supported.")
+        self.generic_visit(node)
+
+    def check_Index(self, node: ast.Index):
+        if not isinstance(node.value, ast.Num):
+            raise NotImplementedError("Only constant indexing is supported for now.")
+        self.generic_visit(node)
+
+    def check_Slice(self, node: ast.Slice):
+        if node.lower is not None and not isinstance(node.lower, ast.Num):
+            raise NotImplementedError("Only constant indexing is supported for now.")
+        if node.upper is not None and not isinstance(node.upper, ast.Num):
+            raise NotImplementedError("Only constant indexing is supported for now.")
+        if node.step is not None and not isinstance(node.step, ast.Num):
+            raise NotImplementedError("Only constant indexing is supported for now.")
+        if not node.lower:
+            raise NotImplementedError(
+                "Please explicitly specify lower bound of a slice")
+        if not node.upper:
+            raise NotImplementedError(
+                "Please explicitly specify supprt bound of a slice")
         self.generic_visit(node)
 
 

@@ -1,16 +1,15 @@
 import ast
 import inspect
-import numpy as np
-
 from typing import Callable, Dict
 
+import numpy as np
+
 from .._core.base import set_module
-from .._core.context import cpu
-from .._core.ndarray import ndarray as NDArray
-from .._core.ir import Module, ConstantExpr
-from .._core.value import IntValue, FloatValue, BoolValue, TensorValue
 from .._core.bound_expr import BoundExpr
 from .._core.executor import Interpreter
+from .._core.ir import ConstantExpr, Module
+from .._core.ndarray import ndarray as NDArray
+from .._core.value import BoolValue, FloatValue, IntValue
 from .._ffi._tvm import relay
 from .cfg import ast2cfg
 from .ir_builder import build_ir
@@ -94,7 +93,6 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
         code = relay.Call(op=entry, args=[_make_argument(arg) for arg in args])
         result = Interpreter.GLOBAL(code)
         return _unwrap(result)
-
     return call
 
 
@@ -114,7 +112,6 @@ def hybrid(python=False):
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
             pos_args = list(bound.arguments.values())
-
             func = FUNC_TAB[pyfunc]
             if func is None:
                 func = pyfunc2relay(pyfunc, FUNC_VAR[pyfunc])

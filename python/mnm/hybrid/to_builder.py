@@ -75,6 +75,57 @@ class DeadCodeEliminationLite(NodeTransformer):
                                returns=node.returns)
 
 
+class Unbox(NodeTransformer):
+
+    def __init__(self):
+        super(Unbox, self).__init__(strict=False)
+
+    def run(self, node: ast.AST) -> ast.AST:
+        return self.visit(node)
+
+    def _unbox(self, lhs, rhs):
+        if isinstance(lhs, ast.Name):
+            assert isinstance(lhs.ctx, ast.Store)
+            return [ast.Assign(targets=[lhs], value=rhs)]
+        elif isinstance(lhs, ast.Tuple):
+            assert isinstance(lhs.ctx, ast.Store)
+            ret = []
+            for idx, elt in enumerate(lhs.elts):
+                idx = ast.Index(value=ast.Num(idx))
+                value = ast.Subscript(value=rhs, slice=idx, ctx=ast.Load())
+                ret.extend(self._unbox(elt, value))
+            return ret
+        else:
+            raise NotImplementedError()
+
+    def _unbox_basic_block(self, stmts: List[ast.AST]):
+        new_stmts = []
+        for stmt in stmts:
+            if isinstance(stmt, ast.Assign):
+                (lhs, ), rhs = stmt.targets, stmt.value
+                new_stmts.extend(self._unbox(lhs, rhs))
+            else:
+                new_stmts.append(stmt)
+        return new_stmts
+
+    def visit_If(self, node: ast.If):
+        return ast.If(test=node.test,
+                      body=self._unbox_basic_block(node.body),
+                      orelse=self._unbox_basic_block(node.orelse))
+
+    def visit_While(self, node: ast.While):
+        return ast.While(test=node.test,
+                         body=self._unbox_basic_block(node.body),
+                         orelse=[])
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        return ast.FunctionDef(name=node.name,
+                               args=node.args,
+                               body=self._unbox_basic_block(node.body),
+                               decorator_list=node.decorator_list,
+                               returns=node.returns)
+
+
 def _call(name, *args):
     func = ast.Attribute(value=ast.Name(
         id='ib', ctx=ast.Load()), attr=name, ctx=ast.Load())
@@ -197,6 +248,36 @@ class ToBuilder(NodeTransformer):
         rhs = self.visit(node.comparators[0])
         return _op("compare", node.ops[0], lhs, rhs)
 
+    def visit_Tuple(self, node: ast.Tuple):
+        assert isinstance(node.ctx, ast.Load)
+        elts = [self.visit(value) for value in node.elts]
+        return _call("make_tuple", *elts)
+
+    def visit_Subscript(self, node: ast.Subscript):
+        assert isinstance(node.ctx, ast.Load)
+        value = self.visit(node.value)
+        slice = self.visit(node.slice)
+        if isinstance(node.slice, ast.Index):
+            return _call("sym_slice_index", value, slice)
+        elif isinstance(node.slice, ast.Slice):
+            return _call("sym_slice_strided", value, slice.lower, slice.upper, slice.step)
+        else:
+            raise NotImplementedError
+
+    def visit_Index(self, node: ast.Index):
+        assert isinstance(node.value, ast.Num)
+        value = self.visit(node.value)
+        return value
+
+    def visit_Slice(self, node: ast.Slice):
+        lower = self.visit(node.lower)
+        upper = self.visit(node.upper)
+        if node.step:
+            step = self.visit(node.step)
+        else:
+            step = ast.Num(n=1)
+        return ast.Slice(lower=lower, upper=upper, step=step)
+
     ########## Module ##########
     visit_Module = generic_visit
     ########## Literals ##########
@@ -205,6 +286,7 @@ class ToBuilder(NodeTransformer):
     visit_NameConstant = generic_visit
     ########## Variables ##########
     visit_Name
+    visit_Tuple
     ########## Expressions ##########
     visit_Expr = generic_visit
     visit_UnaryOp
@@ -226,6 +308,7 @@ class ToBuilder(NodeTransformer):
 def to_builder(node: ast.AST, pyfunc, name: str) -> Tuple[ast.AST, Set[str]]:
     node = DeadCodeEliminationLite().run(node)
     local_names = LocalNames().run(node, pyfunc)
+    node = Unbox().run(node)
     node = ToBuilder(local_names).run(node, name)
     ast.fix_missing_locations(node)
     return node, local_names
