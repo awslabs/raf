@@ -1,8 +1,5 @@
 #pragma once
 
-#include <dlpack/dlpack.h>
-
-#include <mnm/base.h>
 #include <mnm/ir.h>
 #include <mnm/tensor.h>
 
@@ -21,9 +18,6 @@ namespace value {
 
 /* Value */
 class ValueNode : public ir::Node {
- public:
-  virtual ir::Type GetType() const;
-
  public:
   mutable std::shared_ptr<op::OpEnv> op_env{nullptr};
   static constexpr const char* _type_key = "mnm.value.Value";
@@ -253,6 +247,8 @@ class BoundExpr : public ir::NodeRef {
   MNM_DEF_NODE_REF_METHODS(BoundExpr, ir::NodeRef, BoundExprNode);
   static BoundExpr make(ir::Expr expr, Value value);
 };
+
+ir::Type GetType(const Value &value);
 
 }  // namespace value
 }  // namespace mnm

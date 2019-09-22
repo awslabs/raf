@@ -27,7 +27,7 @@ class OpInfoNode : public ir::Node {
   }
 
  public:
-  mutable value::Value output;
+  value::Value output;
   Context ctx;
   bool computational = true;
 

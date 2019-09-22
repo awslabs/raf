@@ -150,3 +150,13 @@ def negative(x: array_like) -> Union[ndarray, scalar]:
     res = _RET_TYPE_GUARDS[Union[ndarray, scalar]](res, "return value")
     return res
 
+def copy(x: ndarray) -> ndarray:
+    """ Reserved for doc string... """
+    x = _ARG_TYPE_GUARDS[ndarray](x, "x")
+    f = get_op("mnm.op.copy")
+    res = f(eager=True,
+            args=[x],
+            attrs=None)
+    res = _RET_TYPE_GUARDS[ndarray](res, "return value")
+    return res
+

@@ -11,6 +11,7 @@
 namespace mnm {
 namespace value {
 
+using common::shape_utils::GetShape;
 using common::shape_utils::MakeShape;
 using executor::Executor;
 using ir::Array;
@@ -23,14 +24,13 @@ using ir::Map;
 using ir::NodePtr;
 using ir::NodeRef;
 using ir::Op;
+using ir::TensorType;
+using ir::TupleType;
+using ir::Type;
 using ir::Var;
 using tensor::Tensor;
 
-ir::Type ValueNode::GetType() const {
-  LOG(FATAL) << "NotImplementedError: " << type_key() << "::GetType()";
-  throw;
-}
-
+/*** Constructors ***/
 TensorValue TensorValue::make(tensor::Tensor tensor) {
   NodePtr<TensorValueNode> n = make_node<TensorValueNode>();
   n->tensor = std::move(tensor);
@@ -103,6 +103,7 @@ BoundExpr BoundExpr::make(Expr expr, Value value) {
   return BoundExpr(n);
 }
 
+/*** BoundExpr ***/
 BoundExprNode::~BoundExprNode() {
   if (executor != nullptr) {
     executor->OnDestruct(this);
@@ -115,6 +116,24 @@ void BoundExprNode::BindExecutor(Executor* executor) {
   executor->OnBind(this);
 }
 
+/*** GetType ***/
+Type GetType(const Value &value) {
+  if (const auto *tv = value.as<TensorValueNode>()) {
+    const DLTensor &dlt = *tv->tensor.operator->();
+    auto shape = GetShape<tvm::Integer>(dlt);
+    return ir::TensorTypeNode::make({shape.begin(), shape.end()}, tvm::TVMType2Type(dlt.dtype));
+  } else if (const auto *tv = value.as<TupleValueNode>()) {
+    Array<Type> tuple_type;
+    for (const Value& sub_value : tv->fields) {
+      tuple_type.push_back(GetType(sub_value));
+    }
+    return ir::TupleTypeNode::make(tuple_type);
+  }
+  LOG(FATAL) << "NotImplementedError: " << value->type_key();
+  throw;
+}
+
+/*** Value ***/
 Value::operator const DLTensor*() const {
   if (const auto* tensor_value = this->as<TensorValueNode>()) {
     const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
@@ -132,6 +151,7 @@ Value::operator const tensor::Tensor&() const {
   throw;
 }
 
+/*** TensorValue ***/
 TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
                                   const std::vector<int64_t>& shape,
                                   const std::vector<int64_t>& strides, void* const data) {
@@ -148,6 +168,7 @@ TensorValue FromTVM(tvm::runtime::NDArray array) {
   return TensorValue::make(Tensor::FromDLPack(array.ToDLPack()));
 }
 
+/*** External symbols ***/
 tvm::runtime::NDArray ToTVM(TensorValue value) {
   DLManagedTensor* tensor = value->tensor.ToDLPack();
   if (tensor->dl_tensor.strides != nullptr) {
@@ -177,21 +198,13 @@ NodeRef DeTuple(Value value) {
 }
 
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);
-
 MNM_REGISTER_GLOBAL("mnm.value.DeTuple").set_body_typed(DeTuple);
-
 MNM_REGISTER_GLOBAL("mnm.value.FromTVM").set_body_typed(FromTVM);
-
 MNM_REGISTER_GLOBAL("mnm.value.ToTVM").set_body_typed(ToTVM);
-
 MNM_REGISTER_GLOBAL("mnm.value._make.TupleValue").set_body_typed(TupleValue::make);
-
 MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
-
 MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
-
 MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
-
 MNM_REGISTER_GLOBAL("mnm.value._make.BoundExpr").set_body_typed(BoundExpr::make);
 
 }  // namespace value

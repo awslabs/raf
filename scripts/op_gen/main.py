@@ -54,6 +54,10 @@ config = {
             "args": OrderedDict(x=Argument(type="array_like"),),
             'ret': 'Union[ndarray, scalar]'
         },
+        'copy': {
+            'args': OrderedDict(x=Argument(type='ndarray')),
+            'ret': 'ndarray'
+        },
     },
     ('nn', 'op'): {
         'avg_pool2d': {

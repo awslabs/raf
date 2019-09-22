@@ -41,8 +41,7 @@ std::unique_ptr<OpEnv> OpDispatch::Dispatch(const Op& op, const OpInfo& info,
       return op_env;
     }
   }
-  LOG(FATAL) << "Cannot dispatch " << op->name << "@" << info->ctx.c_str();
-  throw;
+  return nullptr;
 }
 
 OpDispatch& OpDispatch::set_name(const std::string& name) {

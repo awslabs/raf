@@ -13,6 +13,7 @@
 #include <tvm/relay/expr_functor.h>
 #include <tvm/relay/module.h>
 #include <tvm/relay/op.h>
+#include <tvm/relay/op_attr_types.h>
 #include <tvm/relay/type.h>
 
 namespace mnm {
@@ -42,6 +43,9 @@ using tvm::relay::NodeRef;
 using tvm::relay::Expr;
 using tvm::relay::ExprNode;
 
+using tvm::relay::FTVMCompute;
+using tvm::relay::FTVMSchedule;
+using tvm::relay::TOpPattern;
 using tvm::relay::Op;
 using tvm::relay::OpNode;
 

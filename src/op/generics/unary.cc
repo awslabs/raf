@@ -2,6 +2,7 @@
 #include <mnm/op.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
+#include <topi/elemwise.h>
 
 /*
  * See also
@@ -13,8 +14,12 @@ namespace op {
 namespace unary {
 
 using ir::Array;
+using ir::Op;
 using ir::Attrs;
+using ir::FTVMCompute;
+using ir::FTVMSchedule;
 using ir::TensorTypeNode;
+using ir::TOpPattern;
 using ir::Type;
 using ir::TypeReporter;
 using tensor::Tensor;
@@ -65,6 +70,25 @@ MNM_REGISTER_OP("mnm.op.sigmoid")
     .add_argument("data", "Any Tensor", "Input data.")
     .add_type_rel("SigmoidRel", IdenticalRel)
     .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
+
+MNM_REGISTER_OP("mnm.op.copy")
+    .set_num_inputs(1)
+    .add_argument("a", "array_like", "Input data.")
+    .add_type_rel("IdenticalRel", IdenticalRel)
+    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput)
+    .set_attr<TOpPattern>("TOpPattern", tvm::relay::kElemWise)
+    .set_attr<FTVMCompute>("FTVMCompute",
+                           [](const Attrs& attrs, const Array<tvm::Tensor>& inputs,
+                              const Type& out_type,
+                              const tvm::Target& target) -> Array<tvm::Tensor> {
+                             return {topi::identity(inputs[0])};
+                           })
+    .set_attr<FTVMSchedule>("FTVMSchedule",
+                            [](const Attrs& attrs, const Array<tvm::Tensor>& outs,
+                               const tvm::Target& target) -> tvm::Schedule {
+                              static auto fschedule = Op::GetAttr<FTVMSchedule>("FTVMSchedule")[Op::Get("copy")];
+                              return fschedule(attrs, outs, target);
+                            });
 
 bool ActivationBackRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
                        const TypeReporter& reporter) {
