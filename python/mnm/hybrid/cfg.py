@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union
@@ -112,7 +110,7 @@ class CFG(object):
         return result
 
     @staticmethod
-    def build(entry: ast.AST, finger: Dict[ast.AST, Finger]) -> CFG:
+    def build(entry: ast.AST, finger: Dict[ast.AST, Finger]) -> "CFG":
         stmt2bb = {stmt: BasicBlock(stmt=stmt) for stmt in finger.keys()}
         for stmt, jumps in finger.items():
             stmt2bb[stmt].jumps = list(map(stmt2bb.get, jumps))
@@ -199,6 +197,6 @@ class CFG(object):
                     "{}\nError on BB {}".format(self, self.bb2idx[bb]))
 
 
-def ast2cfg(node: ast.AST) -> CFG:
+def ast2cfg(node: ast.AST) -> "CFG":
     entry, finger = FingerFinder().run(node)
     return CFG.build(entry, finger)

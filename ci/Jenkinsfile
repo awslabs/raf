@@ -1,0 +1,93 @@
+ci_gpu = "mnm.ci_gpu:v0.01"
+
+docker_run = 'docker/bash.sh'
+max_time = 120
+make_flags = "-j32"
+
+mnm_multilib = "build/config.cmake, " +
+               "build/3rdparty/tvm/libtvm_runtime.so, " +
+               "build/3rdparty/tvm/libtvm_topi.so, " +
+               "build/3rdparty/tvm/libtvm.so, " +
+               "build/3rdparty/tvm/libnnvm_compiler.so, " +
+               "build/libmnm.so"
+
+def init_git_unix() {
+  checkout scm
+  retry(5) {
+    timeout(time: 2, unit: 'MINUTES') {
+      sh 'git submodule update --init --recursive'
+    }
+  }
+}
+
+def init_git_win() {
+  checkout scm
+  retry(5) {
+    timeout(time: 2, unit: 'MINUTES') {
+      bat 'git submodule update --init --recursive'
+    }
+  }
+}
+
+def make(docker_type, path, make_flag) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    try {
+      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} ${make_flag}"
+      sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
+    } catch (exc) {
+      echo 'Incremental compilation failed. Fall back to build from scratch'
+      sh "${docker_run} ${docker_type} ./ci/task_clean.sh ${path}" 
+      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} ${make_flag}"
+      sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
+    }
+  }
+}
+
+def pack_lib(name, libs) {
+  sh """
+     echo "Packing ${libs} into ${name}"
+     echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+     """
+  stash includes: libs, name: name
+}
+
+def unpack_lib(name, libs) {
+  unstash name
+  sh """
+     echo "Unpacked ${libs} from ${name}"
+     echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+     """
+}
+
+stage('Build') {
+  parallel 'BUILD: GPU': {
+    node('BUILD') {
+      init_git_unix()
+      sh """
+         mkdir -p build
+         cd build
+         cp ../cmake/config.cmake .
+         echo "set(MNM_USE_CUDA ON)" >> config.cmake
+         echo "set(MNM_USE_CUDNN ON)" >> config.cmake
+         echo "set(MNM_USE_GTEST ON)" >> config.cmake
+         echo "set(USE_LLVM llvm-config-8)" >> config.cmake
+         echo "set(USE_CUDA ON)" >> config.cmake
+         """
+      make(ci_gpu, 'build', make_flags)
+      pack_lib('gpu', mnm_multilib)
+    }
+  }
+}
+
+stage('Unit Test') {
+  parallel 'python3: GPU': {
+    node('GPU') {
+      init_git_unix()
+      unpack_lib('gpu', mnm_multilib)
+      timeout(time: max_time, unit: 'MINUTES') {
+        sh "${docker_run} ${ci_gpu} ./ci/task_python_unittest.sh"
+      }
+    }
+  }
+}
+

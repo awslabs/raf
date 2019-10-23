@@ -142,7 +142,7 @@ def _op(category: str, node: ast.AST, *args):
     op_name = node.__class__.__name__
     category = ast.Str(s=category)
     ast_name = ast.Name(id="ast", ctx=ast.Load())
-    op = ast.Attribute(ast_name, op_name, ctx=ast.Load())
+    op = ast.Attribute(value=ast_name, attr=op_name, ctx=ast.Load())
     return _call("op", category, op, *args)
 
 
