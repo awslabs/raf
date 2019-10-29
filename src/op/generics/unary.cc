@@ -1,151 +1,116 @@
-#include <mnm/ir.h>
 #include <mnm/op.h>
 #include <mnm/tensor.h>
-#include <mnm/value.h>
-#include <topi/elemwise.h>
+#include "../args/ufunc.h"
 
-/*
- * See also
- *   PyTorch: https://pytorch.org/docs/stable/nn.html#relu
- *   TensorFlow: https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/relu
- */
 namespace mnm {
 namespace op {
-namespace unary {
+namespace generics {
 
-using ir::Array;
-using ir::Op;
-using ir::Attrs;
-using ir::FTVMCompute;
-using ir::FTVMSchedule;
-using ir::TensorTypeNode;
-using ir::TOpPattern;
-using ir::Type;
-using ir::TypeReporter;
+using namespace mnm::op::args;
+using namespace mnm::value;
 using tensor::Tensor;
-using value::TensorValue;
-using value::Value;
 
-bool IdenticalRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
-                  const TypeReporter& reporter) {
-  CHECK_EQ(types.size(), 2);
-  reporter->Assign(types[1], types[0]);
-  return true;
-}
+#define MNM_SWITCH_SCALAR(var, value, body)                      \
+  do                                                             \
+    if (const auto* var = (value).as<IntValueNode>()) {          \
+      body;                                                      \
+    } else if (const auto* var = (value).as<FloatValueNode>()) { \
+      body;                                                      \
+    } else if (const auto* var = (value).as<BoolValueNode>()) {  \
+      body;                                                      \
+    }                                                            \
+  while (0);
 
-OpInfo IdenticalMakeOutput(const Array<Value>& values, const Attrs& attrs) {
-  CHECK_EQ(values.size(), 1);
-  const Tensor& data = values[0];
-  std::vector<int64_t> oshape(data->shape, data->shape + data->ndim);
-  return OpInfo::make(
-      TensorValue::Assemble(/*ctx=*/data->ctx, /*dtype=*/data->dtype, /*shape=*/oshape), data->ctx);
-}
+#define MNM_UNARY_SCALAR(op, x)                \
+  MNM_SWITCH_SCALAR(v, x, {                    \
+    call->callee = ir::NullValue<OpValue>();   \
+    call->out = ScalarValue::make(op v->data); \
+    return;                                    \
+  });
 
-MNM_REGISTER_OP("mnm.op.relu")
-    .describe(R"code(Apply a relu elmentwisely on the given tensor.
-
-    This op creates a relu layer.
-
-    - **data**: A any-dimension tensor.
-    - **out**: The output tensor. The tensor on which relu applied.
-
-)code" MNM_ADD_FILELINE)
-    .set_num_inputs(1)
-    .add_argument("data", "Any Tensor", "Input data.")
-    .add_type_rel("ReLURel", IdenticalRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
-
-MNM_REGISTER_OP("mnm.op.tanh")
-    .describe(R"code(This is TanH. Have a nice day.
-)code" MNM_ADD_FILELINE)
-    .set_num_inputs(1)
-    .add_argument("data", "Any Tensor", "Input data.")
-    .add_type_rel("TanHRel", IdenticalRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
-
-MNM_REGISTER_OP("mnm.op.sigmoid")
-    .describe(R"code(This is Sigmoid. Have a nice day.
-)code" MNM_ADD_FILELINE)
-    .set_num_inputs(1)
-    .add_argument("data", "Any Tensor", "Input data.")
-    .add_type_rel("SigmoidRel", IdenticalRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput);
-
-MNM_REGISTER_OP("mnm.op.copy")
-    .set_num_inputs(1)
-    .add_argument("a", "array_like", "Input data.")
-    .add_type_rel("IdenticalRel", IdenticalRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalMakeOutput)
-    .set_attr<TOpPattern>("TOpPattern", tvm::relay::kElemWise)
-    .set_attr<FTVMCompute>("FTVMCompute",
-                           [](const Attrs& attrs, const Array<tvm::Tensor>& inputs,
-                              const Type& out_type,
-                              const tvm::Target& target) -> Array<tvm::Tensor> {
-                             return {topi::identity(inputs[0])};
-                           })
-    .set_attr<FTVMSchedule>("FTVMSchedule",
-                            [](const Attrs& attrs, const Array<tvm::Tensor>& outs,
-                               const tvm::Target& target) -> tvm::Schedule {
-                              static auto fschedule = Op::GetAttr<FTVMSchedule>("FTVMSchedule")[Op::Get("copy")];
-                              return fschedule(attrs, outs, target);
-                            });
-
-bool ActivationBackRel(const Array<Type>& types, int num_inputs, const Attrs& attrs,
-                       const TypeReporter& reporter) {
-  int n = types.size();
-  CHECK_EQ(n, num_inputs + 1);  // y, dy, x, dx
-  const auto* out = types[0].as<TensorTypeNode>();
-  CHECK(out != nullptr);
-  for (int i = 1; i < n; ++i) {
-    const auto* arg = types[i].as<TensorTypeNode>();
-    CHECK_EQ(arg->shape.size(), out->shape.size());
-    int m = arg->shape.size();
-    for (int j = 0; j < m; ++j) {
-      reporter->AssertEQ(arg->shape[j], out->shape[j]);
-    }
+void Negative(const CallValues& call) {
+  const auto* args = call->args.as<UnaryUfuncArgs>();
+  CHECK(args != nullptr);
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_UNARY_SCALAR(-, args->x);
   }
-  reporter->Assign(types[3], types[0]);
-  return true;
+  LOG(FATAL) << "NotImplementedError";
+  throw;
 }
 
-template <int NInputs>
-OpInfo IdenticalBackMakeOutput(const Array<Value>& values, const Attrs& attrs) {
-  CHECK_EQ(values.size(), NInputs);  // y, dy, x
-  const Tensor& y = values[0];
-  for (int i = 1; i < NInputs; ++i) {
-    const Tensor& arg = values[i];
-    CHECK_EQ(arg->ndim, y->ndim);
-    int m = arg->ndim;
-    for (int j = 0; j < m; ++j) {
-      CHECK_EQ(arg->shape[j], y->shape[j]);
-    }
+MNM_REGISTER_OP("mnm.op.negative", UnaryUfuncArgs)
+    .describe(R"code(This is Negative.
+)code" MNM_ADD_FILELINE)
+    .set_attr<FMNMDeclare>("FMNMDeclare", Negative);
+
+void LogicalNot(const CallValues& call) {
+  const auto* args = call->args.as<UnaryUfuncArgs>();
+  CHECK(args != nullptr);
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_UNARY_SCALAR(!, args->x);
   }
-  std::vector<int64_t> oshape(y->shape, y->shape + y->ndim);
-  return OpInfo::make(TensorValue::Assemble(/*ctx=*/y->ctx, /*dtype=*/y->dtype, /*shape=*/oshape),
-                      y->ctx);
+  LOG(FATAL) << "NotImplementedError";
+  throw;
 }
 
-MNM_REGISTER_OP("mnm.op.grad.relu")
-    .describe(R"code(This backward relu.
+MNM_REGISTER_OP("mnm.op.logical_not", UnaryUfuncArgs)
+    .describe(R"code(This is LogicalNot.
 )code" MNM_ADD_FILELINE)
-    .set_num_inputs(3)
-    .add_type_rel("ReLUBackRel", ActivationBackRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalBackMakeOutput<3>);
+    .set_attr<FMNMDeclare>("FMNMDeclare", LogicalNot);
 
-MNM_REGISTER_OP("mnm.op.grad.tanh")
-    .describe(R"code(This is backward tanh.
+void Unary(const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+  const Tensor& x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}
+
+MNM_REGISTER_OP("mnm.op.relu", UnaryArgs)
+    .describe(R"code(This is ReLU.
 )code" MNM_ADD_FILELINE)
-    .set_num_inputs(3)
-    .add_type_rel("TanHBackRel", ActivationBackRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalBackMakeOutput<3>);
+    .set_attr<FMNMDeclare>("FMNMDeclare", Unary);
 
-MNM_REGISTER_OP("mnm.op.grad.sigmoid")
-    .describe(R"code(This is backward sigmoid.
+MNM_REGISTER_OP("mnm.op.tanh", UnaryArgs)
+    .describe(R"code(This is tanh.
 )code" MNM_ADD_FILELINE)
-    .set_num_inputs(3)
-    .add_type_rel("SigmoidBackRel", ActivationBackRel)
-    .set_attr<FOpMakeOutput>("FOpMakeOutput", IdenticalBackMakeOutput<3>);
+    .set_attr<FMNMDeclare>("FMNMDeclare", Unary);
 
-}  // namespace unary
+MNM_REGISTER_OP("mnm.op.sigmoid", UnaryArgs)
+    .describe(R"code(This is sigmoid.
+)code" MNM_ADD_FILELINE)
+    .set_attr<FMNMDeclare>("FMNMDeclare", Unary);
+
+void UnaryDx(const CallValues& call) {
+  // TODO(@junrushao1994): sanity check
+  const auto* args = call->args.as<UnaryDxArgs>();
+  CHECK(args != nullptr);
+  const Tensor& x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}
+
+MNM_REGISTER_OP("mnm.op.relu_dx", UnaryDxArgs)
+    .describe(R"code(This is relu dx.
+)code" MNM_ADD_FILELINE)
+    .set_attr<FMNMDeclare>("FMNMDeclare", UnaryDx);
+
+MNM_REGISTER_OP("mnm.op.tanh_dx", UnaryDxArgs)
+    .describe(R"code(This is tanh dx.
+)code" MNM_ADD_FILELINE)
+    .set_attr<FMNMDeclare>("FMNMDeclare", UnaryDx);
+
+MNM_REGISTER_OP("mnm.op.sigmoid_dx", UnaryDxArgs)
+    .describe(R"code(This is sigmoid dx.
+)code" MNM_ADD_FILELINE)
+    .set_attr<FMNMDeclare>("FMNMDeclare", UnaryDx);
+
+}  // namespace generics
 }  // namespace op
 }  // namespace mnm

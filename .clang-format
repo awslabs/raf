@@ -5,3 +5,4 @@ IndentWidth: 2
 DerivePointerAlignment: false
 AllowShortBlocksOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false
+SortIncludes: false

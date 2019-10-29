@@ -144,9 +144,6 @@ using tvm::relay::ExprFunctor;
   NodeName* operator->() const {                                       \
     return static_cast<NodeName*>(node_.get());                        \
   }                                                                    \
-  operator bool() const {                                              \
-    return this->defined();                                            \
-  }                                                                    \
   using ContainerType = NodeName;
 
 #define MNM_DECLARE_ATTRS TVM_DECLARE_ATTRS
@@ -154,8 +151,6 @@ using tvm::relay::ExprFunctor;
 #define MNM_ATTR_FIELD TVM_ATTR_FIELD
 
 #define MNM_REGISTER_NODE_TYPE TVM_REGISTER_NODE_TYPE
-
-#define MNM_REGISTER_OP RELAY_REGISTER_OP
 
 #define MNM_ADD_FILELINE TVM_ADD_FILELINE
 

@@ -96,6 +96,12 @@ BoolValue BoolValue::make(bool data) {
   return BoolValue(n);
 }
 
+StringValue StringValue::make(const std::string& data) {
+  NodePtr<StringValueNode> n = make_node<StringValueNode>();
+  n->data = data;
+  return StringValue(n);
+}
+
 BoundExpr BoundExpr::make(Expr expr, Value value) {
   NodePtr<BoundExprNode> n = make_node<BoundExprNode>();
   n->expr = std::move(expr);
@@ -117,12 +123,12 @@ void BoundExprNode::BindExecutor(Executor* executor) {
 }
 
 /*** GetType ***/
-Type GetType(const Value &value) {
-  if (const auto *tv = value.as<TensorValueNode>()) {
-    const DLTensor &dlt = *tv->tensor.operator->();
+Type GetType(const Value& value) {
+  if (const auto* tv = value.as<TensorValueNode>()) {
+    const DLTensor& dlt = *tv->tensor.operator->();
     auto shape = GetShape<tvm::Integer>(dlt);
     return ir::TensorTypeNode::make({shape.begin(), shape.end()}, tvm::TVMType2Type(dlt.dtype));
-  } else if (const auto *tv = value.as<TupleValueNode>()) {
+  } else if (const auto* tv = value.as<TupleValueNode>()) {
     Array<Type> tuple_type;
     for (const Value& sub_value : tv->fields) {
       tuple_type.push_back(GetType(sub_value));
@@ -148,6 +154,55 @@ Value::operator const tensor::Tensor&() const {
     return tensor_value->tensor;
   }
   LOG(FATAL) << "InternalError: cannot convert to TensorValue";
+  throw;
+}
+
+#define MNM_SWITCH_SCALAR(var, value, body)                      \
+  do                                                             \
+    if (const auto* var = (value).as<IntValueNode>()) {          \
+      body;                                                      \
+    } else if (const auto* var = (value).as<FloatValueNode>()) { \
+      body;                                                      \
+    } else if (const auto* var = (value).as<BoolValueNode>()) {  \
+      body;                                                      \
+    }                                                            \
+  while (0);
+
+Value::operator int() const {
+  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
+  LOG(FATAL) << "InternalError: cannot be converted to int";
+  throw;
+}
+
+Value::operator int64_t() const {
+  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
+  LOG(FATAL) << "InternalError: cannot be converted to int64_t";
+  throw;
+}
+
+Value::operator float() const {
+  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
+  LOG(FATAL) << "InternalError: cannot be converted to float";
+  throw;
+}
+
+Value::operator double() const {
+  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
+  LOG(FATAL) << "InternalError: cannot be converted to double";
+  throw;
+}
+
+Value::operator bool() const {
+  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
+  LOG(FATAL) << "InternalError: cannot be converted to bool";
+  throw;
+}
+
+Value::operator std::string() const {
+  if (const auto* value = this->as<StringValueNode>()) {
+    return value->data;
+  }
+  LOG(FATAL) << "InternalError: cannot be converted to std::string";
   throw;
 }
 

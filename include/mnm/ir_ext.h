@@ -2,44 +2,6 @@
 
 #include <mnm/ir.h>
 
-/****** mnm::ir::Float ******/
-namespace mnm {
-namespace ir {
-
-using tvm::ir::FloatImm;
-
-class Float : public tvm::Expr {
- public:
-  Float() : tvm::Expr() {
-  }
-  explicit Float(NodePtr<Node> node) : tvm::Expr(node) {
-  }
-  Float(double value) : tvm::Expr(tvm::ir::FloatImm::make(tvm::Float(64), value)) {
-  }
-  Float(float value) : tvm::Expr(value) {
-  }
-  Float& operator=(const Float& other) {
-    node_ = other.node_;
-    return *this;
-  }
-  const tvm::ir::FloatImm* operator->() const {
-    return static_cast<const tvm::ir::FloatImm*>(node_.get());
-  }
-  operator double() const {
-    CHECK(node_ != nullptr) << " Trying get reference a null Integer";
-    return (*this)->value;
-  }
-  operator float() const {
-    CHECK(node_ != nullptr) << " Trying get reference a null Integer";
-    return (*this)->value;
-  }
-  /*! \brief type indicate the container type */
-  using ContainerType = tvm::ir::FloatImm;
-};
-
-}  // namespace ir
-}  // namespace mnm
-
 /****** mnm::ir::Module ******/
 namespace mnm {
 namespace ir {

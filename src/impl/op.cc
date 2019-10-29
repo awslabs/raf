@@ -17,12 +17,18 @@ namespace op {
 
 using executor::Executor;
 using ir::Array;
-using ir::Attrs;
 using ir::make_node;
 using ir::NodePtr;
+using ir::Downcast;
 using ir::Op;
 using requests::Requests;
 using value::Value;
+using value::OpValue;
+
+CallValues CallValues::make() {
+  NodePtr<CallValuesNode> n = make_node<CallValuesNode>();
+  return CallValues(n);
+}
 
 // Implementation: OpDispatch
 
@@ -32,11 +38,11 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
   return list.get();
 }
 
-std::unique_ptr<OpEnv> OpDispatch::Dispatch(const Op& op, const OpInfo& info,
-                                            const Array<Value>& args, const Attrs& attrs) {
-  for (const auto& e : *OpDispatch::Get(op, info->ctx.device_type)) {
+std::unique_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
+  const Op &op = Downcast<OpValue>(call->callee)->op;
+  for (const auto& e : *OpDispatch::Get(op, call->ctx.device_type)) {
     const auto& maker = e.second;
-    std::unique_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(args, info, attrs)));
+    std::unique_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
     if (op_env) {
       return op_env;
     }
@@ -65,15 +71,6 @@ OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& bac
 
 OpDispatch::TRegistry* OpDispatch::Registry() {
   return TRegistry::Get();
-}
-
-// Implementation: OpInfo
-OpInfo OpInfo::make(Value output, Context ctx, bool computational) {
-  NodePtr<OpInfoNode> n = make_node<OpInfoNode>();
-  n->output = std::move(output);
-  n->ctx = std::move(ctx);
-  n->computational = computational;
-  return OpInfo(n);
 }
 
 // Implementation: OpEnv
@@ -125,21 +122,16 @@ std::shared_ptr<Requests> OpEnv::GetRequests() const {
   return this->impl;
 }
 
-OpInfo _MakeOutput(std::string op_name, Array<Value> args, Attrs attrs) {
-  return MakeOutput(Op::Get(op_name), args, attrs);
-}
-
-OpInfo MakeOutput(const Op& op, const Array<Value>& args, const Attrs& attrs) {
-  static const auto f_op_make_output = Op::GetAttr<FOpMakeOutput>("FOpMakeOutput");
+void RunDeclare(const CallValues &call) {
+  static const auto f_op_make_output = Op::GetAttr<FMNMDeclare>("FMNMDeclare");
+  const Op &op = Downcast<OpValue>(call->callee)->op;
   const auto& f = f_op_make_output[op];
-  return f(args, attrs);
+  f(call);
 }
 
 Op GetOp(const std::string& op_name) {
   return Op::Get(op_name);
 }
-
-MNM_REGISTER_GLOBAL("mnm.op.MakeOutput").set_body_typed(_MakeOutput);
 
 MNM_REGISTER_GLOBAL("mnm.op.GetOp").set_body_typed(GetOp);
 

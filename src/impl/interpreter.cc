@@ -8,6 +8,7 @@
 #include <mnm/value.h>
 #include "../common/arg_utils.h"
 #include "../common/shape_utils.h"
+#include "../op/args/list_args.h"
 #include "../requests.h"
 
 namespace mnm {
@@ -19,20 +20,16 @@ using common::arg_utils::AsVector;
 using common::shape_utils::BytesCompactTensor;
 using executor::Executor;
 using memory_pool::Memory;
-using op::MakeOutput;
+using op::CallValues;
+using op::RunDeclare;
 using op::OpDispatch;
 using op::OpEnv;
-using op::OpInfo;
-using registry::TypedPackedFunc;
-using registry::PackedFunc;
 using registry::GetPackedFunc;
+using registry::PackedFunc;
+using registry::TypedPackedFunc;
 using requests::Requests;
 using stream_pool::Stream;
 using tensor::Tensor;
-using tvm::Target;
-using tvm::TVMArgs;
-using tvm::TVMRetValue;
-using tvm::runtime::TVMArgsSetter;
 
 class Stack {
   using Frame = Map<Var, Value>;
@@ -69,56 +66,6 @@ class Stack {
       st.frames.pop_back();
     }
   };
-};
-
-class TVMOpEnv : public OpEnv {
- public:
-  void* stream = nullptr;
-  PackedFunc f = nullptr;
-  std::vector<TVMValue> values;
-  std::vector<int> codes;
-
-  TVMOpEnv(Array<Value> args, const OpInfo& info, Attrs attrs) {
-    std::vector<const DLTensor*> input_dlts = AsVector(args);
-    std::vector<const DLTensor*> output_dlts;
-    if (info->output->is_type<TensorValueNode>()) {
-      output_dlts.push_back(info->output);
-    } else if (const TupleValueNode* outputs = info->output.as<TupleValueNode>()) {
-      output_dlts = AsVector(outputs->fields);
-    } else {
-      LOG(FATAL) << "InternalError: TVMOpEnv does not deal with " << info->output->type_key();
-      throw;
-    }
-    int arity = input_dlts.size() + output_dlts.size();
-    values.resize(arity);
-    codes.resize(arity);
-    {
-      TVMArgsSetter setter(values.data(), codes.data());
-      int cnt = 0;
-      for (const DLTensor* dlt : input_dlts) {
-        setter(cnt++, const_cast<DLTensor*>(dlt));
-      }
-      for (const DLTensor* dlt : output_dlts) {
-        setter(cnt++, const_cast<DLTensor*>(dlt));
-        RequestMemory(const_cast<void**>(&dlt->data), dlt->ctx, BytesCompactTensor(*dlt));
-      }
-    }
-    if (info->ctx.device_type == DevType::kCUDA()) {
-      RequestStream(&stream, info->ctx, stream_pool::kCudaCompute);
-    }
-  }
-
-  static TVMOpEnv* make(Array<Value> args, const OpInfo& info, Attrs attrs) {
-    return new TVMOpEnv(args, info, attrs);
-  }
-
-  void Execute(Array<Value> args, const OpInfo& info, Attrs attrs) override {
-    CHECK(f != nullptr);
-    TVMArgs targs(values.data(), codes.data(), values.size());
-    TVMRetValue rv;
-    // TODO(@junrushao1994): handle stream
-    f.CallPacked(targs, &rv);
-  }
 };
 
 class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Executor {
@@ -171,18 +118,24 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const CallNode* node) override {
+    static auto fschema = Op::GetAttr<op::FMNMSchema>("FMNMSchema");
     const Call& call = GetRef<Call>(node);
     Array<Value> args;
     for (auto arg : call->args) {
       args.push_back(Eval(arg));
     }
-    Value fn = Eval(call->op);
-    if (const auto* closure = fn.as<ClosureValueNode>()) {
-      return InvokeClosure(closure, args, call->attrs);
-    } else if (const auto* op = fn.as<OpValueNode>()) {
-      return InvokePrimitive(op->op, args, call->attrs);
+    CallValues call_values = CallValues::make();
+    call_values->callee = Eval(call->op);
+    if (call_values->callee->is_type<ClosureValueNode>()) {
+      auto attrs = ir::make_node<op::args::ListArgs>();
+      attrs->Init(args);
+      call_values->args = Attrs(attrs);
+      return InvokeClosure(call_values);
+    } else if (const auto* op = call_values->callee.as<OpValueNode>()) {
+      call_values->args = fschema[op->op](args);
+      return InvokePrimitive(call_values);
     }
-    LOG(FATAL) << "InternalError: " << fn->type_key();
+    LOG(FATAL) << "ValueError: type " << call_values->callee->type_key() << " is not callable";
     throw;
   }
 
@@ -235,26 +188,23 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
  public:
-  Value InvokePrimitive(const Op& op, Array<Value> args, const Attrs& attrs) {
-    static auto fcompute = Op::GetAttr<FTVMCompute>("FTVMCompute");
-    OpInfo info = MakeOutput(op, args, attrs);
-    if (!info->computational) {
-      return info->output;
+  Value InvokePrimitive(const CallValues& call) {
+    const Op& op = Downcast<OpValue>(call->callee)->op;
+    RunDeclare(call);
+    if (!call->callee.defined()) {
+      return call->out;
     }
-    std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(op, info, args, attrs);
+    std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
     if (op_env != nullptr) {
-      InvokePrimitiveOpEnv(std::move(op_env), info, args, attrs);
-    } else if (fcompute.count(op)) {
-      InvokePrimitiveJIT(op, info, args, attrs);
+      InvokePrimitiveOpEnv(std::move(op_env), call);
     } else {
-      LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << info->ctx.c_str();
+      LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << call->ctx.c_str();
       throw;
     }
-    return info->output;
+    return call->out;
   }
 
-  void InvokePrimitiveOpEnv(std::unique_ptr<OpEnv> op_env, const OpInfo& info,
-                            const Array<Value>& args, const Attrs& attrs) {
+  void InvokePrimitiveOpEnv(std::unique_ptr<OpEnv> op_env, const CallValues& call) {
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
       for (int i = 0, n = req->memory.size(); i < n; ++i) {
@@ -267,7 +217,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
         RequestStream(req.get(), i);
       }
     }
-    op_env->Execute(args, info, attrs);
+    op_env->Execute(call);
     {
       for (int i = 0, n = req->stream.size(); i < n; ++i) {
         req->stream[i].stream->Wait();
@@ -277,64 +227,19 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       req->stream.clear();
       req->stream.shrink_to_fit();
     }
-    info->output->op_env = std::move(op_env);
-  }
-
-  void InvokePrimitiveJIT(const Op& op, const OpInfo& info, const Array<Value>& args,
-                          const Attrs& attrs) {
-    // Find the right target
-    // TODO(@junrushao1994): refactor this, arch detection and more formuation.
-    Target target;
-    {
-      if (info->ctx.device_type == DevType::kCPU()) {
-        target = tvm::target::llvm();
-      } else if (info->ctx.device_type == DevType::kCUDA()) {
-        target = tvm::target::cuda();
-      } else {
-        LOG(FATAL) << "NotImplementedError: target is not supported "
-                   << info->ctx.device_type.c_str();
-        throw;
-      }
-    }
-    // Assemble the right func that compile engine needs
-    Function func;
-    {
-      Array<Type> arg_types;
-      Array<Var> params;
-      // assemble arguments
-      for (int i = 0, n = args.size(); i < n; ++i) {
-        Type type = GetType(args[i]);
-        arg_types.push_back(type);
-        Var var = VarNode::make("", type);
-        var->checked_type_ = type;
-        params.push_back(var);
-      }
-      // assemble call
-      Type ret_type = GetType(info->output);
-      Expr call = CallNode::make(op, {params.begin(), params.end()}, attrs);
-      call->checked_type_ = ret_type;
-      // eta expand
-      func = FunctionNode::make(params, call, ret_type, {});
-      func->checked_type_ = FuncTypeNode::make(arg_types, ret_type, {}, {});
-    }
-    // Pass to JIT engine
-    static auto engine = GetPackedFunc("relay.backend._CompileEngineGlobal")();
-    static auto c_cache_key = GetPackedFunc("relay.backend._make_CCacheKey");
-    static auto jit = GetPackedFunc("relay.backend._CompileEngineJIT");
-    auto packed_func = jit(engine, c_cache_key(func, target));
-    std::unique_ptr<TVMOpEnv> op_env(TVMOpEnv::make(args, info, attrs));
-    op_env->f = packed_func;
-    InvokePrimitiveOpEnv(std::move(op_env), info, args, attrs);
+    call->out->op_env = std::move(op_env);
   }
 
  public:
-  Value InvokeClosure(const ClosureValueNode* node, Array<Value> args, const Attrs& attrs) {
+  Value InvokeClosure(const CallValues& call) {
+    const auto* node = call->callee.as<ClosureValueNode>();
     const Function& func = node->func;
+    const Array<Value>& call_args = call->args.as<op::args::ListArgs>()->args;
     Map<Var, Value> locals;
-    CHECK_EQ(func->params.size(), args.size());
-    int n_args = args.size();
+    CHECK_EQ(func->params.size(), call_args.size());
+    int n_args = call_args.size();
     for (int i = 0; i < n_args; ++i) {
-      locals.Set(func->params[i], args[i]);
+      locals.Set(func->params[i], call_args[i]);
     }
     for (auto it = node->env.begin(); it != node->env.end(); ++it) {
       locals.Set((*it).first, (*it).second);
@@ -391,7 +296,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 };
 
 static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor) {
-  // TODO(@junrushao1994): dispatch by type key?
   // make nested lists of BoundExpr
   if (value->derived_from<ScalarValueNode>()) {
     return value;
@@ -427,7 +331,7 @@ TypedPackedFunc<NodeRef(Expr)> CreateInterpreter(Module module) {
   return TypedPackedFunc<NodeRef(Expr)>(packed);
 }
 
-TVM_REGISTER_API("mnm.executor.CreateInterpreter").set_body_typed(CreateInterpreter);
+MNM_REGISTER_GLOBAL("mnm.executor.CreateInterpreter").set_body_typed(CreateInterpreter);
 
 }  // namespace interpreter
 }  // namespace mnm

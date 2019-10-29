@@ -20,25 +20,22 @@ class Requests;
 namespace mnm {
 namespace op {
 
-class OpInfoNode : public ir::Node {
+class CallValuesNode : public ir::Node {
  public:
-  void VisitAttrs(tvm::AttrVisitor* v) final {
-    v->Visit("output", &output);
-  }
+  mutable value::Value callee;
+  mutable ir::Attrs args;
+  mutable value::Value out;
+  mutable Context ctx;
 
  public:
-  value::Value output;
-  Context ctx;
-  bool computational = true;
-
-  static constexpr const char* _type_key = "mnm.op.OpInfo";
-  MNM_DEF_NODE_TYPE_INFO(OpInfoNode, Node);
+  static constexpr const char* _type_key = "mnm.op.CallValues";
+  MNM_DEF_NODE_TYPE_INFO(CallValuesNode, ir::Node);
 };
 
-class OpInfo : public ir::NodeRef {
+class CallValues : public ir::NodeRef {
  public:
-  MNM_DEF_NODE_REF_METHODS(OpInfo, NodeRef, OpInfoNode);
-  static OpInfo make(value::Value output, Context ctx, bool computational = true);
+  static CallValues make();
+  MNM_DEF_NODE_REF_METHODS(CallValues, ir::NodeRef, CallValuesNode);
 };
 
 class OpEnv {
@@ -48,7 +45,7 @@ class OpEnv {
  public:
   OpEnv();
   virtual ~OpEnv();
-  virtual void Execute(ir::Array<value::Value> args, const OpInfo& info, ir::Attrs attrs) = 0;
+  virtual void Execute(const CallValues& call) = 0;
 
   void RequestMemory(void** dest, const Context& ctx, int64_t nbytes);
   void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
@@ -63,7 +60,7 @@ class OpEnv {
 };
 
 class OpDispatch {
-  using FMakeOpEnv = std::function<OpEnv*(ir::Array<value::Value>, const OpInfo&, ir::Attrs)>;
+  using FMakeOpEnv = std::function<OpEnv*(const CallValues& call)>;
   using TDispatchList = std::unordered_map<std::string, FMakeOpEnv>;
   using TRegistry = ::dmlc::Registry<OpDispatch>;
 
@@ -76,19 +73,18 @@ class OpDispatch {
  public:
   static TRegistry* Registry();
   static TDispatchList* Get(const ir::Op& op, DevType device_type);
-  static std::unique_ptr<OpEnv> Dispatch(const ir::Op& op, const OpInfo& info,
-                                         const ir::Array<value::Value>& args,
-                                         const ir::Attrs& attrs);
+  static std::unique_ptr<OpEnv> Dispatch(const CallValues& call);
 
  public:
   std::string name;
   registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
-using FOpMakeOutput =
-    registry::TypedPackedFunc<OpInfo(const ir::Array<value::Value>&, const ir::Attrs& attrs)>;
+// TODO: change it to FOpDeclare
+using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
+using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 
-OpInfo MakeOutput(const ir::Op& op, const ir::Array<value::Value>& args, const ir::Attrs& attrs);
+void RunDeclare(const CallValues& call);
 
 }  // namespace op
 }  // namespace mnm
@@ -102,3 +98,30 @@ OpInfo MakeOutput(const ir::Op& op, const ir::Array<value::Value>& args, const i
           ->__REGISTER_OR_GET__(op_name)                                   \
           .set_name(op_name)                                               \
           .add_dispatch(ctx, backend_name, op_env_maker)
+
+#define MNM_OP_SCHEMA(ClassName, TypeKey)                     \
+  static constexpr const char* _type_key = TypeKey;           \
+  TVM_DECLARE_NODE_TYPE_INFO(ClassName, ::tvm::BaseAttrsNode) \
+  template <typename FVisit>                                  \
+  void __VisitAttrs__(FVisit& __fvisit__) {                   \
+  }                                                           \
+  void Init(const ::mnm::ir::Array<::mnm::value::Value>& args)
+
+#define MNM_ARG_OPTIONAL(i, type, name)    \
+  if (static_cast<int>(args.size()) > i) { \
+    this->name = type(args[i]);            \
+  }
+
+#define MNM_ARG_REQUIRED(i, type, name)                                       \
+  {                                                                           \
+    CHECK(static_cast<int>(args.size()) > i) << "Missing argument " << #name; \
+    this->name = type(args[i]);                                               \
+  }
+
+#define MNM_REGISTER_OP(OpName, ArgsName)                                                \
+  RELAY_REGISTER_OP(OpName).set_attr<::mnm::op::FMNMSchema>(                             \
+      "FMNMSchema", [](const ::mnm::ir::Array<::mnm::value::Value>& args) -> ir::Attrs { \
+        auto attrs = ::mnm::ir::make_node<ArgsName>();                                   \
+        attrs->Init(args);                                                               \
+        return ir::Attrs(attrs);                                                         \
+      })

@@ -28,6 +28,18 @@ class Value : public ir::NodeRef {
  public:
   operator const DLTensor*() const;
   operator const tensor::Tensor&() const;
+  explicit operator int () const;
+  explicit operator int64_t () const;
+  explicit operator float () const;
+  explicit operator double () const;
+  explicit operator bool () const;
+  explicit operator std::string () const;
+  template<typename TValue,
+           typename = typename std::enable_if<
+           std::is_base_of<Value, TValue>::value>::type>
+  explicit operator TValue () const {
+    return ir::Downcast<TValue>(*this);
+  }
   MNM_DEF_NODE_REF_METHODS(Value, ir::NodeRef, ValueNode);
 };
 
@@ -215,6 +227,23 @@ class BoolValue : public ScalarValue {
  public:
   static BoolValue make(bool data);
   MNM_DEF_NODE_REF_METHODS(BoolValue, ScalarValue, BoolValueNode);
+};
+
+/* StringValue */
+class StringValueNode : public ValueNode {
+ public:
+  std::string data;
+  void VisitAttrs(tvm::AttrVisitor* v) final {
+    v->Visit("data", &data);
+  }
+  static constexpr const char* _type_key = "mnm.value.StringValue";
+  MNM_DEF_NODE_TYPE_INFO(StringValueNode, ValueNode);
+};
+
+class StringValue : public Value {
+ public:
+  static StringValue make(const std::string &data);
+  MNM_DEF_NODE_REF_METHODS(StringValue, Value, StringValueNode);
 };
 
 }  // namespace value
