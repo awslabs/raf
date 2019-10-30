@@ -8,7 +8,6 @@ namespace generics {
 
 using namespace mnm::op::args;
 using namespace mnm::value;
-using tensor::Tensor;
 
 template <int n>
 static std::vector<int64_t> Pad(const std::vector<int64_t>& a) {
@@ -26,8 +25,8 @@ void Conv2d(const CallValues& call) {
   // N.B.: NCHW + OIHW
   const auto* args = call->args.as<ConvArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
-  const Tensor& w = args->w;
+  const DLTensor* x = args->x;
+  const DLTensor* w = args->w;
   CHECK_EQ(x->ndim, 4);
   CHECK_EQ(w->ndim, 4);
   // TODO(@junrushao1994): deduce ctx here
@@ -66,7 +65,7 @@ void Pool2D(const CallValues& call) {
   // NCHW
   const auto* args = call->args.as<PoolArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   CHECK_EQ(x->ndim, 4);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   std::vector<int64_t> stride = Pad<2>(args->stride);
@@ -111,7 +110,7 @@ MNM_REGISTER_OP("mnm.op.avg_pool2d", PoolArgs)
 void Softmax(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   NormalizeAxis(args->axis, x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
@@ -134,7 +133,7 @@ void BatchNorm(const CallValues& call) {
   const auto* args = call->args.as<BatchNormArgs>();
   CHECK(args != nullptr);
   // TODO(@junrushao1994): sanity check
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
@@ -158,7 +157,7 @@ namespace generics {
 void Conv2dDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvDxwArgs>();
   CHECK(args != nullptr);
-  const Tensor& x_or_w = args->x_or_w;
+  const DLTensor* x_or_w = args->x_or_w;
   std::vector<int64_t> shape(x_or_w->shape, x_or_w->shape + x_or_w->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x_or_w->ctx,
                                     /*dtype=*/x_or_w->dtype,
@@ -179,7 +178,7 @@ MNM_REGISTER_OP("mnm.op.conv2d_dw", ConvDxwArgs)
 void Pool2DDx(const CallValues& call) {
   const auto* args = call->args.as<PoolDxArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
@@ -200,7 +199,7 @@ MNM_REGISTER_OP("mnm.op.avg_pool2d_dx", PoolDxArgs)
 void SoftmaxDx(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxDxArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,

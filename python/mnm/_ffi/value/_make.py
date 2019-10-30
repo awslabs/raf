@@ -13,6 +13,10 @@ def BoolValue(data):
     pass
 
 
+def StringValue(data):
+    pass
+
+
 def TupleValue(fields):
     pass
 

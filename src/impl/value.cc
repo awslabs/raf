@@ -157,55 +157,6 @@ Value::operator const tensor::Tensor&() const {
   throw;
 }
 
-#define MNM_SWITCH_SCALAR(var, value, body)                      \
-  do                                                             \
-    if (const auto* var = (value).as<IntValueNode>()) {          \
-      body;                                                      \
-    } else if (const auto* var = (value).as<FloatValueNode>()) { \
-      body;                                                      \
-    } else if (const auto* var = (value).as<BoolValueNode>()) {  \
-      body;                                                      \
-    }                                                            \
-  while (0);
-
-Value::operator int() const {
-  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to int";
-  throw;
-}
-
-Value::operator int64_t() const {
-  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to int64_t";
-  throw;
-}
-
-Value::operator float() const {
-  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to float";
-  throw;
-}
-
-Value::operator double() const {
-  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to double";
-  throw;
-}
-
-Value::operator bool() const {
-  MNM_SWITCH_SCALAR(value, *this, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to bool";
-  throw;
-}
-
-Value::operator std::string() const {
-  if (const auto* value = this->as<StringValueNode>()) {
-    return value->data;
-  }
-  LOG(FATAL) << "InternalError: cannot be converted to std::string";
-  throw;
-}
-
 /*** TensorValue ***/
 TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
                                   const std::vector<int64_t>& shape,
@@ -260,6 +211,7 @@ MNM_REGISTER_GLOBAL("mnm.value._make.TupleValue").set_body_typed(TupleValue::mak
 MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
+MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.BoundExpr").set_body_typed(BoundExpr::make);
 
 }  // namespace value

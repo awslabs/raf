@@ -8,7 +8,6 @@ namespace generics {
 
 using namespace mnm::op::args;
 using namespace mnm::value;
-using tensor::Tensor;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
   do                                                             \

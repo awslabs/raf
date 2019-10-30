@@ -8,7 +8,6 @@ namespace generics {
 
 using namespace mnm::op::args;
 using namespace mnm::value;
-using tensor::Tensor;
 
 void Linear(const CallValues& call) {
   /*
@@ -18,8 +17,8 @@ void Linear(const CallValues& call) {
   // TODO(@junrushao1994): sanity check
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x1;
-  const Tensor& w = args->x2;
+  const DLTensor* x = args->x1;
+  const DLTensor* w = args->x2;
   // x is of shape [..., a]
   CHECK_GE(x->ndim, 1);
   // w is of shape [b, a]

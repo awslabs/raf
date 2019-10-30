@@ -8,7 +8,6 @@ namespace generics {
 
 using namespace mnm::op::args;
 using namespace mnm::value;
-using tensor::Tensor;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
   do                                                             \
@@ -61,7 +60,7 @@ MNM_REGISTER_OP("mnm.op.logical_not", UnaryUfuncArgs)
 void Unary(const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
@@ -88,7 +87,7 @@ void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check
   const auto* args = call->args.as<UnaryDxArgs>();
   CHECK(args != nullptr);
-  const Tensor& x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,

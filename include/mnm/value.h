@@ -28,12 +28,6 @@ class Value : public ir::NodeRef {
  public:
   operator const DLTensor*() const;
   operator const tensor::Tensor&() const;
-  explicit operator int () const;
-  explicit operator int64_t () const;
-  explicit operator float () const;
-  explicit operator double () const;
-  explicit operator bool () const;
-  explicit operator std::string () const;
   template<typename TValue,
            typename = typename std::enable_if<
            std::is_base_of<Value, TValue>::value>::type>
