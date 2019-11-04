@@ -2,7 +2,7 @@ import ast
 import inspect
 from typing import List, Set, Tuple
 
-from .utils import SUPPORTED_OPS, NodeTransformer, NodeVisitor
+from .hybrid_utils import SUPPORTED_OPS, NodeTransformer, NodeVisitor
 
 
 class LocalNames(NodeVisitor):

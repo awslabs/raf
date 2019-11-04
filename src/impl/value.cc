@@ -14,21 +14,8 @@ namespace value {
 using common::shape_utils::GetShape;
 using common::shape_utils::MakeShape;
 using executor::Executor;
-using ir::Array;
-using ir::Downcast;
-using ir::Expr;
-using ir::Function;
-using ir::Integer;
-using ir::make_node;
-using ir::Map;
-using ir::NodePtr;
-using ir::NodeRef;
-using ir::Op;
-using ir::TensorType;
-using ir::TupleType;
-using ir::Type;
-using ir::Var;
 using tensor::Tensor;
+using namespace mnm::ir;
 
 /*** Constructors ***/
 TensorValue TensorValue::make(tensor::Tensor tensor) {

@@ -80,48 +80,33 @@ class OpDispatch {
   registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
-// TODO: change it to FOpDeclare
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 
 void RunDeclare(const CallValues& call);
+ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);
+ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 
 }  // namespace op
 }  // namespace mnm
 
-#define _MNM_REGISTER_OP_DISPATCH_DEF \
-  static DMLC_ATTRIBUTE_UNUSED ::mnm::op::OpDispatch& __make_##OpDispatch
+#define _MNM_OP_DISPATCH_DEF static DMLC_ATTRIBUTE_UNUSED ::mnm::op::OpDispatch& __make_##OpDispatch
 
-#define MNM_REGISTER_OP_DISPATCH(op_name, ctx, backend_name, op_env_maker) \
-  DMLC_STR_CONCAT(_MNM_REGISTER_OP_DISPATCH_DEF, __COUNTER__) =            \
-      ::mnm::op::OpDispatch::Registry()                                    \
-          ->__REGISTER_OR_GET__(op_name)                                   \
-          .set_name(op_name)                                               \
-          .add_dispatch(ctx, backend_name, op_env_maker)
+#define MNM_OP_REGISTER(op_name) RELAY_REGISTER_OP(op_name)
 
-#define MNM_OP_SCHEMA(ClassName, TypeKey)                     \
-  static constexpr const char* _type_key = TypeKey;           \
-  TVM_DECLARE_NODE_TYPE_INFO(ClassName, ::tvm::BaseAttrsNode) \
-  template <typename FVisit>                                  \
-  void __VisitAttrs__(FVisit& __fvisit__) {                   \
-  }                                                           \
-  void Init(const ::mnm::ir::Array<::mnm::value::Value>& args)
+#define MNM_OP_DECLARE(op_name, body) \
+  RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FMNMDeclare>("FMNMDeclare", body);
 
-#define MNM_ARG_OPTIONAL(i, type, name)    \
-  if (static_cast<int>(args.size()) > i) { \
-    this->name = type(args[i]);            \
+#define MNM_OP_DISPATCH(op_name, op_env, device_type, backend_name) \
+  DMLC_STR_CONCAT(_MNM_OP_DISPATCH_DEF, __COUNTER__) =              \
+      ::mnm::op::OpDispatch::Registry()                             \
+          ->__REGISTER_OR_GET__(op_name)                            \
+          .set_name(op_name)                                        \
+          .add_dispatch(device_type, backend_name, op_env::make)
+
+#define MNM_OP_SCHEMA(class_name, type_key)                    \
+  static constexpr const char* _type_key = type_key;           \
+  TVM_DECLARE_NODE_TYPE_INFO(class_name, ::tvm::BaseAttrsNode) \
+  template <typename FVisit>                                   \
+  void __VisitAttrs__(FVisit& __fvisit__) {                    \
   }
-
-#define MNM_ARG_REQUIRED(i, type, name)                                       \
-  {                                                                           \
-    CHECK(static_cast<int>(args.size()) > i) << "Missing argument " << #name; \
-    this->name = type(args[i]);                                               \
-  }
-
-#define MNM_REGISTER_OP(OpName, ArgsName)                                                \
-  RELAY_REGISTER_OP(OpName).set_attr<::mnm::op::FMNMSchema>(                             \
-      "FMNMSchema", [](const ::mnm::ir::Array<::mnm::value::Value>& args) -> ir::Attrs { \
-        auto attrs = ::mnm::ir::make_node<ArgsName>();                                   \
-        attrs->Init(args);                                                               \
-        return ir::Attrs(attrs);                                                         \
-      })

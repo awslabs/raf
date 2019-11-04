@@ -1,8 +1,8 @@
 import numpy as np
 
-from mnm._core.ir.constant import ConstantExpr, ExtractValue
+from mnm._ffi.ir.constant import ExtractValue
+from mnm._core.ir import ConstantExpr
 from mnm._core.value import FloatValue, IntValue, TensorValue
-from mnm._ffi._tvm import tvm
 
 
 def test_constant_int():

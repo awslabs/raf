@@ -1,7 +1,7 @@
 import ast
 from sys import version_info
 
-from .utils import NodeVisitor, SUPPORTED_OPS
+from .hybrid_utils import NodeVisitor, SUPPORTED_OPS
 
 
 SUPPORTED = {

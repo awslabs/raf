@@ -8,7 +8,6 @@
 #include <mnm/value.h>
 #include "../common/arg_utils.h"
 #include "../common/shape_utils.h"
-#include "../op/args/list_args.h"
 #include "../requests.h"
 
 namespace mnm {
@@ -24,6 +23,8 @@ using op::CallValues;
 using op::RunDeclare;
 using op::OpDispatch;
 using op::OpEnv;
+using op::MakeListArgs;
+using op::GetListArgs;
 using registry::GetPackedFunc;
 using registry::PackedFunc;
 using registry::TypedPackedFunc;
@@ -127,9 +128,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     CallValues call_values = CallValues::make();
     call_values->callee = Eval(call->op);
     if (call_values->callee->is_type<ClosureValueNode>()) {
-      auto attrs = ir::make_node<op::args::ListArgs>();
-      attrs->Init(args);
-      call_values->args = Attrs(attrs);
+      call_values->args = MakeListArgs(args);
       return InvokeClosure(call_values);
     } else if (const auto* op = call_values->callee.as<OpValueNode>()) {
       call_values->args = fschema[op->op](args);
@@ -234,7 +233,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   Value InvokeClosure(const CallValues& call) {
     const auto* node = call->callee.as<ClosureValueNode>();
     const Function& func = node->func;
-    const Array<Value>& call_args = call->args.as<op::args::ListArgs>()->args;
+    const Array<Value>& call_args = GetListArgs(call->args);
     Map<Var, Value> locals;
     CHECK_EQ(func->params.size(), call_args.size());
     int n_args = call_args.size();

@@ -146,12 +146,6 @@ using tvm::relay::ExprFunctor;
   }                                                                    \
   using ContainerType = NodeName;
 
-#define MNM_DECLARE_ATTRS TVM_DECLARE_ATTRS
-
-#define MNM_ATTR_FIELD TVM_ATTR_FIELD
-
-#define MNM_REGISTER_NODE_TYPE TVM_REGISTER_NODE_TYPE
-
-#define MNM_ADD_FILELINE TVM_ADD_FILELINE
+#define MNM_REGISTER_NODE_TYPE(name) TVM_REGISTER_NODE_TYPE(name)
 
 #include <mnm/ir_ext.h>

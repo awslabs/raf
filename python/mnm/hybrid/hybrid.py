@@ -4,19 +4,20 @@ from typing import Callable, Dict
 
 import numpy as np
 
-from .._core.base import set_module
-from .._core.bound_expr import BoundExpr
-from .._core.executor import Interpreter
-from .._core.ir import ConstantExpr, Module
-from .._core.ndarray import ndarray as NDArray
-from .._core.value import BoolValue, FloatValue, IntValue
-from .._ffi._tvm import relay
+from mnm._core.bound_expr import BoundExpr
+from mnm._core.core_utils import set_module
+from mnm._core.executor import Interpreter
+from mnm._core.ir import ConstantExpr, Module
+from mnm._core.ndarray import ndarray as NDArray
+from mnm._core.value import BoolValue, FloatValue, IntValue
+from mnm._lib import relay
+
 from .cfg import ast2cfg
+from .hybrid_utils import get_func_name
 from .ir_builder import build_ir
 from .sanity_check import sanity_check
 from .to_builder import to_builder
 from .to_relay import cfg2relay
-from .utils import get_func_name
 
 FUNC_TAB: Dict[Callable, Callable] = {}
 FUNC_VAR: Dict[Callable, relay.GlobalVar] = {}
@@ -25,11 +26,14 @@ MNM_MODULE = Module.GLOBAL
 
 def find_invoker_name(namespace) -> str:
     name = "__ir_builder_invoker"
+
     if name not in namespace:
         return name
     i = 0
+
     while True:
         new_name = name + "$" + str(i)
+
         if new_name not in namespace:
             return new_name
         i += 1
@@ -47,20 +51,26 @@ ARG_MAKERS = {
 def _make_argument(a):
     if type(a) not in ARG_MAKERS:
         raise NotImplementedError
+
     return ARG_MAKERS[type(a)](a)
 
 
 def _unwrap(a):
     if isinstance(a, IntValue):
         return a.data
+
     if isinstance(a, FloatValue):
         return a.data
+
     if isinstance(a, BoolValue):
         return bool(a.data)
+
     if isinstance(a, BoundExpr):
         return NDArray(a)
+
     if isinstance(a, list):
         return [_unwrap(item) for item in a]
+
     if isinstance(a, tuple):
         return tuple(_unwrap(item) for item in a)
     raise NotImplementedError
@@ -86,13 +96,16 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     local_names = list(local_names)
     hybrid_module = cfg2relay(cfg, pyfunc, local_names, entry)
     # build relay module
+
     for global_var, func in hybrid_module.items():
         MNM_MODULE[global_var] = func
 
     def call(*args):
         code = relay.Call(op=entry, args=[_make_argument(arg) for arg in args])
         result = Interpreter.GLOBAL(code)
+
         return _unwrap(result)
+
     return call
 
 
@@ -104,6 +117,7 @@ def hybrid(python=False):
         global FUNC_VAR
         func_name = get_func_name(pyfunc)
         sig = inspect.signature(pyfunc)
+
         if pyfunc not in FUNC_TAB:
             FUNC_TAB[pyfunc] = None
             FUNC_VAR[pyfunc] = relay.GlobalVar(func_name)
@@ -113,9 +127,11 @@ def hybrid(python=False):
             bound.apply_defaults()
             pos_args = list(bound.arguments.values())
             func = FUNC_TAB[pyfunc]
+
             if func is None:
                 func = pyfunc2relay(pyfunc, FUNC_VAR[pyfunc])
                 FUNC_TAB[pyfunc] = func
+
             return func(*pos_args)
 
         return transformed
@@ -123,4 +139,5 @@ def hybrid(python=False):
     if callable(python):
         return hybrid_no_python(python)
     assert not python
+
     return hybrid_no_python

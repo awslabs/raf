@@ -38,12 +38,14 @@ namespace ir {
 
 using RelayConstantNode = tvm::relay::ConstantNode;
 using RelayConstant = tvm::relay::Constant;
+using Constant = tvm::relay::Constant;
 
 class ConstantNode : public RelayConstantNode {
  public:
   NodeRef value{nullptr};
 };
-using Constant = tvm::relay::Constant;
+
+RelayConstant MakeConstant(NodeRef node_ref);
 
 }  // namespace ir
 }  // namespace mnm

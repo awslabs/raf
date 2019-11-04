@@ -1,10 +1,10 @@
-from .._ffi.value import _make
-from .base import register_mnm_node
-from .value import Value
+from mnm._core.core_utils import register_node
+from mnm._ffi.value import _make
+from mnm._lib import _NodeBase as NodeBase
 
 
-@register_mnm_node("mnm.value.BoundExpr")
-class BoundExpr(Value):
+@register_node("mnm.value.BoundExpr")
+class BoundExpr(NodeBase):
 
     def __init__(self, expr, value, executor=None):
         self.__init_handle_by_constructor__(

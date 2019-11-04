@@ -8,7 +8,7 @@
 #include <mnm/base.h>
 #include <tvm/runtime/registry.h>
 
-#define MNM_REGISTER_GLOBAL TVM_REGISTER_GLOBAL
+#define MNM_REGISTER_GLOBAL(name) TVM_REGISTER_GLOBAL(name)
 
 namespace mnm {
 namespace registry {
@@ -16,6 +16,7 @@ namespace registry {
 using tvm::runtime::PackedFunc;
 using tvm::runtime::Registry;
 using tvm::runtime::TVMArgs;
+using tvm::runtime::TVMArgValue;
 using tvm::runtime::TVMRetValue;
 using tvm::runtime::TypedPackedFunc;
 

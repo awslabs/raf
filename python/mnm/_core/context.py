@@ -1,6 +1,7 @@
-from .._ffi._tvm import _DLContext
-from .base import set_module
+from mnm._lib import _DLContext
+from mnm._core.core_utils import set_module
 
+#TODO(@junrushao1994): entirely remove ctx
 
 def __init_name_dict():
     STR2MASK = {

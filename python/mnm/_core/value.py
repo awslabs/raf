@@ -1,15 +1,16 @@
-from .._ffi._tvm import _NodeBase, tvm
-from .._ffi.value import AssembleTensorValue, DeTuple, FromTVM, _make
-from .base import register_mnm_node
-from .context import Context
+from mnm._core.context import Context
+from mnm._core.core_utils import register_node
+from mnm._ffi import value as ffi
+from mnm._ffi.value import _make
+from mnm._lib import _NodeBase as NodeBase
 
 
-@register_mnm_node("mnm.value.Value")
-class Value(_NodeBase):
+@register_node("mnm.value.Value")
+class Value(NodeBase):
     pass
 
 
-@register_mnm_node("mnm.value.TensorValue")
+@register_node("mnm.value.TensorValue")
 class TensorValue(Value):
 
     @property
@@ -67,18 +68,20 @@ class TensorValue(Value):
             ctx = Context(ctx)
         assert isinstance(ctx, Context), type(ctx)
 
-        return AssembleTensorValue(ctx, dtype, shape, strides, data)
+        return ffi.AssembleTensorValue(ctx, dtype, shape, strides, data)
 
     @staticmethod
     def from_tvm(tvm_array):
-        return FromTVM(tvm_array)
+        return ffi.FromTVM(tvm_array)
 
     @staticmethod
     def from_numpy(np_array):
+        from mnm._lib import tvm
+
         return TensorValue.from_tvm(tvm.ndarray.array(np_array))
 
 
-@register_mnm_node("mnm.value.IntValue")
+@register_node("mnm.value.IntValue")
 class IntValue(Value):
 
     def __init__(self, data):
@@ -86,7 +89,7 @@ class IntValue(Value):
         self.__init_handle_by_constructor__(_make.IntValue, data)
 
 
-@register_mnm_node("mnm.value.FloatValue")
+@register_node("mnm.value.FloatValue")
 class FloatValue(Value):
 
     def __init__(self, data):
@@ -94,7 +97,7 @@ class FloatValue(Value):
         self.__init_handle_by_constructor__(_make.FloatValue, data)
 
 
-@register_mnm_node("mnm.value.BoolValue")
+@register_node("mnm.value.BoolValue")
 class BoolValue(Value):
 
     def __init__(self, data):
@@ -102,7 +105,7 @@ class BoolValue(Value):
         self.__init_handle_by_constructor__(_make.BoolValue, data)
 
 
-@register_mnm_node("mnm.value.StringValue")
+@register_node("mnm.value.StringValue")
 class StringValue(Value):
 
     def __init__(self, data):
@@ -110,7 +113,7 @@ class StringValue(Value):
         self.__init_handle_by_constructor__(_make.StringValue, data)
 
 
-@register_mnm_node("mnm.value.TupleValue")
+@register_node("mnm.value.TupleValue")
 class TupleValue(Value):
 
     def __init__(self, values):
@@ -130,4 +133,4 @@ class TupleValue(Value):
 
     @property
     def _de_tuple(self):
-        return DeTuple(self)
+        return ffi.DeTuple(self)

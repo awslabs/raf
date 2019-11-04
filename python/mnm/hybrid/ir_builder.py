@@ -4,9 +4,10 @@ from inspect import isfunction
 from numbers import Number
 from typing import Callable, Dict
 
-from .._core.ir import ConstantExpr
-from .._ffi._tvm import relay
-from .utils import OP_MAKER, NodeTransformer
+from mnm._core.ir import ConstantExpr
+from mnm._lib import relay
+
+from .hybrid_utils import OP_MAKER, NodeTransformer
 
 SymTab = Dict[str, relay.Var]
 
@@ -15,14 +16,17 @@ def _convert(expr, debug):
     if debug:
         if isinstance(expr, ast.AST):
             return expr
+
         if isinstance(expr, Number):
             return ast.Num(n=expr)
+
         if isinstance(expr, str):
             return ast.Str(s=expr)
         raise NotImplementedError(expr)
     else:
         if isfunction(expr):
             return expr
+
         if isinstance(expr, Number):
             return lambda _: ConstantExpr(expr)
         raise NotImplementedError(expr)
@@ -46,11 +50,14 @@ class IRBuilder(object):
     def sym_get(self, name: str) -> Callable[[SymTab], relay.Expr]:
         if self.debug:
             assert name in self.sym_names
+
             return ast.Name(id=name, ctx=ast.Load())
+
         return lambda sym_tab: sym_tab[name]
 
     def make_tuple(self, *args):
         makers = [_convert(arg, debug=self.debug) for arg in args]
+
         return lambda sym_tab: relay.Tuple([maker(sym_tab) for maker in makers])
 
     def sym_slice_index(self, value: Callable[[SymTab], relay.Expr], index: int):
@@ -59,8 +66,10 @@ class IRBuilder(object):
     def sym_slice_strided(self, value: Callable[[SymTab], relay.Expr], lower: int, upper: int, step: int):
         def _sym_slice_strided(sym_tab: SymTab):
             content = value(sym_tab)
+
             return relay.Tuple([relay.TupleGetItem(content, i)
                                 for i in range(lower, upper, step)])
+
         return _sym_slice_strided
 
     def op(self, category: str, node_t: type, *args) -> Callable[[SymTab], relay.Expr]:
@@ -76,9 +85,11 @@ class IRBuilder(object):
             assert category in DEBUG_RULES.keys(), "{} is not defined".format(category)
             cnt, constructor = DEBUG_RULES[category]
             assert len(args) == cnt
+
             return constructor(args)
         args = [_convert(arg, debug=False) for arg in args]
         maker = OP_MAKER[node_t]
+
         return lambda sym_tab: maker(*(arg(sym_tab) for arg in args))
 
     def sym_set(self, name: str, expr) -> None:
@@ -142,4 +153,5 @@ class IRBuilder(object):
 def build_ir(invoker: Callable[[IRBuilder], None], debug=False) -> ast.Module:
     ib = IRBuilder(debug=debug)
     invoker(ib, ast)
+
     return ib.get()

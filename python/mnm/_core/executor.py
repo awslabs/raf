@@ -1,5 +1,5 @@
-from .._ffi.executor import CreateInterpreter
-from .ir import Module
+import mnm._ffi.executor as ffi
+from mnm._core.ir import Module
 
 
 class Interpreter(object):
@@ -10,7 +10,7 @@ class Interpreter(object):
         if module is None:
             module = Module.GLOBAL
         self.module = module
-        self.runner = CreateInterpreter(module)
+        self.runner = ffi.CreateInterpreter(module)
 
     def __call__(self, expr):
         return self.runner(expr)

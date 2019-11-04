@@ -2,7 +2,7 @@ import ast
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union
 
-from .utils import NodeVisitor, unbound_constant_expr
+from .hybrid_utils import NodeVisitor, unbound_constant_expr
 
 # Tuple[()] : Return
 # Tuple[ast.AST]: unconditional jump

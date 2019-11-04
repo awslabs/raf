@@ -31,25 +31,21 @@ Function ModuleLookup(Module mod, GlobalVar var, Function func) {
   return mod->Lookup(var);
 }
 
-RelayConstant ConstantNode_make(NodeRef node_ref) {
+RelayConstant MakeConstant(NodeRef node_ref) {
   NodePtr<ConstantNode> n = make_node<ConstantNode>();
   n->value = std::move(node_ref);
   return RelayConstant(n);
 }
 
-NodeRef ConstantNode_ExtractValue(RelayConstant _node) {
+NodeRef ConstantExtractValue(RelayConstant _node) {
   const ConstantNode* node = static_cast<const ConstantNode*>(_node.get());
   return node->value;
 }
 
 MNM_REGISTER_GLOBAL("mnm.ir._make.Module").set_body_typed(Module::make);
-
-MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(ConstantNode_make);
-
-MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantNode_ExtractValue);
-
+MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
+MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
-
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
 
 }  // namespace ir
