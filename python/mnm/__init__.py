@@ -6,4 +6,5 @@ from . import _lib
 from . import _ffi
 from . import _core
 from .hybrid import hybrid
-from .op.imports import array
+
+from ._core.numpy_bridge import array

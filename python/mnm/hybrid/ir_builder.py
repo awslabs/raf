@@ -4,7 +4,7 @@ from inspect import isfunction
 from numbers import Number
 from typing import Callable, Dict
 
-from mnm._core.ir import ConstantExpr
+from mnm._core.value import Value
 from mnm._lib import relay
 
 from .hybrid_utils import OP_MAKER, NodeTransformer
@@ -28,7 +28,7 @@ def _convert(expr, debug):
             return expr
 
         if isinstance(expr, Number):
-            return lambda _: ConstantExpr(expr)
+            return lambda _: Value.as_const_expr(expr)
         raise NotImplementedError(expr)
 
 

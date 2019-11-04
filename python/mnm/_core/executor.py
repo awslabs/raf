@@ -1,5 +1,5 @@
 import mnm._ffi.executor as ffi
-from mnm._core.ir import Module
+from mnm._core.module import Module
 
 
 class Interpreter(object):

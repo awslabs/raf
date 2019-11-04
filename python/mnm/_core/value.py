@@ -1,6 +1,6 @@
-from mnm._core.context import Context
-from mnm._core.core_utils import register_node
+from mnm._core.core_utils import ctx2str, register_node, str2ctx
 from mnm._ffi import value as ffi
+from mnm._ffi.ir._make import Constant as make_const_expr
 from mnm._ffi.value import _make
 from mnm._lib import _NodeBase as NodeBase
 
@@ -8,6 +8,21 @@ from mnm._lib import _NodeBase as NodeBase
 @register_node("mnm.value.Value")
 class Value(NodeBase):
     pass
+
+    @staticmethod
+    def as_const_expr(value):
+        if isinstance(value, Value):
+            return make_const_expr(value)
+
+        if isinstance(value, int):
+            return make_const_expr(IntValue(value))
+
+        if isinstance(value, float):
+            return make_const_expr(FloatValue(value))
+
+        if isinstance(value, bool):
+            return make_const_expr(BoolValue(value))
+        raise NotImplementedError
 
 
 @register_node("mnm.value.TensorValue")
@@ -25,10 +40,7 @@ class TensorValue(Value):
 
     @property
     def ctx(self):
-        handle = self.dltensor_handle
-        ctx = handle.contents.ctx
-
-        return Context.create(ctx.device_type, ctx.device_id)
+        return ctx2str(self.dltensor_handle.contents.ctx)
 
     @property
     def ndim(self):
@@ -64,11 +76,7 @@ class TensorValue(Value):
 
     @staticmethod
     def assemble(shape, dtype, ctx, strides=None, data=None):
-        if isinstance(ctx, str):
-            ctx = Context(ctx)
-        assert isinstance(ctx, Context), type(ctx)
-
-        return ffi.AssembleTensorValue(ctx, dtype, shape, strides, data)
+        return ffi.AssembleTensorValue(str2ctx(ctx), dtype, shape, strides, data)
 
     @staticmethod
     def from_tvm(tvm_array):
@@ -134,3 +142,11 @@ class TupleValue(Value):
     @property
     def _de_tuple(self):
         return ffi.DeTuple(self)
+
+
+@register_node("mnm.value.BoundExpr")
+class BoundExpr(NodeBase):
+
+    def __init__(self, expr, value, executor=None):
+        self.__init_handle_by_constructor__(
+            _make.BoundExpr, expr, value, executor)

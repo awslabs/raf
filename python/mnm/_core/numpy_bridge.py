@@ -1,8 +1,10 @@
 import ctypes
 
 import mnm._ffi.tensor as ffi
-from mnm._core.context import Context
+from mnm._core.core_utils import set_module, str2ctx
 from mnm._core.value import TensorValue
+from mnm._core.ndarray import _create_by_pair
+from mnm._ffi.ir._make import Constant as MakeConstant
 from mnm._lib import _DLManagedTensor, _register_func, tvm
 
 _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)
@@ -19,7 +21,7 @@ def _np_del(handle):
 def np_to_tensor_value(npa, ctx=None):
 
     def _tensor_value(obj):
-        ctx = Context("cpu")
+        ctx = str2ctx("cpu")
         dtype = str(obj.dtype)
         shape = [x for x in obj.shape]
         strides = [x // obj.itemsize for x in obj.strides]
@@ -41,7 +43,15 @@ def np_to_tensor_value(npa, ctx=None):
 
         return result
 
-    ctx = Context(ctx)
-    tvm_array = tvm.ndarray.array(npa, ctx=ctx)
+    tvm_array = tvm.ndarray.array(npa, ctx=str2ctx(ctx))
 
     return TensorValue.from_tvm(tvm_array)
+
+
+@set_module("mnm")
+def array(object, dtype=None, copy=True, order='K', subok=False, ndmin=0, ctx=None):
+    import numpy as np
+    npa = np.array(object, dtype=dtype, copy=copy,
+                   order=order, subok=subok, ndmin=ndmin)
+    value = np_to_tensor_value(npa, ctx=ctx)
+    return _create_by_pair(expr=MakeConstant(value), value=value)

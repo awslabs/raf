@@ -1,13 +1,13 @@
 import ast
 
+from mnm._core.value import IntValue, Value
 from mnm._lib import _get_global_func, relay
-from .._core.ir import ConstantExpr
-from .._core.value import IntValue
 
 
 def _wrap_op(name):
     get_op = _get_global_func("relay.op._GetOp")
     op = get_op(name)
+
     return lambda *args: relay.Call(op=op, args=args, attrs=None)
 
 
@@ -58,15 +58,18 @@ class NodeVisitor(object):
     def visit(self, node, *args, **kwargs):
         method = 'visit_' + node.__class__.__name__
         visitor = getattr(self, method, None)
+
         if visitor is None:
             if not self.strict:
                 return self.generic_visit(node, *args, **kwargs)
             raise NotImplementedError("{} is not supported in {}".format(
                 node.__class__.__name__, self.__class__.__name__))
+
         return visitor(node, *args, **kwargs)
 
     def generic_visit(self, node, *args, **kwargs):
         # XXX: It doesn't deal with return value.
+
         for _, value in ast.iter_fields(node):
             if isinstance(value, list):
                 for item in value:
@@ -82,28 +85,34 @@ class NodeTransformer(NodeVisitor):
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
+
                 for value in old_value:
                     if isinstance(value, ast.AST):
                         value = self.visit(value, *args, **kwargs)
+
                         if value is None:
                             continue
                         elif not isinstance(value, ast.AST):
                             new_values.extend(value)
+
                             continue
                     new_values.append(value)
                 old_value[:] = new_values
             elif isinstance(old_value, ast.AST):
                 new_node = self.visit(old_value, *args, **kwargs)
+
                 if new_node is None:
                     delattr(node, field)
                 else:
                     setattr(node, field, new_node)
+
         return node
 
 
 def unbound_constant_expr():
     # TODO(@junrushao1994): fake it until you make it
-    return ConstantExpr(IntValue(0))
+
+    return Value.as_const_expr(IntValue(0))
 
 
 def get_func_name(pyfunc):

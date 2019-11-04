@@ -1,7 +1,6 @@
 import mnm._ffi.value as ffi
-from mnm._core.bound_expr import BoundExpr
-from mnm._core.context import Context
-from mnm._core.core_utils import set_module
+from mnm._core.core_utils import ctx2str, set_module
+from mnm._core.value import BoundExpr
 
 
 @set_module("mnm")
@@ -15,9 +14,7 @@ class ndarray(object):
 
     @property
     def ctx(self):
-        ctx = self.__handle._value._tensor.handle.contents.ctx
-
-        return Context.create(ctx.device_type, ctx.device_id)
+        return ctx2str(self.__handle._value._tensor.handle.contents.ctx)
 
     @property
     def ndim(self):

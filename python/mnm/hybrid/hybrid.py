@@ -4,12 +4,11 @@ from typing import Callable, Dict
 
 import numpy as np
 
-from mnm._core.bound_expr import BoundExpr
 from mnm._core.core_utils import set_module
 from mnm._core.executor import Interpreter
-from mnm._core.ir import ConstantExpr, Module
+from mnm._core.module import Module
 from mnm._core.ndarray import ndarray as NDArray
-from mnm._core.value import BoolValue, FloatValue, IntValue
+from mnm._core.value import BoolValue, BoundExpr, FloatValue, IntValue, Value
 from mnm._lib import relay
 
 from .cfg import ast2cfg
@@ -40,10 +39,10 @@ def find_invoker_name(namespace) -> str:
 
 
 ARG_MAKERS = {
-    int: ConstantExpr,
-    float: ConstantExpr,
-    bool: ConstantExpr,
-    np.ndarray: ConstantExpr,
+    int: Value.as_const_expr,
+    float: Value.as_const_expr,
+    bool: Value.as_const_expr,
+    np.ndarray: Value.as_const_expr,
     NDArray: None,  # TODO
 }
 
