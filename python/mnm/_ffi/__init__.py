@@ -1,3 +1,4 @@
+from . import build_info
 from . import device_api
 from . import executor
 from . import ir

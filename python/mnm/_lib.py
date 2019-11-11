@@ -65,6 +65,7 @@ def find_lib_path(name=None, search_path=None):
     dll_path.append(os.path.join(ffi_dir, ".."))
     # Default cmake build directory
     dll_path.append(os.path.join(source_dir, "build"))
+    dll_path.append(os.path.join(source_dir, "build", "lib"))
     dll_path.append(os.path.join(source_dir, "build", "Release"))
     # Default make build directory
     dll_path.append(os.path.join(source_dir, "lib"))

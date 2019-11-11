@@ -1,73 +1,110 @@
 cmake_minimum_required(VERSION 3.8)
+project(mnm C CXX)
 
-################# Utilities #################
-include(cmake/Util.cmake)
-include(cmake/ClangFormat.cmake)
-clangformat()
+################# User-defined configurations from config.cmake #################
+include(${PROJECT_SOURCE_DIR}/cmake/utils/MNMCmakeUtils.cmake)
+mnm_option(MNM_USE_LLVM "MNM depends on LLVM to do code generation. Option: [ON/OFF/Path-to-llvm-config-executable]" ON)
+mnm_option(MNM_USE_CUDA "Build MNM with CUDA. Option: [ON/OFF]" OFF)
+mnm_option(MNM_USE_CUDNN "Build MNM with cuDNN. Option: [ON/OFF/Path-to-cuDNN]" OFF)
+mnm_option(MNM_USE_GTEST "Build cpptests for MNM. Option: [ON/OFF]" OFF)
+mnm_option(MNM_USE_SANITIZER "Build MNM with sanitizer. Option: [OFF/ASAN/MSAN/TSAN/UBSAN]" OFF)
+mnm_find_config()
 
-################# User-defined configurations #################
-if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
-  include(${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
-  message(STATUS "Found ${CMAKE_CURRENT_BINARY_DIR}/config.cmake")
-else()
-  message(WARNING "config.cmake is not found")
+if (NOT ${MNM_USE_CUDA} STREQUAL "OFF")
+  enable_language(CUDA)
 endif()
 
-mnm_option(MNM_USE_CUDA "The path to CUDA prefix" OFF)
-mnm_option(MNM_USE_CUDNN "The path to CUDNN prefix" OFF)
-mnm_option(MNM_USE_GTEST "The path to GTEST prefix" OFF)
+################# Modules and Third-Party Targets #################
+include(${PROJECT_SOURCE_DIR}/cmake/modules/Threads.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/Git.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDA.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDNN.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/Sanitizer.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/TVM.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/GTest.cmake)
 
-if (NOT MNM_USE_CUDA)
-  project(mnm C CXX)
-else()
-  project(mnm C CXX CUDA)
-  set(USE_CUDA ${MNM_USE_CUDA})
+################# Primary Target: MNM #################
+set(MNM_INCLUDE_DIRS
+  ${CMAKE_CURRENT_LIST_DIR}/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dlpack/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dmlc-core/include/
+)
+
+set(MNM_BACKEND_INCLUDE_DIRS
+  ${MNM_CUDNN_INCLUDE}
+)
+
+set(MNM_LINK_LIBS
+  tvm
+  Threads::Threads
+  ${CMAKE_DL_LIBS}
+)
+
+set(MNM_BACKEND_LINK_LIBS
+  ${MNM_CUDNN_LIBRARY}
+)
+
+set_property(
+  SOURCE ${CMAKE_CURRENT_LIST_DIR}/src/impl/build_info.cc
+  APPEND
+  PROPERTY COMPILE_DEFINITIONS
+  MNM_GIT_VERSION="${MNM_GIT_VERSION}"
+  MNM_USE_CUDA="${MNM_USE_CUDA}"
+  MNM_USE_LLVM="${MNM_USE_LLVM}"
+  MNM_USE_CUDNN="${MNM_USE_CUDNN}"
+)
+
+file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
+  ${CMAKE_CURRENT_LIST_DIR}/src/common/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cpu/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/memory_pool/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/schema/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/generic/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/regs/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
+)
+
+if (${MNM_USE_CUDA} STREQUAL "OFF")
+  set(MNM_CUDA_SOURCE_FILES "")
+else ()
+  file(GLOB_RECURSE MNM_CUDA_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cu
+    ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cu
+  )
 endif()
 
-################# Basic requirement #################
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
-add_definitions(-DDMLC_USE_FOPEN64=0)
-
-################# Thrid-party libraries #################
-add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/tvm)
-add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/tvm/3rdparty/dmlc-core/)
-set(MNM_3RD_PARTY_INCLUDE_DIRS
-  ${CMAKE_SOURCE_DIR}/3rdparty/tvm/include
-  ${CMAKE_SOURCE_DIR}/3rdparty/tvm/3rdparty/dlpack/include/
-  ${CMAKE_SOURCE_DIR}/3rdparty/tvm/3rdparty/dmlc-core/include/
+set(MNM_SOURCE_FILES
+  ${MNM_CXX_SOURCE_FILES}
+  ${MNM_CUDA_SOURCE_FILES}
 )
 
-################# Target: MNM #################
-file(GLOB_RECURSE MNM_SRC_FILES
-  ${CMAKE_SOURCE_DIR}/src/common/*.cc
-  ${CMAKE_SOURCE_DIR}/src/device_api/cpu/*.cc
-  ${CMAKE_SOURCE_DIR}/src/memory_pool/*.cc
-  ${CMAKE_SOURCE_DIR}/src/op/schema/*.cc
-  ${CMAKE_SOURCE_DIR}/src/op/generic/*.cc
-  ${CMAKE_SOURCE_DIR}/src/op/regs/*.cc
-  ${CMAKE_SOURCE_DIR}/src/impl/*.cc
-)
-
-set(MNM_HEADER_FILES ${CMAKE_SOURCE_DIR}/include)
-set(MNM_LINK_LIBRARIES "")
-
-list(APPEND MNM_LINK_LIBRARIES "dmlc")
-list(APPEND MNM_LINK_LIBRARIES "tvm")
-
-################# Backends #################
-include(${CMAKE_SOURCE_DIR}/cmake/backend/CUDA.cmake)
-
-# Finalize the compilation target here
-add_library(mnm SHARED ${MNM_SRC_FILES})
-set_target_properties(mnm PROPERTIES CXX_STANDARD 14)
+add_library(mnm ${MNM_SOURCE_FILES})
+target_include_directories(mnm PRIVATE ${MNM_INCLUDE_DIRS} ${MNM_BACKEND_INCLUDE_DIRS})
+target_link_libraries(mnm PRIVATE ${MNM_LINK_LIBS} ${MNM_BACKEND_LINK_LIBS})
 target_compile_features(mnm PRIVATE cxx_std_14)
-target_include_directories(mnm PRIVATE ${MNM_HEADER_FILES})
-target_include_directories(mnm PRIVATE ${MNM_3RD_PARTY_INCLUDE_DIRS})
-target_link_libraries(mnm ${MNM_LINK_LIBRARIES})
+
+set_target_properties(mnm PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+  POSITION_INDEPENDENT_CODE ON
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  CUDA_STANDARD 14
+  CUDA_STANDARD_REQUIRED ON
+  CUDA_EXTENSIONS OFF
+  CUDA_SEPARABLE_COMPILATION ON
+  # CUDA_PTX_COMPILATION
+  # CUDA_RESOLVE_DEVICE_SYMBOLS
+)
+mnm_target_add_sanitizer(mnm)
 
 ################# Apps #################
-add_subdirectory(apps)
-add_subdirectory(tests/cpp)
-add_subdirectory(tests/cuda)
-add_subdirectory(tests/cudnn)
+add_subdirectory(${PROJECT_SOURCE_DIR}/apps/include_mnm/)
+
+################# Tests #################
+if (${MNM_USE_GTEST} STREQUAL "ON")
+  add_subdirectory(${PROJECT_SOURCE_DIR}/tests/cpp)
+endif()
