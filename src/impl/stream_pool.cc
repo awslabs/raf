@@ -75,7 +75,7 @@ class StreamPool {
         new PerContextStore<StreamPool, false>();
     std::shared_ptr<StreamPool>& ret = per_device->Get(ctx);
     if (ret == nullptr) {
-      auto lock = per_device->GrabLock();
+      std::lock_guard<std::mutex> lock(per_device->mutex_);
       if (ret == nullptr) {
         ret = std::make_shared<StreamPool>(ctx);
       }

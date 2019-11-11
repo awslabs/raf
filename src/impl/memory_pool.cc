@@ -27,7 +27,7 @@ class MemoryPoolManager {
     thread_local char maker_name[128];
     std::shared_ptr<MemoryPool>& result = reg.Get(ctx);
     if (result == nullptr) {
-      std::unique_lock<std::mutex> lock(reg.GrabLock());
+      std::lock_guard<std::mutex> lock(reg.mutex_);
       if (result == nullptr) {
         // ok, it is truly a nullptr
         if (name == "") {
@@ -47,7 +47,7 @@ class MemoryPoolManager {
   }
 
   void Remove(const Context& ctx) {
-    std::unique_lock<std::mutex> lock(reg.GrabLock());
+    std::lock_guard<std::mutex> lock(reg.mutex_);
     std::shared_ptr<MemoryPool>& result = reg.Get(ctx);
     CHECK(result != nullptr);
     result = nullptr;

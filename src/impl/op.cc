@@ -59,7 +59,7 @@ OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& bac
                                      const FMakeOpEnv& op_env_maker) {
   std::shared_ptr<TDispatchList> list = dispatch.Get(device_type);
   {
-    std::unique_lock<std::mutex> lock = dispatch.GrabLock();
+    std::lock_guard<std::mutex> lock(dispatch.mutex_);
     if (list->count(backend_name)) {
       LOG(FATAL) << "InternalError: operator " << name
                  << " already has an implementation on backend " << backend_name;

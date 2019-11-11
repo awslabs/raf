@@ -29,7 +29,7 @@ std::shared_ptr<DeviceAPI> DeviceAPI::Get(DevType device_type) {
   DeviceAPIManager* mgr = DeviceAPIManager::Get();
   std::shared_ptr<DeviceAPI>& result = mgr->reg.Get(device_type);
   if (result == nullptr) {
-    std::unique_lock<std::mutex> lock(mgr->reg.GrabLock());
+    std::lock_guard<std::mutex> lock(mgr->reg.mutex_);
     if (result == nullptr) {
       result.reset(DeviceAPIManager::CreateDeviceAPI(device_type));
     }

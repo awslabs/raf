@@ -50,11 +50,6 @@ class PerDevTypeStore {
     return ret;
   }
 
-  std::unique_lock<std::mutex>&& GrabLock() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    return std::move(lock);
-  }
-
  protected:
   template <bool b = create_default>
   void CreateMissing(EntryPtr& p, typename std::enable_if_t<b, int> = 0) {
@@ -112,11 +107,6 @@ class PerContextStore {
       CreateMissing(ret);
     }
     return ret;
-  }
-
-  std::unique_lock<std::mutex>&& GrabLock() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    return std::move(lock);
   }
 
  protected:
