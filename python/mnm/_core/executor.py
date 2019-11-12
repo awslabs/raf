@@ -9,8 +9,10 @@ class Interpreter(object):
     def __init__(self, module=None):
         if module is None:
             module = Module.GLOBAL
+            self.runner = ffi.CreateInterpreter(module, True)
+        else:
+            self.runner = ffi.CreateInterpreter(module, module is Module.GLOBAL)
         self.module = module
-        self.runner = ffi.CreateInterpreter(module)
 
     def __call__(self, expr):
         return self.runner(expr)

@@ -69,6 +69,16 @@ using registry::TVMRetValue;
 }}  // namespace ffi
 }}  // namespace op
 }}  // namespace mnm
+
+namespace mnm {{
+namespace op {{
+namespace ffi {{
+using registry::TVMArgs;
+using registry::TVMRetValue;
+{OP_FFI_IMPS}
+}}  // namespace ffi
+}}  // namespace op
+}}  // namespace mnm
 """.strip()
     schema_headers = def_schema.by_file()
     ops = def_op.by_name()
@@ -85,12 +95,15 @@ using registry::TVMRetValue;
         name, ops[name].schema_name) for name in sorted(ops.keys()))
     op_ffi_syms = "\n".join(gen_op_ffi_sym(
         ops[name]) for name in sorted(ops.keys()))
+    op_ffi_imps = "\n".join(gen_op_ffi_imp(
+        ops[name]) for name in sorted(ops.keys()))
     return FILE.format(INCLUDES=includes,
                        ARG_REGS=arg_regs,
                        ARG_INITS=arg_inits,
                        FFI_INITS=ffi_inits,
                        OP_SCHEMAS=op_schemas,
-                       OP_FFI_SYMS=op_ffi_syms)
+                       OP_FFI_SYMS=op_ffi_syms,
+                       OP_FFI_IMPS=op_ffi_imps)
 
 
 def gen_include(filename):
@@ -181,6 +194,20 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.{OP_NAME}")
     op_name = op.name
     schema_name = snake_to_pascal(op.schema_name)
     return OP_FFI_SYM.format(OP_NAME=op_name, SCHEMA_NAME=schema_name)
+
+
+def gen_op_ffi_imp(op):
+    OP_FFI_IMP = """
+MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
+.set_body([](TVMArgs args, TVMRetValue *ret) {{
+  static Op op = Op::Get("mnm.op.{OP_NAME}");
+  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
+  *ret = run(CallNode::make(op, ffi::{SCHEMA_NAME}(args)));
+}});
+""".strip()
+    op_name = op.name
+    schema_name = snake_to_pascal(op.schema_name)
+    return OP_FFI_IMP.format(OP_NAME=op_name, SCHEMA_NAME=schema_name)
 
 
 def main(path="./src/op/regs/regs.cc"):

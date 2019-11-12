@@ -7,7 +7,6 @@ from mnm._lib import _NodeBase as NodeBase
 
 @register_node("mnm.value.Value")
 class Value(NodeBase):
-    pass
 
     @staticmethod
     def as_const_expr(value):

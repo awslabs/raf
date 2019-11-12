@@ -20,11 +20,11 @@ using common::shape_utils::BytesCompactTensor;
 using executor::Executor;
 using memory_pool::Memory;
 using op::CallValues;
-using op::RunDeclare;
+using op::GetListArgs;
+using op::MakeListArgs;
 using op::OpDispatch;
 using op::OpEnv;
-using op::MakeListArgs;
-using op::GetListArgs;
+using op::RunDeclare;
 using registry::GetPackedFunc;
 using registry::PackedFunc;
 using registry::TypedPackedFunc;
@@ -70,6 +70,9 @@ class Stack {
 };
 
 class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Executor {
+ public:
+  static TypedPackedFunc<NodeRef(Expr)> global;
+
  public:
   Module mod;
   Stack stack;
@@ -140,7 +143,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
   Value VisitExpr_(const RelayConstantNode* _node) override {
     const ConstantNode* node = static_cast<const ConstantNode*>(_node);
-    return Downcast<Value>(node->value);
+    return node->value.defined() ? Downcast<Value>(node->value) : NullValue<Value>();
   }
 
   Value VisitExpr_(const LetNode* node) override {
@@ -295,7 +298,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 };
 
 static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor) {
-  // make nested lists of BoundExpr
   if (value->derived_from<ScalarValueNode>()) {
     return value;
   }
@@ -321,16 +323,29 @@ static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor)
   throw;
 }
 
-TypedPackedFunc<NodeRef(Expr)> CreateInterpreter(Module module) {
+TypedPackedFunc<NodeRef(Expr)> Interpreter::global = nullptr;
+TypedPackedFunc<NodeRef(Expr)> CreateInterpreter(Module module, bool as_global) {
   auto intrp = std::make_shared<Interpreter>(module);
-  auto packed = [intrp](Expr expr) {
-    Value value = intrp->Eval(expr);
-    return DeTuple(expr, value, intrp.get());
-  };
-  return TypedPackedFunc<NodeRef(Expr)>(packed);
+  auto packed = [intrp](Expr expr) { return DeTuple(expr, intrp->Eval(expr), intrp.get()); };
+  TypedPackedFunc<NodeRef(Expr)> runner(packed);
+  if (as_global) {
+    if (Interpreter::global != nullptr) {
+      LOG(WARNING) << "Changing global interpreter. This is often undesirable and do this only if "
+                      "you are aware of what you are doing.";
+    }
+    CHECK(Interpreter::global == nullptr);
+    Interpreter::global = runner;
+  }
+  return runner;
+}
+
+NodeRef InterpretWithGlobal(Expr expr) {
+  CHECK(Interpreter::global != nullptr) << "Global interpreter does not exist";
+  return Interpreter::global(expr);
 }
 
 MNM_REGISTER_GLOBAL("mnm.executor.CreateInterpreter").set_body_typed(CreateInterpreter);
+MNM_REGISTER_GLOBAL("mnm.executor.InterpretWithGlobal").set_body_typed(InterpretWithGlobal);
 
 }  // namespace interpreter
 }  // namespace mnm

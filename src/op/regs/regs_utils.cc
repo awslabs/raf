@@ -56,10 +56,13 @@ Expr ToAny(const TVMArgValue& a) {
   if (type_code == kStr) {
     MNM_RET_SYM(StringValue, a.operator std::string());
   }
+  if (type_code == kNull) {
+    return MakeConstant(ir::NullValue<Value>());
+  }
   if (type_code == kNodeHandle && a.IsNodeType<Array<Integer>>()) {
     return ffi::ToIntTuple(a);
   }
-  LOG(FATAL) << "Not supported type code" << type_code;
+  LOG(FATAL) << "Not supported type code " << type_code;
   throw;
 }
 

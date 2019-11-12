@@ -21,9 +21,9 @@ def _np_del(handle):
 def np_to_tensor_value(npa, ctx=None):
 
     def _tensor_value(obj):
-        ctx = str2ctx("cpu")
+        ctx = "cpu"
         dtype = str(obj.dtype)
-        shape = [x for x in obj.shape]
+        shape = list(obj.shape)
         strides = [x // obj.itemsize for x in obj.strides]
         data = obj.ctypes.data_as(ctypes.c_void_p)
         assert len(shape) == len(strides)
