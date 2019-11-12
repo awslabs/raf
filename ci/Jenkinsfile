@@ -1,15 +1,13 @@
-ci_gpu = "mnm.ci_gpu:v0.01"
+ci_cpu = "junrushao1994/mnm:ci_cpu-v0.02"
+ci_gpu = "junrushao1994/mnm:ci_gpu-v0.02"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
-make_flags = "-j32"
 
 mnm_multilib = "build/config.cmake, " +
-               "build/3rdparty/tvm/libtvm_runtime.so, " +
-               "build/3rdparty/tvm/libtvm_topi.so, " +
-               "build/3rdparty/tvm/libtvm.so, " +
-               "build/3rdparty/tvm/libnnvm_compiler.so, " +
-               "build/libmnm.so"
+               "build/lib/libtvm_topi.so, " +
+               "build/lib/libtvm.so, " +
+               "build/lib/libmnm.so"
 
 def init_git_unix() {
   checkout scm
@@ -29,15 +27,15 @@ def init_git_win() {
   }
 }
 
-def make(docker_type, path, make_flag) {
+def make(docker_type, path) {
   timeout(time: max_time, unit: 'MINUTES') {
     try {
-      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} ${make_flag}"
+      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} -j\$(nproc)"
       sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
       sh "${docker_run} ${docker_type} ./ci/task_clean.sh ${path}" 
-      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} ${make_flag}"
+      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} -j\$(nproc)"
       sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
     }
   }
@@ -61,33 +59,56 @@ def unpack_lib(name, libs) {
 
 stage('Build') {
   parallel 'BUILD: GPU': {
-    node('BUILD') {
+    node('linux-gpu') {
       init_git_unix()
       sh """
          mkdir -p build
          cd build
          cp ../cmake/config.cmake .
+         echo "set(MNM_USE_LLVM llvm-config-8)" >> config.cmake
+         echo "set(MNM_USE_GTEST ON)" >> config.cmake
          echo "set(MNM_USE_CUDA ON)" >> config.cmake
          echo "set(MNM_USE_CUDNN ON)" >> config.cmake
-         echo "set(MNM_USE_GTEST ON)" >> config.cmake
-         echo "set(USE_LLVM llvm-config-8)" >> config.cmake
-         echo "set(USE_CUDA ON)" >> config.cmake
          """
-      make(ci_gpu, 'build', make_flags)
+      make(ci_gpu, 'build')
       pack_lib('gpu', mnm_multilib)
+    }
+  },
+  'BUILD: CPU': {
+    node('linux-cpu') {
+      init_git_unix()
+      sh """
+         mkdir -p build
+         cd build
+         cp ../cmake/config.cmake .
+         echo "set(MNM_USE_LLVM llvm-config-8)" >> config.cmake
+         echo "set(MNM_USE_GTEST ON)" >> config.cmake
+         echo "set(MNM_USE_CUDA OFF)" >> config.cmake
+         echo "set(MNM_USE_CUDNN OFF)" >> config.cmake
+         """
+      make(ci_cpu, 'build')
+      pack_lib('cpu', mnm_multilib)
     }
   }
 }
 
 stage('Unit Test') {
   parallel 'python3: GPU': {
-    node('GPU') {
+    node('linux-gpu') {
       init_git_unix()
       unpack_lib('gpu', mnm_multilib)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_gpu} ./ci/task_python_unittest.sh"
       }
     }
+  },
+  'python3: CPU': {
+    node('linux-cpu') {
+      init_git_unix()
+      unpack_lib('cpu', mnm_multilib)
+      timeout(time: max_time, unit: 'MINUTES') {
+        sh "${docker_run} ${ci_cpu} ./ci/task_python_unittest.sh"
+      }
+    }
   }
 }
-
