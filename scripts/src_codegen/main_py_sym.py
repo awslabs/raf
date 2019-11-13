@@ -1,7 +1,8 @@
 from numbers import Number
 
 import def_op
-from codegen_utils import write_to_file, NORM_MAP
+from codegen_utils import PY_NORM_MAP as NORM_MAP
+from codegen_utils import write_to_file
 
 
 def gen_file():
@@ -9,6 +10,8 @@ def gen_file():
 import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
 from . import sym_utils
+
+# pylint: disable=invalid-name,line-too-long,too-many-arguments
 {METHODS}
 """.strip()
     ops = def_op.by_name()

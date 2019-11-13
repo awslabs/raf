@@ -1,5 +1,5 @@
 # tag: v0.01
-FROM nvidia/cuda:10.1-cudnn7-devel
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 
 # Base scripts
 RUN apt-get update --fix-missing

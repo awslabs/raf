@@ -6,8 +6,6 @@ from mnm._ffi.ir import _make
 @register_node("mnm.ir.Module")
 class Module(NodeBase):
 
-    GLOBAL = None
-
     def __init__(self, functions=None):
         if functions is None:
             functions = {}

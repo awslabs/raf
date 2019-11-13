@@ -6,9 +6,9 @@ from mnm._core.ndarray import Symbol
 from mnm._core.value import TensorValue, Value
 
 
-def ToAny(a):
+def to_any(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if a is None:
         return None
@@ -16,12 +16,12 @@ def ToAny(a):
     if isinstance(a, (Number, str)):
         return a
 
-    return ToTensor(a)
+    return to_tensor(a)
 
 
-def ToTensor(a):
+def to_tensor(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if not isinstance(a, np.ndarray):
         a = np.array(a)
@@ -30,9 +30,9 @@ def ToTensor(a):
     return Value.as_const_expr(TensorValue.from_numpy(a))
 
 
-def ToIntTuple(a):
+def to_int_tuple(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray):
         a = a.tolist()
@@ -56,13 +56,13 @@ def ToIntTuple(a):
     return result
 
 
-def ToOptionalIntTuple(a):
-    return None if a is None else ToIntTuple(a)
+def to_optional_int_tuple(a):
+    return None if a is None else to_int_tuple(a)
 
 
-def ToInt(a):
+def to_int(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -72,9 +72,9 @@ def ToInt(a):
     raise ValueError("Cannot convert to int")
 
 
-def ToDouble(a):
+def to_double(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -84,9 +84,9 @@ def ToDouble(a):
     raise ValueError("Cannot convert to double")
 
 
-def ToBool(a):
+def to_bool(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -96,9 +96,9 @@ def ToBool(a):
     raise ValueError("Cannot convert to bool")
 
 
-def ToString(a):
+def to_string(a):
     if isinstance(a, Symbol):
-        return a._expr
+        return a._expr  # pylint: disable=protected-access
 
     if isinstance(a, str):
         return a

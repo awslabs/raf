@@ -1,1 +1,1 @@
-import mnm
+import mnm  # pylint: disable=unused-import

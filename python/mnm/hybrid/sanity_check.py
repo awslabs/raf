@@ -94,15 +94,15 @@ class SanityCheck(NodeVisitor):
     def run(self, node: ast.AST) -> None:
         self.visit(node)
 
-    def visit(self, node: ast.AST):
-        if type(node) in SUPPORTED_OPS:
+    def visit(self, node: ast.AST):  # pylint: disable=invalid-name,arguments-differ
+        if type(node) in SUPPORTED_OPS:  # pylint: disable=unidiomatic-typecheck
             return
         name = SUPPORTED.get(type(node), None)
         if name is None:
             raise NotImplementedError(node.__class__.__name__)
         getattr(self, name)(node)
 
-    def check_Module(self, node: ast.Module):
+    def check_Module(self, node: ast.Module):  # pylint: disable=invalid-name
         if len(node.body) != 1:
             raise NotImplementedError("Support only module with one body.")
         body = node.body[0]
@@ -110,19 +110,19 @@ class SanityCheck(NodeVisitor):
             raise NotImplementedError("Require body to be a function")
         self.generic_visit(node)
 
-    def check_Assign(self, node: ast.Assign):
+    def check_Assign(self, node: ast.Assign):  # pylint: disable=invalid-name
         if len(node.targets) != 1:
             raise NotImplementedError(
                 "Multi-target assignment is not supported.")
         self.generic_visit(node)
 
-    def check_While(self, node: ast.While):
+    def check_While(self, node: ast.While):  # pylint: disable=invalid-name
         if node.orelse:
             raise NotImplementedError(
                 "While loop with else branch is not supported.")
         self.generic_visit(node)
 
-    def check_FunctionDef(self, node: ast.FunctionDef):
+    def check_FunctionDef(self, node: ast.FunctionDef):  # pylint: disable=invalid-name
         if self.n_func_defs > 0:
             raise NotImplementedError("Nested function is not supported.")
         self.n_func_defs += 1
@@ -139,38 +139,38 @@ class SanityCheck(NodeVisitor):
             raise NotImplementedError("Default value is not supported.")
         self.generic_visit(node)
 
-    def check_ArithOp(self, node: ast.UnaryOp):
-        if type(node.op) not in SUPPORTED_OPS:
+    def check_ArithOp(self, node: ast.UnaryOp):  # pylint: disable=invalid-name
+        if type(node.op) not in SUPPORTED_OPS:  # pylint: disable=unidiomatic-typecheck
             raise NotImplementedError(
                 "{} is not supported.".format(node.op.__class__.__name__))
         self.generic_visit(node)
 
-    def check_Compare(self, node: ast.Compare):
+    def check_Compare(self, node: ast.Compare):  # pylint: disable=invalid-name
         if len(node.comparators) != len(node.ops):
             raise ValueError
         if len(node.comparators) != 1:
             raise NotImplementedError("Only support comparing 2 values.")
-        if type(node.ops[0]) not in SUPPORTED_OPS:
+        if type(node.ops[0]) not in SUPPORTED_OPS:  # pylint: disable=unidiomatic-typecheck
             raise NotImplementedError(
                 "{} is not supported.".format(node.op.__class__.__name__))
         self.generic_visit(node)
 
-    def check_Return(self, node: ast.Return):
+    def check_Return(self, node: ast.Return):  # pylint: disable=invalid-name
         self.generic_visit(node)
 
-    def check_Subscript(self, node: ast.Subscript):
+    def check_Subscript(self, node: ast.Subscript):  # pylint: disable=invalid-name
         if isinstance(node.ctx, ast.Store):
             raise NotImplementedError("Slice modification is not supported.")
         if isinstance(node.ctx, ast.Del):
             raise NotImplementedError("Deleting a slice is not supported.")
         self.generic_visit(node)
 
-    def check_Index(self, node: ast.Index):
+    def check_Index(self, node: ast.Index):  # pylint: disable=invalid-name
         if not isinstance(node.value, ast.Num):
             raise NotImplementedError("Only constant indexing is supported for now.")
         self.generic_visit(node)
 
-    def check_Slice(self, node: ast.Slice):
+    def check_Slice(self, node: ast.Slice):  # pylint: disable=invalid-name
         if node.lower is not None and not isinstance(node.lower, ast.Num):
             raise NotImplementedError("Only constant indexing is supported for now.")
         if node.upper is not None and not isinstance(node.upper, ast.Num):

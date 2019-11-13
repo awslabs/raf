@@ -2,14 +2,14 @@ from numbers import Number
 
 import numpy as np
 
-from mnm._core.ndarray import _create_by_pair, ndarray
-from mnm._core.value import (BoolValue, FloatValue, IntValue, StringValue,
-                             TensorValue, Value, BoundExpr)
+from mnm._core.ndarray import ndarray
+from mnm._core.value import (BoolValue, BoundExpr, FloatValue, IntValue,
+                             StringValue, TensorValue, Value)
 
 
-def ToAny(a):
+def to_any(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if a is None:
         return None
@@ -17,12 +17,12 @@ def ToAny(a):
     if isinstance(a, (Number, str)):
         return a
 
-    return ToTensor(a)
+    return to_tensor(a)
 
 
-def ToTensor(a):
+def to_tensor(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if not isinstance(a, np.ndarray):
         a = np.array(a)
@@ -31,9 +31,9 @@ def ToTensor(a):
     return Value.as_const_expr(TensorValue.from_numpy(a))
 
 
-def ToIntTuple(a):
+def to_int_tuple(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray):
         a = a.tolist()
@@ -57,13 +57,13 @@ def ToIntTuple(a):
     return result
 
 
-def ToOptionalIntTuple(a):
-    return None if a is None else ToIntTuple(a)
+def to_optional_int_tuple(a):
+    return None if a is None else to_int_tuple(a)
 
 
-def ToInt(a):
+def to_int(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -73,9 +73,9 @@ def ToInt(a):
     raise ValueError("Cannot convert to int")
 
 
-def ToDouble(a):
+def to_double(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -85,9 +85,9 @@ def ToDouble(a):
     raise ValueError("Cannot convert to double")
 
 
-def ToBool(a):
+def to_bool(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -97,24 +97,28 @@ def ToBool(a):
     raise ValueError("Cannot convert to bool")
 
 
-def ToString(a):
+def to_string(a):
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if isinstance(a, str):
         return a
     raise ValueError("Cannot convert to str")
 
 
-def Ret(a):
+def ret(a):
     if isinstance(a, (IntValue, FloatValue, StringValue)):
         return a.data
+
     if isinstance(a, BoolValue):
         return bool(a.data)
+
     if isinstance(a, BoundExpr):
         return ndarray(a)
+
     if isinstance(a, tuple):
-        return tuple(map(Ret, a))
+        return tuple(map(ret, a))
+
     if isinstance(a, list):
-        return list(map(Ret, a))
+        return list(map(ret, a))
     raise NotImplementedError(type(a))

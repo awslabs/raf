@@ -2,9 +2,7 @@ import mnm._ffi.executor as ffi
 from mnm._core.module import Module
 
 
-class Interpreter(object):
-
-    GLOBAL = None
+class Interpreter:  # pylint: disable=too-few-public-methods
 
     def __init__(self, module=None):
         if module is None:

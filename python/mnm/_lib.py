@@ -1,5 +1,6 @@
 """The Python package of MNM is a trivial extension to TVM's.
 """
+# pylint: disable=unused-import
 import ctypes
 import os
 import readline
@@ -30,21 +31,11 @@ from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
 from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
 from tvm.expr import FloatImm, IntImm, StringImm
 from tvm.make import node as _make_node
+from tvm.ndarray import array as tvm_array
 
+# pylint: enable=unused-import
 
 def find_lib_path(name=None, search_path=None):
-    """Find dynamic library files.
-
-    Parameters
-    ----------
-    name : list of str
-        List of names to be found.
-
-    Returns
-    -------
-    lib_path : list(string)
-        List of all found path to the libraries
-    """
     ffi_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
     source_dir = os.path.join(ffi_dir, "..", "..")
     install_lib_dir = os.path.join(ffi_dir, "..", "..", "..")
@@ -74,19 +65,14 @@ def find_lib_path(name=None, search_path=None):
     dll_path = [os.path.realpath(x) for x in dll_path]
 
     if search_path is not None:
-        if isinstance(search_path, list):
-            dll_path.extend(search_path)
-        elif isinstance(search_path, str):
-            dll_path.append(search_path)
+        if not isinstance(search_path, list):
+            search_path = [search_path]
+        dll_path.extend(search_path)
 
     if name is not None:
-        if isinstance(name, list):
-            lib_dll_path = []
-
-            for n in name:
-                lib_dll_path += [os.path.join(p, n) for p in dll_path]
-        else:
-            lib_dll_path = [os.path.join(p, name) for p in dll_path]
+        if not isinstance(name, list):
+            name = [name]
+        lib_dll_path = [os.path.join(p, n) for n in name for p in dll_path]
     else:
         if sys.platform.startswith('win32'):
             lib_dll_path = [os.path.join(p, 'libmnm.dll') for p in dll_path] +\
@@ -132,8 +118,6 @@ def _get_apis():
 
 
 def _init_api_prefix(module_name, prefix):
-    global _APIS
-
     module = sys.modules[module_name]
 
     for name, func in _APIS.items():

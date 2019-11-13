@@ -1,5 +1,6 @@
 from mnm._lib import _APIS
 
+# pylint: disable=invalid-name
 # Defined in ./src/op/regs/regs.cc, line 466
 add = _APIS.get("mnm.op.sym.add", None)
 # Defined in ./src/op/regs/regs.cc, line 471

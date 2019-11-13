@@ -1,5 +1,5 @@
-ci_cpu = "junrushao1994/mnm:ci_cpu-v0.02"
-ci_gpu = "junrushao1994/mnm:ci_gpu-v0.02"
+ci_cpu = "junrushao1994/mnm:ci_cpu-v0.03"
+ci_gpu = "junrushao1994/mnm:ci_gpu-v0.03"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
@@ -55,6 +55,15 @@ def unpack_lib(name, libs) {
      echo "Unpacked ${libs} from ${name}"
      echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
      """
+}
+
+stage("Lint") {
+  timeout(time: max_time, unit: 'MINUTES') {
+    node('linux-cpu') {
+      init_git_unix()
+      sh "${docker_run} ${ci_cpu} ./ci/task_lint.sh"
+    }
+  }
 }
 
 stage('Build') {

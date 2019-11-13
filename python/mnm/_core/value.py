@@ -3,6 +3,7 @@ from mnm._ffi import value as ffi
 from mnm._ffi.ir._make import Constant as make_const_expr
 from mnm._ffi.value import _make
 from mnm._lib import _NodeBase as NodeBase
+from mnm._lib import tvm_array
 
 
 @register_node("mnm.value.Value")
@@ -78,14 +79,12 @@ class TensorValue(Value):
         return ffi.AssembleTensorValue(str2ctx(ctx), dtype, shape, strides, data)
 
     @staticmethod
-    def from_tvm(tvm_array):
-        return ffi.FromTVM(tvm_array)
+    def from_tvm(tvm_ndarray):
+        return ffi.FromTVM(tvm_ndarray)
 
     @staticmethod
     def from_numpy(np_array):
-        from mnm._lib import tvm
-
-        return TensorValue.from_tvm(tvm.ndarray.array(np_array))
+        return TensorValue.from_tvm(tvm_array(np_array))
 
 
 @register_node("mnm.value.IntValue")
@@ -143,7 +142,7 @@ class TupleValue(Value):
         return ffi.DeTuple(self)
 
 
-@register_node("mnm.value.BoundExpr")
+@register_node("mnm.value.BoundExpr")  # pylint: disable=too-few-public-methods
 class BoundExpr(NodeBase):
 
     def __init__(self, expr, value, executor=None):

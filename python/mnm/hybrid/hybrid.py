@@ -48,7 +48,7 @@ ARG_MAKERS = {
 
 
 def _make_argument(a):
-    if type(a) not in ARG_MAKERS:
+    if type(a) not in ARG_MAKERS:  # pylint: disable=unidiomatic-typecheck
         raise NotImplementedError
 
     return ARG_MAKERS[type(a)](a)
@@ -87,7 +87,7 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     compiled = compile(node, filename="<string>", mode='exec')
     # IR builder -> AST
     # TODO(@junrushao1994): deal with nonlocals
-    exec(compiled, mem['__globals__'])
+    exec(compiled, mem['__globals__'])  # pylint: disable=exec-used
     node = build_ir(mem['__globals__'][invoker_name], debug=False)
     # AST -> CFG
     cfg = ast2cfg(node)
@@ -112,8 +112,6 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
 def hybrid(python=False):
 
     def hybrid_no_python(pyfunc):
-        global FUNC_TAB
-        global FUNC_VAR
         func_name = get_func_name(pyfunc)
         sig = inspect.signature(pyfunc)
 

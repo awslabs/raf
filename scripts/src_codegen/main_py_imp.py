@@ -1,7 +1,8 @@
 from numbers import Number
 
 import def_op
-from codegen_utils import write_to_file, NORM_MAP
+from codegen_utils import PY_NORM_MAP as NORM_MAP
+from codegen_utils import write_to_file
 
 
 def gen_file():
@@ -10,6 +11,7 @@ import mnm._ffi.op.imp as ffi
 from mnm._core.core_utils import set_module
 from . import imp_utils
 
+# pylint: disable=invalid-name,line-too-long,too-many-arguments
 __all__ = ["{OP_NAMES}"]
 
 {METHODS}
@@ -26,7 +28,7 @@ def gen_method(op):
 @set_module("mnm")
 def {NAME}({PARAMS_W_DEFAULT}):
 {NORMS}
-    return imp_utils.Ret(ffi.{NAME}({PARAMS_WO_DEFAULT}))
+    return imp_utils.ret(ffi.{NAME}({PARAMS_WO_DEFAULT}))
 """.strip()
     name = op.name
     norms = "\n".join(map(gen_norm, op.schema))

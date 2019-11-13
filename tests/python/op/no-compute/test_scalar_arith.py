@@ -22,32 +22,32 @@ TYPE_TABLE = {
 
 def test_add():
     for x1, x2 in product(range(-5, 5), range(-5, 5)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.add(x1, x2)
             expected = x1 + x2
             assert result == expected
-            assert isinstance(result, TYPE_TABLE[(t1, t2)])
+            assert isinstance(result, TYPE_TABLE[(t_1, t_2)])
 
 
 def test_subtract():
     for x1, x2 in product(range(-5, 5), range(-5, 5)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.subtract(x1, x2)
             expected = x1 - x2
             assert result == expected
-            assert isinstance(result, TYPE_TABLE[(t1, t2)])
+            assert isinstance(result, TYPE_TABLE[(t_1, t_2)])
 
 
 def test_multiply():
     for x1, x2 in product(range(-5, 5), range(-5, 5)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.multiply(x1, x2)
             expected = x1 * x2
             assert result == expected
-            assert isinstance(result, TYPE_TABLE[(t1, t2)])
+            assert isinstance(result, TYPE_TABLE[(t_1, t_2)])
 
 
 def test_divide():
@@ -65,18 +65,18 @@ def test_mod():
 
 def test_negative():
     for x1 in range(10):
-        for t1 in TYPES:
-            x1 = t1(x1)
+        for t_1 in TYPES:
+            x1 = t_1(x1)
             result = mnm.negative(x1)
             expected = -x1
             assert result == expected
-            assert isinstance(result, TYPE_TABLE[t1])
+            assert isinstance(result, TYPE_TABLE[t_1])
 
 
 def test_less():
     for x1, x2 in product(range(3), range(3)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.less(x1, x2)
             expected = x1 < x2
             assert result == expected
@@ -85,8 +85,8 @@ def test_less():
 
 def test_greater():
     for x1, x2 in product(range(3), range(3)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.greater(x1, x2)
             expected = x1 > x2
             assert result == expected
@@ -95,8 +95,8 @@ def test_greater():
 
 def test_less_equal():
     for x1, x2 in product(range(3), range(3)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.less_equal(x1, x2)
             expected = x1 <= x2
             assert result == expected
@@ -105,8 +105,8 @@ def test_less_equal():
 
 def test_greater_equal():
     for x1, x2 in product(range(3), range(3)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.greater_equal(x1, x2)
             expected = x1 >= x2
             assert result == expected
@@ -115,8 +115,8 @@ def test_greater_equal():
 
 def test_equal():
     for x1, x2 in product(range(3), range(3)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.equal(x1, x2)
             expected = x1 == x2
             assert result == expected
@@ -125,8 +125,8 @@ def test_equal():
 
 def test_not_equal():
     for x1, x2 in product(range(3), range(3)):
-        for t1, t2 in product(TYPES, TYPES):
-            x1, x2 = t1(x1), t2(x2)
+        for t_1, t_2 in product(TYPES, TYPES):
+            x1, x2 = t_1(x1), t_2(x2)
             result = mnm.not_equal(x1, x2)
             expected = x1 != x2
             assert result == expected

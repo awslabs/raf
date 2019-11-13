@@ -61,3 +61,16 @@ NORM_MAP = {
     "bool": "ToBool",
     "std::string": "ToString",
 }
+
+PY_NORM_MAP = {
+    "value::Value": "to_any",
+    "value::TensorValue": "to_tensor",
+    "IntTuple": "to_int_tuple",
+    "OptionalIntTuple": "to_optional_int_tuple",
+    "int": "to_int",
+    "int64_t": "to_int",
+    "double": "to_double",
+    "float": "to_double",
+    "bool": "to_bool",
+    "std::string": "to_string",
+}

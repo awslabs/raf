@@ -10,6 +10,7 @@ def gen_internal_file(apis):
     FILE = """
 from mnm._lib import _APIS
 
+# pylint: disable=invalid-name
 {APIs}
 """.strip()
     apis = "\n".join(map(gen_api, sorted(apis, key=lambda api: api.name)))

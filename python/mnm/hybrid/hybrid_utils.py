@@ -3,12 +3,10 @@ import ast
 from mnm._core.value import IntValue, Value
 from mnm._lib import _get_global_func, relay
 
+_GET_OP = _get_global_func("relay.op._GetOp")
 
 def _wrap_op(name):
-    get_op = _get_global_func("relay.op._GetOp")
-    op = get_op(name)
-
-    return lambda *args: relay.Call(op=op, args=args, attrs=None)
+    return lambda *args: relay.Call(op=_GET_OP(name), args=args, attrs=None)
 
 
 OP_MAKER = {
@@ -50,7 +48,7 @@ OP_MAKER = {
 SUPPORTED_OPS = set(py_op for py_op, relay_op in OP_MAKER.items() if relay_op)
 
 
-class NodeVisitor(object):
+class NodeVisitor:
 
     def __init__(self, strict=True):
         self.strict = strict
@@ -91,10 +89,6 @@ class NodeTransformer(NodeVisitor):
                         value = self.visit(value, *args, **kwargs)
 
                         if value is None:
-                            continue
-                        elif not isinstance(value, ast.AST):
-                            new_values.extend(value)
-
                             continue
                     new_values.append(value)
                 old_value[:] = new_values

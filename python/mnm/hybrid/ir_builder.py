@@ -7,7 +7,7 @@ from typing import Callable, Dict
 from mnm._core.value import Value
 from mnm._lib import relay
 
-from .hybrid_utils import OP_MAKER, NodeTransformer
+from .hybrid_utils import OP_MAKER
 
 SymTab = Dict[str, relay.Var]
 
@@ -22,17 +22,16 @@ def _convert(expr, debug):
 
         if isinstance(expr, str):
             return ast.Str(s=expr)
-        raise NotImplementedError(expr)
     else:
         if isfunction(expr):
             return expr
 
         if isinstance(expr, Number):
             return lambda _: Value.as_const_expr(expr)
-        raise NotImplementedError(expr)
+    raise NotImplementedError(expr)
 
 
-class IRBuilder(object):
+class IRBuilder:
 
     def __init__(self, debug: bool):
         self.stmt_block = []
@@ -60,10 +59,11 @@ class IRBuilder(object):
 
         return lambda sym_tab: relay.Tuple([maker(sym_tab) for maker in makers])
 
-    def sym_slice_index(self, value: Callable[[SymTab], relay.Expr], index: int):
+    def sym_slice_index(self, value: Callable[[SymTab], relay.Expr], index: int):  # pylint: disable=no-self-use
         return lambda sym_tab: relay.TupleGetItem(value(sym_tab), index)
 
-    def sym_slice_strided(self, value: Callable[[SymTab], relay.Expr], lower: int, upper: int, step: int):
+    def sym_slice_strided(self, value: Callable[[SymTab], relay.Expr],  # pylint: disable=no-self-use
+                          lower: int, upper: int, step: int):
         def _sym_slice_strided(sym_tab: SymTab):
             content = value(sym_tab)
 
@@ -75,15 +75,15 @@ class IRBuilder(object):
     def op(self, category: str, node_t: type, *args) -> Callable[[SymTab], relay.Expr]:
         if self.debug:
             args = [_convert(arg, debug=True) for arg in args]
-            DEBUG_RULES = {
+            debug_rules = {
                 'unary_op': (1, lambda args: ast.UnaryOp(op=node_t(), operand=args[0])),
                 'bin_op': (2, lambda args: ast.BinOp(left=args[0], op=node_t(), right=args[1])),
                 'bool_op': (2, lambda args: ast.BoolOp(op=node_t(), values=args)),
                 'compare': (2, lambda args: ast.Compare(left=args[0], ops=[node_t()],
                                                         comparators=[args[1]]))
             }
-            assert category in DEBUG_RULES.keys(), "{} is not defined".format(category)
-            cnt, constructor = DEBUG_RULES[category]
+            assert category in debug_rules.keys(), "{} is not defined".format(category)
+            cnt, constructor = debug_rules[category]
             assert len(args) == cnt
 
             return constructor(args)
@@ -151,7 +151,7 @@ class IRBuilder(object):
 
 
 def build_ir(invoker: Callable[[IRBuilder], None], debug=False) -> ast.Module:
-    ib = IRBuilder(debug=debug)
-    invoker(ib, ast)
+    ibr = IRBuilder(debug=debug)
+    invoker(ibr, ast)
 
-    return ib.get()
+    return ibr.get()

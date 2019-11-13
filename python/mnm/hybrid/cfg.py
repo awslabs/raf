@@ -14,28 +14,29 @@ class FingerFinder(NodeVisitor):
 
     def __init__(self):
         super(FingerFinder, self).__init__()
+        self.finger = None
 
     def visit_stmts(self, stmts, break_point, continue_point):
         if stmts:
             if stmts[0] in self.finger:
                 return stmts[0]
             return self.visit(stmts[0], stmts[1:], break_point, continue_point)
-        elif continue_point:
+        if continue_point:
             return continue_point
         return unbound_constant_expr()
 
-    def visit_Return(self, node: ast.Return, stmts, break_point, continue_point):
+    def visit_Return(self, node: ast.Return, _stmts, _break_point, _continue_point):  # pylint: disable=invalid-name
         self.finger[node] = tuple()
         return node
 
-    def visit_While(self, node: ast.While, stmts, break_point, continue_point):
+    def visit_While(self, node: ast.While, stmts, break_point, continue_point):  # pylint: disable=invalid-name
         self.finger[node] = None
         left = self.visit_stmts(node.body, stmts[0], node)
         right = self.visit_stmts(stmts, break_point, continue_point)
         self.finger[node] = (left, right)
         return node
 
-    def visit_If(self, node: ast.If, stmts, break_point, continue_point):
+    def visit_If(self, node: ast.If, stmts, break_point, continue_point):  # pylint: disable=invalid-name
         self.finger[node] = None
         left = self.visit_stmts(node.body + stmts, break_point, continue_point)
         right = self.visit_stmts(
@@ -43,23 +44,23 @@ class FingerFinder(NodeVisitor):
         self.finger[node] = (left, right)
         return node
 
-    def visit_Module(self, node: ast.Module, stmts, break_point, continue_point):
+    def visit_Module(self, node: ast.Module, _stmts, break_point, continue_point):  # pylint: disable=invalid-name
         return self.visit_stmts(node.body, break_point, continue_point)
 
-    def visit_Assign(self, node: ast.Assign, stmts, break_point, continue_point):
+    def visit_Assign(self, node: ast.Assign, stmts, break_point, continue_point):  # pylint: disable=invalid-name
         self.finger[node] = []
         value = self.visit_stmts(stmts, break_point, continue_point)
         if value:
             self.finger[node] = (value, )
         return node
 
-    def visit_Break(self, node: ast.Break, stmts, break_point, continue_point):
+    def visit_Break(self, _node: ast.Break, _stmts, break_point, _continue_point):  # pylint: disable=invalid-name,no-self-use
         return break_point
 
-    def visit_Continue(self, node: ast.Continue, stmts, break_point, continue_point):
+    def visit_Continue(self, _node: ast.Continue, _stmts, _break_point, continue_point):  # pylint: disable=invalid-name,no-self-use
         return continue_point
 
-    def visit_Pass(self, node: ast.Pass, stmts, break_point, continue_point):
+    def visit_Pass(self, node: ast.Pass, stmts, break_point, continue_point):  # pylint: disable=invalid-name
         self.finger[node] = None
         value = self.visit_stmts(stmts, break_point, continue_point)
         if value:
@@ -72,7 +73,7 @@ class FingerFinder(NodeVisitor):
         return entry, self.finger
 
 
-class BasicBlock(object):
+class BasicBlock:  # pylint: disable=too-few-public-methods
 
     stmts: List[ast.AST]
     jumps: List["BasicBlock"]
@@ -87,7 +88,7 @@ class BasicBlock(object):
         self.stmts.append(stmt)
 
 
-class CFG(object):
+class CFG:
 
     bbs: List[BasicBlock]
     entry: BasicBlock
@@ -118,14 +119,14 @@ class CFG(object):
         entry = stmt2bb[entry]
         bb2idx = {bb: idx for idx, bb in enumerate(bbs)}
         cfg = CFG(bbs=bbs, entry=entry, bb2idx=bb2idx)
-        cfg._remove_empty()
-        cfg._remove_dead()
-        cfg._contract()
-        cfg._remove_dead()
-        cfg._sanity_check()
+        cfg.remove_empty()
+        cfg.remove_dead()
+        cfg.contract()
+        cfg.remove_dead()
+        cfg.sanity_check()
         return cfg
 
-    def _remove_empty(self) -> None:
+    def remove_empty(self) -> None:
         for bb in self.bbs:
             jumps = []
             for succ in bb.jumps:
@@ -134,7 +135,7 @@ class CFG(object):
                 jumps.append(succ)
             bb.jumps = jumps
 
-    def _contract(self) -> None:
+    def contract(self) -> None:
         in_degree = defaultdict(int)
         for bb in self.bbs:
             for succ in bb.jumps:
@@ -153,7 +154,7 @@ class CFG(object):
         self.bbs = [bb for bb in self.bbs if bb not in del_bbs]
         assert self.entry in self.bbs
 
-    def _remove_dead(self) -> None:
+    def remove_dead(self) -> None:
         visited = set([self.entry])
         queue = [self.entry]
         while queue:
@@ -166,7 +167,7 @@ class CFG(object):
         self.bbs = [bb for bb in self.bbs if bb in visited]
         assert self.entry in self.bbs
 
-    def _sanity_check(self) -> None:
+    def sanity_check(self) -> None:
         in_degree = defaultdict(int)
         for bb in self.bbs:
             for succ in bb.jumps:

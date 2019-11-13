@@ -1,5 +1,6 @@
 from mnm._lib import _APIS
 
+# pylint: disable=invalid-name
 # Defined in ./src/impl/value.cc, line 200
 BoolValue = _APIS.get("mnm.value._make.BoolValue", None)
 # Defined in ./src/impl/value.cc, line 202

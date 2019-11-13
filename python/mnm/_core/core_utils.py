@@ -1,5 +1,5 @@
 from mnm._lib import _DLContext
-from mnm._lib import _NodeBase as NodeBase
+from mnm._lib import _NodeBase as NodeBase  # pylint: disable=unused-import
 from mnm._lib import _register_node
 
 
@@ -20,7 +20,7 @@ def set_module(module):
 
 
 def _get_ctx_map():
-    DEV_TYPE_MASK = {
+    dev_type_mask = {
         'llvm': 1,
         'stackvm': 1,
         'cpu': 1,
@@ -44,12 +44,13 @@ def _get_ctx_map():
     _str2ctx = {}
     _ctx2str = {}
 
-    for device_type, idx in DEV_TYPE_MASK.items():
+    for device_type, idx in dev_type_mask.items():
         _str2ctx[device_type] = _DLContext(device_type=idx, device_id=0)
 
         for device_id in range(128):
-            _str2ctx[f"{device_type}({device_id})"] = _DLContext(device_type=idx, device_id=device_id)
-            _ctx2str[(idx, device_id)] = f"{device_type}({device_id})"
+            name = f"{device_type}({device_id})"
+            _str2ctx[name] = _DLContext(device_type=idx, device_id=device_id)
+            _ctx2str[(idx, device_id)] = name
 
     return _str2ctx, _ctx2str
 

@@ -10,7 +10,7 @@ def test_mnm_array_cpu():
     assert np.all(array == [1, 2, 3])
 
 
-@pytest.mark.skipif(mnm._ffi.build_info.use_cuda() == "OFF", reason="CUDA is not enabled")
+@pytest.mark.skipif(mnm._ffi.build_info.use_cuda() == "OFF", reason="CUDA is not enabled")  # pylint: disable=protected-access
 def test_mnm_array_cuda():
     array = mnm.array([1, 2, 3], dtype="int8", ctx="cuda")
     array = array.asnumpy()

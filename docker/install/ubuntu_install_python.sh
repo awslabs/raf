@@ -25,6 +25,5 @@ apt-get update
 apt-get install -y python-dev python3-dev
 apt-get install -y python-pip python3-pip
 
-pip3 install pylint==1.9.4 six numpy pytest cython decorator scipy tornado typed_ast pytest mypy orderedset antlr4-python3-runtime attrs requests Pillow packaging psutil
+pip3 install pylint==2.4.3 six numpy pytest cython decorator scipy tornado typed_ast pytest mypy orderedset antlr4-python3-runtime attrs requests Pillow packaging psutil
 pip3 install torch==1.3.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-
