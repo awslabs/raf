@@ -16,12 +16,14 @@
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   } while (false)
 
-#define FORM_SHAPE(def, dl_tensor)                                   \
-  std::vector<int> def = common::shape_utils::PadDims<int, int64_t>( \
-      std::vector<int64_t>((dl_tensor)->shape, (dl_tensor)->shape + (dl_tensor)->ndim), 4)
+#define MAKE_SHAPE_ATLEAST_4D(def, tensor)                                   \
+  std::vector<int> def##_ = common::shape_utils::PadDims<int, int64_t>(      \
+      std::vector<int64_t>(tensor->shape, tensor->shape + tensor->ndim), 4); \
+  int *def = dmlc::BeginPtr(def##_)
 
-#define FORM_STRIDE(def, shape) \
-  std::vector<int> def = common::shape_utils::Shape2Strides<int>(shape)
+#define MAKE_STRIDE(def, shape)                                             \
+  std::vector<int> def##_ = common::shape_utils::Shape2Strides<int>(shape); \
+  int *def = dmlc::BeginPtr(def##_)
 
 namespace mnm {
 
@@ -192,34 +194,52 @@ class AlgorithmCache {
   }
 };
 
-inline void VecAppend(std::vector<int64_t>& res, int64_t v) {
-  res.push_back(1);
-  res.push_back(v);
+inline cudnnTensorDescriptor_t NormalizeTensor(const DLTensor* tv) {
+  cudnnTensorDescriptor_t res;
+  CUDNN_CALL(cudnnCreateTensorDescriptor(&res));
+  int ndim = tv->ndim;
+  MAKE_SHAPE_ATLEAST_4D(shape, tv);
+  MAKE_STRIDE(stride, shape_);
+  CUDNN_CALL(cudnnSetTensorNdDescriptor(res, CUDNNDType(tv->dtype), ndim, shape, stride));
+  return res;
 }
 
-inline void VecAppend(std::vector<int64_t>& res, const std::vector<int>& v) {
-  res.push_back(v.size());
-  for (auto elem : v) {
-    res.push_back(elem);
+inline cudnnFilterDescriptor_t NormalizeFilter(value::TensorValue tv,
+                                         cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW) {
+  cudnnFilterDescriptor_t res;
+  CUDNN_CALL(cudnnCreateFilterDescriptor(&res));
+  int ndim = tv->tensor->ndim;
+  MAKE_SHAPE_ATLEAST_4D(shape, tv->tensor);
+  MAKE_STRIDE(stride, shape_);
+  CUDNN_CALL(cudnnSetFilterNdDescriptor(res, CUDNNDType(tv->tensor->dtype), format, ndim, shape));
+  return res;
+}
+
+inline std::vector<int64_t> MakeAlgoKey(const std::vector<std::vector<int64_t>>& vs) {
+  std::vector<int64_t> res;
+  for (auto &v : vs) {
+    res.push_back(v.size());
+    res.insert(res.end(), v.begin(), v.end());
   }
+  return res;
 }
 
-inline void VecAppend(std::vector<int64_t>& res, ir::Array<ir::Integer> a) {
-  return VecAppend(res, common::shape_utils::MakeShape<int>(a));
+template<typename TDst, typename TSrc>
+inline std::vector<TDst> CastVector(const std::vector<TSrc> &v) {
+  std::vector<TDst> res(v.size());
+  for (int i = 0, e = res.size(); i < e; ++i) {
+    res[i] = v[i];
+  }
+  return res;
 }
 
-class BufferNode : public value::ValueNode {
- public:
-  mutable void* data{nullptr};
-  mutable int64_t size_in_bytes{0};
-  static constexpr const char* _type_key = "mnm.value.BufferNode";
-  MNM_DEF_NODE_TYPE_INFO(BufferNode, ValueNode);
-};
-
-class BufferValue : public value::Value {
- public:
-  MNM_DEF_NODE_REF_METHODS(BufferValue, Value, BufferNode);
-};
+template<int numel>
+inline std::vector<int64_t> NomalizeScalarToTuple(const std::vector<int64_t> &v) {
+  int n = v.size();
+  CHECK(n == 1 || n == numel)
+    << "ValueError: we only accept a single integer or a tuple of " << numel << " integers";
+  return n == 1 ? std::vector<int64_t>(numel, v[0]) : v;
+}
 
 }  // namespace cudnn
 }  // namespace backend

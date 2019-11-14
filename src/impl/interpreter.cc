@@ -6,7 +6,6 @@
 #include <mnm/registry.h>
 #include <mnm/tensor.h>
 #include <mnm/value.h>
-#include "../common/arg_utils.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
 
@@ -15,7 +14,6 @@ namespace interpreter {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using common::arg_utils::AsVector;
 using common::shape_utils::BytesCompactTensor;
 using executor::Executor;
 using memory_pool::Memory;

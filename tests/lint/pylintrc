@@ -392,6 +392,7 @@ good-names=i,
            op,
            x1,
            x2,
+           w,
            x,
            y,
            _

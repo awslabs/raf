@@ -177,9 +177,10 @@ std::vector<int64_t> ToIntTuple(const value::Value& a) {
     for (const auto& item : v->fields) {
       if (const auto* vv = item.as<IntValueNode>()) {
         result.push_back(vv->data);
+      } else {
+        LOG(FATAL) << "Cannot convert to tuple of integers";
+        throw;
       }
-      LOG(FATAL) << "Cannot convert to tuple of integers";
-      throw;
     }
     return result;
   }

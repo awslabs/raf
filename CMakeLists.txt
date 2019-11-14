@@ -69,14 +69,25 @@ if (${MNM_USE_CUDA} STREQUAL "OFF")
   set(MNM_CUDA_SOURCE_FILES "")
 else ()
   file(GLOB_RECURSE MNM_CUDA_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cu
+    ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cu
+  )
+endif()
+
+if (${MNM_USE_CUDNN} STREQUAL "OFF")
+  set(MNM_CUDNN_SOURCE_FILES "")
+else()
+  file(GLOB_RECURSE MNM_CUDNN_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/backend/cudnn/*.cc
   )
 endif()
 
 set(MNM_SOURCE_FILES
   ${MNM_CXX_SOURCE_FILES}
   ${MNM_CUDA_SOURCE_FILES}
+  ${MNM_CUDNN_SOURCE_FILES}
 )
 
 add_library(mnm ${MNM_SOURCE_FILES})

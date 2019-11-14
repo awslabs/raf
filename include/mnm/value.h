@@ -26,8 +26,8 @@ class ValueNode : public ir::Node {
 
 class Value : public ir::NodeRef {
  public:
-  operator const DLTensor*() const;
-  operator const tensor::Tensor&() const;
+  operator DLTensor*() const;
+  operator tensor::Tensor&() const;
   template<typename TValue,
            typename = typename std::enable_if<
            std::is_base_of<Value, TValue>::value>::type>

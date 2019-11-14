@@ -1,6 +1,6 @@
 #include <dmlc/thread_local.h>
 
-#include "./util.h"
+#include "./cudnn_utils.h"
 
 namespace mnm {
 namespace op {

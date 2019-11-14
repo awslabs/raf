@@ -127,16 +127,16 @@ Type GetType(const Value& value) {
 }
 
 /*** Value ***/
-Value::operator const DLTensor*() const {
+Value::operator DLTensor*() const {
   if (const auto* tensor_value = this->as<TensorValueNode>()) {
     const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
-    return dl_tensor_ref;
+    return const_cast<DLTensor*>(dl_tensor_ref);
   }
   LOG(FATAL) << "InternalError: cannot convert to TensorValue";
   throw;
 }
 
-Value::operator const tensor::Tensor&() const {
+Value::operator tensor::Tensor&() const {
   if (const auto* tensor_value = this->as<TensorValueNode>()) {
     return tensor_value->tensor;
   }
