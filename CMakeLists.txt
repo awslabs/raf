@@ -32,6 +32,7 @@ set(MNM_INCLUDE_DIRS
 )
 
 set(MNM_BACKEND_INCLUDE_DIRS
+  ${MNM_CUDA_INCLUDE}
   ${MNM_CUDNN_INCLUDE}
 )
 
@@ -71,8 +72,6 @@ else ()
   file(GLOB_RECURSE MNM_CUDA_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cu
-    ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
-    ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cu
   )
 endif()
 
@@ -91,7 +90,8 @@ set(MNM_SOURCE_FILES
 )
 
 add_library(mnm ${MNM_SOURCE_FILES})
-target_include_directories(mnm PRIVATE ${MNM_INCLUDE_DIRS} ${MNM_BACKEND_INCLUDE_DIRS})
+target_include_directories(mnm PRIVATE ${MNM_INCLUDE_DIRS})
+target_include_directories(mnm SYSTEM PRIVATE ${MNM_BACKEND_INCLUDE_DIRS})
 target_link_libraries(mnm PRIVATE ${MNM_LINK_LIBS} ${MNM_BACKEND_LINK_LIBS})
 target_compile_features(mnm PRIVATE cxx_std_14)
 
