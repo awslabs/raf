@@ -78,6 +78,7 @@ stage('Build') {
          echo "set(MNM_USE_GTEST ON)" >> config.cmake
          echo "set(MNM_USE_CUDA ON)" >> config.cmake
          echo "set(MNM_USE_CUDNN ON)" >> config.cmake
+         echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_gpu, 'build')
       pack_lib('gpu', mnm_multilib)
@@ -94,6 +95,7 @@ stage('Build') {
          echo "set(MNM_USE_GTEST ON)" >> config.cmake
          echo "set(MNM_USE_CUDA OFF)" >> config.cmake
          echo "set(MNM_USE_CUDNN OFF)" >> config.cmake
+         echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_cpu, 'build')
       pack_lib('cpu', mnm_multilib)
