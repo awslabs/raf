@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/device_api.cc
+ * \brief Device api manager
+ */
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
 
@@ -16,7 +21,8 @@ class DeviceAPIManager {
 
   static DeviceAPI* CreateDeviceAPI(DevType device_type) {
     thread_local char creator_name[128];
-    sprintf(creator_name, "mnm.device_api._make.%s", device_type.c_str());
+    snprintf(creator_name, sizeof(creator_name),
+             "mnm.device_api._make.%s", device_type.c_str());
     void* ret = GetPackedFunc(creator_name)();
     return static_cast<DeviceAPI*>(ret);
   }

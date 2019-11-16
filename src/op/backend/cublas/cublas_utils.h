@@ -1,12 +1,14 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/backend/cublas/cublas_utils.h
+ * \brief Helper functions for cuBLAS
+ */
 #pragma once
-
 #include <cublas_v2.h>
-
-#include <mnm/base.h>
-#include <mnm/enum_base.h>
-#include <mnm/ir.h>
-
-#include "../../../common/cuda.h"
+#include "mnm/base.h"
+#include "mnm/enum_base.h"
+#include "mnm/ir.h"
+#include "../../../common/cuda_utils.h"
 
 #define CUBLAS_CALL(func)                                                        \
   do {                                                                           \

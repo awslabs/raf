@@ -1,5 +1,5 @@
-ci_cpu = "junrushao1994/mnm:ci_cpu-v0.03"
-ci_gpu = "junrushao1994/mnm:ci_gpu-v0.03"
+ci_cpu = "junrushao1994/mnm:ci_cpu-v0.04"
+ci_gpu = "junrushao1994/mnm:ci_gpu-v0.04"
 
 docker_run = 'docker/bash.sh'
 max_time = 120

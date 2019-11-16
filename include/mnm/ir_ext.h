@@ -1,6 +1,10 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file ir_ext.h
+ * \brief Extension of TVM/Relay IR
+ */
 #pragma once
-
-#include <mnm/ir.h>
+#include "mnm/ir.h"
 
 /****** mnm::ir::Module ******/
 namespace mnm {

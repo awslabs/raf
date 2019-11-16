@@ -1,6 +1,13 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/schema/ufunc.h
+ * \brief Operator schema. Auto generated. Do not touch.
+ */
 #pragma once
-#include <mnm/op.h>
-#include <mnm/value.h>
+#include <vector>
+#include <string>
+#include "mnm/op.h"
+#include "mnm/value.h"
 namespace mnm {
 namespace op {
 namespace schema {

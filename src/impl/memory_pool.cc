@@ -1,8 +1,12 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/memory_pool.cc
+ * \brief MNM memory pool manager
+ */
 #include <unordered_map>
-
-#include <mnm/base.h>
-#include <mnm/memory_pool.h>
-#include <mnm/registry.h>
+#include "mnm/base.h"
+#include "mnm/memory_pool.h"
+#include "mnm/registry.h"
 
 namespace mnm {
 namespace memory_pool {
@@ -18,7 +22,6 @@ static std::unordered_map<int, std::string> default_strategies = {
 class MemoryPoolManager {
  public:
   static MemoryPoolManager* Get() {
-    // static std::shared_ptr<MemoryPoolManager> instance = std::make_shared<MemoryPoolManager>();
     static MemoryPoolManager* instance = new MemoryPoolManager();
     return instance;
   }
@@ -32,9 +35,11 @@ class MemoryPoolManager {
         // ok, it is truly a nullptr
         if (name == "") {
           const std::string& default_name = default_strategies[ctx.device_type];
-          sprintf(maker_name, "mnm.memory_pool._make.%s", default_name.c_str());
+          snprintf(maker_name, sizeof(maker_name),
+                   "mnm.memory_pool._make.%s", default_name.c_str());
         } else {
-          sprintf(maker_name, "mnm.memory_pool._make.%s", name.c_str());
+          snprintf(maker_name, sizeof(maker_name),
+                   "mnm.memory_pool._make.%s", name.c_str());
         }
         void* ret = GetPackedFunc(maker_name)(ctx.operator DLContext());
         result.reset(static_cast<MemoryPool*>(ret));

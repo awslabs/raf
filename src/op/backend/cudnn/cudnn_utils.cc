@@ -1,5 +1,9 @@
-#include <dmlc/thread_local.h>
-
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/backend/cudnn/cudnn_utils.h
+ * \brief Helper functions for cuDNN
+ */
+#include "dmlc/thread_local.h"
 #include "./cudnn_utils.h"
 
 namespace mnm {

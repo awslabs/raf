@@ -1,7 +1,8 @@
-#include <mnm/op.h>
-
-#include "../../../common/cuda.h"
-#include "../../../common/shape_utils.h"
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/backend/cudnn/conv.cc
+ * \brief Manually-written cuDNN binding for conv2d
+ */
 #include "../../schema/nn.h"
 #include "./cudnn_utils.h"
 
@@ -50,7 +51,7 @@ class ConvCUDNN : public mnm::op::OpEnv {
   const void* beta;
   cudnnTensorDescriptor_t y_desc;
 
-  ConvCUDNN(CallValues call) {
+  explicit ConvCUDNN(CallValues call) {
     const auto* args = call->args.as<mnm::op::schema::ConvArgs>();
     DLTensor *x = args->x;
     DLTensor *w = args->w;
@@ -96,7 +97,7 @@ class ConvCUDNN : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(conv_desc));
   }
 
-  void Execute(const CallValues &call) override final {
+  void Execute(const CallValues &call) final {
     const auto *args = call->args.as<mnm::op::schema::ConvArgs>();
     const DLTensor* x = args->x;
     const DLTensor* w = args->w;
@@ -113,7 +114,6 @@ class ConvCUDNN : public mnm::op::OpEnv {
   }
 };
 
-// TODO: Register 3d/4d also.
 MNM_OP_DISPATCH("mnm.op.conv2d", ConvCUDNN, DevType::kCUDA(), "manual_cudnn");
 
 }  // namespace manual

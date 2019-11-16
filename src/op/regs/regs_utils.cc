@@ -1,5 +1,10 @@
-#include <mnm/tensor.h>
-#include <mnm/value.h>
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/regs/regs_utils.cc
+ * \brief Helpers for operator registry
+ */
+#include "mnm/tensor.h"
+#include "mnm/value.h"
 #include "./regs_utils.h"
 #include "../schema/list_args.h"
 
@@ -124,7 +129,7 @@ using namespace mnm::value;
 using ir::Downcast;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
-  do                                                             \
+  do {                                                          \
     if (const auto* var = (value).as<IntValueNode>()) {          \
       body;                                                      \
     } else if (const auto* var = (value).as<FloatValueNode>()) { \
@@ -132,7 +137,7 @@ using ir::Downcast;
     } else if (const auto* var = (value).as<BoolValueNode>()) {  \
       body;                                                      \
     }                                                            \
-  while (0);
+  } while (0);
 
 Value ToAny(const Value& a) {
   return a;

@@ -1,7 +1,14 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file value.h
+ * \brief Definition of MNM values
+ */
 #pragma once
-
-#include <mnm/ir.h>
-#include <mnm/tensor.h>
+#include <memory>
+#include <vector>
+#include <string>
+#include "mnm/ir.h"
+#include "mnm/tensor.h"
 
 namespace mnm {
 namespace op {

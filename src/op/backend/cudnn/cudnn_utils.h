@@ -1,13 +1,19 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/backend/cudnn/cudnn_utils.h
+ * \brief Helper functions for cuDNN
+ */
 #pragma once
-
 #include <cudnn.h>
-
-#include <mnm/base.h>
-#include <mnm/enum_base.h>
-#include <mnm/ir.h>
-#include <mnm/value.h>
-
-#include "../../../common/cuda.h"
+#include <map>
+#include <string>
+#include <vector>
+#include "mnm/base.h"
+#include "mnm/op.h"
+#include "mnm/enum_base.h"
+#include "mnm/ir.h"
+#include "mnm/value.h"
+#include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 
 #define CUDNN_CALL(func)                                                      \
@@ -63,6 +69,12 @@ class CUDNNThreadEntry {
   cudnnHandle_t handle{nullptr};
 };
 
+template <typename T, int value>
+inline const void* const_typed_addr() {
+  static const T a = static_cast<T>(value);
+  return static_cast<const void*>(&a);
+}
+
 #if CUDNN_VERSION >= 7100
 
 class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t> {
@@ -78,7 +90,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 7, UCharx4, CUDNN_DATA_INT8x4, "uint8x4");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 8, UCharx32, CUDNN_DATA_INT8x32, "uint8x32");
 
-  CUDNNDType(DType dt) : EnumBase(cudnnDataType_t(dt)) {
+  explicit CUDNNDType(DType dt) : EnumBase(cudnnDataType_t(dt)) {
   }
 
  public:
@@ -87,13 +99,13 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t
     cudnnDataType_t dt(*this);
     switch (dt) {
       case CUDNN_DATA_FLOAT:
-        return common::cuda::const_addr<float, value>();
+        return const_typed_addr<float, value>();
       case CUDNN_DATA_HALF:
-        return common::cuda::const_addr<float, value>();
+        return const_typed_addr<float, value>();
       case CUDNN_DATA_DOUBLE:
-        return common::cuda::const_addr<double, value>();
+        return const_typed_addr<double, value>();
       case CUDNN_DATA_INT8:
-        return common::cuda::const_addr<char, value>();
+        return const_typed_addr<char, value>();
       case CUDNN_DATA_INT8x32:
         LOG(FATAL) << "NotImplementedError: " << dt << " no default alpha beta!";
       case CUDNN_DATA_UINT8:
@@ -122,7 +134,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 5, Charx4, CUDNN_DATA_INT8x4, "int8x4");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 6, UChar8x4, CUDNN_DATA_INT8x32, "uint8x32");
 
-  CUDNNDType(DType dt) : EnumBase(cudnnDataType_t(dt)) {
+  explicit CUDNNDType(DType dt) : EnumBase(cudnnDataType_t(dt)) {
   }
 
  public:

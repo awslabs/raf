@@ -1,7 +1,11 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/device_api/cuda/cuda.cc
+ * \brief CUDA device API
+ */
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
-
-#include "../../common/cuda.h"
+#include "../../common/cuda_utils.h"
 
 namespace mnm {
 namespace device_api {
@@ -22,7 +26,7 @@ class CUDADeviceAPI final : public DeviceAPI {
   void* AllocMemory(int64_t nbytes, int64_t alignment) override {
     void* ptr = nullptr;
     // TODO(@junrushao1994): make sure it is correct
-    CHECK(512 % alignment == 0);
+    CHECK_EQ(512 % alignment, 0);
     CUDA_CALL(cudaMalloc(&ptr, nbytes));
     return ptr;
   }

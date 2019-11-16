@@ -1,5 +1,9 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file enum_base.h
+ * \brief Header-only common utilities for better enum
+ */
 #pragma once
-
 #include <vector>
 
 namespace enum_base_details {
@@ -38,7 +42,7 @@ class EnumBase {
   using underlying = _underlying;
   using plain_t = _plain_t;
   static constexpr int numel = _numel;
-  EnumBase(_underlying _v) : v(_v) {
+  EnumBase(_underlying _v) : v(_v) {  // NOLINT(runtime/explicit)
     if (!(0 <= v && v < numel)) {
       throw;
     }

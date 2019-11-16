@@ -1,8 +1,11 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/common/shape_utils.h
+ * \brief Utilities for shape-related manipulation
+ */
 #pragma once
-
 #include <vector>
-
-#include <mnm/ir.h>
+#include "mnm/ir.h"
 
 namespace mnm {
 namespace common {

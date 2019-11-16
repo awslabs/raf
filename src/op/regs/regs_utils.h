@@ -1,8 +1,15 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/regs/regs_utils.h
+ * \brief Helpers for operator registry
+ */
 #pragma once
-#include <mnm/op.h>
-#include <mnm/ir.h>
-#include <mnm/registry.h>
-#include <mnm/value.h>
+#include <vector>
+#include <string>
+#include "mnm/op.h"
+#include "mnm/ir.h"
+#include "mnm/registry.h"
+#include "mnm/value.h"
 
 namespace mnm {
 namespace op {

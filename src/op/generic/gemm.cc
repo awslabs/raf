@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/generic/gemm.cc
+ * \brief Declaration of genmm-related operators
+ */
 #include <mnm/op.h>
 #include <mnm/tensor.h>
 #include "../schema/ufunc.h"

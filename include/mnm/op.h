@@ -1,12 +1,17 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file op.h
+ * \brief Operator interface
+ */
 #pragma once
-
 #include <memory>
 #include <string>
+#include <unordered_map>
 
-#include <mnm/base.h>
-#include <mnm/ir.h>
-#include <mnm/registry.h>
-#include <mnm/value.h>
+#include "mnm/base.h"
+#include "mnm/ir.h"
+#include "mnm/registry.h"
+#include "mnm/value.h"
 
 namespace mnm {
 namespace executor {

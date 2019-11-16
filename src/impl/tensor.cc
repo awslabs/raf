@@ -1,8 +1,11 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/tensor.cc
+ * \brief MNM Tensor underlying implementation
+ */
 #include <vector>
-
-#include <mnm/registry.h>
-#include <mnm/tensor.h>
-
+#include "mnm/registry.h"
+#include "mnm/tensor.h"
 #include "../common/shape_utils.h"
 
 namespace mnm {
@@ -31,7 +34,7 @@ class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
 
   TensorContainer() = delete;
 
-  TensorContainer(void (*del)(Container* self)) {
+  explicit TensorContainer(void (*del)(Container* self)) {
     deleter = del;
     array_type_code_ = kArrayTypeCode;
   }

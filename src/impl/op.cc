@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/op.cc
+ * \brief MNM operator interface underlying implementation
+ */
 #include <dmlc/registry.h>
 
 #include <mnm/executor.h>

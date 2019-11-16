@@ -1,8 +1,11 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file device_api.h
+ * \brief Unified low-level API for heterogeneous devices
+ */
 #pragma once
-
 #include <memory>
-
-#include <mnm/base.h>
+#include "mnm/base.h"
 
 namespace mnm {
 namespace device_api {

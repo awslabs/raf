@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/registry.cc
+ * \brief MNM registry underlying implementation
+ */
 #include <mnm/registry.h>
 
 namespace mnm {

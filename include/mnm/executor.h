@@ -1,9 +1,13 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file executor.h
+ * \brief Executor API
+ */
 #pragma once
-
-#include <mnm/memory_pool.h>
-#include <mnm/op.h>
-#include <mnm/stream_pool.h>
-#include <mnm/value.h>
+#include "mnm/memory_pool.h"
+#include "mnm/op.h"
+#include "mnm/stream_pool.h"
+#include "mnm/value.h"
 
 namespace mnm {
 namespace requests {

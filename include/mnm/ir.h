@@ -1,8 +1,9 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file ir.h
+ * \brief A compatibility layer between MNM and TVM/Relay IR.
+ */
 #pragma once
-
-// This is a compatibility layer between MNM and Relay
-// We will borrow basically everything from TVM/Relay to here.
-
 #include <tvm/attrs.h>
 #include <tvm/ir.h>
 #include <tvm/node/container.h>

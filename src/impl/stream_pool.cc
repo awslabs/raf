@@ -1,10 +1,14 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/tensor.cc
+ * \brief MNM stream pool underlying implementation
+ */
 #include <mutex>
 #include <string>
 #include <unordered_map>
-
-#include <mnm/device_api.h>
-#include <mnm/registry.h>
-#include <mnm/stream_pool.h>
+#include "mnm/device_api.h"
+#include "mnm/registry.h"
+#include "mnm/stream_pool.h"
 
 namespace mnm {
 namespace stream_pool {
@@ -26,7 +30,8 @@ int Tag::GetTagIndex_(const std::string& tag) {
 
 class Stream::Impl {
  public:
-  Impl(const Context& ctx) : ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
+  explicit Impl(const Context& ctx):
+    ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
     this->stream = api->CreateStream(ctx);
   }
 
@@ -44,7 +49,8 @@ class Stream::Impl {
 
 class StreamPool {
  public:
-  StreamPool(const Context& ctx) : ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
+  explicit StreamPool(const Context& ctx):
+    ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
   }
 
   ~StreamPool() {

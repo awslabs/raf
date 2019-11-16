@@ -1,12 +1,18 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file registry.h
+ * \brief Utilities for registering items in separate translation units
+ */
 #pragma once
 
 #include <array>
 #include <functional>
 #include <memory>
 #include <mutex>
-
-#include <mnm/base.h>
-#include <tvm/runtime/registry.h>
+#include <string>
+#include <vector>
+#include "tvm/runtime/registry.h"
+#include "mnm/base.h"
 
 #define MNM_REGISTER_GLOBAL(name) TVM_REGISTER_GLOBAL(name)
 
@@ -42,27 +48,28 @@ class PerDevTypeStore {
   }
 
   EntryPtr& Get(DevType dev_type) {
-    EnsureCapacity(dev_type.operator int());
-    EntryPtr& ret = entries_[int(dev_type)];
+    int dev_type_int = dev_type.operator int();
+    EnsureCapacity(dev_type_int);
+    EntryPtr& ret = entries_[dev_type_int];
     if (create_default) {
-      CreateMissing(ret);
+      CreateMissing(&ret);
     }
     return ret;
   }
 
  protected:
   template <bool b = create_default>
-  void CreateMissing(EntryPtr& p, typename std::enable_if_t<b, int> = 0) {
-    if (p == nullptr) {
+  void CreateMissing(EntryPtr *p, typename std::enable_if_t<b, int> = 0) {
+    if (*p == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (p == nullptr) {
-        p = std::make_shared<EntryType>();
+      if (*p == nullptr) {
+        *p = std::make_shared<EntryType>();
       }
     }
   }
 
   template <bool b = create_default>
-  void CreateMissing(EntryPtr& p, typename std::enable_if_t<!b, int> = 0) {
+  void CreateMissing(EntryPtr *p, typename std::enable_if_t<!b, int> = 0) {
   }
 
   void EnsureCapacity(int i) {
@@ -101,17 +108,18 @@ class PerContextStore {
   }
 
   EntryPtr& Get(Context ctx) {
-    EnsureCapacity(int(ctx.device_type), ctx.device_id);
-    EntryPtr& ret = entries_[int(ctx.device_type)][ctx.device_id];
+    int dev_type_int = ctx.device_type;
+    EnsureCapacity(dev_type_int, ctx.device_id);
+    EntryPtr& ret = entries_[dev_type_int][ctx.device_id];
     if (create_default) {
-      CreateMissing(ret);
+      CreateMissing(&ret);
     }
     return ret;
   }
 
  protected:
   template <bool b = create_default>
-  void CreateMissing(EntryPtr& p, typename std::enable_if_t<b, int> = 0) {
+  void CreateMissing(EntryPtr* p, typename std::enable_if_t<b, int> = 0) {
     if (p == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
       if (p == nullptr) {
@@ -121,7 +129,7 @@ class PerContextStore {
   }
 
   template <bool b = create_default>
-  void CreateMissing(EntryPtr& p, typename std::enable_if_t<!b, int> = 0) {
+  void CreateMissing(EntryPtr* p, typename std::enable_if_t<!b, int> = 0) {
   }
 
   void EnsureCapacity(int i, int j) {

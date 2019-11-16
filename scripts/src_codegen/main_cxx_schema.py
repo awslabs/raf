@@ -5,11 +5,18 @@ import def_schema
 from codegen_utils import snake_to_pascal, write_to_file
 
 
-def gen_file(schemas):
+def gen_file(schemas, filename):
     FILE = """
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \\file {FILENAME}
+ * \\brief Operator schema. Auto generated. Do not touch.
+ */
 #pragma once
-#include <mnm/op.h>
-#include <mnm/value.h>
+#include <vector>
+#include <string>
+#include "mnm/op.h"
+#include "mnm/value.h"
 namespace mnm {{
 namespace op {{
 namespace schema {{
@@ -23,7 +30,9 @@ namespace schema {{
         schema = schemas[name]
         result.append(gen_class(name, schema))
     result = "\n".join(result)
-    return FILE.format(CLASSES=result)
+    if filename.startswith("./"):
+        filename = filename[2:]
+    return FILE.format(CLASSES=result, FILENAME=filename)
 
 
 def gen_class(name, schema):
@@ -67,7 +76,7 @@ def main(path_prefix="./src/op/schema/"):
     for file_name in sorted(files.keys()):
         schemas = files[file_name]
         path = os.path.join(path_prefix, file_name)
-        result = gen_file(schemas)
+        result = gen_file(schemas, path)
         write_to_file(path, result)
 
 

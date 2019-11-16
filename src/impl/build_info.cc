@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/build_info.cc
+ * \brief Reflect build-time information and expose to the frontend
+ */
 #include <mnm/registry.h>
 
 namespace mnm {

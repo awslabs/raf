@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/regs/regs.cc
+ * \brief Auto generated. Do not touch.
+ */
 #include "./regs_utils.h"
 #include "../schema/nn.h"
 #include "../schema/ufunc.h"
@@ -23,7 +28,7 @@ MNM_REGISTER_NODE_TYPE(TernaryUfuncArgs);
 MNM_REGISTER_NODE_TYPE(UnaryArgs);
 MNM_REGISTER_NODE_TYPE(UnaryDxArgs);
 MNM_REGISTER_NODE_TYPE(UnaryUfuncArgs);
-}
+}  // namespace
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

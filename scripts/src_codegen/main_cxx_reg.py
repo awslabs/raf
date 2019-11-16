@@ -3,8 +3,13 @@ import def_schema
 from codegen_utils import NORM_MAP, snake_to_pascal, write_to_file
 
 
-def gen_file():
+def gen_file(filename):
     FILE = """
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \\file {FILENAME}
+ * \\brief Auto generated. Do not touch.
+ */
 #include "./regs_utils.h"
 {INCLUDES}
 
@@ -13,7 +18,7 @@ namespace op {{
 namespace schema {{
 namespace {{
 {ARG_REGS}
-}}
+}}  // namespace
 }}  // namespace schema
 }}  // namespace op
 }}  // namespace mnm
@@ -97,13 +102,16 @@ using registry::TVMRetValue;
         ops[name]) for name in sorted(ops.keys()))
     op_ffi_imps = "\n".join(gen_op_ffi_imp(
         ops[name]) for name in sorted(ops.keys()))
+    if filename.startswith("./"):
+        filename = filename[2:]
     return FILE.format(INCLUDES=includes,
                        ARG_REGS=arg_regs,
                        ARG_INITS=arg_inits,
                        FFI_INITS=ffi_inits,
                        OP_SCHEMAS=op_schemas,
                        OP_FFI_SYMS=op_ffi_syms,
-                       OP_FFI_IMPS=op_ffi_imps)
+                       OP_FFI_IMPS=op_ffi_imps,
+                       FILENAME=filename)
 
 
 def gen_include(filename):
@@ -211,7 +219,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
 
 
 def main(path="./src/op/regs/regs.cc"):
-    result = gen_file()
+    result = gen_file(path)
     write_to_file(path, result)
 
 

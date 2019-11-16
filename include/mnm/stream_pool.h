@@ -1,16 +1,20 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file stream_pool.h
+ * \brief Stream pool API
+ */
 #pragma once
-
 #include <memory>
-
-#include <mnm/base.h>
-#include <mnm/enum_base.h>
+#include <string>
+#include "mnm/base.h"
+#include "mnm/enum_base.h"
 
 namespace mnm {
 namespace stream_pool {
 
 class Tag final {
  public:
-  Tag(const std::string& data) : data(data) {
+  explicit Tag(const std::string& data) : data(data) {
     index = GetTagIndex_(data);
   }
 
@@ -74,7 +78,7 @@ class Stream final {
  public:
   Stream() = default;
 
-  Stream(Impl* impl);
+  explicit Stream(Impl* impl);
 
   ~Stream();
 

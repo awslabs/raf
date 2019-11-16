@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/device_api/cpu/cpu.cc
+ * \brief CPU device API
+ */
 #include <mnm/device_api.h>
 #include <mnm/registry.h>
 

@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/op/generic/binary.cc
+ * \brief Declaration of binary operators
+ */
 #include <mnm/op.h>
 #include <mnm/tensor.h>
 #include "../schema/ufunc.h"
@@ -10,7 +15,7 @@ using namespace mnm::op::schema;
 using namespace mnm::value;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
-  do                                                             \
+  do {                                                           \
     if (const auto* var = (value).as<IntValueNode>()) {          \
       body;                                                      \
     } else if (const auto* var = (value).as<FloatValueNode>()) { \
@@ -18,7 +23,7 @@ using namespace mnm::value;
     } else if (const auto* var = (value).as<BoolValueNode>()) {  \
       body;                                                      \
     }                                                            \
-  while (0);
+  } while (0);
 
 #define MNM_BINARY_SCALAR(op, x1, x2)                                      \
   MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {                    \

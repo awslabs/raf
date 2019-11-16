@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/impl/interpreter.cc
+ * \brief MNM interpreter, a naive implementation of executor
+ */
 #include <mnm/executor.h>
 #include <mnm/ir.h>
 #include <mnm/memory_pool.h>

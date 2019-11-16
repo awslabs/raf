@@ -1,8 +1,13 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file memory_pool.h
+ * \brief Memory pool API
+ */
 #pragma once
-
 #include <memory>
-
-#include <mnm/base.h>
+#include <string>
+#include <vector>
+#include "mnm/base.h"
 
 namespace mnm {
 namespace memory_pool {

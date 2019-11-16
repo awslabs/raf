@@ -1,11 +1,14 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file tensor.h
+ * \brief Definition of MNM tensors
+ */
 #pragma once
-
 #include <vector>
-
-#include <tvm/runtime/ndarray.h>
-#include <tvm/runtime/packed_func.h>
-
-#include <mnm/base.h>
+#include <utility>
+#include "tvm/runtime/ndarray.h"
+#include "tvm/runtime/packed_func.h"
+#include "mnm/base.h"
 
 class MNMTester;
 
@@ -33,13 +36,13 @@ class Tensor : private tvm::runtime::NDArray {
 
   ~Tensor() = default;
 
-  Tensor(TSelf&& other) : TSuper(other) {
+  Tensor(TSelf&& other) : TSuper(other) {  // NOLINT(runtime/explicit)
   }
 
-  Tensor(const TSelf& other) : TSuper(other) {
+  Tensor(const TSelf& other) : TSuper(other) {  // NOLINT(runtime/explicit)
   }
 
-  Tensor(const TSuper& other);
+  Tensor(const TSuper& other);  // NOLINT(runtime/explicit)
 
   TSelf CreateView(const std::vector<int64_t>& shape = {}, const std::vector<int64_t>& strides = {},
                    void* data = nullptr) const;
@@ -74,7 +77,7 @@ class Tensor : private tvm::runtime::NDArray {
   class TensorContainer;
 
  private:
-  Tensor(tvm::runtime::NDArray::Container* data);
+  Tensor(tvm::runtime::NDArray::Container* data);  // NOLINT(runtime/explicit)
 
   int array_type_code() const;
 };

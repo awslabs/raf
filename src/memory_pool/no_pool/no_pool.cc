@@ -1,8 +1,12 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/memory_pool/no_pool/no_pool.cc
+ * \brief No memory pool
+ */
 #include <atomic>
-
-#include <mnm/device_api.h>
-#include <mnm/memory_pool.h>
-#include <mnm/registry.h>
+#include "mnm/device_api.h"
+#include "mnm/memory_pool.h"
+#include "mnm/registry.h"
 
 namespace mnm {
 namespace memory_pool {
@@ -12,7 +16,8 @@ using device_api::DeviceAPI;
 
 class NonOwnedMemory final : public Memory {
  public:
-  NonOwnedMemory(void* data, const Context& ctx, std::shared_ptr<DeviceAPI> api) {
+  explicit NonOwnedMemory(void* data, const Context& ctx,
+                          std::shared_ptr<DeviceAPI> api) {
     this->data = data;
     this->ctx = ctx;
     this->api = std::move(api);
@@ -30,13 +35,13 @@ class NonOwnedMemory final : public Memory {
 
 class NoPool final : public MemoryPool {
  public:
-  NoPool(Context ctx) {
+  explicit NoPool(Context ctx) {
     this->ctx = ctx;
     this->api = DeviceAPI::Get(ctx.device_type);
   }
 
   std::shared_ptr<Memory> Alloc(int64_t nbytes, int64_t alignment) override {
-    CHECK(nbytes >= 0);
+    CHECK_GE(nbytes, 0);
     void* data = nullptr;
     if (nbytes > 0) {
       data = api->AllocMemory(nbytes, alignment);
@@ -44,8 +49,9 @@ class NoPool final : public MemoryPool {
     return std::make_shared<NonOwnedMemory>(data, ctx, api);
   }
 
-  std::vector<std::shared_ptr<Memory> > AllocMany(const std::vector<int64_t>& nbytes,
-                                                  int64_t alignment) override {
+  std::vector<std::shared_ptr<Memory>> AllocMany(
+      const std::vector<int64_t>& nbytes,
+      int64_t alignment) override {
     std::vector<std::shared_ptr<Memory> > ret;
     ret.reserve(nbytes.size());
     for (int64_t bytes : nbytes) {

@@ -1,8 +1,14 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file src/requests.h
+ * \brief Resource request underlying each operator
+ */
 #pragma once
-
-#include <mnm/base.h>
-#include <mnm/memory_pool.h>
-#include <mnm/stream_pool.h>
+#include <memory>
+#include <vector>
+#include "mnm/base.h"
+#include "mnm/memory_pool.h"
+#include "mnm/stream_pool.h"
 
 namespace mnm {
 namespace requests {
