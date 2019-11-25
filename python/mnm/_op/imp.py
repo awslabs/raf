@@ -3,7 +3,15 @@ from mnm._core.core_utils import set_module
 from . import imp_utils
 
 # pylint: disable=invalid-name,line-too-long,too-many-arguments
-__all__ = ["add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm", "conv2d", "conv2d_dw", "conv2d_dx", "divide", "equal", "greater", "greater_equal", "less", "less_equal", "linear", "log_softmax", "log_softmax_dx", "logical_not", "max_pool2d", "max_pool2d_dx", "mod", "multiply", "negative", "not_equal", "relu", "relu_dx", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "subtract", "tanh", "tanh_dx"]
+__all__ = [
+    "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm_infer",
+    "batch_norm_train", "conv2d", "conv2d_dw", "conv2d_dx", "divide",
+    "equal", "greater", "greater_equal", "less", "less_equal",
+    "linear", "log_softmax", "log_softmax_dx", "logical_not", "max_pool2d",
+    "max_pool2d_dx", "mod", "multiply", "negative", "not_equal",
+    "relu", "relu_dx", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "subtract", "tanh", "tanh_dx",
+]
 
 @set_module("mnm")
 def add(x1, x2, out=None, where=None):
@@ -39,15 +47,25 @@ def batch_flatten(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.batch_flatten(x))
 @set_module("mnm")
-def batch_norm(x, running_mean, running_var, scale=None, bias=None, eps=1e-05, momentum=0.1):
+def batch_norm_infer(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
     x = imp_utils.to_tensor(x)
     running_mean = imp_utils.to_tensor(running_mean)
     running_var = imp_utils.to_tensor(running_var)
-    scale = imp_utils.to_tensor(scale)
-    bias = imp_utils.to_tensor(bias)
+    w = imp_utils.to_tensor(w)
+    b = imp_utils.to_tensor(b)
     eps = imp_utils.to_double(eps)
     momentum = imp_utils.to_double(momentum)
-    return imp_utils.ret(ffi.batch_norm(x, running_mean, running_var, scale, bias, eps, momentum))
+    return imp_utils.ret(ffi.batch_norm_infer(x, running_mean, running_var, w, b, eps, momentum))
+@set_module("mnm")
+def batch_norm_train(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
+    x = imp_utils.to_tensor(x)
+    running_mean = imp_utils.to_tensor(running_mean)
+    running_var = imp_utils.to_tensor(running_var)
+    w = imp_utils.to_tensor(w)
+    b = imp_utils.to_tensor(b)
+    eps = imp_utils.to_double(eps)
+    momentum = imp_utils.to_double(momentum)
+    return imp_utils.ret(ffi.batch_norm_train(x, running_mean, running_var, w, b, eps, momentum))
 @set_module("mnm")
 def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     x = imp_utils.to_tensor(x)

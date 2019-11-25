@@ -2,7 +2,7 @@ from numbers import Number
 
 import def_op
 from codegen_utils import PY_NORM_MAP as NORM_MAP
-from codegen_utils import write_to_file
+from codegen_utils import split_chunks, write_to_file
 
 
 def gen_file():
@@ -12,14 +12,17 @@ from mnm._core.core_utils import set_module
 from . import imp_utils
 
 # pylint: disable=invalid-name,line-too-long,too-many-arguments
-__all__ = ["{OP_NAMES}"]
+__all__ = [
+{OP_NAMES}
+]
 
 {METHODS}
 """.strip()
     ops = def_op.by_name()
     methods = "\n".join(gen_method(ops[name])
                         for name in sorted(ops.keys()))
-    op_names = '", "'.join(sorted(ops.keys()))
+    op_names = "\n".join(map(lambda x: '    "' + '", "'.join(x) + '",',
+                             split_chunks(sorted(ops.keys()), chunk_size=5)))
     return FILE.format(METHODS=methods, OP_NAMES=op_names)
 
 

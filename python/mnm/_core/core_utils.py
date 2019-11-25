@@ -19,6 +19,10 @@ def set_module(module):
     return decorator
 
 
+def get_func_name(pyfunc):
+    return pyfunc.__module__ + "$" + pyfunc.__qualname__
+
+
 def _get_ctx_map():
     dev_type_mask = {
         'llvm': 1,
@@ -42,7 +46,6 @@ def _get_ctx_map():
         'micro_dev': 13,
     }
     _str2ctx = {}
-    _ctx2str = {}
 
     for device_type, idx in dev_type_mask.items():
         _str2ctx[device_type] = _DLContext(device_type=idx, device_id=0)
@@ -50,16 +53,35 @@ def _get_ctx_map():
         for device_id in range(128):
             name = f"{device_type}({device_id})"
             _str2ctx[name] = _DLContext(device_type=idx, device_id=device_id)
-            _ctx2str[(idx, device_id)] = name
 
-    return _str2ctx, _ctx2str
+    return _str2ctx
 
 
-_STR2CTX, _CTX2STR = _get_ctx_map()
+_STR2CTX = _get_ctx_map()
 
 
 def ctx2str(ctx: _DLContext) -> str:
-    return _CTX2STR[(int(ctx.device_type), int(ctx.device_id))]
+    mask = [
+        None,
+        "cpu",
+        "cuda",
+        "cpu_pinned",
+        "cl",
+        "aocl",
+        'sdaccel',
+        'vulkan',
+        'metal',
+        'vpi',
+        'rocm',
+        'opengl'
+    ]
+    dev_type = int(ctx.device_type)
+    dev_id = int(ctx.device_id)
+
+    if dev_id == 0 and dev_type in (1, 3):
+        return mask[dev_type]
+
+    return mask[dev_type] + "(" + str(dev_id) + ")"
 
 
 def str2ctx(name: str) -> _DLContext:

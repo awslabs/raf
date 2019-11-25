@@ -48,8 +48,8 @@ Attrs BatchNorm(const Array<Value> &values) {
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, running_mean);
   MNM_REQUIRED(2, args::ToTensor, running_var);
-  MNM_OPTIONAL(3, args::ToTensor, scale);
-  MNM_OPTIONAL(4, args::ToTensor, bias);
+  MNM_OPTIONAL(3, args::ToTensor, w);
+  MNM_OPTIONAL(4, args::ToTensor, b);
   MNM_OPTIONAL(5, args::ToDouble, eps);
   MNM_OPTIONAL(6, args::ToDouble, momentum);
   return Attrs(attrs);
@@ -242,8 +242,8 @@ Array<Expr> BatchNorm(const TVMArgs &values) {
   MNM_REQUIRED(0, ffi::ToTensor, x);
   MNM_REQUIRED(1, ffi::ToTensor, running_mean);
   MNM_REQUIRED(2, ffi::ToTensor, running_var);
-  MNM_OPTIONAL(3, ffi::ToTensor, scale);
-  MNM_OPTIONAL(4, ffi::ToTensor, bias);
+  MNM_OPTIONAL(3, ffi::ToTensor, w);
+  MNM_OPTIONAL(4, ffi::ToTensor, b);
   MNM_OPTIONAL(5, ffi::ToDouble, eps);
   MNM_OPTIONAL(6, ffi::ToDouble, momentum);
   return Array<Expr>(result);
@@ -429,7 +429,8 @@ MNM_BIND_SCHEMA("mnm.op.add", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", args::Pool);
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", args::PoolDx);
 MNM_BIND_SCHEMA("mnm.op.batch_flatten", args::Unary);
-MNM_BIND_SCHEMA("mnm.op.batch_norm", args::BatchNorm);
+MNM_BIND_SCHEMA("mnm.op.batch_norm_infer", args::BatchNorm);
+MNM_BIND_SCHEMA("mnm.op.batch_norm_train", args::BatchNorm);
 MNM_BIND_SCHEMA("mnm.op.conv2d", args::Conv);
 MNM_BIND_SCHEMA("mnm.op.conv2d_dw", args::ConvDxw);
 MNM_BIND_SCHEMA("mnm.op.conv2d_dx", args::ConvDxw);
@@ -488,9 +489,14 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten")
   static Op op = Op::Get("mnm.op.batch_flatten");
   *ret = CallNode::make(op, ffi::Unary(args));
 });
-MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm")
+MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_infer")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
-  static Op op = Op::Get("mnm.op.batch_norm");
+  static Op op = Op::Get("mnm.op.batch_norm_infer");
+  *ret = CallNode::make(op, ffi::BatchNorm(args));
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.batch_norm_train");
   *ret = CallNode::make(op, ffi::BatchNorm(args));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d")
@@ -666,9 +672,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.batch_flatten")
   static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
   *ret = run(CallNode::make(op, ffi::Unary(args)));
 });
-MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm")
+MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm_infer")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
-  static Op op = Op::Get("mnm.op.batch_norm");
+  static Op op = Op::Get("mnm.op.batch_norm_infer");
+  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
+  *ret = run(CallNode::make(op, ffi::BatchNorm(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm_train")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.batch_norm_train");
   static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
   *ret = run(CallNode::make(op, ffi::BatchNorm(args)));
 });

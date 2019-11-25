@@ -3,9 +3,10 @@ import inspect
 from typing import Callable, Dict, List
 
 from mnm._lib import relay
+from mnm._core.core_utils import get_func_name
 
 from .cfg import CFG, BasicBlock
-from .hybrid_utils import NodeVisitor, get_func_name, unbound_constant_expr
+from .hybrid_utils import NodeVisitor, unbound_constant_expr
 
 SymTab = Dict[str, relay.Var]
 FuncTab = Dict[BasicBlock, relay.GlobalVar]

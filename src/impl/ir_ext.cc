@@ -36,8 +36,27 @@ Function ModuleLookup(Module mod, GlobalVar var, Function func) {
   return mod->Lookup(var);
 }
 
+tvm::runtime::NDArray MakeFakeTensor() {
+  static int64_t a[1] = {-114514};
+  static int64_t b[1] = {1};
+  Context ctx = mnm::Context(mnm::DevType::kCPU(), 0);
+  DType dtype = mnm::DType(mnm::DTypeCode::kInt(), 64, 1);
+  DLTensor tensor;
+  tensor.data = a;
+  tensor.ctx = ctx;
+  tensor.dtype = dtype;
+  tensor.shape = b;
+  tensor.ndim = 0;
+  tensor.strides = nullptr;
+  tensor.byte_offset = 0;
+  auto array = tvm::runtime::NDArray::Empty({}, dtype, ctx);
+  array.CopyFrom(&tensor);
+  return array;
+}
+
 RelayConstant MakeConstant(NodeRef node_ref) {
   NodePtr<ConstantNode> n = make_node<ConstantNode>();
+  n->data = MakeFakeTensor();
   n->value = std::move(node_ref);
   return RelayConstant(n);
 }

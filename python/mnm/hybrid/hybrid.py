@@ -4,7 +4,7 @@ from typing import Callable, Dict
 
 import numpy as np
 
-from mnm._core.core_utils import set_module
+from mnm._core.core_utils import get_func_name, set_module
 from mnm._core.executor import Interpreter
 from mnm._core.module import Module
 from mnm._core.ndarray import ndarray as NDArray
@@ -12,7 +12,6 @@ from mnm._core.value import BoolValue, BoundExpr, FloatValue, IntValue, Value
 from mnm._lib import relay
 
 from .cfg import ast2cfg
-from .hybrid_utils import get_func_name
 from .ir_builder import build_ir
 from .sanity_check import sanity_check
 from .to_builder import to_builder

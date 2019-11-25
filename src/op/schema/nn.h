@@ -16,8 +16,8 @@ class BatchNormArgs : public ir::AttrsNode<BatchNormArgs> {
   value::TensorValue x;
   value::TensorValue running_mean;
   value::TensorValue running_var;
-  value::TensorValue scale{nullptr};
-  value::TensorValue bias{nullptr};
+  value::TensorValue w{nullptr};
+  value::TensorValue b{nullptr};
   double eps{1e-05};
   double momentum{0.1};
   MNM_OP_SCHEMA(BatchNormArgs, "mnm.args.batch_norm");

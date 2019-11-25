@@ -2,13 +2,13 @@ from numbers import Number
 
 import numpy as np
 
-from mnm._core.ndarray import Symbol
+from mnm._core.ndarray import Symbol, ndarray
 from mnm._core.value import TensorValue, Value
 
 
 def to_any(a):
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
 
     if a is None:
         return None
@@ -20,19 +20,24 @@ def to_any(a):
 
 
 def to_tensor(a):
+    if a is None:
+        return None
+
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
+
+    if isinstance(a, ndarray):
+        return a._ndarray__handle._expr  # pylint: disable=protected-access
 
     if not isinstance(a, np.ndarray):
         a = np.array(a)
-    # TODO(@junrushao1994): save this FFI call
 
     return Value.as_const_expr(TensorValue.from_numpy(a))
 
 
 def to_int_tuple(a):
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray):
         a = a.tolist()
@@ -62,7 +67,7 @@ def to_optional_int_tuple(a):
 
 def to_int(a):
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -74,7 +79,7 @@ def to_int(a):
 
 def to_double(a):
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -86,7 +91,7 @@ def to_double(a):
 
 def to_bool(a):
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -98,7 +103,7 @@ def to_bool(a):
 
 def to_string(a):
     if isinstance(a, Symbol):
-        return a._expr  # pylint: disable=protected-access
+        return a._Symbol__expr  # pylint: disable=protected-access
 
     if isinstance(a, str):
         return a

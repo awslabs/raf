@@ -49,6 +49,12 @@ def write_to_file(path, content):
         o_f.write(content)
 
 
+def split_chunks(list_, chunk_size):
+    list_ = list(list_)
+    for i in range(0, len(list_), chunk_size):
+        yield list_[i: i + chunk_size]
+
+
 NORM_MAP = {
     "value::Value": "ToAny",
     "value::TensorValue": "ToTensor",

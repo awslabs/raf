@@ -3,6 +3,16 @@ from mnm._core.ndarray import Symbol
 from . import sym_utils
 
 # pylint: disable=invalid-name,line-too-long,too-many-arguments
+__all__ = [
+    "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm_infer",
+    "batch_norm_train", "conv2d", "conv2d_dw", "conv2d_dx", "divide",
+    "equal", "greater", "greater_equal", "less", "less_equal",
+    "linear", "log_softmax", "log_softmax_dx", "logical_not", "max_pool2d",
+    "max_pool2d_dx", "mod", "multiply", "negative", "not_equal",
+    "relu", "relu_dx", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "subtract", "tanh", "tanh_dx",
+]
+
 def add(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -32,15 +42,24 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.batch_flatten(x))
-def batch_norm(x, running_mean, running_var, scale=None, bias=None, eps=1e-05, momentum=0.1):
+def batch_norm_infer(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
     x = sym_utils.to_tensor(x)
     running_mean = sym_utils.to_tensor(running_mean)
     running_var = sym_utils.to_tensor(running_var)
-    scale = sym_utils.to_tensor(scale)
-    bias = sym_utils.to_tensor(bias)
+    w = sym_utils.to_tensor(w)
+    b = sym_utils.to_tensor(b)
     eps = sym_utils.to_double(eps)
     momentum = sym_utils.to_double(momentum)
-    return Symbol.from_expr(ffi.batch_norm(x, running_mean, running_var, scale, bias, eps, momentum))
+    return Symbol.from_expr(ffi.batch_norm_infer(x, running_mean, running_var, w, b, eps, momentum))
+def batch_norm_train(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
+    x = sym_utils.to_tensor(x)
+    running_mean = sym_utils.to_tensor(running_mean)
+    running_var = sym_utils.to_tensor(running_var)
+    w = sym_utils.to_tensor(w)
+    b = sym_utils.to_tensor(b)
+    eps = sym_utils.to_double(eps)
+    momentum = sym_utils.to_double(momentum)
+    return Symbol.from_expr(ffi.batch_norm_train(x, running_mean, running_var, w, b, eps, momentum))
 def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     x = sym_utils.to_tensor(x)
     w = sym_utils.to_tensor(w)

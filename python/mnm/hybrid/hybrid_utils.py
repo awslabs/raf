@@ -107,7 +107,3 @@ def unbound_constant_expr():
     # TODO(@junrushao1994): fake it until you make it
 
     return Value.as_const_expr(IntValue(0))
-
-
-def get_func_name(pyfunc):
-    return pyfunc.__module__ + "$" + pyfunc.__qualname__
