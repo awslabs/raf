@@ -13,11 +13,11 @@ namespace op {
 
 using ir::Array;
 using ir::Attrs;
-using ir::make_node;
+using ir::make_object;
 using value::Value;
 
 Attrs MakeListArgs(const Array<Value>& values) {
-  auto attrs = make_node<op::schema::ListArgs>();
+  auto attrs = make_object<op::schema::ListArgs>();
   attrs->args = values;
   return Attrs(attrs);
 }
@@ -28,7 +28,7 @@ Array<Value> GetListArgs(const Attrs& attrs) {
 
 namespace schema {
 namespace {
-MNM_REGISTER_NODE_TYPE(ListArgs);
+MNM_REGISTER_OBJECT_REFLECT(ListArgs);
 }
 }  // namespace schema
 }  // namespace op
@@ -42,9 +42,9 @@ using registry::TVMArgValue;
 using namespace mnm::ir;
 using namespace mnm::value;
 
-#define MNM_CHECK_SYM(a)                                          \
-  if ((a).type_code() == kNodeHandle && (a).IsNodeType<Expr>()) { \
-    return (a).operator Expr();                                   \
+#define MNM_CHECK_SYM(a)                                              \
+  if ((a).type_code() == kObjectHandle && (a).IsObjectRef<Expr>()) {  \
+    return (a).operator Expr();                                       \
   }
 
 #define MNM_RET_SYM(v_type, v) return MakeConstant(v_type::make(v));
@@ -64,7 +64,7 @@ Expr ToAny(const TVMArgValue& a) {
   if (type_code == kNull) {
     return MakeConstant(ir::NullValue<Value>());
   }
-  if (type_code == kNodeHandle && a.IsNodeType<Array<Integer>>()) {
+  if (type_code == kObjectHandle && a.IsObjectRef<Array<Integer>>()) {
     return ffi::ToIntTuple(a);
   }
   LOG(FATAL) << "Not supported type code " << type_code;
@@ -103,7 +103,7 @@ Expr ToIntTuple(const TVMArgValue& a) {
     MNM_RET_SYM(TupleValue, {IntValue::make(a.operator int64_t())});
   }
   Array<Value> result;
-  for (const auto& item : a.AsNodeRef<Array<Integer>>()) {
+  for (const auto& item : a.AsObjectRef<Array<Integer>>()) {
     result.push_back(IntValue::make(item.operator int64_t()));
   }
   MNM_RET_SYM(TupleValue, result);
@@ -130,11 +130,11 @@ using ir::Downcast;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
   do {                                                          \
-    if (const auto* var = (value).as<IntValueNode>()) {          \
+    if (const auto* var = (value).as<IntValueObj>()) {          \
       body;                                                      \
-    } else if (const auto* var = (value).as<FloatValueNode>()) { \
+    } else if (const auto* var = (value).as<FloatValueObj>()) { \
       body;                                                      \
-    } else if (const auto* var = (value).as<BoolValueNode>()) {  \
+    } else if (const auto* var = (value).as<BoolValueObj>()) {  \
       body;                                                      \
     }                                                            \
   } while (0);
@@ -166,7 +166,7 @@ double ToDouble(const Value& a) {
 }
 
 std::string ToString(const value::Value& a) {
-  if (const auto* value = a.as<StringValueNode>()) {
+  if (const auto* value = a.as<StringValueObj>()) {
     return value->data;
   }
   LOG(FATAL) << "InternalError: cannot be converted to std::string";
@@ -174,13 +174,13 @@ std::string ToString(const value::Value& a) {
 }
 
 std::vector<int64_t> ToIntTuple(const value::Value& a) {
-  if (const auto* v = a.as<IntValueNode>()) {
+  if (const auto* v = a.as<IntValueObj>()) {
     return {v->data};
   }
-  if (const auto* v = a.as<TupleValueNode>()) {
+  if (const auto* v = a.as<TupleValueObj>()) {
     std::vector<int64_t> result;
     for (const auto& item : v->fields) {
-      if (const auto* vv = item.as<IntValueNode>()) {
+      if (const auto* vv = item.as<IntValueObj>()) {
         result.push_back(vv->data);
       } else {
         LOG(FATAL) << "Cannot convert to tuple of integers";

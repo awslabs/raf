@@ -4,49 +4,53 @@
  * \brief A compatibility layer between MNM and TVM/Relay IR.
  */
 #pragma once
-#include <tvm/attrs.h>
-#include <tvm/ir.h>
-#include <tvm/node/container.h>
-#include <tvm/node/memory.h>
-#include <tvm/node/node.h>
-#include <tvm/relay/base.h>
-#include <tvm/relay/expr.h>
-#include <tvm/relay/expr_functor.h>
-#include <tvm/relay/module.h>
-#include <tvm/relay/op.h>
-#include <tvm/relay/op_attr_types.h>
-#include <tvm/relay/type.h>
+#include <string>
+#include "tvm/runtime/object.h"
+#include "tvm/attrs.h"
+#include "tvm/ir.h"
+#include "tvm/node/container.h"
+#include "tvm/node/node.h"
+#include "tvm/relay/base.h"
+#include "tvm/relay/expr.h"
+#include "tvm/relay/expr_functor.h"
+#include "tvm/relay/module.h"
+#include "tvm/relay/op.h"
+#include "tvm/relay/op_attr_types.h"
+#include "tvm/relay/type.h"
 
 namespace mnm {
 namespace ir {
 
+// Containers
 using tvm::Array;
-using tvm::Attrs;
-using tvm::AttrsNode;
-using tvm::Downcast;
-using tvm::GetRef;
-using tvm::Integer;
-using tvm::IntImm;
-using tvm::make_node;
+using tvm::ArrayNode;
 using tvm::Map;
 using tvm::MapNode;
-using tvm::Node;
-using tvm::NodePtr;
-using tvm::NullValue;
+using tvm::StrMapNode;
 
-using tvm::relay::DataType;
-using tvm::relay::IndexExpr;
-using tvm::relay::NodeEqual;
-using tvm::relay::NodeHash;
-using tvm::relay::NodeRef;
+// Scalars
+using tvm::Integer;
+using tvm::IntImm;
+
+// Attributes
+using tvm::Attrs;
+using tvm::AttrsNode;
+
+// Object protocol
+using tvm::runtime::Object;
+using tvm::runtime::ObjectPtr;
+using tvm::runtime::ObjectRef;
+using tvm::runtime::ObjectHash;
+using tvm::runtime::ObjectEqual;
+using tvm::runtime::GetRef;
+using tvm::runtime::Downcast;
+using tvm::runtime::make_object;
+using tvm::NullValue;
 
 // Relay Expression
 using tvm::relay::Expr;
 using tvm::relay::ExprNode;
 
-using tvm::relay::FTVMCompute;
-using tvm::relay::FTVMSchedule;
-using tvm::relay::TOpPattern;
 using tvm::relay::Op;
 using tvm::relay::OpNode;
 
@@ -133,20 +137,51 @@ using tvm::relay::ExprFunctor;
 }  // namespace ir
 }  // namespace mnm
 
-#define MNM_DEF_NODE_TYPE_INFO(TypeName, Parent) TVM_DECLARE_NODE_TYPE_INFO(TypeName, Parent)
+#define MNM_BASE_OBJECT(TypeName, ParentType)                           \
+  static const uint32_t RuntimeTypeIndex()  {                           \
+    if (TypeName::_type_index != ::tvm::runtime::TypeIndex::kDynamic) { \
+      return TypeName::_type_index;                                     \
+    }                                                                   \
+    return _GetOrAllocRuntimeTypeIndex();                               \
+  }                                                                     \
+  static const uint32_t _GetOrAllocRuntimeTypeIndex()  {                \
+    static uint32_t tidx = GetOrAllocRuntimeTypeIndex(                  \
+        TypeName::_type_key,                                            \
+        TypeName::_type_index,                                          \
+        ParentType::_GetOrAllocRuntimeTypeIndex(),                      \
+        TypeName::_type_child_slots,                                    \
+        TypeName::_type_child_slots_can_overflow);                      \
+    return tidx;                                                        \
+  }
 
-#define MNM_DEF_BASE_NODE_INFO(TypeName, Parent) TVM_DECLARE_BASE_NODE_INFO(TypeName, Parent)
+#define MNM_FINAL_OBJECT(TypeName, ParentType)                          \
+  static const constexpr bool _type_final = true;                       \
+  static const constexpr int _type_child_slots = 0;                     \
+  MNM_BASE_OBJECT(TypeName, ParentType)
 
-#define MNM_DEF_NODE_REF_METHODS(TypeName, BaseTypeName, NodeName)     \
-  TypeName() {                                                         \
-  }                                                                    \
-  explicit TypeName(::tvm::NodePtr<::tvm::Node> n) : BaseTypeName(n) { \
-  }                                                                    \
-  NodeName* operator->() const {                                       \
-    return static_cast<NodeName*>(node_.get());                        \
-  }                                                                    \
-  using ContainerType = NodeName;
+#define MNM_OBJECT_REF(TypeName, ParentType, ObjectName)                \
+  TypeName() {}                                                         \
+  explicit TypeName(                                                    \
+      ::tvm::runtime::ObjectPtr<::tvm::runtime::Object> n)              \
+      : ParentType(n) {}                                                \
+  ObjectName* operator->() const {                                      \
+    return static_cast<ObjectName*>(data_.get());                       \
+  }                                                                     \
+  using ContainerType = ObjectName;
 
-#define MNM_REGISTER_NODE_TYPE(name) TVM_REGISTER_NODE_TYPE(name)
+#define MNM_REGISTER_OBJECT_NO_REFLECT(TypeName)                        \
+  static DMLC_ATTRIBUTE_UNUSED uint32_t                                 \
+    __make_Object_tidx ## _ ## TypeName ## __ =                         \
+      TypeName::_GetOrAllocRuntimeTypeIndex()
 
-#include <mnm/ir_ext.h>
+#define MNM_REGISTER_OBJECT_REFLECT(TypeName)                           \
+  MNM_REGISTER_OBJECT_NO_REFLECT(TypeName);                             \
+  static DMLC_ATTRIBUTE_UNUSED ::tvm::ReflectionVTable::Registry &      \
+  __make_Node ## _ ## TypeName ## __ =                                  \
+      ::tvm::ReflectionVTable::Global()->Register<TypeName>()           \
+      .set_creator([](const std::string&)                               \
+          -> ::tvm::runtime::ObjectPtr<::tvm::runtime::Object> {        \
+          return ::tvm::runtime::make_object<TypeName>();               \
+        })
+
+#include "./ir_ext.h"

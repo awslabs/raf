@@ -3,12 +3,12 @@
  * \file src/impl/value.cc
  * \brief MNM value underlying implementation
  */
-#include <tvm/runtime/ndarray.h>
-#include <mnm/executor.h>
-#include <mnm/ir.h>
-#include <mnm/registry.h>
-#include <mnm/tensor.h>
-#include <mnm/value.h>
+#include "tvm/runtime/ndarray.h"
+#include "mnm/executor.h"
+#include "mnm/ir.h"
+#include "mnm/registry.h"
+#include "mnm/tensor.h"
+#include "mnm/value.h"
 #include "../common/shape_utils.h"
 
 namespace mnm {
@@ -22,32 +22,32 @@ using namespace mnm::ir;
 
 /*** Constructors ***/
 TensorValue TensorValue::make(tensor::Tensor tensor) {
-  NodePtr<TensorValueNode> n = make_node<TensorValueNode>();
+  ObjectPtr<TensorValueObj> n = make_object<TensorValueObj>();
   n->tensor = std::move(tensor);
   return TensorValue(n);
 }
 
 TupleValue TupleValue::make(Array<Value> fields) {
-  NodePtr<TupleValueNode> n = make_node<TupleValueNode>();
+  ObjectPtr<TupleValueObj> n = make_object<TupleValueObj>();
   n->fields = std::move(fields);
   return TupleValue(n);
 }
 
 ClosureValue ClosureValue::make(Map<Var, Value> env, Function func) {
-  NodePtr<ClosureValueNode> n = make_node<ClosureValueNode>();
+  ObjectPtr<ClosureValueObj> n = make_object<ClosureValueObj>();
   n->env = std::move(env);
   n->func = std::move(func);
   return ClosureValue(n);
 }
 
 RefValue RefValue::make(Value value) {
-  NodePtr<RefValueNode> n = make_node<RefValueNode>();
+  ObjectPtr<RefValueObj> n = make_object<RefValueObj>();
   n->value = std::move(value);
   return RefValue(n);
 }
 
 OpValue OpValue::make(Op op) {
-  NodePtr<OpValueNode> n = make_node<OpValueNode>();
+  ObjectPtr<OpValueObj> n = make_object<OpValueObj>();
   n->op = std::move(op);
   return OpValue(n);
 }
@@ -69,44 +69,44 @@ BoolValue ScalarValue::make(bool data) {
 }
 
 IntValue IntValue::make(int64_t data) {
-  NodePtr<IntValueNode> n = make_node<IntValueNode>();
+  ObjectPtr<IntValueObj> n = make_object<IntValueObj>();
   n->data = data;
   return IntValue(n);
 }
 
 FloatValue FloatValue::make(double data) {
-  NodePtr<FloatValueNode> n = make_node<FloatValueNode>();
+  ObjectPtr<FloatValueObj> n = make_object<FloatValueObj>();
   n->data = data;
   return FloatValue(n);
 }
 
 BoolValue BoolValue::make(bool data) {
-  NodePtr<BoolValueNode> n = make_node<BoolValueNode>();
+  ObjectPtr<BoolValueObj> n = make_object<BoolValueObj>();
   n->data = data;
   return BoolValue(n);
 }
 
 StringValue StringValue::make(const std::string& data) {
-  NodePtr<StringValueNode> n = make_node<StringValueNode>();
+  ObjectPtr<StringValueObj> n = make_object<StringValueObj>();
   n->data = data;
   return StringValue(n);
 }
 
 BoundExpr BoundExpr::make(Expr expr, Value value) {
-  NodePtr<BoundExprNode> n = make_node<BoundExprNode>();
+  ObjectPtr<BoundExprObj> n = make_object<BoundExprObj>();
   n->expr = std::move(expr);
   n->value = std::move(value);
   return BoundExpr(n);
 }
 
 /*** BoundExpr ***/
-BoundExprNode::~BoundExprNode() {
+BoundExprObj::~BoundExprObj() {
   if (executor != nullptr) {
     executor->OnDestruct(this);
   }
 }
 
-void BoundExprNode::BindExecutor(Executor* executor) {
+void BoundExprObj::BindExecutor(Executor* executor) {
   CHECK(this->executor == nullptr);
   this->executor = executor;
   executor->OnBind(this);
@@ -114,24 +114,24 @@ void BoundExprNode::BindExecutor(Executor* executor) {
 
 /*** GetType ***/
 Type GetType(const Value& value) {
-  if (const auto* tv = value.as<TensorValueNode>()) {
+  if (const auto* tv = value.as<TensorValueObj>()) {
     const DLTensor& dlt = *tv->tensor.operator->();
     auto shape = GetShape<tvm::Integer>(dlt);
     return ir::TensorTypeNode::make({shape.begin(), shape.end()}, tvm::TVMType2Type(dlt.dtype));
-  } else if (const auto* tv = value.as<TupleValueNode>()) {
+  } else if (const auto* tv = value.as<TupleValueObj>()) {
     Array<Type> tuple_type;
     for (const Value& sub_value : tv->fields) {
       tuple_type.push_back(GetType(sub_value));
     }
     return ir::TupleTypeNode::make(tuple_type);
   }
-  LOG(FATAL) << "NotImplementedError: " << value->type_key();
+  LOG(FATAL) << "NotImplementedError: " << value->GetTypeKey();
   throw;
 }
 
 /*** Value ***/
 Value::operator DLTensor*() const {
-  if (const auto* tensor_value = this->as<TensorValueNode>()) {
+  if (const auto* tensor_value = this->as<TensorValueObj>()) {
     const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
     return const_cast<DLTensor*>(dl_tensor_ref);
   }
@@ -140,7 +140,7 @@ Value::operator DLTensor*() const {
 }
 
 Value::operator tensor::Tensor&() const {
-  if (const auto* tensor_value = this->as<TensorValueNode>()) {
+  if (const auto* tensor_value = this->as<TensorValueObj>()) {
     return tensor_value->tensor;
   }
   LOG(FATAL) << "InternalError: cannot convert to TensorValue";
@@ -175,12 +175,12 @@ tvm::runtime::NDArray ToTVM(TensorValue value) {
   return tvm::runtime::NDArray::FromDLPack(tensor);
 }
 
-NodeRef DeTuple(Value value) {
-  if (value->is_type<TensorValueNode>()) {
+ObjectRef DeTuple(Value value) {
+  if (value->IsInstance<TensorValueObj>()) {
     return std::move(value);
   }
-  if (const auto* tuple = value.as<TupleValueNode>()) {
-    Array<NodeRef> result;
+  if (const auto* tuple = value.as<TupleValueObj>()) {
+    Array<ObjectRef> result;
     for (Value sub_value : tuple->fields) {
       if (sub_value->op_env == nullptr) {
         sub_value->op_env = tuple->op_env;
@@ -189,7 +189,7 @@ NodeRef DeTuple(Value value) {
     }
     return std::move(result);
   }
-  LOG(FATAL) << "ValueError: cannot de-tuple " << value->type_key();
+  LOG(FATAL) << "ValueError: cannot de-tuple " << value->GetTypeKey();
   throw;
 }
 
@@ -203,6 +203,19 @@ MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::mak
 MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.BoundExpr").set_body_typed(BoundExpr::make);
+MNM_REGISTER_OBJECT_NO_REFLECT(ValueObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(ScalarValueObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(OpaqueValueObj);
+MNM_REGISTER_OBJECT_REFLECT(TensorValueObj);
+MNM_REGISTER_OBJECT_REFLECT(TupleValueObj);
+MNM_REGISTER_OBJECT_REFLECT(ClosureValueObj);
+MNM_REGISTER_OBJECT_REFLECT(RefValueObj);
+MNM_REGISTER_OBJECT_REFLECT(OpValueObj);
+MNM_REGISTER_OBJECT_REFLECT(IntValueObj);
+MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
+MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
+MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
+MNM_REGISTER_OBJECT_REFLECT(BoundExprObj);
 
 }  // namespace value
 }  // namespace mnm

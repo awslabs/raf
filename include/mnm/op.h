@@ -8,10 +8,10 @@
 #include <string>
 #include <unordered_map>
 
-#include "mnm/base.h"
-#include "mnm/ir.h"
-#include "mnm/registry.h"
-#include "mnm/value.h"
+#include "./base.h"
+#include "./ir.h"
+#include "./registry.h"
+#include "./value.h"
 
 namespace mnm {
 namespace executor {
@@ -25,7 +25,7 @@ class Requests;
 namespace mnm {
 namespace op {
 
-class CallValuesNode : public ir::Node {
+class CallValuesNode : public ir::Object {
  public:
   mutable value::Value callee;
   mutable ir::Attrs args;
@@ -34,13 +34,13 @@ class CallValuesNode : public ir::Node {
 
  public:
   static constexpr const char* _type_key = "mnm.op.CallValues";
-  MNM_DEF_NODE_TYPE_INFO(CallValuesNode, ir::Node);
+  MNM_FINAL_OBJECT(CallValuesNode, ir::Object);
 };
 
-class CallValues : public ir::NodeRef {
+class CallValues : public ir::ObjectRef {
  public:
   static CallValues make();
-  MNM_DEF_NODE_REF_METHODS(CallValues, ir::NodeRef, CallValuesNode);
+  MNM_OBJECT_REF(CallValues, ir::ObjectRef, CallValuesNode);
 };
 
 class OpEnv {
@@ -109,9 +109,9 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
           .set_name(op_name)                                        \
           .add_dispatch(device_type, backend_name, op_env::make)
 
-#define MNM_OP_SCHEMA(class_name, type_key)                    \
-  static constexpr const char* _type_key = type_key;           \
-  TVM_DECLARE_NODE_TYPE_INFO(class_name, ::tvm::BaseAttrsNode) \
-  template <typename FVisit>                                   \
-  void __VisitAttrs__(FVisit& __fvisit__) {                    \
+#define MNM_OP_SCHEMA(class_name, type_key)                         \
+  static constexpr const char* _type_key = type_key;                \
+  MNM_FINAL_OBJECT(class_name, ::tvm::BaseAttrsNode)                \
+  template <typename FVisit>                                        \
+  void __VisitAttrs__(FVisit& __fvisit__) {                         \
   }

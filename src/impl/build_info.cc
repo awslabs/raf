@@ -3,7 +3,7 @@
  * \file src/impl/build_info.cc
  * \brief Reflect build-time information and expose to the frontend
  */
-#include <mnm/registry.h>
+#include "mnm/registry.h"
 
 namespace mnm {
 namespace build_info {

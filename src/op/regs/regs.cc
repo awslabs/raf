@@ -11,23 +11,23 @@ namespace mnm {
 namespace op {
 namespace schema {
 namespace {
-MNM_REGISTER_NODE_TYPE(BatchNormArgs);
-MNM_REGISTER_NODE_TYPE(BinaryArgs);
-MNM_REGISTER_NODE_TYPE(BinaryDxArgs);
-MNM_REGISTER_NODE_TYPE(BinaryUfuncArgs);
-MNM_REGISTER_NODE_TYPE(ConvArgs);
-MNM_REGISTER_NODE_TYPE(ConvDxwArgs);
-MNM_REGISTER_NODE_TYPE(LocalResponseNormArgs);
-MNM_REGISTER_NODE_TYPE(PoolArgs);
-MNM_REGISTER_NODE_TYPE(PoolDxArgs);
-MNM_REGISTER_NODE_TYPE(SoftmaxArgs);
-MNM_REGISTER_NODE_TYPE(SoftmaxDxArgs);
-MNM_REGISTER_NODE_TYPE(TernaryArgs);
-MNM_REGISTER_NODE_TYPE(TernaryDxArgs);
-MNM_REGISTER_NODE_TYPE(TernaryUfuncArgs);
-MNM_REGISTER_NODE_TYPE(UnaryArgs);
-MNM_REGISTER_NODE_TYPE(UnaryDxArgs);
-MNM_REGISTER_NODE_TYPE(UnaryUfuncArgs);
+MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
+MNM_REGISTER_OBJECT_REFLECT(BinaryArgs);
+MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
+MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
+MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
+MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
+MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
+MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
+MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(TernaryArgs);
+MNM_REGISTER_OBJECT_REFLECT(TernaryDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(TernaryUfuncArgs);
+MNM_REGISTER_OBJECT_REFLECT(UnaryArgs);
+MNM_REGISTER_OBJECT_REFLECT(UnaryDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(UnaryUfuncArgs);
 }  // namespace
 }  // namespace schema
 }  // namespace op
@@ -44,7 +44,7 @@ using namespace mnm::value;
 Attrs BatchNorm(const Array<Value> &values) {
   const int size = values.size();
   CHECK(3 <= size && size <= 7);
-  auto attrs = make_node<schema::BatchNormArgs>();
+  auto attrs = make_object<schema::BatchNormArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, running_mean);
   MNM_REQUIRED(2, args::ToTensor, running_var);
@@ -57,7 +57,7 @@ Attrs BatchNorm(const Array<Value> &values) {
 Attrs Binary(const Array<Value> &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 2);
-  auto attrs = make_node<schema::BinaryArgs>();
+  auto attrs = make_object<schema::BinaryArgs>();
   MNM_REQUIRED(0, args::ToAny, x1);
   MNM_REQUIRED(1, args::ToAny, x2);
   return Attrs(attrs);
@@ -65,7 +65,7 @@ Attrs Binary(const Array<Value> &values) {
 Attrs BinaryDx(const Array<Value> &values) {
   const int size = values.size();
   CHECK(4 <= size && size <= 4);
-  auto attrs = make_node<schema::BinaryDxArgs>();
+  auto attrs = make_object<schema::BinaryDxArgs>();
   MNM_REQUIRED(0, args::ToAny, x1);
   MNM_REQUIRED(1, args::ToAny, x2);
   MNM_REQUIRED(2, args::ToTensor, y);
@@ -75,7 +75,7 @@ Attrs BinaryDx(const Array<Value> &values) {
 Attrs BinaryUfunc(const Array<Value> &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 4);
-  auto attrs = make_node<schema::BinaryUfuncArgs>();
+  auto attrs = make_object<schema::BinaryUfuncArgs>();
   MNM_REQUIRED(0, args::ToAny, x1);
   MNM_REQUIRED(1, args::ToAny, x2);
   MNM_OPTIONAL(2, args::ToAny, out);
@@ -85,7 +85,7 @@ Attrs BinaryUfunc(const Array<Value> &values) {
 Attrs Conv(const Array<Value> &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 6);
-  auto attrs = make_node<schema::ConvArgs>();
+  auto attrs = make_object<schema::ConvArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, w);
   MNM_OPTIONAL(2, args::ToIntTuple, stride);
@@ -97,7 +97,7 @@ Attrs Conv(const Array<Value> &values) {
 Attrs ConvDxw(const Array<Value> &values) {
   const int size = values.size();
   CHECK(7 <= size && size <= 7);
-  auto attrs = make_node<schema::ConvDxwArgs>();
+  auto attrs = make_object<schema::ConvDxwArgs>();
   MNM_REQUIRED(0, args::ToTensor, x_or_w);
   MNM_REQUIRED(1, args::ToTensor, y);
   MNM_REQUIRED(2, args::ToTensor, dy);
@@ -110,7 +110,7 @@ Attrs ConvDxw(const Array<Value> &values) {
 Attrs LocalResponseNorm(const Array<Value> &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 5);
-  auto attrs = make_node<schema::LocalResponseNormArgs>();
+  auto attrs = make_object<schema::LocalResponseNormArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToInt, size);
   MNM_OPTIONAL(2, args::ToDouble, alpha);
@@ -121,7 +121,7 @@ Attrs LocalResponseNorm(const Array<Value> &values) {
 Attrs Pool(const Array<Value> &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 7);
-  auto attrs = make_node<schema::PoolArgs>();
+  auto attrs = make_object<schema::PoolArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToIntTuple, kernel);
   MNM_OPTIONAL(2, args::ToOptionalIntTuple, stride);
@@ -134,7 +134,7 @@ Attrs Pool(const Array<Value> &values) {
 Attrs PoolDx(const Array<Value> &values) {
   const int size = values.size();
   CHECK(9 <= size && size <= 9);
-  auto attrs = make_node<schema::PoolDxArgs>();
+  auto attrs = make_object<schema::PoolDxArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, y);
   MNM_REQUIRED(2, args::ToTensor, dy);
@@ -149,7 +149,7 @@ Attrs PoolDx(const Array<Value> &values) {
 Attrs Softmax(const Array<Value> &values) {
   const int size = values.size();
   CHECK(1 <= size && size <= 2);
-  auto attrs = make_node<schema::SoftmaxArgs>();
+  auto attrs = make_object<schema::SoftmaxArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_OPTIONAL(1, args::ToInt, axis);
   return Attrs(attrs);
@@ -157,7 +157,7 @@ Attrs Softmax(const Array<Value> &values) {
 Attrs SoftmaxDx(const Array<Value> &values) {
   const int size = values.size();
   CHECK(3 <= size && size <= 4);
-  auto attrs = make_node<schema::SoftmaxDxArgs>();
+  auto attrs = make_object<schema::SoftmaxDxArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, y);
   MNM_REQUIRED(2, args::ToTensor, dy);
@@ -167,7 +167,7 @@ Attrs SoftmaxDx(const Array<Value> &values) {
 Attrs Ternary(const Array<Value> &values) {
   const int size = values.size();
   CHECK(3 <= size && size <= 3);
-  auto attrs = make_node<schema::TernaryArgs>();
+  auto attrs = make_object<schema::TernaryArgs>();
   MNM_REQUIRED(0, args::ToAny, x1);
   MNM_REQUIRED(1, args::ToAny, x2);
   MNM_REQUIRED(2, args::ToAny, x3);
@@ -176,7 +176,7 @@ Attrs Ternary(const Array<Value> &values) {
 Attrs TernaryDx(const Array<Value> &values) {
   const int size = values.size();
   CHECK(5 <= size && size <= 5);
-  auto attrs = make_node<schema::TernaryDxArgs>();
+  auto attrs = make_object<schema::TernaryDxArgs>();
   MNM_REQUIRED(0, args::ToAny, x1);
   MNM_REQUIRED(1, args::ToAny, x2);
   MNM_REQUIRED(2, args::ToAny, x3);
@@ -187,7 +187,7 @@ Attrs TernaryDx(const Array<Value> &values) {
 Attrs TernaryUfunc(const Array<Value> &values) {
   const int size = values.size();
   CHECK(3 <= size && size <= 5);
-  auto attrs = make_node<schema::TernaryUfuncArgs>();
+  auto attrs = make_object<schema::TernaryUfuncArgs>();
   MNM_REQUIRED(0, args::ToAny, x1);
   MNM_REQUIRED(1, args::ToAny, x2);
   MNM_REQUIRED(2, args::ToAny, x3);
@@ -198,14 +198,14 @@ Attrs TernaryUfunc(const Array<Value> &values) {
 Attrs Unary(const Array<Value> &values) {
   const int size = values.size();
   CHECK(1 <= size && size <= 1);
-  auto attrs = make_node<schema::UnaryArgs>();
+  auto attrs = make_object<schema::UnaryArgs>();
   MNM_REQUIRED(0, args::ToAny, x);
   return Attrs(attrs);
 }
 Attrs UnaryDx(const Array<Value> &values) {
   const int size = values.size();
   CHECK(3 <= size && size <= 3);
-  auto attrs = make_node<schema::UnaryDxArgs>();
+  auto attrs = make_object<schema::UnaryDxArgs>();
   MNM_REQUIRED(0, args::ToAny, x);
   MNM_REQUIRED(1, args::ToTensor, y);
   MNM_REQUIRED(2, args::ToTensor, dy);
@@ -214,7 +214,7 @@ Attrs UnaryDx(const Array<Value> &values) {
 Attrs UnaryUfunc(const Array<Value> &values) {
   const int size = values.size();
   CHECK(1 <= size && size <= 3);
-  auto attrs = make_node<schema::UnaryUfuncArgs>();
+  auto attrs = make_object<schema::UnaryUfuncArgs>();
   MNM_REQUIRED(0, args::ToAny, x);
   MNM_OPTIONAL(1, args::ToAny, out);
   MNM_OPTIONAL(2, args::ToAny, where);

@@ -3,8 +3,8 @@
  * \file src/impl/device_api.cc
  * \brief Device api manager
  */
-#include <mnm/device_api.h>
-#include <mnm/registry.h>
+#include "mnm/device_api.h"
+#include "mnm/registry.h"
 
 namespace mnm {
 namespace device_api {

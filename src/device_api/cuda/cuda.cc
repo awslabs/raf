@@ -3,8 +3,8 @@
  * \file src/device_api/cuda/cuda.cc
  * \brief CUDA device API
  */
-#include <mnm/device_api.h>
-#include <mnm/registry.h>
+#include "mnm/device_api.h"
+#include "mnm/registry.h"
 #include "../../common/cuda_utils.h"
 
 namespace mnm {

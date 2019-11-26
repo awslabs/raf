@@ -3,8 +3,8 @@
  * \file src/op/generic/nn.cc
  * \brief Declaration of nn-specific operators
  */
-#include <mnm/op.h>
-#include <mnm/tensor.h>
+#include "mnm/op.h"
+#include "mnm/tensor.h"
 #include "../schema/nn.h"
 
 namespace mnm {

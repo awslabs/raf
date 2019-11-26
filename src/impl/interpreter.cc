@@ -3,14 +3,14 @@
  * \file src/impl/interpreter.cc
  * \brief MNM interpreter, a naive implementation of executor
  */
-#include <mnm/executor.h>
-#include <mnm/ir.h>
-#include <mnm/memory_pool.h>
-#include <mnm/op.h>
-#include <mnm/pass.h>
-#include <mnm/registry.h>
-#include <mnm/tensor.h>
-#include <mnm/value.h>
+#include "mnm/executor.h"
+#include "mnm/ir.h"
+#include "mnm/memory_pool.h"
+#include "mnm/op.h"
+#include "mnm/pass.h"
+#include "mnm/registry.h"
+#include "mnm/tensor.h"
+#include "mnm/value.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
 
@@ -74,12 +74,12 @@ class Stack {
 
 class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Executor {
  public:
-  static TypedPackedFunc<NodeRef(Expr)> global;
+  static TypedPackedFunc<ObjectRef(Expr)> global;
 
  public:
   Module mod;
   Stack stack;
-  std::unordered_map<const ExprNode*, const BoundExprNode*> bindings;
+  std::unordered_map<const ExprNode*, const BoundExprObj*> bindings;
 
  public:
   Interpreter(Module mod) : mod(mod) {
@@ -88,7 +88,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   ~Interpreter() = default;
 
   Value Eval(const Expr& expr) {
-    const ExprNode* node = expr.as_derived<ExprNode>();
+    const ExprNode* node = expr.as<ExprNode>();
     CHECK(node != nullptr);
     if (bindings.count(node)) {
       return bindings[node]->value;
@@ -133,14 +133,14 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     }
     CallValues call_values = CallValues::make();
     call_values->callee = Eval(call->op);
-    if (call_values->callee->is_type<ClosureValueNode>()) {
+    if (call_values->callee->IsInstance<ClosureValueObj>()) {
       call_values->args = MakeListArgs(args);
       return InvokeClosure(call_values);
-    } else if (const auto* op = call_values->callee.as<OpValueNode>()) {
+    } else if (const auto* op = call_values->callee.as<OpValueObj>()) {
       call_values->args = fschema[op->op](args);
       return InvokePrimitive(call_values);
     }
-    LOG(FATAL) << "ValueError: type " << call_values->callee->type_key() << " is not callable";
+    LOG(FATAL) << "ValueError: type " << call_values->callee->GetTypeKey() << " is not callable";
     throw;
   }
 
@@ -237,7 +237,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
  public:
   Value InvokeClosure(const CallValues& call) {
-    const auto* node = call->callee.as<ClosureValueNode>();
+    const auto* node = call->callee.as<ClosureValueObj>();
     const Function& func = node->func;
     const Array<Value>& call_args = GetListArgs(call->args);
     Map<Var, Value> locals;
@@ -262,15 +262,15 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   void OnDestruct(const op::OpEnv* op_env) override {
   }
 
-  void OnBind(const BoundExprNode* bound_expr) override {
-    const ExprNode* expr = bound_expr->expr.as_derived<ExprNode>();
+  void OnBind(const BoundExprObj* bound_expr) override {
+    const ExprNode* expr = bound_expr->expr.as<ExprNode>();
     CHECK(expr != nullptr);
     CHECK_EQ(bindings.count(expr), 0);
     bindings[expr] = bound_expr;
   }
 
-  void OnDestruct(const BoundExprNode* bound_expr) override {
-    const ExprNode* expr = bound_expr->expr.as_derived<ExprNode>();
+  void OnDestruct(const BoundExprObj* bound_expr) override {
+    const ExprNode* expr = bound_expr->expr.as<ExprNode>();
     CHECK(expr != nullptr);
     CHECK_NE(bindings.count(expr), 0);
     bindings.erase(expr);
@@ -300,17 +300,17 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 };
 
-static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor) {
-  if (value->derived_from<ScalarValueNode>()) {
+static ObjectRef DeTuple(const Expr& expr, const Value& value, Executor* executor) {
+  if (value->IsInstance<ScalarValueObj>()) {
     return value;
   }
-  if (value->is_type<TensorValueNode>()) {
+  if (value->IsInstance<TensorValueObj>()) {
     BoundExpr ret = BoundExpr::make(expr, value);
     ret->BindExecutor(executor);
     return std::move(ret);
   }
-  if (const auto* tuple = value.as<TupleValueNode>()) {
-    Array<NodeRef> result;
+  if (const auto* tuple = value.as<TupleValueObj>()) {
+    Array<ObjectRef> result;
     int n = static_cast<int>(tuple->fields.size());
     for (int i = 0; i < n; ++i) {
       Expr sub_expr = ir::TupleGetItemNode::make(expr, i);
@@ -322,15 +322,15 @@ static NodeRef DeTuple(const Expr& expr, const Value& value, Executor* executor)
     }
     return std::move(result);
   }
-  LOG(FATAL) << "ValueError: cannot de-tuple " << value->type_key();
+  LOG(FATAL) << "ValueError: cannot de-tuple " << value->GetTypeKey();
   throw;
 }
 
-TypedPackedFunc<NodeRef(Expr)> Interpreter::global = nullptr;
-TypedPackedFunc<NodeRef(Expr)> CreateInterpreter(Module module, bool as_global) {
+TypedPackedFunc<ObjectRef(Expr)> Interpreter::global = nullptr;
+TypedPackedFunc<ObjectRef(Expr)> CreateInterpreter(Module module, bool as_global) {
   auto intrp = std::make_shared<Interpreter>(module);
   auto packed = [intrp](Expr expr) { return DeTuple(expr, intrp->Eval(expr), intrp.get()); };
-  TypedPackedFunc<NodeRef(Expr)> runner(packed);
+  TypedPackedFunc<ObjectRef(Expr)> runner(packed);
   if (as_global) {
     if (Interpreter::global != nullptr) {
       LOG(WARNING) << "Changing global interpreter. This is often undesirable and do this only if "
@@ -342,7 +342,7 @@ TypedPackedFunc<NodeRef(Expr)> CreateInterpreter(Module module, bool as_global) 
   return runner;
 }
 
-NodeRef InterpretWithGlobal(Expr expr) {
+ObjectRef InterpretWithGlobal(Expr expr) {
   CHECK(Interpreter::global != nullptr) << "Global interpreter does not exist";
   return Interpreter::global(expr);
 }

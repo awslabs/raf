@@ -7,7 +7,7 @@
 #include <string>
 #include "dlpack/dlpack.h"
 #include "tvm/runtime/c_runtime_api.h"
-#include "mnm/enum_base.h"
+#include "./enum_base.h"
 
 namespace mnm {
 

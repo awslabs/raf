@@ -3,8 +3,8 @@
  * \file src/op/generic/binary.cc
  * \brief Declaration of binary operators
  */
-#include <mnm/op.h>
-#include <mnm/tensor.h>
+#include "mnm/op.h"
+#include "mnm/tensor.h"
 #include "../schema/ufunc.h"
 
 namespace mnm {
@@ -16,11 +16,11 @@ using namespace mnm::value;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
   do {                                                           \
-    if (const auto* var = (value).as<IntValueNode>()) {          \
+    if (const auto* var = (value).as<IntValueObj>()) {          \
       body;                                                      \
-    } else if (const auto* var = (value).as<FloatValueNode>()) { \
+    } else if (const auto* var = (value).as<FloatValueObj>()) { \
       body;                                                      \
-    } else if (const auto* var = (value).as<BoolValueNode>()) {  \
+    } else if (const auto* var = (value).as<BoolValueObj>()) {  \
       body;                                                      \
     }                                                            \
   } while (0);
@@ -91,7 +91,7 @@ MNM_OP_DECLARE("mnm.op.mod", [](const CallValues& call) {
                           throw;
                         }
                         call->callee = ir::NullValue<OpValue>();
-                        if (x1->is_type<FloatValueNode>() || x2->is_type<FloatValueNode>()) {
+                        if (x1->IsInstance<FloatValueObj>() || x2->IsInstance<FloatValueObj>()) {
                           double a1 = x1->data;
                           double a2 = x2->data;
                           double result = fmod(a1, a2);

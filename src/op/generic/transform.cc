@@ -3,8 +3,8 @@
  * \file src/op/generic/transform.cc
  * \brief Declaration of transform operators
  */
-#include <mnm/op.h>
-#include <mnm/tensor.h>
+#include "mnm/op.h"
+#include "mnm/tensor.h"
 #include "../schema/ufunc.h"
 #include "../../common/shape_utils.h"
 

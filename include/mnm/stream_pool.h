@@ -6,8 +6,8 @@
 #pragma once
 #include <memory>
 #include <string>
-#include "mnm/base.h"
-#include "mnm/enum_base.h"
+#include "./base.h"
+#include "./enum_base.h"
 
 namespace mnm {
 namespace stream_pool {

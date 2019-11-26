@@ -4,17 +4,17 @@
  * \brief Extension of TVM/Relay IR
  */
 #pragma once
-#include "mnm/ir.h"
+#include "./ir.h"
 
 /****** mnm::ir::Module ******/
 namespace mnm {
 namespace ir {
 
-class ModuleNode : public Node {
+class ModuleObj : public ir::Object {
  public:
   Map<GlobalVar, Function> functions;
 
-  void VisitAttrs(tvm::AttrVisitor* v) final {
+  void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("functions", &functions);
   }
 
@@ -24,13 +24,13 @@ class ModuleNode : public Node {
 
  public:
   static constexpr const char* _type_key = "mnm.ir.Module";
-  MNM_DEF_NODE_TYPE_INFO(ModuleNode, Node);
+  MNM_FINAL_OBJECT(ModuleObj, ir::Object);
 };
 
-class Module : public NodeRef {
+class Module : public ObjectRef {
  public:
   static Module make(Map<GlobalVar, Function> functions);
-  MNM_DEF_NODE_REF_METHODS(Module, NodeRef, ModuleNode);
+  MNM_OBJECT_REF(Module, ObjectRef, ModuleObj);
 };
 
 }  // namespace ir
@@ -46,10 +46,10 @@ using Constant = tvm::relay::Constant;
 
 class ConstantNode : public RelayConstantNode {
  public:
-  NodeRef value{nullptr};
+  ObjectRef value{nullptr};
 };
 
-RelayConstant MakeConstant(NodeRef node_ref);
+RelayConstant MakeConstant(ObjectRef node_ref);
 
 }  // namespace ir
 }  // namespace mnm

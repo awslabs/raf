@@ -3,13 +3,12 @@
  * \file src/impl/op.cc
  * \brief MNM operator interface underlying implementation
  */
-#include <dmlc/registry.h>
-
-#include <mnm/executor.h>
-#include <mnm/ir.h>
-#include <mnm/op.h>
-#include <mnm/registry.h>
-#include <mnm/value.h>
+#include "dmlc/registry.h"
+#include "mnm/executor.h"
+#include "mnm/ir.h"
+#include "mnm/op.h"
+#include "mnm/registry.h"
+#include "mnm/value.h"
 
 #include "../requests.h"
 
@@ -22,16 +21,16 @@ namespace op {
 
 using executor::Executor;
 using ir::Array;
-using ir::make_node;
-using ir::NodePtr;
+using ir::make_object;
 using ir::Downcast;
+using ir::ObjectPtr;
 using ir::Op;
 using requests::Requests;
 using value::Value;
 using value::OpValue;
 
 CallValues CallValues::make() {
-  NodePtr<CallValuesNode> n = make_node<CallValuesNode>();
+  ObjectPtr<CallValuesNode> n = make_object<CallValuesNode>();
   return CallValues(n);
 }
 

@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 #include "tvm/runtime/registry.h"
-#include "mnm/base.h"
+#include "./base.h"
 
 #define MNM_REGISTER_GLOBAL(name) TVM_REGISTER_GLOBAL(name)
 

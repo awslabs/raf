@@ -8,13 +8,13 @@
 #include <utility>
 #include "tvm/runtime/ndarray.h"
 #include "tvm/runtime/packed_func.h"
-#include "mnm/base.h"
+#include "./base.h"
 
 class MNMTester;
 
 namespace mnm {
 namespace value {
-class TensorValueNode;
+class TensorValueObj;
 }  // namespace value
 }  // namespace mnm
 
@@ -27,7 +27,7 @@ class Tensor : private tvm::runtime::NDArray {
   using TSelf = ::mnm::tensor::Tensor;
   using TSuper = ::tvm::runtime::NDArray;
 
-  friend value::TensorValueNode;
+  friend value::TensorValueObj;
   friend MNMTester;
   friend ::tvm::runtime::TVMPODValue_;
 

@@ -3,8 +3,8 @@
  * \file src/device_api/cpu/cpu.cc
  * \brief CPU device API
  */
-#include <mnm/device_api.h>
-#include <mnm/registry.h>
+#include "mnm/device_api.h"
+#include "mnm/registry.h"
 
 namespace mnm {
 namespace device_api {

@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <tvm/relay/analysis.h>
+#include "tvm/relay/analysis.h"
 
 namespace mnm {
 namespace pass {

@@ -123,7 +123,7 @@ def gen_include(filename):
 
 def gen_arg_reg(name):
     ARG_REG = """
-MNM_REGISTER_NODE_TYPE({CLASS_NAME});
+MNM_REGISTER_OBJECT_REFLECT({CLASS_NAME});
 """.strip()
     class_name = snake_to_pascal(name) + "Args"
     return ARG_REG.format(CLASS_NAME=class_name)
@@ -134,7 +134,7 @@ def gen_arg_init(name, schema):
 Attrs {NAME}(const Array<Value> &values) {{
   const int size = values.size();
   CHECK({N_ARG_LB} <= size && size <= {N_ARG_UB});
-  auto attrs = make_node<schema::{NAME}Args>();
+  auto attrs = make_object<schema::{NAME}Args>();
 {ARG_ENTRIES}
   return Attrs(attrs);
 }}

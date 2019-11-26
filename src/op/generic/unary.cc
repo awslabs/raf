@@ -3,8 +3,8 @@
  * \file src/op/generic/unary.cc
  * \brief Declaration of unary operators
  */
-#include <mnm/op.h>
-#include <mnm/tensor.h>
+#include "mnm/op.h"
+#include "mnm/tensor.h"
 #include "../schema/ufunc.h"
 
 namespace mnm {
@@ -16,11 +16,11 @@ using namespace mnm::value;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                      \
   do {                                                           \
-    if (const auto* var = (value).as<IntValueNode>()) {          \
+    if (const auto* var = (value).as<IntValueObj>()) {          \
       body;                                                      \
-    } else if (const auto* var = (value).as<FloatValueNode>()) { \
+    } else if (const auto* var = (value).as<FloatValueObj>()) { \
       body;                                                      \
-    } else if (const auto* var = (value).as<BoolValueNode>()) {  \
+    } else if (const auto* var = (value).as<BoolValueObj>()) {  \
       body;                                                      \
     }                                                            \
   } while (0);

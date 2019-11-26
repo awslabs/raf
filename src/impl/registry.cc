@@ -3,7 +3,7 @@
  * \file src/impl/registry.cc
  * \brief MNM registry underlying implementation
  */
-#include <mnm/registry.h>
+#include "mnm/registry.h"
 
 namespace mnm {
 namespace registry {

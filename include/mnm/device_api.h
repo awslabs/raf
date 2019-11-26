@@ -5,7 +5,7 @@
  */
 #pragma once
 #include <memory>
-#include "mnm/base.h"
+#include "./base.h"
 
 namespace mnm {
 namespace device_api {
