@@ -35,10 +35,9 @@ class Value : public ir::ObjectRef {
  public:
   operator DLTensor*() const;
   operator tensor::Tensor&() const;
-  template<typename TValue,
-           typename = typename std::enable_if<
-           std::is_base_of<Value, TValue>::value>::type>
-  explicit operator TValue () const {
+  template <typename TValue,
+            typename = typename std::enable_if<std::is_base_of<Value, TValue>::value>::type>
+  explicit operator TValue() const {
     return ir::Downcast<TValue>(*this);
   }
   MNM_OBJECT_REF(Value, ir::ObjectRef, ValueObj);
@@ -243,7 +242,7 @@ class StringValueObj : public ValueObj {
 
 class StringValue : public Value {
  public:
-  static StringValue make(const std::string &data);
+  static StringValue make(const std::string& data);
   MNM_OBJECT_REF(StringValue, Value, StringValueObj);
 };
 
@@ -252,33 +251,11 @@ class StringValue : public Value {
 
 namespace mnm {
 namespace value {
-
-class BoundExprObj : public ir::Object {
- public:
-  ir::Expr expr;
-  Value value;
-  mutable executor::Executor* executor{nullptr};
-
-  ~BoundExprObj();
-
-  void BindExecutor(executor::Executor* executor);
-
-  void VisitAttrs(tvm::AttrVisitor* v) {
-    v->Visit("_expr", &expr);
-    v->Visit("_value", &value);
-  }
-
-  static constexpr const char* _type_key = "mnm.value.BoundExpr";
-  MNM_FINAL_OBJECT(BoundExprObj, ir::Object);
-};
-
-class BoundExpr : public ir::ObjectRef {
- public:
-  MNM_OBJECT_REF(BoundExpr, ir::ObjectRef, BoundExprObj);
-  static BoundExpr make(ir::Expr expr, Value value);
-};
-
-ir::Type GetType(const Value &value);
-
+ir::Var BindNothing(const std::string& name_hint = "");
+ir::Var BindValue(const Value& value, const std::string& name_hint = "");
+ir::Var BindExprValue(const ir::Expr& expr, const Value& value,
+                      const std::string& name_hint = "");
+ir::Expr LookupBoundExpr(const ir::Var& var);
+Value LookupBoundValue(const ir::Var& var);
 }  // namespace value
 }  // namespace mnm

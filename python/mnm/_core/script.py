@@ -64,7 +64,7 @@ def _script_bind_args(pyfunc, args, kwargs):
         params.append(symbol._Symbol__expr)  # pylint: disable=protected-access
 
     for _, param in args[0].state().items():
-        params.append(param._ndarray__handle._expr)  # pylint: disable=protected-access
+        params.append(param._ndarray__handle)  # pylint: disable=protected-access
 
     return bound_args, params
 

@@ -56,8 +56,12 @@ class Stack {
         return (*elem).second;
       }
     }
+    const Value& ret = value::LookupBoundValue(local);
+    if (ret.defined()) {
+      return ret;
+    }
     LOG(FATAL) << "could not find variable binding for " << local->name_hint();
-    return Value();
+    throw;
   }
 
   class LocalFrame {
@@ -79,7 +83,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
  public:
   Module mod;
   Stack stack;
-  std::unordered_map<const ExprNode*, const BoundExprObj*> bindings;
 
  public:
   Interpreter(Module mod) : mod(mod) {
@@ -88,11 +91,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   ~Interpreter() = default;
 
   Value Eval(const Expr& expr) {
-    const ExprNode* node = expr.as<ExprNode>();
-    CHECK(node != nullptr);
-    if (bindings.count(node)) {
-      return bindings[node]->value;
-    }
     return ExprFunctor<Value(const Expr& n)>::VisitExpr(expr);
   }
 
@@ -262,20 +260,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   void OnDestruct(const op::OpEnv* op_env) override {
   }
 
-  void OnBind(const BoundExprObj* bound_expr) override {
-    const ExprNode* expr = bound_expr->expr.as<ExprNode>();
-    CHECK(expr != nullptr);
-    CHECK_EQ(bindings.count(expr), 0);
-    bindings[expr] = bound_expr;
-  }
-
-  void OnDestruct(const BoundExprObj* bound_expr) override {
-    const ExprNode* expr = bound_expr->expr.as<ExprNode>();
-    CHECK(expr != nullptr);
-    CHECK_NE(bindings.count(expr), 0);
-    bindings.erase(expr);
-  }
-
   void RequestMemory(Requests* req, int index) override {
     Requests::MemoryRequest& entry = req->memory[index];
     CHECK(entry.memory == nullptr);
@@ -300,14 +284,12 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 };
 
-static ObjectRef DeTuple(const Expr& expr, const Value& value, Executor* executor) {
+static ObjectRef DeTuple(const Expr& expr, const Value& value) {
   if (value->IsInstance<ScalarValueObj>()) {
     return value;
   }
   if (value->IsInstance<TensorValueObj>()) {
-    BoundExpr ret = BoundExpr::make(expr, value);
-    ret->BindExecutor(executor);
-    return std::move(ret);
+    return value::BindExprValue(expr, value);
   }
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
@@ -318,7 +300,7 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value, Executor* executo
       if (sub_value->op_env == nullptr) {
         sub_value->op_env = tuple->op_env;
       }
-      result.push_back(DeTuple(expr, value, executor));
+      result.push_back(DeTuple(expr, value));
     }
     return std::move(result);
   }
@@ -329,7 +311,7 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value, Executor* executo
 TypedPackedFunc<ObjectRef(Expr)> Interpreter::global = nullptr;
 TypedPackedFunc<ObjectRef(Expr)> CreateInterpreter(Module module, bool as_global) {
   auto intrp = std::make_shared<Interpreter>(module);
-  auto packed = [intrp](Expr expr) { return DeTuple(expr, intrp->Eval(expr), intrp.get()); };
+  auto packed = [intrp](Expr expr) { return DeTuple(expr, intrp->Eval(expr)); };
   TypedPackedFunc<ObjectRef(Expr)> runner(packed);
   if (as_global) {
     if (Interpreter::global != nullptr) {

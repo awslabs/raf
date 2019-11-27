@@ -51,6 +51,9 @@ using tvm::NullValue;
 using tvm::relay::Expr;
 using tvm::relay::ExprNode;
 
+using tvm::relay::Id;
+using tvm::relay::IdNode;
+
 using tvm::relay::Op;
 using tvm::relay::OpNode;
 

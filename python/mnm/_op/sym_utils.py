@@ -27,7 +27,7 @@ def to_tensor(a):
         return a._Symbol__expr  # pylint: disable=protected-access
 
     if isinstance(a, ndarray):
-        return a._ndarray__handle._expr  # pylint: disable=protected-access
+        return a._ndarray__handle  # pylint: disable=protected-access
 
     if not isinstance(a, np.ndarray):
         a = np.array(a)

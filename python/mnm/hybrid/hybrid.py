@@ -8,7 +8,7 @@ from mnm._core.core_utils import get_func_name, set_module
 from mnm._core.executor import Interpreter
 from mnm._core.module import Module
 from mnm._core.ndarray import ndarray as NDArray
-from mnm._core.value import BoolValue, BoundExpr, FloatValue, IntValue, Value
+from mnm._core.value import BoolValue, FloatValue, IntValue, Value
 from mnm._lib import relay
 
 from .cfg import ast2cfg
@@ -63,7 +63,7 @@ def _unwrap(a):
     if isinstance(a, BoolValue):
         return bool(a.data)
 
-    if isinstance(a, BoundExpr):
+    if isinstance(a, relay.Var):
         return NDArray(a)
 
     if isinstance(a, list):
@@ -94,14 +94,12 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     local_names = list(local_names)
     hybrid_module = cfg2relay(cfg, pyfunc, local_names, entry)
     # build relay module
-
     for global_var, func in hybrid_module.items():
         MNM_MODULE[global_var] = func
 
     def call(*args):
         code = relay.Call(op=entry, args=[_make_argument(arg) for arg in args])
         result = Interpreter.GLOBAL(code)
-
         return _unwrap(result)
 
     return call
@@ -109,11 +107,9 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
 
 @set_module("mnm")
 def hybrid(python=False):
-
     def hybrid_no_python(pyfunc):
         func_name = get_func_name(pyfunc)
         sig = inspect.signature(pyfunc)
-
         if pyfunc not in FUNC_TAB:
             FUNC_TAB[pyfunc] = None
             FUNC_VAR[pyfunc] = relay.GlobalVar(func_name)
@@ -123,11 +119,9 @@ def hybrid(python=False):
             bound.apply_defaults()
             pos_args = list(bound.arguments.values())
             func = FUNC_TAB[pyfunc]
-
             if func is None:
                 func = pyfunc2relay(pyfunc, FUNC_VAR[pyfunc])
                 FUNC_TAB[pyfunc] = func
-
             return func(*pos_args)
 
         return transformed
@@ -135,5 +129,4 @@ def hybrid(python=False):
     if callable(python):
         return hybrid_no_python(python)
     assert not python
-
     return hybrid_no_python

@@ -23,8 +23,6 @@ class Executor {
   virtual ~Executor() = default;
   virtual void OnBind(const op::OpEnv* op_env) = 0;
   virtual void OnDestruct(const op::OpEnv* op_env) = 0;
-  virtual void OnBind(const value::BoundExprObj* bound_expr) = 0;
-  virtual void OnDestruct(const value::BoundExprObj* bound_expr) = 0;
   virtual void RequestMemory(requests::Requests* request, int index) = 0;
   virtual void RequestWorkspace(requests::Requests* request, int index) = 0;
   virtual void RequestStream(requests::Requests* request, int index) = 0;

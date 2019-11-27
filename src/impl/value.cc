@@ -92,26 +92,6 @@ StringValue StringValue::make(const std::string& data) {
   return StringValue(n);
 }
 
-BoundExpr BoundExpr::make(Expr expr, Value value) {
-  ObjectPtr<BoundExprObj> n = make_object<BoundExprObj>();
-  n->expr = std::move(expr);
-  n->value = std::move(value);
-  return BoundExpr(n);
-}
-
-/*** BoundExpr ***/
-BoundExprObj::~BoundExprObj() {
-  if (executor != nullptr) {
-    executor->OnDestruct(this);
-  }
-}
-
-void BoundExprObj::BindExecutor(Executor* executor) {
-  CHECK(this->executor == nullptr);
-  this->executor = executor;
-  executor->OnBind(this);
-}
-
 /*** GetType ***/
 Type GetType(const Value& value) {
   if (const auto* tv = value.as<TensorValueObj>()) {
@@ -202,7 +182,6 @@ MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.BoundExpr").set_body_typed(BoundExpr::make);
 MNM_REGISTER_OBJECT_NO_REFLECT(ValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(ScalarValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(OpaqueValueObj);
@@ -215,7 +194,108 @@ MNM_REGISTER_OBJECT_REFLECT(IntValueObj);
 MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
 MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
 MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
-MNM_REGISTER_OBJECT_REFLECT(BoundExprObj);
+}  // namespace value
+}  // namespace mnm
 
+namespace mnm {
+namespace value {
+
+class BindingEntry {
+ public:
+  Expr expr{nullptr};
+  Value value{nullptr};
+
+  BindingEntry() = default;
+  BindingEntry(const Expr& expr, const Value& value) : expr(expr), value(value) {
+  }
+};
+
+class BindingMgr {
+ public:
+  std::mutex mu;
+  std::unordered_map<const VarNode*, std::unique_ptr<BindingEntry> > bindings;
+
+  static BindingMgr* Get() {
+    static BindingMgr* instance = new BindingMgr();
+    return instance;
+  }
+};
+
+class BoundVarObj : public VarNode {
+  // This is basically relay::VarNode, but with a customized callback that
+  // deletes the weak reference inside BindingMgr
+ public:
+  ~BoundVarObj() {
+    static BindingMgr* mgr = BindingMgr::Get();
+    std::unique_ptr<BindingEntry> entry{nullptr};
+    {
+      std::lock_guard<std::mutex> lock(mgr->mu);
+      auto iter = mgr->bindings.find(this);
+      CHECK(iter != mgr->bindings.end());
+      entry.swap(iter->second);
+      mgr->bindings.erase(iter);
+    }
+    // "entry" is destroyed here, to avoid potential recursive lock
+  }
+  static Var make(const std::string& name_hint) {
+    ObjectPtr<BoundVarObj> n = make_object<BoundVarObj>();
+    ObjectPtr<IdNode> id_ptr = make_object<IdNode>();
+    id_ptr->name_hint = name_hint;
+    n->vid = Id(id_ptr);
+    return Var(n);
+  }
+};
+
+Var BindNothing(const std::string& name_hint) {
+  const Expr& expr = NullValue<Expr>();
+  const Value& value = NullValue<Value>();
+  return BindExprValue(expr, value, name_hint);
+}
+
+Var BindValue(const Value& value, const std::string& name_hint) {
+  const Expr& expr = MakeConstant(value);
+  return BindExprValue(expr, value, name_hint);
+}
+
+Var BindExprValue(const Expr& expr, const Value& value, const std::string& name_hint) {
+  static BindingMgr* mgr = BindingMgr::Get();
+  Var var = BoundVarObj::make(name_hint);
+  const VarNode* var_ptr = var.operator->();
+  {
+    std::lock_guard<std::mutex> lock(mgr->mu);
+    mgr->bindings.emplace(var_ptr, std::make_unique<BindingEntry>(expr, value));
+  }
+  return var;
+}
+
+Expr LookupBoundExpr(const Var& var) {
+  static BindingMgr* mgr = BindingMgr::Get();
+  {
+    std::lock_guard<std::mutex> lock(mgr->mu);
+    auto iter = mgr->bindings.find(var.operator->());
+    if (iter == mgr->bindings.end()) {
+      return NullValue<Expr>();
+    }
+    return iter->second->expr;
+  }
+}
+
+Value LookupBoundValue(const ir::Var& var) {
+  static BindingMgr* mgr = BindingMgr::Get();
+  {
+    std::lock_guard<std::mutex> lock(mgr->mu);
+    auto iter = mgr->bindings.find(var.operator->());
+    if (iter == mgr->bindings.end()) {
+      return NullValue<Value>();
+    }
+    return iter->second->value;
+  }
+}
+
+MNM_REGISTER_GLOBAL("mnm.value.BindNothing").set_body_typed(BindNothing);
+MNM_REGISTER_GLOBAL("mnm.value.BindValue").set_body_typed(BindValue);
+MNM_REGISTER_GLOBAL("mnm.value.BindExprValue").set_body_typed(BindExprValue);
+MNM_REGISTER_GLOBAL("mnm.value.LookupBoundExpr").set_body_typed(LookupBoundExpr);
+MNM_REGISTER_GLOBAL("mnm.value.LookupBoundValue").set_body_typed(LookupBoundValue);
 }  // namespace value
 }  // namespace mnm
