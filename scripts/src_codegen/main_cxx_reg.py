@@ -196,7 +196,7 @@ def gen_op_ffi_sym(op):
 MNM_REGISTER_GLOBAL("mnm.op.sym.{OP_NAME}")
 .set_body([](TVMArgs args, TVMRetValue *ret) {{
   static Op op = Op::Get("mnm.op.{OP_NAME}");
-  *ret = CallNode::make(op, ffi::{SCHEMA_NAME}(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::{SCHEMA_NAME}(args)));
 }});
 """.strip()
     op_name = op.name

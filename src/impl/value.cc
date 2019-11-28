@@ -247,55 +247,149 @@ class BoundVarObj : public VarNode {
 };
 
 Var BindNothing(const std::string& name_hint) {
-  const Expr& expr = NullValue<Expr>();
-  const Value& value = NullValue<Value>();
-  return BindExprValue(expr, value, name_hint);
+  return BindExprValue(NullValue<Expr>(), NullValue<Value>(), name_hint);
 }
 
 Var BindValue(const Value& value, const std::string& name_hint) {
-  const Expr& expr = MakeConstant(value);
-  return BindExprValue(expr, value, name_hint);
+  return BindExprValue(MakeConstant(value), value, name_hint);
+}
+
+Var BindExpr(const Expr& expr, const std::string& name_hint) {
+  return BindExprValue(expr, NullValue<Value>(), name_hint);
 }
 
 Var BindExprValue(const Expr& expr, const Value& value, const std::string& name_hint) {
   static BindingMgr* mgr = BindingMgr::Get();
+  static auto& bindings = mgr->bindings;
   Var var = BoundVarObj::make(name_hint);
   const VarNode* var_ptr = var.operator->();
+  std::unique_ptr<BindingEntry> entry = std::make_unique<BindingEntry>(expr, value);
   {
     std::lock_guard<std::mutex> lock(mgr->mu);
-    mgr->bindings.emplace(var_ptr, std::make_unique<BindingEntry>(expr, value));
+    bindings.emplace(var_ptr, std::move(entry));
   }
   return var;
 }
 
-Expr LookupBoundExpr(const Var& var) {
+Expr _LookupBoundExpr(const VarNode* var) {
   static BindingMgr* mgr = BindingMgr::Get();
+  static const auto& bindings = mgr->bindings;
   {
     std::lock_guard<std::mutex> lock(mgr->mu);
-    auto iter = mgr->bindings.find(var.operator->());
-    if (iter == mgr->bindings.end()) {
-      return NullValue<Expr>();
-    }
-    return iter->second->expr;
+    auto iter = bindings.find(var);
+    return iter != bindings.end() ? iter->second->expr : NullValue<Expr>();
   }
 }
 
-Value LookupBoundValue(const ir::Var& var) {
+Value _LookupBoundValue(const VarNode* var) {
   static BindingMgr* mgr = BindingMgr::Get();
+  static const auto& bindings = mgr->bindings;
   {
     std::lock_guard<std::mutex> lock(mgr->mu);
-    auto iter = mgr->bindings.find(var.operator->());
-    if (iter == mgr->bindings.end()) {
-      return NullValue<Value>();
-    }
-    return iter->second->value;
+    auto iter = bindings.find(var);
+    return iter != bindings.end() ? iter->second->value : NullValue<Value>();
   }
+}
+
+Expr LookupBoundExpr(const Var& var) {
+  return _LookupBoundExpr(var.operator->());
+}
+
+Value LookupBoundValue(const ir::Var& var) {
+  return _LookupBoundValue(var.operator->());
+}
+
+class LetListExtractor final : public ExprVisitor {
+ public:
+  void AddVar(const Expr& expr) {
+    if (const VarNode* var = expr.as<VarNode>()) {
+      if (++in_degree[var] == 1) {
+        queue.push_back(var);
+      }
+      if (out_edge != nullptr) {
+        out_edge->push_back(var);
+      }
+    } else if (!expr->IsInstance<ConstantNode>()) {
+      LOG(FATAL) << "Every intermediate result should be bound to a relay.Var";
+    }
+  }
+
+  void VisitExpr_(const VarNode* var) final {
+    if (++in_degree[var] == 1) {
+      queue.push_back(var);
+    }
+  }
+
+  void VisitExpr_(const TupleNode* node) final {
+    for (const Expr& expr : node->fields) {
+      AddVar(expr);
+    }
+  }
+
+  void VisitExpr_(const CallNode* node) final {
+    for (const Expr& expr : node->args) {
+      AddVar(expr);
+    }
+  }
+
+  void VisitExpr_(const TupleGetItemNode* node) final {
+    AddVar(node->tuple);
+  }
+
+  std::vector<const VarNode*> queue;
+  std::unordered_map<const VarNode*, int> in_degree;
+  std::unordered_map<const VarNode*, const ExprNode*> bindings;
+  std::unordered_map<const VarNode*, std::vector<const VarNode*> > graph;
+  std::vector<const VarNode*>* out_edge = nullptr;
+
+  Expr Run(const Var& var) {
+    AddVar(var);
+    while (!queue.empty()) {
+      const VarNode* var = queue.back();
+      const Expr& expr = _LookupBoundExpr(var);
+      bindings[var] = expr.operator->();
+      queue.pop_back();
+      out_edge = &graph[var];
+      if (expr.defined()) {
+        ExprVisitor::VisitExpr(expr);
+      }
+    }
+    Expr body = var;
+    queue.clear();
+    queue.push_back(var.operator->());
+    while (!queue.empty()) {
+      const VarNode* var = queue.back();
+      const ExprNode* expr = bindings[var];
+      queue.pop_back();
+      if (expr != nullptr) {
+        body = LetNode::make(GetRef<Var>(var), GetRef<Expr>(expr), body);
+      }
+      for (const VarNode* out : graph[var]) {
+        if (--in_degree[out] == 0) {
+          queue.push_back(out);
+        }
+      }
+    }
+    return body;
+  }
+
+  static Expr Extract(const Var& var) {
+    std::unique_ptr<LetListExtractor> self = std::make_unique<LetListExtractor>();
+    return self->Run(var);
+  }
+};
+
+ir::Expr ExtractLetList(const Var& var) {
+  return LetListExtractor::Extract(var);
 }
 
 MNM_REGISTER_GLOBAL("mnm.value.BindNothing").set_body_typed(BindNothing);
 MNM_REGISTER_GLOBAL("mnm.value.BindValue").set_body_typed(BindValue);
+MNM_REGISTER_GLOBAL("mnm.value.BindExpr").set_body_typed(BindExpr);
 MNM_REGISTER_GLOBAL("mnm.value.BindExprValue").set_body_typed(BindExprValue);
 MNM_REGISTER_GLOBAL("mnm.value.LookupBoundExpr").set_body_typed(LookupBoundExpr);
 MNM_REGISTER_GLOBAL("mnm.value.LookupBoundValue").set_body_typed(LookupBoundValue);
+MNM_REGISTER_GLOBAL("mnm.value.ExtractLetList").set_body_typed(ExtractLetList);
+
 }  // namespace value
 }  // namespace mnm

@@ -8,7 +8,7 @@ from mnm._core.value import TensorValue, Value
 
 def to_any(a):
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if a is None:
         return None
@@ -24,7 +24,7 @@ def to_tensor(a):
         return None
 
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if isinstance(a, ndarray):
         return a._ndarray__handle  # pylint: disable=protected-access
@@ -37,7 +37,7 @@ def to_tensor(a):
 
 def to_int_tuple(a):
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray):
         a = a.tolist()
@@ -67,7 +67,7 @@ def to_optional_int_tuple(a):
 
 def to_int(a):
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -79,7 +79,7 @@ def to_int(a):
 
 def to_double(a):
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -91,7 +91,7 @@ def to_double(a):
 
 def to_bool(a):
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if isinstance(a, np.ndarray) and a.size == 1 and a.ndim <= 1:
         a = a.item()
@@ -103,7 +103,7 @@ def to_bool(a):
 
 def to_string(a):
     if isinstance(a, Symbol):
-        return a._Symbol__expr  # pylint: disable=protected-access
+        return a._Symbol__handle  # pylint: disable=protected-access
 
     if isinstance(a, str):
         return a

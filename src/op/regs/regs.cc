@@ -472,172 +472,172 @@ using registry::TVMRetValue;
 MNM_REGISTER_GLOBAL("mnm.op.sym.add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.add");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d");
-  *ret = CallNode::make(op, ffi::Pool(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Pool(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d_dx");
-  *ret = CallNode::make(op, ffi::PoolDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::PoolDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_flatten");
-  *ret = CallNode::make(op, ffi::Unary(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_infer")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_infer");
-  *ret = CallNode::make(op, ffi::BatchNorm(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BatchNorm(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_train");
-  *ret = CallNode::make(op, ffi::BatchNorm(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BatchNorm(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d");
-  *ret = CallNode::make(op, ffi::Conv(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Conv(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dw")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d_dw");
-  *ret = CallNode::make(op, ffi::ConvDxw(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::ConvDxw(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d_dx");
-  *ret = CallNode::make(op, ffi::ConvDxw(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::ConvDxw(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.divide")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.divide");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.equal");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.greater");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.greater_equal");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.less")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.less_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less_equal");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.linear")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.linear");
-  *ret = CallNode::make(op, ffi::Binary(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Binary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log_softmax");
-  *ret = CallNode::make(op, ffi::Softmax(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Softmax(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log_softmax_dx");
-  *ret = CallNode::make(op, ffi::SoftmaxDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::SoftmaxDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.logical_not")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.logical_not");
-  *ret = CallNode::make(op, ffi::UnaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::UnaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d");
-  *ret = CallNode::make(op, ffi::Pool(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Pool(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d_dx");
-  *ret = CallNode::make(op, ffi::PoolDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::PoolDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.mod")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.mod");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.multiply")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.multiply");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.negative")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.negative");
-  *ret = CallNode::make(op, ffi::UnaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::UnaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.not_equal");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.relu");
-  *ret = CallNode::make(op, ffi::Unary(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.relu_dx");
-  *ret = CallNode::make(op, ffi::UnaryDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid");
-  *ret = CallNode::make(op, ffi::Unary(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid_dx");
-  *ret = CallNode::make(op, ffi::UnaryDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.softmax");
-  *ret = CallNode::make(op, ffi::Softmax(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Softmax(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.softmax_dx");
-  *ret = CallNode::make(op, ffi::SoftmaxDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::SoftmaxDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.subtract");
-  *ret = CallNode::make(op, ffi::BinaryUfunc(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.tanh");
-  *ret = CallNode::make(op, ffi::Unary(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.tanh_dx");
-  *ret = CallNode::make(op, ffi::UnaryDx(args));
+  *ret = value::BindExpr(CallNode::make(op, ffi::UnaryDx(args)));
 });
 }  // namespace ffi
 }  // namespace op

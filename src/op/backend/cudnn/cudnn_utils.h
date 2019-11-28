@@ -25,11 +25,11 @@
 #define MAKE_SHAPE_ATLEAST_4D(def, tensor)                                   \
   std::vector<int> def##_ = common::shape_utils::PadDims<int, int64_t>(      \
       std::vector<int64_t>(tensor->shape, tensor->shape + tensor->ndim), 4); \
-  int *def = dmlc::BeginPtr(def##_)
+  int* def = dmlc::BeginPtr(def##_)
 
 #define MAKE_STRIDE(def, shape)                                             \
   std::vector<int> def##_ = common::shape_utils::Shape2Strides<int>(shape); \
-  int *def = dmlc::BeginPtr(def##_)
+  int* def = dmlc::BeginPtr(def##_)
 
 namespace mnm {
 
@@ -217,27 +217,26 @@ inline cudnnTensorDescriptor_t NormalizeTensor(const DLTensor* tv) {
 }
 
 inline cudnnFilterDescriptor_t NormalizeFilter(value::TensorValue tv,
-                                         cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW) {
+                                               cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW) {
   cudnnFilterDescriptor_t res;
   CUDNN_CALL(cudnnCreateFilterDescriptor(&res));
   int ndim = tv->tensor->ndim;
   MAKE_SHAPE_ATLEAST_4D(shape, tv->tensor);
-  MAKE_STRIDE(stride, shape_);
   CUDNN_CALL(cudnnSetFilterNdDescriptor(res, CUDNNDType(tv->tensor->dtype), format, ndim, shape));
   return res;
 }
 
 inline std::vector<int64_t> MakeAlgoKey(const std::vector<std::vector<int64_t>>& vs) {
   std::vector<int64_t> res;
-  for (auto &v : vs) {
+  for (auto& v : vs) {
     res.push_back(v.size());
     res.insert(res.end(), v.begin(), v.end());
   }
   return res;
 }
 
-template<typename TDst, typename TSrc>
-inline std::vector<TDst> CastVector(const std::vector<TSrc> &v) {
+template <typename TDst, typename TSrc>
+inline std::vector<TDst> CastVector(const std::vector<TSrc>& v) {
   std::vector<TDst> res(v.size());
   for (int i = 0, e = res.size(); i < e; ++i) {
     res[i] = v[i];
@@ -245,11 +244,11 @@ inline std::vector<TDst> CastVector(const std::vector<TSrc> &v) {
   return res;
 }
 
-template<int numel>
-inline std::vector<int64_t> NomalizeScalarToTuple(const std::vector<int64_t> &v) {
+template <int numel>
+inline std::vector<int64_t> NomalizeScalarToTuple(const std::vector<int64_t>& v) {
   int n = v.size();
-  CHECK(n == 1 || n == numel)
-    << "ValueError: we only accept a single integer or a tuple of " << numel << " integers";
+  CHECK(n == 1 || n == numel) << "ValueError: we only accept a single integer or a tuple of "
+                              << numel << " integers";
   return n == 1 ? std::vector<int64_t>(numel, v[0]) : v;
 }
 

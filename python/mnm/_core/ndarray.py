@@ -4,7 +4,8 @@ import weakref
 from mnm._core.core_utils import ctx2str, set_module, str2ctx
 from mnm._core.value import TensorValue
 from mnm._ffi.tensor import MarkNumpy
-from mnm._ffi.value import BindValue, LookupBoundValue, ToTVM
+from mnm._ffi.value import (BindExpr, BindExprValue, BindNothing, BindValue,
+                            LookupBoundValue, ToTVM)
 from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_array
 
 
@@ -37,6 +38,7 @@ class ndarray:
                                  offset=offset,
                                  strides=strides,
                                  order=order)
+            # NDArray is treated as relay.Constant
             self.__handle = BindValue(_np_to_tensor_value(npa, ctx=ctx), name)
 
     @property
@@ -150,7 +152,10 @@ class Parameter(ndarray):
                                         order=order,
                                         ctx=ctx,
                                         name=name)
-        self.__handle = BindValue(self._ndarray__value, name)  # pylint: disable=no-member
+        # If Parameter requires grad, it is treated as relay.Var
+        # Otherwise, it is treated as relay.Constant
+        # By default, it doesn't require grad, and is treated as relay.Constant
+        self.__handle = BindExprValue(None, self._ndarray__value, name)  # pylint: disable=no-member
         self.__requires_grad = False
         self.__parents = weakref.WeakSet()
         self.requires_grad = requires_grad
@@ -176,30 +181,36 @@ class Parameter(ndarray):
 
 class Symbol:  # pylint: disable=too-few-public-methods
 
-    __slots__ = ["__expr"]
+    __slots__ = ["__handle"]
 
     def __init__(self):
-        self.__expr = None
+        self.__handle = None
 
     @staticmethod
     def from_expr(expr):
+        assert isinstance(expr, relay.Var)
         ret = Symbol()
-        ret.__expr = expr  # pylint: disable=protected-access
-
+        ret.__handle = expr  # pylint: disable=protected-access
         return ret
 
     @staticmethod
     def make_var(name_hint=""):
         ret = Symbol()
-        ret.__expr = relay.Var(name_hint=name_hint)  # pylint: disable=protected-access
-
+        ret.__handle = BindNothing(name_hint)  # pylint: disable=protected-access
         return ret
 
-    def __getitem__(self, item):
-        if isinstance(item, int):
-            ret = Symbol()
-            ret.__expr = relay.TupleGetItem(self.__expr, item)  # pylint: disable=protected-access
+    @staticmethod
+    def make_tuple(symbols, name_hint=""):
+        expr = relay.Tuple(symbols)
+        ret = Symbol()
+        ret.__handle = BindExpr(expr, name_hint)  # pylint: disable=protected-access
+        return ret
 
+    def __getitem__(self, item, name_hint=""):
+        if isinstance(item, int):
+            expr = relay.TupleGetItem(self.__handle, item)
+            ret = Symbol()
+            ret.__handle = BindExpr(expr, name_hint)  # pylint: disable=protected-access
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")

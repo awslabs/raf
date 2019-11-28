@@ -13,8 +13,8 @@ namespace cudnn {
 namespace manual {
 
 using common::shape_utils::BytesCompactTensor;
-using common::shape_utils::MakeShape;
 using common::shape_utils::GetShape;
+using common::shape_utils::MakeShape;
 using ir::Array;
 using ir::Attrs;
 using value::Value;
@@ -53,9 +53,9 @@ class ConvCUDNN : public mnm::op::OpEnv {
 
   explicit ConvCUDNN(CallValues call) {
     const auto* args = call->args.as<mnm::op::schema::ConvArgs>();
-    DLTensor *x = args->x;
-    DLTensor *w = args->w;
-    DLTensor *y = call->out;
+    DLTensor* x = args->x;
+    DLTensor* w = args->w;
+    DLTensor* y = call->out;
 
     x_desc = NormalizeTensor(args->x);
     w_desc = NormalizeFilter(args->w);
@@ -66,8 +66,8 @@ class ConvCUDNN : public mnm::op::OpEnv {
 
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&conv_desc));
     CUDNN_CALL(cudnnSetConvolutionNdDescriptor(conv_desc, padding.size(), dmlc::BeginPtr(padding),
-        dmlc::BeginPtr(stride), dmlc::BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
-        CUDNNDType(y->dtype)));
+                                               dmlc::BeginPtr(stride), dmlc::BeginPtr(dilation),
+                                               CUDNN_CROSS_CORRELATION, CUDNNDType(y->dtype)));
     CUDNN_CALL(cudnnSetConvolutionGroupCount(conv_desc, args->groups));
 
     y_desc = NormalizeTensor(value::TensorValue(call->out));
@@ -78,7 +78,7 @@ class ConvCUDNN : public mnm::op::OpEnv {
     std::vector<int64_t> key;
 
     key = MakeAlgoKey({GetShape<int64_t>(*x), GetShape<int64_t>(*w), GetShape<int64_t>(*y),
-                      args->dilation, args->stride, args->padding});
+                       args->dilation, args->stride, args->padding});
 
     algo = FindConvolutionForwardAlgorithm(key, x_desc, w_desc, conv_desc, y_desc);
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
@@ -97,18 +97,18 @@ class ConvCUDNN : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(conv_desc));
   }
 
-  void Execute(const CallValues &call) final {
-    const auto *args = call->args.as<mnm::op::schema::ConvArgs>();
+  void Execute(const CallValues& call) final {
+    const auto* args = call->args.as<mnm::op::schema::ConvArgs>();
     const DLTensor* x = args->x;
     const DLTensor* w = args->w;
     const DLTensor* y = call->out;
     CUDNN_CALL(cudnnConvolutionForward(CUDNNThreadEntry::ThreadLocal()->handle, alpha, x_desc,
-                                       x->data, w_desc, w->data, conv_desc, algo, ws, ws_size,
-                                       beta, y_desc, y->data));
+                                       x->data, w_desc, w->data, conv_desc, algo, ws, ws_size, beta,
+                                       y_desc, y->data));
     CUDA_CALL(cudaDeviceSynchronize());
   }
 
-  static OpEnv* make(const CallValues &call) {
+  static OpEnv* make(const CallValues& call) {
     std::unique_ptr<ConvCUDNN> res = std::make_unique<ConvCUDNN>(call);
     return res.release();
   }
