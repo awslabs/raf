@@ -160,6 +160,14 @@ class Parameter(ndarray):
         self.__parents = weakref.WeakSet()
         self.requires_grad = requires_grad
 
+    def __switch_mode(self, value):
+        if value == self.__requires_grad:
+            return False
+        self.__requires_grad = value
+        self._ndarray__handle, self.__handle = \
+                self.__handle, self._ndarray__handle  # pylint: disable=attribute-defined-outside-init
+        return True
+
     @property
     def requires_grad(self):
         return self.__requires_grad
@@ -168,15 +176,12 @@ class Parameter(ndarray):
     def requires_grad(self, value):
         if not isinstance(value, bool):
             raise ValueError("Parameter's requires_grad should be boolean")
-        if value == self.__requires_grad:
+        if not self.__switch_mode(value):
             return
-        self.__requires_grad = value
-        self._ndarray__handle, self.__handle = self.__handle, self._ndarray__handle
         for parent in list(self.__parents.data):
             parent = parent()
-            if parent is None:
-                continue
-            parent._Model__invalidate_cache()  # pylint: disable=protected-access
+            if parent is not None:
+                parent._Model__invalidate_cache()  # pylint: disable=protected-access
 
 
 class Symbol:  # pylint: disable=too-few-public-methods

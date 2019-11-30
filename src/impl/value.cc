@@ -301,7 +301,7 @@ Value LookupBoundValue(const ir::Var& var) {
 
 class LetListExtractor final : public ExprVisitor {
  public:
-  void AddVar(const Expr& expr) {
+  void StashVar(const Expr& expr) {
     if (const VarNode* var = expr.as<VarNode>()) {
       if (++in_degree[var] == 1) {
         queue.push_back(var);
@@ -315,25 +315,23 @@ class LetListExtractor final : public ExprVisitor {
   }
 
   void VisitExpr_(const VarNode* var) final {
-    if (++in_degree[var] == 1) {
-      queue.push_back(var);
-    }
+    LOG(FATAL) << "Should not be here";
   }
 
   void VisitExpr_(const TupleNode* node) final {
     for (const Expr& expr : node->fields) {
-      AddVar(expr);
+      StashVar(expr);
     }
   }
 
   void VisitExpr_(const CallNode* node) final {
     for (const Expr& expr : node->args) {
-      AddVar(expr);
+      StashVar(expr);
     }
   }
 
   void VisitExpr_(const TupleGetItemNode* node) final {
-    AddVar(node->tuple);
+    StashVar(node->tuple);
   }
 
   std::vector<const VarNode*> queue;
@@ -343,14 +341,14 @@ class LetListExtractor final : public ExprVisitor {
   std::vector<const VarNode*>* out_edge = nullptr;
 
   Expr Run(const Var& var) {
-    AddVar(var);
+    StashVar(var);
     while (!queue.empty()) {
       const VarNode* var = queue.back();
       const Expr& expr = _LookupBoundExpr(var);
-      bindings[var] = expr.operator->();
+      const ExprNode *expr_node = bindings[var] = expr.operator->();
       queue.pop_back();
       out_edge = &graph[var];
-      if (expr.defined()) {
+      if (expr_node != nullptr) {
         ExprVisitor::VisitExpr(expr);
       }
     }

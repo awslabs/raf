@@ -4,8 +4,8 @@ import threading
 from collections import namedtuple
 
 from mnm._core.core_utils import get_func_name
-from mnm._lib import relay
 from mnm._ffi.value import ExtractLetList
+from mnm._lib import relay
 
 from .model import Model
 from .ndarray import Symbol, ndarray
@@ -56,8 +56,9 @@ def _script_bind_args(pyfunc, args, kwargs):
         symbol = Symbol.make_var(name_hint=name)
         bound_args.arguments[name] = symbol
         params.append(symbol._Symbol__handle)  # pylint: disable=protected-access
-    for _, param in args[0].state().items():
-        params.append(param._ndarray__handle)  # pylint: disable=protected-access
+    for name, param in args[0].state().items():
+        if param.requires_grad:
+            params.append(param._ndarray__handle)  # pylint: disable=protected-access
     return bound_args, params
 
 
