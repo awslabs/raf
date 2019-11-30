@@ -32,5 +32,8 @@ class Executor {
   }
 };
 
+namespace interpreter {
+ir::ObjectRef Interpret(ir::Expr expr, ir::Module mod = ir::NullValue<ir::Module>());
+}  // namespace interpreter
 }  // namespace executor
 }  // namespace mnm

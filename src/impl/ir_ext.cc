@@ -18,8 +18,7 @@ void ModuleObj::Add(const GlobalVar& var, const Function& func) {
 
 Function ModuleObj::Lookup(const GlobalVar& var) const {
   auto it = functions.find(var);
-  CHECK(it != functions.end()) << "There is no definition of "
-                               << var->name_hint;
+  CHECK(it != functions.end()) << "There is no definition of " << var->name_hint;
   return (*it).second;
 }
 
@@ -27,6 +26,11 @@ Module Module::make(Map<GlobalVar, Function> functions) {
   ObjectPtr<ModuleObj> n = make_object<ModuleObj>();
   n->functions = std::move(functions);
   return Module(n);
+}
+
+Module Module::Global() {
+  static Module inst = Module::make({});
+  return inst;
 }
 
 void ModuleAdd(Module mod, GlobalVar var, Function func) {
@@ -72,6 +76,7 @@ MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
 MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
+MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(Module::Global);
 MNM_REGISTER_OBJECT_REFLECT(ModuleObj);
 }  // namespace ir
 }  // namespace mnm

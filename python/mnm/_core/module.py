@@ -18,4 +18,4 @@ class Module(NodeBase):
         return ffi.Lookup(self, var)
 
 
-Module.GLOBAL = Module()
+Module.GLOBAL = ffi.Global()

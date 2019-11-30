@@ -10,6 +10,7 @@
 #include "mnm/ir.h"
 #include "mnm/registry.h"
 #include "mnm/value.h"
+#include "mnm/executor.h"
 
 namespace mnm {
 namespace op {

@@ -80,6 +80,7 @@ namespace op {{
 namespace ffi {{
 using registry::TVMArgs;
 using registry::TVMRetValue;
+using executor::interpreter::Interpret;
 {OP_FFI_IMPS}
 }}  // namespace ffi
 }}  // namespace op
@@ -209,8 +210,7 @@ def gen_op_ffi_imp(op):
 MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
 .set_body([](TVMArgs args, TVMRetValue *ret) {{
   static Op op = Op::Get("mnm.op.{OP_NAME}");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::{SCHEMA_NAME}(args)));
+  *ret = Interpret(CallNode::make(op, ffi::{SCHEMA_NAME}(args)));
 }});
 """.strip()
     op_name = op.name

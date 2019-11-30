@@ -5,7 +5,7 @@ from typing import Callable, Dict
 import numpy as np
 
 from mnm._core.core_utils import get_func_name, set_module
-from mnm._core.executor import Interpreter
+from mnm._core.executor import interpret
 from mnm._core.module import Module
 from mnm._core.ndarray import ndarray as NDArray
 from mnm._core.value import BoolValue, FloatValue, IntValue, Value
@@ -99,7 +99,7 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
 
     def call(*args):
         code = relay.Call(op=entry, args=[_make_argument(arg) for arg in args])
-        result = Interpreter.GLOBAL(code)
+        result = interpret(code)
         return _unwrap(result)
 
     return call

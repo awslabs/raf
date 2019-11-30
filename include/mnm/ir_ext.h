@@ -13,13 +13,10 @@ namespace ir {
 class ModuleObj : public ir::Object {
  public:
   Map<GlobalVar, Function> functions;
-
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("functions", &functions);
   }
-
   void Add(const GlobalVar& var, const Function& func);
-
   Function Lookup(const GlobalVar& var) const;
 
  public:
@@ -30,6 +27,7 @@ class ModuleObj : public ir::Object {
 class Module : public ObjectRef {
  public:
   static Module make(Map<GlobalVar, Function> functions);
+  static Module Global();
   MNM_OBJECT_REF(Module, ObjectRef, ModuleObj);
 };
 

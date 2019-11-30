@@ -648,209 +648,176 @@ namespace op {
 namespace ffi {
 using registry::TVMArgs;
 using registry::TVMRetValue;
+using executor::interpreter::Interpret;
 MNM_REGISTER_GLOBAL("mnm.op.imp.add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.add");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.avg_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Pool(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Pool(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.avg_pool2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::PoolDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::PoolDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.batch_flatten")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_flatten");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Unary(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm_infer")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_infer");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BatchNorm(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BatchNorm(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm_train")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_train");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BatchNorm(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BatchNorm(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Conv(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Conv(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dw")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d_dw");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::ConvDxw(args)));
+  *ret = Interpret(CallNode::make(op, ffi::ConvDxw(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::ConvDxw(args)));
+  *ret = Interpret(CallNode::make(op, ffi::ConvDxw(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.divide")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.divide");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.equal");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.greater")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.greater");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.greater_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.greater_equal");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.less")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.less_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less_equal");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.linear")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.linear");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Binary(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Binary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.log_softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log_softmax");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Softmax(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Softmax(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.log_softmax_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log_softmax_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::SoftmaxDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::SoftmaxDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.logical_not")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.logical_not");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::UnaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::UnaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.max_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Pool(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Pool(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.max_pool2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::PoolDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::PoolDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.mod")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.mod");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.multiply")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.multiply");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.negative")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.negative");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::UnaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::UnaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.not_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.not_equal");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.relu")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.relu");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Unary(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.relu_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.relu_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::UnaryDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Unary(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::UnaryDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.softmax");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Softmax(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Softmax(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.softmax_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.softmax_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::SoftmaxDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::SoftmaxDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.subtract")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.subtract");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::BinaryUfunc(args)));
+  *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.tanh")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.tanh");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::Unary(args)));
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.tanh_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.tanh_dx");
-  static auto run = registry::GetPackedFunc("mnm.executor.InterpretWithGlobal");
-  *ret = run(CallNode::make(op, ffi::UnaryDx(args)));
+  *ret = Interpret(CallNode::make(op, ffi::UnaryDx(args)));
 });
 }  // namespace ffi
 }  // namespace op

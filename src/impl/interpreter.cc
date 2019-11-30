@@ -15,79 +15,81 @@
 #include "../requests.h"
 
 namespace mnm {
+namespace executor {
 namespace interpreter {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using common::shape_utils::BytesCompactTensor;
-using executor::Executor;
+using namespace mnm::op;
 using memory_pool::Memory;
-using op::CallValues;
-using op::GetListArgs;
-using op::MakeListArgs;
-using op::OpDispatch;
-using op::OpEnv;
-using op::RunDeclare;
-using registry::GetPackedFunc;
-using registry::PackedFunc;
-using registry::TypedPackedFunc;
 using requests::Requests;
 using stream_pool::Stream;
 using tensor::Tensor;
 
-class Stack {
-  using Frame = Map<Var, Value>;
-
+class SymbolTable {
  public:
-  std::vector<Frame> frames;
+  std::unordered_map<const VarNode*, std::vector<Value>> tab;
 
-  Stack() : frames() {
-    frames.push_back(Frame({}));
-  }
-
-  void Extend(const Var& var, const Value& value) {
-    frames.back().Set(var, value);
-  }
-
-  Value Lookup(const Var& local) {
-    for (auto frame = frames.rbegin(); frame != frames.rend(); frame++) {
-      auto elem = frame->find(local);
-      if (elem != frame->end()) {
-        return (*elem).second;
-      }
+  Value Lookup(const Var& var) {
+    auto iter = tab.find(var.operator->());
+    if (iter != tab.end() && !iter->second.empty()) {
+      return iter->second.back();
     }
-    const Value& ret = value::LookupBoundValue(local);
+    const Value& ret = LookupBoundValue(var);
     if (ret.defined()) {
       return ret;
     }
-    LOG(FATAL) << "could not find variable binding for " << local->name_hint();
+    LOG(FATAL) << "could not find variable binding for " << var->name_hint();
     throw;
   }
 
-  class LocalFrame {
+  class AddVar {
    public:
-    Stack& st;
-    explicit LocalFrame(Stack& st, const Frame& fr) : st(st) {
-      st.frames.push_back(fr);
+    SymbolTable& st;
+    Var var;
+    explicit AddVar(SymbolTable& st, const Var& var, const Value& value) : st(st), var(var) {
+      st.Extend_(var, value);
     }
-    ~LocalFrame() {
-      st.frames.pop_back();
+    ~AddVar() {
+      st.Pop_(var);
     }
   };
+
+  class LocalFrame {
+   public:
+    SymbolTable& st;
+    Map<Var, Value> frame;
+    explicit LocalFrame(SymbolTable& st, Map<Var, Value>&& frame) : st(st), frame(frame) {
+      for (auto iter : frame) {
+        st.Extend_(iter.first, iter.second);
+      }
+    }
+    ~LocalFrame() {
+      for (auto iter : frame) {
+        st.Pop_(iter.first);
+      }
+    }
+  };
+
+ private:
+  void Extend_(const Var& var, const Value& value) {
+    tab[var.operator->()].push_back(value);
+  }
+
+  void Pop_(const Var& var) {
+    std::vector<Value>& values = tab.at(var.operator->());
+    CHECK(!values.empty());
+    values.pop_back();
+  }
 };
 
 class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Executor {
  public:
-  static TypedPackedFunc<ObjectRef(Expr)> global;
+  SymbolTable st;
+  Module mod{nullptr};
 
  public:
-  Module mod;
-  Stack stack;
-
- public:
-  Interpreter(Module mod) : mod(mod) {
-  }
-
+  Interpreter() = default;
   ~Interpreter() = default;
 
   Value Eval(const Expr& expr) {
@@ -99,7 +101,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const VarNode* node) override {
-    return stack.Lookup(GetRef<Var>(node));
+    return st.Lookup(GetRef<Var>(node));
   }
 
   Value VisitExpr_(const GlobalVarNode* node) override {
@@ -148,7 +150,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const LetNode* node) override {
-    stack.Extend(node->var, Eval(node->value));
+    SymbolTable::AddVar var(st, node->var, Eval(node->value));
     return Eval(node->body);
   }
 
@@ -248,7 +250,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       locals.Set((*it).first, (*it).second);
     }
     {
-      Stack::LocalFrame lf(stack, std::move(locals));
+      SymbolTable::LocalFrame lf(st, std::move(locals));
       return Eval(func->body);
     }
   }
@@ -308,29 +310,14 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value) {
   throw;
 }
 
-TypedPackedFunc<ObjectRef(Expr)> Interpreter::global = nullptr;
-TypedPackedFunc<ObjectRef(Expr)> CreateInterpreter(Module module, bool as_global) {
-  auto intrp = std::make_shared<Interpreter>(module);
-  auto packed = [intrp](Expr expr) { return DeTuple(expr, intrp->Eval(expr)); };
-  TypedPackedFunc<ObjectRef(Expr)> runner(packed);
-  if (as_global) {
-    if (Interpreter::global != nullptr) {
-      LOG(WARNING) << "Changing global interpreter. This is often undesirable and do this only if "
-                      "you are aware of what you are doing.";
-    }
-    CHECK(Interpreter::global == nullptr);
-    Interpreter::global = runner;
-  }
-  return runner;
+ObjectRef Interpret(Expr expr, Module mod) {
+  thread_local Interpreter* intrp = new Interpreter();
+  intrp->st.tab.clear();
+  intrp->mod = mod.defined() ? mod : Module::Global();
+  return DeTuple(expr, intrp->Eval(expr));
 }
 
-ObjectRef InterpretWithGlobal(Expr expr) {
-  CHECK(Interpreter::global != nullptr) << "Global interpreter does not exist";
-  return Interpreter::global(expr);
-}
-
-MNM_REGISTER_GLOBAL("mnm.executor.CreateInterpreter").set_body_typed(CreateInterpreter);
-MNM_REGISTER_GLOBAL("mnm.executor.InterpretWithGlobal").set_body_typed(InterpretWithGlobal);
-
+MNM_REGISTER_GLOBAL("mnm.executor.Interpret").set_body_typed(Interpret);
 }  // namespace interpreter
+}  // namespace executor
 }  // namespace mnm

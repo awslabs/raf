@@ -1,2 +1,1 @@
-from ._internal import CreateInterpreter
-from ._internal import InterpretWithGlobal
+from ._internal import Interpret
