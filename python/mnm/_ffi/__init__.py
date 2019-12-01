@@ -4,5 +4,6 @@ from . import executor
 from . import ir
 from . import memory_pool
 from . import op
+from . import pass_
 from . import tensor
 from . import value

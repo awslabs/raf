@@ -137,6 +137,7 @@ using tvm::relay::TypeReporter;
 // Relay Functors
 using tvm::relay::ExprFunctor;
 using tvm::relay::ExprVisitor;
+using tvm::relay::ExprMutator;
 
 }  // namespace ir
 }  // namespace mnm

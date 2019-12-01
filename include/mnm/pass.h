@@ -9,8 +9,6 @@
 
 namespace mnm {
 namespace pass {
-
 using tvm::relay::FreeVars;
-
 }  // namespace pass
 }  // namespace mnm

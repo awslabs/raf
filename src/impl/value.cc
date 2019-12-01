@@ -345,7 +345,7 @@ class LetListExtractor final : public ExprVisitor {
     while (!queue.empty()) {
       const VarNode* var = queue.back();
       const Expr& expr = _LookupBoundExpr(var);
-      const ExprNode *expr_node = bindings[var] = expr.operator->();
+      const ExprNode* expr_node = bindings[var] = expr.operator->();
       queue.pop_back();
       out_edge = &graph[var];
       if (expr_node != nullptr) {
@@ -370,15 +370,10 @@ class LetListExtractor final : public ExprVisitor {
     }
     return body;
   }
-
-  static Expr Extract(const Var& var) {
-    std::unique_ptr<LetListExtractor> self = std::make_unique<LetListExtractor>();
-    return self->Run(var);
-  }
 };
 
 ir::Expr ExtractLetList(const Var& var) {
-  return LetListExtractor::Extract(var);
+  return LetListExtractor().Run(var);
 }
 
 MNM_REGISTER_GLOBAL("mnm.value.BindNothing").set_body_typed(BindNothing);

@@ -1,10 +1,11 @@
 import contextlib
 import inspect
 import threading
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 from mnm._core.core_utils import get_func_name
 from mnm._ffi.value import ExtractLetList
+from mnm._ffi.pass_ import UnbindConstants
 from mnm._lib import relay
 
 from .model import Model
@@ -48,21 +49,21 @@ def _script_bind_args(pyfunc, args, kwargs):
     sig = inspect.signature(pyfunc)
     bound_args = sig.bind(*args, **kwargs)
     bound_args.apply_defaults()
-    params = []
+    param_dict = OrderedDict()
     for name, value in list(bound_args.arguments.items())[1:]:
         if not isinstance(value, ndarray):
             raise NotImplementedError(
                 "We only support ndarray as inputs for now")
         symbol = Symbol.make_var(name_hint=name)
         bound_args.arguments[name] = symbol
-        params.append(symbol._Symbol__handle)  # pylint: disable=protected-access
+        param_dict[name] = symbol._Symbol__handle  # pylint: disable=protected-access
     for name, param in args[0].state().items():
         if param.requires_grad:
-            params.append(param._ndarray__handle)  # pylint: disable=protected-access
-    return bound_args, params
+            param_dict[name] = param._ndarray__handle  # pylint: disable=protected-access
+    return bound_args, param_dict
 
 
-def _script_make_function(params, ret, mutation):
+def _script_make_function(param_dict, ret, mutation):
     # TODO(@junrushao1994): handle ndarrays
     # TODO(@junrushao1994): handle nested results
     if ret is None:
@@ -76,7 +77,8 @@ def _script_make_function(params, ret, mutation):
     ret = [x._Symbol__handle for x in ret]  # pylint: disable=protected-access
     ret = Symbol.make_tuple(ret)
     ret = ExtractLetList(ret._Symbol__handle)  # pylint: disable=protected-access
-    ret = relay.Function(params=params, body=ret)
+    ret = relay.Function(params=list(param_dict.values()), body=ret)
+    ret = UnbindConstants(ret, dict(param_dict))
     return ret
 
 
@@ -87,7 +89,7 @@ def _script_get_cache(model, func_name):
 def _script_run(pyfunc, args, kwargs):
     import mnm  # pylint: disable=import-outside-toplevel
     print("### Start scripting:", get_func_name(pyfunc))
-    bound_args, params = _script_bind_args(pyfunc, args, kwargs)
+    bound_args, param_dict = _script_bind_args(pyfunc, args, kwargs)
     try:
         _script_switch(mnm._op.sym)  # pylint: disable=protected-access
         with _ScopeStack.scope(item="script"):
@@ -95,7 +97,7 @@ def _script_run(pyfunc, args, kwargs):
             mutation = _ScopeStack.last().mutation
     finally:
         _script_switch(mnm._op.imp)  # pylint: disable=protected-access
-    ret = _script_make_function(params, ret, mutation)
+    ret = _script_make_function(param_dict, ret, mutation)
     print("Result:", ret)
     return ret
 

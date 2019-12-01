@@ -63,6 +63,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/op/schema/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/generic/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/regs/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
 )
 
