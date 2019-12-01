@@ -22,6 +22,21 @@ class BatchNormArgs : public ir::AttrsNode<BatchNormArgs> {
   double momentum{0.1};
   MNM_OP_SCHEMA(BatchNormArgs, "mnm.args.batch_norm");
 };
+class BatchNormTrainDxwbArgs : public ir::AttrsNode<BatchNormTrainDxwbArgs> {
+ public:
+  value::TensorValue dy;
+  value::TensorValue x;
+  value::TensorValue w;
+  value::TensorValue b;
+  MNM_OP_SCHEMA(BatchNormTrainDxwbArgs, "mnm.args.batch_norm_train_dxwb");
+};
+class BiasAddArgs : public ir::AttrsNode<BiasAddArgs> {
+ public:
+  value::TensorValue x;
+  value::TensorValue b;
+  int axis;
+  MNM_OP_SCHEMA(BiasAddArgs, "mnm.args.bias_add");
+};
 class ConvArgs : public ir::AttrsNode<ConvArgs> {
  public:
   value::TensorValue x;

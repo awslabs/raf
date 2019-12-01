@@ -19,7 +19,7 @@ from mnm._lib import _APIS
 
 def gen_api(api):
     API = """
-# Defined in {PATH}, line {LINENO}
+# Defined in {PATH}
 {LAST_NAME} = _APIS.get("{FULL_NAME}", None)
 """.strip()
     path = api.path

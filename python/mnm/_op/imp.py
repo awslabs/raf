@@ -5,12 +5,14 @@ from . import imp_utils
 # pylint: disable=invalid-name,line-too-long,too-many-arguments
 __all__ = [
     "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm_infer",
-    "batch_norm_train", "conv2d", "conv2d_dw", "conv2d_dx", "divide",
-    "equal", "greater", "greater_equal", "less", "less_equal",
-    "linear", "log_softmax", "log_softmax_dx", "logical_not", "max_pool2d",
-    "max_pool2d_dx", "mod", "multiply", "negative", "not_equal",
-    "relu", "relu_dx", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "subtract", "tanh", "tanh_dx",
+    "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "collapse_sum_like", "conv2d",
+    "conv2d_dw", "conv2d_dx", "divide", "equal", "greater",
+    "greater_equal", "less", "less_equal", "log_softmax", "log_softmax_dx",
+    "logical_not", "matmul", "max_pool2d", "max_pool2d_dx", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape_like", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "subtract", "tanh",
+    "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -66,6 +68,24 @@ def batch_norm_train(x, running_mean, running_var, w=None, b=None, eps=1e-05, mo
     eps = imp_utils.to_double(eps)
     momentum = imp_utils.to_double(momentum)
     return imp_utils.ret(ffi.batch_norm_train(x, running_mean, running_var, w, b, eps, momentum))
+@set_module("mnm")
+def batch_norm_train_dxwb(dy, x, w, b):
+    dy = imp_utils.to_tensor(dy)
+    x = imp_utils.to_tensor(x)
+    w = imp_utils.to_tensor(w)
+    b = imp_utils.to_tensor(b)
+    return imp_utils.ret(ffi.batch_norm_train_dxwb(dy, x, w, b))
+@set_module("mnm")
+def bias_add(x, b, axis):
+    x = imp_utils.to_tensor(x)
+    b = imp_utils.to_tensor(b)
+    axis = imp_utils.to_int(axis)
+    return imp_utils.ret(ffi.bias_add(x, b, axis))
+@set_module("mnm")
+def collapse_sum_like(x, shape):
+    x = imp_utils.to_tensor(x)
+    shape = imp_utils.to_int_tuple(shape)
+    return imp_utils.ret(ffi.collapse_sum_like(x, shape))
 @set_module("mnm")
 def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     x = imp_utils.to_tensor(x)
@@ -138,11 +158,6 @@ def less_equal(x1, x2, out=None, where=None):
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.less_equal(x1, x2, out, where))
 @set_module("mnm")
-def linear(x1, x2):
-    x1 = imp_utils.to_any(x1)
-    x2 = imp_utils.to_any(x2)
-    return imp_utils.ret(ffi.linear(x1, x2))
-@set_module("mnm")
 def log_softmax(x, axis=-1):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int(axis)
@@ -160,6 +175,13 @@ def logical_not(x, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.logical_not(x, out, where))
+@set_module("mnm")
+def matmul(a, b, transpose_a=False, transpose_b=False):
+    a = imp_utils.to_tensor(a)
+    b = imp_utils.to_tensor(b)
+    transpose_a = imp_utils.to_bool(transpose_a)
+    transpose_b = imp_utils.to_bool(transpose_b)
+    return imp_utils.ret(ffi.matmul(a, b, transpose_a, transpose_b))
 @set_module("mnm")
 def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
@@ -203,6 +225,23 @@ def negative(x, out=None, where=None):
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.negative(x, out, where))
 @set_module("mnm")
+def nll_loss(y_true, y_pred):
+    y_true = imp_utils.to_tensor(y_true)
+    y_pred = imp_utils.to_tensor(y_pred)
+    return imp_utils.ret(ffi.nll_loss(y_true, y_pred))
+@set_module("mnm")
+def nll_loss_dpred(loss, y_true, y_pred):
+    loss = imp_utils.to_tensor(loss)
+    y_true = imp_utils.to_tensor(y_true)
+    y_pred = imp_utils.to_tensor(y_pred)
+    return imp_utils.ret(ffi.nll_loss_dpred(loss, y_true, y_pred))
+@set_module("mnm")
+def nll_loss_dtrue(loss, y_true, y_pred):
+    loss = imp_utils.to_tensor(loss)
+    y_true = imp_utils.to_tensor(y_true)
+    y_pred = imp_utils.to_tensor(y_pred)
+    return imp_utils.ret(ffi.nll_loss_dtrue(loss, y_true, y_pred))
+@set_module("mnm")
 def not_equal(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
@@ -219,6 +258,11 @@ def relu_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.relu_dx(x, y, dy))
+@set_module("mnm")
+def reshape_like(x, shape):
+    x = imp_utils.to_tensor(x)
+    shape = imp_utils.to_int_tuple(shape)
+    return imp_utils.ret(ffi.reshape_like(x, shape))
 @set_module("mnm")
 def sigmoid(x):
     x = imp_utils.to_any(x)

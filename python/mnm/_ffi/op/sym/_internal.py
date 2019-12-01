@@ -1,71 +1,85 @@
 from mnm._lib import _APIS
 
 # pylint: disable=invalid-name
-# Defined in ./src/op/regs/regs.cc, line 472
+# Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.sym.add", None)
-# Defined in ./src/op/regs/regs.cc, line 477
+# Defined in ./src/op/regs/regs.cc
 avg_pool2d = _APIS.get("mnm.op.sym.avg_pool2d", None)
-# Defined in ./src/op/regs/regs.cc, line 482
+# Defined in ./src/op/regs/regs.cc
 avg_pool2d_dx = _APIS.get("mnm.op.sym.avg_pool2d_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 487
+# Defined in ./src/op/regs/regs.cc
 batch_flatten = _APIS.get("mnm.op.sym.batch_flatten", None)
-# Defined in ./src/op/regs/regs.cc, line 492
+# Defined in ./src/op/regs/regs.cc
 batch_norm_infer = _APIS.get("mnm.op.sym.batch_norm_infer", None)
-# Defined in ./src/op/regs/regs.cc, line 497
+# Defined in ./src/op/regs/regs.cc
 batch_norm_train = _APIS.get("mnm.op.sym.batch_norm_train", None)
-# Defined in ./src/op/regs/regs.cc, line 502
+# Defined in ./src/op/regs/regs.cc
+batch_norm_train_dxwb = _APIS.get("mnm.op.sym.batch_norm_train_dxwb", None)
+# Defined in ./src/op/regs/regs.cc
+bias_add = _APIS.get("mnm.op.sym.bias_add", None)
+# Defined in ./src/op/regs/regs.cc
+collapse_sum_like = _APIS.get("mnm.op.sym.collapse_sum_like", None)
+# Defined in ./src/op/regs/regs.cc
 conv2d = _APIS.get("mnm.op.sym.conv2d", None)
-# Defined in ./src/op/regs/regs.cc, line 507
+# Defined in ./src/op/regs/regs.cc
 conv2d_dw = _APIS.get("mnm.op.sym.conv2d_dw", None)
-# Defined in ./src/op/regs/regs.cc, line 512
+# Defined in ./src/op/regs/regs.cc
 conv2d_dx = _APIS.get("mnm.op.sym.conv2d_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 517
+# Defined in ./src/op/regs/regs.cc
 divide = _APIS.get("mnm.op.sym.divide", None)
-# Defined in ./src/op/regs/regs.cc, line 522
+# Defined in ./src/op/regs/regs.cc
 equal = _APIS.get("mnm.op.sym.equal", None)
-# Defined in ./src/op/regs/regs.cc, line 527
+# Defined in ./src/op/regs/regs.cc
 greater = _APIS.get("mnm.op.sym.greater", None)
-# Defined in ./src/op/regs/regs.cc, line 532
+# Defined in ./src/op/regs/regs.cc
 greater_equal = _APIS.get("mnm.op.sym.greater_equal", None)
-# Defined in ./src/op/regs/regs.cc, line 537
+# Defined in ./src/op/regs/regs.cc
 less = _APIS.get("mnm.op.sym.less", None)
-# Defined in ./src/op/regs/regs.cc, line 542
+# Defined in ./src/op/regs/regs.cc
 less_equal = _APIS.get("mnm.op.sym.less_equal", None)
-# Defined in ./src/op/regs/regs.cc, line 547
-linear = _APIS.get("mnm.op.sym.linear", None)
-# Defined in ./src/op/regs/regs.cc, line 552
+# Defined in ./src/op/regs/regs.cc
 log_softmax = _APIS.get("mnm.op.sym.log_softmax", None)
-# Defined in ./src/op/regs/regs.cc, line 557
+# Defined in ./src/op/regs/regs.cc
 log_softmax_dx = _APIS.get("mnm.op.sym.log_softmax_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 562
+# Defined in ./src/op/regs/regs.cc
 logical_not = _APIS.get("mnm.op.sym.logical_not", None)
-# Defined in ./src/op/regs/regs.cc, line 567
+# Defined in ./src/op/regs/regs.cc
+matmul = _APIS.get("mnm.op.sym.matmul", None)
+# Defined in ./src/op/regs/regs.cc
 max_pool2d = _APIS.get("mnm.op.sym.max_pool2d", None)
-# Defined in ./src/op/regs/regs.cc, line 572
+# Defined in ./src/op/regs/regs.cc
 max_pool2d_dx = _APIS.get("mnm.op.sym.max_pool2d_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 577
+# Defined in ./src/op/regs/regs.cc
 mod = _APIS.get("mnm.op.sym.mod", None)
-# Defined in ./src/op/regs/regs.cc, line 582
+# Defined in ./src/op/regs/regs.cc
 multiply = _APIS.get("mnm.op.sym.multiply", None)
-# Defined in ./src/op/regs/regs.cc, line 587
+# Defined in ./src/op/regs/regs.cc
 negative = _APIS.get("mnm.op.sym.negative", None)
-# Defined in ./src/op/regs/regs.cc, line 592
+# Defined in ./src/op/regs/regs.cc
+nll_loss = _APIS.get("mnm.op.sym.nll_loss", None)
+# Defined in ./src/op/regs/regs.cc
+nll_loss_dpred = _APIS.get("mnm.op.sym.nll_loss_dpred", None)
+# Defined in ./src/op/regs/regs.cc
+nll_loss_dtrue = _APIS.get("mnm.op.sym.nll_loss_dtrue", None)
+# Defined in ./src/op/regs/regs.cc
 not_equal = _APIS.get("mnm.op.sym.not_equal", None)
-# Defined in ./src/op/regs/regs.cc, line 597
+# Defined in ./src/op/regs/regs.cc
 relu = _APIS.get("mnm.op.sym.relu", None)
-# Defined in ./src/op/regs/regs.cc, line 602
+# Defined in ./src/op/regs/regs.cc
 relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 607
+# Defined in ./src/op/regs/regs.cc
+reshape_like = _APIS.get("mnm.op.sym.reshape_like", None)
+# Defined in ./src/op/regs/regs.cc
 sigmoid = _APIS.get("mnm.op.sym.sigmoid", None)
-# Defined in ./src/op/regs/regs.cc, line 612
+# Defined in ./src/op/regs/regs.cc
 sigmoid_dx = _APIS.get("mnm.op.sym.sigmoid_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 617
+# Defined in ./src/op/regs/regs.cc
 softmax = _APIS.get("mnm.op.sym.softmax", None)
-# Defined in ./src/op/regs/regs.cc, line 622
+# Defined in ./src/op/regs/regs.cc
 softmax_dx = _APIS.get("mnm.op.sym.softmax_dx", None)
-# Defined in ./src/op/regs/regs.cc, line 627
+# Defined in ./src/op/regs/regs.cc
 subtract = _APIS.get("mnm.op.sym.subtract", None)
-# Defined in ./src/op/regs/regs.cc, line 632
+# Defined in ./src/op/regs/regs.cc
 tanh = _APIS.get("mnm.op.sym.tanh", None)
-# Defined in ./src/op/regs/regs.cc, line 637
+# Defined in ./src/op/regs/regs.cc
 tanh_dx = _APIS.get("mnm.op.sym.tanh_dx", None)

@@ -5,12 +5,14 @@ from . import sym_utils
 # pylint: disable=invalid-name,line-too-long,too-many-arguments
 __all__ = [
     "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm_infer",
-    "batch_norm_train", "conv2d", "conv2d_dw", "conv2d_dx", "divide",
-    "equal", "greater", "greater_equal", "less", "less_equal",
-    "linear", "log_softmax", "log_softmax_dx", "logical_not", "max_pool2d",
-    "max_pool2d_dx", "mod", "multiply", "negative", "not_equal",
-    "relu", "relu_dx", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "subtract", "tanh", "tanh_dx",
+    "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "collapse_sum_like", "conv2d",
+    "conv2d_dw", "conv2d_dx", "divide", "equal", "greater",
+    "greater_equal", "less", "less_equal", "log_softmax", "log_softmax_dx",
+    "logical_not", "matmul", "max_pool2d", "max_pool2d_dx", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape_like", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "subtract", "tanh",
+    "tanh_dx",
 ]
 
 def add(x1, x2, out=None, where=None):
@@ -60,6 +62,21 @@ def batch_norm_train(x, running_mean, running_var, w=None, b=None, eps=1e-05, mo
     eps = sym_utils.to_double(eps)
     momentum = sym_utils.to_double(momentum)
     return Symbol.from_expr(ffi.batch_norm_train(x, running_mean, running_var, w, b, eps, momentum))
+def batch_norm_train_dxwb(dy, x, w, b):
+    dy = sym_utils.to_tensor(dy)
+    x = sym_utils.to_tensor(x)
+    w = sym_utils.to_tensor(w)
+    b = sym_utils.to_tensor(b)
+    return Symbol.from_expr(ffi.batch_norm_train_dxwb(dy, x, w, b))
+def bias_add(x, b, axis):
+    x = sym_utils.to_tensor(x)
+    b = sym_utils.to_tensor(b)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.bias_add(x, b, axis))
+def collapse_sum_like(x, shape):
+    x = sym_utils.to_tensor(x)
+    shape = sym_utils.to_int_tuple(shape)
+    return Symbol.from_expr(ffi.collapse_sum_like(x, shape))
 def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     x = sym_utils.to_tensor(x)
     w = sym_utils.to_tensor(w)
@@ -122,10 +139,6 @@ def less_equal(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.less_equal(x1, x2, out, where))
-def linear(x1, x2):
-    x1 = sym_utils.to_any(x1)
-    x2 = sym_utils.to_any(x2)
-    return Symbol.from_expr(ffi.linear(x1, x2))
 def log_softmax(x, axis=-1):
     x = sym_utils.to_tensor(x)
     axis = sym_utils.to_int(axis)
@@ -141,6 +154,12 @@ def logical_not(x, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.logical_not(x, out, where))
+def matmul(a, b, transpose_a=False, transpose_b=False):
+    a = sym_utils.to_tensor(a)
+    b = sym_utils.to_tensor(b)
+    transpose_a = sym_utils.to_bool(transpose_a)
+    transpose_b = sym_utils.to_bool(transpose_b)
+    return Symbol.from_expr(ffi.matmul(a, b, transpose_a, transpose_b))
 def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
@@ -178,6 +197,20 @@ def negative(x, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.negative(x, out, where))
+def nll_loss(y_true, y_pred):
+    y_true = sym_utils.to_tensor(y_true)
+    y_pred = sym_utils.to_tensor(y_pred)
+    return Symbol.from_expr(ffi.nll_loss(y_true, y_pred))
+def nll_loss_dpred(loss, y_true, y_pred):
+    loss = sym_utils.to_tensor(loss)
+    y_true = sym_utils.to_tensor(y_true)
+    y_pred = sym_utils.to_tensor(y_pred)
+    return Symbol.from_expr(ffi.nll_loss_dpred(loss, y_true, y_pred))
+def nll_loss_dtrue(loss, y_true, y_pred):
+    loss = sym_utils.to_tensor(loss)
+    y_true = sym_utils.to_tensor(y_true)
+    y_pred = sym_utils.to_tensor(y_pred)
+    return Symbol.from_expr(ffi.nll_loss_dtrue(loss, y_true, y_pred))
 def not_equal(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -192,6 +225,10 @@ def relu_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.relu_dx(x, y, dy))
+def reshape_like(x, shape):
+    x = sym_utils.to_tensor(x)
+    shape = sym_utils.to_int_tuple(shape)
+    return Symbol.from_expr(ffi.reshape_like(x, shape))
 def sigmoid(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.sigmoid(x))

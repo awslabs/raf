@@ -30,7 +30,7 @@ class Conv2d(Model):
                      dtype="float32")
         self.w = Parameter(w, name="w")
         if bias:
-            b = np.zeros((1, out_channels, 1, 1), dtype="float32")
+            b = np.zeros((out_channels, ), dtype="float32")
             self.b = Parameter(b, name="b")
         else:
             self.b = None
@@ -47,7 +47,7 @@ class Conv2d(Model):
                        dilation=self.dilation,
                        groups=self.groups)
         if self.b is not None:
-            x = mnm.add(x, self.b)
+            x = mnm.bias_add(x, self.b, axis=1)
         return x
 
 
@@ -115,7 +115,7 @@ class Linear(Model):
     @script
     def forward(self, x):
         import mnm  # pylint: disable=import-outside-toplevel
-        out = mnm.linear(x, self.w)
+        out = mnm.matmul(x, self.w, transpose_b=True)
         if self.b is not None:
-            out = mnm.add(out, self.b)
+            out = mnm.bias_add(out, self.b, axis=-1)
         return out

@@ -32,10 +32,12 @@ struct ConstUnbinder : public ExprMutator {
       var_map.Set(var, node->value);
       return Mutate(node->body);
     }
-    var_map.Set(var, var);
-    return LetNode::make(var, Mutate(node->value), Mutate(node->body));
+    Var new_var = VarNode::make("a" + std::to_string(++total_internal_var), {});
+    var_map.Set(var, new_var);
+    return LetNode::make(new_var, Mutate(node->value), Mutate(node->body));
   }
 
+  int total_internal_var = 0;
   Map<Var, Expr> var_map;
 };
 

@@ -75,7 +75,14 @@ class ResNet50(mnm.Model):
     # pylint: enable=attribute-defined-outside-init
 
     @mnm.model.script
-    def forward(self, x):
+    def forward(self, x, y_true):
+        y_pred = self.forward_infer(x)
+        y_pred = mnm.log_softmax(y_pred)
+        loss = mnm.nll_loss(y_true, y_pred)
+        return loss
+
+    @mnm.model.script
+    def forward_infer(self, x):
         out = self.conv1(x)
         out = self.layer1(out)
         out = self.layer2(out)
@@ -92,10 +99,10 @@ def test_build():
     model = ResNet50([3, 4, 6, 3])
     print("### Switch to training mode")
     model.train_mode()
-    model(x)
-    model(x)
-    model(x)
-    model(x)
+    model(x, x)
+    model(x, x)
+    model(x, x)
+    model(x, x)
     print("### Switch to infer mode")
     model.infer_mode()
     model(x)

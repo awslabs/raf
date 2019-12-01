@@ -5,7 +5,7 @@
  */
 #include "mnm/op.h"
 #include "mnm/tensor.h"
-#include "../schema/ufunc.h"
+#include "../schema/gemm.h"
 
 namespace mnm {
 namespace op {
@@ -14,27 +14,33 @@ namespace generic {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-MNM_OP_DECLARE("mnm.op.linear", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.matmul", [](const CallValues& call) {
   /*
    * This is essentially transposed matrix multiplication.
-   * [..., a] * [b, a] => [..., b]
+   * [n, m] * [m, k] => [n, k]
    */
   // TODO(@junrushao1994): sanity check
-  const auto* args = call->args.as<BinaryArgs>();
+  const auto* args = call->args.as<MatmulArgs>();
   CHECK(args != nullptr);
-  const DLTensor* x = args->x1;
-  const DLTensor* w = args->x2;
-  // x is of shape [..., a]
-  CHECK_GE(x->ndim, 1);
-  // w is of shape [b, a]
-  CHECK_EQ(w->ndim, 2);
-  std::vector<int64_t> o_shape(x->shape, x->shape + x->ndim);
-  int64_t b = w->shape[0];
-  int64_t a = w->shape[1];
-  CHECK_EQ(o_shape.back(), a);
-  o_shape.back() = b;
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx, /*dtype=*/x->dtype, /*shape=*/o_shape);
-  call->ctx = x->ctx;
+  const DLTensor* a = args->a;
+  const DLTensor* b = args->b;
+  // a is of shape [n1, m1]
+  // b is of shape [n2, m2]
+  CHECK_EQ(a->ndim, 2);
+  CHECK_EQ(b->ndim, 2);
+  int64_t n1 = a->shape[0];
+  int64_t m1 = a->shape[1];
+  int64_t n2 = b->shape[0];
+  int64_t m2 = b->shape[1];
+  if (args->transpose_a) {
+    std::swap(n1, m1);
+  }
+  if (args->transpose_b) {
+    std::swap(n2, m2);
+  }
+  CHECK_EQ(m1, n2);
+  call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype, /*shape=*/{n1, m2});
+  call->ctx = a->ctx;
 });
 
 }  // namespace generic
