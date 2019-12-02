@@ -86,7 +86,17 @@ class OpDispatch {
 };
 
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
+// Schema:
+//    Array<Value> inputs -> Attrs input_schema
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
+// Primial gradient:
+//    <Expr orig_call, Expr output_grad> -> Array<Expr> input_grad
+using FPrimalGradient = tvm::relay::FPrimalGradient;
+// Fused primial gradient:
+//    <Expr orig_call, Expr output_grad, Array<Expr> old_input_grad> -> Array<Expr> new_input_grad
+using FFusedPrimalGradient = registry::TypedPackedFunc<ir::Array<ir::Expr>(
+    const ir::Expr& orig_call, const ir::Expr& output_grad,
+    const ir::Array<ir::Expr>& old_input_grads)>;
 
 void RunDeclare(const CallValues& call);
 ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);
@@ -109,9 +119,9 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
           .set_name(op_name)                                        \
           .add_dispatch(device_type, backend_name, op_env::make)
 
-#define MNM_OP_SCHEMA(class_name, type_key)                         \
-  static constexpr const char* _type_key = type_key;                \
-  MNM_FINAL_OBJECT(class_name, ::tvm::BaseAttrsNode)                \
-  template <typename FVisit>                                        \
-  void __VisitAttrs__(FVisit& __fvisit__) {                         \
+#define MNM_OP_SCHEMA(class_name, type_key)          \
+  static constexpr const char* _type_key = type_key; \
+  MNM_FINAL_OBJECT(class_name, ::tvm::BaseAttrsNode) \
+  template <typename FVisit>                         \
+  void __VisitAttrs__(FVisit& __fvisit__) {          \
   }
