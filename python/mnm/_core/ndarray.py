@@ -43,6 +43,17 @@ class ndarray:
             self.__handle = BindConstValue(_np_to_tensor_value(npa, ctx=ctx), name)
         self.requires_grad = False
 
+    def __setitem__(self, key, value):
+        if isinstance(key, slice):
+            if key == slice(None, None, None):
+                import numpy as np  # pylint: disable=import-outside-toplevel
+                assert isinstance(value, np.ndarray)
+                assert value.shape == self.shape
+                value = _np_to_tensor_value(value.astype(self.dtype), ctx=self.ctx)
+                self.__handle = BindConstValue(value, self.__handle.name_hint)
+                return
+        raise NotImplementedError
+
     @property
     def requires_grad(self):
         return self.__requires_grad
@@ -114,7 +125,7 @@ class ndarray:
 
     @property
     def dtype(self):
-        return self.__dtype
+        return str(self.__dtype)
 
     @dtype.setter
     def dtype(self, dtype):
