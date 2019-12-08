@@ -4,9 +4,8 @@ import threading
 from collections import namedtuple, OrderedDict
 
 from mnm._core.core_utils import get_func_name
-from mnm._ffi.value import ExtractLetList
+from mnm._ffi.binding import ExtractLetList
 from mnm._ffi.pass_ import UnbindConstants
-from mnm._lib import relay
 
 from .model import Model
 from .ndarray import Symbol, ndarray
@@ -58,8 +57,7 @@ def _script_bind_args(pyfunc, args, kwargs):
         bound_args.arguments[name] = symbol
         param_dict[name] = symbol._Symbol__handle  # pylint: disable=protected-access
     for name, param in args[0].state().items():
-        if param.requires_grad:
-            param_dict[name] = param._ndarray__handle  # pylint: disable=protected-access
+        param_dict[name] = param._ndarray__handle  # pylint: disable=protected-access
     return bound_args, param_dict
 
 
@@ -76,8 +74,7 @@ def _script_make_function(param_dict, ret, mutation):
         ret.append(symbol)
     ret = [x._Symbol__handle for x in ret]  # pylint: disable=protected-access
     ret = Symbol.make_tuple(ret)
-    ret = ExtractLetList(ret._Symbol__handle)  # pylint: disable=protected-access
-    ret = relay.Function(params=list(param_dict.values()), body=ret)
+    ret = ExtractLetList(ret._Symbol__handle, list(param_dict.values()))  # pylint: disable=protected-access
     ret = UnbindConstants(ret, dict(param_dict))
     return ret
 

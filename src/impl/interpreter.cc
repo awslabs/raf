@@ -11,6 +11,7 @@
 #include "mnm/registry.h"
 #include "mnm/tensor.h"
 #include "mnm/value.h"
+#include "mnm/binding.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
 
@@ -21,6 +22,8 @@ namespace interpreter {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op;
+using binding::BindExprValue;
+using binding::LookupBoundValue;
 using memory_pool::Memory;
 using requests::Requests;
 using stream_pool::Stream;
@@ -291,7 +294,7 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value) {
     return value;
   }
   if (value->IsInstance<TensorValueObj>()) {
-    return value::BindExprValue(expr, value);
+    return BindExprValue(expr, value);
   }
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;

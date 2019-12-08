@@ -249,14 +249,3 @@ class StringValue : public Value {
 }  // namespace value
 }  // namespace mnm
 
-namespace mnm {
-namespace value {
-ir::Var BindNothing(const std::string& name_hint = "");
-ir::Var BindValue(const Value& value, const std::string& name_hint = "");
-ir::Var BindExpr(const ir::Expr& expr, const std::string& name_hint = "");
-ir::Var BindExprValue(const ir::Expr& expr, const Value& value, const std::string& name_hint = "");
-ir::Expr LookupBoundExpr(const ir::Var& var);
-Value LookupBoundValue(const ir::Var& var);
-ir::Expr ExtractLetList(const ir::Var& var);
-}  // namespace value
-}  // namespace mnm

@@ -3,9 +3,10 @@ import weakref
 
 from mnm._core.core_utils import ctx2str, set_module, str2ctx
 from mnm._core.value import TensorValue
+from mnm._ffi.binding import (BindConstValue, BindExprValue, LookupBoundValue,
+                              SetRequiresGrad)
 from mnm._ffi.tensor import MarkNumpy
-from mnm._ffi.value import (BindExpr, BindExprValue, BindNothing, BindValue,
-                            LookupBoundValue, ToTVM)
+from mnm._ffi.value import ToTVM
 from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_array
 
 
@@ -39,7 +40,18 @@ class ndarray:
                                  strides=strides,
                                  order=order)
             # NDArray is treated as relay.Constant
-            self.__handle = BindValue(_np_to_tensor_value(npa, ctx=ctx), name)
+            self.__handle = BindConstValue(_np_to_tensor_value(npa, ctx=ctx), name)
+        self.requires_grad = False
+
+    @property
+    def requires_grad(self):
+        return self.__requires_grad
+
+    @requires_grad.setter
+    def requires_grad(self, value):
+        assert isinstance(value, bool)
+        self.__requires_grad = value
+        return SetRequiresGrad(self.__handle, value)
 
     @property
     def __handle(self):
@@ -77,6 +89,9 @@ class ndarray:
         shape = " x ".join(map(str, self.shape))
         npa = ToTVM(self.__value).asnumpy()
         return fmt.format(str(npa), shape, self.ctx, self.dtype)
+
+    def __repr__(self):
+        return str(self)
 
     def asnumpy(self):
         return ToTVM(self.__value).asnumpy()  # pylint: disable=protected-access
@@ -142,7 +157,6 @@ class Parameter(ndarray):
             strides=None,
             order=None,
             ctx=None,
-            requires_grad=True,
             name=""):
         super(Parameter, self).__init__(shape=shape,
                                         dtype=dtype,
@@ -155,33 +169,7 @@ class Parameter(ndarray):
         # If Parameter requires grad, it is treated as relay.Var
         # Otherwise, it is treated as relay.Constant
         # By default, it doesn't require grad, and is treated as relay.Constant
-        self.__handle = BindExprValue(None, self._ndarray__value, name)  # pylint: disable=no-member
-        self.__requires_grad = False
         self.__parents = weakref.WeakSet()
-        self.requires_grad = requires_grad
-
-    def __switch_mode(self, value):
-        if value == self.__requires_grad:
-            return False
-        self.__requires_grad = value
-        self._ndarray__handle, self.__handle = \
-                self.__handle, self._ndarray__handle  # pylint: disable=attribute-defined-outside-init
-        return True
-
-    @property
-    def requires_grad(self):
-        return self.__requires_grad
-
-    @requires_grad.setter
-    def requires_grad(self, value):
-        if not isinstance(value, bool):
-            raise ValueError("Parameter's requires_grad should be boolean")
-        if not self.__switch_mode(value):
-            return
-        for parent in list(self.__parents.data):
-            parent = parent()
-            if parent is not None:
-                parent._Model__invalidate_cache()  # pylint: disable=protected-access
 
 
 class Symbol:  # pylint: disable=too-few-public-methods
@@ -201,21 +189,21 @@ class Symbol:  # pylint: disable=too-few-public-methods
     @staticmethod
     def make_var(name_hint=""):
         ret = Symbol()
-        ret.__handle = BindNothing(name_hint)  # pylint: disable=protected-access
+        ret.__handle = BindExprValue(None, None, name_hint)  # pylint: disable=protected-access
         return ret
 
     @staticmethod
     def make_tuple(symbols, name_hint=""):
         expr = relay.Tuple(symbols)
         ret = Symbol()
-        ret.__handle = BindExpr(expr, name_hint)  # pylint: disable=protected-access
+        ret.__handle = BindExprValue(expr, None, name_hint)  # pylint: disable=protected-access
         return ret
 
     def __getitem__(self, item, name_hint=""):
         if isinstance(item, int):
             expr = relay.TupleGetItem(self.__handle, item)
             ret = Symbol()
-            ret.__handle = BindExpr(expr, name_hint)  # pylint: disable=protected-access
+            ret.__handle = BindExprValue(expr, None, name_hint)  # pylint: disable=protected-access
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")
@@ -267,7 +255,7 @@ def array(
                    order=order,
                    subok=subok,
                    ndmin=ndmin)
-    return ndarray(BindValue(_np_to_tensor_value(npa, ctx=ctx), name))
+    return ndarray(BindConstValue(_np_to_tensor_value(npa, ctx=ctx), name))
 
 
 _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)

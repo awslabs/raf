@@ -32,7 +32,7 @@ def _set_is_train(self, value, recursive):
     def set_mode(model):
         model._Model__is_train = value
         for param in model._Model__params.values():
-            param._Parameter__switch_mode(value)
+            param.requires_grad = value
 
     def get_next(model):
         return model._Model__models.values()
