@@ -6,6 +6,7 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
+#include "./generic_utils.h"
 
 namespace mnm {
 namespace op {
@@ -14,15 +15,15 @@ namespace generic {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-#define MNM_SWITCH_SCALAR(var, value, body)                      \
-  do {                                                           \
+#define MNM_SWITCH_SCALAR(var, value, body)                     \
+  do {                                                          \
     if (const auto* var = (value).as<IntValueObj>()) {          \
-      body;                                                      \
+      body;                                                     \
     } else if (const auto* var = (value).as<FloatValueObj>()) { \
-      body;                                                      \
+      body;                                                     \
     } else if (const auto* var = (value).as<BoolValueObj>()) {  \
-      body;                                                      \
-    }                                                            \
+      body;                                                     \
+    }                                                           \
   } while (0);
 
 #define MNM_BINARY_SCALAR(op, x1, x2)                                      \

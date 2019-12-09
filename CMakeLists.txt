@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
+message(STATUS "Building MNM with CMake version: ${CMAKE_VERSION}")
 project(mnm C CXX)
 
 ################# User-defined configurations from config.cmake #################
@@ -18,6 +19,7 @@ endif()
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Threads.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Git.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDA.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/CUBLAS.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDNN.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Sanitizer.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/TVM.cmake)
@@ -44,6 +46,7 @@ set(MNM_LINK_LIBS
 
 set(MNM_BACKEND_LINK_LIBS
   ${MNM_CUDNN_LIBRARY}
+  ${MNM_CUBLAS_LIBRARY}
 )
 
 set_property(
@@ -84,10 +87,19 @@ else()
   )
 endif()
 
+if (${MNM_USE_CUBLAS} STREQUAL "OFF")
+  set(MNM_CUBLAS_SOURCE_FILES "")
+else()
+  file(GLOB_RECURSE MNM_CUBLAS_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/backend/cublas/*.cc
+  )
+endif()
+
 set(MNM_SOURCE_FILES
   ${MNM_CXX_SOURCE_FILES}
   ${MNM_CUDA_SOURCE_FILES}
   ${MNM_CUDNN_SOURCE_FILES}
+  ${MNM_CUBLAS_SOURCE_FILES}
 )
 
 add_library(mnm ${MNM_SOURCE_FILES})

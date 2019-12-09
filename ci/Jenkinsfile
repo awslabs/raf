@@ -78,6 +78,7 @@ stage('Build') {
          echo "set(MNM_USE_GTEST ON)" >> config.cmake
          echo "set(MNM_USE_CUDA ON)" >> config.cmake
          echo "set(MNM_USE_CUDNN ON)" >> config.cmake
+         echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_gpu, 'build')
@@ -95,6 +96,7 @@ stage('Build') {
          echo "set(MNM_USE_GTEST ON)" >> config.cmake
          echo "set(MNM_USE_CUDA OFF)" >> config.cmake
          echo "set(MNM_USE_CUDNN OFF)" >> config.cmake
+         echo "set(MNM_USE_CUBLAS OFF)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_cpu, 'build')
@@ -109,6 +111,7 @@ stage('Unit Test') {
       init_git_unix()
       unpack_lib('gpu', mnm_multilib)
       timeout(time: max_time, unit: 'MINUTES') {
+        sh "${docker_run} ${ci_gpu} nvidia-smi -L"
         sh "${docker_run} ${ci_gpu} ./ci/task_python_unittest.sh"
       }
     }

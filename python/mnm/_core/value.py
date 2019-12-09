@@ -3,7 +3,7 @@ from mnm._ffi import value as ffi
 from mnm._ffi.ir._make import Constant as make_const_expr
 from mnm._ffi.value import _make
 from mnm._lib import _NodeBase as NodeBase
-from mnm._lib import tvm_array
+from mnm._lib import tvm_ndarray
 
 
 @register_node("mnm.value.Value")
@@ -70,12 +70,12 @@ class TensorValue(Value):
                                        data)
 
     @staticmethod
-    def from_tvm(tvm_ndarray):
-        return ffi.FromTVM(tvm_ndarray)
+    def from_tvm(array):
+        return ffi.FromTVM(array)
 
     @staticmethod
     def from_numpy(np_array):
-        return TensorValue.from_tvm(tvm_array(np_array))
+        return TensorValue.from_tvm(tvm_ndarray(np_array))
 
 
 @register_node("mnm.value.IntValue")

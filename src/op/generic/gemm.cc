@@ -15,10 +15,6 @@ using namespace mnm::op::schema;
 using namespace mnm::value;
 
 MNM_OP_DECLARE("mnm.op.matmul", [](const CallValues& call) {
-  /*
-   * This is essentially transposed matrix multiplication.
-   * [n, m] * [m, k] => [n, k]
-   */
   // TODO(@junrushao1994): sanity check
   const auto* args = call->args.as<MatmulArgs>();
   CHECK(args != nullptr);
@@ -39,8 +35,13 @@ MNM_OP_DECLARE("mnm.op.matmul", [](const CallValues& call) {
     std::swap(n2, m2);
   }
   CHECK_EQ(m1, n2);
+  CHECK(a->dtype.code == kDLFloat && (a->dtype.bits == 32 || a->dtype.bits == 64)) <<
+    "Only float and double are supported!";
   call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype, /*shape=*/{n1, m2});
   call->ctx = a->ctx;
+  if (!n1 || !n2 || !m1 || !m2) {
+    call->callee = ir::NullValue<OpValue>();
+  }
 });
 
 }  // namespace generic

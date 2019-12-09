@@ -305,7 +305,7 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value) {
       if (sub_value->op_env == nullptr) {
         sub_value->op_env = tuple->op_env;
       }
-      result.push_back(DeTuple(expr, value));
+      result.push_back(DeTuple(sub_expr, sub_value));
     }
     return std::move(result);
   }

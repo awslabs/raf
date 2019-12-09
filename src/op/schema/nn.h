@@ -18,8 +18,8 @@ class BatchNormArgs : public ir::AttrsNode<BatchNormArgs> {
   value::TensorValue running_var;
   value::TensorValue w{nullptr};
   value::TensorValue b{nullptr};
-  double eps{1e-05};
   double momentum{0.1};
+  double eps{1e-05};
   MNM_OP_SCHEMA(BatchNormArgs, "mnm.args.batch_norm");
 };
 class BatchNormTrainDxwbArgs : public ir::AttrsNode<BatchNormTrainDxwbArgs> {
@@ -28,13 +28,14 @@ class BatchNormTrainDxwbArgs : public ir::AttrsNode<BatchNormTrainDxwbArgs> {
   value::TensorValue x;
   value::TensorValue w;
   value::TensorValue b;
+  double eps;
   MNM_OP_SCHEMA(BatchNormTrainDxwbArgs, "mnm.args.batch_norm_train_dxwb");
 };
 class BiasAddArgs : public ir::AttrsNode<BiasAddArgs> {
  public:
   value::TensorValue x;
   value::TensorValue b;
-  int axis;
+  int axis{1};
   MNM_OP_SCHEMA(BiasAddArgs, "mnm.args.bias_add");
 };
 class ConvArgs : public ir::AttrsNode<ConvArgs> {
@@ -52,6 +53,7 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
   value::TensorValue x_or_w;
   value::TensorValue y;
   value::TensorValue dy;
+  std::vector<int64_t> shape;
   std::vector<int64_t> stride;
   std::vector<int64_t> padding;
   std::vector<int64_t> dilation;

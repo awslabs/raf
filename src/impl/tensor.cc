@@ -130,7 +130,7 @@ class Tensor::Impl {
     container->shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
     container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
     container->dl_tensor.ctx = self->ctx;
-    container->dl_tensor.ndim = shape.size();
+    container->dl_tensor.ndim = container->shape_.size();
     container->dl_tensor.dtype = self->dtype;
     container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);

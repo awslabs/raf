@@ -60,27 +60,28 @@ Attrs BatchNorm(const Array<Value> &values) {
   MNM_REQUIRED(2, args::ToTensor, running_var);
   MNM_OPTIONAL(3, args::ToTensor, w);
   MNM_OPTIONAL(4, args::ToTensor, b);
-  MNM_OPTIONAL(5, args::ToDouble, eps);
-  MNM_OPTIONAL(6, args::ToDouble, momentum);
+  MNM_OPTIONAL(5, args::ToDouble, momentum);
+  MNM_OPTIONAL(6, args::ToDouble, eps);
   return Attrs(attrs);
 }
 Attrs BatchNormTrainDxwb(const Array<Value> &values) {
   const int size = values.size();
-  CHECK(4 <= size && size <= 4);
+  CHECK(5 <= size && size <= 5);
   auto attrs = make_object<schema::BatchNormTrainDxwbArgs>();
   MNM_REQUIRED(0, args::ToTensor, dy);
   MNM_REQUIRED(1, args::ToTensor, x);
   MNM_REQUIRED(2, args::ToTensor, w);
   MNM_REQUIRED(3, args::ToTensor, b);
+  MNM_REQUIRED(4, args::ToDouble, eps);
   return Attrs(attrs);
 }
 Attrs BiasAdd(const Array<Value> &values) {
   const int size = values.size();
-  CHECK(3 <= size && size <= 3);
+  CHECK(2 <= size && size <= 3);
   auto attrs = make_object<schema::BiasAddArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, b);
-  MNM_REQUIRED(2, args::ToInt, axis);
+  MNM_OPTIONAL(2, args::ToInt, axis);
   return Attrs(attrs);
 }
 Attrs Binary(const Array<Value> &values) {
@@ -133,15 +134,16 @@ Attrs Conv(const Array<Value> &values) {
 }
 Attrs ConvDxw(const Array<Value> &values) {
   const int size = values.size();
-  CHECK(7 <= size && size <= 7);
+  CHECK(8 <= size && size <= 8);
   auto attrs = make_object<schema::ConvDxwArgs>();
   MNM_REQUIRED(0, args::ToTensor, x_or_w);
   MNM_REQUIRED(1, args::ToTensor, y);
   MNM_REQUIRED(2, args::ToTensor, dy);
-  MNM_REQUIRED(3, args::ToIntTuple, stride);
-  MNM_REQUIRED(4, args::ToIntTuple, padding);
-  MNM_REQUIRED(5, args::ToIntTuple, dilation);
-  MNM_REQUIRED(6, args::ToInt, groups);
+  MNM_REQUIRED(3, args::ToIntTuple, shape);
+  MNM_REQUIRED(4, args::ToIntTuple, stride);
+  MNM_REQUIRED(5, args::ToIntTuple, padding);
+  MNM_REQUIRED(6, args::ToIntTuple, dilation);
+  MNM_REQUIRED(7, args::ToInt, groups);
   return Attrs(attrs);
 }
 Attrs LocalResponseNorm(const Array<Value> &values) {
@@ -316,27 +318,28 @@ Array<Expr> BatchNorm(const TVMArgs &values) {
   MNM_REQUIRED(2, ffi::ToTensor, running_var);
   MNM_OPTIONAL(3, ffi::ToTensor, w);
   MNM_OPTIONAL(4, ffi::ToTensor, b);
-  MNM_OPTIONAL(5, ffi::ToDouble, eps);
-  MNM_OPTIONAL(6, ffi::ToDouble, momentum);
+  MNM_OPTIONAL(5, ffi::ToDouble, momentum);
+  MNM_OPTIONAL(6, ffi::ToDouble, eps);
   return Array<Expr>(result);
 }
 Array<Expr> BatchNormTrainDxwb(const TVMArgs &values) {
   const int size = values.size();
-  CHECK(4 <= size && size <= 4);
+  CHECK(5 <= size && size <= 5);
   std::vector<Expr> result;
   MNM_REQUIRED(0, ffi::ToTensor, dy);
   MNM_REQUIRED(1, ffi::ToTensor, x);
   MNM_REQUIRED(2, ffi::ToTensor, w);
   MNM_REQUIRED(3, ffi::ToTensor, b);
+  MNM_REQUIRED(4, ffi::ToDouble, eps);
   return Array<Expr>(result);
 }
 Array<Expr> BiasAdd(const TVMArgs &values) {
   const int size = values.size();
-  CHECK(3 <= size && size <= 3);
+  CHECK(2 <= size && size <= 3);
   std::vector<Expr> result;
   MNM_REQUIRED(0, ffi::ToTensor, x);
   MNM_REQUIRED(1, ffi::ToTensor, b);
-  MNM_REQUIRED(2, ffi::ToInt, axis);
+  MNM_OPTIONAL(2, ffi::ToInt, axis);
   return Array<Expr>(result);
 }
 Array<Expr> Binary(const TVMArgs &values) {
@@ -389,15 +392,16 @@ Array<Expr> Conv(const TVMArgs &values) {
 }
 Array<Expr> ConvDxw(const TVMArgs &values) {
   const int size = values.size();
-  CHECK(7 <= size && size <= 7);
+  CHECK(8 <= size && size <= 8);
   std::vector<Expr> result;
   MNM_REQUIRED(0, ffi::ToTensor, x_or_w);
   MNM_REQUIRED(1, ffi::ToTensor, y);
   MNM_REQUIRED(2, ffi::ToTensor, dy);
-  MNM_REQUIRED(3, ffi::ToIntTuple, stride);
-  MNM_REQUIRED(4, ffi::ToIntTuple, padding);
-  MNM_REQUIRED(5, ffi::ToIntTuple, dilation);
-  MNM_REQUIRED(6, ffi::ToInt, groups);
+  MNM_REQUIRED(3, ffi::ToIntTuple, shape);
+  MNM_REQUIRED(4, ffi::ToIntTuple, stride);
+  MNM_REQUIRED(5, ffi::ToIntTuple, padding);
+  MNM_REQUIRED(6, ffi::ToIntTuple, dilation);
+  MNM_REQUIRED(7, ffi::ToInt, groups);
   return Array<Expr>(result);
 }
 Array<Expr> LocalResponseNorm(const TVMArgs &values) {

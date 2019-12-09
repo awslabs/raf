@@ -8,6 +8,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <functional>
+#include <numeric>
 #include "mnm/base.h"
 #include "mnm/op.h"
 #include "mnm/enum_base.h"
@@ -21,15 +23,6 @@
     cudnnStatus_t e = (func);                                                 \
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   } while (false)
-
-#define MAKE_SHAPE_ATLEAST_4D(def, tensor)                                   \
-  std::vector<int> def##_ = common::shape_utils::PadDims<int, int64_t>(      \
-      std::vector<int64_t>(tensor->shape, tensor->shape + tensor->ndim), 4); \
-  int* def = dmlc::BeginPtr(def##_)
-
-#define MAKE_STRIDE(def, shape)                                             \
-  std::vector<int> def##_ = common::shape_utils::Shape2Strides<int>(shape); \
-  int* def = dmlc::BeginPtr(def##_)
 
 namespace mnm {
 
@@ -206,23 +199,38 @@ class AlgorithmCache {
   }
 };
 
-inline cudnnTensorDescriptor_t NormalizeTensor(const DLTensor* tv) {
+inline cudnnTensorDescriptor_t FlattenAndNormalizeTensor(const DLTensor* tv,
+                                                         int flatten_from_axis) {
+  CHECK(0 <= flatten_from_axis && flatten_from_axis <= tv->ndim);
+  std::vector<int64_t> shape(tv->shape, tv->shape + flatten_from_axis);
+  if (flatten_from_axis != tv->ndim) {
+    shape.push_back(
+        std::accumulate(tv->shape + flatten_from_axis,  // from tv->shape[flatten_from_axis]
+                        tv->shape + tv->ndim,           // to   tv->shape[tv->ndim - 1]
+                        1LL,                            // do   product
+                        std::multiplies<int64_t>()));
+  }
+
+  std::vector<int> padded_shape = common::shape_utils::PadDims<int, int64_t>(shape, 4);
+  std::vector<int> stride = common::shape_utils::Shape2Strides<int>(padded_shape);
   cudnnTensorDescriptor_t res;
   CUDNN_CALL(cudnnCreateTensorDescriptor(&res));
-  int ndim = tv->ndim;
-  MAKE_SHAPE_ATLEAST_4D(shape, tv);
-  MAKE_STRIDE(stride, shape_);
-  CUDNN_CALL(cudnnSetTensorNdDescriptor(res, CUDNNDType(tv->dtype), ndim, shape, stride));
+  CUDNN_CALL(cudnnSetTensorNdDescriptor(res, CUDNNDType(tv->dtype),
+                                        static_cast<int>(padded_shape.size()),
+                                        dmlc::BeginPtr(padded_shape), dmlc::BeginPtr(stride)));
   return res;
 }
 
-inline cudnnFilterDescriptor_t NormalizeFilter(value::TensorValue tv,
+inline cudnnFilterDescriptor_t NormalizeFilter(const DLTensor* tv,
                                                cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW) {
+  int ndim = tv->ndim;
+  std::vector<int64_t> shape(tv->shape, tv->shape + tv->ndim);
+  std::vector<int> padded_shape = common::shape_utils::PadDims<int, int64_t>(shape, 4);
   cudnnFilterDescriptor_t res;
   CUDNN_CALL(cudnnCreateFilterDescriptor(&res));
-  int ndim = tv->tensor->ndim;
-  MAKE_SHAPE_ATLEAST_4D(shape, tv->tensor);
-  CUDNN_CALL(cudnnSetFilterNdDescriptor(res, CUDNNDType(tv->tensor->dtype), format, ndim, shape));
+  CUDNN_CALL(cudnnSetFilterNdDescriptor(res, CUDNNDType(tv->dtype), format,
+                                        static_cast<int>(padded_shape.size()),
+                                        dmlc::BeginPtr(padded_shape)));
   return res;
 }
 
@@ -245,7 +253,7 @@ inline std::vector<TDst> CastVector(const std::vector<TSrc>& v) {
 }
 
 template <int numel>
-inline std::vector<int64_t> NomalizeScalarToTuple(const std::vector<int64_t>& v) {
+inline std::vector<int64_t> NormalizeScalarToTuple(const std::vector<int64_t>& v) {
   int n = v.size();
   CHECK(n == 1 || n == numel) << "ValueError: we only accept a single integer or a tuple of "
                               << numel << " integers";

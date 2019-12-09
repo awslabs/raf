@@ -31,7 +31,8 @@ from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
 from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
 from tvm.expr import FloatImm, IntImm, StringImm
 from tvm.make import node as _make_node
-from tvm.ndarray import array as tvm_array
+from tvm.ndarray import array as tvm_ndarray
+from tvm.container import Array
 
 # pylint: enable=unused-import
 

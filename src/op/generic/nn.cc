@@ -6,6 +6,7 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/nn.h"
+#include "./generic_utils.h"
 
 namespace mnm {
 namespace op {
@@ -19,11 +20,6 @@ static std::vector<int64_t> Pad(const std::vector<int64_t>& a) {
   int size = a.size();
   CHECK(size == 1 || size == n);
   return size == 1 ? std::vector<int64_t>(n, a[0]) : a;
-}
-
-static int NormalizeAxis(int axis, int ndim) {
-  CHECK(-ndim >= axis && axis < ndim);
-  return axis < 0 ? axis + ndim : axis;
 }
 
 MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
@@ -84,6 +80,7 @@ void Pool2D(const CallValues& call) {
   int64_t dilate_h = dilation[0];
   int64_t dilate_w = dilation[1];
   int64_t h_out, w_out;
+  CHECK(dilate_h == 1 && dilate_w == 1) << "Pooling does not support dilation!";
   if (!args->ceil_mode) {
     h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
     w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
@@ -115,28 +112,40 @@ void Softmax(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.softmax", Softmax);
 MNM_OP_DECLARE("mnm.op.log_softmax", Softmax);
 
-void BatchNorm(const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormArgs>();
   CHECK(args != nullptr);
-  // TODO(@junrushao1994): sanity check
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
+  TensorValue y = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape);
+  TensorValue running_mean = TensorValue::make(args->running_mean->tensor.CreateView());
+  TensorValue running_var = TensorValue::make(args->running_var->tensor.CreateView());
+  call->out = TupleValue::make({y, running_mean, running_var});
   call->ctx = x->ctx;
-}
+});
 
-MNM_OP_DECLARE("mnm.op.batch_norm", BatchNorm);
+MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
+  // FIXME(@were): please fix this: bn-infer should only output y
+  const auto* args = call->args.as<BatchNormArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  TensorValue y = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape);
+  call->out = y;
+  call->ctx = x->ctx;
+});
 
 void Conv2dDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvDxwArgs>();
   CHECK(args != nullptr);
   const DLTensor* x_or_w = args->x_or_w;
-  std::vector<int64_t> shape(x_or_w->shape, x_or_w->shape + x_or_w->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x_or_w->ctx,
                                     /*dtype=*/x_or_w->dtype,
-                                    /*shape=*/shape);
+                                    /*shape=*/args->shape);
   call->ctx = x_or_w->ctx;
 }
 
@@ -170,6 +179,41 @@ void SoftmaxDx(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.softmax_dx", SoftmaxDx);
 MNM_OP_DECLARE("mnm.op.log_softmax_dx", SoftmaxDx);
+
+MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
+  const auto* args = call->args.as<BatchNormTrainDxwbArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> xshape(x->shape, x->shape + x->ndim);
+  TensorValue dx = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                         /*dtype=*/x->dtype,
+                                         /*shape=*/xshape);
+  const DLTensor* w = args->w;
+  std::vector<int64_t> wshape(w->shape, w->shape + w->ndim);
+  TensorValue dw = TensorValue::Assemble(/*ctx=*/w->ctx,
+                                         /*dtype=*/w->dtype,
+                                         /*shape=*/wshape);
+  TensorValue db = TensorValue::Assemble(/*ctx=*/w->ctx,
+                                         /*dtype=*/w->dtype,
+                                         /*shape=*/wshape);
+  call->out = TupleValue::make({dx, dw, db});
+  call->ctx = x->ctx;
+});
+
+MNM_OP_DECLARE("mnm.op.bias_add", [](const CallValues& call) {
+  const auto* args = call->args.as<BiasAddArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  const DLTensor* b = args->b;
+  int axis = NormalizeAxis(args->axis, x->ndim);
+  CHECK_EQ(b->ndim, 1);
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  CHECK_EQ(x->shape[axis], b->shape[0]);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+});
+
 
 }  // namespace generic
 }  // namespace op

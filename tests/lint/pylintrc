@@ -392,9 +392,18 @@ good-names=i,
            op,
            x1,
            x2,
+           x3,
            w,
            x,
            y,
+           z,
+           db,
+           dw,
+           dx,
+           dy,
+           dz,
+           n,
+           m,
            _
 
 # Include a hint for the correct naming format with invalid-name.

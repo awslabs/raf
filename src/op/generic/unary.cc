@@ -61,6 +61,12 @@ void Unary(const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
+  for (int i = 0, e = shape.size(); i < e; ++i) {
+    if (shape[i] == 0) {
+      call->callee = ir::NullValue<OpValue>();
+      break;
+    }
+  }
 }
 
 MNM_OP_DECLARE("mnm.op.relu", Unary);

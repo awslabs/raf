@@ -49,34 +49,35 @@ def batch_flatten(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.batch_flatten(x))
 @set_module("mnm")
-def batch_norm_infer(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
+def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = imp_utils.to_tensor(x)
     running_mean = imp_utils.to_tensor(running_mean)
     running_var = imp_utils.to_tensor(running_var)
     w = imp_utils.to_tensor(w)
     b = imp_utils.to_tensor(b)
-    eps = imp_utils.to_double(eps)
     momentum = imp_utils.to_double(momentum)
-    return imp_utils.ret(ffi.batch_norm_infer(x, running_mean, running_var, w, b, eps, momentum))
+    eps = imp_utils.to_double(eps)
+    return imp_utils.ret(ffi.batch_norm_infer(x, running_mean, running_var, w, b, momentum, eps))
 @set_module("mnm")
-def batch_norm_train(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
+def batch_norm_train(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = imp_utils.to_tensor(x)
     running_mean = imp_utils.to_tensor(running_mean)
     running_var = imp_utils.to_tensor(running_var)
     w = imp_utils.to_tensor(w)
     b = imp_utils.to_tensor(b)
-    eps = imp_utils.to_double(eps)
     momentum = imp_utils.to_double(momentum)
-    return imp_utils.ret(ffi.batch_norm_train(x, running_mean, running_var, w, b, eps, momentum))
+    eps = imp_utils.to_double(eps)
+    return imp_utils.ret(ffi.batch_norm_train(x, running_mean, running_var, w, b, momentum, eps))
 @set_module("mnm")
-def batch_norm_train_dxwb(dy, x, w, b):
+def batch_norm_train_dxwb(dy, x, w, b, eps):
     dy = imp_utils.to_tensor(dy)
     x = imp_utils.to_tensor(x)
     w = imp_utils.to_tensor(w)
     b = imp_utils.to_tensor(b)
-    return imp_utils.ret(ffi.batch_norm_train_dxwb(dy, x, w, b))
+    eps = imp_utils.to_double(eps)
+    return imp_utils.ret(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
 @set_module("mnm")
-def bias_add(x, b, axis):
+def bias_add(x, b, axis=1):
     x = imp_utils.to_tensor(x)
     b = imp_utils.to_tensor(b)
     axis = imp_utils.to_int(axis)
@@ -96,25 +97,27 @@ def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     groups = imp_utils.to_int(groups)
     return imp_utils.ret(ffi.conv2d(x, w, stride, padding, dilation, groups))
 @set_module("mnm")
-def conv2d_dw(x_or_w, y, dy, stride, padding, dilation, groups):
+def conv2d_dw(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     x_or_w = imp_utils.to_tensor(x_or_w)
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
+    shape = imp_utils.to_int_tuple(shape)
     stride = imp_utils.to_int_tuple(stride)
     padding = imp_utils.to_int_tuple(padding)
     dilation = imp_utils.to_int_tuple(dilation)
     groups = imp_utils.to_int(groups)
-    return imp_utils.ret(ffi.conv2d_dw(x_or_w, y, dy, stride, padding, dilation, groups))
+    return imp_utils.ret(ffi.conv2d_dw(x_or_w, y, dy, shape, stride, padding, dilation, groups))
 @set_module("mnm")
-def conv2d_dx(x_or_w, y, dy, stride, padding, dilation, groups):
+def conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     x_or_w = imp_utils.to_tensor(x_or_w)
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
+    shape = imp_utils.to_int_tuple(shape)
     stride = imp_utils.to_int_tuple(stride)
     padding = imp_utils.to_int_tuple(padding)
     dilation = imp_utils.to_int_tuple(dilation)
     groups = imp_utils.to_int(groups)
-    return imp_utils.ret(ffi.conv2d_dx(x_or_w, y, dy, stride, padding, dilation, groups))
+    return imp_utils.ret(ffi.conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups))
 @set_module("mnm")
 def divide(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)

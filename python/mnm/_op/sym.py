@@ -44,31 +44,32 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.batch_flatten(x))
-def batch_norm_infer(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
+def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = sym_utils.to_tensor(x)
     running_mean = sym_utils.to_tensor(running_mean)
     running_var = sym_utils.to_tensor(running_var)
     w = sym_utils.to_tensor(w)
     b = sym_utils.to_tensor(b)
-    eps = sym_utils.to_double(eps)
     momentum = sym_utils.to_double(momentum)
-    return Symbol.from_expr(ffi.batch_norm_infer(x, running_mean, running_var, w, b, eps, momentum))
-def batch_norm_train(x, running_mean, running_var, w=None, b=None, eps=1e-05, momentum=0.1):
+    eps = sym_utils.to_double(eps)
+    return Symbol.from_expr(ffi.batch_norm_infer(x, running_mean, running_var, w, b, momentum, eps))
+def batch_norm_train(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = sym_utils.to_tensor(x)
     running_mean = sym_utils.to_tensor(running_mean)
     running_var = sym_utils.to_tensor(running_var)
     w = sym_utils.to_tensor(w)
     b = sym_utils.to_tensor(b)
-    eps = sym_utils.to_double(eps)
     momentum = sym_utils.to_double(momentum)
-    return Symbol.from_expr(ffi.batch_norm_train(x, running_mean, running_var, w, b, eps, momentum))
-def batch_norm_train_dxwb(dy, x, w, b):
+    eps = sym_utils.to_double(eps)
+    return Symbol.from_expr(ffi.batch_norm_train(x, running_mean, running_var, w, b, momentum, eps))
+def batch_norm_train_dxwb(dy, x, w, b, eps):
     dy = sym_utils.to_tensor(dy)
     x = sym_utils.to_tensor(x)
     w = sym_utils.to_tensor(w)
     b = sym_utils.to_tensor(b)
-    return Symbol.from_expr(ffi.batch_norm_train_dxwb(dy, x, w, b))
-def bias_add(x, b, axis):
+    eps = sym_utils.to_double(eps)
+    return Symbol.from_expr(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
+def bias_add(x, b, axis=1):
     x = sym_utils.to_tensor(x)
     b = sym_utils.to_tensor(b)
     axis = sym_utils.to_int(axis)
@@ -85,24 +86,26 @@ def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     dilation = sym_utils.to_int_tuple(dilation)
     groups = sym_utils.to_int(groups)
     return Symbol.from_expr(ffi.conv2d(x, w, stride, padding, dilation, groups))
-def conv2d_dw(x_or_w, y, dy, stride, padding, dilation, groups):
+def conv2d_dw(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     x_or_w = sym_utils.to_tensor(x_or_w)
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
+    shape = sym_utils.to_int_tuple(shape)
     stride = sym_utils.to_int_tuple(stride)
     padding = sym_utils.to_int_tuple(padding)
     dilation = sym_utils.to_int_tuple(dilation)
     groups = sym_utils.to_int(groups)
-    return Symbol.from_expr(ffi.conv2d_dw(x_or_w, y, dy, stride, padding, dilation, groups))
-def conv2d_dx(x_or_w, y, dy, stride, padding, dilation, groups):
+    return Symbol.from_expr(ffi.conv2d_dw(x_or_w, y, dy, shape, stride, padding, dilation, groups))
+def conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     x_or_w = sym_utils.to_tensor(x_or_w)
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
+    shape = sym_utils.to_int_tuple(shape)
     stride = sym_utils.to_int_tuple(stride)
     padding = sym_utils.to_int_tuple(padding)
     dilation = sym_utils.to_int_tuple(dilation)
     groups = sym_utils.to_int(groups)
-    return Symbol.from_expr(ffi.conv2d_dx(x_or_w, y, dy, stride, padding, dilation, groups))
+    return Symbol.from_expr(ffi.conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups))
 def divide(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)

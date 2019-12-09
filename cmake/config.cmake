@@ -23,6 +23,9 @@ set(MNM_USE_GTEST ON)
 # MNM_USE_CUDA. Option: [ON/OFF]
 set(MNM_USE_CUDA OFF)
 
+# MNM_USE_CUBLAS. Option: [ON/OFF]
+set(MNM_USE_CUBLAS OFF)
+
 # MNM_USE_CUDNN. Option: [ON/OFF/Path-To-CUDNN]. You may use environment variables, like $ENV{CUDNN_HOME}
 set(MNM_USE_CUDNN OFF)
 

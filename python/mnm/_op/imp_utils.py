@@ -5,7 +5,7 @@ import numpy as np
 from mnm._core.ndarray import ndarray
 from mnm._core.value import (BoolValue, FloatValue, IntValue, StringValue,
                              TensorValue, Value)
-from mnm._lib import relay
+from mnm._lib import Array, relay
 
 
 def to_any(a):
@@ -99,5 +99,7 @@ def ret(a):
     if isinstance(a, tuple):
         return tuple(map(ret, a))
     if isinstance(a, list):
+        return list(map(ret, a))
+    if isinstance(a, Array):
         return list(map(ret, a))
     raise NotImplementedError(type(a))

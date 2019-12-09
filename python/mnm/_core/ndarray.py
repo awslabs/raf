@@ -7,7 +7,7 @@ from mnm._ffi.binding import (BindConstValue, BindExprValue, LookupBoundValue,
                               SetRequiresGrad)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
-from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_array
+from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_ndarray
 
 
 @set_module("mnm")  # pylint: disable=invalid-name,too-many-instance-attributes
@@ -245,7 +245,7 @@ def _np_to_tensor_value(npa, ctx=None):
         MarkNumpy(result._tensor, _manager_ctx(npa))  # pylint: disable=protected-access
         return result
 
-    return TensorValue.from_tvm(tvm_array(npa, ctx=str2ctx(ctx)))
+    return TensorValue.from_tvm(tvm_ndarray(npa, ctx=str2ctx(ctx)))
 
 
 @set_module("mnm")

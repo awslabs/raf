@@ -49,18 +49,21 @@ inline std::vector<TDest> PadDims(const std::vector<TSrc>& shape, int at_least_n
     return res;
   }
   std::vector<TDest> res(at_least_nd);
+  for (int i = 0; i < n; ++i) {
+    res[i] = shape[i];
+  }
   int padn = at_least_nd - n;
   for (int i = 0; i < padn; ++i) {
-    res[i] = 1;
-  }
-  for (int i = 0; i < n; ++i) {
-    res[i + padn] = shape[i];
+    res[i + n] = 1;
   }
   return res;
 }
 
 inline bool IsCompact(const DLTensor& dl_tensor) {
   int ndim = dl_tensor.ndim;
+  if (ndim == 0) {
+    return true;
+  }
   if (dl_tensor.byte_offset != 0) {
     return false;
   }
@@ -77,7 +80,10 @@ inline bool IsCompact(const DLTensor& dl_tensor) {
 
 inline int64_t BytesCompactTensor(const DLTensor& dl_tensor) {
   CHECK(IsCompact(dl_tensor));
-  return (dl_tensor.shape[0] * dl_tensor.strides[0] * dl_tensor.dtype.bits - 1) / 8 + 1;
+  if (dl_tensor.ndim) {
+    return (dl_tensor.shape[0] * dl_tensor.strides[0] * dl_tensor.dtype.bits - 1) / 8 + 1;
+  }
+  return (dl_tensor.dtype.bits - 1) / 8 + 1;
 }
 
 }  // namespace shape_utils

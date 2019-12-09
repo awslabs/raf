@@ -57,12 +57,12 @@ class ConvCUDNN : public mnm::op::OpEnv {
     DLTensor* w = args->w;
     DLTensor* y = call->out;
 
-    x_desc = NormalizeTensor(args->x);
+    x_desc = FlattenAndNormalizeTensor(x, x->ndim);
     w_desc = NormalizeFilter(args->w);
 
-    std::vector<int> padding = CastVector<int>(NomalizeScalarToTuple<2>(args->padding));
-    std::vector<int> stride = CastVector<int>(NomalizeScalarToTuple<2>(args->stride));
-    std::vector<int> dilation = CastVector<int>(NomalizeScalarToTuple<2>(args->dilation));
+    std::vector<int> padding = CastVector<int>(NormalizeScalarToTuple<2>(args->padding));
+    std::vector<int> stride = CastVector<int>(NormalizeScalarToTuple<2>(args->stride));
+    std::vector<int> dilation = CastVector<int>(NormalizeScalarToTuple<2>(args->dilation));
 
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&conv_desc));
     CUDNN_CALL(cudnnSetConvolutionNdDescriptor(conv_desc, padding.size(), dmlc::BeginPtr(padding),
@@ -70,7 +70,7 @@ class ConvCUDNN : public mnm::op::OpEnv {
                                                CUDNN_CROSS_CORRELATION, CUDNNDType(y->dtype)));
     CUDNN_CALL(cudnnSetConvolutionGroupCount(conv_desc, args->groups));
 
-    y_desc = NormalizeTensor(value::TensorValue(call->out));
+    y_desc = FlattenAndNormalizeTensor(y, y->ndim);
     int64_t out_size = BytesCompactTensor(*y);
 
     RequestMemory(&y->data, y->ctx, out_size);
@@ -114,7 +114,8 @@ class ConvCUDNN : public mnm::op::OpEnv {
   }
 };
 
-MNM_OP_DISPATCH("mnm.op.conv2d", ConvCUDNN, DevType::kCUDA(), "manual_cudnn");
+// TODO(@were): Uncomment below when testing op priority.
+// MNM_OP_DISPATCH("mnm.op.conv2d", ConvCUDNN, DevType::kCUDA(), "manual_cudnn");
 
 }  // namespace manual
 }  // namespace cudnn
