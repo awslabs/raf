@@ -1,6 +1,6 @@
 from mnm._lib import _APIS
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/binding.cc
 BindConstValue = _APIS.get("mnm.binding.BindConstValue", None)
 # Defined in ./src/impl/binding.cc

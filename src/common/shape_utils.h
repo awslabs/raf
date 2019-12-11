@@ -12,8 +12,8 @@ namespace common {
 namespace shape_utils {
 
 template <class T>
-inline std::vector<T> GetShape(const DLTensor& tensor) {
-  return std::vector<T>(tensor.shape, tensor.shape + tensor.ndim);
+inline std::vector<T> GetShape(const DLTensor& dlt) {
+  return std::vector<T>(dlt.shape, dlt.shape + dlt.ndim);
 }
 
 template <typename T>
@@ -59,31 +59,49 @@ inline std::vector<TDest> PadDims(const std::vector<TSrc>& shape, int at_least_n
   return res;
 }
 
-inline bool IsCompact(const DLTensor& dl_tensor) {
-  int ndim = dl_tensor.ndim;
+inline bool IsCompact(const DLTensor& dlt) {
+  int ndim = dlt.ndim;
+  if (dlt.byte_offset != 0) {
+    return false;
+  }
   if (ndim == 0) {
     return true;
   }
-  if (dl_tensor.byte_offset != 0) {
-    return false;
+  if (dlt.strides == nullptr) {
+    return true;
   }
-  if (dl_tensor.strides[ndim - 1] != 1) {
+  if (dlt.strides[ndim - 1] != 1) {
     return false;
   }
   for (int i = 0; i < ndim - 1; ++i) {
-    if (dl_tensor.strides[i] != dl_tensor.strides[i + 1] * dl_tensor.shape[i + 1]) {
+    if (dlt.strides[i] != dlt.strides[i + 1] * dlt.shape[i + 1]) {
       return false;
     }
   }
   return true;
 }
 
-inline int64_t BytesCompactTensor(const DLTensor& dl_tensor) {
-  CHECK(IsCompact(dl_tensor));
-  if (dl_tensor.ndim) {
-    return (dl_tensor.shape[0] * dl_tensor.strides[0] * dl_tensor.dtype.bits - 1) / 8 + 1;
+inline int64_t BytesCompactTensor(const DLTensor& dlt) {
+  CHECK(IsCompact(dlt));
+  int64_t nbytes = (dlt.dtype.bits + 7) / 8;
+  if (dlt.ndim == 0) {
+    return nbytes;
   }
-  return (dl_tensor.dtype.bits - 1) / 8 + 1;
+  if (dlt.strides != nullptr) {
+    return nbytes * dlt.shape[0] * dlt.strides[0];
+  }
+  for (int i = 0; i < dlt.ndim; ++i) {
+    nbytes *= dlt.shape[i];
+  }
+  return nbytes;
+}
+
+inline int64_t GetNumel(const DLTensor& dlt) {
+  int64_t numel = 1;
+  for (int i = 0; i < dlt.ndim; ++i) {
+    numel *= dlt.shape[i];
+  }
+  return numel;
 }
 
 }  // namespace shape_utils

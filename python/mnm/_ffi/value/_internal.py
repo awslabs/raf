@@ -1,6 +1,6 @@
 from mnm._lib import _APIS
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/value.cc
 AssembleTensorValue = _APIS.get("mnm.value.AssembleTensorValue", None)
 # Defined in ./src/impl/value.cc

@@ -89,7 +89,7 @@ void CUBLASMatmul::Execute(const CallValues& cv) {
       cudaDataType_t(DType(c->dtype)), m, cudaDataType_t(DType(c->dtype)), CUBLAS_GEMM_DEFAULT));
 }
 
-MNM_OP_DISPATCH("mnm.op.matmul", CUBLASMatmul, DevType::kCUDA(), "cublas");
+MNM_OP_DISPATCH("mnm.op.matmul", CUBLASMatmul::make, DevType::kCUDA(), "cublas");
 
 }  // namespace manual
 }  // namespace cublas

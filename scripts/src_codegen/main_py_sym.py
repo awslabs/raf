@@ -11,7 +11,7 @@ import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
 from . import sym_utils
 
-# pylint: disable=invalid-name,line-too-long,too-many-arguments
+# pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin
 __all__ = [
 {OP_NAMES}
 ]

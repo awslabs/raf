@@ -22,6 +22,7 @@ namespace registry {
 using tvm::runtime::PackedFunc;
 using tvm::runtime::Registry;
 using tvm::runtime::TVMArgs;
+using tvm::runtime::TVMArgsSetter;
 using tvm::runtime::TVMArgValue;
 using tvm::runtime::TVMRetValue;
 using tvm::runtime::TypedPackedFunc;
@@ -59,7 +60,7 @@ class PerDevTypeStore {
 
  protected:
   template <bool b = create_default>
-  void CreateMissing(EntryPtr *p, typename std::enable_if_t<b, int> = 0) {
+  void CreateMissing(EntryPtr* p, typename std::enable_if_t<b, int> = 0) {
     if (*p == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
       if (*p == nullptr) {
@@ -69,7 +70,7 @@ class PerDevTypeStore {
   }
 
   template <bool b = create_default>
-  void CreateMissing(EntryPtr *p, typename std::enable_if_t<!b, int> = 0) {
+  void CreateMissing(EntryPtr* p, typename std::enable_if_t<!b, int> = 0) {
   }
 
   void EnsureCapacity(int i) {

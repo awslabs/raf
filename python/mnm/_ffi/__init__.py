@@ -1,3 +1,5 @@
+# pylint: disable=redefined-builtin
+
 from . import binding
 from . import build_info
 from . import device_api

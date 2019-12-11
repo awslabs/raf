@@ -72,6 +72,12 @@ void Unary(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.relu", Unary);
 MNM_OP_DECLARE("mnm.op.tanh", Unary);
 MNM_OP_DECLARE("mnm.op.sigmoid", Unary);
+MNM_OP_DECLARE("mnm.op.copy", Unary);
+MNM_OP_DECLARE("mnm.op.abs", Unary);
+MNM_OP_DECLARE("mnm.op.ceil", Unary);
+MNM_OP_DECLARE("mnm.op.floor", Unary);
+MNM_OP_DECLARE("mnm.op.log", Unary);
+MNM_OP_DECLARE("mnm.op.cos", Unary);
 
 void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check

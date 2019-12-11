@@ -2,19 +2,25 @@ import mnm._ffi.op.imp as ffi
 from mnm._core.core_utils import set_module
 from . import imp_utils
 
-# pylint: disable=invalid-name,line-too-long,too-many-arguments
+# pylint: disable=invalid-name,line-too-long
+# pylint: disable=too-many-arguments,redefined-builtin
 __all__ = [
-    "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm_infer",
-    "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "collapse_sum_like", "conv2d",
-    "conv2d_dw", "conv2d_dx", "divide", "equal", "greater",
-    "greater_equal", "less", "less_equal", "log_softmax", "log_softmax_dx",
-    "logical_not", "matmul", "max_pool2d", "max_pool2d_dx", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "not_equal", "relu", "relu_dx", "reshape_like", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "subtract", "tanh",
-    "tanh_dx",
+    "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
+    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "ceil",
+    "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx", "copy",
+    "cos", "divide", "equal", "floor", "greater",
+    "greater_equal", "less", "less_equal", "log", "log_softmax",
+    "log_softmax_dx", "logical_not", "matmul", "max_pool2d", "max_pool2d_dx",
+    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
+    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "subtract",
+    "tanh", "tanh_dx",
 ]
 
+@set_module("mnm")
+def abs(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.abs(x))
 @set_module("mnm")
 def add(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
@@ -83,6 +89,10 @@ def bias_add(x, b, axis=1):
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.bias_add(x, b, axis))
 @set_module("mnm")
+def ceil(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.ceil(x))
+@set_module("mnm")
 def collapse_sum_like(x, shape):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
@@ -119,6 +129,14 @@ def conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     groups = imp_utils.to_int(groups)
     return imp_utils.ret(ffi.conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups))
 @set_module("mnm")
+def copy(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.copy(x))
+@set_module("mnm")
+def cos(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.cos(x))
+@set_module("mnm")
 def divide(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
@@ -132,6 +150,10 @@ def equal(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.equal(x1, x2, out, where))
+@set_module("mnm")
+def floor(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.floor(x))
 @set_module("mnm")
 def greater(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
@@ -160,6 +182,10 @@ def less_equal(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.less_equal(x1, x2, out, where))
+@set_module("mnm")
+def log(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.log(x))
 @set_module("mnm")
 def log_softmax(x, axis=-1):
     x = imp_utils.to_tensor(x)

@@ -11,7 +11,8 @@ import mnm._ffi.op.imp as ffi
 from mnm._core.core_utils import set_module
 from . import imp_utils
 
-# pylint: disable=invalid-name,line-too-long,too-many-arguments
+# pylint: disable=invalid-name,line-too-long
+# pylint: disable=too-many-arguments,redefined-builtin
 __all__ = [
 {OP_NAMES}
 ]

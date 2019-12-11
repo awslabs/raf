@@ -13,6 +13,7 @@ def gen_file(filename):
 #include "mnm/op.h"
 namespace mnm {{
 namespace op {{
+namespace {{
 using ir::Array;
 using ir::Attrs;
 using ir::Op;
@@ -24,26 +25,30 @@ using tvm::relay::FTVMCompute;
 using tvm::relay::FTVMSchedule;
 using tvm::relay::OpPatternKind;
 using tvm::relay::TOpPattern;
-#define SET_COMPUTE_SCHEDULE(OP)                                                                  \\
-  set_attr<FTVMCompute>("FTVMCompute",                                                            \\
-                        [](const Attrs& attrs, const Array<Tensor>& inputs, const Type& out_type, \\
-                           const Target& target) -> Array<Tensor> {{                               \\
-                          auto fcompute = Op::GetAttr<FTVMCompute>("FTVMCompute")[Op::Get(OP)];   \\
-                          return fcompute(attrs, inputs, out_type, target);                       \\
-                        }})                                                                        \\
-      .set_attr<FTVMSchedule>(                                                                    \\
-          "FTVMSchedule",                                                                         \\
-          [](const Attrs& attrs, const Array<Tensor>& outs, const Target& target) -> Schedule {{   \\
-            auto fschedule = Op::GetAttr<FTVMSchedule>("FTVMSchedule")[Op::Get(OP)];              \\
-            return fschedule(attrs, outs, target);                                                \\
-          }})
+#define MNM_TVM_OP(MNM_OP, OP, PATTERN)                                                         \\
+  MNM_OP_REGISTER(MNM_OP)                                                                       \\
+      .set_attr<FTVMCompute>("FTVMCompute",                                                     \\
+                             [](const Attrs& attrs, const Array<Tensor>& inputs,                \\
+                                const Type& out_type, const Target& target) -> Array<Tensor> {{  \\
+                               auto fcompute =                                                  \\
+                                   Op::GetAttr<FTVMCompute>("FTVMCompute")[Op::Get(OP)];        \\
+                               return fcompute(attrs, inputs, out_type, target);                \\
+                             }})                                                                 \\
+      .set_attr<FTVMSchedule>(                                                                  \\
+          "FTVMSchedule",                                                                       \\
+          [](const Attrs& attrs, const Array<Tensor>& outs, const Target& target) -> Schedule {{ \\
+            auto fschedule = Op::GetAttr<FTVMSchedule>("FTVMSchedule")[Op::Get(OP)];            \\
+            return fschedule(attrs, outs, target);                                              \\
+          }})                                                                                    \\
+      .set_attr<TOpPattern>("TOpPattern", tvm::relay::PATTERN);
 {REGS}
+}}  // namespace
 }}  // namespace op
 }}  // namespace mnm
 """.strip()
     regs = []
     for mnm_op_name in sorted(OP_MAP.keys()):
-        relay_op_name, pattern = OP_MAP[mnm_op_name]
+        relay_op_name, _, pattern = OP_MAP[mnm_op_name]
         regs.append(gen_reg(mnm_op_name, relay_op_name, pattern))
     regs = "\n".join(regs)
     return FILE.format(REGS=regs, FILENAME=filename)
@@ -51,16 +56,14 @@ using tvm::relay::TOpPattern;
 
 def gen_reg(mnm_op_name, relay_op_name, pattern):
     REG = """
-MNM_OP_REGISTER("{MNM_OP_NAME}")
-.SET_COMPUTE_SCHEDULE("{RELAY_OP_NAME}")
-.set_attr<TOpPattern>("TOpPattern", tvm::relay::{PATTERN});
+MNM_TVM_OP("{MNM_OP_NAME}", "{RELAY_OP_NAME}", {PATTERN});
 """.strip()
     return REG.format(MNM_OP_NAME=mnm_op_name,
                       RELAY_OP_NAME=relay_op_name,
                       PATTERN=pattern)
 
 
-def main(path="./src/op/regs/tvm_topi.cc"):
+def main(path="./src/op/regs/tvmjit_regs.cc"):
     result = gen_file(path)
     write_to_file(path, result)
 

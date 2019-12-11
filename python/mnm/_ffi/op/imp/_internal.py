@@ -1,6 +1,8 @@
 from mnm._lib import _APIS
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,redefined-builtin
+# Defined in ./src/op/regs/regs.cc
+abs = _APIS.get("mnm.op.imp.abs", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.imp.add", None)
 # Defined in ./src/op/regs/regs.cc
@@ -18,6 +20,8 @@ batch_norm_train_dxwb = _APIS.get("mnm.op.imp.batch_norm_train_dxwb", None)
 # Defined in ./src/op/regs/regs.cc
 bias_add = _APIS.get("mnm.op.imp.bias_add", None)
 # Defined in ./src/op/regs/regs.cc
+ceil = _APIS.get("mnm.op.imp.ceil", None)
+# Defined in ./src/op/regs/regs.cc
 collapse_sum_like = _APIS.get("mnm.op.imp.collapse_sum_like", None)
 # Defined in ./src/op/regs/regs.cc
 conv2d = _APIS.get("mnm.op.imp.conv2d", None)
@@ -26,9 +30,15 @@ conv2d_dw = _APIS.get("mnm.op.imp.conv2d_dw", None)
 # Defined in ./src/op/regs/regs.cc
 conv2d_dx = _APIS.get("mnm.op.imp.conv2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
+copy = _APIS.get("mnm.op.imp.copy", None)
+# Defined in ./src/op/regs/regs.cc
+cos = _APIS.get("mnm.op.imp.cos", None)
+# Defined in ./src/op/regs/regs.cc
 divide = _APIS.get("mnm.op.imp.divide", None)
 # Defined in ./src/op/regs/regs.cc
 equal = _APIS.get("mnm.op.imp.equal", None)
+# Defined in ./src/op/regs/regs.cc
+floor = _APIS.get("mnm.op.imp.floor", None)
 # Defined in ./src/op/regs/regs.cc
 greater = _APIS.get("mnm.op.imp.greater", None)
 # Defined in ./src/op/regs/regs.cc
@@ -37,6 +47,8 @@ greater_equal = _APIS.get("mnm.op.imp.greater_equal", None)
 less = _APIS.get("mnm.op.imp.less", None)
 # Defined in ./src/op/regs/regs.cc
 less_equal = _APIS.get("mnm.op.imp.less_equal", None)
+# Defined in ./src/op/regs/regs.cc
+log = _APIS.get("mnm.op.imp.log", None)
 # Defined in ./src/op/regs/regs.cc
 log_softmax = _APIS.get("mnm.op.imp.log_softmax", None)
 # Defined in ./src/op/regs/regs.cc

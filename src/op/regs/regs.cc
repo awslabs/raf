@@ -563,6 +563,7 @@ namespace op {
 namespace args {
 #define MNM_BIND_SCHEMA(op_name, schema_name) \
   MNM_OP_REGISTER(op_name).set_attr<::mnm::op::FMNMSchema>("FMNMSchema", schema_name);
+MNM_BIND_SCHEMA("mnm.op.abs", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.add", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", args::Pool);
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", args::PoolDx);
@@ -571,16 +572,21 @@ MNM_BIND_SCHEMA("mnm.op.batch_norm_infer", args::BatchNorm);
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train", args::BatchNorm);
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", args::BatchNormTrainDxwb);
 MNM_BIND_SCHEMA("mnm.op.bias_add", args::BiasAdd);
+MNM_BIND_SCHEMA("mnm.op.ceil", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", args::CollapseLike);
 MNM_BIND_SCHEMA("mnm.op.conv2d", args::Conv);
 MNM_BIND_SCHEMA("mnm.op.conv2d_dw", args::ConvDxw);
 MNM_BIND_SCHEMA("mnm.op.conv2d_dx", args::ConvDxw);
+MNM_BIND_SCHEMA("mnm.op.copy", args::Unary);
+MNM_BIND_SCHEMA("mnm.op.cos", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.divide", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.equal", args::BinaryUfunc);
+MNM_BIND_SCHEMA("mnm.op.floor", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.greater", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.greater_equal", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.less", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.less_equal", args::BinaryUfunc);
+MNM_BIND_SCHEMA("mnm.op.log", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.log_softmax", args::Softmax);
 MNM_BIND_SCHEMA("mnm.op.log_softmax_dx", args::SoftmaxDx);
 MNM_BIND_SCHEMA("mnm.op.logical_not", args::UnaryUfunc);
@@ -614,6 +620,12 @@ namespace op {
 namespace ffi {
 using registry::TVMArgs;
 using registry::TVMRetValue;
+MNM_REGISTER_GLOBAL("mnm.op.sym.abs")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.abs");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.add");
@@ -662,6 +674,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.bias_add")
   *ret = binding::BindExprValue(CallNode::make(op, ffi::BiasAdd(args)),
                                                NullValue<Value>());
 });
+MNM_REGISTER_GLOBAL("mnm.op.sym.ceil")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.ceil");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.collapse_sum_like");
@@ -686,6 +704,18 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dx")
   *ret = binding::BindExprValue(CallNode::make(op, ffi::ConvDxw(args)),
                                                NullValue<Value>());
 });
+MNM_REGISTER_GLOBAL("mnm.op.sym.copy")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.copy");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
+                                               NullValue<Value>());
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.cos")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.cos");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.divide")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.divide");
@@ -696,6 +726,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.equal");
   *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
+                                               NullValue<Value>());
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.floor")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.floor");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
                                                NullValue<Value>());
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater")
@@ -720,6 +756,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.less_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less_equal");
   *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
+                                               NullValue<Value>());
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.log")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.log");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
                                                NullValue<Value>());
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax")
@@ -870,6 +912,11 @@ namespace ffi {
 using registry::TVMArgs;
 using registry::TVMRetValue;
 using executor::interpreter::Interpret;
+MNM_REGISTER_GLOBAL("mnm.op.imp.abs")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.abs");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
+});
 MNM_REGISTER_GLOBAL("mnm.op.imp.add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.add");
@@ -910,6 +957,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.bias_add")
   static Op op = Op::Get("mnm.op.bias_add");
   *ret = Interpret(CallNode::make(op, ffi::BiasAdd(args)));
 });
+MNM_REGISTER_GLOBAL("mnm.op.imp.ceil")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.ceil");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
+});
 MNM_REGISTER_GLOBAL("mnm.op.imp.collapse_sum_like")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.collapse_sum_like");
@@ -930,6 +982,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dx")
   static Op op = Op::Get("mnm.op.conv2d_dx");
   *ret = Interpret(CallNode::make(op, ffi::ConvDxw(args)));
 });
+MNM_REGISTER_GLOBAL("mnm.op.imp.copy")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.copy");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.cos")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.cos");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
+});
 MNM_REGISTER_GLOBAL("mnm.op.imp.divide")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.divide");
@@ -939,6 +1001,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.equal");
   *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.floor")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.floor");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.greater")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
@@ -959,6 +1026,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.less_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less_equal");
   *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.log")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.log");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.log_softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {

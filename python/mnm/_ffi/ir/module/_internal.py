@@ -1,6 +1,6 @@
 from mnm._lib import _APIS
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/ir_ext.cc
 Add = _APIS.get("mnm.ir.module.Add", None)
 # Defined in ./src/impl/ir_ext.cc

@@ -1,3 +1,4 @@
+# pylint: disable=redefined-builtin
 from ._internal import AssembleTensorValue
 from ._internal import DeTuple
 from ._internal import FromTVM

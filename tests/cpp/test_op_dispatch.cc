@@ -35,7 +35,7 @@ class Conv2dX : public Conv2d {
     return new Conv2dX();
   }
 };
-MNM_OP_DISPATCH("mnm.cpptest.conv2d", Conv2dX, DevType::kCPU(), "mklShallowNN");
+MNM_OP_DISPATCH("mnm.cpptest.conv2d", Conv2dX::make, DevType::kCPU(), "mklShallowNN");
 
 // Implement 1 of "mnm.cpptest.conv2d"
 class Conv2dY : public Conv2d {
@@ -48,7 +48,7 @@ class Conv2dY : public Conv2d {
     return new Conv2dY();
   }
 };
-MNM_OP_DISPATCH("mnm.cpptest.conv2d", Conv2dY, DevType::kCPU(), "sshadow");
+MNM_OP_DISPATCH("mnm.cpptest.conv2d", Conv2dY::make, DevType::kCPU(), "sshadow");
 MNM_OP_REGISTER("mnm.cpptest.conv2d");
 
 TEST(OpDispatch, Registry) {

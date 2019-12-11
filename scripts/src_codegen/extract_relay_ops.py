@@ -82,12 +82,12 @@ def collect_op():
 def main():
     ops = collect_op()
     print("OP_MAP = {")
-    for op_name, _attrs, pattern in ops:
+    for op_name, attrs, pattern in ops:
         if op_name in MNM_OP_NAME:
             mnm_op_name = MNM_OP_NAME[mnm_op_name]
         else:
             mnm_op_name = "mnm.op." + op_name
-        print(f'    "{mnm_op_name}": ["{op_name}", "{pattern}"],')
+        print(f'    "{mnm_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
     print("}")
 
 

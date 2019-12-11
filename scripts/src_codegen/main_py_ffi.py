@@ -10,7 +10,7 @@ def gen_internal_file(apis):
     FILE = """
 from mnm._lib import _APIS
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,redefined-builtin
 {APIs}
 """.strip()
     apis = "\n".join(map(gen_api, sorted(apis, key=lambda api: api.name)))
@@ -31,6 +31,7 @@ def gen_api(api):
 
 def gen_init_file(apis, dirs):
     FILE = """
+# pylint: disable=redefined-builtin
 {INTERNALS}
 {DIRS}
 """.strip()

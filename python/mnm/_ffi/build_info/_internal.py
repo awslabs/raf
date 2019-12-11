@@ -1,6 +1,6 @@
 from mnm._lib import _APIS
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/build_info.cc
 git_version = _APIS.get("mnm.build_info.git_version", None)
 # Defined in ./src/impl/build_info.cc

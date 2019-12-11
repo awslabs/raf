@@ -9,7 +9,7 @@ def strip_type_commons(s):
     return s[len('cudnn'):-len('Descriptor_t')]
 
 def call_cudnn_api(api, args):
-    return f'CUDNN_CALL({"" if api.startswith("cudnn") else "cudnn"}{api}({args}));' 
+    return f'CUDNN_CALL({"" if api.startswith("cudnn") else "cudnn"}{api}({args}));'
 
 class Status(object):
 
@@ -20,7 +20,7 @@ class Status(object):
         self.attrs = dict()
         self.casts = dict()
         self.wrappers = wrappers
-    
+
     def add_attr(self, ty, name):
         assert name not in self.attrs.keys(), name
         self.attrs[name] = ty
@@ -43,7 +43,7 @@ class Status(object):
         res = [call_cudnn_api(f'Destroy{strip_type_commons(ty)}Descriptor', name)
                for name, ty in self.attrs.items() if ty.endswith('Descriptor_t')]
         return '\n    '.join(res)
-    
+
     def get_attrs(self):
         return '\n  '.join(f'{ty} {name};' for name, ty in self.attrs.items())
 
@@ -133,11 +133,11 @@ class CUDNNTensor(ShapeWrapper):
 def CUDNNOutput(Base):
 
     class Output(Base):
-    
+
         def __init__(self, desc, ptr, tensor, flatten=None):
             Base.__init__(self, desc, ptr, tensor, flatten)
             self.ptr = ptr
-    
+
         def add_cast(self, status):
             if self.tensor == 'cv->out':
                 status.add_cast('DLTensor*', 'out', 'cv->out')
@@ -148,7 +148,7 @@ def CUDNNOutput(Base):
                 self.tensor = f'out{idx}'
             else:
                 assert False, self.tensor
-    
+
         def normalize(self, status):
             res = Base.normalize(self, status)
             res += [f'auto bytes_of_{self.tensor} = BytesCompactTensor(*{self.tensor});']
@@ -243,7 +243,7 @@ AlgorithmCache<{ALGO_T}> {CACHE};
 
 
 class CUDNNWorkSpace(object):
-    
+
     def __init__(self, size, ptr, api, args):
         self.size = size
         self.ptr = ptr
@@ -293,10 +293,10 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
     return new {CLASSNAME}(cv);
   }}
 }};
-MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}, DevType::kCUDA(), "generated_cudnn");
+MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn");
 """.strip()
 
-    
+
     def __init__(self, op, api, arg_type, normalizers, args, output=['DLTensor *']):
         self.op = op
         self.api = api

@@ -2,19 +2,23 @@ import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
 from . import sym_utils
 
-# pylint: disable=invalid-name,line-too-long,too-many-arguments
+# pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin
 __all__ = [
-    "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_norm_infer",
-    "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "collapse_sum_like", "conv2d",
-    "conv2d_dw", "conv2d_dx", "divide", "equal", "greater",
-    "greater_equal", "less", "less_equal", "log_softmax", "log_softmax_dx",
-    "logical_not", "matmul", "max_pool2d", "max_pool2d_dx", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "not_equal", "relu", "relu_dx", "reshape_like", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "subtract", "tanh",
-    "tanh_dx",
+    "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
+    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "ceil",
+    "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx", "copy",
+    "cos", "divide", "equal", "floor", "greater",
+    "greater_equal", "less", "less_equal", "log", "log_softmax",
+    "log_softmax_dx", "logical_not", "matmul", "max_pool2d", "max_pool2d_dx",
+    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
+    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "subtract",
+    "tanh", "tanh_dx",
 ]
 
+def abs(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.abs(x))
 def add(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -74,6 +78,9 @@ def bias_add(x, b, axis=1):
     b = sym_utils.to_tensor(b)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.bias_add(x, b, axis))
+def ceil(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.ceil(x))
 def collapse_sum_like(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
@@ -106,6 +113,12 @@ def conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     dilation = sym_utils.to_int_tuple(dilation)
     groups = sym_utils.to_int(groups)
     return Symbol.from_expr(ffi.conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups))
+def copy(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.copy(x))
+def cos(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.cos(x))
 def divide(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -118,6 +131,9 @@ def equal(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.equal(x1, x2, out, where))
+def floor(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.floor(x))
 def greater(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -142,6 +158,9 @@ def less_equal(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.less_equal(x1, x2, out, where))
+def log(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.log(x))
 def log_softmax(x, axis=-1):
     x = sym_utils.to_tensor(x)
     axis = sym_utils.to_int(axis)
