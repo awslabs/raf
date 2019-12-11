@@ -49,6 +49,7 @@ OP_MAP = {
     "mnm.op.mod": ["mod", "", "kBroadcast"],
     "mnm.op.multiply": ["multiply", "", "kBroadcast"],
     "mnm.op.negative": ["negative", "", "kElemWise"],
+    "mnm.op.bias_add": ["nn.bias_add", "relay.attrs.BiasAddAttrs", "kBroadcast"],
     "mnm.op.not_equal": ["not_equal", "", "kBroadcast"],
     "mnm.op.one_hot": ["one_hot", "relay.attrs.OneHotAttrs", "kOutEWiseFusable"],
     "mnm.op.ones": ["ones", "relay.attrs.InitOpAttrs", "kElemWise"],

@@ -14,27 +14,24 @@ namespace tvmjit {
 
 using namespace mnm::ir;
 using common::shape_utils::GetNumel;
-using op::CallValues;
 using schema::UnaryArgs;
 
-void UnaryNormalizer(TVMOpEnv* env) {
-  CHECK_EQ(env->inputs.size(), 1U);
+Attrs UnaryNormalizer(TVMOpEnv* env, const UnaryArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
-  DLTensor& x = env->inputs[0];
-  DLTensor& y = env->outputs[0];
+  env->inputs.resize(1);
   env->shape_slots.resize(1);
-  std::vector<int64_t>& shape = env->shape_slots[0];
-  shape.resize(1);
-  shape[0] = GetNumel(x);
+  DLTensor& x = env->inputs[0] = GetDLTensor(args->x);
+  DLTensor& y = env->outputs[0];
+  std::vector<int64_t>& shape = env->shape_slots[0] = {GetNumel(x)};
   x.ndim = y.ndim = 1;
   x.shape = y.shape = dmlc::BeginPtr(shape);
   x.strides = y.strides = nullptr;
+  return Attrs();
 }
 
 void UnaryTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *y_type = GetTensorType(env->outputs[0]);
-  param_types->resize(1);
-  param_types->at(0) = GetTensorType(env->inputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 MNM_TVMJIT(Copy, "mnm.op.copy", UnaryArgs, UnaryNormalizer, UnaryTyper);

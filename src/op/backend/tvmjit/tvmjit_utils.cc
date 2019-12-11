@@ -19,12 +19,9 @@ using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using tvm::TVMType2Type;
 
-void GetIn(const std::vector<Value>& vs, std::vector<DLTensor>* ret) {
-  CHECK(ret->empty());
-  for (const auto& v : vs) {
-    DLTensor* t = v;
-    ret->emplace_back(*t);
-  }
+DLTensor GetDLTensor(const Value &v) {
+  DLTensor *ret = v;
+  return *ret;
 }
 
 void GetOut(const Value& out, std::vector<DLTensor>* ret) {

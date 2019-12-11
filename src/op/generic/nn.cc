@@ -212,6 +212,7 @@ MNM_OP_DECLARE("mnm.op.bias_add", [](const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
+  call->ctx = x->ctx;
 });
 
 

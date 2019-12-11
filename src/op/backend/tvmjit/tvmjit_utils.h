@@ -16,7 +16,7 @@
 namespace mnm {
 namespace op {
 namespace tvmjit {
-void GetIn(const std::vector<value::Value>& vs, std::vector<DLTensor>* ret);
+DLTensor GetDLTensor(const value::Value& v);
 void GetOut(const value::Value& out, std::vector<DLTensor>* ret);
 ir::Type GetTensorType(const DLTensor& dlt);
 ir::Type GetTupleType(const std::vector<DLTensor>& dlts);
@@ -45,24 +45,23 @@ class TVMOpEnv : public op::OpEnv {
 }  // namespace op
 }  // namespace mnm
 
-#define MNM_TVMJIT(FUNC, OP, SCHEMA, NORM, TYPE)            \
-  OpEnv* FUNC(const CallValues& call) {                     \
-    static const auto op = Op::Get(OP);                     \
-    const auto* args = call->args.as<SCHEMA>();             \
-    const auto& ctx = call->ctx;                            \
-    auto env = std::make_unique<TVMOpEnv>();                \
-    /* Normalize inputs and outputs */                      \
-    GetIn({args->x}, &env->inputs);                         \
-    GetOut(call->out, &env->outputs);                       \
-    NORM(env.get());                                        \
-    /* Normalize types */                                   \
-    std::vector<Type> param_types;                          \
-    Type ret_type;                                          \
-    TYPE(env.get(), &param_types, &ret_type);               \
-    /* Compile. TODO(@junrushao1994): cache */              \
-    env->f = CompileOp(op, {}, param_types, ret_type, ctx); \
-    env->Setup();                                           \
-    return env.release();                                   \
-  }                                                         \
-  MNM_OP_DISPATCH(OP, FUNC, DevType::kCPU(), "tvm-cpu");    \
+#define MNM_TVMJIT(FUNC, OP, SCHEMA, NORM, TYPE)               \
+  OpEnv* FUNC(const op::CallValues& call) {                    \
+    static const auto op = Op::Get(OP);                        \
+    const auto* args = call->args.as<SCHEMA>();                \
+    const auto& ctx = call->ctx;                               \
+    auto env = std::make_unique<TVMOpEnv>();                   \
+    /* Normalize inputs and outputs */                         \
+    GetOut(call->out, &env->outputs);                          \
+    Attrs attrs = NORM(env.get(), args);                       \
+    /* Normalize types */                                      \
+    std::vector<Type> param_types;                             \
+    Type ret_type;                                             \
+    TYPE(env.get(), &param_types, &ret_type);                  \
+    /* Compile. TODO(@junrushao1994): cache */                 \
+    env->f = CompileOp(op, attrs, param_types, ret_type, ctx); \
+    env->Setup();                                              \
+    return env.release();                                      \
+  }                                                            \
+  MNM_OP_DISPATCH(OP, FUNC, DevType::kCPU(), "tvm-cpu");       \
   MNM_OP_DISPATCH(OP, FUNC, DevType::kCUDA(), "tvm-cuda");

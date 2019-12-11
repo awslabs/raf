@@ -715,8 +715,6 @@ class BiasAddImplementedByCUDNNAddTensor : public mnm::op::OpEnv {
     return new BiasAddImplementedByCUDNNAddTensor(cv);
   }
 };
-MNM_OP_DISPATCH("mnm.op.bias_add", BiasAddImplementedByCUDNNAddTensor::make, DevType::kCUDA(),
-                "generated_cudnn");
 class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnFilterDescriptor_t wDesc;

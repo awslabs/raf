@@ -19,7 +19,13 @@ BLACK_LIST = {
     "relay.op.annotation.simulated_quantize",
 }
 
-MNM_OP_NAME = {}
+WHILTE_LIST = {
+    "nn.bias_add",
+}
+
+MNM_OP_NAME = {
+    "nn.bias_add": "mnm.op.bias_add",
+}
 
 
 def collect_op():
@@ -38,6 +44,9 @@ def collect_op():
     def is_black_listed(op_name):
         if op_name.startswith("mnm."):
             return True
+        if op_name in WHILTE_LIST:
+            assert op_name not in BLACK_LIST
+            return False
         if op_name in BLACK_LIST:
             print("[Skip]", op_name, ": Blacklisted", file=sys.stderr)
             return True
@@ -84,7 +93,7 @@ def main():
     print("OP_MAP = {")
     for op_name, attrs, pattern in ops:
         if op_name in MNM_OP_NAME:
-            mnm_op_name = MNM_OP_NAME[mnm_op_name]
+            mnm_op_name = MNM_OP_NAME[op_name]
         else:
             mnm_op_name = "mnm.op." + op_name
         print(f'    "{mnm_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
