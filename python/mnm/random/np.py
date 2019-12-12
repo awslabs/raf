@@ -1,13 +1,13 @@
 import numpy as np
 
-import mnm
+from mnm._core.ndarray import ndarray
 
 
 def _wrap(np_ndarray, name=""):
     ret = np_ndarray
     if not isinstance(ret, np.ndarray):
         ret = np.array(ret)
-    return mnm.ndarray(ret, name=name)  # pylint: disable=unexpected-keyword-arg
+    return ndarray(ret, name=name)
 
 
 def uniform(low=0.0, high=1.0, shape=None, name=""):

@@ -553,19 +553,8 @@ def dispatch_conv_dxw(op, xorw, dims):
                          normalizers=normalizers,
                          args=ALPHA_BETA)
 
-def dispatch_bias_add():
-    axis = AssignStatement('int', 'axis', '(args->axis + out->ndim) % out->ndim', False)
-    b = CUDNNTensor('aDesc', 'A', 'args->b', ['0', '0', '<last>'])
-    y = CUDNNOutputTensor('cDesc', 'C', 'cv->out', ['0', 'axis', 'axis+1', '<last>'])
-    return CUDNNDispatch(op='bias_add',
-                         api=f'AddTensor',
-                         arg_type='bias_add',
-                         normalizers=[axis, b, y],
-                         args={'alpha': constant(1), 'beta': constant(1)})
-
 
 SCHEMAS = [
-    dispatch_bias_add(),
     dispatch_unary('relu', 'CUDNN_ACTIVATION_RELU'),
     dispatch_unary('tanh', 'CUDNN_ACTIVATION_TANH'),
     dispatch_unary('sigmoid', 'CUDNN_ACTIVATION_SIGMOID'),

@@ -1,4 +1,4 @@
-from mnm._core.model import Model
+from .model import Model
 
 class Sequential(Model):
 

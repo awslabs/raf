@@ -3,8 +3,9 @@
 __version__ = "0.0.2.dev"
 
 from ._core.ndarray import array, ndarray, Parameter
-from ._core.model import Model
 from ._op.imp import *  # pylint: disable=redefined-builtin
-from .hybrid import hybrid
-
+from . import random
 from . import build
+from . import model
+from .model.model import Model
+from .hybrid import hybrid

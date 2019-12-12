@@ -1,8 +1,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-.pytest_cache
 *.py[cod]
 *$py.class
+.pytest_cache/
+.pylint.d/
 
 # C extensions
 *.so
