@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cudnn/conv.cc
+ * \file src/op/dispatch/cudnn/conv.cc
  * \brief Manually-written cuDNN binding for conv2d
  */
 #include "../../schema/nn.h"
@@ -8,7 +8,6 @@
 
 namespace mnm {
 namespace op {
-namespace backend {
 namespace cudnn {
 namespace manual {
 
@@ -119,6 +118,5 @@ class ConvCUDNN : public mnm::op::OpEnv {
 
 }  // namespace manual
 }  // namespace cudnn
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

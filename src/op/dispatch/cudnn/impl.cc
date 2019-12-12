@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cudnn/impl.cc
+ * \file src/op/dispatch/cudnn/impl.cc
  * \brief Operator schema. Auto generated. Do not touch.
  */
 #include "../../schema/gemm.h"
@@ -12,7 +12,6 @@
 #include "./cudnn_utils.h"
 namespace mnm {
 namespace op {
-namespace backend {
 namespace cudnn {
 namespace generated {
 using common::shape_utils::BytesCompactTensor;
@@ -1990,6 +1989,5 @@ MNM_OP_DISPATCH("mnm.op.tanh_dx", TanhDxImplementedByCUDNNActivationBackward::ma
                 DevType::kCUDA(), "generated_cudnn");
 }  // namespace generated
 }  // namespace cudnn
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

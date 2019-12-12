@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file ./src/op/backend/tvmjit/unary.cc
+ * \file ./src/op/dispatch/tvmjit/unary.cc
  * \brief Unary operators bridged from TVM.
  */
 #include <array>

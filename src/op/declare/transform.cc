@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/generic/transform.cc
+ * \file src/op/declare/transform.cc
  * \brief Declaration of transform operators
  */
 #include "mnm/op.h"
@@ -10,7 +10,7 @@
 
 namespace mnm {
 namespace op {
-namespace generic {
+namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
@@ -38,6 +38,6 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   throw;
 });
 
-}  // namespace generic
+}  // namespace declare
 }  // namespace op
 }  // namespace mnm

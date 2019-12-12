@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cublas/cublas_utils.cc
+ * \file src/op/dispatch/cublas/cublas_utils.cc
  * \brief Helper functions for cuBLAS
  */
 #include <cublas_v2.h>
@@ -10,7 +10,6 @@
 
 namespace mnm {
 namespace op {
-namespace backend {
 namespace cublas {
 
 using CUBlasThreadStore = dmlc::ThreadLocalStore<CUBlasThreadEntry>;
@@ -24,6 +23,5 @@ CUBlasThreadEntry* CUBlasThreadEntry::ThreadLocal() {
 }
 
 }  // namespace cublas
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

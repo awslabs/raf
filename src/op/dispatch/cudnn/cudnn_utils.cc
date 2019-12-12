@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cudnn/cudnn_utils.h
+ * \file src/op/dispatch/cudnn/cudnn_utils.h
  * \brief Helper functions for cuDNN
  */
 #include "dmlc/thread_local.h"
@@ -8,7 +8,6 @@
 
 namespace mnm {
 namespace op {
-namespace backend {
 namespace cudnn {
 
 CUDNNThreadEntry::CUDNNThreadEntry() {
@@ -22,6 +21,5 @@ CUDNNThreadEntry* CUDNNThreadEntry::ThreadLocal() {
 }
 
 }  // namespace cudnn
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

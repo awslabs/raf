@@ -1,16 +1,16 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/generic/binary.cc
+ * \file src/op/declare/binary.cc
  * \brief Declaration of binary operators
  */
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
-#include "./generic_utils.h"
+#include "./declare_utils.h"
 
 namespace mnm {
 namespace op {
-namespace generic {
+namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
@@ -170,6 +170,6 @@ MNM_OP_DECLARE("mnm.op.not_equal", [](const CallValues& call) {
   throw;
 });
 
-}  // namespace generic
+}  // namespace declare
 }  // namespace op
 }  // namespace mnm

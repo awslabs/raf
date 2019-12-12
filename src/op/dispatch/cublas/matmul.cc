@@ -1,11 +1,10 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cublas/cublas_utils.cc
+ * \file src/op/dispatch/cublas/cublas_utils.cc
  * \brief Helper functions for cuBLAS
  */
-
 #include <cublas.h>
-#include <mnm/op.h>
+#include "mnm/op.h"
 
 #include "../../schema/gemm.h"
 #include "../../../common/cuda_utils.h"
@@ -14,7 +13,6 @@
 
 namespace mnm {
 namespace op {
-namespace backend {
 namespace cublas {
 namespace manual {
 
@@ -66,8 +64,7 @@ void CUBLASMatmul::Execute(const CallValues& cv) {
         CUBLAS_CALL(cublasSgemm(
             handle, transb, transa, m, n, k,
             static_cast<const float*>(const_typed_addr<1>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<float*>(b->data), ldb,
-            static_cast<float*>(a->data), lda,
+            static_cast<float*>(b->data), ldb, static_cast<float*>(a->data), lda,
             static_cast<const float*>(const_typed_addr<0>(cudaDataType_t(DType(c->dtype)))),
             static_cast<float*>(c->data), m));
         return;
@@ -75,8 +72,7 @@ void CUBLASMatmul::Execute(const CallValues& cv) {
         CUBLAS_CALL(cublasDgemm(
             handle, transb, transa, m, n, k,
             static_cast<const double*>(const_typed_addr<1>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<double*>(b->data), ldb,
-            static_cast<double*>(a->data), lda,
+            static_cast<double*>(b->data), ldb, static_cast<double*>(a->data), lda,
             static_cast<const double*>(const_typed_addr<0>(cudaDataType_t(DType(c->dtype)))),
             static_cast<double*>(c->data), m));
         return;
@@ -93,6 +89,5 @@ MNM_OP_DISPATCH("mnm.op.matmul", CUBLASMatmul::make, DevType::kCUDA(), "cublas")
 
 }  // namespace manual
 }  // namespace cublas
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

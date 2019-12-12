@@ -64,9 +64,9 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cpu/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/memory_pool/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/schema/*.cc
-  ${CMAKE_CURRENT_LIST_DIR}/src/op/generic/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/declare/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/regs/*.cc
-  ${CMAKE_CURRENT_LIST_DIR}/src/op/backend/tvmjit/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/tvmjit/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
 )
@@ -84,7 +84,7 @@ if (${MNM_USE_CUDNN} STREQUAL "OFF")
   set(MNM_CUDNN_SOURCE_FILES "")
 else()
   file(GLOB_RECURSE MNM_CUDNN_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/backend/cudnn/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cudnn/*.cc
   )
 endif()
 
@@ -92,7 +92,7 @@ if (${MNM_USE_CUBLAS} STREQUAL "OFF")
   set(MNM_CUBLAS_SOURCE_FILES "")
 else()
   file(GLOB_RECURSE MNM_CUBLAS_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/backend/cublas/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cublas/*.cc
   )
 endif()
 

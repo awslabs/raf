@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/generic/gemm.cc
+ * \file src/op/declare/gemm.cc
  * \brief Declaration of genmm-related operators
  */
 #include "mnm/op.h"
@@ -9,7 +9,7 @@
 
 namespace mnm {
 namespace op {
-namespace generic {
+namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
@@ -35,8 +35,8 @@ MNM_OP_DECLARE("mnm.op.matmul", [](const CallValues& call) {
     std::swap(n2, m2);
   }
   CHECK_EQ(m1, n2);
-  CHECK(a->dtype.code == kDLFloat && (a->dtype.bits == 32 || a->dtype.bits == 64)) <<
-    "Only float and double are supported!";
+  CHECK(a->dtype.code == kDLFloat && (a->dtype.bits == 32 || a->dtype.bits == 64))
+      << "Only float and double are supported!";
   call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype, /*shape=*/{n1, m2});
   call->ctx = a->ctx;
   if (!n1 || !n2 || !m1 || !m2) {
@@ -44,6 +44,6 @@ MNM_OP_DECLARE("mnm.op.matmul", [](const CallValues& call) {
   }
 });
 
-}  // namespace generic
+}  // namespace declare
 }  // namespace op
 }  // namespace mnm

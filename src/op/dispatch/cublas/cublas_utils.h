@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cublas/cublas_utils.h
+ * \file src/op/dispatch/cublas/cublas_utils.h
  * \brief Helper functions for cuBLAS
  */
 #pragma once
@@ -39,7 +39,6 @@ inline DType::operator cudaDataType_t() const {
 }
 
 namespace op {
-namespace backend {
 namespace cublas {
 
 inline const char* cublasGetErrorString(cublasStatus_t status) {
@@ -100,6 +99,5 @@ const void *const_typed_addr(cudaDataType_t dt) {
 }
 
 }  // namespace cublas
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

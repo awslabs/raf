@@ -16,7 +16,7 @@ def preprocess(f_name, ind_dir):
 
 
 class CUDNNArg(object):
-    
+
     def __init__(self, const, ty, is_ptr, name):
         self.const = const
         self.type = ty
@@ -102,7 +102,7 @@ def extract_functions(src):
     return visitor.parsed_funcs
 
 
-def main(path='src/op/backend/cudnn/impl.cc'):
+def main(path='src/op/dispatch/cudnn/impl.cc'):
     cudnn_home = os.getenv("CUDNN_HOME")
     cuda_home = os.getenv("CUDA_HOME")
     cudnn_h = "%s/include/cudnn.h" % cudnn_home
@@ -129,7 +129,6 @@ def main(path='src/op/backend/cudnn/impl.cc'):
 {HEADERS}
 namespace mnm {{
 namespace op {{
-namespace backend {{
 namespace cudnn {{
 namespace generated {{
 using value::TupleValueObj;
@@ -140,11 +139,10 @@ using common::shape_utils::Shape2Strides;
 using dmlc::BeginPtr;
 {WRAPPERS}
 {CLASSES}
-}}
-}}
-}}
-}}
-}}
+}}  // namespace generated
+}}  // namespace cudnn
+}}  // namespace op
+}}  // namespace mnm
 """.strip()
     headers = [f'#include "../../schema/{i}"'
                for i in os.listdir('src/op/schema/') if i.endswith('.h')]

@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/backend/cudnn/cudnn_utils.h
+ * \file src/op/dispatch/cudnn/cudnn_utils.h
  * \brief Helper functions for cuDNN
  */
 #pragma once
@@ -50,7 +50,6 @@ inline DType::operator cudnnDataType_t() const {
 }
 
 namespace op {
-namespace backend {
 namespace cudnn {
 
 class CUDNNThreadEntry {
@@ -261,6 +260,5 @@ inline std::vector<int64_t> NormalizeScalarToTuple(const std::vector<int64_t>& v
 }
 
 }  // namespace cudnn
-}  // namespace backend
 }  // namespace op
 }  // namespace mnm

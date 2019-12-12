@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file ./src/op/tvmjit/tvmjit_utils.cc
+ * \file ./src/op/dispatch/tvmjit/tvmjit_utils.cc
  * \brief Implementation of utility methods for TVM JIT.
  */
 #include "mnm/value.h"

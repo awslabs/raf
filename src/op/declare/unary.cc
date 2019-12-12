@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/generic/unary.cc
+ * \file src/op/declare/unary.cc
  * \brief Declaration of unary operators
  */
 #include "mnm/op.h"
@@ -9,20 +9,20 @@
 
 namespace mnm {
 namespace op {
-namespace generic {
+namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-#define MNM_SWITCH_SCALAR(var, value, body)                      \
-  do {                                                           \
+#define MNM_SWITCH_SCALAR(var, value, body)                     \
+  do {                                                          \
     if (const auto* var = (value).as<IntValueObj>()) {          \
-      body;                                                      \
+      body;                                                     \
     } else if (const auto* var = (value).as<FloatValueObj>()) { \
-      body;                                                      \
+      body;                                                     \
     } else if (const auto* var = (value).as<BoolValueObj>()) {  \
-      body;                                                      \
-    }                                                            \
+      body;                                                     \
+    }                                                           \
   } while (0);
 
 #define MNM_UNARY_SCALAR(op, x)                \
@@ -95,6 +95,6 @@ MNM_OP_DECLARE("mnm.op.relu_dx", UnaryDx);
 MNM_OP_DECLARE("mnm.op.tanh_dx", UnaryDx);
 MNM_OP_DECLARE("mnm.op.sigmoid_dx", UnaryDx);
 
-}  // namespace generic
+}  // namespace declare
 }  // namespace op
 }  // namespace mnm

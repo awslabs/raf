@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file ./src/op/backend/tvmjit/nn.cc
+ * \file ./src/op/dispatch/tvmjit/nn.cc
  * \brief NN-related operators bridged from TVM.
  */
 #include <array>

@@ -1,16 +1,16 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/generic/nn.cc
+ * \file src/op/declare/nn.cc
  * \brief Declaration of nn-specific operators
  */
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/nn.h"
-#include "./generic_utils.h"
+#include "./declare_utils.h"
 
 namespace mnm {
 namespace op {
-namespace generic {
+namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
@@ -215,7 +215,6 @@ MNM_OP_DECLARE("mnm.op.bias_add", [](const CallValues& call) {
   call->ctx = x->ctx;
 });
 
-
-}  // namespace generic
+}  // namespace declare
 }  // namespace op
 }  // namespace mnm
