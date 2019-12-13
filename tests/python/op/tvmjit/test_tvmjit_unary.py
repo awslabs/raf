@@ -36,6 +36,7 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -48,7 +49,6 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("ctx", get_ctx_list())
 def test_unary_ops(ops, shape, dtype, ctx):
     n_op, m_op = ops
     m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
@@ -57,12 +57,12 @@ def test_unary_ops(ops, shape, dtype, ctx):
     check(m_x, n_x)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("ops", [
     (np.log, mnm.log),
 ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("ctx", get_ctx_list())
 def test_unary_ops_pos(ops, shape, dtype, ctx):
     n_op, m_op = ops
     m_x, n_x = randn_pos(shape, dtype=dtype, ctx=ctx)
