@@ -3,14 +3,12 @@ import math
 import numpy as np
 
 from mnm._core.ndarray import Parameter
-from mnm._op.sym import (batch_norm_infer, batch_norm_train, bias_add, conv2d,
-                         matmul)
+from mnm._op import sym
 from mnm.random import uniform
 from mnm.random.nn import kaiming_uniform
 
 from .model import Model
-from .model import script_model as script
-from .model import script_mutate_attr as script_mutate
+from .trace import trace, trace_mutate_attr
 
 
 class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
@@ -46,16 +44,16 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
 
     # pylint: enable=attribute-defined-outside-init
 
-    @script
+    @trace
     def forward(self, x):
-        x = conv2d(x,
-                   self.w,
-                   stride=self.stride,
-                   padding=self.padding,
-                   dilation=self.dilation,
-                   groups=self.groups)
+        x = sym.conv2d(x,
+                       self.w,
+                       stride=self.stride,
+                       padding=self.padding,
+                       dilation=self.dilation,
+                       groups=self.groups)
         if self.b is not None:
-            x = bias_add(x, self.b, axis=1)
+            x = sym.bias_add(x, self.b, axis=1)
         return x
 
 
@@ -83,28 +81,28 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
 
     # pylint: enable=attribute-defined-outside-init
 
-    @script
+    @trace
     def forward(self, x):
-        ret = batch_norm_train(x=x,
-                               w=self.w,
-                               b=self.b,
-                               running_mean=self.running_mean,
-                               running_var=self.running_var,
-                               eps=self.eps,
-                               momentum=self.momentum)
-        script_mutate(self, "running_mean", ret[1])
-        script_mutate(self, "running_var", ret[2])
+        ret = sym.batch_norm_train(x=x,
+                                   w=self.w,
+                                   b=self.b,
+                                   running_mean=self.running_mean,
+                                   running_var=self.running_var,
+                                   eps=self.eps,
+                                   momentum=self.momentum)
+        trace_mutate_attr(self, "running_mean", ret[1])
+        trace_mutate_attr(self, "running_var", ret[2])
         return ret[0]
 
-    @script
+    @trace
     def forward_infer(self, x):
-        ret = batch_norm_infer(x=x,
-                               w=self.w,
-                               b=self.b,
-                               running_mean=self.running_mean,
-                               running_var=self.running_var,
-                               eps=self.eps,
-                               momentum=self.momentum)
+        ret = sym.batch_norm_infer(x=x,
+                                   w=self.w,
+                                   b=self.b,
+                                   running_mean=self.running_mean,
+                                   running_var=self.running_var,
+                                   eps=self.eps,
+                                   momentum=self.momentum)
         return ret
 
 
@@ -129,9 +127,9 @@ class Linear(Model):
 
     # pylint: enable=attribute-defined-outside-init
 
-    @script
+    @trace
     def forward(self, x):
-        out = matmul(x, self.w, transpose_b=True)
+        out = sym.matmul(x, self.w, transpose_b=True)
         if self.b is not None:
-            out = bias_add(out, self.b, axis=-1)
+            out = sym.bias_add(out, self.b, axis=-1)
         return out

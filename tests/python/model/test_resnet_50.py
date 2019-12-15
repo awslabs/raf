@@ -32,7 +32,7 @@ class BottleNeck(mnm.Model):
 
     # pylint: enable=attribute-defined-outside-init
 
-    @mnm.model.script
+    @mnm.model.trace
     def forward(self, x):
         out = mnm.relu(self.bn1(x))
 
@@ -74,14 +74,14 @@ class ResNet50(mnm.Model):
 
     # pylint: enable=attribute-defined-outside-init
 
-    @mnm.model.script
+    @mnm.model.trace
     def forward(self, x, y_true):
         y_pred = self.forward_infer(x)
         y_pred = mnm.log_softmax(y_pred)
         loss = mnm.nll_loss(y_true, y_pred)
         return loss
 
-    @mnm.model.script
+    @mnm.model.trace
     def forward_infer(self, x):
         out = self.conv1(x)
         out = self.layer1(out)
