@@ -69,6 +69,11 @@ def test_model_batch_norm(num_features, affine, is_train):
     m_y = model(m_x)
     t_y = t_model(t_x)
     check(m_y, t_y)
+    check(model.running_mean, t_model.running_mean)
+    check(model.running_var, t_model.running_var)
+    if affine:
+        check(model.w, t_model.weight)
+        check(model.b, t_model.bias)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
