@@ -46,4 +46,4 @@ def test_bias_add(shape, ctx):
 
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main([__file__])

@@ -44,7 +44,6 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
         (np.ceil, mnm.ceil),
         (np.floor, mnm.floor),
         (np.cos, mnm.cos),
-        # (np.log, mnm.log),
         (np.abs, mnm.abs),
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
@@ -72,4 +71,4 @@ def test_unary_ops_pos(ops, shape, dtype, ctx):
 
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main([__file__])

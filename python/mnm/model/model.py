@@ -1,10 +1,11 @@
 from collections import OrderedDict
 
 from mnm._core import cacher
-from mnm._core.core_utils import bfs, get_attr, get_named_attr
-from mnm._core.ndarray import Parameter
+from mnm._core.core_utils import bfs, get_attr, get_named_attr, set_module
+from mnm._core.ndarray import ndarray
 
 
+@set_module("mnm")
 class Model(cacher.Cacher):
     def __init__(self, *args, **kwargs):
         super(Model, self).__init__()
@@ -41,11 +42,11 @@ def _get_attr_models_value(model):
 
 
 def _get_attr_params(model):
-    return get_named_attr(model, check=lambda x: isinstance(x, Parameter))
+    return get_named_attr(model, check=lambda x: isinstance(x, ndarray))
 
 
 def _get_attr_params_value(model):
-    return get_attr(model, check=lambda x: isinstance(x, Parameter))
+    return get_attr(model, check=lambda x: isinstance(x, ndarray))
 
 
 def _set_is_train(root_model, *, value, recursive):
@@ -89,9 +90,9 @@ def _extract_methods(model):
     fwd_train = get_attr(model, name="forward", check=callable)
     fwd_infer = get_attr(model, name="forward_infer", check=callable)
     if not build:
-        raise NotImplementedError("Please implement build() method")
+        raise KeyError("Please implement build() method")
     if not fwd_train:
-        raise NotImplementedError("Please implement forward() method")
+        raise KeyError("Please implement forward() method")
     if not fwd_infer:
         fwd_infer = fwd_train
     return build, fwd_train, fwd_infer

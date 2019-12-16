@@ -1,5 +1,4 @@
 import ctypes
-import weakref
 
 from mnm._core.core_utils import ctx2str, set_module, str2ctx
 from mnm._core.value import TensorValue
@@ -40,7 +39,8 @@ class ndarray:
                                  strides=strides,
                                  order=order)
             # NDArray is treated as relay.Constant
-            self.__handle = BindConstValue(_np_to_tensor_value(npa, ctx=ctx), name)
+            self.__handle = BindConstValue(_np_to_tensor_value(npa, ctx=ctx),
+                                           name)
         self.requires_grad = False
 
     def __setitem__(self, key, value):
@@ -49,7 +49,8 @@ class ndarray:
                 import numpy as np  # pylint: disable=import-outside-toplevel
                 assert isinstance(value, np.ndarray)
                 assert value.shape == self.shape
-                value = _np_to_tensor_value(value.astype(self.dtype), ctx=self.ctx)
+                value = _np_to_tensor_value(value.astype(self.dtype),
+                                            ctx=self.ctx)
                 self.__handle = BindConstValue(value, self.__handle.name_hint)
                 return
         raise NotImplementedError
@@ -154,33 +155,6 @@ class ndarray:
     @byte_offset.setter
     def byte_offset(self, byte_offset):
         self.__byte_offset = byte_offset
-
-
-@set_module("mnm")
-class Parameter(ndarray):
-    def __init__(
-            self,
-            shape,
-            dtype=float,
-            *,  # pylint: disable=too-many-arguments
-            buffer=None,
-            offset=0,
-            strides=None,
-            order=None,
-            ctx=None,
-            name=""):
-        super(Parameter, self).__init__(shape=shape,
-                                        dtype=dtype,
-                                        buffer=buffer,
-                                        offset=offset,
-                                        strides=strides,
-                                        order=order,
-                                        ctx=ctx,
-                                        name=name)
-        # If Parameter requires grad, it is treated as relay.Var
-        # Otherwise, it is treated as relay.Constant
-        # By default, it doesn't require grad, and is treated as relay.Constant
-        self.__parents = weakref.WeakSet()
 
 
 class Symbol:  # pylint: disable=too-few-public-methods

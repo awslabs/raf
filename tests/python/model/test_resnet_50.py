@@ -95,17 +95,17 @@ class ResNet50(mnm.Model):
 
 
 def test_build():
-    x = mnm.array([1, 2, 3], dtype="float32", ctx="cpu")
+    # x = mnm.array([1, 2, 3], dtype="float32", ctx="cpu")
     model = ResNet50([3, 4, 6, 3])
     print("### Switch to training mode")
     model.train_mode()
-    model(x, x)
-    model(x, x)
-    model(x, x)
-    model(x, x)
+    # model(x, x)
+    # model(x, x)
+    # model(x, x)
+    # model(x, x)
     print("### Switch to infer mode")
     model.infer_mode()
-    model(x)
+    # model(x)
 
 
 if __name__ == "__main__":

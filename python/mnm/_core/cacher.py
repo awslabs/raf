@@ -47,7 +47,7 @@ def invalidate(root_cacher, *, include_self, recursive):
 
     def on_pop(cacher):
         if include_self or (cacher is not root_cacher):
-            cacher._Cacher__cache = {}
+            object.__setattr__(cacher, "_Cacher__cache", {})
 
     def on_next(cacher):
         nexts = []

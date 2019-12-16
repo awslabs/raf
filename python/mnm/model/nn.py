@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from mnm._core.ndarray import Parameter
+from mnm._core.ndarray import ndarray
 from mnm._op import sym
 from mnm.random import uniform
 from mnm.random.nn import kaiming_uniform
@@ -30,17 +30,17 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
         self.groups = groups
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
-        self.w_shape = (in_channels, out_channels // groups, *kernel_size)
+        self.w_shape = (out_channels, in_channels // groups, *kernel_size)
         self.b_shape = (out_channels, ) if bias else None
         self.reset()
 
     def reset(self):
-        self.w = Parameter(kaiming_uniform(self.w_shape, name="w"))
+        self.w = ndarray(kaiming_uniform(self.w_shape, name="w"))
         self.b = None
         if self.b_shape is not None:
             _, fan_in, _, _ = self.w_shape
             bound = 1.0 / math.sqrt(fan_in)
-            self.b = Parameter(uniform(-bound, bound, self.b_shape, name="b"))
+            self.b = ndarray(uniform(-bound, bound, self.b_shape, name="b"))
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -69,15 +69,15 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
 
     def reset(self):
         n_f = self.num_features
-        self.running_mean = Parameter(np.zeros(n_f, dtype="float32"),
-                                      name="running_mean")
-        self.running_var = Parameter(np.ones(n_f, dtype="float32"),
-                                     name="running_var")
+        self.running_mean = ndarray(np.zeros(n_f, dtype="float32"),
+                                    name="running_mean")
+        self.running_var = ndarray(np.ones(n_f, dtype="float32"),
+                                   name="running_var")
         self.w = None
         self.b = None
         if self.affine:
-            self.w = Parameter(np.zeros(n_f, dtype="float32"), name="w")
-            self.b = Parameter(np.ones(n_f, dtype="float32"), name="b")
+            self.w = ndarray(np.zeros(n_f, dtype="float32"), name="w")
+            self.b = ndarray(np.ones(n_f, dtype="float32"), name="b")
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -116,14 +116,14 @@ class Linear(Model):
         self.reset()
 
     def reset(self):
-        self.w = Parameter(
+        self.w = ndarray(
             kaiming_uniform((self.out_features, self.in_features), name="w"))
         self.b = None
         if self.bias:
             fan_in = self.in_features
             bound = 1.0 / math.sqrt(fan_in)
-            self.b = Parameter(uniform(-bound, bound, [self.out_features]),
-                               name="b")
+            self.b = ndarray(uniform(-bound, bound, [self.out_features]),
+                             name="b")
 
     # pylint: enable=attribute-defined-outside-init
 

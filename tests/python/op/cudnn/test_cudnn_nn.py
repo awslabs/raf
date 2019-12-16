@@ -17,6 +17,17 @@ def randn(shape, *, ctx="cuda", dtype="float32", std=1.0):
     return m_x, t_x
 
 
+def randn_pos(shape, *, ctx="cuda", dtype="float32", std=1.0):
+    x = np.abs(np.random.randn(*shape)) * std + 1e-5
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    assert list(x.shape) == list(shape)
+    x = x.astype(dtype)
+    m_x = mnm.array(x, ctx=ctx)
+    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
+    return m_x, t_x
+
+
 def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
     m_x = m_x.asnumpy()
     t_x = t_x.detach().cpu().numpy()
@@ -32,15 +43,31 @@ def test_mnm_conv2d(stride, dilation, padding):
     # forward
     m_x, t_x = randn([8, 3, 32, 32], std=0.001)
     m_w, t_w = randn([16, 3, 3, 3], std=0.01)
-    m_y = mnm.conv2d(m_x, m_w, stride=stride, dilation=dilation, padding=padding)
+    m_y = mnm.conv2d(m_x,
+                     m_w,
+                     stride=stride,
+                     dilation=dilation,
+                     padding=padding)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     m_dy, t_dy = randn(m_y.shape)
     # backward
-    m_dx = mnm.conv2d_dx(m_w, m_y, m_dy, shape=m_x.shape, stride=stride,
-                         padding=padding, dilation=dilation, groups=1)
-    m_dw = mnm.conv2d_dw(m_x, m_y, m_dy, shape=m_w.shape, stride=stride,
-                         padding=padding, dilation=dilation, groups=1)
+    m_dx = mnm.conv2d_dx(m_w,
+                         m_y,
+                         m_dy,
+                         shape=m_x.shape,
+                         stride=stride,
+                         padding=padding,
+                         dilation=dilation,
+                         groups=1)
+    m_dw = mnm.conv2d_dw(m_x,
+                         m_y,
+                         m_dy,
+                         shape=m_w.shape,
+                         stride=stride,
+                         padding=padding,
+                         dilation=dilation,
+                         groups=1)
     t_y.backward(t_dy)
     t_dx = t_x.grad
     t_dw = t_w.grad
@@ -58,13 +85,15 @@ def test_mnm_conv2d(stride, dilation, padding):
     [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
-@pytest.mark.parametrize("funcs", [
-    # pylint: disable=no-member
-    [mnm.relu, mnm.relu_dx, torch.relu],
-    [mnm.tanh, mnm.tanh_dx, torch.tanh],
-    [mnm.sigmoid, mnm.sigmoid_dx, torch.sigmoid],
-    # pylint: enable=no-member
-])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        # pylint: disable=no-member
+        [mnm.relu, mnm.relu_dx, torch.relu],
+        [mnm.tanh, mnm.tanh_dx, torch.tanh],
+        [mnm.sigmoid, mnm.sigmoid_dx, torch.sigmoid],
+        # pylint: enable=no-member
+    ])
 def test_mnm_unary(shape, funcs):
     mnm_fwd, mnm_bwd, torch_fwd = funcs
     # forward
@@ -90,12 +119,14 @@ def test_mnm_unary(shape, funcs):
     [3, 2, 5, 8, 4, 7],
 ])
 @pytest.mark.parametrize("axis", range(-8, 8))
-@pytest.mark.parametrize("funcs", [
-    # pylint: disable=no-member
-    [mnm.softmax, mnm.softmax_dx, torch.softmax],
-    [mnm.log_softmax, mnm.log_softmax_dx, torch.log_softmax],
-    # pylint: enable=no-member
-])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        # pylint: disable=no-member
+        [mnm.softmax, mnm.softmax_dx, torch.softmax],
+        [mnm.log_softmax, mnm.log_softmax_dx, torch.log_softmax],
+        # pylint: enable=no-member
+    ])
 def test_mnm_unary_with_axis(shape, axis, funcs):
     mnm_fwd, mnm_bwd, torch_fwd = funcs
     # forward
@@ -119,12 +150,14 @@ def test_mnm_unary_with_axis(shape, axis, funcs):
 @pytest.mark.parametrize("kernel", [1, 2, 3, 4])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
 @pytest.mark.parametrize("padding", [0, 1])
-@pytest.mark.parametrize("funcs", [
-    # pylint: disable=no-member
-    [mnm.max_pool2d, mnm.max_pool2d_dx, torch.nn.functional.max_pool2d],
-    [mnm.avg_pool2d, mnm.avg_pool2d_dx, torch.nn.functional.avg_pool2d],
-    # pylint: enable=no-member
-])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        # pylint: disable=no-member
+        [mnm.max_pool2d, mnm.max_pool2d_dx, torch.nn.functional.max_pool2d],
+        [mnm.avg_pool2d, mnm.avg_pool2d_dx, torch.nn.functional.avg_pool2d],
+        # pylint: enable=no-member
+    ])
 def test_mnm_pool2d(kernel, stride, padding, funcs):
     mnm_fwd, mnm_bwd, torch_fwd = funcs
     if padding > kernel // 2:
@@ -136,8 +169,15 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
     check(m_y, t_y)
     # backward
     m_dy, t_dy = randn(m_y.shape)
-    m_dx = mnm_bwd(m_x, m_y, m_dy, kernel=kernel, stride=stride, padding=padding,
-                   dilation=1, ceil_mode=False, include_pad=True)
+    m_dx = mnm_bwd(m_x,
+                   m_y,
+                   m_dy,
+                   kernel=kernel,
+                   stride=stride,
+                   padding=padding,
+                   dilation=1,
+                   ceil_mode=False,
+                   include_pad=True)
     t_y.backward(t_dy)
     t_dx = t_x.grad
     check(m_dx, t_dx)
@@ -151,12 +191,13 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):  # pylint: disable=too-many
     stats_shape = [shape[1]]
     m_x, t_x = randn(shape)
     m_m, t_m = randn(stats_shape)
-    m_v, t_v = randn(stats_shape)
+    m_v, t_v = randn_pos(stats_shape)
     m_w, t_w = randn(stats_shape)
     m_b, t_b = randn(stats_shape)
     t_m.requires_grad = False
     t_v.requires_grad = False
-    t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, False, momentum, eps)
+    t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, False,
+                                         momentum, eps)
     m_y = mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
@@ -170,13 +211,15 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
     # forward
     m_x, t_x = randn(shape)
     m_m, t_m = randn(stats_shape)
-    m_v, t_v = randn(stats_shape)
+    m_v, t_v = randn_pos(stats_shape)
     m_w, t_w = randn(stats_shape)
     m_b, t_b = randn(stats_shape)
     t_m.requires_grad = False
     t_v.requires_grad = False
-    t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, True, momentum, eps)
-    m_y, m_m, m_v = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+    t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, True,
+                                         momentum, eps)
+    m_y, m_m, m_v = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum,
+                                         eps)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_m, t_m, rtol=1e-4, atol=1e-4)
     check(m_v, t_v, rtol=1e-4, atol=1e-4)
@@ -188,23 +231,6 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
     check(m_dx, t_dx, rtol=1e-4, atol=1e-4)
     check(m_dw, t_dw, rtol=1e-4, atol=1e-4)
     check(m_db, t_db, rtol=1e-4, atol=1e-4)
-
-
-# TODO(@were): bias cannot be supported in CUDNN without additional mechanisms
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("axis", range(-8, 8))
-def test_mnm_bias_add(axis): #pylint: disable=unused-argument
-    return
-    # pylint: disable=unreachable
-    ndims = 3
-    shape = [2] * ndims
-    x = np.arange(1, 2 ** ndims + 1).astype('float32')
-    b = np.arange(1, ndims + 1).astype('float32')
-    x.shape = shape
-    # n_y = x + np.expand_dims(b, axis)
-    x = mnm.array(x, ctx='cuda')
-    b = mnm.array(b, ctx='cuda')
-    # y = mnm.bias_add(x, b, axis=axis)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -226,4 +252,4 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b):
 
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main([__file__])

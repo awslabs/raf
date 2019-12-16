@@ -222,7 +222,6 @@ inline cudnnTensorDescriptor_t FlattenAndNormalizeTensor(const DLTensor* tv,
 
 inline cudnnFilterDescriptor_t NormalizeFilter(const DLTensor* tv,
                                                cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW) {
-  int ndim = tv->ndim;
   std::vector<int64_t> shape(tv->shape, tv->shape + tv->ndim);
   std::vector<int> padded_shape = common::shape_utils::PadDims<int, int64_t>(shape, 4);
   cudnnFilterDescriptor_t res;

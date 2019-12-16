@@ -3,12 +3,22 @@ from collections import OrderedDict, namedtuple
 
 from mnm._core import cacher
 from mnm._core.core_utils import get_bound_args, get_func_name
+from mnm._core.executor import interpret
 from mnm._core.global_scope import SCOPE
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
-from mnm._lib import relay
+from mnm._lib import relay, Array
 
 from .model import Model
+
+_TraceRecord = namedtuple(
+    "_TraceRecord",
+    [
+        "func",  # The relay.Function constructed by tracing
+        "named_params",  # Model parameters that are extra inputs to the relay.Function
+        "o_struct",  # Structure of the outputs
+        "mutations",  # [model, attr_name]
+    ])
 
 
 def trace_mutate_attr(obj, attr_name, symbol):
@@ -20,30 +30,59 @@ def trace_mutate_attr(obj, attr_name, symbol):
 
 def trace(pyfunc):
     def new_pyfunc(*args, **kwargs):
+        if len(args) == 0 or not isinstance(args[0], Model):
+            raise ValueError(
+                "Decorator trace should only be applied to a model")
         if _scope_last_name() == "trace":
             return pyfunc(*args, **kwargs)
-        return _get_trace_record(pyfunc, args, kwargs)
+        record = _get_trace_record(pyfunc, args, kwargs)
+        bound_args = get_bound_args(pyfunc, args, kwargs)
+        return _run_trace_record(record, bound_args.args, bound_args.kwargs)
 
     return new_pyfunc
 
 
-_TraceRecord = namedtuple(
-    "_TraceRecord",
-    [
-        "func",  # The relay.Function constructed by tracing
-        "params",  # Model parameters that are extra inputs to the relay.Function
-        # OrderedDict str -> ndarray/Parameter
-        "struct",  # Structure of the outputs
-        "mutations",  # [model, attr_name]
-    ])
+# The logic of running a tracing record
+
+
+def _run_trace_record(record, args, kwargs):
+    if kwargs:
+        # TODO(@junrushao1994): implement it
+        raise NotImplementedError("keyword arguments not supported yet.")
+    func_inputs = []
+    for arg in args[1:]:
+        if not isinstance(arg, ndarray):
+            raise NotImplementedError("Only ndarray is supported for now")
+        handle = arg._ndarray__handle  # pylint: disable=protected-access
+        func_inputs.append(handle)
+    for param in record.named_params.values():
+        handle = param._ndarray__handle  # pylint: disable=protected-access
+        func_inputs.append(handle)
+
+    code = relay.Call(op=record.func, args=func_inputs)
+    result = interpret(code)
+    result = _unwrap(result)
+    if not isinstance(result, list):
+        result = [result]
+    for obj, attr in reversed(record.mutations):
+        object.__setattr__(obj, attr, result[-1])
+        result.pop()
+    return _unflatten_from_struct(result, record.o_struct)
+
+
+def _unwrap(result):
+    if isinstance(result, relay.Var):
+        return ndarray(result)
+    if isinstance(result, Array):
+        return [_unwrap(x) for x in result]
+    raise NotImplementedError(type(result))
+
+
+# The logic of tracing
 
 
 def _get_trace_record(pyfunc, args, kwargs):
-    try:
-        model = args[0]
-        assert isinstance(model, Model)
-    except:
-        raise ValueError("@trace should only be applied to a model")
+    model = args[0]
     func_name = get_func_name(pyfunc)
     record = cacher.get_cache(model, "trace@" + func_name, None)
     if record is not None:
@@ -57,7 +96,9 @@ def _get_trace_record(pyfunc, args, kwargs):
 
 
 def _do_tracing(pyfunc, args, kwargs):
-    args, kwargs, input_named_vars = _bind_inputs(pyfunc, args, kwargs)
+    # Step 1. switch input arguments to symbols
+    named_inputs, args, kwargs = _symbolize_inputs(pyfunc, args, kwargs)
+    # Step 2. run the traced function once
     try:
         _switch_imperative_symbolic("sym")
         with _scope(name="trace"):
@@ -65,25 +106,82 @@ def _do_tracing(pyfunc, args, kwargs):
             mutations, mutate_symbols = _scope_last_mutate()
     finally:
         _switch_imperative_symbolic("imp")
-    output, struct = _flatten_to_list(output)
-    body = _extract_func_body(output + mutate_symbols)
-    params = _get_used_params(args[0], body, input_named_vars)
-    func = _make_func(body, input_named_vars, params)
+    # Step 3. flatten output to list, and keep record of its original structure
+    output, o_struct = _flatten_to_list(output)
+    # Step 4. and extra model parameters and finally make the relay.Func
+    func, named_params = _make_func(args[0], named_inputs,
+                                    output + mutate_symbols)
     return _TraceRecord(func=func,
-                        params=params,
-                        struct=struct,
+                        named_params=named_params,
+                        o_struct=o_struct,
                         mutations=mutations)
 
 
-def _make_func(body, input_named_vars, params):
-    input_vars = list(input_named_vars.values())
-    param_vars = [x._ndarray__handle for x in params.values()]  # pylint: disable=protected-access
-    func = relay.Function(input_vars + param_vars, body=body)
+def _symbolize_inputs(pyfunc, args, kwargs):
+    # TODO(@junrushao1994): support varargs and kwargs
+    bound_args = get_bound_args(pyfunc, args, kwargs)
+    named_inputs = OrderedDict()
+    for name, value in list(bound_args.arguments.items())[1:]:
+        if not isinstance(value, ndarray):
+            raise NotImplementedError("Only ndarray is supported for now")
+        bound_args.arguments[name] = \
+                named_inputs[name] = \
+                Symbol.make_var(name_hint=name)
+    return named_inputs, bound_args.args, bound_args.kwargs
+
+
+def _make_func(model, named_inputs, outputs):
+    # Step 1. construct the function body
+    body = _construct_func_body(outputs)
+    # Step 2. scan the body and find out the model parameters used
+    named_params = _get_used_params(model, body, named_inputs)
+    # Step 3. construct the function using input vars and model parameters as inputs
+    func = relay.Function(
+        [x._Symbol__handle for x in named_inputs.values()] +  # pylint: disable=protected-access
+        [x._ndarray__handle for x in named_params.values()],  # pylint: disable=protected-access
+        body=body)
+    # Step 4. replace all variables in func, so that
+    # 1) vars have better names
+    # 2) get rid of referencing global binding table
+    func = RenameVars(func, _get_named_vars(named_inputs, named_params))
+    return func, named_params
+
+
+def _construct_func_body(outputs):
+    body = [x._Symbol__handle for x in outputs]  # pylint: disable=protected-access
+    if len(body) == 1:
+        body = body[0]
+    else:
+        body = Symbol.make_tuple(body)._Symbol__handle  # pylint: disable=protected-access
+    return ExtractBinding(body)
+
+
+def _get_used_params(model, body, named_inputs):
+    free_vars = set(relay.analysis.free_vars(body))
+    named_params = OrderedDict()
+    for sym in named_inputs.values():
+        handle = sym._Symbol__handle  # pylint: disable=protected-access
+        if handle in free_vars:
+            free_vars.remove(handle)
+    for name, param in model.state().items():
+        handle = param._ndarray__handle  # pylint: disable=protected-access
+        if handle in free_vars:
+            named_params[name] = param
+            free_vars.remove(handle)
+    if free_vars:
+        raise ValueError("To ensure correctness, in tracing mode, "
+                         "please do not use other ndarray/symbols "
+                         "other than model's own")
+    return named_params
+
+
+def _get_named_vars(named_inputs, named_params):
     named_vars = dict()
-    for name, var in input_named_vars.items():
+    for name, var in named_inputs.items():
+        handle = var._Symbol__handle  # pylint: disable=protected-access
         assert name not in named_vars
-        named_vars[name] = var
-    for name, param in params.items():
+        named_vars[name] = handle
+    for name, param in named_params.items():
         handle = param._ndarray__handle  # pylint: disable=protected-access
         if name not in named_vars:
             named_vars[name] = handle
@@ -95,48 +193,10 @@ def _make_func(body, input_named_vars, params):
                 named_vars[new_name] = handle
                 break
             suffix += 1
-    func = RenameVars(func, named_vars)
-    return func
+    return named_vars
 
 
-def _extract_func_body(outputs):
-    body = [x._Symbol__handle for x in outputs]  # pylint: disable=protected-access
-    if len(body) == 1:
-        body = body[0]
-    else:
-        body = Symbol.make_tuple(body)._Symbol__handle  # pylint: disable=protected-access
-    return ExtractBinding(body)
-
-
-def _get_used_params(model, body, input_named_vars):
-    free_vars = set(relay.analysis.free_vars(body))
-    params = OrderedDict()
-    for var in input_named_vars.values():
-        if var in free_vars:
-            free_vars.remove(var)
-    for name, param in model.state().items():
-        handle = param._ndarray__handle  # pylint: disable=protected-access
-        if handle in free_vars:
-            params[name] = param
-            free_vars.remove(handle)
-    if free_vars:
-        raise ValueError("To ensure correctness, in tracing mode, "
-                         "please do not use other ndarray/symbols "
-                         "other than model's own")
-    return params
-
-
-def _bind_inputs(pyfunc, args, kwargs):
-    # TODO(@junrushao1994): support varargs and kwargs
-    bound_args = get_bound_args(pyfunc, args, kwargs)
-    input_named_vars = OrderedDict()
-    for name, value in list(bound_args.arguments.items())[1:]:
-        if not isinstance(value, ndarray):
-            raise NotImplementedError("Only ndarray is supported for now")
-        symbol = Symbol.make_var(name_hint=name)
-        bound_args.arguments[name] = symbol
-        input_named_vars[name] = symbol._Symbol__handle  # pylint: disable=protected-access
-    return bound_args.args, bound_args.kwargs, input_named_vars
+# Manipulate structures
 
 
 def _flatten_to_list(a):
@@ -174,6 +234,9 @@ def _unflatten_from_struct(a, struct):
             result = tuple(result)
         return result
     raise NotImplementedError
+
+
+# A simple user-facing switcher
 
 
 def _switch_imperative_symbolic(target):

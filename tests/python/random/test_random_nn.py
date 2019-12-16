@@ -40,4 +40,4 @@ def test_kaiming_uniform(shape):
 
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main([__file__])
