@@ -225,6 +225,21 @@ MNM_OP_DECLARE("mnm.op.not_equal", [](const CallValues& call) {
   throw;
 });
 
+MNM_OP_DECLARE("mnm.op.add_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor *x = args->x1;
+  DLTensor *dy = args->dy;
+  CHECK(x->ndim <= dy->ndim);
+  for (int i = 0, offset = dy->ndim - x->ndim; i < x->ndim; ++i) {
+    CHECK(x->shape[i] == 1 || x->shape[i] == dy->shape[i + offset]);
+  }
+  call->ctx = x->ctx;
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

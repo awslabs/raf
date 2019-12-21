@@ -5,16 +5,17 @@ from . import imp_utils
 # pylint: disable=invalid-name,line-too-long
 # pylint: disable=too-many-arguments,redefined-builtin
 __all__ = [
-    "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "ceil",
-    "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx", "copy",
-    "cos", "divide", "equal", "floor", "greater",
-    "greater_equal", "less", "less_equal", "log", "log_softmax",
-    "log_softmax_dx", "logical_not", "matmul", "max_pool2d", "max_pool2d_dx",
+    "abs", "add", "add_dx", "avg_pool2d", "avg_pool2d_dx",
+    "batch_flatten", "batch_flatten_dx", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
+    "bias_add", "bias_add_db", "ceil", "collapse_sum_like", "conv2d",
+    "conv2d_dw", "conv2d_dx", "copy", "cos", "divide",
+    "equal", "floor", "greater", "greater_equal", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_da", "matmul_db", "max_pool2d", "max_pool2d_dx",
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
     "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
-    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "subtract",
-    "tanh", "tanh_dx",
+    "sgd", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "subtract", "tanh", "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -28,6 +29,13 @@ def add(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.add(x1, x2, out, where))
+@set_module("mnm")
+def add_dx(x1, x2, y, dy):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.add_dx(x1, x2, y, dy))
 @set_module("mnm")
 def avg_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
@@ -54,6 +62,12 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.batch_flatten(x))
+@set_module("mnm")
+def batch_flatten_dx(x, y, dy):
+    x = imp_utils.to_any(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.batch_flatten_dx(x, y, dy))
 @set_module("mnm")
 def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = imp_utils.to_tensor(x)
@@ -88,6 +102,12 @@ def bias_add(x, b, axis=1):
     b = imp_utils.to_tensor(b)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.bias_add(x, b, axis))
+@set_module("mnm")
+def bias_add_db(b, dy, axis=1):
+    b = imp_utils.to_tensor(b)
+    dy = imp_utils.to_tensor(dy)
+    axis = imp_utils.to_int(axis)
+    return imp_utils.ret(ffi.bias_add_db(b, dy, axis))
 @set_module("mnm")
 def ceil(x):
     x = imp_utils.to_any(x)
@@ -212,6 +232,20 @@ def matmul(a, b, transpose_a=False, transpose_b=False):
     transpose_b = imp_utils.to_bool(transpose_b)
     return imp_utils.ret(ffi.matmul(a, b, transpose_a, transpose_b))
 @set_module("mnm")
+def matmul_da(dy, a_or_b, transpose_dx=False, transpose_dy=False):
+    dy = imp_utils.to_tensor(dy)
+    a_or_b = imp_utils.to_tensor(a_or_b)
+    transpose_dx = imp_utils.to_bool(transpose_dx)
+    transpose_dy = imp_utils.to_bool(transpose_dy)
+    return imp_utils.ret(ffi.matmul_da(dy, a_or_b, transpose_dx, transpose_dy))
+@set_module("mnm")
+def matmul_db(dy, a_or_b, transpose_dx=False, transpose_dy=False):
+    dy = imp_utils.to_tensor(dy)
+    a_or_b = imp_utils.to_tensor(a_or_b)
+    transpose_dx = imp_utils.to_bool(transpose_dx)
+    transpose_dy = imp_utils.to_bool(transpose_dy)
+    return imp_utils.ret(ffi.matmul_db(dy, a_or_b, transpose_dx, transpose_dy))
+@set_module("mnm")
 def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
     kernel = imp_utils.to_int_tuple(kernel)
@@ -292,6 +326,14 @@ def reshape_like(x, shape):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
     return imp_utils.ret(ffi.reshape_like(x, shape))
+@set_module("mnm")
+def sgd(x, dx, v, learning_rate, mu):
+    x = imp_utils.to_tensor(x)
+    dx = imp_utils.to_tensor(dx)
+    v = imp_utils.to_tensor(v)
+    learning_rate = imp_utils.to_double(learning_rate)
+    mu = imp_utils.to_double(mu)
+    return imp_utils.ret(ffi.sgd(x, dx, v, learning_rate, mu))
 @set_module("mnm")
 def sigmoid(x):
     x = imp_utils.to_any(x)

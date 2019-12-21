@@ -7,5 +7,6 @@ from ._op.imp import *  # pylint: disable=redefined-builtin
 from . import random
 from . import build
 from . import model
+from . import _tvmjit
 from .model.model import Model
 from .hybrid import hybrid

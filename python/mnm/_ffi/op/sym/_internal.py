@@ -6,11 +6,15 @@ abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.sym.add", None)
 # Defined in ./src/op/regs/regs.cc
+add_dx = _APIS.get("mnm.op.sym.add_dx", None)
+# Defined in ./src/op/regs/regs.cc
 avg_pool2d = _APIS.get("mnm.op.sym.avg_pool2d", None)
 # Defined in ./src/op/regs/regs.cc
 avg_pool2d_dx = _APIS.get("mnm.op.sym.avg_pool2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
 batch_flatten = _APIS.get("mnm.op.sym.batch_flatten", None)
+# Defined in ./src/op/regs/regs.cc
+batch_flatten_dx = _APIS.get("mnm.op.sym.batch_flatten_dx", None)
 # Defined in ./src/op/regs/regs.cc
 batch_norm_infer = _APIS.get("mnm.op.sym.batch_norm_infer", None)
 # Defined in ./src/op/regs/regs.cc
@@ -19,6 +23,8 @@ batch_norm_train = _APIS.get("mnm.op.sym.batch_norm_train", None)
 batch_norm_train_dxwb = _APIS.get("mnm.op.sym.batch_norm_train_dxwb", None)
 # Defined in ./src/op/regs/regs.cc
 bias_add = _APIS.get("mnm.op.sym.bias_add", None)
+# Defined in ./src/op/regs/regs.cc
+bias_add_db = _APIS.get("mnm.op.sym.bias_add_db", None)
 # Defined in ./src/op/regs/regs.cc
 ceil = _APIS.get("mnm.op.sym.ceil", None)
 # Defined in ./src/op/regs/regs.cc
@@ -58,6 +64,10 @@ logical_not = _APIS.get("mnm.op.sym.logical_not", None)
 # Defined in ./src/op/regs/regs.cc
 matmul = _APIS.get("mnm.op.sym.matmul", None)
 # Defined in ./src/op/regs/regs.cc
+matmul_da = _APIS.get("mnm.op.sym.matmul_da", None)
+# Defined in ./src/op/regs/regs.cc
+matmul_db = _APIS.get("mnm.op.sym.matmul_db", None)
+# Defined in ./src/op/regs/regs.cc
 max_pool2d = _APIS.get("mnm.op.sym.max_pool2d", None)
 # Defined in ./src/op/regs/regs.cc
 max_pool2d_dx = _APIS.get("mnm.op.sym.max_pool2d_dx", None)
@@ -81,6 +91,8 @@ relu = _APIS.get("mnm.op.sym.relu", None)
 relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape_like = _APIS.get("mnm.op.sym.reshape_like", None)
+# Defined in ./src/op/regs/regs.cc
+sgd = _APIS.get("mnm.op.sym.sgd", None)
 # Defined in ./src/op/regs/regs.cc
 sigmoid = _APIS.get("mnm.op.sym.sigmoid", None)
 # Defined in ./src/op/regs/regs.cc

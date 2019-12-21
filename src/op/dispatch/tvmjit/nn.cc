@@ -14,6 +14,7 @@ namespace tvmjit {
 
 using namespace mnm::ir;
 using schema::BiasAddArgs;
+using schema::BiasAddDbArgs;
 using tvm_attrs::BiasAddAttrs;
 
 Attrs BiasAddNormalizer(TVMOpEnv* env, const BiasAddArgs* args) {
@@ -35,6 +36,18 @@ void BiasAddTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
 }
 
 MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddNormalizer, BiasAddTyper);
+
+Attrs BiasAddDbNormalizer(TVMOpEnv* env, const BiasAddDbArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->dy);
+  env->inputs[1] = GetDLTensor(args->b);
+  auto attrs = make_object<BiasAddAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+MNM_TVMJIT(BiasAddDb, "mnm.op.bias_add_db", BiasAddDbArgs, BiasAddDbNormalizer, BiasAddTyper);
 
 }  // namespace tvmjit
 }  // namespace op

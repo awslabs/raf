@@ -32,8 +32,11 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     (np.subtract, mnm.subtract),
     (np.multiply, mnm.multiply),
 ])
-@pytest.mark.parametrize("shape", [[(), (1, 2)], [(1, 2),
-                                                  (2, 1)], [(3, 3), (1, 1)]])
+@pytest.mark.parametrize("shape", [
+    [(), (1, 2)],
+    [(1, 2), (2, 1)],
+    [(3, 3), (1, 1)]
+])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_unary_ops(ops, shape, dtype, ctx):
     n_op, m_op = ops

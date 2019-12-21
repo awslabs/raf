@@ -8,6 +8,7 @@
 #include "../schema/likes.h"
 #include "../schema/loss.h"
 #include "../schema/nn.h"
+#include "../schema/optimizer.h"
 #include "../schema/ufunc.h"
 
 namespace mnm {
@@ -17,6 +18,7 @@ namespace {
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
 MNM_REGISTER_OBJECT_REFLECT(BiasAddArgs);
+MNM_REGISTER_OBJECT_REFLECT(BiasAddDbArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
@@ -27,9 +29,11 @@ MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(MatmulArgs);
+MNM_REGISTER_OBJECT_REFLECT(MatmulDabArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryArgs);
@@ -81,6 +85,15 @@ Attrs BiasAdd(const Array<Value> &values) {
   auto attrs = make_object<schema::BiasAddArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToTensor, b);
+  MNM_OPTIONAL(2, args::ToInt, axis);
+  return Attrs(attrs);
+}
+Attrs BiasAddDb(const Array<Value> &values) {
+  const int size = values.size();
+  CHECK(2 <= size && size <= 3);
+  auto attrs = make_object<schema::BiasAddDbArgs>();
+  MNM_REQUIRED(0, args::ToTensor, b);
+  MNM_REQUIRED(1, args::ToTensor, dy);
   MNM_OPTIONAL(2, args::ToInt, axis);
   return Attrs(attrs);
 }
@@ -184,6 +197,16 @@ Attrs Matmul(const Array<Value> &values) {
   MNM_OPTIONAL(3, args::ToBool, transpose_b);
   return Attrs(attrs);
 }
+Attrs MatmulDab(const Array<Value> &values) {
+  const int size = values.size();
+  CHECK(2 <= size && size <= 4);
+  auto attrs = make_object<schema::MatmulDabArgs>();
+  MNM_REQUIRED(0, args::ToTensor, dy);
+  MNM_REQUIRED(1, args::ToTensor, a_or_b);
+  MNM_OPTIONAL(2, args::ToBool, transpose_dx);
+  MNM_OPTIONAL(3, args::ToBool, transpose_dy);
+  return Attrs(attrs);
+}
 Attrs Pool(const Array<Value> &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 7);
@@ -218,6 +241,17 @@ Attrs ReshapeLike(const Array<Value> &values) {
   auto attrs = make_object<schema::ReshapeLikeArgs>();
   MNM_REQUIRED(0, args::ToTensor, x);
   MNM_REQUIRED(1, args::ToIntTuple, shape);
+  return Attrs(attrs);
+}
+Attrs Sgd(const Array<Value> &values) {
+  const int size = values.size();
+  CHECK(5 <= size && size <= 5);
+  auto attrs = make_object<schema::SgdArgs>();
+  MNM_REQUIRED(0, args::ToTensor, x);
+  MNM_REQUIRED(1, args::ToTensor, dx);
+  MNM_REQUIRED(2, args::ToTensor, v);
+  MNM_REQUIRED(3, args::ToDouble, learning_rate);
+  MNM_REQUIRED(4, args::ToDouble, mu);
   return Attrs(attrs);
 }
 Attrs Softmax(const Array<Value> &values) {
@@ -342,6 +376,15 @@ Array<Expr> BiasAdd(const TVMArgs &values) {
   MNM_OPTIONAL(2, ffi::ToInt, axis);
   return Array<Expr>(result);
 }
+Array<Expr> BiasAddDb(const TVMArgs &values) {
+  const int size = values.size();
+  CHECK(2 <= size && size <= 3);
+  std::vector<Expr> result;
+  MNM_REQUIRED(0, ffi::ToTensor, b);
+  MNM_REQUIRED(1, ffi::ToTensor, dy);
+  MNM_OPTIONAL(2, ffi::ToInt, axis);
+  return Array<Expr>(result);
+}
 Array<Expr> Binary(const TVMArgs &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 2);
@@ -442,6 +485,16 @@ Array<Expr> Matmul(const TVMArgs &values) {
   MNM_OPTIONAL(3, ffi::ToBool, transpose_b);
   return Array<Expr>(result);
 }
+Array<Expr> MatmulDab(const TVMArgs &values) {
+  const int size = values.size();
+  CHECK(2 <= size && size <= 4);
+  std::vector<Expr> result;
+  MNM_REQUIRED(0, ffi::ToTensor, dy);
+  MNM_REQUIRED(1, ffi::ToTensor, a_or_b);
+  MNM_OPTIONAL(2, ffi::ToBool, transpose_dx);
+  MNM_OPTIONAL(3, ffi::ToBool, transpose_dy);
+  return Array<Expr>(result);
+}
 Array<Expr> Pool(const TVMArgs &values) {
   const int size = values.size();
   CHECK(2 <= size && size <= 7);
@@ -476,6 +529,17 @@ Array<Expr> ReshapeLike(const TVMArgs &values) {
   std::vector<Expr> result;
   MNM_REQUIRED(0, ffi::ToTensor, x);
   MNM_REQUIRED(1, ffi::ToIntTuple, shape);
+  return Array<Expr>(result);
+}
+Array<Expr> Sgd(const TVMArgs &values) {
+  const int size = values.size();
+  CHECK(5 <= size && size <= 5);
+  std::vector<Expr> result;
+  MNM_REQUIRED(0, ffi::ToTensor, x);
+  MNM_REQUIRED(1, ffi::ToTensor, dx);
+  MNM_REQUIRED(2, ffi::ToTensor, v);
+  MNM_REQUIRED(3, ffi::ToDouble, learning_rate);
+  MNM_REQUIRED(4, ffi::ToDouble, mu);
   return Array<Expr>(result);
 }
 Array<Expr> Softmax(const TVMArgs &values) {
@@ -565,13 +629,16 @@ namespace args {
   MNM_OP_REGISTER(op_name).set_attr<::mnm::op::FMNMSchema>("FMNMSchema", schema_name);
 MNM_BIND_SCHEMA("mnm.op.abs", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.add", args::BinaryUfunc);
+MNM_BIND_SCHEMA("mnm.op.add_dx", args::BinaryDx);
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", args::Pool);
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", args::PoolDx);
 MNM_BIND_SCHEMA("mnm.op.batch_flatten", args::Unary);
+MNM_BIND_SCHEMA("mnm.op.batch_flatten_dx", args::UnaryDx);
 MNM_BIND_SCHEMA("mnm.op.batch_norm_infer", args::BatchNorm);
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train", args::BatchNorm);
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", args::BatchNormTrainDxwb);
 MNM_BIND_SCHEMA("mnm.op.bias_add", args::BiasAdd);
+MNM_BIND_SCHEMA("mnm.op.bias_add_db", args::BiasAddDb);
 MNM_BIND_SCHEMA("mnm.op.ceil", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", args::CollapseLike);
 MNM_BIND_SCHEMA("mnm.op.conv2d", args::Conv);
@@ -591,6 +658,8 @@ MNM_BIND_SCHEMA("mnm.op.log_softmax", args::Softmax);
 MNM_BIND_SCHEMA("mnm.op.log_softmax_dx", args::SoftmaxDx);
 MNM_BIND_SCHEMA("mnm.op.logical_not", args::UnaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.matmul", args::Matmul);
+MNM_BIND_SCHEMA("mnm.op.matmul_da", args::MatmulDab);
+MNM_BIND_SCHEMA("mnm.op.matmul_db", args::MatmulDab);
 MNM_BIND_SCHEMA("mnm.op.max_pool2d", args::Pool);
 MNM_BIND_SCHEMA("mnm.op.max_pool2d_dx", args::PoolDx);
 MNM_BIND_SCHEMA("mnm.op.mod", args::BinaryUfunc);
@@ -603,6 +672,7 @@ MNM_BIND_SCHEMA("mnm.op.not_equal", args::BinaryUfunc);
 MNM_BIND_SCHEMA("mnm.op.relu", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.relu_dx", args::UnaryDx);
 MNM_BIND_SCHEMA("mnm.op.reshape_like", args::ReshapeLike);
+MNM_BIND_SCHEMA("mnm.op.sgd", args::Sgd);
 MNM_BIND_SCHEMA("mnm.op.sigmoid", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.sigmoid_dx", args::UnaryDx);
 MNM_BIND_SCHEMA("mnm.op.softmax", args::Softmax);
@@ -632,6 +702,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.add")
   *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
                                                NullValue<Value>());
 });
+MNM_REGISTER_GLOBAL("mnm.op.sym.add_dx")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.add_dx");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryDx(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d");
@@ -648,6 +724,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_flatten");
   *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
+                                               NullValue<Value>());
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten_dx")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.batch_flatten_dx");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryDx(args)),
                                                NullValue<Value>());
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_infer")
@@ -672,6 +754,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.bias_add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.bias_add");
   *ret = binding::BindExprValue(CallNode::make(op, ffi::BiasAdd(args)),
+                                               NullValue<Value>());
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.bias_add_db")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.bias_add_db");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::BiasAddDb(args)),
                                                NullValue<Value>());
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.ceil")
@@ -788,6 +876,18 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.matmul")
   *ret = binding::BindExprValue(CallNode::make(op, ffi::Matmul(args)),
                                                NullValue<Value>());
 });
+MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_da")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.matmul_da");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::MatmulDab(args)),
+                                               NullValue<Value>());
+});
+MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_db")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.matmul_db");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::MatmulDab(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d");
@@ -860,6 +960,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.reshape_like")
   *ret = binding::BindExprValue(CallNode::make(op, ffi::ReshapeLike(args)),
                                                NullValue<Value>());
 });
+MNM_REGISTER_GLOBAL("mnm.op.sym.sgd")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.sgd");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Sgd(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid");
@@ -922,6 +1028,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.add")
   static Op op = Op::Get("mnm.op.add");
   *ret = Interpret(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
+MNM_REGISTER_GLOBAL("mnm.op.imp.add_dx")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.add_dx");
+  *ret = Interpret(CallNode::make(op, ffi::BinaryDx(args)));
+});
 MNM_REGISTER_GLOBAL("mnm.op.imp.avg_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d");
@@ -936,6 +1047,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.batch_flatten")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_flatten");
   *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.batch_flatten_dx")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.batch_flatten_dx");
+  *ret = Interpret(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm_infer")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
@@ -956,6 +1072,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.bias_add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.bias_add");
   *ret = Interpret(CallNode::make(op, ffi::BiasAdd(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.bias_add_db")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.bias_add_db");
+  *ret = Interpret(CallNode::make(op, ffi::BiasAddDb(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.ceil")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
@@ -1052,6 +1173,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.matmul")
   static Op op = Op::Get("mnm.op.matmul");
   *ret = Interpret(CallNode::make(op, ffi::Matmul(args)));
 });
+MNM_REGISTER_GLOBAL("mnm.op.imp.matmul_da")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.matmul_da");
+  *ret = Interpret(CallNode::make(op, ffi::MatmulDab(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.matmul_db")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.matmul_db");
+  *ret = Interpret(CallNode::make(op, ffi::MatmulDab(args)));
+});
 MNM_REGISTER_GLOBAL("mnm.op.imp.max_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d");
@@ -1111,6 +1242,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reshape_like")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.reshape_like");
   *ret = Interpret(CallNode::make(op, ffi::ReshapeLike(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.sgd")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.sgd");
+  *ret = Interpret(CallNode::make(op, ffi::Sgd(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {

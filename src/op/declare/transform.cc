@@ -38,6 +38,30 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   throw;
 });
 
+MNM_OP_DECLARE("mnm.op.batch_flatten_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  const DLTensor* dy = args->dy;
+  const int ndim = x->ndim;
+  CHECK_GE(ndim, 2) << "ValueError: batch_flatten only works with ndim >= 2";
+
+  if (IsCompact(*x)) {
+    std::vector<int64_t> dshape(x->shape, x->shape + x->ndim);
+    int64_t flat{1};
+    for (int i = 1; i < ndim; ++i) {
+      flat = flat * int64_t{dshape[i]};
+    }
+    call->callee = ir::NullValue<OpValue>();
+    CHECK_EQ(dy->shape[0], dshape[0]);
+    CHECK_EQ(dy->shape[1], flat);
+    call->out = TensorValue::make(Tensor(args->dy).CreateView(dshape, {}, nullptr));
+    return;
+  }
+  LOG(FATAL) << "NotImplementedError: for now we only support batch_flatten on contiguous tensor.";
+  throw;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

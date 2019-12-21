@@ -50,7 +50,7 @@ def test_mnm_conv2d(stride, dilation, padding):
                      padding=padding)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
-    m_dy, t_dy = randn(m_y.shape)
+    m_dy, t_dy = randn(t_y.shape)
     # backward
     m_dx = mnm.conv2d_dx(m_w,
                          m_y,
@@ -240,15 +240,21 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_mnm_matmul(n, k, m, transpose_a, transpose_b):
-    a = np.arange(1, n * k + 1).astype('float32')
-    a.shape = (n, k) if not transpose_a else (k, n)
-    b = np.arange(1, k * m + 1).astype('float32')
-    b.shape = (k, m) if not transpose_b else (m, k)
-    n_c = np.dot(a if not transpose_a else a.T, b if not transpose_b else b.T)
-    a = mnm.array(a, ctx='cuda')
-    b = mnm.array(b, ctx='cuda')
-    m_c = mnm.matmul(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
-    np.testing.assert_allclose(m_c.asnumpy(), n_c, atol=1e-4, rtol=1e-4)
+    # pylint: disable=too-many-locals
+    shapea = (n, k) if not transpose_a else (k, n)
+    shapeb = (k, m) if not transpose_b else (m, k)
+    m_a, t_a = randn(shapea)
+    m_b, t_b = randn(shapeb)
+    m_c = mnm.matmul(m_a, m_b, transpose_a=transpose_a, transpose_b=transpose_b)
+    t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
+    m_dy, t_dy = randn(m_c.shape)
+    t_c.backward(t_dy)
+    t_da, t_db = t_a.grad, t_b.grad
+    m_da = mnm.matmul_da(m_dy, m_b, transpose_b, transpose_a)
+    m_db = mnm.matmul_db(m_dy, m_a, transpose_a, transpose_b)
+    check(m_c, t_c, rtol=1e-4, atol=1e-4)
+    check(m_da, t_da, rtol=1e-4, atol=1e-4)
+    check(m_db, t_db, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

@@ -18,45 +18,18 @@ namespace manual {
 
 using value::Value;
 
-class CUBLASMatmul : public mnm::op::OpEnv {
- public:
-  explicit CUBLASMatmul(const CallValues& cv) {
-    auto args = cv->args.as<schema::MatmulArgs>();
-    CHECK(args != nullptr);
-    DLTensor* out = cv->out;
-    RequestMemory(&out->data, cv->ctx, common::shape_utils::BytesCompactTensor(*out));
-  }
-
-  void Execute(const CallValues& cv) override;
-
-  ~CUBLASMatmul() {
-  }
-
-  static OpEnv* make(const CallValues& cv) {
-    return new CUBLASMatmul(cv);
-  }
-};
-
-// To be compatible with Fortran, cublas uses column-major storage.
-// However, C++ is row major. Thus, only compact-stored tensors can be
-// fed to this executor.
-void CUBLASMatmul::Execute(const CallValues& cv) {
+void GemmImpl(DLTensor *a, bool transpose_a, DLTensor *b, bool transpose_b, DLTensor *c) {
   auto handle = CUBlasThreadEntry::ThreadLocal()->handle;
-  auto args = cv->args.as<schema::MatmulArgs>();
 
-  cublasOperation_t transa = args->transpose_a ? CUBLAS_OP_T : CUBLAS_OP_N;
-  cublasOperation_t transb = args->transpose_b ? CUBLAS_OP_T : CUBLAS_OP_N;
-
-  DLTensor* a = args->a;
-  DLTensor* b = args->b;
-  DLTensor* c = cv->out;
+  cublasOperation_t transa = transpose_a ? CUBLAS_OP_T : CUBLAS_OP_N;
+  cublasOperation_t transb = transpose_b ? CUBLAS_OP_T : CUBLAS_OP_N;
 
   int m = c->shape[1];
   int n = c->shape[0];
   int k = b->shape[transb != CUBLAS_OP_N];
 
-  int ldb = std::max(1, args->transpose_b ? k : m);
-  int lda = std::max(1, args->transpose_a ? n : k);
+  int ldb = std::max(1, transpose_b ? k : m);
+  int lda = std::max(1, transpose_a ? n : k);
 
   if (c->dtype.code == kDLFloat) {
     switch (c->dtype.bits) {
@@ -85,7 +58,68 @@ void CUBLASMatmul::Execute(const CallValues& cv) {
       cudaDataType_t(DType(c->dtype)), m, cudaDataType_t(DType(c->dtype)), CUBLAS_GEMM_DEFAULT));
 }
 
-MNM_OP_DISPATCH("mnm.op.matmul", CUBLASMatmul::make, DevType::kCUDA(), "cublas");
+template<typename ArgT_, typename DerivedT>
+class MatmulBase : public mnm::op::OpEnv {
+ protected:
+  using ArgType = ArgT_;
+  void Init(const CallValues& cv) {
+    auto args = cv->args.as<ArgType>();
+    CHECK(args != nullptr);
+    DLTensor* out = cv->out;
+    RequestMemory(&out->data, cv->ctx, common::shape_utils::BytesCompactTensor(*out));
+  }
+ public:
+  static OpEnv* make(const CallValues& cv) {
+    return new DerivedT(cv);
+  }
+};
+
+class Matmul : public MatmulBase<schema::MatmulArgs, Matmul> {
+ public:
+  explicit Matmul(const CallValues &cv) {
+    Init(cv);
+  }
+  void Execute(const CallValues &cv) override {
+    auto args = cv->args.as<Matmul::ArgType>();
+    GemmImpl(args->a, args->transpose_a, args->b, args->transpose_b, cv->out);
+  }
+};
+
+MNM_OP_DISPATCH("mnm.op.matmul", Matmul::make, DevType::kCUDA(), "cublas");
+
+class MatmulDa : public MatmulBase<schema::MatmulDabArgs, MatmulDa> {
+ public:
+  explicit MatmulDa(const CallValues &cv) {
+    Init(cv);
+  }
+  void Execute(const CallValues &cv) {
+    auto args = cv->args.as<MatmulDa::ArgType>();
+    if (!args->transpose_dy) {
+      GemmImpl(args->dy, false, args->a_or_b, !args->transpose_dx, cv->out);
+    } else {
+      GemmImpl(args->a_or_b, args->transpose_dx, args->dy, true, cv->out);
+    }
+  }
+};
+
+MNM_OP_DISPATCH("mnm.op.matmul_da", MatmulDa::make, DevType::kCUDA(), "cublas");
+
+class MatmulDb : public MatmulBase<schema::MatmulDabArgs, MatmulDb> {
+ public:
+  explicit MatmulDb(const CallValues &cv) {
+    Init(cv);
+  }
+  void Execute(const CallValues &cv) {
+    auto args = cv->args.as<MatmulDb::ArgType>();
+    if (!args->transpose_dy) {
+      GemmImpl(args->a_or_b, !args->transpose_dx, args->dy, false, cv->out);
+    } else {
+      GemmImpl(args->dy, true, args->a_or_b, args->transpose_dx, cv->out);
+    }
+  }
+};
+
+MNM_OP_DISPATCH("mnm.op.matmul_db", MatmulDb::make, DevType::kCUDA(), "cublas");
 
 }  // namespace manual
 }  // namespace cublas

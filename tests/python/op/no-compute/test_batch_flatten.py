@@ -1,48 +1,35 @@
-import numpy as np
+import functools
+import operator
 import pytest
+import numpy as np
 
 import mnm
 
 
-def test_batch_flatten_0d():
-    x = np.random.randn(1).astype("float32").reshape(())
+@pytest.mark.parametrize("shape", [(1, ()), (5, (5,))])
+def test_batch_flatten_error(shape):
+    shape, reshape = shape
+    x = np.random.randn(shape).astype("float32").reshape(reshape)
     x = mnm.array(x)
-    assert x.shape == ()
+    assert x.shape == reshape
     with pytest.raises(ValueError):
         mnm.batch_flatten(x)
 
 
-def test_batch_flatten_1d():
-    x = np.random.randn(5).astype("float32")
-    x = mnm.array(x)
-    with pytest.raises(ValueError):
-        mnm.batch_flatten(x)
-
-
-def test_batch_flatten_2d():
-    x = np.random.randn(5, 3).astype("float32")
+@pytest.mark.parametrize("shape", [
+    [5, 3],
+    [5, 3, 2],
+    [5, 2, 2, 2]
+])
+def test_batch_flatten(shape):
+    x = np.random.randn(*shape).astype("float32")
     x = mnm.array(x)
     y = mnm.batch_flatten(x)
-    assert y.shape == (5, 3)
-
-
-def test_batch_flatten_3d():
-    x = np.random.randn(5, 3, 2).astype("float32")
-    x = mnm.array(x)
-    y = mnm.batch_flatten(x)
-    assert y.shape == (5, 6)
-
-
-def test_batch_flatten_4d():
-    x = np.random.randn(5, 2, 2, 2).astype('float32')
-    x = mnm.array(x)
-    y = mnm.batch_flatten(x)
-    assert y.shape == (5, 8)
+    expcected = (5, functools.reduce(operator.mul, list(x.shape)[1:]))
+    assert y.shape == expcected
+    dy = mnm.batch_flatten_dx(x, y, y)
+    assert dy.shape == x.shape
 
 
 if __name__ == "__main__":
-    test_batch_flatten_0d()
-    test_batch_flatten_1d()
-    test_batch_flatten_2d()
-    test_batch_flatten_3d()
-    test_batch_flatten_4d()
+    pytest.main([__file__])

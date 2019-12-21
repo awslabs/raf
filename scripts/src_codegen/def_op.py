@@ -17,6 +17,7 @@ OPS = [
     Op(name="softmax_dx", schema_name="softmax_dx"),
     Op(name="log_softmax_dx", schema_name="softmax_dx"),
     Op(name="batch_flatten", schema_name="unary"),
+    Op(name="batch_flatten_dx", schema_name="unary_dx"),
     Op(name="negative", schema_name="unary_ufunc"),
     Op(name="logical_not", schema_name="unary_ufunc"),
     Op(name="relu", schema_name="unary"),
@@ -43,12 +44,17 @@ OPS = [
     Op(name="equal", schema_name="binary_ufunc"),
     Op(name="not_equal", schema_name="binary_ufunc"),
     Op(name="matmul", schema_name="matmul"),
+    Op(name="matmul_da", schema_name="matmul_dab"),
+    Op(name="matmul_db", schema_name="matmul_dab"),
     Op(name="bias_add", schema_name="bias_add"),
+    Op(name="bias_add_db", schema_name="bias_add_db"),
     Op(name="nll_loss", schema_name="loss"),
     Op(name="nll_loss_dpred", schema_name="loss_dx"),
     Op(name="nll_loss_dtrue", schema_name="loss_dx"),
     Op(name="reshape_like", schema_name="reshape_like"),
     Op(name="collapse_sum_like", schema_name="collapse_like"),
+    Op(name="sgd", schema_name="sgd"),
+    Op(name="add_dx", schema_name="binary_dx"),
 ]
 
 

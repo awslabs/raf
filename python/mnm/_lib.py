@@ -33,6 +33,8 @@ from tvm.expr import FloatImm, IntImm, StringImm
 from tvm.make import node as _make_node
 from tvm.ndarray import array as tvm_ndarray
 from tvm.container import Array
+import topi
+
 
 # pylint: enable=unused-import
 

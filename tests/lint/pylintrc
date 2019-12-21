@@ -390,6 +390,7 @@ good-names=i,
            e,
            bb,
            op,
+           x0,
            x1,
            x2,
            x3,
@@ -404,6 +405,9 @@ good-names=i,
            dz,
            n,
            m,
+           mu,
+           v0,
+           v1,
            _
 
 # Include a hint for the correct naming format with invalid-name.

@@ -72,6 +72,12 @@ SCHEMAS = {
         Arg(name="transpose_a", cxx_type="bool", cxx_default=False),
         Arg(name="transpose_b", cxx_type="bool", cxx_default=False),
     ],
+    "gemm.h::matmul_dab": [
+        Arg(name="dy", cxx_type="value::TensorValue"),
+        Arg(name="a_or_b", cxx_type="value::TensorValue"),
+        Arg(name="transpose_dx", cxx_type="bool", cxx_default=False),
+        Arg(name="transpose_dy", cxx_type="bool", cxx_default=False),
+    ],
     "nn.h::local_response_norm": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="size", cxx_type="int64_t"),
@@ -182,6 +188,11 @@ SCHEMAS = {
         Arg(name="b", cxx_type="value::TensorValue"),
         Arg(name="axis", cxx_type="int", cxx_default=1),
     ],
+    "nn.h::bias_add_db": [
+        Arg(name="b", cxx_type="value::TensorValue"),
+        Arg(name="dy", cxx_type="value::TensorValue"),
+        Arg(name="axis", cxx_type="int", cxx_default=1),
+    ],
     "likes.h::collapse_like": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="shape",
@@ -194,6 +205,13 @@ SCHEMAS = {
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
     ],
+    "optimizer.h::sgd": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="dx", cxx_type="value::TensorValue"),
+        Arg(name="v", cxx_type="value::TensorValue"),
+        Arg(name="learning_rate", cxx_type="double"),
+        Arg(name="mu", cxx_type="double"),
+    ]
 }
 
 
