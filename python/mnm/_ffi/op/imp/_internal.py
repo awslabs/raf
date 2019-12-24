@@ -94,6 +94,8 @@ reshape_like = _APIS.get("mnm.op.imp.reshape_like", None)
 # Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.imp.sgd", None)
 # Defined in ./src/op/regs/regs.cc
+shape = _APIS.get("mnm.op.imp.shape", None)
+# Defined in ./src/op/regs/regs.cc
 sigmoid = _APIS.get("mnm.op.imp.sigmoid", None)
 # Defined in ./src/op/regs/regs.cc
 sigmoid_dx = _APIS.get("mnm.op.imp.sigmoid_dx", None)

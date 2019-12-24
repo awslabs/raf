@@ -133,5 +133,63 @@ def test_model_dense(batch_size, in_features, out_features, bias):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
+def _fake_test_relu():
+    m_x, _ = randn([1, 2, 3, 4], ctx="cpu")
+
+    class ReLU(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            return mnm.relu(x)
+
+    model = ReLU()
+    model(m_x)
+
+
+def _fake_test_conv2d():
+    model = mnm.model.Conv2d(in_channels=3,
+                             out_channels=16,
+                             kernel_size=3,
+                             stride=1,
+                             padding=1,
+                             dilation=1,
+                             groups=1,
+                             bias=False)
+    m_x, _ = randn([8, 3, 32, 32], ctx="cpu")
+    model(m_x)
+
+
+def _fake_test_batch_norm():
+    num_features = 128
+    model = mnm.model.BatchNorm(num_features=num_features,
+                                eps=1e-5,
+                                momentum=0.1,
+                                affine=True)
+    m_x, _ = randn([5, num_features, 3, 3], ctx="cpu")
+    model(m_x)
+
+
+def _fake_test_binary_add():
+    m_x1, _ = randn([1, 2, 3], ctx="cpu")
+    m_x2, _ = randn([2, 2, 3], ctx="cpu")
+
+    class Add(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x1, x2):  # pylint: disable=no-self-use
+            return mnm.add(x1, x2)
+
+    model = Add()
+    model(m_x1, m_x2)
+
+
 if __name__ == "__main__":
+    # _fake_test_relu()
+    # _fake_test_conv2d()
+    # _fake_test_batch_norm()
+    # _fake_test_binary_add()
     pytest.main([__file__])

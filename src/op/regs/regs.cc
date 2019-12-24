@@ -673,6 +673,7 @@ MNM_BIND_SCHEMA("mnm.op.relu", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.relu_dx", args::UnaryDx);
 MNM_BIND_SCHEMA("mnm.op.reshape_like", args::ReshapeLike);
 MNM_BIND_SCHEMA("mnm.op.sgd", args::Sgd);
+MNM_BIND_SCHEMA("mnm.op.shape", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.sigmoid", args::Unary);
 MNM_BIND_SCHEMA("mnm.op.sigmoid_dx", args::UnaryDx);
 MNM_BIND_SCHEMA("mnm.op.softmax", args::Softmax);
@@ -966,6 +967,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.sgd")
   *ret = binding::BindExprValue(CallNode::make(op, ffi::Sgd(args)),
                                                NullValue<Value>());
 });
+MNM_REGISTER_GLOBAL("mnm.op.sym.shape")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.shape");
+  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
+                                               NullValue<Value>());
+});
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid");
@@ -1247,6 +1254,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sgd")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sgd");
   *ret = Interpret(CallNode::make(op, ffi::Sgd(args)));
+});
+MNM_REGISTER_GLOBAL("mnm.op.imp.shape")
+.set_body([](TVMArgs args, TVMRetValue *ret) {
+  static Op op = Op::Get("mnm.op.shape");
+  *ret = Interpret(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {

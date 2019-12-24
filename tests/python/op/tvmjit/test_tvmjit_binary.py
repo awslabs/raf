@@ -38,7 +38,7 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     [(3, 3), (1, 1)]
 ])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_unary_ops(ops, shape, dtype, ctx):
+def test_binary_ops(ops, shape, dtype, ctx):
     n_op, m_op = ops
     m_x1, n_x1 = randn(shape[0], dtype=dtype, ctx=ctx)
     m_x2, n_x2 = randn(shape[1], dtype=dtype, ctx=ctx)

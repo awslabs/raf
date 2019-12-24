@@ -2,7 +2,7 @@ import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
 from . import sym_utils
 
-# pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin
+# pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "add_dx", "avg_pool2d", "avg_pool2d_dx",
     "batch_flatten", "batch_flatten_dx", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
@@ -13,8 +13,8 @@ __all__ = [
     "matmul", "matmul_da", "matmul_db", "max_pool2d", "max_pool2d_dx",
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
     "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
-    "sgd", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
-    "subtract", "tanh", "tanh_dx",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "subtract", "tanh", "tanh_dx",
 ]
 
 def abs(x):
@@ -287,6 +287,9 @@ def sgd(x, dx, v, learning_rate, mu):
     learning_rate = sym_utils.to_double(learning_rate)
     mu = sym_utils.to_double(mu)
     return Symbol.from_expr(ffi.sgd(x, dx, v, learning_rate, mu))
+def shape(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.shape(x))
 def sigmoid(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.sigmoid(x))

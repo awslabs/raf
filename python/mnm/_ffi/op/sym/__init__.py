@@ -45,6 +45,7 @@ from ._internal import relu
 from ._internal import relu_dx
 from ._internal import reshape_like
 from ._internal import sgd
+from ._internal import shape
 from ._internal import sigmoid
 from ._internal import sigmoid_dx
 from ._internal import softmax

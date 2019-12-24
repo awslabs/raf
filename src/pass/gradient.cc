@@ -3,6 +3,7 @@
  * \file gradient.cc
  * \brief Symbolic gradient pass
  */
+#include <sstream>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "./let_list.h"
@@ -10,53 +11,6 @@
 namespace mnm {
 namespace pass {
 namespace gradient {
-
-using namespace mnm::ir;
-using namespace mnm::op;
-using tvm::relay::LetList;
-
-Expr TensorAdd(const Expr& x1, const Expr& x2) {
-  static Op op = Op::Get("mnm.op.add");
-  return CallNode::make(op, {x1, x2});
-}
-
-Array<Expr> AccGrad(const Array<Expr>& grads, const Array<Expr>& delta) {
-  int n1 = grads.size();
-  int n2 = delta.size();
-  int n = std::max(n1, n2);
-  std::vector<Expr> igrads;
-  for (int i = 0; i < n; ++i) {
-    const Expr& x1 = i < n1 ? grads[i] : NullValue<Expr>();
-    const Expr& x2 = i < n2 ? delta[i] : NullValue<Expr>();
-    if (!x1.defined()) {
-      igrads.push_back(x2);
-    } else if (!x2.defined()) {
-      igrads.push_back(x1);
-    } else {
-      igrads.push_back(TensorAdd(x1, x2));
-    }
-  }
-  return igrads;
-}
-
-Array<Expr> UpdatePrimalGrad(const Op& op, const Expr& orig, const Expr& ograd,
-                             const Array<Expr>& old_igrads) {
-  static const auto f_primal_grad = Op::GetAttr<FPrimalGradient>("FPrimalGradient");
-  static const auto f_primal_grad_fused = Op::GetAttr<FFusedPrimalGradient>("FFusedPrimalGradient");
-  if (f_primal_grad_fused.count(op)) {
-    return f_primal_grad_fused[op](orig, ograd, old_igrads);
-  } else if (f_primal_grad.count(op)) {
-    return AccGrad(old_igrads, f_primal_grad[op](orig, ograd));
-  }
-  LOG(FATAL) << "Gradient is not registered for operator " << op->name;
-  throw;
-}
-
-#define MNM_NODE_ASSUME_ANF(NodeType)                      \
-  void VisitExpr_(const NodeType* node) final {            \
-    LOG(FATAL) << "ValueError: Gradient pass assumes ANF"; \
-    throw;                                                 \
-  }
 
 #define MNM_NODE_NOT_SUPPORT(NodeType)                                  \
   void VisitExpr_(const NodeType* node) final {                         \
@@ -70,10 +24,57 @@ Array<Expr> UpdatePrimalGrad(const Op& op, const Expr& orig, const Expr& ograd,
     throw;                                              \
   }
 
+using namespace mnm::ir;
+using namespace mnm::op;
+using mnm::value::ZerosValue;
+using tvm::relay::LetList;
+
+struct ExplicitLetList {
+ public:
+  std::vector<Var> vars;
+  std::vector<Expr> exprs;
+  Var ret;
+
+  Expr AsExpr() {
+    CHECK_EQ(vars.size(), exprs.size());
+    Expr body = ret;
+    int n = exprs.size();
+    for (int i = n - 1; i >= 0; --i) {
+      body = LetNode::make(vars[i], exprs[i], body);
+    }
+    return body;
+  }
+
+  static std::unique_ptr<ExplicitLetList> make(const Expr& node) {
+    std::unique_ptr<ExplicitLetList> ell = std::make_unique<ExplicitLetList>();
+    Maker(ell.get()).VisitExpr(node);
+    return ell;
+  }
+
+  struct Maker : public ExprVisitor {
+    explicit Maker(ExplicitLetList* ell) : ell(ell) {
+    }
+    void VisitExpr_(const LetNode* node) final {
+      ell->vars.push_back(node->var);
+      ell->exprs.push_back(node->value);
+      const Expr& expr = node->body;
+      if (expr->IsInstance<LetNode>()) {
+        ExprVisitor::VisitExpr(expr);  // tail call
+      } else if (expr->IsInstance<VarNode>()) {
+        ell->ret = Downcast<Var>(expr);
+      } else {
+        LOG(FATAL) << "ValueError: Gradient pass assumes ANF";
+        throw;
+      }
+    }
+    ExplicitLetList* ell;
+  };
+};
+
 struct Gradient : public ExprVisitor {
  public:
-  MNM_NODE_ASSUME_ANF(VarNode);
-  MNM_NODE_ASSUME_ANF(RelayConstantNode);
+  // Closures are not supported
+  MNM_NODE_NOT_SUPPORT(FunctionNode);
   // The algorithm shouldn't generate or deal with references
   MNM_NODE_NOT_SUPPORT(RefCreateNode);
   MNM_NODE_NOT_SUPPORT(RefReadNode);
@@ -82,125 +83,297 @@ struct Gradient : public ExprVisitor {
   MNM_NODE_NOT_SUPPORT(tvm::relay::ConstructorNode);
   MNM_NODE_NOT_SUPPORT(tvm::relay::MatchNode);
   // TODO(@junrushao1994): implement them
-  // replace GlobalVar with adjoint
-  MNM_NODE_NOT_IMPL(GlobalVarNode);
-  // replace OpNode with its corresponding GlobalVar's adjoint (eta-expand)
-  MNM_NODE_NOT_IMPL(OpNode);
-  // normalize the program with tail call
-  MNM_NODE_NOT_IMPL(IfNode);
+  // TODO(@junrushao1994): nested tuples are still problematic
+  MNM_NODE_NOT_IMPL(OpNode);         // replace OpNode with its corresponding GlobalVar's adjoint
+  MNM_NODE_NOT_IMPL(IfNode);         // normalize the program with tail call
+  MNM_NODE_NOT_IMPL(VarNode);        // propagate copy/constant
+  MNM_NODE_NOT_IMPL(GlobalVarNode);  // replace GlobalVar with adjoint
 
-  void UpdateAdjoints(const Array<Expr>& args, const Array<Expr>& new_ones) {
-    int n = std::min(args.size(), new_ones.size());
-    for (int i = 0; i < n; ++i) {
-      const Expr& new_one = new_ones[i];
-      const Expr& arg = args[i];
-      if (!new_one.defined() || arg->IsInstance<RelayConstantNode>()) {
-        continue;
-      }
-      CHECK(arg->IsInstance<VarNode>());
-      const Var& var = Downcast<Var>(arg);
-      adjoints.Set(var, ll->Push(new_one));
-    }
+ public:
+  explicit Gradient(const FunctionNode* func) : func(func), ell(ExplicitLetList::make(func->body)) {
+    InitTuple();
   }
 
-  Array<Expr> ExtractAdjoints(const Array<Expr>& args) {
-    Array<Expr> result;
-    for (const Expr& arg : args) {
-      if (arg->IsInstance<RelayConstantNode>()) {
-        result.push_back(NullValue<Expr>());
-      } else if (arg->IsInstance<VarNode>()) {
-        const Var& var = Downcast<Var>(arg);
-        if (adjoints.count(var)) {
-          result.push_back(adjoints[var]);
-        } else {
-          result.push_back(NullValue<Expr>());
-        }
-      } else if (arg->IsInstance<TupleNode>()) {
-        LOG(INFO) << "NotImplementedError";
-        throw;
-      }
-      LOG(FATAL) << "Cannot deal with adjoint of type: " << arg->GetTypeKey();
-      throw;
-    }
-    return result;
-  }
-
-  // Entry
-  void VisitExpr_(const FunctionNode* node) final {
-    // TODO(@junrushao1994): check closure
-    if (func_vistied) {
-      LOG(FATAL) << "NotImplementedError: Closure";
-      throw;
-    }
-    func_vistied = true;
-    ExprVisitor::VisitExpr_(node);
-  }
-
-  // Let binding
-  void VisitExpr_(const LetNode* node) final {
-    CHECK(bound.defined()) << "ValueError: Gradient pass assumes ANF";
-    VisitExpr(node->body);
-    // If does exists gradient w.r.t. the bound var
-    if (adjoints.count(node->var)) {
-      bound = node->var;
-      VisitExpr(node->value);
-      bound = NullValue<Var>();
-    }
-  }
-
-  void VisitExpr_(const CallNode* node) final {
-    CHECK(bound.defined()) << "ValueError: Gradient pass assumes ANF";
-    const Expr& callee = node->op;
-    if (callee->IsInstance<OpNode>()) {
-      const Op& op = Downcast<Op>(node->op);
-      Array<Expr> old_igrads = this->ExtractAdjoints(node->args);
-      Array<Expr> igrads = UpdatePrimalGrad(op, callee, adjoints[bound], old_igrads);
-      this->UpdateAdjoints(node->args, igrads);
-    } else {
-      LOG(FATAL) << "Calling unsupported type: " << callee->GetTypeKey();
-      throw;
-    }
-    LOG(FATAL) << "NotImplementedError: Call";
-    throw;
+ public:
+  void VisitExpr_(const RelayConstantNode* node) final {
+    // Do nothing
   }
 
   void VisitExpr_(const TupleNode* node) final {
-    CHECK(bound.defined()) << "ValueError: Gradient pass assumes ANF";
-    const TupleNode* ograd = adjoints[bound].as<TupleNode>();
-    CHECK(ograd);
-    Array<Expr> delta = ograd->fields;
-    Array<Expr> old_igrads = this->ExtractAdjoints(node->fields);
-    Array<Expr> igrads = AccGrad(old_igrads, delta);
-    this->UpdateAdjoints(node->fields, igrads);
+    // expr:
+    //    let var = tuple(*node->fields);
+    // situation:
+    //    grad(var) is known
+    // return:
+    //    update `grad(node->fields[i])` with `+= grad(var)[i]`
+    const Array<Expr>& ograds = GetOutputGrads();
+    const Array<Expr>& igrads = GetInputGrads(node->fields);
+    const Array<Expr>& new_igrads = AddTensors(ograds, igrads);
+    WriteBackInputGrads(node->fields, new_igrads);
   }
 
   void VisitExpr_(const TupleGetItemNode* node) final {
-    CHECK(bound.defined()) << "ValueError: Gradient pass assumes ANF";
-    const Expr& ograd = adjoints[bound];
-    const Var& var = Downcast<Var>(node->tuple);
-    int index = node->index;
-    if (!adjoints.count(var)) {
-      adjoints.Set(var, TupleNode::make(std::vector<Expr>(index)));
-    }
-    const TupleNode* igrad = adjoints[var].as<TupleNode>();
-    CHECK(igrad);
-    Array<Expr> items = igrad->fields;
-    while (static_cast<int>(index) >= items.size()) {
-      items.push_back(NullValue<Expr>());
-    }
-    if (items[index].defined()) {
-      items.Set(index, ll->Push(TensorAdd(ograd, items[index])));
-    } else {
-      items.Set(index, ograd);
-    }
-    adjoints.Set(var, TupleNode::make(items));
+    // expr:
+    //    let var = tuple[index]
+    // situation:
+    //    grad(var) are known
+    // return:
+    //    update `grad(tuple[index])` with `+= grad(var)`
+    const VarNode* tuple = node->tuple.as<VarNode>();
+    const Array<Expr>& ograds = GetOutputGrads();
+    Array<Expr> tuple_igrads = tuple_grads[tuple];
+    CHECK_EQ(ograds.size(), 1);
+    CHECK_GT(tuple_igrads.size(), node->index);
+    tuple_igrads.Set(node->index, AddTensor(ograds[0], tuple_igrads[node->index]));
+    tuple_grads[tuple] = tuple_igrads;
   }
 
-  Map<Var, Expr> adjoints;
-  Var bound{nullptr};
-  bool func_vistied = 0;
-  LetList* ll;
+  void VisitExpr_(const CallNode* node) final {
+    const Expr& callee = node->op;
+    if (callee->IsInstance<OpNode>()) {
+      const Op& op = Downcast<Op>(node->op);
+      const Array<Expr>& ograds = GetOutputGrads();
+      const Array<Expr>& igrads = GetInputGrads(node->args);
+      const Array<Expr>& new_igrads = UpdateInputGrads(op, GetRef<Expr>(node), ograds, igrads);
+      WriteBackInputGrads(node->args, new_igrads);
+    } else {
+      LOG(FATAL) << "NotImplementedError: Calling unsupported type: " << callee->GetTypeKey();
+      throw;
+    }
+  }
+
+ public:
+  // Helper functions for the workflow:
+  //    get igrads => update igrads => write back igrads
+  Array<Expr> GetOutputGrads() {
+    const VarNode* var = let_var.operator->();
+    return tuple_grads[var];
+  }
+
+  Array<Expr> GetInputGrads(const Array<Expr>& vars) {
+    Array<Expr> ret;
+    for (const auto& expr : vars) {
+      if (const auto* var = expr.as<VarNode>()) {
+        CHECK_EQ(tuple_length.count(var), 0) << "NotImplementedError: use tuple as inputs";
+        ret.push_back(tuple_grads[var][0]);
+      } else if (expr->IsInstance<RelayConstantNode>()) {
+        ret.push_back(NullValue<Var>());
+      } else {
+        LOG(FATAL) << "Unsupported to get grads of type: " << expr->GetTypeKey();
+        throw;
+      }
+    }
+    return ret;
+  }
+
+  Array<Expr> UpdateInputGrads(const Op& op,      // the operator called
+                               const Expr& orig,  // relay.Call that contains this expression
+                               const Array<Expr>& ograds,  // grad(output)
+                               const Array<Expr>& igrads) {
+    // given: igrads
+    // returns: new_igrads = igrads + grad-of-call-op<ograd>
+    static const auto fpg = Op::GetAttr<FPrimalGradient>("FPrimalGradient");
+    static const auto ffpg = Op::GetAttr<FFusedPrimalGradient>("FFusedPrimalGradient");
+    if (ffpg.count(op)) {
+      Array<Expr> ret = ffpg[op](let_var, orig, ograds, igrads);
+      // ensure intermediate results are bound to a relay::var
+      for (int i = 0, n = ret.size(); i < n; ++i) {
+        if (ret[i].defined() && !ret[i]->IsInstance<VarNode>()) {
+          ret.Set(i, ll->Push(ret[i]));
+        }
+      }
+      return ret;
+    } else if (fpg.count(op)) {
+      return AddTensors(igrads, fpg[op](let_var, orig, ograds));
+    }
+    LOG(FATAL) << "Gradient is not registered for operator " << op->name;
+    throw;
+  }
+
+  void WriteBackInputGrads(const Array<Expr>& vars, const Array<Expr>& igrads) {
+    CHECK_GE(vars.size(), igrads.size());
+    int n = igrads.size();
+    for (int i = 0; i < n; ++i) {
+      const Expr& igrad = igrads[i];
+      if (!igrad.defined()) {
+        continue;
+      }
+      if (const auto* var = vars[i].as<VarNode>()) {
+        CHECK_EQ(tuple_length.count(var), 0);
+        tuple_grads[var].Set(0, igrad);
+      } else if (!vars[i]->IsInstance<RelayConstantNode>()) {
+        LOG(FATAL) << "Assume ANF";
+        throw;
+      }
+    }
+  }
+
+ public:
+  // helper functions for adding tensors
+  Array<Expr> AddTensors(const Array<Expr>& x1s, const Array<Expr>& x2s) {
+    int n1 = x1s.size();
+    int n2 = x2s.size();
+    int n = std::max(n1, n2);
+    std::vector<Expr> ret;
+    for (int i = 0; i < n; ++i) {
+      const Expr& x1 = i < n1 ? x1s[i] : NullValue<Expr>();
+      const Expr& x2 = i < n2 ? x2s[i] : NullValue<Expr>();
+      ret.push_back(AddTensor(x1, x2));
+    }
+    return ret;
+  }
+
+  Expr AddTensor(const Expr& x1, const Expr& x2) {
+    static Op op = Op::Get("mnm.op.add");
+    if (!x1.defined() && !x2.defined()) {
+      return NullValue<Var>();
+    }
+    if (!x1.defined()) {
+      return x2->IsInstance<VarNode>() ? x2 : ll->Push(x2);
+    }
+    if (!x2.defined()) {
+      return x1->IsInstance<VarNode>() ? x1 : ll->Push(x1);
+    }
+    return ll->Push(CallNode::make(op, {x1, x2}));
+  }
+
+  // Initialize, running and finalize
+  void InitTuple() {
+    // grads for tuples
+    const auto& vars = ell->vars;
+    const auto& exprs = ell->exprs;
+    CHECK_EQ(vars.size(), exprs.size());
+    int n = exprs.size();
+    for (int i = 0; i < n; ++i) {
+      // a must-be tuple
+      if (const auto* tuple = exprs[i].as<TupleNode>()) {
+        const VarNode* var = vars[i].operator->();
+        tuple_length[var] = tuple->fields.size();
+        tuple_grads[var] = std::vector<Expr>(tuple->fields.size(), NullValue<Var>());
+      } else if (const auto* tuple_get_item = exprs[i].as<TupleGetItemNode>()) {
+        // This is a tuple, which however is not constructed inside this function
+        // (i.e. input arguments or outputs of an operator/function)
+        // Therefore, its length is unknown
+        const VarNode* var = tuple_get_item->tuple.as<VarNode>();
+        int size = tuple_get_item->index + 1;
+        if (tuple_length.count(var) == 0) {
+          tuple_length[var] = -1;
+          tuple_grads[var] = std::vector<Expr>(size, NullValue<Var>());
+        } else {
+          CHECK_EQ(tuple_length[var], -1);
+          int old_size = tuple_grads[var].size();
+          if (size > old_size) {
+            tuple_grads[var] = std::vector<Expr>(size, NullValue<Var>());
+          }
+        }
+      }
+    }
+    // grads for non-tuples
+    for (int i = 0; i < n; ++i) {
+      const VarNode* var = vars[i].operator->();
+      if (!tuple_grads.count(var)) {
+        tuple_grads[var] = {NullValue<Var>()};
+      }
+    }
+    // grad for input arguments
+    for (const Var& param : func->params) {
+      const VarNode* var = param.operator->();
+      if (!tuple_grads.count(var)) {
+        tuple_grads[var] = {NullValue<Var>()};
+      }
+    }
+  }
+
+  // The closure looks like:
+  //   fn (dy) {
+  //      let xxx = ...;
+  //      ret_grads
+  //   }
+  void MakeClosureInputGrads(const Var& dy) {
+    const VarNode* ret = ell->ret.operator->();
+    if (tuple_length.count(ret)) {
+      int n = tuple_grads[ret].size();
+      for (int i = 0; i < n; ++i) {
+        tuple_grads[ret].Set(i, ll->Push(TupleGetItemNode::make(dy, i)));
+      }
+    } else {
+      CHECK_EQ(tuple_grads[ret].size(), 1);
+      tuple_grads[ret] = {dy};
+    }
+  }
+
+  Var MakeClosureRet() {
+    const Array<Var>& targets = func->params;
+    Array<Expr> grads;
+    for (const Var& var : targets) {
+      const VarNode* var_node = var.operator->();
+      std::vector<Expr> var_grads(tuple_grads[var_node].begin(), tuple_grads[var_node].end());
+      if (tuple_length.count(var_node)) {
+        for (Expr& expr : var_grads) {
+          if (!expr.defined()) {
+            expr = MakeConstant(ZerosValue::make());
+          }
+        }
+        grads.push_back(ll->Push(TupleNode::make(var_grads)));
+      } else {
+        CHECK_EQ(var_grads.size(), 1);
+        if (var_grads[0].defined()) {
+          grads.push_back(var_grads[0]);
+        } else {
+          grads.push_back(MakeConstant(ZerosValue::make()));
+        }
+      }
+    }
+    if (targets.size() == 1) {
+      return Downcast<Var>(grads[0]);
+    }
+    return ll->Push(TupleNode::make(grads));
+  }
+
+  Function Run() {
+    Var dy = VarNode::make("dy", {});
+    Expr body = LetList::With([&](LetList* ll) {
+      this->ll = ll;
+      const auto& vars = ell->vars;
+      const auto& exprs = ell->exprs;
+      CHECK_EQ(vars.size(), exprs.size());
+      int n = exprs.size();
+      MakeClosureInputGrads(dy);
+      for (int i = n - 1; i >= 0; --i) {
+        let_var = vars[i];
+        ExprVisitor::VisitExpr(exprs[i]);
+      }
+      return MakeClosureRet();
+    });
+    Var closure = VarNode::make("closure", {});
+    Var ret = VarNode::make("ret", {});
+    // let closure = fn(dy) {};
+    ell->vars.push_back(closure);
+    ell->exprs.push_back(FunctionNode::make({dy}, body, {}, {}));
+    // let ret = tuple(y, closure)
+    ell->vars.push_back(ret);
+    ell->exprs.push_back(TupleNode::make({ell->ret, closure}));
+    ell->ret = ret;
+    return FunctionNode::make(func->params, ell->AsExpr(), {}, {});
+  }
+
+ public:
+  // initialized in constructor
+  const FunctionNode* func;
+  std::unique_ptr<ExplicitLetList> ell{nullptr};
+  std::unordered_map<const VarNode*, int> tuple_length;
+  std::unordered_map<const VarNode*, Array<Expr>> tuple_grads;
+  // initialized in Run
+  LetList* ll = nullptr;
+  // a variable that is set for each let expr
+  Var let_var;
 };
+
+Function AutoDiff(Function func) {
+  return Gradient(func.operator->()).Run();
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);
 
 }  // namespace gradient
 }  // namespace pass

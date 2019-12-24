@@ -55,6 +55,7 @@ OPS = [
     Op(name="collapse_sum_like", schema_name="collapse_like"),
     Op(name="sgd", schema_name="sgd"),
     Op(name="add_dx", schema_name="binary_dx"),
+    Op(name="shape", schema_name="unary"),
 ]
 
 

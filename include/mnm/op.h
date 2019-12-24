@@ -90,12 +90,14 @@ using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 //    Array<Value> inputs -> Attrs input_schema
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 // Primial gradient:
-//    <Expr orig_call, Expr output_grad> -> Array<Expr> input_grad
-using FPrimalGradient = tvm::relay::FPrimalGradient;
+//    <Var output, Expr orig_call, Array<Expr> output_grad> -> Array<Expr> input_grad
+using FPrimalGradient = registry::TypedPackedFunc<ir::Array<ir::Expr>(
+    const ir::Var& var, const ir::Expr& orig_call, const ir::Array<ir::Expr>& output_grad)>;
 // Fused primial gradient:
-//    <Expr orig_call, Expr output_grad, Array<Expr> old_input_grad> -> Array<Expr> new_input_grad
+//    <Var output, Expr orig_call, Expr output_grad, Array<Expr> old_input_grad> -> Array<Expr>
+//    new_input_grad
 using FFusedPrimalGradient = registry::TypedPackedFunc<ir::Array<ir::Expr>(
-    const ir::Expr& orig_call, const ir::Expr& output_grad,
+    const ir::Var& var, const ir::Expr& orig_call, const ir::Array<ir::Expr>& output_grad,
     const ir::Array<ir::Expr>& old_input_grads)>;
 
 void RunDeclare(const CallValues& call);
@@ -125,3 +127,10 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
   template <typename FVisit>                         \
   void __VisitAttrs__(FVisit& __fvisit__) {          \
   }
+
+#define MNM_OP_GRAD(op_name, body) \
+  RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FPrimalGradient>("FPrimalGradient", body);
+
+#define MNM_OP_FUSED_GRAD(op_name, body)                                                       \
+  RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FFusedPrimalGradient>("FFusedPrimalGradient", \
+                                                                       body);

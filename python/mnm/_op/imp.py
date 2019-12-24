@@ -3,7 +3,7 @@ from mnm._core.core_utils import set_module
 from . import imp_utils
 
 # pylint: disable=invalid-name,line-too-long
-# pylint: disable=too-many-arguments,redefined-builtin
+# pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "add_dx", "avg_pool2d", "avg_pool2d_dx",
     "batch_flatten", "batch_flatten_dx", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
@@ -14,8 +14,8 @@ __all__ = [
     "matmul", "matmul_da", "matmul_db", "max_pool2d", "max_pool2d_dx",
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
     "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
-    "sgd", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
-    "subtract", "tanh", "tanh_dx",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "subtract", "tanh", "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -334,6 +334,10 @@ def sgd(x, dx, v, learning_rate, mu):
     learning_rate = imp_utils.to_double(learning_rate)
     mu = imp_utils.to_double(mu)
     return imp_utils.ret(ffi.sgd(x, dx, v, learning_rate, mu))
+@set_module("mnm")
+def shape(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.shape(x))
 @set_module("mnm")
 def sigmoid(x):
     x = imp_utils.to_any(x)

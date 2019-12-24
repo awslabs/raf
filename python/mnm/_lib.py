@@ -6,6 +6,7 @@ import os
 import readline
 import sys
 
+import topi
 import tvm
 import tvm.relay as relay
 from tvm._ffi.base import TVMError as _TVMError
@@ -29,14 +30,15 @@ from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
 from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
 from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
+from tvm.container import Array
 from tvm.expr import FloatImm, IntImm, StringImm
 from tvm.make import node as _make_node
 from tvm.ndarray import array as tvm_ndarray
-from tvm.container import Array
-import topi
-
+from tvm.relay.op import (OpPattern, register_compute, register_pattern,
+                          register_schedule)
 
 # pylint: enable=unused-import
+
 
 def find_lib_path(name=None, search_path=None):
     ffi_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
@@ -48,12 +50,14 @@ def find_lib_path(name=None, search_path=None):
     if os.environ.get('MNM_LIBRARY_PATH', None):
         dll_path.append(os.environ['MNM_LIBRARY_PATH'])
 
-    if sys.platform.startswith('linux') and os.environ.get('LD_LIBRARY_PATH', None):
-        dll_path.extend([p.strip()
-                         for p in os.environ['LD_LIBRARY_PATH'].split(":")])
-    elif sys.platform.startswith('darwin') and os.environ.get('DYLD_LIBRARY_PATH', None):
-        dll_path.extend([p.strip()
-                         for p in os.environ['DYLD_LIBRARY_PATH'].split(":")])
+    if sys.platform.startswith('linux') and os.environ.get(
+            'LD_LIBRARY_PATH', None):
+        dll_path.extend(
+            [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
+    elif sys.platform.startswith('darwin') and os.environ.get(
+            'DYLD_LIBRARY_PATH', None):
+        dll_path.extend(
+            [p.strip() for p in os.environ['DYLD_LIBRARY_PATH'].split(":")])
 
     # Pip lib directory
     dll_path.append(os.path.join(ffi_dir, ".."))
@@ -85,12 +89,12 @@ def find_lib_path(name=None, search_path=None):
         else:
             lib_dll_path = [os.path.join(p, 'libmnm.so') for p in dll_path]
 
-    lib_found = [p for p in lib_dll_path if os.path.exists(
-        p) and os.path.isfile(p)]
+    lib_found = [
+        p for p in lib_dll_path if os.path.exists(p) and os.path.isfile(p)
+    ]
 
     if not lib_found:
-        message = ('Cannot find the files.\n' +
-                   'List of candidates:\n' +
+        message = ('Cannot find the files.\n' + 'List of candidates:\n' +
                    str('\n'.join(lib_dll_path)))
         raise RuntimeError(message)
 

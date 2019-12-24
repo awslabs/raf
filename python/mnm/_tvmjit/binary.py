@@ -1,10 +1,11 @@
-from .._lib import tvm as _tvm
+from .._lib import (OpPattern, register_compute, register_pattern,
+                    register_schedule)
 from .._lib import topi as _topi
-from .._lib import relay as _relay
+from .._lib import tvm as _tvm
 
 
-@_relay.op.register_compute("mnm.op.add_dx")
-def add_dx_compute(attr, inputs, output_type, target): # pylint: disable=unused-argument
+@register_compute("mnm.op.add_dx")
+def add_dx_compute(attr, inputs, output_type, target):  # pylint: disable=unused-argument
     # pylint: disable=too-many-locals
     a, _, _, dy = inputs
     n_a = len(a.shape)
@@ -21,6 +22,7 @@ def add_dx_compute(attr, inputs, output_type, target): # pylint: disable=unused-
             idx.append(_tvm.reduce_axis((0, j)))
         else:
             assert False, f'{shapea} and {shapedy} does not match'
+
     def fcompute(*args):
         axis = []
         offset = n - n_a
@@ -33,11 +35,13 @@ def add_dx_compute(attr, inputs, output_type, target): # pylint: disable=unused-
             else:
                 axis.append(idx[i])
         return _tvm.sum(dy(*idx), axis=axis) if axis else dy(*idx)
+
     return [_tvm.compute(a.shape, fcompute)]
 
 
-@_relay.op.register_schedule("mnm.op.add_dx")
-def add_dx_schedule(attr, outputs, target): # pylint: disable=unused-argument
+@register_schedule("mnm.op.add_dx")
+def add_dx_schedule(attr, outputs, target):  # pylint: disable=unused-argument
     return _topi.generic.schedule_injective(outputs)
 
-_relay.op.register_pattern("mnm.op.add_dx", _relay.op.OpPattern.INJECTIVE)
+
+register_pattern("mnm.op.add_dx", OpPattern.INJECTIVE)

@@ -12,7 +12,7 @@ from mnm._core.core_utils import set_module
 from . import imp_utils
 
 # pylint: disable=invalid-name,line-too-long
-# pylint: disable=too-many-arguments,redefined-builtin
+# pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
 {OP_NAMES}
 ]

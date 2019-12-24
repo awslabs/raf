@@ -92,6 +92,10 @@ StringValue StringValue::make(const std::string& data) {
   return StringValue(n);
 }
 
+ZerosValue ZerosValue::make() {
+  ObjectPtr<ZerosValueObj> n = make_object<ZerosValueObj>();
+  return ZerosValue(n);
+}
 /*** GetType ***/
 Type GetType(const Value& value) {
   if (const auto* tv = value.as<TensorValueObj>()) {

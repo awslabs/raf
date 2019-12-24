@@ -150,13 +150,7 @@ class OpaqueValue : public Value {
   MNM_OBJECT_REF(OpaqueValue, Value, OpaqueValueObj);
 };
 
-}  // namespace value
-}  // namespace mnm
-
 // Scalar values
-
-namespace mnm {
-namespace value {
 
 class IntValue;
 class FloatValue;
@@ -246,6 +240,19 @@ class StringValue : public Value {
   MNM_OBJECT_REF(StringValue, Value, StringValueObj);
 };
 
+/* Specific values */
+class ZerosValueObj : public ValueObj {
+ public:
+  void VisitAttrs(tvm::AttrVisitor* v) {
+  }
+  static constexpr const char* _type_key = "mnm.value.ZerosValue";
+  MNM_FINAL_OBJECT(ZerosValueObj, ValueObj);
+};
+
+class ZerosValue : public Value {
+ public:
+  static ZerosValue make();
+  MNM_OBJECT_REF(ZerosValue, Value, ZerosValueObj);
+};
 }  // namespace value
 }  // namespace mnm
-
