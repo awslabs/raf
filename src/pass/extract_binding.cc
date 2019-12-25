@@ -13,7 +13,7 @@ namespace extract_binding {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using binding::LookupBoundExpr;
+using namespace mnm::binding;
 
 class Extractor final : public ExprVisitor {
  public:
@@ -77,11 +77,17 @@ class Extractor final : public ExprVisitor {
     EnqueueVar(var);
     while (!queue.empty()) {
       const VarNode* var = queue.back();
-      const Expr& expr = LookupBoundExpr(GetRef<Var>(var));
-      bindings[var] = expr.operator->();
       queue.pop_back();
-      if (expr.defined()) {
-        ExprVisitor::VisitExpr(expr);
+      const auto& binding = LookupBinding(var);
+      if (const auto* sym = binding.as<SymbolBindingObj>()) {
+        const Expr& expr = sym->expr;
+        bindings[var] = expr.operator->();
+        if (expr.defined()) {
+          ExprVisitor::VisitExpr(expr);
+        }
+      } else if (const auto* nda = binding.as<NDArrayBindingObj>()) {
+        bindings[var] = {};
+        continue;
       }
     }
     // Do topo-sort based on in_degree

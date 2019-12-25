@@ -2,13 +2,9 @@ from mnm._lib import _APIS
 
 # pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/binding.cc
-BindConstValue = _APIS.get("mnm.binding.BindConstValue", None)
+BindNDArray = _APIS.get("mnm.binding.BindNDArray", None)
 # Defined in ./src/impl/binding.cc
-BindExprValue = _APIS.get("mnm.binding.BindExprValue", None)
-# Defined in ./src/impl/binding.cc
-GetGrad = _APIS.get("mnm.binding.GetGrad", None)
-# Defined in ./src/impl/binding.cc
-LookupBoundExpr = _APIS.get("mnm.binding.LookupBoundExpr", None)
+BindSymbol = _APIS.get("mnm.binding.BindSymbol", None)
 # Defined in ./src/impl/binding.cc
 LookupBoundValue = _APIS.get("mnm.binding.LookupBoundValue", None)
 # Defined in ./src/impl/binding.cc

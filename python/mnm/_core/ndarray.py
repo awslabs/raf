@@ -2,7 +2,7 @@ import ctypes
 
 from mnm._core.core_utils import ctx2str, set_module, str2ctx
 from mnm._core.value import TensorValue
-from mnm._ffi.binding import (BindConstValue, BindExprValue, LookupBoundValue,
+from mnm._ffi.binding import (BindNDArray, BindSymbol, LookupBoundValue,
                               SetRequiresGrad)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
@@ -39,9 +39,8 @@ class ndarray:
                                  strides=strides,
                                  order=order)
             # NDArray is treated as relay.Constant
-            self.__handle = BindConstValue(_np_to_tensor_value(npa, ctx=ctx),
-                                           name)
-        self.requires_grad = False
+            self.__handle = BindNDArray(_np_to_tensor_value(npa, ctx=ctx), name, None)
+        self.__requires_grad = False
 
     def __setitem__(self, key, value):
         if isinstance(key, slice):
@@ -51,7 +50,7 @@ class ndarray:
                 assert value.shape == self.shape
                 value = _np_to_tensor_value(value.astype(self.dtype),
                                             ctx=self.ctx)
-                self.__handle = BindConstValue(value, self.__handle.name_hint)
+                self.__handle = BindNDArray(value, self.__handle.name_hint, None)
                 return
         raise NotImplementedError
 
@@ -63,7 +62,7 @@ class ndarray:
     def requires_grad(self, value):
         assert isinstance(value, bool)
         self.__requires_grad = value
-        return SetRequiresGrad(self.__handle, value)
+        SetRequiresGrad(self.__handle, value)
 
     @property
     def __handle(self):
@@ -174,21 +173,21 @@ class Symbol:  # pylint: disable=too-few-public-methods
     @staticmethod
     def make_var(name_hint=""):
         ret = Symbol()
-        ret.__handle = BindExprValue(None, None, name_hint)  # pylint: disable=protected-access
+        ret.__handle = BindSymbol(None, name_hint)  # pylint: disable=protected-access
         return ret
 
     @staticmethod
     def make_tuple(symbols, name_hint=""):
         expr = relay.Tuple(symbols)
         ret = Symbol()
-        ret.__handle = BindExprValue(expr, None, name_hint)  # pylint: disable=protected-access
+        ret.__handle = BindSymbol(expr, name_hint)  # pylint: disable=protected-access
         return ret
 
     def __getitem__(self, item, name_hint=""):
         if isinstance(item, int):
             expr = relay.TupleGetItem(self.__handle, item)
             ret = Symbol()
-            ret.__handle = BindExprValue(expr, None, name_hint)  # pylint: disable=protected-access
+            ret.__handle = BindSymbol(expr, name_hint)  # pylint: disable=protected-access
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")
@@ -240,7 +239,7 @@ def array(
                    order=order,
                    subok=subok,
                    ndmin=ndmin)
-    return ndarray(BindConstValue(_np_to_tensor_value(npa, ctx=ctx), name))
+    return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), name, None))
 
 
 _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)

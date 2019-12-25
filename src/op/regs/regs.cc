@@ -694,326 +694,272 @@ using registry::TVMRetValue;
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.abs");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.add");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.add_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.add_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Pool(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Pool(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.avg_pool2d_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::PoolDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::PoolDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_flatten");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_flatten_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_infer")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_infer");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BatchNorm(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BatchNorm(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_train");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BatchNorm(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BatchNorm(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train_dxwb")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.batch_norm_train_dxwb");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BatchNormTrainDxwb(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BatchNormTrainDxwb(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.bias_add")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.bias_add");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BiasAdd(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BiasAdd(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.bias_add_db")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.bias_add_db");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BiasAddDb(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BiasAddDb(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.ceil")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.ceil");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.collapse_sum_like");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::CollapseLike(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::CollapseLike(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Conv(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Conv(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dw")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d_dw");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::ConvDxw(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::ConvDxw(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.conv2d_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::ConvDxw(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::ConvDxw(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.copy")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.copy");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.cos")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.cos");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.divide")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.divide");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.equal");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.floor")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.floor");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.greater");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.greater_equal");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.less")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.less_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.less_equal");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.log")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log_softmax");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Softmax(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Softmax(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.log_softmax_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::SoftmaxDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::SoftmaxDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.logical_not")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.logical_not");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::UnaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.matmul");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Matmul(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Matmul(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_da")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.matmul_da");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::MatmulDab(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::MatmulDab(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_db")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.matmul_db");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::MatmulDab(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::MatmulDab(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Pool(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Pool(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.max_pool2d_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::PoolDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::PoolDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.mod")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.mod");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.multiply")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.multiply");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.negative")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.negative");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::UnaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.nll_loss");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Loss(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Loss(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dpred")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.nll_loss_dpred");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::LossDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::LossDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dtrue")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.nll_loss_dtrue");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::LossDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::LossDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.not_equal");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.relu");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.relu_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.reshape_like")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.reshape_like");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::ReshapeLike(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::ReshapeLike(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sgd");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Sgd(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Sgd(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.shape")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.shape");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.sigmoid_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::UnaryDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.softmax");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Softmax(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Softmax(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.softmax_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::SoftmaxDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::SoftmaxDx(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.subtract");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::BinaryUfunc(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::BinaryUfunc(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.tanh");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::Unary(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::Unary(args)));
 });
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx")
 .set_body([](TVMArgs args, TVMRetValue *ret) {
   static Op op = Op::Get("mnm.op.tanh_dx");
-  *ret = binding::BindExprValue(CallNode::make(op, ffi::UnaryDx(args)),
-                                               NullValue<Value>());
+  *ret = binding::BindSymbol(CallNode::make(op, ffi::UnaryDx(args)));
 });
 }  // namespace ffi
 }  // namespace op

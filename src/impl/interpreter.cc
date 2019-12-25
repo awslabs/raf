@@ -22,8 +22,10 @@ namespace interpreter {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op;
-using binding::BindExprValue;
-using binding::LookupBoundValue;
+using binding::BindNDArray;
+using binding::BindingEntry;
+using binding::NDArrayBinding;
+using binding::LookupBinding;
 using memory_pool::Memory;
 using requests::Requests;
 using stream_pool::Stream;
@@ -38,12 +40,12 @@ class SymbolTable {
     if (iter != tab.end() && !iter->second.empty()) {
       return iter->second.back();
     }
-    const Value& ret = LookupBoundValue(var);
-    if (ret.defined()) {
-      return ret;
+    BindingEntry entry = LookupBinding(var.operator->());
+    if (!entry.defined()) {
+      LOG(FATAL) << "could not find variable binding for " << var->name_hint();
+      throw;
     }
-    LOG(FATAL) << "could not find variable binding for " << var->name_hint();
-    throw;
+    return Downcast<NDArrayBinding>(entry)->value;
   }
 
   class AddVar {
@@ -294,7 +296,7 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value) {
     return value;
   }
   if (value->IsInstance<TensorValueObj>()) {
-    return BindExprValue(expr, value);
+    return BindNDArray(value, {});
   }
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;

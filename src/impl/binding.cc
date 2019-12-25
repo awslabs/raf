@@ -9,7 +9,10 @@
 namespace mnm {
 namespace binding {
 namespace {
-MNM_REGISTER_OBJECT_REFLECT(BindingEntryObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(ADInfoObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(BindingEntryObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(NDArrayBindingObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(SymbolBindingObj);
 }  // namespace
 
 using namespace mnm::ir;
@@ -51,19 +54,33 @@ class BoundVarObj : public VarNode {
   }
 };
 
-BindingEntry BindingEntry::make(Expr expr, Value value) {
-  ObjectPtr<BindingEntryObj> n = make_object<BindingEntryObj>();
-  n->expr = std::move(expr);
-  n->value = std::move(value);
-  return BindingEntry(n);
+ADInfo ADInfo::make(value::ClosureValue bp, ir::Var ograd, ir::Array<ObjectRef> inputs) {
+  ObjectPtr<ADInfoObj> n = make_object<ADInfoObj>();
+  n->bp = std::move(bp);
+  n->ograd = std::move(ograd);
+  n->inputs = std::move(inputs);
+  return ADInfo(n);
 }
 
-Var BindExprValue(Expr expr, Value value, std::string name_hint) {
+NDArrayBinding NDArrayBinding::make(value::Value value, ADInfo ad_info) {
+  ObjectPtr<NDArrayBindingObj> n = make_object<NDArrayBindingObj>();
+  n->value = std::move(value);
+  n->ad_info = std::move(ad_info);
+  return NDArrayBinding(n);
+}
+
+SymbolBinding SymbolBinding::make(Expr expr) {
+  ObjectPtr<SymbolBindingObj> n = make_object<SymbolBindingObj>();
+  n->expr = std::move(expr);
+  return SymbolBinding(n);
+}
+
+Var MakeManagedBinding(const BindingEntry& entry, const std::string &name_hint) {
   static BindingMgr* mgr = BindingMgr::Get();
   static auto& bindings = mgr->bindings;
   Var var = BoundVarObj::make(name_hint);
   const VarNode* var_ptr = var.operator->();
-  BindingEntry entry = BindingEntry::make(expr, value);
+  LOG(INFO) << "create binding: " << entry->GetTypeKey() << ", ptr = " << entry.get();
   {
     std::lock_guard<std::mutex> lock(mgr->mu);
     bindings.emplace(var_ptr, entry);
@@ -71,7 +88,18 @@ Var BindExprValue(Expr expr, Value value, std::string name_hint) {
   return var;
 }
 
-BindingEntry LookupBinding(const VarNode* var) {
+Var BindNDArray(Value value, std::string name_hint, ADInfo ad_info) {
+  std::string grad_name_hint = "d" + name_hint;
+  return MakeManagedBinding(NDArrayBinding::make(
+        /*value=*/std::move(value),
+        /*ad_info=*/ad_info), name_hint);
+}
+
+Var BindSymbol(Expr expr, std::string name_hint) {
+  return MakeManagedBinding(SymbolBinding::make(std::move(expr)), name_hint);
+}
+
+BindingEntry LookupBinding(const VarNode *var) {
   static BindingMgr* mgr = BindingMgr::Get();
   static const auto& bindings = mgr->bindings;
   {
@@ -81,47 +109,17 @@ BindingEntry LookupBinding(const VarNode* var) {
   }
 }
 
-Var BindConstValue(Value value, std::string name_hint) {
-  return BindExprValue(MakeConstant(value), value, name_hint);
+Value LookupBoundValue(Var var) {
+  return Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->value;
 }
 
-Expr LookupBoundExpr(Var var) {
-  BindingEntry entry = LookupBinding(var.operator->());
-  return entry.defined() ? entry->expr : NullValue<Expr>();
+void SetRequiresGrad(Var var, bool value) {
+  Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->ad_info = NullValue<ADInfo>();
 }
 
-Value LookupBoundValue(ir::Var var) {
-  BindingEntry entry = LookupBinding(var.operator->());
-  return entry.defined() ? entry->value : NullValue<Value>();
-}
-
-Var GetGrad(Var var) {
-  BindingEntry entry = LookupBinding(var.operator->());
-  return entry.defined() ? entry->grad : NullValue<Var>();
-}
-
-void SetRequiresGrad(Var var, bool true_or_false) {
-  BindingEntry entry = LookupBinding(var.operator->());
-  CHECK(entry.defined());
-  if (entry->grad.defined() == true_or_false) {
-    return;
-  }
-  if (true_or_false) {
-    std::string name = var->vid->name_hint;
-    if (name != "") {
-      name = name + ".grad";
-    }
-    entry->grad = BindExprValue(NullValue<Expr>(), NullValue<Value>(), name);
-  } else {
-    entry->grad = NullValue<Var>();
-  }
-}
-
-MNM_REGISTER_GLOBAL("mnm.binding.BindConstValue").set_body_typed(BindConstValue);
-MNM_REGISTER_GLOBAL("mnm.binding.BindExprValue").set_body_typed(BindExprValue);
-MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundExpr").set_body_typed(LookupBoundExpr);
+MNM_REGISTER_GLOBAL("mnm.binding.BindNDArray").set_body_typed(BindNDArray);
+MNM_REGISTER_GLOBAL("mnm.binding.BindSymbol").set_body_typed(BindSymbol);
 MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundValue").set_body_typed(LookupBoundValue);
-MNM_REGISTER_GLOBAL("mnm.binding.GetGrad").set_body_typed(GetGrad);
 MNM_REGISTER_GLOBAL("mnm.binding.SetRequiresGrad").set_body_typed(SetRequiresGrad);
 
 }  // namespace binding
