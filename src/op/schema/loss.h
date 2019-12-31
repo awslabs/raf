@@ -17,13 +17,6 @@ class LossArgs : public ir::AttrsNode<LossArgs> {
   value::TensorValue y_pred;
   MNM_OP_SCHEMA(LossArgs, "mnm.args.loss");
 };
-class LossDxArgs : public ir::AttrsNode<LossDxArgs> {
- public:
-  value::TensorValue loss;
-  value::TensorValue y_true;
-  value::TensorValue y_pred;
-  MNM_OP_SCHEMA(LossDxArgs, "mnm.args.loss_dx");
-};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

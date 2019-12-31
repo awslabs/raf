@@ -70,5 +70,13 @@ def test_unary_ops_pos(ops, shape, dtype, ctx):
     check(m_x, n_x)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+def test_shape(ctx):
+    shape = (3, 6, 9)
+    m_x = mnm.array(np.random.randn(*shape).astype('float32'), ctx=ctx)
+    m_shape = mnm.shape(m_x)
+    assert tuple(m_shape) == shape
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

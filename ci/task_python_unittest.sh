@@ -5,4 +5,4 @@ set -o pipefail
 source ./ci/env.sh
 
 cd 3rdparty/tvm/ && make cython3 && cd ../../
-python3 -m pytest tests/python/
+python3 -m pytest --assert=plain tests/python/

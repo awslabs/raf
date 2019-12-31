@@ -66,18 +66,6 @@ SCHEMAS = {
         Arg(name="b", cxx_type="value::TensorValue"),
         Arg(name="eps", cxx_type="double"),
     ],
-    "gemm.h::matmul": [
-        Arg(name="a", cxx_type="value::TensorValue"),
-        Arg(name="b", cxx_type="value::TensorValue"),
-        Arg(name="transpose_a", cxx_type="bool", cxx_default=False),
-        Arg(name="transpose_b", cxx_type="bool", cxx_default=False),
-    ],
-    "gemm.h::matmul_dab": [
-        Arg(name="dy", cxx_type="value::TensorValue"),
-        Arg(name="a_or_b", cxx_type="value::TensorValue"),
-        Arg(name="transpose_dx", cxx_type="bool", cxx_default=False),
-        Arg(name="transpose_dy", cxx_type="bool", cxx_default=False),
-    ],
     "nn.h::local_response_norm": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="size", cxx_type="int64_t"),
@@ -130,11 +118,6 @@ SCHEMAS = {
         Arg(name="y_true", cxx_type="value::TensorValue"),
         Arg(name="y_pred", cxx_type="value::TensorValue"),
     ],
-    "loss.h::loss_dx": [
-        Arg(name="loss", cxx_type="value::TensorValue"),
-        Arg(name="y_true", cxx_type="value::TensorValue"),
-        Arg(name="y_pred", cxx_type="value::TensorValue"),
-    ],
     "ufunc.h::unary_ufunc": [
         Arg(name="x", cxx_type="value::Value"),
         Arg(name="out", cxx_type="value::Value", cxx_default="nullptr"),
@@ -183,25 +166,24 @@ SCHEMAS = {
         Arg(name="y", cxx_type="value::TensorValue"),
         Arg(name="dy", cxx_type="value::TensorValue"),
     ],
-    "nn.h::bias_add": [
-        Arg(name="x", cxx_type="value::TensorValue"),
-        Arg(name="b", cxx_type="value::TensorValue"),
-        Arg(name="axis", cxx_type="int", cxx_default=1),
-    ],
-    "nn.h::bias_add_db": [
-        Arg(name="b", cxx_type="value::TensorValue"),
-        Arg(name="dy", cxx_type="value::TensorValue"),
-        Arg(name="axis", cxx_type="int", cxx_default=1),
-    ],
     "likes.h::collapse_like": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="shape",
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
     ],
-    "likes.h::reshape_like": [
+    "likes.h::reshape": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+    ],
+    "likes.h::sum": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="axis",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="keep",
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
     ],

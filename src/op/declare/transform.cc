@@ -3,9 +3,14 @@
  * \file src/op/declare/transform.cc
  * \brief Declaration of transform operators
  */
+
+#include <functional>
+#include <numeric>
+
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
+#include "../schema/likes.h"
 #include "../../common/shape_utils.h"
 
 namespace mnm {
@@ -38,27 +43,20 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.batch_flatten_dx", [](const CallValues& call) {
-  const auto* args = call->args.as<UnaryDxArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  const DLTensor* dy = args->dy;
-  const int ndim = x->ndim;
-  CHECK_GE(ndim, 2) << "ValueError: batch_flatten only works with ndim >= 2";
-
+MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
+  const auto* args = call->args.as<ReshapeArgs>();
+  DLTensor *x = args->x;
+  const std::vector<int64_t> &shape = args->shape;
+  call->ctx = x->ctx;
+  call->callee = ir::NullValue<OpValue>();
   if (IsCompact(*x)) {
-    std::vector<int64_t> dshape(x->shape, x->shape + x->ndim);
-    int64_t flat{1};
-    for (int i = 1; i < ndim; ++i) {
-      flat = flat * int64_t{dshape[i]};
-    }
-    call->callee = ir::NullValue<OpValue>();
-    CHECK_EQ(dy->shape[0], dshape[0]);
-    CHECK_EQ(dy->shape[1], flat);
-    call->out = TensorValue::make(Tensor(args->dy).CreateView(dshape, {}, nullptr));
+    int64_t origin = std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
+    int64_t reshaped = std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
+    CHECK_EQ(origin, reshaped) << "Number of elements mismatch after reshaping!";
+    call->out = TensorValue::make(Tensor(args->x).CreateView(shape));
     return;
   }
-  LOG(FATAL) << "NotImplementedError: for now we only support batch_flatten on contiguous tensor.";
+  LOG(FATAL) << "NotImplementedError: for now we only support reshape on contiguous tensor.";
   throw;
 });
 

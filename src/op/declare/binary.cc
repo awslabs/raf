@@ -225,20 +225,59 @@ MNM_OP_DECLARE("mnm.op.not_equal", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.add_dx", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryDxArgs>();
+void CollapseAxis(const CallValues &call) {
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  DLTensor *x = args->x1;
-  DLTensor *dy = args->dy;
-  CHECK(x->ndim <= dy->ndim);
-  for (int i = 0, offset = dy->ndim - x->ndim; i < x->ndim; ++i) {
-    CHECK(x->shape[i] == 1 || x->shape[i] == dy->shape[i + offset]);
+  DLTensor *x1 = args->x1;
+  DLTensor *x2 = args->x2;
+
+  call->callee = ir::NullValue<OpValue>();
+  call->ctx = x1->ctx;
+
+  CHECK_LE(x2->ndim, x1->ndim);
+  int offset = x1->ndim - x2->ndim;
+  ir::Array<Value> res;
+  for (int i = 0; i < offset; ++i) {
+    res.push_back(ScalarValue::make(i));
   }
-  call->ctx = x->ctx;
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
-});
+  for (int i = 0; i < x2->ndim; ++i) {
+    if (x1->shape[i + offset] != x2->shape[i]) {
+      CHECK_EQ(x2->shape[i], 1) << "The collapsed dimension should be 1-sized!";
+      res.push_back(ScalarValue::make(i + offset));
+    }
+  }
+
+  call->out = TupleValue::make(res);
+}
+
+MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis);
+
+void CollapseKeep(const CallValues &call) {
+  const auto* args = call->args.as<BinaryArgs>();
+  CHECK(args != nullptr);
+  DLTensor *x1 = args->x1;
+  DLTensor *x2 = args->x2;
+
+  call->callee = ir::NullValue<OpValue>();
+  call->ctx = x1->ctx;
+
+  CHECK_LE(x2->ndim, x1->ndim);
+  int offset = x1->ndim - x2->ndim;
+  ir::Array<Value> res;
+  for (int i = 0; i < offset; ++i) {
+    res.push_back(ScalarValue::make(0));
+  }
+  for (int i = 0; i < x2->ndim; ++i) {
+    if (x1->shape[i + offset] != x2->shape[i]) {
+      CHECK_EQ(x2->shape[i], 1) << "The collapsed dimension should be 1-sized!";
+      res.push_back(ScalarValue::make(1));
+    }
+  }
+
+  call->out = TupleValue::make(res);
+}
+
+MNM_OP_DECLARE("mnm.op.get_kept_dims", CollapseKeep);
 
 }  // namespace declare
 }  // namespace op

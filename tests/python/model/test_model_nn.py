@@ -85,7 +85,7 @@ def test_model_conv2d(stride, dilation, padding, bias):
     m_x, t_x = randn([8, 3, 32, 32], std=0.001)
     m_w, t_w = randn([16, 3, 3, 3], std=0.01)
     if bias:
-        m_b, t_b = randn([16], std=0.001)
+        m_b, t_b = randn([16, 1, 1], std=0.001)
     model = mnm.model.Conv2d(in_channels=3,
                              out_channels=16,
                              kernel_size=3,
@@ -100,7 +100,6 @@ def test_model_conv2d(stride, dilation, padding, bias):
     m_y = model(m_x)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     if bias:
-        t_b = t_b.unsqueeze(dim=-1).unsqueeze(dim=-1).unsqueeze(dim=0)
         t_y = t_y + t_b
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 

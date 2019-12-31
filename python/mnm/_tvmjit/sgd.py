@@ -6,7 +6,7 @@ from .._lib import tvm as _tvm
 
 @register_compute("mnm.op.sgd")
 def compute(attr, inputs, output_type, target):  # pylint: disable=unused-argument
-    learning_rate, mu = attr.learning_rate, attr.mu
+    learning_rate, mu = attr.learning_rate, attr.mu  # pylint: disable=invalid-name
     x0, dx, v0 = inputs
 
     def fcomputev(*args):

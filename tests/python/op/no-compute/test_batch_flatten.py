@@ -27,8 +27,9 @@ def test_batch_flatten(shape):
     y = mnm.batch_flatten(x)
     expcected = (5, functools.reduce(operator.mul, list(x.shape)[1:]))
     assert y.shape == expcected
-    dy = mnm.batch_flatten_dx(x, y, y)
+    dy = mnm.reshape(y, mnm.shape(x))
     assert dy.shape == x.shape
+    assert (x.asnumpy() == dy.asnumpy()).all()
 
 
 if __name__ == "__main__":

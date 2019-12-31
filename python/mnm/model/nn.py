@@ -31,7 +31,7 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         self.w_shape = (out_channels, in_channels // groups, *kernel_size)
-        self.b_shape = (out_channels, ) if bias else None
+        self.b_shape = (out_channels, 1, 1) if bias else None
         self.reset()
 
     def reset(self):
@@ -53,7 +53,7 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
                        dilation=self.dilation,
                        groups=self.groups)
         if self.b is not None:
-            x = sym.bias_add(x, self.b, axis=1)
+            x = sym.add(x, self.b)
         return x
 
 
@@ -129,7 +129,7 @@ class Linear(Model):
 
     @trace
     def forward(self, x):
-        out = sym.matmul(x, self.w, transpose_b=True)
+        out = sym.matmul_nt(x, self.w)
         if self.b is not None:
-            out = sym.bias_add(out, self.b, axis=-1)
+            out = sym.add(out, self.b)
         return out

@@ -200,36 +200,6 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
   call->ctx = x->ctx;
 });
 
-MNM_OP_DECLARE("mnm.op.bias_add", [](const CallValues& call) {
-  const auto* args = call->args.as<BiasAddArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  const DLTensor* b = args->b;
-  int axis = NormalizeAxis(args->axis, x->ndim);
-  CHECK_EQ(b->ndim, 1);
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  CHECK_EQ(x->shape[axis], b->shape[0]);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
-  call->ctx = x->ctx;
-});
-
-MNM_OP_DECLARE("mnm.op.bias_add_db", [](const CallValues& call) {
-  const auto* args = call->args.as<BiasAddDbArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* b = args->b;
-  const DLTensor* dy = args->dy;
-  int axis = NormalizeAxis(args->axis, dy->ndim);
-  CHECK_EQ(b->ndim, 1);
-  std::vector<int64_t> shape(b->shape, b->shape + b->ndim);
-  CHECK_EQ(dy->shape[axis], b->shape[0]);
-  call->out = TensorValue::Assemble(/*ctx=*/b->ctx,
-                                    /*dtype=*/b->dtype,
-                                    /*shape=*/shape);
-  call->ctx = b->ctx;
-});
-
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

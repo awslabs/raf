@@ -31,20 +31,6 @@ class BatchNormTrainDxwbArgs : public ir::AttrsNode<BatchNormTrainDxwbArgs> {
   double eps;
   MNM_OP_SCHEMA(BatchNormTrainDxwbArgs, "mnm.args.batch_norm_train_dxwb");
 };
-class BiasAddArgs : public ir::AttrsNode<BiasAddArgs> {
- public:
-  value::TensorValue x;
-  value::TensorValue b;
-  int axis{1};
-  MNM_OP_SCHEMA(BiasAddArgs, "mnm.args.bias_add");
-};
-class BiasAddDbArgs : public ir::AttrsNode<BiasAddDbArgs> {
- public:
-  value::TensorValue b;
-  value::TensorValue dy;
-  int axis{1};
-  MNM_OP_SCHEMA(BiasAddDbArgs, "mnm.args.bias_add_db");
-};
 class ConvArgs : public ir::AttrsNode<ConvArgs> {
  public:
   value::TensorValue x;

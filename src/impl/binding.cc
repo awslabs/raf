@@ -80,7 +80,6 @@ Var MakeManagedBinding(const BindingEntry& entry, const std::string &name_hint) 
   static auto& bindings = mgr->bindings;
   Var var = BoundVarObj::make(name_hint);
   const VarNode* var_ptr = var.operator->();
-  LOG(INFO) << "create binding: " << entry->GetTypeKey() << ", ptr = " << entry.get();
   {
     std::lock_guard<std::mutex> lock(mgr->mu);
     bindings.emplace(var_ptr, entry);

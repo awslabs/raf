@@ -1,1 +1,1 @@
-from . import nn, sgd, binary
+from . import loss, sgd, reduce

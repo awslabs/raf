@@ -6,7 +6,7 @@
 #include <cublas.h>
 #include "mnm/op.h"
 
-#include "../../schema/gemm.h"
+#include "../../schema/ufunc.h"
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 #include "./cublas_utils.h"
@@ -58,68 +58,33 @@ void GemmImpl(DLTensor *a, bool transpose_a, DLTensor *b, bool transpose_b, DLTe
       cudaDataType_t(DType(c->dtype)), m, cudaDataType_t(DType(c->dtype)), CUBLAS_GEMM_DEFAULT));
 }
 
-template<typename ArgT_, typename DerivedT>
-class MatmulBase : public mnm::op::OpEnv {
- protected:
-  using ArgType = ArgT_;
-  void Init(const CallValues& cv) {
-    auto args = cv->args.as<ArgType>();
+template<bool transpose_a, bool transpose_b>
+class MatmulImpl : public mnm::op::OpEnv {
+ public:
+  explicit MatmulImpl(const CallValues &cv) {
+    auto args = cv->args.as<op::schema::BinaryUfuncArgs>();
     CHECK(args != nullptr);
     DLTensor* out = cv->out;
     RequestMemory(&out->data, cv->ctx, common::shape_utils::BytesCompactTensor(*out));
   }
- public:
-  static OpEnv* make(const CallValues& cv) {
-    return new DerivedT(cv);
-  }
-};
-
-class Matmul : public MatmulBase<schema::MatmulArgs, Matmul> {
- public:
-  explicit Matmul(const CallValues &cv) {
-    Init(cv);
-  }
   void Execute(const CallValues &cv) override {
-    auto args = cv->args.as<Matmul::ArgType>();
-    GemmImpl(args->a, args->transpose_a, args->b, args->transpose_b, cv->out);
+    auto args = cv->args.as<op::schema::BinaryUfuncArgs>();
+    GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out);
+  }
+  static OpEnv* make(const CallValues& cv) {
+    return new MatmulImpl<transpose_a, transpose_b>(cv);
   }
 };
 
-MNM_OP_DISPATCH("mnm.op.matmul", Matmul::make, DevType::kCUDA(), "cublas");
+using MatmulNN = MatmulImpl<false, false>;
+using MatmulNT = MatmulImpl<false, true>;
+using MatmulTN = MatmulImpl<true, false>;
+using MatmulTT = MatmulImpl<true, true>;
 
-class MatmulDa : public MatmulBase<schema::MatmulDabArgs, MatmulDa> {
- public:
-  explicit MatmulDa(const CallValues &cv) {
-    Init(cv);
-  }
-  void Execute(const CallValues &cv) {
-    auto args = cv->args.as<MatmulDa::ArgType>();
-    if (!args->transpose_dy) {
-      GemmImpl(args->dy, false, args->a_or_b, !args->transpose_dx, cv->out);
-    } else {
-      GemmImpl(args->a_or_b, args->transpose_dx, args->dy, true, cv->out);
-    }
-  }
-};
-
-MNM_OP_DISPATCH("mnm.op.matmul_da", MatmulDa::make, DevType::kCUDA(), "cublas");
-
-class MatmulDb : public MatmulBase<schema::MatmulDabArgs, MatmulDb> {
- public:
-  explicit MatmulDb(const CallValues &cv) {
-    Init(cv);
-  }
-  void Execute(const CallValues &cv) {
-    auto args = cv->args.as<MatmulDb::ArgType>();
-    if (!args->transpose_dy) {
-      GemmImpl(args->a_or_b, !args->transpose_dx, args->dy, false, cv->out);
-    } else {
-      GemmImpl(args->dy, true, args->a_or_b, args->transpose_dx, cv->out);
-    }
-  }
-};
-
-MNM_OP_DISPATCH("mnm.op.matmul_db", MatmulDb::make, DevType::kCUDA(), "cublas");
+MNM_OP_DISPATCH("mnm.op.matmul", MatmulNN::make, DevType::kCUDA(), "cublas");
+MNM_OP_DISPATCH("mnm.op.matmul_nt", MatmulNT::make, DevType::kCUDA(), "cublas");
+MNM_OP_DISPATCH("mnm.op.matmul_tn", MatmulTN::make, DevType::kCUDA(), "cublas");
+MNM_OP_DISPATCH("mnm.op.matmul_tt", MatmulTT::make, DevType::kCUDA(), "cublas");
 
 }  // namespace manual
 }  // namespace cublas

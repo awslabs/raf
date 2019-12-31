@@ -95,6 +95,20 @@ MNM_OP_DECLARE("mnm.op.relu_dx", UnaryDx);
 MNM_OP_DECLARE("mnm.op.tanh_dx", UnaryDx);
 MNM_OP_DECLARE("mnm.op.sigmoid_dx", UnaryDx);
 
+void Shape(const CallValues &call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<Value> shape;
+  std::for_each(x->shape, x->shape + x->ndim, [&shape](int64_t x) {
+    shape.push_back(ScalarValue::make(x));
+  });
+  call->out = TupleValue::make(shape);
+  call->callee = ir::NullValue<OpValue>();
+}
+
+MNM_OP_DECLARE("mnm.op.shape", Shape);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -16,17 +16,23 @@ Array<Expr> AddGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ogra
   //    x1, x2
   // schema for binary_dx is:
   //    x1, x2, y, dy
-  static auto op_dx = Op::Get("mnm.op.add_dx");
   CHECK_EQ(ograds.size(), 1);
   const Expr& dy = ograds[0];
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 2);
   const Expr& x1 = call->args[0];
   const Expr& x2 = call->args[1];
-  return {
-      CallNode::make(op_dx, {x1, x2, y, dy}),
-      CallNode::make(op_dx, {x2, x1, y, dy}),
+
+  auto f = [&dy](const Expr &x) {
+    static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
+    static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
+    static auto sum = Op::Get("mnm.op.sum");
+    Call axes = CallNode::make(collapse_axis, {dy, x});
+    Call keep = CallNode::make(collapse_keep, {dy, x});
+    return CallNode::make(sum, {dy, axes, keep});
   };
+
+  return {f(x1), f(x2)};
 }
 
 MNM_OP_GRAD("mnm.op.add", AddGrad);

@@ -16,6 +16,30 @@ Expr Shape(const Expr& expr) {
   return CallNode::make(op_shape, {expr});
 }
 
+template <const char* GradOp>
+Array<Expr> PoolGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+  static auto op_dx = Op::Get(GradOp);
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& x = call->args[0];
+  const Expr& kernel = call->args[1];
+  const Expr& stride = call->args[2];
+  const Expr& padding = call->args[3];
+  const Expr& dilation = call->args[4];
+  const Expr& ceil_mode = call->args[5];
+  const Expr& include_pad = call->args[6];
+  const Expr& dy = ograds[0];
+  return {
+      CallNode::make(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
+}
+
+const char MAX_POOL2D_DX[] = "mnm.op.max_pool2d_dx";
+auto MaxPool2dGrad = PoolGrad<MAX_POOL2D_DX>;
+MNM_OP_GRAD("mnm.op.max_pool2d", MaxPool2dGrad);
+
+const char AVG_POOL2D_DX[] = "mnm.op.avg_pool2d_dx";
+auto AvgPool2dGrad = PoolGrad<AVG_POOL2D_DX>;
+MNM_OP_GRAD("mnm.op.avg_pool2d", AvgPool2dGrad);
+
 Array<Expr> Conv2dGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
   // schema for conv2d is:
   //    x, w, stride, padding, dilation, groups
@@ -42,12 +66,13 @@ Array<Expr> Conv2dGrad(const Var& y, const Expr& orig_call, const Array<Expr>& o
 
 MNM_OP_GRAD("mnm.op.conv2d", Conv2dGrad);
 
-Array<Expr> ReluGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+template <const char* GradOp>
+Array<Expr> UnaryGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
   // schema for relu is:
   //    x
   // schema for relu_dx is:
   //    x, y, dy
-  static auto op_dx = Op::Get("mnm.op.relu_dx");
+  static auto op_dx = Op::Get(GradOp);
   CHECK_EQ(ograds.size(), 1);
   const Expr& dy = ograds[0];
   const CallNode* call = orig_call.as<CallNode>();
@@ -56,7 +81,17 @@ Array<Expr> ReluGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ogr
   return {CallNode::make(op_dx, {x, y, dy})};
 }
 
+const char RELU_DX[] = "mnm.op.relu_dx";
+auto ReluGrad = UnaryGrad<RELU_DX>;
 MNM_OP_GRAD("mnm.op.relu", ReluGrad);
+
+const char TANH_DX[] = "mnm.op.tanh_dx";
+auto TanhGrad = UnaryGrad<TANH_DX>;
+MNM_OP_GRAD("mnm.op.tanh", TanhGrad);
+
+const char SIGMOID_DX[] = "mnm.op.sigmoid_dx";
+auto SigmoidGrad = UnaryGrad<SIGMOID_DX>;
+MNM_OP_GRAD("mnm.op.sigmoid", SigmoidGrad);
 
 Array<Expr> BatchNormTrainGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds,
                                const Array<Expr>& igrads) {
@@ -71,17 +106,35 @@ Array<Expr> BatchNormTrainGrad(const Var& y, const Expr& orig_call, const Array<
   const Expr& w = call->args[3];
   const Expr& b = call->args[4];
   const Expr& eps = call->args[6];
-  const Expr &ret = CallNode::make(op_dxwb, {dy, x, w, b, eps});
+  const Expr& ret = CallNode::make(op_dxwb, {dy, x, w, b, eps});
   return {
-    TupleGetItemNode::make(ret, 0),
-    NullValue<Expr>(),
-    NullValue<Expr>(),
-    TupleGetItemNode::make(ret, 1),
-    TupleGetItemNode::make(ret, 2),
+      TupleGetItemNode::make(ret, 0),
+      NullValue<Expr>(),
+      NullValue<Expr>(),
+      TupleGetItemNode::make(ret, 1),
+      TupleGetItemNode::make(ret, 2),
   };
 }
 
 MNM_OP_FUSED_GRAD("mnm.op.batch_norm_train", BatchNormTrainGrad);
+
+template <const char* GradOp>
+Array<Expr> SoftmaxGradImpl(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+  static auto op_dx = Op::Get(GradOp);
+  const Expr& dy = ograds[0];
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& x = call->args[0];
+  const Expr& axis = call->args[1];
+  return {CallNode::make(op_dx, {x, y, dy, axis})};
+}
+
+const char SOFTMAX_DX[] = "mnm.op.softmax_dx";
+auto SoftmaxGrad = SoftmaxGradImpl<SOFTMAX_DX>;
+MNM_OP_GRAD("mnm.op.softmax", SoftmaxGrad);
+
+const char LOG_SOFTMAX_DX[] = "mnm.op.log_softmax_dx";
+auto LogSoftmaxGrad = SoftmaxGradImpl<LOG_SOFTMAX_DX>;
+MNM_OP_GRAD("mnm.op.log_softmax", LogSoftmaxGrad);
 
 }  // namespace grad
 }  // namespace op

@@ -35,14 +35,17 @@ def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
 @pytest.mark.parametrize("stride", [1, 2, 3])
 @pytest.mark.parametrize("dilation", [1, 2, 3, 4])
 @pytest.mark.parametrize("padding", [0, 1])
-def test_mnm_conv2d(stride, dilation, padding):
+def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
+    # pylint: disable=too-many-locals
     # N.B.: NCHW + OIHW
     # forward
-    m_x, t_x = randn([8, 3, 32, 32], std=0.001)
-    m_w, t_w = randn([16, 3, 3, 3], std=0.01)
+    m_x, t_x = randn(xshape, std=0.001)
+    m_w, t_w = randn(wshape, std=0.01)
     m_y = mnm.conv2d(m_x,
                      m_w,
                      stride=stride,
@@ -245,16 +248,18 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b):
     shapeb = (k, m) if not transpose_b else (m, k)
     m_a, t_a = randn(shapea)
     m_b, t_b = randn(shapeb)
-    m_c = mnm.matmul(m_a, m_b, transpose_a=transpose_a, transpose_b=transpose_b)
+    mnm_op = [[mnm.matmul, mnm.matmul_nt], [mnm.matmul_tn, mnm.matmul_tt]]
+    m_c = mnm_op[transpose_a][transpose_b](m_a, m_b)
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
-    m_dy, t_dy = randn(m_c.shape)
-    t_c.backward(t_dy)
-    t_da, t_db = t_a.grad, t_b.grad
-    m_da = mnm.matmul_da(m_dy, m_b, transpose_b, transpose_a)
-    m_db = mnm.matmul_db(m_dy, m_a, transpose_a, transpose_b)
     check(m_c, t_c, rtol=1e-4, atol=1e-4)
-    check(m_da, t_da, rtol=1e-4, atol=1e-4)
-    check(m_db, t_db, rtol=1e-4, atol=1e-4)
+    # TODO(@were): bring this back when AD is done
+    #m_dy, t_dy = randn(m_c.shape)
+    #t_c.backward(t_dy)
+    #t_da, t_db = t_a.grad, t_b.grad
+    #m_da = mnm.matmul_da(m_dy, m_b, transpose_b, transpose_a)
+    #m_db = mnm.matmul_db(m_dy, m_a, transpose_a, transpose_b)
+    #check(m_da, t_da, rtol=1e-4, atol=1e-4)
+    #check(m_db, t_db, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

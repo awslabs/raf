@@ -4,17 +4,17 @@ from . import sym_utils
 
 # pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
-    "abs", "add", "add_dx", "avg_pool2d", "avg_pool2d_dx",
-    "batch_flatten", "batch_flatten_dx", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
-    "bias_add", "bias_add_db", "ceil", "collapse_sum_like", "conv2d",
-    "conv2d_dw", "conv2d_dx", "copy", "cos", "divide",
-    "equal", "floor", "greater", "greater_equal", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_da", "matmul_db", "max_pool2d", "max_pool2d_dx",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "subtract", "tanh", "tanh_dx",
+    "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
+    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil", "collapse_sum_like",
+    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
+    "divide", "equal", "floor", "get_kept_dims", "get_reduce_axis",
+    "greater", "greater_equal", "less", "less_equal", "log",
+    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
+    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "subtract", "sum", "tanh", "tanh_dx",
 ]
 
 def abs(x):
@@ -26,12 +26,6 @@ def add(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.add(x1, x2, out, where))
-def add_dx(x1, x2, y, dy):
-    x1 = sym_utils.to_any(x1)
-    x2 = sym_utils.to_any(x2)
-    y = sym_utils.to_tensor(y)
-    dy = sym_utils.to_tensor(dy)
-    return Symbol.from_expr(ffi.add_dx(x1, x2, y, dy))
 def avg_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
@@ -55,11 +49,6 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.batch_flatten(x))
-def batch_flatten_dx(x, y, dy):
-    x = sym_utils.to_any(x)
-    y = sym_utils.to_tensor(y)
-    dy = sym_utils.to_tensor(dy)
-    return Symbol.from_expr(ffi.batch_flatten_dx(x, y, dy))
 def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = sym_utils.to_tensor(x)
     running_mean = sym_utils.to_tensor(running_mean)
@@ -85,16 +74,6 @@ def batch_norm_train_dxwb(dy, x, w, b, eps):
     b = sym_utils.to_tensor(b)
     eps = sym_utils.to_double(eps)
     return Symbol.from_expr(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
-def bias_add(x, b, axis=1):
-    x = sym_utils.to_tensor(x)
-    b = sym_utils.to_tensor(b)
-    axis = sym_utils.to_int(axis)
-    return Symbol.from_expr(ffi.bias_add(x, b, axis))
-def bias_add_db(b, dy, axis=1):
-    b = sym_utils.to_tensor(b)
-    dy = sym_utils.to_tensor(dy)
-    axis = sym_utils.to_int(axis)
-    return Symbol.from_expr(ffi.bias_add_db(b, dy, axis))
 def ceil(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.ceil(x))
@@ -151,6 +130,14 @@ def equal(x1, x2, out=None, where=None):
 def floor(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.floor(x))
+def get_kept_dims(x1, x2):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    return Symbol.from_expr(ffi.get_kept_dims(x1, x2))
+def get_reduce_axis(x1, x2):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    return Symbol.from_expr(ffi.get_reduce_axis(x1, x2))
 def greater(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -193,24 +180,30 @@ def logical_not(x, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.logical_not(x, out, where))
-def matmul(a, b, transpose_a=False, transpose_b=False):
-    a = sym_utils.to_tensor(a)
-    b = sym_utils.to_tensor(b)
-    transpose_a = sym_utils.to_bool(transpose_a)
-    transpose_b = sym_utils.to_bool(transpose_b)
-    return Symbol.from_expr(ffi.matmul(a, b, transpose_a, transpose_b))
-def matmul_da(dy, a_or_b, transpose_dx=False, transpose_dy=False):
-    dy = sym_utils.to_tensor(dy)
-    a_or_b = sym_utils.to_tensor(a_or_b)
-    transpose_dx = sym_utils.to_bool(transpose_dx)
-    transpose_dy = sym_utils.to_bool(transpose_dy)
-    return Symbol.from_expr(ffi.matmul_da(dy, a_or_b, transpose_dx, transpose_dy))
-def matmul_db(dy, a_or_b, transpose_dx=False, transpose_dy=False):
-    dy = sym_utils.to_tensor(dy)
-    a_or_b = sym_utils.to_tensor(a_or_b)
-    transpose_dx = sym_utils.to_bool(transpose_dx)
-    transpose_dy = sym_utils.to_bool(transpose_dy)
-    return Symbol.from_expr(ffi.matmul_db(dy, a_or_b, transpose_dx, transpose_dy))
+def matmul(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.matmul(x1, x2, out, where))
+def matmul_nt(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.matmul_nt(x1, x2, out, where))
+def matmul_tn(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.matmul_tn(x1, x2, out, where))
+def matmul_tt(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.matmul_tt(x1, x2, out, where))
 def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
@@ -252,16 +245,14 @@ def nll_loss(y_true, y_pred):
     y_true = sym_utils.to_tensor(y_true)
     y_pred = sym_utils.to_tensor(y_pred)
     return Symbol.from_expr(ffi.nll_loss(y_true, y_pred))
-def nll_loss_dpred(loss, y_true, y_pred):
-    loss = sym_utils.to_tensor(loss)
+def nll_loss_dpred(y_true, y_pred):
     y_true = sym_utils.to_tensor(y_true)
     y_pred = sym_utils.to_tensor(y_pred)
-    return Symbol.from_expr(ffi.nll_loss_dpred(loss, y_true, y_pred))
-def nll_loss_dtrue(loss, y_true, y_pred):
-    loss = sym_utils.to_tensor(loss)
+    return Symbol.from_expr(ffi.nll_loss_dpred(y_true, y_pred))
+def nll_loss_dtrue(y_true, y_pred):
     y_true = sym_utils.to_tensor(y_true)
     y_pred = sym_utils.to_tensor(y_pred)
-    return Symbol.from_expr(ffi.nll_loss_dtrue(loss, y_true, y_pred))
+    return Symbol.from_expr(ffi.nll_loss_dtrue(y_true, y_pred))
 def not_equal(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -276,10 +267,10 @@ def relu_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.relu_dx(x, y, dy))
-def reshape_like(x, shape):
+def reshape(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
-    return Symbol.from_expr(ffi.reshape_like(x, shape))
+    return Symbol.from_expr(ffi.reshape(x, shape))
 def sgd(x, dx, v, learning_rate, mu):
     x = sym_utils.to_tensor(x)
     dx = sym_utils.to_tensor(dx)
@@ -314,6 +305,11 @@ def subtract(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.subtract(x1, x2, out, where))
+def sum(x, axis, keep):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int_tuple(axis)
+    keep = sym_utils.to_int_tuple(keep)
+    return Symbol.from_expr(ffi.sum(x, axis, keep))
 def tanh(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.tanh(x))

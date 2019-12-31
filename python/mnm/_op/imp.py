@@ -5,17 +5,17 @@ from . import imp_utils
 # pylint: disable=invalid-name,line-too-long
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
-    "abs", "add", "add_dx", "avg_pool2d", "avg_pool2d_dx",
-    "batch_flatten", "batch_flatten_dx", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
-    "bias_add", "bias_add_db", "ceil", "collapse_sum_like", "conv2d",
-    "conv2d_dw", "conv2d_dx", "copy", "cos", "divide",
-    "equal", "floor", "greater", "greater_equal", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_da", "matmul_db", "max_pool2d", "max_pool2d_dx",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape_like",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "subtract", "tanh", "tanh_dx",
+    "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
+    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil", "collapse_sum_like",
+    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
+    "divide", "equal", "floor", "get_kept_dims", "get_reduce_axis",
+    "greater", "greater_equal", "less", "less_equal", "log",
+    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
+    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "subtract", "sum", "tanh", "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -29,13 +29,6 @@ def add(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.add(x1, x2, out, where))
-@set_module("mnm")
-def add_dx(x1, x2, y, dy):
-    x1 = imp_utils.to_any(x1)
-    x2 = imp_utils.to_any(x2)
-    y = imp_utils.to_tensor(y)
-    dy = imp_utils.to_tensor(dy)
-    return imp_utils.ret(ffi.add_dx(x1, x2, y, dy))
 @set_module("mnm")
 def avg_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
@@ -62,12 +55,6 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.batch_flatten(x))
-@set_module("mnm")
-def batch_flatten_dx(x, y, dy):
-    x = imp_utils.to_any(x)
-    y = imp_utils.to_tensor(y)
-    dy = imp_utils.to_tensor(dy)
-    return imp_utils.ret(ffi.batch_flatten_dx(x, y, dy))
 @set_module("mnm")
 def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = imp_utils.to_tensor(x)
@@ -96,18 +83,6 @@ def batch_norm_train_dxwb(dy, x, w, b, eps):
     b = imp_utils.to_tensor(b)
     eps = imp_utils.to_double(eps)
     return imp_utils.ret(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
-@set_module("mnm")
-def bias_add(x, b, axis=1):
-    x = imp_utils.to_tensor(x)
-    b = imp_utils.to_tensor(b)
-    axis = imp_utils.to_int(axis)
-    return imp_utils.ret(ffi.bias_add(x, b, axis))
-@set_module("mnm")
-def bias_add_db(b, dy, axis=1):
-    b = imp_utils.to_tensor(b)
-    dy = imp_utils.to_tensor(dy)
-    axis = imp_utils.to_int(axis)
-    return imp_utils.ret(ffi.bias_add_db(b, dy, axis))
 @set_module("mnm")
 def ceil(x):
     x = imp_utils.to_any(x)
@@ -175,6 +150,16 @@ def floor(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.floor(x))
 @set_module("mnm")
+def get_kept_dims(x1, x2):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    return imp_utils.ret(ffi.get_kept_dims(x1, x2))
+@set_module("mnm")
+def get_reduce_axis(x1, x2):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    return imp_utils.ret(ffi.get_reduce_axis(x1, x2))
+@set_module("mnm")
 def greater(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
@@ -225,26 +210,33 @@ def logical_not(x, out=None, where=None):
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.logical_not(x, out, where))
 @set_module("mnm")
-def matmul(a, b, transpose_a=False, transpose_b=False):
-    a = imp_utils.to_tensor(a)
-    b = imp_utils.to_tensor(b)
-    transpose_a = imp_utils.to_bool(transpose_a)
-    transpose_b = imp_utils.to_bool(transpose_b)
-    return imp_utils.ret(ffi.matmul(a, b, transpose_a, transpose_b))
+def matmul(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.matmul(x1, x2, out, where))
 @set_module("mnm")
-def matmul_da(dy, a_or_b, transpose_dx=False, transpose_dy=False):
-    dy = imp_utils.to_tensor(dy)
-    a_or_b = imp_utils.to_tensor(a_or_b)
-    transpose_dx = imp_utils.to_bool(transpose_dx)
-    transpose_dy = imp_utils.to_bool(transpose_dy)
-    return imp_utils.ret(ffi.matmul_da(dy, a_or_b, transpose_dx, transpose_dy))
+def matmul_nt(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.matmul_nt(x1, x2, out, where))
 @set_module("mnm")
-def matmul_db(dy, a_or_b, transpose_dx=False, transpose_dy=False):
-    dy = imp_utils.to_tensor(dy)
-    a_or_b = imp_utils.to_tensor(a_or_b)
-    transpose_dx = imp_utils.to_bool(transpose_dx)
-    transpose_dy = imp_utils.to_bool(transpose_dy)
-    return imp_utils.ret(ffi.matmul_db(dy, a_or_b, transpose_dx, transpose_dy))
+def matmul_tn(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.matmul_tn(x1, x2, out, where))
+@set_module("mnm")
+def matmul_tt(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.matmul_tt(x1, x2, out, where))
 @set_module("mnm")
 def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
@@ -293,17 +285,15 @@ def nll_loss(y_true, y_pred):
     y_pred = imp_utils.to_tensor(y_pred)
     return imp_utils.ret(ffi.nll_loss(y_true, y_pred))
 @set_module("mnm")
-def nll_loss_dpred(loss, y_true, y_pred):
-    loss = imp_utils.to_tensor(loss)
+def nll_loss_dpred(y_true, y_pred):
     y_true = imp_utils.to_tensor(y_true)
     y_pred = imp_utils.to_tensor(y_pred)
-    return imp_utils.ret(ffi.nll_loss_dpred(loss, y_true, y_pred))
+    return imp_utils.ret(ffi.nll_loss_dpred(y_true, y_pred))
 @set_module("mnm")
-def nll_loss_dtrue(loss, y_true, y_pred):
-    loss = imp_utils.to_tensor(loss)
+def nll_loss_dtrue(y_true, y_pred):
     y_true = imp_utils.to_tensor(y_true)
     y_pred = imp_utils.to_tensor(y_pred)
-    return imp_utils.ret(ffi.nll_loss_dtrue(loss, y_true, y_pred))
+    return imp_utils.ret(ffi.nll_loss_dtrue(y_true, y_pred))
 @set_module("mnm")
 def not_equal(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
@@ -322,10 +312,10 @@ def relu_dx(x, y, dy):
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.relu_dx(x, y, dy))
 @set_module("mnm")
-def reshape_like(x, shape):
+def reshape(x, shape):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
-    return imp_utils.ret(ffi.reshape_like(x, shape))
+    return imp_utils.ret(ffi.reshape(x, shape))
 @set_module("mnm")
 def sgd(x, dx, v, learning_rate, mu):
     x = imp_utils.to_tensor(x)
@@ -367,6 +357,12 @@ def subtract(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.subtract(x1, x2, out, where))
+@set_module("mnm")
+def sum(x, axis, keep):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int_tuple(axis)
+    keep = imp_utils.to_int_tuple(keep)
+    return imp_utils.ret(ffi.sum(x, axis, keep))
 @set_module("mnm")
 def tanh(x):
     x = imp_utils.to_any(x)
