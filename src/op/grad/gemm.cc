@@ -3,7 +3,7 @@
  * \file src/op/grad/binary.cc
  * \brief Declaration of gradients
  */
-#include "mnm/op.h"
+#include "./grad_utils.h"
 
 namespace mnm {
 namespace op {
@@ -12,9 +12,7 @@ namespace grad {
 using namespace mnm::ir;
 
 template<bool transpose_a, bool transpose_b>
-Array<Expr> MatmulGradImpl(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
-  CHECK_EQ(ograds.size(), 1);
-  const Expr& dy = ograds[0];
+Array<Expr> MatmulGradImpl(const Expr& orig_call, const Var &y, const Expr& dy) {
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];

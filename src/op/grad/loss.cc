@@ -3,7 +3,7 @@
  * \file src/op/grad/binary.cc
  * \brief Declaration of gradients
  */
-#include "mnm/op.h"
+#include "./grad_utils.h"
 
 namespace mnm {
 namespace op {
@@ -11,7 +11,7 @@ namespace grad {
 
 using namespace mnm::ir;
 
-Array<Expr> NllLossGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+Array<Expr> NllLossGrad(const Expr& orig_call, const Expr &y, const Expr& ograds) {
   static auto dpred = Op::Get("mnm.op.nll_loss_dpred");
   static auto dtrue = Op::Get("mnm.op.nll_loss_dtrue");
   // TODO(@were): I am not sure how is the dy here.

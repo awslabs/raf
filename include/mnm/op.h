@@ -86,19 +86,30 @@ class OpDispatch {
 };
 
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
-// Schema:
-//    Array<Value> inputs -> Attrs input_schema
+
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
-// Primial gradient:
-//    <Var output, Expr orig_call, Array<Expr> output_grad> -> Array<Expr> input_grad
-using FPrimalGradient = registry::TypedPackedFunc<ir::Array<ir::Expr>(
-    const ir::Var& var, const ir::Expr& orig_call, const ir::Array<ir::Expr>& output_grad)>;
-// Fused primial gradient:
-//    <Var output, Expr orig_call, Expr output_grad, Array<Expr> old_input_grad> -> Array<Expr>
-//    new_input_grad
-using FFusedPrimalGradient = registry::TypedPackedFunc<ir::Array<ir::Expr>(
-    const ir::Var& var, const ir::Expr& orig_call, const ir::Array<ir::Expr>& output_grad,
-    const ir::Array<ir::Expr>& old_input_grads)>;
+
+using FPrimalGradient = registry::TypedPackedFunc<
+  // returns: op's contribution to igrads
+  ir::Array<ir::Expr>(
+    // orig_call: a relay::Call which invokes this operator
+    const ir::Expr& orig_call,
+    // computed_output: (optional) to which var the op's output binds to
+    const ir::Var& computed_output,
+    // out_grad: ograds
+    const ir::Expr& out_grad)>;
+
+using FFusedPrimalGradient = registry::TypedPackedFunc<
+  // returns: the updated igrads
+  ir::Array<ir::Expr>(
+    // orig_call: a relay::Call which invokes this operator
+    const ir::Expr& orig_call,
+    // computed_output: (optional) to which var the op's output binds to
+    const ir::Var& computed_output,
+    // out_grad: ograds
+    const ir::Expr& out_grad,
+    // in_grad: old igrads
+    const ir::Array<ir::Expr>& in_grad)>;
 
 void RunDeclare(const CallValues& call);
 ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);

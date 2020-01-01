@@ -174,8 +174,10 @@ struct Gradient : public ExprVisitor {
     // returns: new_igrads = igrads + grad-of-call-op<ograd>
     static const auto fpg = Op::GetAttr<FPrimalGradient>("FPrimalGradient");
     static const auto ffpg = Op::GetAttr<FFusedPrimalGradient>("FFusedPrimalGradient");
+    const VarNode* var = let_var.operator->();
+    const Expr &_ograds = tuple_length.count(var) ? TupleNode::make(ograds) : ograds[0];
     if (ffpg.count(op)) {
-      Array<Expr> ret = ffpg[op](let_var, orig, ograds, igrads);
+      Array<Expr> ret = ffpg[op](orig, let_var, _ograds, igrads);
       // ensure intermediate results are bound to a relay::var
       for (int i = 0, n = ret.size(); i < n; ++i) {
         if (ret[i].defined() && !ret[i]->IsInstance<VarNode>()) {
@@ -184,7 +186,7 @@ struct Gradient : public ExprVisitor {
       }
       return ret;
     } else if (fpg.count(op)) {
-      return AddTensors(igrads, fpg[op](let_var, orig, ograds));
+      return AddTensors(igrads, fpg[op](orig, let_var, _ograds));
     }
     LOG(FATAL) << "Gradient is not registered for operator " << op->name;
     throw;

@@ -26,7 +26,7 @@ DLTensor GetDLTensor(const Value &v) {
 
 void GetOut(const Value& out, std::vector<DLTensor>* ret) {
   CHECK(ret->empty());
-  if (const auto* tv = out.as<TensorValueObj>()) {
+  if (out->IsInstance<TensorValueObj>()) {
     DLTensor* t = out;
     ret->emplace_back(*t);
   } else if (const auto* tv = out.as<TupleValueObj>()) {
@@ -118,7 +118,7 @@ void TVMOpEnv::Execute(const op::CallValues& call) {
   TVMArgs targs(values.data(), codes.data(), values.size());
   TVMRetValue rv;
   f.CallPacked(targs, &rv);
-  if (const auto* tv = call->out.as<value::TensorValueObj>()) {
+  if (call->out->IsInstance<TensorValueObj>()) {
     DLTensor* dlt = Downcast<value::TensorValue>(call->out);
     dlt->data = outputs[0].data;
   } else if (const auto* tv = call->out.as<value::TupleValueObj>()) {

@@ -3,7 +3,7 @@
  * \file src/op/grad/nn.cc
  * \brief Declaration of gradients
  */
-#include "mnm/op.h"
+#include "./grad_utils.h"
 
 namespace mnm {
 namespace op {
@@ -17,7 +17,7 @@ Expr Shape(const Expr& expr) {
 }
 
 template <const char* GradOp>
-Array<Expr> PoolGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+Array<Expr> PoolGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
@@ -27,7 +27,6 @@ Array<Expr> PoolGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ogr
   const Expr& dilation = call->args[4];
   const Expr& ceil_mode = call->args[5];
   const Expr& include_pad = call->args[6];
-  const Expr& dy = ograds[0];
   return {
       CallNode::make(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
 }
@@ -40,15 +39,13 @@ const char AVG_POOL2D_DX[] = "mnm.op.avg_pool2d_dx";
 auto AvgPool2dGrad = PoolGrad<AVG_POOL2D_DX>;
 MNM_OP_GRAD("mnm.op.avg_pool2d", AvgPool2dGrad);
 
-Array<Expr> Conv2dGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+Array<Expr> Conv2dGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
   // schema for conv2d is:
   //    x, w, stride, padding, dilation, groups
   // schema for conv2d_grad is:
   //    x_or_w, y, dy, shape, stride, padding, dilation, groups
   static auto op_dx = Op::Get("mnm.op.conv2d_dx");
   static auto op_dw = Op::Get("mnm.op.conv2d_dw");
-  CHECK_EQ(ograds.size(), 1);
-  const Expr& dy = ograds[0];
   const CallNode* call = orig_call.as<CallNode>();
   // TODO(@junrushao1994): this piece of code is particularly suitable for auto-gen
   CHECK_GE(call->args.size(), 6);
@@ -67,14 +64,12 @@ Array<Expr> Conv2dGrad(const Var& y, const Expr& orig_call, const Array<Expr>& o
 MNM_OP_GRAD("mnm.op.conv2d", Conv2dGrad);
 
 template <const char* GradOp>
-Array<Expr> UnaryGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+Array<Expr> UnaryGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
   // schema for relu is:
   //    x
   // schema for relu_dx is:
   //    x, y, dy
   static auto op_dx = Op::Get(GradOp);
-  CHECK_EQ(ograds.size(), 1);
-  const Expr& dy = ograds[0];
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
@@ -93,14 +88,14 @@ const char SIGMOID_DX[] = "mnm.op.sigmoid_dx";
 auto SigmoidGrad = UnaryGrad<SIGMOID_DX>;
 MNM_OP_GRAD("mnm.op.sigmoid", SigmoidGrad);
 
-Array<Expr> BatchNormTrainGrad(const Var& y, const Expr& orig_call, const Array<Expr>& ograds,
+Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var &y, const Expr& dymv,
                                const Array<Expr>& igrads) {
   // schema for batch_norm_train is:
   //    x, running_mean,running_var, w, b, momentum, eps
   // schema for batch_norm_train_dxwb is:
   //    dy, x, w, b, eps
   static auto op_dxwb = Op::Get("mnm.op.batch_norm_train_dxwb");
-  const Expr& dy = ograds[0];
+  const Expr& dy = AsTupleExpr(dymv, 3)[0];
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
   const Expr& w = call->args[3];
@@ -119,9 +114,8 @@ Array<Expr> BatchNormTrainGrad(const Var& y, const Expr& orig_call, const Array<
 MNM_OP_FUSED_GRAD("mnm.op.batch_norm_train", BatchNormTrainGrad);
 
 template <const char* GradOp>
-Array<Expr> SoftmaxGradImpl(const Var& y, const Expr& orig_call, const Array<Expr>& ograds) {
+Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Var &y, const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);
-  const Expr& dy = ograds[0];
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
   const Expr& axis = call->args[1];

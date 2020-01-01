@@ -85,7 +85,7 @@ class Extractor final : public ExprVisitor {
         if (expr.defined()) {
           ExprVisitor::VisitExpr(expr);
         }
-      } else if (const auto* nda = binding.as<NDArrayBindingObj>()) {
+      } else if (binding->IsInstance<NDArrayBindingObj>()) {
         bindings[var] = {};
         continue;
       }
