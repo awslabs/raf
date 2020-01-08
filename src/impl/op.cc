@@ -9,8 +9,8 @@
 #include "mnm/op.h"
 #include "mnm/registry.h"
 #include "mnm/value.h"
-
 #include "../requests.h"
+#include "../op/schema/list_args.h"
 
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mnm::op::OpDispatch);
@@ -20,17 +20,20 @@ namespace mnm {
 namespace op {
 
 using executor::Executor;
+using ir::Attrs;
 using ir::Array;
-using ir::make_object;
 using ir::Downcast;
+using ir::make_object;
 using ir::ObjectPtr;
 using ir::Op;
 using requests::Requests;
-using value::Value;
 using value::OpValue;
+using value::Value;
 
-CallValues CallValues::make() {
+CallValues CallValues::make(value::Value callee, ir::Attrs args) {
   ObjectPtr<CallValuesNode> n = make_object<CallValuesNode>();
+  n->callee = std::move(callee);
+  n->args = std::move(args);
   return CallValues(n);
 }
 
@@ -43,7 +46,7 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
 }
 
 std::unique_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
-  const Op &op = Downcast<OpValue>(call->callee)->op;
+  const Op& op = Downcast<OpValue>(call->callee)->op;
   for (const auto& e : *OpDispatch::Get(op, call->ctx.device_type)) {
     const auto& maker = e.second;
     std::unique_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
@@ -126,15 +129,25 @@ std::shared_ptr<Requests> OpEnv::GetRequests() const {
   return this->impl;
 }
 
-void RunDeclare(const CallValues &call) {
+void RunDeclare(const CallValues& call) {
   static const auto f_op_make_output = Op::GetAttr<FMNMDeclare>("FMNMDeclare");
-  const Op &op = Downcast<OpValue>(call->callee)->op;
+  const Op& op = Downcast<OpValue>(call->callee)->op;
   const auto& f = f_op_make_output[op];
   f(call);
 }
 
 Op GetOp(const std::string& op_name) {
   return Op::Get(op_name);
+}
+
+Attrs MakeListArgs(const Array<Value>& values) {
+  auto attrs = make_object<schema::ListArgs>();
+  attrs->args = values;
+  return Attrs(attrs);
+}
+
+Array<Value> GetListArgs(const Attrs& attrs) {
+  return attrs.as<schema::ListArgs>()->args;
 }
 
 MNM_REGISTER_GLOBAL("mnm.op.GetOp").set_body_typed(GetOp);

@@ -26,7 +26,7 @@ namespace gradient {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using mnm::value::ZerosValue;
+using mnm::value::NoGradValue;
 using tvm::relay::LetList;
 
 struct ExplicitLetList {
@@ -313,7 +313,7 @@ struct Gradient : public ExprVisitor {
       if (tuple_length.count(var_node)) {
         for (Expr& expr : var_grads) {
           if (!expr.defined()) {
-            expr = MakeConstant(ZerosValue::make());
+            expr = MakeConstant(NoGradValue::make());
           }
         }
         grads.push_back(ll->Push(TupleNode::make(var_grads)));
@@ -322,7 +322,7 @@ struct Gradient : public ExprVisitor {
         if (var_grads[0].defined()) {
           grads.push_back(var_grads[0]);
         } else {
-          grads.push_back(MakeConstant(ZerosValue::make()));
+          grads.push_back(MakeConstant(NoGradValue::make()));
         }
       }
     }

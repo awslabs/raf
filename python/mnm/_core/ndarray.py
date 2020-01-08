@@ -39,7 +39,7 @@ class ndarray:
                                  strides=strides,
                                  order=order)
             # NDArray is treated as relay.Constant
-            self.__handle = BindNDArray(_np_to_tensor_value(npa, ctx=ctx), name, None)
+            self.__handle = BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, name)
         self.__requires_grad = False
 
     def __setitem__(self, key, value):
@@ -50,7 +50,7 @@ class ndarray:
                 assert value.shape == self.shape
                 value = _np_to_tensor_value(value.astype(self.dtype),
                                             ctx=self.ctx)
-                self.__handle = BindNDArray(value, self.__handle.name_hint, None)
+                self.__handle = BindNDArray(value, None, self.__handle.name_hint)
                 return
         raise NotImplementedError
 
@@ -239,7 +239,7 @@ def array(
                    order=order,
                    subok=subok,
                    ndmin=ndmin)
-    return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), name, None))
+    return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, name))
 
 
 _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)

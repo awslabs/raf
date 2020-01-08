@@ -12,6 +12,7 @@
 #include "mnm/tensor.h"
 #include "mnm/value.h"
 #include "mnm/binding.h"
+#include "dmlc/thread_local.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
 
@@ -22,10 +23,10 @@ namespace interpreter {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op;
-using binding::BindNDArray;
 using binding::BindingEntry;
-using binding::NDArrayBinding;
+using binding::BindNDArray;
 using binding::LookupBinding;
+using binding::NDArrayBinding;
 using memory_pool::Memory;
 using requests::Requests;
 using stream_pool::Stream;
@@ -291,23 +292,22 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 };
 
-static ObjectRef DeTuple(const Expr& expr, const Value& value) {
+ObjectRef DeTuple(const Value& value) {
   if (value->IsInstance<ScalarValueObj>()) {
     return value;
   }
   if (value->IsInstance<TensorValueObj>()) {
-    return BindNDArray(value, {});
+    return BindNDArray(value);
   }
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
     int n = static_cast<int>(tuple->fields.size());
     for (int i = 0; i < n; ++i) {
-      Expr sub_expr = ir::TupleGetItemNode::make(expr, i);
       Value sub_value = tuple->fields[i];
       if (sub_value->op_env == nullptr) {
         sub_value->op_env = tuple->op_env;
       }
-      result.push_back(DeTuple(sub_expr, sub_value));
+      result.push_back(DeTuple(sub_value));
     }
     return std::move(result);
   }
@@ -315,11 +315,40 @@ static ObjectRef DeTuple(const Expr& expr, const Value& value) {
   throw;
 }
 
+class IntrpThreadEntry {
+ public:
+  IntrpThreadEntry() = default;
+
+  static Interpreter* ThreadLocal() {
+    using TLS = dmlc::ThreadLocalStore<IntrpThreadEntry>;
+    return &TLS::Get()->exec;
+  }
+  Interpreter exec;
+};
+
 ObjectRef Interpret(Expr expr, Module mod) {
-  thread_local Interpreter* intrp = new Interpreter();
-  intrp->st.tab.clear();
+  Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
   intrp->mod = mod.defined() ? mod : Module::Global();
-  return DeTuple(expr, intrp->Eval(expr));
+  auto ret = DeTuple(intrp->Eval(expr));
+  intrp->mod = {};
+  intrp->st.tab = {};
+  return ret;
+}
+
+ObjectRef InvokePrimitive(const CallValues &call) {
+  Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
+  auto ret = DeTuple(intrp->InvokePrimitive(call));
+  intrp->mod = {};
+  intrp->st.tab = {};
+  return ret;
+}
+
+Value _InvokePrimitive(const CallValues &call) {
+  Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
+  auto ret = intrp->InvokePrimitive(call);
+  intrp->mod = {};
+  intrp->st.tab = {};
+  return ret;
 }
 
 MNM_REGISTER_GLOBAL("mnm.executor.Interpret").set_body_typed(Interpret);

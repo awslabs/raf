@@ -11,21 +11,24 @@
 namespace mnm {
 namespace binding {
 
-// ADInfo stores the information necessary for doing imperative auto differentiation
-class ADInfoObj : public ir::Object {
+// GradTape stores the information necessary for doing imperative auto differentiation
+//  * requires_grad     <=> tape.defined()
+//  * retain_grad       <=> tape.defined() && tape->retain_grad
+//  * (unused) is_leaf  <=> !tape.defined() || tape->prev_tapes.empty()
+class GradTapeObj : public ir::Object {
  public:
-  value::ClosureValue bp;
-  ir::Var ograd;
-  ir::Array<ir::ObjectRef> inputs;
-  bool retain_grad{false};
-  static constexpr const char* _type_key = "mnm.binding.ADInfoObj";
-  MNM_FINAL_OBJECT(ADInfoObj, ir::Object);
+  ir::Var grad;
+  mutable value::ClosureValue bp;
+  mutable ir::Array<ir::ObjectRef> prev_tapes;
+  mutable bool retain_grad{false};
+  static constexpr const char* _type_key = "mnm.binding.GradTapeObj";
+  MNM_FINAL_OBJECT(GradTapeObj, ir::Object);
 };
 
-class ADInfo : public ir::ObjectRef {
+class GradTape : public ir::ObjectRef {
  public:
-  static ADInfo make(value::ClosureValue bp, ir::Var ograd, ir::Array<ir::ObjectRef> inputs);
-  MNM_OBJECT_REF(ADInfo, ir::ObjectRef, ADInfoObj);
+  static GradTape make(ir::Var grad, value::ClosureValue bp, ir::Array<ir::ObjectRef> prev_tapes);
+  MNM_OBJECT_REF(GradTape, ir::ObjectRef, GradTapeObj);
 };
 
 // BindingEntry stores auxiliary information for vars
@@ -43,15 +46,15 @@ class BindingEntry : public ir::ObjectRef {
 // NDArray's binding entry
 class NDArrayBindingObj : public BindingEntryObj {
  public:
-  value::Value value;
-  mutable ADInfo ad_info;
+  mutable value::Value value;
+  mutable GradTape tape;
   static constexpr const char* _type_key = "mnm.binding.NDArrayBinding";
   MNM_FINAL_OBJECT(NDArrayBindingObj, BindingEntryObj);
 };
 
 class NDArrayBinding : public BindingEntry {
  public:
-  static NDArrayBinding make(value::Value value, ADInfo ad_info);
+  static NDArrayBinding make(value::Value value, GradTape tape);
   MNM_OBJECT_REF(NDArrayBinding, BindingEntry, NDArrayBindingObj);
 };
 
@@ -69,7 +72,7 @@ class SymbolBinding : public BindingEntry {
   MNM_OBJECT_REF(SymbolBinding, BindingEntry, SymbolBindingObj);
 };
 
-ir::Var BindNDArray(value::Value value, std::string name_hint = "", ADInfo ad_info = {});
+ir::Var BindNDArray(value::Value value, GradTape tape = {}, std::string name_hint = "");
 ir::Var BindSymbol(ir::Expr expr, std::string name_hint = "");
 BindingEntry LookupBinding(const ir::VarNode *var);
 

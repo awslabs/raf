@@ -17,5 +17,5 @@ class Module(NodeBase):
     def __getitem__(self, var):
         return ffi.Lookup(self, var)
 
-
-Module.GLOBAL = ffi.Global()
+def get_global():
+    return ffi.Global()

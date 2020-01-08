@@ -6,7 +6,7 @@ import numpy as np
 
 from mnm._core.core_utils import get_func_name, set_module
 from mnm._core.executor import interpret
-from mnm._core.module import Module
+from mnm._core import module
 from mnm._core.ndarray import ndarray as NDArray
 from mnm._core.value import BoolValue, FloatValue, IntValue, Value
 from mnm._lib import relay
@@ -19,7 +19,6 @@ from .to_relay import cfg2relay
 
 FUNC_TAB: Dict[Callable, Callable] = {}
 FUNC_VAR: Dict[Callable, relay.GlobalVar] = {}
-MNM_MODULE = Module.GLOBAL
 
 
 def find_invoker_name(namespace) -> str:
@@ -94,8 +93,9 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     local_names = list(local_names)
     hybrid_module = cfg2relay(cfg, pyfunc, local_names, entry)
     # build relay module
+    global_module = module.get_global()
     for global_var, func in hybrid_module.items():
-        MNM_MODULE[global_var] = func
+        global_module[global_var] = func
 
     def call(*args):
         code = relay.Call(op=entry, args=[_make_argument(arg) for arg in args])

@@ -6,6 +6,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <algorithm>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/registry.h"
@@ -15,30 +16,135 @@
 
 namespace mnm {
 namespace op {
-namespace ffi {
-ir::Expr ToAny(const registry::TVMArgValue& a);
-ir::Expr ToTensor(const registry::TVMArgValue& a);
-ir::Expr ToInt(const registry::TVMArgValue& a);
-ir::Expr ToBool(const registry::TVMArgValue& a);
-ir::Expr ToDouble(const registry::TVMArgValue& a);
-ir::Expr ToString(const registry::TVMArgValue& a);
-ir::Expr ToIntTuple(const registry::TVMArgValue& a);
-ir::Expr ToOptionalIntTuple(const registry::TVMArgValue& a);
-}  // namespace ffi
+namespace regs {
+
+constexpr int MAX_NUM_ARGS = 256;
+
+inline void FillError(const dmlc::Error &e, const std::string &from, const std::string &to) {
+  size_t index = 0;
+  std::string str = e.what();
+  while (true) {
+      index = str.find(from, index);
+      if (index == std::string::npos) {
+        break;
+      }
+      str.replace(index, from.length(), to);
+      index += to.length();
+  }
+  throw dmlc::Error(str);
+}
+
+inline std::string ToOrdinal(int x) {
+  if (x == 0) {
+    return "first";
+  }
+  if (x == 1) {
+    return "second";
+  }
+  if (x == 2) {
+    return "third";
+  }
+  return std::to_string(x + 1) + "-th";
+}
+
+inline std::string GetTypeStr(const registry::TVMArgValue& a) {
+  if (a.type_code() == kObjectHandle) {
+    return (a.operator ir::ObjectRef())->GetTypeKey();
+  }
+  return tvm::runtime::TypeCode2Str(a.type_code());
+}
+
+inline bool RemoveNoGrad(binding::GradTape* tapes, ir::Expr* grads, int *n) {
+  // returns: whether full grad is used
+  int m = 0;
+  bool full_grads = true;
+  for (int i = 0, len = *n; i < len; ++i) {
+    const auto& tape = tapes[i];
+    const auto& grad = grads[i];
+    if (tape.defined() && grad.defined()) {
+      grads[m] = grads[i];
+      tapes[m] = tape;
+      ++m;
+      continue;
+    }
+    if (grad.defined()) {
+      full_grads = false;
+    }
+  }
+  *n = m;
+  return full_grads;
+}
+
+ir::ObjectRef DeTuple(const value::Value& value);
+
+ir::ObjectRef DeStruct(value::Value value,
+                       value::ClosureValue bp,
+                       ir::Array<ir::ObjectRef> prev_tapes);
+
+void CollectVars(const ir::Expr& expr, std::vector<const ir::ExprNode*>* vars);
+
+}  // namespace regs
 }  // namespace op
 }  // namespace mnm
 
 namespace mnm {
 namespace op {
-namespace args {
-value::Value ToAny(const value::Value& a);
-value::TensorValue ToTensor(const value::Value& a);
-int64_t ToInt(const value::Value& a);
-bool ToBool(const value::Value& a);
-double ToDouble(const value::Value& a);
-std::string ToString(const value::Value& a);
-std::vector<int64_t> ToIntTuple(const value::Value& a);
-std::vector<int64_t> ToOptionalIntTuple(const value::Value& a);
-}  // namespace args
+namespace regs {
+
+class VarPack {
+ public:
+  ir::Var y = ir::VarNode::make("y", {});
+  ir::Var dy = ir::VarNode::make("dy", {});
+  std::array<ir::Var, MAX_NUM_ARGS> x;
+
+  VarPack() {
+    for (int i = 0; i < MAX_NUM_ARGS; ++i) {
+      x[i] = ir::VarNode::make("x" + std::to_string(i), {});
+    }
+  }
+
+  ir::Call MakeCall(const ir::Op& op, int n) const {
+    CHECK_LE(n, MAX_NUM_ARGS);
+    std::vector<ir::Expr> xs(n);
+    for (int i = 0; i < n; ++i) {
+      xs[i] = this->x[i];
+    }
+    return ir::CallNode::make(op, xs);
+  }
+
+  static VarPack* Get() {
+    static VarPack* pack = new VarPack();
+    return pack;
+  }
+};
+
+template <const char* op_name, int n_args>
+struct OpPack {
+  static_assert(n_args <= MAX_NUM_ARGS, "Too many arguments");
+  ir::Op op = ir::Op::Get(op_name);
+  value::OpValue opv = value::OpValue::make(op);
+  ir::Array<ir::Expr> grads;
+  std::vector<const ir::ExprNode*> grad_used_vars;
+  OpPack() {
+    auto fpg = ir::Op::GetAttr<FPrimalGradient>("FPrimalGradient");
+    const auto* pack = VarPack::Get();
+    if (fpg.count(op)) {
+      grads = fpg[op](pack->MakeCall(op, n_args), pack->y, pack->dy);
+      std::vector<ir::Expr> grads_defined;
+      for (const ir::Expr &grad : grads_defined) {
+        if (grad.defined()) {
+          grads_defined.push_back(grad);
+        }
+      }
+      CollectVars(ir::TupleNode::make(grads_defined), &grad_used_vars);
+    }
+  }
+  static OpPack<op_name, n_args>* Get() {
+    static auto* inst = new OpPack<op_name, n_args>();
+    return inst;
+  }
+};
+
+}  // namespace regs
 }  // namespace op
 }  // namespace mnm

@@ -29,7 +29,7 @@ def add(x1, x2, out=None, where=None):
 def avg_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
-    stride = sym_utils.to_optional_int_tuple(stride)
+    stride = sym_utils.to_int_tuple(stride)
     padding = sym_utils.to_int_tuple(padding)
     dilation = sym_utils.to_int_tuple(dilation)
     ceil_mode = sym_utils.to_bool(ceil_mode)
@@ -207,7 +207,7 @@ def matmul_tt(x1, x2, out=None, where=None):
 def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
-    stride = sym_utils.to_optional_int_tuple(stride)
+    stride = sym_utils.to_int_tuple(stride)
     padding = sym_utils.to_int_tuple(padding)
     dilation = sym_utils.to_int_tuple(dilation)
     ceil_mode = sym_utils.to_bool(ceil_mode)

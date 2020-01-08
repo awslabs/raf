@@ -92,9 +92,9 @@ StringValue StringValue::make(const std::string& data) {
   return StringValue(n);
 }
 
-ZerosValue ZerosValue::make() {
-  ObjectPtr<ZerosValueObj> n = make_object<ZerosValueObj>();
-  return ZerosValue(n);
+NoGradValue NoGradValue::make() {
+  ObjectPtr<NoGradValueObj> n = make_object<NoGradValueObj>();
+  return NoGradValue(n);
 }
 /*** GetType ***/
 Type GetType(const Value& value) {

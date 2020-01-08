@@ -39,7 +39,7 @@ class CallValuesNode : public ir::Object {
 
 class CallValues : public ir::ObjectRef {
  public:
-  static CallValues make();
+  static CallValues make(value::Value callee = {}, ir::Attrs args = {});
   MNM_OBJECT_REF(CallValues, ir::ObjectRef, CallValuesNode);
 };
 

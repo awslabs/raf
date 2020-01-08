@@ -14,9 +14,6 @@ namespace mnm {
 namespace op {
 class OpEnv;
 }  // namespace op
-namespace executor {
-class Executor;
-}  // namespace executor
 }  // namespace mnm
 
 // Basic values used in tensor algebra
@@ -241,18 +238,18 @@ class StringValue : public Value {
 };
 
 /* Specific values */
-class ZerosValueObj : public ValueObj {
+class NoGradValueObj : public ValueObj {
  public:
   void VisitAttrs(tvm::AttrVisitor* v) {
   }
-  static constexpr const char* _type_key = "mnm.value.ZerosValue";
-  MNM_FINAL_OBJECT(ZerosValueObj, ValueObj);
+  static constexpr const char* _type_key = "mnm.value.NoGradValue";
+  MNM_FINAL_OBJECT(NoGradValueObj, ValueObj);
 };
 
-class ZerosValue : public Value {
+class NoGradValue : public Value {
  public:
-  static ZerosValue make();
-  MNM_OBJECT_REF(ZerosValue, Value, ZerosValueObj);
+  static NoGradValue make();
+  MNM_OBJECT_REF(NoGradValue, Value, NoGradValueObj);
 };
 }  // namespace value
 }  // namespace mnm

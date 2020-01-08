@@ -9,7 +9,7 @@
 namespace mnm {
 namespace binding {
 namespace {
-MNM_REGISTER_OBJECT_NO_REFLECT(ADInfoObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(GradTapeObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(BindingEntryObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(NDArrayBindingObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(SymbolBindingObj);
@@ -54,18 +54,18 @@ class BoundVarObj : public VarNode {
   }
 };
 
-ADInfo ADInfo::make(value::ClosureValue bp, ir::Var ograd, ir::Array<ObjectRef> inputs) {
-  ObjectPtr<ADInfoObj> n = make_object<ADInfoObj>();
+GradTape GradTape::make(Var grad, ClosureValue bp, Array<ObjectRef> prev_tapes) {
+  ObjectPtr<GradTapeObj> n = make_object<GradTapeObj>();
+  n->grad = std::move(grad);
   n->bp = std::move(bp);
-  n->ograd = std::move(ograd);
-  n->inputs = std::move(inputs);
-  return ADInfo(n);
+  n->prev_tapes = std::move(prev_tapes);
+  return GradTape(n);
 }
 
-NDArrayBinding NDArrayBinding::make(value::Value value, ADInfo ad_info) {
+NDArrayBinding NDArrayBinding::make(Value value, GradTape tape) {
   ObjectPtr<NDArrayBindingObj> n = make_object<NDArrayBindingObj>();
   n->value = std::move(value);
-  n->ad_info = std::move(ad_info);
+  n->tape = std::move(tape);
   return NDArrayBinding(n);
 }
 
@@ -87,11 +87,11 @@ Var MakeManagedBinding(const BindingEntry& entry, const std::string &name_hint) 
   return var;
 }
 
-Var BindNDArray(Value value, std::string name_hint, ADInfo ad_info) {
+Var BindNDArray(Value value, GradTape tape, std::string name_hint) {
   std::string grad_name_hint = "d" + name_hint;
   return MakeManagedBinding(NDArrayBinding::make(
         /*value=*/std::move(value),
-        /*ad_info=*/ad_info), name_hint);
+        /*tape=*/tape), name_hint);
 }
 
 Var BindSymbol(Expr expr, std::string name_hint) {
@@ -113,7 +113,14 @@ Value LookupBoundValue(Var var) {
 }
 
 void SetRequiresGrad(Var var, bool value) {
-  Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->ad_info = NullValue<ADInfo>();
+  GradTape &tape = Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->tape;
+  if (tape.defined() != value) {
+    if (value) {
+      tape = GradTape::make(BindNDArray({}, {}, "d" + var->name_hint()), {}, {});
+    } else {
+      tape = NullValue<GradTape>();
+    }
+  }
 }
 
 MNM_REGISTER_GLOBAL("mnm.binding.BindNDArray").set_body_typed(BindNDArray);

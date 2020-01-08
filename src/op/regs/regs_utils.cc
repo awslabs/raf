@@ -5,198 +5,91 @@
  */
 #include "mnm/tensor.h"
 #include "mnm/value.h"
+#include "mnm/binding.h"
 #include "./regs_utils.h"
 #include "../schema/list_args.h"
 
 namespace mnm {
 namespace op {
+namespace regs {
 
-using ir::Array;
-using ir::Attrs;
-using ir::make_object;
-using value::Value;
-
-Attrs MakeListArgs(const Array<Value>& values) {
-  auto attrs = make_object<op::schema::ListArgs>();
-  attrs->args = values;
-  return Attrs(attrs);
-}
-
-Array<Value> GetListArgs(const Attrs& attrs) {
-  return attrs.as<op::schema::ListArgs>()->args;
-}
-
-namespace schema {
-namespace {
-MNM_REGISTER_OBJECT_REFLECT(ListArgs);
-}
-}  // namespace schema
-}  // namespace op
-}  // namespace mnm
-
-namespace mnm {
-namespace op {
-namespace ffi {
-
-using registry::TVMArgValue;
+using namespace mnm::value;
 using namespace mnm::ir;
-using namespace mnm::value;
+using binding::GradTape;
+using binding::BindNDArray;
+using registry::TVMArgValue;
 
-#define MNM_CHECK_SYM(a)                                              \
-  if ((a).type_code() == kObjectHandle && (a).IsObjectRef<Expr>()) {  \
-    return (a).operator Expr();                                       \
+class UsedVars : public ir::ExprVisitor {
+ public:
+  explicit UsedVars(std::vector<const ExprNode*>* vars) : vars(vars) {
   }
-
-#define MNM_RET_SYM(v_type, v) return MakeConstant(v_type::make(v));
-
-Expr ToAny(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  int type_code = a.type_code();
-  if (type_code == kDLInt) {
-    MNM_RET_SYM(IntValue, a.operator int64_t());
+  void VisitExpr_(const VarNode* op) final {
+    vars->push_back(op);
   }
-  if (type_code == kDLFloat) {
-    MNM_RET_SYM(FloatValue, a.operator double());
+  std::vector<const ExprNode*>* vars;
+};
+
+void CollectVars(const Expr& expr, std::vector<const ExprNode*>* vars) {
+  UsedVars(vars).VisitExpr(expr);  // NOLINT(*)
+  std::sort(vars->begin(), vars->end());
+}
+
+ObjectRef DeTuple(const Value& value) {
+  if (value->IsInstance<ScalarValueObj>()) {
+    return value;
   }
-  if (type_code == kStr) {
-    MNM_RET_SYM(StringValue, a.operator std::string());
+  if (value->IsInstance<TensorValueObj>()) {
+    return BindNDArray(value);
   }
-  if (type_code == kNull) {
-    return MakeConstant(ir::NullValue<Value>());
-  }
-  if (type_code == kObjectHandle && a.IsObjectRef<Array<Integer>>()) {
-    return ffi::ToIntTuple(a);
-  }
-  LOG(FATAL) << "Not supported type code " << type_code;
-  throw;
-}
-
-Expr ToTensor(const TVMArgValue& a) {
-  using mnm::tensor::Tensor;
-  MNM_CHECK_SYM(a);
-  MNM_RET_SYM(TensorValue, a.AsNDArray<Tensor>());
-}
-
-Expr ToInt(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  MNM_RET_SYM(IntValue, a.operator int64_t());
-}
-
-Expr ToBool(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  MNM_RET_SYM(BoolValue, a.operator bool());
-}
-
-Expr ToDouble(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  MNM_RET_SYM(FloatValue, a.operator double());
-}
-
-Expr ToString(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  MNM_RET_SYM(StringValue, a.operator std::string());
-}
-
-Expr ToIntTuple(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  if (a.type_code() == kDLInt) {
-    MNM_RET_SYM(TupleValue, {IntValue::make(a.operator int64_t())});
-  }
-  Array<Value> result;
-  for (const auto& item : a.AsObjectRef<Array<Integer>>()) {
-    result.push_back(IntValue::make(item.operator int64_t()));
-  }
-  MNM_RET_SYM(TupleValue, result);
-}
-
-Expr ToOptionalIntTuple(const TVMArgValue& a) {
-  MNM_CHECK_SYM(a);
-  if (a.type_code() == kNull) {
-    MNM_RET_SYM(TupleValue, {});
-  }
-  return ffi::ToIntTuple(a);
-}
-
-}  // namespace ffi
-}  // namespace op
-}  // namespace mnm
-
-namespace mnm {
-namespace op {
-namespace args {
-
-using namespace mnm::value;
-using ir::Downcast;
-
-#define MNM_SWITCH_SCALAR(var, value, body)                      \
-  do {                                                          \
-    if (const auto* var = (value).as<IntValueObj>()) {          \
-      body;                                                      \
-    } else if (const auto* var = (value).as<FloatValueObj>()) { \
-      body;                                                      \
-    } else if (const auto* var = (value).as<BoolValueObj>()) {  \
-      body;                                                      \
-    }                                                            \
-  } while (0);
-
-Value ToAny(const Value& a) {
-  return a;
-}
-
-TensorValue ToTensor(const Value& a) {
-  return Downcast<TensorValue>(a);
-}
-
-int64_t ToInt(const Value& a) {
-  MNM_SWITCH_SCALAR(value, a, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to int";
-  throw;
-}
-
-bool ToBool(const Value& a) {
-  MNM_SWITCH_SCALAR(value, a, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to int";
-  throw;
-}
-
-double ToDouble(const Value& a) {
-  MNM_SWITCH_SCALAR(value, a, { return value->data; });
-  LOG(FATAL) << "InternalError: cannot be converted to double";
-  throw;
-}
-
-std::string ToString(const value::Value& a) {
-  if (const auto* value = a.as<StringValueObj>()) {
-    return value->data;
-  }
-  LOG(FATAL) << "InternalError: cannot be converted to std::string";
-  throw;
-}
-
-std::vector<int64_t> ToIntTuple(const value::Value& a) {
-  if (const auto* v = a.as<IntValueObj>()) {
-    return {v->data};
-  }
-  if (const auto* v = a.as<TupleValueObj>()) {
-    std::vector<int64_t> result;
-    for (const auto& item : v->fields) {
-      if (const auto* vv = item.as<IntValueObj>()) {
-        result.push_back(vv->data);
-      } else {
-        LOG(FATAL) << "Cannot convert to tuple of integers";
-        throw;
+  if (const auto* tuple = value.as<TupleValueObj>()) {
+    Array<ObjectRef> result;
+    int n = static_cast<int>(tuple->fields.size());
+    for (int i = 0; i < n; ++i) {
+      Value sub_value = tuple->fields[i];
+      if (sub_value->op_env == nullptr) {
+        sub_value->op_env = tuple->op_env;
       }
+      result.push_back(DeTuple(sub_value));
     }
-    return result;
+    return std::move(result);
   }
-  LOG(FATAL) << "Cannot convert to tuple of integers";
+  LOG(FATAL) << "ValueError: cannot de-tuple " << value->GetTypeKey();
   throw;
 }
 
-std::vector<int64_t> ToOptionalIntTuple(const value::Value& a) {
-  return a.defined() ? args::ToIntTuple(a) : std::vector<int64_t>();
+ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
+  if (value->IsInstance<ScalarValueObj>()) {
+    return std::move(value);
+  }
+  GradTape tape = GradTape::make(
+      /*dy=*/binding::BindNDArray({}),
+      /*bp=*/std::move(bp),
+      /*prev_tapes=*/std::move(prev_tapes));
+  if (value->IsInstance<TensorValueObj>()) {
+    return BindNDArray(std::move(value), std::move(tape));
+  }
+  if (const auto* tuple = value.as<TupleValueObj>()) {
+    Array<ObjectRef> result;
+    int n = static_cast<int>(tuple->fields.size());
+    Var dy = VarNode::make("dy", {});
+    std::vector<Expr> grads(n, MakeConstant(NoGradValue::make()));
+    for (int i = 0; i < n; ++i) {
+      Value sub_value = tuple->fields[i];
+      if (sub_value->op_env == nullptr) {
+        sub_value->op_env = tuple->op_env;
+      }
+      grads[i] = dy;
+      result.push_back(DeStruct(
+          /*value=*/sub_value,
+          /*bp=*/ClosureValue::make({}, FunctionNode::make({dy}, TupleNode::make(grads), {}, {})),
+          /*prev_tapes*/ {tape}));
+    }
+    return std::move(result);
+  }
+  LOG(FATAL) << "ValueError: cannot de-tuple " << value->GetTypeKey();
+  throw;
 }
 
-}  // namespace args
+}  // namespace regs
 }  // namespace op
 }  // namespace mnm
