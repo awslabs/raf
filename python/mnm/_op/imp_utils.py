@@ -30,6 +30,8 @@ def to_tensor(a):
 def to_int_tuple(a):
     if isinstance(a, ndarray):
         return a._ndarray__handle  # pylint: disable=protected-access
+    if a is None:
+        a = []
     if isinstance(a, np.ndarray):
         a = a.tolist()
     if isinstance(a, Number):

@@ -1,3 +1,6 @@
+import pytest
+import numpy as np
+
 import mnm
 from mnm.model import BatchNorm, Conv2d, Linear, Sequential
 
@@ -88,24 +91,26 @@ class ResNet50(mnm.Model):
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
-        out = mnm.avg_pool2d(out, 4)
+        out = mnm.avg_pool2d(out, 4, 4)
         out = mnm.batch_flatten(out)
         out = self.linear(out)
         return out
 
 
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_build():
-    # x = mnm.array([1, 2, 3], dtype="float32", ctx="cpu")
+    x = np.random.randn(1, 3, 32, 32)
+    y = np.random.randn(1, 10)
+    m_x = mnm.array(x, dtype="float32", ctx="cuda")
+    m_y = mnm.array(y, dtype='float32', ctx='cuda')
     model = ResNet50([3, 4, 6, 3])
+    model.to(ctx='cuda')
     print("### Switch to training mode")
     model.train_mode()
-    # model(x, x)
-    # model(x, x)
-    # model(x, x)
-    # model(x, x)
+    model(m_x, m_y)
     print("### Switch to infer mode")
     model.infer_mode()
-    # model(x)
+    model(m_x)
 
 
 if __name__ == "__main__":

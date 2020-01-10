@@ -39,17 +39,20 @@ def to_int_tuple(a):
     if isinstance(a, Symbol):
         return a._Symbol__handle  # pylint: disable=protected-access
 
+    if a is None:
+        a = []
+
     if isinstance(a, np.ndarray):
         a = a.tolist()
 
     if isinstance(a, Number):
         if int(a) != a:
-            raise ValueError("Cannot convert to List[int]")
+            raise ValueError(f"Cannot convert {a} to List[int]")
 
         return int(a)
 
     if not isinstance(a, (tuple, list)):
-        raise ValueError("Cannot convert to List[int]")
+        raise ValueError(f"Cannot convert {a} to List[int]")
     result = []
 
     for item in a:

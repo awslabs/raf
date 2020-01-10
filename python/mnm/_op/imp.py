@@ -30,7 +30,7 @@ def add(x1, x2, out=None, where=None):
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.add(x1, x2, out, where))
 @set_module("mnm")
-def avg_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
+def avg_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
     kernel = imp_utils.to_int_tuple(kernel)
     stride = imp_utils.to_int_tuple(stride)
@@ -238,7 +238,7 @@ def matmul_tt(x1, x2, out=None, where=None):
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.matmul_tt(x1, x2, out, where))
 @set_module("mnm")
-def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
+def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
     kernel = imp_utils.to_int_tuple(kernel)
     stride = imp_utils.to_int_tuple(stride)

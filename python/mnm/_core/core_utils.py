@@ -136,3 +136,11 @@ def get_named_attr(instance, *, name=None, check=None):
             continue
         ret[candidate] = member
     return ret
+
+
+def get_chained_attr(instance, names, default=None):
+    for name in names:
+        if not hasattr(instance, name):
+            return default
+        instance = getattr(instance, name)
+    return instance

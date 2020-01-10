@@ -29,11 +29,18 @@ class Model(cacher.Cacher):
     def state(self, prefix="", recursive=True):
         return _get_param_dict(self, prefix=prefix, recursive=recursive)
 
+    def to(self, *, ctx=None, dtype=None):  # pylint: disable=invalid-name
+        # TODO(@junrushao1994): do we control cache invalidation?
+        for model in _get_model_dict(self, prefix="", recursive=True).values():
+            for name, param in _get_attr_params_key_value(model).items():
+                param = param.to(ctx=ctx, dtype=dtype)
+                setattr(model, name, param)
+
 
 # pylint: disable=protected-access
 
 
-def _get_attr_models(model):
+def _get_attr_models_key_value(model):
     return get_named_attr(model, check=lambda x: isinstance(x, Model))
 
 
@@ -41,7 +48,7 @@ def _get_attr_models_value(model):
     return get_attr(model, check=lambda x: isinstance(x, Model))
 
 
-def _get_attr_params(model):
+def _get_attr_params_key_value(model):
     return get_named_attr(model, check=lambda x: isinstance(x, ndarray))
 
 
@@ -73,9 +80,28 @@ def _get_param_dict(root_model, *, prefix, recursive):
         prefix = model_prefix[model]
         if prefix != "":
             prefix = prefix + "."
-        for name, item in _get_attr_params(model).items():
+        for name, item in _get_attr_params_key_value(model).items():
             result[prefix + name] = item
-        for name, item in _get_attr_models(model).items():
+        for name, item in _get_attr_models_key_value(model).items():
+            model_prefix[item] = prefix + name
+
+    bfs([root_model],
+        on_pop,
+        on_next=_get_attr_models_value,
+        recursive=recursive)
+    return result
+
+
+def _get_model_dict(root_model, *, prefix, recursive):
+    model_prefix = {root_model: prefix}
+    result = OrderedDict()
+
+    def on_pop(model):
+        prefix = model_prefix[model]
+        result[prefix] = model
+        if prefix != "":
+            prefix = prefix + "."
+        for name, item in _get_attr_models_key_value(model).items():
             model_prefix[item] = prefix + name
 
     bfs([root_model],

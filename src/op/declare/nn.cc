@@ -64,7 +64,7 @@ void Pool2D(const CallValues& call) {
   const DLTensor* x = args->x;
   CHECK_EQ(x->ndim, 4);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
-  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> stride = args->stride.empty() ? kernel : Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
   int64_t n_in = x->shape[0];

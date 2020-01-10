@@ -66,7 +66,7 @@ class PoolArgs : public ir::AttrsNode<PoolArgs> {
  public:
   value::TensorValue x;
   std::vector<int64_t> kernel;
-  std::vector<int64_t> stride{};
+  std::vector<int64_t> stride;
   std::vector<int64_t> padding{0};
   std::vector<int64_t> dilation{1};
   bool ceil_mode{false};

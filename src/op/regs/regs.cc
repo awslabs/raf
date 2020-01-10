@@ -1484,10 +1484,10 @@ Attrs Loss(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Pool(const Array<Value>& values) {
-  MNM_PRELUDE(2, 7, schema::PoolArgs);
+  MNM_PRELUDE(3, 7, schema::PoolArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, kernel);
-  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, stride);
+  MNM_REQUIRED(2, value2schema::IntOrTupleInt, stride);
   MNM_OPTIONAL(3, value2schema::IntOrTupleInt, padding);
   MNM_OPTIONAL(4, value2schema::IntOrTupleInt, dilation);
   MNM_OPTIONAL(5, value2schema::Bool, ceil_mode);

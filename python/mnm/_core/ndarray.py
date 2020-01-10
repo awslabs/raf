@@ -39,7 +39,8 @@ class ndarray:
                                  strides=strides,
                                  order=order)
             # NDArray is treated as relay.Constant
-            self.__handle = BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, name)
+            self.__handle = BindNDArray(
+                _np_to_tensor_value(npa, ctx=ctx), None, name)
         self.__requires_grad = False
 
     def __setitem__(self, key, value):
@@ -50,7 +51,8 @@ class ndarray:
                 assert value.shape == self.shape
                 value = _np_to_tensor_value(value.astype(self.dtype),
                                             ctx=self.ctx)
-                self.__handle = BindNDArray(value, None, self.__handle.name_hint)
+                self.__handle = BindNDArray(
+                    value, None, self.__handle.name_hint)
                 return
         raise NotImplementedError
 
@@ -154,6 +156,14 @@ class ndarray:
     @byte_offset.setter
     def byte_offset(self, byte_offset):
         self.__byte_offset = byte_offset
+
+    def to(self, *, ctx=None, dtype=None):  # pylint: disable=invalid-name
+        npa = self.asnumpy()
+        if dtype is not None:
+            npa = npa.astype(dtype)
+        if ctx is None:
+            ctx = self.ctx
+        return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, ""))
 
 
 class Symbol:  # pylint: disable=too-few-public-methods

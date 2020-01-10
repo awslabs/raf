@@ -26,7 +26,7 @@ def add(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.add(x1, x2, out, where))
-def avg_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
+def avg_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
     stride = sym_utils.to_int_tuple(stride)
@@ -204,7 +204,7 @@ def matmul_tt(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.matmul_tt(x1, x2, out, where))
-def max_pool2d(x, kernel, stride=None, padding=0, dilation=1, ceil_mode=False, include_pad=True):
+def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
     stride = sym_utils.to_int_tuple(stride)

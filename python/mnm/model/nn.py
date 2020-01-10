@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 from mnm._core.ndarray import ndarray
+from mnm._core.core_utils import get_chained_attr
 from mnm._op import sym
 from mnm.random import uniform
 from mnm.random.nn import kaiming_uniform
@@ -32,15 +33,16 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
             kernel_size = (kernel_size, kernel_size)
         self.w_shape = (out_channels, in_channels // groups, *kernel_size)
         self.b_shape = (out_channels, 1, 1) if bias else None
+        self.b = None
         self.reset()
 
     def reset(self):
-        self.w = ndarray(kaiming_uniform(self.w_shape, name="w"))
-        self.b = None
+        self.w = kaiming_uniform(self.w_shape, name="w")
         if self.b_shape is not None:
             _, fan_in, _, _ = self.w_shape
             bound = 1.0 / math.sqrt(fan_in)
-            self.b = ndarray(uniform(-bound, bound, self.b_shape, name="b"))
+            self.b = uniform(-bound, bound, self.b_shape, name="b",
+                             ctx=get_chained_attr(self, ["b", "ctx"], default="cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -65,19 +67,24 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
         self.eps = eps
         self.momentum = momentum
         self.affine = affine
+        self.running_var = self.running_mean = None
+        if affine:
+            self.w = self.b = None
         self.reset()
 
     def reset(self):
         n_f = self.num_features
         self.running_mean = ndarray(np.zeros(n_f, dtype="float32"),
-                                    name="running_mean")
+                                    name="running_mean",
+                                    ctx=get_chained_attr(self, ["running_mean", "ctx"], "cpu"))
         self.running_var = ndarray(np.ones(n_f, dtype="float32"),
-                                   name="running_var")
-        self.w = None
-        self.b = None
+                                   name="running_var",
+                                   ctx=get_chained_attr(self, ["running_var", "ctx"], "cpu"))
         if self.affine:
-            self.w = ndarray(np.zeros(n_f, dtype="float32"), name="w")
-            self.b = ndarray(np.ones(n_f, dtype="float32"), name="b")
+            self.w = ndarray(np.zeros(n_f, dtype="float32"),
+                             name="w", ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
+            self.b = ndarray(np.ones(n_f, dtype="float32"),
+                             name="b", ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -113,23 +120,23 @@ class Linear(Model):
         self.in_features = in_features
         self.out_features = out_features
         self.bias = bias
+        self.b = None
         self.reset()
 
     def reset(self):
-        self.w = ndarray(
-            kaiming_uniform((self.out_features, self.in_features), name="w"))
-        self.b = None
+        self.w = kaiming_uniform((self.out_features, self.in_features), name="w",
+                                 ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
         if self.bias:
             fan_in = self.in_features
             bound = 1.0 / math.sqrt(fan_in)
-            self.b = ndarray(uniform(-bound, bound, [self.out_features]),
-                             name="b")
+            self.b = uniform(-bound, bound, [self.out_features], name="b",
+                             ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 
     @trace
     def forward(self, x):
         out = sym.matmul_nt(x, self.w)
-        if self.b is not None:
+        if self.bias:
             out = sym.add(out, self.b)
         return out
