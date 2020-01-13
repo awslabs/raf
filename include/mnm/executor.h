@@ -33,9 +33,9 @@ class Executor {
 };
 
 namespace interpreter {
-ir::ObjectRef Interpret(ir::Expr expr, ir::Module mod = ir::NullValue<ir::Module>());
-ir::ObjectRef InvokePrimitive(const op::CallValues &call);
-value::Value _InvokePrimitive(const op::CallValues &call);
+value::Value Interpret(ir::Expr expr, ir::Module mod = ir::NullValue<ir::Module>());
+value::Value InvokePrimitive(const op::CallValues &call);
+value::Value InvokeClosure(const op::CallValues &call);
 }  // namespace interpreter
 }  // namespace executor
 }  // namespace mnm

@@ -11,35 +11,43 @@ namespace grad {
 
 using namespace mnm::ir;
 
-template<bool transpose_a, bool transpose_b>
-Array<Expr> MatmulGradImpl(const Expr& orig_call, const Var &y, const Expr& dy) {
+template <bool transpose_a, bool transpose_b>
+Array<Expr> MatmulGradImpl(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto op_nn = Op::Get("mnm.op.matmul");
+  static auto op_nt = Op::Get("mnm.op.matmul_nt");
+  static auto op_tn = Op::Get("mnm.op.matmul_tn");
+  static auto op_tt = Op::Get("mnm.op.matmul_tt");
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
-
-  Call da;
+  Call da, db;
   if (!transpose_a) {
-    // matmul(dy, false, b, !transpose_b);
-    static auto op = Op::Get(!transpose_b ? "mnm.op.matmul_nt" : "mnm.op.matmul");
-    da = CallNode::make(op, {dy, b});
+    if (!transpose_b) {
+      return {
+          CallNode::make(op_nt, {dy, b}),
+          CallNode::make(op_tn, {a, dy}),
+      };
+    } else {
+      return {
+          da = CallNode::make(op_nn, {dy, b}),
+          db = CallNode::make(op_tn, {dy, a}),
+      };
+    }
   } else {
-    // matmul(b, transpose_b, dy, true);
-    static auto op = Op::Get(transpose_b ? "mnm.op.matmul_tt" : "mnm.op.matmul_nt");
-    da = CallNode::make(op, {b, dy});
+    if (!transpose_b) {
+      return {
+          CallNode::make(op_nt, {b, dy}),
+          CallNode::make(op_nn, {a, dy}),
+      };
+    } else {
+      return {
+          CallNode::make(op_tt, {b, dy}),
+          CallNode::make(op_tt, {dy, a}),
+      };
+    }
   }
-
-  Call db;
-  if (!transpose_b) {
-    // matmul(a, !transpose_a, dy, false);
-    static auto op = Op::Get(!transpose_a ? "mnm.op.matmul_tn" : "mnm.op.matmul");
-    db = CallNode::make(op, {a, dy});
-  } else {
-    // matmul(dy, true, a, transpose_a);
-    static auto op = Op::Get(transpose_a ? "mnm.op.matmul_tt" : "mnm.op.matmul_tn");
-    db = CallNode::make(op, {dy, a});
-  }
-
-  return {da, db};
+  LOG(FATAL) << "Unreachable code";
+  throw;
 }
 
 auto MatmulGradNN = MatmulGradImpl<false, false>;
@@ -50,7 +58,7 @@ auto MatmulGradTT = MatmulGradImpl<true, true>;
 MNM_OP_GRAD("mnm.op.matmul", MatmulGradNN);
 MNM_OP_GRAD("mnm.op.matmul_nt", MatmulGradNT);
 MNM_OP_GRAD("mnm.op.matmul_tn", MatmulGradTN);
-MNM_OP_GRAD("mnm.op.matmul_tt", MatmulGradNN);
+MNM_OP_GRAD("mnm.op.matmul_tt", MatmulGradTT);
 
 }  // namespace grad
 }  // namespace op

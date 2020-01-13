@@ -3,7 +3,7 @@ import ctypes
 from mnm._core.core_utils import ctx2str, set_module, str2ctx
 from mnm._core.value import TensorValue
 from mnm._ffi.binding import (BindNDArray, BindSymbol, LookupBoundValue,
-                              SetRequiresGrad)
+                              SetRequiresGrad, Backward, LookupGrad)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
 from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_ndarray
@@ -165,6 +165,18 @@ class ndarray:
             ctx = self.ctx
         return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, ""))
 
+    def backward(self, gradient=None):
+        if gradient is not None:
+            assert isinstance(gradient, ndarray)
+            gradient = gradient._ndarray__handle  # pylint: disable=protected-access
+        Backward(self.__handle, gradient)
+
+    @property
+    def grad(self):
+        if not self.requires_grad:
+            raise ValueError("Cannot run backward() for NDArrays whose require_grad = False")
+        return ndarray(LookupGrad(self.__handle))
+
 
 class Symbol:  # pylint: disable=too-few-public-methods
 
@@ -261,3 +273,8 @@ def _np_del(handle):
     void_p = handle.contents.manager_ctx
     pyobj = ctypes.cast(void_p, ctypes.py_object)
     ctypes.pythonapi.Py_DecRef(pyobj)
+
+
+@_register_func("mnm._ndarray_to_string")
+def _print(var):
+    return str(ndarray(var))

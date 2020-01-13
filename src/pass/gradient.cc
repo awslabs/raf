@@ -175,7 +175,7 @@ struct Gradient : public ExprVisitor {
     static const auto fpg = Op::GetAttr<FPrimalGradient>("FPrimalGradient");
     static const auto ffpg = Op::GetAttr<FFusedPrimalGradient>("FFusedPrimalGradient");
     const VarNode* var = let_var.operator->();
-    const Expr &_ograds = tuple_length.count(var) ? TupleNode::make(ograds) : ograds[0];
+    const Expr& _ograds = tuple_length.count(var) ? TupleNode::make(ograds) : ograds[0];
     if (ffpg.count(op)) {
       Array<Expr> ret = ffpg[op](orig, let_var, _ograds, igrads);
       // ensure intermediate results are bound to a relay::var
@@ -371,12 +371,13 @@ struct Gradient : public ExprVisitor {
   Var let_var;
 };
 
-Function AutoDiff(Function func) {
-  return Gradient(func.operator->()).Run();
+}  // namespace gradient
+
+ir::Function AutoDiff(ir::Function func) {
+  return gradient::Gradient(func.operator->()).Run();
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);
 
-}  // namespace gradient
 }  // namespace pass
 }  // namespace mnm

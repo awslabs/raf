@@ -3,28 +3,19 @@ import pytest
 import torch
 
 import mnm
-from mnm.model import BatchNorm, Conv2d
+from mnm.model import Conv2d, BatchNorm
 
 
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
+def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0, requires_grad=False):
+    x = np.random.randn(*shape) * std + mean
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)
     x = x.astype(dtype)
     m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def randn_pos(shape, *, ctx="cuda", dtype="float32", std=1.0):
-    x = np.abs(np.random.randn(*shape)) * std + 1e-5
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
+    if requires_grad:
+        m_x.requires_grad = True
+    t_x = torch.tensor(x, requires_grad=requires_grad)  # pylint: disable=not-callable
     return m_x, t_x
 
 
@@ -139,6 +130,7 @@ def test_bottleneck(config, is_train):
     m_block = MNMBottleNeck(*config[0])
     t_block = TorchPreActBottleneck(*config[0])
     # set the parameters to be exactly the same
+    # pylint: disable=attribute-defined-outside-init,invalid-name
     m_block.bn1.w = t2m_param(t_block.bn1.weight)
     m_block.bn1.b = t2m_param(t_block.bn1.bias)
     m_block.bn1.running_mean = t2m_param(t_block.bn1.running_mean)
@@ -156,6 +148,7 @@ def test_bottleneck(config, is_train):
     m_block.conv3.w = t2m_param(t_block.conv3.weight)
     if m_block.shortcut is not None:
         m_block.shortcut.w = t2m_param(t_block.shortcut[0].weight)
+    # pylint: enable=attribute-defined-outside-init,invalid-name
     # set train/eval mode
     if is_train:
         m_block.train_mode()
@@ -164,37 +157,46 @@ def test_bottleneck(config, is_train):
         m_block.infer_mode()
         t_block.eval()
     # run the model
-    m_x, t_x = randn(config[1])
+    m_x, t_x = randn(config[1], requires_grad=is_train)
     t_y = t_block(t_x)
     m_y = m_block(m_x)
+    if is_train:
+        m_dy, t_dy = randn(m_y.shape, std=m_y.asnumpy().std() * 0.0001)
+        t_y.backward(t_dy)
+        m_y.backward(m_dy)
     # check outputs
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     # check model parameters
-    m_state = m_block.state()
-    t_state = t_block.state_dict()
     mapping = {
-        "bn1.w": "bn1.weight",
-        "bn1.b": "bn1.bias",
-        "bn1.running_mean": "bn1.running_mean",
-        "bn1.running_var": "bn1.running_var",
-        "conv1.w": "conv1.weight",
-        "bn2.w": "bn2.weight",
-        "bn2.b": "bn2.bias",
-        "bn2.running_mean": "bn2.running_mean",
-        "bn2.running_var": "bn2.running_var",
-        "conv2.w": "conv2.weight",
-        "bn3.w": "bn3.weight",
-        "bn3.b": "bn3.bias",
-        "bn3.running_mean": "bn3.running_mean",
-        "bn3.running_var": "bn3.running_var",
-        "conv3.w": "conv3.weight",
+        "bn1.w": t_block.bn1.weight,
+        "bn1.b": t_block.bn1.bias,
+        "bn1.running_mean": t_block.bn1.running_mean,
+        "bn1.running_var": t_block.bn1.running_var,
+        "conv1.w": t_block.conv1.weight,
+        "bn2.w": t_block.bn2.weight,
+        "bn2.b": t_block.bn2.bias,
+        "bn2.running_mean": t_block.bn2.running_mean,
+        "bn2.running_var": t_block.bn2.running_var,
+        "conv2.w": t_block.conv2.weight,
+        "bn3.w": t_block.bn3.weight,
+        "bn3.b": t_block.bn3.bias,
+        "bn3.running_mean": t_block.bn3.running_mean,
+        "bn3.running_var": t_block.bn3.running_var,
+        "conv3.w": t_block.conv3.weight,
     }
     if m_block.shortcut is not None:
-        mapping["shortcut.w"] = "shortcut.0.weight"
-    for m_key, t_key in mapping.items():
-        m_v = m_state[m_key]
-        t_v = t_state[t_key]
+        mapping["shortcut.w"] = t_block.shortcut[0].weight
+    m_dict = m_block.state()
+    for m_name, t_v in mapping.items():
+        m_v = m_dict[m_name]
         check(m_v, t_v, rtol=1e-4, atol=1e-4)
+    if not is_train:
+        return
+    for m_name, t_v in mapping.items():
+        m_v = m_dict[m_name]
+        if "running_" not in m_name:
+            print(m_name)
+            check(m_v.grad, t_v.grad, rtol=1e-2, atol=1e-2)
 
 
 if __name__ == "__main__":

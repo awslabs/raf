@@ -9,7 +9,7 @@ from mnm.random import uniform
 from mnm.random.nn import kaiming_uniform
 
 from .model import Model
-from .trace import trace, trace_mutate_attr
+from .trace import trace, trace_mutate_attr  # pylint: disable=unused-import
 
 
 class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
@@ -97,8 +97,8 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
                                    running_var=self.running_var,
                                    eps=self.eps,
                                    momentum=self.momentum)
-        trace_mutate_attr(self, "running_mean", ret[1])
-        trace_mutate_attr(self, "running_var", ret[2])
+        # trace_mutate_attr(self, "running_mean", ret[1])
+        # trace_mutate_attr(self, "running_var", ret[2])
         return ret[0]
 
     @trace

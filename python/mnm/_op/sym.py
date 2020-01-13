@@ -180,30 +180,22 @@ def logical_not(x, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.logical_not(x, out, where))
-def matmul(x1, x2, out=None, where=None):
+def matmul(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.matmul(x1, x2, out, where))
-def matmul_nt(x1, x2, out=None, where=None):
+    return Symbol.from_expr(ffi.matmul(x1, x2))
+def matmul_nt(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.matmul_nt(x1, x2, out, where))
-def matmul_tn(x1, x2, out=None, where=None):
+    return Symbol.from_expr(ffi.matmul_nt(x1, x2))
+def matmul_tn(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.matmul_tn(x1, x2, out, where))
-def matmul_tt(x1, x2, out=None, where=None):
+    return Symbol.from_expr(ffi.matmul_tn(x1, x2))
+def matmul_tt(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.matmul_tt(x1, x2, out, where))
+    return Symbol.from_expr(ffi.matmul_tt(x1, x2))
 def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)

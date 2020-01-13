@@ -3,10 +3,10 @@ from collections import OrderedDict, namedtuple
 
 from mnm._core import cacher
 from mnm._core.core_utils import get_bound_args, get_func_name
-from mnm._core.executor import interpret
 from mnm._core.global_scope import SCOPE
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
+from mnm._ffi.model import RunModel
 from mnm._lib import relay, Array
 
 from .model import Model
@@ -59,9 +59,7 @@ def _run_trace_record(record, args, kwargs):
         handle = param._ndarray__handle  # pylint: disable=protected-access
         func_inputs.append(handle)
 
-    code = relay.Call(op=record.func, args=func_inputs)
-    result = interpret(code)
-    result = _unwrap(result)
+    result = _unwrap(RunModel(record.func, func_inputs))
     if not isinstance(result, list):
         result = [result]
     for obj, attr in reversed(record.mutations):
@@ -86,12 +84,10 @@ def _get_trace_record(pyfunc, args, kwargs):
     func_name = get_func_name(pyfunc)
     record = cacher.get_cache(model, "trace@" + func_name, None)
     if record is not None:
-        print("### Use cached trace:", func_name)
         return record
-    print("### Start tracing:", func_name)
     record = _do_tracing(pyfunc, args, kwargs)
+    print(record.func)
     cacher.set_cache(model, "trace@" + func_name, record)
-    print("Result:", record.func)
     return record
 
 

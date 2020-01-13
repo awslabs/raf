@@ -17,7 +17,7 @@ using namespace mnm::value;
 template<bool transpose_a, bool transpose_b>
 void MatmulDecl(const CallValues& call) {
   // TODO(@junrushao1994): sanity check
-  const auto* args = call->args.as<schema::BinaryUfuncArgs>();
+  const auto* args = call->args.as<schema::BinaryArgs>();
   CHECK(args != nullptr);
   const DLTensor* a = args->x1;
   const DLTensor* b = args->x2;

@@ -210,33 +210,25 @@ def logical_not(x, out=None, where=None):
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.logical_not(x, out, where))
 @set_module("mnm")
-def matmul(x1, x2, out=None, where=None):
+def matmul(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.matmul(x1, x2, out, where))
+    return imp_utils.ret(ffi.matmul(x1, x2))
 @set_module("mnm")
-def matmul_nt(x1, x2, out=None, where=None):
+def matmul_nt(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.matmul_nt(x1, x2, out, where))
+    return imp_utils.ret(ffi.matmul_nt(x1, x2))
 @set_module("mnm")
-def matmul_tn(x1, x2, out=None, where=None):
+def matmul_tn(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.matmul_tn(x1, x2, out, where))
+    return imp_utils.ret(ffi.matmul_tn(x1, x2))
 @set_module("mnm")
-def matmul_tt(x1, x2, out=None, where=None):
+def matmul_tt(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.matmul_tt(x1, x2, out, where))
+    return imp_utils.ret(ffi.matmul_tt(x1, x2))
 @set_module("mnm")
 def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)

@@ -22,7 +22,7 @@ using namespace mnm::value;
 using namespace mnm::registry;
 using namespace mnm::binding;
 using mnm::op::FMNMSchema;
-using mnm::executor::interpreter::_InvokePrimitive;
+using mnm::executor::interpreter::InvokePrimitive;
 
 // Part 0. Op names
 namespace mnm {
@@ -351,7 +351,7 @@ namespace imperative {
   } catch (const dmlc::Error &e) {                                                             \
     FillError(e, "{op}", names::op);                                                           \
   }                                                                                            \
-  Value value = _InvokePrimitive(CallValues::make(opack->opv, _schema));                       \
+  Value value = InvokePrimitive(CallValues::make(opack->opv, _schema));                        \
   int n_tapes = grads.size();                                                                  \
   bool full_grads = RemoveNoGrad(prev_tapes.data(), grads.data(), &n_tapes);                   \
   /* case 1: no grad required */                                                               \
@@ -690,44 +690,36 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.logical_not")
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.matmul")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(matmul, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(matmul, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.matmul_nt")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(matmul_nt, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(matmul_nt, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.matmul_tn")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(matmul_tn, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(matmul_tn, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.matmul_tt")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(matmul_tt, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(matmul_tt, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1280,13 +1272,13 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax_dx")
 MNM_REGISTER_GLOBAL("mnm.op.sym.logical_not")
 .set_body(MNM_SYMBOLIC_API(logical_not, 3, UnaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul")
-.set_body(MNM_SYMBOLIC_API(matmul, 4, BinaryUfunc));
+.set_body(MNM_SYMBOLIC_API(matmul, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_nt")
-.set_body(MNM_SYMBOLIC_API(matmul_nt, 4, BinaryUfunc));
+.set_body(MNM_SYMBOLIC_API(matmul_nt, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_tn")
-.set_body(MNM_SYMBOLIC_API(matmul_tn, 4, BinaryUfunc));
+.set_body(MNM_SYMBOLIC_API(matmul_tn, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_tt")
-.set_body(MNM_SYMBOLIC_API(matmul_tt, 4, BinaryUfunc));
+.set_body(MNM_SYMBOLIC_API(matmul_tt, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d")
 .set_body(MNM_SYMBOLIC_API(max_pool2d, 7, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
@@ -1658,10 +1650,10 @@ MNM_BIND_SCHEMA("mnm.op.log", names::log, value2schema::Unary);  // NOLINT(white
 MNM_BIND_SCHEMA("mnm.op.log_softmax", names::log_softmax, value2schema::Softmax);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.log_softmax_dx", names::log_softmax_dx, value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.logical_not", names::logical_not, value2schema::UnaryUfunc);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.matmul", names::matmul, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.matmul_nt", names::matmul_nt, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.matmul_tn", names::matmul_tn, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.matmul_tt", names::matmul_tt, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.matmul", names::matmul, value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.matmul_nt", names::matmul_nt, value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.matmul_tn", names::matmul_tn, value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.matmul_tt", names::matmul_tt, value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d", names::max_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d_dx", names::max_pool2d_dx, value2schema::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mod", names::mod, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)

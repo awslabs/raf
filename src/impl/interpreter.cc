@@ -27,6 +27,7 @@ using binding::BindingEntry;
 using binding::BindNDArray;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
+using binding::DeTuple;
 using memory_pool::Memory;
 using requests::Requests;
 using stream_pool::Stream;
@@ -292,29 +293,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 };
 
-ObjectRef DeTuple(const Value& value) {
-  if (value->IsInstance<ScalarValueObj>()) {
-    return value;
-  }
-  if (value->IsInstance<TensorValueObj>()) {
-    return BindNDArray(value);
-  }
-  if (const auto* tuple = value.as<TupleValueObj>()) {
-    Array<ObjectRef> result;
-    int n = static_cast<int>(tuple->fields.size());
-    for (int i = 0; i < n; ++i) {
-      Value sub_value = tuple->fields[i];
-      if (sub_value->op_env == nullptr) {
-        sub_value->op_env = tuple->op_env;
-      }
-      result.push_back(DeTuple(sub_value));
-    }
-    return std::move(result);
-  }
-  LOG(FATAL) << "ValueError: cannot de-tuple " << value->GetTypeKey();
-  throw;
-}
-
 class IntrpThreadEntry {
  public:
   IntrpThreadEntry() = default;
@@ -326,24 +304,16 @@ class IntrpThreadEntry {
   Interpreter exec;
 };
 
-ObjectRef Interpret(Expr expr, Module mod) {
+Value Interpret(Expr expr, Module mod) {
   Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
   intrp->mod = mod.defined() ? mod : Module::Global();
-  auto ret = DeTuple(intrp->Eval(expr));
+  auto ret = intrp->Eval(expr);
   intrp->mod = {};
   intrp->st.tab = {};
   return ret;
 }
 
-ObjectRef InvokePrimitive(const CallValues &call) {
-  Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
-  auto ret = DeTuple(intrp->InvokePrimitive(call));
-  intrp->mod = {};
-  intrp->st.tab = {};
-  return ret;
-}
-
-Value _InvokePrimitive(const CallValues &call) {
+Value InvokePrimitive(const CallValues &call) {
   Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
   auto ret = intrp->InvokePrimitive(call);
   intrp->mod = {};
@@ -351,7 +321,19 @@ Value _InvokePrimitive(const CallValues &call) {
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.executor.Interpret").set_body_typed(Interpret);
+Value InvokeClosure(const CallValues &call) {
+  Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
+  auto ret = intrp->InvokeClosure(call);
+  intrp->mod = {};
+  intrp->st.tab = {};
+  return ret;
+}
+
+ObjectRef _Interpret(Expr expr, Module mod) {
+  return DeTuple(Interpret(expr, mod));
+}
+
+MNM_REGISTER_GLOBAL("mnm.executor.Interpret").set_body_typed(_Interpret);
 }  // namespace interpreter
 }  // namespace executor
 }  // namespace mnm

@@ -38,7 +38,7 @@ using namespace mnm::value;
 using namespace mnm::registry;
 using namespace mnm::binding;
 using mnm::op::FMNMSchema;
-using mnm::executor::interpreter::_InvokePrimitive;
+using mnm::executor::interpreter::InvokePrimitive;
 
 // Part 0. Op names
 namespace mnm {{
@@ -263,7 +263,7 @@ namespace imperative {
   } catch (const dmlc::Error &e) {                                                             \\
     FillError(e, "{op}", names::op);                                                           \\
   }                                                                                            \\
-  Value value = _InvokePrimitive(CallValues::make(opack->opv, _schema));                       \\
+  Value value = InvokePrimitive(CallValues::make(opack->opv, _schema));                        \\
   int n_tapes = grads.size();                                                                  \\
   bool full_grads = RemoveNoGrad(prev_tapes.data(), grads.data(), &n_tapes);                   \\
   /* case 1: no grad required */                                                               \\

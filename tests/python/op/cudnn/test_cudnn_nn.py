@@ -44,38 +44,28 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
     # pylint: disable=too-many-locals
     # N.B.: NCHW + OIHW
     # forward
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x, w):  # pylint: disable=no-self-use
+            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+
+    model = TestModel()
+    # forward
     m_x, t_x = randn(xshape, std=0.001)
     m_w, t_w = randn(wshape, std=0.01)
-    m_y = mnm.conv2d(m_x,
-                     m_w,
-                     stride=stride,
-                     dilation=dilation,
-                     padding=padding)
+    m_x.requires_grad = True
+    m_w.requires_grad = True
+    m_y = model(m_x, m_w)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
-    m_dy, t_dy = randn(t_y.shape)
     # backward
-    m_dx = mnm.conv2d_dx(m_w,
-                         m_y,
-                         m_dy,
-                         shape=m_x.shape,
-                         stride=stride,
-                         padding=padding,
-                         dilation=dilation,
-                         groups=1)
-    m_dw = mnm.conv2d_dw(m_x,
-                         m_y,
-                         m_dy,
-                         shape=m_w.shape,
-                         stride=stride,
-                         padding=padding,
-                         dilation=dilation,
-                         groups=1)
+    m_dy, t_dy = randn(t_y.shape)
+    m_y.backward(m_dy)
     t_y.backward(t_dy)
-    t_dx = t_x.grad
-    t_dw = t_w.grad
-    check(m_dx, t_dx, rtol=1e-4, atol=1e-4)
-    check(m_dw, t_dw, rtol=1e-4, atol=1e-4)
+    check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
+    check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -91,25 +81,34 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
 @pytest.mark.parametrize(
     "funcs",
     [
-        # pylint: disable=no-member
-        [mnm.relu, mnm.relu_dx, torch.relu],
-        [mnm.tanh, mnm.tanh_dx, torch.tanh],
-        [mnm.sigmoid, mnm.sigmoid_dx, torch.sigmoid],
-        # pylint: enable=no-member
+        # pylint: disable=no-member,protected-access
+        [mnm._op.sym.relu, torch.relu],
+        [mnm._op.sym.tanh, torch.tanh],
+        [mnm._op.sym.sigmoid, torch.sigmoid],
+        # pylint: enable=no-member,protected-access
     ])
 def test_mnm_unary(shape, funcs):
-    mnm_fwd, mnm_bwd, torch_fwd = funcs
+    mnm_fwd, torch_fwd = funcs
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            return mnm_fwd(x)
+
+    model = TestModel()
     # forward
     m_x, t_x = randn(shape)
-    m_y = mnm_fwd(m_x)
+    m_x.requires_grad = True
+    m_y = model(m_x)
     t_y = torch_fwd(t_x)
     check(m_y, t_y)
     # backward
     m_dy, t_dy = randn(shape)
+    m_y.backward(m_dy)
     t_y.backward(t_dy)
-    m_dx = mnm_bwd(m_x, m_y, m_dy)
-    t_dx = t_x.grad
-    check(m_dx, t_dx)
+    check(m_x.grad, t_x.grad)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -125,28 +124,37 @@ def test_mnm_unary(shape, funcs):
 @pytest.mark.parametrize(
     "funcs",
     [
-        # pylint: disable=no-member
-        [mnm.softmax, mnm.softmax_dx, torch.softmax],
-        [mnm.log_softmax, mnm.log_softmax_dx, torch.log_softmax],
-        # pylint: enable=no-member
+        # pylint: disable=no-member,protected-access
+        [mnm._op.sym.softmax, torch.softmax],
+        [mnm._op.sym.log_softmax, torch.log_softmax],
+        # pylint: enable=no-member,protected-access
     ])
 def test_mnm_unary_with_axis(shape, axis, funcs):
-    mnm_fwd, mnm_bwd, torch_fwd = funcs
+    mnm_fwd, torch_fwd = funcs
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            return mnm_fwd(x, axis=axis)
+
+    model = TestModel()
     # forward
     m_x, t_x = randn(shape)
+    m_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
-            m_y = mnm.softmax(m_x, axis=axis)
+            m_y = model(m_x)
         return
-    m_y = mnm_fwd(m_x, axis=axis)
+    m_y = model(m_x)
     t_y = torch_fwd(t_x, dim=axis)  # pylint: disable=no-member
     check(m_y, t_y)
     # backward
     m_dy, t_dy = randn(shape)
     t_y.backward(t_dy)
-    m_dx = mnm_bwd(m_x, m_y, m_dy, axis)
-    t_dx = t_x.grad
-    check(m_dx, t_dx)
+    m_y.backward(m_dy)
+    check(m_x.grad, t_x.grad)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -156,34 +164,35 @@ def test_mnm_unary_with_axis(shape, axis, funcs):
 @pytest.mark.parametrize(
     "funcs",
     [
-        # pylint: disable=no-member
-        [mnm.max_pool2d, mnm.max_pool2d_dx, torch.nn.functional.max_pool2d],
-        [mnm.avg_pool2d, mnm.avg_pool2d_dx, torch.nn.functional.avg_pool2d],
-        # pylint: enable=no-member
+        # pylint: disable=no-member,protected-access
+        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+        # pylint: enable=no-member,protected-access
     ])
 def test_mnm_pool2d(kernel, stride, padding, funcs):
-    mnm_fwd, mnm_bwd, torch_fwd = funcs
+    mnm_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding)
+
+    model = TestModel()
     # forward
     m_x, t_x = randn([8, 3, 32, 32])
-    m_y = mnm_fwd(m_x, kernel=kernel, stride=stride, padding=padding)
+    m_x.requires_grad = True
+    m_y = model(m_x)
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
     check(m_y, t_y)
     # backward
     m_dy, t_dy = randn(m_y.shape)
-    m_dx = mnm_bwd(m_x,
-                   m_y,
-                   m_dy,
-                   kernel=kernel,
-                   stride=stride,
-                   padding=padding,
-                   dilation=1,
-                   ceil_mode=False,
-                   include_pad=True)
+    m_y.backward(m_dy)
     t_y.backward(t_dy)
-    t_dx = t_x.grad
-    check(m_dx, t_dx)
+    check(m_x.grad, t_x.grad)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -199,9 +208,18 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):  # pylint: disable=too-many
     m_b, t_b = randn(stats_shape)
     t_m.requires_grad = False
     t_v.requires_grad = False
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+            return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+
+    model = TestModel()
+    m_y = model(m_x, m_m, m_v, m_w, m_b)
     t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, False,
                                          momentum, eps)
-    m_y = mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
@@ -211,7 +229,6 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):  # pylint: disable=too-many
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
 def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many-locals
     stats_shape = [shape[1]]
-    # forward
     m_x, t_x = randn(shape)
     m_m, t_m = randn(stats_shape)
     m_v, t_v = randn_pos(stats_shape)
@@ -219,21 +236,32 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
     m_b, t_b = randn(stats_shape)
     t_m.requires_grad = False
     t_v.requires_grad = False
-    t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, True,
-                                         momentum, eps)
-    m_y, m_m, m_v = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum,
-                                         eps)
+    m_x.requires_grad = True
+    m_w.requires_grad = True
+    m_b.requires_grad = True
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+            result = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            return result[0]
+
+    # forward
+    model = TestModel()
+    m_y = model(m_x, m_m, m_v, m_w, m_b)
+    t_y = torch.nn.functional.batch_norm(t_x, t_m, t_v, t_w, t_b, True, momentum, eps)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_m, t_m, rtol=1e-4, atol=1e-4)
     check(m_v, t_v, rtol=1e-4, atol=1e-4)
     # backward
     m_dy, t_dy = randn(shape)
-    m_dx, m_dw, m_db = mnm.batch_norm_train_dxwb(m_dy, m_x, m_w, m_b, eps=eps)
+    m_y.backward(m_dy)
     t_y.backward(t_dy)
-    t_dx, t_dw, t_db = t_x.grad, t_w.grad, t_b.grad
-    check(m_dx, t_dx, rtol=1e-4, atol=1e-4)
-    check(m_dw, t_dw, rtol=1e-4, atol=1e-4)
-    check(m_db, t_db, rtol=1e-4, atol=1e-4)
+    check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
+    check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
+    check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -243,23 +271,30 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_mnm_matmul(n, k, m, transpose_a, transpose_b):
-    # pylint: disable=too-many-locals
-    shapea = (n, k) if not transpose_a else (k, n)
-    shapeb = (k, m) if not transpose_b else (m, k)
-    m_a, t_a = randn(shapea)
-    m_b, t_b = randn(shapeb)
-    mnm_op = [[mnm.matmul, mnm.matmul_nt], [mnm.matmul_tn, mnm.matmul_tt]]
-    m_c = mnm_op[transpose_a][transpose_b](m_a, m_b)
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_a, m_b):  # pylint: disable=no-self-use
+            mnm_op = [[mnm.matmul, mnm.matmul_nt],
+                      [mnm.matmul_tn, mnm.matmul_tt]]
+            mnm_op = mnm_op[transpose_a][transpose_b]
+            return mnm_op(m_a, m_b)
+    # forward
+    model = TestModel()
+    m_a, t_a = randn((n, k) if not transpose_a else (k, n))
+    m_b, t_b = randn((k, m) if not transpose_b else (m, k))
+    m_a.requires_grad = True
+    m_b.requires_grad = True
+    m_c = model(m_a, m_b)
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
     check(m_c, t_c, rtol=1e-4, atol=1e-4)
-    # TODO(@were): bring this back when AD is done
-    #m_dy, t_dy = randn(m_c.shape)
-    #t_c.backward(t_dy)
-    #t_da, t_db = t_a.grad, t_b.grad
-    #m_da = mnm.matmul_da(m_dy, m_b, transpose_b, transpose_a)
-    #m_db = mnm.matmul_db(m_dy, m_a, transpose_a, transpose_b)
-    #check(m_da, t_da, rtol=1e-4, atol=1e-4)
-    #check(m_db, t_db, rtol=1e-4, atol=1e-4)
+    # backward
+    m_dc, t_dc = randn(m_c.shape)
+    m_c.backward(m_dc)
+    t_c.backward(t_dc)
+    check(m_a.grad, t_a.grad, rtol=1e-4, atol=1e-4)
+    check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

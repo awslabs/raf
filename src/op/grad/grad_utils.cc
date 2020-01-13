@@ -17,7 +17,6 @@ Array<Expr> AsTupleExpr(const Expr& expr, int numel) {
     for (const Expr &expr : tuple->fields) {
       result.push_back(expr);
     }
-    CHECK_GE((int) result.size(), numel);
     return result;
   }
   Array<Expr> result;

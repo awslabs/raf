@@ -1,4 +1,3 @@
-import random
 import numpy as np
 import pytest
 import torch
@@ -21,7 +20,18 @@ def randn(shape, *, ctx="cpu", dtype="float32"):
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, ctx=ctx)
-    t_x = torch.tensor(n_x, requires_grad=True) # pylint: disable=not-callable
+    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
+    return m_x, t_x
+
+
+def one_hot(batch_size, num_classes, ctx="cpu", dtype="float32"):
+    targets = np.random.randint(0, num_classes, size=batch_size)
+    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
+    m_x[range(batch_size), targets] = 1
+    m_x = mnm.array(m_x, ctx=ctx)
+    t_x = torch.tensor(targets, requires_grad=False)  # pylint: disable=not-callable
+    assert list(m_x.shape) == [batch_size, num_classes]
+    assert list(t_x.shape) == [batch_size]
     return m_x, t_x
 
 
@@ -35,23 +45,26 @@ def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
 @pytest.mark.parametrize("n", [3, 5, 7])
 @pytest.mark.parametrize("c", [2, 4, 6])
 def test_nll_loss(ctx, n, c):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, y_true, y_pred):  # pylint: disable=no-self-use
+            return mnm.nll_loss(y_true=y_true, y_pred=y_pred)
+
+    model = TestModel()
     m_pred, t_pred = randn((n, c), ctx=ctx)
-    true = [random.randint(0, c - 1) for i in range(n)]
-    t_true = torch.zeros([n], dtype=torch.long) # pylint: disable=no-member
-    for i, j in enumerate(true):
-        t_true[i] = j
+    m_true, t_true = one_hot(n, c, ctx=ctx)
+    m_pred.requires_grad = True
+    # forward
     t_loss = F.nll_loss(t_pred, t_true)
+    m_loss = model(y_true=m_true, y_pred=m_pred)
+    check(m_loss, t_loss)
+    # backward
     t_loss.backward()
-
-    n_tmp = np.zeros((n, c)).astype('float32')
-    for i, j in enumerate(true):
-        n_tmp[i, j] = 1.0
-    m_true = mnm.array(n_tmp, ctx=ctx)
-    m_loss = mnm.nll_loss(m_true, m_pred)
-
-    assert abs(m_loss.asnumpy() - t_loss.detach().numpy()) < 1e-4
-    m_dpred = mnm.nll_loss_dpred(m_true, m_pred)
-    np.testing.assert_allclose(m_dpred.asnumpy(), t_pred.grad.detach().numpy(), 1e-4, 1e-4)
+    m_loss.backward()
+    check(m_pred.grad, t_pred.grad)
 
 
 @pytest.mark.parametrize("shape", [
@@ -85,7 +98,7 @@ def test_sgd(shape):
     x0 = np.random.randn(*shape).astype('float32')
     dx = np.random.randn(*shape).astype('float32')
     v0 = np.random.randn(*shape).astype('float32')
-    mu = np.random.randn(1)[0] # pylint: disable=invalid-name
+    mu = np.random.randn(1)[0]  # pylint: disable=invalid-name
     learning_rate = 0.01
 
     n_v1 = (mu * v0 + dx)

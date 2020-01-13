@@ -62,13 +62,13 @@ template<bool transpose_a, bool transpose_b>
 class MatmulImpl : public mnm::op::OpEnv {
  public:
   explicit MatmulImpl(const CallValues &cv) {
-    auto args = cv->args.as<op::schema::BinaryUfuncArgs>();
+    auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
     DLTensor* out = cv->out;
     RequestMemory(&out->data, cv->ctx, common::shape_utils::BytesCompactTensor(*out));
   }
   void Execute(const CallValues &cv) override {
-    auto args = cv->args.as<op::schema::BinaryUfuncArgs>();
+    auto args = cv->args.as<op::schema::BinaryArgs>();
     GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out);
   }
   static OpEnv* make(const CallValues& cv) {

@@ -75,12 +75,6 @@ inline bool RemoveNoGrad(binding::GradTape* tapes, ir::Expr* grads, int *n) {
   return full_grads;
 }
 
-ir::ObjectRef DeTuple(const value::Value& value);
-
-ir::ObjectRef DeStruct(value::Value value,
-                       value::ClosureValue bp,
-                       ir::Array<ir::ObjectRef> prev_tapes);
-
 void CollectVars(const ir::Expr& expr, std::vector<const ir::ExprNode*>* vars);
 
 }  // namespace regs
