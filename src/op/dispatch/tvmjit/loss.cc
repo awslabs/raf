@@ -26,14 +26,21 @@ Attrs LossNormalizer(TVMOpEnv* env, const LossArgs* args) {
 void LossTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *y_type = GetTensorType(env->outputs[0]);
   *param_types = {
-    GetTensorType(env->inputs[0]),
-    GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
   };
 }
 
-MNM_TVMJIT(NLLLoss, "mnm.op.nll_loss", LossArgs, LossNormalizer, LossTyper);
-MNM_TVMJIT(NllLossDpred, "mnm.op.nll_loss_dpred", LossArgs, LossNormalizer, LossTyper);
-MNM_TVMJIT(NllLossDtrue, "mnm.op.nll_loss_dtrue", LossArgs, LossNormalizer, LossTyper);
+void LossHasher(utils::HashKey* key, const LossArgs* args, std::vector<Type>* param_types,
+                Type* y_type) {
+  *key << tvm::Downcast<ir::TensorType>((*param_types)[0]);
+  *key << tvm::Downcast<ir::TensorType>((*param_types)[1]);
+  *key << tvm::Downcast<ir::TensorType>(*y_type);
+}
+
+MNM_TVMJIT(NLLLoss, "mnm.op.nll_loss", LossArgs, LossNormalizer, LossTyper, LossHasher);
+MNM_TVMJIT(NllLossDpred, "mnm.op.nll_loss_dpred", LossArgs, LossNormalizer, LossTyper, LossHasher);
+MNM_TVMJIT(NllLossDtrue, "mnm.op.nll_loss_dtrue", LossArgs, LossNormalizer, LossTyper, LossHasher);
 
 }  // namespace tvmjit
 }  // namespace op

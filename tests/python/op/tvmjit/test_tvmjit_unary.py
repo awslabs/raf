@@ -78,5 +78,14 @@ def test_shape(ctx):
     assert tuple(m_shape) == shape
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [(1, 2, 3, 4), (4, 3, 2, 1), (2, 4, 1, 3)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_cache(ctx, shape, dtype):
+    m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
+    m_y, n_y = mnm.cos(m_x), np.cos(n_x)
+    check(m_y, n_y)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

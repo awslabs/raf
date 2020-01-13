@@ -147,6 +147,7 @@ using dmlc::BeginPtr;
     headers = [f'#include "../../schema/{i}"'
                for i in os.listdir('src/op/schema/') if i.endswith('.h')]
     headers += ['#include "./cudnn_utils.h"']
+    headers += ['#include "../../op_utils.h"']
     headers = '\n'.join(sorted(headers))
     wrappers = '\n'.join(sorted(wrappers.values()))
     open(path, 'w').write(fmt.format(FILENAME=path, HEADERS=headers, CLASSES=classes, WRAPPERS=wrappers) + "\n")

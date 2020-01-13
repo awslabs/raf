@@ -4,6 +4,7 @@
  * \brief Manually-written cuDNN binding for conv2d
  */
 #include "../../schema/nn.h"
+#include "../../op_utils.h"
 #include "./cudnn_utils.h"
 
 namespace mnm {
@@ -18,17 +19,15 @@ using ir::Array;
 using ir::Attrs;
 using value::Value;
 
-// TODO(@were): Is this good to put this as a global variable?
+static utils::MetaCache<cudnnConvolutionFwdAlgo_t> _conv_fwd_alg_cache;
 
-static AlgorithmCache<cudnnConvolutionFwdAlgo_t> _conv_fwd_alg_cache;
-
-cudnnConvolutionFwdAlgo_t FindConvolutionForwardAlgorithm(const std::vector<int64_t>& key,
+cudnnConvolutionFwdAlgo_t FindConvolutionForwardAlgorithm(const std::vector<uint8_t>& key,
                                                           cudnnTensorDescriptor_t xDesc,
                                                           cudnnFilterDescriptor_t wDesc,
                                                           cudnnConvolutionDescriptor_t convDesc,
                                                           cudnnTensorDescriptor_t yDesc) {
-  if (_conv_fwd_alg_cache.has(key)) {
-    return _conv_fwd_alg_cache.get(key);
+  if (auto *val = _conv_fwd_alg_cache.get(key)) {
+    return *val;
   }
   int cnt;
   cudnnConvolutionFwdAlgoPerf_t res;
@@ -56,7 +55,9 @@ class ConvCUDNN : public mnm::op::OpEnv {
     DLTensor* w = args->w;
     DLTensor* y = call->out;
 
-    x_desc = FlattenAndNormalizeTensor(x, x->ndim);
+    ir::TensorType x_tt = SquashTensorShape(x, {});
+    ir::TensorType w_tt = SquashTensorShape(w, {});
+    x_desc = NormalizeTensorType(x_tt);
     w_desc = NormalizeFilter(args->w);
 
     std::vector<int> padding = CastVector<int>(NormalizeScalarToTuple<2>(args->padding));
@@ -69,15 +70,16 @@ class ConvCUDNN : public mnm::op::OpEnv {
                                                CUDNN_CROSS_CORRELATION, CUDNNDType(y->dtype)));
     CUDNN_CALL(cudnnSetConvolutionGroupCount(conv_desc, args->groups));
 
-    y_desc = FlattenAndNormalizeTensor(y, y->ndim);
+    ir::TensorType y_tt = SquashTensorShape(y, {});
+    y_desc = NormalizeTensorType(y_tt);
     int64_t out_size = BytesCompactTensor(*y);
 
     RequestMemory(&y->data, y->ctx, out_size);
 
-    std::vector<int64_t> key;
+    utils::HashKey hasher;
+    hasher << x_tt  << w_tt << y_tt << args->padding << args->stride << args->dilation;
 
-    key = MakeAlgoKey({GetShape<int64_t>(*x), GetShape<int64_t>(*w), GetShape<int64_t>(*y),
-                       args->dilation, args->stride, args->padding});
+    const std::vector<uint8_t> &key = hasher.byte_vector;
 
     algo = FindConvolutionForwardAlgorithm(key, x_desc, w_desc, conv_desc, y_desc);
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,

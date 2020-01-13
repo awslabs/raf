@@ -155,66 +155,48 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
 
 #endif
 
-template <typename T>
-class AlgorithmCache {
-  std::map<std::vector<int64_t>, T> cached_results;
+inline int64_t GetTensorTypeDim(ir::TensorType tt, int i) {
+  int n = tt->shape.size();
+  CHECK(0 <= i && i < n) << "Get dim out of bound!";
+  auto res = tvm::Downcast<ir::Integer>(tt->shape[i]);
+  return res;
+}
 
-  static std::string Key2String(const std::vector<int64_t>& key) {
-    std::ostringstream oss;
-    for (size_t i = 0; i < key.size(); ++i) {
-      oss << key[i];
-      if (i != key.size() - 1) {
-        oss << " ";
+inline ir::TensorType SquashTensorShape(const DLTensor *tensor, const std::vector<int> &slices) {
+  ir::Array<tvm::relay::IndexExpr> shape;
+  if (slices.empty()) {
+    for (int i = 0; i < tensor->ndim; ++i) {
+      ir::Integer dim = tensor->shape[i];
+      shape.push_back(dim);
+    }
+  } else {
+    for (int i = 1, n = slices.size(); i < n; ++i) {
+      ir::Integer prod = 1;
+      if (0 <= slices[i - 1] && slices[i - 1] <= slices[i] && slices[i] <= tensor->ndim) {
+        prod = std::accumulate(tensor->shape + slices[i - 1], tensor->shape + slices[i], 1ll,
+                               std::multiplies<int64_t>());
       }
+      shape.push_back(prod);
     }
-    return oss.str();
   }
+  auto res = ir::TensorTypeNode::make(shape, tvm::TVMType2Type(tensor->dtype));
+  return res;
+}
 
- public:
-  // TODO(@were): serialize and dump the cached results when exiting.
-  ~AlgorithmCache() {
-  }
+inline cudnnTensorDescriptor_t NormalizeTensorType(ir::TensorType tt) {
+  DLDataType dtype{(uint8_t) tt->dtype.code(), (uint8_t) tt->dtype.bits(),
+                   (uint16_t) tt->dtype.lanes()};
 
-  bool has(const std::vector<int64_t>& key) {
-    return cached_results.count(key);
-  }
-
-  T get(const std::vector<int64_t>& key) {
-    if (!has(key)) {
-      LOG(FATAL) << "KeyError: The cached results have no key: " << AlgorithmCache::Key2String(key)
-                 << "\n";
-      throw;
-    }
-    return cached_results[key];
-  }
-
-  void set(const std::vector<int64_t>& key, T val) {
-    if (has(key)) {
-      LOG(FATAL) << "KeyError: The result is already cached: " << AlgorithmCache::Key2String(key)
-                 << "\n";
-      throw;
-    }
-    cached_results[key] = val;
-  }
-};
-
-inline cudnnTensorDescriptor_t FlattenAndNormalizeTensor(const DLTensor* tv,
-                                                         int flatten_from_axis) {
-  CHECK(0 <= flatten_from_axis && flatten_from_axis <= tv->ndim);
-  std::vector<int64_t> shape(tv->shape, tv->shape + flatten_from_axis);
-  if (flatten_from_axis != tv->ndim) {
-    shape.push_back(
-        std::accumulate(tv->shape + flatten_from_axis,  // from tv->shape[flatten_from_axis]
-                        tv->shape + tv->ndim,           // to   tv->shape[tv->ndim - 1]
-                        1LL,                            // do   product
-                        std::multiplies<int64_t>()));
+  std::vector<int64_t> shape(tt->shape.size());
+  for (int i = 0, n = shape.size(); i < n; ++i) {
+    shape[i] = tvm::Downcast<ir::Integer>(tt->shape[i]);
   }
 
   std::vector<int> padded_shape = common::shape_utils::PadDims<int, int64_t>(shape, 4);
   std::vector<int> stride = common::shape_utils::Shape2Strides<int>(padded_shape);
   cudnnTensorDescriptor_t res;
   CUDNN_CALL(cudnnCreateTensorDescriptor(&res));
-  CUDNN_CALL(cudnnSetTensorNdDescriptor(res, CUDNNDType(tv->dtype),
+  CUDNN_CALL(cudnnSetTensorNdDescriptor(res, CUDNNDType(dtype),
                                         static_cast<int>(padded_shape.size()),
                                         dmlc::BeginPtr(padded_shape), dmlc::BeginPtr(stride)));
   return res;
@@ -256,6 +238,15 @@ inline std::vector<int64_t> NormalizeScalarToTuple(const std::vector<int64_t>& v
   CHECK(n == 1 || n == numel) << "ValueError: we only accept a single integer or a tuple of "
                               << numel << " integers";
   return n == 1 ? std::vector<int64_t>(numel, v[0]) : v;
+}
+
+template<typename T>
+inline ir::Array<ir::Integer> ToArrayOfInteger(const std::vector<T> &v) {
+  ir::Array<ir::Integer> res;
+  for (auto elem : v) {
+    res.push_back(static_cast<int64_t>(elem));
+  }
+  return res;
 }
 
 }  // namespace cudnn

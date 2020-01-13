@@ -68,45 +68,27 @@ class ShapeWrapper(object):
 
     def normalize(self, status):
         self.add_cast(status)
-        if self.flatten:
-            res = [f'std::vector<int> shape_{self.name};']
-            fmt = """
-      int prod_{NAME}_{DIM} = 1;
-      for (int i = {FROM}; i < {TO} && i < {TENSOR}->ndim; ++i) {{
-        prod_{NAME}_{DIM} *= {TENSOR}->shape[i];
-      }}
-      shape_{NAME}.push_back(prod_{NAME}_{DIM});
-""".strip()
-            frm = None
-            for i, to in enumerate(map(str, self.flatten)):
-                # NOTE: This makes prod 1-base!
-                if frm is not None:
-                    res.append(fmt.format(FROM=frm, TO=to.replace('<last>', f'{self.tensor}->ndim'),
-                                          TENSOR=self.tensor, NAME=self.name, DIM=i))
-                frm = to
-        else:
-            res = [f'std::vector<int> shape_{self.name}(GetShape<int>(*{self.tensor}));']
-        res += [f'std::vector<int> padded_{self.name}(PadDims<int, int>(shape_{self.name}, 4));']
-        if self.need_stride:
-            invoke_stride = f'Shape2Strides<int, int>(padded_{self.name})'
-            res += [f'std::vector<int> stride_{self.name}({invoke_stride});']
+        slices = ''
+        if self.flatten is not None:
+            slices = ', '.join(str(i).replace('<last>', f'{self.tensor}->ndim') for i in self.flatten)
+        res = [f'auto {self.name}_tt = SquashTensorShape({self.tensor}, {{{slices}}});']
         return res
 
 class CUDNNFilter(ShapeWrapper):
 
+    # `flatten' is only for legacy normalization.
     def __init__(self, name, ptr, tensor, flatten=None):
+        assert flatten is None
         ShapeWrapper.__init__(self, name, tensor, flatten, False)
         self.ptr = ptr
 
     def normalize(self, status):
-        res = ShapeWrapper.normalize(self, status)
-        res += [call_cudnn_api(f'cudnnCreateFilterDescriptor', f'&{self.name}')]
-        padded_shape = f'padded_{self.name}'
-        args = [self.name, f'CUDNNDType({self.tensor}->dtype)', 'CUDNN_TENSOR_NCHW',
-                f'static_cast<int>({padded_shape}.size())', f'BeginPtr({padded_shape})']
-        res += [call_cudnn_api(f'SetFilterNdDescriptor', ', '.join(args))]
+        ShapeWrapper.add_cast(self, status)
         status.add_attr(f'cudnnFilterDescriptor_t', self.name)
         status.set_hardcode(self.ptr, f'{self.tensor}->data')
+        res = [f'auto {self.name}_tt = SquashTensorShape({self.tensor}, {{}});']
+        res += [f'(void) {self.name}_tt;']
+        res += [f'{self.name} = NormalizeFilter({self.tensor});']
         return res
 
 
@@ -118,16 +100,9 @@ class CUDNNTensor(ShapeWrapper):
 
     def normalize(self, status):
         res = ShapeWrapper.normalize(self, status)
-        # Add the rule of invocation
         status.set_hardcode(self.ptr, f'{self.tensor}->data')
-
-        args = [self.name, f'CUDNNDType({self.tensor}->dtype)',
-                f'static_cast<int>(padded_{self.name}.size())', f'BeginPtr(padded_{self.name})',
-                f'BeginPtr(stride_{self.name})']
-
-        res += [call_cudnn_api(f'cudnnCreateTensorDescriptor', f'&{self.name}')]
-        res += [call_cudnn_api(f'SetTensorNdDescriptor', ', '.join(args))]
         status.add_attr(f'cudnnTensorDescriptor_t', self.name)
+        res += [f'{self.name} = NormalizeTensorType({self.name}_tt);']
         return res
 
 def CUDNNOutput(Base):
@@ -191,10 +166,10 @@ class CUDNNAlgorithm(object):
 
     def normalize(self, status):
         fmt = """
-AlgorithmCache<{ALGO_T}> {CACHE};
-{ALGO_T} Find{ALGO_T}Wrapper(const std::vector<int64_t> &key, {ARGS}) {{
-  if ({CACHE}.has(key)) {{
-    return {CACHE}.get(key);
+static utils::MetaCache<{ALGO_T}> {CACHE};
+{ALGO_T} Find{ALGO_T}Wrapper(const std::vector<uint8_t> &key, {ARGS}) {{
+  if (auto *val = {CACHE}.get(key)) {{
+    return *val;
   }}
   int cnt;
   {PERF_T} res;
@@ -236,7 +211,9 @@ AlgorithmCache<{ALGO_T}> {CACHE};
                        FINDER=call_cudnn_api(self.api, finder_params),
                        CACHE=f'CacheFor{self.algo_ty}'))
 
-        res = [f'auto {self.name}_key = MakeAlgoKey({{{", ".join(self.keys)}}});']
+        res = [f'utils::HashKey {self.name}_hasher;']
+        res += [f'{self.name}_hasher << ' + ' << '.join(self.keys) + ';']
+        res += [f'const auto &{self.name}_key = {self.name}_hasher.byte_vector;']
         res += [f'{self.name} = Find{self.algo_ty}Wrapper({self.name}_key, {site_params});']
         status.add_attr(self.algo_ty, self.name)
         return res
@@ -364,7 +341,7 @@ def dispatch_softmax(op, algorithm):
     axis = AssignStatement('int', 'axis', '(args->axis + x->ndim) % x->ndim', False)
     x = CUDNNTensor('xDesc', 'x', 'args->x', [0, 'axis', 'axis+1', '<last>'])
     y = CUDNNOutputTensor('yDesc', 'y', 'cv->out', [0, 'axis', 'axis+1', '<last>'])
-    mode = """prod_xDesc_2 == 1 && prod_xDesc_3 == 1 ?
+    mode = """GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1 ?
     CUDNN_SOFTMAX_MODE_INSTANCE : CUDNN_SOFTMAX_MODE_CHANNEL"""
     mode = AssignStatement('cudnnSoftmaxMode_t', 'mode', mode, True)
     return CUDNNDispatch(op, 'SoftmaxForward', 'softmax', [axis, x, y, mode], consts)
@@ -377,7 +354,7 @@ def dispatch_softmax_dx(op, algorithm):
     y = CUDNNTensor('yDesc', 'y', 'args->y', [0, 'axis', 'axis+1', '<last>'])
     dy = CUDNNTensor('dyDesc', 'dy', 'args->dy', [0, 'axis', 'axis+1', '<last>'])
     dx = CUDNNOutputTensor('dxDesc', 'dx', 'cv->out', [0, 'axis', 'axis+1', '<last>'])
-    mode = """prod_xDesc_2 == 1 && prod_xDesc_3 == 1 ?
+    mode = """GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1 ?
     CUDNN_SOFTMAX_MODE_INSTANCE : CUDNN_SOFTMAX_MODE_CHANNEL"""
     mode = AssignStatement('cudnnSoftmaxMode_t', 'mode', mode, True)
     return CUDNNDispatch(op, 'SoftmaxBackward', 'softmax_dx', [axis, x, y, dy, dx, mode], consts)
@@ -490,9 +467,9 @@ def dispatch_conv(op, dims):
                             'args->stride',
                             'args->padding',
                             'args->dilation',
-                            'GetShape<int64_t>(*w)',
-                            'GetShape<int64_t>(*x)',
-                            'GetShape<int64_t>(*out)',
+                            'wDesc_tt',
+                            'xDesc_tt',
+                            'yDesc_tt',
                           ])
     ws = CUDNNWorkSpace('workSpaceSizeInBytes', 'workSpace', 'GetConvolutionForwardWorkspaceSize',
             ['xDesc', 'wDesc', 'convDesc', 'yDesc', 'algo', '&workSpaceSizeInBytes'])
@@ -540,9 +517,9 @@ def dispatch_conv_dxw(op, xorw, dims):
                             'args->stride',
                             'args->padding',
                             'args->dilation',
-                            'GetShape<int64_t>(*x_or_w)',
-                            'GetShape<int64_t>(*dy)',
-                            'GetShape<int64_t>(*out)',
+                            f'{x_or_w.name}_tt',
+                            'dyDesc_tt',
+                            f'{diff.name}_tt',
                           ])
     ws = CUDNNWorkSpace('workSpaceSizeInBytes', 'workSpace', f'GetConvolutionBackward{xorw}WorkspaceSize',
             [f'{x_or_w.name}', 'dyDesc', 'convDesc', f'{diff.name}', 'algo', '&workSpaceSizeInBytes'])

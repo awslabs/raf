@@ -41,13 +41,20 @@ Attrs SgdNormalizer(TVMOpEnv* env, const SgdArgs* args) {
 void SgdTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   y_type[0] = GetTupleType({env->outputs[0], env->outputs[1]});
   *param_types = {
-    GetTensorType(env->inputs[0]),
-    GetTensorType(env->inputs[1]),
-    GetTensorType(env->inputs[2]),
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
   };
 }
 
-MNM_TVMJIT(OptimizerSgd, "mnm.op.sgd", SgdArgs, SgdNormalizer, SgdTyper);
+void SgdHasher(utils::HashKey* key, const SgdArgs* args, std::vector<Type>* param_types,
+               Type* y_type) {
+  GenericHasher(key, args, param_types, y_type);
+  *key << args->mu;
+  *key << args->learning_rate;
+}
+
+MNM_TVMJIT(OptimizerSgd, "mnm.op.sgd", SgdArgs, SgdNormalizer, SgdTyper, SgdHasher);
 
 }  // namespace tvmjit
 }  // namespace op

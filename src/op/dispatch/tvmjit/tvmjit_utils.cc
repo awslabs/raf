@@ -19,8 +19,8 @@ using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using tvm::TVMType2Type;
 
-DLTensor GetDLTensor(const Value &v) {
-  DLTensor *ret = v;
+DLTensor GetDLTensor(const Value& v) {
+  DLTensor* ret = v;
   return *ret;
 }
 

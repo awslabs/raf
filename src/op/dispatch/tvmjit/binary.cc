@@ -36,10 +36,11 @@ void BinaryTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-MNM_TVMJIT(Add, "mnm.op.add", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper);
-MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper);
-MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper);
-
+MNM_TVMJIT(Add, "mnm.op.add", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper, GenericHasher);
+MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
+           GenericHasher);
+MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
+           GenericHasher);
 
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   Array<Integer> axis;
@@ -72,7 +73,16 @@ void SumTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumNormalizer, SumTyper);
+void SumHasher(utils::HashKey* key, const SumArgs* args, std::vector<Type>* param_types,
+               Type* y_type) {
+  GenericHasher(key, args, param_types, y_type);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    *key << args->axis[i];
+    *key << args->keep[i];
+  }
+}
+
+MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumNormalizer, SumTyper, SumHasher);
 
 }  // namespace tvmjit
 }  // namespace op
