@@ -15,9 +15,8 @@ namespace op {
 namespace tvmjit {
 
 using namespace mnm::ir;
+using namespace mnm::op::schema;
 using common::shape_utils::GetNumel;
-using schema::BinaryUfuncArgs;
-using schema::SumArgs;
 
 Attrs BinaryNormalizer(TVMOpEnv* env, const BinaryUfuncArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -45,8 +44,7 @@ MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinaryNormalizer, Binar
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   Array<Integer> axis;
   Array<Integer> keep;
-  // declare attribute fields in header file
-  TVM_DECLARE_ATTRS(SumAttrs, "attrs.SgdAttrs") {
+  TVM_DECLARE_ATTRS(SumAttrs, "attrs.SumAttrs") {
     TVM_ATTR_FIELD(axis);
     TVM_ATTR_FIELD(keep);
   }
@@ -73,13 +71,13 @@ void SumTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-void SumHasher(utils::HashKey* key, const SumArgs* args, std::vector<Type>* param_types,
-               Type* y_type) {
-  GenericHasher(key, args, param_types, y_type);
+HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, const SumArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
-    *key << args->axis[i];
-    *key << args->keep[i];
+    key << args->axis[i];
+    key << args->keep[i];
   }
+  return key;
 }
 
 MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumNormalizer, SumTyper, SumHasher);

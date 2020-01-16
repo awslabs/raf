@@ -5,6 +5,7 @@
  */
 #include "../../op_utils.h"
 #include "../../schema/gemm.h"
+#include "../../schema/init.h"
 #include "../../schema/likes.h"
 #include "../../schema/list_args.h"
 #include "../../schema/loss.h"
@@ -22,13 +23,12 @@ using common::shape_utils::PadDims;
 using common::shape_utils::Shape2Strides;
 using dmlc::BeginPtr;
 using value::TupleValueObj;
-static utils::MetaCache<cudnnConvolutionBwdDataAlgo_t> CacheForcudnnConvolutionBwdDataAlgo_t;
+MetaCache<cudnnConvolutionBwdDataAlgo_t> CacheForcudnnConvolutionBwdDataAlgo_t;
 cudnnConvolutionBwdDataAlgo_t FindcudnnConvolutionBwdDataAlgo_tWrapper(
     const std::vector<uint8_t>& key, const cudnnFilterDescriptor_t wDesc,
     const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnTensorDescriptor_t dxDesc) {
-  auto* val = CacheForcudnnConvolutionBwdDataAlgo_t.get(key);
-  if (val) {
+  if (auto* val = CacheForcudnnConvolutionBwdDataAlgo_t.Get(key)) {
     return *val;
   }
   int cnt;
@@ -39,16 +39,15 @@ cudnnConvolutionBwdDataAlgo_t FindcudnnConvolutionBwdDataAlgo_tWrapper(
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }
-  CacheForcudnnConvolutionBwdDataAlgo_t.set(key, res.algo);
+  CacheForcudnnConvolutionBwdDataAlgo_t.Set(key, res.algo);
   return res.algo;
 }
-static utils::MetaCache<cudnnConvolutionBwdFilterAlgo_t> CacheForcudnnConvolutionBwdFilterAlgo_t;
+MetaCache<cudnnConvolutionBwdFilterAlgo_t> CacheForcudnnConvolutionBwdFilterAlgo_t;
 cudnnConvolutionBwdFilterAlgo_t FindcudnnConvolutionBwdFilterAlgo_tWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
     const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnFilterDescriptor_t dwDesc) {
-  auto* val = CacheForcudnnConvolutionBwdFilterAlgo_t.get(key);
-  if (val) {
+  if (auto* val = CacheForcudnnConvolutionBwdFilterAlgo_t.Get(key)) {
     return *val;
   }
   int cnt;
@@ -59,16 +58,15 @@ cudnnConvolutionBwdFilterAlgo_t FindcudnnConvolutionBwdFilterAlgo_tWrapper(
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }
-  CacheForcudnnConvolutionBwdFilterAlgo_t.set(key, res.algo);
+  CacheForcudnnConvolutionBwdFilterAlgo_t.Set(key, res.algo);
   return res.algo;
 }
-static utils::MetaCache<cudnnConvolutionFwdAlgo_t> CacheForcudnnConvolutionFwdAlgo_t;
+MetaCache<cudnnConvolutionFwdAlgo_t> CacheForcudnnConvolutionFwdAlgo_t;
 cudnnConvolutionFwdAlgo_t FindcudnnConvolutionFwdAlgo_tWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
     const cudnnFilterDescriptor_t wDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnTensorDescriptor_t yDesc) {
-  auto* val = CacheForcudnnConvolutionFwdAlgo_t.get(key);
-  if (val) {
+  if (auto* val = CacheForcudnnConvolutionFwdAlgo_t.Get(key)) {
     return *val;
   }
   int cnt;
@@ -79,7 +77,7 @@ cudnnConvolutionFwdAlgo_t FindcudnnConvolutionFwdAlgo_tWrapper(
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }
-  CacheForcudnnConvolutionFwdAlgo_t.set(key, res.algo);
+  CacheForcudnnConvolutionFwdAlgo_t.Set(key, res.algo);
   return res.algo;
 }
 class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
@@ -408,7 +406,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
                                                BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
                                                CUDNNDType(w->dtype)));
     cudnnSetConvolutionGroupCount(convDesc, args->groups);
-    utils::HashKey algo_hasher;
+    HashKey algo_hasher;
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << xDesc_tt
                 << yDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
@@ -480,7 +478,7 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
                                                BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
                                                CUDNNDType(x_or_w->dtype)));
     cudnnSetConvolutionGroupCount(convDesc, args->groups);
-    utils::HashKey algo_hasher;
+    HashKey algo_hasher;
     algo_hasher << args->stride << args->padding << args->dilation << xDesc_tt << dyDesc_tt
                 << dwDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
@@ -552,7 +550,7 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
                                                BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
                                                CUDNNDType(x_or_w->dtype)));
     cudnnSetConvolutionGroupCount(convDesc, args->groups);
-    utils::HashKey algo_hasher;
+    HashKey algo_hasher;
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << dyDesc_tt
                 << dxDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;

@@ -31,11 +31,12 @@ void LossTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-void LossHasher(utils::HashKey* key, const LossArgs* args, std::vector<Type>* param_types,
-                Type* y_type) {
-  *key << tvm::Downcast<ir::TensorType>((*param_types)[0]);
-  *key << tvm::Downcast<ir::TensorType>((*param_types)[1]);
-  *key << tvm::Downcast<ir::TensorType>(*y_type);
+HashKey LossHasher(const std::vector<Type>& param_types, const Type& y_type, const LossArgs *args) {
+  HashKey key;
+  key << Downcast<TensorType>(param_types[0]);
+  key << Downcast<TensorType>(param_types[1]);
+  key << Downcast<TensorType>(y_type);
+  return key;
 }
 
 MNM_TVMJIT(NLLLoss, "mnm.op.nll_loss", LossArgs, LossNormalizer, LossTyper, LossHasher);

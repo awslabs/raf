@@ -43,50 +43,66 @@ class TVMOpEnv : public op::OpEnv {
   void Execute(const op::CallValues& call) override;
 };
 
-template <typename T>
-void GenericHasher(utils::HashKey* key, const T* args, std::vector<ir::Type>* param_types,
-                   ir::Type* y_type) {
-  for (int i = 0, n = param_types->size(); i < n; ++i) {
-    *key << tvm::Downcast<ir::TensorType>((*param_types)[i]);
+template <class Unused>
+HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& ret_type,
+                      const Unused* args) {
+  HashKey key;
+  for (int i = 0, n = param_types.size(); i < n; ++i) {
+    key << ir::Downcast<ir::TensorType>(param_types[i]);
   }
-  if (auto tuple = y_type->as<ir::TupleTypeNode>()) {
+  if (const auto tuple = ret_type.as<ir::TupleTypeNode>()) {
     for (int i = 0, n = tuple->fields.size(); i < n; ++i) {
-      *key << tvm::Downcast<ir::TensorType>(tuple->fields[i]);
+      key << ir::Downcast<ir::TensorType>(tuple->fields[i]);
     }
   } else {
-    *key << tvm::Downcast<ir::TensorType>(*y_type);
+    key << ir::Downcast<ir::TensorType>(ret_type);
   }
+  return key;
 }
 
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm
 
-#define MNM_TVMJIT(FUNC, OP, SCHEMA, NORM, TYPE, MAKE_KEY)       \
-  utils::MetaCache<registry::PackedFunc> FUNC##Cache;            \
-  OpEnv* FUNC(const op::CallValues& call) {                      \
-    static const auto op = Op::Get(OP);                          \
-    const auto* args = call->args.as<SCHEMA>();                  \
-    const auto& ctx = call->ctx;                                 \
-    auto env = std::make_unique<TVMOpEnv>();                     \
-    /* Normalize inputs and outputs */                           \
-    GetOut(call->out, &env->outputs);                            \
-    Attrs attrs = NORM(env.get(), args);                         \
-    /* Normalize types */                                        \
-    std::vector<Type> param_types;                               \
-    Type ret_type;                                               \
-    TYPE(env.get(), &param_types, &ret_type);                    \
-    utils::HashKey key;                                          \
-    key << call->ctx.device_type;                                \
-    MAKE_KEY(&key, args, &param_types, &ret_type);               \
-    if (auto compiled = FUNC##Cache.get(key.byte_vector)) {      \
-      env->f = *compiled;                                        \
-    } else {                                                     \
-      env->f = CompileOp(op, attrs, param_types, ret_type, ctx); \
-      FUNC##Cache.set(key.byte_vector, env->f);                  \
-    }                                                            \
-    env->Setup();                                                \
-    return env.release();                                        \
-  }                                                              \
-  MNM_OP_DISPATCH(OP, FUNC, DevType::kCPU(), "tvm-cpu");         \
-  MNM_OP_DISPATCH(OP, FUNC, DevType::kCUDA(), "tvm-cuda");
+#define MNM_TVMJIT(FUNC, OP, SCHEMA, NORM, TYPE, HASH)             \
+  MetaCache<registry::PackedFunc> FUNC##CacheCpu;                  \
+  MetaCache<registry::PackedFunc> FUNC##CacheCuda;                 \
+  OpEnv* FUNC(const op::CallValues& call) {                        \
+    static const auto op = Op::Get(OP);                            \
+    const auto* args = call->args.as<SCHEMA>();                    \
+    const auto& ctx = call->ctx;                                   \
+    auto env = std::make_unique<TVMOpEnv>();                       \
+    /* Normalize inputs and outputs */                             \
+    GetOut(call->out, &env->outputs);                              \
+    Attrs attrs = NORM(env.get(), args);                           \
+    /* Normalize types */                                          \
+    std::vector<Type> param_types;                                 \
+    Type ret_type;                                                 \
+    TYPE(env.get(), &param_types, &ret_type);                      \
+    /* Determine which cache to look up */                         \
+    MetaCache<registry::PackedFunc>* cache;                        \
+    if (call->ctx.device_type == DevType::kCPU()) {                \
+      cache = &FUNC##CacheCpu;                                     \
+    } else if (call->ctx.device_type == DevType::kCUDA()) {        \
+      cache = &FUNC##CacheCuda;                                    \
+    } else {                                                       \
+      LOG(FATAL) << "NotImplementedError: ";                       \
+      throw;                                                       \
+    }                                                              \
+    /* Look up hash */                                             \
+    HashKey key = HASH(param_types, ret_type, args);               \
+    {                                                              \
+      std::lock_guard<std::mutex> lock(cache->mu);                 \
+      if (const auto *compiled = cache->Get(key.byte_vector)) {    \
+        env->f = *compiled;                                        \
+      } else {                                                     \
+        env->f = CompileOp(op, attrs, param_types, ret_type, ctx); \
+        cache->Set(key.byte_vector, env->f);                       \
+      }                                                            \
+    }                                                              \
+    /* Setup other parts of the environment */                     \
+    env->Setup();                                                  \
+    return env.release();                                          \
+  }                                                                \
+  MNM_OP_DISPATCH(OP, FUNC, DevType::kCPU(), "tvmjit");            \
+  MNM_OP_DISPATCH(OP, FUNC, DevType::kCUDA(), "tvmjit");

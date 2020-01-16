@@ -47,11 +47,13 @@ void SgdTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-void SgdHasher(utils::HashKey* key, const SgdArgs* args, std::vector<Type>* param_types,
-               Type* y_type) {
-  GenericHasher(key, args, param_types, y_type);
-  *key << args->mu;
-  *key << args->learning_rate;
+HashKey SgdHasher(const std::vector<Type>& param_types,
+               const Type &y_type,
+               const SgdArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->mu;
+  key << args->learning_rate;
+  return key;
 }
 
 MNM_TVMJIT(OptimizerSgd, "mnm.op.sgd", SgdArgs, SgdNormalizer, SgdTyper, SgdHasher);

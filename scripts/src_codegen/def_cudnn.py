@@ -166,9 +166,10 @@ class CUDNNAlgorithm(object):
 
     def normalize(self, status):
         fmt = """
-static utils::MetaCache<{ALGO_T}> {CACHE};
+MetaCache<{ALGO_T}> {CACHE};
 {ALGO_T} Find{ALGO_T}Wrapper(const std::vector<uint8_t> &key, {ARGS}) {{
-  if (auto *val = {CACHE}.get(key)) {{
+  std::lock_guard<std::mutex> lock({CACHE}.mu);
+  if (auto *val = {CACHE}.Get(key)) {{
     return *val;
   }}
   int cnt;
@@ -178,7 +179,7 @@ static utils::MetaCache<{ALGO_T}> {CACHE};
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }}
-  {CACHE}.set(key, res.algo);
+  {CACHE}.Set(key, res.algo);
   return res.algo;
 }}
 """.strip()
@@ -211,7 +212,7 @@ static utils::MetaCache<{ALGO_T}> {CACHE};
                        FINDER=call_cudnn_api(self.api, finder_params),
                        CACHE=f'CacheFor{self.algo_ty}'))
 
-        res = [f'utils::HashKey {self.name}_hasher;']
+        res = [f'HashKey {self.name}_hasher;']
         res += [f'{self.name}_hasher << ' + ' << '.join(self.keys) + ';']
         res += [f'const auto &{self.name}_key = {self.name}_hasher.byte_vector;']
         res += [f'{self.name} = Find{self.algo_ty}Wrapper({self.name}_key, {site_params});']

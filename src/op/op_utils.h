@@ -8,139 +8,131 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <limits>
 #include "mnm/op.h"
 
 namespace mnm {
 namespace op {
-namespace utils {
+
+#define MNM_APPEND_BYTES(type, nbytes, value)                               \
+  {                                                                         \
+    constexpr int NUM_BYTES = nbytes;                                       \
+    union UNION {                                                           \
+      type v;                                                               \
+      struct {                                                              \
+        uint8_t bytes[NUM_BYTES];                                           \
+      };                                                                    \
+    } u;                                                                    \
+    u.v = value;                                                            \
+    static_assert(sizeof(UNION) == sizeof(uint8_t) * NUM_BYTES, "invalid"); \
+    static_assert(sizeof(UNION) == sizeof(type), "invalid");                \
+    for (int i = 0; i < NUM_BYTES; ++i) {                                   \
+      byte_vector.push_back(u.bytes[i]);                                    \
+    }                                                                       \
+  }
+
+#define MNM_DEF_PRIMITIVE(type_code, type, nbytes)                              \
+  inline HashKey& operator<<(const type& v) {                                   \
+    static_assert(0 <= type_code, "invalid");                                   \
+    static_assert(type_code <= std::numeric_limits<uint8_t>::max(), "invalid"); \
+    MNM_APPEND_BYTES(type, nbytes, v);                                          \
+    return *this;                                                               \
+  }
 
 class HashKey {
-  template<typename T>
-  HashKey& PODShrImpl(const T& v, uint8_t typecode) {
-    byte_vector.push_back(typecode);
-    byte_vector.resize(byte_vector.size() + sizeof(v));
-    *reinterpret_cast<T*>(dmlc::BeginPtr(byte_vector) + byte_vector.size() - sizeof(v)) = v;
+ public:
+  MNM_DEF_PRIMITIVE(0, bool, 1);
+  MNM_DEF_PRIMITIVE(1, int8_t, 1);
+  MNM_DEF_PRIMITIVE(2, int16_t, 2);
+  MNM_DEF_PRIMITIVE(3, int32_t, 4);
+  MNM_DEF_PRIMITIVE(4, int64_t, 8);
+  MNM_DEF_PRIMITIVE(5, uint8_t, 1);
+  MNM_DEF_PRIMITIVE(6, uint16_t, 2);
+  MNM_DEF_PRIMITIVE(7, uint32_t, 4);
+  MNM_DEF_PRIMITIVE(8, uint64_t, 8);
+  MNM_DEF_PRIMITIVE(9, float, 4);
+  MNM_DEF_PRIMITIVE(10, double, 8);
+  MNM_DEF_PRIMITIVE(11, DLDataType, 4);
+  MNM_DEF_PRIMITIVE(12, DLContext, 8);
+
+  inline HashKey& operator<<(const std::vector<int64_t>& v) {
+    byte_vector.push_back(13);
+    for (int i = 0, n = v.size(); i < n; ++i) {
+      MNM_APPEND_BYTES(int64_t, 8, v[i]);
+    }
+    MNM_APPEND_BYTES(int64_t, 8, 0);
     return *this;
   }
 
- public:
-  inline HashKey& operator<<(const bool &v) {
-    return PODShrImpl(v, 0);
-  }
-  inline HashKey& operator<<(const int8_t &v) {
-    return PODShrImpl(v, 1);
-  }
-  inline HashKey& operator<<(const int16_t &v) {
-    return PODShrImpl(v, 2);
-  }
-  inline HashKey& operator<<(const int32_t &v) {
-    return PODShrImpl(v, 3);
-  }
-  inline HashKey& operator<<(const int64_t &v) {
-    return PODShrImpl(v, 4);
-  }
-  inline HashKey& operator<<(const uint8_t &v) {
-    return PODShrImpl(v, 5);
-  }
-  inline HashKey& operator<<(const uint16_t &v) {
-    return PODShrImpl(v, 6);
-  }
-  inline HashKey& operator<<(const uint32_t &v) {
-    return PODShrImpl(v, 7);
-  }
-  inline HashKey& operator<<(const uint64_t &v) {
-    return PODShrImpl(v, 8);
-  }
-  inline HashKey& operator<<(const float &v) {
-    return PODShrImpl(v, 9);
-  }
-  inline HashKey& operator<<(const double &v) {
-    return PODShrImpl(v, 10);
-  }
-  inline HashKey& operator<<(const std::vector<int64_t> &v) {
-    byte_vector.push_back(11);
-    (*this) << static_cast<int64_t>(v.size());
-    for (int i = 0, n = v.size(); i < n; ++i) {
-      (*this) << v[i];
-    }
-    return *this;
-  }
-  inline HashKey& operator<<(const tvm::DataType &v) {
-    byte_vector.push_back(12);
-    (*this) << v.code() << v.bits() << v.lanes();
-    return *this;
-  }
-  inline HashKey& operator<<(const ir::TensorType &v) {
-    byte_vector.push_back(13);
-    (*this) << v->dtype;
-    (*this) << v->shape.size();
-    for (int i = 0, n = v->shape.size(); i < n; ++i) {
-      if (v->shape.as<tvm::ir::Any>()) {
-        (*this) << static_cast<uint64_t>(~0ull);
-      } else {
-        int64_t dim = tvm::Downcast<ir::Integer>(v->shape[i]);
-        (*this) << dim;
-      }
-    }
-    return *this;
-  }
-  inline HashKey& operator<<(const Context &ctx) {
+  inline HashKey& operator<<(const ir::TensorType& v) {
     byte_vector.push_back(14);
-    (*this) << ctx.device_type;
-    (*this) << ctx.device_id;
+    MNM_APPEND_BYTES(DLDataType, 4, v->dtype);
+    for (int i = 0, n = v->shape.size(); i < n; ++i) {
+      int64_t dim_i;
+      if (v->shape.as<tvm::ir::Any>()) {
+        dim_i = -1;
+      } else {
+        dim_i = ir::Downcast<ir::Integer>(v->shape[i]);
+      }
+      MNM_APPEND_BYTES(int64_t, 8, dim_i);
+    }
+    MNM_APPEND_BYTES(int64_t, 8, 0);
     return *this;
   }
+
+  inline HashKey& operator<<(const DLTensor& v) {
+    // N.B.: stride and ctx are not taken into consideration
+    byte_vector.push_back(15);
+    MNM_APPEND_BYTES(DLDataType, 4, v.dtype);
+    for (int i = 0, n = v.ndim; i < n; ++i) {
+      MNM_APPEND_BYTES(int64_t, 8, v.shape[i]);
+    }
+    MNM_APPEND_BYTES(int64_t, 8, 0);
+    return *this;
+  }
+
+  HashKey() {
+    byte_vector.reserve(1024);
+  }
+
   std::vector<uint8_t> byte_vector;
 };
 
+#undef MNM_DEF_PRIMITIVE
+#undef MNM_APPEND_BYTES
+
 template <typename T>
 class MetaCache {
-  std::unordered_map<std::string, T> cached_results;
-  std::mutex mutex_;
-
  public:
-  // TODO(@were): serialize and dump the cached results when exiting.
-  ~MetaCache() {
+  std::unordered_map<std::string, T> cached_;
+  std::mutex mu;
+
+  ~MetaCache() = default;
+
+  bool Has(const std::vector<uint8_t>& key) {
+    const std::string s(key.begin(), key.end());
+    return cached_.count(s);
   }
 
-
-  bool has(const std::vector<uint8_t>& key) {
+  const T* Get(const std::vector<uint8_t>& key) {
     const std::string s(key.begin(), key.end());
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      return cached_results.count(s);
+    auto iter = cached_.find(s);
+    if (iter == cached_.end()) {
+      return nullptr;
     }
+    return &iter->second;
   }
 
-  const T *get(const std::vector<uint8_t>& key) {
+  void Set(const std::vector<uint8_t>& key, T val) {
     const std::string s(key.begin(), key.end());
-    // TODO(@were): We need to write a optional utility to systematically do this.
-    static thread_local T res;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      auto iter = cached_results.find(s);
-      if (iter == cached_results.end()) {
-        return nullptr;
-      }
-      res = iter->second;
-      return &res;
+    auto iter = cached_.find(s);
+    if (iter != cached_.end()) {
+      LOG(FATAL) << "KeyError: The key is already cached!";
+      throw;
     }
-  }
-
-  void set(const std::vector<uint8_t>& key, T val) {
-    const std::string s(key.begin(), key.end());
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      auto iter = cached_results.find(s);
-      if (iter != cached_results.end()) {
-        LOG(FATAL) << "KeyError: The key is already cached!";
-        throw;
-      }
-      cached_results.emplace(s, val);
-    }
+    cached_.emplace(s, val);
   }
 };
 
-}  // namespace utils
 }  // namespace op
 }  // namespace mnm

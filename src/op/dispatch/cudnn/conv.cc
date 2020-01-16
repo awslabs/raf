@@ -19,21 +19,21 @@ using ir::Array;
 using ir::Attrs;
 using value::Value;
 
-static utils::MetaCache<cudnnConvolutionFwdAlgo_t> _conv_fwd_alg_cache;
+MetaCache<cudnnConvolutionFwdAlgo_t> _conv_fwd_alg_cache;
 
 cudnnConvolutionFwdAlgo_t FindConvolutionForwardAlgorithm(const std::vector<uint8_t>& key,
                                                           cudnnTensorDescriptor_t xDesc,
                                                           cudnnFilterDescriptor_t wDesc,
                                                           cudnnConvolutionDescriptor_t convDesc,
                                                           cudnnTensorDescriptor_t yDesc) {
-  if (auto *val = _conv_fwd_alg_cache.get(key)) {
+  if (auto *val = _conv_fwd_alg_cache.Get(key)) {
     return *val;
   }
   int cnt;
   cudnnConvolutionFwdAlgoPerf_t res;
   CUDNN_CALL(cudnnFindConvolutionForwardAlgorithm(CUDNNThreadEntry::ThreadLocal()->handle, xDesc,
                                                   wDesc, convDesc, yDesc, 1, &cnt, &res));
-  _conv_fwd_alg_cache.set(key, res.algo);
+  _conv_fwd_alg_cache.Set(key, res.algo);
   return res.algo;
 }
 
@@ -76,7 +76,7 @@ class ConvCUDNN : public mnm::op::OpEnv {
 
     RequestMemory(&y->data, y->ctx, out_size);
 
-    utils::HashKey hasher;
+    HashKey hasher;
     hasher << x_tt  << w_tt << y_tt << args->padding << args->stride << args->dilation;
 
     const std::vector<uint8_t> &key = hasher.byte_vector;
