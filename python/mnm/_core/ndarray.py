@@ -278,3 +278,11 @@ def _np_del(handle):
 @_register_func("mnm._ndarray_to_string")
 def _print(var):
     return str(ndarray(var))
+
+
+def get_ndarray_handle(a):
+    return a._ndarray__handle  # pylint: disable=protected-access
+
+
+def get_symbol_handle(a):
+    return a._Symbol__handle  # pylint: disable=protected-access
