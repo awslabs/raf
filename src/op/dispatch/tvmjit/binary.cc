@@ -40,6 +40,10 @@ MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinaryNormalizer, Binar
            GenericHasher);
 MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
            GenericHasher);
+MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
+           GenericHasher);
+MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
+           GenericHasher);
 
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   Array<Integer> axis;

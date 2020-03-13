@@ -70,6 +70,10 @@ max_pool2d = _APIS.get("mnm.op.sym.max_pool2d", None)
 # Defined in ./src/op/regs/regs.cc
 max_pool2d_dx = _APIS.get("mnm.op.sym.max_pool2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
+maximum = _APIS.get("mnm.op.sym.maximum", None)
+# Defined in ./src/op/regs/regs.cc
+minimum = _APIS.get("mnm.op.sym.minimum", None)
+# Defined in ./src/op/regs/regs.cc
 mod = _APIS.get("mnm.op.sym.mod", None)
 # Defined in ./src/op/regs/regs.cc
 multiply = _APIS.get("mnm.op.sym.multiply", None)

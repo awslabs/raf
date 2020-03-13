@@ -63,6 +63,8 @@ static const char matmul_tn[] = "mnm.op.matmul_tn";
 static const char matmul_tt[] = "mnm.op.matmul_tt";
 static const char max_pool2d[] = "mnm.op.max_pool2d";
 static const char max_pool2d_dx[] = "mnm.op.max_pool2d_dx";
+static const char maximum[] = "mnm.op.maximum";
+static const char minimum[] = "mnm.op.minimum";
 static const char mod[] = "mnm.op.mod";
 static const char multiply[] = "mnm.op.multiply";
 static const char negative[] = "mnm.op.negative";
@@ -754,6 +756,28 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.max_pool2d_dx")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.maximum")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(maximum, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.minimum")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(minimum, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.mod")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(mod, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -1283,6 +1307,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d")
 .set_body(MNM_SYMBOLIC_API(max_pool2d, 7, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
 .set_body(MNM_SYMBOLIC_API(max_pool2d_dx, 9, PoolDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.maximum")
+.set_body(MNM_SYMBOLIC_API(maximum, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.minimum")
+.set_body(MNM_SYMBOLIC_API(minimum, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mod")
 .set_body(MNM_SYMBOLIC_API(mod, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.multiply")
@@ -1656,6 +1684,8 @@ MNM_BIND_SCHEMA("mnm.op.matmul_tn", names::matmul_tn, value2schema::Binary);  //
 MNM_BIND_SCHEMA("mnm.op.matmul_tt", names::matmul_tt, value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d", names::max_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d_dx", names::max_pool2d_dx, value2schema::PoolDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.maximum", names::maximum, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.minimum", names::minimum, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mod", names::mod, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.multiply", names::multiply, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.negative", names::negative, value2schema::UnaryUfunc);  // NOLINT(whitespace/line_length)

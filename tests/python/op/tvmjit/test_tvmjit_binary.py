@@ -31,6 +31,8 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     (np.add, mnm.add),
     (np.subtract, mnm.subtract),
     (np.multiply, mnm.multiply),
+    (np.maximum,  mnm.maximum),
+    (np.minimum,  mnm.minimum),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],

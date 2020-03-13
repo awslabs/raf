@@ -10,11 +10,12 @@ __all__ = [
     "divide", "equal", "floor", "get_kept_dims", "get_reduce_axis",
     "greater", "greater_equal", "less", "less_equal", "log",
     "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "not_equal", "relu", "relu_dx", "reshape", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
-    "subtract", "sum", "tanh", "tanh_dx",
+    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
+    "reshape", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "softmax", "softmax_dx", "subtract", "sum", "tanh",
+    "tanh_dx",
 ]
 
 def abs(x):
@@ -216,6 +217,18 @@ def max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
     ceil_mode = sym_utils.to_bool(ceil_mode)
     include_pad = sym_utils.to_bool(include_pad)
     return Symbol.from_expr(ffi.max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad))
+def maximum(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.maximum(x1, x2, out, where))
+def minimum(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.minimum(x1, x2, out, where))
 def mod(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)

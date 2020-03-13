@@ -225,6 +225,40 @@ MNM_OP_DECLARE("mnm.op.not_equal", [](const CallValues& call) {
   throw;
 });
 
+MNM_OP_DECLARE("mnm.op.maximum", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+                        call->callee = ir::NullValue<OpValue>();
+                        call->out = ScalarValue::make(v1->data > v2->data ? v1->data : v2->data);
+                        return;
+                      }));
+    MNM_BINARY_TENSOR(x1, x2);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
+MNM_OP_DECLARE("mnm.op.minimum", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+                        call->callee = ir::NullValue<OpValue>();
+                        call->out = ScalarValue::make(v1->data < v2->data ? v1->data : v2->data);
+                        return;
+                      }));
+    MNM_BINARY_TENSOR(x1, x2);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
 void CollapseAxis(const CallValues &call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
