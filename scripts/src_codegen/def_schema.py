@@ -112,6 +112,22 @@ SCHEMAS = {
         Arg(name="dy", cxx_type="value::TensorValue"),
         Arg(name="axis", cxx_type="int", cxx_default=-1),
     ],
+    "nn.h::take": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="indices", cxx_type="value::TensorValue"),
+        Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
+    ],
+    "nn.h::expand_dims": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="axis", cxx_type="int"),
+        Arg(name="num_newaxis", cxx_type="int", cxx_default=1),
+    ],
+    "nn.h::sequence_mask": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="sequence_length", cxx_type="value::TensorValue"),
+        Arg(name="mask_value", cxx_type="double", cxx_default=0.0),
+        Arg(name="axis", cxx_type="int", cxx_default=0),
+    ],
     "loss.h::loss": [
         Arg(name="y_true", cxx_type="value::TensorValue"),
         Arg(name="y_pred", cxx_type="value::TensorValue"),

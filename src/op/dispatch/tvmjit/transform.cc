@@ -1,0 +1,92 @@
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file ./src/op/dispatch/tvmjit/transform.cc
+ * \brief NN-related operators bridged from TVM.
+ */
+#include <tvm/relay/attrs/transform.h>
+#include <mnm/value.h>
+#include <array>
+#include "./tvmjit_utils.h"
+#include "./tvm_attrs.h"
+#include "../../schema/nn.h"
+
+namespace mnm {
+namespace op {
+namespace tvmjit {
+
+using namespace mnm::ir;
+using namespace mnm::value;
+using schema::TakeArgs;
+using ::tvm::relay::TakeAttrs;
+using schema::SequenceMaskArgs;
+using ::tvm::relay::SequenceMaskAttrs;
+
+Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->indices);
+  auto attrs = make_object<TakeAttrs>();
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    attrs->axis = v->data;
+  } else {
+    attrs->axis = NullValue<Integer>();
+  }
+  attrs->mode = "clip";
+  return Attrs(attrs);
+}
+
+void TakeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0]),
+                  GetTensorType(env->inputs[1])};
+}
+
+HashKey TakeHasher(const std::vector<Type>& param_types,
+                   const Type &y_type,
+                   const TakeArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    key << v->data;
+  }
+  return key;
+}
+
+MNM_TVMJIT(Take, "mnm.op.take", TakeArgs, TakeNormalizer, TakeTyper, TakeHasher);
+
+Attrs SequenceMaskNormalizer(TVMOpEnv* env, const SequenceMaskArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->sequence_length);
+  auto attrs = make_object<SequenceMaskAttrs>();
+  attrs->mask_value = args->mask_value;
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+void SequenceMaskTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0]),
+                  GetTensorType(env->inputs[1])};
+}
+
+HashKey SequenceMaskHasher(const std::vector<Type>& param_types,
+                           const Type &y_type,
+                           const SequenceMaskArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->mask_value;
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs,
+           SequenceMaskNormalizer, SequenceMaskTyper, SequenceMaskHasher);
+
+}  // namespace tvmjit
+}  // namespace op
+}  // namespace mnm

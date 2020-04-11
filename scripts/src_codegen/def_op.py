@@ -63,6 +63,9 @@ OPS = [
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),
     Op(name="shape", schema_name="unary"),
+    Op(name="take", schema_name="take"),
+    Op(name="expand_dims", schema_name="expand_dims"),
+    Op(name="sequence_mask", schema_name="sequence_mask"),
 ]
 
 
