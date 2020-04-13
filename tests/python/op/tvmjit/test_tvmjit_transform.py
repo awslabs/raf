@@ -72,5 +72,17 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     check(m_y, n_y)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    [[1, 4, 1], [1, 2, 4, 1]],
+    [[4, 1, 1], [3, 4, 2, 2]]
+])
+def test_broadcast_to(shape, ctx):
+    m_x, n_x = randn(shape[0], ctx=ctx)
+    m_y = mnm.broadcast_to(m_x, shape[1])
+    n_y = np.broadcast_to(n_x, shape[1])
+    check(m_y, n_y)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

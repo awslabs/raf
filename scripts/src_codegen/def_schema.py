@@ -128,6 +128,12 @@ SCHEMAS = {
         Arg(name="mask_value", cxx_type="double", cxx_default=0.0),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
+    "nn.h::broadcast_to": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+    ],
     "loss.h::loss": [
         Arg(name="y_true", cxx_type="value::TensorValue"),
         Arg(name="y_pred", cxx_type="value::TensorValue"),

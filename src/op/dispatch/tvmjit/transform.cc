@@ -16,10 +16,8 @@ namespace tvmjit {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using schema::TakeArgs;
-using ::tvm::relay::TakeAttrs;
-using schema::SequenceMaskArgs;
-using ::tvm::relay::SequenceMaskAttrs;
+using namespace mnm::op::schema;
+using namespace ::tvm::relay;
 
 Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -86,6 +84,29 @@ HashKey SequenceMaskHasher(const std::vector<Type>& param_types,
 
 MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs,
            SequenceMaskNormalizer, SequenceMaskTyper, SequenceMaskHasher);
+
+Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<InitOpAttrs>();
+  std::vector<IndexExpr> shape;
+  shape.reserve(args->shape.size());
+  for (size_t i = 0; i < args->shape.size(); ++i) {
+    shape.emplace_back(IntImm::make(Int(32), args->shape[i]));
+  }
+  attrs->shape = Array<relay::IndexExpr>(shape.begin(), shape.end());
+  return Attrs(attrs);
+}
+
+void BroadcastToTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs,
+           BroadcastToNormalizer, BroadcastToTyper, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

@@ -112,6 +112,17 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
                                     /*shape=*/shape);
   call->ctx = x->ctx;
 });
+
+MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
+  const auto* args = call->args.as<BroadcastToArgs>();
+  DLTensor *x = args->x;
+  std::vector<int64_t> shape = args->shape;
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm
