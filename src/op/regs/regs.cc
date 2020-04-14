@@ -46,6 +46,8 @@ static const char copy[] = "mnm.op.copy";
 static const char cos[] = "mnm.op.cos";
 static const char divide[] = "mnm.op.divide";
 static const char equal[] = "mnm.op.equal";
+static const char erf[] = "mnm.op.erf";
+static const char erf_dx[] = "mnm.op.erf_dx";
 static const char floor[] = "mnm.op.floor";
 static const char get_kept_dims[] = "mnm.op.get_kept_dims";
 static const char get_reduce_axis[] = "mnm.op.get_reduce_axis";
@@ -81,6 +83,8 @@ static const char sigmoid[] = "mnm.op.sigmoid";
 static const char sigmoid_dx[] = "mnm.op.sigmoid_dx";
 static const char softmax[] = "mnm.op.softmax";
 static const char softmax_dx[] = "mnm.op.softmax_dx";
+static const char sqrt[] = "mnm.op.sqrt";
+static const char sqrt_dx[] = "mnm.op.sqrt_dx";
 static const char subtract[] = "mnm.op.subtract";
 static const char sum[] = "mnm.op.sum";
 static const char tanh[] = "mnm.op.tanh";
@@ -582,6 +586,24 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.equal")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.erf")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(erf, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.erf_dx")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(erf_dx, 3, ffi2schema::UnaryDx, schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.floor")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(floor, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
@@ -933,6 +955,24 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.softmax_dx")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(sqrt, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt_dx")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(sqrt_dx, 3, ffi2schema::UnaryDx, schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.subtract")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(subtract, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -1273,6 +1313,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.divide")
 .set_body(MNM_SYMBOLIC_API(divide, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.equal")
 .set_body(MNM_SYMBOLIC_API(equal, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.erf")
+.set_body(MNM_SYMBOLIC_API(erf, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.erf_dx")
+.set_body(MNM_SYMBOLIC_API(erf_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.floor")
 .set_body(MNM_SYMBOLIC_API(floor, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.get_kept_dims")
@@ -1343,6 +1387,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.softmax")
 .set_body(MNM_SYMBOLIC_API(softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx")
 .set_body(MNM_SYMBOLIC_API(softmax_dx, 4, SoftmaxDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt")
+.set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx")
+.set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract")
 .set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum")
@@ -1667,6 +1715,8 @@ MNM_BIND_SCHEMA("mnm.op.copy", names::copy, value2schema::Unary);  // NOLINT(whi
 MNM_BIND_SCHEMA("mnm.op.cos", names::cos, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.divide", names::divide, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.equal", names::equal, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.erf", names::erf, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.erf_dx", names::erf_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.floor", names::floor, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_kept_dims", names::get_kept_dims, value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_reduce_axis", names::get_reduce_axis, value2schema::Binary);  // NOLINT(whitespace/line_length)
@@ -1702,6 +1752,8 @@ MNM_BIND_SCHEMA("mnm.op.sigmoid", names::sigmoid, value2schema::Unary);  // NOLI
 MNM_BIND_SCHEMA("mnm.op.sigmoid_dx", names::sigmoid_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax", names::softmax, value2schema::Softmax);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax_dx", names::softmax_dx, value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.sqrt", names::sqrt, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.sqrt_dx", names::sqrt_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.tanh", names::tanh, value2schema::Unary);  // NOLINT(whitespace/line_length)

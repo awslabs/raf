@@ -8,15 +8,15 @@ __all__ = [
     "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
     "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil", "collapse_sum_like",
     "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
-    "divide", "equal", "floor", "get_kept_dims", "get_reduce_axis",
-    "greater", "greater_equal", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "softmax", "softmax_dx", "subtract", "sum", "tanh",
-    "tanh_dx",
+    "divide", "equal", "erf", "erf_dx", "floor",
+    "get_kept_dims", "get_reduce_axis", "greater", "greater_equal", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d",
+    "max_pool2d_dx", "maximum", "minimum", "mod", "multiply",
+    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
+    "relu", "relu_dx", "reshape", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "sqrt",
+    "sqrt_dx", "subtract", "sum", "tanh", "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -146,6 +146,16 @@ def equal(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.equal(x1, x2, out, where))
+@set_module("mnm")
+def erf(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.erf(x))
+@set_module("mnm")
+def erf_dx(x, y, dy):
+    x = imp_utils.to_any(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.erf_dx(x, y, dy))
 @set_module("mnm")
 def floor(x):
     x = imp_utils.to_any(x)
@@ -357,6 +367,16 @@ def softmax_dx(x, y, dy, axis=-1):
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.softmax_dx(x, y, dy, axis))
+@set_module("mnm")
+def sqrt(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.sqrt(x))
+@set_module("mnm")
+def sqrt_dx(x, y, dy):
+    x = imp_utils.to_any(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.sqrt_dx(x, y, dy))
 @set_module("mnm")
 def subtract(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)

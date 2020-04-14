@@ -28,6 +28,7 @@ cudnnConvolutionBwdDataAlgo_t FindcudnnConvolutionBwdDataAlgo_tWrapper(
     const std::vector<uint8_t>& key, const cudnnFilterDescriptor_t wDesc,
     const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnTensorDescriptor_t dxDesc) {
+  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionBwdDataAlgo_t.mu);
   if (auto* val = CacheForcudnnConvolutionBwdDataAlgo_t.Get(key)) {
     return *val;
   }
@@ -47,6 +48,7 @@ cudnnConvolutionBwdFilterAlgo_t FindcudnnConvolutionBwdFilterAlgo_tWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
     const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnFilterDescriptor_t dwDesc) {
+  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionBwdFilterAlgo_t.mu);
   if (auto* val = CacheForcudnnConvolutionBwdFilterAlgo_t.Get(key)) {
     return *val;
   }
@@ -66,6 +68,7 @@ cudnnConvolutionFwdAlgo_t FindcudnnConvolutionFwdAlgo_tWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
     const cudnnFilterDescriptor_t wDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnTensorDescriptor_t yDesc) {
+  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionFwdAlgo_t.mu);
   if (auto* val = CacheForcudnnConvolutionFwdAlgo_t.Get(key)) {
     return *val;
   }

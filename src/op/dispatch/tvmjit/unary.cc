@@ -40,6 +40,8 @@ MNM_TVMJIT(Ceil, "mnm.op.ceil", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericH
 MNM_TVMJIT(Floor, "mnm.op.floor", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Log, "mnm.op.log", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Cos, "mnm.op.cos", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

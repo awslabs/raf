@@ -36,6 +36,10 @@ divide = _APIS.get("mnm.op.sym.divide", None)
 # Defined in ./src/op/regs/regs.cc
 equal = _APIS.get("mnm.op.sym.equal", None)
 # Defined in ./src/op/regs/regs.cc
+erf = _APIS.get("mnm.op.sym.erf", None)
+# Defined in ./src/op/regs/regs.cc
+erf_dx = _APIS.get("mnm.op.sym.erf_dx", None)
+# Defined in ./src/op/regs/regs.cc
 floor = _APIS.get("mnm.op.sym.floor", None)
 # Defined in ./src/op/regs/regs.cc
 get_kept_dims = _APIS.get("mnm.op.sym.get_kept_dims", None)
@@ -105,6 +109,10 @@ sigmoid_dx = _APIS.get("mnm.op.sym.sigmoid_dx", None)
 softmax = _APIS.get("mnm.op.sym.softmax", None)
 # Defined in ./src/op/regs/regs.cc
 softmax_dx = _APIS.get("mnm.op.sym.softmax_dx", None)
+# Defined in ./src/op/regs/regs.cc
+sqrt = _APIS.get("mnm.op.sym.sqrt", None)
+# Defined in ./src/op/regs/regs.cc
+sqrt_dx = _APIS.get("mnm.op.sym.sqrt_dx", None)
 # Defined in ./src/op/regs/regs.cc
 subtract = _APIS.get("mnm.op.sym.subtract", None)
 # Defined in ./src/op/regs/regs.cc

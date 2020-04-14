@@ -16,6 +16,8 @@ from ._internal import copy
 from ._internal import cos
 from ._internal import divide
 from ._internal import equal
+from ._internal import erf
+from ._internal import erf_dx
 from ._internal import floor
 from ._internal import get_kept_dims
 from ._internal import get_reduce_axis
@@ -51,6 +53,8 @@ from ._internal import sigmoid
 from ._internal import sigmoid_dx
 from ._internal import softmax
 from ._internal import softmax_dx
+from ._internal import sqrt
+from ._internal import sqrt_dx
 from ._internal import subtract
 from ._internal import sum
 from ._internal import tanh
