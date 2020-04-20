@@ -55,6 +55,32 @@ MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT);
 MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN);
 MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT);
 
+MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
+  const auto* args = call->args.as<schema::BinaryArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* a = args->x1;
+  const DLTensor* b = args->x2;
+  // a is of shape [k1, n1, m1]
+  // b is of shape [k2, n2, m2]
+  CHECK_EQ(a->ndim, 3);
+  CHECK_EQ(b->ndim, 3);
+  int64_t k1 = a->shape[0];
+  int64_t n1 = a->shape[1];
+  int64_t m1 = a->shape[2];
+  int64_t k2 = b->shape[0];
+  int64_t n2 = b->shape[1];
+  int64_t m2 = b->shape[2];
+  CHECK_EQ(m1, m2);
+  CHECK_EQ(k1, k2);
+  CHECK(a->dtype.code == kDLFloat && (a->dtype.bits == 32 || a->dtype.bits == 64))
+      << "Only float and double are supported!";
+  call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype, /*shape=*/{k1, n1, n2});
+  call->ctx = a->ctx;
+  if (!k1 || !k2 || !n1 || !n2 || !m1 || !m2) {
+    call->callee = ir::NullValue<OpValue>();
+  }
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

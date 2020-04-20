@@ -6,17 +6,18 @@ from . import imp_utils
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil", "collapse_sum_like",
-    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
-    "divide", "equal", "erf", "erf_dx", "floor",
-    "get_kept_dims", "get_reduce_axis", "greater", "greater_equal", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d",
-    "max_pool2d_dx", "maximum", "minimum", "mod", "multiply",
-    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
-    "relu", "relu_dx", "reshape", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "sqrt",
-    "sqrt_dx", "subtract", "sum", "tanh", "tanh_dx",
+    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil",
+    "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx", "copy",
+    "cos", "divide", "equal", "erf", "erf_dx",
+    "floor", "get_kept_dims", "get_reduce_axis", "greater", "greater_equal",
+    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
+    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
+    "max_pool2d", "max_pool2d_dx", "maximum", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "sqrt", "sqrt_dx", "subtract", "sum", "tanh",
+    "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -56,6 +57,11 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.batch_flatten(x))
+@set_module("mnm")
+def batch_matmul(x1, x2):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    return imp_utils.ret(ffi.batch_matmul(x1, x2))
 @set_module("mnm")
 def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = imp_utils.to_tensor(x)

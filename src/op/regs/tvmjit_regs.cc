@@ -45,6 +45,7 @@ MNM_TVM_OP("mnm.op.argmin", "argmin", kCommReduce);
 MNM_TVM_OP("mnm.op.argsort", "argsort", kOpaque);
 MNM_TVM_OP("mnm.op.argwhere", "argwhere", kOpaque);
 MNM_TVM_OP("mnm.op.atan", "atan", kElemWise);
+MNM_TVM_OP("mnm.op.batch_matmul", "nn.batch_matmul", kOpaque);
 MNM_TVM_OP("mnm.op.bias_add", "nn.bias_add", kBroadcast);
 MNM_TVM_OP("mnm.op.broadcast_to", "broadcast_to", kBroadcast);
 MNM_TVM_OP("mnm.op.broadcast_to_like", "broadcast_to_like", kBroadcast);

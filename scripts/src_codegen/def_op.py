@@ -52,6 +52,7 @@ OPS = [
     Op(name="matmul_nt", schema_name="binary"),
     Op(name="matmul_tn", schema_name="binary"),
     Op(name="matmul_tt", schema_name="binary"),
+    Op(name="batch_matmul", schema_name="binary"),
     Op(name="nll_loss", schema_name="loss"),
     Op(name="nll_loss_dpred", schema_name="loss"),
     Op(name="nll_loss_dtrue", schema_name="loss"),

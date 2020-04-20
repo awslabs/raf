@@ -34,6 +34,7 @@ static const char add[] = "mnm.op.add";
 static const char avg_pool2d[] = "mnm.op.avg_pool2d";
 static const char avg_pool2d_dx[] = "mnm.op.avg_pool2d_dx";
 static const char batch_flatten[] = "mnm.op.batch_flatten";
+static const char batch_matmul[] = "mnm.op.batch_matmul";
 static const char batch_norm_infer[] = "mnm.op.batch_norm_infer";
 static const char batch_norm_train[] = "mnm.op.batch_norm_train";
 static const char batch_norm_train_dxwb[] = "mnm.op.batch_norm_train_dxwb";
@@ -444,6 +445,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.batch_flatten")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(batch_flatten, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.batch_matmul")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(batch_matmul, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1289,6 +1299,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
 .set_body(MNM_SYMBOLIC_API(avg_pool2d_dx, 9, PoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten")
 .set_body(MNM_SYMBOLIC_API(batch_flatten, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.batch_matmul")
+.set_body(MNM_SYMBOLIC_API(batch_matmul, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_infer")
 .set_body(MNM_SYMBOLIC_API(batch_norm_infer, 7, BatchNorm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train")
@@ -1703,6 +1715,7 @@ MNM_BIND_SCHEMA("mnm.op.add", names::add, value2schema::BinaryUfunc);  // NOLINT
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", names::avg_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", names::avg_pool2d_dx, value2schema::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_flatten", names::batch_flatten, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.batch_matmul", names::batch_matmul, value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_infer", names::batch_norm_infer, value2schema::BatchNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train", names::batch_norm_train, value2schema::BatchNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", names::batch_norm_train_dxwb, value2schema::BatchNormTrainDxwb);  // NOLINT(whitespace/line_length)

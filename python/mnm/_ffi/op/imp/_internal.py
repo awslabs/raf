@@ -12,6 +12,8 @@ avg_pool2d_dx = _APIS.get("mnm.op.imp.avg_pool2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
 batch_flatten = _APIS.get("mnm.op.imp.batch_flatten", None)
 # Defined in ./src/op/regs/regs.cc
+batch_matmul = _APIS.get("mnm.op.imp.batch_matmul", None)
+# Defined in ./src/op/regs/regs.cc
 batch_norm_infer = _APIS.get("mnm.op.imp.batch_norm_infer", None)
 # Defined in ./src/op/regs/regs.cc
 batch_norm_train = _APIS.get("mnm.op.imp.batch_norm_train", None)
