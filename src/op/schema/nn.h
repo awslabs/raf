@@ -31,6 +31,12 @@ class BatchNormTrainDxwbArgs : public ir::AttrsNode<BatchNormTrainDxwbArgs> {
   double eps;
   MNM_OP_SCHEMA(BatchNormTrainDxwbArgs, "mnm.args.batch_norm_train_dxwb");
 };
+class BroadcastToArgs : public ir::AttrsNode<BroadcastToArgs> {
+ public:
+  value::TensorValue x;
+  std::vector<int64_t> shape;
+  MNM_OP_SCHEMA(BroadcastToArgs, "mnm.args.broadcast_to");
+};
 class ConvArgs : public ir::AttrsNode<ConvArgs> {
  public:
   value::TensorValue x;
@@ -52,6 +58,13 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
   std::vector<int64_t> dilation;
   int64_t groups;
   MNM_OP_SCHEMA(ConvDxwArgs, "mnm.args.conv_dxw");
+};
+class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
+ public:
+  value::TensorValue x;
+  int axis;
+  int num_newaxis{1};
+  MNM_OP_SCHEMA(ExpandDimsArgs, "mnm.args.expand_dims");
 };
 class LocalResponseNormArgs : public ir::AttrsNode<LocalResponseNormArgs> {
  public:
@@ -86,6 +99,14 @@ class PoolDxArgs : public ir::AttrsNode<PoolDxArgs> {
   bool include_pad;
   MNM_OP_SCHEMA(PoolDxArgs, "mnm.args.pool_dx");
 };
+class SequenceMaskArgs : public ir::AttrsNode<SequenceMaskArgs> {
+ public:
+  value::TensorValue x;
+  value::TensorValue sequence_length;
+  double mask_value{0.0};
+  int axis{0};
+  MNM_OP_SCHEMA(SequenceMaskArgs, "mnm.args.sequence_mask");
+};
 class SoftmaxArgs : public ir::AttrsNode<SoftmaxArgs> {
  public:
   value::TensorValue x;
@@ -99,6 +120,13 @@ class SoftmaxDxArgs : public ir::AttrsNode<SoftmaxDxArgs> {
   value::TensorValue dy;
   int axis{-1};
   MNM_OP_SCHEMA(SoftmaxDxArgs, "mnm.args.softmax_dx");
+};
+class TakeArgs : public ir::AttrsNode<TakeArgs> {
+ public:
+  value::TensorValue x;
+  value::TensorValue indices;
+  value::Value axis{nullptr};
+  MNM_OP_SCHEMA(TakeArgs, "mnm.args.take");
 };
 }  // namespace schema
 }  // namespace op
