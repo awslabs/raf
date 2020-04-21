@@ -207,6 +207,12 @@ SCHEMAS = {
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
     ],
+    "transform.h::transpose": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="axes",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),    
+    ],
     "optimizer.h::sgd": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="dx", cxx_type="value::TensorValue"),

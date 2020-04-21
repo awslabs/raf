@@ -12,7 +12,11 @@
 #include "./declare_utils.h"
 #include "../schema/ufunc.h"
 #include "../schema/likes.h"
+<<<<<<< HEAD
 #include "../schema/nn.h"
+=======
+#include "../schema/transform.h"
+>>>>>>> meta_op_transpose
 #include "../../common/shape_utils.h"
 
 namespace mnm {
@@ -47,7 +51,8 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   const auto* args = call->args.as<ReshapeArgs>();
-  DLTensor* x = args->x;
+  CHECK(args != nullptr);
+  DLTensor *x = args->x;
   const std::vector<int64_t> &shape = args->shape;
   call->ctx = x->ctx;
   call->callee = ir::NullValue<OpValue>();
@@ -120,6 +125,31 @@ MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
+  call->ctx = x->ctx;
+});
+                            
+MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
+  const auto* args = call->args.as<TransposeArgs>();
+  CHECK(args != nullptr);
+  const std::vector<int64_t> &axes = args->axes;
+  const DLTensor *x = args->x;
+  int64_t* ishape = x->shape;
+  int ndim = x->ndim;
+
+  CHECK_EQ(ndim, axes.size());
+
+  std::vector<int64_t> oshape(ndim, -1);
+  if (axes.size() != 0) {
+    for (int i = 0; i < ndim; ++i) {
+      int axis = axes[i] >= 0 ? axes[i] : axes[i] + ndim;
+      oshape[i] = ishape[axis];
+    }
+  } else {
+    for (int i = 0; i < ndim; ++i) {
+      oshape[i] = ishape[ndim - i - 1];
+    }
+  }
+  call->out = TensorValue::Assemble(x->ctx, x->dtype, oshape);
   call->ctx = x->ctx;
 });
 

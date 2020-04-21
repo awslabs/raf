@@ -8,6 +8,7 @@
 #include <array>
 #include "./tvmjit_utils.h"
 #include "./tvm_attrs.h"
+#include "../../schema/transform.h"
 #include "../../schema/nn.h"
 
 namespace mnm {
@@ -107,6 +108,37 @@ void BroadcastToTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_typ
 
 MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs,
            BroadcastToNormalizer, BroadcastToTyper, GenericHasher);
+
+Attrs TransposeNormalizer(TVMOpEnv* env, const TransposeArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<TransposeAttrs>();
+  std::vector<Integer> axes;
+  axes.reserve(args->axes.size());
+  for (size_t i = 0; i < args->axes.size(); ++i) {
+    axes.emplace_back(args->axes[i]);
+  }
+  attrs->axes = Array<Integer>(axes.begin(), axes.end());
+  return Attrs(attrs);
+}
+
+void TransposeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey TransposeHasher(const std::vector<Type>& param_types,
+                        const Type& y_type,
+                        const TransposeArgs *args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axes;
+  return key;
+}
+
+MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeNormalizer,
+           TransposeTyper, TransposeHasher);
 
 }  // namespace tvmjit
 }  // namespace op

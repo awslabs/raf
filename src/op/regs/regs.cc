@@ -15,6 +15,7 @@
 #include "../schema/loss.h"
 #include "../schema/nn.h"
 #include "../schema/optimizer.h"
+#include "../schema/transform.h"
 #include "../schema/ufunc.h"
 
 using namespace mnm::ir;
@@ -94,6 +95,7 @@ static const char sum[] = "mnm.op.sum";
 static const char take[] = "mnm.op.take";
 static const char tanh[] = "mnm.op.tanh";
 static const char tanh_dx[] = "mnm.op.tanh_dx";
+static const char transpose[] = "mnm.op.transpose";
 }  // namespace names
 }  // namespace regs
 }  // namespace op
@@ -344,6 +346,13 @@ Attrs TernaryUfunc(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(2, ffi2schema::ArrayLike, x3);
   MNM_TAPE(3, ffi2schema::ArrayLike, out);
   MNM_TAPE(4, ffi2schema::ArrayLike, where);
+  return Attrs(attrs);
+}
+
+Attrs Transpose(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::TransposeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, axes);
   return Attrs(attrs);
 }
 
@@ -1098,6 +1107,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.tanh_dx")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.transpose")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(transpose, 2, ffi2schema::Transpose, schema::TransposeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axes));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 #undef MNM_RET
 #undef MNM_SET_ENV
 #undef MNM_PRELUDE
@@ -1350,6 +1368,13 @@ Array<Expr> TernaryUfunc(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Transpose(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, axes);
+  MNM_RET();
+}
+
 Array<Expr> Unary(const TVMArgs& values) {
   MNM_PRELUDE(1);
   MNM_ARG(0, ffi2expr::ArrayLike, x);
@@ -1527,6 +1552,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.tanh")
 .set_body(MNM_SYMBOLIC_API(tanh, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx")
 .set_body(MNM_SYMBOLIC_API(tanh_dx, 3, UnaryDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.transpose")
+.set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
 
 #undef MNM_SYMBOLIC_API
 
@@ -1820,6 +1847,14 @@ Attrs TernaryUfunc(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs Transpose(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::TransposeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, axes);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Unary(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::UnaryArgs);
   MNM_REQUIRED(0, value2schema::ArrayLike, x);
@@ -1927,6 +1962,7 @@ MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);  // NOLINT(whitesp
 MNM_BIND_SCHEMA("mnm.op.take", names::take, value2schema::Take);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.tanh", names::tanh, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.tanh_dx", names::tanh_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.transpose", names::transpose, value2schema::Transpose);  // NOLINT(whitespace/line_length)
 
 #undef MNM_BIND_SCHEMA
 
@@ -1965,6 +2001,7 @@ MNM_REGISTER_OBJECT_REFLECT(TakeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryUfuncArgs);
+MNM_REGISTER_OBJECT_REFLECT(TransposeArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryUfuncArgs);
