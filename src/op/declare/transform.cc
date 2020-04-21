@@ -47,7 +47,7 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   const auto* args = call->args.as<ReshapeArgs>();
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   const std::vector<int64_t> &shape = args->shape;
   call->ctx = x->ctx;
   call->callee = ir::NullValue<OpValue>();
@@ -65,8 +65,8 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
 MNM_OP_DECLARE("mnm.op.take", [](const CallValues &call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);
-  DLTensor *x = args->x;
-  DLTensor *indices = args->indices;
+  DLTensor* x = args->x;
+  DLTensor* indices = args->indices;
   std::vector<int64_t> shape;
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
@@ -87,7 +87,7 @@ MNM_OP_DECLARE("mnm.op.take", [](const CallValues &call) {
 MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   const auto* args = call->args.as<ExpandDimsArgs>();
   CHECK(args != nullptr);
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   int axis = NormalizeAxis(args->axis, x->ndim);
   int num_newaxis = args->num_newaxis;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
@@ -104,7 +104,7 @@ MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
   CHECK(args != nullptr);
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   // TODO(@hzfan): checks x.shape and sequence_length.shape
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
@@ -115,7 +115,7 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
 
 MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
   const auto* args = call->args.as<BroadcastToArgs>();
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   std::vector<int64_t> shape = args->shape;
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
