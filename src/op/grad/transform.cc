@@ -20,6 +20,16 @@ Array<Expr> BatchFlattenGrad(const Expr& orig_call, const Var &y, const Expr& dy
 
 MNM_OP_GRAD("mnm.op.batch_flatten", BatchFlattenGrad);
 
+Array<Expr> TransposeGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+  static auto transpose = Op::Get("mnm.op.transpose");
+  const CallNode* call = orig_call.as<CallNode>();
+  return {CallNode::make(transpose, {dy, call->args[1]})};
+  LOG(FATAL) << "Unreachable code";
+  throw;
+}
+
+MNM_OP_GRAD("mnm.op.transpose", TransposeGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm
