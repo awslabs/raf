@@ -8,6 +8,7 @@ from ._internal import batch_matmul
 from ._internal import batch_norm_infer
 from ._internal import batch_norm_train
 from ._internal import batch_norm_train_dxwb
+from ._internal import broadcast_to
 from ._internal import ceil
 from ._internal import collapse_sum_like
 from ._internal import conv2d
@@ -19,6 +20,7 @@ from ._internal import divide
 from ._internal import equal
 from ._internal import erf
 from ._internal import erf_dx
+from ._internal import expand_dims
 from ._internal import floor
 from ._internal import get_kept_dims
 from ._internal import get_reduce_axis
@@ -48,6 +50,7 @@ from ._internal import not_equal
 from ._internal import relu
 from ._internal import relu_dx
 from ._internal import reshape
+from ._internal import sequence_mask
 from ._internal import sgd
 from ._internal import shape
 from ._internal import sigmoid
@@ -58,5 +61,6 @@ from ._internal import sqrt
 from ._internal import sqrt_dx
 from ._internal import subtract
 from ._internal import sum
+from ._internal import take
 from ._internal import tanh
 from ._internal import tanh_dx

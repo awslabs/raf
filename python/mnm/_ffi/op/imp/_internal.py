@@ -20,6 +20,8 @@ batch_norm_train = _APIS.get("mnm.op.imp.batch_norm_train", None)
 # Defined in ./src/op/regs/regs.cc
 batch_norm_train_dxwb = _APIS.get("mnm.op.imp.batch_norm_train_dxwb", None)
 # Defined in ./src/op/regs/regs.cc
+broadcast_to = _APIS.get("mnm.op.imp.broadcast_to", None)
+# Defined in ./src/op/regs/regs.cc
 ceil = _APIS.get("mnm.op.imp.ceil", None)
 # Defined in ./src/op/regs/regs.cc
 collapse_sum_like = _APIS.get("mnm.op.imp.collapse_sum_like", None)
@@ -41,6 +43,8 @@ equal = _APIS.get("mnm.op.imp.equal", None)
 erf = _APIS.get("mnm.op.imp.erf", None)
 # Defined in ./src/op/regs/regs.cc
 erf_dx = _APIS.get("mnm.op.imp.erf_dx", None)
+# Defined in ./src/op/regs/regs.cc
+expand_dims = _APIS.get("mnm.op.imp.expand_dims", None)
 # Defined in ./src/op/regs/regs.cc
 floor = _APIS.get("mnm.op.imp.floor", None)
 # Defined in ./src/op/regs/regs.cc
@@ -100,6 +104,8 @@ relu_dx = _APIS.get("mnm.op.imp.relu_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.imp.reshape", None)
 # Defined in ./src/op/regs/regs.cc
+sequence_mask = _APIS.get("mnm.op.imp.sequence_mask", None)
+# Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.imp.sgd", None)
 # Defined in ./src/op/regs/regs.cc
 shape = _APIS.get("mnm.op.imp.shape", None)
@@ -119,6 +125,8 @@ sqrt_dx = _APIS.get("mnm.op.imp.sqrt_dx", None)
 subtract = _APIS.get("mnm.op.imp.subtract", None)
 # Defined in ./src/op/regs/regs.cc
 sum = _APIS.get("mnm.op.imp.sum", None)
+# Defined in ./src/op/regs/regs.cc
+take = _APIS.get("mnm.op.imp.take", None)
 # Defined in ./src/op/regs/regs.cc
 tanh = _APIS.get("mnm.op.imp.tanh", None)
 # Defined in ./src/op/regs/regs.cc
