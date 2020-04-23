@@ -12,11 +12,8 @@
 #include "./declare_utils.h"
 #include "../schema/ufunc.h"
 #include "../schema/likes.h"
-<<<<<<< HEAD
 #include "../schema/nn.h"
-=======
 #include "../schema/transform.h"
->>>>>>> meta_op_transpose
 #include "../../common/shape_utils.h"
 
 namespace mnm {
@@ -127,7 +124,7 @@ MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
                                     /*shape=*/shape);
   call->ctx = x->ctx;
 });
-                            
+
 MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
   const auto* args = call->args.as<TransposeArgs>();
   CHECK(args != nullptr);
