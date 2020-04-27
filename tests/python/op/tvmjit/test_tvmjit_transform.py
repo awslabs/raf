@@ -3,9 +3,8 @@ import operator
 
 import numpy as np
 import pytest
-import topi.testing
-
 import mnm
+import topi.testing
 
 
 def get_ctx_list():
@@ -87,8 +86,10 @@ def test_broadcast_to(shape, ctx):
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
     [(2, 2), (1, 0)],
+    [(2, 2), None],
     [(2, 2, 2), (1, 2, 0)],
     [(2, 2, 2), (2, 1, 0)],
+    [(2, 2, 2), None],
     [(4, 4, 4, 4), (3, 2, 1, 0)],
     [(4, 4, 4, 4), (1, 2, 3, 0)]
 ])
@@ -97,6 +98,7 @@ def test_transpose(shape, ctx):
     m_y = mnm.transpose(m_x, shape[1])
     n_y = np.transpose(n_x, shape[1])
     check(m_y, n_y)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

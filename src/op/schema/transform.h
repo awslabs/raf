@@ -14,7 +14,7 @@ namespace schema {
 class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
  public:
   value::TensorValue x;
-  std::vector<int64_t> axes;
+  std::vector<int64_t> axes{};
   MNM_OP_SCHEMA(TransposeArgs, "mnm.args.transpose");
 };
 }  // namespace schema

@@ -17,7 +17,8 @@ __all__ = [
     "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
     "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
-    "subtract", "sum", "take", "tanh", "tanh_dx", "transpose"
+    "subtract", "sum", "take", "tanh", "tanh_dx",
+    "transpose",
 ]
 
 @set_module("mnm")
@@ -431,7 +432,7 @@ def tanh_dx(x, y, dy):
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.tanh_dx(x, y, dy))
 @set_module("mnm")
-def transpose(x, axes):
+def transpose(x, axes=None):
     x = imp_utils.to_tensor(x)
     axes = imp_utils.to_int_tuple(axes)
     return imp_utils.ret(ffi.transpose(x, axes))

@@ -133,10 +133,9 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
   int64_t* ishape = x->shape;
   int ndim = x->ndim;
 
-  CHECK_EQ(ndim, axes.size());
-
   std::vector<int64_t> oshape(ndim, -1);
   if (axes.size() != 0) {
+    CHECK_EQ(ndim, axes.size());
     for (int i = 0; i < ndim; ++i) {
       int axis = axes[i] >= 0 ? axes[i] : axes[i] + ndim;
       oshape[i] = ishape[axis];

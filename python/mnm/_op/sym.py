@@ -16,7 +16,8 @@ __all__ = [
     "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
     "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
-    "subtract", "sum", "take", "tanh", "tanh_dx", "transpose"
+    "subtract", "sum", "take", "tanh", "tanh_dx",
+    "transpose",
 ]
 
 def abs(x):
@@ -364,7 +365,7 @@ def tanh_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.tanh_dx(x, y, dy))
-def transpose(x, axes):
+def transpose(x, axes=None):
     x = sym_utils.to_tensor(x)
     axes = sym_utils.to_int_tuple(axes)
     return Symbol.from_expr(ffi.transpose(x, axes))

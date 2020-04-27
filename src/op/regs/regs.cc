@@ -1848,9 +1848,9 @@ Attrs TernaryUfunc(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Transpose(const Array<Value>& values) {
-  MNM_PRELUDE(2, 2, schema::TransposeArgs);
+  MNM_PRELUDE(1, 2, schema::TransposeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::IntOrTupleInt, axes);
+  MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axes);
   return Attrs(attrs);
 }
 
