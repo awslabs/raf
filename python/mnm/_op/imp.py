@@ -6,17 +6,18 @@ from . import imp_utils
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil", "collapse_sum_like",
-    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
-    "divide", "equal", "floor", "get_kept_dims", "get_reduce_axis",
+    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to",
+    "ceil", "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx",
+    "copy", "cos", "divide", "equal", "erf",
+    "erf_dx", "expand_dims", "floor", "get_kept_dims", "get_reduce_axis",
     "greater", "greater_equal", "less", "less_equal", "log",
     "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
     "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
     "minimum", "mod", "multiply", "negative", "nll_loss",
     "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "softmax", "softmax_dx", "subtract", "sum", "tanh",
-    "tanh_dx",
+    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
+    "subtract", "sum", "take", "tanh", "tanh_dx",
 ]
 
 @set_module("mnm")
@@ -57,6 +58,11 @@ def batch_flatten(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.batch_flatten(x))
 @set_module("mnm")
+def batch_matmul(x1, x2):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    return imp_utils.ret(ffi.batch_matmul(x1, x2))
+@set_module("mnm")
 def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = imp_utils.to_tensor(x)
     running_mean = imp_utils.to_tensor(running_mean)
@@ -84,6 +90,11 @@ def batch_norm_train_dxwb(dy, x, w, b, eps):
     b = imp_utils.to_tensor(b)
     eps = imp_utils.to_double(eps)
     return imp_utils.ret(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
+@set_module("mnm")
+def broadcast_to(x, shape):
+    x = imp_utils.to_tensor(x)
+    shape = imp_utils.to_int_tuple(shape)
+    return imp_utils.ret(ffi.broadcast_to(x, shape))
 @set_module("mnm")
 def ceil(x):
     x = imp_utils.to_any(x)
@@ -146,6 +157,22 @@ def equal(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.equal(x1, x2, out, where))
+@set_module("mnm")
+def erf(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.erf(x))
+@set_module("mnm")
+def erf_dx(x, y, dy):
+    x = imp_utils.to_any(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.erf_dx(x, y, dy))
+@set_module("mnm")
+def expand_dims(x, axis, num_newaxis=1):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int(axis)
+    num_newaxis = imp_utils.to_int(num_newaxis)
+    return imp_utils.ret(ffi.expand_dims(x, axis, num_newaxis))
 @set_module("mnm")
 def floor(x):
     x = imp_utils.to_any(x)
@@ -324,6 +351,13 @@ def reshape(x, shape):
     shape = imp_utils.to_int_tuple(shape)
     return imp_utils.ret(ffi.reshape(x, shape))
 @set_module("mnm")
+def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
+    x = imp_utils.to_tensor(x)
+    sequence_length = imp_utils.to_tensor(sequence_length)
+    mask_value = imp_utils.to_double(mask_value)
+    axis = imp_utils.to_int(axis)
+    return imp_utils.ret(ffi.sequence_mask(x, sequence_length, mask_value, axis))
+@set_module("mnm")
 def sgd(x, dx, v, learning_rate, mu):
     x = imp_utils.to_tensor(x)
     dx = imp_utils.to_tensor(dx)
@@ -358,6 +392,16 @@ def softmax_dx(x, y, dy, axis=-1):
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.softmax_dx(x, y, dy, axis))
 @set_module("mnm")
+def sqrt(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.sqrt(x))
+@set_module("mnm")
+def sqrt_dx(x, y, dy):
+    x = imp_utils.to_any(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.sqrt_dx(x, y, dy))
+@set_module("mnm")
 def subtract(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
@@ -370,6 +414,12 @@ def sum(x, axis, keep):
     axis = imp_utils.to_int_tuple(axis)
     keep = imp_utils.to_int_tuple(keep)
     return imp_utils.ret(ffi.sum(x, axis, keep))
+@set_module("mnm")
+def take(x, indices, axis=None):
+    x = imp_utils.to_tensor(x)
+    indices = imp_utils.to_tensor(indices)
+    axis = imp_utils.to_any(axis)
+    return imp_utils.ret(ffi.take(x, indices, axis))
 @set_module("mnm")
 def tanh(x):
     x = imp_utils.to_any(x)

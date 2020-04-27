@@ -28,9 +28,13 @@ OPS = [
     Op(name="floor", schema_name="unary"),
     Op(name="log", schema_name="unary"),
     Op(name="sigmoid", schema_name="unary"),
+    Op(name="erf", schema_name="unary"),
+    Op(name="sqrt", schema_name="unary"),
     Op(name="relu_dx", schema_name="unary_dx"),
     Op(name="tanh_dx", schema_name="unary_dx"),
     Op(name="sigmoid_dx", schema_name="unary_dx"),
+    Op(name="erf_dx", schema_name="unary_dx"),
+    Op(name="sqrt_dx", schema_name="unary_dx"),
     Op(name="add", schema_name="binary_ufunc"),
     Op(name="subtract", schema_name="binary_ufunc"),
     Op(name="multiply", schema_name="binary_ufunc"),
@@ -48,6 +52,7 @@ OPS = [
     Op(name="matmul_nt", schema_name="binary"),
     Op(name="matmul_tn", schema_name="binary"),
     Op(name="matmul_tt", schema_name="binary"),
+    Op(name="batch_matmul", schema_name="binary"),
     Op(name="nll_loss", schema_name="loss"),
     Op(name="nll_loss_dpred", schema_name="loss"),
     Op(name="nll_loss_dtrue", schema_name="loss"),
@@ -58,6 +63,10 @@ OPS = [
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),
     Op(name="shape", schema_name="unary"),
+    Op(name="take", schema_name="take"),
+    Op(name="expand_dims", schema_name="expand_dims"),
+    Op(name="sequence_mask", schema_name="sequence_mask"),
+    Op(name="broadcast_to", schema_name="broadcast_to"),
 ]
 
 

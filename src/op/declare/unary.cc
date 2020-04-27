@@ -78,6 +78,8 @@ MNM_OP_DECLARE("mnm.op.ceil", Unary);
 MNM_OP_DECLARE("mnm.op.floor", Unary);
 MNM_OP_DECLARE("mnm.op.log", Unary);
 MNM_OP_DECLARE("mnm.op.cos", Unary);
+MNM_OP_DECLARE("mnm.op.erf", Unary);
+MNM_OP_DECLARE("mnm.op.sqrt", Unary);
 
 void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check
@@ -94,6 +96,8 @@ void UnaryDx(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.relu_dx", UnaryDx);
 MNM_OP_DECLARE("mnm.op.tanh_dx", UnaryDx);
 MNM_OP_DECLARE("mnm.op.sigmoid_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.erf_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.sqrt_dx", UnaryDx);
 
 void Shape(const CallValues &call) {
   const auto* args = call->args.as<UnaryArgs>();

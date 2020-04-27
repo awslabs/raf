@@ -88,6 +88,14 @@ const char SIGMOID_DX[] = "mnm.op.sigmoid_dx";
 auto SigmoidGrad = UnaryGrad<SIGMOID_DX>;
 MNM_OP_GRAD("mnm.op.sigmoid", SigmoidGrad);
 
+const char ERF_DX[] = "mnm.op.erf_dx";
+auto ErfGrad = UnaryGrad<ERF_DX>;
+MNM_OP_GRAD("mnm.op.erf", ErfGrad);
+
+const char SQRT_DX[] = "mnm.op.sqrt_dx";
+auto SqrtGrad = UnaryGrad<SQRT_DX>;
+MNM_OP_GRAD("mnm.op.sqrt", SqrtGrad);
+
 Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var &y, const Expr& dymv,
                                const Array<Expr>& igrads) {
   // schema for batch_norm_train is:

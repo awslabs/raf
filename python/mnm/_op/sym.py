@@ -5,17 +5,18 @@ from . import sym_utils
 # pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "ceil", "collapse_sum_like",
-    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
-    "divide", "equal", "floor", "get_kept_dims", "get_reduce_axis",
+    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to",
+    "ceil", "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx",
+    "copy", "cos", "divide", "equal", "erf",
+    "erf_dx", "expand_dims", "floor", "get_kept_dims", "get_reduce_axis",
     "greater", "greater_equal", "less", "less_equal", "log",
     "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
     "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
     "minimum", "mod", "multiply", "negative", "nll_loss",
     "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "softmax", "softmax_dx", "subtract", "sum", "tanh",
-    "tanh_dx",
+    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
+    "subtract", "sum", "take", "tanh", "tanh_dx",
 ]
 
 def abs(x):
@@ -50,6 +51,10 @@ def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
 def batch_flatten(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.batch_flatten(x))
+def batch_matmul(x1, x2):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    return Symbol.from_expr(ffi.batch_matmul(x1, x2))
 def batch_norm_infer(x, running_mean, running_var, w=None, b=None, momentum=0.1, eps=1e-05):
     x = sym_utils.to_tensor(x)
     running_mean = sym_utils.to_tensor(running_mean)
@@ -75,6 +80,10 @@ def batch_norm_train_dxwb(dy, x, w, b, eps):
     b = sym_utils.to_tensor(b)
     eps = sym_utils.to_double(eps)
     return Symbol.from_expr(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
+def broadcast_to(x, shape):
+    x = sym_utils.to_tensor(x)
+    shape = sym_utils.to_int_tuple(shape)
+    return Symbol.from_expr(ffi.broadcast_to(x, shape))
 def ceil(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.ceil(x))
@@ -128,6 +137,19 @@ def equal(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.equal(x1, x2, out, where))
+def erf(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.erf(x))
+def erf_dx(x, y, dy):
+    x = sym_utils.to_any(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    return Symbol.from_expr(ffi.erf_dx(x, y, dy))
+def expand_dims(x, axis, num_newaxis=1):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int(axis)
+    num_newaxis = sym_utils.to_int(num_newaxis)
+    return Symbol.from_expr(ffi.expand_dims(x, axis, num_newaxis))
 def floor(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.floor(x))
@@ -276,6 +298,12 @@ def reshape(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.reshape(x, shape))
+def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
+    x = sym_utils.to_tensor(x)
+    sequence_length = sym_utils.to_tensor(sequence_length)
+    mask_value = sym_utils.to_double(mask_value)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.sequence_mask(x, sequence_length, mask_value, axis))
 def sgd(x, dx, v, learning_rate, mu):
     x = sym_utils.to_tensor(x)
     dx = sym_utils.to_tensor(dx)
@@ -304,6 +332,14 @@ def softmax_dx(x, y, dy, axis=-1):
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.softmax_dx(x, y, dy, axis))
+def sqrt(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.sqrt(x))
+def sqrt_dx(x, y, dy):
+    x = sym_utils.to_any(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    return Symbol.from_expr(ffi.sqrt_dx(x, y, dy))
 def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -315,6 +351,11 @@ def sum(x, axis, keep):
     axis = sym_utils.to_int_tuple(axis)
     keep = sym_utils.to_int_tuple(keep)
     return Symbol.from_expr(ffi.sum(x, axis, keep))
+def take(x, indices, axis=None):
+    x = sym_utils.to_tensor(x)
+    indices = sym_utils.to_tensor(indices)
+    axis = sym_utils.to_any(axis)
+    return Symbol.from_expr(ffi.take(x, indices, axis))
 def tanh(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.tanh(x))
