@@ -21,9 +21,9 @@ class TensorValueObj;
 namespace mnm {
 namespace tensor {
 
-constexpr int kArrayTypeCode = 1;
+// constexpr int kArrayTypeCode = 1;
 
-class Tensor : private tvm::runtime::NDArray {
+class Tensor : public tvm::runtime::NDArray {
   using TSelf = ::mnm::tensor::Tensor;
   using TSuper = ::tvm::runtime::NDArray;
 
@@ -77,19 +77,11 @@ class Tensor : private tvm::runtime::NDArray {
   class TensorContainer;
 
  private:
-  Tensor(tvm::runtime::NDArray::Container* data);  // NOLINT(runtime/explicit)
+  // Tensor(tvm::runtime::NDArray::Container* data);  // NOLINT(runtime/explicit)
+  Tensor(tvm::runtime::ObjectPtr<tvm::runtime::Object> data);  // NOLINT(runtime/explicit)
 
   int array_type_code() const;
 };
 
 }  // namespace tensor
 }  // namespace mnm
-
-namespace tvm {
-namespace runtime {
-template <>
-struct array_type_info<::mnm::tensor::Tensor> {
-  static const int code = ::mnm::tensor::kArrayTypeCode;
-};
-}  // namespace runtime
-}  // namespace tvm

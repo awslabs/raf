@@ -6,14 +6,18 @@
 #pragma once
 #include <string>
 #include "tvm/runtime/object.h"
+//#include "tvm/ir/attrs.h"
+//#include "tvm/ir/type.h"
+//#include "tvm/ir/module.h"
+//#include "tvm/ir/tensor_type.h"
 #include "tvm/attrs.h"
 #include "tvm/ir.h"
+#include "tvm/relay/module.h"
 #include "tvm/node/container.h"
 #include "tvm/node/node.h"
 #include "tvm/relay/base.h"
 #include "tvm/relay/expr.h"
 #include "tvm/relay/expr_functor.h"
-#include "tvm/relay/module.h"
 #include "tvm/relay/op.h"
 #include "tvm/relay/op_attr_types.h"
 #include "tvm/relay/type.h"
@@ -36,6 +40,15 @@ using tvm::IntImm;
 using tvm::Attrs;
 using tvm::AttrsNode;
 
+// using tvm::BaseTensorType;
+// using tvm::BaseTensorTypeNode;
+// using tvm::RelayRefType;
+// using tvm::RelayRefTypeNode;
+using tvm::relay::BaseTensorType;
+using tvm::relay::BaseTensorTypeNode;
+using tvm::relay::RefType;
+using tvm::relay::RefTypeNode;
+
 // Object protocol
 using tvm::NullValue;
 using tvm::runtime::Downcast;
@@ -46,6 +59,7 @@ using tvm::runtime::ObjectEqual;
 using tvm::runtime::ObjectHash;
 using tvm::runtime::ObjectPtr;
 using tvm::runtime::ObjectRef;
+using tvm::runtime::GetObjectPtr;
 
 // Relay Expression
 using tvm::relay::Expr;
@@ -99,9 +113,6 @@ using tvm::relay::Kind;
 using tvm::relay::Type;
 using tvm::relay::TypeNode;
 
-using tvm::relay::BaseTensorType;
-using tvm::relay::BaseTensorTypeNode;
-
 using tvm::relay::TensorType;
 using tvm::relay::TensorTypeNode;
 
@@ -122,9 +133,6 @@ using tvm::relay::FuncTypeNode;
 
 using tvm::relay::TupleType;
 using tvm::relay::TupleTypeNode;
-
-using tvm::relay::RefType;
-using tvm::relay::RefTypeNode;
 
 using tvm::relay::TypeConstraint;
 using tvm::relay::TypeConstraintNode;

@@ -11,6 +11,7 @@
 namespace mnm {
 namespace pass {
 using tvm::relay::FreeVars;
+//using tvm::AsText;
 using tvm::relay::AsText;
 ir::Function AutoDiff(ir::Function func);
 }  // namespace pass

@@ -22,9 +22,9 @@ class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
   // void* manager_ctx = nullptr;
   using Container::manager_ctx;
   // void (*deleter)(Container* self) = nullptr;
-  using Container::deleter;
+  using Container::deleter_;
   // int32_t array_type_code_ = 0;
-  using Container::array_type_code_;
+  //using Container::array_type_code_;
   //  std::atomic<int> ref_counter_ = 0;
   using Container::ref_counter_;
   // std::vector<int64_t> shape_;
@@ -32,34 +32,33 @@ class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
   // An extra field
   std::vector<int64_t> strides_;
 
-  TensorContainer() = delete;
-
-  explicit TensorContainer(void (*del)(Container* self)) {
-    deleter = del;
-    array_type_code_ = kArrayTypeCode;
+  // TensorContainer() = delete;
+  
+  explicit TensorContainer() : tvm::runtime::NDArray::Container() {
+    // array_type_code_ = kArrayTypeCode;
   }
 
-  void CheckTypeCode() {
-    CHECK_EQ(array_type_code_, kArrayTypeCode)
-        << "InternalError: type code error " << array_type_code_;
-  }
+  // void CheckTypeCode() {
+  //   CHECK_EQ(array_type_code_, kArrayTypeCode)
+  //       << "InternalError: type code error " << array_type_code_;
+  // }
 };
 
 class Tensor::Impl {
  public:
-  static void DefaultDeleter(Container* super_ptr) {
+  static void DefaultDeleter(ir::Object* super_ptr) {
     TensorContainer* ptr = static_cast<TensorContainer*>(super_ptr);
     if (ptr->manager_ctx != nullptr) {
       // View of other tensors
       static_cast<TSuper::Container*>(ptr->manager_ctx)->DecRef();
     } else {
-      CHECK_EQ(ptr->array_type_code_, kArrayTypeCode);
+      // CHECK_EQ(ptr->array_type_code_, kArrayTypeCode);
       // Memory is not owned by MNM tensor, so do nothing
     }
     delete ptr;
   }
 
-  static void NumpyArrayDeleter(Container* super_ptr) {
+  static void NumpyArrayDeleter(ir::Object* super_ptr) {
     static const auto& deleter = registry::GetPackedFunc("mnm._numpy_array_deleter");
     TensorContainer* ptr = static_cast<TensorContainer*>(super_ptr);
     CHECK(ptr->manager_ctx != nullptr);
@@ -72,8 +71,10 @@ class Tensor::Impl {
     delete tensor;
   }
 
-  static void FromDLPackDeleter(Container* super_ptr) {
-    DLManagedTensor* tensor = static_cast<DLManagedTensor*>(super_ptr->manager_ctx);
+  static void FromDLPackDeleter(ir::Object* super_ptr) {
+    // DLManagedTensor* tensor = static_cast<DLManagedTensor*>(super_ptr->manager_ctx);
+    auto* ptr = static_cast<NDArray::Container*>(super_ptr);
+    DLManagedTensor* tensor = static_cast<DLManagedTensor*>(ptr->manager_ctx);
     if (tensor->deleter != nullptr) {
       (*tensor->deleter)(tensor);
     }
@@ -85,8 +86,11 @@ class Tensor::Impl {
     if (!strides.empty()) {
       CHECK_EQ(shape.size(), strides.size());
     }
-    TensorContainer* container = new TensorContainer(DefaultDeleter);
-    Tensor ret(container);
+    // TensorContainer* container = new TensorContainer(DefaultDeleter);
+    TensorContainer* container = new TensorContainer();
+    container->SetDeleter(DefaultDeleter);
+    // Tensor ret(container);
+    Tensor ret(ir::GetObjectPtr<ir::Object>(container));
     container->shape_ = shape;
     container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
     container->dl_tensor.data = data;
@@ -100,8 +104,11 @@ class Tensor::Impl {
   }
 
   static Tensor FromDLPack(DLManagedTensor* tensor) {
-    TensorContainer* container = new TensorContainer(FromDLPackDeleter);
-    Tensor ret(container);
+    // TensorContainer* container = new TensorContainer(FromDLPackDeleter);
+    TensorContainer* container = new TensorContainer();
+    container->SetDeleter(FromDLPackDeleter);
+    // Tensor ret(container);
+    Tensor ret(ir::GetObjectPtr<ir::Object>(container));
     container->manager_ctx = tensor;
     container->dl_tensor = tensor->dl_tensor;
     std::vector<int64_t> shape(tensor->dl_tensor.shape,
@@ -114,8 +121,8 @@ class Tensor::Impl {
   }
 
   static void MarkNumpy(Tensor tensor, void* manager_ctx) {
-    tensor.data_->manager_ctx = manager_ctx;
-    tensor.data_->deleter = NumpyArrayDeleter;
+    tensor.get_mutable()->manager_ctx = manager_ctx;
+    tensor.get_mutable()->SetDeleter(NumpyArrayDeleter);
   }
 
   static Tensor CreateView(const Tensor& self,
@@ -125,8 +132,11 @@ class Tensor::Impl {
     if (!shape.empty() && !strides.empty()) {
       CHECK_EQ(shape.size(), strides.size());
     }
-    TensorContainer* container = new TensorContainer(DefaultDeleter);
-    Tensor ret(container);
+    // TensorContainer* container = new TensorContainer(DefaultDeleter);
+    TensorContainer* container = new TensorContainer();
+    container->SetDeleter(DefaultDeleter);
+    // Tensor ret(container);
+    Tensor ret(ir::GetObjectPtr<ir::Object>(container));
     container->shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
     container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
     container->dl_tensor.ctx = self->ctx;
@@ -135,18 +145,18 @@ class Tensor::Impl {
     container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     container->dl_tensor.byte_offset = 0;
-    self.data_->IncRef();
-    container->manager_ctx = self.data_;
+    self.get_mutable()->IncRef();
+    container->manager_ctx = self.get_mutable()->manager_ctx;
     container->dl_tensor.data = data ? data : self->data;
     return ret;
   }
 };
 
-Tensor::Tensor(tvm::runtime::NDArray::Container* data) : TSuper(data) {
+Tensor::Tensor(tvm::runtime::ObjectPtr<tvm::runtime::Object> data) : TSuper(data) {
 }
 
 Tensor::Tensor(const tvm::runtime::NDArray& other) : TSuper(other) {
-  static_cast<Tensor::TensorContainer*>(data_)->CheckTypeCode();
+  // static_cast<Tensor::TensorContainer*>(data_)->CheckTypeCode();
 }
 
 Tensor Tensor::CreateView(const std::vector<int64_t>& shape, const std::vector<int64_t>& strides,
@@ -154,9 +164,9 @@ Tensor Tensor::CreateView(const std::vector<int64_t>& shape, const std::vector<i
   return Tensor::Impl::CreateView(*this, shape, strides, data);
 }
 
-int Tensor::array_type_code() const {
-  return data_ == nullptr ? -1 : static_cast<Tensor::TensorContainer*>(data_)->array_type_code_;
-}
+// int Tensor::array_type_code() const {
+//   return get_mutable() == nullptr ? -1 : static_cast<Tensor::TensorContainer*>(get_mutable())->array_type_code_;
+// }
 
 Tensor Tensor::make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
                     const std::vector<int64_t>& strides, void* data) {
@@ -170,12 +180,12 @@ Tensor Tensor::FromDLPack(DLManagedTensor* tensor) {
 DLManagedTensor* Tensor::ToDLPack() const {
   DLManagedTensor* ret = new DLManagedTensor();
   ret->deleter = Tensor::Impl::ToDLPackDeleter;
-  ret->manager_ctx = data_;
-  ret->dl_tensor = data_->dl_tensor;
-  if (IsCompact(data_->dl_tensor)) {
+  ret->manager_ctx = get_mutable();
+  ret->dl_tensor = get_mutable()->dl_tensor;
+  if (IsCompact(get_mutable()->dl_tensor)) {
     ret->dl_tensor.strides = nullptr;
   }
-  data_->IncRef();
+  get_mutable()->IncRef();
   return ret;
 }
 
