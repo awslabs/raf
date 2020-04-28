@@ -144,6 +144,7 @@ nd_get_manager_ctx = tvm.get_global_func("mnm.tensor.nd_get_manager_ctx")
 
 @tvm.register_object("mnm.tensor.Tensor")
 class Tensor(tvm.Object):
+    # pylint: disable=too-few-public-methods
     """Subclassing TVM's NDArray infrastructure."""
     @property
     def _tvm_handle(self):
