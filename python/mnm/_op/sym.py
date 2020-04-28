@@ -85,6 +85,10 @@ def broadcast_to(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.broadcast_to(x, shape))
+def broadcast_to_like(x, broadcast_type):
+    x = sym_utils.to_tensor(x)
+    broadcast_type = sym_utils.to_tensor(broadcast_type)
+    return Symbol.from_expr(ffi.broadcast_to_like(x, broadcast_type))
 def ceil(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.ceil(x))

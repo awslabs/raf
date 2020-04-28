@@ -97,6 +97,11 @@ def broadcast_to(x, shape):
     shape = imp_utils.to_int_tuple(shape)
     return imp_utils.ret(ffi.broadcast_to(x, shape))
 @set_module("mnm")
+def broadcast_to_like(x, broadcast_type):
+    x = imp_utils.to_tensor(x)
+    broadcast_type = imp_utils.to_tensor(broadcast_type)
+    return imp_utils.ret(ffi.broadcast_to_like(x, broadcast_type))
+@set_module("mnm")
 def ceil(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.ceil(x))

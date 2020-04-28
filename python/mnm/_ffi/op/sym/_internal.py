@@ -22,6 +22,8 @@ batch_norm_train_dxwb = _APIS.get("mnm.op.sym.batch_norm_train_dxwb", None)
 # Defined in ./src/op/regs/regs.cc
 broadcast_to = _APIS.get("mnm.op.sym.broadcast_to", None)
 # Defined in ./src/op/regs/regs.cc
+broadcast_to_like = _APIS.get("mnm.op.sym.broadcast_to_like", None)
+# Defined in ./src/op/regs/regs.cc
 ceil = _APIS.get("mnm.op.sym.ceil", None)
 # Defined in ./src/op/regs/regs.cc
 collapse_sum_like = _APIS.get("mnm.op.sym.collapse_sum_like", None)

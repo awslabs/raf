@@ -177,6 +177,29 @@ HashKey TransposeDxHasher(const std::vector<Type>& param_types,
 MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxNormalizer,
            TransposeDxTyper, TransposeDxHasher);
 
+Attrs BroadcastToLikeNormalizer(TVMOpEnv* env,
+                                const BroadcastToLikeArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->broadcast_type);
+  auto attrs = make_object<InitOpAttrs>();
+  return Attrs(attrs);
+}
+
+void BroadcastToLikeTyper(TVMOpEnv* env,
+                          std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+  };
+}
+
+MNM_TVMJIT(BroadcastToLike, "mnm.op.broadcast_to_like", BroadcastToLikeArgs,
+           BroadcastToLikeNormalizer, BroadcastToLikeTyper, GenericHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

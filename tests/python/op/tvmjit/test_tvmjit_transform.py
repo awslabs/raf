@@ -126,5 +126,18 @@ def test_transpose(shape, ctx):
     check(m_x.grad, n_x_grad)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    [[1, 4, 1], [1, 2, 4, 1]],
+    [[4, 1, 1], [3, 4, 2, 2]]
+])
+def test_broadcast_to_like(shape, ctx):
+    m_x, n_x = randn(shape[0], ctx=ctx)
+    m_broadcast_type, _ = randn(shape[1], ctx=ctx)
+    m_y = mnm.broadcast_to_like(m_x, m_broadcast_type)
+    n_y = np.broadcast_to(n_x, shape[1])
+    check(m_y, n_y)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

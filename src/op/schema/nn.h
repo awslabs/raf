@@ -37,6 +37,12 @@ class BroadcastToArgs : public ir::AttrsNode<BroadcastToArgs> {
   std::vector<int64_t> shape;
   MNM_OP_SCHEMA(BroadcastToArgs, "mnm.args.broadcast_to");
 };
+class BroadcastToLikeArgs : public ir::AttrsNode<BroadcastToLikeArgs> {
+ public:
+  value::TensorValue x;
+  value::TensorValue broadcast_type;
+  MNM_OP_SCHEMA(BroadcastToLikeArgs, "mnm.args.broadcast_to_like");
+};
 class ConvArgs : public ir::AttrsNode<ConvArgs> {
  public:
   value::TensorValue x;
