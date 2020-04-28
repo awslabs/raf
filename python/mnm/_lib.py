@@ -20,7 +20,6 @@ from tvm._ffi.function import get_global_func as _get_global_func
 from tvm._ffi.function import list_global_func_names as _list_global_func_names
 from tvm._ffi.function import register_func as _register_func
 from tvm._ffi.ndarray import _NDArrayBase
-from tvm._ffi.ndarray import free_extension_handle as _free_extension_handle
 from tvm._ffi.ndarray import register_extension as _register_extension
 from tvm._ffi.node import NodeBase as _NodeBase
 from tvm._ffi.node import NodeGeneric as _NodeGeneric
@@ -28,7 +27,7 @@ from tvm._ffi.node import register_node as _register_node
 from tvm._ffi.runtime_ctypes import TVMArray as _DLTensor
 from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
-from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
+# from tvm._ffi.runtime_ctypes import TVMNDArrayContainer as _DLManagedTensor
 from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
 from tvm.container import Array
 from tvm.expr import FloatImm, IntImm, StringImm
@@ -38,7 +37,6 @@ from tvm.relay.op import (OpPattern, register_compute, register_pattern,
                           register_schedule)
 
 # pylint: enable=unused-import
-
 
 def find_lib_path(name=None, search_path=None):
     ffi_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
@@ -139,3 +137,18 @@ def _init_api_prefix(module_name, prefix):
 
 _LIB, _LIB_NAME = _load_lib()
 _APIS = _get_apis()
+
+# pylint: disable=invalid-name
+nd_get_manager_ctx = tvm.get_global_func("mnm.tensor.nd_get_manager_ctx")
+# pylint: enable=invalid-name
+
+@tvm.register_object("mnm.tensor.Tensor")
+class Tensor(tvm.Object):
+    """Subclassing TVM's NDArray infrastructure."""
+    @property
+    def _tvm_handle(self):
+        return self.handle.value
+
+    @property
+    def manager_ctx(self):
+        return nd_get_manager_ctx(self)

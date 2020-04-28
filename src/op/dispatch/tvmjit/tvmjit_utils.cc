@@ -17,7 +17,6 @@ using namespace mnm::ir;
 using namespace mnm::registry;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
-// using tvm::TVMType2Type;
 
 DLTensor GetDLTensor(const Value& v) {
   DLTensor* ret = v;
@@ -87,13 +86,10 @@ PackedFunc CompileOp(const Op& op,                          //
     }
     func = FunctionNode::make(params,                                                     //
                               CallNode::make(op, {params.begin(), params.end()}, attrs),  //
-    // func = FunctionNode(params,
-    //                     CallNode(op, {params.begin(), params.end()}, attrs),
-                        ret_type,
-                        {});
+                              ret_type,                                                   //
+                              {});
     func->body->checked_type_ = ret_type;
     func->checked_type_ = FuncTypeNode::make(param_types, ret_type, {}, {});
-    // func->checked_type_ = FuncTypeNode(param_types, ret_type, {}, {});
   }
   tvm::Target target;
   {

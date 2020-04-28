@@ -96,12 +96,12 @@ NoGradValue NoGradValue::make() {
   ObjectPtr<NoGradValueObj> n = make_object<NoGradValueObj>();
   return NoGradValue(n);
 }
+
 /*** GetType ***/
 Type GetType(const Value& value) {
   if (const auto* tv = value.as<TensorValueObj>()) {
     const DLTensor& dlt = *tv->tensor.operator->();
     auto shape = GetShape<tvm::Integer>(dlt);
-    // return ir::TensorTypeNode::make({shape.begin(), shape.end()}, tvm::TVMType2Type(dlt.dtype));
     return ir::TensorTypeNode::make({shape.begin(), shape.end()}, tvm::relay::DataType(dlt.dtype));
   } else if (const auto* tv = value.as<TupleValueObj>()) {
     Array<Type> tuple_type;
@@ -136,15 +136,13 @@ Value::operator tensor::Tensor&() const {
 TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
                                   const std::vector<int64_t>& shape,
                                   const std::vector<int64_t>& strides, void* const data) {
-  // return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data));
   return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data));
 }
 
 TensorValue AssembleTensorValue(DLContext ctx, DLDataType dtype, Array<Integer> shape,
                                 Array<Integer> strides, void* data) {
-  // return TensorValue::make(
-  //     Tensor::make(ctx, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
-  return TensorValue::make(Tensor::make(ctx, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
+  return TensorValue::make(
+      Tensor::make(ctx, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
 }
 
 TensorValue FromTVM(tvm::runtime::NDArray array) {

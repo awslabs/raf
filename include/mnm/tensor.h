@@ -21,9 +21,7 @@ class TensorValueObj;
 namespace mnm {
 namespace tensor {
 
-// constexpr int kArrayTypeCode = 1;
-
-class Tensor : public tvm::runtime::NDArray {
+class Tensor : private tvm::runtime::NDArray {
   using TSelf = ::mnm::tensor::Tensor;
   using TSuper = ::tvm::runtime::NDArray;
 
@@ -69,18 +67,18 @@ class Tensor : public tvm::runtime::NDArray {
 
   DLManagedTensor* ToDLPack() const;
 
+  void * get_manager_ctx() const;
+
  public:
-  // const DLTensor* operator->() const;
   using TSuper::operator->;
 
   class Impl;
   class TensorContainer;
 
- private:
-  // Tensor(tvm::runtime::NDArray::Container* data);  // NOLINT(runtime/explicit)
-  Tensor(tvm::runtime::ObjectPtr<tvm::runtime::Object> data);  // NOLINT(runtime/explicit)
+  using ContainerType = TensorContainer;
 
-  int array_type_code() const;
+ private:
+  Tensor(tvm::runtime::ObjectPtr<tvm::runtime::Object> data);  // NOLINT(runtime/explicit)
 };
 
 }  // namespace tensor

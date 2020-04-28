@@ -173,7 +173,6 @@ ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
       grads[i] = dy;
       result.push_back(DeStruct(
           /*value=*/sub_value,
-          /*bp=*/ // ClosureValue::make({}, FunctionNode::make({dy}, TupleNode::make(grads), {}, {})),
           /*bp=*/ClosureValue::make({}, FunctionNode::make({dy}, TupleNode::make(grads), {}, {})),
           /*prev_tapes*/ {tape}));
     }

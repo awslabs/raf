@@ -6,7 +6,9 @@ from mnm._ffi.binding import (BindNDArray, BindSymbol, LookupBoundValue,
                               SetRequiresGrad, Backward, LookupGrad)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
-from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_ndarray
+# from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_ndarray
+from mnm._lib import _register_func, relay, tvm_ndarray
+from mnm._lib import Tensor as _DLManagedTensor
 
 
 @set_module("mnm")  # pylint: disable=invalid-name,too-many-instance-attributes
@@ -264,7 +266,8 @@ def array(
     return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, name))
 
 
-_DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)
+# _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)
+_DL_MANAGED_TENSOR_PTR = _DLManagedTensor
 
 
 @_register_func("mnm._numpy_array_deleter")

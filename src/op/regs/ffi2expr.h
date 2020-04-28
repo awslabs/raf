@@ -47,7 +47,6 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
 inline ir::Expr Tensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kNDArrayContainer || type_code == kNull) {
-    // return MNM_CONST(TensorValue, a.AsNDArray<Tensor>());
     return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
