@@ -53,7 +53,6 @@ class Tensor::Impl {
       // View of other tensors
       static_cast<TSuper::Container*>(ptr->manager_ctx)->DecRef();
     } else {
-      // CHECK_EQ(ptr->array_type_code_, kArrayTypeCode);
       // Memory is not owned by MNM tensor, so do nothing
     }
     delete ptr;

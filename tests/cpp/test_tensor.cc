@@ -20,9 +20,6 @@ class MNMTester {
   static int use_count(const Tensor& tensor) {
     return tensor.use_count();
   }
-  static int array_type_code(const Tensor& tensor) {
-    return tensor.array_type_code();
-  }
   static std::vector<int64_t> RandomShape(int ndim) {
     std::vector<int64_t> result(ndim);
     for (int i = 0; i < ndim; ++i) {
@@ -65,8 +62,6 @@ TEST(Tensor, make_no_strides_no_data) {
   ASSERT_EQ(strides, std::vector<int64_t>(tensor->strides, tensor->strides + ndim));
   // check byte_offset
   ASSERT_EQ(tensor->byte_offset, 0);
-  // check array_type_code
-  ASSERT_EQ(MNMTester::array_type_code(tensor), mnm::tensor::kArrayTypeCode);
   // check use_count
   ASSERT_EQ(MNMTester::use_count(tensor), 1);
 }
@@ -97,8 +92,6 @@ TEST(Tensor, make_no_strides) {
   ASSERT_EQ(strides, std::vector<int64_t>(tensor->strides, tensor->strides + ndim));
   // check byte_offset
   ASSERT_EQ(tensor->byte_offset, 0);
-  // check array_type_code
-  ASSERT_EQ(MNMTester::array_type_code(tensor), mnm::tensor::kArrayTypeCode);
   // check use_count
   ASSERT_EQ(MNMTester::use_count(tensor), 1);
 }
@@ -129,8 +122,6 @@ TEST(Tensor, make_given_all_fields) {
   ASSERT_EQ(strides, std::vector<int64_t>(tensor->strides, tensor->strides + ndim));
   // check byte_offset
   ASSERT_EQ(tensor->byte_offset, 0);
-  // check array_type_code
-  ASSERT_EQ(MNMTester::array_type_code(tensor), mnm::tensor::kArrayTypeCode);
   // check use_count
   ASSERT_EQ(MNMTester::use_count(tensor), 1);
 }

@@ -272,11 +272,10 @@ def array(
 @_register_func("mnm._numpy_array_deleter")
 def _np_del(handle):
     # handle = ctypes.cast(handle, _DL_MANAGED_TENSOR_PTR)
-    handle = ctypes.cast(handle, _DLManagedTensor)
-    void_p = handle.contents.manager_ctx
-    pyobj = ctypes.cast(void_p, ctypes.py_object)
-    ctypes.pythonapi.Py_DecRef(pyobj)
-
+    # void_p = handle.contents.manager_ctx
+    # pyobj = ctypes.cast(void_p, ctypes.py_object)
+    # ctypes.pythonapi.Py_DecRef(pyobj)
+    pass
 
 @_register_func("mnm._ndarray_to_string")
 def _print(var):

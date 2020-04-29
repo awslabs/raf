@@ -19,7 +19,8 @@ from tvm._ffi.function import Function as _Function
 from tvm._ffi.function import get_global_func as _get_global_func
 from tvm._ffi.function import list_global_func_names as _list_global_func_names
 from tvm._ffi.function import register_func as _register_func
-from tvm._ffi.ndarray import _NDArrayBase
+from tvm._ffi.function import _NDArrayBase, _ObjectBase
+# from tvm._ffi.ndarray import _NDArrayBase
 from tvm._ffi.ndarray import register_extension as _register_extension
 from tvm._ffi.node import NodeBase as _NodeBase
 from tvm._ffi.node import NodeGeneric as _NodeGeneric
