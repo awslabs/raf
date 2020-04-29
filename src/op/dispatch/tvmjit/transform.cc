@@ -140,6 +140,43 @@ HashKey TransposeHasher(const std::vector<Type>& param_types,
 MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeNormalizer,
            TransposeTyper, TransposeHasher);
 
+Attrs TransposeDxNormalizer(TVMOpEnv* env, const TransposeDxArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(3);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->y);
+  env->inputs[2] = GetDLTensor(args->dy);
+  auto attrs = make_object<TransposeAttrs>();
+  std::vector<Integer> axes;
+  axes.reserve(args->axes.size());
+  for (size_t i = 0; i < args->axes.size(); ++i) {
+    axes.emplace_back(args->axes[i]);
+  }
+  attrs->axes = Array<Integer>(axes.begin(), axes.end());
+  return Attrs(attrs);
+}
+
+void TransposeDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
+  };
+}
+
+HashKey TransposeDxHasher(const std::vector<Type>& param_types,
+                        const Type& y_type,
+                        const TransposeDxArgs *args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axes;
+  return key;
+}
+
+MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxNormalizer,
+           TransposeDxTyper, TransposeDxHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

@@ -94,10 +94,36 @@ def test_broadcast_to(shape, ctx):
     [(4, 4, 4, 4), (1, 2, 3, 0)]
 ])
 def test_transpose(shape, ctx):
+
+    class Transpose(mnm.Model):
+        def build(self, axes=None):
+            self._axes = axes
+
+        @mnm.model.trace
+        def forward(self, a):
+            ret = mnm.transpose(a, self._axes)
+            return ret
+
+    axes = shape[1]
+    model = Transpose(axes)
     m_x, n_x = randn(shape[0], ctx=ctx)
-    m_y = mnm.transpose(m_x, shape[1])
+    m_x.requires_grad = True
+    m_y = model(m_x)
     n_y = np.transpose(n_x, shape[1])
+    # check forward
     check(m_y, n_y)
+    # check backward
+    y_shape = n_y.shape
+    m_dy, n_dy = randn(y_shape, ctx=ctx)
+    if(axes != None):
+        axes_inverse = list(axes).copy()
+        for idx, i in enumerate(list(axes)):
+            axes_inverse[i] = idx
+        n_x_grad = np.transpose(n_dy, axes=tuple(axes_inverse))
+    else:
+        n_x_grad = np.transpose(n_dy)
+    m_y.backward(m_dy)
+    check(m_x.grad, n_x_grad)
 
 
 if __name__ == "__main__":

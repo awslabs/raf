@@ -149,6 +149,17 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
   call->ctx = x->ctx;
 });
 
+MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues &call) {
+  const auto* args = call->args.as<TransposeDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor *x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm
