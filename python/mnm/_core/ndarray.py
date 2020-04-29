@@ -8,7 +8,7 @@ from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
 # from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_ndarray
 from mnm._lib import _register_func, relay, tvm_ndarray
-from mnm._lib import Tensor as _DLManagedTensor
+# from mnm._lib import Tensor as _DLManagedTensor
 
 
 @set_module("mnm")  # pylint: disable=invalid-name,too-many-instance-attributes
@@ -266,15 +266,9 @@ def array(
     return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, name))
 
 
-# _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)
-
-
 @_register_func("mnm._numpy_array_deleter")
-def _np_del(handle):
-    # handle = ctypes.cast(handle, _DL_MANAGED_TENSOR_PTR)
-    # void_p = handle.contents.manager_ctx
-    # pyobj = ctypes.cast(void_p, ctypes.py_object)
-    # ctypes.pythonapi.Py_DecRef(pyobj)
+def _np_del(handle):  # pylint: disable=unused-argument
+    # ctypes.pythonapi.Py_DecRef(_DLManagedTensor.manager_ctx)
     pass
 
 @_register_func("mnm._ndarray_to_string")
