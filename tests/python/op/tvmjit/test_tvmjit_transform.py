@@ -92,16 +92,16 @@ def test_broadcast_to(shape, ctx):
     [(2, 2, 2), None],
     [(4, 4, 4, 4), (3, 2, 1, 0)],
     [(4, 4, 4, 4), (1, 2, 3, 0)]
-])
+])  # pylint: disable-msg=too-many-locals
 def test_transpose(shape, ctx):
 
     class Transpose(mnm.Model):
         def build(self, axes=None):
-            self._axes = axes
+            self._axes = axes  # pylint: disable=attribute-defined-outside-init
 
         @mnm.model.trace
-        def forward(self, a):
-            ret = mnm.transpose(a, self._axes)
+        def forward(self, x):
+            ret = mnm.transpose(x, self._axes)
             return ret
 
     axes = shape[1]
@@ -115,7 +115,7 @@ def test_transpose(shape, ctx):
     # check backward
     y_shape = n_y.shape
     m_dy, n_dy = randn(y_shape, ctx=ctx)
-    if(axes != None):
+    if axes is not None:
         axes_inverse = list(axes).copy()
         for idx, i in enumerate(list(axes)):
             axes_inverse[i] = idx
