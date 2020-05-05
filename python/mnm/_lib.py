@@ -139,5 +139,7 @@ _LIB, _LIB_NAME = _load_lib()
 _APIS = _get_apis()
 
 class TensorContainer(ctypes.Structure):
+    # pylint: disable=too-few-public-methods
+    """Python interface for NDArray::Container in tvm"""
     _fields_ = [('dltensor', _DLTensor),
                 ("manager_ctx", ctypes.c_void_p)]
