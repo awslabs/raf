@@ -32,19 +32,11 @@ class GradTape : public ir::ObjectRef {
 };
 
 // BindingEntry stores auxiliary information for vars
-class BindingEntryObj : public ir::Object {
- public:
-  static constexpr const char* _type_key = "mnm.binding.Binding";
-  MNM_BASE_OBJECT(BindingEntryObj, ir::Object);
-};
-
-class BindingEntry : public ir::ObjectRef {
- public:
-  MNM_OBJECT_REF(BindingEntry, ir::ObjectRef, BindingEntryObj);
-};
+using BindingEntryObj = ir::Object;
+using BindingEntry = ir::ObjectRef;
 
 // NDArray's binding entry
-class NDArrayBindingObj : public BindingEntryObj {
+class NDArrayBindingObj : public ir::NDArray::Container {
  public:
   mutable value::Value value;
   mutable GradTape tape;
@@ -52,10 +44,10 @@ class NDArrayBindingObj : public BindingEntryObj {
   MNM_FINAL_OBJECT(NDArrayBindingObj, BindingEntryObj);
 };
 
-class NDArrayBinding : public BindingEntry {
+class NDArrayBinding : public ir::NDArray {
  public:
   static NDArrayBinding make(value::Value value, GradTape tape);
-  MNM_OBJECT_REF(NDArrayBinding, BindingEntry, NDArrayBindingObj);
+  MNM_OBJECT_REF(NDArrayBinding, ir::NDArray, NDArrayBindingObj);
 };
 
 // Symbol's binding entry

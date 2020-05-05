@@ -24,6 +24,7 @@ namespace value {
 class ValueObj : public ir::Object {
  public:
   mutable std::shared_ptr<op::OpEnv> op_env{nullptr};
+  static constexpr const uint32_t _type_index = ir::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.value.Value";
   MNM_BASE_OBJECT(ValueObj, ir::Object);
 };

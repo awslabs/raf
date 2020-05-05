@@ -43,6 +43,7 @@ using tvm::relay::RefTypeNode;
 
 // Object protocol
 using tvm::NullValue;
+using tvm::runtime::TypeIndex;
 using tvm::runtime::Downcast;
 using tvm::runtime::GetRef;
 using tvm::runtime::make_object;
@@ -52,6 +53,7 @@ using tvm::runtime::ObjectHash;
 using tvm::runtime::ObjectPtr;
 using tvm::runtime::ObjectRef;
 using tvm::runtime::GetObjectPtr;
+using tvm::runtime::NDArray;
 
 // Relay Expression
 using tvm::relay::Expr;

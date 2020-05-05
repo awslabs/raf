@@ -15,7 +15,7 @@ using common::shape_utils::GetShape;
 using common::shape_utils::IsCompact;
 using common::shape_utils::Shape2Strides;
 
-class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
+class Tensor::TensorContainer : public ir::NDArray::Container {
  public:
   // DLTensor dl_tensor;
   using Container::dl_tensor;
@@ -30,13 +30,13 @@ class Tensor::TensorContainer : public tvm::runtime::NDArray::Container {
   // An extra field
   std::vector<int64_t> strides_;
 
-  TensorContainer() : tvm::runtime::NDArray::Container() {
+  TensorContainer() : ir::NDArray::Container() {
     type_index_ = TensorContainer::RuntimeTypeIndex();
   }
 
   static constexpr const uint32_t _type_index = tvm::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.tensor.Tensor";
-  TVM_DECLARE_FINAL_OBJECT_INFO(TensorContainer, tvm::runtime::NDArray::Container);
+  TVM_DECLARE_FINAL_OBJECT_INFO(TensorContainer, ir::NDArray::Container);
 };
 
 void* Tensor::get_manager_ctx() const {
@@ -59,9 +59,9 @@ class Tensor::Impl {
   }
 
   static void NumpyArrayDeleter(ir::Object* super_ptr) {
-    static const auto& deleter = registry::GetPackedFunc("mnm._numpy_array_deleter");
     TensorContainer* ptr = static_cast<TensorContainer*>(super_ptr);
     CHECK(ptr->manager_ctx != nullptr);
+    static const auto& deleter = registry::GetPackedFunc("mnm._numpy_array_deleter");
     deleter(ptr->manager_ctx);
     delete ptr;
   }
@@ -145,10 +145,10 @@ class Tensor::Impl {
   }
 };
 
-Tensor::Tensor(tvm::runtime::ObjectPtr<tvm::runtime::Object> data) : TSuper(data) {
+Tensor::Tensor(ir::ObjectPtr<ir::Object> data) : TSuper(data) {
 }
 
-Tensor::Tensor(const tvm::runtime::NDArray& other) : TSuper(other) {
+Tensor::Tensor(const ir::NDArray& other) : TSuper(other) {
 }
 
 Tensor Tensor::CreateView(const std::vector<int64_t>& shape, const std::vector<int64_t>& strides,
