@@ -128,6 +128,7 @@ def test_transpose(shape, ctx):
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
+    [[1, 4, 1], [1, 4, 1]],
     [[1, 4, 1], [1, 2, 4, 1]],
     [[4, 1, 1], [3, 4, 2, 2]]
 ])

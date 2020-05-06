@@ -18,6 +18,7 @@ namespace tvmjit {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
+using namespace tvm;
 using namespace ::tvm::relay;
 
 Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
@@ -87,7 +88,6 @@ MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs,
            SequenceMaskNormalizer, SequenceMaskTyper, SequenceMaskHasher);
 
 Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
-  using namespace tvm;
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(1);
   env->inputs[0] = GetDLTensor(args->x);
@@ -110,7 +110,6 @@ MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs,
            BroadcastToNormalizer, BroadcastToTyper, GenericHasher);
 
 Attrs TransposeNormalizer(TVMOpEnv* env, const TransposeArgs* args) {
-  using namespace tvm;
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(1);
   env->inputs[0] = GetDLTensor(args->x);
@@ -141,7 +140,6 @@ MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeNormalizer,
            TransposeTyper, TransposeHasher);
 
 Attrs TransposeDxNormalizer(TVMOpEnv* env, const TransposeDxArgs* args) {
-  using namespace tvm;
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(3);
   env->inputs[0] = GetDLTensor(args->x);
@@ -179,7 +177,6 @@ MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxNorma
 
 Attrs BroadcastToLikeNormalizer(TVMOpEnv* env,
                                 const BroadcastToLikeArgs* args) {
-  using namespace tvm;
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(2);
   env->inputs[0] = GetDLTensor(args->x);
