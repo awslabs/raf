@@ -17,6 +17,7 @@ __all__ = [
     "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
     "subtract", "sum", "take", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 def abs(x):
@@ -364,3 +365,13 @@ def tanh_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.tanh_dx(x, y, dy))
+def transpose(x, axes=None):
+    x = sym_utils.to_tensor(x)
+    axes = sym_utils.to_int_tuple(axes)
+    return Symbol.from_expr(ffi.transpose(x, axes))
+def transpose_dx(x, y, dy, axes=None):
+    x = sym_utils.to_tensor(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    axes = sym_utils.to_int_tuple(axes)
+    return Symbol.from_expr(ffi.transpose_dx(x, y, dy, axes))

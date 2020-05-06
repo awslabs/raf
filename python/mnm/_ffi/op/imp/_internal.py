@@ -131,3 +131,7 @@ take = _APIS.get("mnm.op.imp.take", None)
 tanh = _APIS.get("mnm.op.imp.tanh", None)
 # Defined in ./src/op/regs/regs.cc
 tanh_dx = _APIS.get("mnm.op.imp.tanh_dx", None)
+# Defined in ./src/op/regs/regs.cc
+transpose = _APIS.get("mnm.op.imp.transpose", None)
+# Defined in ./src/op/regs/regs.cc
+transpose_dx = _APIS.get("mnm.op.imp.transpose_dx", None)

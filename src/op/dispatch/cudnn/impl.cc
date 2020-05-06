@@ -11,6 +11,7 @@
 #include "../../schema/loss.h"
 #include "../../schema/nn.h"
 #include "../../schema/optimizer.h"
+#include "../../schema/transform.h"
 #include "../../schema/ufunc.h"
 #include "./cudnn_utils.h"
 namespace mnm {

@@ -18,6 +18,7 @@ __all__ = [
     "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
     "subtract", "sum", "take", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -430,3 +431,15 @@ def tanh_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.tanh_dx(x, y, dy))
+@set_module("mnm")
+def transpose(x, axes=None):
+    x = imp_utils.to_tensor(x)
+    axes = imp_utils.to_int_tuple(axes)
+    return imp_utils.ret(ffi.transpose(x, axes))
+@set_module("mnm")
+def transpose_dx(x, y, dy, axes=None):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    axes = imp_utils.to_int_tuple(axes)
+    return imp_utils.ret(ffi.transpose_dx(x, y, dy, axes))

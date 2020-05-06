@@ -10,6 +10,7 @@ namespace op {
 namespace grad {
 
 using namespace mnm::ir;
+using namespace mnm::value;
 
 template <bool transpose_a, bool transpose_b>
 Array<Expr> MatmulGradImpl(const Expr& orig_call, const Var& y, const Expr& dy) {
@@ -59,6 +60,26 @@ MNM_OP_GRAD("mnm.op.matmul", MatmulGradNN);
 MNM_OP_GRAD("mnm.op.matmul_nt", MatmulGradNT);
 MNM_OP_GRAD("mnm.op.matmul_tn", MatmulGradTN);
 MNM_OP_GRAD("mnm.op.matmul_tt", MatmulGradTT);
+
+Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto batch_matmul = Op::Get("mnm.op.batch_matmul");
+  static auto transpose = Op::Get("mnm.op.transpose");
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& a = call->args[0];
+  const Expr& b = call->args[1];
+  const std::vector<Value> axes = {IntValue::make(0), IntValue::make(2),
+                                   IntValue::make(1)};
+  const Expr& axes_expr = MakeConstant(TupleValue::make(Array<Value>(axes)));
+  auto dy_trans = CallNode::make(transpose, {dy, axes_expr});
+  auto b_trans = CallNode::make(transpose, {b, axes_expr});
+  auto a_trans = CallNode::make(transpose, {a, axes_expr});
+  return {
+          CallNode::make(batch_matmul, {dy, b_trans}),
+          CallNode::make(batch_matmul, {dy_trans, a_trans}),
+  };
+}
+
+MNM_OP_GRAD("mnm.op.batch_matmul", BatchMatmulGrad);
 
 }  // namespace grad
 }  // namespace op
