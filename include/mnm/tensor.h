@@ -67,8 +67,6 @@ class Tensor : private tvm::runtime::NDArray {
 
   DLManagedTensor* ToDLPack() const;
 
-  void * get_manager_ctx() const;
-
  public:
   using TSuper::operator->;
 

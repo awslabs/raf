@@ -39,12 +39,6 @@ class Tensor::TensorContainer : public ir::NDArray::Container {
   TVM_DECLARE_FINAL_OBJECT_INFO(TensorContainer, ir::NDArray::Container);
 };
 
-void* Tensor::get_manager_ctx() const {
-  ContainerType * self = static_cast<ContainerType*>(get_mutable());
-  CHECK(self != nullptr);
-  return self->manager_ctx;
-}
-
 class Tensor::Impl {
  public:
   static void DefaultDeleter(ir::Object* super_ptr) {
@@ -180,18 +174,6 @@ DLManagedTensor* Tensor::ToDLPack() const {
 TVM_REGISTER_OBJECT_TYPE(Tensor::TensorContainer);
 
 MNM_REGISTER_GLOBAL("mnm.tensor.MarkNumpy").set_body_typed(Tensor::Impl::MarkNumpy);
-
-}  // namespace tensor
-}  // namespace mnm
-
-namespace mnm {
-namespace tensor {
-
-TVM_REGISTER_GLOBAL("mnm.tensor.nd_get_manager_ctx")
-.set_body([](tvm::TVMArgs args, tvm::TVMRetValue *rv) {
-    mnm::tensor::Tensor a = args[0];
-    *rv = a.get_manager_ctx();
-  });
 
 }  // namespace tensor
 }  // namespace mnm
