@@ -69,6 +69,7 @@ OPS = [
     Op(name="expand_dims", schema_name="expand_dims"),
     Op(name="sequence_mask", schema_name="sequence_mask"),
     Op(name="broadcast_to", schema_name="broadcast_to"),
+    Op(name="broadcast_to_like", schema_name="broadcast_to_like"),
 ]
 
 

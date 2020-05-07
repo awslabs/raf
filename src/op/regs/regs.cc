@@ -40,6 +40,7 @@ static const char batch_norm_infer[] = "mnm.op.batch_norm_infer";
 static const char batch_norm_train[] = "mnm.op.batch_norm_train";
 static const char batch_norm_train_dxwb[] = "mnm.op.batch_norm_train_dxwb";
 static const char broadcast_to[] = "mnm.op.broadcast_to";
+static const char broadcast_to_like[] = "mnm.op.broadcast_to_like";
 static const char ceil[] = "mnm.op.ceil";
 static const char collapse_sum_like[] = "mnm.op.collapse_sum_like";
 static const char conv2d[] = "mnm.op.conv2d";
@@ -179,6 +180,13 @@ Attrs BroadcastTo(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::BroadcastToArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+Attrs BroadcastToLike(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::BroadcastToLikeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, broadcast_type);
   return Attrs(attrs);
 }
 
@@ -558,6 +566,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.broadcast_to")
   MNM_PRELUDE(broadcast_to, 2, ffi2schema::BroadcastTo, schema::BroadcastToArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.broadcast_to_like")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(broadcast_to_like, 2, ffi2schema::BroadcastToLike, schema::BroadcastToLikeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->broadcast_type));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1221,6 +1238,13 @@ Array<Expr> BroadcastTo(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> BroadcastToLike(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, broadcast_type);
+  MNM_RET();
+}
+
 Array<Expr> CollapseLike(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1472,6 +1496,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train_dxwb")
 .set_body(MNM_SYMBOLIC_API(batch_norm_train_dxwb, 5, BatchNormTrainDxwb));
 MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to")
 .set_body(MNM_SYMBOLIC_API(broadcast_to, 2, BroadcastTo));
+MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to_like")
+.set_body(MNM_SYMBOLIC_API(broadcast_to_like, 2, BroadcastToLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.ceil")
 .set_body(MNM_SYMBOLIC_API(ceil, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
@@ -1689,6 +1715,14 @@ Attrs BroadcastTo(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::BroadcastToArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs BroadcastToLike(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::BroadcastToLikeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, broadcast_type);
   return Attrs(attrs);
 }
 
@@ -1949,6 +1983,7 @@ MNM_BIND_SCHEMA("mnm.op.batch_norm_infer", names::batch_norm_infer, value2schema
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train", names::batch_norm_train, value2schema::BatchNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", names::batch_norm_train_dxwb, value2schema::BatchNormTrainDxwb);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to", names::broadcast_to, value2schema::BroadcastTo);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.broadcast_to_like", names::broadcast_to_like, value2schema::BroadcastToLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.ceil", names::ceil, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", names::collapse_sum_like, value2schema::CollapseLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d", names::conv2d, value2schema::Conv);  // NOLINT(whitespace/line_length)
@@ -2026,6 +2061,7 @@ MNM_REGISTER_OBJECT_REFLECT(BinaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToArgs);
+MNM_REGISTER_OBJECT_REFLECT(BroadcastToLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);

@@ -6,18 +6,18 @@ from . import sym_utils
 __all__ = [
     "abs", "add", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
     "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to",
-    "ceil", "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "divide", "equal", "erf",
-    "erf_dx", "expand_dims", "floor", "get_kept_dims", "get_reduce_axis",
-    "greater", "greater_equal", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
-    "subtract", "sum", "take", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "broadcast_to_like", "ceil", "collapse_sum_like", "conv2d", "conv2d_dw",
+    "conv2d_dx", "copy", "cos", "divide", "equal",
+    "erf", "erf_dx", "expand_dims", "floor", "get_kept_dims",
+    "get_reduce_axis", "greater", "greater_equal", "less", "less_equal",
+    "log", "log_softmax", "log_softmax_dx", "logical_not", "matmul",
+    "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx",
+    "maximum", "minimum", "mod", "multiply", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu",
+    "relu_dx", "reshape", "sequence_mask", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "sqrt",
+    "sqrt_dx", "subtract", "sum", "take", "tanh",
+    "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def abs(x):
@@ -85,6 +85,10 @@ def broadcast_to(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.broadcast_to(x, shape))
+def broadcast_to_like(x, broadcast_type):
+    x = sym_utils.to_tensor(x)
+    broadcast_type = sym_utils.to_tensor(broadcast_type)
+    return Symbol.from_expr(ffi.broadcast_to_like(x, broadcast_type))
 def ceil(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.ceil(x))

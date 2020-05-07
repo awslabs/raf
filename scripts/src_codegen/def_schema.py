@@ -134,6 +134,10 @@ SCHEMAS = {
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
     ],
+    "nn.h::broadcast_to_like": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="broadcast_type", cxx_type="value::TensorValue"),
+    ],
     "loss.h::loss": [
         Arg(name="y_true", cxx_type="value::TensorValue"),
         Arg(name="y_pred", cxx_type="value::TensorValue"),

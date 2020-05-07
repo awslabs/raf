@@ -160,6 +160,19 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues &call) {
   call->ctx = x->ctx;
 });
 
+MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues &call) {
+  const auto* args = call->args.as<BroadcastToLikeArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* broadcast_type = args->broadcast_type;
+  std::vector<int64_t> shape(broadcast_type->shape,
+                             broadcast_type->shape + broadcast_type->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/broadcast_type->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

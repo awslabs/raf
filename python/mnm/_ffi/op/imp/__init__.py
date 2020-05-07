@@ -9,6 +9,7 @@ from ._internal import batch_norm_infer
 from ._internal import batch_norm_train
 from ._internal import batch_norm_train_dxwb
 from ._internal import broadcast_to
+from ._internal import broadcast_to_like
 from ._internal import ceil
 from ._internal import collapse_sum_like
 from ._internal import conv2d
