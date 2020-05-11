@@ -43,15 +43,17 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
              << "\" is not array-like";
   throw;
 }
+
 inline ir::Expr Tensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kNDArrayContainer || type_code == kNull) {
-    return MNM_CONST(TensorValue, a.AsNDArray<Tensor>());
+    return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not a tensor";
   throw;
 }
+
 inline ir::Expr Int(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
@@ -61,6 +63,7 @@ inline ir::Expr Int(const registry::TVMArgValue& a) {
              << "\" is not an integer";
   throw;
 }
+
 inline ir::Expr Bool(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
@@ -76,6 +79,7 @@ inline ir::Expr Bool(const registry::TVMArgValue& a) {
              << "\" is not boolean";
   throw;
 }
+
 inline ir::Expr Double(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
@@ -88,6 +92,7 @@ inline ir::Expr Double(const registry::TVMArgValue& a) {
              << "\" is not double";
   throw;
 }
+
 inline ir::Expr String(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kStr) {
@@ -97,6 +102,7 @@ inline ir::Expr String(const registry::TVMArgValue& a) {
              << "\" is a string";
   throw;
 }
+
 inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
@@ -119,6 +125,7 @@ inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
              << "\" is not tuple of integers";
   throw;
 }
+
 inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {

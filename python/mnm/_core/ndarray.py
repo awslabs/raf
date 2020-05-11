@@ -6,8 +6,8 @@ from mnm._ffi.binding import (BindNDArray, BindSymbol, LookupBoundValue,
                               SetRequiresGrad, Backward, LookupGrad)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
-from mnm._lib import _DLManagedTensor, _register_func, relay, tvm_ndarray
-
+from mnm._lib import _register_func, relay, tvm_ndarray
+from mnm._lib import TensorContainer as _DLManagedTensor
 
 @set_module("mnm")  # pylint: disable=invalid-name,too-many-instance-attributes
 class ndarray:

@@ -17,7 +17,6 @@ using namespace mnm::ir;
 using namespace mnm::registry;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
-using tvm::TVMType2Type;
 
 DLTensor GetDLTensor(const Value& v) {
   DLTensor* ret = v;
@@ -42,7 +41,7 @@ void GetOut(const Value& out, std::vector<DLTensor>* ret) {
 
 Type GetTensorType(const DLTensor& dlt) {
   auto shape = GetShape<Integer>(dlt);
-  return TensorTypeNode::make({shape.begin(), shape.end()}, TVMType2Type(dlt.dtype));
+  return TensorTypeNode::make({shape.begin(), shape.end()}, tvm::relay::DataType(dlt.dtype));
 }
 
 Type GetTupleType(const std::vector<DLTensor>& dlts) {

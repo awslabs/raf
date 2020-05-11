@@ -36,8 +36,14 @@ using tvm::IntImm;
 using tvm::Attrs;
 using tvm::AttrsNode;
 
+using tvm::relay::BaseTensorType;
+using tvm::relay::BaseTensorTypeNode;
+using tvm::relay::RefType;
+using tvm::relay::RefTypeNode;
+
 // Object protocol
 using tvm::NullValue;
+using tvm::runtime::TypeIndex;
 using tvm::runtime::Downcast;
 using tvm::runtime::GetRef;
 using tvm::runtime::make_object;
@@ -46,6 +52,8 @@ using tvm::runtime::ObjectEqual;
 using tvm::runtime::ObjectHash;
 using tvm::runtime::ObjectPtr;
 using tvm::runtime::ObjectRef;
+using tvm::runtime::GetObjectPtr;
+using tvm::runtime::NDArray;
 
 // Relay Expression
 using tvm::relay::Expr;
@@ -99,9 +107,6 @@ using tvm::relay::Kind;
 using tvm::relay::Type;
 using tvm::relay::TypeNode;
 
-using tvm::relay::BaseTensorType;
-using tvm::relay::BaseTensorTypeNode;
-
 using tvm::relay::TensorType;
 using tvm::relay::TensorTypeNode;
 
@@ -122,9 +127,6 @@ using tvm::relay::FuncTypeNode;
 
 using tvm::relay::TupleType;
 using tvm::relay::TupleTypeNode;
-
-using tvm::relay::RefType;
-using tvm::relay::RefTypeNode;
 
 using tvm::relay::TypeConstraint;
 using tvm::relay::TypeConstraintNode;
