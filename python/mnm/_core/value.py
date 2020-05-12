@@ -2,12 +2,12 @@ from mnm._core.core_utils import ctx2str, register_node, str2ctx
 from mnm._ffi import value as ffi
 from mnm._ffi.ir._make import Constant as make_const_expr
 from mnm._ffi.value import _make
-from mnm._lib import _NodeBase as NodeBase
+from mnm._lib import Object
 from mnm._lib import tvm_ndarray
 
 
 @register_node("mnm.value.Value")
-class Value(NodeBase):
+class Value(Object):
     @staticmethod
     def as_const_expr(value):
         if isinstance(value, Value):

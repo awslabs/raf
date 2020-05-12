@@ -41,7 +41,7 @@ void GetOut(const Value& out, std::vector<DLTensor>* ret) {
 
 Type GetTensorType(const DLTensor& dlt) {
   auto shape = GetShape<Integer>(dlt);
-  return TensorTypeNode::make({shape.begin(), shape.end()}, tvm::relay::DataType(dlt.dtype));
+  return TensorType({shape.begin(), shape.end()}, ir::DataType(dlt.dtype));
 }
 
 Type GetTupleType(const std::vector<DLTensor>& dlts) {
@@ -49,7 +49,7 @@ Type GetTupleType(const std::vector<DLTensor>& dlts) {
   for (const auto& dlt : dlts) {
     types.emplace_back(GetTensorType(dlt));
   }
-  return TupleTypeNode::make(types);
+  return TupleType(types);
 }
 
 void SetArgs(std::vector<DLTensor>* i, std::vector<DLTensor>* o, std::vector<TVMValue>* values,
@@ -89,7 +89,7 @@ PackedFunc CompileOp(const Op& op,                          //
                               ret_type,                                                   //
                               {});
     func->body->checked_type_ = ret_type;
-    func->checked_type_ = FuncTypeNode::make(param_types, ret_type, {}, {});
+    func->checked_type_ = FuncType(param_types, ret_type, {}, {});
   }
   tvm::Target target;
   {

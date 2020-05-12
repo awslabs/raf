@@ -48,7 +48,7 @@ inline std::string ToOrdinal(int x) {
 }
 
 inline std::string GetTypeStr(const registry::TVMArgValue& a) {
-  if (a.type_code() == kObjectHandle) {
+  if (a.type_code() == kTVMObjectHandle) {
     return (a.operator ir::ObjectRef())->GetTypeKey();
   }
   return tvm::runtime::TypeCode2Str(a.type_code());

@@ -15,24 +15,23 @@ from tvm._ffi.base import numeric_types as _numeric_types
 from tvm._ffi.base import py_str as _py_str
 from tvm._ffi.base import register_error as _register_error
 from tvm._ffi.base import string_types as _string_types
-from tvm._ffi.function import Function as _Function
-from tvm._ffi.function import get_global_func as _get_global_func
-from tvm._ffi.function import list_global_func_names as _list_global_func_names
-from tvm._ffi.function import register_func as _register_func
-from tvm._ffi.ndarray import register_extension as _register_extension
-from tvm._ffi.node import NodeBase as _NodeBase
-from tvm._ffi.node import NodeGeneric as _NodeGeneric
-from tvm._ffi.node import register_node as _register_node
+from tvm.relay import Function as _Function
+from tvm._ffi.registry import get_global_func as _get_global_func
+from tvm._ffi.registry import list_global_func_names as _list_global_func_names
+from tvm._ffi.registry import register_func as _register_func
+from tvm._ffi.registry import register_extension as _register_extension
+from tvm._ffi.registry import register_object as _register_object
+from tvm.runtime.object_generic import ObjectBase as _NodeBase
+from tvm.runtime.object import Object
+from tvm.runtime.object_generic import ObjectGeneric as _NodeGeneric
 from tvm._ffi.runtime_ctypes import TVMArray as _DLTensor
 from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
 from tvm._ffi.runtime_ctypes import TVMArrayHandle as _DLArrayHandle
-from tvm._ffi.object import register_object as _register_object
-from tvm._ffi.runtime_ctypes import TVMType as _DLDataType
-from tvm.container import Array
 from tvm.expr import FloatImm, IntImm, StringImm
 from tvm.make import node as _make_node
-from tvm.ndarray import array as tvm_ndarray
+from tvm.ir.container import Array
+from tvm.runtime.ndarray import array as tvm_ndarray
 from tvm.relay.op import (OpPattern, register_compute, register_pattern,
                           register_schedule)
 

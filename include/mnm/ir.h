@@ -6,14 +6,12 @@
 #pragma once
 #include <string>
 #include "tvm/runtime/object.h"
-#include "tvm/attrs.h"
-#include "tvm/ir.h"
+#include "tvm/runtime/data_type.h"
 #include "tvm/node/container.h"
 #include "tvm/node/node.h"
 #include "tvm/relay/base.h"
 #include "tvm/relay/expr.h"
 #include "tvm/relay/expr_functor.h"
-#include "tvm/relay/module.h"
 #include "tvm/relay/op.h"
 #include "tvm/relay/op_attr_types.h"
 #include "tvm/relay/type.h"
@@ -31,18 +29,20 @@ using tvm::StrMapNode;
 // Scalars
 using tvm::Integer;
 using tvm::IntImm;
+using tvm::IntImmNode;
 
 // Attributes
 using tvm::Attrs;
 using tvm::AttrsNode;
 
-using tvm::relay::BaseTensorType;
-using tvm::relay::BaseTensorTypeNode;
-using tvm::relay::RefType;
-using tvm::relay::RefTypeNode;
+using tvm::BaseTensorType;
+using tvm::BaseTensorTypeNode;
+using tvm::Type;
+using tvm::TypeNode;
 
 // Object protocol
 using tvm::NullValue;
+using tvm::runtime::DataType;
 using tvm::runtime::TypeIndex;
 using tvm::runtime::Downcast;
 using tvm::runtime::GetRef;
@@ -102,6 +102,7 @@ using tvm::relay::TempExpr;
 using tvm::relay::TempExprNode;
 
 // Relay Types
+using tvm::relay::Any;
 using tvm::relay::Kind;
 
 using tvm::relay::Type;

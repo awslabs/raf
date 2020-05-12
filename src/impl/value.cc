@@ -102,13 +102,13 @@ Type GetType(const Value& value) {
   if (const auto* tv = value.as<TensorValueObj>()) {
     const DLTensor& dlt = *tv->tensor.operator->();
     auto shape = GetShape<tvm::Integer>(dlt);
-    return ir::TensorTypeNode::make({shape.begin(), shape.end()}, tvm::relay::DataType(dlt.dtype));
+    return ir::TensorType({shape.begin(), shape.end()}, ir::DataType(dlt.dtype));
   } else if (const auto* tv = value.as<TupleValueObj>()) {
     Array<Type> tuple_type;
     for (const Value& sub_value : tv->fields) {
       tuple_type.push_back(GetType(sub_value));
     }
-    return ir::TupleTypeNode::make(tuple_type);
+    return ir::TupleType(tuple_type);
   }
   LOG(FATAL) << "NotImplementedError: " << value->GetTypeKey();
   throw;

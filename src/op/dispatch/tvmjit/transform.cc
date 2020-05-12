@@ -95,7 +95,7 @@ Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
   std::vector<IndexExpr> shape;
   shape.reserve(args->shape.size());
   for (size_t i = 0; i < args->shape.size(); ++i) {
-    shape.emplace_back(IntImm::make(tvm::runtime::DataType::Int(32), args->shape[i]));
+    shape.emplace_back(IntImm(ir::DataType::Int(32), args->shape[i]));
   }
   attrs->shape = Array<relay::IndexExpr>(shape.begin(), shape.end());
   return Attrs(attrs);

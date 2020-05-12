@@ -23,10 +23,10 @@ namespace ffi2schema {
 
 inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape* tape) {
   MNM_PRELUDE();
-  if (type_code == kNull) {
+  if (type_code == kTVMNullptr) {
     return {};
   }
-  if (type_code == kObjectHandle && a.IsObjectRef<Var>()) {
+  if (type_code == kTVMObjectHandle && a.IsObjectRef<Var>()) {
     using binding::NDArrayBindingObj;
     auto* bound = binding::LookupBinding(a.AsObjectRef<Var>().operator->()).as<NDArrayBindingObj>();
     *tape = bound->tape;
@@ -44,7 +44,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
 }
 inline value::TensorValue Tensor(const registry::TVMArgValue& a, binding::GradTape* tape) {
   MNM_PRELUDE();
-  if (type_code == kObjectHandle && a.IsObjectRef<Var>()) {
+  if (type_code == kTVMObjectHandle && a.IsObjectRef<Var>()) {
     using binding::NDArrayBindingObj;
     auto* bound = binding::LookupBinding(a.AsObjectRef<Var>().operator->()).as<NDArrayBindingObj>();
     *tape = bound->tape;
@@ -89,7 +89,7 @@ inline double Double(const registry::TVMArgValue& a) {
 }
 inline std::string String(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
-  if (type_code == kStr) {
+  if (type_code == kTVMStr) {
     return a.operator std::string();
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
@@ -99,12 +99,12 @@ inline std::string String(const registry::TVMArgValue& a) {
 inline std::vector<int64_t> TupleInt(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
-  if (type_code == kObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     std::vector<int64_t> ret;
     ret.reserve(n->data.size());
     for (const ObjectRef& i : n->data) {
-      if (const auto* e = i.as<IntImm>()) {
+      if (const auto* e = i.as<IntImmNode>()) {
         ret.push_back(e->value);
         continue;
       }
@@ -125,12 +125,12 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
     return {a.operator int64_t()};
   }
   const Object* _ptr = a.ptr<Object>();
-  if (type_code == kObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     std::vector<int64_t> ret;
     ret.reserve(n->data.size());
     for (const ObjectRef& i : n->data) {
-      if (const auto* e = i.as<IntImm>()) {
+      if (const auto* e = i.as<IntImmNode>()) {
         ret.push_back(e->value);
         continue;
       }

@@ -69,7 +69,7 @@ class HashKey {
     MNM_APPEND_BYTES(DLDataType, 4, v->dtype);
     for (int i = 0, n = v->shape.size(); i < n; ++i) {
       int64_t dim_i;
-      if (v->shape.as<tvm::ir::Any>()) {
+      if (v->shape.as<ir::Any>()) {
         dim_i = -1;
       } else {
         dim_i = ir::Downcast<ir::Integer>(v->shape[i]);

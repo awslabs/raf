@@ -179,7 +179,7 @@ inline ir::TensorType SquashTensorShape(const DLTensor *tensor, const std::vecto
       shape.push_back(prod);
     }
   }
-  auto res = ir::TensorTypeNode::make(shape, tvm::relay::DataType(tensor->dtype));
+  auto res = ir::TensorType(shape, ir::DataType(tensor->dtype));
   return res;
 }
 

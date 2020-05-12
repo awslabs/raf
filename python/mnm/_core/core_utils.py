@@ -3,7 +3,7 @@ from collections import deque, OrderedDict
 
 from mnm._lib import _DLContext
 from mnm._lib import _NodeBase as NodeBase  # pylint: disable=unused-import
-from mnm._lib import _register_node
+from mnm._lib import _register_object as _register_node
 
 
 def register_node(type_key=None):
