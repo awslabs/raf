@@ -1,5 +1,5 @@
-ci_cpu = "junrushao1994/mnm:ci_cpu-v0.04"
-ci_gpu = "junrushao1994/mnm:ci_gpu-v0.04"
+ci_cpu = "hgt312/mnm:ci_cpu-v0.05"
+ci_gpu = "hgt312/mnm:ci_gpu-v0.05"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
@@ -34,7 +34,7 @@ def make(docker_type, path) {
       sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
-      sh "${docker_run} ${docker_type} ./ci/task_clean.sh ${path}" 
+      sh "${docker_run} ${docker_type} ./ci/task_clean.sh ${path}"
       sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} -j\$(nproc)"
       sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
     }
