@@ -211,6 +211,15 @@ SCHEMAS = {
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
     ],
+    "reduce.h::reduce": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="axis",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple",
+            cxx_default="{}",
+            py_default=()),
+        Arg(name="keepdims", cxx_type="bool", cxx_default=False),
+    ],
     "transform.h::transpose": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="axes",

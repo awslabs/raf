@@ -6,6 +6,10 @@ abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.sym.add", None)
 # Defined in ./src/op/regs/regs.cc
+argmax = _APIS.get("mnm.op.sym.argmax", None)
+# Defined in ./src/op/regs/regs.cc
+argmin = _APIS.get("mnm.op.sym.argmin", None)
+# Defined in ./src/op/regs/regs.cc
 avg_pool2d = _APIS.get("mnm.op.sym.avg_pool2d", None)
 # Defined in ./src/op/regs/regs.cc
 avg_pool2d_dx = _APIS.get("mnm.op.sym.avg_pool2d_dx", None)

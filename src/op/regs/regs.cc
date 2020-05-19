@@ -15,6 +15,7 @@
 #include "../schema/loss.h"
 #include "../schema/nn.h"
 #include "../schema/optimizer.h"
+#include "../schema/reduce.h"
 #include "../schema/transform.h"
 #include "../schema/ufunc.h"
 
@@ -32,6 +33,8 @@ namespace regs {
 namespace names {
 static const char abs[] = "mnm.op.abs";
 static const char add[] = "mnm.op.add";
+static const char argmax[] = "mnm.op.argmax";
+static const char argmin[] = "mnm.op.argmin";
 static const char avg_pool2d[] = "mnm.op.avg_pool2d";
 static const char avg_pool2d_dx[] = "mnm.op.avg_pool2d_dx";
 static const char batch_flatten[] = "mnm.op.batch_flatten";
@@ -272,6 +275,14 @@ Attrs PoolDx(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs Reduce(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ReduceArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
+  MNM_POD(2, ffi2schema::Bool, keepdims);
+  return Attrs(attrs);
+}
+
 Attrs Reshape(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::ReshapeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
@@ -470,6 +481,26 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.add")
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
   MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.argmax")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(argmax, 3, ffi2schema::Reduce, schema::ReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.argmin")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(argmin, 3, ffi2schema::Reduce, schema::ReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1327,6 +1358,14 @@ Array<Expr> PoolDx(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Reduce(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, axis);
+  MNM_ARG(2, ffi2expr::Bool, keepdims);
+  MNM_RET();
+}
+
 Array<Expr> Reshape(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1480,6 +1519,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.abs")
 .set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.add")
 .set_body(MNM_SYMBOLIC_API(add, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.argmax")
+.set_body(MNM_SYMBOLIC_API(argmax, 3, Reduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym.argmin")
+.set_body(MNM_SYMBOLIC_API(argmin, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d")
 .set_body(MNM_SYMBOLIC_API(avg_pool2d, 7, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
@@ -1817,6 +1860,15 @@ Attrs PoolDx(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs Reduce(const Array<Value>& values) {
+  MNM_PRELUDE(1, 3, schema::ReduceArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axis);
+  MNM_OPTIONAL(2, value2schema::Bool, keepdims);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Reshape(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::ReshapeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
@@ -1975,6 +2027,8 @@ namespace f_mnm_schema {
 
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.add", names::add, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.argmax", names::argmax, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.argmin", names::argmin, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", names::avg_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", names::avg_pool2d_dx, value2schema::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_flatten", names::batch_flatten, value2schema::Unary);  // NOLINT(whitespace/line_length)
@@ -2070,6 +2124,7 @@ MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(ReduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
 MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);

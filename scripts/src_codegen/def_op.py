@@ -61,6 +61,8 @@ OPS = [
     Op(name="transpose_dx", schema_name="transpose_dx"),
     Op(name="collapse_sum_like", schema_name="collapse_like"),
     Op(name="sum", schema_name="sum"),
+    Op(name="argmax", schema_name="reduce"),
+    Op(name="argmin", schema_name="reduce"),
     Op(name="get_reduce_axis", schema_name="binary"),
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),
