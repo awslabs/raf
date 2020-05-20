@@ -4,6 +4,7 @@ __version__ = "0.0.2.dev"
 
 from ._core.ndarray import array, ndarray
 from ._op.imp import *  # pylint: disable=redefined-builtin
+from . import frontend
 from . import random
 from . import build
 from . import model

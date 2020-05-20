@@ -76,7 +76,7 @@ void SumTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
 }
 
 HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, const SumArgs* args) {
-  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  HashKey key = GenericHasher<std::nullptr_t>(param_types, ret_type, nullptr);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
     key << args->axis[i];
     key << args->keep[i];
