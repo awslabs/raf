@@ -23,6 +23,8 @@ OPS = [
     Op(name="tanh", schema_name="unary"),
     Op(name="copy", schema_name="unary"),
     Op(name="abs", schema_name="unary"),
+    Op(name="all", schema_name="reduce"),
+    Op(name="any", schema_name="reduce"),
     Op(name="ceil", schema_name="unary"),
     Op(name="cos", schema_name="unary"),
     Op(name="floor", schema_name="unary"),

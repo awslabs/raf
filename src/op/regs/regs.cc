@@ -33,6 +33,8 @@ namespace regs {
 namespace names {
 static const char abs[] = "mnm.op.abs";
 static const char add[] = "mnm.op.add";
+static const char all[] = "mnm.op.all";
+static const char any[] = "mnm.op.any";
 static const char argmax[] = "mnm.op.argmax";
 static const char argmin[] = "mnm.op.argmin";
 static const char avg_pool2d[] = "mnm.op.avg_pool2d";
@@ -481,6 +483,26 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.add")
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
   MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.all")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(all, 3, ffi2schema::Reduce, schema::ReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.any")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(any, 3, ffi2schema::Reduce, schema::ReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1519,6 +1541,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.abs")
 .set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.add")
 .set_body(MNM_SYMBOLIC_API(add, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.all")
+.set_body(MNM_SYMBOLIC_API(all, 3, Reduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym.any")
+.set_body(MNM_SYMBOLIC_API(any, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmax")
 .set_body(MNM_SYMBOLIC_API(argmax, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmin")
@@ -2027,6 +2053,8 @@ namespace f_mnm_schema {
 
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.add", names::add, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.all", names::all, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.any", names::any, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmax", names::argmax, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmin", names::argmin, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", names::avg_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)

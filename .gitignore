@@ -91,3 +91,6 @@ ENV/
 .ropeproject
 
 compile_commands.json
+
+# vscode
+.vscode/

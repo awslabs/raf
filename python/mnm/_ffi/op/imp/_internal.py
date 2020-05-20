@@ -6,6 +6,10 @@ abs = _APIS.get("mnm.op.imp.abs", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.imp.add", None)
 # Defined in ./src/op/regs/regs.cc
+all = _APIS.get("mnm.op.imp.all", None)
+# Defined in ./src/op/regs/regs.cc
+any = _APIS.get("mnm.op.imp.any", None)
+# Defined in ./src/op/regs/regs.cc
 argmax = _APIS.get("mnm.op.imp.argmax", None)
 # Defined in ./src/op/regs/regs.cc
 argmin = _APIS.get("mnm.op.imp.argmin", None)

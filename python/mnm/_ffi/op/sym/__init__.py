@@ -1,6 +1,8 @@
 # pylint: disable=redefined-builtin
 from ._internal import abs
 from ._internal import add
+from ._internal import all
+from ._internal import any
 from ._internal import argmax
 from ._internal import argmin
 from ._internal import avg_pool2d

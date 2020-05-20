@@ -53,6 +53,8 @@ HashKey ReduceHasher(const std::vector<Type>& param_types,
 
 MNM_TVMJIT(Argmax, "mnm.op.argmax", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(Argmin, "mnm.op.argmin", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
+MNM_TVMJIT(All, "mnm.op.all", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
+MNM_TVMJIT(Any, "mnm.op.any", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 
 }  // namespace tvmjit
 }  // namespace op
