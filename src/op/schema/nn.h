@@ -43,6 +43,12 @@ class BroadcastToLikeArgs : public ir::AttrsNode<BroadcastToLikeArgs> {
   value::TensorValue broadcast_type;
   MNM_OP_SCHEMA(BroadcastToLikeArgs, "mnm.args.broadcast_to_like");
 };
+class ConcatenateArgs : public ir::AttrsNode<ConcatenateArgs> {
+ public:
+  std::vector<value::TensorValue> x;
+  int axis{0};
+  MNM_OP_SCHEMA(ConcatenateArgs, "mnm.args.concatenate");
+};
 class ConvArgs : public ir::AttrsNode<ConvArgs> {
  public:
   value::TensorValue x;
@@ -126,6 +132,13 @@ class SoftmaxDxArgs : public ir::AttrsNode<SoftmaxDxArgs> {
   value::TensorValue dy;
   int axis{-1};
   MNM_OP_SCHEMA(SoftmaxDxArgs, "mnm.args.softmax_dx");
+};
+class SplitArgs : public ir::AttrsNode<SplitArgs> {
+ public:
+  value::TensorValue x;
+  std::vector<int64_t> indices_or_sections;
+  int axis{0};
+  MNM_OP_SCHEMA(SplitArgs, "mnm.args.split");
 };
 class TakeArgs : public ir::AttrsNode<TakeArgs> {
  public:

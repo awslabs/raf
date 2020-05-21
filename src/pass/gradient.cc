@@ -154,7 +154,6 @@ struct Gradient : public ExprVisitor {
     Array<Expr> ret;
     for (const auto& expr : vars) {
       if (const auto* var = expr.as<VarNode>()) {
-        CHECK_EQ(tuple_length.count(var), 0) << "NotImplementedError: use tuple as inputs";
         ret.push_back(tuple_grads[var][0]);
       } else if (expr->IsInstance<RelayConstantNode>()) {
         ret.push_back(NullValue<Var>());
@@ -201,8 +200,14 @@ struct Gradient : public ExprVisitor {
         continue;
       }
       if (const auto* var = vars[i].as<VarNode>()) {
-        CHECK_EQ(tuple_length.count(var), 0);
-        tuple_grads[var].Set(0, igrad);
+        if (tuple_length.count(var) == 0) {
+          tuple_grads[var].Set(0, igrad);
+        } else {
+          CHECK_NE(tuple_length[var], -1);
+          for (int i = 0; i < tuple_length[var]; ++i) {
+            tuple_grads[var].Set(i, ll->Push(TupleGetItemNode::make(igrad, i)));
+          }
+        }
       } else if (!vars[i]->IsInstance<RelayConstantNode>()) {
         LOG(FATAL) << "Assume ANF";
         throw;
@@ -235,6 +240,11 @@ struct Gradient : public ExprVisitor {
     }
     if (!x2.defined()) {
       return x1->IsInstance<VarNode>() ? x1 : ll->Push(x1);
+    }
+    const auto* t1 = x1.as<TupleNode>();
+    const auto* t2 = x2.as<TupleNode>();
+    if (t1 && t2) {
+      return TupleNode::make(AddTensors(t1->fields, t2->fields));
     }
     return ll->Push(CallNode::make(op, {x1, x2}));
   }

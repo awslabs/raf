@@ -48,6 +48,8 @@ static const char broadcast_to[] = "mnm.op.broadcast_to";
 static const char broadcast_to_like[] = "mnm.op.broadcast_to_like";
 static const char ceil[] = "mnm.op.ceil";
 static const char collapse_sum_like[] = "mnm.op.collapse_sum_like";
+static const char concatenate[] = "mnm.op.concatenate";
+static const char concatenate_dx[] = "mnm.op.concatenate_dx";
 static const char conv2d[] = "mnm.op.conv2d";
 static const char conv2d_dw[] = "mnm.op.conv2d_dw";
 static const char conv2d_dx[] = "mnm.op.conv2d_dx";
@@ -94,6 +96,7 @@ static const char sigmoid[] = "mnm.op.sigmoid";
 static const char sigmoid_dx[] = "mnm.op.sigmoid_dx";
 static const char softmax[] = "mnm.op.softmax";
 static const char softmax_dx[] = "mnm.op.softmax_dx";
+static const char split[] = "mnm.op.split";
 static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
 static const char subtract[] = "mnm.op.subtract";
@@ -199,6 +202,13 @@ Attrs CollapseLike(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::CollapseLikeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+Attrs Concatenate(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ConcatenateArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, x);
+  MNM_POD(1, ffi2schema::Int, axis);
   return Attrs(attrs);
 }
 
@@ -324,6 +334,14 @@ Attrs SoftmaxDx(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   MNM_POD(3, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+Attrs Split(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::SplitArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, indices_or_sections);
+  MNM_POD(2, ffi2schema::Int, axis);
   return Attrs(attrs);
 }
 
@@ -645,6 +663,24 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.collapse_sum_like")
   MNM_PRELUDE(collapse_sum_like, 2, ffi2schema::CollapseLike, schema::CollapseLikeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.concatenate")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(concatenate, 2, ffi2schema::Concatenate, schema::ConcatenateArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.concatenate_dx")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(concatenate_dx, 2, ffi2schema::Concatenate, schema::ConcatenateArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1120,6 +1156,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.softmax_dx")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.split")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(split, 3, ffi2schema::Split, schema::SplitArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->indices_or_sections));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sqrt, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
@@ -1305,6 +1351,13 @@ Array<Expr> CollapseLike(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Concatenate(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_RET();
+}
+
 Array<Expr> Conv(const TVMArgs& values) {
   MNM_PRELUDE(6);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1427,6 +1480,14 @@ Array<Expr> SoftmaxDx(const TVMArgs& values) {
   MNM_ARG(1, ffi2expr::Tensor, y);
   MNM_ARG(2, ffi2expr::Tensor, dy);
   MNM_ARG(3, ffi2expr::Int, axis);
+  MNM_RET();
+}
+
+Array<Expr> Split(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, indices_or_sections);
+  MNM_ARG(2, ffi2expr::Int, axis);
   MNM_RET();
 }
 
@@ -1571,6 +1632,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.ceil")
 .set_body(MNM_SYMBOLIC_API(ceil, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
 .set_body(MNM_SYMBOLIC_API(collapse_sum_like, 2, CollapseLike));
+MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate")
+.set_body(MNM_SYMBOLIC_API(concatenate, 2, Concatenate));
+MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate_dx")
+.set_body(MNM_SYMBOLIC_API(concatenate_dx, 2, Concatenate));
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d")
 .set_body(MNM_SYMBOLIC_API(conv2d, 6, Conv));
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dw")
@@ -1663,6 +1728,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.softmax")
 .set_body(MNM_SYMBOLIC_API(softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx")
 .set_body(MNM_SYMBOLIC_API(softmax_dx, 4, SoftmaxDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.split")
+.set_body(MNM_SYMBOLIC_API(split, 3, Split));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt")
 .set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx")
@@ -1800,6 +1867,14 @@ Attrs CollapseLike(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::CollapseLikeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Concatenate(const Array<Value>& values) {
+  MNM_PRELUDE(1, 2, schema::ConcatenateArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  MNM_OPTIONAL(1, value2schema::Int, axis);
   return Attrs(attrs);
 }
 
@@ -1942,6 +2017,15 @@ Attrs SoftmaxDx(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs Split(const Array<Value>& values) {
+  MNM_PRELUDE(2, 3, schema::SplitArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, indices_or_sections);
+  MNM_OPTIONAL(2, value2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Sum(const Array<Value>& values) {
   MNM_PRELUDE(3, 3, schema::SumArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
@@ -2068,6 +2152,8 @@ MNM_BIND_SCHEMA("mnm.op.broadcast_to", names::broadcast_to, value2schema::Broadc
 MNM_BIND_SCHEMA("mnm.op.broadcast_to_like", names::broadcast_to_like, value2schema::BroadcastToLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.ceil", names::ceil, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", names::collapse_sum_like, value2schema::CollapseLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.concatenate", names::concatenate, value2schema::Concatenate);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.concatenate_dx", names::concatenate_dx, value2schema::Concatenate);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d", names::conv2d, value2schema::Conv);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d_dw", names::conv2d_dw, value2schema::ConvDxw);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d_dx", names::conv2d_dx, value2schema::ConvDxw);  // NOLINT(whitespace/line_length)
@@ -2114,6 +2200,7 @@ MNM_BIND_SCHEMA("mnm.op.sigmoid", names::sigmoid, value2schema::Unary);  // NOLI
 MNM_BIND_SCHEMA("mnm.op.sigmoid_dx", names::sigmoid_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax", names::softmax, value2schema::Softmax);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax_dx", names::softmax_dx, value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.split", names::split, value2schema::Split);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sqrt", names::sqrt, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sqrt_dx", names::sqrt_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
@@ -2145,6 +2232,7 @@ MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
@@ -2158,6 +2246,7 @@ MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryArgs);

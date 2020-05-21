@@ -64,6 +64,28 @@ def to_int_tuple(a):
     return result
 
 
+def to_tensor_tuple(a):
+    if isinstance(a, Symbol):
+        return a._Symbol__handle  # pylint: disable=protected-access
+
+    if isinstance(a, ndarray):
+        return a._ndarray__handle  # pylint: disable=protected-access
+
+    if not isinstance(a, (tuple, list)):
+        raise ValueError(f"Cannot convert {a} to List[tensor]")
+    result = []
+
+    for item in a:
+        if isinstance(item, Symbol):
+            result.append(item._Symbol__handle)  # pylint: disable=protected-access
+        elif isinstance(item, ndarray):
+            result.append(item._ndarray__handle)  # pylint: disable=protected-access
+        else:
+            raise ValueError(f"Cannot convert {a} to List[tensor]")
+
+    return result
+
+
 def to_optional_int_tuple(a):
     return None if a is None else to_int_tuple(a)
 

@@ -173,6 +173,78 @@ MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues &call) {
   call->ctx = x->ctx;
 });
 
+MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues &call) {
+  const auto* args = call->args.as<ConcatenateArgs>();
+  CHECK(args != nullptr);
+  const std::vector<TensorValue>& x = args->x;
+  CHECK_GE(x.size(), 1U);
+  DLTensor *y0 = x[0];
+  int axis = NormalizeAxis(args->axis, y0->ndim);
+  int64_t dimsize = 0;
+  for (auto i : x) {
+    DLTensor* y = i;
+    CHECK(y->ndim == y0->ndim);
+    for (int k = 0; k < y0->ndim; ++k) {
+      if (k != axis) {
+        CHECK(y->shape[k] == y0->shape[k]);
+      }
+    }
+    dimsize += y->shape[axis];
+  }
+  std::vector<int64_t> shape(y0->shape, y0->shape + y0->ndim);
+  shape[axis] = dimsize;
+  call->out = TensorValue::Assemble(/*ctx=*/y0->ctx,
+                                    /*dtype=*/y0->dtype,
+                                    /*shape=*/shape);
+  call->ctx = y0->ctx;
+});
+
+
+MNM_OP_DECLARE("mnm.op.split", [](const CallValues &call){
+  const auto* args = call->args.as<SplitArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> indices_or_sections = args->indices_or_sections;
+  int axis = NormalizeAxis(args->axis, x->ndim);
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  int64_t start = 0;
+  int64_t end = 0;
+  std::vector<TensorValue> ret;
+  indices_or_sections.push_back(x->shape[axis]);
+  for (size_t i = 0; i < indices_or_sections.size(); ++i) {
+    start = end;
+    end = indices_or_sections[i];
+    shape[axis] = end - start;
+    ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
+  }
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  call->ctx = x->ctx;
+});
+
+void ConcatenateDx(const CallValues &call) {
+  const auto* args = call->args.as<ConcatenateArgs>();
+  CHECK(args != nullptr);
+  const std::vector<TensorValue>& x = args->x;
+  int axis = args->axis;
+  ir::Array<Value> res;
+  if (x.size() > 0U) {
+    DLTensor* y0 = x[0];
+    axis = NormalizeAxis(axis, y0->ndim);
+    int64_t acc = 0;
+    for (size_t i = 0; i + 1 < x.size(); ++i) {
+      DLTensor* x0 = x[i];
+      acc += x0->shape[axis];
+      res.push_back(ScalarValue::make(acc));
+    }
+  }
+  call->callee = ir::NullValue<OpValue>();
+  call->out = TupleValue::make(res);
+}
+
+MNM_OP_DECLARE("mnm.op.concatenate_dx", ConcatenateDx);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

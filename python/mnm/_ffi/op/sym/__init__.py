@@ -16,6 +16,8 @@ from ._internal import broadcast_to
 from ._internal import broadcast_to_like
 from ._internal import ceil
 from ._internal import collapse_sum_like
+from ._internal import concatenate
+from ._internal import concatenate_dx
 from ._internal import conv2d
 from ._internal import conv2d_dw
 from ._internal import conv2d_dx
@@ -62,6 +64,7 @@ from ._internal import sigmoid
 from ._internal import sigmoid_dx
 from ._internal import softmax
 from ._internal import softmax_dx
+from ._internal import split
 from ._internal import sqrt
 from ._internal import sqrt_dx
 from ._internal import subtract

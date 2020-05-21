@@ -134,6 +134,27 @@ inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
+inline std::vector<value::TensorValue> TupleTensor(const value::Value& a) {
+  MNM_PRELUDE_DISALLOW_NULL("tuple of tensors");
+  if (const auto* v = a.as<TupleValueObj>()) {
+    std::vector<TensorValue> ret;
+    ret.reserve(v->fields.size());
+    for (const ObjectRef& i : v->fields) {
+      if (const auto* e = i.as<TensorValueObj>()) {
+        ret.push_back(Downcast<TensorValue>(i));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of tensors, "
+                 << "because the " << ToOrdinal(ret.size()) << " member is of type \""
+                 << i->GetTypeKey() << '"';
+      throw;
+    }
+    return ret;
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
+             << "\" is not tuple of tensors";
+  throw;
+}
 
 #undef MNM_PRELUDE_DISALLOW_NULL
 #undef MNM_PRELUDE_ALLOW_NULL

@@ -138,6 +138,19 @@ SCHEMAS = {
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="broadcast_type", cxx_type="value::TensorValue"),
     ],
+    "nn.h::concatenate": [
+        Arg(name="x",
+            cxx_type="std::vector<value::TensorValue>",
+            cxx_normalizer="TensorTuple"),
+        Arg(name="axis", cxx_type="int", cxx_default=0),
+    ],
+    "nn.h::split": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="indices_or_sections",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="axis", cxx_type="int", cxx_default=0),
+    ],
     "loss.h::loss": [
         Arg(name="y_true", cxx_type="value::TensorValue"),
         Arg(name="y_pred", cxx_type="value::TensorValue"),

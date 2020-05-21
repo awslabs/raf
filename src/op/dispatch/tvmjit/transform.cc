@@ -185,6 +185,35 @@ Attrs BroadcastToLikeNormalizer(TVMOpEnv* env,
   return Attrs(attrs);
 }
 
+Attrs SplitNormalizer(TVMOpEnv* env, const SplitArgs* args) {
+  using namespace tvm;
+  const std::vector<int64_t>& indices_or_sections = args->indices_or_sections;
+  CHECK_EQ(env->outputs.size(), indices_or_sections.size() + 1);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<SplitAttrs>();
+  attrs->indices_or_sections = Array<Integer>(indices_or_sections.begin(),
+                                              indices_or_sections.end());
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+void SplitTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTupleType(env->outputs);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey SplitHasher(const std::vector<Type>& param_types,
+                        const Type& y_type,
+                        const SplitArgs *args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(Split, "mnm.op.split", SplitArgs, SplitNormalizer,
+           SplitTyper, SplitHasher);
+
 void BroadcastToLikeTyper(TVMOpEnv* env,
                           std::vector<Type>* param_types, Type* y_type) {
   y_type[0] = GetTensorType(env->outputs[0]);
@@ -196,6 +225,40 @@ void BroadcastToLikeTyper(TVMOpEnv* env,
 
 MNM_TVMJIT(BroadcastToLike, "mnm.op.broadcast_to_like", BroadcastToLikeArgs,
            BroadcastToLikeNormalizer, BroadcastToLikeTyper, GenericHasher);
+
+Attrs ConcatenateNormalizer(TVMOpEnv* env, const ConcatenateArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  const std::vector<TensorValue>& x = args->x;
+  env->inputs.resize(x.size());
+  for (size_t i = 0; i < x.size(); ++i) {
+    env->inputs[i] = GetDLTensor(x[i]);
+  }
+  auto attrs = make_object<ConcatenateAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+void ConcatenateTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  std::vector<Type> types;
+  for (size_t i = 0; i < env->inputs.size(); ++i) {
+    types.push_back(GetTensorType(env->inputs[i]));
+  }
+  *param_types = types;
+}
+
+HashKey ConcatenateHasher(const std::vector<Type>& param_types,
+                     const Type &y_type,
+                     const ConcatenateArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs,
+           ConcatenateNormalizer, ConcatenateTyper, ConcatenateHasher);
+
 
 }  // namespace tvmjit
 }  // namespace op

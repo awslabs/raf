@@ -145,6 +145,31 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
+inline std::vector<value::TensorValue> TupleTensor(const registry::TVMArgValue& a) {
+  MNM_PRELUDE();
+  const Object* _ptr = a.ptr<Object>();
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
+    std::vector<TensorValue> ret;
+    ret.reserve(n->data.size());
+    for (const ObjectRef& i : n->data) {
+      if (const auto* e = i.as<VarNode>()) {
+        using binding::NDArrayBindingObj;
+        auto* bound = binding::LookupBinding(e).as<NDArrayBindingObj>();
+        ret.push_back(Downcast<TensorValue>(bound->value));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of tensors, "
+                 << "because the " << ToOrdinal(ret.size()) << " member is of type \""
+                 << i->GetTypeKey() << '"';
+      throw;
+    }
+    return ret;
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
+             << "\" is not tuple of tensors";
+  throw;
+}
 
 #undef MNM_PRELUDE
 

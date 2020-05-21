@@ -66,6 +66,7 @@ NORM_MAP = {
     "float": "ToDouble",
     "bool": "ToBool",
     "std::string": "ToString",
+    "TensorTuple": "ToTensorTuple",
 }
 
 PY_NORM_MAP = {
@@ -79,4 +80,5 @@ PY_NORM_MAP = {
     "float": "to_double",
     "bool": "to_bool",
     "std::string": "to_string",
+    "TensorTuple": "to_tensor_tuple",
 }

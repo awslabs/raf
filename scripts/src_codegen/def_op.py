@@ -74,6 +74,9 @@ OPS = [
     Op(name="sequence_mask", schema_name="sequence_mask"),
     Op(name="broadcast_to", schema_name="broadcast_to"),
     Op(name="broadcast_to_like", schema_name="broadcast_to_like"),
+    Op(name="concatenate", schema_name="concatenate"),
+    Op(name="split", schema_name="split"),
+    Op(name="concatenate_dx", schema_name="concatenate"),
 ]
 
 

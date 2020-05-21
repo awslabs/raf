@@ -36,6 +36,10 @@ ceil = _APIS.get("mnm.op.imp.ceil", None)
 # Defined in ./src/op/regs/regs.cc
 collapse_sum_like = _APIS.get("mnm.op.imp.collapse_sum_like", None)
 # Defined in ./src/op/regs/regs.cc
+concatenate = _APIS.get("mnm.op.imp.concatenate", None)
+# Defined in ./src/op/regs/regs.cc
+concatenate_dx = _APIS.get("mnm.op.imp.concatenate_dx", None)
+# Defined in ./src/op/regs/regs.cc
 conv2d = _APIS.get("mnm.op.imp.conv2d", None)
 # Defined in ./src/op/regs/regs.cc
 conv2d_dw = _APIS.get("mnm.op.imp.conv2d_dw", None)
@@ -127,6 +131,8 @@ sigmoid_dx = _APIS.get("mnm.op.imp.sigmoid_dx", None)
 softmax = _APIS.get("mnm.op.imp.softmax", None)
 # Defined in ./src/op/regs/regs.cc
 softmax_dx = _APIS.get("mnm.op.imp.softmax_dx", None)
+# Defined in ./src/op/regs/regs.cc
+split = _APIS.get("mnm.op.imp.split", None)
 # Defined in ./src/op/regs/regs.cc
 sqrt = _APIS.get("mnm.op.imp.sqrt", None)
 # Defined in ./src/op/regs/regs.cc

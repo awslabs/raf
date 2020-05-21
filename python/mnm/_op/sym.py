@@ -7,18 +7,18 @@ __all__ = [
     "abs", "add", "all", "any", "argmax",
     "argmin", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_matmul",
     "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to", "broadcast_to_like",
-    "ceil", "collapse_sum_like", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "divide", "equal", "erf",
-    "erf_dx", "expand_dims", "floor", "get_kept_dims", "get_reduce_axis",
-    "greater", "greater_equal", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "sqrt", "sqrt_dx",
-    "subtract", "sum", "take", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "ceil", "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d",
+    "conv2d_dw", "conv2d_dx", "copy", "cos", "divide",
+    "equal", "erf", "erf_dx", "expand_dims", "floor",
+    "get_kept_dims", "get_reduce_axis", "greater", "greater_equal", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d",
+    "max_pool2d_dx", "maximum", "minimum", "mod", "multiply",
+    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
+    "relu", "relu_dx", "reshape", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "split", "sqrt", "sqrt_dx", "subtract", "sum",
+    "take", "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def abs(x):
@@ -117,6 +117,14 @@ def collapse_sum_like(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.collapse_sum_like(x, shape))
+def concatenate(x, axis=0):
+    x = sym_utils.to_tensor_tuple(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.concatenate(x, axis))
+def concatenate_dx(x, axis=0):
+    x = sym_utils.to_tensor_tuple(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.concatenate_dx(x, axis))
 def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
     x = sym_utils.to_tensor(x)
     w = sym_utils.to_tensor(w)
@@ -358,6 +366,11 @@ def softmax_dx(x, y, dy, axis=-1):
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.softmax_dx(x, y, dy, axis))
+def split(x, indices_or_sections, axis=0):
+    x = sym_utils.to_tensor(x)
+    indices_or_sections = sym_utils.to_int_tuple(indices_or_sections)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.split(x, indices_or_sections, axis))
 def sqrt(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.sqrt(x))
