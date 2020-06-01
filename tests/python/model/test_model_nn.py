@@ -1,37 +1,9 @@
-import numpy as np
 import pytest
 import torch
 import torch.nn.functional as F
 
 import mnm
-
-
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def randn_pos(shape, *, ctx="cuda", dtype="float32", std=1.0):
-    x = np.abs(np.random.randn(*shape)) * std + 1e-5
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+from utils import check, randn # pylint: disable=E0401
 
 
 # TODO(@were): allow affine=False
@@ -41,11 +13,11 @@ def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
 @pytest.mark.parametrize("is_train", [False, True])
 def test_model_batch_norm(num_features, affine, is_train):
     m_x, t_x = randn([8, num_features, 5, 6])
-    m_m, _ = randn([num_features])
-    m_v, _ = randn_pos([num_features])
+    m_m, _ = randn([num_features], requires_grad=True)
+    m_v, _ = randn([num_features], mean=1e-5, requires_grad=True, positive=True)
     if affine:
-        m_w, _ = randn([num_features])
-        m_b, _ = randn_pos([num_features])
+        m_w, _ = randn([num_features], requires_grad=True)
+        m_b, _ = randn([num_features], mean=1e-5, requires_grad=True, positive=True)
     model = mnm.model.nn.BatchNorm(num_features=num_features, affine=affine)
     model.running_mean = m_m
     model.running_var = m_v
@@ -82,10 +54,10 @@ def test_model_batch_norm(num_features, affine, is_train):
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize("bias", [False, True])
 def test_model_conv2d(stride, dilation, padding, bias):
-    m_x, t_x = randn([8, 3, 32, 32], std=0.001)
-    m_w, t_w = randn([16, 3, 3, 3], std=0.01)
+    m_x, t_x = randn([8, 3, 32, 32], std=0.001, requires_grad=True)
+    m_w, t_w = randn([16, 3, 3, 3], std=0.01, requires_grad=True)
     if bias:
-        m_b, t_b = randn([16, 1, 1], std=0.001)
+        m_b, t_b = randn([16, 1, 1], std=0.001, requires_grad=True)
     model = mnm.model.Conv2d(in_channels=3,
                              out_channels=16,
                              kernel_size=3,
@@ -110,10 +82,10 @@ def test_model_conv2d(stride, dilation, padding, bias):
 @pytest.mark.parametrize("out_features", [1, 2, 4, 8, 16, 32])
 @pytest.mark.parametrize("bias", [False, True])
 def test_model_dense(batch_size, in_features, out_features, bias):
-    m_x, t_x = randn([batch_size, in_features])
-    m_w, _ = randn([out_features, in_features])
+    m_x, t_x = randn([batch_size, in_features], requires_grad=True)
+    m_w, _ = randn([out_features, in_features], requires_grad=True)
     if bias:
-        m_b, _ = randn([out_features])
+        m_b, _ = randn([out_features], requires_grad=True)
 
     # pylint: disable=no-member
     t_model = torch.nn.Linear(in_features, out_features, bias=bias)
@@ -133,7 +105,7 @@ def test_model_dense(batch_size, in_features, out_features, bias):
 
 
 def _fake_test_relu():
-    m_x, _ = randn([1, 2, 3, 4], ctx="cpu")
+    m_x, _ = randn([1, 2, 3, 4], ctx="cpu", requires_grad=True)
 
     class ReLU(mnm.Model):
         def build(self):
@@ -156,7 +128,7 @@ def _fake_test_conv2d():
                              dilation=1,
                              groups=1,
                              bias=False)
-    m_x, _ = randn([8, 3, 32, 32], ctx="cpu")
+    m_x, _ = randn([8, 3, 32, 32], ctx="cpu", requires_grad=True)
     model(m_x)
 
 
@@ -166,13 +138,13 @@ def _fake_test_batch_norm():
                                 eps=1e-5,
                                 momentum=0.1,
                                 affine=True)
-    m_x, _ = randn([5, num_features, 3, 3], ctx="cpu")
+    m_x, _ = randn([5, num_features, 3, 3], ctx="cpu", requires_grad=True)
     model(m_x)
 
 
 def _fake_test_binary_add():
-    m_x1, _ = randn([1, 2, 3], ctx="cpu")
-    m_x2, _ = randn([2, 2, 3], ctx="cpu")
+    m_x1, _ = randn([1, 2, 3], ctx="cpu", requires_grad=True)
+    m_x2, _ = randn([2, 2, 3], ctx="cpu", requires_grad=True)
 
     class Add(mnm.Model):
         def build(self):

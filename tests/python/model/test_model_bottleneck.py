@@ -1,28 +1,10 @@
-import numpy as np
 import pytest
 import torch
 
 import mnm
 from mnm.model import Conv2d, BatchNorm
 
-
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0, requires_grad=False):
-    x = np.random.randn(*shape) * std + mean
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    if requires_grad:
-        m_x.requires_grad = True
-    t_x = torch.tensor(x, requires_grad=requires_grad)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+from utils import check, randn # pylint: disable=E0401
 
 
 class MNMBottleNeck(mnm.Model):

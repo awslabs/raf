@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import pytest
@@ -6,37 +5,7 @@ import pytest
 import mnm
 from mnm.model import BatchNorm, Conv2d, Linear, Sequential
 
-
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def one_hot(batch_size, num_classes, ctx="cuda", dtype="float32"):
-    targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
-    m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
-    t_x = torch.tensor(targets, requires_grad=False)  # pylint: disable=not-callable
-    assert list(m_x.shape) == [batch_size, num_classes]
-    assert list(t_x.shape) == [batch_size]
-    return m_x, t_x
-
-
-def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
-
-
-def t2m_param(param, ctx="cuda"):
-    return mnm.ndarray(param.detach().numpy(), ctx=ctx)  # pylint: disable=unexpected-keyword-arg
+from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
 
 
 class TorchBottleneck(nn.Module):
@@ -524,7 +493,7 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
 
     m_model.fc1.w = t2m_param(t_model.fc1.weight)
     m_model.fc1.b = t2m_param(t_model.fc1.bias)
-    m_x, t_x = randn([1, 3, 224, 224])  # pylint: disable=unused-variable
+    m_x, t_x = randn([1, 3, 224, 224], requires_grad=True)  # pylint: disable=unused-variable
     m_y, t_y = one_hot(batch_size=1, num_classes=1000)
     m_x.requires_grad = True
     m_model.train_mode()
