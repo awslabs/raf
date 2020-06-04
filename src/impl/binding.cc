@@ -247,6 +247,7 @@ void Backward(Var var, Var dy_var) {
 
 MNM_REGISTER_GLOBAL("mnm.binding.BindNDArray").set_body_typed(BindNDArray);
 MNM_REGISTER_GLOBAL("mnm.binding.BindSymbol").set_body_typed(BindSymbol);
+MNM_REGISTER_GLOBAL("mnm.binding.RebindNDArray").set_body_typed(RebindNDArray);
 MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundValue").set_body_typed(LookupBoundValue);
 MNM_REGISTER_GLOBAL("mnm.binding.SetRequiresGrad").set_body_typed(SetRequiresGrad);
 MNM_REGISTER_GLOBAL("mnm.binding.Backward").set_body_typed(Backward);

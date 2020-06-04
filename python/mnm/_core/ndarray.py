@@ -2,7 +2,7 @@ import ctypes
 
 from mnm._core.core_utils import ctx2str, set_module, str2ctx
 from mnm._core.value import TensorValue
-from mnm._ffi.binding import (BindNDArray, BindSymbol, LookupBoundValue,
+from mnm._ffi.binding import (BindNDArray, BindSymbol, RebindNDArray, LookupBoundValue,
                               SetRequiresGrad, Backward, LookupGrad)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
@@ -170,6 +170,12 @@ class ndarray:
             assert isinstance(gradient, ndarray)
             gradient = gradient._ndarray__handle  # pylint: disable=protected-access
         Backward(self.__handle, gradient)
+
+    def update(self, value):
+        RebindNDArray(self.__handle, value.__value, None) # pylint: disable=protected-access
+        # call custom setters to update value
+        self.__handle = self.__handle
+        self.requires_grad = self.requires_grad
 
     @property
     def grad(self):
