@@ -2,6 +2,7 @@ import def_schema
 from codegen_utils import Op
 
 OPS = [
+    Op(name="atan", schema_name="unary"),
     Op(name="conv2d", schema_name="conv"),
     Op(name="max_pool2d", schema_name="pool"),
     Op(name="avg_pool2d", schema_name="pool"),

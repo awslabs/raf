@@ -6,20 +6,21 @@ from . import imp_utils
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "all", "any", "argmax",
-    "argmin", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_matmul",
-    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to", "broadcast_to_like",
-    "ceil", "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d",
-    "conv2d_dw", "conv2d_dx", "copy", "cos", "divide",
-    "equal", "erf", "erf_dx", "expand_dims", "floor",
-    "get_kept_dims", "get_reduce_axis", "greater", "greater_equal", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d",
-    "max_pool2d_dx", "maximum", "minimum", "mod", "multiply",
-    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
-    "relu", "relu_dx", "reshape", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
-    "split", "sqrt", "sqrt_dx", "subtract", "sum",
-    "take", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "argmin", "atan", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
+    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to",
+    "broadcast_to_like", "ceil", "collapse_sum_like", "concatenate", "concatenate_dx",
+    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
+    "divide", "equal", "erf", "erf_dx", "expand_dims",
+    "floor", "get_kept_dims", "get_reduce_axis", "greater", "greater_equal",
+    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
+    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
+    "max_pool2d", "max_pool2d_dx", "maximum", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
+    "sum", "take", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -57,6 +58,10 @@ def argmin(x, axis=(), keepdims=False):
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
     return imp_utils.ret(ffi.argmin(x, axis, keepdims))
+@set_module("mnm")
+def atan(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.atan(x))
 @set_module("mnm")
 def avg_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)

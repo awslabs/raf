@@ -46,6 +46,7 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
         (np.floor, mnm.floor),
         (np.cos, mnm.cos),
         (np.abs, mnm.abs),
+        (np.arctan, mnm.atan),
         (special.erf, mnm.erf),  # pylint: disable=no-member
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])

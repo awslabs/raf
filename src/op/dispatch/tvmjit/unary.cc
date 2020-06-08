@@ -42,6 +42,7 @@ MNM_TVMJIT(Log, "mnm.op.log", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHas
 MNM_TVMJIT(Cos, "mnm.op.cos", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

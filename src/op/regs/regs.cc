@@ -37,6 +37,7 @@ static const char all[] = "mnm.op.all";
 static const char any[] = "mnm.op.any";
 static const char argmax[] = "mnm.op.argmax";
 static const char argmin[] = "mnm.op.argmin";
+static const char atan[] = "mnm.op.atan";
 static const char avg_pool2d[] = "mnm.op.avg_pool2d";
 static const char avg_pool2d_dx[] = "mnm.op.avg_pool2d_dx";
 static const char batch_flatten[] = "mnm.op.batch_flatten";
@@ -541,6 +542,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.argmin")
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
   MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.atan")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(atan, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1610,6 +1619,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.argmax")
 .set_body(MNM_SYMBOLIC_API(argmax, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmin")
 .set_body(MNM_SYMBOLIC_API(argmin, 3, Reduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym.atan")
+.set_body(MNM_SYMBOLIC_API(atan, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d")
 .set_body(MNM_SYMBOLIC_API(avg_pool2d, 7, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
@@ -2141,6 +2152,7 @@ MNM_BIND_SCHEMA("mnm.op.all", names::all, value2schema::Reduce);  // NOLINT(whit
 MNM_BIND_SCHEMA("mnm.op.any", names::any, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmax", names::argmax, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmin", names::argmin, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.atan", names::atan, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", names::avg_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", names::avg_pool2d_dx, value2schema::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_flatten", names::batch_flatten, value2schema::Unary);  // NOLINT(whitespace/line_length)

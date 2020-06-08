@@ -80,6 +80,7 @@ MNM_OP_DECLARE("mnm.op.log", Unary);
 MNM_OP_DECLARE("mnm.op.cos", Unary);
 MNM_OP_DECLARE("mnm.op.erf", Unary);
 MNM_OP_DECLARE("mnm.op.sqrt", Unary);
+MNM_OP_DECLARE("mnm.op.atan", Unary);
 
 void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check
