@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 
 import mnm
-from mnm.model import Conv2d, Linear
+from mnm.model import Conv2d, Linear, BatchNorm
 
 
 def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
@@ -54,6 +54,7 @@ class TorchTest(nn.Module):
                                kernel_size=5,
                                padding=2,
                                bias=False)
+        self.bn1 = nn.BatchNorm2d(6)
         self.linear1 = nn.Linear((input_shape // 2) ** 2 * 6, num_classes)
 
     def forward(self, x, y_true): # pylint: disable=arguments-differ
@@ -63,7 +64,7 @@ class TorchTest(nn.Module):
         return loss
 
     def forward_infer(self, x):
-        out = self.conv1(x)
+        out = self.bn1(self.conv1(x))
         out = torch.sigmoid(out) # pylint: disable=no-member
         out = F.avg_pool2d(out, (2, 2), (2, 2))
         out = torch.flatten(out, 1) # pylint: disable=no-member
@@ -79,6 +80,7 @@ class MNMTest(mnm.Model):
                             kernel_size=5,
                             padding=2,
                             bias=False)
+        self.bn1 = BatchNorm(6)
         self.linear1 = Linear((input_shape // 2) ** 2 * 6,
                               num_classes)
     # pylint: enable=attribute-defined-outside-init
@@ -92,7 +94,7 @@ class MNMTest(mnm.Model):
 
     @mnm.model.trace
     def forward_infer(self, x):
-        out = self.conv1(x)
+        out = self.bn1(self.conv1(x))
         out = mnm.sigmoid(out)
         out = mnm.avg_pool2d(out, (2, 2), (2, 2))
         out = mnm.batch_flatten(out)
@@ -113,6 +115,10 @@ def test_sgd(config):
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
     m_model.linear1.b = t2m_param(t_model.linear1.bias)
+    m_model.bn1.w = t2m_param(t_model.bn1.weight)
+    m_model.bn1.b = t2m_param(t_model.bn1.bias)
+    m_model.bn1.running_mean = t2m_param(t_model.bn1.running_mean)
+    m_model.bn1.running_var = t2m_param(t_model.bn1.running_var)
 
     m_param_dict = m_model.state()
     m_optimizer = mnm.optim.SGD(m_param_dict.values(), 0.1, 0.01)
@@ -124,6 +130,7 @@ def test_sgd(config):
     for i in range(batch_size):
         t_optimizer.zero_grad()
         m_x, t_x = randn([1, 3, config[1], config[1]], requires_grad=True)
+        m_x.requires_grad = True
         m_y, t_y = one_hot(batch_size=1, num_classes=config[2])
         m_loss = m_model(m_x, m_y)
         t_loss = t_model(t_x, t_y)
@@ -133,11 +140,15 @@ def test_sgd(config):
         check(m_model.conv1.w.grad, t_model.conv1.weight.grad, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.w.grad, t_model.linear1.weight.grad, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.b.grad, t_model.linear1.bias.grad, rtol=1e-4, atol=1e-4)
+        check(m_model.bn1.w.grad, t_model.bn1.weight.grad, rtol=1e-4, atol=1e-4)
+        check(m_model.bn1.b.grad, t_model.bn1.bias.grad, rtol=1e-4, atol=1e-4)
         m_optimizer.step()
         t_optimizer.step()
         check(m_model.conv1.w, t_model.conv1.weight, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.w, t_model.linear1.weight, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.b, t_model.linear1.bias, rtol=1e-4, atol=1e-4)
+        check(m_model.bn1.w, t_model.bn1.weight, rtol=1e-4, atol=1e-4)
+        check(m_model.bn1.b, t_model.bn1.bias, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

@@ -163,7 +163,9 @@ class ndarray:
             npa = npa.astype(dtype)
         if ctx is None:
             ctx = self.ctx
-        return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, ""))
+        ret = ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, ""))
+        ret.requires_grad = self.requires_grad
+        return ret
 
     def backward(self, gradient=None):
         if gradient is not None:
@@ -181,7 +183,11 @@ class ndarray:
     def grad(self):
         if not self.requires_grad:
             raise ValueError("Cannot run backward() for NDArrays whose require_grad = False")
-        return ndarray(LookupGrad(self.__handle))
+        grad_var = LookupGrad(self.__handle)
+        grad_val = LookupBoundValue(grad_var)
+        if not isinstance(grad_val, TensorValue):
+            return None
+        return ndarray(grad_var)
 
 
 class Symbol:  # pylint: disable=too-few-public-methods

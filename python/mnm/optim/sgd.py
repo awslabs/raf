@@ -19,6 +19,10 @@ class SGD:
         momentum factor
     """
     def __init__(self, params, lr, momentum=0):
+        if lr < 0.0:
+            raise ValueError("Invalid learning rate: {}".format(lr))
+        if momentum < 0.0:
+            raise ValueError("Invalid momentum value: {}".format(momentum))
         self.params = []
         self._lr = lr
         self._momentum = momentum
@@ -30,6 +34,8 @@ class SGD:
 
     def step(self):
         for x0, v0 in self.params:
+            if x0.grad is None:
+                continue
             v1, x1 = sgd(x0, x0.grad, v0, self._lr, self._momentum)
             x0.update(x1)
             v0.update(v1)
