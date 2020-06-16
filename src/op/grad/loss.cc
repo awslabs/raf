@@ -21,7 +21,7 @@ Array<Expr> NllLossGrad(const Expr& orig_call, const Expr &y, const Expr& ograds
   CHECK_GE(call->args.size(), 2);
   const Expr& true_ = call->args[0];
   const Expr& pred = call->args[1];
-  return {CallNode::make(dtrue, {true_, pred}), CallNode::make(dpred, {true_, pred})};
+  return {Call(dtrue, {true_, pred}), Call(dpred, {true_, pred})};
 }
 
 MNM_OP_GRAD("mnm.op.nll_loss", NllLossGrad);

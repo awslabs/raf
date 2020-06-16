@@ -196,7 +196,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
   Value VisitExpr_(const RefWriteNode* node) override {
     Downcast<RefValue>(Eval(node->ref))->value = Eval(node->value);
-    return TupleValue::make({});
+    return TupleValue::make(tvm::Array<Value>({}));
   }
 
  public:

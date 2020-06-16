@@ -187,9 +187,11 @@ MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
+
 MNM_REGISTER_OBJECT_NO_REFLECT(ValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(ScalarValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(OpaqueValueObj);
+
 MNM_REGISTER_OBJECT_REFLECT(TensorValueObj);
 MNM_REGISTER_OBJECT_REFLECT(TupleValueObj);
 MNM_REGISTER_OBJECT_REFLECT(ClosureValueObj);
@@ -199,5 +201,6 @@ MNM_REGISTER_OBJECT_REFLECT(IntValueObj);
 MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
 MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
 MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
+
 }  // namespace value
 }  // namespace mnm

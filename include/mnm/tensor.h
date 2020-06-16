@@ -21,7 +21,7 @@ class TensorValueObj;
 namespace mnm {
 namespace tensor {
 
-class Tensor : private tvm::runtime::NDArray {
+class Tensor : public tvm::runtime::NDArray {
   using TSelf = ::mnm::tensor::Tensor;
   using TSuper = ::tvm::runtime::NDArray;
 
@@ -75,7 +75,6 @@ class Tensor : private tvm::runtime::NDArray {
 
   using ContainerType = TensorContainer;
 
- private:
   Tensor(tvm::runtime::ObjectPtr<tvm::runtime::Object> data);  // NOLINT(runtime/explicit)
 };
 

@@ -106,7 +106,7 @@ class Extractor final : public ExprVisitor {
         continue;
       }
       if (!expr_node->IsInstance<ConstantNode>()) {
-        body = LetNode::make(GetRef<Var>(var), GetRef<Expr>(expr_node), body);
+        body = Let(GetRef<Var>(var), GetRef<Expr>(expr_node), body);
       }
       ExprVisitor::VisitExpr(GetRef<Expr>(expr_node));
     }

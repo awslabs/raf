@@ -25,25 +25,25 @@ Array<Expr> MatmulGradImpl(const Expr& orig_call, const Var& y, const Expr& dy) 
   if (!transpose_a) {
     if (!transpose_b) {
       return {
-          CallNode::make(op_nt, {dy, b}),
-          CallNode::make(op_tn, {a, dy}),
+          Call(op_nt, {dy, b}),
+          Call(op_tn, {a, dy}),
       };
     } else {
       return {
-          da = CallNode::make(op_nn, {dy, b}),
-          db = CallNode::make(op_tn, {dy, a}),
+          da = Call(op_nn, {dy, b}),
+          db = Call(op_tn, {dy, a}),
       };
     }
   } else {
     if (!transpose_b) {
       return {
-          CallNode::make(op_nt, {b, dy}),
-          CallNode::make(op_nn, {a, dy}),
+          Call(op_nt, {b, dy}),
+          Call(op_nn, {a, dy}),
       };
     } else {
       return {
-          CallNode::make(op_tt, {b, dy}),
-          CallNode::make(op_tt, {dy, a}),
+          Call(op_tt, {b, dy}),
+          Call(op_tt, {dy, a}),
       };
     }
   }
@@ -70,12 +70,12 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Var& y, const Expr& dy)
   const std::vector<Value> axes = {IntValue::make(0), IntValue::make(2),
                                    IntValue::make(1)};
   const Expr& axes_expr = MakeConstant(TupleValue::make(Array<Value>(axes)));
-  auto dy_trans = CallNode::make(transpose, {dy, axes_expr});
-  auto b_trans = CallNode::make(transpose, {b, axes_expr});
-  auto a_trans = CallNode::make(transpose, {a, axes_expr});
+  auto dy_trans = Call(transpose, {dy, axes_expr});
+  auto b_trans = Call(transpose, {b, axes_expr});
+  auto a_trans = Call(transpose, {a, axes_expr});
   return {
-          CallNode::make(batch_matmul, {dy, b_trans}),
-          CallNode::make(batch_matmul, {dy_trans, a_trans}),
+          Call(batch_matmul, {dy, b_trans}),
+          Call(batch_matmul, {dy_trans, a_trans}),
   };
 }
 

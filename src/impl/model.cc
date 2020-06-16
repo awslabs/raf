@@ -38,10 +38,10 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
     }
   }
   if (!requires_grad) {
-    return DeTuple(Interpret(CallNode::make(func, args)));
+    return DeTuple(Interpret(Call(func, args)));
   }
   func = AutoDiff(func);
-  TupleValue result = Downcast<TupleValue>(Interpret(CallNode::make(func, args)));
+  TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args)));
   CHECK_EQ(result->fields.size(), 2U);
   return DeStruct(/*value=*/result->fields[0],
                   /*bp=*/Downcast<ClosureValue>(result->fields[1]),

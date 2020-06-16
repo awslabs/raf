@@ -157,6 +157,7 @@ class BoolValue;
 /* ScalarValue */
 class ScalarValueObj : public ValueObj {
  public:
+  static constexpr const uint32_t _type_index = tvm::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.value.ScalarValue";
   MNM_BASE_OBJECT(ScalarValueObj, ValueObj);
 };
@@ -177,6 +178,7 @@ class IntValueObj : public ScalarValueObj {
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("data", &data);
   }
+  static constexpr const uint32_t _type_index = tvm::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.value.IntValue";
   MNM_FINAL_OBJECT(IntValueObj, ScalarValueObj);
 };
@@ -252,5 +254,6 @@ class NoGradValue : public Value {
   static NoGradValue make();
   MNM_OBJECT_REF(NoGradValue, Value, NoGradValueObj);
 };
+
 }  // namespace value
 }  // namespace mnm

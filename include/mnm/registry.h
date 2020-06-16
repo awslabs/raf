@@ -5,13 +5,15 @@
  */
 #pragma once
 
+#include <tvm/runtime/registry.h>
+
 #include <array>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
-#include "tvm/runtime/registry.h"
+
 #include "./base.h"
 
 #define MNM_REGISTER_GLOBAL(name) TVM_REGISTER_GLOBAL(name)

@@ -40,6 +40,7 @@ class NDArrayBindingObj : public ir::NDArray::Container {
  public:
   mutable value::Value value;
   mutable GradTape tape;
+  static constexpr const uint32_t _type_index = ir::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.binding.NDArrayBinding";
   MNM_FINAL_OBJECT(NDArrayBindingObj, BindingEntryObj);
 };

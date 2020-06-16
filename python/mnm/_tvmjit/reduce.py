@@ -1,24 +1,24 @@
-from .._lib import (OpPattern, register_compute, register_pattern,
-                    register_schedule)
+from .._lib import OpPattern, register_compute
 from .._lib import topi as _topi
 from .._lib import tvm as _tvm
+from .._lib import _reg
 
 
 @register_compute("mnm.op.sum")
-def sum_compute(attrs, inputs, output_type, target): # pylint: disable=unused-argument
+def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     x = inputs[0]
     axes = [int(i) for i in attrs.axis]
     keep = [int(i) for i in attrs.keep]
     if not axes:
         # TODO(@were): It seems that TVM create view may crash, I cannot directly return [x]
-        return [_tvm.compute(x.shape, lambda *args: x(*args))] # pylint: disable=unnecessary-lambda
+        return [_tvm.te.compute(x.shape, lambda *args: x(*args))] # pylint: disable=unnecessary-lambda
     if len(keep) == 1:
         keep = [keep[0]] * len(axes)
     # Fallback to TOPI
     if keep == [keep[0]] * len(axes):
         return [_topi.sum(x, axes, keep[0])]
     axes = sorted(zip(axes, keep))
-    red_axis = [_tvm.reduce_axis((0, x.shape[i])) for i, _ in axes]
+    red_axis = [_tvm.te.reduce_axis((0, x.shape[i])) for i, _ in axes]
     shape = list(x.shape)
     for i, j in axes:
         shape[i] = 1 if j else None
@@ -36,13 +36,14 @@ def sum_compute(attrs, inputs, output_type, target): # pylint: disable=unused-ar
                 idx.append(reds.pop())
             else:
                 idx.append(scan.pop())
-        return _tvm.sum(x(*idx), axis=red_axis)
+        return _tvm.te.sum(x(*idx), axis=red_axis)
 
-    return [_tvm.compute(shape, fcompute)]
+    return [_tvm.te.compute(shape, fcompute)]
 
-@register_schedule("mnm.op.sum")
-def sum_schedule(attr, outputs, target): # pylint: disable=unused-argument
-    with target:
-        return _topi.generic.schedule_injective(outputs)
+_reg.register_injective_schedule("mnm.op.sum")
+_reg.register_pattern("mnm.op.sum", OpPattern.COMM_REDUCE)
 
-register_pattern("mnm.op.sum", OpPattern.COMM_REDUCE)
+_reg.register_reduce_schedule("mnm.op.argmax")
+_reg.register_reduce_schedule("mnm.op.argmin")
+_reg.register_reduce_schedule("mnm.op.all")
+_reg.register_reduce_schedule("mnm.op.any")

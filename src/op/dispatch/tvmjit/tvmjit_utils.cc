@@ -80,14 +80,14 @@ PackedFunc CompileOp(const Op& op,                          //
   {
     std::vector<Var> params;
     for (int i = 0, n = param_types.size(); i < n; ++i) {
-      auto var = VarNode::make("", param_types[i]);
+      auto var = mnm::ir::Var("", param_types[i]);
       var->checked_type_ = param_types[i];
       params.push_back(var);
     }
-    func = FunctionNode::make(params,                                                     //
-                              CallNode::make(op, {params.begin(), params.end()}, attrs),  //
-                              ret_type,                                                   //
-                              {});
+    func = Function(params,
+                    Call(op, {params.begin(), params.end()}, attrs),
+                    ret_type,
+                    {});
     func->body->checked_type_ = ret_type;
     func->checked_type_ = FuncType(param_types, ret_type, {}, {});
   }

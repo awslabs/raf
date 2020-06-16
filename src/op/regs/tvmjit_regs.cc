@@ -5,9 +5,11 @@
  */
 #include "mnm/ir.h"
 #include "mnm/op.h"
+
 namespace mnm {
 namespace op {
 namespace {
+
 using ir::Array;
 using ir::Attrs;
 using ir::Op;
@@ -19,14 +21,15 @@ using tvm::relay::FTVMCompute;
 using tvm::relay::FTVMSchedule;
 using tvm::relay::OpPatternKind;
 using tvm::relay::TOpPattern;
+
 #define MNM_TVM_OP(MNM_OP, OP, PATTERN)                                                         \
   MNM_OP_REGISTER(MNM_OP)                                                                       \
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \
                              [](const Attrs& attrs, const Array<Tensor>& inputs,                \
-                                const Type& out_type, const Target& target) -> Array<Tensor> {  \
+                                const Type& out_type) -> Array<Tensor> {  \
                                auto fcompute =                                                  \
                                    Op::GetAttr<FTVMCompute>("FTVMCompute")[Op::Get(OP)];        \
-                               return fcompute(attrs, inputs, out_type, target);                \
+                               return fcompute(attrs, inputs, out_type);                \
                              })                                                                 \
       .set_attr<FTVMSchedule>(                                                                  \
           "FTVMSchedule",                                                                       \
@@ -35,6 +38,7 @@ using tvm::relay::TOpPattern;
             return fschedule(attrs, outs, target);                                              \
           })                                                                                    \
       .set_attr<TOpPattern>("TOpPattern", tvm::relay::PATTERN);
+
 MNM_TVM_OP("mnm.op.abs", "abs", kElemWise);
 MNM_TVM_OP("mnm.op.add", "add", kBroadcast);
 MNM_TVM_OP("mnm.op.all", "all", kCommReduce);
@@ -120,6 +124,9 @@ MNM_TVM_OP("mnm.op.variance", "variance", kCommReduce);
 MNM_TVM_OP("mnm.op.where", "where", kBroadcast);
 MNM_TVM_OP("mnm.op.zeros", "zeros", kElemWise);
 MNM_TVM_OP("mnm.op.zeros_like", "zeros_like", kElemWise);
+
+// MNM_TVM_OP("mnm.op.nll_loss", "nll_loss", kInjective);
+
 }  // namespace
 }  // namespace op
 }  // namespace mnm

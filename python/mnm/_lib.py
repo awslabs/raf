@@ -28,12 +28,13 @@ from tvm._ffi.runtime_ctypes import TVMArray as _DLTensor
 from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
 from tvm._ffi.runtime_ctypes import TVMArrayHandle as _DLArrayHandle
-from tvm.expr import FloatImm, IntImm, StringImm
-from tvm.make import node as _make_node
+from tvm.tir import FloatImm, IntImm, StringImm
 from tvm.ir.container import Array
 from tvm.runtime.ndarray import array as tvm_ndarray
-from tvm.relay.op import (OpPattern, register_compute, register_pattern,
-                          register_schedule)
+from tvm.relay.op import OpPattern, register_compute, register_pattern
+from tvm.relay.op.op import register_injective_schedule, register_broadcast_schedule, \
+    register_reduce_schedule
+from tvm.relay.op import op as _reg
 
 # pylint: enable=unused-import
 

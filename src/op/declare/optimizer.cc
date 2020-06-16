@@ -33,7 +33,7 @@ MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
   auto x1 = TensorValue::Assemble(/*ctx=*/dx->ctx,
                                   /*dtype=*/dx->dtype,
                                   /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
-  call->out = TupleValue::make({v1, x1});
+  call->out = TupleValue::make(tvm::Array<Value>({v1, x1}));
   call->ctx = dx->ctx;
 });
 

@@ -87,13 +87,13 @@ namespace regs {
 
 class VarPack {
  public:
-  ir::Var y = ir::VarNode::make("y", {});
-  ir::Var dy = ir::VarNode::make("dy", {});
+  ir::Var y = ir::Var("y", {});
+  ir::Var dy = ir::Var("dy", {});
   std::array<ir::Var, MAX_NUM_ARGS> x;
 
   VarPack() {
     for (int i = 0; i < MAX_NUM_ARGS; ++i) {
-      x[i] = ir::VarNode::make("x" + std::to_string(i), {});
+      x[i] = ir::Var("x" + std::to_string(i), {});
     }
   }
 
@@ -103,7 +103,7 @@ class VarPack {
     for (int i = 0; i < n; ++i) {
       xs[i] = this->x[i];
     }
-    return ir::CallNode::make(op, xs);
+    return ir::Call(op, xs);
   }
 
   static VarPack* Get() {
@@ -130,7 +130,7 @@ struct OpPack {
           grads_defined.push_back(grad);
         }
       }
-      CollectVars(ir::TupleNode::make(grads_defined), &grad_used_vars);
+      CollectVars(ir::Tuple(grads_defined), &grad_used_vars);
     }
   }
   static OpPack<op_name, n_args>* Get() {

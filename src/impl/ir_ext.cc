@@ -77,6 +77,8 @@ MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtra
 MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(Module::Global);
+
 MNM_REGISTER_OBJECT_REFLECT(ModuleObj);
+
 }  // namespace ir
 }  // namespace mnm

@@ -40,7 +40,7 @@ struct ExplicitLetList {
     Expr body = ret;
     int n = exprs.size();
     for (int i = n - 1; i >= 0; --i) {
-      body = LetNode::make(vars[i], exprs[i], body);
+      body = Let(vars[i], exprs[i], body);
     }
     return body;
   }
@@ -172,7 +172,7 @@ struct Gradient : public ExprVisitor {
     static const auto fpg = Op::GetAttr<FPrimalGradient>("FPrimalGradient");
     static const auto ffpg = Op::GetAttr<FFusedPrimalGradient>("FFusedPrimalGradient");
     const VarNode* var = let_var.operator->();
-    const Expr& _ograds = tuple_length.count(var) ? TupleNode::make(ograds) : ograds[0];
+    const Expr& _ograds = tuple_length.count(var) ? Tuple(ograds) : ograds[0];
     if (ffpg.count(op)) {
       Array<Expr> ret = ffpg[op](orig, let_var, _ograds, igrads);
       // ensure intermediate results are bound to a relay::var
@@ -203,7 +203,7 @@ struct Gradient : public ExprVisitor {
         } else {
           CHECK_NE(tuple_length[var], -1);
           for (int i = 0; i < tuple_length[var]; ++i) {
-            WriteBackInputGrad(var, i, ll->Push(TupleGetItemNode::make(igrad, i)));
+            WriteBackInputGrad(var, i, ll->Push(TupleGetItem(igrad, i)));
           }
         }
       } else if (!vars[i]->IsInstance<RelayConstantNode>()) {
@@ -247,9 +247,9 @@ struct Gradient : public ExprVisitor {
     const auto* t1 = x1.as<TupleNode>();
     const auto* t2 = x2.as<TupleNode>();
     if (t1 && t2) {
-      return TupleNode::make(AddTensors(t1->fields, t2->fields));
+      return Tuple(AddTensors(t1->fields, t2->fields));
     }
-    return ll->Push(CallNode::make(op, {x1, x2}));
+    return ll->Push(Call(op, {x1, x2}));
   }
 
   // Initialize, running and finalize
@@ -309,7 +309,7 @@ struct Gradient : public ExprVisitor {
     if (tuple_length.count(ret)) {
       int n = tuple_grads[ret].size();
       for (int i = 0; i < n; ++i) {
-        tuple_grads[ret].Set(i, ll->Push(TupleGetItemNode::make(dy, i)));
+        tuple_grads[ret].Set(i, ll->Push(TupleGetItem(dy, i)));
       }
     } else {
       CHECK_EQ(tuple_grads[ret].size(), 1);
@@ -329,7 +329,7 @@ struct Gradient : public ExprVisitor {
             expr = MakeConstant(NoGradValue::make());
           }
         }
-        grads.push_back(ll->Push(TupleNode::make(var_grads)));
+        grads.push_back(ll->Push(Tuple(var_grads)));
       } else {
         CHECK_EQ(var_grads.size(), 1);
         if (var_grads[0].defined()) {
@@ -342,11 +342,11 @@ struct Gradient : public ExprVisitor {
     if (targets.size() == 1) {
       return Downcast<Var>(grads[0]);
     }
-    return ll->Push(TupleNode::make(grads));
+    return ll->Push(Tuple(grads));
   }
 
   Function Run() {
-    Var dy = VarNode::make("dy", {});
+    Var dy = mnm::ir::Var("dy", {});
     Expr body = LetList::With([&](LetList* ll) {
       this->ll = ll;
       const auto& vars = ell->vars;
@@ -360,16 +360,16 @@ struct Gradient : public ExprVisitor {
       }
       return MakeClosureRet();
     });
-    Var closure = VarNode::make("closure", {});
-    Var ret = VarNode::make("ret", {});
+    Var closure = mnm::ir::Var("closure", {});
+    Var ret = mnm::ir::Var("ret", {});
     // let closure = fn(dy) {};
     ell->vars.push_back(closure);
-    ell->exprs.push_back(FunctionNode::make({dy}, body, {}, {}));
+    ell->exprs.push_back(Function({dy}, body, {}, {}));
     // let ret = tuple(y, closure)
     ell->vars.push_back(ret);
-    ell->exprs.push_back(TupleNode::make({ell->ret, closure}));
+    ell->exprs.push_back(Tuple({ell->ret, closure}));
     ell->ret = ret;
-    return FunctionNode::make(func->params, ell->AsExpr(), {}, {});
+    return Function(func->params, ell->AsExpr(), {}, {});
   }
 
  public:

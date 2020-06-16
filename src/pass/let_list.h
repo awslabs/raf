@@ -54,7 +54,7 @@ class LetList {
    * \return a Var that hold the inserted expr.
    */
   Var Push(Expr expr, Type ty) {
-    return Push(VarNode::make("x", ty), expr);
+    return Push(mnm::ir::Var("x", ty), expr);
   }
 
   /*!
@@ -79,7 +79,7 @@ class LetList {
     CHECK(!used_);
     Expr ret = body;
     for (auto rit = lets_.rbegin(); rit != lets_.rend(); ++rit) {
-      ret = LetNode::make(std::get<0>(*rit), std::get<1>(*rit), ret);
+      ret = mnm::ir::Let(std::get<0>(*rit), std::get<1>(*rit), ret);
     }
     used_ = true;
     return ret;
@@ -96,10 +96,10 @@ class LetList {
    *    // Automatically call Get with LetList::With
    *    return LetList::With([&](LetList* ll) {
    *      // Turn a call to plus into a variable to avoid duplication of code
-   *      Var b = ll->Push(CallNode::make(plus, {a, a}));
-   *      Var c = ll->Push(CallNode::make(plus, {b, b}));
-   *      Var d = ll->Push(CallNode::make(plus, {c, c}));
-   *      return CallNode::make(plus, {d, d});
+   *      Var b = ll->Push(Call(plus, {a, a}));
+   *      Var c = ll->Push(Call(plus, {b, b}));
+   *      Var d = ll->Push(Call(plus, {c, c}));
+   *      return Call(plus, {d, d});
    *    });
    *  }
    *  \endcode

@@ -21,7 +21,7 @@ Array<Expr> AsTupleExpr(const Expr& expr, int numel) {
   }
   Array<Expr> result;
   for (int i = 0; i < numel; ++i) {
-    result.push_back(TupleGetItemNode::make(expr, i));
+    result.push_back(TupleGetItem(expr, i));
   }
   return result;
 }

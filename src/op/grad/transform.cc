@@ -15,7 +15,7 @@ Array<Expr> BatchFlattenGrad(const Expr& orig_call, const Var &y, const Expr& dy
   static auto reshape = Op::Get("mnm.op.reshape");
   static auto shape = Op::Get("mnm.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
-  return {CallNode::make(reshape, {dy, CallNode::make(shape, {call->args[0]})})};
+  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
 }
 
 MNM_OP_GRAD("mnm.op.batch_flatten", BatchFlattenGrad);
@@ -26,7 +26,7 @@ Array<Expr> TransposeGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
   CHECK(call != nullptr);
   const Expr& x = call->args[0];
   const Expr& axes = call->args[1];
-  return {CallNode::make(transpose_dx, {x, y, dy, axes})};
+  return {Call(transpose_dx, {x, y, dy, axes})};
 }
 
 MNM_OP_GRAD("mnm.op.transpose", TransposeGrad);
@@ -38,8 +38,8 @@ Array<Expr> ConcatenateGrad(const Expr& orig_call, const Var &y, const Expr& dy)
   CHECK_GE(call->args.size(), 2);
   const Expr& x = call->args[0];
   const Expr& axis = call->args[1];
-  Expr indices = CallNode::make(op_indices, {x, axis});
-  return {CallNode::make(op_dx, {dy, indices, axis})};
+  Expr indices = Call(op_indices, {x, axis});
+  return {Call(op_dx, {dy, indices, axis})};
 }
 
 MNM_OP_GRAD("mnm.op.concatenate", ConcatenateGrad);

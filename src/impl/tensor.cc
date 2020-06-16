@@ -3,9 +3,10 @@
  * \file src/impl/tensor.cc
  * \brief MNM Tensor underlying implementation
  */
+
+#include <mnm/registry.h>
+#include <mnm/tensor.h>
 #include <vector>
-#include "mnm/registry.h"
-#include "mnm/tensor.h"
 #include "../common/shape_utils.h"
 
 namespace mnm {

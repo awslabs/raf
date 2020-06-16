@@ -461,7 +461,7 @@ namespace imperative {
     *ret = DeTuple(value);                                                                     \
     return;                                                                                    \
   }                                                                                            \
-  Expr body = TupleNode::make({grads.begin(), grads.begin() + n_tapes});                       \
+  Expr body = Tuple({grads.begin(), grads.begin() + n_tapes});                                 \
   std::vector<const ExprNode*> used_vars;                                                      \
   if (full_grads) {                                                                            \
     /* case 2: full grad required, use pre-computed results */                                 \
@@ -484,7 +484,7 @@ namespace imperative {
 #define MNM_RET()                                                                      \
   DeStruct(std::move(value),                                                           \
            ClosureValue::make(/*env=*/std::move(env),                                  \
-                              /*func=*/FunctionNode::make({vpack->dy}, body, {}, {})), \
+                              /*func=*/Function({vpack->dy}, body, {}, {})), \
            {prev_tapes.begin(), prev_tapes.begin() + n_tapes});
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.abs")
@@ -1601,7 +1601,7 @@ namespace symbolic {
   [](TVMArgs args, TVMRetValue* ret) {                                          \
     auto *pack = regs::OpPack<names::op_name, n_args>::Get();                   \
     try {                                                                       \
-        *ret = BindSymbol(CallNode::make(pack->op, ffi2expr::schema(args)));    \
+        *ret = BindSymbol(Call(pack->op, ffi2expr::schema(args)));              \
     } catch (const dmlc::Error &e) {                                            \
         FillError(e, "{op}", names::op_name);                                   \
     }                                                                           \
@@ -2235,6 +2235,7 @@ namespace mnm {
 namespace op {
 namespace schema {
 namespace {
+
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
@@ -2269,6 +2270,7 @@ MNM_REGISTER_OBJECT_REFLECT(TransposeDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryUfuncArgs);
+
 }  // namespace
 }  // namespace schema
 }  // namespace op

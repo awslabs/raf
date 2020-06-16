@@ -181,7 +181,8 @@ using tvm::relay::ExprVisitor;
 #define MNM_REGISTER_OBJECT_REFLECT(TypeName)                                                    \
   MNM_REGISTER_OBJECT_NO_REFLECT(TypeName);                                                      \
   static DMLC_ATTRIBUTE_UNUSED ::tvm::ReflectionVTable::Registry& __make_Node##_##TypeName##__ = \
-      ::tvm::ReflectionVTable::Global()->Register<TypeName>().set_creator(                       \
+    ::tvm::ReflectionVTable::Global()->Register                                                  \
+    <TypeName, ::tvm::detail::ReflectionTrait<TypeName> >().set_creator(                         \
           [](const std::string&) -> ::tvm::runtime::ObjectPtr<::tvm::runtime::Object> {          \
             return ::tvm::runtime::make_object<TypeName>();                                      \
           })

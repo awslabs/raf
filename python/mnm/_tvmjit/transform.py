@@ -1,11 +1,11 @@
-from .._lib import (OpPattern, register_compute, register_pattern,
-                    register_schedule)
+from .._lib import OpPattern, register_compute
 from .._lib import topi as _topi
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
+from .._lib import _reg
 
 
 @register_compute("mnm.op.transpose_dx")
-def compute(attrs, inputs, output_type, target):  # pylint: disable=unused-argument
+def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     dy = inputs[2]
     axes = list(_topi.util.get_const_tuple(attrs.axes))
     axes_inverse = axes.copy()
@@ -15,10 +15,14 @@ def compute(attrs, inputs, output_type, target):  # pylint: disable=unused-argum
     return [out]
 
 
-@register_schedule("mnm.op.transpose_dx")
-def schedule(attr, outputs, target):  # pylint: disable=unused-argument
-    with target:
-        return _topi.generic.schedule_injective(outputs)
+_reg.register_injective_schedule("mnm.op.transpose_dx")
+_reg.register_pattern("mnm.op.transpose_dx", OpPattern.INJECTIVE)
 
+_reg.register_injective_schedule("mnm.op.transpose")
+_reg.register_injective_schedule("mnm.op.split")
+_reg.register_injective_schedule("mnm.op.take")
+_reg.register_injective_schedule("mnm.op.sequence_mask")
+_reg.register_injective_schedule("mnm.op.concatenate")
 
-register_pattern("mnm.op.transpose_dx", OpPattern.INJECTIVE)
+_reg.register_broadcast_schedule("mnm.op.broadcast_to")
+_reg.register_broadcast_schedule("mnm.op.broadcast_to_like")

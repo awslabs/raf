@@ -163,7 +163,7 @@ ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
     int n = static_cast<int>(tuple->fields.size());
-    Var dy = VarNode::make("dy", {});
+    Var dy = mnm::ir::Var("dy", {});
     std::vector<Expr> grads(n, MakeConstant(NoGradValue::make()));
     for (int i = 0; i < n; ++i) {
       Value sub_value = tuple->fields[i];
@@ -173,7 +173,7 @@ ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
       grads[i] = dy;
       result.push_back(DeStruct(
           /*value=*/sub_value,
-          /*bp=*/ClosureValue::make({}, FunctionNode::make({dy}, TupleNode::make(grads), {}, {})),
+          /*bp=*/ClosureValue::make({}, Function({dy}, Tuple(grads), {}, {})),
           /*prev_tapes*/ {tape}));
     }
     return std::move(result);

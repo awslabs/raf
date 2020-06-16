@@ -25,9 +25,9 @@ Array<Expr> AddGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
     static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
     static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
     static auto sum = Op::Get("mnm.op.sum");
-    Call axes = CallNode::make(collapse_axis, {dy, x});
-    Call keep = CallNode::make(collapse_keep, {dy, x});
-    return CallNode::make(sum, {dy, axes, keep});
+    Call axes = Call(collapse_axis, {dy, x});
+    Call keep = Call(collapse_keep, {dy, x});
+    return Call(sum, {dy, axes, keep});
   };
 
   return {f(x1), f(x2)};
