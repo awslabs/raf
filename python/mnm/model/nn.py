@@ -81,10 +81,10 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
                                    name="running_var",
                                    ctx=get_chained_attr(self, ["running_var", "ctx"], "cpu"))
         if self.affine:
-            self.w = ndarray(np.zeros(n_f, dtype="float32"),
-                             name="w", ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
-            self.b = ndarray(np.ones(n_f, dtype="float32"),
-                             name="b", ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
+            self.w = ndarray(np.ones(n_f, dtype="float32"),
+                             name="w", ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
+            self.b = ndarray(np.zeros(n_f, dtype="float32"),
+                             name="b", ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 
