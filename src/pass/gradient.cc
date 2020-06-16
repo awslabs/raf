@@ -107,9 +107,7 @@ struct Gradient : public ExprVisitor {
     // return:
     //    update `grad(node->fields[i])` with `+= grad(var)[i]`
     const Array<Expr>& ograds = GetOutputGrads();
-    const Array<Expr>& igrads = GetInputGrads(node->fields);
-    const Array<Expr>& new_igrads = AddTensors(ograds, igrads);
-    WriteBackInputGrads(node->fields, new_igrads);
+    WriteBackInputGrads(node->fields, ograds);
   }
 
   void VisitExpr_(const TupleGetItemNode* node) final {
@@ -185,7 +183,7 @@ struct Gradient : public ExprVisitor {
       }
       return ret;
     } else if (fpg.count(op)) {
-      return AddTensors(igrads, fpg[op](orig, let_var, _ograds));
+      return fpg[op](orig, let_var, _ograds);
     }
     LOG(FATAL) << "Gradient is not registered for operator " << op->name;
     throw;
@@ -201,11 +199,11 @@ struct Gradient : public ExprVisitor {
       }
       if (const auto* var = vars[i].as<VarNode>()) {
         if (tuple_length.count(var) == 0) {
-          tuple_grads[var].Set(0, igrad);
+          WriteBackInputGrad(var, 0, igrad);
         } else {
           CHECK_NE(tuple_length[var], -1);
           for (int i = 0; i < tuple_length[var]; ++i) {
-            tuple_grads[var].Set(i, ll->Push(TupleGetItemNode::make(igrad, i)));
+            WriteBackInputGrad(var, i, ll->Push(TupleGetItemNode::make(igrad, i)));
           }
         }
       } else if (!vars[i]->IsInstance<RelayConstantNode>()) {
@@ -213,6 +211,11 @@ struct Gradient : public ExprVisitor {
         throw;
       }
     }
+  }
+
+  void WriteBackInputGrad(const VarNode* var, int idx, const Expr& igrad) {
+    Expr grad = AddTensor(tuple_grads[var][idx], igrad);
+    tuple_grads[var].Set(idx, grad);
   }
 
  public:
