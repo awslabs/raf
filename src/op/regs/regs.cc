@@ -484,7 +484,7 @@ namespace imperative {
 #define MNM_RET()                                                                      \
   DeStruct(std::move(value),                                                           \
            ClosureValue::make(/*env=*/std::move(env),                                  \
-                              /*func=*/Function({vpack->dy}, body, {}, {})), \
+                              /*func=*/Function({vpack->dy}, body, {}, {})),           \
            {prev_tapes.begin(), prev_tapes.begin() + n_tapes});
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.abs")
@@ -2235,7 +2235,6 @@ namespace mnm {
 namespace op {
 namespace schema {
 namespace {
-
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
@@ -2270,7 +2269,6 @@ MNM_REGISTER_OBJECT_REFLECT(TransposeDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryUfuncArgs);
-
 }  // namespace
 }  // namespace schema
 }  // namespace op

@@ -29,10 +29,10 @@ using tvm::relay::TOpPattern;
   MNM_OP_REGISTER(MNM_OP)                                                                       \\
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \\
                              [](const Attrs& attrs, const Array<Tensor>& inputs,                \\
-                                const Type& out_type, const Target& target) -> Array<Tensor> {{  \\
+                                const Type& out_type) -> Array<Tensor> {{                       \\
                                auto fcompute =                                                  \\
                                    Op::GetAttr<FTVMCompute>("FTVMCompute")[Op::Get(OP)];        \\
-                               return fcompute(attrs, inputs, out_type, target);                \\
+                               return fcompute(attrs, inputs, out_type);                        \\
                              }})                                                                 \\
       .set_attr<FTVMSchedule>(                                                                  \\
           "FTVMSchedule",                                                                       \\
