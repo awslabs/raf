@@ -49,7 +49,7 @@ class NoPool final : public MemoryPool {
     return std::make_shared<NonOwnedMemory>(data, ctx, api);
   }
 
-  std::vector<std::shared_ptr<Memory>> AllocMany(
+  std::vector<std::shared_ptr<Memory>> AllocBatch(
       const std::vector<int64_t>& nbytes,
       int64_t alignment) override {
     std::vector<std::shared_ptr<Memory> > ret;

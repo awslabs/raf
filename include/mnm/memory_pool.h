@@ -14,8 +14,14 @@ namespace memory_pool {
 
 class MemoryPool;
 
-// A chunk of memory, which may have shared reference to the pool so that they are freed correctly.
-// Interaction between memory pool manager also happens here
+/*!
+ * \brief A wrapper for a chunk of memory, which may have shared reference to the pool so that they
+ * are freed correctly. Interaction between memory pool manager also happens here.
+ *
+ * This wrapper is the base wrapper for memory.
+ *
+ * \sa Memory
+ */
 class Memory {
  public:
   virtual ~Memory() = default;
@@ -23,7 +29,7 @@ class Memory {
  public:
   static std::shared_ptr<Memory> Alloc(const Context& ctx, int64_t nbytes,
                                        int64_t alignment = kDefaultMemoryAlignment);
-  static std::vector<std::shared_ptr<Memory> > AllocMany(
+  static std::vector<std::shared_ptr<Memory> > AllocBatch(
       const Context& ctx, const std::vector<int64_t>& nbytes,
       int64_t alignment = kDefaultMemoryAlignment);
 
@@ -35,19 +41,40 @@ class Memory {
   static MemoryPool* InitPool(const Context& ctx, const std::string& name);
 
  public:
+  /*! \brief The pointer to the allocated chunk of memory. */
   void* data = nullptr;
+  /*! \brief The context of the allocated chunk of memory. */
   Context ctx{};
 };
 
-// Only interface for implementing new allocation strategy, no static interface is included.
+/*!
+ * \brief A base class for memory pool.
+ * Only interface for implementing new allocation strategy, no static interface is included.
+ */
 class MemoryPool {
  public:
   virtual ~MemoryPool() = default;
 
+  /*!
+   * \brief Allocate a chunk of memory with given size and alignment.
+   *
+   * \param nbytes The size of the memory chunk to allocate.
+   * \param align The alignment of the memory chunk to allocate.
+   *
+   * \return A shared pointer to Memory object which holds the memory chunk.
+   */
   virtual std::shared_ptr<Memory> Alloc(int64_t nbytes,
                                         int64_t alignment = kDefaultMemoryAlignment) = 0;
 
-  virtual std::vector<std::shared_ptr<Memory> > AllocMany(
+  /*!
+   * \brief Allocate a bacth of memory chunks with given sizes and alignments.
+   *
+   * \param nbytes The sizes of the memory chunks to allocate.
+   * \param align The alignments of the memory chunks to allocate.
+   *
+   * \return The shared pointers to Memory object which hold the memory chunks.
+   */
+  virtual std::vector<std::shared_ptr<Memory> > AllocBatch(
       const std::vector<int64_t>& nbytes, int64_t alignment = kDefaultMemoryAlignment) = 0;
 };
 

@@ -15,8 +15,8 @@ using registry::GetPackedFunc;
 using registry::PerContextStore;
 
 static std::unordered_map<int, std::string> default_strategies = {
-    {DevType(DevType::kCPU()), "no_pool"},
-    {DevType(DevType::kCUDA()), "no_pool"},
+    {DevType(DevType::kCPU()), "page_unit_pool"},
+    {DevType(DevType::kCUDA()), "page_unit_pool"},
 };
 
 class MemoryPoolManager {
@@ -35,11 +35,10 @@ class MemoryPoolManager {
         // ok, it is truly a nullptr
         if (name == "") {
           const std::string& default_name = default_strategies[ctx.device_type];
-          snprintf(maker_name, sizeof(maker_name),
-                   "mnm.memory_pool._make.%s", default_name.c_str());
+          snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s",
+                   default_name.c_str());
         } else {
-          snprintf(maker_name, sizeof(maker_name),
-                   "mnm.memory_pool._make.%s", name.c_str());
+          snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", name.c_str());
         }
         void* ret = GetPackedFunc(maker_name)(ctx.operator DLContext());
         result.reset(static_cast<MemoryPool*>(ret));
@@ -54,7 +53,6 @@ class MemoryPoolManager {
   void Remove(const Context& ctx) {
     std::lock_guard<std::mutex> lock(reg.mutex_);
     std::shared_ptr<MemoryPool>& result = reg.Get(ctx);
-    CHECK(result != nullptr);
     result = nullptr;
   }
 
@@ -67,11 +65,11 @@ std::shared_ptr<Memory> Memory::Alloc(const Context& ctx, int64_t nbytes, int64_
   return mgr->GetPool(ctx, "")->Alloc(nbytes, alignment);
 }
 
-std::vector<std::shared_ptr<Memory> > Memory::AllocMany(const Context& ctx,
-                                                        const std::vector<int64_t>& nbytes,
-                                                        int64_t alignment) {
+std::vector<std::shared_ptr<Memory> > Memory::AllocBatch(const Context& ctx,
+                                                         const std::vector<int64_t>& nbytes,
+                                                         int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  return mgr->GetPool(ctx, "")->AllocMany(nbytes, alignment);
+  return mgr->GetPool(ctx, "")->AllocBatch(nbytes, alignment);
 }
 
 void Memory::RemovePool(const Context& ctx) {
@@ -88,6 +86,31 @@ MemoryPool* Memory::InitPool(const Context& ctx, const std::string& name) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(ctx, name);
 }
+
+/*!
+ * \brief RemovePool Disable the current memory pool, the memory chuncks in this pool will not
+ * be freed unitl there is nobody using to it.
+ *
+ * \param ctx The context that the pool belongs to.
+ */
+void RemovePool(DLContext ctx) {
+  Memory::RemovePool(ctx);
+}
+
+/*!
+ * \brief InitPool Enable a new memory pool using the given pool_name. The memories requested after
+ * this will be managed by this pool.
+ *
+ * \param ctx The context that the pool belongs to.
+ * \param pool_name The name of the new pool.
+ */
+void InitPool(DLContext ctx, std::string pool_name) {
+  Memory::RemovePool(ctx);  // Remove the current pool firstly.
+  Memory::InitPool(ctx, pool_name);
+}
+
+MNM_REGISTER_GLOBAL("mnm.memory_pool.InitPool").set_body_typed(InitPool);
+MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed(RemovePool);
 
 }  // namespace memory_pool
 }  // namespace mnm

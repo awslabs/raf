@@ -86,7 +86,7 @@ def _get_trace_record(pyfunc, args, kwargs):
     if record is not None:
         return record
     record = _do_tracing(pyfunc, args, kwargs)
-    print(record.func)
+    # print(record.func)
     cacher.set_cache(model, "trace@" + func_name, record)
     return record
 
