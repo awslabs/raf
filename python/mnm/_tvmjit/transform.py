@@ -26,3 +26,20 @@ _reg.register_injective_schedule("mnm.op.concatenate")
 
 _reg.register_broadcast_schedule("mnm.op.broadcast_to")
 _reg.register_broadcast_schedule("mnm.op.broadcast_to_like")
+_reg.register_broadcast_schedule("mnm.op.clip")
+
+
+@register_compute("mnm.op.clip_dx")
+def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    x = inputs[0]
+    grad = inputs[1]
+    a_min = attrs.a_min
+    a_max = attrs.a_max
+    def _select(*indices):
+        return _tvm.tir.if_then_else(_tvm.tir.any(x[indices] <= a_min,
+                                                  x[indices] >= a_max),
+                                     0, grad(*indices))
+    return [_tvm.te.compute(x.shape, _select)]
+
+_reg.register_injective_schedule("mnm.op.clip_dx")
+_reg.register_pattern("mnm.op.clip_dx", OpPattern.INJECTIVE)

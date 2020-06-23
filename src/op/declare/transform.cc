@@ -248,6 +248,29 @@ void ConcatenateDx(const CallValues &call) {
 
 MNM_OP_DECLARE("mnm.op.concatenate_dx", ConcatenateDx);
 
+MNM_OP_DECLARE("mnm.op.clip", [](const CallValues &call) {
+  const auto* args = call->args.as<ClipArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+});
+
+MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues &call) {
+  const auto* args = call->args.as<ClipDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor *x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm
+

@@ -48,6 +48,8 @@ static const char batch_norm_train_dxwb[] = "mnm.op.batch_norm_train_dxwb";
 static const char broadcast_to[] = "mnm.op.broadcast_to";
 static const char broadcast_to_like[] = "mnm.op.broadcast_to_like";
 static const char ceil[] = "mnm.op.ceil";
+static const char clip[] = "mnm.op.clip";
+static const char clip_dx[] = "mnm.op.clip_dx";
 static const char collapse_sum_like[] = "mnm.op.collapse_sum_like";
 static const char concatenate[] = "mnm.op.concatenate";
 static const char concatenate_dx[] = "mnm.op.concatenate_dx";
@@ -196,6 +198,23 @@ Attrs BroadcastToLike(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::BroadcastToLikeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_TAPE(1, ffi2schema::Tensor, broadcast_type);
+  return Attrs(attrs);
+}
+
+Attrs Clip(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ClipArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Double, a_min);
+  MNM_POD(2, ffi2schema::Double, a_max);
+  return Attrs(attrs);
+}
+
+Attrs ClipDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ClipDxArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_POD(2, ffi2schema::Double, a_min);
+  MNM_POD(3, ffi2schema::Double, a_max);
   return Attrs(attrs);
 }
 
@@ -663,6 +682,27 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.ceil")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(ceil, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.clip")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(clip, 3, ffi2schema::Clip, schema::ClipArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->a_min));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->a_max));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.clip_dx")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(clip_dx, 4, ffi2schema::ClipDx, schema::ClipDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->a_min));
+  MNM_SET_ENV(vpack->x[3], schema2value::Double(schema->a_max));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1353,6 +1393,23 @@ Array<Expr> BroadcastToLike(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Clip(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Double, a_min);
+  MNM_ARG(2, ffi2expr::Double, a_max);
+  MNM_RET();
+}
+
+Array<Expr> ClipDx(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::Double, a_min);
+  MNM_ARG(3, ffi2expr::Double, a_max);
+  MNM_RET();
+}
+
 Array<Expr> CollapseLike(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1641,6 +1698,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to_like")
 .set_body(MNM_SYMBOLIC_API(broadcast_to_like, 2, BroadcastToLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.ceil")
 .set_body(MNM_SYMBOLIC_API(ceil, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.clip")
+.set_body(MNM_SYMBOLIC_API(clip, 3, Clip));
+MNM_REGISTER_GLOBAL("mnm.op.sym.clip_dx")
+.set_body(MNM_SYMBOLIC_API(clip_dx, 4, ClipDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
 .set_body(MNM_SYMBOLIC_API(collapse_sum_like, 2, CollapseLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate")
@@ -1870,6 +1931,25 @@ Attrs BroadcastToLike(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::BroadcastToLikeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Tensor, broadcast_type);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Clip(const Array<Value>& values) {
+  MNM_PRELUDE(3, 3, schema::ClipArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Double, a_min);
+  MNM_REQUIRED(2, value2schema::Double, a_max);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs ClipDx(const Array<Value>& values) {
+  MNM_PRELUDE(4, 4, schema::ClipDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_REQUIRED(2, value2schema::Double, a_min);
+  MNM_REQUIRED(3, value2schema::Double, a_max);
   return Attrs(attrs);
 }
 
@@ -2163,6 +2243,8 @@ MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", names::batch_norm_train_dxwb, va
 MNM_BIND_SCHEMA("mnm.op.broadcast_to", names::broadcast_to, value2schema::BroadcastTo);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to_like", names::broadcast_to_like, value2schema::BroadcastToLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.ceil", names::ceil, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.clip", names::clip, value2schema::Clip);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.clip_dx", names::clip_dx, value2schema::ClipDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", names::collapse_sum_like, value2schema::CollapseLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate", names::concatenate, value2schema::Concatenate);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate_dx", names::concatenate_dx, value2schema::Concatenate);  // NOLINT(whitespace/line_length)
@@ -2243,6 +2325,8 @@ MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(ClipArgs);
+MNM_REGISTER_OBJECT_REFLECT(ClipDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);

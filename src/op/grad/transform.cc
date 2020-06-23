@@ -44,6 +44,18 @@ Array<Expr> ConcatenateGrad(const Expr& orig_call, const Var &y, const Expr& dy)
 
 MNM_OP_GRAD("mnm.op.concatenate", ConcatenateGrad);
 
+Array<Expr> ClipGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.clip_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 3);
+  const Expr& x = call->args[0];
+  const Expr& a_min = call->args[1];
+  const Expr& a_max = call->args[2];
+  return {Call(op_dx, {x, dy, a_min, a_max})};
+}
+
+MNM_OP_GRAD("mnm.op.clip", ClipGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

@@ -11,6 +11,21 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class ClipArgs : public ir::AttrsNode<ClipArgs> {
+ public:
+  value::TensorValue x;
+  double a_min;
+  double a_max;
+  MNM_OP_SCHEMA(ClipArgs, "mnm.args.clip");
+};
+class ClipDxArgs : public ir::AttrsNode<ClipDxArgs> {
+ public:
+  value::TensorValue x;
+  value::TensorValue dy;
+  double a_min;
+  double a_max;
+  MNM_OP_SCHEMA(ClipDxArgs, "mnm.args.clip_dx");
+};
 class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
  public:
   value::TensorValue x;

@@ -259,7 +259,60 @@ HashKey ConcatenateHasher(const std::vector<Type>& param_types,
 MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs,
            ConcatenateNormalizer, ConcatenateTyper, ConcatenateHasher);
 
+Attrs ClipNormalizer(TVMOpEnv* env, const ClipArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<ClipAttrs>();
+  attrs->a_min = args->a_min;
+  attrs->a_max = args->a_max;
+  return Attrs(attrs);
+}
 
+void ClipTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey ClipHasher(const std::vector<Type>& param_types,
+                     const Type &y_type,
+                     const ClipArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->a_min;
+  key << args->a_max;
+  return key;
+}
+
+MNM_TVMJIT(Clip, "mnm.op.clip", ClipArgs,
+           ClipNormalizer, ClipTyper, ClipHasher);
+
+Attrs ClipDxNormalizer(TVMOpEnv* env, const ClipDxArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->dy);
+  auto attrs = make_object<ClipAttrs>();
+  attrs->a_min = args->a_min;
+  attrs->a_max = args->a_max;
+  return Attrs(attrs);
+}
+
+void ClipDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
+}
+
+HashKey ClipDxHasher(const std::vector<Type>& param_types,
+                     const Type &y_type,
+                     const ClipDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->a_min;
+  key << args->a_max;
+  return key;
+}
+
+MNM_TVMJIT(ClipDx, "mnm.op.clip_dx", ClipDxArgs,
+           ClipDxNormalizer, ClipDxTyper, ClipDxHasher);
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

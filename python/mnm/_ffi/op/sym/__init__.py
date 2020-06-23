@@ -16,6 +16,8 @@ from ._internal import batch_norm_train_dxwb
 from ._internal import broadcast_to
 from ._internal import broadcast_to_like
 from ._internal import ceil
+from ._internal import clip
+from ._internal import clip_dx
 from ._internal import collapse_sum_like
 from ._internal import concatenate
 from ._internal import concatenate_dx

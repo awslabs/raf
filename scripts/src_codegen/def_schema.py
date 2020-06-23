@@ -251,6 +251,17 @@ SCHEMAS = {
             cxx_default="{}",
             py_default="None"),
     ],
+    "transform.h::clip": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="a_min", cxx_type="double"),
+        Arg(name="a_max", cxx_type="double"),
+    ],
+    "transform.h::clip_dx": [
+        Arg(name="x", cxx_type="value::TensorValue"),
+        Arg(name="dy", cxx_type="value::TensorValue"),
+        Arg(name="a_min", cxx_type="double"),
+        Arg(name="a_max", cxx_type="double"),
+    ],
     "optimizer.h::sgd": [
         Arg(name="x", cxx_type="value::TensorValue"),
         Arg(name="dx", cxx_type="value::TensorValue"),

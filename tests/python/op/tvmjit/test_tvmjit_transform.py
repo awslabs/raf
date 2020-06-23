@@ -234,6 +234,40 @@ def test_concatenate(params, ctx):
     for m_x, t_x in zip(m_i, t_i):
         check_torch(m_x.grad, t_x.grad)
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [(1, 3), (1, 2), (4, 3, 2, 1),
+                                   (2, 4, 1, 3), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("a_min", [0.1, 0.2, 0.3, 0.4, 0.5])
+@pytest.mark.parametrize("a_max", [0.6, 0.7, 0.8, 0.9, 1.0])
+def test_clip(shape, a_min, a_max, ctx):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    # pylint: disable=no-self-use
+    class Clip(mnm.Model):
+        def build(self, shape):
+            self._shape = shape
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.clip(x, a_min, a_max)
+
+    m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
+    m_dy, n_dy = randn(shape, dtype='float32', ctx=ctx)
+    m_x.requires_grad = True
+    model = Clip(shape=shape)
+    m_y = model(m_x)
+    # check forward
+    n_y = np.clip(n_x, a_min, a_max)
+    check(m_y, n_y)
+    # check backward
+    m_y.backward(m_dy)
+    n_s = np.where(n_x <= a_min, 0, 1)
+    n_grad = n_s * n_dy
+    n_s = np.where(n_x >= a_max, 0, 1)
+    n_grad = n_s * n_grad
+    check(m_x.grad, n_grad)
 
 if __name__ == "__main__":
     pytest.main([__file__])
