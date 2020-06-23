@@ -124,6 +124,8 @@ relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.sym.reshape", None)
 # Defined in ./src/op/regs/regs.cc
+reshape_dx = _APIS.get("mnm.op.sym.reshape_dx", None)
+# Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.sym.sequence_mask", None)
 # Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.sym.sgd", None)

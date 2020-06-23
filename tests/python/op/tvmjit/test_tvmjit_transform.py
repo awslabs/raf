@@ -269,5 +269,38 @@ def test_clip(shape, a_min, a_max, ctx):
     n_grad = n_s * n_grad
     check(m_x.grad, n_grad)
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("params", [
+    {"orig_shape": (8, 8, 8, 8), "to_shape": (2, 2048)},
+    {"orig_shape": (8, 1000), "to_shape": (2, 2, 2, 1000)},
+    {"orig_shape": (3, 3, 3, 3), "to_shape": (81, 1)},
+])
+def test_reshape(params, ctx):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    class Reshape(mnm.Model):
+        def build(self, shape):
+            self._shape = shape
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.reshape(x, shape=self._shape)
+
+    orig_shape, to_shape = params["orig_shape"], params["to_shape"]
+    m_x, n_x = randn(orig_shape, ctx=ctx)
+    m_dy, n_dy = randn(to_shape, ctx=ctx)
+    m_x.requires_grad = True
+    model = Reshape(shape=to_shape)
+    m_y = model(m_x)
+    # check forward
+    n_y = np.reshape(n_x, to_shape)
+    n_dy = np.reshape(n_dy, orig_shape)
+    check(m_y, n_y)
+    # check backward
+    m_y.backward(m_dy)
+    check(m_x.grad, n_dy)
+
 if __name__ == "__main__":
     pytest.main([__file__])

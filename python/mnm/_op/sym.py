@@ -16,10 +16,10 @@ __all__ = [
     "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
     "minimum", "mod", "multiply", "negative", "nll_loss",
     "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "subtract", "sum", "take", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "reshape", "reshape_dx", "sequence_mask", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "split",
+    "sqrt", "sqrt_dx", "subtract", "sum", "take",
+    "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def abs(x):
@@ -347,6 +347,10 @@ def reshape(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.reshape(x, shape))
+def reshape_dx(x, shape):
+    x = sym_utils.to_tensor(x)
+    shape = sym_utils.to_int_tuple(shape)
+    return Symbol.from_expr(ffi.reshape_dx(x, shape))
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
     x = sym_utils.to_tensor(x)
     sequence_length = sym_utils.to_tensor(sequence_length)

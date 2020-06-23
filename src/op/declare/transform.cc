@@ -66,6 +66,21 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   throw;
 });
 
+void ReshapeDx(const CallValues &call) {
+  const auto* args = call->args.as<ReshapeArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  const int ndim = x->ndim;
+  ir::Array<Value> res;
+  for (int i = 0; i < ndim; i++) {
+    res.push_back(ScalarValue::make(x->shape[i]));
+  }
+  call->callee = ir::NullValue<OpValue>();
+  call->out = TupleValue::make(res);
+}
+
+MNM_OP_DECLARE("mnm.op.reshape_dx", ReshapeDx);
+
 MNM_OP_DECLARE("mnm.op.take", [](const CallValues &call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);

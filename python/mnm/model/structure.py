@@ -7,7 +7,6 @@ class Sequential(Model):
         self.num_layers = len(args)
         for idx, layer in enumerate(args):
             setattr(self, "seq_" + str(idx), layer)
-    # pylint: enable=attribute-defined-outside-init
 
     def forward(self, x):
         for idx in range(self.num_layers):

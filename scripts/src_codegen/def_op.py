@@ -60,6 +60,7 @@ OPS = [
     Op(name="nll_loss_dpred", schema_name="loss"),
     Op(name="nll_loss_dtrue", schema_name="loss"),
     Op(name="reshape", schema_name="reshape"),
+    Op(name="reshape_dx", schema_name="reshape"),
     Op(name="transpose", schema_name="transpose"),
     Op(name="transpose_dx", schema_name="transpose_dx"),
     Op(name="collapse_sum_like", schema_name="collapse_like"),

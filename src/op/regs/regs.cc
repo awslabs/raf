@@ -92,6 +92,7 @@ static const char not_equal[] = "mnm.op.not_equal";
 static const char relu[] = "mnm.op.relu";
 static const char relu_dx[] = "mnm.op.relu_dx";
 static const char reshape[] = "mnm.op.reshape";
+static const char reshape_dx[] = "mnm.op.reshape_dx";
 static const char sequence_mask[] = "mnm.op.sequence_mask";
 static const char sgd[] = "mnm.op.sgd";
 static const char shape[] = "mnm.op.shape";
@@ -1136,6 +1137,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reshape")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.reshape_dx")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(reshape_dx, 2, ffi2schema::Reshape, schema::ReshapeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.sequence_mask")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sequence_mask, 4, ffi2schema::SequenceMask, schema::SequenceMaskArgs);  // NOLINT(whitespace/line_length)
@@ -1786,6 +1796,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx")
 .set_body(MNM_SYMBOLIC_API(relu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reshape")
 .set_body(MNM_SYMBOLIC_API(reshape, 2, Reshape));
+MNM_REGISTER_GLOBAL("mnm.op.sym.reshape_dx")
+.set_body(MNM_SYMBOLIC_API(reshape_dx, 2, Reshape));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
 .set_body(MNM_SYMBOLIC_API(sequence_mask, 4, SequenceMask));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd")
@@ -2287,6 +2299,7 @@ MNM_BIND_SCHEMA("mnm.op.not_equal", names::not_equal, value2schema::BinaryUfunc)
 MNM_BIND_SCHEMA("mnm.op.relu", names::relu, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.relu_dx", names::relu_dx, value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reshape", names::reshape, value2schema::Reshape);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.reshape_dx", names::reshape_dx, value2schema::Reshape);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sequence_mask", names::sequence_mask, value2schema::SequenceMask);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sgd", names::sgd, value2schema::Sgd);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.shape", names::shape, value2schema::Unary);  // NOLINT(whitespace/line_length)

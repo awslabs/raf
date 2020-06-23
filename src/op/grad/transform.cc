@@ -56,6 +56,18 @@ Array<Expr> ClipGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
 
 MNM_OP_GRAD("mnm.op.clip", ClipGrad);
 
+Array<Expr> ReshapeGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.reshape");
+  static auto op_shape = Op::Get("mnm.op.reshape_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& x = call->args[0];
+  const Expr& orig_shape = call->args[1];
+  Expr shape = Call(op_shape, {x, orig_shape});
+  return {Call(op_dx, {dy, shape})};
+}
+
+MNM_OP_GRAD("mnm.op.reshape", ReshapeGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm
