@@ -55,9 +55,9 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   call->ctx = x->ctx;
   call->callee = ir::NullValue<OpValue>();
   if (IsCompact(*x)) {
-    int64_t origin = std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
+    int64_t origin = std::accumulate(x->shape, x->shape + x->ndim, 1LL, std::multiplies<int64_t>());
     int64_t reshaped = std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
-    CHECK_EQ(origin, reshaped) << "Number of elements mismatch after reshaping!";
+    CHECK_EQ(origin, reshaped) << "ValueError: Number of elements mismatch after reshaping!";
     call->out = TensorValue::make(Tensor(args->x).CreateView(shape));
     call->out->op_env = args->x->op_env;
     return;
