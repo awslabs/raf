@@ -1,3 +1,5 @@
+import inspect
+import functools
 import sys
 from collections import OrderedDict, namedtuple
 
@@ -8,8 +10,6 @@ from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
 from mnm._ffi.model import RunModel
 from mnm._lib import relay, Array
-
-from .model import Model
 
 _TraceRecord = namedtuple(
     "_TraceRecord",
@@ -29,8 +29,9 @@ def trace_mutate_attr(obj, attr_name, symbol):
 
 
 def trace(pyfunc):
+    @functools.wraps(pyfunc)
     def new_pyfunc(*args, **kwargs):
-        if len(args) == 0 or not isinstance(args[0], Model):
+        if len(args) == 0 or not isinstance(args[0], cacher.Cacher):
             raise ValueError(
                 "Decorator trace should only be applied to a model")
         if _scope_last_name() == "trace":
@@ -40,6 +41,23 @@ def trace(pyfunc):
         return _run_trace_record(record, bound_args.args, bound_args.kwargs)
 
     return new_pyfunc
+
+
+def _get_traced_func(model, traced_func, *args, **kwargs):
+    # TODO(hgt312): varargs and kwargs
+    pyfunc = traced_func.__wrapped__
+    func_name = get_func_name(pyfunc)
+    record = cacher.get_cache(model, "trace@" + func_name, None)
+    if record is not None:
+        return record.func
+    if args or kwargs:
+        args = [model] + args
+    else:
+        sig = inspect.signature(pyfunc)
+        args = [model] + list(sig.parameters.keys())[1:]
+    record = _do_tracing(pyfunc, args, {})
+    cacher.set_cache(model, "trace@" + func_name, record)
+    return record.func
 
 
 # The logic of running a tracing record
@@ -117,9 +135,11 @@ def _symbolize_inputs(pyfunc, args, kwargs):
     # TODO(@junrushao1994): support varargs and kwargs
     bound_args = get_bound_args(pyfunc, args, kwargs)
     named_inputs = OrderedDict()
-    for name, value in list(bound_args.arguments.items())[1:]:
-        if not isinstance(value, ndarray):
-            raise NotImplementedError("Only ndarray is supported for now")
+    for name, value in list(bound_args.arguments.items())[1:]:  # pylint: disable=unused-variable
+        ## comment the check to legalize fake inputs
+        ## the same check is also in `_run_trace_record`
+        # if not isinstance(value, ndarray):
+        #     raise NotImplementedError("Only ndarray is supported for now")
         bound_args.arguments[name] = \
                 named_inputs[name] = \
                 Symbol.make_var(name_hint=name)

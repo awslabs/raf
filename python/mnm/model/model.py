@@ -4,6 +4,8 @@ from mnm._core import cacher
 from mnm._core.core_utils import bfs, get_attr, get_named_attr, set_module
 from mnm._core.ndarray import ndarray
 
+from mnm.model.trace import _get_traced_func
+
 
 @set_module("mnm")
 class Model(cacher.Cacher):
@@ -25,6 +27,10 @@ class Model(cacher.Cacher):
     def infer_mode(self, recursive=True):
         _set_is_train(self, value=False, recursive=recursive)
         cacher.invalidate(self, include_self=False, recursive=True)
+
+    def get_relay_func(self, *args, **kwargs):
+        fwd_func = self.__fwd_train if self.__is_train else self.__fwd_infer
+        return _get_traced_func(self, fwd_func, *args, **kwargs)
 
     def state(self, prefix="", recursive=True):
         return _get_param_dict(self, prefix=prefix, recursive=recursive)
