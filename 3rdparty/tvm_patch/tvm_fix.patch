@@ -1,4 +1,4 @@
-diff --git a/include/tvm/ir/op.h b/3rdparty/tvm/include/tvm/ir/op.h
+diff --git a/3rdparty/tvm/include/tvm/ir/op.h b/3rdparty/tvm/include/tvm/ir/op.h
 index 48cf61d18..17607cb53 100644
 --- a/3rdparty/tvm/include/tvm/ir/op.h
 +++ b/3rdparty/tvm/include/tvm/ir/op.h
