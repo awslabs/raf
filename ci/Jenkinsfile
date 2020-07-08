@@ -1,5 +1,5 @@
-ci_cpu = "hgt312/mnm:ci_cpu-v0.05"
-ci_gpu = "hgt312/mnm:ci_gpu-v0.05"
+ci_cpu = "benjaminchen2016/mnm:ci_cpu-v0.06"
+ci_gpu = "benjaminchen2016/mnm:ci_gpu-v0.06"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
@@ -29,15 +29,9 @@ def init_git_win() {
 
 def make(docker_type, path) {
   timeout(time: max_time, unit: 'MINUTES') {
-    try {
-      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} -j\$(nproc)"
-      sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
-    } catch (exc) {
-      echo 'Incremental compilation failed. Fall back to build from scratch'
-      sh "${docker_run} ${docker_type} ./ci/task_clean.sh ${path}"
-      sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} -j\$(nproc)"
-      sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
-    }
+    sh "${docker_run} ${docker_type} ./ci/task_clean.sh ${path}"
+    sh "${docker_run} ${docker_type} ./ci/task_build.sh ${path} -j\$(nproc)"
+    sh "${docker_run} ${docker_type} ./ci/task_cpp_unittest.sh"
   }
 }
 
