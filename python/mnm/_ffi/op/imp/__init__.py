@@ -49,6 +49,8 @@ from ._internal import matmul_tt
 from ._internal import max_pool2d
 from ._internal import max_pool2d_dx
 from ._internal import maximum
+from ._internal import mean
+from ._internal import mean_dx
 from ._internal import minimum
 from ._internal import mod
 from ._internal import multiply

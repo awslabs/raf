@@ -81,6 +81,8 @@ static const char matmul_tt[] = "mnm.op.matmul_tt";
 static const char max_pool2d[] = "mnm.op.max_pool2d";
 static const char max_pool2d_dx[] = "mnm.op.max_pool2d_dx";
 static const char maximum[] = "mnm.op.maximum";
+static const char mean[] = "mnm.op.mean";
+static const char mean_dx[] = "mnm.op.mean_dx";
 static const char minimum[] = "mnm.op.minimum";
 static const char mod[] = "mnm.op.mod";
 static const char multiply[] = "mnm.op.multiply";
@@ -313,6 +315,16 @@ Attrs Reduce(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
   MNM_POD(2, ffi2schema::Bool, keepdims);
+  return Attrs(attrs);
+}
+
+Attrs ReduceDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ReduceDxArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, y);
+  MNM_TAPE(2, ffi2schema::Tensor, dy);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, axis);
+  MNM_POD(4, ffi2schema::Bool, keepdims);
   return Attrs(attrs);
 }
 
@@ -1029,6 +1041,28 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.maximum")
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.mean")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(mean, 3, ffi2schema::Reduce, schema::ReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.mean_dx")
+.set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(mean_dx, 5, ffi2schema::ReduceDx, schema::ReduceDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.minimum")
 .set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(minimum, 4, ffi2schema::BinaryUfunc, schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -1517,6 +1551,16 @@ Array<Expr> Reduce(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> ReduceDx(const TVMArgs& values) {
+  MNM_PRELUDE(5);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, y);
+  MNM_ARG(2, ffi2expr::Tensor, dy);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, axis);
+  MNM_ARG(4, ffi2expr::Bool, keepdims);
+  MNM_RET();
+}
+
 Array<Expr> Reshape(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1774,6 +1818,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
 .set_body(MNM_SYMBOLIC_API(max_pool2d_dx, 9, PoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.maximum")
 .set_body(MNM_SYMBOLIC_API(maximum, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.mean")
+.set_body(MNM_SYMBOLIC_API(mean, 3, Reduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym.mean_dx")
+.set_body(MNM_SYMBOLIC_API(mean_dx, 5, ReduceDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.minimum")
 .set_body(MNM_SYMBOLIC_API(minimum, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mod")
@@ -2073,6 +2121,17 @@ Attrs Reduce(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs ReduceDx(const Array<Value>& values) {
+  MNM_PRELUDE(3, 5, schema::ReduceDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, y);
+  MNM_REQUIRED(2, value2schema::Tensor, dy);
+  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, axis);
+  MNM_OPTIONAL(4, value2schema::Bool, keepdims);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Reshape(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::ReshapeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
@@ -2288,6 +2347,8 @@ MNM_BIND_SCHEMA("mnm.op.matmul_tt", names::matmul_tt, value2schema::Binary);  //
 MNM_BIND_SCHEMA("mnm.op.max_pool2d", names::max_pool2d, value2schema::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d_dx", names::max_pool2d_dx, value2schema::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.maximum", names::maximum, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.mean", names::mean, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.mean_dx", names::mean_dx, value2schema::ReduceDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.minimum", names::minimum, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mod", names::mod, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.multiply", names::multiply, value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
@@ -2350,6 +2411,7 @@ MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceArgs);
+MNM_REGISTER_OBJECT_REFLECT(ReduceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
 MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);

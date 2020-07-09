@@ -102,6 +102,10 @@ max_pool2d_dx = _APIS.get("mnm.op.imp.max_pool2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
 maximum = _APIS.get("mnm.op.imp.maximum", None)
 # Defined in ./src/op/regs/regs.cc
+mean = _APIS.get("mnm.op.imp.mean", None)
+# Defined in ./src/op/regs/regs.cc
+mean_dx = _APIS.get("mnm.op.imp.mean_dx", None)
+# Defined in ./src/op/regs/regs.cc
 minimum = _APIS.get("mnm.op.imp.minimum", None)
 # Defined in ./src/op/regs/regs.cc
 mod = _APIS.get("mnm.op.imp.mod", None)

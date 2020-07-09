@@ -47,3 +47,46 @@ _reg.register_reduce_schedule("mnm.op.argmax")
 _reg.register_reduce_schedule("mnm.op.argmin")
 _reg.register_reduce_schedule("mnm.op.all")
 _reg.register_reduce_schedule("mnm.op.any")
+_reg.register_reduce_schedule("mnm.op.mean")
+
+def axis_reverse(input_axis):
+    # get the reverse axis to change axis back
+    # e.g.: input_axis = [1, 2, 0, 3]
+    #       the reverse_axis = [2, 0, 1, 3]
+    reverse_axis = input_axis.copy()
+    for i, axis in enumerate(input_axis):
+        reverse_axis[axis] = i
+    return reverse_axis
+
+def mul_shapes(shape_list, axis_list):
+    # get the product of shapes in given axis
+    out = 1
+    for axis in axis_list:
+        out *= shape_list[axis]
+    return out
+
+@register_compute("mnm.op.mean_dx")
+def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
+    x = inputs[0]
+    dy = inputs[2]
+    axis = list(_topi.util.get_const_tuple(attrs.axis))
+    keepdims = attrs.keepdims
+    shape_mul = mul_shapes(x.shape, axis)
+    def _elem_div(*indices):
+        return dy[indices] / shape_mul
+    out = _tvm.te.compute(dy.shape, _elem_div)
+    # if keepdims = True, repeat the elements in those reduced axis
+    if keepdims:
+        for repeat_axis in axis:
+            out = _topi.repeat(out, int(x.shape[repeat_axis]), repeat_axis)
+    # if keepdims = False, using broadcast_to to expand the dimension
+    else:
+        left_axis = list(set(range(len(x.shape))) - set(axis))
+        expand_axis = axis + left_axis
+        reverse_axis = axis_reverse(expand_axis)
+        out = _topi.broadcast_to(out, _topi.transpose(x, axes=expand_axis).shape)
+        out = _topi.transpose(out, axes=reverse_axis)
+    return [out]
+
+_reg.register_injective_schedule("mnm.op.mean_dx")
+_reg.register_pattern("mnm.op.mean_dx", OpPattern.COMM_REDUCE)

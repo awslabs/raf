@@ -14,12 +14,13 @@ __all__ = [
     "greater", "greater_equal", "less", "less_equal", "log",
     "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
     "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "reshape_dx", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "subtract", "sum", "take",
-    "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "mean", "mean_dx", "minimum", "mod", "multiply",
+    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
+    "relu", "relu_dx", "reshape", "reshape_dx", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
+    "sum", "take", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 def abs(x):
@@ -294,6 +295,18 @@ def maximum(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.maximum(x1, x2, out, where))
+def mean(x, axis=(), keepdims=False):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int_tuple(axis)
+    keepdims = sym_utils.to_bool(keepdims)
+    return Symbol.from_expr(ffi.mean(x, axis, keepdims))
+def mean_dx(x, y, dy, axis=(), keepdims=False):
+    x = sym_utils.to_tensor(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    axis = sym_utils.to_int_tuple(axis)
+    keepdims = sym_utils.to_bool(keepdims)
+    return Symbol.from_expr(ffi.mean_dx(x, y, dy, axis, keepdims))
 def minimum(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)

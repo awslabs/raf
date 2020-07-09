@@ -63,10 +63,24 @@ void ReduceOutSame(const CallValues &call) {
   call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
 }
 
+void ReduceDxOutSame(const CallValues &call) {
+  // the shape of the output of reduce_dx op is same as input x
+  const auto* args = call->args.as<ReduceDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->ctx = x->ctx;
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
 MNM_OP_DECLARE("mnm.op.argmax", ReduceOutInt);
 MNM_OP_DECLARE("mnm.op.argmin", ReduceOutInt);
 MNM_OP_DECLARE("mnm.op.all", ReduceOutSame);
 MNM_OP_DECLARE("mnm.op.any", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.mean", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.mean_dx", ReduceDxOutSame);
 
 }  // namespace declare
 }  // namespace op

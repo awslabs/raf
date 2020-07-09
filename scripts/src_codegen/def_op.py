@@ -67,6 +67,8 @@ OPS = [
     Op(name="sum", schema_name="sum"),
     Op(name="argmax", schema_name="reduce"),
     Op(name="argmin", schema_name="reduce"),
+    Op(name="mean", schema_name="reduce"),
+    Op(name="mean_dx", schema_name="reduce_dx"),
     Op(name="get_reduce_axis", schema_name="binary"),
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),

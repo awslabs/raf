@@ -18,6 +18,15 @@ class ReduceArgs : public ir::AttrsNode<ReduceArgs> {
   bool keepdims{false};
   MNM_OP_SCHEMA(ReduceArgs, "mnm.args.reduce");
 };
+class ReduceDxArgs : public ir::AttrsNode<ReduceDxArgs> {
+ public:
+  value::TensorValue x;
+  value::TensorValue y;
+  value::TensorValue dy;
+  std::vector<int64_t> axis{};
+  bool keepdims{false};
+  MNM_OP_SCHEMA(ReduceDxArgs, "mnm.args.reduce_dx");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

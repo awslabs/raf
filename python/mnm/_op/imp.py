@@ -15,12 +15,13 @@ __all__ = [
     "greater", "greater_equal", "less", "less_equal", "log",
     "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
     "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "reshape_dx", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "subtract", "sum", "take",
-    "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "mean", "mean_dx", "minimum", "mod", "multiply",
+    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
+    "relu", "relu_dx", "reshape", "reshape_dx", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
+    "sum", "take", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -345,6 +346,20 @@ def maximum(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.maximum(x1, x2, out, where))
+@set_module("mnm")
+def mean(x, axis=(), keepdims=False):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int_tuple(axis)
+    keepdims = imp_utils.to_bool(keepdims)
+    return imp_utils.ret(ffi.mean(x, axis, keepdims))
+@set_module("mnm")
+def mean_dx(x, y, dy, axis=(), keepdims=False):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    axis = imp_utils.to_int_tuple(axis)
+    keepdims = imp_utils.to_bool(keepdims)
+    return imp_utils.ret(ffi.mean_dx(x, y, dy, axis, keepdims))
 @set_module("mnm")
 def minimum(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
