@@ -25,9 +25,10 @@ using namespace mnm::value;
 using namespace mnm::op;
 using binding::BindingEntry;
 using binding::BindNDArray;
+using binding::DeTuple;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
-using binding::DeTuple;
+using common::shape_utils::BytesCompactTensor;
 using memory_pool::Memory;
 using requests::Requests;
 using stream_pool::Stream;
@@ -206,8 +207,10 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     if (!call->callee.defined()) {
       return call->out;
     }
+    auto out_buf = AllocOutputBuffer(call->out);
     std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
     if (op_env != nullptr) {
+      op_env->SetOutputBuffer(std::move(out_buf));
       InvokePrimitiveOpEnv(std::move(op_env), call);
     } else {
       LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << call->ctx.c_str();
@@ -219,9 +222,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   void InvokePrimitiveOpEnv(std::unique_ptr<OpEnv> op_env, const CallValues& call) {
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
-      for (int i = 0, n = req->memory.size(); i < n; ++i) {
-        RequestMemory(req.get(), i);
-      }
       for (int i = 0, n = req->workspace.size(); i < n; ++i) {
         RequestWorkspace(req.get(), i);
       }
@@ -269,14 +269,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   void OnDestruct(const op::OpEnv* op_env) override {
   }
 
-  void RequestMemory(Requests* req, int index) override {
-    Requests::MemoryRequest& entry = req->memory[index];
-    CHECK(entry.memory == nullptr);
-    std::shared_ptr<Memory> memory = Memory::Alloc(entry.ctx, entry.nbytes);
-    *entry.dest = memory->data;
-    entry.memory = memory;
-  }
-
   void RequestWorkspace(Requests* req, int index) override {
     Requests::WorkspaceRequest& entry = req->workspace[index];
     CHECK(entry.memory == nullptr);
@@ -290,6 +282,30 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     std::shared_ptr<Stream> stream = Stream::Get(entry.ctx, entry.tag_idx, entry.stream_idx);
     *entry.dest = stream->data();
     entry.stream = stream;
+  }
+
+ private:
+  std::vector<std::shared_ptr<Memory>> AllocOutputBuffer(Value& out) {
+    std::vector<DLTensor*> out_tensors;
+    if (out->IsInstance<TensorValueObj>()) {
+      DLTensor* t = out;
+      out_tensors.emplace_back(t);
+    } else if (const auto* tv = out.as<TupleValueObj>()) {
+      for (const auto& v : tv->fields) {
+        DLTensor* t = v;
+        out_tensors.emplace_back(t);
+      }
+    } else {
+      LOG(FATAL) << "InternalError: Interpreter does not deal with " << out->GetTypeKey();
+      throw;
+    }
+    std::vector<std::shared_ptr<Memory>> out_buf;
+    for (auto* dlt : out_tensors) {
+      std::shared_ptr<Memory> memory = Memory::Alloc(dlt->ctx, BytesCompactTensor(*dlt));
+      dlt->data = memory->data;
+      out_buf.push_back(memory);
+    }
+    return out_buf;
   }
 };
 

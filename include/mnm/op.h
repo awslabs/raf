@@ -6,12 +6,14 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 #include "./base.h"
 #include "./ir.h"
 #include "./registry.h"
 #include "./value.h"
+#include "./memory_pool.h"
 
 namespace mnm {
 namespace executor {
@@ -52,7 +54,6 @@ class OpEnv {
   virtual ~OpEnv();
   virtual void Execute(const CallValues& call) = 0;
 
-  void RequestMemory(void** dest, const Context& ctx, int64_t nbytes);
   void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
   void RequestStream(void** dest, const Context& ctx, int tag_idx);
   void RequestDistributed(void** dest) {
@@ -62,6 +63,12 @@ class OpEnv {
 
   void BindExecutor(executor::Executor* executor);
   std::shared_ptr<requests::Requests> GetRequests() const;
+  void SetOutputBuffer(std::vector<std::shared_ptr<memory_pool::Memory>> out_buf);
+
+ private:
+  // Keep reference to output buffer so that the memory is released when OpEnv is destructed.
+  // TODO(wuwei,haichen): we should move this part to a better place
+  std::vector<std::shared_ptr<memory_pool::Memory>> out_buf_;
 };
 
 class OpDispatch {

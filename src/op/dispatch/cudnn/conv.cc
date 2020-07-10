@@ -72,9 +72,6 @@ class ConvCUDNN : public mnm::op::OpEnv {
 
     ir::TensorType y_tt = SquashTensorShape(y, {});
     y_desc = NormalizeTensorType(y_tt);
-    int64_t out_size = BytesCompactTensor(*y);
-
-    RequestMemory(&y->data, y->ctx, out_size);
 
     HashKey hasher;
     hasher << x_tt  << w_tt << y_tt << args->padding << args->stride << args->dilation;

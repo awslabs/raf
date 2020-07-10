@@ -126,8 +126,6 @@ def CUDNNOutput(Base):
 
         def normalize(self, status):
             res = Base.normalize(self, status)
-            res += [f'auto bytes_of_{self.tensor} = BytesCompactTensor(*{self.tensor});']
-            res += [f'RequestMemory(&{self.tensor}->data, cv->ctx, bytes_of_{self.tensor});']
             return res
 
     return Output
@@ -413,9 +411,7 @@ def dispatch_batchnorm_dxwb(op):
       'dBnBiasResult': 'tv->fields[2].operator DLTensor*()->data',
     }
 
-    db = AssignStatement('', '', 'RequestMemory(&tv->fields[2].operator DLTensor*()->data, cv->ctx, bytes_of_out1)', False)
-
-    return CUDNNDispatch(op, 'BatchNormalizationBackward', 'batch_norm_train_dxwb', [x, dy, dx, dw, db], args, ['DLTensor *'] * 3)
+    return CUDNNDispatch(op, 'BatchNormalizationBackward', 'batch_norm_train_dxwb', [x, dy, dx, dw], args, ['DLTensor *'] * 3)
 
 def dispatch_batchnorm(op, api):
     x = CUDNNTensor('xDesc', 'x', 'args->x', [0, 1, 2, 3, '<last>'])

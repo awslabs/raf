@@ -100,8 +100,6 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     std::vector<int> kernel = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->kernel));
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
     std::vector<int> padding = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->padding));
@@ -162,8 +160,6 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     std::vector<int> kernel = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->kernel));
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
     std::vector<int> padding = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->padding));
@@ -224,8 +220,6 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {0, 1, 2, 3, out->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     auto bnScaleBiasMeanVarDesc_tt = SquashTensorShape(w, {0, 0, 1, w->ndim});
     bnScaleBiasMeanVarDesc = NormalizeTensorType(bnScaleBiasMeanVarDesc_tt);
   }
@@ -276,8 +270,6 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out0, {0, 1, 2, 3, out0->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out0 = BytesCompactTensor(*out0);
-    RequestMemory(&out0->data, cv->ctx, bytes_of_out0);
     auto bnScaleBiasMeanVarDesc_tt = SquashTensorShape(w, {0, 0, 1, w->ndim});
     bnScaleBiasMeanVarDesc = NormalizeTensorType(bnScaleBiasMeanVarDesc_tt);
   }
@@ -335,13 +327,8 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out0, {0, 1, 2, 3, out0->ndim});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out0 = BytesCompactTensor(*out0);
-    RequestMemory(&out0->data, cv->ctx, bytes_of_out0);
     auto dBnScaleBiasDesc_tt = SquashTensorShape(out1, {0, 0, 1, out1->ndim});
     dBnScaleBiasDesc = NormalizeTensorType(dBnScaleBiasDesc_tt);
-    auto bytes_of_out1 = BytesCompactTensor(*out1);
-    RequestMemory(&out1->data, cv->ctx, bytes_of_out1);
-    RequestMemory(&tv->fields[2].operator DLTensor*()->data, cv->ctx, bytes_of_out1);
   }
 
  public:
@@ -401,8 +388,6 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     wDesc = NormalizeFilter(w);
     auto yDesc_tt = SquashTensorShape(out, {});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
     std::vector<int> padding = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->padding));
     std::vector<int> dilation = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->dilation));
@@ -471,8 +456,6 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     auto dwDesc_tt = SquashTensorShape(out, {});
     (void)dwDesc_tt;
     dwDesc = NormalizeFilter(out);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     auto dyDesc_tt = SquashTensorShape(dy, {});
     dyDesc = NormalizeTensorType(dyDesc_tt);
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
@@ -540,8 +523,6 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     (void)dy;
     auto dxDesc_tt = SquashTensorShape(out, {});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     auto wDesc_tt = SquashTensorShape(x_or_w, {});
     (void)wDesc_tt;
     wDesc = NormalizeFilter(x_or_w);
@@ -609,8 +590,6 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {0, axis, axis + 1, out->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
@@ -664,8 +643,6 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {0, axis, axis + 1, out->ndim});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
@@ -715,8 +692,6 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     std::vector<int> kernel = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->kernel));
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
     std::vector<int> padding = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->padding));
@@ -774,8 +749,6 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     std::vector<int> kernel = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->kernel));
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
     std::vector<int> padding = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->padding));
@@ -830,8 +803,6 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {0, out->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_RELU,
                                             CUDNN_PROPAGATE_NAN, 0.0));
@@ -885,8 +856,6 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {0, out->ndim});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_RELU,
                                             CUDNN_PROPAGATE_NAN, 0.0));
@@ -937,8 +906,6 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {0, out->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_SIGMOID,
                                             CUDNN_PROPAGATE_NAN, 0.0));
@@ -992,8 +959,6 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {0, out->ndim});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_SIGMOID,
                                             CUDNN_PROPAGATE_NAN, 0.0));
@@ -1045,8 +1010,6 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {0, axis, axis + 1, out->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
@@ -1100,8 +1063,6 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {0, axis, axis + 1, out->ndim});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
@@ -1151,8 +1112,6 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     xDesc = NormalizeTensorType(xDesc_tt);
     auto yDesc_tt = SquashTensorShape(out, {0, out->ndim});
     yDesc = NormalizeTensorType(yDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_TANH,
                                             CUDNN_PROPAGATE_NAN, 0.0));
@@ -1206,8 +1165,6 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     dyDesc = NormalizeTensorType(dyDesc_tt);
     auto dxDesc_tt = SquashTensorShape(out, {0, out->ndim});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto bytes_of_out = BytesCompactTensor(*out);
-    RequestMemory(&out->data, cv->ctx, bytes_of_out);
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_TANH,
                                             CUDNN_PROPAGATE_NAN, 0.0));

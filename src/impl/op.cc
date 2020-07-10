@@ -95,14 +95,6 @@ OpEnv::~OpEnv() {
   }
 }
 
-void OpEnv::RequestMemory(void** dest, const Context& ctx, int64_t nbytes) {
-  int index = impl->memory.size();
-  impl->memory.push_back({dest, ctx, nbytes, nullptr});
-  if (impl->executor != nullptr) {
-    impl->executor->RequestMemory(impl.get(), index);
-  }
-}
-
 void OpEnv::RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes) {
   int index = impl->workspace.size();
   impl->workspace.push_back({dest, ctx, nbytes, nullptr});
@@ -127,6 +119,10 @@ void OpEnv::BindExecutor(Executor* executor) {
 
 std::shared_ptr<Requests> OpEnv::GetRequests() const {
   return this->impl;
+}
+
+void OpEnv::SetOutputBuffer(std::vector<std::shared_ptr<memory_pool::Memory>> out_buf) {
+  out_buf_ = std::move(out_buf);
 }
 
 void RunDeclare(const CallValues& call) {

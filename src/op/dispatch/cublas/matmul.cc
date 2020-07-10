@@ -64,8 +64,6 @@ class MatmulImpl : public mnm::op::OpEnv {
   explicit MatmulImpl(const CallValues &cv) {
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
-    DLTensor* out = cv->out;
-    RequestMemory(&out->data, cv->ctx, common::shape_utils::BytesCompactTensor(*out));
   }
   void Execute(const CallValues &cv) override {
     auto args = cv->args.as<op::schema::BinaryArgs>();

@@ -107,9 +107,6 @@ PackedFunc CompileOp(const Op& op,                          //
 }
 
 void TVMOpEnv::Setup() {
-  for (auto& dlt : outputs) {
-    RequestMemory(&dlt.data, dlt.ctx, BytesCompactTensor(dlt));
-  }
   SetArgs(&inputs, &outputs, &values, &codes);
 }
 
