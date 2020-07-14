@@ -12,6 +12,7 @@
 #include "mnm/tensor.h"
 #include "mnm/value.h"
 #include "mnm/binding.h"
+#include "mnm/profiler.h"
 #include "dmlc/thread_local.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
@@ -220,25 +221,49 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   void InvokePrimitiveOpEnv(std::unique_ptr<OpEnv> op_env, const CallValues& call) {
+    const Op& op = Downcast<OpValue>(call->callee)->op;
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
-      for (int i = 0, n = req->workspace.size(); i < n; ++i) {
-        RequestWorkspace(req.get(), i);
-      }
-      for (int i = 0, n = req->stream.size(); i < n; ++i) {
-        RequestStream(req.get(), i);
-      }
+      // note: Request workspace, workspace is kind of special memory which will be freed once this
+      // op is done.
+      WITH_BASE_PROFILER(call->ctx, op->name, "WorkspaceRequest",
+                    {"Count: " + std::to_string(req->workspace.size())}, {
+                      for (int i = 0, n = req->workspace.size(); i < n; ++i) {
+                        RequestWorkspace(req.get(), i);
+                      }
+                    });
+
+      // note: Request stream, every op will run on a given stream. For op that executed on cuda,
+      // the default one is cuda DefautlStream. Currently, all ops are running on default stream.
+      WITH_BASE_PROFILER(call->ctx, op->name, "StreamRequest",
+                    {"Count: " + std::to_string(req->stream.size())}, {
+                      for (int i = 0, n = req->stream.size(); i < n; ++i) {
+                        RequestStream(req.get(), i);
+                      }
+                    });
     }
-    op_env->Execute(call);
+
+    // note: Execute the Operator.
+    WITH_BASE_PROFILER(call->ctx, op->name, "CUDA_CALL", {}, { op_env->Execute(call); });
+
     {
+      // note: Force op to run synchronously.
       for (int i = 0, n = req->stream.size(); i < n; ++i) {
         req->stream[i].stream->Wait();
       }
-      req->workspace.clear();
-      req->workspace.shrink_to_fit();
+
+      // note: Free the workspace of this op.
+      WITH_BASE_PROFILER(call->ctx, op->name, "WorkspaceClear", {}, {
+        req->workspace.clear();
+        req->workspace.shrink_to_fit();
+      });
+
       req->stream.clear();
       req->stream.shrink_to_fit();
     }
+
+    // note: The next op holds a reference to this op. It will make sure that the memories requested
+    // by this op will not be freed after the return of this op.
     call->out->op_env = std::move(op_env);
   }
 
@@ -329,7 +354,7 @@ Value Interpret(Expr expr, Module mod) {
   return ret;
 }
 
-Value InvokePrimitive(const CallValues &call) {
+Value InvokePrimitive(const CallValues& call) {
   Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
   auto ret = intrp->InvokePrimitive(call);
   intrp->mod = {};
@@ -337,7 +362,7 @@ Value InvokePrimitive(const CallValues &call) {
   return ret;
 }
 
-Value InvokeClosure(const CallValues &call) {
+Value InvokeClosure(const CallValues& call) {
   Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
   auto ret = intrp->InvokeClosure(call);
   intrp->mod = {};

@@ -10,6 +10,7 @@
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 #include "./cublas_utils.h"
+#include "../../../profiler/cuda/cuda_profiler.h"
 
 namespace mnm {
 namespace op {
@@ -18,7 +19,7 @@ namespace manual {
 
 using value::Value;
 
-void GemmImpl(DLTensor *a, bool transpose_a, DLTensor *b, bool transpose_b, DLTensor *c) {
+void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTensor* c) {
   auto handle = CUBlasThreadEntry::ThreadLocal()->handle;
 
   cublasOperation_t transa = transpose_a ? CUBLAS_OP_T : CUBLAS_OP_N;
@@ -58,16 +59,18 @@ void GemmImpl(DLTensor *a, bool transpose_a, DLTensor *b, bool transpose_b, DLTe
       cudaDataType_t(DType(c->dtype)), m, cudaDataType_t(DType(c->dtype)), CUBLAS_GEMM_DEFAULT));
 }
 
-template<bool transpose_a, bool transpose_b>
+template <bool transpose_a, bool transpose_b>
 class MatmulImpl : public mnm::op::OpEnv {
  public:
-  explicit MatmulImpl(const CallValues &cv) {
+  explicit MatmulImpl(const CallValues& cv) {
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
   }
-  void Execute(const CallValues &cv) override {
+  void Execute(const CallValues& cv) override {
     auto args = cv->args.as<op::schema::BinaryArgs>();
-    GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out);
+    std::string op_name = tvm::runtime::Downcast<value::OpValue>(cv->callee)->op->name;
+    WITH_CUDA_PROFILER(cv->ctx, op_name, "ComputationOperator", {},
+                  { GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out); })
   }
   static OpEnv* make(const CallValues& cv) {
     return new MatmulImpl<transpose_a, transpose_b>(cv);

@@ -9,5 +9,6 @@ from . import memory_pool
 from . import model
 from . import op
 from . import pass_
+from . import profiler
 from . import tensor
 from . import value

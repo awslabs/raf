@@ -71,6 +71,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/tvmjit/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/profiler/base/*.cc
 )
 
 if (${MNM_USE_CUDA} STREQUAL "OFF")
@@ -79,6 +80,7 @@ else ()
   file(GLOB_RECURSE MNM_CUDA_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cu
+    ${CMAKE_CURRENT_LIST_DIR}/src/profiler/cuda/*.cc
   )
 endif()
 

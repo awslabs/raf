@@ -49,6 +49,8 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+profile_cuda.json
+profile_no_cuda.json
 
 # Translations
 *.mo
