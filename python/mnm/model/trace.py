@@ -51,7 +51,7 @@ def _get_traced_func(model, traced_func, *args, **kwargs):
     if record is not None:
         return record.func
     if args or kwargs:
-        args = [model] + args
+        args = [model] + list(args)
     else:
         sig = inspect.signature(pyfunc)
         args = [model] + list(sig.parameters.keys())[1:]

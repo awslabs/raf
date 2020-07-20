@@ -4,6 +4,7 @@
  * \brief Extension of TVM/Relay IR
  */
 #pragma once
+#include <tvm/node/structural_hash.h>
 #include "./ir.h"
 
 /****** mnm::ir::Module ******/
@@ -45,6 +46,14 @@ using Constant = tvm::relay::Constant;
 class ConstantNode : public RelayConstantNode {
  public:
   ObjectRef value{nullptr};
+
+  bool SEqualReduce(const ConstantNode* other, tvm::SEqualReducer equal) const {
+    return equal(value, other->value);
+  }
+
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    hash_reduce(value);
+  }
 };
 
 RelayConstant MakeConstant(ObjectRef node_ref);

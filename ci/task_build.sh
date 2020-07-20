@@ -14,7 +14,7 @@ pip3 install pycparser
 # check src_gen
 git checkout --recurse-submodules .
 ./scripts/src_codegen/run_all.sh
-if [[ ! -z `git status --porcelain` ]]; then
+if [[ ! -z `git status --porcelain --ignore-submodules *.cc *.py *.h` ]]; then
    echo "src gen created git diff, please update the source gen file"
    git status --porcelain
    exit 1

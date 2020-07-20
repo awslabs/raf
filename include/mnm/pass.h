@@ -13,5 +13,7 @@ namespace pass {
 using tvm::relay::FreeVars;
 using tvm::AsText;
 ir::Function AutoDiff(ir::Function func);
+ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
+ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
 }  // namespace pass
 }  // namespace mnm

@@ -51,7 +51,7 @@ Below we introduce an environment variable that indicates where MNM is.
 
 ```bash
 # Create the build directory
-git clone https://github.com/meta-project/meta --recursive && cd mnm
+git clone https://github.com/meta-project/meta --recursive && cd meta
 export MNM_HOME=$(pwd)
 mkdir $MNM_HOME/build && cd $MNM_HOME/build
 # Configuration file for CMake

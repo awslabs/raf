@@ -20,8 +20,9 @@ using binding::DeTuple;
 using binding::GradTape;
 using binding::NDArrayBindingObj;
 using executor::interpreter::Interpret;
-using executor::interpreter::Interpret;
 using pass::AutoDiff;
+using pass::FoldConstant;
+using pass::BindParam;
 
 ObjectRef RunModel(Function func, Array<Expr> args) {
   std::vector<GradTape> grads;
@@ -37,10 +38,19 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
       }
     }
   }
+
+  auto mod = Module::Global();
+  func = Downcast<Function>(BindParam(func, args));
   if (!requires_grad) {
-    return DeTuple(Interpret(Call(func, args)));
+    // TODO(haibin): add simplify inference pass - simplify the compute of
+    // BN, LN, Dropout, GN, etc.
+    func = Downcast<Function>(FoldConstant(func, mod));
+    auto call_node = Call(func, args);
+    return DeTuple(Interpret(call_node));
   }
   func = AutoDiff(func);
+  // run const folding pass
+  func = Downcast<Function>(FoldConstant(func, mod));
   TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args)));
   CHECK_EQ(result->fields.size(), 2U);
   return DeStruct(/*value=*/result->fields[0],
