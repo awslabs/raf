@@ -15,7 +15,7 @@ using namespace mnm::ir;
 
 struct RenameVarsMutator : public ExprMutator {
  public:
-  explicit RenameVarsMutator(const Map<std::string, Var>& named_vars) {
+  explicit RenameVarsMutator(const Map<String, Var>& named_vars) {
     for (const auto& iter : named_vars) {
       var_map.Set(iter.second, mnm::ir::Var(iter.first, {}));
     }
@@ -37,7 +37,7 @@ struct RenameVarsMutator : public ExprMutator {
   Map<Var, Expr> var_map;
 };
 
-Expr RenameVars(Expr expr, Map<std::string, Var> named_vars) {
+Expr RenameVars(Expr expr, Map<String, Var> named_vars) {
   return RenameVarsMutator(named_vars).Mutate(expr);
 }
 

@@ -154,7 +154,7 @@ def collect_op():
         op_name = op_name.value
         if is_black_listed(op_name):
             continue
-        op: relay.Op = get_op(op_name)
+        op: relay.Op = get_op(op_name) # pylint: disable=no-member
         assert op.name == op_name
         attrs = op.attrs_type_key
         fcompute = op.get_attr("FTVMCompute")

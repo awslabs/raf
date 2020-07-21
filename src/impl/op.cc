@@ -126,7 +126,7 @@ void OpEnv::SetOutputBuffer(std::vector<std::shared_ptr<memory_pool::Memory>> ou
 }
 
 void RunDeclare(const CallValues& call) {
-  static const auto f_op_make_output = Op::GetAttr<FMNMDeclare>("FMNMDeclare");
+  static const auto f_op_make_output = Op::GetAttrMap<FMNMDeclare>("FMNMDeclare");
   const Op& op = Downcast<OpValue>(call->callee)->op;
   const auto& f = f_op_make_output[op];
   f(call);

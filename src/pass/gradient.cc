@@ -169,8 +169,8 @@ struct Gradient : public ExprVisitor {
                                const Array<Expr>& igrads) {
     // given: igrads
     // returns: new_igrads = igrads + grad-of-call-op<ograd>
-    static const auto fpg = Op::GetAttr<FPrimalGradient>("FPrimalGradient");
-    static const auto ffpg = Op::GetAttr<FFusedPrimalGradient>("FFusedPrimalGradient");
+    static const auto fpg = Op::GetAttrMap<FPrimalGradient>("FPrimalGradient");
+    static const auto ffpg = Op::GetAttrMap<FFusedPrimalGradient>("FFusedPrimalGradient");
     const VarNode* var = let_var.operator->();
     const Expr& _ograds = tuple_length.count(var) ? Tuple(ograds) : ograds[0];
     if (ffpg.count(op)) {

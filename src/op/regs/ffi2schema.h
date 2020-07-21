@@ -102,8 +102,8 @@ inline std::vector<int64_t> TupleInt(const registry::TVMArgValue& a) {
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     std::vector<int64_t> ret;
-    ret.reserve(n->data.size());
-    for (const ObjectRef& i : n->data) {
+    ret.reserve(n->size());
+    for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
         ret.push_back(e->value);
         continue;
@@ -119,6 +119,7 @@ inline std::vector<int64_t> TupleInt(const registry::TVMArgValue& a) {
              << "\" is not tuple of integers";
   throw;
 }
+
 inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
@@ -128,8 +129,8 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     std::vector<int64_t> ret;
-    ret.reserve(n->data.size());
-    for (const ObjectRef& i : n->data) {
+    ret.reserve(n->size());
+    for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
         ret.push_back(e->value);
         continue;
@@ -145,14 +146,15 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
+
 inline std::vector<value::TensorValue> TupleTensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     std::vector<TensorValue> ret;
-    ret.reserve(n->data.size());
-    for (const ObjectRef& i : n->data) {
+    ret.reserve(n->size());
+    for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<VarNode>()) {
         using binding::NDArrayBindingObj;
         auto* bound = binding::LookupBinding(e).as<NDArrayBindingObj>();

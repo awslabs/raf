@@ -26,6 +26,15 @@ inline std::vector<T> MakeShape(const ir::Array<ir::Integer>& shape) {
   return result;
 }
 
+inline ir::Array<ir::Integer> StdVector2Array(const std::vector<int64_t>& shape) {
+  ir::Array<ir::Integer> shape_;
+  shape_.resize(shape.size());
+  for (size_t i = 0; i < shape.size(); i++) {
+    shape_.Set(i, shape[i]);
+  }
+  return shape_;
+}
+
 template <typename TDest, typename TSrc>
 inline std::vector<TDest> Shape2Strides(const std::vector<TSrc>& shape) {
   int ndim = shape.size();

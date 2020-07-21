@@ -134,7 +134,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const CallNode* node) override {
-    static auto fschema = Op::GetAttr<op::FMNMSchema>("FMNMSchema");
+    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
     const Call& call = GetRef<Call>(node);
     Array<Value> args;
     for (auto arg : call->args) {

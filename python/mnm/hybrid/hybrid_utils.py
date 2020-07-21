@@ -3,7 +3,7 @@ import ast
 from mnm._core.value import IntValue, Value
 from mnm._lib import _get_global_func, relay
 
-_GET_OP = _get_global_func("relay.op._GetOp")
+_GET_OP = _get_global_func("ir.GetOp")
 
 def _wrap_op(name):
     return lambda *args: relay.Call(op=_GET_OP(name), args=args, attrs=None)

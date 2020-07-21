@@ -109,7 +109,7 @@ inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     Array<Value> ret;
-    for (const ObjectRef& i : n->data) {
+    for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
         ret.push_back(IntValue::make(e->value));
         continue;
@@ -135,7 +135,7 @@ inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     Array<Value> ret;
-    for (const ObjectRef& i : n->data) {
+    for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
         ret.push_back(IntValue::make(e->value));
         continue;
@@ -157,7 +157,7 @@ inline ir::Expr TupleTensor(const registry::TVMArgValue& a) {
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
     Array<tvm::relay::Expr> ret;
-    for (const ObjectRef& i : n->data) {
+    for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<VarNode>()) {
         ret.push_back(Downcast<Var>(i));
         continue;

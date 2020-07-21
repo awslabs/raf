@@ -10,6 +10,7 @@
 #include "./tvm_attrs.h"
 #include "../../schema/transform.h"
 #include "../../schema/nn.h"
+#include "../../../common/shape_utils.h"
 
 namespace mnm {
 namespace op {
@@ -97,7 +98,7 @@ Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
   for (size_t i = 0; i < args->shape.size(); ++i) {
     shape.emplace_back(IntImm(ir::DataType::Int(32), args->shape[i]));
   }
-  attrs->shape = Array<relay::IndexExpr>(shape.begin(), shape.end());
+  attrs->shape = Array<Integer>(shape.begin(), shape.end());
   return Attrs(attrs);
 }
 
@@ -187,13 +188,12 @@ Attrs BroadcastToLikeNormalizer(TVMOpEnv* env,
 
 Attrs SplitNormalizer(TVMOpEnv* env, const SplitArgs* args) {
   using namespace tvm;
-  const std::vector<int64_t>& indices_or_sections = args->indices_or_sections;
+  const auto& indices_or_sections = args->indices_or_sections;
   CHECK_EQ(env->outputs.size(), indices_or_sections.size() + 1);
   env->inputs.resize(1);
   env->inputs[0] = GetDLTensor(args->x);
   auto attrs = make_object<SplitAttrs>();
-  attrs->indices_or_sections = Array<Integer>(indices_or_sections.begin(),
-                                              indices_or_sections.end());
+  attrs->indices_or_sections = mnm::common::shape_utils::StdVector2Array(indices_or_sections);
   attrs->axis = args->axis;
   return Attrs(attrs);
 }

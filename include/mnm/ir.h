@@ -15,6 +15,7 @@
 #include "tvm/relay/op.h"
 #include "tvm/relay/op_attr_types.h"
 #include "tvm/relay/type.h"
+#include "tvm/ir/op.h"
 
 namespace mnm {
 namespace ir {
@@ -24,7 +25,7 @@ using tvm::Array;
 using tvm::ArrayNode;
 using tvm::Map;
 using tvm::MapNode;
-using tvm::StrMapNode;
+using tvm::String;
 
 // Scalars
 using tvm::Integer;
@@ -48,8 +49,6 @@ using tvm::runtime::Downcast;
 using tvm::runtime::GetRef;
 using tvm::runtime::make_object;
 using tvm::runtime::Object;
-using tvm::runtime::ObjectEqual;
-using tvm::runtime::ObjectHash;
 using tvm::runtime::ObjectPtr;
 using tvm::runtime::ObjectRef;
 using tvm::runtime::GetObjectPtr;
@@ -62,8 +61,8 @@ using tvm::relay::ExprNode;
 using tvm::relay::Id;
 using tvm::relay::IdNode;
 
-using tvm::relay::Op;
-using tvm::relay::OpNode;
+using tvm::Op;
+using tvm::OpNode;
 
 using tvm::relay::Tuple;
 using tvm::relay::TupleNode;
@@ -103,6 +102,7 @@ using tvm::relay::TempExprNode;
 
 // Relay Types
 using tvm::relay::Any;
+using tvm::relay::AnyNode;
 using tvm::relay::Kind;
 
 using tvm::relay::Type;

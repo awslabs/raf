@@ -23,15 +23,15 @@ using tvm::relay::TOpPattern;
   MNM_OP_REGISTER(MNM_OP)                                                                       \
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \
                              [](const Attrs& attrs, const Array<Tensor>& inputs,                \
-                                const Type& out_type) -> Array<Tensor> {                       \
+                                const Type& out_type) -> Array<Tensor> {                        \
                                auto fcompute =                                                  \
-                                   Op::GetAttr<FTVMCompute>("FTVMCompute")[Op::Get(OP)];        \
+                                   Op::GetAttrMap<FTVMCompute>("FTVMCompute")[Op::Get(OP)];     \
                                return fcompute(attrs, inputs, out_type);                        \
                              })                                                                 \
       .set_attr<FTVMSchedule>(                                                                  \
           "FTVMSchedule",                                                                       \
           [](const Attrs& attrs, const Array<Tensor>& outs, const Target& target) -> Schedule { \
-            auto fschedule = Op::GetAttr<FTVMSchedule>("FTVMSchedule")[Op::Get(OP)];            \
+            auto fschedule = Op::GetAttrMap<FTVMSchedule>("FTVMSchedule")[Op::Get(OP)];         \
             return fschedule(attrs, outs, target);                                              \
           })                                                                                    \
       .set_attr<TOpPattern>("TOpPattern", tvm::relay::PATTERN);

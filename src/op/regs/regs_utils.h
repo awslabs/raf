@@ -51,7 +51,7 @@ inline std::string GetTypeStr(const registry::TVMArgValue& a) {
   if (a.type_code() == kTVMObjectHandle) {
     return (a.operator ir::ObjectRef())->GetTypeKey();
   }
-  return tvm::runtime::TypeCode2Str(a.type_code());
+  return tvm::runtime::ArgTypeCode2Str(a.type_code());
 }
 
 inline bool RemoveNoGrad(binding::GradTape* tapes, ir::Expr* grads, int *n) {
@@ -120,7 +120,7 @@ struct OpPack {
   ir::Array<ir::Expr> grads;
   std::vector<const ir::ExprNode*> grad_used_vars;
   OpPack() {
-    auto fpg = ir::Op::GetAttr<FPrimalGradient>("FPrimalGradient");
+    auto fpg = ir::Op::GetAttrMap<FPrimalGradient>("FPrimalGradient");
     const auto* pack = VarPack::Get();
     if (fpg.count(op)) {
       grads = fpg[op](pack->MakeCall(op, n_args), pack->y, pack->dy);
