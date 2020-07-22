@@ -51,6 +51,8 @@ using tvm::runtime::make_object;
 using tvm::runtime::Object;
 using tvm::runtime::ObjectPtr;
 using tvm::runtime::ObjectRef;
+using tvm::runtime::ObjectPtrHash;
+using tvm::runtime::ObjectPtrEqual;
 using tvm::runtime::GetObjectPtr;
 using tvm::runtime::NDArray;
 
