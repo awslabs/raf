@@ -134,7 +134,7 @@ class Tensor::Impl {
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     container->dl_tensor.byte_offset = 0;
     self.get_mutable()->IncRef();
-    container->manager_ctx = self.get_mutable()->manager_ctx;
+    container->manager_ctx = self.get_mutable();
     container->dl_tensor.data = data ? data : self->data;
     return ret;
   }
