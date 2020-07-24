@@ -242,8 +242,10 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
     CUDNN_CALL(cudnnBatchNormalizationForwardInference(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
         CUDNNDType(x->dtype).const_addr<1>(), CUDNNDType(x->dtype).const_addr<0>(), xDesc, x->data,
-        yDesc, out->data, bnScaleBiasMeanVarDesc, w->data, args->b->tensor->data,
-        args->running_mean->tensor->data, args->running_var->tensor->data, args->eps));
+        yDesc, out->data, bnScaleBiasMeanVarDesc, w->data,
+        (args->b).as<value::TensorValueObj>()->tensor->data,
+        (args->running_mean).as<value::TensorValueObj>()->tensor->data,
+        (args->running_var).as<value::TensorValueObj>()->tensor->data, args->eps));
   }
   static OpEnv* make(const CallValues& cv) {
     return new BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference(cv);
@@ -293,8 +295,10 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
     CUDNN_CALL(cudnnBatchNormalizationForwardTraining(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
         CUDNNDType(x->dtype).const_addr<1>(), CUDNNDType(x->dtype).const_addr<0>(), xDesc, x->data,
-        yDesc, out0->data, bnScaleBiasMeanVarDesc, w->data, args->b->tensor->data, args->momentum,
-        args->running_mean->tensor->data, args->running_var->tensor->data, args->eps, nullptr,
+        yDesc, out0->data, bnScaleBiasMeanVarDesc, w->data,
+        (args->b).as<value::TensorValueObj>()->tensor->data, args->momentum,
+        (args->running_mean).as<value::TensorValueObj>()->tensor->data,
+        (args->running_var).as<value::TensorValueObj>()->tensor->data, args->eps, nullptr,
         nullptr));
   }
   static OpEnv* make(const CallValues& cv) {
@@ -354,8 +358,9 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
         CUDNNDType(out0->dtype).const_addr<1>(), CUDNNDType(out0->dtype).const_addr<0>(),
         CUDNNDType(out1->dtype).const_addr<1>(), CUDNNDType(out1->dtype).const_addr<0>(), xDesc,
-        x->data, dyDesc, dy->data, dxDesc, out0->data, dBnScaleBiasDesc, args->w->tensor->data,
-        out1->data, tv->fields[2].operator DLTensor*()->data, args->eps, nullptr, nullptr));
+        x->data, dyDesc, dy->data, dxDesc, out0->data, dBnScaleBiasDesc,
+        (args->w).as<value::TensorValueObj>()->tensor->data, out1->data,
+        tv->fields[2].operator DLTensor*()->data, args->eps, nullptr, nullptr));
   }
   static OpEnv* make(const CallValues& cv) {
     return new BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward(cv);

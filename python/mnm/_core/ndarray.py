@@ -205,23 +205,38 @@ class Symbol:  # pylint: disable=too-few-public-methods
         return ret
 
     @staticmethod
-    def make_var(name_hint=""):
+    def make_var(name_hint="", type_annotation=None):
+        """
+        Create a symbol
+
+        Parameters
+        ----------
+        name_hint: string
+            The name hint
+
+        type_annotation: relay.Type
+            The type annotation for the variable
+
+        Returns:
+            ret: Symbol
+                 The Symbol with name_hint and type_annotation
+        """
         ret = Symbol()
-        ret.__handle = BindSymbol(None, name_hint)  # pylint: disable=protected-access
+        ret.__handle = BindSymbol(None, name_hint, type_annotation)  # pylint: disable=protected-access
         return ret
 
     @staticmethod
     def make_tuple(symbols, name_hint=""):
         expr = relay.Tuple(symbols)
         ret = Symbol()
-        ret.__handle = BindSymbol(expr, name_hint)  # pylint: disable=protected-access
+        ret.__handle = BindSymbol(expr, name_hint, None)  # pylint: disable=protected-access
         return ret
 
     def __getitem__(self, item, name_hint=""):
         if isinstance(item, int):
             expr = relay.TupleGetItem(self.__handle, item)
             ret = Symbol()
-            ret.__handle = BindSymbol(expr, name_hint)  # pylint: disable=protected-access
+            ret.__handle = BindSymbol(expr, name_hint, None)  # pylint: disable=protected-access
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")

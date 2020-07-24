@@ -123,8 +123,10 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   TensorValue y = TensorValue::Assemble(/*ctx=*/x->ctx,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape);
-  TensorValue running_mean = TensorValue::make(args->running_mean->tensor.CreateView());
-  TensorValue running_var = TensorValue::make(args->running_var->tensor.CreateView());
+  TensorValue running_mean = TensorValue::make((args->running_mean).as<TensorValueObj>()->tensor
+                                               .CreateView());
+  TensorValue running_var = TensorValue::make((args->running_var).as<TensorValueObj>()->tensor
+                                              .CreateView());
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
   call->ctx = x->ctx;
 });

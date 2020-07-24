@@ -136,13 +136,16 @@ def _symbolize_inputs(pyfunc, args, kwargs):
     bound_args = get_bound_args(pyfunc, args, kwargs)
     named_inputs = OrderedDict()
     for name, value in list(bound_args.arguments.items())[1:]:  # pylint: disable=unused-variable
-        ## comment the check to legalize fake inputs
-        ## the same check is also in `_run_trace_record`
-        # if not isinstance(value, ndarray):
-        #     raise NotImplementedError("Only ndarray is supported for now")
-        bound_args.arguments[name] = \
-                named_inputs[name] = \
-                Symbol.make_var(name_hint=name)
+        if isinstance(value, ndarray):
+            bound_args.arguments[name] = \
+                    named_inputs[name] = \
+                    Symbol.make_var(name_hint=name,
+                                    type_annotation=relay.TensorType(shape=value.shape,
+                                                                     dtype=value.dtype))
+        elif isinstance(value, Symbol):
+            bound_args.arguments[name] = named_inputs[name] = value
+        else:
+            raise NotImplementedError("Only ndarray and Symbol are supported for now")
     return named_inputs, bound_args.args, bound_args.kwargs
 
 

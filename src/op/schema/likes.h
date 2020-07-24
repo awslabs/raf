@@ -13,19 +13,19 @@ namespace op {
 namespace schema {
 class CollapseLikeArgs : public ir::AttrsNode<CollapseLikeArgs> {
  public:
-  value::TensorValue x;
+  value::BaseTensorValue x;
   std::vector<int64_t> shape;
   MNM_OP_SCHEMA(CollapseLikeArgs, "mnm.args.collapse_like");
 };
 class ReshapeArgs : public ir::AttrsNode<ReshapeArgs> {
  public:
-  value::TensorValue x;
+  value::BaseTensorValue x;
   std::vector<int64_t> shape;
   MNM_OP_SCHEMA(ReshapeArgs, "mnm.args.reshape");
 };
 class SumArgs : public ir::AttrsNode<SumArgs> {
  public:
-  value::TensorValue x;
+  value::BaseTensorValue x;
   std::vector<int64_t> axis;
   std::vector<int64_t> keep;
   MNM_OP_SCHEMA(SumArgs, "mnm.args.sum");

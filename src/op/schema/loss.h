@@ -13,8 +13,8 @@ namespace op {
 namespace schema {
 class LossArgs : public ir::AttrsNode<LossArgs> {
  public:
-  value::TensorValue y_true;
-  value::TensorValue y_pred;
+  value::BaseTensorValue y_true;
+  value::BaseTensorValue y_pred;
   MNM_OP_SCHEMA(LossArgs, "mnm.args.loss");
 };
 }  // namespace schema

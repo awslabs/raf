@@ -8,6 +8,7 @@
 #include "mnm/op.h"
 #include "mnm/executor.h"
 #include "mnm/tensor.h"
+#include "../op/ty/utils.h"
 
 namespace mnm {
 namespace binding {
@@ -47,11 +48,13 @@ class BoundVarObj : public VarNode {
     }
     // "entry" is destroyed here, to avoid potential recursive lock
   }
-  static Var make(const std::string& name_hint) {
+  static Var make(const std::string& name_hint,
+                  Type type = Type()) {
     ObjectPtr<BoundVarObj> n = make_object<BoundVarObj>();
     ObjectPtr<IdNode> id_ptr = make_object<IdNode>();
     id_ptr->name_hint = name_hint;
     n->vid = Id(id_ptr);
+    n->type_annotation = type;
     return Var(n);
   }
 };
@@ -77,10 +80,12 @@ SymbolBinding SymbolBinding::make(Expr expr) {
   return SymbolBinding(n);
 }
 
-Var MakeManagedBinding(const BindingEntry& entry, const std::string& name_hint) {
+Var MakeManagedBinding(const BindingEntry& entry,
+                       const std::string& name_hint,
+                       Type type = Type()) {
   static BindingMgr* mgr = BindingMgr::Get();
   static auto& bindings = mgr->bindings;
-  Var var = BoundVarObj::make(name_hint);
+  Var var = BoundVarObj::make(name_hint, type);
   const VarNode* var_ptr = var.operator->();
   {
     std::lock_guard<std::mutex> lock(mgr->mu);
@@ -94,7 +99,8 @@ Var BindNDArray(Value value, GradTape tape, std::string name_hint) {
   return MakeManagedBinding(NDArrayBinding::make(
                                 /*value=*/std::move(value),
                                 /*tape=*/tape),
-                            name_hint);
+                            name_hint,
+                            op::type::GetType(value));
 }
 
 void RebindNDArray(Var var, Value value, GradTape tape) {
@@ -108,8 +114,10 @@ void RebindNDArray(Var var, Value value, GradTape tape) {
   }
 }
 
-Var BindSymbol(Expr expr, std::string name_hint) {
-  return MakeManagedBinding(SymbolBinding::make(std::move(expr)), name_hint);
+Var BindSymbol(Expr expr, std::string name_hint, Type ty) {
+  return MakeManagedBinding(SymbolBinding::make(std::move(expr)),
+                            name_hint,
+                            ty);
 }
 
 BindingEntry LookupBinding(const VarNode* var) {

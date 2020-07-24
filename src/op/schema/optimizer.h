@@ -13,9 +13,9 @@ namespace op {
 namespace schema {
 class SgdArgs : public ir::AttrsNode<SgdArgs> {
  public:
-  value::TensorValue x;
-  value::TensorValue dx;
-  value::TensorValue v;
+  value::BaseTensorValue x;
+  value::BaseTensorValue dx;
+  value::BaseTensorValue v;
   double learning_rate;
   double mu;
   MNM_OP_SCHEMA(SgdArgs, "mnm.args.sgd");

@@ -21,8 +21,8 @@ class BinaryDxArgs : public ir::AttrsNode<BinaryDxArgs> {
  public:
   value::Value x1;
   value::Value x2;
-  value::TensorValue y;
-  value::TensorValue dy;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
   MNM_OP_SCHEMA(BinaryDxArgs, "mnm.args.binary_dx");
 };
 class BinaryUfuncArgs : public ir::AttrsNode<BinaryUfuncArgs> {
@@ -45,8 +45,8 @@ class TernaryDxArgs : public ir::AttrsNode<TernaryDxArgs> {
   value::Value x1;
   value::Value x2;
   value::Value x3;
-  value::TensorValue y;
-  value::TensorValue dy;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
   MNM_OP_SCHEMA(TernaryDxArgs, "mnm.args.ternary_dx");
 };
 class TernaryUfuncArgs : public ir::AttrsNode<TernaryUfuncArgs> {
@@ -66,8 +66,8 @@ class UnaryArgs : public ir::AttrsNode<UnaryArgs> {
 class UnaryDxArgs : public ir::AttrsNode<UnaryDxArgs> {
  public:
   value::Value x;
-  value::TensorValue y;
-  value::TensorValue dy;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
   MNM_OP_SCHEMA(UnaryDxArgs, "mnm.args.unary_dx");
 };
 class UnaryUfuncArgs : public ir::AttrsNode<UnaryUfuncArgs> {

@@ -229,7 +229,7 @@ MNM_TVMJIT(BroadcastToLike, "mnm.op.broadcast_to_like", BroadcastToLikeArgs,
 Attrs ConcatenateNormalizer(TVMOpEnv* env, const ConcatenateArgs* args) {
   using namespace tvm;
   CHECK_EQ(env->outputs.size(), 1U);
-  const std::vector<TensorValue>& x = args->x;
+  const std::vector<BaseTensorValue>& x = args->x;
   env->inputs.resize(x.size());
   for (size_t i = 0; i < x.size(); ++i) {
     env->inputs[i] = GetDLTensor(x[i]);

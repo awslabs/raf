@@ -42,7 +42,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
              << "\" is not array-like";
   throw;
 }
-inline value::TensorValue Tensor(const registry::TVMArgValue& a, binding::GradTape* tape) {
+inline value::BaseTensorValue Tensor(const registry::TVMArgValue& a, binding::GradTape* tape) {
   MNM_PRELUDE();
   if (type_code == kTVMObjectHandle && a.IsObjectRef<Var>()) {
     using binding::NDArrayBindingObj;
@@ -146,13 +146,12 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
-
-inline std::vector<value::TensorValue> TupleTensor(const registry::TVMArgValue& a) {
+inline std::vector<value::BaseTensorValue> TupleTensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
-    std::vector<TensorValue> ret;
+    std::vector<BaseTensorValue> ret;
     ret.reserve(n->size());
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<VarNode>()) {

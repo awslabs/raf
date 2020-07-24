@@ -79,6 +79,7 @@ class Extractor final : public ExprVisitor {
       const VarNode* var = queue.back();
       queue.pop_back();
       const auto& binding = LookupBinding(var);
+      CHECK(binding.defined()) << "Unbinded variable " << GetRef<Var>(var);
       if (const auto* sym = binding.as<SymbolBindingObj>()) {
         const Expr& expr = sym->expr;
         bindings[var] = expr.operator->();

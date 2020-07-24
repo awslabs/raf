@@ -345,8 +345,19 @@ struct Gradient : public ExprVisitor {
     return ll->Push(Tuple(grads));
   }
 
+  Var MakeOutputGrad() {
+    Type ty = func->checked_type_;
+    Type annotation;
+    if (ty.defined()) {
+      const auto* fty = ty.as<FuncTypeNode>();
+      CHECK(fty != nullptr);
+      annotation = fty->ret_type;
+    }
+    return mnm::ir::Var("dy", annotation);
+  }
+
   Function Run() {
-    Var dy = mnm::ir::Var("dy", {});
+    Var dy = MakeOutputGrad();
     Expr body = LetList::With([&](LetList* ll) {
       this->ll = ll;
       const auto& vars = ell->vars;

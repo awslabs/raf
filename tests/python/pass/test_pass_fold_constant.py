@@ -71,8 +71,8 @@ def test_fold_const_ir(ctx, shape):
             return mnm.matmul(x, z)
 
     def expected():
-        x = tvm.relay.var('x')
-        c = tvm.relay.var('c')
+        x = tvm.relay.var('x', tvm.relay.TensorType(shape))
+        c = tvm.relay.var('c', tvm.relay.TensorType(shape))
         # we are only interested in the structure
         t_value = mnm._core.value.TensorValue.from_numpy(const.asnumpy())
         const_var = mnm._ffi.ir._make.Constant(t_value)

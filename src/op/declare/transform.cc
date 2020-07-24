@@ -194,7 +194,7 @@ MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues &call) {
 MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues &call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
-  const std::vector<TensorValue>& x = args->x;
+  const std::vector<BaseTensorValue>& x = args->x;
   CHECK_GE(x.size(), 1U);
   DLTensor *y0 = x[0];
   int axis = NormalizeAxis(args->axis, y0->ndim);
@@ -244,7 +244,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues &call){
 void ConcatenateDx(const CallValues &call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
-  const std::vector<TensorValue>& x = args->x;
+  const std::vector<BaseTensorValue>& x = args->x;
   int axis = args->axis;
   ir::Array<Value> res;
   if (x.size() > 0U) {

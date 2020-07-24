@@ -9,6 +9,8 @@ BindParam = _APIS.get("mnm.pass_.BindParam", None)
 ExtractBinding = _APIS.get("mnm.pass_.ExtractBinding", None)
 # Defined in ./src/pass/fold_const.cc
 FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
+# Defined in ./src/pass/type_infer.cc
+InferType = _APIS.get("mnm.pass_.InferType", None)
 # Defined in ./src/pass/rename_vars.cc
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/fold_const.cc

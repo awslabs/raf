@@ -4,6 +4,7 @@
  * \brief Definition of MNM values
  */
 #pragma once
+#include <tvm/relay/type.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -41,24 +42,54 @@ class Value : public ir::ObjectRef {
   MNM_OBJECT_REF(Value, ir::ObjectRef, ValueObj);
 };
 
+/* BaseTensorValue */
+class BaseTensorValueObj : public ValueObj {
+ public:
+  static constexpr const uint32_t _type_index = ir::TypeIndex::kDynamic;
+  static constexpr const char* _type_key = "mnm.value.BaseTensorValue";
+  MNM_BASE_OBJECT(BaseTensorValueObj, ValueObj);
+};
+
+class BaseTensorValue : public Value {
+ public:
+  MNM_OBJECT_REF(BaseTensorValue, Value, BaseTensorValueObj);
+};
+
 /* TensorValue */
-class TensorValueObj final : public ValueObj {
+class TensorValueObj final : public BaseTensorValueObj {
  public:
   mutable tensor::Tensor tensor;
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_tensor", &tensor);
   }
   static constexpr const char* _type_key = "mnm.value.TensorValue";
-  MNM_FINAL_OBJECT(TensorValueObj, ValueObj);
+  MNM_FINAL_OBJECT(TensorValueObj, BaseTensorValueObj);
 };
 
-class TensorValue final : public Value {
+class TensorValue final : public BaseTensorValue {
  public:
   static TensorValue make(tensor::Tensor tensor);
   static TensorValue Assemble(const Context& ctx, const DType& dtype,
                               const std::vector<int64_t>& shape,
                               const std::vector<int64_t>& strides = {}, void* data = nullptr);
-  MNM_OBJECT_REF(TensorValue, Value, TensorValueObj);
+  MNM_OBJECT_REF(TensorValue, BaseTensorValue, TensorValueObj);
+};
+
+/* TensorTypeValue */
+class TensorTypeValueObj final : public BaseTensorValueObj {
+ public:
+  tvm::relay::TensorType type;
+  void VisitAttrs(tvm::AttrVisitor* v) {
+    v->Visit("_type", &type);
+  }
+  static constexpr const char* _type_key = "mnm.value.TensorTypeValue";
+  MNM_FINAL_OBJECT(TensorTypeValueObj, BaseTensorValueObj);
+};
+
+class TensorTypeValue final : public BaseTensorValue {
+ public:
+  static TensorTypeValue make(tvm::relay::TensorType type);
+  MNM_OBJECT_REF(TensorTypeValue, BaseTensorValue, TensorTypeValueObj);
 };
 
 /* TupleValue */

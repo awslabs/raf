@@ -97,21 +97,10 @@ NoGradValue NoGradValue::make() {
   return NoGradValue(n);
 }
 
-/*** GetType ***/
-Type GetType(const Value& value) {
-  if (const auto* tv = value.as<TensorValueObj>()) {
-    const DLTensor& dlt = *tv->tensor.operator->();
-    auto shape = GetShape<tvm::Integer>(dlt);
-    return ir::TensorType({shape.begin(), shape.end()}, ir::DataType(dlt.dtype));
-  } else if (const auto* tv = value.as<TupleValueObj>()) {
-    Array<Type> tuple_type;
-    for (const Value& sub_value : tv->fields) {
-      tuple_type.push_back(GetType(sub_value));
-    }
-    return ir::TupleType(tuple_type);
-  }
-  LOG(FATAL) << "NotImplementedError: " << value->GetTypeKey();
-  throw;
+TensorTypeValue TensorTypeValue::make(TensorType t) {
+  ObjectPtr<TensorTypeValueObj> n = make_object<TensorTypeValueObj>();
+  n->type = std::move(t);
+  return TensorTypeValue(n);
 }
 
 /*** Value ***/
@@ -189,6 +178,7 @@ MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make)
 MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
 
 MNM_REGISTER_OBJECT_NO_REFLECT(ValueObj);
+MNM_REGISTER_OBJECT_NO_REFLECT(BaseTensorValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(ScalarValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(OpaqueValueObj);
 
@@ -201,6 +191,6 @@ MNM_REGISTER_OBJECT_REFLECT(IntValueObj);
 MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
 MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
 MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
-
+MNM_REGISTER_OBJECT_REFLECT(TensorTypeValueObj);
 }  // namespace value
 }  // namespace mnm

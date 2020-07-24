@@ -21,8 +21,13 @@ class Value(Object):
         raise NotImplementedError
 
 
+@register_node("mnm.value.BaseTensorValue")
+class BaseTensorValue(Value):
+    pass
+
+
 @register_node("mnm.value.TensorValue")
-class TensorValue(Value):
+class TensorValue(BaseTensorValue):
     # TODO(@junrushao1994): remove property decorators
     @property
     def dltensor_handle(self):
@@ -76,6 +81,12 @@ class TensorValue(Value):
     @staticmethod
     def from_numpy(np_array):
         return TensorValue.from_tvm(tvm_ndarray(np_array))
+
+
+@register_node("mnm.value.TensorTypeValue")
+class TensorTypeValue(BaseTensorValue):
+    # TODO(@hzfan): add constructors
+    pass
 
 
 @register_node("mnm.value.IntValue")

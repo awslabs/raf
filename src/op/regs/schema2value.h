@@ -21,7 +21,7 @@ namespace schema2value {
 inline value::Value ArrayLike(const value::Value& a) {
   return a;
 }
-inline value::Value Tensor(const value::TensorValue& a) {
+inline value::Value Tensor(const value::BaseTensorValue& a) {
   return a;
 }
 inline value::Value Int(int64_t a) {
@@ -51,7 +51,7 @@ inline value::Value TupleInt(const std::vector<int64_t>& a) {
 inline value::Value IntOrTupleInt(const std::vector<int64_t>& a) {
   return TupleInt(a);
 }
-inline value::Value TupleTensor(const std::vector<value::TensorValue>& a) {
+inline value::Value TupleTensor(const std::vector<value::BaseTensorValue>& a) {
   MNM_PRELUDE();
   Array<Value> ret;
   for (const auto i : a) {

@@ -57,7 +57,7 @@ def split_chunks(list_, chunk_size):
 
 NORM_MAP = {
     "value::Value": "ToAny",
-    "value::TensorValue": "ToTensor",
+    "value::BaseTensorValue": "ToTensor",
     "IntTuple": "ToIntTuple",
     "OptionalIntTuple": "ToOptionalIntTuple",
     "int": "ToInt",
@@ -71,7 +71,7 @@ NORM_MAP = {
 
 PY_NORM_MAP = {
     "value::Value": "to_any",
-    "value::TensorValue": "to_tensor",
+    "value::BaseTensorValue": "to_tensor",
     "IntTuple": "to_int_tuple",
     "OptionalIntTuple": "to_optional_int_tuple",
     "int": "to_int",
