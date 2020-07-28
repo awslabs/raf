@@ -1,16 +1,17 @@
-# pylint: disable=invalid-name, no-else-return, protected-access, too-many-lines, no-member
+# pylint: disable=invalid-name, no-else-return, protected-access, too-many-lines
+# pylint: disable=no-member, unused-argument
 """MXNet symbol frontend."""
 import json
+from collections import OrderedDict
 
 from mnm._core.ndarray import Symbol, ndarray
-from mnm._ffi.model import RunModel
 from mnm._ffi.pass_ import ExtractBinding
 from mnm._lib import relay
 from mnm._op import sym as op
-from mnm.model.trace import _unwrap
+from mnm.frontend.model import FrameworkModel
 
 
-def _mx_conv(inputs, attrs):
+def _mx_conv(inputs, attrs, is_train):
     def _mx_conv2d(inputs, attrs):
         new_attrs = {}
         new_attrs["stride"] = attrs.get_int_tuple("stride", (1, 1))
@@ -30,7 +31,7 @@ def _mx_conv(inputs, attrs):
         raise NotImplementedError
 
 
-def _mx_fully_connected(inputs, attrs):  # pylint: disable=unused-argument
+def _mx_fully_connected(inputs, attrs, is_train):
     use_bias = not attrs.get_bool("no_bias", False)
     use_flatten = attrs.get_bool("flatten", True)
     if use_flatten:
@@ -44,20 +45,29 @@ def _mx_fully_connected(inputs, attrs):  # pylint: disable=unused-argument
     return [res]
 
 
-def _mx_batch_norm(inputs, attrs):
+def _mx_batch_norm(inputs, attrs, is_train):
     new_attrs = {}
     new_attrs["eps"] = attrs.get_float("eps", 0.001)
     new_attrs["momentum"] = attrs.get_float("momentum", 0.9)
-    res = op.batch_norm_infer(x=inputs[0],
-                              w=inputs[1],
-                              b=inputs[2],
-                              running_mean=inputs[3],
-                              running_var=inputs[4],
-                              **new_attrs)
-    return [res]
+    if is_train:
+        res = op.batch_norm_train(x=inputs[0],
+                                  w=inputs[1],
+                                  b=inputs[2],
+                                  running_mean=inputs[3],
+                                  running_var=inputs[4],
+                                  **new_attrs)
+        return res
+    else:
+        res = op.batch_norm_infer(x=inputs[0],
+                                  w=inputs[1],
+                                  b=inputs[2],
+                                  running_mean=inputs[3],
+                                  running_var=inputs[4],
+                                  **new_attrs)
+        return [res]
 
 
-def _mx_pooling(inputs, attrs):
+def _mx_pooling(inputs, attrs, is_train):
     global_pool = attrs.get_bool("global_pool", False)
     pool_type = attrs.get_str("pool_type")
 
@@ -86,7 +96,7 @@ def _mx_pooling(inputs, attrs):
     raise NotImplementedError
 
 
-def _mx_activations(inputs, attrs):
+def _mx_activations(inputs, attrs, is_train):
     act_type = attrs.get_str("act_type")
     assert len(inputs) == 1
     if act_type == "relu":
@@ -95,7 +105,7 @@ def _mx_activations(inputs, attrs):
         raise NotImplementedError
 
 
-def _mx_add(inputs, attrs):  # pylint: disable=unused-argument
+def _mx_add(inputs, attrs, is_train):
     return [op.add(inputs[0], inputs[1])]
 
 _convert_map = {
@@ -108,7 +118,7 @@ _convert_map = {
 }
 
 
-def _from_mxnet_impl(symbol):
+def _from_mxnet_impl(symbol, is_train):
     """Convert mxnet symbol to compatible relay Function.
     Migrate from TVM.
 
@@ -119,6 +129,9 @@ def _from_mxnet_impl(symbol):
     symbol : mxnet.sym.Symbol
         Incompatible symbol from mxnet.
         The op_name and attrs inside are not always compatible.
+
+    is_train : bool
+        Whether in train mode.
 
     Returns:
     -------
@@ -144,7 +157,7 @@ def _from_mxnet_impl(symbol):
             if op_name in ['_cond', '_foreach', '_while_loop']:  # pylint: disable=no-else-raise
                 raise NotImplementedError
             else:
-                res = _convert_map[op_name](children, attrs)
+                res = _convert_map[op_name](children, attrs, is_train)
             if res is None:
                 # defer conversion, used in RNN state initialization
                 res = [node]
@@ -169,8 +182,6 @@ def _from_mxnet_impl(symbol):
 
 def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
                inputs_name,
-               ctx=None,
-               mode='infer',  # pylint: disable=unused-argument
                arg_params=None,
                aux_params=None):
     """
@@ -189,7 +200,8 @@ def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, t
             params[k] = v.asnumpy()
         for k, v in aux_params.items():
             params[k] = v.asnumpy()
-        func = _from_mxnet_impl(symbol)
+        train_func = _from_mxnet_impl(symbol, True)
+        infer_func = _from_mxnet_impl(symbol, False)
     elif isinstance(symbol, mx.gluon.HybridBlock):
         if arg_params is not None or aux_params is not None:
             raise ValueError("arg_params and aux_params ae not used when importing HybridBlock")
@@ -202,20 +214,17 @@ def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, t
         sym = symbol(*inputs)
         if isinstance(sym, (list, tuple)):
             sym = mx.sym.Group(sym)
-        func = _from_mxnet_impl(sym)
+        train_func = _from_mxnet_impl(sym, True)
+        infer_func = _from_mxnet_impl(sym, False)
     elif isinstance(symbol, mx.gluon.Block):
         raise NotImplementedError("Only Hybrid Blocks are supported now.")
     else:
         msg = "mxnet.Symbol or gluon.HybridBlock expected, got {}".format(type(symbol))
         raise ValueError(msg)
-    params_input = []
-    for v in func.params:
+    ordered_params = OrderedDict()
+    for v in train_func.params:
         if v.name_hint in params:
-            params_input.append(ndarray(params[v.name_hint], ctx=ctx)._ndarray__handle)
+            ordered_params[v.name_hint] = ndarray(params[v.name_hint])
 
-    def new_pyfunc(*args, **kwargs):  # pylint: disable=unused-argument
-        assert len(args) == len(inputs_name)
-        func_inputs = [arg._ndarray__handle for arg in args] + params_input
-        result = _unwrap(RunModel(func, func_inputs))
-        return result
-    return new_pyfunc
+    front_model = FrameworkModel(train_func, infer_func, ordered_params)
+    return front_model

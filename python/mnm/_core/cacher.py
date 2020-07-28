@@ -5,6 +5,7 @@ from .core_utils import bfs
 
 class Cacher:
     def __init__(self):
+        super(Cacher, self).__init__()
         self.__enabled = False
         self.__cache = {}
         self.__parents = weakref.WeakKeyDictionary()

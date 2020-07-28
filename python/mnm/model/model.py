@@ -8,29 +8,22 @@ from mnm.model.trace import _get_traced_func
 
 
 @set_module("mnm")
-class Model(cacher.Cacher):
-    def __init__(self, *args, **kwargs):
-        super(Model, self).__init__()
+class BaseModel:
+    def __init__(self):
+        super(BaseModel, self).__init__()
         self.__is_train = True
-        build, self.__fwd_train, self.__fwd_infer = _extract_methods(self)
-        build(*args, **kwargs)
-        cacher.enable(self)  # Cache is set up after the model is built
 
     def __call__(self, *args, **kwargs):
-        forward = self.__fwd_train if self.__is_train else self.__fwd_infer
-        return forward(*args, **kwargs)
+        raise NotImplementedError
 
     def train_mode(self, recursive=True):
         _set_is_train(self, value=True, recursive=recursive)
-        cacher.invalidate(self, include_self=False, recursive=True)
 
     def infer_mode(self, recursive=True):
         _set_is_train(self, value=False, recursive=recursive)
-        cacher.invalidate(self, include_self=False, recursive=True)
 
     def get_relay_func(self, *args, **kwargs):
-        fwd_func = self.__fwd_train if self.__is_train else self.__fwd_infer
-        return _get_traced_func(self, fwd_func, *args, **kwargs)
+        raise NotImplementedError
 
     def state(self, prefix="", recursive=True):
         return _get_param_dict(self, prefix=prefix, recursive=recursive)
@@ -41,6 +34,30 @@ class Model(cacher.Cacher):
             for name, param in _get_attr_params_key_value(model).items():
                 param = param.to(ctx=ctx, dtype=dtype)
                 setattr(model, name, param)
+
+
+class Model(BaseModel, cacher.Cacher):
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__()
+        build, self.__fwd_train, self.__fwd_infer = _extract_methods(self)
+        build(*args, **kwargs)
+        cacher.enable(self)  # Cache is set up after the model is built
+
+    def __call__(self, *args, **kwargs):
+        forward = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
+        return forward(*args, **kwargs)
+
+    def train_mode(self, recursive=True):
+        super(Model, self).train_mode(recursive=recursive)
+        cacher.invalidate(self, include_self=False, recursive=True)
+
+    def infer_mode(self, recursive=True):
+        super(Model, self).infer_mode(recursive=recursive)
+        cacher.invalidate(self, include_self=False, recursive=True)
+
+    def get_relay_func(self, *args, **kwargs):
+        fwd_func = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
+        return _get_traced_func(self, fwd_func, *args, **kwargs)
 
 
 # pylint: disable=protected-access
@@ -63,11 +80,11 @@ def _get_attr_params_value(model):
 
 
 def _set_is_train(root_model, *, value, recursive):
-    if not hasattr(root_model, "_Model__is_train"):
+    if not hasattr(root_model, "_BaseModel__is_train"):
         return
 
     def on_pop(model):
-        object.__setattr__(model, "_Model__is_train", value)
+        object.__setattr__(model, "_BaseModel__is_train", value)
         for param in _get_attr_params_value(model):
             # TODO(@junrushao1994): maybe invalidate param's other parents?
             param.requires_grad = value
