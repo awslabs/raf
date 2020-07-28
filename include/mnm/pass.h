@@ -6,6 +6,7 @@
 #pragma once
 
 #include "tvm/relay/analysis.h"
+#include "tvm/relay/transform.h"
 #include "mnm/ir.h"
 
 namespace mnm {
@@ -15,5 +16,6 @@ using tvm::AsText;
 ir::Function AutoDiff(ir::Function func);
 ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
+ir::Module LambdaLift(ir::Module mod);
 }  // namespace pass
 }  // namespace mnm

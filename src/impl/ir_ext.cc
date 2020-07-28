@@ -9,11 +9,13 @@
 namespace mnm {
 namespace ir {
 
-void ModuleObj::Add(const GlobalVar& var, const Function& func) {
+void ModuleObj::Add(const GlobalVar& var, const Function& func, bool update) {
   auto it = functions.find(var);
-  CHECK(it == functions.end() || !(*it).second.defined())
-      << "Duplicate definition of " << var->name_hint;
+  if (functions.find(var) != functions.end()) {
+    CHECK(update) << "Duplicate definition of " << var->name_hint;
+  }
   functions.Set(var, func);
+  global_var_map_.Set(var->name_hint, var);
 }
 
 Function ModuleObj::Lookup(const GlobalVar& var) const {
@@ -22,9 +24,46 @@ Function ModuleObj::Lookup(const GlobalVar& var) const {
   return (*it).second;
 }
 
+Function ModuleObj::Lookup(const std::string& name) const {
+  GlobalVar id = this->GetGlobalVar(name);
+  return this->Lookup(id);
+}
+
+bool ModuleObj::ContainGlobalVar(const std::string& name) const {
+  return global_var_map_.find(name) != global_var_map_.end();
+}
+
+GlobalVar ModuleObj::GetGlobalVar(const std::string& name) const {
+  auto it = global_var_map_.find(name);
+  if (it == global_var_map_.end()) {
+    std::ostringstream msg;
+    msg << "ValueError: Cannot find global var \"" << name << "\" in the Module\n"
+        << "candidates are: [";
+    int counter = 0;
+    for (auto kv : global_var_map_) {
+      if (counter++ != 0) {
+        msg << ", ";
+      }
+      msg << "\"" << kv.first << "\"";
+    }
+    msg << "]";
+    LOG(FATAL) << msg.str();
+  }
+  return (*it).second;
+}
+
 Module Module::make(Map<GlobalVar, Function> functions) {
   ObjectPtr<ModuleObj> n = make_object<ModuleObj>();
   n->functions = std::move(functions);
+  n->global_var_map_ = {};
+
+  for (const auto& kv : n->functions) {
+    // set global var map
+    CHECK(n->global_var_map_.count(kv.first->name_hint) == 0)
+      << "Duplicate global function name " << kv.first->name_hint;
+    n->global_var_map_.Set(kv.first->name_hint, kv.first);
+  }
+
   return Module(n);
 }
 
@@ -37,9 +76,14 @@ void ModuleAdd(Module mod, GlobalVar var, Function func) {
   mod->Add(var, func);
 }
 
-Function ModuleLookup(Module mod, GlobalVar var, Function func) {
+Function ModuleLookup(Module mod, GlobalVar var) {
   return mod->Lookup(var);
 }
+
+Function ModuleLookupStr(Module mod, const std::string& name) {
+  return mod->Lookup(name);
+}
+
 
 tvm::runtime::NDArray MakeFakeTensor() {
   static int64_t a[1] = {-114514};
@@ -76,6 +120,7 @@ MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
 MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
+MNM_REGISTER_GLOBAL("mnm.ir.module.LookupStr").set_body_typed(ModuleLookupStr);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(Module::Global);
 
 MNM_REGISTER_OBJECT_REFLECT(ModuleObj);

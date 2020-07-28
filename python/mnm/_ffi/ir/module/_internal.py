@@ -7,3 +7,5 @@ Add = _APIS.get("mnm.ir.module.Add", None)
 Global = _APIS.get("mnm.ir.module.Global", None)
 # Defined in ./src/impl/ir_ext.cc
 Lookup = _APIS.get("mnm.ir.module.Lookup", None)
+# Defined in ./src/impl/ir_ext.cc
+LookupStr = _APIS.get("mnm.ir.module.LookupStr", None)

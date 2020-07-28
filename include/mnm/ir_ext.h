@@ -5,31 +5,44 @@
  */
 #pragma once
 #include <tvm/node/structural_hash.h>
+#include <string>
 #include "./ir.h"
 
 /****** mnm::ir::Module ******/
 namespace mnm {
 namespace ir {
+class Module;
 
 class ModuleObj : public ir::Object {
  public:
   Map<GlobalVar, Function> functions;
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("functions", &functions);
+    v->Visit("global_var_map_", &global_var_map_);
   }
-  void Add(const GlobalVar& var, const Function& func);
+  void Add(const GlobalVar& var, const Function& func, bool update = false);
   Function Lookup(const GlobalVar& var) const;
+  Function Lookup(const std::string& name) const;
+  bool ContainGlobalVar(const std::string& name) const;
+  GlobalVar GetGlobalVar(const std::string& str) const;
 
  public:
   static constexpr const char* _type_key = "mnm.ir.Module";
   MNM_FINAL_OBJECT(ModuleObj, ir::Object);
+
+ private:
+  /*! \brief A map from string names to global type variables (ADT names)
+   * that ensures global uniqueness.
+   */
+  Map<String, GlobalVar> global_var_map_;
+  friend class Module;
 };
 
-class Module : public ObjectRef {
+class Module : public ir::ObjectRef {
  public:
   static Module make(Map<GlobalVar, Function> functions);
   static Module Global();
-  MNM_OBJECT_REF(Module, ObjectRef, ModuleObj);
+  MNM_OBJECT_REF(Module, ir::ObjectRef, ModuleObj);
 };
 
 }  // namespace ir
