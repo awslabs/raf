@@ -118,26 +118,31 @@ def main(path='src/op/dispatch/cudnn/impl.cc'):
     import def_cudnn
     wrappers = dict()
     classes = [elem.normalize(ops, schema, cudnn_apis, wrappers) for elem in sorted(def_cudnn.SCHEMAS, key=lambda x:x.op)]
-    classes = '\n'.join(classes)
+    classes = '\n\n'.join(classes)
 
     fmt = """
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \\file {FILENAME}
- * \\brief Operator schema. Auto generated. Do not touch.
+ * \\brief Operator schema.
  */
 {HEADERS}
+
 namespace mnm {{
 namespace op {{
 namespace cudnn {{
 namespace generated {{
+
 using value::TupleValueObj;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using common::shape_utils::PadDims;
 using common::shape_utils::Shape2Strides;
 using dmlc::BeginPtr;
+
 {WRAPPERS}
+
 {CLASSES}
 }}  // namespace generated
 }}  // namespace cudnn
@@ -149,7 +154,7 @@ using dmlc::BeginPtr;
     headers += ['#include "./cudnn_utils.h"']
     headers += ['#include "../../op_utils.h"']
     headers = '\n'.join(sorted(headers))
-    wrappers = '\n'.join(sorted(wrappers.values()))
+    wrappers = '\n\n'.join(sorted(wrappers.values()))
     open(path, 'w').write(fmt.format(FILENAME=path, HEADERS=headers, CLASSES=classes, WRAPPERS=wrappers) + "\n")
     subprocess.check_output(['clang-format', '-i', path])
 

@@ -1,4 +1,4 @@
-from .._lib import OpPattern, register_compute
+from .._lib import register_compute
 from .._lib import topi as _topi
 from .._lib import tvm as _tvm
 from .._lib import _reg
@@ -41,7 +41,6 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     return [_tvm.te.compute(shape, fcompute)]
 
 _reg.register_injective_schedule("mnm.op.sum")
-_reg.register_pattern("mnm.op.sum", OpPattern.COMM_REDUCE)
 
 _reg.register_reduce_schedule("mnm.op.argmax")
 _reg.register_reduce_schedule("mnm.op.argmin")
@@ -89,4 +88,3 @@ def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argume
     return [out]
 
 _reg.register_injective_schedule("mnm.op.mean_dx")
-_reg.register_pattern("mnm.op.mean_dx", OpPattern.COMM_REDUCE)

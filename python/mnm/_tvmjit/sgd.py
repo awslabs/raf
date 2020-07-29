@@ -1,4 +1,4 @@
-from .._lib import OpPattern, register_compute
+from .._lib import register_compute
 from .._lib import topi as _topi  # pylint: disable=unused-import
 from .._lib import tvm as _tvm
 from .._lib import _reg
@@ -21,4 +21,3 @@ def sgd_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
     return [v1, x1]
 
 _reg.register_broadcast_schedule("mnm.op.sgd")
-_reg.register_pattern("mnm.op.sgd", OpPattern.ELEMWISE)

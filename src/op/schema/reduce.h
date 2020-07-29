@@ -1,7 +1,8 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \file src/op/schema/reduce.h
- * \brief Operator schema. Auto generated. Do not touch.
+ * \brief Operator schema.
  */
 #pragma once
 #include <vector>
@@ -18,6 +19,7 @@ class ReduceArgs : public ir::AttrsNode<ReduceArgs> {
   bool keepdims{false};
   MNM_OP_SCHEMA(ReduceArgs, "mnm.args.reduce");
 };
+
 class ReduceDxArgs : public ir::AttrsNode<ReduceDxArgs> {
  public:
   value::BaseTensorValue x;

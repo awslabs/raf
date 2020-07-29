@@ -58,7 +58,7 @@ MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/{n_in, out, h_out, w_out});
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 void Pool2D(const CallValues& call) {
   // NCHW
@@ -97,8 +97,8 @@ void Pool2D(const CallValues& call) {
   call->ctx = x->ctx;
 }
 
-MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D);
-MNM_OP_DECLARE("mnm.op.avg_pool2d", Pool2D);
+MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.avg_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 void Softmax(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxArgs>();
@@ -112,8 +112,8 @@ void Softmax(const CallValues& call) {
   call->ctx = x->ctx;
 }
 
-MNM_OP_DECLARE("mnm.op.softmax", Softmax);
-MNM_OP_DECLARE("mnm.op.log_softmax", Softmax);
+MNM_OP_DECLARE("mnm.op.softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.log_softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormArgs>();
@@ -129,7 +129,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
                                               .CreateView());
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
   // FIXME(@were): please fix this: bn-infer should only output y
@@ -142,7 +142,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
                                         /*shape=*/shape);
   call->out = y;
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 void Conv2dDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvDxwArgs>();
@@ -154,8 +154,8 @@ void Conv2dDxw(const CallValues& call) {
   call->ctx = x_or_w->ctx;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw);
-MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw);
+MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 void Pool2DDx(const CallValues& call) {
   const auto* args = call->args.as<PoolDxArgs>();
@@ -168,8 +168,10 @@ void Pool2DDx(const CallValues& call) {
   call->ctx = x->ctx;
 }
 
-MNM_OP_DECLARE("mnm.op.max_pool2d_dx", Pool2DDx);
-MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", Pool2DDx);
+MNM_OP_DECLARE("mnm.op.max_pool2d_dx", Pool2DDx)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", Pool2DDx)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 void SoftmaxDx(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxDxArgs>();
@@ -182,8 +184,8 @@ void SoftmaxDx(const CallValues& call) {
   call->ctx = x->ctx;
 }
 
-MNM_OP_DECLARE("mnm.op.softmax_dx", SoftmaxDx);
-MNM_OP_DECLARE("mnm.op.log_softmax_dx", SoftmaxDx);
+MNM_OP_DECLARE("mnm.op.softmax_dx", SoftmaxDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.log_softmax_dx", SoftmaxDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormTrainDxwbArgs>();
@@ -203,7 +205,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
                                          /*shape=*/wshape);
   call->out = TupleValue::make(tvm::Array<Value>({dx, dw, db}));
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare
 }  // namespace op

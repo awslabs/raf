@@ -8,6 +8,7 @@ from codegen_utils import write_to_file
 
 def gen_internal_file(apis):
     FILE = """
+\"\"\"Auto generated. Do not touch.\"\"\"
 from mnm._lib import _APIS
 
 # pylint: disable=invalid-name,redefined-builtin
@@ -31,6 +32,7 @@ def gen_api(api):
 
 def gen_init_file(apis, dirs):
     FILE = """
+\"\"\"Auto generated. Do not touch.\"\"\"
 # pylint: disable=redefined-builtin
 {INTERNALS}
 {DIRS}

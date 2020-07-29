@@ -1,7 +1,8 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \file src/op/schema/optimizer.h
- * \brief Operator schema. Auto generated. Do not touch.
+ * \brief Operator schema.
  */
 #pragma once
 #include <vector>

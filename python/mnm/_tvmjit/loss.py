@@ -1,4 +1,4 @@
-from .._lib import OpPattern, register_compute
+from .._lib import register_compute
 from .._lib import topi as _topi  # pylint: disable=unused-import
 from .._lib import tvm as _tvm
 from .._lib import _reg
@@ -20,7 +20,6 @@ def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argu
 
 
 _reg.register_injective_schedule("mnm.op.nll_loss")
-_reg.register_pattern("mnm.op.nll_loss", OpPattern.INJECTIVE)
 
 
 @register_compute("mnm.op.nll_loss_dpred")
@@ -31,7 +30,6 @@ def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-
 
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dpred")
-_reg.register_pattern("mnm.op.nll_loss_dpred", OpPattern.ELEMWISE)
 
 
 @register_compute("mnm.op.nll_loss_dtrue")
@@ -41,4 +39,3 @@ def nllloss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-
     return [_tvm.te.compute((n, c), lambda x, y: -pred[x, y] / n)]
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dtrue")
-_reg.register_pattern("mnm.op.nll_loss_dtrue", OpPattern.ELEMWISE)

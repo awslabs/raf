@@ -52,7 +52,7 @@ void Sum(const CallValues &call) {
   call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
 }
 
-MNM_OP_DECLARE("mnm.op.sum", Sum);
+MNM_OP_DECLARE("mnm.op.sum", Sum).set_attr<TOpPattern>("TOpPattern", kCommReduce);
 
 }  // namespace declare
 }  // namespace op

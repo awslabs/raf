@@ -45,7 +45,7 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   }
   LOG(FATAL) << "NotImplementedError: for now we only support batch_flatten on contiguous tensor.";
   throw;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   const auto* args = call->args.as<ReshapeArgs>();
@@ -64,7 +64,7 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   }
   LOG(FATAL) << "NotImplementedError: for now we only support reshape on contiguous tensor.";
   throw;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 void ReshapeDx(const CallValues &call) {
   const auto* args = call->args.as<ReshapeArgs>();
@@ -79,7 +79,7 @@ void ReshapeDx(const CallValues &call) {
   call->out = TupleValue::make(res);
 }
 
-MNM_OP_DECLARE("mnm.op.reshape_dx", ReshapeDx);
+MNM_OP_DECLARE("mnm.op.reshape_dx", ReshapeDx).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.take", [](const CallValues &call) {
   const auto* args = call->args.as<TakeArgs>();
@@ -101,7 +101,7 @@ MNM_OP_DECLARE("mnm.op.take", [](const CallValues &call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   const auto* args = call->args.as<ExpandDimsArgs>();
@@ -119,7 +119,7 @@ MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   }
   LOG(FATAL) << "NotImplementedError: for now we only support expand_dims on contiguous tensor.";
   throw;
-});
+}).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
@@ -131,7 +131,7 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
   const auto* args = call->args.as<BroadcastToArgs>();
@@ -141,7 +141,7 @@ MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
   const auto* args = call->args.as<TransposeArgs>();
@@ -165,7 +165,7 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
   }
   call->out = TensorValue::Assemble(x->ctx, x->dtype, oshape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues &call) {
   const auto* args = call->args.as<TransposeDxArgs>();
@@ -176,7 +176,7 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues &call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues &call) {
   const auto* args = call->args.as<BroadcastToLikeArgs>();
@@ -189,7 +189,7 @@ MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues &call) {
                                     /*dtype=*/broadcast_type->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues &call) {
   const auto* args = call->args.as<ConcatenateArgs>();
@@ -215,8 +215,30 @@ MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues &call) {
                                     /*dtype=*/y0->dtype,
                                     /*shape=*/shape);
   call->ctx = y0->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+void ConcatenateDx(const CallValues &call) {
+  const auto* args = call->args.as<ConcatenateArgs>();
+  CHECK(args != nullptr);
+  const std::vector<BaseTensorValue>& x = args->x;
+  int axis = args->axis;
+  ir::Array<Value> res;
+  if (x.size() > 0U) {
+    DLTensor* y0 = x[0];
+    axis = NormalizeAxis(axis, y0->ndim);
+    int64_t acc = 0;
+    for (size_t i = 0; i + 1 < x.size(); ++i) {
+      DLTensor* x0 = x[i];
+      acc += x0->shape[axis];
+      res.push_back(ScalarValue::make(acc));
+    }
+  }
+  call->callee = ir::NullValue<OpValue>();
+  call->out = TupleValue::make(res);
+}
+
+MNM_OP_DECLARE("mnm.op.concatenate_dx", ConcatenateDx)
+.set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.split", [](const CallValues &call){
   const auto* args = call->args.as<SplitArgs>();
@@ -239,29 +261,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues &call){
   }
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
   call->ctx = x->ctx;
-});
-
-void ConcatenateDx(const CallValues &call) {
-  const auto* args = call->args.as<ConcatenateArgs>();
-  CHECK(args != nullptr);
-  const std::vector<BaseTensorValue>& x = args->x;
-  int axis = args->axis;
-  ir::Array<Value> res;
-  if (x.size() > 0U) {
-    DLTensor* y0 = x[0];
-    axis = NormalizeAxis(axis, y0->ndim);
-    int64_t acc = 0;
-    for (size_t i = 0; i + 1 < x.size(); ++i) {
-      DLTensor* x0 = x[i];
-      acc += x0->shape[axis];
-      res.push_back(ScalarValue::make(acc));
-    }
-  }
-  call->callee = ir::NullValue<OpValue>();
-  call->out = TupleValue::make(res);
-}
-
-MNM_OP_DECLARE("mnm.op.concatenate_dx", ConcatenateDx);
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.clip", [](const CallValues &call) {
   const auto* args = call->args.as<ClipArgs>();
@@ -272,7 +272,7 @@ MNM_OP_DECLARE("mnm.op.clip", [](const CallValues &call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues &call) {
   const auto* args = call->args.as<ClipDxArgs>();
@@ -283,7 +283,7 @@ MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues &call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 }  // namespace declare
 }  // namespace op

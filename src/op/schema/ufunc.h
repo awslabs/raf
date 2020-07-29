@@ -1,7 +1,8 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \file src/op/schema/ufunc.h
- * \brief Operator schema. Auto generated. Do not touch.
+ * \brief Operator schema.
  */
 #pragma once
 #include <vector>
@@ -17,6 +18,7 @@ class BinaryArgs : public ir::AttrsNode<BinaryArgs> {
   value::Value x2;
   MNM_OP_SCHEMA(BinaryArgs, "mnm.args.binary");
 };
+
 class BinaryDxArgs : public ir::AttrsNode<BinaryDxArgs> {
  public:
   value::Value x1;
@@ -25,6 +27,7 @@ class BinaryDxArgs : public ir::AttrsNode<BinaryDxArgs> {
   value::BaseTensorValue dy;
   MNM_OP_SCHEMA(BinaryDxArgs, "mnm.args.binary_dx");
 };
+
 class BinaryUfuncArgs : public ir::AttrsNode<BinaryUfuncArgs> {
  public:
   value::Value x1;
@@ -33,6 +36,7 @@ class BinaryUfuncArgs : public ir::AttrsNode<BinaryUfuncArgs> {
   value::Value where{nullptr};
   MNM_OP_SCHEMA(BinaryUfuncArgs, "mnm.args.binary_ufunc");
 };
+
 class TernaryArgs : public ir::AttrsNode<TernaryArgs> {
  public:
   value::Value x1;
@@ -40,6 +44,7 @@ class TernaryArgs : public ir::AttrsNode<TernaryArgs> {
   value::Value x3;
   MNM_OP_SCHEMA(TernaryArgs, "mnm.args.ternary");
 };
+
 class TernaryDxArgs : public ir::AttrsNode<TernaryDxArgs> {
  public:
   value::Value x1;
@@ -49,6 +54,7 @@ class TernaryDxArgs : public ir::AttrsNode<TernaryDxArgs> {
   value::BaseTensorValue dy;
   MNM_OP_SCHEMA(TernaryDxArgs, "mnm.args.ternary_dx");
 };
+
 class TernaryUfuncArgs : public ir::AttrsNode<TernaryUfuncArgs> {
  public:
   value::Value x1;
@@ -58,11 +64,13 @@ class TernaryUfuncArgs : public ir::AttrsNode<TernaryUfuncArgs> {
   value::Value where{nullptr};
   MNM_OP_SCHEMA(TernaryUfuncArgs, "mnm.args.ternary_ufunc");
 };
+
 class UnaryArgs : public ir::AttrsNode<UnaryArgs> {
  public:
   value::Value x;
   MNM_OP_SCHEMA(UnaryArgs, "mnm.args.unary");
 };
+
 class UnaryDxArgs : public ir::AttrsNode<UnaryDxArgs> {
  public:
   value::Value x;
@@ -70,6 +78,7 @@ class UnaryDxArgs : public ir::AttrsNode<UnaryDxArgs> {
   value::BaseTensorValue dy;
   MNM_OP_SCHEMA(UnaryDxArgs, "mnm.args.unary_dx");
 };
+
 class UnaryUfuncArgs : public ir::AttrsNode<UnaryUfuncArgs> {
  public:
   value::Value x;

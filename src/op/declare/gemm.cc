@@ -50,10 +50,10 @@ auto MatmulNT = MatmulDecl<false, true>;
 auto MatmulTN = MatmulDecl<true, false>;
 auto MatmulTT = MatmulDecl<true, true>;
 
-MNM_OP_DECLARE("mnm.op.matmul", MatmulNN);
-MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT);
-MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN);
-MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT);
+MNM_OP_DECLARE("mnm.op.matmul", MatmulNN).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
   const auto* args = call->args.as<schema::BinaryArgs>();
@@ -79,7 +79,7 @@ MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
   if (!k1 || !k2 || !n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
   }
-});
+}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 }  // namespace declare
 }  // namespace op

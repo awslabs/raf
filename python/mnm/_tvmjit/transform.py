@@ -1,4 +1,4 @@
-from .._lib import OpPattern, register_compute
+from .._lib import register_compute
 from .._lib import topi as _topi
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
@@ -16,8 +16,6 @@ def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
 
 
 _reg.register_injective_schedule("mnm.op.transpose_dx")
-_reg.register_pattern("mnm.op.transpose_dx", OpPattern.INJECTIVE)
-
 _reg.register_injective_schedule("mnm.op.transpose")
 _reg.register_injective_schedule("mnm.op.split")
 _reg.register_injective_schedule("mnm.op.take")
@@ -42,4 +40,3 @@ def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argum
     return [_tvm.te.compute(x.shape, _select)]
 
 _reg.register_injective_schedule("mnm.op.clip_dx")
-_reg.register_pattern("mnm.op.clip_dx", OpPattern.INJECTIVE)

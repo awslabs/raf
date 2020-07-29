@@ -7,6 +7,7 @@ from codegen_utils import split_chunks, write_to_file
 
 def gen_file():
     FILE = """
+\"\"\"Auto generated. Do not touch.\"\"\"
 import mnm._ffi.op.imp as ffi
 from mnm._core.core_utils import set_module
 from . import imp_utils
@@ -20,7 +21,7 @@ __all__ = [
 {METHODS}
 """.strip()
     ops = def_op.by_name()
-    methods = "\n".join(gen_method(ops[name])
+    methods = "\n\n".join(gen_method(ops[name])
                         for name in sorted(ops.keys()))
     op_names = "\n".join(map(lambda x: '    "' + '", "'.join(x) + '",',
                              split_chunks(sorted(ops.keys()), chunk_size=5)))

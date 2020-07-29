@@ -1,3 +1,4 @@
+"""Auto generated. Do not touch."""
 # pylint: disable=redefined-builtin
 from ._internal import git_version
 from ._internal import use_cuda

@@ -35,7 +35,7 @@ MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
                                   /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
   call->out = TupleValue::make(tvm::Array<Value>({v1, x1}));
   call->ctx = dx->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 
 }  // namespace declare

@@ -92,6 +92,16 @@ class OpDispatch {
   registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
+using tvm::relay::TOpPattern;
+using tvm::relay::OpPatternKind;
+using tvm::relay::kElemWise;
+using tvm::relay::kBroadcast;
+using tvm::relay::kInjective;
+using tvm::relay::kCommReduce;
+using tvm::relay::kOutEWiseFusable;
+using tvm::relay::kTuple;
+using tvm::relay::kOpaque;
+
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
@@ -130,7 +140,7 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 #define MNM_OP_REGISTER(op_name) RELAY_REGISTER_OP(op_name)
 
 #define MNM_OP_DECLARE(op_name, body) \
-  RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FMNMDeclare>("FMNMDeclare", body);
+  RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FMNMDeclare>("FMNMDeclare", body)
 
 #define MNM_OP_DISPATCH(op_name, op_env_maker, device_type, backend_name) \
   DMLC_STR_CONCAT(_MNM_OP_DISPATCH_DEF, __COUNTER__) =                    \

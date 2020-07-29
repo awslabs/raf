@@ -23,7 +23,7 @@ void Ones(const CallValues &call) {
   call->out = TensorValue::Assemble(call->ctx, DType(DTypeCode::kFloat(), 32), shape);
 }
 
-MNM_OP_DECLARE("mnm.op.ones", Ones);
+MNM_OP_DECLARE("mnm.op.ones", Ones).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 }  // namespace init
 }  // namespace op

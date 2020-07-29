@@ -28,7 +28,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss", [](const CallValues& call) {
                                     /*dtype=*/true_->dtype,
                                     /*shape=*/{1});
   call->ctx = true_->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kCommReduce);
 
 MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues &call){
   const auto* args = call->args.as<LossArgs>();
@@ -41,7 +41,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues &call){
   CHECK_EQ(pred->shape[1], true_->shape[1]);
   call->out = TensorValue::Assemble(pred->ctx, pred->dtype, {pred->shape[0], pred->shape[1]});
   call->ctx = pred->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.nll_loss_dtrue", [](const CallValues &call){
   const auto* args = call->args.as<LossArgs>();
@@ -54,7 +54,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss_dtrue", [](const CallValues &call){
   CHECK_EQ(pred->shape[1], true_->shape[1]);
   call->out = TensorValue::Assemble(true_->ctx, pred->dtype, {true_->shape[0], true_->shape[1]});
   call->ctx = true_->ctx;
-});
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 }  // namespace declare
 }  // namespace op

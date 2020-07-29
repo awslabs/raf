@@ -5,9 +5,10 @@ from def_tvm_op import OP_MAP
 def gen_file(filename):
     FILE = """
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \\file {FILENAME}
- * \\brief Auto generated. Do not touch.
+ * \\brief Register TVM ops.
  */
 #include "mnm/ir.h"
 #include "mnm/op.h"
@@ -23,9 +24,7 @@ using tvm::te::Schedule;
 using tvm::te::Tensor;
 using tvm::relay::FTVMCompute;
 using tvm::relay::FTVMSchedule;
-using tvm::relay::OpPatternKind;
-using tvm::relay::TOpPattern;
-#define MNM_TVM_OP(MNM_OP, OP, PATTERN)                                                         \\
+#define MNM_TVM_OP(MNM_OP, OP)                                                                  \\
   MNM_OP_REGISTER(MNM_OP)                                                                       \\
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \\
                              [](const Attrs& attrs, const Array<Tensor>& inputs,                \\
@@ -39,8 +38,8 @@ using tvm::relay::TOpPattern;
           [](const Attrs& attrs, const Array<Tensor>& outs, const Target& target) -> Schedule {{ \\
             auto fschedule = Op::GetAttrMap<FTVMSchedule>("FTVMSchedule")[Op::Get(OP)];         \\
             return fschedule(attrs, outs, target);                                              \\
-          }})                                                                                    \\
-      .set_attr<TOpPattern>("TOpPattern", tvm::relay::PATTERN);
+          }})
+
 {REGS}
 }}  // namespace
 }}  // namespace op
@@ -48,19 +47,18 @@ using tvm::relay::TOpPattern;
 """.strip()
     regs = []
     for mnm_op_name in sorted(OP_MAP.keys()):
-        relay_op_name, _, pattern = OP_MAP[mnm_op_name]
-        regs.append(gen_reg(mnm_op_name, relay_op_name, pattern))
+        relay_op_name, _, _ = OP_MAP[mnm_op_name]
+        regs.append(gen_reg(mnm_op_name, relay_op_name))
     regs = "\n".join(regs)
     return FILE.format(REGS=regs, FILENAME=filename)
 
 
-def gen_reg(mnm_op_name, relay_op_name, pattern):
+def gen_reg(mnm_op_name, relay_op_name):
     REG = """
-MNM_TVM_OP("{MNM_OP_NAME}", "{RELAY_OP_NAME}", {PATTERN});
+MNM_TVM_OP("{MNM_OP_NAME}", "{RELAY_OP_NAME}");
 """.strip()
     return REG.format(MNM_OP_NAME=mnm_op_name,
-                      RELAY_OP_NAME=relay_op_name,
-                      PATTERN=pattern)
+                      RELAY_OP_NAME=relay_op_name)
 
 
 def main(path="./src/op/regs/tvmjit_regs.cc"):

@@ -1,3 +1,4 @@
+"""Auto generated. Do not touch."""
 # pylint: disable=redefined-builtin
 from ._internal import AssembleTensorValue
 from ._internal import DeTuple

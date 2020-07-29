@@ -269,6 +269,7 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
     return new {CLASSNAME}(cv);
   }}
 }};
+
 MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn");
 """.strip()
 

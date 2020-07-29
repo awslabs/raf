@@ -1,7 +1,8 @@
 /*!
  * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \file src/op/regs/regs.cc
- * \brief Auto generated. Do not touch.
+ * \brief Register op schemas.
  */
 #include <algorithm>
 #include <array>

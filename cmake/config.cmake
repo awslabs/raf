@@ -1,5 +1,5 @@
 # The example config.cmake
-# When building the probject, copy this file to the `build' directory
+# When building the project, copy this file to the `build' directory
 
 ########## CMake Configuration #########
 # Below are the suggested configurations to CMake

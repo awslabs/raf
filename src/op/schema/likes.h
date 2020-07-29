@@ -1,7 +1,8 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \file src/op/schema/likes.h
- * \brief Operator schema. Auto generated. Do not touch.
+ * \brief Operator schema.
  */
 #pragma once
 #include <vector>
@@ -17,12 +18,14 @@ class CollapseLikeArgs : public ir::AttrsNode<CollapseLikeArgs> {
   std::vector<int64_t> shape;
   MNM_OP_SCHEMA(CollapseLikeArgs, "mnm.args.collapse_like");
 };
+
 class ReshapeArgs : public ir::AttrsNode<ReshapeArgs> {
  public:
   value::BaseTensorValue x;
   std::vector<int64_t> shape;
   MNM_OP_SCHEMA(ReshapeArgs, "mnm.args.reshape");
 };
+
 class SumArgs : public ir::AttrsNode<SumArgs> {
  public:
   value::BaseTensorValue x;

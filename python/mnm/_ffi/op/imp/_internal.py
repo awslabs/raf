@@ -1,3 +1,4 @@
+"""Auto generated. Do not touch."""
 from mnm._lib import _APIS
 
 # pylint: disable=invalid-name,redefined-builtin

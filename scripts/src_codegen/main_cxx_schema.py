@@ -8,9 +8,10 @@ from codegen_utils import snake_to_pascal, write_to_file
 def gen_file(schemas, filename):
     FILE = """
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2020 by Contributors
+ * Auto generated. Do not touch.
  * \\file {FILENAME}
- * \\brief Operator schema. Auto generated. Do not touch.
+ * \\brief Operator schema.
  */
 #pragma once
 #include <vector>
@@ -29,7 +30,7 @@ namespace schema {{
     for name in sorted(schemas.keys()):
         schema = schemas[name]
         result.append(gen_class(name, schema))
-    result = "\n".join(result)
+    result = "\n\n".join(result)
     if filename.startswith("./"):
         filename = filename[2:]
     return FILE.format(CLASSES=result, FILENAME=filename)
