@@ -80,6 +80,23 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Var& y, const Expr& dy)
 
 MNM_OP_GRAD("mnm.op.batch_matmul", BatchMatmulGrad);
 
+Array<Expr> DenseGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  using namespace mnm::value;
+  static auto op_dense = Op::Get("mnm.op.dense");
+  static auto op_transpose = Op::Get("mnm.op.transpose");
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& a = call->args[0];
+  const Expr& b = call->args[1];
+  const Expr& axes =
+      MakeConstant(TupleValue::make(Array<Value>{IntValue::make(1), IntValue::make(0)}));
+  const Expr& at = Call(op_transpose, {a, axes});
+  const Expr& bt = Call(op_transpose, {b, axes});
+  const Expr& dyt = Call(op_transpose, {dy, axes});
+  return {Call(op_dense, {dy, bt}), Call(op_dense, {dyt, at})};
+}
+
+MNM_OP_GRAD("mnm.op.dense", DenseGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

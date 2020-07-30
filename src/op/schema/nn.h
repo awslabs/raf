@@ -163,6 +163,16 @@ class TakeArgs : public ir::AttrsNode<TakeArgs> {
   value::Value axis{nullptr};
   MNM_OP_SCHEMA(TakeArgs, "mnm.args.take");
 };
+
+class TakeDxArgs : public ir::AttrsNode<TakeDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
+  value::BaseTensorValue indices;
+  value::Value axis{nullptr};
+  MNM_OP_SCHEMA(TakeDxArgs, "mnm.args.take_dx");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

@@ -51,7 +51,35 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   const auto* args = call->args.as<ReshapeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
-  const std::vector<int64_t>& shape = args->shape;
+  bool reverse = args->reverse;
+  std::vector<int64_t> shape = args->shape;
+  int64_t size = 1;
+  int tbd = -1;
+  for (size_t i = 0; i < shape.size(); ++i) {
+    if (shape[i] == -1) {
+      CHECK_EQ(tbd, -1);
+      tbd = i;
+    } else {
+      if (shape[i] == 0) {
+        if (reverse) {
+          CHECK_GE(x->ndim - (shape.size() - i), 0);
+          shape[i] = x->shape[x->ndim - (shape.size() - i)];
+        } else {
+          CHECK(i < x->ndim);
+          shape[i] = x->shape[i];
+        }
+      }
+      size = size * shape[i];
+    }
+  }
+  if (tbd >= 0) {
+    int64_t x_size = 1;
+    for (int i = 0; i < x->ndim; ++i) {
+      x_size *= x->shape[i];
+    }
+    CHECK_EQ(x_size % size, 0);
+    shape[tbd] = x_size / size;
+  }
   call->ctx = x->ctx;
   call->callee = ir::NullValue<OpValue>();
   if (IsCompact(*x)) {
@@ -97,6 +125,18 @@ MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
   } else {
     shape.insert(shape.end(), indices->shape, indices->shape + indices->ndim);
   }
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.take_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<TakeDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  ;
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);

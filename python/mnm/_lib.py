@@ -31,7 +31,7 @@ from tvm._ffi.runtime_ctypes import TVMArrayHandle as _DLArrayHandle
 from tvm.tir import FloatImm, IntImm, StringImm
 from tvm.ir.container import Array
 from tvm.runtime.ndarray import array as tvm_ndarray
-from tvm.relay.op import OpPattern, register_compute, register_pattern
+from tvm.relay.op import OpPattern, register_compute, register_pattern, strategy
 from tvm.relay.op.op import register_injective_schedule, register_broadcast_schedule, \
     register_reduce_schedule
 from tvm.relay.op import op as _reg

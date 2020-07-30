@@ -81,6 +81,25 @@ MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
   }
 }).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
+MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
+  const auto* args = call->args.as<schema::BinaryArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* a = args->x1;
+  const DLTensor* b = args->x2;
+  CHECK_EQ(a->ndim, 2);
+  CHECK_EQ(b->ndim, 2);
+  int64_t n1 = a->shape[0];
+  int64_t m1 = a->shape[1];
+  int64_t n2 = b->shape[0];
+  int64_t m2 = b->shape[1];
+  CHECK_EQ(m1, m2);
+  call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype, /*shape=*/{n1, n2});
+  call->ctx = a->ctx;
+  if (!n1 || !n2 || !m1 || !m2) {
+    call->callee = ir::NullValue<OpValue>();
+  }
+}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

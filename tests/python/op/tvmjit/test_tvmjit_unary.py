@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from scipy import special
+import torch
 
 import mnm
 
@@ -32,6 +33,23 @@ def randn_pos(shape, *, ctx="cpu", dtype="float32"):
     return m_x, n_x
 
 
+def randn_torch(shape, *, ctx="cpu", dtype="float32"):
+    x = np.random.randn(*shape)
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    assert list(x.shape) == list(shape)
+    n_x = x.astype(dtype)
+    m_x = mnm.array(n_x, ctx=ctx)
+    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
+    return m_x, t_x
+
+
+def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
+    m_x = m_x.asnumpy()
+    t_x = t_x.detach().cpu().numpy()
+    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+
+
 def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     m_x = m_x.asnumpy()
     np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
@@ -57,6 +75,41 @@ def test_unary_ops(ops, shape, dtype, ctx):
     m_x = m_op(m_x)
     n_x = n_op(n_x)
     check(m_x, n_x)
+
+
+# pylint: disable=no-member
+# pylint: disable=protected-access
+# pylint: disable=no-self-use
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize(
+    "ops",
+    [
+        (torch.erf, mnm._op.sym.erf),
+        (torch.nn.ReLU(), mnm._op.sym.relu),
+    ])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_unary_ops_with_grad(ops, shape, dtype, ctx):
+    class Unary(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return m_op(x)
+    t_op, m_op = ops
+    model = Unary()
+    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx)
+    m_x.requires_grad = True
+    m_y = model(m_x)
+    t_y = t_op(t_x)
+    # check forward
+    check_torch(m_y, t_y)
+    # check backward
+    m_dy, t_dy = randn_torch(shape, dtype=dtype, ctx=ctx)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check_torch(m_x.grad, t_x.grad)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())

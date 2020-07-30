@@ -12,18 +12,18 @@ __all__ = [
     "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to",
     "broadcast_to_like", "ceil", "clip", "clip_dx", "collapse_sum_like",
     "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "divide", "equal", "erf",
-    "erf_dx", "expand_dims", "floor", "get_kept_dims", "get_reduce_axis",
-    "greater", "greater_equal", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx", "maximum",
-    "mean", "mean_dx", "minimum", "mod", "multiply",
-    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "not_equal",
-    "relu", "relu_dx", "reshape", "reshape_dx", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
-    "sum", "take", "tanh", "tanh_dx", "transpose",
-    "transpose_dx",
+    "copy", "cos", "dense", "divide", "equal",
+    "erf", "erf_dx", "expand_dims", "floor", "get_kept_dims",
+    "get_reduce_axis", "greater", "greater_equal", "less", "less_equal",
+    "log", "log_softmax", "log_softmax_dx", "logical_not", "matmul",
+    "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx",
+    "maximum", "mean", "mean_dx", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "not_equal", "relu", "relu_dx", "reshape", "reshape_dx",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "softmax", "softmax_dx", "split", "sqrt", "sqrt_dx",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -231,6 +231,12 @@ def copy(x):
 def cos(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.cos(x))
+
+@set_module("mnm")
+def dense(x1, x2):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    return imp_utils.ret(ffi.dense(x1, x2))
 
 @set_module("mnm")
 def divide(x1, x2, out=None, where=None):
@@ -484,16 +490,18 @@ def relu_dx(x, y, dy):
     return imp_utils.ret(ffi.relu_dx(x, y, dy))
 
 @set_module("mnm")
-def reshape(x, shape):
+def reshape(x, shape, reverse=False):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
-    return imp_utils.ret(ffi.reshape(x, shape))
+    reverse = imp_utils.to_bool(reverse)
+    return imp_utils.ret(ffi.reshape(x, shape, reverse))
 
 @set_module("mnm")
-def reshape_dx(x, shape):
+def reshape_dx(x, shape, reverse=False):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
-    return imp_utils.ret(ffi.reshape_dx(x, shape))
+    reverse = imp_utils.to_bool(reverse)
+    return imp_utils.ret(ffi.reshape_dx(x, shape, reverse))
 
 @set_module("mnm")
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
@@ -583,6 +591,15 @@ def take(x, indices, axis=None):
     indices = imp_utils.to_tensor(indices)
     axis = imp_utils.to_any(axis)
     return imp_utils.ret(ffi.take(x, indices, axis))
+
+@set_module("mnm")
+def take_dx(x, y, dy, indices, axis=None):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    indices = imp_utils.to_tensor(indices)
+    axis = imp_utils.to_any(axis)
+    return imp_utils.ret(ffi.take_dx(x, y, dy, indices, axis))
 
 @set_module("mnm")
 def tanh(x):

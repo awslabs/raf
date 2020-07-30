@@ -28,6 +28,7 @@ from ._internal import conv2d_dw
 from ._internal import conv2d_dx
 from ._internal import copy
 from ._internal import cos
+from ._internal import dense
 from ._internal import divide
 from ._internal import equal
 from ._internal import erf
@@ -78,6 +79,7 @@ from ._internal import sqrt_dx
 from ._internal import subtract
 from ._internal import sum
 from ._internal import take
+from ._internal import take_dx
 from ._internal import tanh
 from ._internal import tanh_dx
 from ._internal import transpose

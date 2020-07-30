@@ -74,6 +74,8 @@ OPS = [
     Op(name="sgd", schema_name="sgd"),
     Op(name="shape", schema_name="unary"),
     Op(name="take", schema_name="take"),
+    Op(name="take_dx", schema_name="take_dx"),
+    Op(name="dense", schema_name="binary"),
     Op(name="expand_dims", schema_name="expand_dims"),
     Op(name="sequence_mask", schema_name="sequence_mask"),
     Op(name="broadcast_to", schema_name="broadcast_to"),

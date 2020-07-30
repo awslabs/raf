@@ -3,6 +3,7 @@ import operator
 
 import numpy as np
 import pytest
+import mxnet as mx
 import torch
 import mnm
 import topi.testing
@@ -57,20 +58,44 @@ def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
     np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
 
 
+# pylint: disable=too-many-locals
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=no-member
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
     [(5, 4, 3), (1, 2)],
     [(6, 5), (2, 2)],
     [(1, 1), (2, 2, 2)],
 ])
-@pytest.mark.parametrize("axis", [None, 0, 1, -1])
+@pytest.mark.parametrize("axis", [0, 1, -1])
 def test_take(shape, axis, ctx):
+    class Take(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, x, indices):
+            return mnm.take(x, indices=indices, axis=self._axis)
     size = reduce(operator.mul, shape[0], 1) if axis is None else shape[0][axis]
     m_x, n_x = randn(shape[0], ctx=ctx)
+    m_x.requires_grad = True
     m_indices, n_indices = randint(shape[1], low=0, high=size, ctx=ctx)
-    m_y = mnm.take(m_x, m_indices, axis=axis)
+    model = Take(axis)
+    m_y = model(m_x, m_indices)
     n_y = np.take(n_x, n_indices, axis=axis, mode="clip")
+    # check forward
     check(m_y, n_y)
+    # check backward
+    m_dy, n_dy = randn(n_y.shape, ctx=ctx)
+    mx_x = mx.nd.array(n_x)
+    mx_x.attach_grad()
+    mx_dy = mx.nd.array(n_dy)
+    mx_indices = mx.nd.array(n_indices)
+    with mx.autograd.record():
+        mx_y = mx.nd.take(mx_x, indices=mx_indices, axis=axis, mode="clip")
+        mx_y.backward(mx_dy)
+    m_y.backward(m_dy)
+    check(m_x.grad, mx_x.grad.asnumpy())
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -301,6 +326,46 @@ def test_reshape(params, ctx):
     # check backward
     m_y.backward(m_dy)
     check(m_x.grad, n_dy)
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    [10, 3, 2, 5],
+    [1, 4, 5, 2],
+    [9, 12, 18, 2, 1]])
+@pytest.mark.parametrize("axis", [0, 1, 2, 3])
+@pytest.mark.parametrize("num_newaxis", [0, 1, 2, 5])
+def test_expand_dims(ctx, shape, axis, num_newaxis):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    class ExpandDims(mnm.Model):
+        def build(self, axis, num_newaxis):
+            self.axis = axis
+            self.num_newaxis = num_newaxis
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.expand_dims(x, axis=self.axis, num_newaxis=self.num_newaxis)
+
+    m_x, n_x = randn(shape, ctx=ctx)
+    m_x.requires_grad = True
+    model = ExpandDims(axis, num_newaxis)
+    m_y = model(m_x)
+    # check forward
+    n_y = n_x
+    if num_newaxis == 0:
+        pass
+    elif num_newaxis == 1:
+        n_y = np.expand_dims(n_y, axis=axis)
+    else:
+        for _ in range(num_newaxis):
+            n_y = np.expand_dims(n_y, axis=axis)
+    check(m_y, n_y)
+    # check backward
+    m_dy, n_dy = randn(m_y.shape, ctx=ctx)
+    m_y.backward(m_dy)
+    check(m_x.grad, np.reshape(n_dy, n_x.shape))
 
 if __name__ == "__main__":
     pytest.main([__file__])

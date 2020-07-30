@@ -15,6 +15,7 @@ namespace tvmjit {
 using namespace mnm::ir;
 using common::shape_utils::GetNumel;
 using schema::UnaryArgs;
+using schema::UnaryDxArgs;
 
 Attrs UnaryNormalizer(TVMOpEnv* env, const UnaryArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -34,13 +35,35 @@ void UnaryTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *param_types = {GetTensorType(env->inputs[0])};
 }
 
+Attrs UnaryDxNormalizer(TVMOpEnv* env, const UnaryDxArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+      GetDLTensor(args->dy),
+      GetDLTensor(args->y),
+  };
+  return Attrs();
+}
+
+void UnaryDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
+  };
+}
+
 MNM_TVMJIT(Copy, "mnm.op.copy", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Abs, "mnm.op.abs", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Ceil, "mnm.op.ceil", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Floor, "mnm.op.floor", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Log, "mnm.op.log", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Cos, "mnm.op.cos", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Relu, "mnm.op.relu", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper, GenericHasher);
 MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper, GenericHasher);
 MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 

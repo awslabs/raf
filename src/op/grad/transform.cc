@@ -56,6 +56,15 @@ Array<Expr> ClipGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 
 MNM_OP_GRAD("mnm.op.clip", ClipGrad);
 
+Array<Expr> ExpandDimsGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto reshape = Op::Get("mnm.op.reshape");
+  static auto shape = Op::Get("mnm.op.shape");
+  const CallNode* call = orig_call.as<CallNode>();
+  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
+}
+
+MNM_OP_GRAD("mnm.op.expand_dims", ExpandDimsGrad);
+
 Array<Expr> ReshapeGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.reshape");
   static auto op_shape = Op::Get("mnm.op.reshape_dx");
@@ -67,6 +76,18 @@ Array<Expr> ReshapeGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 }
 
 MNM_OP_GRAD("mnm.op.reshape", ReshapeGrad);
+
+Array<Expr> TakeGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.take_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_EQ(call->args.size(), 3);
+  const Expr& x = call->args[0];
+  const Expr& indices = call->args[1];
+  const Expr& axis = call->args[2];
+  return {Call(op_dx, {x, y, dy, indices, axis})};
+}
+
+MNM_OP_GRAD("mnm.op.take", TakeGrad);
 
 }  // namespace grad
 }  // namespace op

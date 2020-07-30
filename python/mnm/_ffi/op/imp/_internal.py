@@ -57,6 +57,8 @@ copy = _APIS.get("mnm.op.imp.copy", None)
 # Defined in ./src/op/regs/regs.cc
 cos = _APIS.get("mnm.op.imp.cos", None)
 # Defined in ./src/op/regs/regs.cc
+dense = _APIS.get("mnm.op.imp.dense", None)
+# Defined in ./src/op/regs/regs.cc
 divide = _APIS.get("mnm.op.imp.divide", None)
 # Defined in ./src/op/regs/regs.cc
 equal = _APIS.get("mnm.op.imp.equal", None)
@@ -156,6 +158,8 @@ subtract = _APIS.get("mnm.op.imp.subtract", None)
 sum = _APIS.get("mnm.op.imp.sum", None)
 # Defined in ./src/op/regs/regs.cc
 take = _APIS.get("mnm.op.imp.take", None)
+# Defined in ./src/op/regs/regs.cc
+take_dx = _APIS.get("mnm.op.imp.take_dx", None)
 # Defined in ./src/op/regs/regs.cc
 tanh = _APIS.get("mnm.op.imp.tanh", None)
 # Defined in ./src/op/regs/regs.cc

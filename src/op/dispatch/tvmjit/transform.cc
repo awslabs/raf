@@ -56,6 +56,44 @@ HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, con
 
 MNM_TVMJIT(Take, "mnm.op.take", TakeArgs, TakeNormalizer, TakeTyper, TakeHasher);
 
+Attrs TakeDxNormalizer(TVMOpEnv* env, const TakeDxArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(4);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->y);
+  env->inputs[2] = GetDLTensor(args->dy);
+  env->inputs[3] = GetDLTensor(args->indices);
+  auto attrs = make_object<TakeAttrs>();
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    attrs->axis = v->data;
+  } else {
+    attrs->axis = NullValue<Integer>();
+  }
+  attrs->mode = "wrap";
+  return Attrs(attrs);
+}
+
+void TakeDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
+                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3])};
+}
+
+HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                     const TakeDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    key << v->data;
+  }
+  return key;
+}
+
+MNM_TVMJIT(TakeDx, "mnm.op.take_dx", TakeDxArgs, TakeDxNormalizer, TakeDxTyper, TakeDxHasher);
+
 Attrs SequenceMaskNormalizer(TVMOpEnv* env, const SequenceMaskArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(2);

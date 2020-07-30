@@ -23,6 +23,7 @@ class ReshapeArgs : public ir::AttrsNode<ReshapeArgs> {
  public:
   value::BaseTensorValue x;
   std::vector<int64_t> shape;
+  bool reverse{false};
   MNM_OP_SCHEMA(ReshapeArgs, "mnm.args.reshape");
 };
 
