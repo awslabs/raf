@@ -1,3 +1,4 @@
+"""Schedule registries for unary operators."""
 from .._lib import _reg
 
 _reg.register_broadcast_schedule("mnm.op.copy")

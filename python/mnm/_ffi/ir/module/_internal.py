@@ -1,7 +1,7 @@
+# pylint: disable=invalid-name,redefined-builtin
+# pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
-
-# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/ir_ext.cc
 Add = _APIS.get("mnm.ir.module.Add", None)
 # Defined in ./src/impl/ir_ext.cc

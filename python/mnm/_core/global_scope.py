@@ -1,3 +1,5 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Provide a thread-local scope to cache items"""
 import contextlib
 import threading
 

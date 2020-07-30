@@ -16,8 +16,8 @@ namespace op {
 namespace type {
 
 using namespace mnm::value;
-using tvm::relay::Type;
 using schema::UnaryArgs;
+using tvm::relay::Type;
 
 Type UnaryInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();

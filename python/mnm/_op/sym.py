@@ -1,9 +1,10 @@
+# pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
+# pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
 from . import sym_utils
 
-# pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 __all__ = [
     "abs", "add", "all", "any", "argmax",
     "argmin", "atan", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",

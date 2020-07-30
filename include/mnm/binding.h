@@ -68,12 +68,11 @@ class SymbolBinding : public BindingEntry {
 ir::Var BindNDArray(value::Value value, GradTape tape = {}, std::string name_hint = "");
 void RebindNDArray(ir::Var var, value::Value value, GradTape tape = {});
 ir::Var BindSymbol(ir::Expr expr, std::string name_hint = "", tvm::Type ty = tvm::Type());
-BindingEntry LookupBinding(const ir::VarNode *var);
+BindingEntry LookupBinding(const ir::VarNode* var);
 
 ir::ObjectRef DeTuple(value::Value value);
 
-ir::ObjectRef DeStruct(value::Value value,
-                       value::ClosureValue bp,
+ir::ObjectRef DeStruct(value::Value value, value::ClosureValue bp,
                        ir::Array<ir::ObjectRef> prev_tapes);
 
 }  // namespace binding

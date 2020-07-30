@@ -1,3 +1,5 @@
+# pylint: disable=missing-function-docstring
+"""SGD compute definition and schedule."""
 from .._lib import register_compute
 from .._lib import topi as _topi  # pylint: disable=unused-import
 from .._lib import tvm as _tvm
@@ -19,5 +21,6 @@ def sgd_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
 
     x1 = _tvm.te.compute(x0.shape, fcomputex)
     return [v1, x1]
+
 
 _reg.register_broadcast_schedule("mnm.op.sgd")

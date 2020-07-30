@@ -82,14 +82,19 @@ inline const void* const_typed_addr() {
   return static_cast<const void*>(&a);
 }
 
-template<int value>
-const void *const_typed_addr(cudaDataType_t dt) {
+template <int value>
+const void* const_typed_addr(cudaDataType_t dt) {
   switch (dt) {
-    case CUDA_R_8I: return const_typed_addr<int8_t, value>();
-    case CUDA_R_8U: return const_typed_addr<uint8_t, value>();
-    case CUDA_R_16F: return const_typed_addr<float, value>();
-    case CUDA_R_32F: return const_typed_addr<float, value>();
-    case CUDA_R_64F: return const_typed_addr<double, value>();
+    case CUDA_R_8I:
+      return const_typed_addr<int8_t, value>();
+    case CUDA_R_8U:
+      return const_typed_addr<uint8_t, value>();
+    case CUDA_R_16F:
+      return const_typed_addr<float, value>();
+    case CUDA_R_32F:
+      return const_typed_addr<float, value>();
+    case CUDA_R_64F:
+      return const_typed_addr<double, value>();
     default:
       LOG(FATAL) << "Not supported data type!";
       throw;

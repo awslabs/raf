@@ -12,22 +12,22 @@
 #include "mnm/registry.h"
 #include "mnm/profiler.h"
 
-#define WITH_CUDA_PROFILER(CTX, NAME, CAT, ARGS, CODE_SNIPPET)                               \
-  {                                                                                             \
-    bool profiling = profiler::Profiler::Get()->IsProfiling();                                  \
-    std::vector<profiler::ProfilerCudaHelper>& profiling_helpers =                              \
-        profiler::CudaProfiler::Get()->GetProfilingHelpers();                                   \
-    if (profiling) {                                                                            \
+#define WITH_CUDA_PROFILER(CTX, NAME, CAT, ARGS, CODE_SNIPPET)                                   \
+  {                                                                                              \
+    bool profiling = profiler::Profiler::Get()->IsProfiling();                                   \
+    std::vector<profiler::ProfilerCudaHelper>& profiling_helpers =                               \
+        profiler::CudaProfiler::Get()->GetProfilingHelpers();                                    \
+    if (profiling) {                                                                             \
       profiler::ProfilerCudaHelper phelper(profiling, CTX.device_id, CTX.device_type, NAME, CAT, \
-                                          ARGS);                                                \
+                                           ARGS);                                                \
       profiling_helpers.push_back(phelper);                                                      \
-      profiling_helpers.back().start();                                                         \
-      cudaEventRecord(profiling_helpers.back().start_event, 0);                                 \
-      CODE_SNIPPET                                                                              \
-      cudaEventRecord(profiling_helpers.back().end_event, 0);                                   \
-    } else {                                                                                    \
-      CODE_SNIPPET                                                                              \
-    }                                                                                           \
+      profiling_helpers.back().start();                                                          \
+      cudaEventRecord(profiling_helpers.back().start_event, 0);                                  \
+      CODE_SNIPPET                                                                               \
+      cudaEventRecord(profiling_helpers.back().end_event, 0);                                    \
+    } else {                                                                                     \
+      CODE_SNIPPET                                                                               \
+    }                                                                                            \
   }
 
 namespace mnm {

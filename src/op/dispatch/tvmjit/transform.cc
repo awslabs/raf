@@ -41,13 +41,10 @@ Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
 
 void TakeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]),
-                  GetTensorType(env->inputs[1])};
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
 }
 
-HashKey TakeHasher(const std::vector<Type>& param_types,
-                   const Type &y_type,
-                   const TakeArgs* args) {
+HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, const TakeArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
@@ -72,12 +69,10 @@ Attrs SequenceMaskNormalizer(TVMOpEnv* env, const SequenceMaskArgs* args) {
 
 void SequenceMaskTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]),
-                  GetTensorType(env->inputs[1])};
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
 }
 
-HashKey SequenceMaskHasher(const std::vector<Type>& param_types,
-                           const Type &y_type,
+HashKey SequenceMaskHasher(const std::vector<Type>& param_types, const Type& y_type,
                            const SequenceMaskArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->mask_value;
@@ -85,8 +80,8 @@ HashKey SequenceMaskHasher(const std::vector<Type>& param_types,
   return key;
 }
 
-MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs,
-           SequenceMaskNormalizer, SequenceMaskTyper, SequenceMaskHasher);
+MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs, SequenceMaskNormalizer,
+           SequenceMaskTyper, SequenceMaskHasher);
 
 Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -107,8 +102,8 @@ void BroadcastToTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_typ
   *param_types = {GetTensorType(env->inputs[0])};
 }
 
-MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs,
-           BroadcastToNormalizer, BroadcastToTyper, GenericHasher);
+MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs, BroadcastToNormalizer,
+           BroadcastToTyper, GenericHasher);
 
 Attrs TransposeNormalizer(TVMOpEnv* env, const TransposeArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -129,16 +124,15 @@ void TransposeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type)
   *param_types = {GetTensorType(env->inputs[0])};
 }
 
-HashKey TransposeHasher(const std::vector<Type>& param_types,
-                        const Type& y_type,
-                        const TransposeArgs *args) {
+HashKey TransposeHasher(const std::vector<Type>& param_types, const Type& y_type,
+                        const TransposeArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->axes;
   return key;
 }
 
-MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeNormalizer,
-           TransposeTyper, TransposeHasher);
+MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeNormalizer, TransposeTyper,
+           TransposeHasher);
 
 Attrs TransposeDxNormalizer(TVMOpEnv* env, const TransposeDxArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -165,9 +159,8 @@ void TransposeDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_typ
   };
 }
 
-HashKey TransposeDxHasher(const std::vector<Type>& param_types,
-                        const Type& y_type,
-                        const TransposeDxArgs *args) {
+HashKey TransposeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                          const TransposeDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->axes;
   return key;
@@ -176,8 +169,7 @@ HashKey TransposeDxHasher(const std::vector<Type>& param_types,
 MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxNormalizer,
            TransposeDxTyper, TransposeDxHasher);
 
-Attrs BroadcastToLikeNormalizer(TVMOpEnv* env,
-                                const BroadcastToLikeArgs* args) {
+Attrs BroadcastToLikeNormalizer(TVMOpEnv* env, const BroadcastToLikeArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(2);
   env->inputs[0] = GetDLTensor(args->x);
@@ -203,19 +195,16 @@ void SplitTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *param_types = {GetTensorType(env->inputs[0])};
 }
 
-HashKey SplitHasher(const std::vector<Type>& param_types,
-                        const Type& y_type,
-                        const SplitArgs *args) {
+HashKey SplitHasher(const std::vector<Type>& param_types, const Type& y_type,
+                    const SplitArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->axis;
   return key;
 }
 
-MNM_TVMJIT(Split, "mnm.op.split", SplitArgs, SplitNormalizer,
-           SplitTyper, SplitHasher);
+MNM_TVMJIT(Split, "mnm.op.split", SplitArgs, SplitNormalizer, SplitTyper, SplitHasher);
 
-void BroadcastToLikeTyper(TVMOpEnv* env,
-                          std::vector<Type>* param_types, Type* y_type) {
+void BroadcastToLikeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   y_type[0] = GetTensorType(env->outputs[0]);
   *param_types = {
       GetTensorType(env->inputs[0]),
@@ -248,16 +237,15 @@ void ConcatenateTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_typ
   *param_types = types;
 }
 
-HashKey ConcatenateHasher(const std::vector<Type>& param_types,
-                     const Type &y_type,
-                     const ConcatenateArgs* args) {
+HashKey ConcatenateHasher(const std::vector<Type>& param_types, const Type& y_type,
+                          const ConcatenateArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->axis;
   return key;
 }
 
-MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs,
-           ConcatenateNormalizer, ConcatenateTyper, ConcatenateHasher);
+MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs, ConcatenateNormalizer,
+           ConcatenateTyper, ConcatenateHasher);
 
 Attrs ClipNormalizer(TVMOpEnv* env, const ClipArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -274,17 +262,14 @@ void ClipTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *param_types = {GetTensorType(env->inputs[0])};
 }
 
-HashKey ClipHasher(const std::vector<Type>& param_types,
-                     const Type &y_type,
-                     const ClipArgs* args) {
+HashKey ClipHasher(const std::vector<Type>& param_types, const Type& y_type, const ClipArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->a_min;
   key << args->a_max;
   return key;
 }
 
-MNM_TVMJIT(Clip, "mnm.op.clip", ClipArgs,
-           ClipNormalizer, ClipTyper, ClipHasher);
+MNM_TVMJIT(Clip, "mnm.op.clip", ClipArgs, ClipNormalizer, ClipTyper, ClipHasher);
 
 Attrs ClipDxNormalizer(TVMOpEnv* env, const ClipDxArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -302,8 +287,7 @@ void ClipDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
 }
 
-HashKey ClipDxHasher(const std::vector<Type>& param_types,
-                     const Type &y_type,
+HashKey ClipDxHasher(const std::vector<Type>& param_types, const Type& y_type,
                      const ClipDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->a_min;
@@ -311,8 +295,7 @@ HashKey ClipDxHasher(const std::vector<Type>& param_types,
   return key;
 }
 
-MNM_TVMJIT(ClipDx, "mnm.op.clip_dx", ClipDxArgs,
-           ClipDxNormalizer, ClipDxTyper, ClipDxHasher);
+MNM_TVMJIT(ClipDx, "mnm.op.clip_dx", ClipDxArgs, ClipDxNormalizer, ClipDxTyper, ClipDxHasher);
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

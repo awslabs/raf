@@ -17,7 +17,7 @@ Expr Shape(const Expr& expr) {
 }
 
 template <const char* GradOp>
-Array<Expr> PoolGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+Array<Expr> PoolGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
@@ -27,8 +27,7 @@ Array<Expr> PoolGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
   const Expr& dilation = call->args[4];
   const Expr& ceil_mode = call->args[5];
   const Expr& include_pad = call->args[6];
-  return {
-      Call(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
+  return {Call(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
 }
 
 const char MAX_POOL2D_DX[] = "mnm.op.max_pool2d_dx";
@@ -39,7 +38,7 @@ const char AVG_POOL2D_DX[] = "mnm.op.avg_pool2d_dx";
 auto AvgPool2dGrad = PoolGrad<AVG_POOL2D_DX>;
 MNM_OP_GRAD("mnm.op.avg_pool2d", AvgPool2dGrad);
 
-Array<Expr> Conv2dGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+Array<Expr> Conv2dGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   // schema for conv2d is:
   //    x, w, stride, padding, dilation, groups
   // schema for conv2d_grad is:
@@ -64,7 +63,7 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
 MNM_OP_GRAD("mnm.op.conv2d", Conv2dGrad);
 
 template <const char* GradOp>
-Array<Expr> UnaryGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+Array<Expr> UnaryGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   // schema for relu is:
   //    x
   // schema for relu_dx is:
@@ -96,7 +95,7 @@ const char SQRT_DX[] = "mnm.op.sqrt_dx";
 auto SqrtGrad = UnaryGrad<SQRT_DX>;
 MNM_OP_GRAD("mnm.op.sqrt", SqrtGrad);
 
-Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var &y, const Expr& dymv,
+Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var& y, const Expr& dymv,
                                const Array<Expr>& igrads) {
   // schema for batch_norm_train is:
   //    x, running_mean,running_var, w, b, momentum, eps
@@ -111,18 +110,15 @@ Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var &y, const Expr& 
   const Expr& eps = call->args[6];
   const Expr& ret = Call(op_dxwb, {dy, x, w, b, eps});
   return {
-      TupleGetItem(ret, 0),
-      NullValue<Expr>(),
-      NullValue<Expr>(),
-      TupleGetItem(ret, 1),
-      TupleGetItem(ret, 2),
+      TupleGetItem(ret, 0), NullValue<Expr>(),    NullValue<Expr>(),
+      TupleGetItem(ret, 1), TupleGetItem(ret, 2),
   };
 }
 
 MNM_OP_FUSED_GRAD("mnm.op.batch_norm_train", BatchNormTrainGrad);
 
 template <const char* GradOp>
-Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Var &y, const Expr& dy) {
+Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Var& y, const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];

@@ -31,7 +31,7 @@ void LossTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-HashKey LossHasher(const std::vector<Type>& param_types, const Type& y_type, const LossArgs *args) {
+HashKey LossHasher(const std::vector<Type>& param_types, const Type& y_type, const LossArgs* args) {
   HashKey key;
   key << Downcast<TensorType>(param_types[0]);
   key << Downcast<TensorType>(param_types[1]);

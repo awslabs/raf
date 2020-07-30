@@ -1,6 +1,7 @@
-from .base import Any, Op, Tensor
-
 # pylint: disable=too-few-public-methods,too-many-arguments,unused-argument,invalid-name
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Other useful argument data structures."""
+from .base import Any, Op, Tensor
 
 
 class TensorAttrsArgs:

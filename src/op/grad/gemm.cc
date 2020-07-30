@@ -67,15 +67,14 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Var& y, const Expr& dy)
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
-  const std::vector<Value> axes = {IntValue::make(0), IntValue::make(2),
-                                   IntValue::make(1)};
+  const std::vector<Value> axes = {IntValue::make(0), IntValue::make(2), IntValue::make(1)};
   const Expr& axes_expr = MakeConstant(TupleValue::make(Array<Value>(axes)));
   auto dy_trans = Call(transpose, {dy, axes_expr});
   auto b_trans = Call(transpose, {b, axes_expr});
   auto a_trans = Call(transpose, {a, axes_expr});
   return {
-          Call(batch_matmul, {dy, b_trans}),
-          Call(batch_matmul, {dy_trans, a_trans}),
+      Call(batch_matmul, {dy, b_trans}),
+      Call(batch_matmul, {dy_trans, a_trans}),
   };
 }
 

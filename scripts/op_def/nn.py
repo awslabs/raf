@@ -1,7 +1,8 @@
+# pylint: disable=too-few-public-methods,too-many-arguments,unused-argument,invalid-name
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""NN-specific operators and their argument data structures."""
 from .base import (IntOrTupleInt, IntOrTupleIntOrNone, Op, Tensor, Tuple,
                    TupleInt)
-
-# pylint: disable=too-few-public-methods,too-many-arguments,unused-argument,invalid-name
 
 
 class ConvArgs:

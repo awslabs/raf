@@ -20,16 +20,16 @@ namespace regs {
 
 constexpr int MAX_NUM_ARGS = 256;
 
-inline void FillError(const dmlc::Error &e, const std::string &from, const std::string &to) {
+inline void FillError(const dmlc::Error& e, const std::string& from, const std::string& to) {
   size_t index = 0;
   std::string str = e.what();
   while (true) {
-      index = str.find(from, index);
-      if (index == std::string::npos) {
-        break;
-      }
-      str.replace(index, from.length(), to);
-      index += to.length();
+    index = str.find(from, index);
+    if (index == std::string::npos) {
+      break;
+    }
+    str.replace(index, from.length(), to);
+    index += to.length();
   }
   throw dmlc::Error(str);
 }
@@ -54,7 +54,7 @@ inline std::string GetTypeStr(const registry::TVMArgValue& a) {
   return tvm::runtime::ArgTypeCode2Str(a.type_code());
 }
 
-inline bool RemoveNoGrad(binding::GradTape* tapes, ir::Expr* grads, int *n) {
+inline bool RemoveNoGrad(binding::GradTape* tapes, ir::Expr* grads, int* n) {
   // returns: whether full grad is used
   int m = 0;
   bool full_grads = true;
@@ -125,7 +125,7 @@ struct OpPack {
     if (fpg.count(op)) {
       grads = fpg[op](pack->MakeCall(op, n_args), pack->y, pack->dy);
       std::vector<ir::Expr> grads_defined;
-      for (const ir::Expr &grad : grads_defined) {
+      for (const ir::Expr& grad : grads_defined) {
         if (grad.defined()) {
           grads_defined.push_back(grad);
         }

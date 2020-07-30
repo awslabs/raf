@@ -11,7 +11,7 @@ namespace grad {
 
 using namespace mnm::ir;
 
-Array<Expr> AddGrad(const Expr& orig_call, const Var &y, const Expr& dy) {
+Array<Expr> AddGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   // schema for relu is:
   //    x1, x2
   // schema for binary_dx is:

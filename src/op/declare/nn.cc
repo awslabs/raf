@@ -51,9 +51,8 @@ MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
   int64_t h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
   int64_t w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   int64_t groups = args->groups;
-  CHECK_EQ(c_in / groups, in) << "Unmatched input channel " << c_in
-                              << " and weight channel size" << in
-                              << " with group size " << groups;
+  CHECK_EQ(c_in / groups, in) << "Unmatched input channel " << c_in << " and weight channel size"
+                              << in << " with group size " << groups;
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/{n_in, out, h_out, w_out});
@@ -123,10 +122,10 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   TensorValue y = TensorValue::Assemble(/*ctx=*/x->ctx,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape);
-  TensorValue running_mean = TensorValue::make((args->running_mean).as<TensorValueObj>()->tensor
-                                               .CreateView());
-  TensorValue running_var = TensorValue::make((args->running_var).as<TensorValueObj>()->tensor
-                                              .CreateView());
+  TensorValue running_mean =
+      TensorValue::make((args->running_mean).as<TensorValueObj>()->tensor.CreateView());
+  TensorValue running_var =
+      TensorValue::make((args->running_var).as<TensorValueObj>()->tensor.CreateView());
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);

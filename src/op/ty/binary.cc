@@ -14,9 +14,9 @@ namespace op {
 namespace type {
 
 using namespace mnm::value;
-using tvm::relay::Type;
-using schema::BinaryUfuncArgs;
 using schema::BinaryArgs;
+using schema::BinaryUfuncArgs;
+using tvm::relay::Type;
 
 Type BroadcastInfer(const CallValues& value) {
   using namespace tvm;
@@ -40,8 +40,7 @@ Type BroadcastInfer(const CallValues& value) {
     } else if (TypeCheckEqual(lhs, rhs)) {
       oshape.push_back(lhs);
     } else {
-      LOG(FATAL) << "Incompatible broadcast type "
-                 << x1 << " and " << x2;
+      LOG(FATAL) << "Incompatible broadcast type " << x1 << " and " << x2;
     }
   }
   return TensorType(oshape, x1->dtype);

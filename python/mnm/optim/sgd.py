@@ -1,3 +1,4 @@
+"""SGD optimizer."""
 import numpy as np
 from .._op.imp import sgd
 from .._core.ndarray import ndarray
@@ -33,6 +34,7 @@ class SGD:
             self.params.append((x, v_i))
 
     def step(self):
+        """Update the parameters with gradients."""
         for x0, v0 in self.params:
             if x0.grad is None:
                 continue

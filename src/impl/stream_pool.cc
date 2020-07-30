@@ -30,8 +30,7 @@ int Tag::GetTagIndex_(const std::string& tag) {
 
 class Stream::Impl {
  public:
-  explicit Impl(const Context& ctx):
-    ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
+  explicit Impl(const Context& ctx) : ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
     this->stream = api->CreateStream(ctx);
   }
 
@@ -49,8 +48,7 @@ class Stream::Impl {
 
 class StreamPool {
  public:
-  explicit StreamPool(const Context& ctx):
-    ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
+  explicit StreamPool(const Context& ctx) : ctx(ctx), api(DeviceAPI::Get(ctx.device_type)) {
   }
 
   ~StreamPool() {

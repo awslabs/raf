@@ -48,8 +48,7 @@ class BoundVarObj : public VarNode {
     }
     // "entry" is destroyed here, to avoid potential recursive lock
   }
-  static Var make(const std::string& name_hint,
-                  Type type = Type()) {
+  static Var make(const std::string& name_hint, Type type = Type()) {
     ObjectPtr<BoundVarObj> n = make_object<BoundVarObj>();
     ObjectPtr<IdNode> id_ptr = make_object<IdNode>();
     id_ptr->name_hint = name_hint;
@@ -80,8 +79,7 @@ SymbolBinding SymbolBinding::make(Expr expr) {
   return SymbolBinding(n);
 }
 
-Var MakeManagedBinding(const BindingEntry& entry,
-                       const std::string& name_hint,
+Var MakeManagedBinding(const BindingEntry& entry, const std::string& name_hint,
                        Type type = Type()) {
   static BindingMgr* mgr = BindingMgr::Get();
   static auto& bindings = mgr->bindings;
@@ -99,8 +97,7 @@ Var BindNDArray(Value value, GradTape tape, std::string name_hint) {
   return MakeManagedBinding(NDArrayBinding::make(
                                 /*value=*/std::move(value),
                                 /*tape=*/tape),
-                            name_hint,
-                            op::type::GetType(value));
+                            name_hint, op::type::GetType(value));
 }
 
 void RebindNDArray(Var var, Value value, GradTape tape) {
@@ -115,9 +112,7 @@ void RebindNDArray(Var var, Value value, GradTape tape) {
 }
 
 Var BindSymbol(Expr expr, std::string name_hint, Type ty) {
-  return MakeManagedBinding(SymbolBinding::make(std::move(expr)),
-                            name_hint,
-                            ty);
+  return MakeManagedBinding(SymbolBinding::make(std::move(expr)), name_hint, ty);
 }
 
 BindingEntry LookupBinding(const VarNode* var) {

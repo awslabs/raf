@@ -42,8 +42,7 @@ using namespace mnm::value;
   }
 
 #define MNM_REGISTER_BINARY_BCAST_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body) \
-    .set_attr<TOpPattern>("TOpPattern", kBroadcast)
+  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kBroadcast)
 
 TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2) {
   int ndim_1 = x1->ndim;
@@ -263,11 +262,11 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
   throw;
 });
 
-void CollapseAxis(const CallValues &call) {
+void CollapseAxis(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  DLTensor *x1 = args->x1;
-  DLTensor *x2 = args->x2;
+  DLTensor* x1 = args->x1;
+  DLTensor* x2 = args->x2;
 
   call->callee = ir::NullValue<OpValue>();
   call->ctx = x1->ctx;
@@ -291,11 +290,11 @@ void CollapseAxis(const CallValues &call) {
 // TODO(@icemelon9): Currently use opaque for shape related op.
 MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
-void CollapseKeep(const CallValues &call) {
+void CollapseKeep(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  DLTensor *x1 = args->x1;
-  DLTensor *x2 = args->x2;
+  DLTensor* x1 = args->x1;
+  DLTensor* x2 = args->x2;
 
   call->callee = ir::NullValue<OpValue>();
   call->ctx = x1->ctx;

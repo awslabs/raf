@@ -1,3 +1,4 @@
+"""Types that used in operator definition/attributes."""
 from typing import NewType, Optional, Tuple, Union
 
 Context = NewType('Context', object)

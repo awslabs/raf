@@ -1,3 +1,5 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Multi-dimension array representation"""
 import ctypes
 
 from mnm._core.core_utils import ctx2str, set_module, str2ctx

@@ -14,10 +14,10 @@ namespace declare {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-void Sum(const CallValues &call) {
+void Sum(const CallValues& call) {
   const auto* args = call->args.as<SumArgs>();
   CHECK(args != nullptr);
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
   std::vector<int64_t> keep = args->keep;
@@ -33,7 +33,7 @@ void Sum(const CallValues &call) {
   // Figure out the shape
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   for (int i = 0, n = axis_info.size(); i < n; ++i) {
-    int64_t &cur_axis = axis_info[i].first;
+    int64_t& cur_axis = axis_info[i].first;
     cur_axis = (cur_axis + x->ndim) % x->ndim;
     CHECK(cur_axis >= 0 && cur_axis < x->ndim);
     shape[cur_axis] = 1;

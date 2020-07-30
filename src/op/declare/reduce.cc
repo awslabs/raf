@@ -16,12 +16,10 @@ using namespace mnm::op::schema;
 using namespace mnm::value;
 
 #define MNM_DECLARE_REDUCE_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body) \
-    .set_attr<TOpPattern>("TOpPattern", kCommReduce)
+  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kCommReduce)
 
 #define MNM_DECLARE_REDUCE_DX_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body) \
-    .set_attr<TOpPattern>("TOpPattern", kBroadcast)
+  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kBroadcast)
 
 void GenerateReduceShape(const ReduceArgs* args, const DLTensor* x, std::vector<int64_t>* shape) {
   CHECK(args != nullptr);
@@ -53,25 +51,25 @@ void GenerateReduceShape(const ReduceArgs* args, const DLTensor* x, std::vector<
   }
 }
 
-void ReduceOutInt(const CallValues &call) {
+void ReduceOutInt(const CallValues& call) {
   const auto* args = call->args.as<ReduceArgs>();
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   std::vector<int64_t> shape;
   GenerateReduceShape(args, x, &shape);
   call->ctx = x->ctx;
   call->out = TensorValue::Assemble(x->ctx, DType(DTypeCode::kInt(), 32), shape);
 }
 
-void ReduceOutSame(const CallValues &call) {
+void ReduceOutSame(const CallValues& call) {
   const auto* args = call->args.as<ReduceArgs>();
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   std::vector<int64_t> shape;
   GenerateReduceShape(args, x, &shape);
   call->ctx = x->ctx;
   call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
 }
 
-void ReduceDxOutSame(const CallValues &call) {
+void ReduceDxOutSame(const CallValues& call) {
   // the shape of the output of reduce_dx op is same as input x
   const auto* args = call->args.as<ReduceDxArgs>();
   CHECK(args != nullptr);

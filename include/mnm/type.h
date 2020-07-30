@@ -17,14 +17,13 @@
 namespace mnm {
 namespace type {
 
-using tvm::relay::Type;
-using tvm::relay::TensorType;
-using tvm::relay::TupleType;
 using tvm::relay::FuncType;
 using tvm::relay::IncompleteType;
+using tvm::relay::TensorType;
+using tvm::relay::TupleType;
+using tvm::relay::Type;
 
-using TypeInferenceFn =
-  tvm::TypedEnvFunc<Type(const op::CallValues& value)>;
+using TypeInferenceFn = tvm::TypedEnvFunc<Type(const op::CallValues& value)>;
 
 using OpType = FuncType;
 
@@ -44,8 +43,7 @@ class TypeInferenceNode : public tvm::TypeConstraintNode {
   }
 
   bool SEqualReduce(const TypeInferenceNode* other, tvm::SEqualReducer equal) const {
-    return
-        equal(func, other->func);
+    return equal(func, other->func);
   }
 
   void SHashReduce(tvm::SHashReducer hash_reduce) const {
@@ -66,16 +64,12 @@ class TypeInference : public tvm::TypeConstraint {
   TVM_DEFINE_OBJECT_REF_METHODS(TypeInference, TypeConstraint, TypeInferenceNode);
 };
 
-OpType MakeOpType(
-  const std::string& op_name,
-  const std::string& fn_name,
-  tvm::runtime::TypedPackedFunc<Type(const op::CallValues& value)> fn);
+OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
+                  tvm::runtime::TypedPackedFunc<Type(const op::CallValues& value)> fn);
 
 }  // namespace type
 }  // namespace mnm
 
-
-#define MNM_OP_TYPE(op_name, fn_name, body)                                        \
-  RELAY_REGISTER_OP(op_name)                                                       \
-  .set_attr<::mnm::type::OpType>("OpType",                                         \
-                                 ::mnm::type::MakeOpType(op_name, fn_name, body));
+#define MNM_OP_TYPE(op_name, fn_name, body)                 \
+  RELAY_REGISTER_OP(op_name).set_attr<::mnm::type::OpType>( \
+      "OpType", ::mnm::type::MakeOpType(op_name, fn_name, body));

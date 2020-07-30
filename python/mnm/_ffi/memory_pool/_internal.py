@@ -1,7 +1,7 @@
+# pylint: disable=invalid-name,redefined-builtin
+# pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
-
-# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/impl/memory_pool.cc
 InitPool = _APIS.get("mnm.memory_pool.InitPool", None)
 # Defined in ./src/impl/memory_pool.cc

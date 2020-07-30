@@ -10,7 +10,7 @@ if [ $? -eq "0" ]; then
     clang-format $i -output-replacements-xml | grep "<replacement " > /dev/null
     if [ $? -ne "1" ]; then
       echo $i mismatch the result of clang-format.
-      echo Please run scripts/clang-format to correct it!
+      echo Please run scripts/lint/run-clang-format.sh to correct it!
       exit 1
     fi
   done

@@ -60,7 +60,7 @@ Module Module::make(Map<GlobalVar, Function> functions) {
   for (const auto& kv : n->functions) {
     // set global var map
     CHECK(n->global_var_map_.count(kv.first->name_hint) == 0)
-      << "Duplicate global function name " << kv.first->name_hint;
+        << "Duplicate global function name " << kv.first->name_hint;
     n->global_var_map_.Set(kv.first->name_hint, kv.first);
   }
 
@@ -83,7 +83,6 @@ Function ModuleLookup(Module mod, GlobalVar var) {
 Function ModuleLookupStr(Module mod, const std::string& name) {
   return mod->Lookup(name);
 }
-
 
 tvm::runtime::NDArray MakeFakeTensor() {
   static int64_t a[1] = {-114514};

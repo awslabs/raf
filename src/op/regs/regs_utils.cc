@@ -15,8 +15,8 @@ namespace regs {
 
 using namespace mnm::value;
 using namespace mnm::ir;
-using binding::GradTape;
 using binding::BindNDArray;
+using binding::GradTape;
 using registry::TVMArgValue;
 
 class UsedVars : public ir::ExprVisitor {

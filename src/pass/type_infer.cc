@@ -122,11 +122,10 @@ class TypeInferencer : public ExprFunctor<Type(const Expr&)> {
     return ti->func(call_values);
   }
 
-
   Type InferClosure(const Call& call, const FunctionNode* op) {
-      // TODO(@hzfan): perform template param deduction to eliminate type_params
-      FuncType fty = Downcast<FuncType>(op->checked_type());
-      return fty->ret_type;
+    // TODO(@hzfan): perform template param deduction to eliminate type_params
+    FuncType fty = Downcast<FuncType>(op->checked_type());
+    return fty->ret_type;
   }
 
   Type VisitExpr_(const RelayConstantNode* op) override {
@@ -170,13 +169,12 @@ class TypeInferencer : public ExprFunctor<Type(const Expr&)> {
     for (const auto& v : op->params) {
       arg_types.push_back(VisitExpr(v));
     }
-    Type ret_type = op->ret_type.defined() ?
-                    Unify(VisitExpr(op->body), op->ret_type) :
-                    VisitExpr(op->body);
-    Type ret = FuncType(arg_types, ret_type,
-                        op->type_params, {});
+    Type ret_type =
+        op->ret_type.defined() ? Unify(VisitExpr(op->body), op->ret_type) : VisitExpr(op->body);
+    Type ret = FuncType(arg_types, ret_type, op->type_params, {});
     return ret;
   }
+
  private:
   Module mod_;
 };
@@ -191,8 +189,7 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
     } else {
       Type resolved = this->VisitType(src, dst);
       CHECK(resolved.defined()) << "unable to unify: "
-                                << "`" << PrettyPrint(src) << "` and `"
-                                << PrettyPrint(dst) << "`";
+                                << "`" << PrettyPrint(src) << "` and `" << PrettyPrint(dst) << "`";
       return resolved;
     }
   }
@@ -248,12 +245,9 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
 
     tvm::Array<IndexExpr> shape;
     CHECK_EQ(tt1->shape.size(), tt2->shape.size())
-      << "tensor type `" << PrettyPrint(tt1)
-      << "` has " <<  tt1->shape.size()
-      << " dimensions, while `"
-      << PrettyPrint(tt2)
-      << "` has " << tt2->shape.size()
-      << " dimensions";
+        << "tensor type `" << PrettyPrint(tt1) << "` has " << tt1->shape.size()
+        << " dimensions, while `" << PrettyPrint(tt2) << "` has " << tt2->shape.size()
+        << " dimensions";
 
     CHECK_EQ(tt1->shape.size(), tt2->shape.size());
     for (size_t i = 0; i < tt1->shape.size(); i++) {
@@ -281,8 +275,7 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
 
   Type VisitType_(const FuncTypeNode* op, const Type& tn) final {
     const auto* ftn = tn.as<FuncTypeNode>();
-    CHECK(ftn &&
-          op->arg_types.size() == ftn->arg_types.size() &&
+    CHECK(ftn && op->arg_types.size() == ftn->arg_types.size() &&
           op->type_constraints.size() == ftn->type_constraints.size());
 
     // without loss of generality, suppose op->type_params.size() >= ftn->type_params.size().
@@ -302,10 +295,7 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
       subst_map.Set(op->type_params[i], IncompleteType(kType));
     }
 
-    FuncType ft = FuncType(op->arg_types,
-                           op->ret_type,
-                           ft_type_params,
-                           op->type_constraints);
+    FuncType ft = FuncType(op->arg_types, op->ret_type, ft_type_params, op->type_constraints);
     auto ft1 = Downcast<FuncType>(Bind(ft, subst_map));
     auto ft2 = GetRef<FuncType>(ftn);
 
@@ -319,8 +309,7 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
 
     std::vector<TypeConstraint> type_constraints;
     for (size_t i = 0; i < ft1->type_constraints.size(); ++i) {
-      Type unified_constraint = Unify(ft1->type_constraints[i],
-                                      ft2->type_constraints[i]);
+      Type unified_constraint = Unify(ft1->type_constraints[i], ft2->type_constraints[i]);
       const auto* tcn = unified_constraint.as<TypeConstraintNode>();
       CHECK(tcn) << "Two type constraints unified into a non-constraint?"
                  << ft1->type_constraints[i] << " and " << ft2->type_constraints[i];
@@ -357,7 +346,6 @@ class TypeGetter : public TypeFunctor<Value(const Type&)> {
     return TupleValue::make(ret);
   }
 };
-
 
 class ValueGetter : public ExprFunctor<Value(const Expr&)> {
   Value VisitExpr_(const RelayConstantNode* op) {

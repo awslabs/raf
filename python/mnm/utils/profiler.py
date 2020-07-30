@@ -1,3 +1,4 @@
+"""Runtime profiler"""
 import json
 from mnm import build
 from mnm._ffi.profiler import EnableProfiler, DisableProfiler

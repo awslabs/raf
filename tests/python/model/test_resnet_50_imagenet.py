@@ -1,6 +1,6 @@
+import pytest
 import torch
 import torch.nn as nn
-import pytest
 
 import mnm
 from mnm.model import BatchNorm, Conv2d, Linear, Sequential

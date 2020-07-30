@@ -1,7 +1,7 @@
+# pylint: disable=invalid-name,redefined-builtin
+# pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
-
-# pylint: disable=invalid-name,redefined-builtin
 # Defined in ./src/pass/gradient.cc
 AutoDiff = _APIS.get("mnm.pass_.AutoDiff", None)
 # Defined in ./src/pass/fold_const.cc

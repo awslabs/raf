@@ -21,8 +21,8 @@ using binding::GradTape;
 using binding::NDArrayBindingObj;
 using executor::interpreter::Interpret;
 using pass::AutoDiff;
-using pass::FoldConstant;
 using pass::BindParam;
+using pass::FoldConstant;
 
 ObjectRef RunModel(Function func, Array<Expr> args) {
   std::vector<GradTape> grads;

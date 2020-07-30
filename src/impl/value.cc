@@ -113,7 +113,7 @@ Value::operator DLTensor*() const {
   throw;
 }
 
-Value::operator tensor::Tensor&() const {
+Value::operator tensor::Tensor &() const {
   if (const auto* tensor_value = this->as<TensorValueObj>()) {
     return tensor_value->tensor;
   }

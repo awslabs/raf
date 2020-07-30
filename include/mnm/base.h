@@ -53,11 +53,10 @@ class DevType final : public EnumBase<DevType, 13, int32_t, int> {
 class Context {
  public:
   Context() = default;
-  Context(DevType device_type, int device_id):  // NOLINT(runtime/explicit)
-    device_type(device_type), device_id(device_id) {
+  Context(DevType device_type, int device_id) : device_type(device_type), device_id(device_id) {
   }
-  Context(TVMContext context):  // NOLINT(runtime/explicit)
-    device_type(context.device_type), device_id(context.device_id) {
+  Context(TVMContext context)  // NOLINT(runtime/explicit)
+      : device_type(context.device_type), device_id(context.device_id) {
   }
   operator TVMContext() const {
     return TVMContext{DLDeviceType(device_type), device_id};

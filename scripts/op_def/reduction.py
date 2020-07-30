@@ -1,6 +1,7 @@
-from .base import ArrayLike, BoolOrTupleInt, IntOrTupleIntOrNone, Op
-
 # pylint: disable=too-few-public-methods,too-many-arguments,unused-argument,invalid-name
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Reduction operators and their argument data structures."""
+from .base import ArrayLike, BoolOrTupleInt, IntOrTupleIntOrNone, Op
 
 
 class ReductionArgs:

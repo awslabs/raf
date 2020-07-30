@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 import ast
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union

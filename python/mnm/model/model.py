@@ -1,3 +1,5 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Interactive interface for training & inference."""
 from collections import OrderedDict
 
 from mnm._core import cacher

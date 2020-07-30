@@ -227,20 +227,20 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       // note: Request workspace, workspace is kind of special memory which will be freed once this
       // op is done.
       WITH_BASE_PROFILER(call->ctx, op->name, "WorkspaceRequest",
-                    {"Count: " + std::to_string(req->workspace.size())}, {
-                      for (int i = 0, n = req->workspace.size(); i < n; ++i) {
-                        RequestWorkspace(req.get(), i);
-                      }
-                    });
+                         {"Count: " + std::to_string(req->workspace.size())}, {
+                           for (int i = 0, n = req->workspace.size(); i < n; ++i) {
+                             RequestWorkspace(req.get(), i);
+                           }
+                         });
 
       // note: Request stream, every op will run on a given stream. For op that executed on cuda,
       // the default one is cuda DefautlStream. Currently, all ops are running on default stream.
       WITH_BASE_PROFILER(call->ctx, op->name, "StreamRequest",
-                    {"Count: " + std::to_string(req->stream.size())}, {
-                      for (int i = 0, n = req->stream.size(); i < n; ++i) {
-                        RequestStream(req.get(), i);
-                      }
-                    });
+                         {"Count: " + std::to_string(req->stream.size())}, {
+                           for (int i = 0, n = req->stream.size(); i < n; ++i) {
+                             RequestStream(req.get(), i);
+                           }
+                         });
     }
 
     // note: Execute the Operator.

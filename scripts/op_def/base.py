@@ -1,3 +1,5 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Basic data structures for operator definition."""
 from dataclasses import dataclass  # pylint: disable=import-error
 from typing import Any, List, NewType, Optional, Tuple, Union
 

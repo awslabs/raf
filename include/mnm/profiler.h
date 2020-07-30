@@ -23,7 +23,7 @@
 #include <unistd.h>
 #endif
 
-#define WITH_BASE_PROFILER(CTX, NAME, CAT, ARGS, CODE_SNIPPET)                                \
+#define WITH_BASE_PROFILER(CTX, NAME, CAT, ARGS, CODE_SNIPPET)                                   \
   {                                                                                              \
     bool profiling = profiler::Profiler::Get()->IsProfiling();                                   \
     if (profiling) {                                                                             \

@@ -1,4 +1,7 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Blocks for constructing structural Model."""
 from .model import Model
+
 
 class Sequential(Model):
 

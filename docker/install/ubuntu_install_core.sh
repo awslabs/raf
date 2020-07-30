@@ -25,4 +25,4 @@ apt-get update && apt-get install -y --no-install-recommends \
         git make cmake wget unzip libtinfo-dev libz-dev\
         libcurl4-openssl-dev libopenblas-dev g++ sudo\
         doxygen graphviz libprotobuf-dev protobuf-compiler ccache\
-        clang-format
+        clang-format-10

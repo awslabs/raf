@@ -1,6 +1,7 @@
-from .base import Op, ArrayLike
-
 # pylint: disable=too-few-public-methods,too-many-arguments,unused-argument,invalid-name
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Broadcast operator definition and their argument data structures."""
+from .base import Op, ArrayLike
 
 
 class UnaryArgs:

@@ -20,8 +20,8 @@ namespace mnm {
 namespace op {
 
 using executor::Executor;
-using ir::Attrs;
 using ir::Array;
+using ir::Attrs;
 using ir::Downcast;
 using ir::make_object;
 using ir::ObjectPtr;

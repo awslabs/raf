@@ -70,7 +70,7 @@ class MatmulImpl : public mnm::op::OpEnv {
     auto args = cv->args.as<op::schema::BinaryArgs>();
     std::string op_name = tvm::runtime::Downcast<value::OpValue>(cv->callee)->op->name;
     WITH_CUDA_PROFILER(cv->ctx, op_name, "ComputationOperator", {},
-                  { GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out); })
+                       { GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out); })
   }
   static OpEnv* make(const CallValues& cv) {
     return new MatmulImpl<transpose_a, transpose_b>(cv);

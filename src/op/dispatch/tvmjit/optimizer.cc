@@ -47,9 +47,7 @@ void SgdTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-HashKey SgdHasher(const std::vector<Type>& param_types,
-               const Type &y_type,
-               const SgdArgs* args) {
+HashKey SgdHasher(const std::vector<Type>& param_types, const Type& y_type, const SgdArgs* args) {
   HashKey key = GenericHasher<std::nullptr_t>(param_types, y_type, nullptr);
   key << args->mu;
   key << args->learning_rate;

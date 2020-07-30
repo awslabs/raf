@@ -1,3 +1,5 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Operator definition for TOPI (TVM Operator Inventory)."""
 import sys
 
 import tvm

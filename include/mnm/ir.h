@@ -44,17 +44,17 @@ using tvm::TypeNode;
 // Object protocol
 using tvm::NullValue;
 using tvm::runtime::DataType;
-using tvm::runtime::TypeIndex;
 using tvm::runtime::Downcast;
+using tvm::runtime::GetObjectPtr;
 using tvm::runtime::GetRef;
 using tvm::runtime::make_object;
+using tvm::runtime::NDArray;
 using tvm::runtime::Object;
 using tvm::runtime::ObjectPtr;
-using tvm::runtime::ObjectRef;
-using tvm::runtime::ObjectPtrHash;
 using tvm::runtime::ObjectPtrEqual;
-using tvm::runtime::GetObjectPtr;
-using tvm::runtime::NDArray;
+using tvm::runtime::ObjectPtrHash;
+using tvm::runtime::ObjectRef;
+using tvm::runtime::TypeIndex;
 
 // Relay Expression
 using tvm::relay::Expr;
@@ -183,10 +183,11 @@ using tvm::relay::ExprVisitor;
 #define MNM_REGISTER_OBJECT_REFLECT(TypeName)                                                    \
   MNM_REGISTER_OBJECT_NO_REFLECT(TypeName);                                                      \
   static DMLC_ATTRIBUTE_UNUSED ::tvm::ReflectionVTable::Registry& __make_Node##_##TypeName##__ = \
-    ::tvm::ReflectionVTable::Global()->Register                                                  \
-    <TypeName, ::tvm::detail::ReflectionTrait<TypeName> >().set_creator(                         \
-          [](const std::string&) -> ::tvm::runtime::ObjectPtr<::tvm::runtime::Object> {          \
-            return ::tvm::runtime::make_object<TypeName>();                                      \
-          })
+      ::tvm::ReflectionVTable::Global()                                                          \
+          ->Register<TypeName, ::tvm::detail::ReflectionTrait<TypeName>>()                       \
+          .set_creator(                                                                          \
+              [](const std::string&) -> ::tvm::runtime::ObjectPtr<::tvm::runtime::Object> {      \
+                return ::tvm::runtime::make_object<TypeName>();                                  \
+              })
 
 #include "./ir_ext.h"

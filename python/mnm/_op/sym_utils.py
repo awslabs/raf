@@ -1,3 +1,5 @@
+# pylint: disable=missing-function-docstring
+"""Symbolic API utilities"""
 from numbers import Number
 
 import numpy as np

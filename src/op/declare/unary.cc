@@ -33,8 +33,7 @@ using namespace mnm::value;
   })
 
 #define MNM_DECLARE_UNARY_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body) \
-    .set_attr<TOpPattern>("TOpPattern", kElemWise)
+  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kElemWise)
 
 MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryUfuncArgs>();
@@ -104,14 +103,13 @@ MNM_DECLARE_UNARY_OP("mnm.op.sigmoid_dx", UnaryDx);
 MNM_DECLARE_UNARY_OP("mnm.op.erf_dx", UnaryDx);
 MNM_DECLARE_UNARY_OP("mnm.op.sqrt_dx", UnaryDx);
 
-void Shape(const CallValues &call) {
+void Shape(const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<Value> shape;
-  std::for_each(x->shape, x->shape + x->ndim, [&shape](int64_t x) {
-    shape.push_back(ScalarValue::make(x));
-  });
+  std::for_each(x->shape, x->shape + x->ndim,
+                [&shape](int64_t x) { shape.push_back(ScalarValue::make(x)); });
   call->out = TupleValue::make(shape);
   call->callee = ir::NullValue<OpValue>();
 }

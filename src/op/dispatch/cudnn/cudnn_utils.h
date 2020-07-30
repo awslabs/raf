@@ -162,7 +162,7 @@ inline int64_t GetTensorTypeDim(ir::TensorType tt, int i) {
   return res;
 }
 
-inline ir::TensorType SquashTensorShape(const DLTensor *tensor, const std::vector<int> &slices) {
+inline ir::TensorType SquashTensorShape(const DLTensor* tensor, const std::vector<int>& slices) {
   ir::Array<tvm::relay::IndexExpr> shape;
   if (slices.empty()) {
     for (int i = 0; i < tensor->ndim; ++i) {
@@ -184,8 +184,8 @@ inline ir::TensorType SquashTensorShape(const DLTensor *tensor, const std::vecto
 }
 
 inline cudnnTensorDescriptor_t NormalizeTensorType(ir::TensorType tt) {
-  DLDataType dtype{(uint8_t) tt->dtype.code(), (uint8_t) tt->dtype.bits(),
-                   (uint16_t) tt->dtype.lanes()};
+  DLDataType dtype{(uint8_t)tt->dtype.code(), (uint8_t)tt->dtype.bits(),
+                   (uint16_t)tt->dtype.lanes()};
 
   std::vector<int64_t> shape(tt->shape.size());
   for (int i = 0, n = shape.size(); i < n; ++i) {
@@ -240,8 +240,8 @@ inline std::vector<int64_t> NormalizeScalarToTuple(const std::vector<int64_t>& v
   return n == 1 ? std::vector<int64_t>(numel, v[0]) : v;
 }
 
-template<typename T>
-inline ir::Array<ir::Integer> ToArrayOfInteger(const std::vector<T> &v) {
+template <typename T>
+inline ir::Array<ir::Integer> ToArrayOfInteger(const std::vector<T>& v) {
   ir::Array<ir::Integer> res;
   for (auto elem : v) {
     res.push_back(static_cast<int64_t>(elem));

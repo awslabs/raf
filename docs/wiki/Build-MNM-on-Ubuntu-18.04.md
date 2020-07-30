@@ -24,7 +24,7 @@ sudo apt-get update
 sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev           \
                      llvm-8-doc llvm-8-examples llvm-8-runtime                \
                      clang-8 clang-tools-8 clang-8-doc libclang-common-8-dev  \
-                     libclang-8-dev libclang1-8 clang-format-8                \
+                     libclang-8-dev libclang1-8 clang-format-10               \
                      python-clang-8 libfuzzer-8-dev lldb-8 lld-8              \
                      libc++-8-dev libc++abi-8-dev libomp-8-dev clang-tidy-8
 ```

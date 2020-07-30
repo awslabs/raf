@@ -13,15 +13,15 @@ namespace op {
 namespace type {
 
 using namespace mnm::value;
-using tvm::relay::Type;
 using schema::TransposeArgs;
 using schema::TransposeDxArgs;
+using tvm::relay::Type;
 
 Type TransposeInfer(const CallValues& value) {
   using namespace tvm;
   using namespace tvm::relay;
   const auto* args = value->args.as<TransposeArgs>();
-  const std::vector<int64_t> &axes = args->axes;
+  const std::vector<int64_t>& axes = args->axes;
   TensorType x = Downcast<TensorType>(GetType(args->x));
   size_t ndim = x->shape.size();
   Array<tvm::PrimExpr> oshape;

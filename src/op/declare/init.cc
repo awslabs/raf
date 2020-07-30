@@ -14,10 +14,10 @@ namespace init {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-void Ones(const CallValues &call) {
+void Ones(const CallValues& call) {
   const auto* args = call->args.as<ShapeDtypeArgs>();
   CHECK(args != nullptr);
-  const std::vector<int64_t> &shape = args->shape;
+  const std::vector<int64_t>& shape = args->shape;
   // TODO(@junrushao1994): hacky here
   call->ctx = Context(DevType::kCUDA(), 0);
   call->out = TensorValue::Assemble(call->ctx, DType(DTypeCode::kFloat(), 32), shape);

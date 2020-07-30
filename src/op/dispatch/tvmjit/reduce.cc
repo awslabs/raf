@@ -41,8 +41,7 @@ void ReduceTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   };
 }
 
-HashKey ReduceHasher(const std::vector<Type>& param_types,
-                     const Type& ret_type,
+HashKey ReduceHasher(const std::vector<Type>& param_types, const Type& ret_type,
                      const ReduceArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
@@ -59,7 +58,7 @@ Attrs MeanReduceNormalizer(TVMOpEnv* env, const ReduceArgs* args) {
   };
   auto attrs = make_object<tvm_attrs::ReduceAttrs>();
   // expand the empty axis
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   auto ndim = x->ndim;
   std::vector<int64_t> axis;
   if (args->axis.empty()) {
@@ -79,11 +78,13 @@ Attrs MeanReduceNormalizer(TVMOpEnv* env, const ReduceArgs* args) {
 Attrs ReduceDxNormalizer(TVMOpEnv* env, const ReduceDxArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs = {
-      GetDLTensor(args->x), GetDLTensor(args->y), GetDLTensor(args->dy),
+      GetDLTensor(args->x),
+      GetDLTensor(args->y),
+      GetDLTensor(args->dy),
   };
   auto attrs = make_object<tvm_attrs::ReduceAttrs>();
   // expand the empty axis
-  DLTensor *x = args->x;
+  DLTensor* x = args->x;
   auto ndim = x->ndim;
   std::vector<int64_t> axis;
   if (args->axis.empty()) {
@@ -103,13 +104,14 @@ Attrs ReduceDxNormalizer(TVMOpEnv* env, const ReduceDxArgs* args) {
 void ReduceDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
   *y_type = GetTensorType(env->outputs[0]);
   *param_types = {
-      GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]), GetTensorType(env->inputs[2]),
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
   };
 }
 
-HashKey ReduceDxHasher(const std::vector<Type>& param_types,
-                     const Type& ret_type,
-                     const ReduceDxArgs* args) {
+HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                       const ReduceDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
     key << args->axis[i];
@@ -123,7 +125,8 @@ MNM_TVMJIT(Argmin, "mnm.op.argmin", ReduceArgs, ReduceNormalizer, ReduceTyper, R
 MNM_TVMJIT(All, "mnm.op.all", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(Any, "mnm.op.any", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(Mean, "mnm.op.mean", ReduceArgs, MeanReduceNormalizer, ReduceTyper, ReduceHasher);
-MNM_TVMJIT(MeanDx, "mnm.op.mean_dx", ReduceDxArgs, ReduceDxNormalizer, ReduceDxTyper, ReduceDxHasher); //NOLINT
+MNM_TVMJIT(MeanDx, "mnm.op.mean_dx", ReduceDxArgs, ReduceDxNormalizer, ReduceDxTyper,
+           ReduceDxHasher);  // NOLINT
 
 }  // namespace tvmjit
 }  // namespace op

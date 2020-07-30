@@ -1,3 +1,5 @@
+# pylint: disable=missing-function-docstring
+"""NN-specific random initializers."""
 import math
 
 import numpy as np

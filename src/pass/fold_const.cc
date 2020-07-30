@@ -28,8 +28,7 @@ class ConstantChecker : private ExprVisitor {
       return true;
     }
     const auto it = memo_.find(expr);
-    if (it != memo_.end())
-      return it->second;
+    if (it != memo_.end()) return it->second;
     VisitExpr(expr);
     return memo_[expr];  // return memoized result or the default value false
   }
@@ -51,8 +50,8 @@ class ConstantChecker : private ExprVisitor {
 
 class ConstantFolder : public ExprMutator {
  public:
-  explicit ConstantFolder(Module module) :
-        module_(module) {}
+  explicit ConstantFolder(Module module) : module_(module) {
+  }
 
   Expr VisitExpr_(const LetNode* op) final {
     Expr value = this->Mutate(op->value);
@@ -62,9 +61,7 @@ class ConstantFolder : public ExprMutator {
     } else {
       Var var = Downcast<Var>(this->Mutate(op->var));
       Expr body = this->Mutate(op->body);
-      if (var.same_as(op->var) &&
-          value.same_as(op->value) &&
-          body.same_as(op->body)) {
+      if (var.same_as(op->var) && value.same_as(op->value) && body.same_as(op->body)) {
         return GetRef<Expr>(op);
       } else {
         return Let(var, value, body);
@@ -73,8 +70,8 @@ class ConstantFolder : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* call) final {
-    static std::unordered_set<std::string> skip_list{"zeros_like", "ones_like",
-                                                     "full_like", "full"};
+    static std::unordered_set<std::string> skip_list{"zeros_like", "ones_like", "full_like",
+                                                     "full"};
 
     auto origin_args = call->args;
     Expr res = ExprMutator::VisitExpr_(call);
@@ -87,7 +84,7 @@ class ConstantFolder : public ExprMutator {
     const OpNode* op = call->op.as<OpNode>();
     if (op == nullptr) return res;
     if (skip_list.count(op->name)) {
-        return res;
+      return res;
     }
 
     // TODO(haibin): skip stateful ops.
@@ -188,7 +185,7 @@ struct BindParamMutator : public ExprMutator {
   Expr VisitExpr_(const FunctionNode* fn) final {
     // the input params are not pruned. We only mutate the function body
     Function func = GetRef<Function>(fn);
-    auto new_body =  Mutate(func->body);
+    auto new_body = Mutate(func->body);
     return Function(func->params, new_body, func->ret_type, func->type_params, func->attrs);
   }
 

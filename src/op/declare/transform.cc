@@ -47,11 +47,11 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   throw;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   const auto* args = call->args.as<ReshapeArgs>();
   CHECK(args != nullptr);
-  DLTensor *x = args->x;
-  const std::vector<int64_t> &shape = args->shape;
+  DLTensor* x = args->x;
+  const std::vector<int64_t>& shape = args->shape;
   call->ctx = x->ctx;
   call->callee = ir::NullValue<OpValue>();
   if (IsCompact(*x)) {
@@ -66,7 +66,7 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues &call) {
   throw;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-void ReshapeDx(const CallValues &call) {
+void ReshapeDx(const CallValues& call) {
   const auto* args = call->args.as<ReshapeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -81,7 +81,7 @@ void ReshapeDx(const CallValues &call) {
 
 MNM_OP_DECLARE("mnm.op.reshape_dx", ReshapeDx).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.take", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -121,7 +121,7 @@ MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   throw;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
-MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues& call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -133,7 +133,7 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues &call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToArgs>();
   DLTensor* x = args->x;
   std::vector<int64_t> shape = args->shape;
@@ -143,11 +143,11 @@ MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues &call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
-MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
   const auto* args = call->args.as<TransposeArgs>();
   CHECK(args != nullptr);
-  const std::vector<int64_t> &axes = args->axes;
-  const DLTensor *x = args->x;
+  const std::vector<int64_t>& axes = args->axes;
+  const DLTensor* x = args->x;
   int64_t* ishape = x->shape;
   int ndim = x->ndim;
 
@@ -167,10 +167,10 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues &call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
   const auto* args = call->args.as<TransposeDxArgs>();
   CHECK(args != nullptr);
-  const DLTensor *x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
@@ -178,25 +178,24 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues &call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToLikeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   DLTensor* broadcast_type = args->broadcast_type;
-  std::vector<int64_t> shape(broadcast_type->shape,
-                             broadcast_type->shape + broadcast_type->ndim);
+  std::vector<int64_t> shape(broadcast_type->shape, broadcast_type->shape + broadcast_type->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/broadcast_type->dtype,
                                     /*shape=*/shape);
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
-MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
   const std::vector<BaseTensorValue>& x = args->x;
   CHECK_GE(x.size(), 1U);
-  DLTensor *y0 = x[0];
+  DLTensor* y0 = x[0];
   int axis = NormalizeAxis(args->axis, y0->ndim);
   int64_t dimsize = 0;
   for (auto i : x) {
@@ -217,7 +216,7 @@ MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues &call) {
   call->ctx = y0->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-void ConcatenateDx(const CallValues &call) {
+void ConcatenateDx(const CallValues& call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
   const std::vector<BaseTensorValue>& x = args->x;
@@ -238,9 +237,9 @@ void ConcatenateDx(const CallValues &call) {
 }
 
 MNM_OP_DECLARE("mnm.op.concatenate_dx", ConcatenateDx)
-.set_attr<TOpPattern>("TOpPattern", kInjective);
+    .set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.split", [](const CallValues &call){
+MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
   const auto* args = call->args.as<SplitArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -263,7 +262,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues &call){
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.clip", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.clip", [](const CallValues& call) {
   const auto* args = call->args.as<ClipArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -274,10 +273,10 @@ MNM_OP_DECLARE("mnm.op.clip", [](const CallValues &call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
-MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues &call) {
+MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues& call) {
   const auto* args = call->args.as<ClipDxArgs>();
   CHECK(args != nullptr);
-  const DLTensor *x = args->x;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
@@ -288,4 +287,3 @@ MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues &call) {
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm
-

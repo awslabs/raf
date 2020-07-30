@@ -11,7 +11,7 @@ namespace grad {
 
 using namespace mnm::ir;
 
-Array<Expr> NllLossGrad(const Expr& orig_call, const Expr &y, const Expr& ograds) {
+Array<Expr> NllLossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
   static auto dtrue = Op::Get("mnm.op.nll_loss_dtrue");
   static auto dpred = Op::Get("mnm.op.nll_loss_dpred");
   // TODO(@were): I am not sure how is the dy here.

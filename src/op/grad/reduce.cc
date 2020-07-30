@@ -11,7 +11,7 @@ namespace grad {
 
 using namespace mnm::ir;
 
-Array<Expr> MeanGrad(const Expr& orig_call, const Expr &y, const Expr& dy) {
+Array<Expr> MeanGrad(const Expr& orig_call, const Expr& y, const Expr& dy) {
   static auto mean_dx = Op::Get("mnm.op.mean_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 3);

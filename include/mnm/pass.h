@@ -11,8 +11,8 @@
 
 namespace mnm {
 namespace pass {
-using tvm::relay::FreeVars;
 using tvm::AsText;
+using tvm::relay::FreeVars;
 ir::Function AutoDiff(ir::Function func);
 ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);

@@ -14,10 +14,10 @@ using ir::Attrs;
 using ir::Op;
 using ir::Type;
 using tvm::Target;
-using tvm::te::Schedule;
-using tvm::te::Tensor;
 using tvm::relay::FTVMCompute;
 using tvm::relay::FTVMSchedule;
+using tvm::te::Schedule;
+using tvm::te::Tensor;
 #define MNM_TVM_OP(MNM_OP, OP)                                                                  \
   MNM_OP_REGISTER(MNM_OP)                                                                       \
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \

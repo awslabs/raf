@@ -13,8 +13,8 @@ namespace op {
 namespace type {
 
 using namespace mnm::value;
-using tvm::relay::Type;
 using schema::SumArgs;
+using tvm::relay::Type;
 
 Type SumInfer(const CallValues& value) {
   using namespace tvm;
@@ -56,7 +56,6 @@ Type SumInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.sum", "Sum", SumInfer);
-
 
 }  // namespace type
 }  // namespace op

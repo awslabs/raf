@@ -93,7 +93,7 @@ HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& 
     HashKey key = HASH(param_types, ret_type, args);               \
     {                                                              \
       std::lock_guard<std::mutex> lock(cache->mu);                 \
-      if (const auto *compiled = cache->Get(key.byte_vector)) {    \
+      if (const auto* compiled = cache->Get(key.byte_vector)) {    \
         env->f = *compiled;                                        \
       } else {                                                     \
         env->f = CompileOp(op, attrs, param_types, ret_type, ctx); \

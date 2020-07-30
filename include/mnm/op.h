@@ -92,41 +92,41 @@ class OpDispatch {
   registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
-using tvm::relay::TOpPattern;
-using tvm::relay::OpPatternKind;
-using tvm::relay::kElemWise;
 using tvm::relay::kBroadcast;
-using tvm::relay::kInjective;
 using tvm::relay::kCommReduce;
+using tvm::relay::kElemWise;
+using tvm::relay::kInjective;
+using tvm::relay::kOpaque;
 using tvm::relay::kOutEWiseFusable;
 using tvm::relay::kTuple;
-using tvm::relay::kOpaque;
+using tvm::relay::OpPatternKind;
+using tvm::relay::TOpPattern;
 
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 
 using FPrimalGradient = registry::TypedPackedFunc<
-  // returns: op's contribution to igrads
-  ir::Array<ir::Expr>(
-    // orig_call: a relay::Call which invokes this operator
-    const ir::Expr& orig_call,
-    // computed_output: (optional) to which var the op's output binds to
-    const ir::Var& computed_output,
-    // out_grad: ograds
-    const ir::Expr& out_grad)>;
+    // returns: op's contribution to igrads
+    ir::Array<ir::Expr>(
+        // orig_call: a relay::Call which invokes this operator
+        const ir::Expr& orig_call,
+        // computed_output: (optional) to which var the op's output binds to
+        const ir::Var& computed_output,
+        // out_grad: ograds
+        const ir::Expr& out_grad)>;
 
 using FFusedPrimalGradient = registry::TypedPackedFunc<
-  // returns: the updated igrads
-  ir::Array<ir::Expr>(
-    // orig_call: a relay::Call which invokes this operator
-    const ir::Expr& orig_call,
-    // computed_output: (optional) to which var the op's output binds to
-    const ir::Var& computed_output,
-    // out_grad: ograds
-    const ir::Expr& out_grad,
-    // in_grad: old igrads
-    const ir::Array<ir::Expr>& in_grad)>;
+    // returns: the updated igrads
+    ir::Array<ir::Expr>(
+        // orig_call: a relay::Call which invokes this operator
+        const ir::Expr& orig_call,
+        // computed_output: (optional) to which var the op's output binds to
+        const ir::Var& computed_output,
+        // out_grad: ograds
+        const ir::Expr& out_grad,
+        // in_grad: old igrads
+        const ir::Array<ir::Expr>& in_grad)>;
 
 void RunDeclare(const CallValues& call);
 ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);

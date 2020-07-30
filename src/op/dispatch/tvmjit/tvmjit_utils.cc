@@ -84,10 +84,7 @@ PackedFunc CompileOp(const Op& op,                          //
       var->checked_type_ = param_types[i];
       params.push_back(var);
     }
-    func = Function(params,
-                    Call(op, {params.begin(), params.end()}, attrs),
-                    ret_type,
-                    {});
+    func = Function(params, Call(op, {params.begin(), params.end()}, attrs), ret_type, {});
     func->body->checked_type_ = ret_type;
     func->checked_type_ = FuncType(param_types, ret_type, {}, {});
   }

@@ -16,8 +16,7 @@ using device_api::DeviceAPI;
 
 class NonOwnedMemory final : public Memory {
  public:
-  explicit NonOwnedMemory(void* data, const Context& ctx,
-                          std::shared_ptr<DeviceAPI> api) {
+  explicit NonOwnedMemory(void* data, const Context& ctx, std::shared_ptr<DeviceAPI> api) {
     this->data = data;
     this->ctx = ctx;
     this->api = std::move(api);
@@ -49,10 +48,9 @@ class NoPool final : public MemoryPool {
     return std::make_shared<NonOwnedMemory>(data, ctx, api);
   }
 
-  std::vector<std::shared_ptr<Memory>> AllocBatch(
-      const std::vector<int64_t>& nbytes,
-      int64_t alignment) override {
-    std::vector<std::shared_ptr<Memory> > ret;
+  std::vector<std::shared_ptr<Memory>> AllocBatch(const std::vector<int64_t>& nbytes,
+                                                  int64_t alignment) override {
+    std::vector<std::shared_ptr<Memory>> ret;
     ret.reserve(nbytes.size());
     for (int64_t bytes : nbytes) {
       ret.emplace_back(Alloc(bytes, alignment));

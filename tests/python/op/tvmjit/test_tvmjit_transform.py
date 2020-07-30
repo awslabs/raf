@@ -1,9 +1,9 @@
 from functools import reduce
 import operator
 
-import torch
 import numpy as np
 import pytest
+import torch
 import mnm
 import topi.testing
 

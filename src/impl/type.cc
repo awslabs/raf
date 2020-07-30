@@ -11,10 +11,8 @@ namespace type {
 
 using namespace mnm::ir;
 
-OpType MakeOpType(
-  const std::string& op_name,
-  const std::string& fn_name,
-  tvm::runtime::TypedPackedFunc<tvm::relay::Type(const op::CallValues& value)> fn) {
+OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
+                  tvm::runtime::TypedPackedFunc<tvm::relay::Type(const op::CallValues& value)> fn) {
   using namespace tvm;
   auto func_name = std::string("mnm.type.type_inference.") + fn_name;
   TypeInferenceFn env_fn;
@@ -22,13 +20,11 @@ OpType MakeOpType(
   if (runtime::Registry::Get(func_name)) {
     env_fn = EnvFunc::Get(func_name);
   } else {
-    runtime::Registry::Register(func_name)
-      .set_body(fn);
+    runtime::Registry::Register(func_name).set_body(fn);
     env_fn = EnvFunc::Get(func_name);
   }
 
-  const Op& op =
-    tvm::OpRegEntry::RegisterOrGet(op_name).op();
+  const Op& op = tvm::OpRegEntry::RegisterOrGet(op_name).op();
   Array<TypeVar> type_params;
   Array<Type> arg_types;
 
@@ -45,11 +41,9 @@ OpType MakeOpType(
   auto out_param = TypeVar(fn_name + "_out", TypeKind::kType);
   type_params.push_back(out_param);
 
-  TypeConstraint type_inference =
-      TypeInference(env_fn);
+  TypeConstraint type_inference = TypeInference(env_fn);
 
-  auto func_type =
-      FuncType(arg_types, out_param, type_params, {type_inference});
+  auto func_type = FuncType(arg_types, out_param, type_params, {type_inference});
 
   return func_type;
 }

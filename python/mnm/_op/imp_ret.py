@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring,missing-function-docstring
 from mnm._core.ndarray import ndarray
 from mnm._core.value import BoolValue, FloatValue, IntValue, StringValue
 from mnm._lib import Array, relay

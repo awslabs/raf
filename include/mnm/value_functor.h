@@ -26,15 +26,13 @@ template <typename FType>
 class ValueFunctor;
 
 // functions to be overriden.
-#define VALUE_FUNCTOR_DEFAULT                                      \
+#define VALUE_FUNCTOR_DEFAULT \
   { return VisitValueDefault_(op, std::forward<Args>(args)...); }
 
-#define VALUE_FUNCTOR_DISPATCH(OP)                                \
-  vtable.template set_dispatch<OP>(                                    \
-      [](const ir::ObjectRef& n, TSelf* self, Args... args) {                \
-        return self->VisitValue_(static_cast<const OP*>(n.get()), \
-                                 std::forward<Args>(args)...);          \
-      });
+#define VALUE_FUNCTOR_DISPATCH(OP)                                                          \
+  vtable.template set_dispatch<OP>([](const ir::ObjectRef& n, TSelf* self, Args... args) {  \
+    return self->VisitValue_(static_cast<const OP*>(n.get()), std::forward<Args>(args)...); \
+  });
 
 template <typename R, typename... Args>
 class ValueFunctor<R(const Value& n, Args...)> {
@@ -46,7 +44,8 @@ class ValueFunctor<R(const Value& n, Args...)> {
   /*! \brief the result type of this functor */
   using result_type = R;
   /*! \brief virtual destructor */
-  virtual ~ValueFunctor() {}
+  virtual ~ValueFunctor() {
+  }
   /*!
    * \brief Same as call.
    * \param n The value node.
@@ -68,22 +67,15 @@ class ValueFunctor<R(const Value& n, Args...)> {
     return vtable(n, this, std::forward<Args>(args)...);
   }
   // Functions that can be overriden by subclass
-  virtual R VisitValue_(const TensorValueObj* op,
-                        Args... args) VALUE_FUNCTOR_DEFAULT;
-  virtual R VisitValue_(const TensorTypeValueObj* op,
-                        Args... args) VALUE_FUNCTOR_DEFAULT;
-  virtual R VisitValue_(const TupleValueObj* op,
-                       Args... args) VALUE_FUNCTOR_DEFAULT;
-  virtual R VisitValue_(const RefValueObj* op,
-                       Args... args) VALUE_FUNCTOR_DEFAULT;
-  virtual R VisitValue_(const OpValueObj* op,
-                       Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const TensorValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const TensorTypeValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const TupleValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const RefValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const OpValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const OpaqueValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const IntValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
-  virtual R VisitValue_(const FloatValueObj* op,
-                       Args... args) VALUE_FUNCTOR_DEFAULT;
-  virtual R VisitValue_(const BoolValueObj* op,
-                       Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const FloatValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const BoolValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const StringValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const NoGradValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValueDefault_(const ir::Object* op, Args...) {

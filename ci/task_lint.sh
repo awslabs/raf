@@ -4,14 +4,14 @@ set -u
 set -o pipefail
 source ./ci/env.sh
 
-echo "Running cpplint on include/ and src/"
-python3 3rdparty/tvm/3rdparty/dmlc-core/scripts/lint.py mnm cpp include/ src/
+echo "clang-format check..."
+# check lastest change, for squash merge into master
+./scripts/lint/git-clang-format.sh HEAD~1
+# chekc against origin/master for PRs.
+./scripts/lint/git-clang-format.sh origin/master
 
-echo "Running pylint on python/mnm"
-python3 -m pylint ${MNM_HOME}/python/mnm --rcfile=${MNM_HOME}/tests/lint/pylintrc
+echo "Running pylint on python/mnm and scripts/op_def"
+python3 -m pylint python/mnm scripts/op_def --rcfile=./scripts/lint/pylintrc
 
 echo "Running pylint on tests/python"
-python3 -m pylint ${MNM_HOME}/tests/python --rcfile=${MNM_HOME}/tests/lint/pylintrc
-
-echo "Running pylint on scripts/op_def"
-python3 -m pylint ${MNM_HOME}/scripts/op_def --rcfile=${MNM_HOME}/tests/lint/pylintrc
+python3 -m pylint tests/python --rcfile=./scripts/lint/pytestlintrc

@@ -1,3 +1,5 @@
+# pylint: disable=missing-function-docstring
+"""Compute definition and schedules for loss functions."""
 from .._lib import register_compute
 from .._lib import topi as _topi  # pylint: disable=unused-import
 from .._lib import tvm as _tvm
@@ -37,5 +39,6 @@ def nllloss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-
     _, pred = inputs
     n, c = pred.shape
     return [_tvm.te.compute((n, c), lambda x, y: -pred[x, y] / n)]
+
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dtrue")

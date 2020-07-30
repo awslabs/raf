@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring,missing-function-docstring
 import numpy as np
 
 from mnm._core import value

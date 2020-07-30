@@ -26,7 +26,7 @@ cudnnConvolutionFwdAlgo_t FindConvolutionForwardAlgorithm(const std::vector<uint
                                                           cudnnFilterDescriptor_t wDesc,
                                                           cudnnConvolutionDescriptor_t convDesc,
                                                           cudnnTensorDescriptor_t yDesc) {
-  if (auto *val = _conv_fwd_alg_cache.Get(key)) {
+  if (auto* val = _conv_fwd_alg_cache.Get(key)) {
     return *val;
   }
   int cnt;
@@ -74,9 +74,9 @@ class ConvCUDNN : public mnm::op::OpEnv {
     y_desc = NormalizeTensorType(y_tt);
 
     HashKey hasher;
-    hasher << x_tt  << w_tt << y_tt << args->padding << args->stride << args->dilation;
+    hasher << x_tt << w_tt << y_tt << args->padding << args->stride << args->dilation;
 
-    const std::vector<uint8_t> &key = hasher.byte_vector;
+    const std::vector<uint8_t>& key = hasher.byte_vector;
 
     algo = FindConvolutionForwardAlgorithm(key, x_desc, w_desc, conv_desc, y_desc);
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,

@@ -39,6 +39,20 @@ from tvm.relay.op import op as _reg
 # pylint: enable=unused-import
 
 def find_lib_path(name=None, search_path=None):
+    """Find dynamic library files.
+
+    Parameters
+    ----------
+    name : list of str
+        List of names to be found.
+    search_path : str
+        Root path to search.
+
+    Returns
+    -------
+    lib_path : list(string)
+        List of all found path to the libraries
+    """
     ffi_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
     source_dir = os.path.join(ffi_dir, "..", "..")
     install_lib_dir = os.path.join(ffi_dir, "..", "..", "..")

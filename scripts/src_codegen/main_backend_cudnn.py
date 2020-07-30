@@ -156,7 +156,6 @@ using dmlc::BeginPtr;
     headers = '\n'.join(sorted(headers))
     wrappers = '\n\n'.join(sorted(wrappers.values()))
     open(path, 'w').write(fmt.format(FILENAME=path, HEADERS=headers, CLASSES=classes, WRAPPERS=wrappers) + "\n")
-    subprocess.check_output(['clang-format', '-i', path])
 
 if __name__ == '__main__':
     main()

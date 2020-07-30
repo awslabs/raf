@@ -1,3 +1,5 @@
+# pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+
 import weakref
 
 from .core_utils import bfs

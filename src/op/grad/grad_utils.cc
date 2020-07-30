@@ -12,9 +12,9 @@ namespace grad {
 using namespace mnm::ir;
 
 Array<Expr> AsTupleExpr(const Expr& expr, int numel) {
-  if (const auto *tuple = expr.as<TupleNode>()) {
+  if (const auto* tuple = expr.as<TupleNode>()) {
     Array<Expr> result;
-    for (const Expr &expr : tuple->fields) {
+    for (const Expr& expr : tuple->fields) {
       result.push_back(expr);
     }
     return result;

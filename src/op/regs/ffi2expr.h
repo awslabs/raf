@@ -17,13 +17,13 @@ namespace op {
 namespace regs {
 namespace ffi2expr {
 
-#define MNM_PRELUDE()                                          \
-  using namespace mnm::ir;                                     \
-  using namespace mnm::value;                                  \
-  using mnm::tensor::Tensor;                                   \
-  int type_code = a.type_code();                               \
+#define MNM_PRELUDE()                                             \
+  using namespace mnm::ir;                                        \
+  using namespace mnm::value;                                     \
+  using mnm::tensor::Tensor;                                      \
+  int type_code = a.type_code();                                  \
   if (type_code == kTVMObjectHandle && (a).IsObjectRef<Expr>()) { \
-    return a.AsObjectRef<Expr>();                              \
+    return a.AsObjectRef<Expr>();                                 \
   }
 
 #define MNM_CONST(type, value) MakeConstant(type::make(value))

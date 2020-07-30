@@ -139,9 +139,6 @@ disable=print-statement,
         deprecated-sys-function,
         exception-escape,
         comprehension-escape,
-        missing-module-docstring,
-        missing-class-docstring,
-        missing-function-docstring,
         fixme,
         duplicate-code
 

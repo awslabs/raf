@@ -33,7 +33,7 @@ class ValueObj : public ir::Object {
 class Value : public ir::ObjectRef {
  public:
   operator DLTensor*() const;
-  operator tensor::Tensor&() const;
+  operator tensor::Tensor &() const;
   template <typename TValue,
             typename = typename std::enable_if<std::is_base_of<Value, TValue>::value>::type>
   explicit operator TValue() const {

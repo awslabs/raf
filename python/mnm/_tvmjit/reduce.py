@@ -1,3 +1,5 @@
+# pylint: disable=missing-function-docstring
+"""Reduction compute definition and schedules."""
 from .._lib import register_compute
 from .._lib import topi as _topi
 from .._lib import tvm as _tvm
@@ -40,6 +42,7 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
 
     return [_tvm.te.compute(shape, fcompute)]
 
+
 _reg.register_injective_schedule("mnm.op.sum")
 
 _reg.register_reduce_schedule("mnm.op.argmax")
@@ -47,6 +50,7 @@ _reg.register_reduce_schedule("mnm.op.argmin")
 _reg.register_reduce_schedule("mnm.op.all")
 _reg.register_reduce_schedule("mnm.op.any")
 _reg.register_reduce_schedule("mnm.op.mean")
+
 
 def axis_reverse(input_axis):
     # get the reverse axis to change axis back
@@ -57,12 +61,14 @@ def axis_reverse(input_axis):
         reverse_axis[axis] = i
     return reverse_axis
 
+
 def mul_shapes(shape_list, axis_list):
     # get the product of shapes in given axis
     out = 1
     for axis in axis_list:
         out *= shape_list[axis]
     return out
+
 
 @register_compute("mnm.op.mean_dx")
 def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
@@ -86,5 +92,6 @@ def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argume
         out = _topi.broadcast_to(out, _topi.transpose(x, axes=expand_axis).shape)
         out = _topi.transpose(out, axes=reverse_axis)
     return [out]
+
 
 _reg.register_injective_schedule("mnm.op.mean_dx")

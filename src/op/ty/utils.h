@@ -46,7 +46,6 @@ bool TypeCheckEqual(const tvm::PrimExpr& lhs, const tvm::PrimExpr& rhs);
  */
 bool TypeCheck(const tvm::PrimExpr& cond);
 
-
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

@@ -10,9 +10,9 @@ using mnm::DevType;
 using mnm::ir::Array;
 using mnm::ir::Attrs;
 using mnm::ir::Op;
+using mnm::op::CallValues;
 using mnm::op::OpDispatch;
 using mnm::op::OpEnv;
-using mnm::op::CallValues;
 using mnm::value::Value;
 
 class Conv2d : public OpEnv {
@@ -20,7 +20,7 @@ class Conv2d : public OpEnv {
   int type;
   Conv2d() = default;
   virtual ~Conv2d() = default;
-  void Execute(const CallValues &call) override final {
+  void Execute(const CallValues& call) override final {
   }
 };
 
@@ -31,7 +31,7 @@ class Conv2dX : public Conv2d {
     type = 0;
   }
   virtual ~Conv2dX() = default;
-  static OpEnv* make(const CallValues &call) {
+  static OpEnv* make(const CallValues& call) {
     return new Conv2dX();
   }
 };
@@ -44,7 +44,7 @@ class Conv2dY : public Conv2d {
     type = 1;
   }
   virtual ~Conv2dY() = default;
-  static OpEnv* make(const CallValues &call) {
+  static OpEnv* make(const CallValues& call) {
     return new Conv2dY();
   }
 };

@@ -1,3 +1,5 @@
+# pylint: disable=missing-class-docstring,missing-function-docstring
+"""Neural network specific Model blocks."""
 import math
 
 import numpy as np

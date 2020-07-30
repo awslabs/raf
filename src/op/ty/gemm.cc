@@ -16,7 +16,7 @@ using tvm::relay::Type;
 using namespace mnm::value;
 using schema::BinaryArgs;
 
-template<bool transpose_a, bool transpose_b>
+template <bool transpose_a, bool transpose_b>
 Type MatmulInfer(const CallValues& value) {
   using namespace tvm;
   using namespace tvm::relay;
@@ -34,10 +34,8 @@ Type MatmulInfer(const CallValues& value) {
   if (transpose_b) {
     std::swap(n2, m2);
   }
-  CHECK(TypeCheckEqual(m1, n2))
-      << "Matmul: shapes of x and y is inconsistent, "
-      << " x shape=" << x->shape
-      << ", y shape=" << y->shape;
+  CHECK(TypeCheckEqual(m1, n2)) << "Matmul: shapes of x and y is inconsistent, "
+                                << " x shape=" << x->shape << ", y shape=" << y->shape;
 
   Array<tvm::PrimExpr> oshape = {n1, m2};
   return TensorType(oshape, x->dtype);

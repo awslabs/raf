@@ -8,10 +8,10 @@ from codegen_utils import write_to_file
 
 def gen_internal_file(apis):
     FILE = """
+# pylint: disable=invalid-name,redefined-builtin
+# pylint: disable=missing-class-docstring,missing-function-docstring
 \"\"\"Auto generated. Do not touch.\"\"\"
 from mnm._lib import _APIS
-
-# pylint: disable=invalid-name,redefined-builtin
 {APIs}
 """.strip()
     apis = "\n".join(map(gen_api, sorted(apis, key=lambda api: api.name)))
@@ -34,6 +34,7 @@ def gen_init_file(apis, dirs):
     FILE = """
 \"\"\"Auto generated. Do not touch.\"\"\"
 # pylint: disable=redefined-builtin
+# pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 {INTERNALS}
 {DIRS}
 """.strip()

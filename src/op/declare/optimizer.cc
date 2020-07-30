@@ -37,7 +37,6 @@ MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
   call->ctx = dx->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
-
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

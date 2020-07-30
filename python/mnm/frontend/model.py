@@ -1,9 +1,23 @@
+"""Model that wraps the IR converted from deep learning frameworks."""
 from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap
 
 
 class FrameworkModel(BaseModel):
+    """Represent the wrapper of the models read from deep learning frameworks.
+
+    Parameters
+    ----------
+    train_func : Expr
+        Function contains both forward and backward computation.
+
+    infer_func : Expr
+        Forward function
+
+    params : Dict[str, ndarray]
+        Model parameters
+    """
     def __init__(self, train_func, infer_func, params):
         super(FrameworkModel, self).__init__()
         self.__train_func = train_func
