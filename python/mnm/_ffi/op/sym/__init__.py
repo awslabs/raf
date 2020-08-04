@@ -37,6 +37,7 @@ from ._internal import expand_dims
 from ._internal import floor
 from ._internal import get_kept_dims
 from ._internal import get_reduce_axis
+from ._internal import get_valid_counts
 from ._internal import greater
 from ._internal import greater_equal
 from ._internal import less

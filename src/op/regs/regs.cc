@@ -19,6 +19,7 @@
 #include "../schema/reduce.h"
 #include "../schema/transform.h"
 #include "../schema/ufunc.h"
+#include "../schema/vision.h"
 
 using namespace mnm::ir;
 using namespace mnm::value;
@@ -68,6 +69,7 @@ static const char expand_dims[] = "mnm.op.expand_dims";
 static const char floor[] = "mnm.op.floor";
 static const char get_kept_dims[] = "mnm.op.get_kept_dims";
 static const char get_reduce_axis[] = "mnm.op.get_reduce_axis";
+static const char get_valid_counts[] = "mnm.op.get_valid_counts";
 static const char greater[] = "mnm.op.greater";
 static const char greater_equal[] = "mnm.op.greater_equal";
 static const char less[] = "mnm.op.less";
@@ -267,6 +269,15 @@ Attrs ExpandDims(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, axis);
   MNM_POD(2, ffi2schema::Int, num_newaxis);
+  return Attrs(attrs);
+}
+
+Attrs GetValidCounts(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::GetValidCountsArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::Double, score_threshold);
+  MNM_POD(2, ffi2schema::Int, id_index);
+  MNM_POD(3, ffi2schema::Int, score_index);
   return Attrs(attrs);
 }
 
@@ -891,6 +902,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.get_reduce_axis").set_body([](TVMArgs args, TVMR
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.get_valid_counts").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(get_valid_counts, 4, ffi2schema::GetValidCounts,
+              schema::GetValidCountsArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->score_threshold));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->id_index));
+  MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->score_index));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.greater").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(greater, 4, ffi2schema::BinaryUfunc,
               schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -1509,6 +1531,15 @@ Array<Expr> ExpandDims(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> GetValidCounts(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Double, score_threshold);
+  MNM_ARG(2, ffi2expr::Int, id_index);
+  MNM_ARG(3, ffi2expr::Int, score_index);
+  MNM_RET();
+}
+
 Array<Expr> LocalResponseNorm(const TVMArgs& values) {
   MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1786,6 +1817,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.get_kept_dims")
     .set_body(MNM_SYMBOLIC_API(get_kept_dims, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.get_reduce_axis")
     .set_body(MNM_SYMBOLIC_API(get_reduce_axis, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.get_valid_counts")
+    .set_body(MNM_SYMBOLIC_API(get_valid_counts, 4, GetValidCounts));
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater").set_body(MNM_SYMBOLIC_API(greater, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
     .set_body(MNM_SYMBOLIC_API(greater_equal, 4, BinaryUfunc));
@@ -2022,6 +2055,16 @@ Attrs ExpandDims(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Int, axis);
   MNM_OPTIONAL(2, value2schema::Int, num_newaxis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs GetValidCounts(const Array<Value>& values) {
+  MNM_PRELUDE(1, 4, schema::GetValidCountsArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_OPTIONAL(1, value2schema::Double, score_threshold);
+  MNM_OPTIONAL(2, value2schema::Int, id_index);
+  MNM_OPTIONAL(3, value2schema::Int, score_index);
   return Attrs(attrs);
 }
 
@@ -2333,6 +2376,8 @@ MNM_BIND_SCHEMA("mnm.op.get_kept_dims", names::get_kept_dims,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_reduce_axis", names::get_reduce_axis,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.get_valid_counts", names::get_valid_counts,
+                value2schema::GetValidCounts);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.greater", names::greater,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.greater_equal", names::greater_equal,
@@ -2448,6 +2493,7 @@ MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
+MNM_REGISTER_OBJECT_REFLECT(GetValidCountsArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);

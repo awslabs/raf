@@ -85,6 +85,7 @@ OPS = [
     Op(name="concatenate_dx", schema_name="concatenate"),
     Op(name="clip", schema_name="clip"),
     Op(name="clip_dx", schema_name="clip_dx"),
+    Op(name="get_valid_counts", schema_name="get_valid_counts"),
 ]
 
 

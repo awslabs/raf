@@ -75,6 +75,8 @@ get_kept_dims = _APIS.get("mnm.op.sym.get_kept_dims", None)
 # Defined in ./src/op/regs/regs.cc
 get_reduce_axis = _APIS.get("mnm.op.sym.get_reduce_axis", None)
 # Defined in ./src/op/regs/regs.cc
+get_valid_counts = _APIS.get("mnm.op.sym.get_valid_counts", None)
+# Defined in ./src/op/regs/regs.cc
 greater = _APIS.get("mnm.op.sym.greater", None)
 # Defined in ./src/op/regs/regs.cc
 greater_equal = _APIS.get("mnm.op.sym.greater_equal", None)

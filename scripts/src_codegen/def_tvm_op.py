@@ -87,4 +87,5 @@ OP_MAP = {
     "mnm.op.dense": ["nn.dense", "", "kOpaque"],
     "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
     "mnm.op.relu": ["nn.relu", "", "kInjective"],
+    "mnm.op.get_valid_counts": ["get_valid_counts", "", "kInjective"],
 }

@@ -281,6 +281,15 @@ SCHEMAS = {
         Arg(name="a_min", cxx_type="double"),
         Arg(name="a_max", cxx_type="double"),
     ],
+    "vision.h::get_valid_counts": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="score_threshold", cxx_type="double",
+            cxx_default=0),
+        Arg(name="id_index", cxx_type="int64_t",
+            cxx_default=0),
+        Arg(name="score_index", cxx_type="int64_t",
+            cxx_default=1),
+    ],
     "optimizer.h::sgd": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="dx", cxx_type="value::BaseTensorValue"),

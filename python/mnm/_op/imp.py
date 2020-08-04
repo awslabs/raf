@@ -14,16 +14,16 @@ __all__ = [
     "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
     "copy", "cos", "dense", "divide", "equal",
     "erf", "erf_dx", "expand_dims", "floor", "get_kept_dims",
-    "get_reduce_axis", "greater", "greater_equal", "less", "less_equal",
-    "log", "log_softmax", "log_softmax_dx", "logical_not", "matmul",
-    "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d", "max_pool2d_dx",
-    "maximum", "mean", "mean_dx", "minimum", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "not_equal", "relu", "relu_dx", "reshape", "reshape_dx",
-    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "softmax", "softmax_dx", "split", "sqrt", "sqrt_dx",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "get_reduce_axis", "get_valid_counts", "greater", "greater_equal", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d",
+    "max_pool2d_dx", "maximum", "mean", "mean_dx", "minimum",
+    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape",
+    "reshape_dx", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
+    "sqrt_dx", "subtract", "sum", "take", "take_dx",
+    "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -289,6 +289,14 @@ def get_reduce_axis(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
     return imp_utils.ret(ffi.get_reduce_axis(x1, x2))
+
+@set_module("mnm")
+def get_valid_counts(data, score_threshold=0, id_index=0, score_index=1):
+    data = imp_utils.to_tensor(data)
+    score_threshold = imp_utils.to_double(score_threshold)
+    id_index = imp_utils.to_int(id_index)
+    score_index = imp_utils.to_int(score_index)
+    return imp_utils.ret(ffi.get_valid_counts(data, score_threshold, id_index, score_index))
 
 @set_module("mnm")
 def greater(x1, x2, out=None, where=None):

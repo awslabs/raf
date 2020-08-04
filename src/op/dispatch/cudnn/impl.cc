@@ -14,6 +14,7 @@
 #include "../../schema/reduce.h"
 #include "../../schema/transform.h"
 #include "../../schema/ufunc.h"
+#include "../../schema/vision.h"
 #include "./cudnn_utils.h"
 
 namespace mnm {
