@@ -1,5 +1,5 @@
-import def_schema
-from codegen_utils import Op
+from . import def_schema
+from .codegen_utils import Op
 
 OPS = [
     Op(name="atan", schema_name="unary"),

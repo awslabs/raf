@@ -2,8 +2,8 @@ import os
 import shutil
 from collections import defaultdict
 
-import def_api
-from codegen_utils import write_to_file
+from . import def_api
+from .codegen_utils import write_to_file
 
 
 def gen_internal_file(apis):

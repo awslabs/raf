@@ -2,8 +2,9 @@
 
 from collections import OrderedDict
 import os
-import codegen_utils
 import itertools
+
+from . import codegen_utils
 
 def strip_type_commons(s):
     return s[len('cudnn'):-len('Descriptor_t')]

@@ -1,8 +1,8 @@
 from numbers import Number
 
-import def_op
-from codegen_utils import PY_NORM_MAP as NORM_MAP
-from codegen_utils import split_chunks, write_to_file
+from . import def_op
+from .codegen_utils import PY_NORM_MAP as NORM_MAP
+from .codegen_utils import split_chunks, write_to_file
 
 
 def gen_file():

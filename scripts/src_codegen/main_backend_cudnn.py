@@ -109,13 +109,13 @@ def main(path='src/op/dispatch/cudnn/impl.cc'):
     src = preprocess(cudnn_h, "-I%s/include" % cuda_home)
     cudnn_apis = extract_functions(src)
 
-    import def_op
+    from . import def_op
     ops = def_op.by_name()
 
-    import def_schema
+    from . import def_schema
     schema = def_schema.by_name()
 
-    import def_cudnn
+    from . import def_cudnn
     wrappers = dict()
     classes = [elem.normalize(ops, schema, cudnn_apis, wrappers) for elem in sorted(def_cudnn.SCHEMAS, key=lambda x:x.op)]
     classes = '\n\n'.join(classes)

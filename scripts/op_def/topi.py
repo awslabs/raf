@@ -2,9 +2,6 @@
 """Operator definition for TOPI (TVM Operator Inventory)."""
 import sys
 
-import tvm
-from tvm import relay
-
 __all__ = ["OP_MAP"]
 
 # pylint: disable=line-too-long
@@ -94,6 +91,11 @@ OP_MAP = {
     "mnm.op.where": ["where", "", "kBroadcast"],
     "mnm.op.zeros": ["zeros", "relay.attrs.InitOpAttrs", "kElemWise"],
     "mnm.op.zeros_like": ["zeros_like", "", "kElemWise"],
+    "mnm.op.batch_matmul": ["nn.batch_matmul", "", "kOpaque"],
+    "mnm.op.dense": ["nn.dense", "", "kOpaque"],
+    "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
+    "mnm.op.relu": ["nn.relu", "", "kInjective"],
+    "mnm.op.get_valid_counts": ["get_valid_counts", "", "kInjective"],
 }
 
 # pylint: enable=line-too-long
@@ -124,6 +126,10 @@ MNM_OP_NAME = {
 
 
 def collect_op():
+    # pylint: disable=import-outside-toplevel
+    import tvm
+    from tvm import relay
+
     pattern_map = {
         0: "kElemWise",
         1: "kBroadcast",

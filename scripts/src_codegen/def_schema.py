@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from codegen_utils import Arg
+from .codegen_utils import Arg
 
 SCHEMAS = {
     "nn.h::conv": [

@@ -1,6 +1,6 @@
 import os
 
-from codegen_utils import API
+from .codegen_utils import API
 
 
 def get(path_prefix="./src/"):

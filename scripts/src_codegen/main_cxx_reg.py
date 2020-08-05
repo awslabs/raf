@@ -1,6 +1,6 @@
-import def_op
-import def_schema
-from codegen_utils import NORM_MAP, snake_to_pascal, write_to_file
+from . import def_op
+from . import def_schema
+from .codegen_utils import NORM_MAP, snake_to_pascal, write_to_file
 
 # pylint: disable=invalid-name
 

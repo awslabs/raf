@@ -1,5 +1,5 @@
-from codegen_utils import write_to_file
-from def_tvm_op import OP_MAP
+from .codegen_utils import write_to_file
+from ..op_def import topi
 
 
 def gen_file(filename):
@@ -46,8 +46,8 @@ using tvm::relay::FTVMSchedule;
 }}  // namespace mnm
 """.strip()
     regs = []
-    for mnm_op_name in sorted(OP_MAP.keys()):
-        relay_op_name, _, _ = OP_MAP[mnm_op_name]
+    for mnm_op_name in sorted(topi.OP_MAP.keys()):
+        relay_op_name, _, _ = topi.OP_MAP[mnm_op_name]
         regs.append(gen_reg(mnm_op_name, relay_op_name))
     regs = "\n".join(regs)
     return FILE.format(REGS=regs, FILENAME=filename)

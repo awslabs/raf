@@ -1,8 +1,8 @@
 import os
 from numbers import Number
 
-import def_schema
-from codegen_utils import snake_to_pascal, write_to_file
+from . import def_schema
+from .codegen_utils import snake_to_pascal, write_to_file
 
 
 def gen_file(schemas, filename):
