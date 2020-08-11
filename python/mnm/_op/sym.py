@@ -8,18 +8,18 @@ from . import sym_utils
 __all__ = [
     "abs", "add", "all", "any", "argmax",
     "argmin", "atan", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "broadcast_to",
-    "broadcast_to_like", "ceil", "clip", "clip_dx", "collapse_sum_like",
-    "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "dense", "divide", "equal",
-    "erf", "erf_dx", "expand_dims", "floor", "get_kept_dims",
-    "get_reduce_axis", "get_valid_counts", "greater", "greater_equal", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max_pool2d",
-    "max_pool2d_dx", "maximum", "mean", "mean_dx", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "not_equal", "relu", "relu_dx", "reshape",
-    "reshape_dx", "sequence_mask", "sgd", "shape", "sigmoid",
+    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add",
+    "broadcast_to", "broadcast_to_like", "ceil", "clip", "clip_dx",
+    "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
+    "conv2d_dx", "copy", "cos", "dense", "divide",
+    "equal", "erf", "erf_dx", "expand_dims", "floor",
+    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
+    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
+    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
+    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
+    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
     "sqrt_dx", "subtract", "sum", "take", "take_dx",
     "tanh", "tanh_dx", "transpose", "transpose_dx",
@@ -122,6 +122,12 @@ def batch_norm_train_dxwb(dy, x, w, b, eps):
     b = sym_utils.to_tensor(b)
     eps = sym_utils.to_double(eps)
     return Symbol.from_expr(ffi.batch_norm_train_dxwb(dy, x, w, b, eps))
+
+def bias_add(x, bias, axis=1):
+    x = sym_utils.to_tensor(x)
+    bias = sym_utils.to_tensor(bias)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.bias_add(x, bias, axis))
 
 def broadcast_to(x, shape):
     x = sym_utils.to_tensor(x)
@@ -437,12 +443,6 @@ def reshape(x, shape, reverse=False):
     shape = sym_utils.to_int_tuple(shape)
     reverse = sym_utils.to_bool(reverse)
     return Symbol.from_expr(ffi.reshape(x, shape, reverse))
-
-def reshape_dx(x, shape, reverse=False):
-    x = sym_utils.to_tensor(x)
-    shape = sym_utils.to_int_tuple(shape)
-    reverse = sym_utils.to_bool(reverse)
-    return Symbol.from_expr(ffi.reshape_dx(x, shape, reverse))
 
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
     x = sym_utils.to_tensor(x)

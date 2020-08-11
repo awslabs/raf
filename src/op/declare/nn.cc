@@ -206,6 +206,22 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
+void BiasAdd(const CallValues& call) {
+  const auto* args = call->args.as<BiasAddArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  const DLTensor* bias = args->bias;
+  CHECK(bias->ndim == 1) << "bias should only have 1 dim";
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}
+
+MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+;
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

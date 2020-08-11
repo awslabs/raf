@@ -34,6 +34,14 @@ class BatchNormTrainDxwbArgs : public ir::AttrsNode<BatchNormTrainDxwbArgs> {
   MNM_OP_SCHEMA(BatchNormTrainDxwbArgs, "mnm.args.batch_norm_train_dxwb");
 };
 
+class BiasAddArgs : public ir::AttrsNode<BiasAddArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue bias;
+  int64_t axis{1};
+  MNM_OP_SCHEMA(BiasAddArgs, "mnm.args.bias_add");
+};
+
 class BroadcastToArgs : public ir::AttrsNode<BroadcastToArgs> {
  public:
   value::BaseTensorValue x;

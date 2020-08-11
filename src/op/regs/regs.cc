@@ -47,6 +47,7 @@ static const char batch_matmul[] = "mnm.op.batch_matmul";
 static const char batch_norm_infer[] = "mnm.op.batch_norm_infer";
 static const char batch_norm_train[] = "mnm.op.batch_norm_train";
 static const char batch_norm_train_dxwb[] = "mnm.op.batch_norm_train_dxwb";
+static const char bias_add[] = "mnm.op.bias_add";
 static const char broadcast_to[] = "mnm.op.broadcast_to";
 static const char broadcast_to_like[] = "mnm.op.broadcast_to_like";
 static const char ceil[] = "mnm.op.ceil";
@@ -98,7 +99,6 @@ static const char not_equal[] = "mnm.op.not_equal";
 static const char relu[] = "mnm.op.relu";
 static const char relu_dx[] = "mnm.op.relu_dx";
 static const char reshape[] = "mnm.op.reshape";
-static const char reshape_dx[] = "mnm.op.reshape_dx";
 static const char sequence_mask[] = "mnm.op.sequence_mask";
 static const char sgd[] = "mnm.op.sgd";
 static const char shape[] = "mnm.op.shape";
@@ -167,6 +167,14 @@ Attrs BatchNormTrainDxwb(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(2, ffi2schema::Tensor, w);
   MNM_TAPE(3, ffi2schema::Tensor, b);
   MNM_POD(4, ffi2schema::Double, eps);
+  return Attrs(attrs);
+}
+
+Attrs BiasAdd(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::BiasAddArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, bias);
+  MNM_POD(2, ffi2schema::Int, axis);
   return Attrs(attrs);
 }
 
@@ -692,6 +700,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.batch_norm_train_dxwb")
       *ret = MNM_RET();
     });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.bias_add").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(bias_add, 3, ffi2schema::BiasAdd,
+              schema::BiasAddArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->bias));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.broadcast_to").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(broadcast_to, 2, ffi2schema::BroadcastTo,
               schema::BroadcastToArgs);  // NOLINT(whitespace/line_length)
@@ -1197,16 +1215,6 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reshape").set_body([](TVMArgs args, TVMRetValue*
   *ret = MNM_RET();
 });
 
-MNM_REGISTER_GLOBAL("mnm.op.imp.reshape_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(reshape_dx, 3, ffi2schema::Reshape,
-              schema::ReshapeArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
-  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->reverse));
-  MNM_SET_ENV(vpack->y, value);
-  *ret = MNM_RET();
-});
-
 MNM_REGISTER_GLOBAL("mnm.op.imp.sequence_mask").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sequence_mask, 4, ffi2schema::SequenceMask,
               schema::SequenceMaskArgs);  // NOLINT(whitespace/line_length)
@@ -1426,6 +1434,14 @@ Array<Expr> BatchNormTrainDxwb(const TVMArgs& values) {
   MNM_ARG(2, ffi2expr::Tensor, w);
   MNM_ARG(3, ffi2expr::Tensor, b);
   MNM_ARG(4, ffi2expr::Double, eps);
+  MNM_RET();
+}
+
+Array<Expr> BiasAdd(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, bias);
+  MNM_ARG(2, ffi2expr::Int, axis);
   MNM_RET();
 }
 
@@ -1787,6 +1803,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train")
     .set_body(MNM_SYMBOLIC_API(batch_norm_train, 7, BatchNorm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_norm_train_dxwb")
     .set_body(MNM_SYMBOLIC_API(batch_norm_train_dxwb, 5, BatchNormTrainDxwb));
+MNM_REGISTER_GLOBAL("mnm.op.sym.bias_add").set_body(MNM_SYMBOLIC_API(bias_add, 3, BiasAdd));
 MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to")
     .set_body(MNM_SYMBOLIC_API(broadcast_to, 2, BroadcastTo));
 MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to_like")
@@ -1853,7 +1870,6 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal").set_body(MNM_SYMBOLIC_API(not_equal,
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu").set_body(MNM_SYMBOLIC_API(relu, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx").set_body(MNM_SYMBOLIC_API(relu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reshape").set_body(MNM_SYMBOLIC_API(reshape, 3, Reshape));
-MNM_REGISTER_GLOBAL("mnm.op.sym.reshape_dx").set_body(MNM_SYMBOLIC_API(reshape_dx, 3, Reshape));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
     .set_body(MNM_SYMBOLIC_API(sequence_mask, 4, SequenceMask));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd").set_body(MNM_SYMBOLIC_API(sgd, 5, Sgd));
@@ -1941,6 +1957,15 @@ Attrs BatchNormTrainDxwb(const Array<Value>& values) {
   MNM_REQUIRED(2, value2schema::Tensor, w);
   MNM_REQUIRED(3, value2schema::Tensor, b);
   MNM_REQUIRED(4, value2schema::Double, eps);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs BiasAdd(const Array<Value>& values) {
+  MNM_PRELUDE(2, 3, schema::BiasAddArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, bias);
+  MNM_OPTIONAL(2, value2schema::Int, axis);
   return Attrs(attrs);
 }
 
@@ -2337,6 +2362,8 @@ MNM_BIND_SCHEMA("mnm.op.batch_norm_train", names::batch_norm_train,
                 value2schema::BatchNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", names::batch_norm_train_dxwb,
                 value2schema::BatchNormTrainDxwb);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.bias_add", names::bias_add,
+                value2schema::BiasAdd);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to", names::broadcast_to,
                 value2schema::BroadcastTo);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to_like", names::broadcast_to_like,
@@ -2432,8 +2459,6 @@ MNM_BIND_SCHEMA("mnm.op.relu_dx", names::relu_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reshape", names::reshape,
                 value2schema::Reshape);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.reshape_dx", names::reshape_dx,
-                value2schema::Reshape);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sequence_mask", names::sequence_mask,
                 value2schema::SequenceMask);                   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sgd", names::sgd, value2schema::Sgd);  // NOLINT(whitespace/line_length)
@@ -2481,6 +2506,7 @@ namespace {
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
+MNM_REGISTER_OBJECT_REFLECT(BiasAddArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);

@@ -6,6 +6,8 @@ from mnm._lib import _APIS
 AutoDiff = _APIS.get("mnm.pass_.AutoDiff", None)
 # Defined in ./src/pass/fold_const.cc
 BindParam = _APIS.get("mnm.pass_.BindParam", None)
+# Defined in ./src/pass/canonicalize_ops.cc
+CanonicalizeOps = _APIS.get("mnm.pass_.CanonicalizeOps", None)
 # Defined in ./src/pass/extract_binding.cc
 ExtractBinding = _APIS.get("mnm.pass_.ExtractBinding", None)
 # Defined in ./src/pass/fold_const.cc

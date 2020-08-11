@@ -15,6 +15,7 @@ namespace op {
 namespace tvmjit {
 
 using namespace mnm::ir;
+using schema::BiasAddArgs;
 using schema::BinaryArgs;
 using schema::SoftmaxArgs;
 using schema::SoftmaxDxArgs;
@@ -105,6 +106,34 @@ HashKey SoftmaxDxHasher(const std::vector<Type>& param_types, const Type& y_type
 MNM_TVMJIT(Softmax, "mnm.op.softmax", SoftmaxArgs, SoftmaxNormalizer, SoftmaxTyper, SoftmaxHasher);
 MNM_TVMJIT(SoftmaxDx, "mnm.op.softmax_dx", SoftmaxDxArgs, SoftmaxDxNormalizer, SoftmaxDxTyper,
            SoftmaxDxHasher);
+
+Attrs BiasAddNormalizer(TVMOpEnv* env, const BiasAddArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+      GetDLTensor(args->bias),
+  };
+  auto attrs = make_object<tvm::relay::BiasAddAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+void BiasAddTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+  };
+}
+
+HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
+                      const BiasAddArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddNormalizer, BiasAddTyper, BiasAddHasher);
 
 }  // namespace tvmjit
 }  // namespace op

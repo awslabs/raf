@@ -16,6 +16,15 @@ Expr Shape(const Expr& expr) {
   return Call(op_shape, {expr});
 }
 
+Array<Expr> BiasAddGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto reshape = Op::Get("mnm.op.reshape");
+  static auto shape = Op::Get("mnm.op.shape");
+  const CallNode* call = orig_call.as<CallNode>();
+  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
+}
+
+MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
+
 template <const char* GradOp>
 Array<Expr> PoolGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);

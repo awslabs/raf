@@ -15,6 +15,7 @@ from ._internal import batch_matmul
 from ._internal import batch_norm_infer
 from ._internal import batch_norm_train
 from ._internal import batch_norm_train_dxwb
+from ._internal import bias_add
 from ._internal import broadcast_to
 from ._internal import broadcast_to_like
 from ._internal import ceil
@@ -66,7 +67,6 @@ from ._internal import not_equal
 from ._internal import relu
 from ._internal import relu_dx
 from ._internal import reshape
-from ._internal import reshape_dx
 from ._internal import sequence_mask
 from ._internal import sgd
 from ._internal import shape

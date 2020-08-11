@@ -60,7 +60,6 @@ OPS = [
     Op(name="nll_loss_dpred", schema_name="loss"),
     Op(name="nll_loss_dtrue", schema_name="loss"),
     Op(name="reshape", schema_name="reshape"),
-    Op(name="reshape_dx", schema_name="reshape"),
     Op(name="transpose", schema_name="transpose"),
     Op(name="transpose_dx", schema_name="transpose_dx"),
     Op(name="collapse_sum_like", schema_name="collapse_like"),
@@ -86,6 +85,7 @@ OPS = [
     Op(name="clip", schema_name="clip"),
     Op(name="clip_dx", schema_name="clip_dx"),
     Op(name="get_valid_counts", schema_name="get_valid_counts"),
+    Op(name="bias_add", schema_name="bias_add"),
 ]
 
 

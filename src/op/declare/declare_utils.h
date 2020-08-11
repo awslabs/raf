@@ -14,6 +14,7 @@ inline int NormalizeAxis(int axis, int ndim) {
       << "ValueError: invalid axis = " << axis << " on ndim = " << ndim;
   return axis < 0 ? axis + ndim : axis;
 }
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -94,21 +94,6 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   throw;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-void ReshapeDx(const CallValues& call) {
-  const auto* args = call->args.as<ReshapeArgs>();
-  CHECK(args != nullptr);
-  DLTensor* x = args->x;
-  const int ndim = x->ndim;
-  ir::Array<Value> res;
-  for (int i = 0; i < ndim; i++) {
-    res.push_back(ScalarValue::make(x->shape[i]));
-  }
-  call->callee = ir::NullValue<OpValue>();
-  call->out = TupleValue::make(res);
-}
-
-MNM_OP_DECLARE("mnm.op.reshape_dx", ReshapeDx).set_attr<TOpPattern>("TOpPattern", kInjective);
-
 MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);
@@ -147,7 +132,11 @@ MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   const auto* args = call->args.as<ExpandDimsArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
-  int axis = NormalizeAxis(args->axis, x->ndim);
+  int axis = args->axis;
+  int ndim = x->ndim;
+  CHECK(-ndim - 1 <= axis && axis <= ndim)
+      << "ValueError: invalid axis (expand_dims) = " << axis << " on ndim = " << ndim;
+  axis = axis < 0 ? axis + ndim + 1 : axis;
   int num_newaxis = args->num_newaxis;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   shape.insert(shape.begin() + axis, num_newaxis, 1);

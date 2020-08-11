@@ -22,6 +22,7 @@ using binding::NDArrayBindingObj;
 using executor::interpreter::Interpret;
 using pass::AutoDiff;
 using pass::BindParam;
+using pass::CanonicalizeOps;
 using pass::FoldConstant;
 
 ObjectRef RunModel(Function func, Array<Expr> args) {
@@ -44,10 +45,14 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
   if (!requires_grad) {
     // TODO(haibin): add simplify inference pass - simplify the compute of
     // BN, LN, Dropout, GN, etc.
+    func = Downcast<Function>(CanonicalizeOps(func));
     func = Downcast<Function>(FoldConstant(func, mod));
     auto call_node = Call(func, args);
     return DeTuple(Interpret(call_node));
   }
+  // run canonicalize ops pass (it needs "inter type pass" to work properly.)
+  func = Downcast<Function>(CanonicalizeOps(func));
+  // run auto diff pass
   func = AutoDiff(func);
   // run const folding pass
   func = Downcast<Function>(FoldConstant(func, mod));

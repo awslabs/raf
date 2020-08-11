@@ -3,6 +3,7 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from ._internal import AutoDiff
 from ._internal import BindParam
+from ._internal import CanonicalizeOps
 from ._internal import ExtractBinding
 from ._internal import FoldConstant
 from ._internal import InferType

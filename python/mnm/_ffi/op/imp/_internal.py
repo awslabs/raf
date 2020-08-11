@@ -31,6 +31,8 @@ batch_norm_train = _APIS.get("mnm.op.imp.batch_norm_train", None)
 # Defined in ./src/op/regs/regs.cc
 batch_norm_train_dxwb = _APIS.get("mnm.op.imp.batch_norm_train_dxwb", None)
 # Defined in ./src/op/regs/regs.cc
+bias_add = _APIS.get("mnm.op.imp.bias_add", None)
+# Defined in ./src/op/regs/regs.cc
 broadcast_to = _APIS.get("mnm.op.imp.broadcast_to", None)
 # Defined in ./src/op/regs/regs.cc
 broadcast_to_like = _APIS.get("mnm.op.imp.broadcast_to_like", None)
@@ -132,8 +134,6 @@ relu = _APIS.get("mnm.op.imp.relu", None)
 relu_dx = _APIS.get("mnm.op.imp.relu_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.imp.reshape", None)
-# Defined in ./src/op/regs/regs.cc
-reshape_dx = _APIS.get("mnm.op.imp.reshape_dx", None)
 # Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.imp.sequence_mask", None)
 # Defined in ./src/op/regs/regs.cc
