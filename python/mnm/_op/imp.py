@@ -19,11 +19,11 @@ __all__ = [
     "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
     "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
     "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "not_equal", "relu", "relu_dx",
-    "reshape", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu",
+    "relu_dx", "reshape", "sequence_mask", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "split",
+    "sqrt", "sqrt_dx", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -483,6 +483,22 @@ def nll_loss_dtrue(y_true, y_pred):
     y_true = imp_utils.to_tensor(y_true)
     y_pred = imp_utils.to_tensor(y_pred)
     return imp_utils.ret(ffi.nll_loss_dtrue(y_true, y_pred))
+
+@set_module("mnm")
+def non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold=0.5, force_suppress=False, top_k=-1, coord_start=2, score_index=1, id_index=0, return_indices=True, invalid_to_bottom=False):
+    data = imp_utils.to_tensor(data)
+    valid_count = imp_utils.to_tensor(valid_count)
+    indices = imp_utils.to_tensor(indices)
+    max_output_size = imp_utils.to_tensor(max_output_size)
+    iou_threshold = imp_utils.to_double(iou_threshold)
+    force_suppress = imp_utils.to_bool(force_suppress)
+    top_k = imp_utils.to_int(top_k)
+    coord_start = imp_utils.to_int(coord_start)
+    score_index = imp_utils.to_int(score_index)
+    id_index = imp_utils.to_int(id_index)
+    return_indices = imp_utils.to_bool(return_indices)
+    invalid_to_bottom = imp_utils.to_bool(invalid_to_bottom)
+    return imp_utils.ret(ffi.non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold, force_suppress, top_k, coord_start, score_index, id_index, return_indices, invalid_to_bottom))
 
 @set_module("mnm")
 def not_equal(x1, x2, out=None, where=None):

@@ -88,6 +88,7 @@ MNM_TVM_OP("mnm.op.minimum", "minimum");
 MNM_TVM_OP("mnm.op.mod", "mod");
 MNM_TVM_OP("mnm.op.multiply", "multiply");
 MNM_TVM_OP("mnm.op.negative", "negative");
+MNM_TVM_OP("mnm.op.non_max_suppression", "non_max_suppression");
 MNM_TVM_OP("mnm.op.not_equal", "not_equal");
 MNM_TVM_OP("mnm.op.one_hot", "one_hot");
 MNM_TVM_OP("mnm.op.ones", "ones");

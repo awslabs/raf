@@ -63,6 +63,7 @@ from ._internal import negative
 from ._internal import nll_loss
 from ._internal import nll_loss_dpred
 from ._internal import nll_loss_dtrue
+from ._internal import non_max_suppression
 from ._internal import not_equal
 from ._internal import relu
 from ._internal import relu_dx

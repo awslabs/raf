@@ -96,6 +96,7 @@ OP_MAP = {
     "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
     "mnm.op.relu": ["nn.relu", "", "kInjective"],
     "mnm.op.get_valid_counts": ["get_valid_counts", "", "kInjective"],
+    "mnm.op.non_max_suppression": ["non_max_suppression", "relay.attrs.NonMaxSuppressionAttrs", "kInjective"],
 }
 
 # pylint: enable=line-too-long

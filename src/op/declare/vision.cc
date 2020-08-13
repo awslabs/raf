@@ -33,6 +33,30 @@ MNM_OP_DECLARE("mnm.op.get_valid_counts", [](const CallValues& call) {
   call->ctx = data->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
+  const auto* args = call->args.as<NonMaxSuppressionArgs>();
+  CHECK(args != nullptr);
+  DLTensor* data = args->data;
+  DLTensor* valid_count = args->valid_count;
+  CHECK_EQ(data->ndim, 3) << "Input data should be 3-D.";
+  CHECK_EQ(valid_count->ndim, 1) << "Input valid count should be 1-D.";
+
+  if (args->return_indices) {
+    std::vector<TensorValue> ret;
+    std::vector<int64_t> oshape(data->shape, data->shape + 2);
+    std::vector<int64_t> count_shape({*data->shape, 1});
+    ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), oshape));
+    ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), count_shape));
+    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  } else {
+    std::vector<int64_t> dshape(data->shape, data->shape + data->ndim);
+    call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+                                      /*dtype=*/data->dtype,
+                                      /*shape=*/dshape);
+  }
+  call->ctx = data->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

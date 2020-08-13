@@ -127,6 +127,8 @@ nll_loss_dpred = _APIS.get("mnm.op.imp.nll_loss_dpred", None)
 # Defined in ./src/op/regs/regs.cc
 nll_loss_dtrue = _APIS.get("mnm.op.imp.nll_loss_dtrue", None)
 # Defined in ./src/op/regs/regs.cc
+non_max_suppression = _APIS.get("mnm.op.imp.non_max_suppression", None)
+# Defined in ./src/op/regs/regs.cc
 not_equal = _APIS.get("mnm.op.imp.not_equal", None)
 # Defined in ./src/op/regs/regs.cc
 relu = _APIS.get("mnm.op.imp.relu", None)
