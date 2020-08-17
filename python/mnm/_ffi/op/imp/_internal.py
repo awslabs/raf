@@ -137,6 +137,10 @@ relu_dx = _APIS.get("mnm.op.imp.relu_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.imp.reshape", None)
 # Defined in ./src/op/regs/regs.cc
+reverse = _APIS.get("mnm.op.imp.reverse", None)
+# Defined in ./src/op/regs/regs.cc
+reverse_sequence = _APIS.get("mnm.op.imp.reverse_sequence", None)
+# Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.imp.sequence_mask", None)
 # Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.imp.sgd", None)

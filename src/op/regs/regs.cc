@@ -100,6 +100,8 @@ static const char not_equal[] = "mnm.op.not_equal";
 static const char relu[] = "mnm.op.relu";
 static const char relu_dx[] = "mnm.op.relu_dx";
 static const char reshape[] = "mnm.op.reshape";
+static const char reverse[] = "mnm.op.reverse";
+static const char reverse_sequence[] = "mnm.op.reverse_sequence";
 static const char sequence_mask[] = "mnm.op.sequence_mask";
 static const char sgd[] = "mnm.op.sgd";
 static const char shape[] = "mnm.op.shape";
@@ -373,6 +375,22 @@ Attrs Reshape(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
   MNM_POD(2, ffi2schema::Bool, reverse);
+  return Attrs(attrs);
+}
+
+Attrs Reverse(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ReverseArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+Attrs ReverseSequence(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ReverseSequenceArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, sequence_length);
+  MNM_POD(2, ffi2schema::Int, seq_axis);
+  MNM_POD(3, ffi2schema::Int, batch_axis);
   return Attrs(attrs);
 }
 
@@ -1252,6 +1270,26 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reshape").set_body([](TVMArgs args, TVMRetValue*
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.reverse").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(reverse, 2, ffi2schema::Reverse,
+              schema::ReverseArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.reverse_sequence").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(reverse_sequence, 4, ffi2schema::ReverseSequence,
+              schema::ReverseSequenceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->sequence_length));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->seq_axis));
+  MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->batch_axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.sequence_mask").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sequence_mask, 4, ffi2schema::SequenceMask,
               schema::SequenceMaskArgs);  // NOLINT(whitespace/line_length)
@@ -1679,6 +1717,22 @@ Array<Expr> Reshape(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Reverse(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_RET();
+}
+
+Array<Expr> ReverseSequence(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, sequence_length);
+  MNM_ARG(2, ffi2expr::Int, seq_axis);
+  MNM_ARG(3, ffi2expr::Int, batch_axis);
+  MNM_RET();
+}
+
 Array<Expr> SequenceMask(const TVMArgs& values) {
   MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1926,6 +1980,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal").set_body(MNM_SYMBOLIC_API(not_equal,
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu").set_body(MNM_SYMBOLIC_API(relu, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx").set_body(MNM_SYMBOLIC_API(relu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reshape").set_body(MNM_SYMBOLIC_API(reshape, 3, Reshape));
+MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, Reverse));
+MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
+    .set_body(MNM_SYMBOLIC_API(reverse_sequence, 4, ReverseSequence));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
     .set_body(MNM_SYMBOLIC_API(sequence_mask, 4, SequenceMask));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd").set_body(MNM_SYMBOLIC_API(sgd, 5, Sgd));
@@ -2244,6 +2301,24 @@ Attrs Reshape(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs Reverse(const Array<Value>& values) {
+  MNM_PRELUDE(1, 2, schema::ReverseArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_OPTIONAL(1, value2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs ReverseSequence(const Array<Value>& values) {
+  MNM_PRELUDE(2, 4, schema::ReverseSequenceArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, sequence_length);
+  MNM_OPTIONAL(2, value2schema::Int, seq_axis);
+  MNM_OPTIONAL(3, value2schema::Int, batch_axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs SequenceMask(const Array<Value>& values) {
   MNM_PRELUDE(2, 4, schema::SequenceMaskArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
@@ -2535,6 +2610,10 @@ MNM_BIND_SCHEMA("mnm.op.relu_dx", names::relu_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reshape", names::reshape,
                 value2schema::Reshape);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.reverse", names::reverse,
+                value2schema::Reverse);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.reverse_sequence", names::reverse_sequence,
+                value2schema::ReverseSequence);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sequence_mask", names::sequence_mask,
                 value2schema::SequenceMask);                   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sgd", names::sgd, value2schema::Sgd);  // NOLINT(whitespace/line_length)
@@ -2604,6 +2683,8 @@ MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
+MNM_REGISTER_OBJECT_REFLECT(ReverseArgs);
+MNM_REGISTER_OBJECT_REFLECT(ReverseSequenceArgs);
 MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);

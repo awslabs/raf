@@ -121,6 +121,56 @@ HashKey SequenceMaskHasher(const std::vector<Type>& param_types, const Type& y_t
 MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs, SequenceMaskNormalizer,
            SequenceMaskTyper, SequenceMaskHasher);
 
+Attrs ReverseNormalizer(TVMOpEnv* env, const ReverseArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<ReverseAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+void ReverseTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey ReverseHasher(const std::vector<Type>& param_types, const Type& y_type,
+                      const ReverseArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(Reverse, "mnm.op.reverse", ReverseArgs, ReverseNormalizer, ReverseTyper, ReverseHasher);
+
+Attrs ReverseSequenceNormalizer(TVMOpEnv* env, const ReverseSequenceArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->x);
+  env->inputs[1] = GetDLTensor(args->sequence_length);
+  auto attrs = make_object<ReverseSequenceAttrs>();
+  attrs->seq_axis = args->seq_axis;
+  attrs->batch_axis = args->batch_axis;
+  return Attrs(attrs);
+}
+
+void ReverseSequenceTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
+}
+
+HashKey ReverseSequenceHasher(const std::vector<Type>& param_types, const Type& y_type,
+                              const ReverseSequenceArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->seq_axis;
+  key << args->batch_axis;
+  return key;
+}
+
+MNM_TVMJIT(ReverseSequence, "mnm.op.reverse_sequence", ReverseSequenceArgs,
+           ReverseSequenceNormalizer, ReverseSequenceTyper, ReverseSequenceHasher);
+
 Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(1);

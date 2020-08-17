@@ -29,6 +29,13 @@ class ClipDxArgs : public ir::AttrsNode<ClipDxArgs> {
   MNM_OP_SCHEMA(ClipDxArgs, "mnm.args.clip_dx");
 };
 
+class ReverseArgs : public ir::AttrsNode<ReverseArgs> {
+ public:
+  value::BaseTensorValue x;
+  int axis{0};
+  MNM_OP_SCHEMA(ReverseArgs, "mnm.args.reverse");
+};
+
 class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
  public:
   value::BaseTensorValue x;

@@ -131,6 +131,15 @@ class PoolDxArgs : public ir::AttrsNode<PoolDxArgs> {
   MNM_OP_SCHEMA(PoolDxArgs, "mnm.args.pool_dx");
 };
 
+class ReverseSequenceArgs : public ir::AttrsNode<ReverseSequenceArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue sequence_length;
+  int seq_axis{1};
+  int batch_axis{0};
+  MNM_OP_SCHEMA(ReverseSequenceArgs, "mnm.args.reverse_sequence");
+};
+
 class SequenceMaskArgs : public ir::AttrsNode<SequenceMaskArgs> {
  public:
   value::BaseTensorValue x;

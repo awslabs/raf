@@ -197,6 +197,72 @@ def test_split(shape, axis, indices_or_sections, ctx):
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("inputs", [
+    {"shape": (3, 3, 3), "seq_length": [1, 2, 3]},
+    {"shape": (5, 5, 5), "seq_length": [1, 2, 3, 4, 5]},
+    {"shape": (5, 5, 5), "seq_length": [2, 2, 3, 3, 4]}
+])
+@pytest.mark.parametrize("axes", [[0, 1]])
+def test_reverse_sequence(inputs, axes, ctx):
+    class ReverseSequence(mnm.Model):
+        def build(self, seq_axis, batch_axis):
+            self._seq_axis = seq_axis
+            self._batch_axis = batch_axis
+
+        @mnm.model.trace
+        def forward(self, x, seq_length):
+            return mnm.reverse_sequence(x, seq_length, self._seq_axis, self._batch_axis)
+    shape = inputs["shape"]
+    m_seq_length = mnm.array(inputs["seq_length"], dtype=int, ctx=ctx)
+    mx_seq_length = mx.nd.array(inputs["seq_length"], dtype=int)
+    seq_axis = axes[0]
+    batch_axis = axes[1]
+    m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
+    m_dy, n_dy = randn(shape, dtype='float32', ctx=ctx)
+    mx_x = mx.nd.array(n_x)
+    mx_dy = mx.nd.array(n_dy)
+    mx_x.attach_grad()
+    m_x.requires_grad = True
+    model = ReverseSequence(seq_axis, batch_axis)
+
+    m_y = model(m_x, m_seq_length)
+    with mx.autograd.record():
+        mx_y = mx.nd.SequenceReverse(mx_x, mx_seq_length, use_sequence_length=True)
+        # check forward
+        check(m_y, mx_y.asnumpy())
+        mx_y.backward(mx_dy)
+    m_y.backward(m_dy)
+    # check backward
+    check(m_x.grad, mx_x.grad.asnumpy())
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
+@pytest.mark.parametrize("axis", [0, 1, 2])
+def test_reverse(shape, axis, ctx):
+    class Reverse(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.reverse(x, self._axis)
+
+    m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
+    m_dy, n_dy = randn(shape, dtype='float32', ctx=ctx)
+    m_x.requires_grad = True
+    model = Reverse(axis=axis)
+    m_y = model(m_x)
+    # check forward
+    n_y = np.flip(n_x, axis=axis)
+    check(m_y, n_y)
+    # check backward
+    m_y.backward(m_dy)
+    n_grad = np.flip(n_dy, axis=axis)
+    check(m_x.grad, n_grad)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("params", [
     {"shapes": [[1, 4, 1], [2, 4, 1]], "axis": 0},
     {"shapes": [[2, 2, 2], [2, 3, 2], [2, 4, 2]], "axis": -2},

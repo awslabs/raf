@@ -44,6 +44,28 @@ Array<Expr> ConcatenateGrad(const Expr& orig_call, const Var& y, const Expr& dy)
 
 MNM_OP_GRAD("mnm.op.concatenate", ConcatenateGrad);
 
+Array<Expr> ReverseGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.reverse");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& axis = call->args[1];
+  return {Call(op_dx, {dy, axis})};
+}
+
+MNM_OP_GRAD("mnm.op.reverse", ReverseGrad);
+
+Array<Expr> ReverseSequenceGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.reverse_sequence");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 4);
+  const Expr& seq_length = call->args[1];
+  const Expr& seq_axis = call->args[2];
+  const Expr& batch_axis = call->args[3];
+  return {Call(op_dx, {dy, seq_length, seq_axis, batch_axis})};
+}
+
+MNM_OP_GRAD("mnm.op.reverse_sequence", ReverseSequenceGrad);
+
 Array<Expr> ClipGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.clip_dx");
   const CallNode* call = orig_call.as<CallNode>();

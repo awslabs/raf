@@ -99,6 +99,7 @@ MNM_TVM_OP("mnm.op.reinterpret", "reinterpret");
 MNM_TVM_OP("mnm.op.relu", "nn.relu");
 MNM_TVM_OP("mnm.op.repeat", "repeat");
 MNM_TVM_OP("mnm.op.reverse", "reverse");
+MNM_TVM_OP("mnm.op.reverse_sequence", "reverse_sequence");
 MNM_TVM_OP("mnm.op.right_shift", "right_shift");
 MNM_TVM_OP("mnm.op.round", "round");
 MNM_TVM_OP("mnm.op.rsqrt", "rsqrt");

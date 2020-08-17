@@ -162,6 +162,35 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues& call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.reverse", [](const CallValues& call) {
+  const auto* args = call->args.as<ReverseArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.reverse_sequence", [](const CallValues& call) {
+  const auto* args = call->args.as<ReverseSequenceArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* sequence_length = args->sequence_length;
+  int batch_axis = args->batch_axis;
+  int64_t* ishape = x->shape;
+  int64_t* sshape = sequence_length->shape;
+  int s_ndim = sequence_length->ndim;
+  CHECK_EQ(s_ndim, 1);
+  CHECK_EQ(sshape[0], ishape[batch_axis]);
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToArgs>();
   DLTensor* x = args->x;

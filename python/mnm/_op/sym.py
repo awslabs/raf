@@ -19,10 +19,11 @@ __all__ = [
     "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
     "minimum", "mod", "multiply", "negative", "nll_loss",
     "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu",
-    "relu_dx", "reshape", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "subtract", "sum", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "relu_dx", "reshape", "reverse", "reverse_sequence", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 def abs(x):
@@ -458,6 +459,18 @@ def reshape(x, shape, reverse=False):
     shape = sym_utils.to_int_tuple(shape)
     reverse = sym_utils.to_bool(reverse)
     return Symbol.from_expr(ffi.reshape(x, shape, reverse))
+
+def reverse(x, axis=0):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.reverse(x, axis))
+
+def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
+    x = sym_utils.to_tensor(x)
+    sequence_length = sym_utils.to_tensor(sequence_length)
+    seq_axis = sym_utils.to_int(seq_axis)
+    batch_axis = sym_utils.to_int(batch_axis)
+    return Symbol.from_expr(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
     x = sym_utils.to_tensor(x)

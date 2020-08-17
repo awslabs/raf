@@ -77,6 +77,8 @@ OPS = [
     Op(name="dense", schema_name="binary"),
     Op(name="expand_dims", schema_name="expand_dims"),
     Op(name="sequence_mask", schema_name="sequence_mask"),
+    Op(name="reverse_sequence", schema_name="reverse_sequence"),
+    Op(name="reverse", schema_name="reverse"),
     Op(name="broadcast_to", schema_name="broadcast_to"),
     Op(name="broadcast_to_like", schema_name="broadcast_to_like"),
     Op(name="concatenate", schema_name="concatenate"),

@@ -140,6 +140,12 @@ SCHEMAS = {
         Arg(name="mask_value", cxx_type="double", cxx_default=0.0),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
+     "nn.h::reverse_sequence": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="sequence_length", cxx_type="value::BaseTensorValue"),
+        Arg(name="seq_axis", cxx_type="int", cxx_default=1),
+        Arg(name="batch_axis", cxx_type="int", cxx_default=0),
+    ],
     "nn.h::broadcast_to": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="shape",
@@ -274,6 +280,10 @@ SCHEMAS = {
             cxx_normalizer="IntTuple",
             cxx_default="{}",
             py_default="None"),
+    ],
+    "transform.h::reverse": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
     "transform.h::clip": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

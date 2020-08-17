@@ -68,6 +68,8 @@ from ._internal import not_equal
 from ._internal import relu
 from ._internal import relu_dx
 from ._internal import reshape
+from ._internal import reverse
+from ._internal import reverse_sequence
 from ._internal import sequence_mask
 from ._internal import sgd
 from ._internal import shape
