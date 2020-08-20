@@ -8,5 +8,6 @@ from ._internal import ExtractBinding
 from ._internal import FoldConstant
 from ._internal import InferType
 from ._internal import LambdaLift
+from ._internal import ManifestAlloc
 from ._internal import RenameVars
 from ._internal import is_constant
