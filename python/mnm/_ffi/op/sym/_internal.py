@@ -161,6 +161,8 @@ sqrt = _APIS.get("mnm.op.sym.sqrt", None)
 # Defined in ./src/op/regs/regs.cc
 sqrt_dx = _APIS.get("mnm.op.sym.sqrt_dx", None)
 # Defined in ./src/op/regs/regs.cc
+stack = _APIS.get("mnm.op.sym.stack", None)
+# Defined in ./src/op/regs/regs.cc
 subtract = _APIS.get("mnm.op.sym.subtract", None)
 # Defined in ./src/op/regs/regs.cc
 sum = _APIS.get("mnm.op.sym.sum", None)

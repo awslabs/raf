@@ -248,6 +248,43 @@ MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
+MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
+  const auto* args = call->args.as<StackArgs>();
+  CHECK(args != nullptr);
+  const std::vector<BaseTensorValue>& x = args->x;
+  CHECK_GE(x.size(), 1U);
+  DLTensor* y0 = x[0];
+
+  int axis = args->axis;
+  CHECK(-y0->ndim <= axis && axis < y0->ndim)
+      << "ValueError: invalid axis = " << axis << " on ndim = " << y0->ndim;
+  axis = axis < 0 ? axis + y0->ndim + 1 : axis;
+
+  int64_t stack_dim = 0;
+  for (auto i : x) {
+    DLTensor* y = i;
+    CHECK(y->ndim == y0->ndim);
+    for (int k = 0; k < y0->ndim; ++k) {
+      CHECK(y->shape[k] == y0->shape[k]);
+    }
+    stack_dim += 1;
+  }
+  std::vector<int64_t> shape;
+  shape.reserve(y0->ndim + 1);
+
+  for (int i = 0; i < axis; i++) {
+    shape.emplace_back(y0->shape[i]);
+  }
+  shape.emplace_back(stack_dim);
+  for (int i = axis; i < y0->ndim; i++) {
+    shape.emplace_back(y0->shape[i]);
+  }
+  call->out = TensorValue::Assemble(/*ctx=*/y0->ctx,
+                                    /*dtype=*/y0->dtype,
+                                    /*shape=*/shape);
+  call->ctx = y0->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);

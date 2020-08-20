@@ -82,6 +82,7 @@ OPS = [
     Op(name="broadcast_to", schema_name="broadcast_to"),
     Op(name="broadcast_to_like", schema_name="broadcast_to_like"),
     Op(name="concatenate", schema_name="concatenate"),
+    Op(name="stack", schema_name="stack"),
     Op(name="split", schema_name="split"),
     Op(name="concatenate_dx", schema_name="concatenate"),
     Op(name="clip", schema_name="clip"),

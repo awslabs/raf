@@ -173,6 +173,13 @@ class SplitArgs : public ir::AttrsNode<SplitArgs> {
   MNM_OP_SCHEMA(SplitArgs, "mnm.args.split");
 };
 
+class StackArgs : public ir::AttrsNode<StackArgs> {
+ public:
+  std::vector<value::BaseTensorValue> x;
+  int axis{0};
+  MNM_OP_SCHEMA(StackArgs, "mnm.args.stack");
+};
+
 class TakeArgs : public ir::AttrsNode<TakeArgs> {
  public:
   value::BaseTensorValue x;

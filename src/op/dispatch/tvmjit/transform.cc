@@ -335,6 +335,37 @@ HashKey ConcatenateHasher(const std::vector<Type>& param_types, const Type& y_ty
 MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs, ConcatenateNormalizer,
            ConcatenateTyper, ConcatenateHasher);
 
+Attrs StackNormalizer(TVMOpEnv* env, const StackArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  const std::vector<BaseTensorValue>& x = args->x;
+  env->inputs.resize(x.size());
+  for (size_t i = 0; i < x.size(); ++i) {
+    env->inputs[i] = GetDLTensor(x[i]);
+  }
+  auto attrs = make_object<StackAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+void StackTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  std::vector<Type> types;
+  for (size_t i = 0; i < env->inputs.size(); ++i) {
+    types.push_back(GetTensorType(env->inputs[i]));
+  }
+  *param_types = types;
+}
+
+HashKey StackHasher(const std::vector<Type>& param_types, const Type& y_type,
+                    const StackArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(Stack, "mnm.op.stack", StackArgs, StackNormalizer, StackTyper, StackHasher);
+
 Attrs ClipNormalizer(TVMOpEnv* env, const ClipArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(1);

@@ -22,9 +22,9 @@ __all__ = [
     "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu",
     "relu_dx", "reshape", "reverse", "reverse_sequence", "sequence_mask",
     "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -608,6 +608,12 @@ def sqrt_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.sqrt_dx(x, y, dy))
+
+@set_module("mnm")
+def stack(x, axis=0):
+    x = imp_utils.to_tensor_tuple(x)
+    axis = imp_utils.to_int(axis)
+    return imp_utils.ret(ffi.stack(x, axis))
 
 @set_module("mnm")
 def subtract(x1, x2, out=None, where=None):

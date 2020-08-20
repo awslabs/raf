@@ -21,9 +21,9 @@ __all__ = [
     "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu",
     "relu_dx", "reshape", "reverse", "reverse_sequence", "sequence_mask",
     "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def abs(x):
@@ -528,6 +528,11 @@ def sqrt_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.sqrt_dx(x, y, dy))
+
+def stack(x, axis=0):
+    x = sym_utils.to_tensor_tuple(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.stack(x, axis))
 
 def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

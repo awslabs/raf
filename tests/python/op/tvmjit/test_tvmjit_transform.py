@@ -325,6 +325,65 @@ def test_concatenate(params, ctx):
     for m_x, t_x in zip(m_i, t_i):
         check_torch(m_x.grad, t_x.grad)
 
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("params", [
+    {"shapes": [[1, 4, 1], [1, 4, 1]], "axis": 0},
+    {"shapes": [[2, 2, 2], [2, 2, 2], [2, 2, 2]], "axis": -1},
+    {"shapes": [[2, 1, 1], [2, 1, 1], [2, 1, 1], [2, 1, 1]], "axis": 1},
+])
+def test_stack(params, ctx):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    class Stack1(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, a):
+            return mnm.stack([a], axis=self._axis)
+
+    class Stack2(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, a, b):
+            return mnm.stack([a, b], axis=self._axis)
+
+    class Stack3(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, a, b, c):
+            return mnm.stack([a, b, c], axis=self._axis)
+
+    class Stack4(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, a, b, c, d):
+            return mnm.stack([a, b, c, d], axis=self._axis)
+
+    stack = [None, Stack1, Stack2, Stack3, Stack4]
+    shapes, axis = params["shapes"], params["axis"]
+    m_i, n_i = [], []
+    for shape in shapes:
+        m_x, n_x = randn(shape, ctx=ctx)
+        m_i.append(m_x)
+        n_i.append(n_x)
+    model = stack[len(m_i)](axis=axis)
+    m_y = model(*m_i)
+    n_y = np.stack(n_i, axis=axis)
+    # check forward
+    check(m_y, n_y)
+
+
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [(1, 3), (1, 2), (4, 3, 2, 1),
                                    (2, 4, 1, 3), (1, 2, 3), (1, 2, 3, 4)])

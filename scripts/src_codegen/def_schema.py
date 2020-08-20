@@ -162,6 +162,12 @@ SCHEMAS = {
             cxx_normalizer="TensorTuple"),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
+    "nn.h::stack": [
+        Arg(name="x",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple"),
+        Arg(name="axis", cxx_type="int", cxx_default=0),
+    ],
     "nn.h::split": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="indices_or_sections",

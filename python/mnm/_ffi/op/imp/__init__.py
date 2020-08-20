@@ -80,6 +80,7 @@ from ._internal import softmax_dx
 from ._internal import split
 from ._internal import sqrt
 from ._internal import sqrt_dx
+from ._internal import stack
 from ._internal import subtract
 from ._internal import sum
 from ._internal import take

@@ -25,6 +25,8 @@ _reg.register_injective_schedule("mnm.op.sequence_mask")
 _reg.register_injective_schedule("mnm.op.reverse_sequence")
 _reg.register_injective_schedule("mnm.op.concatenate")
 _reg.register_injective_schedule("mnm.op.reverse")
+_reg.register_injective_schedule("mnm.op.stack")
+
 _reg.register_broadcast_schedule("mnm.op.broadcast_to")
 _reg.register_broadcast_schedule("mnm.op.broadcast_to_like")
 _reg.register_broadcast_schedule("mnm.op.clip")
