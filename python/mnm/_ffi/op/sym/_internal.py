@@ -69,6 +69,8 @@ erf = _APIS.get("mnm.op.sym.erf", None)
 # Defined in ./src/op/regs/regs.cc
 erf_dx = _APIS.get("mnm.op.sym.erf_dx", None)
 # Defined in ./src/op/regs/regs.cc
+exp = _APIS.get("mnm.op.sym.exp", None)
+# Defined in ./src/op/regs/regs.cc
 expand_dims = _APIS.get("mnm.op.sym.expand_dims", None)
 # Defined in ./src/op/regs/regs.cc
 floor = _APIS.get("mnm.op.sym.floor", None)
@@ -103,6 +105,8 @@ matmul_tn = _APIS.get("mnm.op.sym.matmul_tn", None)
 # Defined in ./src/op/regs/regs.cc
 matmul_tt = _APIS.get("mnm.op.sym.matmul_tt", None)
 # Defined in ./src/op/regs/regs.cc
+max = _APIS.get("mnm.op.sym.max", None)
+# Defined in ./src/op/regs/regs.cc
 max_pool2d = _APIS.get("mnm.op.sym.max_pool2d", None)
 # Defined in ./src/op/regs/regs.cc
 max_pool2d_dx = _APIS.get("mnm.op.sym.max_pool2d_dx", None)
@@ -112,6 +116,8 @@ maximum = _APIS.get("mnm.op.sym.maximum", None)
 mean = _APIS.get("mnm.op.sym.mean", None)
 # Defined in ./src/op/regs/regs.cc
 mean_dx = _APIS.get("mnm.op.sym.mean_dx", None)
+# Defined in ./src/op/regs/regs.cc
+min = _APIS.get("mnm.op.sym.min", None)
 # Defined in ./src/op/regs/regs.cc
 minimum = _APIS.get("mnm.op.sym.minimum", None)
 # Defined in ./src/op/regs/regs.cc
@@ -134,6 +140,8 @@ not_equal = _APIS.get("mnm.op.sym.not_equal", None)
 relu = _APIS.get("mnm.op.sym.relu", None)
 # Defined in ./src/op/regs/regs.cc
 relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)
+# Defined in ./src/op/regs/regs.cc
+repeat = _APIS.get("mnm.op.sym.repeat", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.sym.reshape", None)
 # Defined in ./src/op/regs/regs.cc

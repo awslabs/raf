@@ -30,6 +30,7 @@ _reg.register_injective_schedule("mnm.op.stack")
 _reg.register_broadcast_schedule("mnm.op.broadcast_to")
 _reg.register_broadcast_schedule("mnm.op.broadcast_to_like")
 _reg.register_broadcast_schedule("mnm.op.clip")
+_reg.register_broadcast_schedule("mnm.op.repeat")
 
 
 @register_compute("mnm.op.clip_dx")

@@ -80,6 +80,7 @@ MNM_DECLARE_UNARY_OP("mnm.op.abs", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.ceil", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.floor", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.log", Unary);
+MNM_DECLARE_UNARY_OP("mnm.op.exp", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.cos", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.erf", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.sqrt", Unary);

@@ -18,6 +18,7 @@ class UnaryArgs:
         Op("cos"),
         Op("floor"),
         Op("log"),
+        Op("exp"),
         Op("sigmoid"),
         Op("negative"),
         Op("logical_not"),

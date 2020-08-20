@@ -131,6 +131,14 @@ class PoolDxArgs : public ir::AttrsNode<PoolDxArgs> {
   MNM_OP_SCHEMA(PoolDxArgs, "mnm.args.pool_dx");
 };
 
+class RepeatArgs : public ir::AttrsNode<RepeatArgs> {
+ public:
+  value::BaseTensorValue x;
+  int repeats;
+  value::Value axis{nullptr};
+  MNM_OP_SCHEMA(RepeatArgs, "mnm.args.repeat");
+};
+
 class ReverseSequenceArgs : public ir::AttrsNode<ReverseSequenceArgs> {
  public:
   value::BaseTensorValue x;

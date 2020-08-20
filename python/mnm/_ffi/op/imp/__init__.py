@@ -34,6 +34,7 @@ from ._internal import divide
 from ._internal import equal
 from ._internal import erf
 from ._internal import erf_dx
+from ._internal import exp
 from ._internal import expand_dims
 from ._internal import floor
 from ._internal import get_kept_dims
@@ -51,11 +52,13 @@ from ._internal import matmul
 from ._internal import matmul_nt
 from ._internal import matmul_tn
 from ._internal import matmul_tt
+from ._internal import max
 from ._internal import max_pool2d
 from ._internal import max_pool2d_dx
 from ._internal import maximum
 from ._internal import mean
 from ._internal import mean_dx
+from ._internal import min
 from ._internal import minimum
 from ._internal import mod
 from ._internal import multiply
@@ -67,6 +70,7 @@ from ._internal import non_max_suppression
 from ._internal import not_equal
 from ._internal import relu
 from ._internal import relu_dx
+from ._internal import repeat
 from ._internal import reshape
 from ._internal import reverse
 from ._internal import reverse_sequence

@@ -122,6 +122,8 @@ HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_typ
 
 MNM_TVMJIT(Argmax, "mnm.op.argmax", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(Argmin, "mnm.op.argmin", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
+MNM_TVMJIT(Max, "mnm.op.max", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
+MNM_TVMJIT(Min, "mnm.op.min", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(All, "mnm.op.all", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(Any, "mnm.op.any", ReduceArgs, ReduceNormalizer, ReduceTyper, ReduceHasher);
 MNM_TVMJIT(Mean, "mnm.op.mean", ReduceArgs, MeanReduceNormalizer, ReduceTyper, ReduceHasher);

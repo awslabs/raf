@@ -83,6 +83,8 @@ void ReduceDxOutSame(const CallValues& call) {
 
 MNM_DECLARE_REDUCE_OP("mnm.op.argmax", ReduceOutInt);
 MNM_DECLARE_REDUCE_OP("mnm.op.argmin", ReduceOutInt);
+MNM_DECLARE_REDUCE_OP("mnm.op.max", ReduceOutSame);
+MNM_DECLARE_REDUCE_OP("mnm.op.min", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.all", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.any", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.mean", ReduceOutSame);

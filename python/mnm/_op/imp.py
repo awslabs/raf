@@ -13,18 +13,19 @@ __all__ = [
     "broadcast_to", "broadcast_to_like", "ceil", "clip", "clip_dx",
     "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
     "conv2d_dx", "copy", "cos", "dense", "divide",
-    "equal", "erf", "erf_dx", "expand_dims", "floor",
-    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
-    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
-    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
-    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu",
-    "relu_dx", "reshape", "reverse", "reverse_sequence", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "equal", "erf", "erf_dx", "exp", "expand_dims",
+    "floor", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
+    "greater_equal", "less", "less_equal", "log", "log_softmax",
+    "log_softmax_dx", "logical_not", "matmul", "matmul_nt", "matmul_tn",
+    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
+    "mean", "mean_dx", "min", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "non_max_suppression", "not_equal", "relu", "relu_dx", "repeat",
+    "reshape", "reverse", "reverse_sequence", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "split", "sqrt", "sqrt_dx", "stack", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -275,6 +276,11 @@ def erf_dx(x, y, dy):
     return imp_utils.ret(ffi.erf_dx(x, y, dy))
 
 @set_module("mnm")
+def exp(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.exp(x))
+
+@set_module("mnm")
 def expand_dims(x, axis, num_newaxis=1):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int(axis)
@@ -389,6 +395,13 @@ def matmul_tt(x1, x2):
     return imp_utils.ret(ffi.matmul_tt(x1, x2))
 
 @set_module("mnm")
+def max(x, axis=(), keepdims=False):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int_tuple(axis)
+    keepdims = imp_utils.to_bool(keepdims)
+    return imp_utils.ret(ffi.max(x, axis, keepdims))
+
+@set_module("mnm")
 def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
     x = imp_utils.to_tensor(x)
     kernel = imp_utils.to_int_tuple(kernel)
@@ -435,6 +448,13 @@ def mean_dx(x, y, dy, axis=(), keepdims=False):
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
     return imp_utils.ret(ffi.mean_dx(x, y, dy, axis, keepdims))
+
+@set_module("mnm")
+def min(x, axis=(), keepdims=False):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int_tuple(axis)
+    keepdims = imp_utils.to_bool(keepdims)
+    return imp_utils.ret(ffi.min(x, axis, keepdims))
 
 @set_module("mnm")
 def minimum(x1, x2, out=None, where=None):
@@ -520,6 +540,13 @@ def relu_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.relu_dx(x, y, dy))
+
+@set_module("mnm")
+def repeat(x, repeats, axis=None):
+    x = imp_utils.to_tensor(x)
+    repeats = imp_utils.to_int(repeats)
+    axis = imp_utils.to_any(axis)
+    return imp_utils.ret(ffi.repeat(x, repeats, axis))
 
 @set_module("mnm")
 def reshape(x, shape, reverse=False):

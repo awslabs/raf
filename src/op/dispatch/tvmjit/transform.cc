@@ -22,6 +22,41 @@ using namespace mnm::op::schema;
 using namespace tvm;
 using namespace ::tvm::relay;
 
+Attrs RepeatNormalizer(TVMOpEnv* env, const RepeatArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<RepeatAttrs>();
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    attrs->axis = v->data;
+  } else {
+    attrs->axis = NullValue<Integer>();
+  }
+  attrs->repeats = args->repeats;
+  return Attrs(attrs);
+}
+
+void RepeatTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey RepeatHasher(const std::vector<Type>& param_types, const Type& y_type,
+                     const RepeatArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->repeats;
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    key << v->data;
+  }
+  return key;
+}
+
+MNM_TVMJIT(Repeat, "mnm.op.repeat", RepeatArgs, RepeatNormalizer, RepeatTyper, RepeatHasher);
+
 Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(2);

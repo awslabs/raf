@@ -128,6 +128,22 @@ def test_broadcast_to(shape, ctx):
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
+    (1, 4, 1),
+    (3, 4, 2, 2),
+    (4, 1, 1),
+    (1, 2, 4, 1)
+])
+def test_repeat(shape, ctx):
+    m_x, n_x = randn(shape, ctx=ctx)
+    ndim = len(shape)
+    for axis in range(-ndim, ndim):
+        m_y = mnm.repeat(m_x, 2, axis)
+        n_y = np.repeat(n_x, 2, axis)
+        check(m_y, n_y)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
     [(2, 2), (1, 0)],
     [(2, 2), None],
     [(2, 2, 2), (1, 2, 0)],

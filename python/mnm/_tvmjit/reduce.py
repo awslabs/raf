@@ -47,6 +47,8 @@ _reg.register_injective_schedule("mnm.op.sum")
 
 _reg.register_reduce_schedule("mnm.op.argmax")
 _reg.register_reduce_schedule("mnm.op.argmin")
+_reg.register_reduce_schedule("mnm.op.max")
+_reg.register_reduce_schedule("mnm.op.min")
 _reg.register_reduce_schedule("mnm.op.all")
 _reg.register_reduce_schedule("mnm.op.any")
 _reg.register_reduce_schedule("mnm.op.mean")

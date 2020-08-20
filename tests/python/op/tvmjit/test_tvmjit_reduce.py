@@ -55,6 +55,8 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     [
         (np.argmax, mnm.argmax),
         (np.argmin, mnm.argmin),
+        (np.amax, mnm.max),
+        (np.amin, mnm.min),
     ])
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

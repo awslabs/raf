@@ -201,6 +201,37 @@ MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues& call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
+MNM_OP_DECLARE("mnm.op.repeat", [](const CallValues& call) {
+  const auto* args = call->args.as<RepeatArgs>();
+  CHECK(args != nullptr);
+  CHECK(args->axis.defined());
+  DLTensor* x = args->x;
+  const int64_t* ishape = x->shape;
+  int repeat = args->repeats;
+  int ndim = x->ndim;
+  std::vector<int64_t> shape;
+
+  shape.resize(x->ndim);
+  int axis = args->axis.as<IntValueObj>()->data;
+  CHECK(axis >= -ndim && axis < ndim)
+      << "repeat only accepts `axis` in [-data.ndim, data.ndim - 1]"
+      << ", but got axis = " << axis << ", and data.ndim = " << ndim;
+  axis = axis >= 0 ? axis : axis + ndim;
+
+  for (int i = 0; i < x->ndim; i++) {
+    if (axis == i) {
+      shape[i] = ishape[i] * repeat;
+    } else {
+      shape[i] = ishape[i];
+    }
+  }
+
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+
 MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
   const auto* args = call->args.as<TransposeArgs>();
   CHECK(args != nullptr);
