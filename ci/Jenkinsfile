@@ -1,5 +1,5 @@
-ci_cpu = "yzhliu/meta:ci_cpu-v0.07"
-ci_gpu = "yzhliu/meta:ci_gpu-v0.07"
+ci_cpu = "tigerchang/mnm:ci_cpu-v0.09"
+ci_gpu = "tigerchang/mnm:ci_gpu-v0.09"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
@@ -62,7 +62,7 @@ stage("Lint") {
 
 stage('Build') {
   parallel 'BUILD: GPU': {
-    node('linux-gpu') {
+    node('linux-gpu-4x') {
       init_git_unix()
       sh """
          mkdir -p build
@@ -73,6 +73,8 @@ stage('Build') {
          echo "set(MNM_USE_CUDA ON)" >> config.cmake
          echo "set(MNM_USE_CUDNN ON)" >> config.cmake
          echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
+         echo "set(MNM_USE_MPI ON)" >> config.cmake
+         echo "set(MNM_USE_NCCL ON)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_gpu, 'build')
@@ -101,7 +103,7 @@ stage('Build') {
 
 stage('Unit Test') {
   parallel 'python3: GPU': {
-    node('linux-gpu') {
+    node('linux-gpu-4x') {
       init_git_unix()
       unpack_lib('gpu', mnm_multilib)
       timeout(time: max_time, unit: 'MINUTES') {

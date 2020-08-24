@@ -32,7 +32,7 @@ enum StreamTag {
   kMemCpyCpuToCuda = 2,
   kMemCpyCudaToCpu = 3,
   kMemCpyCudaToCuda = 4,
-  kReserved0 = 5,
+  kCudaCommunicate = 5,
   kReserved1 = 6,
   kReserved2 = 7,
   kReserved3 = 8,
@@ -56,7 +56,8 @@ class StreamTagEnum : public EnumBase<StreamTagEnum, 16, int32_t, StreamTag> {
                            "Memcopy from CUDA to CPU");
   ENUM_DEF_ENTRY_WITH_NAME(StreamTagEnum, 4, MemCudaToCuda, kMemCpyCudaToCuda,
                            "Memcopy from CUDA to CUDA");
-  ENUM_DEF_ENTRY_WITH_NAME(StreamTagEnum, 5, Reserved0, kReserved0, "Reserved for other devices");
+  ENUM_DEF_ENTRY_WITH_NAME(StreamTagEnum, 5, CudaCommunicate, kCudaCommunicate,
+                           "Communicate between Cuda devices");
   ENUM_DEF_ENTRY_WITH_NAME(StreamTagEnum, 6, Reserved1, kReserved1, "Reserved for other devices");
   ENUM_DEF_ENTRY_WITH_NAME(StreamTagEnum, 7, Reserved2, kReserved2, "Reserved for other devices");
   ENUM_DEF_ENTRY_WITH_NAME(StreamTagEnum, 8, Reserved3, kReserved3, "Reserved for other devices");

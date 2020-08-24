@@ -56,10 +56,7 @@ class OpEnv {
 
   void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
   void RequestStream(void** dest, const Context& ctx, int tag_idx);
-  void RequestDistributed(void** dest) {
-    LOG(FATAL) << "NotImplementedError: RequestDistributed";
-    throw;
-  }
+  void RequestDistributed(void** dest);
 
   void BindExecutor(executor::Executor* executor);
   std::shared_ptr<requests::Requests> GetRequests() const;

@@ -111,6 +111,14 @@ void OpEnv::RequestStream(void** dest, const Context& ctx, int tag_idx) {
   }
 }
 
+void OpEnv::RequestDistributed(void** dest) {
+  int index = impl->distributed.size();
+  impl->distributed.push_back({dest});
+  if (impl->executor != nullptr) {
+    impl->executor->RequestDistributed(impl.get(), index);
+  }
+}
+
 void OpEnv::BindExecutor(Executor* executor) {
   CHECK(impl->executor != nullptr);
   impl->executor = executor;

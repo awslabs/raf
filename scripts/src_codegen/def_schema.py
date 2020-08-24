@@ -344,6 +344,11 @@ SCHEMAS = {
         Arg(name="v", cxx_type="value::BaseTensorValue"),
         Arg(name="learning_rate", cxx_type="double"),
         Arg(name="mu", cxx_type="double"),
+    ],
+    "communication.h::_allreduce": [
+        Arg(name="x",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple"),
     ]
 }
 

@@ -1,31 +1,36 @@
 # pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
+# pylint: disable=protected-access
 """Auto generated. Do not touch."""
 import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
 from . import sym_utils
 
 __all__ = [
-    "abs", "add", "all", "any", "argmax",
-    "argmin", "atan", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add",
-    "broadcast_to", "broadcast_to_like", "ceil", "clip", "clip_dx",
-    "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
-    "conv2d_dx", "copy", "cos", "dense", "divide",
-    "equal", "erf", "erf_dx", "exp", "expand_dims",
-    "floor", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
-    "greater_equal", "less", "less_equal", "log", "log_softmax",
-    "log_softmax_dx", "logical_not", "matmul", "matmul_nt", "matmul_tn",
-    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
-    "mean", "mean_dx", "min", "minimum", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "non_max_suppression", "not_equal", "relu", "relu_dx", "repeat",
-    "reshape", "reverse", "reverse_sequence", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
-    "split", "sqrt", "sqrt_dx", "stack", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "_allreduce", "abs", "add", "all", "any",
+    "argmax", "argmin", "atan", "avg_pool2d", "avg_pool2d_dx",
+    "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
+    "bias_add", "broadcast_to", "broadcast_to_like", "ceil", "clip",
+    "clip_dx", "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d",
+    "conv2d_dw", "conv2d_dx", "copy", "cos", "dense",
+    "divide", "equal", "erf", "erf_dx", "exp",
+    "expand_dims", "floor", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
+    "greater", "greater_equal", "less", "less_equal", "log",
+    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
+    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
+    "maximum", "mean", "mean_dx", "min", "minimum",
+    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu", "relu_dx",
+    "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx",
 ]
+
+def _allreduce(x):
+    x = sym_utils.to_tensor_tuple(x)
+    return Symbol.from_expr(ffi._allreduce(x))
 
 def abs(x):
     x = sym_utils.to_any(x)

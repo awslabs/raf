@@ -7,6 +7,8 @@ include(${PROJECT_SOURCE_DIR}/cmake/utils/MNMCmakeUtils.cmake)
 mnm_option(MNM_USE_LLVM "MNM depends on LLVM to do code generation. Option: [ON/OFF/Path-to-llvm-config-executable]" ON)
 mnm_option(MNM_USE_CUDA "Build MNM with CUDA. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_CUDNN "Build MNM with cuDNN. Option: [ON/OFF/Path-to-cuDNN]" OFF)
+mnm_option(MNM_USE_MPI "Build MNM with MPI. Option: [ON/OFF]" OFF)
+mnm_option(MNM_USE_NCCL "Build MNM with NCCL. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_CUBLAS "Build MNM with cuBLAS. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_GTEST "Build cpptests for MNM. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_SANITIZER "Build MNM with sanitizer. Option: [OFF/ASAN/MSAN/TSAN/UBSAN]" OFF)
@@ -17,6 +19,7 @@ if (NOT ${MNM_USE_CUDA} STREQUAL "OFF")
 endif()
 
 ################# Modules and Third-Party Targets #################
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules;${CMAKE_MODULE_PATH}")
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Threads.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Git.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDA.cmake)
@@ -25,6 +28,8 @@ include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDNN.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Sanitizer.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/TVM.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/GTest.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/MPI.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/NCCL.cmake)
 
 ################# Primary Target: MNM #################
 set(MNM_INCLUDE_DIRS
@@ -37,6 +42,8 @@ set(MNM_INCLUDE_DIRS
 set(MNM_BACKEND_INCLUDE_DIRS
   ${MNM_CUDA_INCLUDE}
   ${MNM_CUDNN_INCLUDE}
+  ${MNM_NCCL_INCLUDE}
+  ${MNM_MPI_INCLUDE}
 )
 
 set(MNM_LINK_LIBS
@@ -48,6 +55,8 @@ set(MNM_LINK_LIBS
 set(MNM_BACKEND_LINK_LIBS
   ${MNM_CUDNN_LIBRARY}
   ${MNM_CUBLAS_LIBRARY}
+  ${MNM_NCCL_LIBRARY}
+  ${MNM_MPI_LIBRARY}
 )
 
 set_property(
@@ -58,6 +67,8 @@ set_property(
   MNM_USE_CUDA="${MNM_USE_CUDA}"
   MNM_USE_LLVM="${MNM_USE_LLVM}"
   MNM_USE_CUDNN="${MNM_USE_CUDNN}"
+  MNM_USE_MPI="${MNM_USE_MPI}"
+  MNM_USE_NCCL="${MNM_USE_NCCL}"
 )
 
 file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
@@ -101,11 +112,21 @@ else()
   )
 endif()
 
+if (${MNM_USE_NCCL} STREQUAL "OFF")
+  set(MNM_DISTRIBUTED_SOURCE_FILES "")
+else ()
+  file(GLOB_RECURSE MNM_DISTRIBUTED_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/communication/*.cc
+  )
+endif()
+
 set(MNM_SOURCE_FILES
   ${MNM_CXX_SOURCE_FILES}
   ${MNM_CUDA_SOURCE_FILES}
   ${MNM_CUDNN_SOURCE_FILES}
   ${MNM_CUBLAS_SOURCE_FILES}
+  ${MNM_DISTRIBUTED_SOURCE_FILES}
 )
 
 add_library(mnm ${MNM_SOURCE_FILES})

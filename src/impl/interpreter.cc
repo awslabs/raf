@@ -13,6 +13,7 @@
 #include "mnm/value.h"
 #include "mnm/binding.h"
 #include "mnm/profiler.h"
+#include "mnm/communicator.h"
 #include "dmlc/thread_local.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
@@ -241,6 +242,15 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
                              RequestStream(req.get(), i);
                            }
                          });
+
+      // note: Request distributed resources, operators like allreduce needs such resources.
+      // Currently, the distributed resources only contain a communicator.
+      WITH_BASE_PROFILER(call->ctx, op->name, "DistributedRequest",
+                         {"Count: " + std::to_string(req->distributed.size())}, {
+                           for (int i = 0, n = req->distributed.size(); i < n; ++i) {
+                             RequestDistributed(req.get(), i);
+                           }
+                         });
     }
 
     // note: Execute the Operator.
@@ -307,6 +317,11 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     std::shared_ptr<Stream> stream = Stream::Get(entry.ctx, entry.tag_idx, entry.stream_idx);
     *entry.dest = stream->data();
     entry.stream = stream;
+  }
+
+  void RequestDistributed(Requests* req, int index) override {
+    Requests::DistributedRequest& entry = req->distributed[index];
+    *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
   }
 
  private:

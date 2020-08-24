@@ -10,6 +10,7 @@ def gen_file():
 # pylint: disable=invalid-name,line-too-long
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
+# pylint: disable=protected-access
 \"\"\"Auto generated. Do not touch.\"\"\"
 import mnm._ffi.op.imp as ffi
 from mnm._core.core_utils import set_module

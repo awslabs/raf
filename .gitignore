@@ -101,3 +101,6 @@ compile_commands.json
 # Jetbrain
 .idea/
 cmake-build-debug/
+
+#others	
+.sudo_as_admin_successful

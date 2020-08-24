@@ -25,10 +25,7 @@ class Executor {
   virtual void OnDestruct(const op::OpEnv* op_env) = 0;
   virtual void RequestWorkspace(requests::Requests* request, int index) = 0;
   virtual void RequestStream(requests::Requests* request, int index) = 0;
-  virtual void RequestDistributed(requests::Requests* request, int index) {
-    LOG(FATAL) << "NotImplementedError: RequestDistributed";
-    throw;
-  }
+  virtual void RequestDistributed(requests::Requests* request, int index) = 0;
 };
 
 namespace interpreter {

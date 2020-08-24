@@ -5,6 +5,7 @@
  * \brief Operator schema.
  */
 #include "../../op_utils.h"
+#include "../../schema/communication.h"
 #include "../../schema/init.h"
 #include "../../schema/likes.h"
 #include "../../schema/list_args.h"

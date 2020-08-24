@@ -10,3 +10,7 @@ use_cuda = _APIS.get("mnm.build_info.use_cuda", None)
 use_cudnn = _APIS.get("mnm.build_info.use_cudnn", None)
 # Defined in ./src/impl/build_info.cc
 use_llvm = _APIS.get("mnm.build_info.use_llvm", None)
+# Defined in ./src/impl/build_info.cc
+use_mpi = _APIS.get("mnm.build_info.use_mpi", None)
+# Defined in ./src/impl/build_info.cc
+use_nccl = _APIS.get("mnm.build_info.use_nccl", None)

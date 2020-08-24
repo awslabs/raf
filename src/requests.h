@@ -37,10 +37,15 @@ class Requests {
     std::shared_ptr<stream_pool::Stream> stream;
   };
 
+  struct DistributedRequest {
+    void** dest;
+  };
+
  public:
   std::vector<MemoryRequest> memory;
   std::vector<WorkspaceRequest> workspace;
   std::vector<StreamRequest> stream;
+  std::vector<DistributedRequest> distributed;
 };
 
 }  // namespace requests

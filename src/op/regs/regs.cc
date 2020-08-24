@@ -12,6 +12,7 @@
 #include "./value2schema.h"
 #include "./schema2value.h"
 #include "../schema/list_args.h"
+#include "../schema/communication.h"
 #include "../schema/likes.h"
 #include "../schema/loss.h"
 #include "../schema/nn.h"
@@ -33,6 +34,7 @@ namespace mnm {
 namespace op {
 namespace regs {
 namespace names {
+static const char _allreduce[] = "mnm.op._allreduce";
 static const char abs[] = "mnm.op.abs";
 static const char add[] = "mnm.op.add";
 static const char all[] = "mnm.op.all";
@@ -155,6 +157,12 @@ namespace ffi2schema {
   CHECK_EQ(size, n) << "TypeError: Mismatched number of arguments for operator \"{op}\": " \
                     << "Expected " << n << ", but get " << size;                           \
   auto attrs = make_object<obj>();
+
+Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::AllreduceArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
 
 Attrs BatchNorm(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::BatchNormArgs, 7);  // NOLINT(whitespace/line_length)
@@ -607,6 +615,14 @@ namespace imperative {
       std::move(value),                                                                         \
       ClosureValue::make(/*env=*/std::move(env), /*func=*/Function({vpack->dy}, body, {}, {})), \
       {prev_tapes.begin(), prev_tapes.begin() + n_tapes});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_allreduce, 1, ffi2schema::Allreduce,
+              schema::AllreduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.abs").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(abs, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
@@ -1552,6 +1568,12 @@ namespace ffi2expr {
 
 #define MNM_RET() return Array<Expr>(result);
 
+Array<Expr> Allreduce(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_RET();
+}
+
 Array<Expr> BatchNorm(const TVMArgs& values) {
   MNM_PRELUDE(7);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -1970,6 +1992,7 @@ namespace symbolic {
     }                                                            \
   }
 
+MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 1, Allreduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.add").set_body(MNM_SYMBOLIC_API(add, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.all").set_body(MNM_SYMBOLIC_API(all, 3, Reduce));
@@ -2130,6 +2153,13 @@ namespace value2schema {
       }                                 \
     }                                   \
   }
+
+template <const char* op_name>
+Attrs Allreduce(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::AllreduceArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
 
 template <const char* op_name>
 Attrs BatchNorm(const Array<Value>& values) {
@@ -2586,6 +2616,8 @@ namespace f_mnm_schema {
 #define MNM_BIND_SCHEMA(op_str, op_name, schema) \
   MNM_OP_REGISTER(op_str).set_attr<FMNMSchema>("FMNMSchema", schema<op_name>);
 
+MNM_BIND_SCHEMA("mnm.op._allreduce", names::_allreduce,
+                value2schema::Allreduce);                        // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.add", names::add,
                 value2schema::BinaryUfunc);                       // NOLINT(whitespace/line_length)
@@ -2765,6 +2797,7 @@ namespace op {
 namespace schema {
 namespace {
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
+MNM_REGISTER_OBJECT_REFLECT(AllreduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
 MNM_REGISTER_OBJECT_REFLECT(BiasAddArgs);

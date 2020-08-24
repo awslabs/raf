@@ -3,6 +3,8 @@
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
 # Defined in ./src/op/regs/regs.cc
+_allreduce = _APIS.get("mnm.op.sym._allreduce", None)
+# Defined in ./src/op/regs/regs.cc
 abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.sym.add", None)
