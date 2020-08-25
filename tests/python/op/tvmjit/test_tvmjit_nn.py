@@ -149,5 +149,49 @@ def test_unary_with_axis(shape, axis, funcs, ctx):
     check_torch(m_x.grad, t_x.grad)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    (5, 4, 6, 9),
+    (6, 5, 7, 10),
+    (12, 32, 6, 8),
+    (3, 7, 9)
+])
+@pytest.mark.parametrize("axis", [0, 1, 2, -1])
+@pytest.mark.parametrize("eps", [1e-05, 2e-05])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_layer_norm(ctx, shape, axis, eps, dtype):
+    # pylint: disable=too-many-locals
+    # pylint: disable=import-outside-toplevel
+    # pylint: disable=attribute-defined-outside-init
+    import mxnet as mx
+    class LayerNorm(mnm.Model):
+        def build(self, axis, eps):
+            self._axis = axis
+            self._eps = eps
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.layer_norm(x, axis=self._axis, eps=self._eps)
+    m_model = LayerNorm(axis, eps)
+    m_model.to(ctx=ctx, dtype=dtype)
+    mx_model = mx.gluon.nn.LayerNorm(axis=axis, epsilon=eps, center=False, scale=False)
+    mx_model.initialize(ctx=mx.cpu(0))
+    m_x, n_x = randn(shape, ctx=ctx, dtype=dtype)
+    mx_x = mx.nd.array(n_x)
+    m_x.requires_grad = True
+    mx_x.attach_grad()
+    # check forward
+    m_y = m_model(m_x)
+    m_dy, n_dy = randn(m_y.shape, ctx=ctx, dtype=dtype)
+    mx_dy = mx.nd.array(n_dy)
+    with mx.autograd.record():
+        mx_y = mx_model(mx_x)
+        mx_y.backward(mx_dy)
+    check(m_y, mx_y.asnumpy())
+    # check backward
+    m_y.backward(m_dy)
+    check(m_x.grad, mx_x.grad.asnumpy(), rtol=1e-4, atol=1e-4)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

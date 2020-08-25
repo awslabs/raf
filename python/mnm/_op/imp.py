@@ -16,17 +16,17 @@ __all__ = [
     "conv2d_dw", "conv2d_dx", "copy", "cos", "dense",
     "divide", "equal", "erf", "erf_dx", "exp",
     "expand_dims", "floor", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
-    "greater", "greater_equal", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
-    "maximum", "mean", "mean_dx", "min", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
+    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
+    "min", "minimum", "mod", "multiply", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
+    "relu", "relu_dx", "repeat", "reshape", "reverse",
+    "reverse_sequence", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
+    "sqrt_dx", "stack", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -333,6 +333,22 @@ def greater_equal(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.greater_equal(x1, x2, out, where))
+
+@set_module("mnm")
+def layer_norm(x, axis=-1, eps=1e-05):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int(axis)
+    eps = imp_utils.to_double(eps)
+    return imp_utils.ret(ffi.layer_norm(x, axis, eps))
+
+@set_module("mnm")
+def layer_norm_dx(x, y, dy, axis=-1, eps=1e-05):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    axis = imp_utils.to_int(axis)
+    eps = imp_utils.to_double(eps)
+    return imp_utils.ret(ffi.layer_norm_dx(x, y, dy, axis, eps))
 
 @set_module("mnm")
 def less(x1, x2, out=None, where=None):

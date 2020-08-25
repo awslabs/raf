@@ -173,6 +173,18 @@ SCHEMAS = {
             cxx_normalizer="TensorTuple"),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
+    "nn.h::layer_norm": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
+        Arg(name="eps", cxx_type="double", cxx_default=1e-5),
+    ],
+    "nn.h::layer_norm_dx": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="y", cxx_type="value::BaseTensorValue"),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
+        Arg(name="eps", cxx_type="double", cxx_default=1e-5),
+    ],
     "nn.h::split": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="indices_or_sections",

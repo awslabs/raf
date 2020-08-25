@@ -28,6 +28,7 @@ from tvm._ffi.runtime_ctypes import TVMArray as _DLTensor
 from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
 from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
 from tvm._ffi.runtime_ctypes import TVMArrayHandle as _DLArrayHandle
+from tvm.target import generic_func
 from tvm.tir import FloatImm, IntImm, StringImm
 from tvm.ir.container import Array
 from tvm.runtime.ndarray import array as tvm_ndarray

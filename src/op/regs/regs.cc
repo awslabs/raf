@@ -76,6 +76,8 @@ static const char get_reduce_axis[] = "mnm.op.get_reduce_axis";
 static const char get_valid_counts[] = "mnm.op.get_valid_counts";
 static const char greater[] = "mnm.op.greater";
 static const char greater_equal[] = "mnm.op.greater_equal";
+static const char layer_norm[] = "mnm.op.layer_norm";
+static const char layer_norm_dx[] = "mnm.op.layer_norm_dx";
 static const char less[] = "mnm.op.less";
 static const char less_equal[] = "mnm.op.less_equal";
 static const char log[] = "mnm.op.log";
@@ -302,6 +304,24 @@ Attrs GetValidCounts(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(1, ffi2schema::Double, score_threshold);
   MNM_POD(2, ffi2schema::Int, id_index);
   MNM_POD(3, ffi2schema::Int, score_index);
+  return Attrs(attrs);
+}
+
+Attrs LayerNorm(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::LayerNormArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Int, axis);
+  MNM_POD(2, ffi2schema::Double, eps);
+  return Attrs(attrs);
+}
+
+Attrs LayerNormDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::LayerNormDxArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, y);
+  MNM_TAPE(2, ffi2schema::Tensor, dy);
+  MNM_POD(3, ffi2schema::Int, axis);
+  MNM_POD(4, ffi2schema::Double, eps);
   return Attrs(attrs);
 }
 
@@ -1032,6 +1052,28 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.greater_equal").set_body([](TVMArgs args, TVMRet
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.layer_norm").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(layer_norm, 3, ffi2schema::LayerNorm,
+              schema::LayerNormArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->eps));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.layer_norm_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(layer_norm_dx, 5, ffi2schema::LayerNormDx,
+              schema::LayerNormDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->eps));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.less").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(less, 4, ffi2schema::BinaryUfunc,
               schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -1715,6 +1757,24 @@ Array<Expr> GetValidCounts(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> LayerNorm(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_ARG(2, ffi2expr::Double, eps);
+  MNM_RET();
+}
+
+Array<Expr> LayerNormDx(const TVMArgs& values) {
+  MNM_PRELUDE(5);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, y);
+  MNM_ARG(2, ffi2expr::Tensor, dy);
+  MNM_ARG(3, ffi2expr::Int, axis);
+  MNM_ARG(4, ffi2expr::Double, eps);
+  MNM_RET();
+}
+
 Array<Expr> LocalResponseNorm(const TVMArgs& values) {
   MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2048,6 +2108,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.get_valid_counts")
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater").set_body(MNM_SYMBOLIC_API(greater, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
     .set_body(MNM_SYMBOLIC_API(greater_equal, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm").set_body(MNM_SYMBOLIC_API(layer_norm, 3, LayerNorm));
+MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm_dx")
+    .set_body(MNM_SYMBOLIC_API(layer_norm_dx, 5, LayerNormDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.less").set_body(MNM_SYMBOLIC_API(less, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.less_equal").set_body(MNM_SYMBOLIC_API(less_equal, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log").set_body(MNM_SYMBOLIC_API(log, 1, Unary));
@@ -2315,6 +2378,26 @@ Attrs GetValidCounts(const Array<Value>& values) {
   MNM_OPTIONAL(1, value2schema::Double, score_threshold);
   MNM_OPTIONAL(2, value2schema::Int, id_index);
   MNM_OPTIONAL(3, value2schema::Int, score_index);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs LayerNorm(const Array<Value>& values) {
+  MNM_PRELUDE(1, 3, schema::LayerNormArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_OPTIONAL(1, value2schema::Int, axis);
+  MNM_OPTIONAL(2, value2schema::Double, eps);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs LayerNormDx(const Array<Value>& values) {
+  MNM_PRELUDE(3, 5, schema::LayerNormDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, y);
+  MNM_REQUIRED(2, value2schema::Tensor, dy);
+  MNM_OPTIONAL(3, value2schema::Int, axis);
+  MNM_OPTIONAL(4, value2schema::Double, eps);
   return Attrs(attrs);
 }
 
@@ -2690,6 +2773,10 @@ MNM_BIND_SCHEMA("mnm.op.greater", names::greater,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.greater_equal", names::greater_equal,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.layer_norm", names::layer_norm,
+                value2schema::LayerNorm);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.layer_norm_dx", names::layer_norm_dx,
+                value2schema::LayerNormDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.less", names::less,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.less_equal", names::less_equal,
@@ -2814,6 +2901,8 @@ MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(GetValidCountsArgs);
+MNM_REGISTER_OBJECT_REFLECT(LayerNormArgs);
+MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(NonMaxSuppressionArgs);

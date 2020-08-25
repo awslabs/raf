@@ -17,6 +17,8 @@ namespace tvmjit {
 using namespace mnm::ir;
 using schema::BiasAddArgs;
 using schema::BinaryArgs;
+using schema::LayerNormArgs;
+using schema::LayerNormDxArgs;
 using schema::SoftmaxArgs;
 using schema::SoftmaxDxArgs;
 
@@ -134,6 +136,69 @@ HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
 }
 
 MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddNormalizer, BiasAddTyper, BiasAddHasher);
+
+Attrs LayerNormNormalizer(TVMOpEnv* env, const LayerNormArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  // attrs will be later passed to compute & schedule functions
+  auto attrs = make_object<tvm::relay::LayerNormAttrs>();
+  attrs->axis = args->axis;
+  attrs->epsilon = args->eps;
+  return Attrs(attrs);
+}
+
+void LayerNormTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+  };
+}
+
+HashKey LayerNormHasher(const std::vector<Type>& param_types, const Type& y_type,
+                        const LayerNormArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  key << args->eps;
+  return key;
+}
+
+MNM_TVMJIT(LayerNorm, "mnm.op.layer_norm", LayerNormArgs, LayerNormNormalizer, LayerNormTyper,
+           LayerNormHasher);
+
+Attrs LayerNormDxNormalizer(TVMOpEnv* env, const LayerNormDxArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+      GetDLTensor(args->y),
+      GetDLTensor(args->dy),
+  };
+  // attrs will be later passed to compute & schedule functions
+  auto attrs = make_object<tvm::relay::LayerNormAttrs>();
+  attrs->axis = args->axis;
+  attrs->epsilon = args->eps;
+  return Attrs(attrs);
+}
+
+void LayerNormDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
+  };
+}
+
+HashKey LayerNormDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                          const LayerNormDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  key << args->eps;
+  return key;
+}
+
+MNM_TVMJIT(LayerNormDx, "mnm.op.layer_norm_dx", LayerNormDxArgs, LayerNormDxNormalizer,
+           LayerNormDxTyper, LayerNormDxHasher);
 
 }  // namespace tvmjit
 }  // namespace op

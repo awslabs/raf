@@ -143,6 +143,18 @@ const char LOG_SOFTMAX_DX[] = "mnm.op.log_softmax_dx";
 auto LogSoftmaxGrad = SoftmaxGradImpl<LOG_SOFTMAX_DX>;
 MNM_OP_GRAD("mnm.op.log_softmax", LogSoftmaxGrad);
 
+Array<Expr> LayerNormGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.layer_norm_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  const Expr& axis = call->args[1];
+  const Expr& eps = call->args[2];
+  return {Call(op_dx, {x, y, dy, axis, eps})};
+}
+
+MNM_OP_GRAD("mnm.op.layer_norm", LayerNormGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

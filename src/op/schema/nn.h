@@ -95,6 +95,24 @@ class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
   MNM_OP_SCHEMA(ExpandDimsArgs, "mnm.args.expand_dims");
 };
 
+class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
+ public:
+  value::BaseTensorValue x;
+  int64_t axis{-1};
+  double eps{1e-05};
+  MNM_OP_SCHEMA(LayerNormArgs, "mnm.args.layer_norm");
+};
+
+class LayerNormDxArgs : public ir::AttrsNode<LayerNormDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
+  int64_t axis{-1};
+  double eps{1e-05};
+  MNM_OP_SCHEMA(LayerNormDxArgs, "mnm.args.layer_norm_dx");
+};
+
 class LocalResponseNormArgs : public ir::AttrsNode<LocalResponseNormArgs> {
  public:
   value::BaseTensorValue x;

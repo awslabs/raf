@@ -15,17 +15,17 @@ __all__ = [
     "conv2d_dw", "conv2d_dx", "copy", "cos", "dense",
     "divide", "equal", "erf", "erf_dx", "exp",
     "expand_dims", "floor", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
-    "greater", "greater_equal", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
-    "maximum", "mean", "mean_dx", "min", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
+    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
+    "min", "minimum", "mod", "multiply", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
+    "relu", "relu_dx", "repeat", "reshape", "reverse",
+    "reverse_sequence", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
+    "sqrt_dx", "stack", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -290,6 +290,20 @@ def greater_equal(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.greater_equal(x1, x2, out, where))
+
+def layer_norm(x, axis=-1, eps=1e-05):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int(axis)
+    eps = sym_utils.to_double(eps)
+    return Symbol.from_expr(ffi.layer_norm(x, axis, eps))
+
+def layer_norm_dx(x, y, dy, axis=-1, eps=1e-05):
+    x = sym_utils.to_tensor(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    axis = sym_utils.to_int(axis)
+    eps = sym_utils.to_double(eps)
+    return Symbol.from_expr(ffi.layer_norm_dx(x, y, dy, axis, eps))
 
 def less(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

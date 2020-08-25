@@ -87,6 +87,10 @@ greater = _APIS.get("mnm.op.imp.greater", None)
 # Defined in ./src/op/regs/regs.cc
 greater_equal = _APIS.get("mnm.op.imp.greater_equal", None)
 # Defined in ./src/op/regs/regs.cc
+layer_norm = _APIS.get("mnm.op.imp.layer_norm", None)
+# Defined in ./src/op/regs/regs.cc
+layer_norm_dx = _APIS.get("mnm.op.imp.layer_norm_dx", None)
+# Defined in ./src/op/regs/regs.cc
 less = _APIS.get("mnm.op.imp.less", None)
 # Defined in ./src/op/regs/regs.cc
 less_equal = _APIS.get("mnm.op.imp.less_equal", None)
