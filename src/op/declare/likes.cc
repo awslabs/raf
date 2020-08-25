@@ -6,6 +6,7 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/likes.h"
+#include <numeric>
 
 namespace mnm {
 namespace op {
@@ -18,9 +19,14 @@ void Sum(const CallValues& call) {
   const auto* args = call->args.as<SumArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
+  auto ndim = x->ndim;
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
-  std::vector<int64_t> keep = args->keep;
+  std::vector<int64_t> keep = args->keepdims;
+  if (axis.empty() && !keep.empty()) {
+    axis.resize(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+  }
   if (keep.size() == 1) {
     keep = std::vector<int64_t>(axis.size(), keep[0]);
   }

@@ -47,10 +47,10 @@ MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryUfuncArgs, BinaryNormalizer, BinaryT
 
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   Array<Integer> axis;
-  Array<Integer> keep;
+  Array<Integer> keepdims;
   TVM_DECLARE_ATTRS(SumAttrs, "attrs.SumAttrs") {
     TVM_ATTR_FIELD(axis);
-    TVM_ATTR_FIELD(keep);
+    TVM_ATTR_FIELD(keepdims);
   }
 };
 TVM_REGISTER_NODE_TYPE(SumAttrs);
@@ -63,7 +63,9 @@ Attrs SumNormalizer(TVMOpEnv* env, const SumArgs* args) {
   auto attrs = make_object<SumAttrs>();
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
     attrs->axis.push_back(args->axis[i]);
-    attrs->keep.push_back(args->keep[i]);
+  }
+  for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
+    attrs->keepdims.push_back(args->keepdims[i]);
   }
   return Attrs(attrs);
 }
@@ -79,7 +81,7 @@ HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, co
   HashKey key = GenericHasher<std::nullptr_t>(param_types, ret_type, nullptr);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
     key << args->axis[i];
-    key << args->keep[i];
+    key << args->keepdims[i];
   }
   return key;
 }

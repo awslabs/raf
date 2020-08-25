@@ -85,7 +85,7 @@ def test_broadcast_add(shape, ctx):
     def mnm_add_dx(m_dy, m_x):
         axis = mnm.get_reduce_axis(m_dy, m_x)
         keep = mnm.get_kept_dims(m_dy, m_x)
-        return mnm.sum(m_dy, axis, keep)
+        return mnm.sum(m_dy, axis=axis, keepdims=keep)
 
     m_da = mnm_add_dx(m_dy, m_a)
     check(m_da, t_a.grad, atol=0.01 if n == 4 else 1e-4)

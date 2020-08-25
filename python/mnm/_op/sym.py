@@ -583,11 +583,11 @@ def subtract(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.subtract(x1, x2, out, where))
 
-def sum(x, axis, keep):
+def sum(x, axis=(), keepdims=0):
     x = sym_utils.to_tensor(x)
     axis = sym_utils.to_int_tuple(axis)
-    keep = sym_utils.to_int_tuple(keep)
-    return Symbol.from_expr(ffi.sum(x, axis, keep))
+    keepdims = sym_utils.to_int_tuple(keepdims)
+    return Symbol.from_expr(ffi.sum(x, axis, keepdims))
 
 def take(x, indices, axis=None):
     x = sym_utils.to_tensor(x)

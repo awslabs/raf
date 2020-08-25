@@ -9,16 +9,14 @@ from .._lib import _reg
 @register_compute("mnm.op.sum")
 def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     x = inputs[0]
-    axes = [int(i) for i in attrs.axis]
-    keep = [int(i) for i in attrs.keep]
-    if not axes:
+    axes = list(_topi.util.get_const_tuple(attrs.axis))
+    keep = list(_topi.util.get_const_tuple(attrs.keepdims))
+    if not keep:
         # TODO(@were): It seems that TVM create view may crash, I cannot directly return [x]
         return [_tvm.te.compute(x.shape, lambda *args: x(*args))] # pylint: disable=unnecessary-lambda
     if len(keep) == 1:
-        keep = [keep[0]] * len(axes)
-    # Fallback to TOPI
-    if keep == [keep[0]] * len(axes):
-        return [_topi.sum(x, axes, keep[0])]
+        axes = None if not axes else axes
+        return [_topi.sum(x, axis=axes, keepdims=keep[0])]
     axes = sorted(zip(axes, keep))
     red_axis = [_tvm.te.reduce_axis((0, x.shape[i])) for i, _ in axes]
     shape = list(x.shape)

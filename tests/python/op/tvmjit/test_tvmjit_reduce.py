@@ -72,6 +72,24 @@ def test_reduce_ops(ops, shape, dtype, axis, ctx):
 @pytest.mark.parametrize(
     "ops",
     [
+        (np.sum, mnm.sum)
+    ])
+@pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("axis", [(1), (0, 1), None])
+@pytest.mark.parametrize("keepdims", [True, False])
+# pylint: disable=too-many-arguments
+def test_reduce_keepdims_ops(ops, shape, dtype, axis, keepdims, ctx):
+    n_op, m_op = ops
+    m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
+    m_x = m_op(m_x, axis=axis, keepdims=keepdims)
+    n_x = n_op(n_x, axis=axis, keepdims=keepdims)
+    check(m_x, n_x)
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize(
+    "ops",
+    [
         (np.all, mnm.all),
         (np.any, mnm.any),
     ])

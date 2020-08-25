@@ -489,7 +489,7 @@ Attrs Sum(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::SumArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
-  MNM_POD(2, ffi2schema::IntOrTupleInt, keep);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, keepdims);
   return Attrs(attrs);
 }
 
@@ -1517,7 +1517,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sum").set_body([](TVMArgs args, TVMRetValue* ret
   MNM_PRELUDE(sum, 3, ffi2schema::Sum, schema::SumArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
-  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->keep));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->keepdims));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1939,7 +1939,7 @@ Array<Expr> Sum(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::IntOrTupleInt, axis);
-  MNM_ARG(2, ffi2expr::IntOrTupleInt, keep);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, keepdims);
   MNM_RET();
 }
 
@@ -2580,10 +2580,10 @@ Attrs Stack(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Sum(const Array<Value>& values) {
-  MNM_PRELUDE(3, 3, schema::SumArgs);
+  MNM_PRELUDE(1, 3, schema::SumArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::IntOrTupleInt, axis);
-  MNM_REQUIRED(2, value2schema::IntOrTupleInt, keep);
+  MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axis);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, keepdims);
   return Attrs(attrs);
 }
 

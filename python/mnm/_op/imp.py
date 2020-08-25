@@ -673,11 +673,11 @@ def subtract(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.subtract(x1, x2, out, where))
 
 @set_module("mnm")
-def sum(x, axis, keep):
+def sum(x, axis=(), keepdims=0):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
-    keep = imp_utils.to_int_tuple(keep)
-    return imp_utils.ret(ffi.sum(x, axis, keep))
+    keepdims = imp_utils.to_int_tuple(keepdims)
+    return imp_utils.ret(ffi.sum(x, axis, keepdims))
 
 @set_module("mnm")
 def take(x, indices, axis=None):

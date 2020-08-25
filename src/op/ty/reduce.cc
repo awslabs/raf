@@ -24,7 +24,7 @@ Type SumInfer(const CallValues& value) {
   TensorType x = Downcast<TensorType>(GetType(args->x));
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
-  std::vector<int64_t> keep = args->keep;
+  std::vector<int64_t> keep = args->keepdims;
   if (keep.size() == 1) {
     keep = std::vector<int64_t>(axis.size(), keep[0]);
   }
