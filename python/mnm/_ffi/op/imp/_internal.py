@@ -39,6 +39,10 @@ broadcast_to = _APIS.get("mnm.op.imp.broadcast_to", None)
 # Defined in ./src/op/regs/regs.cc
 broadcast_to_like = _APIS.get("mnm.op.imp.broadcast_to_like", None)
 # Defined in ./src/op/regs/regs.cc
+cast = _APIS.get("mnm.op.imp.cast", None)
+# Defined in ./src/op/regs/regs.cc
+cast_like = _APIS.get("mnm.op.imp.cast_like", None)
+# Defined in ./src/op/regs/regs.cc
 ceil = _APIS.get("mnm.op.imp.ceil", None)
 # Defined in ./src/op/regs/regs.cc
 clip = _APIS.get("mnm.op.imp.clip", None)

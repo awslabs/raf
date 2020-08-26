@@ -17,6 +17,8 @@ namespace type {
 
 using namespace mnm::value;
 using declare::NormalizeAxis;
+using schema::CastArgs;
+using schema::CastLikeArgs;
 using schema::ConcatenateArgs;
 using schema::TransposeArgs;
 using schema::TransposeDxArgs;
@@ -101,6 +103,29 @@ Type ConcatenateInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.concatenate", "Concatenate", ConcatenateInfer);
+
+Type CastInfer(const CallValues& value) {
+  using namespace tvm;
+  using namespace tvm::relay;
+  const auto* args = value->args.as<CastArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  DataType dtype = DataType(ir::String2DLDataType(args->dtype));
+  return TensorType(data->shape, dtype);
+}
+
+MNM_OP_TYPE("mnm.op.cast", "Cast", CastInfer);
+
+Type CastLikeInfer(const CallValues& value) {
+  using namespace tvm;
+  using namespace tvm::relay;
+  const auto* args = value->args.as<CastLikeArgs>();
+  CHECK(args != nullptr);
+  TensorType dtype_like = Downcast<TensorType>(GetType(args->dtype_like));
+  return dtype_like;
+}
+
+MNM_OP_TYPE("mnm.op.cast_like", "CastLike", CastLikeInfer);
 
 }  // namespace type
 }  // namespace op

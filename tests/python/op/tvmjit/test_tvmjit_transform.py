@@ -508,5 +508,39 @@ def test_expand_dims(ctx, shape, axis, num_newaxis):
     m_y.backward(m_dy)
     check(m_x.grad, np.reshape(n_dy, n_x.shape))
 
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
+@pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
+@pytest.mark.parametrize("otype", ["float16", "float32", "float64", "int32", "int64", "bool"])
+def test_cast(shape, ctx, itype, otype):
+    # TODO(hgt312): some problems when working with float16
+    if ctx == "cuda" and "float16" in [itype, otype]:
+        return
+    if (itype, otype, ctx) == ("float64", "float16", "cpu"):
+        return
+
+    class Cast(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, data):  # pylint: disable=no-self-use
+            return mnm.cast(data, otype)
+
+    m_x, n_x = randn(shape, ctx=ctx, dtype=itype)
+    m_x.requires_grad = True
+    # forward
+    model = Cast()
+    m_y = model(m_x)
+    n_y = n_x.astype(otype)
+    check(m_y, n_y)
+    # backward
+    if (itype, otype, ctx) == ("float16", "float64", "cpu"):
+        return
+    m_dy, n_dy = randn(shape, ctx=ctx, dtype=otype)
+    m_y.backward(m_dy)
+    check(m_x.grad, n_dy.astype(itype))
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

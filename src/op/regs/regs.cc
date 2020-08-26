@@ -52,6 +52,8 @@ static const char batch_norm_train_dxwb[] = "mnm.op.batch_norm_train_dxwb";
 static const char bias_add[] = "mnm.op.bias_add";
 static const char broadcast_to[] = "mnm.op.broadcast_to";
 static const char broadcast_to_like[] = "mnm.op.broadcast_to_like";
+static const char cast[] = "mnm.op.cast";
+static const char cast_like[] = "mnm.op.cast_like";
 static const char ceil[] = "mnm.op.ceil";
 static const char clip[] = "mnm.op.clip";
 static const char clip_dx[] = "mnm.op.clip_dx";
@@ -232,6 +234,20 @@ Attrs BroadcastToLike(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::BroadcastToLikeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_TAPE(1, ffi2schema::Tensor, broadcast_type);
+  return Attrs(attrs);
+}
+
+Attrs Cast(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::CastArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::String, dtype);
+  return Attrs(attrs);
+}
+
+Attrs CastLike(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::CastLikeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_TAPE(1, ffi2schema::Tensor, dtype_like);
   return Attrs(attrs);
 }
 
@@ -816,6 +832,23 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.broadcast_to_like").set_body([](TVMArgs args, TV
               schema::BroadcastToLikeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->broadcast_type));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.cast").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(cast, 2, ffi2schema::Cast, schema::CastArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.cast_like").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(cast_like, 2, ffi2schema::CastLike,
+              schema::CastLikeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dtype_like));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1685,6 +1718,20 @@ Array<Expr> BroadcastToLike(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Cast(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::String, dtype);
+  MNM_RET();
+}
+
+Array<Expr> CastLike(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Tensor, dtype_like);
+  MNM_RET();
+}
+
 Array<Expr> Clip(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2076,6 +2123,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to")
     .set_body(MNM_SYMBOLIC_API(broadcast_to, 2, BroadcastTo));
 MNM_REGISTER_GLOBAL("mnm.op.sym.broadcast_to_like")
     .set_body(MNM_SYMBOLIC_API(broadcast_to_like, 2, BroadcastToLike));
+MNM_REGISTER_GLOBAL("mnm.op.sym.cast").set_body(MNM_SYMBOLIC_API(cast, 2, Cast));
+MNM_REGISTER_GLOBAL("mnm.op.sym.cast_like").set_body(MNM_SYMBOLIC_API(cast_like, 2, CastLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.ceil").set_body(MNM_SYMBOLIC_API(ceil, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.clip").set_body(MNM_SYMBOLIC_API(clip, 3, Clip));
 MNM_REGISTER_GLOBAL("mnm.op.sym.clip_dx").set_body(MNM_SYMBOLIC_API(clip_dx, 4, ClipDx));
@@ -2298,6 +2347,22 @@ Attrs BroadcastToLike(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::BroadcastToLikeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Tensor, broadcast_type);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Cast(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::CastArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::String, dtype);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs CastLike(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::CastLikeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::Tensor, dtype_like);
   return Attrs(attrs);
 }
 
@@ -2730,7 +2795,10 @@ MNM_BIND_SCHEMA("mnm.op.bias_add", names::bias_add,
 MNM_BIND_SCHEMA("mnm.op.broadcast_to", names::broadcast_to,
                 value2schema::BroadcastTo);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to_like", names::broadcast_to_like,
-                value2schema::BroadcastToLike);                    // NOLINT(whitespace/line_length)
+                value2schema::BroadcastToLike);                   // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cast", names::cast, value2schema::Cast);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cast_like", names::cast_like,
+                value2schema::CastLike);                           // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.ceil", names::ceil, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.clip", names::clip, value2schema::Clip);   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.clip_dx", names::clip_dx,
@@ -2893,6 +2961,8 @@ MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(CastArgs);
+MNM_REGISTER_OBJECT_REFLECT(CastLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);

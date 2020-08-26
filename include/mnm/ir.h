@@ -54,6 +54,7 @@ using tvm::runtime::ObjectPtr;
 using tvm::runtime::ObjectPtrEqual;
 using tvm::runtime::ObjectPtrHash;
 using tvm::runtime::ObjectRef;
+using tvm::runtime::String2DLDataType;
 using tvm::runtime::TypeIndex;
 
 // Relay Expression

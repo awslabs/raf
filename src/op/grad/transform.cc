@@ -108,6 +108,15 @@ Array<Expr> TakeGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 
 MNM_OP_GRAD("mnm.op.take", TakeGrad);
 
+Array<Expr> CastGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.cast_like");
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& x = call->args[0];
+  return {Call(op_dx, {dy, x})};
+}
+
+MNM_OP_GRAD("mnm.op.cast", CastGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

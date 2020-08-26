@@ -19,6 +19,8 @@ from ._internal import batch_norm_train_dxwb
 from ._internal import bias_add
 from ._internal import broadcast_to
 from ._internal import broadcast_to_like
+from ._internal import cast
+from ._internal import cast_like
 from ._internal import ceil
 from ._internal import clip
 from ._internal import clip_dx

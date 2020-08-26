@@ -12,6 +12,20 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class CastArgs : public ir::AttrsNode<CastArgs> {
+ public:
+  value::BaseTensorValue data;
+  std::string dtype;
+  MNM_OP_SCHEMA(CastArgs, "mnm.args.cast");
+};
+
+class CastLikeArgs : public ir::AttrsNode<CastLikeArgs> {
+ public:
+  value::BaseTensorValue data;
+  value::BaseTensorValue dtype_like;
+  MNM_OP_SCHEMA(CastLikeArgs, "mnm.args.cast_like");
+};
+
 class ClipArgs : public ir::AttrsNode<ClipArgs> {
  public:
   value::BaseTensorValue x;

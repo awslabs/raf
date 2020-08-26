@@ -10,22 +10,23 @@ __all__ = [
     "_allreduce", "abs", "add", "all", "any",
     "argmax", "argmin", "atan", "avg_pool2d", "avg_pool2d_dx",
     "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
-    "bias_add", "broadcast_to", "broadcast_to_like", "ceil", "clip",
-    "clip_dx", "collapse_sum_like", "concatenate", "concatenate_dx", "conv2d",
-    "conv2d_dw", "conv2d_dx", "copy", "cos", "dense",
-    "divide", "equal", "erf", "erf_dx", "exp",
-    "expand_dims", "floor", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
-    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
-    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
-    "min", "minimum", "mod", "multiply", "negative",
-    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
-    "relu", "relu_dx", "repeat", "reshape", "reverse",
-    "reverse_sequence", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "stack", "subtract", "sum", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "bias_add", "broadcast_to", "broadcast_to_like", "cast", "cast_like",
+    "ceil", "clip", "clip_dx", "collapse_sum_like", "concatenate",
+    "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx", "copy",
+    "cos", "dense", "divide", "equal", "erf",
+    "erf_dx", "exp", "expand_dims", "floor", "get_kept_dims",
+    "get_reduce_axis", "get_valid_counts", "greater", "greater_equal", "layer_norm",
+    "layer_norm_dx", "less", "less_equal", "log", "log_softmax",
+    "log_softmax_dx", "logical_not", "matmul", "matmul_nt", "matmul_tn",
+    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
+    "mean", "mean_dx", "min", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "non_max_suppression", "not_equal", "relu", "relu_dx", "repeat",
+    "reshape", "reverse", "reverse_sequence", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "softmax", "softmax_dx",
+    "split", "sqrt", "sqrt_dx", "stack", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -145,6 +146,16 @@ def broadcast_to_like(x, broadcast_type):
     x = sym_utils.to_tensor(x)
     broadcast_type = sym_utils.to_tensor(broadcast_type)
     return Symbol.from_expr(ffi.broadcast_to_like(x, broadcast_type))
+
+def cast(data, dtype):
+    data = sym_utils.to_tensor(data)
+    dtype = sym_utils.to_string(dtype)
+    return Symbol.from_expr(ffi.cast(data, dtype))
+
+def cast_like(data, dtype_like):
+    data = sym_utils.to_tensor(data)
+    dtype_like = sym_utils.to_tensor(dtype_like)
+    return Symbol.from_expr(ffi.cast_like(data, dtype_like))
 
 def ceil(x):
     x = sym_utils.to_any(x)

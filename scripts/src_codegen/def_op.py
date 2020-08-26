@@ -97,6 +97,8 @@ OPS = [
     Op(name="bias_add", schema_name="bias_add"),
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
     Op(name="_allreduce", schema_name="_allreduce"),
+    Op(name="cast", schema_name="cast"),
+    Op(name="cast_like", schema_name="cast_like")
 ]
 
 

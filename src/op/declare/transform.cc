@@ -410,6 +410,29 @@ MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues& call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
+MNM_OP_DECLARE("mnm.op.cast", [](const CallValues& call) {
+  const auto* args = call->args.as<CastArgs>();
+  CHECK(args != nullptr);
+  DLTensor* data = args->data;
+  std::string dtype = args->dtype;
+  std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+                                    /*dtype=*/ir::String2DLDataType(dtype),
+                                    /*shape=*/shape);
+  call->ctx = data->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
+MNM_OP_DECLARE("mnm.op.cast_like", [](const CallValues& call) {
+  const auto* args = call->args.as<CastLikeArgs>();
+  CHECK(args != nullptr);
+  DLTensor* dtype_like = args->dtype_like;
+  std::vector<int64_t> shape(dtype_like->shape, dtype_like->shape + dtype_like->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/dtype_like->ctx,
+                                    /*dtype=*/dtype_like->dtype,
+                                    /*shape=*/shape);
+  call->ctx = dtype_like->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

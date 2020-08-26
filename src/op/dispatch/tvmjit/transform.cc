@@ -450,6 +450,45 @@ HashKey ClipDxHasher(const std::vector<Type>& param_types, const Type& y_type,
 }
 
 MNM_TVMJIT(ClipDx, "mnm.op.clip_dx", ClipDxArgs, ClipDxNormalizer, ClipDxTyper, ClipDxHasher);
+
+Attrs CastNormalizer(TVMOpEnv* env, const CastArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->data);
+  auto attrs = make_object<CastAttrs>();
+  attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
+  return Attrs(attrs);
+}
+
+void CastTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey CastHasher(const std::vector<Type>& param_types, const Type& y_type, const CastArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << ir::String2DLDataType(args->dtype);
+  return key;
+}
+
+MNM_TVMJIT(Cast, "mnm.op.cast", CastArgs, CastNormalizer, CastTyper, CastHasher);
+
+Attrs CastLikeNormalizer(TVMOpEnv* env, const CastLikeArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(2);
+  env->inputs[0] = GetDLTensor(args->data);
+  env->inputs[1] = GetDLTensor(args->dtype_like);
+  return Attrs();
+}
+
+void CastLikeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  y_type[0] = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
+}
+
+MNM_TVMJIT(CastLike, "mnm.op.cast_like", CastLikeArgs, CastLikeNormalizer, CastLikeTyper,
+           GenericHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

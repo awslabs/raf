@@ -323,6 +323,14 @@ SCHEMAS = {
         Arg(name="a_min", cxx_type="double"),
         Arg(name="a_max", cxx_type="double"),
     ],
+    "transform.h::cast": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="dtype", cxx_type="std::string"),
+    ],
+    "transform.h::cast_like": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="dtype_like", cxx_type="value::BaseTensorValue"),
+    ],
     "vision.h::get_valid_counts": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="score_threshold", cxx_type="double",
