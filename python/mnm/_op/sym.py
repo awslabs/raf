@@ -566,9 +566,9 @@ def softmax_dx(x, y, dy, axis=-1):
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.softmax_dx(x, y, dy, axis))
 
-def split(x, indices_or_sections, axis=0):
+def split(x, indices_or_sections=None, axis=0):
     x = sym_utils.to_tensor(x)
-    indices_or_sections = sym_utils.to_int_tuple(indices_or_sections)
+    indices_or_sections = sym_utils.to_any(indices_or_sections)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.split(x, indices_or_sections, axis))
 

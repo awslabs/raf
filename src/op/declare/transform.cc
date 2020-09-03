@@ -369,20 +369,43 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
   const auto* args = call->args.as<SplitArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
-  std::vector<int64_t> indices_or_sections = args->indices_or_sections;
   int axis = NormalizeAxis(args->axis, x->ndim);
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  int64_t start = 0;
-  int64_t end = 0;
   std::vector<TensorValue> ret;
-  indices_or_sections.push_back(x->shape[axis]);
-  for (size_t i = 0; i < indices_or_sections.size(); ++i) {
-    start = end;
-    end = indices_or_sections[i];
-    shape[axis] = end - start;
-    ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
-                                        /*dtype=*/x->dtype,
-                                        /*shape=*/shape));
+
+  value::Value indices_or_sections = args->indices_or_sections;
+
+  // indices_or_sections can be of 2 types - Integer or a tuple. The 2 types are handled
+  // differently.
+  if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
+    // Handling first type - integer scalar - sections
+    int64_t sections = scalar->data;
+    CHECK_EQ(x->shape[axis] % sections, 0)
+        << "indices_or_sections need to be able to divide input.shape[axis]";
+
+    for (size_t i = 0; i < sections; ++i) {
+      std::vector<int64_t> oshape(x->shape, x->shape + x->ndim);
+      oshape[axis] = oshape[axis] / sections;
+      ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
+                                          /*dtype=*/x->dtype,
+                                          /*shape=*/oshape));
+    }
+  } else if (const auto* tup = indices_or_sections.as<TupleValueObj>()) {
+    // Handling second type - tuple values - indices
+    std::vector<int64_t> indices;
+    for (auto field : tup->fields) {
+      auto int_value = field.as<IntValueObj>();
+      indices.push_back(int_value->data);
+    }
+    indices.push_back(x->shape[axis]);
+    int64_t begin = 0;
+    for (size_t i = 0; i < indices.size(); ++i) {
+      std::vector<int64_t> oshape(x->shape, x->shape + x->ndim);
+      oshape[axis] = indices[i] - begin;
+      begin = indices[i];
+      ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
+                                          /*dtype=*/x->dtype,
+                                          /*shape=*/oshape));
+    }
   }
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
   call->ctx = x->ctx;

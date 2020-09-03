@@ -653,9 +653,9 @@ def softmax_dx(x, y, dy, axis=-1):
     return imp_utils.ret(ffi.softmax_dx(x, y, dy, axis))
 
 @set_module("mnm")
-def split(x, indices_or_sections, axis=0):
+def split(x, indices_or_sections=None, axis=0):
     x = imp_utils.to_tensor(x)
-    indices_or_sections = imp_utils.to_int_tuple(indices_or_sections)
+    indices_or_sections = imp_utils.to_any(indices_or_sections)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.split(x, indices_or_sections, axis))
 

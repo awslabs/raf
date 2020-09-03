@@ -18,6 +18,9 @@ def to_any(a):
     if isinstance(a, (Number, str)):
         return a
 
+    if isinstance(a, tuple):
+        return to_int_tuple(a)
+
     return to_tensor(a)
 
 

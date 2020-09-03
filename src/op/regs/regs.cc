@@ -489,7 +489,7 @@ Attrs SoftmaxDx(const TVMArgs& values, GradTape* tapes) {
 Attrs Split(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::SplitArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_POD(1, ffi2schema::IntOrTupleInt, indices_or_sections);
+  MNM_TAPE(1, ffi2schema::ArrayLike, indices_or_sections);
   MNM_POD(2, ffi2schema::Int, axis);
   return Attrs(attrs);
 }
@@ -1504,7 +1504,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.softmax_dx").set_body([](TVMArgs args, TVMRetVal
 MNM_REGISTER_GLOBAL("mnm.op.imp.split").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(split, 3, ffi2schema::Split, schema::SplitArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->indices_or_sections));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->indices_or_sections));
   MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->axis));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1970,7 +1970,7 @@ Array<Expr> SoftmaxDx(const TVMArgs& values) {
 Array<Expr> Split(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::IntOrTupleInt, indices_or_sections);
+  MNM_ARG(1, ffi2expr::ArrayLike, indices_or_sections);
   MNM_ARG(2, ffi2expr::Int, axis);
   MNM_RET();
 }
@@ -2628,9 +2628,9 @@ Attrs SoftmaxDx(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Split(const Array<Value>& values) {
-  MNM_PRELUDE(2, 3, schema::SplitArgs);
+  MNM_PRELUDE(1, 3, schema::SplitArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::IntOrTupleInt, indices_or_sections);
+  MNM_OPTIONAL(1, value2schema::ArrayLike, indices_or_sections);
   MNM_OPTIONAL(2, value2schema::Int, axis);
   return Attrs(attrs);
 }

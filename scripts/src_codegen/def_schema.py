@@ -187,9 +187,7 @@ SCHEMAS = {
     ],
     "nn.h::split": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="indices_or_sections",
-            cxx_type="std::vector<int64_t>",
-            cxx_normalizer="IntTuple"),
+        Arg(name="indices_or_sections", cxx_type="value::Value", cxx_default="nullptr"),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
     "loss.h::loss": [

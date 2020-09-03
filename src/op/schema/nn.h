@@ -194,7 +194,7 @@ class SoftmaxDxArgs : public ir::AttrsNode<SoftmaxDxArgs> {
 class SplitArgs : public ir::AttrsNode<SplitArgs> {
  public:
   value::BaseTensorValue x;
-  std::vector<int64_t> indices_or_sections;
+  value::Value indices_or_sections{nullptr};
   int axis{0};
   MNM_OP_SCHEMA(SplitArgs, "mnm.args.split");
 };

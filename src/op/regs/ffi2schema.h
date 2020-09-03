@@ -38,6 +38,24 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
   if (type_code == kDLFloat) {
     return FloatValue::make(a.operator double());
   }
+  const Object* _ptr = a.ptr<Object>();
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
+    ir::Array<Value> fields;
+    for (const ObjectRef& i : *n) {
+      if (const auto* e = i.as<IntImmNode>()) {
+        int64_t val = e->value;
+        fields.push_back(IntValue::make(val));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
+                 << "because the " << ToOrdinal(fields.size()) << " member is of type \""
+                 << i->GetTypeKey() << '"';
+      throw;
+    }
+    return value::TupleValue::make(std::move(fields));
+  }
+
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not array-like";
   throw;

@@ -34,7 +34,8 @@ namespace value2schema {
 inline value::Value ArrayLike(const value::Value& a) {
   MNM_PRELUDE_ALLOW_NULL();
   if (a->IsInstance<IntValueObj>() || a->IsInstance<FloatValueObj>() ||
-      a->IsInstance<BoolValueObj>() || a->IsInstance<BaseTensorValueObj>()) {
+      a->IsInstance<BoolValueObj>() || a->IsInstance<BaseTensorValueObj>() ||
+      a->IsInstance<TupleValueObj>()) {
     return a;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()

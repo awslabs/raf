@@ -303,12 +303,25 @@ Attrs BroadcastToLikeNormalizer(TVMOpEnv* env, const BroadcastToLikeArgs* args) 
 
 Attrs SplitNormalizer(TVMOpEnv* env, const SplitArgs* args) {
   using namespace tvm;
-  const auto& indices_or_sections = args->indices_or_sections;
-  CHECK_EQ(env->outputs.size(), indices_or_sections.size() + 1);
   env->inputs.resize(1);
   env->inputs[0] = GetDLTensor(args->x);
   auto attrs = make_object<SplitAttrs>();
-  attrs->indices_or_sections = mnm::common::shape_utils::StdVector2Array(indices_or_sections);
+  value::Value indices_or_sections = args->indices_or_sections;
+  // Scalar is sections, Tuple value is indices
+  if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
+    int64_t sections = scalar->data;
+    CHECK_EQ(env->outputs.size(), sections);
+    attrs->indices_or_sections = IntImm(ir::DataType::Int(32), sections);
+  } else if (const auto* tup = indices_or_sections.as<TupleValueObj>()) {
+    std::vector<int64_t> indices;
+    for (auto field : tup->fields) {
+      auto int_value = field.as<IntValueObj>();
+      indices.push_back(int_value->data);
+    }
+    CHECK_EQ(env->outputs.size(), indices.size() + 1);
+    attrs->indices_or_sections = mnm::common::shape_utils::StdVector2Array(indices);
+  }
+
   attrs->axis = args->axis;
   return Attrs(attrs);
 }

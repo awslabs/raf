@@ -200,9 +200,9 @@ def test_broadcast_to_like(shape, ctx):
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
-@pytest.mark.parametrize("shape", [[10, 20, 30], [6, 8, 9, 3]])
+@pytest.mark.parametrize("shape", [[10, 20, 30], [6, 8, 10, 3]])
 @pytest.mark.parametrize("axis", [0, 1, 2])
-@pytest.mark.parametrize("indices_or_sections", [(2, 4), (1, 4)])
+@pytest.mark.parametrize("indices_or_sections", [(2, 4), (1, 4), 2, (2,)])
 def test_split(shape, axis, indices_or_sections, ctx):
     m_x, n_x = randn(shape, ctx=ctx)
     m_y = mnm.split(m_x, indices_or_sections=indices_or_sections, axis=axis)
