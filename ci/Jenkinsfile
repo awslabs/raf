@@ -1,5 +1,5 @@
-ci_cpu = "tigerchang/mnm:ci_cpu-v0.09"
-ci_gpu = "tigerchang/mnm:ci_gpu-v0.09"
+ci_cpu = "xiaoxia51/mnm:ci_cpu-v0.10"
+ci_gpu = "xiaoxia51/mnm:ci_gpu-v0.10"
 
 docker_run = 'docker/bash.sh'
 max_time = 120

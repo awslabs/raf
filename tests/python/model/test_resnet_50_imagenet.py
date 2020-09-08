@@ -8,7 +8,7 @@ from mnm.model import BatchNorm, Conv2d, Linear, Sequential
 from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
 
 
-class TorchBottleneck(nn.Module):
+class TorchBottleneck(nn.Module):  # pylint: disable=abstract-method
     expansion = 4
 
     def __init__(self, inplanes, planes, stride):
@@ -63,7 +63,9 @@ class TorchBottleneck(nn.Module):
         return out
 
 
-class TorchResNet50(nn.Module):  # pylint: disable=too-many-instance-attributes
+class TorchResNet50(nn.Module):
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=abstract-method
     def __init__(self, layers, num_classes=1000):
         super(TorchResNet50, self).__init__()
         self.inplanes = 64

@@ -8,7 +8,7 @@ from mnm.model import Linear
 from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
 
 
-class TorchMlp(nn.Module):
+class TorchMlp(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, num_inputs, num_outputs, num_hiddens1, num_hiddens2):
         super(TorchMlp, self).__init__()
         self.fc1 = nn.Linear(num_inputs, num_hiddens1)

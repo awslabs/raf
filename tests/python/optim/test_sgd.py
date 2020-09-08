@@ -46,7 +46,7 @@ def t2m_param(param, ctx="cuda"):
     return mnm.ndarray(param.detach().numpy(), ctx=ctx)  # pylint: disable=unexpected-keyword-arg
 
 
-class TorchTest(nn.Module):
+class TorchTest(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchTest, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3,

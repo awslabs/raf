@@ -51,7 +51,7 @@ class MNMBottleNeck(mnm.Model):
         return out
 
 
-class TorchPreActBottleneck(torch.nn.Module):
+class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
     '''Pre-activation version of the original Bottleneck module.'''
     expansion = 4
 

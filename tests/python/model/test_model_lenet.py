@@ -8,7 +8,7 @@ from mnm.model import Conv2d, Linear
 
 from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
 
-class TorchLeNet(nn.Module):
+class TorchLeNet(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchLeNet, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3,
