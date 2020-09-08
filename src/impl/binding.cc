@@ -94,10 +94,11 @@ Var MakeManagedBinding(const BindingEntry& entry, const std::string& name_hint,
 
 Var BindNDArray(Value value, GradTape tape, std::string name_hint) {
   std::string grad_name_hint = "d" + name_hint;
+  Type type = op::type::GetType(value);
   return MakeManagedBinding(NDArrayBinding::make(
                                 /*value=*/std::move(value),
                                 /*tape=*/tape),
-                            name_hint, op::type::GetType(value));
+                            name_hint, type);
 }
 
 void RebindNDArray(Var var, Value value, GradTape tape) {
