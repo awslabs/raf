@@ -15,3 +15,4 @@ from . import pass_
 from . import profiler
 from . import tensor
 from . import value
+from . import vm

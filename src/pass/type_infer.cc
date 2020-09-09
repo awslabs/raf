@@ -28,8 +28,6 @@ using namespace tvm::relay;
 using tvm::TypeFunctor;
 using tvm::relay::transform::Pass;
 
-Expr InferType(Expr func);
-
 Type Unify(const Type& src, const Type& dst);
 
 Value GetValue(Type type);
@@ -372,13 +370,17 @@ Type Unify(const Type& src, const Type& dst) {
   return unifier.Unify(src, dst);
 }
 
-Expr InferType(Expr func) {
-  TypeInferencer(Module()).VisitExpr(func);
-  return func;
+}  // namespace type_infer
+
+ir::Module InferType(ir::Module mod) {
+  auto ti = type_infer::TypeInferencer(mod);
+  for (auto kv : mod->functions) {
+    ti.VisitExpr(kv.second);
+  }
+  return mod;
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed(InferType);
 
-}  // namespace type_infer
 }  // namespace pass
 }  // namespace mnm

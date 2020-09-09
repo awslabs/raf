@@ -1,14 +1,16 @@
-import numpy as np
 import pytest
+import numpy as np
 import mnm
-from mnm._lib import tvm, relay
-
+from mnm._core.executor import VMExecutor
+from mnm._core.module import Module
+import tvm
 
 def get_ctx_list():
-    ret = ["cpu"]
+    ret = ["llvm"]
     if mnm.build.with_cuda():
         ret.append("cuda")
     return ret
+
 
 def randn(shape, *, ctx="cpu", dtype="float32"):
     x = np.random.randn(*shape)
@@ -25,7 +27,7 @@ def randn(shape, *, ctx="cpu", dtype="float32"):
     [3, 3],
     [4, 4]
 ])
-def test_memory_alloc(ctx, shape):
+def test_vm(ctx, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -38,19 +40,17 @@ def test_memory_alloc(ctx, shape):
             z = mnm.add(x, y)
             return z
 
-    model_before = Model()
-    model_before.infer_mode()
+    model = Model()
+    model.infer_mode()
     m_x, _ = randn(shape, ctx=ctx)
-    func = model_before.get_relay_func(m_x)
-    mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})
-    mod = mnm._ffi.pass_.InferType(mod)
-    target_name = ctx if ctx != 'cpu' else 'llvm'
-    with tvm.target.create(target_name):
-        mod = mnm._ffi.pass_.ManifestAlloc(mod)
-    text = mod['main'].astext()
-    assert "alloc_storage" in text
-    assert "alloc_tensor" in text
-    assert "invoke_op" in text
+    mod = Module()
+    func = model.get_relay_func(m_x)
+    mod[tvm.ir.GlobalVar('main')] = func
+    executor = VMExecutor(mod, ctx)
+    m_z = executor.make_executor()(m_x).asnumpy()
+    ref_z = model(m_x).asnumpy()
+    np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
 
-if __name__ == "__main__":
-    pytest.main([__file__])
+    executable = executor.executable
+    assert len(executable.globals) == 1
+    assert executable.globals[0] == 'main'

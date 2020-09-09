@@ -25,5 +25,6 @@ ir::Module LambdaLift(ir::Module mod);
  */
 ir::Module ManifestAlloc(ir::Module mod);
 ir::Expr CanonicalizeOps(ir::Expr expr);
+ir::Module InferType(ir::Module mod);
 }  // namespace pass
 }  // namespace mnm

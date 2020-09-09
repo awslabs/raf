@@ -42,8 +42,9 @@ def test_canonicalize_ops_bias_add_ir():
 
     model_before = ModelWithBiasAdd(bias)
     func_before = model_before.get_relay_func(x)
+    mod = mnm._ffi.ir._make.Module({tvm.relay.GlobalVar("main"): func_before})
     # infer type
-    func_infer_type = mnm._ffi.pass_.InferType(func_before)
+    func_infer_type = mnm._ffi.pass_.InferType(mod)['main']
     # canonicalize ops
     func_canonicalized = mnm._ffi.pass_.CanonicalizeOps(func_infer_type)
     func_expected = expected()
