@@ -35,6 +35,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/modules/NCCL.cmake)
 set(MNM_INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/include/
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/src
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dlpack/include/
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dmlc-core/include/
 )

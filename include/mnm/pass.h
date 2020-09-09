@@ -26,5 +26,12 @@ ir::Module LambdaLift(ir::Module mod);
 ir::Module ManifestAlloc(ir::Module mod);
 ir::Expr CanonicalizeOps(ir::Expr expr);
 ir::Module InferType(ir::Module mod);
+/*!
+ * \brief Fuse the operators in the expression.
+ * \param expr Expression to be fused.
+ * \param fuse_opt_level Optimization level. If it is 0, then no operators will be fused.
+ * \return Transformed expression.
+ */
+ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level);
 }  // namespace pass
 }  // namespace mnm

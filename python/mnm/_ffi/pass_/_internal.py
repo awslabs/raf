@@ -12,6 +12,8 @@ CanonicalizeOps = _APIS.get("mnm.pass_.CanonicalizeOps", None)
 ExtractBinding = _APIS.get("mnm.pass_.ExtractBinding", None)
 # Defined in ./src/pass/fold_const.cc
 FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
+# Defined in ./src/pass/fuse_ops.cc
+FuseOps = _APIS.get("mnm.pass_.FuseOps", None)
 # Defined in ./src/pass/type_infer.cc
 InferType = _APIS.get("mnm.pass_.InferType", None)
 # Defined in ./src/pass/lambda_lift.cc

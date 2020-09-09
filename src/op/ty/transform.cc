@@ -16,13 +16,8 @@ namespace op {
 namespace type {
 
 using namespace mnm::value;
+using namespace schema;
 using declare::NormalizeAxis;
-using schema::CastArgs;
-using schema::CastLikeArgs;
-using schema::ConcatenateArgs;
-using schema::TransposeArgs;
-using schema::TransposeDxArgs;
-using schema::UnaryArgs;
 using tvm::relay::Type;
 
 Type TransposeInfer(const CallValues& value) {
@@ -126,6 +121,33 @@ Type CastLikeInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.cast_like", "CastLike", CastLikeInfer);
+
+Type ExpandDimsInfer(const CallValues& value) {
+  using namespace tvm;
+  using namespace tvm::relay;
+  const auto* args = value->args.as<ExpandDimsArgs>();
+  CHECK(args);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  int ndim = x->shape.size();
+  int axis = args->axis;
+  CHECK(-ndim - 1 <= axis && axis <= ndim)
+      << "ValueError: invalid axis (expand_dims) = " << axis << " on ndim = " << ndim;
+  axis = axis < 0 ? axis + ndim + 1 : axis;
+  int num_newaxis = args->num_newaxis;
+  Array<PrimExpr> oshape;
+  for (int i = 0; i < axis; ++i) {
+    oshape.push_back(x->shape[i]);
+  }
+  for (int i = 0; i < num_newaxis; ++i) {
+    oshape.push_back(1);
+  }
+  for (int i = axis; i < ndim; ++i) {
+    oshape.push_back(x->shape[i]);
+  }
+  return TensorType(oshape, x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.expand_dims", "ExpandDims", ExpandDimsInfer);
 
 }  // namespace type
 }  // namespace op

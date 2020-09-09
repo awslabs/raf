@@ -6,6 +6,7 @@ from ._internal import BindParam
 from ._internal import CanonicalizeOps
 from ._internal import ExtractBinding
 from ._internal import FoldConstant
+from ._internal import FuseOps
 from ._internal import InferType
 from ._internal import LambdaLift
 from ._internal import ManifestAlloc

@@ -87,14 +87,6 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
   MNM_OP_SCHEMA(ConvDxwArgs, "mnm.args.conv_dxw");
 };
 
-class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
- public:
-  value::BaseTensorValue x;
-  int axis;
-  int num_newaxis{1};
-  MNM_OP_SCHEMA(ExpandDimsArgs, "mnm.args.expand_dims");
-};
-
 class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
  public:
   value::BaseTensorValue x;

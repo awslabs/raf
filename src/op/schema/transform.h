@@ -43,6 +43,14 @@ class ClipDxArgs : public ir::AttrsNode<ClipDxArgs> {
   MNM_OP_SCHEMA(ClipDxArgs, "mnm.args.clip_dx");
 };
 
+class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
+ public:
+  value::BaseTensorValue x;
+  int axis;
+  int num_newaxis{1};
+  MNM_OP_SCHEMA(ExpandDimsArgs, "mnm.args.expand_dims");
+};
+
 class GatherNdArgs : public ir::AttrsNode<GatherNdArgs> {
  public:
   value::BaseTensorValue data;

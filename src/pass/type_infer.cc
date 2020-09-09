@@ -40,7 +40,7 @@ Value GetValue(Expr expr);
     throw;                                              \
   }
 
-class TypeInferencer : public ExprFunctor<Type(const Expr&)> {
+class TypeInferencer : public ExprMutator {
  public:
   // MNM_NODE_NOT_IMPL(RefReadNode)
   // MNM_NODE_NOT_IMPL(RefWriteNode)
@@ -50,44 +50,35 @@ class TypeInferencer : public ExprFunctor<Type(const Expr&)> {
   TypeInferencer(Module mod) : mod_(mod) {
   }
 
-  Type GetType(const Value& v) {
+  Type GetValueType(const Value& v) {
     return op::type::GetType(v);
   }
 
-  Type VisitExpr(const Expr& e) override {
-    if (e->checked_type_.defined()) {
-      if (!e->checked_type_.as<IncompleteTypeNode>()) {
-        return e->checked_type_;
-      }
-    }
-    Type ret = ExprFunctor::VisitExpr(e);
-    e->checked_type_ = ret;
-    return ret;
-  }
-
-  Type VisitExpr_(const VarNode* op) override {
+  Expr VisitExpr_(const VarNode* op) override {
     if (op->type_annotation.defined()) {
-      return op->type_annotation;
+      op->checked_type_ = op->type_annotation;
+    } else if (!op->checked_type_.defined()) {
+      op->checked_type_ = IncompleteType(kType);
     }
-    return IncompleteType(kType);
+    return GetRef<Var>(op);
   }
 
-  Type VisitExpr_(const GlobalVarNode* op) override {
+  Expr VisitExpr_(const GlobalVarNode* op) override {
     CHECK(mod_.defined());
     return VisitExpr(mod_->Lookup(GetRef<GlobalVar>(op)));
   }
 
-  Type VisitExpr_(const CallNode* op) override {
-    const Call& call = GetRef<Call>(op);
+  Expr VisitExpr_(const CallNode* call) override {
+    Array<Expr> args;
     for (const auto& arg : call->args) {
-      VisitExpr(arg);
+      args.push_back(VisitExpr(arg));
     }
-    VisitExpr(call->op);
-    Type ret;
-    if (const FunctionNode* fn = call->op.as<FunctionNode>()) {
-      ret = InferClosure(call, fn);
-    } else if (const OpNode* opn = call->op.as<OpNode>()) {
-      ret = InferPrimitive(call, opn);
+    Expr op = VisitExpr(call->op);
+    Call ret = Call(op, args, call->attrs, call->type_args);
+    if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {
+      ret->checked_type_ = InferClosure(ret, fn);
+    } else if (const OpNode* opn = ret->op.as<OpNode>()) {
+      ret->checked_type_ = InferPrimitive(ret, opn);
     } else {
       LOG(FATAL) << "Invalid op type: " << call->op->GetTypeKey();
     }
@@ -126,51 +117,71 @@ class TypeInferencer : public ExprFunctor<Type(const Expr&)> {
     return fty->ret_type;
   }
 
-  Type VisitExpr_(const RelayConstantNode* op) override {
+  Expr VisitExpr_(const RelayConstantNode* op) override {
     using tensor::Tensor;
-    return GetType(TensorValue::make(Tensor::FromDLPack(op->data.ToDLPack())));
+    op->checked_type_ = GetValueType(TensorValue::make(Tensor::FromDLPack(op->data.ToDLPack())));
+    return GetRef<Expr>(op);
   }
 
-  Type VisitExpr_(const IfNode* node) override {
-    VisitExpr(node->cond);
-    Type ttype = VisitExpr(node->true_branch);
-    Type ftype = VisitExpr(node->false_branch);
-    return Unify(ttype, ftype);
-  }
-
-  Type VisitExpr_(const LetNode* op) override {
-    Type vtype = VisitExpr(op->value);
-    op->var->checked_type_ = vtype;
-    return VisitExpr(op->body);
-  }
-
-  Type VisitExpr_(const TupleNode* op) override {
-    Array<Type> ret;
-    for (const auto& e : op->fields) {
-      ret.push_back(VisitExpr(e));
-    }
-    return TupleType(ret);
-  }
-
-  Type VisitExpr_(const TupleGetItemNode* op) override {
-    TupleType tt = Downcast<TupleType>(op->tuple);
-    return tt->fields[op->index];
-  }
-
-  Type VisitExpr_(const OpNode* op) override {
-    static const auto op_type = Op::GetAttrMap<OpType>("OpType");
-    return op_type[GetRef<Op>(op)];
-  }
-
-  Type VisitExpr_(const FunctionNode* op) override {
-    Array<Type> arg_types;
-    for (const auto& v : op->params) {
-      arg_types.push_back(VisitExpr(v));
-    }
-    Type ret_type =
-        op->ret_type.defined() ? Unify(VisitExpr(op->body), op->ret_type) : VisitExpr(op->body);
-    Type ret = FuncType(arg_types, ret_type, op->type_params, {});
+  Expr VisitExpr_(const IfNode* node) override {
+    Expr cond = VisitExpr(node->cond);
+    Expr true_branch = VisitExpr(node->true_branch);
+    Expr false_branch = VisitExpr(node->false_branch);
+    Expr ret = If(cond, true_branch, false_branch);
+    ret->checked_type_ = Unify(true_branch->checked_type(), false_branch->checked_type());
     return ret;
+  }
+
+  Expr VisitExpr_(const LetNode* op) override {
+    Expr value = VisitExpr(op->value);
+    Var var = op->var;
+    var->checked_type_ = value->checked_type();
+    Expr body = VisitExpr(op->body);
+    Let let(var, value, body);
+    let->checked_type_ = body->checked_type();
+    return let;
+  }
+
+  Expr VisitExpr_(const TupleNode* op) override {
+    Array<Expr> fields;
+    Array<Type> types;
+    for (const auto& e : op->fields) {
+      auto f = VisitExpr(e);
+      fields.push_back(f);
+      types.push_back(f->checked_type());
+    }
+    Tuple ret(fields);
+    ret->checked_type_ = TupleType(types);
+    return ret;
+  }
+
+  Expr VisitExpr_(const TupleGetItemNode* op) override {
+    auto tup = VisitExpr(op->tuple);
+    TupleGetItem ret(tup, op->index);
+    ret->checked_type_ = Downcast<TupleType>(tup->checked_type())->fields[op->index];
+    return ret;
+  }
+
+  Expr VisitExpr_(const OpNode* op) override {
+    static const auto op_type = Op::GetAttrMap<OpType>("OpType");
+    op->checked_type_ = op_type[GetRef<Op>(op)];
+    return GetRef<Expr>(op);
+  }
+
+  Expr VisitExpr_(const FunctionNode* op) override {
+    Array<Var> params;
+    Array<Type> param_types;
+    for (const auto& p : op->params) {
+      Var param = Downcast<Var>(VisitExpr(p));
+      params.push_back(param);
+      param_types.push_back(param->checked_type());
+    }
+    Expr body = VisitExpr(op->body);
+    Type ret_type =
+        op->ret_type.defined() ? Unify(body->checked_type(), op->ret_type) : body->checked_type();
+    Function func(params, body, ret_type, op->type_params, op->attrs);
+    func->checked_type_ = FuncType(param_types, ret_type, op->type_params, {});
+    return func;
   }
 
  private:
@@ -233,7 +244,7 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
 
   Type VisitType_(const TensorTypeNode* op, const Type& tn) final {
     const auto* tt_node = tn.as<TensorTypeNode>();
-    CHECK(!tt_node);
+    CHECK(tt_node);
     auto tt1 = GetRef<TensorType>(op);
     auto tt2 = GetRef<TensorType>(tt_node);
     if (tvm::StructuralEqual()(tt1, tt2)) {
@@ -373,11 +384,20 @@ Type Unify(const Type& src, const Type& dst) {
 }  // namespace type_infer
 
 ir::Module InferType(ir::Module mod) {
-  auto ti = type_infer::TypeInferencer(mod);
-  for (auto kv : mod->functions) {
-    ti.VisitExpr(kv.second);
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  auto ti = type_infer::TypeInferencer(updated_mod);
+  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      auto func = tvm::runtime::Downcast<ir::Function>(ti.VisitExpr(kv.second));
+      updated_funcs.emplace_back(kv.first, func);
+    }
   }
-  return mod;
+
+  for (const auto& it : updated_funcs) {
+    updated_mod->Add(it.first, it.second, true);
+  }
+  return updated_mod;
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed(InferType);

@@ -54,3 +54,6 @@ def test_vm(ctx, shape):
     executable = executor.executable
     assert len(executable.globals) == 1
     assert executable.globals[0] == 'main'
+
+if __name__ == "__main__":
+    pytest.main([__file__])

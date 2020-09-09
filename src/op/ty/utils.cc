@@ -13,7 +13,7 @@ namespace type {
 using namespace value;
 using namespace tvm;
 
-class Typer : public ValueFunctor<Type(const Value&)> {
+class ValueTyper : public ValueFunctor<Type(const Value&)> {
   Type VisitValue_(const TensorValueObj* value) override {
     const DLTensor* x = GetRef<Value>(value);
     auto shape = std::vector<Integer>(x->shape, x->shape + x->ndim);
@@ -38,7 +38,7 @@ Type GetType(Value value) {
   if (!value.defined()) {
     return Type();
   }
-  Typer typer;
+  ValueTyper typer;
   return typer(value);
 }
 

@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import mnm
+from mnm.testing import run_infer_type
 import tvm
 
 def randn(shape, *, ctx="cpu", dtype="float32"):
@@ -42,12 +43,13 @@ def test_canonicalize_ops_bias_add_ir():
 
     model_before = ModelWithBiasAdd(bias)
     func_before = model_before.get_relay_func(x)
-    mod = mnm._ffi.ir._make.Module({tvm.relay.GlobalVar("main"): func_before})
     # infer type
-    func_infer_type = mnm._ffi.pass_.InferType(mod)['main']
+    func_infer_type = run_infer_type(func_before)
     # canonicalize ops
     func_canonicalized = mnm._ffi.pass_.CanonicalizeOps(func_infer_type)
-    func_expected = expected()
+    func_canonicalized = run_infer_type(func_canonicalized)
+    # expected
+    func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_canonicalized, func_expected)
 
 if __name__ == "__main__":

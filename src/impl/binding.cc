@@ -96,7 +96,7 @@ Var BindNDArray(Value value, GradTape tape, std::string name_hint) {
   std::string grad_name_hint = "d" + name_hint;
   Type type = op::type::GetType(value);
   return MakeManagedBinding(NDArrayBinding::make(
-                                /*value=*/std::move(value),
+                                /*value=*/value,
                                 /*tape=*/tape),
                             name_hint, type);
 }

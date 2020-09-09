@@ -129,11 +129,6 @@ SCHEMAS = {
         Arg(name="indices", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
     ],
-    "nn.h::expand_dims": [
-        Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="axis", cxx_type="int"),
-        Arg(name="num_newaxis", cxx_type="int", cxx_default=1),
-    ],
     "nn.h::repeat": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="repeats", cxx_type="int"),
@@ -328,6 +323,11 @@ SCHEMAS = {
     "transform.h::cast_like": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="dtype_like", cxx_type="value::BaseTensorValue"),
+    ],
+    "transform.h::expand_dims": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int"),
+        Arg(name="num_newaxis", cxx_type="int", cxx_default=1),
     ],
     "vision.h::get_valid_counts": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
