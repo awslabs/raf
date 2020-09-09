@@ -134,5 +134,12 @@ class MetaCache {
   }
 };
 
+template <int n>
+static std::vector<int64_t> Pad(const std::vector<int64_t>& a) {
+  int size = a.size();
+  CHECK(size == 1 || size == n);
+  return size == 1 ? std::vector<int64_t>(n, a[0]) : a;
+}
+
 }  // namespace op
 }  // namespace mnm

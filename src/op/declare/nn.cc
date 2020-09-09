@@ -7,6 +7,7 @@
 #include "mnm/tensor.h"
 #include "../schema/nn.h"
 #include "./declare_utils.h"
+#include "../op_utils.h"
 
 namespace mnm {
 namespace op {
@@ -14,13 +15,6 @@ namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
-
-template <int n>
-static std::vector<int64_t> Pad(const std::vector<int64_t>& a) {
-  int size = a.size();
-  CHECK(size == 1 || size == n);
-  return size == 1 ? std::vector<int64_t>(n, a[0]) : a;
-}
 
 MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
   // N.B.: NCHW + OIHW

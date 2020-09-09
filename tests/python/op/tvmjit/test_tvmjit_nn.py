@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+import torch.nn.functional as F
 import mnm
 
 
@@ -21,8 +22,8 @@ def randn(shape, *, ctx="cpu", dtype="float32"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
+def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
+    x = np.random.randn(*shape) * std
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)
@@ -191,6 +192,42 @@ def test_layer_norm(ctx, shape, axis, eps, dtype):
     # check backward
     m_y.backward(m_dy)
     check(m_x.grad, mx_x.grad.asnumpy(), rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
+@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("dilation", [1])
+@pytest.mark.parametrize("padding", [0, 1, 2])
+def test_conv2d(ctx, dtype, xshape, wshape, stride, dilation, padding):
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments
+    # N.B.: NCHW + OIHW
+    # forward
+    class Conv2D(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x, w):  # pylint: disable=no-self-use
+            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+
+    model = Conv2D()
+    # forward
+    m_x, t_x = randn_torch(xshape, std=0.001, ctx=ctx, dtype=dtype)
+    m_w, t_w = randn_torch(wshape, std=0.01, ctx=ctx, dtype=dtype)
+    m_x.requires_grad = True
+    m_w.requires_grad = True
+    m_y = model(m_x, m_w)
+    t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
+    check_torch(m_y, t_y, rtol=1e-4, atol=1e-4)
+    # backward
+    m_dy, t_dy = randn_torch(t_y.shape, ctx=ctx, dtype=dtype)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check_torch(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
+    check_torch(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ namespace op {
 namespace tvmjit {
 namespace tvm_attrs {
 using tvm::relay::BiasAddAttrs;
+using tvm::relay::Conv2DAttrs;
 using tvm::relay::ReduceAttrs;
 }  // namespace tvm_attrs
 }  // namespace tvmjit

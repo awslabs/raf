@@ -11,6 +11,7 @@
 #include "mnm/type.h"
 #include "../schema/nn.h"
 #include "./utils.h"
+#include "../op_utils.h"
 
 namespace mnm {
 namespace op {
@@ -28,13 +29,6 @@ using schema::BiasAddArgs;
 using schema::ConvArgs;
 using schema::PoolArgs;
 using schema::SoftmaxArgs;
-
-template <int n>
-static std::vector<int64_t> Pad(const std::vector<int64_t>& a) {
-  int size = a.size();
-  CHECK(size == 1 || size == n);
-  return size == 1 ? std::vector<int64_t>(n, a[0]) : a;
-}
 
 Type Conv2DInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvArgs>();
