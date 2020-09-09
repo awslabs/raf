@@ -117,6 +117,17 @@ Array<Expr> CastGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 
 MNM_OP_GRAD("mnm.op.cast", CastGrad);
 
+Array<Expr> GatherNdGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto gather_nd_dx = Op::Get("mnm.op.gather_nd_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& data = call->args[0];
+  const Expr& indices = call->args[1];
+  return {Call(gather_nd_dx, {data, indices, dy})};
+}
+
+MNM_OP_GRAD("mnm.op.gather_nd", GatherNdGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

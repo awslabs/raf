@@ -50,3 +50,37 @@ def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argum
 
 
 _reg.register_injective_schedule("mnm.op.clip_dx")
+
+# pylint: disable=too-many-locals
+@register_compute("mnm.op.gather_nd_dx")
+def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    data, indices, dy = inputs
+    ind_s = _topi.util.get_const_tuple(indices.shape)
+    ind_l = len(ind_s)
+    x = ind_s[0]
+    ind_s_1 = ind_s[1:]
+    data_s = _topi.util.get_const_tuple(data.shape)
+    data_s_0 = data_s[:x]
+    def compute_match(*idx):
+        ind_i = idx[:ind_l - 1]
+        data_i = idx[ind_l - 1:]
+        ret = _tvm.tir.const(True, "bool")
+        for i in range(x):
+            ind_idx = (i,) + ind_i
+            ret = _tvm.tir.And(ret, indices[ind_idx] == data_i[i])
+        return ret
+    match = _tvm.te.compute(ind_s_1 + data_s_0, compute_match)
+    def compute_temp(*idx):
+        ind_i = idx[:ind_l - 1]
+        data_i_0 = idx[ind_l - 1: ind_l - 1 + x]
+        data_i_1 = idx[ind_l - 1 + x:]
+        temp_cond = match[ind_i + data_i_0]
+        t_val = dy[ind_i + data_i_1]
+        f_val = _tvm.tir.const(0, dy.dtype)
+        return _tvm.tir.if_then_else(temp_cond, t_val, f_val)
+    temp = _tvm.te.compute(ind_s_1 + data_s, compute_temp)
+    ret = _topi.sum(temp, axis=tuple(range(0, ind_l - 1)))
+    return [ret]
+
+_reg.register_injective_schedule("mnm.op.gather_nd")
+_reg.register_injective_schedule("mnm.op.gather_nd_dx")

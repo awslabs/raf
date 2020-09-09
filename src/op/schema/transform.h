@@ -43,6 +43,21 @@ class ClipDxArgs : public ir::AttrsNode<ClipDxArgs> {
   MNM_OP_SCHEMA(ClipDxArgs, "mnm.args.clip_dx");
 };
 
+class GatherNdArgs : public ir::AttrsNode<GatherNdArgs> {
+ public:
+  value::BaseTensorValue data;
+  value::BaseTensorValue indices;
+  MNM_OP_SCHEMA(GatherNdArgs, "mnm.args.gather_nd");
+};
+
+class GatherNdDxArgs : public ir::AttrsNode<GatherNdDxArgs> {
+ public:
+  value::BaseTensorValue data;
+  value::BaseTensorValue indices;
+  value::BaseTensorValue dy;
+  MNM_OP_SCHEMA(GatherNdDxArgs, "mnm.args.gather_nd_dx");
+};
+
 class ReverseArgs : public ir::AttrsNode<ReverseArgs> {
  public:
   value::BaseTensorValue x;

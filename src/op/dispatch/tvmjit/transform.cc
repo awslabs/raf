@@ -502,6 +502,48 @@ void CastLikeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) 
 MNM_TVMJIT(CastLike, "mnm.op.cast_like", CastLikeArgs, CastLikeNormalizer, CastLikeTyper,
            GenericHasher);
 
+Attrs GatherNdNormalizer(TVMOpEnv* env, const GatherNdArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->data),
+      GetDLTensor(args->indices),
+  };
+  return Attrs();
+}
+
+void GatherNdTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+  };
+}
+
+MNM_TVMJIT(GatherNd, "mnm.op.gather_nd", GatherNdArgs, GatherNdNormalizer, GatherNdTyper,
+           GenericHasher);
+
+Attrs GatherNdDxNormalizer(TVMOpEnv* env, const GatherNdDxArgs* args) {
+  using namespace tvm;
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(3);
+  env->inputs[0] = GetDLTensor(args->data);
+  env->inputs[1] = GetDLTensor(args->indices);
+  env->inputs[2] = GetDLTensor(args->dy);
+  return Attrs();
+}
+
+void GatherNdDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
+  };
+}
+
+MNM_TVMJIT(GatherNdDx, "mnm.op.gather_nd_dx", GatherNdDxArgs, GatherNdDxNormalizer, GatherNdDxTyper,
+           GenericHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

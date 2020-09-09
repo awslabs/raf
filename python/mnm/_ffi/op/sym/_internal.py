@@ -81,6 +81,10 @@ expand_dims = _APIS.get("mnm.op.sym.expand_dims", None)
 # Defined in ./src/op/regs/regs.cc
 floor = _APIS.get("mnm.op.sym.floor", None)
 # Defined in ./src/op/regs/regs.cc
+gather_nd = _APIS.get("mnm.op.sym.gather_nd", None)
+# Defined in ./src/op/regs/regs.cc
+gather_nd_dx = _APIS.get("mnm.op.sym.gather_nd_dx", None)
+# Defined in ./src/op/regs/regs.cc
 get_kept_dims = _APIS.get("mnm.op.sym.get_kept_dims", None)
 # Defined in ./src/op/regs/regs.cc
 get_reduce_axis = _APIS.get("mnm.op.sym.get_reduce_axis", None)

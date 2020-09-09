@@ -98,7 +98,9 @@ OPS = [
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
     Op(name="_allreduce", schema_name="_allreduce"),
     Op(name="cast", schema_name="cast"),
-    Op(name="cast_like", schema_name="cast_like")
+    Op(name="cast_like", schema_name="cast_like"),
+    Op(name="gather_nd", schema_name="gather_nd"),
+    Op(name="gather_nd_dx", schema_name="gather_nd_dx"),
 ]
 
 

@@ -508,7 +508,6 @@ def test_expand_dims(ctx, shape, axis, num_newaxis):
     m_y.backward(m_dy)
     check(m_x.grad, np.reshape(n_dy, n_x.shape))
 
-
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
 @pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
@@ -541,6 +540,38 @@ def test_cast(shape, ctx, itype, otype):
     m_y.backward(m_dy)
     check(m_x.grad, n_dy.astype(itype))
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
+@pytest.mark.parametrize("ishape", [[3, 4, 2], [4, 5, 3]])
+def test_gather_nd(dshape, ishape, ctx):
+    # pylint: disable=no-self-use
+    class GatherNd(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, data, indices):
+            return mnm.gather_nd(data, indices)
+
+    m_x, n_x = randn(dshape, ctx=ctx)
+    m_i = randint(ishape, high=dshape[0: ishape[-1]], ctx=ctx)[0]
+    mx_x = mx.nd.array(n_x)
+    m_x.requires_grad = True
+    mx_x.attach_grad()
+    idim = len(ishape)
+    m_i = mnm.transpose(m_i, axes=[idim - 1] + list(range(idim - 1)))
+    mx_i = mx.nd.array(m_i.asnumpy())
+    # check forward
+    model = GatherNd()
+    m_y = model(m_x, m_i)
+    m_dy, n_dy = randn(m_y.shape, ctx=ctx)
+    mx_dy = mx.nd.array(n_dy)
+    with mx.autograd.record():
+        mx_y = mx.nd.gather_nd(mx_x, mx_i)
+        mx_y.backward(mx_dy)
+    check(m_y, mx_y.asnumpy())
+    # check backward
+    m_y.backward(m_dy)
+    check(m_x.grad, mx_x.grad.asnumpy())
 
 if __name__ == "__main__":
     pytest.main([__file__])
