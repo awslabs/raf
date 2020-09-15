@@ -32,14 +32,29 @@ using namespace mnm::value;
     return;                                    \
   })
 
+#define MNM_UNARY_TENSOR(x)                     \
+  if (x->IsInstance<TensorValueObj>()) {        \
+    const TensorValue& tv = MakeUnaryTensor(x); \
+    call->out = tv;                             \
+    call->ctx = tv->tensor->ctx;                \
+    return;                                     \
+  }
+
 #define MNM_DECLARE_UNARY_OP(op_name, body) \
   MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kElemWise)
+
+TensorValue MakeUnaryTensor(DLTensor* x) {
+  int ndim = x->ndim;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  return TensorValue::Assemble(x->ctx, x->dtype, shape);
+}
 
 MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryUfuncArgs>();
   CHECK(args != nullptr);
   if (!args->out.defined() && !args->where.defined()) {
     MNM_UNARY_SCALAR(-, args->x);
+    MNM_UNARY_TENSOR(args->x)
   }
   LOG(FATAL) << "NotImplementedError";
   throw;

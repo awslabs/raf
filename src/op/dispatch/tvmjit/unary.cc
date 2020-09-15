@@ -16,8 +16,10 @@ using namespace mnm::ir;
 using common::shape_utils::GetNumel;
 using schema::UnaryArgs;
 using schema::UnaryDxArgs;
+using schema::UnaryUfuncArgs;
 
-Attrs UnaryNormalizer(TVMOpEnv* env, const UnaryArgs* args) {
+template <typename T>
+Attrs UnaryNormalizer(TVMOpEnv* env, const T* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs.resize(1);
   env->shape_slots.resize(1);
@@ -67,6 +69,7 @@ MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHas
 MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper, GenericHasher);
 MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Negative, "mnm.op.negative", UnaryUfuncArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

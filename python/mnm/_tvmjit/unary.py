@@ -18,6 +18,7 @@ _reg.register_broadcast_schedule("mnm.op.log")
 _reg.register_broadcast_schedule("mnm.op.sqrt")
 _reg.register_broadcast_schedule("mnm.op.atan")
 _reg.register_broadcast_schedule("mnm.op.relu")
+_reg.register_broadcast_schedule("mnm.op.negative")
 
 @register_compute("mnm.op.erf_dx")
 def erf_dx_compute(attrs, inputs, output_type):

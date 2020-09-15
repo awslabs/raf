@@ -67,6 +67,7 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
         (np.exp, mnm.exp),
         (np.arctan, mnm.atan),
         (special.erf, mnm.erf),  # pylint: disable=no-member
+        (np.negative, mnm.negative)
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
