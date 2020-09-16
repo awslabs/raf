@@ -1,13 +1,13 @@
 # pylint: disable=missing-function-docstring
 """Reduction compute definition and schedules."""
 from .._lib import register_compute
-from .._lib import topi as _topi
 from .._lib import tvm as _tvm
 from .._lib import _reg
 
+_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.sum")
-def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,no-member
     x = inputs[0]
     axes = list(_topi.util.get_const_tuple(attrs.axis))
     keep = list(_topi.util.get_const_tuple(attrs.keepdims))

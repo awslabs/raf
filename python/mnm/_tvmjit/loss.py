@@ -1,10 +1,10 @@
 # pylint: disable=missing-function-docstring
 """Compute definition and schedules for loss functions."""
 from .._lib import register_compute
-from .._lib import topi as _topi  # pylint: disable=unused-import
 from .._lib import tvm as _tvm
 from .._lib import _reg
 
+_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.nll_loss")
 def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument

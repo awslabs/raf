@@ -2,10 +2,11 @@
 # pylint: disable=missing-module-docstring
 from .._lib import register_compute
 from .._lib import generic_func
-from .._lib import topi as _topi
 from .._lib import tvm as _tvm
 from .._lib import _reg
 from .._lib import strategy
+
+_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.take_dx")
 def take_dx_compute(attrs, inputs, output_type):

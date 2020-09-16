@@ -7,7 +7,7 @@ set(OpenGL_GL_PREFERENCE "GLVND")
 # Introduce targets from tvm
 add_subdirectory(${PROJECT_SOURCE_DIR}/3rdparty/tvm/)
 # Get rid of clang's warning: argument unused during compilation: '-rdynamic'
-set_target_properties(tvm tvm_runtime tvm_topi PROPERTIES
+set_target_properties(tvm tvm_runtime PROPERTIES
   COMPILE_FLAGS -Wno-unused-command-line-argument
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib

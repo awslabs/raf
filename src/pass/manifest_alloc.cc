@@ -125,7 +125,7 @@ class ManifestAllocMutator : public ExprMutator {
     auto alloc_storage_attrs = make_object<tvm::relay::AllocStorageAttrs>();
     alloc_storage_attrs->dtype = type->dtype;
     auto target = tvm::Target::Current();
-    alloc_storage_attrs->device_type = target.defined() ? target->id->device_type : kDLCPU;
+    alloc_storage_attrs->device_type = target.defined() ? target->kind->device_type : kDLCPU;
     alloc_storage_attrs->device_id = 0;
     auto storage = scope->Push(Call(Op::Get("mnm.op.vm.alloc_storage"),
                                     Array<Expr>{size, alignment}, Attrs(alloc_storage_attrs)));

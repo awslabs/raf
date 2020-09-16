@@ -91,9 +91,9 @@ PackedFunc CompileOp(const Op& op,                          //
   tvm::Target target;
   {
     if (ctx.device_type == DevType::kCPU()) {
-      target = tvm::target::llvm();
+      target = tvm::Target("llvm");
     } else if (ctx.device_type == DevType::kCUDA()) {
-      target = tvm::target::cuda();
+      target = tvm::Target("cuda");
     } else {
       LOG(FATAL) << "NotImplementedError: target is not supported " << ctx.device_type.c_str();
       throw;

@@ -6,7 +6,7 @@ import pytest
 import mxnet as mx
 import torch
 import mnm
-import topi.testing
+import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 
 
 def get_ctx_list():
@@ -110,7 +110,7 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     m_x, n_x = randn(x_shape, ctx=ctx)
     m_length, n_length = randint([batch_size], low=0, high=max_length, ctx=ctx)
     m_y = mnm.sequence_mask(m_x, m_length, axis=axis, mask_value=-10)
-    n_y = topi.testing.sequence_mask(n_x, n_length, axis=axis, mask_value=-10)
+    n_y = npx.sequence_mask(n_x, n_length, axis=axis, mask_value=-10)
     check(m_y, n_y)
 
 

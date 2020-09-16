@@ -5,7 +5,6 @@ docker_run = 'docker/bash.sh'
 max_time = 120
 
 mnm_multilib = "build/config.cmake, " +
-               "build/lib/libtvm_topi.so, " +
                "build/lib/libtvm.so, " +
                "build/lib/libmnm.so"
 

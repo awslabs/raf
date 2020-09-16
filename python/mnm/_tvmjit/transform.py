@@ -1,10 +1,10 @@
 # pylint: disable=missing-function-docstring
 """Compute definition and schedules for data transform operators"""
 from .._lib import register_compute
-from .._lib import topi as _topi
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
 
+_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.transpose_dx")
 def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument

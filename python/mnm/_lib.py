@@ -6,7 +6,7 @@ import os
 import readline
 import sys
 
-import topi
+import tvm.topi as topi
 import tvm
 import tvm.relay as relay
 from tvm._ffi.base import TVMError as _TVMError
