@@ -48,6 +48,7 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     (np.subtract, mnm.subtract),
     (np.maximum, mnm.maximum),
     (np.minimum, mnm.minimum),
+    (np.greater, mnm.greater),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
@@ -72,6 +73,7 @@ def test_binary_ops(ops, shape, dtype, ctx):
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("ops", [
     (torch.mul, mnm._op.sym.multiply),
+    (torch.div, mnm._op.sym.divide),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],

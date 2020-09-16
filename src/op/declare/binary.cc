@@ -41,10 +41,18 @@ using namespace mnm::value;
     return;                                                                   \
   }
 
+#define MNM_LOGICAL_BINARY_TENSOR(x1, x2)                                     \
+  if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
+    const TensorValue& tv = MakeBinaryTensor(x1, x2, true);                   \
+    call->out = tv;                                                           \
+    call->ctx = tv->tensor->ctx;                                              \
+    return;                                                                   \
+  }
+
 #define MNM_REGISTER_BINARY_BCAST_OP(op_name, body) \
   MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kBroadcast)
 
-TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2) {
+TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false) {
   int ndim_1 = x1->ndim;
   int ndim_2 = x2->ndim;
   int ndim = std::max(ndim_1, ndim_2);
@@ -62,6 +70,13 @@ TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2) {
       LOG(FATAL) << "Cannot broadcast";
       throw;
     }
+  }
+  if (is_logical) {
+    DLDataType dtype;
+    dtype.code = DLDataTypeCode(1);
+    dtype.bits = 1;
+    dtype.lanes = 1;
+    return TensorValue::Assemble(x1->ctx, dtype, oshape);
   }
   return TensorValue::Assemble(x1->ctx, x1->dtype, oshape);
 }
@@ -120,6 +135,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.divide", [](const CallValues& call) {
                         call->out = ScalarValue::make(s1->data / s2->data);
                         return;
                       }));
+    MNM_BINARY_TENSOR(x1, x2);
   }
   LOG(FATAL) << "NotImplementedError";
   throw;
@@ -175,6 +191,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
   const Value& x2 = args->x2;
   if (!args->out.defined() && !args->where.defined()) {
     MNM_BINARY_SCALAR(>, x1, x2);
+    MNM_LOGICAL_BINARY_TENSOR(x1, x2);
   }
   LOG(FATAL) << "NotImplementedError";
   throw;

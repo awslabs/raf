@@ -11,6 +11,7 @@ from mnm._ffi.value import ToTVM
 from mnm._lib import _register_func, relay, tvm_ndarray
 from mnm._lib import TensorContainer as _DLManagedTensor
 
+
 @set_module("mnm")  # pylint: disable=invalid-name,too-many-instance-attributes
 class ndarray:
     def __init__(  # pylint: disable=too-many-arguments
@@ -181,6 +182,31 @@ class ndarray:
         self.__handle = self.__handle
         self.requires_grad = self.requires_grad
 
+    def __sub__(self, other):
+        """x.__sub__(y) <=> x - y"""
+        from mnm._op.imp import subtract  # pylint: disable=import-outside-toplevel,cyclic-import
+        return subtract(self, other)
+
+    def __add__(self, other):
+        """x.__add__(y) <=> x + y"""
+        from mnm._op.imp import add  # pylint: disable=import-outside-toplevel,cyclic-import
+        return add(self, other)
+
+    def __mul__(self, other):
+        """x.__mul__(y) <=> x * y"""
+        from mnm._op.imp import multiply  # pylint: disable=import-outside-toplevel,cyclic-import
+        return multiply(self, other)
+
+    def __div__(self, other):
+        """x.__div__(y) <=> x / y"""
+        from mnm._op.imp import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+        return divide(self, other)
+
+    def __truediv__(self, other):
+        """x.__div__(y) <=> x / y"""
+        from mnm._op.imp import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+        return divide(self, other)
+
     @property
     def grad(self):
         if not self.requires_grad:
@@ -242,6 +268,31 @@ class Symbol:  # pylint: disable=too-few-public-methods
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")
+
+    def __sub__(self, other):
+        """x.__sub__(y) <=> x - y"""
+        from mnm._op.sym import subtract  # pylint: disable=import-outside-toplevel,cyclic-import
+        return subtract(self, other)
+
+    def __add__(self, other):
+        """x.__add__(y) <=> x + y"""
+        from mnm._op.sym import add  # pylint: disable=import-outside-toplevel,cyclic-import
+        return add(self, other)
+
+    def __mul__(self, other):
+        """x.__mul__(y) <=> x * y"""
+        from mnm._op.sym import multiply  # pylint: disable=import-outside-toplevel,cyclic-import
+        return multiply(self, other)
+
+    def __div__(self, other):
+        """x.__div__(y) <=> x / y"""
+        from mnm._op.sym import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+        return divide(self, other)
+
+    def __truediv__(self, other):
+        """x.__div__(y) <=> x / y"""
+        from mnm._op.sym import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+        return divide(self, other)
 
 
 def _np_to_tensor_value(npa, ctx=None):

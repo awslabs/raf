@@ -38,7 +38,10 @@ void BinaryTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
 MNM_TVMJIT(Add, "mnm.op.add", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper, GenericHasher);
 MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
            GenericHasher);
+MNM_TVMJIT(Divide, "mnm.op.divide", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper, GenericHasher);
 MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
+           GenericHasher);
+MNM_TVMJIT(Greater, "mnm.op.greater", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
            GenericHasher);
 MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
            GenericHasher);
