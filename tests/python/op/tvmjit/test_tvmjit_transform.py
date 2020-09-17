@@ -204,9 +204,26 @@ def test_broadcast_to_like(shape, ctx):
 @pytest.mark.parametrize("axis", [0, 1, 2])
 @pytest.mark.parametrize("indices_or_sections", [(2, 4), (1, 4), 2, (2,)])
 def test_split(shape, axis, indices_or_sections, ctx):
+    class Split(mnm.Model):
+        def build(self, indices_or_sections, axis):
+            self._indices_or_sections = indices_or_sections
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, x):
+            ret = mnm.split(x, self._indices_or_sections, self._axis)
+            return ret[0], ret[1]
     m_x, n_x = randn(shape, ctx=ctx)
-    m_y = mnm.split(m_x, indices_or_sections=indices_or_sections, axis=axis)
     n_y = np.split(n_x, indices_or_sections=indices_or_sections, axis=axis)
+    # test hybridized call
+    model = Split(indices_or_sections, axis)
+    m_y0, m_y1 = model(m_x)
+    n_y0, n_y1 = n_y[0], n_y[1]
+    check(m_y0, n_y0)
+    check(m_y1, n_y1)
+
+    # test imperative call
+    m_y = mnm.split(m_x, indices_or_sections=indices_or_sections, axis=axis)
     assert len(m_y) == len(n_y)
     for m, n in zip(m_y, n_y):
         check(m, n)

@@ -138,6 +138,8 @@ class ConstantFolder : public ExprMutator {
       return Tuple(fields);
     } else if (value->IsInstance<value::TensorValueObj>()) {
       return MakeConstant(Downcast<value::TensorValue>(value));
+    } else if (value->IsInstance<value::TupleValueObj>()) {
+      return MakeConstant(Downcast<value::TupleValue>(value));
     } else {
       LOG(FATAL) << "Cannot handle " << value->GetTypeKey();
       return Expr();
