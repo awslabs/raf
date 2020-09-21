@@ -101,6 +101,7 @@ OPS = [
     Op(name="cast_like", schema_name="cast_like"),
     Op(name="gather_nd", schema_name="gather_nd"),
     Op(name="gather_nd_dx", schema_name="gather_nd_dx"),
+    Op(name="argsort", schema_name="argsort"),
 ]
 
 

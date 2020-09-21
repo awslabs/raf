@@ -12,6 +12,7 @@
 #include "./value2schema.h"
 #include "./schema2value.h"
 #include "../schema/list_args.h"
+#include "../schema/algorithm.h"
 #include "../schema/communication.h"
 #include "../schema/likes.h"
 #include "../schema/loss.h"
@@ -41,6 +42,7 @@ static const char all[] = "mnm.op.all";
 static const char any[] = "mnm.op.any";
 static const char argmax[] = "mnm.op.argmax";
 static const char argmin[] = "mnm.op.argmin";
+static const char argsort[] = "mnm.op.argsort";
 static const char atan[] = "mnm.op.atan";
 static const char avg_pool2d[] = "mnm.op.avg_pool2d";
 static const char avg_pool2d_dx[] = "mnm.op.avg_pool2d_dx";
@@ -167,6 +169,15 @@ namespace ffi2schema {
 Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::AllreduceArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+Attrs Argsort(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ArgsortArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::Int, axis);
+  MNM_POD(2, ffi2schema::Bool, is_ascend);
+  MNM_POD(3, ffi2schema::String, dtype);
   return Attrs(attrs);
 }
 
@@ -727,6 +738,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.argmin").set_body([](TVMArgs args, TVMRetValue* 
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
   MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.argsort").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(argsort, 4, ffi2schema::Argsort,
+              schema::ArgsortArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->is_ascend));
+  MNM_SET_ENV(vpack->x[3], schema2value::String(schema->dtype));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1685,6 +1707,15 @@ Array<Expr> Allreduce(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Argsort(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_ARG(2, ffi2expr::Bool, is_ascend);
+  MNM_ARG(3, ffi2expr::String, dtype);
+  MNM_RET();
+}
+
 Array<Expr> BatchNorm(const TVMArgs& values) {
   MNM_PRELUDE(7);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2157,6 +2188,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.all").set_body(MNM_SYMBOLIC_API(all, 3, Reduce))
 MNM_REGISTER_GLOBAL("mnm.op.sym.any").set_body(MNM_SYMBOLIC_API(any, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmax").set_body(MNM_SYMBOLIC_API(argmax, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmin").set_body(MNM_SYMBOLIC_API(argmin, 3, Reduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym.argsort").set_body(MNM_SYMBOLIC_API(argsort, 4, Argsort));
 MNM_REGISTER_GLOBAL("mnm.op.sym.atan").set_body(MNM_SYMBOLIC_API(atan, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d").set_body(MNM_SYMBOLIC_API(avg_pool2d, 7, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
@@ -2324,6 +2356,16 @@ template <const char* op_name>
 Attrs Allreduce(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::AllreduceArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Argsort(const Array<Value>& values) {
+  MNM_PRELUDE(1, 4, schema::ArgsortArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_OPTIONAL(1, value2schema::Int, axis);
+  MNM_OPTIONAL(2, value2schema::Bool, is_ascend);
+  MNM_OPTIONAL(3, value2schema::String, dtype);
   return Attrs(attrs);
 }
 
@@ -2845,7 +2887,9 @@ MNM_BIND_SCHEMA("mnm.op.any", names::any, value2schema::Reduce);  // NOLINT(whit
 MNM_BIND_SCHEMA("mnm.op.argmax", names::argmax,
                 value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmin", names::argmin,
-                value2schema::Reduce);                             // NOLINT(whitespace/line_length)
+                value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.argsort", names::argsort,
+                value2schema::Argsort);                            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.atan", names::atan, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", names::avg_pool2d,
                 value2schema::Pool);  // NOLINT(whitespace/line_length)
@@ -3028,6 +3072,7 @@ namespace schema {
 namespace {
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
 MNM_REGISTER_OBJECT_REFLECT(AllreduceArgs);
+MNM_REGISTER_OBJECT_REFLECT(ArgsortArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
 MNM_REGISTER_OBJECT_REFLECT(BiasAddArgs);

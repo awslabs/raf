@@ -8,6 +8,7 @@ from ._internal import all
 from ._internal import any
 from ._internal import argmax
 from ._internal import argmin
+from ._internal import argsort
 from ._internal import atan
 from ._internal import avg_pool2d
 from ._internal import avg_pool2d_dx
