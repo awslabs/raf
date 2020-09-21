@@ -70,6 +70,8 @@ MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper,
 MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Negative, "mnm.op.negative", UnaryUfuncArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Sigmoid, "mnm.op.sigmoid", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Tanh, "mnm.op.tanh", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

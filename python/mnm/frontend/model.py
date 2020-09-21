@@ -15,30 +15,48 @@ class FrameworkModel(BaseModel):
     infer_func : Expr
         Forward function
 
-    params : Dict[str, ndarray]
+    arg_params : Dict[str, ndarray]
         Model parameters
+
+    aux_params : Dict[str, ndarray]
+        Auxiliary params, not learnable
     """
-    def __init__(self, train_func, infer_func, params):
+    def __init__(self, train_func, infer_func, arg_params, aux_params):
         super(FrameworkModel, self).__init__()
         self.__train_func = train_func
         self.__infer_func = infer_func
-        self.__params = params
+        self.__arg_params = arg_params
+        self.__aux_params = aux_params
+        for param in self.__aux_params.values():
+            param.requires_grad = False
 
     def __call__(self, *args, **kwargs):
-        func_inputs = [arg._ndarray__handle for arg in args]
-        func_inputs += [param._ndarray__handle for param in self.__params.values()]
+        func = self.__infer_func
         if self._BaseModel__is_train:
-            return _unwrap(RunModel(self.__train_func, func_inputs))
-        return _unwrap(RunModel(self.__infer_func, func_inputs))
+            func = self.__train_func
+        func_inputs = list()
+        arg_index = 0
+        for var_node in func.params:
+            var_name = var_node.name_hint
+            if var_name in self.__arg_params:
+                func_inputs.append(self.__arg_params[var_name]._ndarray__handle)
+            elif var_name in self.__aux_params:
+                func_inputs.append(self.__aux_params[var_name]._ndarray__handle)
+            elif var_name in kwargs:
+                func_inputs.append(kwargs[var_name]._ndarray__handle)
+            else:
+                func_inputs.append(args[arg_index]._ndarray__handle)
+                arg_index += 1
+        return _unwrap(RunModel(func, func_inputs))
 
     def train_mode(self, recursive=True):
         self._BaseModel__is_train = True  # pylint: disable=invalid-name, attribute-defined-outside-init
-        for param in self.__params.values():
+        for param in self.__arg_params.values():
             param.requires_grad = True
 
     def infer_mode(self, recursive=True):
         self._BaseModel__is_train = False  # pylint: disable=invalid-name, attribute-defined-outside-init
-        for param in self.__params.values():
+        for param in self.__arg_params.values():
             param.requires_grad = False
 
     def get_relay_func(self, *args, **kwargs):
@@ -46,9 +64,12 @@ class FrameworkModel(BaseModel):
         return ret
 
     def state(self, prefix="", recursive=True):
-        return self.__params
+        return self.__arg_params
 
     def to(self, *, ctx=None, dtype=None):  # pylint: disable=invalid-name
-        for name, param in self.__params.items():
+        for name, param in self.__arg_params.items():
             new_param = param.to(ctx=ctx, dtype=dtype)
-            self.__params[name] = new_param
+            self.__arg_params[name] = new_param
+        for name, param in self.__aux_params.items():
+            new_param = param.to(ctx=ctx, dtype=dtype)
+            self.__aux_params[name] = new_param

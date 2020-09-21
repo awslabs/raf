@@ -1,15 +1,34 @@
 # pylint: disable=invalid-name, no-else-return, protected-access, too-many-lines
 # pylint: disable=no-member, unused-argument
+# pylint: disable=too-many-locals, too-many-arguments, too-many-statements, too-many-branches
 """MXNet symbol frontend."""
 import json
-from collections import OrderedDict
 
 from mnm._core.ndarray import Symbol, ndarray
+from mnm._core.ndarray import array as mnm_array
 from mnm._ffi.pass_ import ExtractBinding
 from mnm._lib import relay
 from mnm._op import sym as op
 from mnm.frontend.model import FrameworkModel
 
+_saved_reshape_inputs = dict()
+_extra_aux_params = dict()
+
+def _generator():
+    """ Generate unique names - returns a function. """
+    def f():
+        f.count += 1
+        return 'aux_param' + str(f.count)
+    f.count = 0
+    return f
+_unique_name = _generator()
+
+
+_activation_map = {
+    "sigmoid": op.sigmoid,
+    "tanh"   : op.tanh,
+    "relu"   : op.relu
+}
 
 def _mx_conv(inputs, attrs, is_train):
     def _mx_conv2d(inputs, attrs):
@@ -108,13 +127,206 @@ def _mx_activations(inputs, attrs, is_train):
 def _mx_add(inputs, attrs, is_train):
     return [op.add(inputs[0], inputs[1])]
 
+
+def _mx_reshape(inputs, attrs, is_train):
+    shape = attrs.get_int_tuple("shape")
+    reverse = attrs.get_bool("reverse", False)
+    if reverse:
+        return op.reverse_reshape(inputs[0], newshape=shape)
+    out = op.reshape(inputs[0], shape=shape)
+    _saved_reshape_inputs[out] = inputs[0]
+    return [out]
+
+
+def _mx_rnn_param_concat(inputs, attrs, _):
+    # We don't need to concatenate RNN params because we will unravel the RNN op
+    return [inputs]
+
+
+def _mx_rnn_layer(inputs, attrs, is_train):
+    def _rnn_cell(data, states, i2h_weight, h2h_weight, i2h_bias, h2h_bias, activation):
+        i2h = op.bias_add(op.dense(data, i2h_weight), i2h_bias, axis=-1)
+        h2h = op.bias_add(op.dense(states[0], h2h_weight), h2h_bias, axis=-1)
+        out = _activation_map[activation](op.add(i2h, h2h))
+        return out, [out]
+
+    def _gru_cell(data, states, i2h_weight, h2h_weight, i2h_bias, h2h_bias):
+        dtype = 'float32'
+        i2h = op.bias_add(op.dense(data, i2h_weight), i2h_bias, axis=-1)
+        h2h = op.bias_add(op.dense(states[0], h2h_weight), h2h_bias, axis=-1)
+        i2h_split = op.split(i2h, indices_or_sections=3, axis=1)
+        i2h_r, i2h_z, i2h = i2h_split[0], i2h_split[1], i2h_split[2]
+        h2h_split = op.split(h2h, indices_or_sections=3, axis=1)
+        h2h_r, h2h_z, h2h = h2h_split[0], h2h_split[1], h2h_split[2]
+        reset_gate = _activation_map["sigmoid"](op.add(i2h_r, h2h_r))
+        update_gate = _activation_map["sigmoid"](op.add(i2h_z, h2h_z))
+        next_h_tmp = _activation_map["tanh"](op.add(op.multiply(reset_gate, h2h), i2h))
+        name = _unique_name()
+        indices = mnm_array(1, dtype=dtype)
+        _extra_aux_params[name] = indices
+
+        next_h = op.add(op.multiply(op.subtract(Symbol.make_var(name_hint=name),
+                                                update_gate),
+                                    next_h_tmp),
+                        op.multiply(update_gate, states[0]))
+        return next_h, [next_h]
+
+    def _lstm_cell(data, states, i2h_weight, h2h_weight, i2h_bias, h2h_bias):
+        i2h = op.bias_add(op.dense(data, i2h_weight), i2h_bias, axis=-1)
+        h2h = op.bias_add(op.dense(states[0], h2h_weight), h2h_bias, axis=-1)
+        gates = op.add(i2h, h2h)
+        slice_gates = op.split(gates, indices_or_sections=4, axis=1)
+        in_gate = _activation_map["sigmoid"](slice_gates[0])
+        forget_gate = _activation_map["sigmoid"](slice_gates[1])
+        in_transform = _activation_map["tanh"](slice_gates[2])
+        out_gate = _activation_map["sigmoid"](slice_gates[3])
+        next_c = op.add(op.multiply(forget_gate, states[1]), op.multiply(in_gate, in_transform))
+        next_h = op.multiply(out_gate, _activation_map["tanh"](next_c))
+        return next_h, [next_h, next_c]
+
+    num_layers = attrs.get_int("num_layers", 1)
+    mode = attrs.get_str("mode")
+    output_states = attrs.get_bool("state_outputs", False)
+    if mode.startswith("rnn"):
+        mode, activation = mode.split('_')
+    assert mode in ["rnn", "gru", "lstm"]
+    bidirectional = attrs.get_bool("bidirectional", False)
+    direct = 2 if bidirectional else 1
+    layout = attrs.get_str("layout", "TNC")
+    if layout != "TNC":
+        raise NotImplementedError(
+            "RNN with layout other than TNC is not supported yet")
+    num_states = 2 if mode == 'lstm' else 1
+    assert len(inputs) == num_states + 2
+
+    seq_data = inputs[0]
+    concat_weight = inputs[1]
+    init_states = inputs[2:]
+    # TODO - Assuming seq_len of 1
+    seq_len = 1
+    assert len(concat_weight) == num_layers * 4 * direct
+
+    ## expr = _infer_type(seq_data)
+    ## data_shape = expr.checked_type.shape
+    ## seq_len = int(data_shape[0])
+
+    # TODO - This code not exercised yet
+    # for idx, state in enumerate(init_states[:]):
+    #     if isinstance(state, dict):
+    #         node = state
+    #         attrs = StrAttrsDict(node.get("attrs", {}))
+    #         op_name = node["op"]
+    #         # by default, RNN layer uses zeros to initialize states
+    #         assert op_name == "_zeros"
+    #         shape = attrs.get_int_tuple("shape")
+    #         dtype = attrs.get_str("dtype", "float32")
+    #         init_layout = attrs.get_str("__layout__")
+    #         new_shape = list(shape)
+    #         for i, dim in enumerate(shape):
+    #             if dim == 0:
+    #                 axis = layout.find(init_layout[i])
+    #                 assert axis >= 0
+    #                 new_shape[i] = int(data_shape[axis])
+    #         init_states[idx] = op.zeros(new_shape, dtype)
+
+    weights = []
+    bias = []
+    states = []
+    back_weights = []
+    back_bias = []
+    back_states = []
+
+    concat_weight_args = list()
+    for c in concat_weight:
+        concat_weight_args.append(_saved_reshape_inputs[c])
+    for i in range(num_layers):
+        weights.append([concat_weight_args[i*2*direct],
+                        concat_weight_args[i*2*direct + 1]])
+        bias.append([concat_weight_args[(num_layers+i)*2*direct],
+                     concat_weight_args[(num_layers+i)*2*direct + 1]])
+        s = []
+        for state in init_states:
+            name = _unique_name()
+            indices = mnm_array(i*direct, dtype="int32")
+            _extra_aux_params[name] = indices
+            s.append(op.take(state, Symbol.make_var(name_hint=name), axis=0))
+        states.append(s)
+        if bidirectional:
+            back_weights.append([concat_weight_args[i*2*direct + 2],
+                                 concat_weight_args[i*2*direct + 3]])
+            back_bias.append([concat_weight_args[(num_layers+i)*2*direct + 2],
+                              concat_weight_args[(num_layers+i)*2*direct + 3]])
+            s = []
+            for state in init_states:
+                name = _unique_name()
+                indices = mnm_array(i * direct + 1, dtype="int32")
+                _extra_aux_params[name] = indices
+                s.append(op.take(state, Symbol.make_var(name_hint=name), axis=0))
+            back_states.append(s)
+
+    xs = list()
+    for t in range(seq_len):
+        name = _unique_name()
+        indices = mnm_array(t, dtype="int32")
+        _extra_aux_params[name] = indices
+        xs.append(op.take(seq_data, Symbol.make_var(name_hint=name), axis=0))
+
+
+    for l in range(num_layers):
+        outputs = []
+        back_outputs = []
+        for x in xs:
+            if mode == "rnn":
+                out, new_states = _rnn_cell(x, states[l], *weights[l], *bias[l], activation)
+            elif mode == "gru":
+                out, new_states = _gru_cell(x, states[l], *weights[l], *bias[l])
+            else: # mode == "lstm"
+                out, new_states = _lstm_cell(x, states[l], *weights[l], *bias[l])
+            states[l] = new_states
+            outputs.append(out)
+        if bidirectional:
+            for x in reversed(xs):
+                if mode == "rnn":
+                    out, new_states = _rnn_cell(
+                        x, back_states[l], *back_weights[l], *back_bias[l], activation)
+                elif mode == "gru":
+                    out, new_states = _gru_cell(
+                        x, back_states[l], *back_weights[l], *back_bias[l])
+                else: # mode == "lstm"
+                    out, new_states = _lstm_cell(
+                        x, back_states[l], *back_weights[l], *back_bias[l])
+                back_states[l] = new_states
+                back_outputs.append(out)
+            back_outputs.reverse()
+            concat_outputs = []
+            for t, out in enumerate(outputs):
+                new_out = op.concatenate([out, back_outputs[t]], axis=-1)
+                concat_outputs.append(new_out)
+            outputs = concat_outputs
+        xs = outputs
+
+    ret = [op.stack(outputs, axis=0)]
+    if output_states:
+        for i in range(num_states):
+            inputs = []
+            for l, s in enumerate(states):
+                inputs.append(s[i])
+                if bidirectional:
+                    inputs.append(back_states[l][i])
+            ret.append(op.stack(inputs, axis=0))
+    return ret
+
+
 _convert_map = {
     'Activation': _mx_activations,
     'BatchNorm': _mx_batch_norm,
     'Convolution': _mx_conv,
     'FullyConnected': _mx_fully_connected,
     'Pooling': _mx_pooling,
-    'elemwise_add': _mx_add
+    'Reshape': _mx_reshape,
+    "RNN": _mx_rnn_layer,
+    'elemwise_add': _mx_add,
+    "_rnn_param_concat": _mx_rnn_param_concat,
 }
 
 
@@ -221,10 +433,16 @@ def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, t
     else:
         msg = "mxnet.Symbol or gluon.HybridBlock expected, got {}".format(type(symbol))
         raise ValueError(msg)
-    ordered_params = OrderedDict()
+    meta_arg_params = dict()
+    meta_aux_params = dict()
     for v in train_func.params:
         if v.name_hint in params:
-            ordered_params[v.name_hint] = ndarray(params[v.name_hint])
+            meta_arg_params[v.name_hint] = ndarray(params[v.name_hint])
+        elif v.name_hint in _extra_aux_params:
+            meta_aux_params[v.name_hint] = ndarray(_extra_aux_params[v.name_hint])
+    for v in infer_func.params:
+        if v.name_hint in _extra_aux_params:
+            meta_aux_params[v.name_hint] = ndarray(_extra_aux_params[v.name_hint])
 
-    front_model = FrameworkModel(train_func, infer_func, ordered_params)
+    front_model = FrameworkModel(train_func, infer_func, meta_arg_params, meta_aux_params)
     return front_model
