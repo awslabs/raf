@@ -56,6 +56,10 @@ Attrs DenseNormalizer(TVMOpEnv* env, const BinaryArgs* args) {
 
 MNM_TVMJIT(BatchMatmul, "mnm.op.batch_matmul", BinaryArgs, GEMMNormalizer, GEMMTyper,
            GenericHasher);
+MNM_TVMJIT(Matmul, "mnm.op.matmul", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
+MNM_TVMJIT(MatmulTN, "mnm.op.matmul_tn", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
+MNM_TVMJIT(MatmulNT, "mnm.op.matmul_nt", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
+MNM_TVMJIT(MatmulTT, "mnm.op.matmul_tt", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
 MNM_TVMJIT(Dense, "mnm.op.dense", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
 
 Attrs Conv2dNormalizer(TVMOpEnv* env, const ConvArgs* args) {

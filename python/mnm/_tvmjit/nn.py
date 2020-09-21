@@ -35,6 +35,38 @@ _reg.register_strategy("mnm.op.dense", strategy.dense_strategy)
 
 _reg.register_strategy("mnm.op.batch_matmul", strategy.batch_matmul_strategy)
 
+def compute_matmul_general(attr, inputs, output_type,
+                           transpose_a=False, transpose_b=False):
+    # pylint: disable=unused-argument
+    if len(inputs) == 2:
+        data, weight = inputs[0], inputs[1]
+    else:
+        raise ValueError("Invalid input")
+    assert len(data.shape) == 2 and len(weight.shape) == 2, \
+        "only support 2-dim dense"
+    return [_topi.matmul(data, weight, transp_a=transpose_a, transp_b=transpose_b)]
+
+@register_compute("mnm.op.matmul")
+def compute_matmul(attr, inputs, output_type):
+    return compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=False)
+
+@register_compute("mnm.op.matmul_tn")
+def compute_matmul_tn(attr, inputs, output_type):
+    return compute_matmul_general(attr, inputs, output_type, transpose_a=True, transpose_b=False)
+
+@register_compute("mnm.op.matmul_nt")
+def compute_matmul_nt(attr, inputs, output_type):
+    return compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=True)
+
+@register_compute("mnm.op.matmul_tt")
+def compute_matmul_tt(attr, inputs, output_type):
+    return compute_matmul_general(attr, inputs, output_type, transpose_a=True, transpose_b=True)
+
+_reg.register_injective_schedule("mnm.op.matmul")
+_reg.register_injective_schedule("mnm.op.matmul_tn")
+_reg.register_injective_schedule("mnm.op.matmul_nt")
+_reg.register_injective_schedule("mnm.op.matmul_tt")
+
 _reg.register_strategy("mnm.op.softmax", strategy.softmax_strategy)
 
 @register_compute("mnm.op.softmax_dx")

@@ -230,5 +230,41 @@ def test_conv2d(ctx, dtype, xshape, wshape, stride, dilation, padding):
     check_torch(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("n", [1, 2, 4])
+@pytest.mark.parametrize("m", [1, 2, 4])
+@pytest.mark.parametrize("k", [1, 2, 4])
+@pytest.mark.parametrize("transpose_a", [True, False])
+@pytest.mark.parametrize("transpose_b", [True, False])
+def test_matmul(ctx, dtype, n, k, m, transpose_a, transpose_b):
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_a, m_b):  # pylint: disable=no-self-use
+            mnm_op = [[mnm.matmul, mnm.matmul_nt],
+                      [mnm.matmul_tn, mnm.matmul_tt]]
+            mnm_op = mnm_op[transpose_a][transpose_b]
+            return mnm_op(m_a, m_b)
+    # forward
+    model = TestModel()
+    m_a, t_a = randn_torch((n, k) if not transpose_a else (k, n), ctx=ctx, dtype=dtype)
+    m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k), ctx=ctx, dtype=dtype)
+    m_a.requires_grad = True
+    m_b.requires_grad = True
+    m_c = model(m_a, m_b)
+    t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
+    check_torch(m_c, t_c, rtol=1e-4, atol=1e-4)
+    # backward
+    m_dc, t_dc = randn_torch(m_c.shape, ctx=ctx, dtype=dtype)
+    m_c.backward(m_dc)
+    t_c.backward(t_dc)
+    check_torch(m_a.grad, t_a.grad, rtol=1e-4, atol=1e-4)
+    check_torch(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
