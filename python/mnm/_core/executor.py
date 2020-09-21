@@ -2,10 +2,10 @@
 # pylint: disable=no-else-return, unidiomatic-typecheck, undefined-variable, invalid-name, redefined-builtin, no-self-use
 import numpy as np
 import tvm
-import mnm._ffi as ffi
 from . import ndarray as _nd
 from .core_utils import str2ctx
-from ..model.trace import _unwrap
+from .. import _ffi
+from .._core.value import TensorValue, TupleValue
 
 
 def interpret(expr, module=None):
@@ -23,7 +23,7 @@ def interpret(expr, module=None):
     ret: mnm.value.Value
         Executed results.
     """
-    return ffi.executor.Interpret(expr, module)
+    return _ffi.executor.Interpret(expr, module)
 
 
 class Executable:
@@ -133,7 +133,7 @@ class Executable:
             raise TypeError("lib is expected to be the type of tvm.runtime.Module" +
                             ", but received {}".format(type(lib)))
 
-        return Executable(ffi.vm.Load_Executable(bytecode, lib))
+        return Executable(_ffi.vm.Load_Executable(bytecode, lib))
 
     @property
     def lib(self):
@@ -167,9 +167,9 @@ class Executable:
             The list of primitive ops.
         """
         ret = []
-        num_primitives = ffi.vm.GetNumOfPrimitives(self.module)
+        num_primitives = _ffi.vm.GetNumOfPrimitives(self.module)
         for i in range(num_primitives):
-            ret.append(ffi.vm.GetPrimitiveFields(self.module, i))
+            ret.append(_ffi.vm.GetPrimitiveFields(self.module, i))
         return ret
 
     @property
@@ -215,9 +215,9 @@ class Executable:
             The globals contained in the executable.
         """
         ret = []
-        num_globals = ffi.vm.GetNumOfGlobals(self.module)
+        num_globals = _ffi.vm.GetNumOfGlobals(self.module)
         for i in range(num_globals):
-            ret.append(ffi.vm.GetGlobalFields(self.module, i))
+            ret.append(_ffi.vm.GetGlobalFields(self.module, i))
         return ret
 
     @property
@@ -282,7 +282,7 @@ class VMCompiler:
     """Compiler that compiles Relay module to VM executable."""
 
     def __init__(self):
-        self.mod = ffi.vm.VMCompiler()
+        self.mod = _ffi.vm.VMCompiler()
         self._lower = self.mod["lower"]
         self._get_exec = self.mod["get_executable"]
         self._set_params_func = self.mod["set_params"]
@@ -301,7 +301,7 @@ class VMCompiler:
         inputs = {}
         for name, param in params.items():
             if isinstance(param, np.ndarray):
-                param = _nd.array(arg, ctx=tvm.cpu(0))
+                param = _nd.array(param, ctx=tvm.cpu(0))
                 inputs[name] = param
             else:
                 assert isinstance(param, _nd.ndarray)
@@ -419,9 +419,9 @@ class VMCompiler:
 def _convert(arg, cargs):
     if isinstance(arg, np.ndarray):
         nd_arr = _nd.array(arg, ctx=tvm.cpu(0))
-        cargs.append(nd_arr._ndarray__handle)
+        cargs.append(nd_arr._ndarray__value)
     elif isinstance(arg, _nd.ndarray):
-        cargs.append(arg._ndarray__handle)
+        cargs.append(arg._ndarray__value)
     else:
         raise TypeError("Unsupported type: %s" % (type(arg)))
 
@@ -431,6 +431,17 @@ def _convert_args(args):
     for arg in args:
         _convert(arg, cargs)
     return cargs
+
+
+def _convert_result(result):
+    if isinstance(result, TensorValue):
+        return _nd.ndarray.from_tensor_value(result) # pylint: disable=no-member
+    if isinstance(result, TupleValue):
+        tup = []
+        for item in result:
+            tup.append(_convert_result(item))
+        return tuple(tup)
+    raise NotImplementedError(type(result))
 
 
 # pylint: disable=too-few-public-methods
@@ -471,7 +482,7 @@ class VirtualMachine:
         if not isinstance(exe, Executable):
             raise TypeError("mod is expected to be the type of Executable, but received {}"
                             .format(type(exe)))
-        self.mod = ffi.vm.VirtualMachine(exe.module)
+        self.mod = _ffi.vm.VirtualMachine(exe.module)
         self._exec = exe
         self._init = self.mod["init"]
         self._invoke = self.mod["invoke"]
@@ -557,4 +568,4 @@ class VirtualMachine:
         result : Object
             The output.
         """
-        return _unwrap(self.invoke("main", *args, **kwargs))
+        return _convert_result(self.invoke("main", *args, **kwargs))

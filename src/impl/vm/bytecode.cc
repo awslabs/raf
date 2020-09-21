@@ -54,36 +54,37 @@ Instruction::Instruction(const Instruction& instr) {
       this->alloc_tensor.dtype = instr.alloc_tensor.dtype;
       return;
     case Opcode::AllocTensorReg:
-      this->alloc_tensor_reg.storage = instr.alloc_tensor_reg.storage;
-      this->alloc_tensor_reg.offset = instr.alloc_tensor_reg.offset;
-      this->alloc_tensor_reg.shape_register = instr.alloc_tensor_reg.shape_register;
-      this->alloc_tensor_reg.dtype = instr.alloc_tensor_reg.dtype;
+      this->alloc_tensor_reg = instr.alloc_tensor_reg;
       return;
-    case Opcode::AllocADT:
-      this->constructor_tag = instr.constructor_tag;
-      this->num_fields = instr.num_fields;
-      this->datatype_fields = Duplicate<RegName>(instr.datatype_fields, instr.num_fields);
+    case Opcode::AllocTuple:
+      this->alloc_tuple.num_fields = instr.alloc_tuple.num_fields;
+      this->alloc_tuple.fields =
+          Duplicate<RegName>(instr.alloc_tuple.fields, instr.alloc_tuple.num_fields);
       return;
     case Opcode::AllocClosure:
-      this->clo_index = instr.clo_index;
-      this->num_freevar = instr.num_freevar;
-      this->free_vars = Duplicate<RegName>(instr.free_vars, instr.num_freevar);
+      this->alloc_closure.func_index = instr.alloc_closure.func_index;
+      this->alloc_closure.num_free_vars = instr.alloc_closure.num_free_vars;
+      this->alloc_closure.free_vars =
+          Duplicate<RegName>(instr.alloc_closure.free_vars, instr.alloc_closure.num_free_vars);
       return;
     case Opcode::InvokePacked:
-      this->packed_index = instr.packed_index;
-      this->arity = instr.arity;
-      this->output_size = instr.output_size;
-      this->packed_args = Duplicate<RegName>(instr.packed_args, instr.arity);
+      this->invoke_packed.packed_index = instr.invoke_packed.packed_index;
+      this->invoke_packed.arity = instr.invoke_packed.arity;
+      this->invoke_packed.output_size = instr.invoke_packed.output_size;
+      this->invoke_packed.args =
+          Duplicate<RegName>(instr.invoke_packed.args, instr.invoke_packed.arity);
       return;
     case Opcode::InvokeClosure:
-      this->closure = instr.closure;
-      this->num_closure_args = instr.num_closure_args;
-      this->closure_args = Duplicate<RegName>(instr.closure_args, instr.num_closure_args);
+      this->invoke_closure.closure = instr.invoke_closure.closure;
+      this->invoke_closure.num_args = instr.invoke_closure.num_args;
+      this->invoke_closure.args =
+          Duplicate<RegName>(instr.invoke_closure.args, instr.invoke_closure.num_args);
       return;
-    case Opcode::Invoke:
-      this->func_index = instr.func_index;
-      this->num_args = instr.num_args;
-      this->invoke_args_registers = Duplicate<RegName>(instr.invoke_args_registers, instr.num_args);
+    case Opcode::InvokeFunc:
+      this->invoke_func.func_index = instr.invoke_func.func_index;
+      this->invoke_func.num_args = instr.invoke_func.num_args;
+      this->invoke_func.args =
+          Duplicate<RegName>(instr.invoke_func.args, instr.invoke_func.num_args);
       return;
     case Opcode::If:
       this->if_op = instr.if_op;
@@ -95,11 +96,7 @@ Instruction::Instruction(const Instruction& instr) {
       this->load_consti = instr.load_consti;
       return;
     case Opcode::GetField:
-      this->object = instr.object;
-      this->field_index = instr.field_index;
-      return;
-    case Opcode::GetTag:
-      this->get_tag = instr.get_tag;
+      this->get_field = instr.get_field;
       return;
     case Opcode::Goto:
       this->pc_offset = instr.pc_offset;
@@ -107,12 +104,12 @@ Instruction::Instruction(const Instruction& instr) {
     case Opcode::AllocStorage:
       this->alloc_storage = instr.alloc_storage;
       return;
-    case Opcode::InvokeJitOp:
+    case Opcode::InvokeJit:
       this->op = instr.op;
-      this->invoke_jit_op.op_value = instr.invoke_jit_op.op_value;
-      this->arity = instr.arity;
-      this->output_size = instr.output_size;
-      this->packed_args = Duplicate<RegName>(instr.packed_args, instr.arity);
+      this->invoke_jit.op_reg = instr.invoke_jit.op_reg;
+      this->invoke_jit.arity = instr.invoke_jit.arity;
+      this->invoke_jit.output_size = instr.invoke_jit.output_size;
+      this->invoke_jit.args = Duplicate<RegName>(instr.invoke_jit.args, instr.invoke_jit.arity);
       return;
     default:
       std::ostringstream out;
@@ -156,36 +153,40 @@ Instruction& Instruction::operator=(const Instruction& instr) {
       this->alloc_tensor_reg.shape_register = instr.alloc_tensor_reg.shape_register;
       this->alloc_tensor_reg.dtype = instr.alloc_tensor_reg.dtype;
       return *this;
-    case Opcode::AllocADT:
-      this->constructor_tag = instr.constructor_tag;
-      this->num_fields = instr.num_fields;
-      FreeIf(this->datatype_fields);
-      this->datatype_fields = Duplicate<RegName>(instr.datatype_fields, instr.num_fields);
+    case Opcode::AllocTuple:
+      this->alloc_tuple.num_fields = instr.alloc_tuple.num_fields;
+      FreeIf(this->alloc_tuple.fields);
+      this->alloc_tuple.fields =
+          Duplicate<RegName>(instr.alloc_tuple.fields, instr.alloc_tuple.num_fields);
       return *this;
     case Opcode::AllocClosure:
-      this->clo_index = instr.clo_index;
-      this->num_freevar = instr.num_freevar;
-      FreeIf(this->free_vars);
-      this->free_vars = Duplicate<RegName>(instr.free_vars, instr.num_freevar);
+      this->alloc_closure.func_index = instr.alloc_closure.func_index;
+      this->alloc_closure.num_free_vars = instr.alloc_closure.num_free_vars;
+      FreeIf(this->alloc_closure.free_vars);
+      this->alloc_closure.free_vars =
+          Duplicate<RegName>(instr.alloc_closure.free_vars, instr.alloc_closure.num_free_vars);
       return *this;
     case Opcode::InvokePacked:
-      this->packed_index = instr.packed_index;
-      this->arity = instr.arity;
-      this->output_size = instr.output_size;
-      FreeIf(this->packed_args);
-      this->packed_args = Duplicate<RegName>(instr.packed_args, instr.arity);
+      this->invoke_packed.packed_index = instr.invoke_packed.packed_index;
+      this->invoke_packed.arity = instr.invoke_packed.arity;
+      this->invoke_packed.output_size = instr.invoke_packed.output_size;
+      FreeIf(this->invoke_packed.args);
+      this->invoke_packed.args =
+          Duplicate<RegName>(instr.invoke_packed.args, instr.invoke_packed.arity);
       return *this;
     case Opcode::InvokeClosure:
-      this->closure = instr.closure;
-      this->num_closure_args = instr.num_closure_args;
-      FreeIf(this->closure_args);
-      this->closure_args = Duplicate<RegName>(instr.closure_args, instr.num_closure_args);
+      this->invoke_closure.closure = instr.invoke_closure.closure;
+      this->invoke_closure.num_args = instr.invoke_closure.num_args;
+      FreeIf(this->invoke_closure.args);
+      this->invoke_closure.args =
+          Duplicate<RegName>(instr.invoke_closure.args, instr.invoke_closure.num_args);
       return *this;
-    case Opcode::Invoke:
-      this->func_index = instr.func_index;
-      this->num_args = instr.num_args;
-      FreeIf(this->invoke_args_registers);
-      this->invoke_args_registers = Duplicate<RegName>(instr.invoke_args_registers, instr.num_args);
+    case Opcode::InvokeFunc:
+      this->invoke_func.func_index = instr.invoke_func.func_index;
+      this->invoke_func.num_args = instr.invoke_func.num_args;
+      FreeIf(this->invoke_func.args);
+      this->invoke_func.args =
+          Duplicate<RegName>(instr.invoke_func.args, instr.invoke_func.num_args);
       return *this;
     case Opcode::If:
       this->if_op = instr.if_op;
@@ -194,11 +195,7 @@ Instruction& Instruction::operator=(const Instruction& instr) {
       this->const_index = instr.const_index;
       return *this;
     case Opcode::GetField:
-      this->object = instr.object;
-      this->field_index = instr.field_index;
-      return *this;
-    case Opcode::GetTag:
-      this->get_tag = instr.get_tag;
+      this->get_field = instr.get_field;
       return *this;
     case Opcode::Goto:
       this->pc_offset = instr.pc_offset;
@@ -221,7 +218,6 @@ Instruction::~Instruction() {
     case Opcode::If:
     case Opcode::LoadConst:
     case Opcode::GetField:
-    case Opcode::GetTag:
     case Opcode::Goto:
     case Opcode::LoadConsti:
     case Opcode::AllocStorage:
@@ -230,23 +226,23 @@ Instruction::~Instruction() {
     case Opcode::AllocTensor:
       delete[] this->alloc_tensor.shape;
       return;
-    case Opcode::AllocADT:
-      delete[] this->datatype_fields;
+    case Opcode::AllocTuple:
+      delete[] this->alloc_tuple.fields;
       return;
     case Opcode::AllocClosure:
-      delete[] this->free_vars;
+      delete[] this->alloc_closure.free_vars;
       return;
     case Opcode::InvokePacked:
-      delete[] this->packed_args;
+      delete[] this->invoke_packed.args;
       return;
     case Opcode::InvokeClosure:
-      delete[] this->closure_args;
+      delete[] this->invoke_closure.args;
       return;
-    case Opcode::Invoke:
-      delete[] this->invoke_args_registers;
+    case Opcode::InvokeFunc:
+      delete[] this->invoke_func.args;
       return;
-    case Opcode::InvokeJitOp:
-      delete[] this->packed_args;
+    case Opcode::InvokeJit:
+      delete[] this->invoke_jit.args;
       return;
     default:
       std::ostringstream out;
@@ -271,12 +267,12 @@ Instruction Instruction::InvokePacked(Index packed_index, Index arity, Index out
                                       const std::vector<RegName>& args) {
   Instruction instr;
   instr.op = Opcode::InvokePacked;
-  instr.packed_index = packed_index;
-  instr.arity = arity;
-  instr.output_size = output_size;
-  instr.packed_args = new RegName[arity];
+  instr.invoke_packed.packed_index = packed_index;
+  instr.invoke_packed.arity = arity;
+  instr.invoke_packed.output_size = output_size;
+  instr.invoke_packed.args = new RegName[arity];
   for (Index i = 0; i < arity; ++i) {
-    instr.packed_args[i] = args[i];
+    instr.invoke_packed.args[i] = args[i];
   }
   return instr;
 }
@@ -323,30 +319,28 @@ Instruction Instruction::AllocStorage(RegName size, Index alignment, DLDataType 
   return instr;
 }
 
-Instruction Instruction::AllocADT(Index tag, Index num_fields,
-                                  const std::vector<RegName>& datatype_fields, Index dst) {
+Instruction Instruction::AllocTuple(const std::vector<RegName>& fields, Index dst) {
   Instruction instr;
-  instr.op = Opcode::AllocADT;
+  instr.op = Opcode::AllocTuple;
   instr.dst = dst;
-  instr.constructor_tag = tag;
-  instr.num_fields = num_fields;
-  instr.datatype_fields = new RegName[num_fields];
-  for (Index i = 0; i < num_fields; ++i) {
-    instr.datatype_fields[i] = datatype_fields[i];
+  instr.alloc_tuple.num_fields = fields.size();
+  instr.alloc_tuple.fields = new RegName[fields.size()];
+  for (Index i = 0; i < fields.size(); ++i) {
+    instr.alloc_tuple.fields[i] = fields[i];
   }
   return instr;
 }
 
-Instruction Instruction::AllocClosure(Index func_index, Index free_vars,
-                                      const std::vector<RegName>& free_var_register, Index dst) {
+Instruction Instruction::AllocClosure(Index func_index, const std::vector<RegName>& free_vars,
+                                      Index dst) {
   Instruction instr;
   instr.op = Opcode::AllocClosure;
   instr.dst = dst;
-  instr.clo_index = func_index;
-  instr.num_freevar = free_vars;
-  instr.free_vars = new RegName[instr.num_freevar];
-  for (Index i = 0; i < instr.num_freevar; ++i) {
-    instr.free_vars[i] = free_var_register[i];
+  instr.alloc_closure.func_index = func_index;
+  instr.alloc_closure.num_free_vars = free_vars.size();
+  instr.alloc_closure.free_vars = new RegName[free_vars.size()];
+  for (Index i = 0; i < free_vars.size(); ++i) {
+    instr.alloc_closure.free_vars[i] = free_vars[i];
   }
   return instr;
 }
@@ -355,16 +349,8 @@ Instruction Instruction::GetField(RegName object, Index field_index, RegName dst
   Instruction instr;
   instr.op = Opcode::GetField;
   instr.dst = dst;
-  instr.object = object;
-  instr.field_index = field_index;
-  return instr;
-}
-
-Instruction Instruction::GetTag(RegName object, RegName dst) {
-  Instruction instr;
-  instr.op = Opcode::GetTag;
-  instr.dst = dst;
-  instr.get_tag.object = object;
+  instr.get_field.object = object;
+  instr.get_field.field_index = field_index;
   return instr;
 }
 
@@ -385,16 +371,16 @@ Instruction Instruction::Goto(Index pc_offset) {
   return instr;
 }
 
-Instruction Instruction::Invoke(Index func_index, const std::vector<RegName>& args_registers,
-                                RegName dst) {
+Instruction Instruction::InvokeFunc(Index func_index, const std::vector<RegName>& args,
+                                    RegName dst) {
   Instruction instr;
-  instr.op = Opcode::Invoke;
+  instr.op = Opcode::InvokeFunc;
   instr.dst = dst;
-  instr.func_index = func_index;
-  instr.num_args = args_registers.size();
-  instr.invoke_args_registers = new RegName[instr.num_args];
-  for (Index i = 0; i < instr.num_args; ++i) {
-    instr.invoke_args_registers[i] = args_registers[i];
+  instr.invoke_func.func_index = func_index;
+  instr.invoke_func.num_args = args.size();
+  instr.invoke_func.args = new RegName[instr.invoke_func.num_args];
+  for (Index i = 0; i < instr.invoke_func.num_args; ++i) {
+    instr.invoke_func.args[i] = args[i];
   }
   return instr;
 }
@@ -404,11 +390,11 @@ Instruction Instruction::InvokeClosure(RegName closure, const std::vector<RegNam
   Instruction instr;
   instr.op = Opcode::InvokeClosure;
   instr.dst = dst;
-  instr.closure = closure;
-  instr.num_closure_args = args.size();
-  instr.closure_args = new RegName[args.size()];
+  instr.invoke_closure.closure = closure;
+  instr.invoke_closure.num_args = args.size();
+  instr.invoke_closure.args = new RegName[args.size()];
   for (size_t i = 0; i < args.size(); ++i) {
-    instr.closure_args[i] = args[i];
+    instr.invoke_closure.args[i] = args[i];
   }
   return instr;
 }
@@ -437,16 +423,16 @@ Instruction Instruction::Move(RegName src, RegName dst) {
   return instr;
 }
 
-Instruction Instruction::InvokeJitOp(RegName op_value, Index arity, Index output_size,
-                                     const std::vector<RegName>& args) {
+Instruction Instruction::InvokeJit(RegName op_reg, Index arity, Index output_size,
+                                   const std::vector<RegName>& args) {
   Instruction instr;
-  instr.op = Opcode::InvokeJitOp;
-  instr.invoke_jit_op.op_value = op_value;
-  instr.arity = arity;
-  instr.output_size = output_size;
-  instr.packed_args = new RegName[arity];
+  instr.op = Opcode::InvokeJit;
+  instr.invoke_jit.op_reg = op_reg;
+  instr.invoke_jit.arity = arity;
+  instr.invoke_jit.output_size = output_size;
+  instr.invoke_jit.args = new RegName[arity];
   for (Index i = 0; i < arity; ++i) {
-    instr.packed_args[i] = args[i];
+    instr.invoke_jit.args[i] = args[i];
   }
   return instr;
 }
@@ -498,10 +484,10 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       break;
     }
     case Opcode::InvokePacked: {
-      os << "invoke_packed PackedFunc[" << instr.packed_index << "] (in: $"
-         << StrJoin<RegName>(instr.packed_args, 0, instr.arity - instr.output_size, ", $")
-         << ", out: $"
-         << StrJoin<RegName>(instr.packed_args, instr.arity - instr.output_size, instr.output_size,
+      Index num_inputs = instr.invoke_packed.arity - instr.invoke_packed.output_size;
+      os << "invoke_packed PackedFunc[" << instr.invoke_packed.packed_index << "] (in: $"
+         << StrJoin<RegName>(instr.invoke_packed.args, 0, num_inputs, ", $") << ", out: $"
+         << StrJoin<RegName>(instr.invoke_packed.args, num_inputs, instr.invoke_packed.output_size,
                              ", $")
          << ")";
       break;
@@ -519,14 +505,17 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       DLDatatypePrint(os, instr.alloc_tensor_reg.dtype);
       break;
     }
-    case Opcode::AllocADT: {
-      os << "alloc_data $" << instr.dst << " tag(" << instr.constructor_tag << ") [$"
-         << StrJoin<RegName>(instr.datatype_fields, 0, instr.num_fields, ",$") << "]";
+    case Opcode::AllocTuple: {
+      os << "alloc_tuple $" << instr.dst << " [$"
+         << StrJoin<RegName>(instr.alloc_tuple.fields, 0, instr.alloc_tuple.num_fields, ",$")
+         << "]";
       break;
     }
     case Opcode::AllocClosure: {
-      os << "alloc_closure $" << instr.dst << " VMFunc[" << instr.clo_index << "]($"
-         << StrJoin<RegName>(instr.free_vars, 0, instr.num_freevar, ",$") << ")";
+      os << "alloc_closure $" << instr.dst << " VMFunc[" << instr.alloc_closure.func_index << "]($"
+         << StrJoin<RegName>(instr.alloc_closure.free_vars, 0, instr.alloc_closure.num_free_vars,
+                             ",$")
+         << ")";
       break;
     }
     case Opcode::If: {
@@ -535,14 +524,15 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
          << " " << instr.if_op.false_offset;
       break;
     }
-    case Opcode::Invoke: {
-      os << "invoke $" << instr.dst << " VMFunc[" << instr.func_index << "]($"
-         << StrJoin<RegName>(instr.invoke_args_registers, 0, instr.num_args, ",$") << ")";
+    case Opcode::InvokeFunc: {
+      os << "invoke_func $" << instr.dst << " VMFunc[" << instr.invoke_func.func_index << "]($"
+         << StrJoin<RegName>(instr.invoke_func.args, 0, instr.invoke_func.num_args, ",$") << ")";
       break;
     }
     case Opcode::InvokeClosure: {
-      os << "invoke_closure $" << instr.dst << " $" << instr.closure << "($"
-         << StrJoin<RegName>(instr.closure_args, 0, instr.num_closure_args, ",$") << ")";
+      os << "invoke_closure $" << instr.dst << " $" << instr.invoke_closure.closure << "($"
+         << StrJoin<RegName>(instr.invoke_closure.args, 0, instr.invoke_closure.num_args, ",$")
+         << ")";
       break;
     }
     case Opcode::LoadConst: {
@@ -554,11 +544,8 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       break;
     }
     case Opcode::GetField: {
-      os << "get_field $" << instr.dst << " $" << instr.object << "[" << instr.field_index << "]";
-      break;
-    }
-    case Opcode::GetTag: {
-      os << "get_tag $" << instr.dst << " $" << instr.get_tag.object;
+      os << "get_field $" << instr.dst << " $" << instr.get_field.object << "["
+         << instr.get_field.field_index << "]";
       break;
     }
     case Opcode::Goto: {
@@ -566,17 +553,16 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       break;
     }
     case Opcode::AllocStorage: {
-      os << "alloc_storage $" << instr.dst << " $" << instr.alloc_storage.allocation_size << " $"
+      os << "alloc_storage $" << instr.dst << " $" << instr.alloc_storage.allocation_size << " "
          << instr.alloc_storage.alignment << " "
          << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
       break;
     }
-    case Opcode::InvokeJitOp: {
-      os << "invoke_jit_op $" << instr.invoke_jit_op.op_value << " (in: $"
-         << StrJoin<RegName>(instr.packed_args, 0, instr.arity - instr.output_size, ", $")
-         << ", out: $"
-         << StrJoin<RegName>(instr.packed_args, instr.arity - instr.output_size, instr.output_size,
-                             ", $")
+    case Opcode::InvokeJit: {
+      Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
+      os << "invoke_jit $" << instr.invoke_jit.op_reg << " (in: $"
+         << StrJoin<RegName>(instr.invoke_jit.args, 0, num_inputs, ", $") << ", out: $"
+         << StrJoin<RegName>(instr.invoke_jit.args, num_inputs, instr.invoke_jit.output_size, ", $")
          << ")";
       break;
     }

@@ -264,9 +264,11 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       // Number of fields = 3 + instr.arity
       // Note that arity includes both input arguments and outputs. We will
       // put all the `arity` number of fields in the end for serialization.
-      fields.assign({instr.packed_index, instr.arity, instr.output_size});
+      fields.assign({instr.invoke_packed.packed_index, instr.invoke_packed.arity,
+                     instr.invoke_packed.output_size});
       // Save the args.
-      fields.insert(fields.end(), instr.packed_args, instr.packed_args + instr.arity);
+      fields.insert(fields.end(), instr.invoke_packed.args,
+                    instr.invoke_packed.args + instr.invoke_packed.arity);
       break;
     }
     case Opcode::AllocTensor: {
@@ -318,20 +320,22 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       fields.push_back(instr.dst);
       break;
     }
-    case Opcode::AllocADT: {
-      // Number of fields = 3 + instr.num_fields
-      fields.assign({instr.constructor_tag, instr.num_fields, instr.dst});
+    case Opcode::AllocTuple: {
+      // Number of fields = 2 + instr.num_fields
+      fields.assign({instr.alloc_tuple.num_fields, instr.dst});
 
       // Save the fields.
-      fields.insert(fields.end(), instr.datatype_fields, instr.datatype_fields + instr.num_fields);
+      fields.insert(fields.end(), instr.alloc_tuple.fields,
+                    instr.alloc_tuple.fields + instr.alloc_tuple.num_fields);
       break;
     }
     case Opcode::AllocClosure: {
       // Number of fields = 3 + instr.num_freevar
-      fields.assign({instr.clo_index, instr.num_freevar, instr.dst});
+      fields.assign({instr.alloc_closure.func_index, instr.alloc_closure.num_free_vars, instr.dst});
 
       // Save the free vars.
-      fields.insert(fields.end(), instr.free_vars, instr.free_vars + instr.num_freevar);
+      fields.insert(fields.end(), instr.alloc_closure.free_vars,
+                    instr.alloc_closure.free_vars + instr.alloc_closure.num_free_vars);
       break;
     }
     case Opcode::If: {
@@ -340,21 +344,22 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
                      instr.if_op.false_offset});
       break;
     }
-    case Opcode::Invoke: {
+    case Opcode::InvokeFunc: {
       // Number of fields = 3 + instr.num_args
-      fields.assign({instr.func_index, instr.num_args, instr.dst});
+      fields.assign({instr.invoke_func.func_index, instr.invoke_func.num_args, instr.dst});
 
       // Save the args.
-      fields.insert(fields.end(), instr.invoke_args_registers,
-                    instr.invoke_args_registers + instr.num_args);
+      fields.insert(fields.end(), instr.invoke_func.args,
+                    instr.invoke_func.args + instr.invoke_func.num_args);
       break;
     }
     case Opcode::InvokeClosure: {
       // Number of fields = 3 + instr.num_closure_args
-      fields.assign({instr.closure, instr.num_closure_args, instr.dst});
+      fields.assign({instr.invoke_closure.closure, instr.invoke_closure.num_args, instr.dst});
 
       // Save the args.
-      fields.insert(fields.end(), instr.closure_args, instr.closure_args + instr.num_closure_args);
+      fields.insert(fields.end(), instr.invoke_closure.args,
+                    instr.invoke_closure.args + instr.invoke_closure.num_args);
       break;
     }
     case Opcode::LoadConst: {
@@ -369,12 +374,7 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
     }
     case Opcode::GetField: {
       // Number of fields = 3
-      fields.assign({instr.object, instr.field_index, instr.dst});
-      break;
-    }
-    case Opcode::GetTag: {
-      // Number of fields = 2
-      fields.assign({instr.get_tag.object, instr.dst});
+      fields.assign({instr.get_field.object, instr.get_field.field_index, instr.dst});
       break;
     }
     case Opcode::Goto: {
@@ -382,13 +382,15 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       fields.push_back(instr.pc_offset);
       break;
     }
-    case Opcode::InvokeJitOp: {
+    case Opcode::InvokeJit: {
       // Number of fields = 3 + instr.arity
       // Note that arity includes both input arguments and outputs. We will
       // put all the `arity` number of fields in the end for serialization.
-      fields.assign({instr.packed_index, instr.arity, instr.output_size});
+      fields.assign(
+          {instr.invoke_jit.op_reg, instr.invoke_jit.arity, instr.invoke_jit.output_size});
       // Save the args.
-      fields.insert(fields.end(), instr.packed_args, instr.packed_args + instr.arity);
+      fields.insert(fields.end(), instr.invoke_jit.args,
+                    instr.invoke_jit.args + instr.invoke_jit.arity);
       break;
     }
     default:
@@ -558,29 +560,28 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
 
       return Instruction::AllocTensorReg(storage_reg, offset, shape_register, dtype, dst);
     }
-    case Opcode::AllocADT: {
-      // Number of fields = 3 + instr.num_fields
-      DCHECK_GE(instr.fields.size(), 3U);
-      DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
+    case Opcode::AllocTuple: {
+      // Number of fields = 2 + instr.num_fields
+      DCHECK_GE(instr.fields.size(), 2U);
+      DCHECK_EQ(instr.fields.size(), 2U + static_cast<size_t>(instr.fields[0]));
 
-      Index constructor_tag = instr.fields[0];
-      Index num_fields = instr.fields[1];
-      RegName dst = instr.fields[2];
-      std::vector<Index> fields = ExtractFields(instr.fields, 3, num_fields);
+      Index num_fields = instr.fields[0];
+      RegName dst = instr.fields[1];
+      std::vector<Index> fields = ExtractFields(instr.fields, 2, num_fields);
 
-      return Instruction::AllocADT(constructor_tag, num_fields, fields, dst);
+      return Instruction::AllocTuple(fields, dst);
     }
     case Opcode::AllocClosure: {
       // Number of fields = 3 + instr.num_freevar
       DCHECK_GE(instr.fields.size(), 3U);
       DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
 
-      Index clo_index = instr.fields[0];
-      Index num_freevar = instr.fields[1];
+      Index func_index = instr.fields[0];
+      Index num_free_vars = instr.fields[1];
       RegName dst = instr.fields[2];
-      std::vector<Index> free_vars = ExtractFields(instr.fields, 3, num_freevar);
+      std::vector<Index> free_vars = ExtractFields(instr.fields, 3, num_free_vars);
 
-      return Instruction::AllocClosure(clo_index, num_freevar, free_vars, dst);
+      return Instruction::AllocClosure(func_index, free_vars, dst);
     }
     case Opcode::AllocStorage: {
       DCHECK_GE(instr.fields.size(), 6U);
@@ -609,7 +610,7 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
 
       return Instruction::If(test, target, true_offset, false_offset);
     }
-    case Opcode::Invoke: {
+    case Opcode::InvokeFunc: {
       // Number of fields = 3 + instr.num_args
       DCHECK_GE(instr.fields.size(), 3U);
       DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
@@ -619,7 +620,7 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       RegName dst = instr.fields[2];
       std::vector<Index> args = ExtractFields(instr.fields, 3, num_args);
 
-      return Instruction::Invoke(func_index, args, dst);
+      return Instruction::InvokeFunc(func_index, args, dst);
     }
     case Opcode::InvokeClosure: {
       // Number of fields = 3 + instr.num_closure_args
@@ -648,26 +649,21 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       DCHECK_EQ(instr.fields.size(), 3U);
       return Instruction::GetField(instr.fields[0], instr.fields[1], instr.fields[2]);
     }
-    case Opcode::GetTag: {
-      // Number of fields = 2
-      DCHECK_EQ(instr.fields.size(), 2U);
-      return Instruction::GetTag(instr.fields[0], instr.fields[1]);
-    }
     case Opcode::Goto: {
       // Number of fields = 1
       DCHECK_EQ(instr.fields.size(), 1U);
       return Instruction::Goto(instr.fields[0]);
     }
-    case Opcode::InvokeJitOp: {
+    case Opcode::InvokeJit: {
       // Number of fields = 3 + instr.arity
       DCHECK_GE(instr.fields.size(), 3U);
       DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
 
-      Index packed_index = instr.fields[0];
+      Index op_reg = instr.fields[0];
       Index arity = instr.fields[1];
       Index output_size = instr.fields[2];
       std::vector<RegName> args = ExtractFields(instr.fields, 3, arity);
-      return Instruction::InvokeJitOp(packed_index, arity, output_size, args);
+      return Instruction::InvokeJit(op_reg, arity, output_size, args);
     }
     default:
       LOG(FATAL) << "Invalid opcode" << instr.opcode;

@@ -217,6 +217,13 @@ class ndarray:
             return None
         return ndarray(grad_var)
 
+    @staticmethod
+    def from_tensor_value(value):
+        assert isinstance(value, TensorValue)
+        arr = ndarray(value.shape, dtype=value.dtype)
+        arr.__value = value # pylint: disable=protected-access
+        return arr
+
 
 class Symbol:  # pylint: disable=too-few-public-methods
 

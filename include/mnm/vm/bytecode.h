@@ -36,24 +36,34 @@ using Index = int64_t;
  * as a tagged union.
  */
 enum class Opcode {
+  //  Basic instructions
   Move = 0U,
   Ret = 1U,
-  Invoke = 2U,
-  InvokeClosure = 3U,
-  InvokePacked = 4U,
-  AllocTensor = 5U,
-  AllocTensorReg = 6U,
-  AllocADT = 7U,
-  AllocClosure = 8U,
-  GetField = 9U,
+  Fatal = 2U,
+  LoadConst = 3U,
+  LoadConsti = 4U,
+  GetField = 5U,
+  // TODO(@icemelon9): Current don't support ADT object
+  // GetTag = 6U,
+
+  // Control instructions
   If = 10U,
-  LoadConst = 11U,
-  Goto = 12U,
-  GetTag = 13U,
-  LoadConsti = 14U,
-  Fatal = 15U,
-  AllocStorage = 16U,
-  InvokeJitOp = 17U,
+  Goto = 11U,
+
+  // Memory instructions
+  AllocStorage = 20U,
+  AllocTensor = 21U,
+  AllocTensorReg = 22U,
+  AllocTuple = 23U,
+  AllocClosure = 24U,
+  // TODO(@icemelon9): Current don't support ADT object
+  // AllocADT = 25U,
+
+  // Invoke instructions
+  InvokeFunc = 30U,
+  InvokeClosure = 31U,
+  InvokePacked = 32U,
+  InvokeJit = 33U,
 };
 
 /*! \brief A single virtual machine instruction.
@@ -73,6 +83,57 @@ struct Instruction {
   RegName dst;
 
   union {
+    // Basic instructions
+    struct /* Move Operands */ {
+      /*! \brief The source register for a move operation. */
+      RegName from;
+    };
+    struct /* Return Operands */ {
+      /*! \brief The register to return. */
+      RegName result;
+    };
+    struct /* LoadConst Operands */ {
+      /* \brief The index into the constant pool. */
+      Index const_index;
+    };
+    struct /* LoadConsti Operands */ {
+      /* \brief The index into the constant pool. */
+      Index val;
+    } load_consti;
+    struct /* GetField Operands */ {
+      /*! \brief The register to read from. */
+      RegName object;
+      /*! \brief The field to read out. */
+      Index field_index;
+    } get_field;
+
+    // Control flow instructions
+    struct /* If Operands */ {
+      /*! \brief The register containing the test value. */
+      RegName test;
+      /*! \brief The register containing the target value. */
+      RegName target;
+      /*! \brief The program counter offset for the true branch. */
+      Index true_offset;
+      /*! \brief The program counter offset for the false branch. */
+      Index false_offset;
+    } if_op;
+    struct /* Jump Operands */ {
+      /*! \brief The jump offset. */
+      Index pc_offset;
+    };
+
+    // Memory instructions
+    struct /* AllocStorage Operands */ {
+      /*! \brief The size of the allocation. */
+      RegName allocation_size;
+      /*! \brief The alignment of the allocation. */
+      Index alignment;
+      /*! \brief The hint of the dtype. */
+      DLDataType dtype_hint;
+      DevType device_type;
+      Index device_id;
+    } alloc_storage;
     struct /* AllocTensor Operands */ {
       /*! \brief The storage to allocate from. */
       RegName storage;
@@ -95,22 +156,37 @@ struct Instruction {
       /*! \brief The datatype of tensor to be allocated. */
       DLDataType dtype;
     } alloc_tensor_reg;
+    struct /* AllocClosure Operands */ {
+      /*! \brief The index into the function table. */
+      Index func_index;
+      /*! \brief The number of free variables to capture. */
+      Index num_free_vars;
+      /*! \brief The free variables as an array. */
+      RegName* free_vars;
+    } alloc_closure;
+    struct /* AllocTuple Operands */ {
+      /*! \brief The number of fields to store in the tuple. */
+      Index num_fields;
+      /*! \brief The fields in the tuple. */
+      RegName* fields;
+    } alloc_tuple;
+
+    struct /* InvokeFunc Operands */ {
+      /*! \brief The function to call. */
+      Index func_index;
+      /*! \brief The number of arguments to the function. */
+      Index num_args;
+      /*! \brief The registers containing the arguments. */
+      RegName* args;
+    } invoke_func;
     struct /* InvokeClosure Operands */ {
       /*! \brief The register containing the closure. */
       RegName closure;
       /*! \brief The number of arguments to the closure. */
-      Index num_closure_args;
+      Index num_args;
       /*! \brief The closure arguments as an array. */
-      RegName* closure_args;
-    };
-    struct /* Return Operands */ {
-      /*! \brief The register to return. */
-      RegName result;
-    };
-    struct /* Move Operands */ {
-      /*! \brief The source register for a move operation. */
-      RegName from;
-    };
+      RegName* args;
+    } invoke_closure;
     struct /* InvokePacked Operands */ {
       /*! \brief The index into the packed function table. */
       Index packed_index;
@@ -119,84 +195,18 @@ struct Instruction {
       /*! \brief The number of outputs produced by the packed function. */
       Index output_size;
       /*! \brief The arguments to pass to the packed function. */
-      RegName* packed_args;
-    };
-    struct /* If Operands */ {
-      /*! \brief The register containing the test value. */
-      RegName test;
-      /*! \brief The register containing the target value. */
-      RegName target;
-      /*! \brief The program counter offset for the true branch. */
-      Index true_offset;
-      /*! \brief The program counter offset for the false branch. */
-      Index false_offset;
-    } if_op;
-    struct /* Invoke Operands */ {
-      /*! \brief The function to call. */
-      Index func_index;
-      /*! \brief The number of arguments to the function. */
-      Index num_args;
-      /*! \brief The registers containing the arguments. */
-      RegName* invoke_args_registers;
-    };
-    struct /* LoadConst Operands */ {
-      /* \brief The index into the constant pool. */
-      Index const_index;
-    };
-    struct /* LoadConsti Operands */ {
-      /* \brief The index into the constant pool. */
-      Index val;
-    } load_consti;
-    struct /* Jump Operands */ {
-      /*! \brief The jump offset. */
-      Index pc_offset;
-    };
-    struct /* Proj Operands */ {
-      /*! \brief The register to project from. */
-      RegName object;
-      /*! \brief The field to read out. */
-      Index field_index;
-    };
-    struct /* GetTag Operands */ {
-      /*! \brief The register to project from. */
-      RegName object;
-    } get_tag;
-    struct /* AllocADT Operands */ {
-      /*! \brief The datatype's constructor tag. */
-      Index constructor_tag;
-      /*! \brief The number of fields to store in the datatype. */
-      Index num_fields;
-      /*! \brief The fields as an array. */
-      RegName* datatype_fields;
-    };
-    struct /* AllocClosure Operands */ {
-      /*! \brief The index into the function table. */
-      Index clo_index;
-      /*! \brief The number of free variables to capture. */
-      Index num_freevar;
-      /*! \brief The free variables as an array. */
-      RegName* free_vars;
-    };
-    struct /* AllocStorage Operands */ {
-      /*! \brief The size of the allocation. */
-      RegName allocation_size;
-      /*! \brief The alignment of the allocation. */
-      RegName alignment;
-      /*! \brief The hint of the dtype. */
-      DLDataType dtype_hint;
-      DevType device_type;
-      Index device_id;
-    } alloc_storage;
-    struct /* InvokeJitOp Operands */ {
-      /*! \brief The OpValue to invoke. */
-      RegName op_value;
+      RegName* args;
+    } invoke_packed;
+    struct /* InvokeJit Operands */ {
+      /*! \brief The register containing the OpValue to invoke. */
+      RegName op_reg;
       /*! \brief The arity of the packed function. */
       Index arity;
       /*! \brief The number of outputs produced by the packed function. */
       Index output_size;
       /*! \brief The arguments to pass to the packed function. */
-      RegName* packed_args;
-    } invoke_jit_op;
+      RegName* args;
+    } invoke_jit;
   };
 
   /*!
@@ -243,25 +253,22 @@ struct Instruction {
   static Instruction AllocTensorReg(RegName storage, Index offset, RegName shape_register,
                                     DLDataType dtype, RegName dst);
   /*!
-   * \brief Construct an allocate datatype instruction.
-   * \param tag The datatype tag.
+   * \brief Construct an allocate tuple instruction.
    * \param num_fields The number of fields for the datatype.
    * \param fields The registers containing the fields.
    * \param dst The register name of the destination.
-   * \return The allocate instruction tensor.
+   * \return The allocate tuple instruction.
    */
-  static Instruction AllocADT(Index tag, Index num_fields, const std::vector<RegName>& fields,
-                              RegName dst);
+  static Instruction AllocTuple(const std::vector<RegName>& fields, RegName dst);
   /*!
    * \brief Construct an allocate closure instruction.
    * \param func_index The index of the function table.
-   * \param num_freevar The number of free variables.
    * \param free_vars The registers of the free variables.
    * \param dst The destination register.
    * \return The allocate closure instruction.
    */
-  static Instruction AllocClosure(Index func_index, Index num_freevar,
-                                  const std::vector<RegName>& free_vars, RegName dst);
+  static Instruction AllocClosure(Index func_index, const std::vector<RegName>& free_vars,
+                                  RegName dst);
   /*!
    * \brief Construct a get field instruction.
    * \param object_reg The register containing the object to project from.
@@ -270,13 +277,6 @@ struct Instruction {
    * \return The get field instruction.
    */
   static Instruction GetField(RegName object_reg, Index field_index, RegName dst);
-  /*!
-   * \brief Construct a get_tag instruction.
-   * \param object_reg The register containing the object to project from.
-   * \param dst The destination register.
-   * \return The get_tag instruction.
-   */
-  static Instruction GetTag(RegName object_reg, RegName dst);
   /*!
    * \brief Construct an if instruction.
    * \param test The register containing the test value.
@@ -299,7 +299,7 @@ struct Instruction {
    * \param dst The destination register.
    * \return The invoke instruction.
    */
-  static Instruction Invoke(Index func_index, const std::vector<RegName>& args, RegName dst);
+  static Instruction InvokeFunc(Index func_index, const std::vector<RegName>& args, RegName dst);
   /*!
    * \brief Construct an invoke closure instruction.
    * \param closure The register of the closure to invoke.
@@ -343,14 +343,14 @@ struct Instruction {
 
   /*!
    * \brief Construct a invoke JIT operator instruction.
-   * \param op_value The OpValue to invoke.
+   * \param op_reg The register containing the OpValue to invoke.
    * \param arity The arity of the function.
    * \param output_size The number of outputs of the packed function.
    * \param args The argument registers.
    * \return The invoke JIT operator instruction.
    */
-  static Instruction InvokeJitOp(RegName op_value, Index arity, Index output_size,
-                                 const std::vector<RegName>& args);
+  static Instruction InvokeJit(RegName op_reg, Index arity, Index output_size,
+                               const std::vector<RegName>& args);
 
   Instruction();
   Instruction(const Instruction& instr);

@@ -16,13 +16,11 @@
 #include <stdexcept>
 #include <vector>
 
-#include "mnm/binding.h"
 #include "mnm/memory_pool.h"
 #include "mnm/ir.h"
 #include "mnm/op.h"
 #include "mnm/value.h"
 #include "mnm/vm/vm.h"
-#include "./storage.h"
 #include "../../requests.h"
 
 namespace mnm {
@@ -34,32 +32,31 @@ using namespace mnm::value;
 using namespace mnm::op;
 using namespace mnm::registry;
 using namespace mnm::requests;
-using binding::DeTuple;
-using binding::LookupBinding;
-using binding::NDArrayBinding;
 
-VMClosure::VMClosure(size_t func_index, std::vector<ObjectRef> free_vars) {
-  auto ptr = make_object<VMClosureObj>();
-  ptr->func_index = func_index;
-  ptr->free_vars = std::move(free_vars);
-  data_ = std::move(ptr);
+inline StorageValue make_storage(size_t size, size_t alignment, DLDataType dtype_hint,
+                                 Context ctx) {
+  auto buffer = memory_pool::Memory::Alloc(ctx, size);
+  return StorageValue::make(buffer);
 }
 
-inline Storage make_storage(size_t size, size_t alignment, DLDataType dtype_hint, Context ctx) {
-  auto storage_obj = tvm::runtime::SimpleObjAllocator().make_object<StorageObj>();
-  storage_obj->buffer = memory_pool::Memory::Alloc(ctx, size);
-  return Storage(storage_obj);
-}
-
-inline ObjectRef CopyTo(ObjectRef src, const DLContext& ctx) {
+inline Value CopyTo(Value src, const DLContext& ctx) {
   if (!src.defined()) {
     return src;
-  } else if (src->IsInstance<VarNode>()) {
-    auto var = Downcast<Var>(src);
-    auto entry = LookupBinding(var.operator->());
-    CHECK(entry.defined()) << "could not find variable binding for " << var->name_hint();
-    // TODO(vinx13): copy to ctx to support heterogeneous execution
-    return Downcast<NDArrayBinding>(entry)->value;
+  }
+  if (src.as<TensorValueObj>()) {
+    auto tensor = Downcast<TensorValue>(src)->tensor;
+    if (tensor->ctx.device_type != ctx.device_type) {
+      return TensorValue::make(tensor::Tensor(tensor.CopyTo(ctx)));
+    }
+    return src;
+  }
+  if (src.as<TupleValueObj>()) {
+    std::vector<Value> ret;
+    TupleValue tup = Downcast<TupleValue>(src);
+    for (size_t i = 0; i < tup->fields.size(); ++i) {
+      ret.push_back(CopyTo(tup->fields[i], ctx));
+    }
+    return TupleValue::make(ret);
   }
   return src;
 }
@@ -79,7 +76,7 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
       } else {
         auto it = inputs_.find(func_name);
         CHECK(it != inputs_.end()) << "Input has not been set for function " << func_name;
-        const std::vector<ObjectRef>& func_args = it->second;
+        const std::vector<Value>& func_args = it->second;
         *rv = Invoke(func, func_args);
       }
     });
@@ -105,10 +102,10 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
       TVMContext ctx = ctxs_[0];
       CHECK_EQ(args.size() - 1, param_names.size())
           << "The number of provided parameters doesn't match the number of arguments";
-      std::vector<ObjectRef> func_args(param_names.size());
+      std::vector<Value> func_args(param_names.size());
       for (int i = 1; i < args.size(); ++i) {
-        ObjectRef obj = CopyTo(args[i], ctx);
-        func_args[i - 1] = obj;
+        Value arg = args[i];
+        func_args[i - 1] = CopyTo(arg, ctx);
       }
       inputs_.erase(func_name);
       inputs_.emplace(func_name, func_args);
@@ -170,7 +167,7 @@ Index VirtualMachine::PopFrame() {
   return call_stack_size;
 }
 
-void VirtualMachine::InvokeGlobal(const VMFunction& func, const std::vector<ObjectRef>& args) {
+void VirtualMachine::InvokeGlobal(const VMFunction& func, const std::vector<Value>& args) {
   DLOG(INFO) << "Invoking global " << func.name << " " << args.size();
 
   PushFrame(func.params.size(), this->pc_ + 1, func);
@@ -183,7 +180,7 @@ void VirtualMachine::InvokeGlobal(const VMFunction& func, const std::vector<Obje
   pc_ = 0;
 }
 
-ObjectRef VirtualMachine::Invoke(const VMFunction& func, const std::vector<ObjectRef>& args) {
+Value VirtualMachine::Invoke(const VMFunction& func, const std::vector<Value>& args) {
   DLOG(INFO) << "Executing Function: " << std::endl << func;
 
   InvokeGlobal(func, args);
@@ -191,10 +188,10 @@ ObjectRef VirtualMachine::Invoke(const VMFunction& func, const std::vector<Objec
   // TODO(wweic) ctx could be obtained from the ctxs list.
   // auto alloc = MemoryManager::Global()->GetAllocator(ctxs_[0]);
   // DLOG(INFO) << "Memory used: " << alloc->UsedMemory() << " B";
-  return DeTuple(return_register_);
+  return return_register_;
 }
 
-ObjectRef VirtualMachine::Invoke(const std::string& name, const std::vector<ObjectRef>& args) {
+Value VirtualMachine::Invoke(const std::string& name, const std::vector<Value>& args) {
   CHECK(exec_) << "The executable has not been created yet.";
   auto it = exec_->global_map.find(name);
   CHECK(it != exec_->global_map.end()) << "Cannot find function " << name << " in the executable";
@@ -207,11 +204,11 @@ void VirtualMachine::Init(const std::vector<Context>& ctxs) {
   ctxs_ = ctxs;
 }
 
-inline void VirtualMachine::WriteRegister(Index r, const ObjectRef& val) {
+inline void VirtualMachine::WriteRegister(Index r, const Value& val) {
   frames_.back().register_file[r] = val;
 }
 
-inline ObjectRef VirtualMachine::ReadRegister(Index r) const {
+inline Value VirtualMachine::ReadRegister(Index r) const {
   return frames_.back().register_file[r];
 }
 
@@ -236,8 +233,7 @@ void VirtualMachine::RunLoop() {
 
     switch (instr.op) {
       case Opcode::Move: {
-        ObjectRef from_obj;
-        from_obj = ReadRegister(instr.from);
+        Value from_obj = ReadRegister(instr.from);
         WriteRegister(instr.dst, from_obj);
         pc_++;
         goto main_loop;
@@ -267,12 +263,12 @@ void VirtualMachine::RunLoop() {
         pc_++;
         goto main_loop;
       }
-      case Opcode::Invoke: {
-        std::vector<ObjectRef> args;
-        for (Index i = 0; i < instr.num_args; ++i) {
-          args.push_back(ReadRegister(instr.invoke_args_registers[i]));
+      case Opcode::InvokeFunc: {
+        std::vector<Value> args;
+        for (Index i = 0; i < instr.invoke_func.num_args; ++i) {
+          args.push_back(ReadRegister(instr.invoke_func.args[i]));
         }
-        InvokeGlobal(exec_->functions[instr.func_index], args);
+        InvokeGlobal(exec_->functions[instr.invoke_func.func_index], args);
         frames_.back().caller_return_register = instr.dst;
         goto main_loop;
       }
@@ -280,35 +276,23 @@ void VirtualMachine::RunLoop() {
         LOG(FATAL) << "Not supported.";
       }
       case Opcode::InvokeClosure: {
-        auto object = ReadRegister(instr.closure);
-        const auto* closure = object.as<VMClosureObj>();
-
-        std::vector<ObjectRef> args;
+        auto closure = Downcast<VMClosureValue>(ReadRegister(instr.invoke_closure.closure));
+        std::vector<Value> args;
         for (auto free_var : closure->free_vars) {
           args.push_back(free_var);
         }
-        for (Index i = 0; i < instr.num_closure_args; ++i) {
-          args.push_back(ReadRegister(instr.closure_args[i]));
+        for (Index i = 0; i < instr.invoke_closure.num_args; ++i) {
+          args.push_back(ReadRegister(instr.invoke_closure.args[i]));
         }
         InvokeGlobal(exec_->functions[closure->func_index], args);
         frames_.back().caller_return_register = instr.dst;
         goto main_loop;
       }
       case Opcode::GetField: {
-        auto object = ReadRegister(instr.object);
-        const auto& tuple = Downcast<tvm::runtime::ADT>(object);
-        auto field = tuple[instr.field_index];
+        auto object = ReadRegister(instr.get_field.object);
+        const auto& tuple = Downcast<TupleValue>(object);
+        auto field = tuple->fields[instr.get_field.field_index];
         WriteRegister(instr.dst, field);
-        pc_++;
-        goto main_loop;
-      }
-      case Opcode::GetTag: {
-        auto object = ReadRegister(instr.get_tag.object);
-        const auto& adt = Downcast<tvm::runtime::ADT>(object);
-        auto tag = adt.tag();
-        auto tag_tensor = NDArray::Empty({1}, {kDLInt, 32, 1}, {kDLCPU, 0});
-        reinterpret_cast<int32_t*>(tag_tensor->data)[0] = tag;
-        WriteRegister(instr.dst, tag_tensor);
         pc_++;
         goto main_loop;
       }
@@ -338,7 +322,7 @@ void VirtualMachine::RunLoop() {
         }
 
         auto storage_obj = ReadRegister(instr.alloc_tensor.storage);
-        auto storage = Downcast<Storage>(storage_obj);
+        auto storage = Downcast<StorageValue>(storage_obj);
         auto tensor = TensorValue::Assemble(ctxs_[0], instr.alloc_tensor.dtype, shape, {},
                                             storage->buffer->data);
         WriteRegister(instr.dst, tensor);
@@ -348,39 +332,31 @@ void VirtualMachine::RunLoop() {
       case Opcode::AllocTensorReg: {
         LOG(FATAL) << "Not supported";
       }
-      case Opcode::AllocADT: {
-        std::vector<ObjectRef> fields;
-        for (Index i = 0; i < instr.num_fields; ++i) {
-          fields.push_back(ReadRegister(instr.datatype_fields[i]));
+      case Opcode::AllocTuple: {
+        Array<Value> fields;
+        TupleValue tuple;
+        for (Index i = 0; i < instr.alloc_tuple.num_fields; ++i) {
+          tuple->fields.push_back(ReadRegister(instr.alloc_tuple.fields[i]));
         }
-        ObjectRef obj;
-        if (instr.constructor_tag == 0) {
-          Array<Value> values;
-          std::transform(fields.begin(), fields.end(), std::back_inserter(values),
-                         [](auto& field) { return Downcast<Value>(field); });
-          obj = TupleValue::make(values);
-        } else {
-          tvm::runtime::ADT(instr.constructor_tag, fields);
-        }
-        WriteRegister(instr.dst, obj);
+        WriteRegister(instr.dst, tuple);
         pc_++;
         goto main_loop;
       }
       case Opcode::AllocClosure: {
-        std::vector<ObjectRef> free_vars;
-        for (Index i = 0; i < instr.num_freevar; i++) {
-          free_vars.push_back(ReadRegister(instr.free_vars[i]));
+        std::vector<Value> free_vars;
+        for (Index i = 0; i < instr.alloc_closure.num_free_vars; i++) {
+          free_vars.push_back(ReadRegister(instr.alloc_closure.free_vars[i]));
         }
-        WriteRegister(instr.dst, VMClosure(instr.func_index, free_vars));
+        WriteRegister(instr.dst, VMClosureValue::make(instr.alloc_closure.func_index, free_vars));
         pc_++;
         goto main_loop;
       }
       case Opcode::AllocStorage: {
         auto size = LoadScalarInt(instr.alloc_storage.allocation_size);
-        auto alignment = LoadScalarInt(instr.alloc_storage.alignment);
+        auto alignment = instr.alloc_storage.alignment;
 
-        DLOG(INFO) << "AllocStorage: allocation_size=" << size << "alignment=" << alignment
-                   << "dtype_hint="
+        DLOG(INFO) << "AllocStorage: allocation_size=" << size << " alignment=" << alignment
+                   << " dtype_hint="
                    << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
         auto ctx = GetContext(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
@@ -393,7 +369,7 @@ void VirtualMachine::RunLoop() {
         // If we have hit the point from which we started
         // running, we should return to the caller breaking
         // the dispatch loop.
-        return_register_ = Downcast<Value>(ReadRegister(instr.result));
+        return_register_ = ReadRegister(instr.result);
         auto caller_return_register = frames_.back().caller_return_register;
 
         if (PopFrame() == frame_start) {
@@ -404,25 +380,24 @@ void VirtualMachine::RunLoop() {
           goto main_loop;
         }
       }
-      case Opcode::InvokeJitOp: {
+      case Opcode::InvokeJit: {
         static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
         auto call_values = CallValues::make();
-        auto op = Downcast<OpValue>(ReadRegister(instr.invoke_jit_op.op_value));
+        Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
+        auto op = Downcast<OpValue>(ReadRegister(instr.invoke_jit.op_reg));
         call_values->callee = op;
         Array<Value> args;
-        for (Index i = 0; i < instr.arity - instr.output_size; i++) {
-          auto reg_value = ReadRegister(instr.packed_args[i]);
-          args.push_back(Downcast<Value>(reg_value));
+        for (Index i = 0; i < num_inputs; i++) {
+          args.push_back(ReadRegister(instr.invoke_jit.args[i]));
         }
         call_values->args = fschema[op->op](args);
         call_values->ctx = ctxs_[0];
-        if (instr.output_size == 1) {
-          call_values->out = Downcast<Value>(
-              ReadRegister(instr.invoke_jit_op.packed_args[instr.arity - instr.output_size]));
+        if (instr.invoke_jit.output_size == 1) {
+          call_values->out = ReadRegister(instr.invoke_jit.args[num_inputs]);
         } else {
           Array<Value> outs;
-          for (Index i = instr.arity - instr.output_size; i < instr.arity; i++) {
-            outs.push_back(Downcast<Value>(ReadRegister(instr.packed_args[i])));
+          for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
+            outs.push_back(ReadRegister(instr.invoke_jit.args[i]));
           }
           call_values->out = TupleValue::make(outs);
         }

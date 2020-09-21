@@ -15,54 +15,15 @@
 #include "mnm/value.h"
 #include "mnm/vm/bytecode.h"
 #include "mnm/vm/executable.h"
+#include "mnm/vm/value.h"
 
 namespace mnm {
 namespace executor {
 namespace vm {
 
 using namespace mnm::ir;
+using namespace mnm::value;
 using mnm::registry::PackedFunc;
-using mnm::value::Value;
-
-/*!
- * \brief An object representing a closure. This object is used by both the
- * Relay VM and interpreter.
- */
-class ClosureObj : public Object {
- public:
-  static constexpr const char* _type_key = "runtime.Closure";
-  TVM_DECLARE_BASE_OBJECT_INFO(ClosureObj, Object);
-};
-
-/*! \brief reference to closure. */
-class Closure : public ObjectRef {
- public:
-  TVM_DEFINE_OBJECT_REF_METHODS(Closure, ObjectRef, ClosureObj);
-};
-
-/*!
- * \brief An object representing a vm closure.
- */
-class VMClosureObj : public ClosureObj {
- public:
-  /*!
-   * \brief The index into the function list. The function could be any
-   * function object that is compatible to the VM runtime.
-   */
-  size_t func_index;
-  /*! \brief The free variables of the closure. */
-  std::vector<ObjectRef> free_vars;
-
-  static constexpr const char* _type_key = "vm.Closure";
-  TVM_DECLARE_FINAL_OBJECT_INFO(VMClosureObj, ClosureObj);
-};
-
-/*! \brief reference to closure. */
-class VMClosure : public Closure {
- public:
-  VMClosure(size_t func_index, std::vector<ObjectRef> free_vars);
-  TVM_DEFINE_OBJECT_REF_METHODS(VMClosure, Closure, VMClosureObj);
-};
 
 /*! \brief Magic number for NDArray list file  */
 constexpr uint64_t kTVMNDArrayListMagic = 0xF7E58D4F05049CB7;
@@ -84,10 +45,10 @@ struct VMFunction {
   Index register_file_size;
 
   VMFunction(const std::string& name, std::vector<std::string> params,
-             const std::vector<Instruction>& instructions, Index register_file_size)
+             std::vector<Instruction> instructions, Index register_file_size)
       : name(name),
-        params(params),
-        instructions(instructions),
+        params(std::move(params)),
+        instructions(std::move(instructions)),
         register_file_size(register_file_size) {
   }
 
@@ -113,10 +74,8 @@ struct VMFrame {
   Index args;
   /*! \brief A pointer into the caller function's instructions. */
   const Instruction* code;
-
   /*! \brief Statically allocated space for objects */
-  std::vector<ObjectRef> register_file;
-
+  std::vector<Value> register_file;
   /*! \brief Register in caller's frame to put return value */
   RegName caller_return_register;
 
@@ -194,7 +153,7 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   /*! \brief The executable the VM will operate on. */
   const Executable* exec_;
   /*! \brief The function name to inputs mapping. */
-  std::unordered_map<std::string, std::vector<ObjectRef>> inputs_;
+  std::unordered_map<std::string, std::vector<Value>> inputs_;
   /*! \brief The set of TVM contexts the VM is currently executing on. */
   std::vector<Context> ctxs_;
 
@@ -212,14 +171,14 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * \param reg The register to write to.
    * \param obj The object to write to.
    */
-  inline void WriteRegister(RegName reg, const ObjectRef& obj);
+  inline void WriteRegister(RegName reg, const Value& obj);
 
   /*!
    * \brief Read a VM register.
    * \param reg The register to read from.
    * \return The read object.
    */
-  inline ObjectRef ReadRegister(RegName reg) const;
+  inline Value ReadRegister(RegName reg) const;
 
   /*!
    * \brief Read a VM register and cast it to int32_t
@@ -232,18 +191,18 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * \brief Invoke a VM function.
    * \param func The function.
    * \param args The arguments to the function.
-   * \return The object representing the result.
+   * \return The value representing the result.
    */
-  ObjectRef Invoke(const VMFunction& func, const std::vector<ObjectRef>& args);
+  Value Invoke(const VMFunction& func, const std::vector<Value>& args);
 
   // TODO(@jroesch): I really would like this to be a global variable.
   /*!
    * \brief Invoke a VM function by name.
    * \param name The function's name.
    * \param args The arguments to the function.
-   * \return The object representing the result.
+   * \return The value representing the result.
    */
-  ObjectRef Invoke(const std::string& name, const std::vector<ObjectRef>& args);
+  Value Invoke(const std::string& name, const std::vector<Value>& args);
 
   /*!
    * \brief Initialize the virtual machine for a set of contexts.
@@ -266,13 +225,13 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    *
    * This does not begin execution of the VM.
    */
-  void InvokeGlobal(const VMFunction& func, const std::vector<ObjectRef>& args);
+  void InvokeGlobal(const VMFunction& func, const std::vector<Value>& args);
 
   /*!
    * \brief The constant pool for runtime. It caches the device dependent
    * object to avoid rellocation of constants during inference.
    */
-  std::vector<ObjectRef> const_pool_;
+  std::vector<Value> const_pool_;
 };
 
 }  // namespace vm

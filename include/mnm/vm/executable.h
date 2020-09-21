@@ -140,7 +140,7 @@ class Executable : public tvm::runtime::ModuleNode {
    * code when executing on non-CPU devices. */
   tvm::runtime::Module lib;
   /*! \brief The global constant pool. */
-  std::vector<ObjectRef> constants;
+  std::vector<Value> constants;
   /*! \brief A map from globals (as strings) to their index in the function map. */
   std::unordered_map<std::string, Index> global_map;
   /*! \brief A mapping from the packed function (as string) to the index that

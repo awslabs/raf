@@ -240,14 +240,13 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     DLOG(INFO) << "VMCompiler::Emit: instr=" << instr;
     CHECK((int)instr.op < 100) << "Invalid opcode " << (int)instr.op;
     switch (instr.op) {
-      case Opcode::AllocADT:
+      case Opcode::AllocTuple:
       case Opcode::AllocTensor:
       case Opcode::AllocTensorReg:
       case Opcode::GetField:
-      case Opcode::GetTag:
       case Opcode::LoadConst:
       case Opcode::LoadConsti:
-      case Opcode::Invoke:
+      case Opcode::InvokeFunc:
       case Opcode::AllocClosure:
       case Opcode::AllocStorage:
       case Opcode::Move:
@@ -255,11 +254,12 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
         last_register_ = instr.dst;
         break;
       case Opcode::InvokePacked:
+      case Opcode::InvokeJit:
       case Opcode::If:
       case Opcode::Ret:
       case Opcode::Goto:
       case Opcode::Fatal:
-      case Opcode::InvokeJitOp:
+        last_register_ = -1;
         break;
     }
     instructions_.push_back(instr);
@@ -267,7 +267,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
 
   void VisitExpr_(const ConstantNode* const_node) {
     size_t konst_idx = context_->constants.size();
-    context_->constants.push_back(const_node->value);
+    context_->constants.push_back(Downcast<Value>(const_node->value));
     Emit(Instruction::LoadConst(konst_idx, NewRegister()));
   }
 
@@ -295,8 +295,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       fields_registers.push_back(last_register_);
     }
 
-    // TODO(@jroesch): use correct tag
-    Emit(Instruction::AllocADT(0, tuple->fields.size(), fields_registers, NewRegister()));
+    Emit(Instruction::AllocTuple(fields_registers, NewRegister()));
   }
 
   void VisitExpr_(const LetNode* let_node) {
@@ -319,7 +318,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     auto it = context_->global_map.find(var);
     CHECK(it != context_->global_map.end());
     // Allocate closure with zero free vars
-    Emit(Instruction::AllocClosure(it->second, 0, {}, NewRegister()));
+    Emit(Instruction::AllocClosure(it->second, {}, NewRegister()));
   }
 
   void VisitExpr_(const IfNode* if_node) {
@@ -422,15 +421,17 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    this->VisitExpr(args[0]);
                    auto size_register = last_register_;
 
-                   this->VisitExpr(args[1]);
-                   auto alignment_register = last_register_;
+                   CHECK(args[1]->IsInstance<ConstantNode>());
+                   auto align_val = args[1].as<ConstantNode>()->value;
+                   CHECK(align_val->IsInstance<IntValueObj>());
+                   Index alignment = align_val.as<IntValueObj>()->data;
 
                    // Get the dtype hint from the attributes.
                    auto alloc_attrs = attrs.as<tvm::relay::AllocStorageAttrs>();
                    CHECK(alloc_attrs != nullptr) << "must be the alloc tensor attrs";
                    auto dtype = alloc_attrs->dtype;
 
-                   Emit(Instruction::AllocStorage(size_register, alignment_register, dtype,
+                   Emit(Instruction::AllocStorage(size_register, alignment, dtype,
                                                   alloc_attrs->device_type, alloc_attrs->device_id,
                                                   NewRegister()));
                  })
@@ -469,16 +470,10 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
 
       if (tvm::relay::vm::IsClosure(func)) {
         auto arity = func->params.size();
-        Emit(Instruction::AllocClosure(it->second, arity, args_registers, NewRegister()));
+        Emit(Instruction::AllocClosure(it->second, args_registers, NewRegister()));
       } else {
-        Emit(Instruction::Invoke(it->second, args_registers, NewRegister()));
+        Emit(Instruction::InvokeFunc(it->second, args_registers, NewRegister()));
       }
-    } else if (auto constructor_node = op.as<ConstructorNode>()) {
-      // In the constructor case, we simply need to find its tag
-      // and emit a call to allocate the data structure.
-      auto constructor = GetRef<Constructor>(constructor_node);
-      Emit(Instruction::AllocADT(constructor->tag, call_node->args.size(), args_registers,
-                                 NewRegister()));
     } else if (auto var_node = op.as<VarNode>()) {
       // If we are calling a variable, it must be the case that it is a closure so we
       // emit invoke closure here.
@@ -563,8 +558,8 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       // heterogeneous execution.
       LOG(FATAL) << "Currently VM compiler doesn't support heterogeneous compilation";
     }
-    Emit(Instruction::InvokeJitOp(op_reg, argument_registers.size(), output_tuple->fields.size(),
-                                  argument_registers));
+    Emit(Instruction::InvokeJit(op_reg, argument_registers.size(), output_tuple->fields.size(),
+                                argument_registers));
   }
 
  protected:
@@ -577,7 +572,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
   /*! \brief Map from var to register number. */
   std::unordered_map<Var, RegName, ObjectHash, ObjectEqual> var_register_map_;
   /*! \brief Last used register number. */
-  size_t last_register_;
+  Index last_register_;
   /*! \brief Total number of virtual registers allocated. */
   size_t registers_num_;
   /*! \brief Global shared meta data */
@@ -640,7 +635,7 @@ void VMCompiler::Lower(Module mod, const TargetsMap& targets, const tvm::Target&
 #endif  // USE_RELAY_DEBUG
 
   // populate constants
-  for (auto data : context_.constants) {
+  for (const Value& data : context_.constants) {
     exec_->constants.push_back(data);
   }
 

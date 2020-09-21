@@ -49,7 +49,7 @@ struct VMCompilerContext {
   // Map from global var to a unique integer
   GlobalMap global_map;
   // List of constants
-  std::vector<ObjectRef> constants;
+  std::vector<Value> constants;
 };
 
 class VMCompiler : public tvm::runtime::ModuleNode {
