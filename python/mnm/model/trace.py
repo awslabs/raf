@@ -222,8 +222,10 @@ def _get_named_vars(named_inputs, named_params):
 def _flatten_to_list(a):
     if a is None:
         return [None], None
-    if isinstance(a, (ndarray, Symbol)):
+    if isinstance(a, (ndarray)):
         return [a], ndarray
+    if isinstance(a, (Symbol)):
+        return [a], Symbol
     if isinstance(a, (tuple, list)):
         flat_a = []
         struct = list()
@@ -244,6 +246,14 @@ def _unflatten_from_struct(a, struct):
     if struct is ndarray:
         assert len(a) == 1
         return ndarray(a[0])
+    if struct is Symbol:
+        length = len(a)
+        if length == 1:
+            return ndarray(a[0])
+        out_array = []
+        for i in range(length):
+            out_array.append(ndarray(a[i]))
+        return tuple(out_array)
     if isinstance(struct, (tuple, list)):
         result = []
         for length, sub_struct in struct:

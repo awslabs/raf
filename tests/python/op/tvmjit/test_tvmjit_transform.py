@@ -212,15 +212,15 @@ def test_split(shape, axis, indices_or_sections, ctx):
         @mnm.model.trace
         def forward(self, x):
             ret = mnm.split(x, self._indices_or_sections, self._axis)
-            return ret[0], ret[1]
+            return ret
     m_x, n_x = randn(shape, ctx=ctx)
     n_y = np.split(n_x, indices_or_sections=indices_or_sections, axis=axis)
     # test hybridized call
     model = Split(indices_or_sections, axis)
-    m_y0, m_y1 = model(m_x)
-    n_y0, n_y1 = n_y[0], n_y[1]
-    check(m_y0, n_y0)
-    check(m_y1, n_y1)
+    m_y = model(m_x)
+    assert len(m_y) == len(n_y)
+    for m, n in zip(m_y, n_y):
+        check(m, n)
 
     # test imperative call
     m_y = mnm.split(m_x, indices_or_sections=indices_or_sections, axis=axis)
