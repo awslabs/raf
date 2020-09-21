@@ -76,21 +76,15 @@ class CUBlasThreadEntry {
   cublasHandle_t handle{nullptr};
 };
 
-template <typename T, int value>
-inline const void* const_typed_addr() {
-  static const T a = static_cast<T>(value);
-  return static_cast<const void*>(&a);
-}
-
 template <int value>
-const void* const_typed_addr(cudaDataType_t dt) {
+inline const void* const_addr(cudaDataType_t dt) {
   switch (dt) {
     case CUDA_R_8I:
       return const_typed_addr<int8_t, value>();
     case CUDA_R_8U:
       return const_typed_addr<uint8_t, value>();
     case CUDA_R_16F:
-      return const_typed_addr<float, value>();
+      return const_typed_addr<__half, value>();
     case CUDA_R_32F:
       return const_typed_addr<float, value>();
     case CUDA_R_64F:

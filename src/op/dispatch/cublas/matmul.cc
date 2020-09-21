@@ -34,29 +34,37 @@ void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTe
 
   if (c->dtype.code == kDLFloat) {
     switch (c->dtype.bits) {
+      case 16:
+        CUBLAS_CALL(
+            cublasHgemm(handle, transb, transa, m, n, k,
+                        static_cast<const __half*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
+                        static_cast<__half*>(b->data), ldb, static_cast<__half*>(a->data), lda,
+                        static_cast<const __half*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
+                        static_cast<__half*>(c->data), m));
+        return;
       case 32:
-        CUBLAS_CALL(cublasSgemm(
-            handle, transb, transa, m, n, k,
-            static_cast<const float*>(const_typed_addr<1>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<float*>(b->data), ldb, static_cast<float*>(a->data), lda,
-            static_cast<const float*>(const_typed_addr<0>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<float*>(c->data), m));
+        CUBLAS_CALL(
+            cublasSgemm(handle, transb, transa, m, n, k,
+                        static_cast<const float*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
+                        static_cast<float*>(b->data), ldb, static_cast<float*>(a->data), lda,
+                        static_cast<const float*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
+                        static_cast<float*>(c->data), m));
         return;
       case 64:
-        CUBLAS_CALL(cublasDgemm(
-            handle, transb, transa, m, n, k,
-            static_cast<const double*>(const_typed_addr<1>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<double*>(b->data), ldb, static_cast<double*>(a->data), lda,
-            static_cast<const double*>(const_typed_addr<0>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<double*>(c->data), m));
+        CUBLAS_CALL(
+            cublasDgemm(handle, transb, transa, m, n, k,
+                        static_cast<const double*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
+                        static_cast<double*>(b->data), ldb, static_cast<double*>(a->data), lda,
+                        static_cast<const double*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
+                        static_cast<double*>(c->data), m));
         return;
     }
   }
   CUBLAS_CALL(cublasGemmEx(
-      handle, transb, transa, m, n, k, const_typed_addr<1>(cudaDataType_t(DType(c->dtype))),
-      b->data, cudaDataType_t(DType(b->dtype)), ldb, a->data, cudaDataType_t(DType(a->dtype)), lda,
-      const_typed_addr<0>(cudaDataType_t(DType(c->dtype))), c->data,
-      cudaDataType_t(DType(c->dtype)), m, cudaDataType_t(DType(c->dtype)), CUBLAS_GEMM_DEFAULT));
+      handle, transb, transa, m, n, k, const_addr<1>(cudaDataType_t(DType(c->dtype))), b->data,
+      cudaDataType_t(DType(b->dtype)), ldb, a->data, cudaDataType_t(DType(a->dtype)), lda,
+      const_addr<0>(cudaDataType_t(DType(c->dtype))), c->data, cudaDataType_t(DType(c->dtype)), m,
+      cudaDataType_t(DType(c->dtype)), CUBLAS_GEMM_DEFAULT));
 }
 
 template <bool transpose_a, bool transpose_b>

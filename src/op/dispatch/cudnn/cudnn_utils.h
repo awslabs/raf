@@ -61,12 +61,6 @@ class CUDNNThreadEntry {
   cudnnHandle_t handle{nullptr};
 };
 
-template <typename T, int value>
-inline const void* const_typed_addr() {
-  static const T a = static_cast<T>(value);
-  return static_cast<const void*>(&a);
-}
-
 #if CUDNN_VERSION >= 7100
 
 class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t> {
@@ -74,7 +68,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t
   ENUM_DEF_HEADER(CUDNNDType, 0, plain);
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 0, Float, CUDNN_DATA_FLOAT, "float32");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 1, Double, CUDNN_DATA_DOUBLE, "float64");
-  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 2, Half, CUDNN_DATA_FLOAT, "float16");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 2, Half, CUDNN_DATA_HALF, "float16");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 3, Char, CUDNN_DATA_INT8, "int8");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 4, Int, CUDNN_DATA_INT32, "int32");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 5, Charx4, CUDNN_DATA_INT8x4, "int8x4");
@@ -93,7 +87,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t
       case CUDNN_DATA_FLOAT:
         return const_typed_addr<float, value>();
       case CUDNN_DATA_HALF:
-        return const_typed_addr<float, value>();
+        return const_typed_addr<__half, value>();
       case CUDNN_DATA_DOUBLE:
         return const_typed_addr<double, value>();
       case CUDNN_DATA_INT8:
@@ -120,7 +114,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
   ENUM_DEF_HEADER(CUDNNDType, 0, plain);
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 0, Float, CUDNN_DATA_FLOAT, "float32");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 1, Double, CUDNN_DATA_DOUBLE, "float64");
-  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 2, Half, CUDNN_DATA_FLOAT, "float16");
+  ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 2, Half, CUDNN_DATA_HALF, "float16");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 3, Char, CUDNN_DATA_INT8, "int8");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 4, Int, CUDNN_DATA_INT32, "int32");
   ENUM_DEF_ENTRY_WITH_NAME(CUDNNDType, 5, Charx4, CUDNN_DATA_INT8x4, "int8x4");
@@ -137,7 +131,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
       case CUDNN_DATA_FLOAT:
         return common::cuda::const_addr<float, value>();
       case CUDNN_DATA_HALF:
-        return common::cuda::const_addr<float, value>();
+        return common::cuda::const_addr<__half, value>();
       case CUDNN_DATA_DOUBLE:
         return common::cuda::const_addr<double, value>();
       case CUDNN_DATA_INT8:

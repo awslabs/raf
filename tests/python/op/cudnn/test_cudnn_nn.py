@@ -1,3 +1,4 @@
+# pylint: disable=too-many-locals, too-many-arguments
 import numpy as np
 import pytest
 import torch
@@ -13,7 +14,7 @@ def randn(shape, *, ctx="cuda", dtype="float32", std=1.0):
     assert list(x.shape) == list(shape)
     x = x.astype(dtype)
     m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
+    t_x = torch.tensor(x, requires_grad=True, device=ctx)  # pylint: disable=not-callable
     return m_x, t_x
 
 
@@ -24,7 +25,7 @@ def randn_pos(shape, *, ctx="cuda", dtype="float32", std=1.0):
     assert list(x.shape) == list(shape)
     x = x.astype(dtype)
     m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
+    t_x = torch.tensor(x, requires_grad=True, device=ctx)  # pylint: disable=not-callable
     return m_x, t_x
 
 
@@ -199,7 +200,7 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
-def test_mnm_batch_norm_infer(shape, momentum, eps):  # pylint: disable=too-many-locals
+def test_mnm_batch_norm_infer(shape, momentum, eps):
     stats_shape = [shape[1]]
     m_x, t_x = randn(shape)
     m_m, t_m = randn(stats_shape)
@@ -213,7 +214,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):  # pylint: disable=too-many
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use
             return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
 
     model = TestModel()
@@ -227,7 +228,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):  # pylint: disable=too-many
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
-def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many-locals
+def test_mnm_batch_norm_train(shape, momentum, eps):
     stats_shape = [shape[1]]
     m_x, t_x = randn(shape)
     m_m, t_m = randn(stats_shape)
@@ -244,7 +245,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use
             result = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
             return result[0]
 
@@ -270,7 +271,8 @@ def test_mnm_batch_norm_train(shape, momentum, eps):  # pylint: disable=too-many
 @pytest.mark.parametrize("k", [1, 2, 4])
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
-def test_mnm_matmul(n, k, m, transpose_a, transpose_b):
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -282,19 +284,23 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b):
             return mnm_op(m_a, m_b)
     # forward
     model = TestModel()
-    m_a, t_a = randn((n, k) if not transpose_a else (k, n))
-    m_b, t_b = randn((k, m) if not transpose_b else (m, k))
+    m_a, t_a = randn((n, k) if not transpose_a else (k, n), dtype=dtype)
+    m_b, t_b = randn((k, m) if not transpose_b else (m, k), dtype=dtype)
     m_a.requires_grad = True
     m_b.requires_grad = True
     m_c = model(m_a, m_b)
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
-    check(m_c, t_c, rtol=1e-4, atol=1e-4)
+    rtol = 1e-4 if dtype == "float32" else 2e-3
+    atol = 1e-4 if dtype == "float32" else 2e-3
+    check(m_c, t_c, rtol=rtol, atol=atol)
     # backward
-    m_dc, t_dc = randn(m_c.shape)
+    m_dc, t_dc = randn(m_c.shape, dtype=dtype)
     m_c.backward(m_dc)
     t_c.backward(t_dc)
-    check(m_a.grad, t_a.grad, rtol=1e-4, atol=1e-4)
-    check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
+    rtol = 1e-4 if dtype == "float32" else 2e-3
+    atol = 1e-4 if dtype == "float32" else 2e-3
+    check(m_a.grad, t_a.grad, rtol=rtol, atol=atol)
+    check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)
 
 
 if __name__ == "__main__":
