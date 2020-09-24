@@ -26,6 +26,18 @@ Array<Expr> NllLossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds
 
 MNM_OP_GRAD("mnm.op.nll_loss", NllLossGrad);
 
+Array<Expr> CrossEntropyGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
+  static auto dtrue = Op::Get("mnm.op.cross_entropy_dtrue");
+  static auto dpred = Op::Get("mnm.op.cross_entropy_dpred");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& true_ = call->args[0];
+  const Expr& pred = call->args[1];
+  return {Call(dtrue, {true_, pred}), Call(dpred, {true_, pred})};
+}
+
+MNM_OP_GRAD("mnm.op.cross_entropy", CrossEntropyGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

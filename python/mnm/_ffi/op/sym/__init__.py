@@ -33,6 +33,9 @@ from ._internal import conv2d_dw
 from ._internal import conv2d_dx
 from ._internal import copy
 from ._internal import cos
+from ._internal import cross_entropy
+from ._internal import cross_entropy_dpred
+from ._internal import cross_entropy_dtrue
 from ._internal import dense
 from ._internal import divide
 from ._internal import equal

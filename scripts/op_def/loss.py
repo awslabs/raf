@@ -10,6 +10,9 @@ class LossArgs:
         Op("nll_loss"),
         Op("nll_loss_dtrue"),
         Op("nll_loss_dpred"),
+        Op("cross_entropy"),
+        Op("cross_entropy_dtrue"),
+        Op("cross_entropy_dpred"),
     ]
 
     @staticmethod

@@ -67,6 +67,9 @@ static const char conv2d_dw[] = "mnm.op.conv2d_dw";
 static const char conv2d_dx[] = "mnm.op.conv2d_dx";
 static const char copy[] = "mnm.op.copy";
 static const char cos[] = "mnm.op.cos";
+static const char cross_entropy[] = "mnm.op.cross_entropy";
+static const char cross_entropy_dpred[] = "mnm.op.cross_entropy_dpred";
+static const char cross_entropy_dtrue[] = "mnm.op.cross_entropy_dtrue";
 static const char dense[] = "mnm.op.dense";
 static const char divide[] = "mnm.op.divide";
 static const char equal[] = "mnm.op.equal";
@@ -998,6 +1001,33 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.copy").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.cos").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(cos, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.cross_entropy").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(cross_entropy, 2, ffi2schema::Loss,
+              schema::LossArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.cross_entropy_dpred").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(cross_entropy_dpred, 2, ffi2schema::Loss,
+              schema::LossArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.cross_entropy_dtrue").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(cross_entropy_dtrue, 2, ffi2schema::Loss,
+              schema::LossArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2222,6 +2252,11 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dw").set_body(MNM_SYMBOLIC_API(conv2d_dw,
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dx").set_body(MNM_SYMBOLIC_API(conv2d_dx, 8, ConvDxw));
 MNM_REGISTER_GLOBAL("mnm.op.sym.copy").set_body(MNM_SYMBOLIC_API(copy, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.cos").set_body(MNM_SYMBOLIC_API(cos, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy").set_body(MNM_SYMBOLIC_API(cross_entropy, 2, Loss));
+MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dpred")
+    .set_body(MNM_SYMBOLIC_API(cross_entropy_dpred, 2, Loss));
+MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dtrue")
+    .set_body(MNM_SYMBOLIC_API(cross_entropy_dtrue, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.dense").set_body(MNM_SYMBOLIC_API(dense, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.divide").set_body(MNM_SYMBOLIC_API(divide, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.equal").set_body(MNM_SYMBOLIC_API(equal, 4, BinaryUfunc));
@@ -2932,6 +2967,12 @@ MNM_BIND_SCHEMA("mnm.op.conv2d_dx", names::conv2d_dx,
                 value2schema::ConvDxw);                            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.copy", names::copy, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.cos", names::cos, value2schema::Unary);    // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cross_entropy", names::cross_entropy,
+                value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cross_entropy_dpred", names::cross_entropy_dpred,
+                value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cross_entropy_dtrue", names::cross_entropy_dtrue,
+                value2schema::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.dense", names::dense,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.divide", names::divide,

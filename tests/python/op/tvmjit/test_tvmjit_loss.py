@@ -67,6 +67,32 @@ def test_nll_loss(ctx, n, c):
     check(m_pred.grad, t_pred.grad)
 
 
+@pytest.mark.parametrize("ctx", ['cpu'])
+@pytest.mark.parametrize("n", [3, 5, 7])
+@pytest.mark.parametrize("c", [2, 4, 6])
+def test_cross_entropy(ctx, n, c):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, y_true, y_pred):  # pylint: disable=no-self-use
+            return mnm.cross_entropy(y_true=y_true, y_pred=y_pred)
+
+    model = TestModel()
+    m_pred, t_pred = randn((n, c), ctx=ctx)
+    m_true, t_true = one_hot(n, c, ctx=ctx)
+    m_pred.requires_grad = True
+    # forward
+    t_loss = F.cross_entropy(t_pred, t_true)
+    m_loss = model(y_true=m_true, y_pred=m_pred)
+    check(m_loss, t_loss)
+    # backward
+    t_loss.backward()
+    m_loss.backward()
+    check(m_pred.grad, t_pred.grad)
+
+
 @pytest.mark.parametrize("shape", [
     (3, 16, 128, 128),
     (3, 16),

@@ -42,6 +42,11 @@ HashKey LossHasher(const std::vector<Type>& param_types, const Type& y_type, con
 MNM_TVMJIT(NLLLoss, "mnm.op.nll_loss", LossArgs, LossNormalizer, LossTyper, LossHasher);
 MNM_TVMJIT(NllLossDpred, "mnm.op.nll_loss_dpred", LossArgs, LossNormalizer, LossTyper, LossHasher);
 MNM_TVMJIT(NllLossDtrue, "mnm.op.nll_loss_dtrue", LossArgs, LossNormalizer, LossTyper, LossHasher);
+MNM_TVMJIT(CrossEntropy, "mnm.op.cross_entropy", LossArgs, LossNormalizer, LossTyper, LossHasher);
+MNM_TVMJIT(CrossEntropyDpred, "mnm.op.cross_entropy_dpred", LossArgs, LossNormalizer, LossTyper,
+           LossHasher);
+MNM_TVMJIT(CrossEntropyDtrue, "mnm.op.cross_entropy_dtrue", LossArgs, LossNormalizer, LossTyper,
+           LossHasher);
 
 }  // namespace tvmjit
 }  // namespace op

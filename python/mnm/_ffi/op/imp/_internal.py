@@ -67,6 +67,12 @@ copy = _APIS.get("mnm.op.imp.copy", None)
 # Defined in ./src/op/regs/regs.cc
 cos = _APIS.get("mnm.op.imp.cos", None)
 # Defined in ./src/op/regs/regs.cc
+cross_entropy = _APIS.get("mnm.op.imp.cross_entropy", None)
+# Defined in ./src/op/regs/regs.cc
+cross_entropy_dpred = _APIS.get("mnm.op.imp.cross_entropy_dpred", None)
+# Defined in ./src/op/regs/regs.cc
+cross_entropy_dtrue = _APIS.get("mnm.op.imp.cross_entropy_dtrue", None)
+# Defined in ./src/op/regs/regs.cc
 dense = _APIS.get("mnm.op.imp.dense", None)
 # Defined in ./src/op/regs/regs.cc
 divide = _APIS.get("mnm.op.imp.divide", None)
