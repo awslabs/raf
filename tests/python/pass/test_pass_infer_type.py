@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 import mnm
 from mnm._core.ndarray import Symbol
-from mnm._ffi.pass_ import InferType, AutoDiff
+from mnm._ffi.pass_ import InferType, AutoDiff, ExtractBinding
+from mnm._op import sym as op
 from tvm import relay
-
 
 def assert_has_type(expr, typ):
     checked_type = expr.checked_type
@@ -146,6 +146,45 @@ def test_gradient_closure():
 
     check_backward((1, 3, 2), (1, 2, 3))
 
+def test_gradient_op():
+    x_ty = relay.TensorType((1, 1, 224, 224))
+    y_ty = relay.TensorType((1, 1, 222, 222))
+    w_ty = relay.TensorType((1, 1, 3, 3))
+    x_shape = [1, 1, 224, 224]
+    w_shape = [1, 1, 3, 3]
+    x = Symbol.make_var("x", x_ty)
+    w = Symbol.make_var("w", w_ty)
+    y = Symbol.make_var("y", y_ty)
+
+    def get_type_func(net):
+        # pylint: disable=protected-access
+        body = net._Symbol__handle
+        body = ExtractBinding(body)
+        func = relay.Function(relay.analysis.free_vars(body), body)
+        func = run_infer_type(func)
+        return func
+
+    def check_conv2d_dx():
+        dx = op.conv2d_dx(w, y, y, x_shape, 1, 0, 1, 1)
+        expected_ty = relay.FuncType([w_ty, y_ty], x_ty)
+        func = get_type_func(dx)
+        assert_has_type(func, expected_ty)
+
+    def check_conv2d_dw():
+        dw = op.conv2d_dw(x, y, y, w_shape, 1, 0, 1, 1)
+        expected_ty = relay.FuncType([x_ty, y_ty], w_ty)
+        func = get_type_func(dw)
+        assert_has_type(func, expected_ty)
+
+    def check_relu_dx():
+        dx = op.relu_dx(x, x, x)
+        expected_ty = relay.FuncType([x_ty], x_ty)
+        func = get_type_func(dx)
+        assert_has_type(func, expected_ty)
+
+    check_conv2d_dx()
+    check_conv2d_dw()
+    check_relu_dx()
 
 if __name__ == "__main__":
     pytest.main([__file__])

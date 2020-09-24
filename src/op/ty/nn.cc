@@ -27,6 +27,7 @@ using namespace mnm::value;
 using schema::BatchNormArgs;
 using schema::BiasAddArgs;
 using schema::ConvArgs;
+using schema::ConvDxwArgs;
 using schema::PoolArgs;
 using schema::SoftmaxArgs;
 
@@ -64,6 +65,19 @@ Type Conv2DInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.conv2d", "Conv2d", Conv2DInfer);
+
+Type Conv2DDxwInfer(const CallValues& value) {
+  const auto* args = value->args.as<ConvDxwArgs>();
+  CHECK(args != nullptr);
+  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  std::vector<int64_t> shape = Pad<4>(args->shape);
+  Array<PrimExpr> res;
+  for (int i = 0; i < shape.size(); ++i) res.push_back(Integer(shape[i]));
+  return TensorType(res, dy->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.conv2d_dw", "Conv2dDxw", Conv2DDxwInfer);
+MNM_OP_TYPE("mnm.op.conv2d_dx", "Conv2dDxw", Conv2DDxwInfer);
 
 Type Pool2DInfer(const CallValues& value) {
   const auto* args = value->args.as<PoolArgs>();
