@@ -223,6 +223,10 @@ HashKey SoftmaxDxHasher(const std::vector<Type>& param_types, const Type& y_type
 MNM_TVMJIT(Softmax, "mnm.op.softmax", SoftmaxArgs, SoftmaxNormalizer, SoftmaxTyper, SoftmaxHasher);
 MNM_TVMJIT(SoftmaxDx, "mnm.op.softmax_dx", SoftmaxDxArgs, SoftmaxDxNormalizer, SoftmaxDxTyper,
            SoftmaxDxHasher);
+MNM_TVMJIT(LogSoftmax, "mnm.op.log_softmax", SoftmaxArgs, SoftmaxNormalizer, SoftmaxTyper,
+           SoftmaxHasher);
+MNM_TVMJIT(LogSoftmaxDx, "mnm.op.log_softmax_dx", SoftmaxDxArgs, SoftmaxDxNormalizer,
+           SoftmaxDxTyper, SoftmaxDxHasher);
 
 Attrs BiasAddNormalizer(TVMOpEnv* env, const BiasAddArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);

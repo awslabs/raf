@@ -108,6 +108,7 @@ def test_dense(n, m, k, ctx):
 # pylint: disable=no-self-use
 # pylint: disable=protected-access
 @pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("shape", [
     [3],
     [3, 2],
@@ -120,33 +121,34 @@ def test_dense(n, m, k, ctx):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.softmax, torch.nn.Softmax],
+        [mnm._op.sym.softmax, torch.softmax],
+        [mnm._op.sym.log_softmax, torch.log_softmax],
     ])
-def test_unary_with_axis(shape, axis, funcs, ctx):
+def test_unary_with_axis(ctx, dtype, shape, axis, funcs):
+    mnm_fwd, torch_fwd = funcs
+
     class TestModel(mnm.Model):
         def build(self):
             pass
-
         @mnm.model.trace
         def forward(self, x):
-            return m_func(x, axis=axis)
-    m_func, t_func = funcs
+            return mnm_fwd(x, axis=axis)
+
     model = TestModel()
-    # check forward
-    m_x, t_x = randn_torch(shape, ctx=ctx)
+    # forward
+    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype)
     m_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
             m_y = model(m_x)
         return
     m_y = model(m_x)
-    t_m = t_func(axis)
-    t_y = t_m(t_x)
+    t_y = torch_fwd(t_x, dim=axis)
     check_torch(m_y, t_y)
-    # check backward
-    m_dy, t_dy = randn_torch(shape, ctx=ctx)
-    m_y.backward(m_dy)
+    # backward
+    m_dy, t_dy = randn_torch(shape, ctx=ctx, dtype=dtype)
     t_y.backward(t_dy)
+    m_y.backward(m_dy)
     check_torch(m_x.grad, t_x.grad)
 
 

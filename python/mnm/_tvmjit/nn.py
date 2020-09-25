@@ -71,15 +71,39 @@ _reg.register_strategy("mnm.op.softmax", strategy.softmax_strategy)
 
 @register_compute("mnm.op.softmax_dx")
 def compute_softmax_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=unused-variable
+    # pylint: disable=unused-argument, unused-variable, invalid-name
     x, y, dy = inputs[0], inputs[1], inputs[2]
     axis = attr.axis
-    dy_sum = _topi.sum(dy * y, axis=axis, keepdims=True)
-    dy_sum = _topi.repeat(dy_sum, repeats=int(x.shape[axis]), axis=axis)
-    return [y * (dy - dy_sum)]
+    softmax_out = _topi.nn.softmax(x, axis=axis)
+    grads = _tvm.te.gradient(softmax_out, [x], head=dy)
+    return grads
 
+# TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("mnm.op.softmax_dx")
+
+@register_compute("mnm.op.log_softmax")
+def compute_log_softmax(attr, inputs, output_type):
+    # pylint: disable=unused-argument
+    x = inputs[0]
+    axis = attr.axis
+    softmax_out = _topi.nn.softmax(x, axis=axis)
+    log_softmax_out = _topi.log(softmax_out)
+    return [log_softmax_out]
+
+_reg.register_injective_schedule("mnm.op.log_softmax")
+
+@register_compute("mnm.op.log_softmax_dx")
+def compute_log_softmax_dx(attr, inputs, output_type):
+    # pylint: disable=unused-argument, unused-variable, invalid-name
+    x, y, dy = inputs[0], inputs[1], inputs[2]
+    axis = attr.axis
+    softmax_out = _topi.nn.softmax(x, axis=axis)
+    log_softmax_out = _topi.log(softmax_out)
+    grads = _tvm.te.gradient(log_softmax_out, [x], head=dy)
+    return grads
+
+# TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
+_reg.register_injective_schedule("mnm.op.log_softmax_dx")
 
 @register_compute("mnm.op.relu_dx")
 def compute_relu_dx(attr, inputs, output_type):
