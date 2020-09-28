@@ -232,6 +232,46 @@ def test_conv2d(ctx, dtype, xshape, wshape, stride, dilation, padding):
     check_torch(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
 
+@pytest.mark.parametrize("ctx", ["cpu"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("kernel", [1, 2, 3, 4])
+@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("padding", [0, 1])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+    ])
+def test_pool2d(ctx, dtype, data_shape, kernel, stride, padding, funcs):
+    # TODO(@XIAO-XIA): complement test case when ctx=cuda
+    # pylint: disable=too-many-locals, too-many-arguments
+    mnm_fwd, torch_fwd = funcs
+    if padding > kernel // 2:
+        return
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding)
+
+    model = TestModel()
+    # forward
+    m_x, t_x = randn_torch(data_shape, dtype=dtype, ctx=ctx)
+    m_x.requires_grad = True
+    m_y = model(m_x)
+    t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
+    check_torch(m_y, t_y)
+    # backward
+    m_dy, t_dy = randn_torch(m_y.shape, dtype=dtype, ctx=ctx)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check_torch(m_x.grad, t_x.grad)
+
+
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("n", [1, 2, 4])

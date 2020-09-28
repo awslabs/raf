@@ -96,6 +96,8 @@ OP_MAP = {
     "mnm.op.dense": ["nn.dense", "", "kOpaque"],
     "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
     "mnm.op.relu": ["nn.relu", "", "kInjective"],
+    "mnm.op.avg_pool2d": ["nn.avg_pool2d", "", "kOpaque"],
+    "mnm.op.max_pool2d": ["nn.max_pool2d", "", "kOpaque"],
     "mnm.op.get_valid_counts": ["get_valid_counts", "", "kInjective"],
     "mnm.op.non_max_suppression": ["non_max_suppression", "relay.attrs.NonMaxSuppressionAttrs", "kInjective"],
 }

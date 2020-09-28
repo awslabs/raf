@@ -24,6 +24,8 @@ using schema::ConvArgs;
 using schema::ConvDxwArgs;
 using schema::LayerNormArgs;
 using schema::LayerNormDxArgs;
+using schema::PoolArgs;
+using schema::PoolDxArgs;
 using schema::SoftmaxArgs;
 using schema::SoftmaxDxArgs;
 
@@ -255,6 +257,151 @@ HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
 }
 
 MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddNormalizer, BiasAddTyper, BiasAddHasher);
+
+Attrs MaxPool2DNormalizer(TVMOpEnv* env, const PoolArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+  };
+  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> kernel = Pad<2>(args->kernel);
+  auto attrs = make_object<tvm::relay::MaxPool2DAttrs>();
+  for (int i = 0; i < stride.size(); ++i) {
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < padding.size(); ++i) {
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
+  }
+  for (int i = 0; i < kernel.size(); ++i) {
+    attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel[i]));
+  }
+  attrs->ceil_mode = args->ceil_mode;
+  attrs->layout = "NCHW";
+  CHECK_EQ(args->include_pad, true);
+  return Attrs(attrs);
+}
+
+Attrs AvgPool2DNormalizer(TVMOpEnv* env, const PoolArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+  };
+  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> kernel = Pad<2>(args->kernel);
+  auto attrs = make_object<tvm::relay::AvgPool2DAttrs>();
+  for (int i = 0; i < stride.size(); ++i) {
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < padding.size(); ++i) {
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
+  }
+  for (int i = 0; i < kernel.size(); ++i) {
+    attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel[i]));
+  }
+  attrs->ceil_mode = args->ceil_mode;
+  attrs->count_include_pad = args->include_pad;
+  attrs->layout = "NCHW";
+  return Attrs(attrs);
+}
+
+void PoolTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+  };
+}
+
+HashKey PoolHasher(const std::vector<Type>& param_types, const Type& y_type, const PoolArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->stride;
+  key << args->padding;
+  key << args->kernel;
+  key << args->ceil_mode;
+  key << args->include_pad;
+  return key;
+}
+
+MNM_TVMJIT(MaxPool2D, "mnm.op.max_pool2d", PoolArgs, MaxPool2DNormalizer, PoolTyper, PoolHasher);
+MNM_TVMJIT(AvgPool2D, "mnm.op.avg_pool2d", PoolArgs, AvgPool2DNormalizer, PoolTyper, PoolHasher);
+
+Attrs AvgPool2DDxNormalizer(TVMOpEnv* env, const PoolDxArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+      GetDLTensor(args->y),
+      GetDLTensor(args->dy),
+  };
+  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> kernel = Pad<2>(args->kernel);
+  auto attrs = make_object<tvm::relay::AvgPool2DAttrs>();
+  for (int i = 0; i < stride.size(); ++i) {
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < padding.size(); ++i) {
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
+  }
+  for (int i = 0; i < kernel.size(); ++i) {
+    attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel[i]));
+  }
+  attrs->ceil_mode = args->ceil_mode;
+  attrs->count_include_pad = args->include_pad;
+  attrs->layout = "NCHW";
+  return Attrs(attrs);
+}
+
+Attrs MaxPool2DDxNormalizer(TVMOpEnv* env, const PoolDxArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {
+      GetDLTensor(args->x),
+      GetDLTensor(args->y),
+      GetDLTensor(args->dy),
+  };
+  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> kernel = Pad<2>(args->kernel);
+  auto attrs = make_object<tvm::relay::MaxPool2DAttrs>();
+  for (int i = 0; i < stride.size(); ++i) {
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < padding.size(); ++i) {
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
+  }
+  for (int i = 0; i < kernel.size(); ++i) {
+    attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel[i]));
+  }
+  attrs->ceil_mode = args->ceil_mode;
+  attrs->layout = "NCHW";
+  CHECK_EQ(args->include_pad, true);
+  return Attrs(attrs);
+}
+
+void PoolDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {
+      GetTensorType(env->inputs[0]),
+      GetTensorType(env->inputs[1]),
+      GetTensorType(env->inputs[2]),
+  };
+}
+
+HashKey PoolDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                     const PoolDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->stride;
+  key << args->padding;
+  key << args->kernel;
+  key << args->ceil_mode;
+  key << args->include_pad;
+  return key;
+}
+
+MNM_TVMJIT(AvgPool2DDx, "mnm.op.avg_pool2d_dx", PoolDxArgs, AvgPool2DDxNormalizer, PoolDxTyper,
+           PoolDxHasher);
+MNM_TVMJIT(MaxPool2DDx, "mnm.op.max_pool2d_dx", PoolDxArgs, MaxPool2DDxNormalizer, PoolDxTyper,
+           PoolDxHasher);
 
 Attrs LayerNormNormalizer(TVMOpEnv* env, const LayerNormArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
