@@ -54,7 +54,7 @@ class LetList {
    * \return a Var that hold the inserted expr.
    */
   Var Push(Expr expr, Type ty) {
-    return Push(mnm::ir::Var("x", ty), expr);
+    return Push(mnm::ir::MakeVar("x", ty), expr);
   }
 
   /*!

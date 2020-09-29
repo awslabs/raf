@@ -32,7 +32,7 @@ class BindingMgr {
   }
 };
 
-class BoundVarObj : public VarNode {
+class BoundVarObj : public ExtendedVarNode {
   // This is basically relay::VarNode, but with a customized callback that
   // deletes the weak reference inside BindingMgr
  public:
@@ -167,7 +167,7 @@ ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
     int n = static_cast<int>(tuple->fields.size());
-    Var dy = mnm::ir::Var("dy", {});
+    Var dy = mnm::ir::MakeVar("dy", {});
     std::vector<Expr> grads(n, MakeConstant(NoGradValue::make()));
     for (int i = 0; i < n; ++i) {
       Value sub_value = tuple->fields[i];

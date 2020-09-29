@@ -341,9 +341,11 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     }
     std::vector<std::shared_ptr<Memory>> out_buf;
     for (auto* dlt : out_tensors) {
-      std::shared_ptr<Memory> memory = Memory::Alloc(dlt->ctx, BytesCompactTensor(*dlt));
-      dlt->data = memory->data;
-      out_buf.push_back(memory);
+      if (dlt->data == nullptr) {
+        std::shared_ptr<Memory> memory = Memory::Alloc(dlt->ctx, BytesCompactTensor(*dlt));
+        dlt->data = memory->data;
+        out_buf.push_back(memory);
+      }
     }
     return out_buf;
   }

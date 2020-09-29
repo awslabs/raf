@@ -27,12 +27,14 @@ MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
     CHECK_EQ(x0->shape[i], dx->shape[i]);
     CHECK_EQ(v0->shape[i], dx->shape[i]);
   }
-  auto v1 = TensorValue::Assemble(/*ctx=*/dx->ctx,
-                                  /*dtype=*/dx->dtype,
-                                  /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
-  auto x1 = TensorValue::Assemble(/*ctx=*/dx->ctx,
-                                  /*dtype=*/dx->dtype,
-                                  /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
+  auto v1 = TensorValue::Assemble(
+      /*ctx=*/dx->ctx,
+      /*dtype=*/dx->dtype,
+      /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
+  auto x1 = TensorValue::Assemble(
+      /*ctx=*/dx->ctx,
+      /*dtype=*/dx->dtype,
+      /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
   call->out = TupleValue::make(tvm::Array<Value>({v1, x1}));
   call->ctx = dx->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);

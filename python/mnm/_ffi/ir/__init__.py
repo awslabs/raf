@@ -5,3 +5,4 @@
 from . import _make
 from . import constant
 from . import module
+from . import variable

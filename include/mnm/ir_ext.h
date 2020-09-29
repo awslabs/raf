@@ -48,7 +48,7 @@ class Module : public ir::ObjectRef {
 }  // namespace ir
 }  // namespace mnm
 
-/****** mnm::ir::Module ******/
+/****** mnm::ir::Constant ******/
 namespace mnm {
 namespace ir {
 
@@ -70,6 +70,28 @@ class ConstantNode : public RelayConstantNode {
 };
 
 RelayConstant MakeConstant(ObjectRef node_ref);
+
+}  // namespace ir
+}  // namespace mnm
+
+/****** mnm::ir::Var ******/
+namespace mnm {
+namespace ir {
+
+class ExtendedVarNode : public VarNode {
+ public:
+  /*! \brief A hint for inplace write into may_share */
+  mutable Var may_share{Var()};
+};
+
+/*!
+ * \brief Create an extended meta variable
+ * \param name_hint name_hint
+ * \param type_annotation type_annotation
+ * \param may_share the var with which it may share memory
+ * \return a var which contains a pointer to ExtendedVarNode
+ */
+Var MakeVar(const std::string& name_hint, Type type_annotation, Var may_share = {});
 
 }  // namespace ir
 }  // namespace mnm

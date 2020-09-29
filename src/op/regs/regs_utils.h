@@ -87,13 +87,13 @@ namespace regs {
 
 class VarPack {
  public:
-  ir::Var y = ir::Var("y", {});
-  ir::Var dy = ir::Var("dy", {});
+  ir::Var y = ir::MakeVar("y", {});
+  ir::Var dy = ir::MakeVar("dy", {});
   std::array<ir::Var, MAX_NUM_ARGS> x;
 
   VarPack() {
     for (int i = 0; i < MAX_NUM_ARGS; ++i) {
-      x[i] = ir::Var("x" + std::to_string(i), {});
+      x[i] = ir::MakeVar("x" + std::to_string(i), {});
     }
   }
 

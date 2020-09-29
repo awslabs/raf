@@ -814,7 +814,7 @@ class FuseMutator : private ExprMutator {
       // create a new parameter.
       std::ostringstream os;
       os << "p" << params.size();
-      auto var = Var(os.str(), type);
+      auto var = MakeVar(os.str(), type);
       params.push_back(var);
       arguments.push_back(expr);
       return var;

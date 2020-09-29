@@ -3,8 +3,6 @@
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
 # Defined in ./src/impl/ir_ext.cc
-Constant = _APIS.get("mnm.ir._make.Constant", None)
+GetMayShare = _APIS.get("mnm.ir.variable.GetMayShare", None)
 # Defined in ./src/impl/ir_ext.cc
-Module = _APIS.get("mnm.ir._make.Module", None)
-# Defined in ./src/impl/ir_ext.cc
-Var = _APIS.get("mnm.ir._make.Var", None)
+SetMayShare = _APIS.get("mnm.ir.variable.SetMayShare", None)

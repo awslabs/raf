@@ -353,7 +353,7 @@ struct Gradient : public ExprVisitor {
       CHECK(fty != nullptr);
       annotation = fty->ret_type;
     }
-    return mnm::ir::Var("dy", annotation);
+    return mnm::ir::MakeVar("dy", annotation);
   }
 
   Function Run() {
@@ -371,8 +371,8 @@ struct Gradient : public ExprVisitor {
       }
       return MakeClosureRet();
     });
-    Var closure = mnm::ir::Var("closure", {});
-    Var ret = mnm::ir::Var("ret", {});
+    Var closure = mnm::ir::MakeVar("closure", {});
+    Var ret = mnm::ir::MakeVar("ret", {});
     // let closure = fn(dy) {};
     ell->vars.push_back(closure);
     ell->exprs.push_back(Function({dy}, body, {}, {}));

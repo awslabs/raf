@@ -80,7 +80,7 @@ PackedFunc CompileOp(const Op& op,                          //
   {
     std::vector<Var> params;
     for (int i = 0, n = param_types.size(); i < n; ++i) {
-      auto var = mnm::ir::Var("", param_types[i]);
+      auto var = mnm::ir::MakeVar("", param_types[i]);
       var->checked_type_ = param_types[i];
       params.push_back(var);
     }

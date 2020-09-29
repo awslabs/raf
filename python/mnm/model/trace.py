@@ -9,6 +9,7 @@ from mnm._core.core_utils import get_bound_args, get_func_name
 from mnm._core.global_scope import SCOPE
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
+from mnm._ffi.ir.variable import SetMayShare
 from mnm._ffi.model import RunModel
 from mnm._lib import relay, Array
 
@@ -23,10 +24,22 @@ _TraceRecord = namedtuple(
 
 
 def trace_mutate_attr(obj, attr_name, symbol):
+    # pylint: disable=protected-access
     last = _scope_last()
     assert last is not None
     assert last.name == "trace"
-    last.mutate.append((obj, attr_name, symbol))
+    if (obj, attr_name) not in last.mutate:
+        arr = getattr(obj, attr_name)
+        assert isinstance(arr, ndarray)
+    else:
+        arr = last.mutate[(obj, attr_name)][0]
+    var = symbol._Symbol__handle
+    source = arr._ndarray__handle
+    assert isinstance(var, relay.Var)
+    assert isinstance(source, relay.Var)
+    SetMayShare(var, source)
+    last.mutate[(obj, attr_name)] = (arr, symbol)
+    object.__setattr__(obj, attr_name, symbol)
 
 
 def trace(pyfunc):
@@ -105,7 +118,6 @@ def _get_trace_record(pyfunc, args, kwargs):
     if record is not None:
         return record
     record = _do_tracing(pyfunc, args, kwargs)
-    # print(record.func)
     cacher.set_cache(model, "trace@" + func_name, record)
     return record
 
@@ -118,7 +130,9 @@ def _do_tracing(pyfunc, args, kwargs):
         _switch_imperative_symbolic("sym")
         with _scope(name="trace"):
             output = pyfunc(*args, **kwargs)
-            mutations, mutate_symbols = _scope_last_mutate()
+            mutations, mutate_arrays, mutate_symbols = _scope_last_mutate()
+            for ((obj, attr), arr) in zip(mutations, mutate_arrays):
+                object.__setattr__(obj, attr, arr)
     finally:
         _switch_imperative_symbolic("imp")
     # Step 3. flatten output to list, and keep record of its original structure
@@ -168,7 +182,7 @@ def _make_func(model, named_inputs, outputs):
 
 
 def _construct_func_body(outputs):
-    body = [x._Symbol__handle for x in outputs]  # pylint: disable=protected-access
+    body = [x._Symbol__handle if isinstance(x, Symbol) else x._ndarray__handle for x in outputs]  # pylint: disable=protected-access
     if len(body) == 1:
         body = body[0]
     else:
@@ -283,7 +297,15 @@ _ScopeItem = namedtuple("_ScopeItem", ["name", "mutate"])
 
 def _scope(name, mutate=None):
     if mutate is None:
-        mutate = []
+        # mutate is a dictionary of the following form:
+        # mutate[(obj, attr_name)] = (arr, new_symbol)
+        # where the obj is typically a Model object
+        # attr_name is the name of an obj's attribute
+        # obj.attr_name refers to the mutable param.
+        # arr is the initial value of obj.attr_name
+        # new_symbol is the current value of obj.attr_name
+        # (because obj.attr_name is mutable, its value varies by time)
+        mutate = {}
     return SCOPE.with_scope(_ScopeItem(name=name, mutate=mutate))
 
 
@@ -305,7 +327,9 @@ def _scope_last_mutate():
     last = last.mutate
     mutations = []
     mutate_symbols = []
-    for obj, attr, sym in last:
+    mutate_arrays = []
+    for ((obj, attr), (arr, sym)) in last.items():
         mutations.append((obj, attr))
+        mutate_arrays.append(arr)
         mutate_symbols.append(sym)
-    return mutations, mutate_symbols
+    return mutations, mutate_arrays, mutate_symbols

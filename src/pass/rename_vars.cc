@@ -17,7 +17,9 @@ struct RenameVarsMutator : public ExprMutator {
  public:
   explicit RenameVarsMutator(const Map<String, Var>& named_vars) {
     for (const auto& iter : named_vars) {
-      var_map.Set(iter.second, mnm::ir::Var(iter.first, iter.second->type_annotation));
+      const auto* var = iter.second.as<ExtendedVarNode>();
+      var_map.Set(iter.second,
+                  mnm::ir::MakeVar(iter.first, iter.second->type_annotation, var->may_share));
     }
   }
 
@@ -28,7 +30,11 @@ struct RenameVarsMutator : public ExprMutator {
   Expr VisitExpr_(const LetNode* node) final {
     const Var& var = node->var;
     CHECK_EQ(var_map.count(var), 0) << "IR is malformed: cannot bind var twice";
-    Var new_var = mnm::ir::Var("a" + std::to_string(++num_bound_var), var->type_annotation);
+    const auto* vn = var.as<ExtendedVarNode>();
+    Var may_share = vn->may_share;
+    Var new_var =
+        mnm::ir::MakeVar("a" + std::to_string(++num_bound_var), var->type_annotation,
+                         may_share.defined() ? Downcast<Var>(var_map.at(may_share)) : may_share);
     var_map.Set(var, new_var);
     return mnm::ir::Let(new_var, Mutate(node->value), Mutate(node->body));
   }

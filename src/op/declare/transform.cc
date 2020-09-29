@@ -374,8 +374,8 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
 
   value::Value indices_or_sections = args->indices_or_sections;
 
-  // indices_or_sections can be of 2 types - Integer or a tuple. The 2 types are handled
-  // differently.
+  // indices_or_sections can be of 2 types - Integer or a tuple. The 2 types are
+  // handled differently.
   if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
     // Handling first type - integer scalar - sections
     int64_t sections = scalar->data;

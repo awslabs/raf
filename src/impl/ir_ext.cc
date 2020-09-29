@@ -114,9 +114,46 @@ ObjectRef ConstantExtractValue(RelayConstant _node) {
   return node->value;
 }
 
+Var MakeVar_(Id vid, Type type_annotation, Var may_share = Var()) {
+  ObjectPtr<ExtendedVarNode> n = make_object<ExtendedVarNode>();
+  n->vid = std::move(vid);
+  n->type_annotation = std::move(type_annotation);
+  n->may_share = may_share;
+  return Var(n);
+}
+
+Var MakeVar(const std::string& name_hint, Type type_annotation, Var may_share) {
+  return MakeVar_(Id(name_hint), type_annotation, may_share);
+}
+
+/*!
+ * \brief Set may_share field of an extended variable
+ * \param var the variable
+ * \param may_share the may_share field
+ * \return the variable with may_share set
+ */
+Var SetMayShare(Var var, Var may_share) {
+  const auto* vn = var.as<ExtendedVarNode>();
+  vn->may_share = may_share;
+  return GetRef<Var>(vn);
+}
+
+/*!
+ * \brief Extract the may_share field of an extended variable
+ * \param var the variable
+ * \return the may_share field of this variable
+ */
+Var GetMayShare(Var var) {
+  const auto* vn = var.as<ExtendedVarNode>();
+  return vn->may_share;
+}
+
 MNM_REGISTER_GLOBAL("mnm.ir._make.Module").set_body_typed(Module::make);
 MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
+MNM_REGISTER_GLOBAL("mnm.ir._make.Var").set_body_typed(MakeVar);
 MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
+MNM_REGISTER_GLOBAL("mnm.ir.variable.SetMayShare").set_body_typed(SetMayShare);
+MNM_REGISTER_GLOBAL("mnm.ir.variable.GetMayShare").set_body_typed(GetMayShare);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
 MNM_REGISTER_GLOBAL("mnm.ir.module.LookupStr").set_body_typed(ModuleLookupStr);
