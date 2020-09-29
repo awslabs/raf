@@ -87,7 +87,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 9, int32_t, cudnnDataType_t
       case CUDNN_DATA_FLOAT:
         return const_typed_addr<float, value>();
       case CUDNN_DATA_HALF:
-        return const_typed_addr<__half, value>();
+        return const_typed_addr<float, value>();
       case CUDNN_DATA_DOUBLE:
         return const_typed_addr<double, value>();
       case CUDNN_DATA_INT8:
@@ -131,7 +131,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
       case CUDNN_DATA_FLOAT:
         return common::cuda::const_addr<float, value>();
       case CUDNN_DATA_HALF:
-        return common::cuda::const_addr<__half, value>();
+        return common::cuda::const_addr<float, value>();
       case CUDNN_DATA_DOUBLE:
         return common::cuda::const_addr<double, value>();
       case CUDNN_DATA_INT8:

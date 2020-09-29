@@ -41,7 +41,8 @@ def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
 @pytest.mark.parametrize("stride", [1, 2, 3])
 @pytest.mark.parametrize("dilation", [1, 2, 3, 4])
 @pytest.mark.parametrize("padding", [0, 1])
-def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
     # pylint: disable=too-many-locals
     # N.B.: NCHW + OIHW
     # forward
@@ -54,19 +55,21 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn(xshape, std=0.001)
-    m_w, t_w = randn(wshape, std=0.01)
+    m_x, t_x = randn(xshape, std=0.001, dtype=dtype)
+    m_w, t_w = randn(wshape, std=0.01, dtype=dtype)
     m_x.requires_grad = True
     m_w.requires_grad = True
     m_y = model(m_x, m_w)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
-    check(m_y, t_y, rtol=1e-4, atol=1e-4)
+    rtol = 1e-4 if dtype == "float32" else 3e-2
+    atol = 1e-4 if dtype == "float32" else 3e-2
+    check(m_y, t_y, rtol=rtol, atol=atol)
     # backward
-    m_dy, t_dy = randn(t_y.shape)
+    m_dy, t_dy = randn(t_y.shape, dtype=dtype)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
-    check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
-    check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
+    check(m_x.grad, t_x.grad, rtol=rtol, atol=atol)
+    check(m_w.grad, t_w.grad, rtol=rtol, atol=atol)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -297,8 +300,6 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
     m_dc, t_dc = randn(m_c.shape, dtype=dtype)
     m_c.backward(m_dc)
     t_c.backward(t_dc)
-    rtol = 1e-4 if dtype == "float32" else 2e-3
-    atol = 1e-4 if dtype == "float32" else 2e-3
     check(m_a.grad, t_a.grad, rtol=rtol, atol=atol)
     check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)
 
