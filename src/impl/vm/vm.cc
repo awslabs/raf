@@ -334,11 +334,10 @@ void VirtualMachine::RunLoop() {
       }
       case Opcode::AllocTuple: {
         Array<Value> fields;
-        TupleValue tuple;
         for (Index i = 0; i < instr.alloc_tuple.num_fields; ++i) {
-          tuple->fields.push_back(ReadRegister(instr.alloc_tuple.fields[i]));
+          fields.push_back(ReadRegister(instr.alloc_tuple.fields[i]));
         }
-        WriteRegister(instr.dst, tuple);
+        WriteRegister(instr.dst, TupleValue::make(fields));
         pc_++;
         goto main_loop;
       }
