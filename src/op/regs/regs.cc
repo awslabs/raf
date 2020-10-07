@@ -124,6 +124,9 @@ static const char sgd[] = "mnm.op.sgd";
 static const char shape[] = "mnm.op.shape";
 static const char sigmoid[] = "mnm.op.sigmoid";
 static const char sigmoid_dx[] = "mnm.op.sigmoid_dx";
+static const char smooth_l1_loss[] = "mnm.op.smooth_l1_loss";
+static const char smooth_l1_loss_dpred[] = "mnm.op.smooth_l1_loss_dpred";
+static const char smooth_l1_loss_dtrue[] = "mnm.op.smooth_l1_loss_dtrue";
 static const char softmax[] = "mnm.op.softmax";
 static const char softmax_dx[] = "mnm.op.softmax_dx";
 static const char split[] = "mnm.op.split";
@@ -1569,6 +1572,33 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid_dx").set_body([](TVMArgs args, TVMRetVal
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.smooth_l1_loss").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(smooth_l1_loss, 2, ffi2schema::Loss,
+              schema::LossArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.smooth_l1_loss_dpred").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(smooth_l1_loss_dpred, 2, ffi2schema::Loss,
+              schema::LossArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.smooth_l1_loss_dtrue").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(smooth_l1_loss_dtrue, 2, ffi2schema::Loss,
+              schema::LossArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.softmax").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(softmax, 2, ffi2schema::Softmax,
               schema::SoftmaxArgs);  // NOLINT(whitespace/line_length)
@@ -2326,6 +2356,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.sgd").set_body(MNM_SYMBOLIC_API(sgd, 5, Sgd));
 MNM_REGISTER_GLOBAL("mnm.op.sym.shape").set_body(MNM_SYMBOLIC_API(shape, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid").set_body(MNM_SYMBOLIC_API(sigmoid, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sigmoid_dx").set_body(MNM_SYMBOLIC_API(sigmoid_dx, 3, UnaryDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.smooth_l1_loss")
+    .set_body(MNM_SYMBOLIC_API(smooth_l1_loss, 2, Loss));
+MNM_REGISTER_GLOBAL("mnm.op.sym.smooth_l1_loss_dpred")
+    .set_body(MNM_SYMBOLIC_API(smooth_l1_loss_dpred, 2, Loss));
+MNM_REGISTER_GLOBAL("mnm.op.sym.smooth_l1_loss_dtrue")
+    .set_body(MNM_SYMBOLIC_API(smooth_l1_loss_dtrue, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax").set_body(MNM_SYMBOLIC_API(softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx").set_body(MNM_SYMBOLIC_API(softmax_dx, 4, SoftmaxDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.split").set_body(MNM_SYMBOLIC_API(split, 3, Split));
@@ -3074,6 +3110,12 @@ MNM_BIND_SCHEMA("mnm.op.sigmoid", names::sigmoid,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sigmoid_dx", names::sigmoid_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.smooth_l1_loss", names::smooth_l1_loss,
+                value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.smooth_l1_loss_dpred", names::smooth_l1_loss_dpred,
+                value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.smooth_l1_loss_dtrue", names::smooth_l1_loss_dtrue,
+                value2schema::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax", names::softmax,
                 value2schema::Softmax);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax_dx", names::softmax_dx,

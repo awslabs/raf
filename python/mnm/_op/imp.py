@@ -25,10 +25,11 @@ __all__ = [
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
     "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu", "relu_dx",
     "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "stack",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
+    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
+    "sqrt", "sqrt_dx", "stack", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -677,6 +678,24 @@ def sigmoid_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.sigmoid_dx(x, y, dy))
+
+@set_module("mnm")
+def smooth_l1_loss(y_true, y_pred):
+    y_true = imp_utils.to_tensor(y_true)
+    y_pred = imp_utils.to_tensor(y_pred)
+    return imp_utils.ret(ffi.smooth_l1_loss(y_true, y_pred))
+
+@set_module("mnm")
+def smooth_l1_loss_dpred(y_true, y_pred):
+    y_true = imp_utils.to_tensor(y_true)
+    y_pred = imp_utils.to_tensor(y_pred)
+    return imp_utils.ret(ffi.smooth_l1_loss_dpred(y_true, y_pred))
+
+@set_module("mnm")
+def smooth_l1_loss_dtrue(y_true, y_pred):
+    y_true = imp_utils.to_tensor(y_true)
+    y_pred = imp_utils.to_tensor(y_pred)
+    return imp_utils.ret(ffi.smooth_l1_loss_dtrue(y_true, y_pred))
 
 @set_module("mnm")
 def softmax(x, axis=-1):

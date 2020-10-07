@@ -181,6 +181,12 @@ sigmoid = _APIS.get("mnm.op.imp.sigmoid", None)
 # Defined in ./src/op/regs/regs.cc
 sigmoid_dx = _APIS.get("mnm.op.imp.sigmoid_dx", None)
 # Defined in ./src/op/regs/regs.cc
+smooth_l1_loss = _APIS.get("mnm.op.imp.smooth_l1_loss", None)
+# Defined in ./src/op/regs/regs.cc
+smooth_l1_loss_dpred = _APIS.get("mnm.op.imp.smooth_l1_loss_dpred", None)
+# Defined in ./src/op/regs/regs.cc
+smooth_l1_loss_dtrue = _APIS.get("mnm.op.imp.smooth_l1_loss_dtrue", None)
+# Defined in ./src/op/regs/regs.cc
 softmax = _APIS.get("mnm.op.imp.softmax", None)
 # Defined in ./src/op/regs/regs.cc
 softmax_dx = _APIS.get("mnm.op.imp.softmax_dx", None)

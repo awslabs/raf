@@ -15,6 +15,38 @@ namespace declare {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
+MNM_OP_DECLARE("mnm.op.smooth_l1_loss", [](const CallValues& call) {
+  const auto* args = call->args.as<LossArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* pred = args->y_pred;
+  const DLTensor* true_ = args->y_true;
+  for (int i = 0; i < pred->ndim; i++) CHECK_EQ(pred->shape[i], true_->shape[i]);
+  call->out = TensorValue::Assemble(/*ctx=*/true_->ctx,
+                                    /*dtype=*/true_->dtype,
+                                    /*shape=*/{1});
+  call->ctx = true_->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kCommReduce);
+
+MNM_OP_DECLARE("mnm.op.smooth_l1_loss_dpred", [](const CallValues& call) {
+  const auto* args = call->args.as<LossArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* pred = args->y_pred;
+  const DLTensor* true_ = args->y_true;
+  std::vector<int64_t> shape(pred->shape, pred->shape + pred->ndim);
+  call->out = TensorValue::Assemble(pred->ctx, pred->dtype, shape);
+  call->ctx = pred->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
+MNM_OP_DECLARE("mnm.op.smooth_l1_loss_dtrue", [](const CallValues& call) {
+  const auto* args = call->args.as<LossArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* pred = args->y_pred;
+  const DLTensor* true_ = args->y_true;
+  std::vector<int64_t> shape(true_->shape, true_->shape + true_->ndim);
+  call->out = TensorValue::Assemble(true_->ctx, pred->dtype, shape);
+  call->ctx = true_->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
 MNM_OP_DECLARE("mnm.op.nll_loss", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);

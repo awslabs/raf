@@ -41,6 +41,35 @@ def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
     np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
 
 
+@pytest.mark.parametrize("ctx", ['cpu'])
+@pytest.mark.parametrize("shape", [
+    [3],
+    [1, 2],
+    [1, 2, 5],
+])
+def test_smooth_l1_loss(ctx, shape):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, y_true, y_pred):  # pylint: disable=no-self-use
+            return mnm.smooth_l1_loss(y_true=y_true, y_pred=y_pred)
+
+    model = TestModel()
+    m_pred, t_pred = randn(shape, ctx=ctx)
+    m_true, t_true = randn(shape, ctx=ctx)
+    m_pred.requires_grad = True
+    # forward
+    t_loss = F.smooth_l1_loss(t_pred, t_true)
+    m_loss = model(y_true=m_pred, y_pred=m_true)
+    check(m_loss, t_loss)
+    # backward
+    t_loss.backward()
+    m_loss.backward()
+    check(m_pred.grad, t_pred.grad)
+
+
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("n", [3, 5, 7])
 @pytest.mark.parametrize("c", [2, 4, 6])

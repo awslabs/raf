@@ -11,6 +11,18 @@ namespace grad {
 
 using namespace mnm::ir;
 
+Array<Expr> SmoothL1LossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
+  static auto dtrue = Op::Get("mnm.op.smooth_l1_loss_dtrue");
+  static auto dpred = Op::Get("mnm.op.smooth_l1_loss_dpred");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& true_ = call->args[0];
+  const Expr& pred = call->args[1];
+  return {Call(dpred, {true_, pred}), Call(dtrue, {true_, pred})};
+}
+
+MNM_OP_GRAD("mnm.op.smooth_l1_loss", SmoothL1LossGrad);
+
 Array<Expr> NllLossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
   static auto dtrue = Op::Get("mnm.op.nll_loss_dtrue");
   static auto dpred = Op::Get("mnm.op.nll_loss_dpred");

@@ -6,6 +6,60 @@ from .._lib import _reg
 
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
+
+@register_compute("mnm.op.smooth_l1_loss")
+def smooth_l1_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    true, pred = inputs
+    delta = _topi.abs(_topi.subtract(true, pred))
+    mul = 1
+    for i in pred.shape:
+        mul *= i
+
+    temp = _tvm.te.compute(pred.shape, lambda *ind: _tvm.tir.if_then_else(delta[ind] >= 1, \
+                        delta[ind] - _tvm.tir.const(0.5), 0.5 * delta[ind] * delta[ind]))
+    loss = _topi.transform.reshape(_topi.sum(temp / mul, axis=tuple(range(0, len(pred.shape)))),
+                                   [1])
+    return [loss]
+
+_reg.register_injective_schedule("mnm.op.smooth_l1_loss")
+
+
+@register_compute("mnm.op.smooth_l1_loss_dpred")
+def smooth_l1_loss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
+    true, pred = inputs
+    delta = _topi.abs(_topi.subtract(true, pred))
+    mul = 1
+    for i in pred.shape:
+        mul *= i
+
+    dpred = _tvm.te.compute(pred.shape, lambda *ind: _tvm.tir.if_then_else(delta[ind] >= 1, \
+                            _tvm.tir.if_then_else(pred[ind] > true[ind], _tvm.tir.const(-1), \
+                            _tvm.tir.const(1)), true[ind] - pred[ind]))
+
+    return [dpred / mul]
+
+
+_reg.register_broadcast_schedule("mnm.op.smooth_l1_loss_dpred")
+
+
+@register_compute("mnm.op.smooth_l1_loss_dtrue")
+def smooth_l1_loss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
+    true, pred = inputs
+    delta = _topi.abs(_topi.subtract(true, pred))
+    mul = 1
+    for i in pred.shape:
+        mul *= i
+
+    dtrue = _tvm.te.compute(pred.shape, lambda *ind: _tvm.tir.if_then_else(delta[ind] >= 1, \
+                            _tvm.tir.if_then_else(pred[ind] > true[ind], _tvm.tir.const(1), \
+                            _tvm.tir.const(-1)), - true[ind] + pred[ind]))
+
+    return [dtrue / mul]
+
+
+_reg.register_broadcast_schedule("mnm.op.smooth_l1_loss_dtrue")
+
+
 @register_compute("mnm.op.nll_loss")
 def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs

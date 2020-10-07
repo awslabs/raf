@@ -7,6 +7,9 @@ from .base import Op, Tensor
 class LossArgs:
 
     __ops__ = [
+        Op("smooth_l1_loss"),
+        Op("smooth_l1_loss_dtrue"),
+        Op("smooth_l1_loss_dpred"),
         Op("nll_loss"),
         Op("nll_loss_dtrue"),
         Op("nll_loss_dpred"),

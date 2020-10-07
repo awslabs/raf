@@ -90,6 +90,9 @@ from ._internal import sgd
 from ._internal import shape
 from ._internal import sigmoid
 from ._internal import sigmoid_dx
+from ._internal import smooth_l1_loss
+from ._internal import smooth_l1_loss_dpred
+from ._internal import smooth_l1_loss_dtrue
 from ._internal import softmax
 from ._internal import softmax_dx
 from ._internal import split
