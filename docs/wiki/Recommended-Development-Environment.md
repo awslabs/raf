@@ -23,11 +23,11 @@ vim $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
 We may set environment variables inside this script:
 
 ```bash
-export CC=$(which clang)
-export CXX=$(which clang++)
+export CC=$(which gcc)
+export CXX=$(which g++)
 export MNM_HOME=$HOME/Projects/mnm-dev
 export TVM_HOME=$MNM_HOME/3rdparty/tvm
-export PYTHONPATH=$MNM_HOME/python/:$TVM_HOME/topi/python:$TVM_HOME/python
+export PYTHONPATH=$MNM_HOME/python/:$TVM_HOME/python
 export TVM_LIBRARY_PATH=$MNM_HOME/build/lib
 export CUDNN_HOME=$CONDA_PREFIX
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
