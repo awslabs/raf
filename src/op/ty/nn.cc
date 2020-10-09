@@ -24,12 +24,7 @@ using tvm::PrimExpr;
 using tvm::relay::TensorType;
 using tvm::relay::Type;
 using namespace mnm::value;
-using schema::BatchNormArgs;
-using schema::BiasAddArgs;
-using schema::ConvArgs;
-using schema::ConvDxwArgs;
-using schema::PoolArgs;
-using schema::SoftmaxArgs;
+using namespace schema;
 
 Type Conv2DInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvArgs>();
@@ -113,6 +108,17 @@ Type Pool2DInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.max_pool2d", "Pool2D", Pool2DInfer);
 MNM_OP_TYPE("mnm.op.avg_pool2d", "Pool2D", Pool2DInfer);
 
+template <typename T>
+Type GeneralDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<T>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
+MNM_OP_TYPE("mnm.op.max_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
+MNM_OP_TYPE("mnm.op.avg_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
+
 Type BatchNormInferInfer(const CallValues& value) {
   const auto* args = value->args.as<BatchNormArgs>();
   TensorType x = Downcast<TensorType>(GetType(args->x));
@@ -121,17 +127,22 @@ Type BatchNormInferInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.batch_norm_infer", "BatchNormInfer", BatchNormInferInfer);
 
-Type SoftmaxInfer(const CallValues& value) {
-  const auto* args = value->args.as<SoftmaxArgs>();
+template <typename T>
+Type GeneralAxisInfer(const CallValues& value) {
+  const auto* args = value->args.as<T>();
+  CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
+  int axis = args->axis;
+  int ndim = x->shape.size();
+  CHECK(-ndim <= axis && axis < ndim)
+      << "ValueError: invalid axis = " << axis << " on ndim = " << ndim;
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.softmax", "Softmax", SoftmaxInfer);
-
-using namespace mnm::value;
-using schema::BiasAddArgs;
-using tvm::relay::Type;
+MNM_OP_TYPE("mnm.op.softmax", "Softmax", GeneralAxisInfer<SoftmaxArgs>);
+MNM_OP_TYPE("mnm.op.log_softmax", "LogSoftmax", GeneralAxisInfer<SoftmaxArgs>);
+MNM_OP_TYPE("mnm.op.softmax_dx", "SoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
+MNM_OP_TYPE("mnm.op.log_softmax_dx", "LogSoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
 
 Type BiasAddInfer(const CallValues& value) {
   const auto* args = value->args.as<BiasAddArgs>();
@@ -139,6 +150,9 @@ Type BiasAddInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
+
+MNM_OP_TYPE("mnm.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
+MNM_OP_TYPE("mnm.op.layer_norm_dx", "LayerNormDx", GeneralDxInfer<LayerNormDxArgs>);
 
 }  // namespace type
 }  // namespace op
