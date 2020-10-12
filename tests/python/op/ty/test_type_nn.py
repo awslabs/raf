@@ -2,25 +2,15 @@ import numpy as np
 import pytest
 import torch
 import mnm
-from mnm._ffi.pass_ import InferType, AutoDiff
-from tvm import relay
+from mnm._ffi.pass_ import AutoDiff
 from tvm.relay import TensorType, FuncType, TupleType
 
 
-def check_type(expr, typ):
-    checked_type = expr.checked_type
-    if checked_type != typ:
-        raise RuntimeError(f"Type mismatch {checked_type} vs {typ}")
+if __name__ == "__main__":
+    pytest.main([__file__])
 
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
+# pylint: disable=wrong-import-position
+from .utils import check_type, run_infer_type, randn
 
 
 def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
@@ -32,13 +22,6 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
     m_x = mnm.array(n_x, ctx=ctx)
     t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
     return m_x, t_x
-
-
-def run_infer_type(func):
-    # pylint: disable=protected-access
-    mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})
-    mod = InferType(mod)
-    return mod['main']
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
@@ -192,7 +175,3 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     bwd_ty = FuncType([dy_ty], dx_ty)
     checked_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
     check_type(m_func, checked_type)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
