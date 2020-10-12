@@ -140,7 +140,7 @@ SCHEMAS = {
         Arg(name="mask_value", cxx_type="double", cxx_default=0.0),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
-     "nn.h::reverse_sequence": [
+    "nn.h::reverse_sequence": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="sequence_length", cxx_type="value::BaseTensorValue"),
         Arg(name="seq_axis", cxx_type="int", cxx_default=1),
@@ -182,7 +182,8 @@ SCHEMAS = {
     ],
     "nn.h::split": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="indices_or_sections", cxx_type="value::Value", cxx_default="nullptr"),
+        Arg(name="indices_or_sections",
+            cxx_type="value::Value", cxx_default="nullptr"),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
     "loss.h::loss": [
@@ -366,6 +367,12 @@ SCHEMAS = {
         Arg(name="v", cxx_type="value::BaseTensorValue"),
         Arg(name="learning_rate", cxx_type="double"),
         Arg(name="mu", cxx_type="double"),
+    ],
+    "communication.h::stream_control": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="stream_tag",
+            cxx_type="int64_t",
+            cxx_default=0),
     ],
     "communication.h::_allreduce": [
         Arg(name="x",

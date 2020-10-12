@@ -8,7 +8,7 @@ import pytest
 import numpy as np
 
 import mnm
-from mnm.distributed import DistContext
+from mnm import distributed as dist
 
 
 def check(m_x, n_x, rtol=1e-5, atol=1e-5):
@@ -16,7 +16,7 @@ def check(m_x, n_x, rtol=1e-5, atol=1e-5):
 
 
 def get_node_info():
-    dctx = DistContext.get_context()
+    dctx = dist.get_context()
     root_rank = dctx.root_rank
     rank = dctx.rank
     size = dctx.size
@@ -94,3 +94,4 @@ if __name__ == "__main__":
     if mnm.build.with_distributed():
         test_allreduce_with_tensor()
         test_allreduce_with_tensor_list()
+        dist.RemoveCommunicator()

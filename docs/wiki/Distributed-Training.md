@@ -32,9 +32,9 @@ Before you use the operator, you must get a distributed context, from which you 
 ``` python
 import numpy as np
 import mnm
-from mnm.distributed import DistContext
+from mnm import distributed as dist
 
-dctx = DistContext.get_context()
+dctx = dist.get_context()
 root_rank = dctx.root_rank
 rank = dctx.rank
 size = dctx.size
@@ -56,10 +56,32 @@ print("After allreduce : ", x)
 
 ## Auto Parallel - Data Parallel Part
 
-Still in the progress. See [PR:dev-dist](https://github.com/meta-project/meta/pull/201) for details if you want.
+### How to use
+
+To use auto data parallel, you just need to set `mnm.distributed.get_context().enable_data_parallel = True` before running model.
+
+What need to be mentioned is that currently meta run operators synchronously, as we will call `stream->wait()` after each op. If you want to overlap the communication and computation, you need to make some change to src code: add a if-else statement before comment the code `req->stream[i].stream->Wait();` in `interpreter.cc::Interpreter::InvokePrimitiveOpEnv()`.  
+
+``` cpp
+if (op->name != "mnm.op._allreduce") req->stream[i].stream->Wait();
+```
+
+*note: We have ensured that communication operators will run on specific stream (different with computation operators).*
 
 ### Basic design
 
 Design a new Pass for the IR. Add a communication operator (eg. allreduce) after the gradient of a parameter is generated.
 
-What's more, we will need some other operators like `wait_event` and `record_event` to make sure the computation and communication can be parallelized.
+What's more, we will add a new operator called `stream_sync` before return of backward to make sure that all the communication tasks have finished.
+
+### Advanced design
+
+See [PR:dev-dist](https://github.com/meta-project/meta/pull/201) for details if you want.
+
+### TODO
+
+These todos will be implemented in following PRs.
+
+* Auto Model Parallel
+* Overlapping communication with forward propagation (of next iteration)
+* Fuse small tensors when communicating. (Could Pass::FuseOps support this?)

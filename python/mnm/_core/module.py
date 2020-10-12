@@ -23,7 +23,9 @@ class Module(Object):
             return ffi.LookupStr(self, var)
         if isinstance(var, relay.GlobalVar):
             return ffi.Lookup(self, var)
-        raise NotImplementedError(f"Module lookup for type {type(var)} is not supported")
+        raise NotImplementedError(
+            f"Module lookup for type {type(var)} is not supported")
+
 
 def get_global():
     return ffi.Global()

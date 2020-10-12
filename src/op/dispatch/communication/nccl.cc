@@ -4,13 +4,6 @@
  * \brief Communication operators implmentated by NCCL
  */
 #include "../../op_utils.h"
-#include "../../schema/init.h"
-#include "../../schema/likes.h"
-#include "../../schema/list_args.h"
-#include "../../schema/loss.h"
-#include "../../schema/nn.h"
-#include "../../schema/optimizer.h"
-#include "../../schema/ufunc.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
@@ -19,15 +12,9 @@ namespace op {
 namespace communication {
 namespace nccl {
 using common::shape_utils::BytesCompactTensor;
-using common::shape_utils::GetShape;
-using common::shape_utils::PadDims;
-using common::shape_utils::Shape2Strides;
 using distributed::communicator::Communicator;
 using distributed::communicator::CommunicatorManager;
 using stream_pool::StreamTagEnum;
-
-using dmlc::BeginPtr;
-using value::TupleValueObj;
 
 class NCCLAllReduce : public mnm::op::OpEnv {
   void* stream;

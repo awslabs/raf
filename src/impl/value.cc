@@ -97,6 +97,11 @@ NoGradValue NoGradValue::make() {
   return NoGradValue(n);
 }
 
+VoidValue VoidValue::make() {
+  ObjectPtr<VoidValueObj> n = make_object<VoidValueObj>();
+  return VoidValue(n);
+}
+
 TensorTypeValue TensorTypeValue::make(TensorType t) {
   ObjectPtr<TensorTypeValueObj> n = make_object<TensorTypeValueObj>();
   n->type = std::move(t);

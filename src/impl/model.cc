@@ -9,6 +9,7 @@
 #include "mnm/registry.h"
 #include "mnm/executor.h"
 #include "mnm/pass.h"
+#include "mnm/dist_context.h"
 
 namespace mnm {
 namespace model {
@@ -20,6 +21,7 @@ using binding::DeTuple;
 using binding::GradTape;
 using binding::NDArrayBindingObj;
 using executor::interpreter::Interpret;
+using pass::AutoDataParallel;
 using pass::AutoDiff;
 using pass::BindParam;
 using pass::CanonicalizeOps;
@@ -54,6 +56,12 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
   func = Downcast<Function>(CanonicalizeOps(func));
   // run auto diff pass
   func = AutoDiff(func);
+
+  // run auto parallel
+  if (distributed::DistContext::Global()->enable_data_parallel) {
+    func = AutoDataParallel(func);
+  }
+
   // run const folding pass
   func = Downcast<Function>(FoldConstant(func, mod));
   TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args)));

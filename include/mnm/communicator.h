@@ -40,8 +40,11 @@ class Communicator {
   int GetRank() {
     return connector_->rank;
   }
+  int GetRootRank() {
+    return root_rank;
+  }
   bool IsRoot() {
-    return GetRank() == root_rank;
+    return GetRank() == GetRootRank();
   }
   virtual void* GetCommHandle() = 0;
 
@@ -72,16 +75,22 @@ class CommunicatorManager {
   Communicator* GetCommunicator(const std::string& name = "") {
     CHECK_LT(name.size(), 128) << "There is no such communicator: " << name;
     thread_local char maker_name[128];
+
+    std::string default_name = "nccl";
+    snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
+             default_name.c_str());
+    const registry::PackedFunc* pf = registry::Registry::Get(maker_name);
+    if (pf == nullptr) default_name = "void";
+
     if (comm_ == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
       if (comm_ == nullptr) {
         // ok, it is truly a nullptr
         if (name == "") {
-          const std::string& default_name = "nccl";
           snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
                    default_name.c_str());
         } else {
-          CHECK_EQ(name, "nccl") << "Unsupported communicator: " << name;
+          if (name != "void") CHECK_EQ(name, "nccl") << "Unsupported communicator: " << name;
           snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
                    name.c_str());
         }

@@ -103,6 +103,7 @@ OPS = [
     Op(name="bias_add", schema_name="bias_add"),
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
     Op(name="_allreduce", schema_name="_allreduce"),
+    Op(name="stream_sync", schema_name="stream_control"),
     Op(name="cast", schema_name="cast"),
     Op(name="cast_like", schema_name="cast_like"),
     Op(name="gather_nd", schema_name="gather_nd"),

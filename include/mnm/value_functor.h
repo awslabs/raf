@@ -78,6 +78,7 @@ class ValueFunctor<R(const Value& n, Args...)> {
   virtual R VisitValue_(const BoolValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const StringValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const NoGradValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const VoidValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValueDefault_(const ir::Object* op, Args...) {
     LOG(FATAL) << "Do not have a default for " << op->GetTypeKey();
     throw;

@@ -26,9 +26,9 @@ __all__ = [
     "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
     "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
     "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "stack", "subtract", "sum",
-    "take", "take_dx", "tanh", "tanh_dx", "transpose",
-    "transpose_dx",
+    "sqrt", "sqrt_dx", "stack", "stream_sync", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -636,6 +636,11 @@ def stack(x, axis=0):
     x = sym_utils.to_tensor_tuple(x)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.stack(x, axis))
+
+def stream_sync(x, stream_tag=0):
+    x = sym_utils.to_tensor(x)
+    stream_tag = sym_utils.to_int(stream_tag)
+    return Symbol.from_expr(ffi.stream_sync(x, stream_tag))
 
 def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

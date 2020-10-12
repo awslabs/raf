@@ -52,16 +52,22 @@ class ConnectorManager {
   Connector* GetConnector(const std::string& name) {
     CHECK_LT(name.size(), 128) << "There is no such connector: " << name;
     thread_local char maker_name[128];
+
+    std::string default_name = "mpi";
+    snprintf(maker_name, sizeof(maker_name), "mnm.distributed.connector._make.%s",
+             default_name.c_str());
+    const registry::PackedFunc* pf = registry::Registry::Get(maker_name);
+    if (pf == nullptr) default_name = "void";
+
     if (conn_ == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
       if (conn_ == nullptr) {
         // ok, it is truly a nullptr
         if (name == "") {
-          const std::string& default_name = "mpi";
           snprintf(maker_name, sizeof(maker_name), "mnm.distributed.connector._make.%s",
                    default_name.c_str());
         } else {
-          CHECK_EQ(name, "mpi") << "Unsupported connector: " << name;
+          if (name != "void") CHECK_EQ(name, "mpi") << "Unsupported connector: " << name;
           snprintf(maker_name, sizeof(maker_name), "mnm.distributed.connector._make.%s",
                    name.c_str());
         }

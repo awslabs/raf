@@ -85,6 +85,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/profiler/base/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/distributed/common/*.cc
 )
 
 if (${MNM_USE_CUDA} STREQUAL "OFF")
@@ -117,7 +118,7 @@ if (${MNM_USE_NCCL} STREQUAL "OFF")
   set(MNM_DISTRIBUTED_SOURCE_FILES "")
 else ()
   file(GLOB_RECURSE MNM_DISTRIBUTED_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/communication/*.cc
   )
 endif()

@@ -335,6 +335,8 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
         DLTensor* t = v;
         out_tensors.emplace_back(t);
       }
+    } else if (out->IsInstance<VoidValueObj>()) {
+      // do nothing.
     } else {
       LOG(FATAL) << "InternalError: Interpreter does not deal with " << out->GetTypeKey();
       throw;

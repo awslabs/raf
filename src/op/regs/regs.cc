@@ -133,6 +133,7 @@ static const char split[] = "mnm.op.split";
 static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
 static const char stack[] = "mnm.op.stack";
+static const char stream_sync[] = "mnm.op.stream_sync";
 static const char subtract[] = "mnm.op.subtract";
 static const char sum[] = "mnm.op.sum";
 static const char take[] = "mnm.op.take";
@@ -532,6 +533,13 @@ Attrs Stack(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::StackArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
   MNM_POD(1, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+Attrs StreamControl(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::StreamControlArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Int, stream_tag);
   return Attrs(attrs);
 }
 
@@ -1653,6 +1661,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.stack").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.stream_sync").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(stream_sync, 2, ffi2schema::StreamControl,
+              schema::StreamControlArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_tag));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.subtract").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(subtract, 4, ffi2schema::BinaryUfunc,
               schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -2124,6 +2141,13 @@ Array<Expr> Stack(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> StreamControl(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Int, stream_tag);
+  MNM_RET();
+}
+
 Array<Expr> Sum(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2368,6 +2392,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.split").set_body(MNM_SYMBOLIC_API(split, 3, Spli
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt").set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx").set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stack").set_body(MNM_SYMBOLIC_API(stack, 2, Stack));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync")
+    .set_body(MNM_SYMBOLIC_API(stream_sync, 2, StreamControl));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 3, Sum));
 MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 3, Take));
@@ -2828,6 +2854,14 @@ Attrs Stack(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs StreamControl(const Array<Value>& values) {
+  MNM_PRELUDE(1, 2, schema::StreamControlArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_OPTIONAL(1, value2schema::Int, stream_tag);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Sum(const Array<Value>& values) {
   MNM_PRELUDE(1, 3, schema::SumArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
@@ -3127,6 +3161,8 @@ MNM_BIND_SCHEMA("mnm.op.sqrt_dx", names::sqrt_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stack", names::stack,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
+                value2schema::StreamControl);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract,
                 value2schema::BinaryUfunc);                       // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);     // NOLINT(whitespace/line_length)
@@ -3195,6 +3231,7 @@ MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);
+MNM_REGISTER_OBJECT_REFLECT(StreamControlArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeDxArgs);

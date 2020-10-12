@@ -286,5 +286,20 @@ class NoGradValue : public Value {
   MNM_OBJECT_REF(NoGradValue, Value, NoGradValueObj);
 };
 
+/* Null values */
+class VoidValueObj : public ValueObj {
+ public:
+  void VisitAttrs(tvm::AttrVisitor* v) {
+  }
+  static constexpr const char* _type_key = "mnm.value.VoidValue";
+  MNM_FINAL_OBJECT(VoidValueObj, ValueObj);
+};
+
+class VoidValue : public Value {
+ public:
+  static VoidValue make();
+  MNM_OBJECT_REF(VoidValue, Value, VoidValueObj);
+};
+
 }  // namespace value
 }  // namespace mnm

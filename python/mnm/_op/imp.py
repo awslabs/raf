@@ -27,9 +27,9 @@ __all__ = [
     "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
     "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
     "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "stack", "subtract", "sum",
-    "take", "take_dx", "tanh", "tanh_dx", "transpose",
-    "transpose_dx",
+    "sqrt", "sqrt_dx", "stack", "stream_sync", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -735,6 +735,12 @@ def stack(x, axis=0):
     x = imp_utils.to_tensor_tuple(x)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.stack(x, axis))
+
+@set_module("mnm")
+def stream_sync(x, stream_tag=0):
+    x = imp_utils.to_tensor(x)
+    stream_tag = imp_utils.to_int(stream_tag)
+    return imp_utils.ret(ffi.stream_sync(x, stream_tag))
 
 @set_module("mnm")
 def subtract(x1, x2, out=None, where=None):

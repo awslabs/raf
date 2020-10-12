@@ -1,6 +1,7 @@
 """Auto generated. Do not touch."""
 # pylint: disable=redefined-builtin
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+from ._internal import AutoDataParallel
 from ._internal import AutoDiff
 from ._internal import BindParam
 from ._internal import CanonicalizeOps
