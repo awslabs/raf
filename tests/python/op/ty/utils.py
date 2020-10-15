@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import mnm
 from tvm import relay
 from mnm._ffi.pass_ import InferType
@@ -25,3 +26,13 @@ def randn(shape, *, ctx="cpu", dtype="float32"):
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, ctx=ctx)
     return m_x, n_x
+
+def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
+    x = np.random.randn(*shape) * std
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    assert list(x.shape) == list(shape)
+    n_x = x.astype(dtype)
+    m_x = mnm.array(n_x, ctx=ctx)
+    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
+    return m_x, t_x

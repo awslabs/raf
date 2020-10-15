@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import torch
 import mnm
@@ -10,18 +9,7 @@ if __name__ == "__main__":
     pytest.main([__file__])
 
 # pylint: disable=wrong-import-position
-from .utils import check_type, run_infer_type, randn
-
-
-def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
+from .utils import check_type, run_infer_type, randn, randn_torch
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
