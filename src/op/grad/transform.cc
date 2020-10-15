@@ -44,6 +44,17 @@ Array<Expr> ConcatenateGrad(const Expr& orig_call, const Var& y, const Expr& dy)
 
 MNM_OP_GRAD("mnm.op.concatenate", ConcatenateGrad);
 
+Array<Expr> SplitGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+  static auto concatenate = Op::Get("mnm.op.concatenate");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  CHECK_GE(call->args.size(), 3);
+  const Expr& axis = call->args[2];
+  return {Call(concatenate, {dy, axis})};
+}
+
+MNM_OP_GRAD("mnm.op.split", SplitGrad);
+
 Array<Expr> ReverseGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.reverse");
   const CallNode* call = orig_call.as<CallNode>();

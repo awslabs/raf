@@ -9,12 +9,14 @@
 #include "mnm/executor.h"
 #include "mnm/tensor.h"
 #include "../op/ty/utils.h"
+#include "mnm/pass.h"
 
 namespace mnm {
 namespace binding {
 
 using namespace mnm::ir;
 using namespace mnm::value;
+using namespace tvm::relay;
 using executor::interpreter::InvokeClosure;
 using op::CallValues;
 using op::MakeListArgs;
@@ -153,32 +155,82 @@ ObjectRef DeTuple(Value value) {
   throw;
 }
 
+TensorValue MakeZeros(Context to_ctx, std::vector<int64_t>& shape) {
+  int64_t size = 1;
+  for (const int64_t& elem : shape) {
+    size *= elem;
+  }
+  float a[size] = {0.0};
+  DType dtype = DType(DTypeCode::kFloat(), 32, 1);
+  DLTensor tensor;
+  tensor.data = a;
+  tensor.ctx = Context(DevType::kCPU(), 0);
+  tensor.dtype = dtype;
+  tensor.shape = shape.data();
+  tensor.ndim = shape.size();
+  tensor.strides = nullptr;
+  tensor.byte_offset = 0;
+  auto array = tvm::runtime::NDArray::Empty(shape, dtype, to_ctx);
+  array.CopyFrom(&tensor);
+  return TensorValue::make(Tensor::FromDLPack(array.ToDLPack()));
+}
+
+Expr MakeZeros(Value value) {
+  if (value->IsInstance<ScalarValueObj>()) {
+    return MakeConstant(ScalarValue::make(0.0));
+  } else if (const auto* tensor = value.as<TensorValueObj>()) {
+    const Tensor& a = tensor->tensor;
+    Context x_ctx = a->ctx;
+    std::vector<int64_t> shape(a->shape, a->shape + a->ndim);
+    return MakeConstant(MakeZeros(x_ctx, shape));
+  } else if (const auto* tuple = value.as<TupleValueObj>()) {
+    int n = static_cast<int>(tuple->fields.size());
+    std::vector<Expr> zeros(n);
+    for (int i = 0; i < n; ++i) {
+      Value sub_value = tuple->fields[i];
+      zeros[i] = MakeZeros(sub_value);
+    }
+    return Tuple(zeros);
+  } else {
+    LOG(FATAL) << "ValueError: cannot de-tuple " << value->GetTypeKey();
+    throw;
+  }
+}
+
 ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
   if (value->IsInstance<ScalarValueObj>()) {
     return std::move(value);
   }
   GradTape tape = GradTape::make(
       /*dy=*/binding::BindNDArray({}),
-      /*bp=*/std::move(bp),
-      /*prev_tapes=*/std::move(prev_tapes));
+      /*bp=*/bp,
+      /*prev_tapes=*/prev_tapes);
   if (value->IsInstance<TensorValueObj>()) {
     return BindNDArray(std::move(value), std::move(tape));
   }
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
     int n = static_cast<int>(tuple->fields.size());
-    Var dy = mnm::ir::MakeVar("dy", {});
-    std::vector<Expr> grads(n, MakeConstant(NoGradValue::make()));
+    Var dy = mnm::ir::Var("dy", {});
+    Map<ir::Var, Value> env;
+    Var tuple_bp = mnm::ir::Var("tuple_bp", {});
+    env.Set(tuple_bp, bp);
     for (int i = 0; i < n; ++i) {
       Value sub_value = tuple->fields[i];
+      std::vector<Expr> grads(n);
+      for (int j = 0; j < n; ++j) {  // Set the remaining parts zero.
+        if (j != i) {
+          grads[j] = MakeZeros(tuple->fields[j]);
+        }
+      }
       if (sub_value->op_env == nullptr) {
         sub_value->op_env = tuple->op_env;
       }
       grads[i] = dy;
       result.push_back(DeStruct(
           /*value=*/sub_value,
-          /*bp=*/ClosureValue::make({}, Function({dy}, Tuple(grads), {}, {})),
-          /*prev_tapes*/ {tape}));
+          /*bp=*/ClosureValue::make(env, Function({dy}, Call(tuple_bp, {Tuple(grads)}), {}, {})),
+          /*prev_tapes*/ prev_tapes));
     }
     return std::move(result);
   }

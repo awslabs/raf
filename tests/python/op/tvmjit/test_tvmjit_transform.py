@@ -202,7 +202,11 @@ def test_broadcast_to_like(shape, ctx):
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [[10, 20, 30], [6, 8, 10, 3]])
 @pytest.mark.parametrize("axis", [0, 1, 2])
-@pytest.mark.parametrize("indices_or_sections", [(2, 4), (1, 4), 2, (2,)])
+@pytest.mark.parametrize("indices_or_sections", [
+    [2, 2], [(2,), (2, (2,))],
+    [(2, 4), (4, (2, 2))],
+    [(1, 4), (4, (1, 3))]
+])
 def test_split(shape, axis, indices_or_sections, ctx):
     class Split(mnm.Model):
         def build(self, indices_or_sections, axis):
@@ -214,19 +218,36 @@ def test_split(shape, axis, indices_or_sections, ctx):
             ret = mnm.split(x, self._indices_or_sections, self._axis)
             return ret
     m_x, n_x = randn(shape, ctx=ctx)
-    n_y = np.split(n_x, indices_or_sections=indices_or_sections, axis=axis)
-    # test hybridized call
-    model = Split(indices_or_sections, axis)
+    n_y = np.split(n_x, indices_or_sections[0], axis=axis)
+    model = Split(indices_or_sections[0], axis)
     m_y = model(m_x)
+    # check forward
     assert len(m_y) == len(n_y)
     for m, n in zip(m_y, n_y):
         check(m, n)
-
-    # test imperative call
-    m_y = mnm.split(m_x, indices_or_sections=indices_or_sections, axis=axis)
-    assert len(m_y) == len(n_y)
-    for m, n in zip(m_y, n_y):
-        check(m, n)
+    # check backward
+    t_indices_or_sections = indices_or_sections[1]
+    if isinstance(t_indices_or_sections, (tuple, list)):
+        size = shape[axis]
+        r_section = size - t_indices_or_sections[0]
+        t_indices_or_sections = t_indices_or_sections[1] + (r_section, )
+    else:
+        t_indices_or_sections = int(shape[axis]/t_indices_or_sections)
+    m_x, t_x = randn_torch(shape, ctx=ctx)
+    m_x.requires_grad = True
+    m_y = model(m_x)
+    m_dy, t_dy = randn_torch(m_y[0].shape, ctx=ctx)
+    t_y = torch.split(t_x, t_indices_or_sections, dim=axis)
+    t_y[0].backward(t_dy)
+    m_y[0].backward(m_dy)
+    check_torch(m_x.grad, t_x.grad)
+    m_dy2, t_dy2 = randn_torch(m_y[1].shape, ctx=ctx)
+    t_x2 = t_x.clone().detach()
+    t_x2.requires_grad = True
+    t_y2 = torch.split(t_x2, t_indices_or_sections, dim=axis)
+    t_y2[1].backward(t_dy2)
+    m_y[1].backward(m_dy2)
+    check_torch(m_x.grad, t_x2.grad)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
