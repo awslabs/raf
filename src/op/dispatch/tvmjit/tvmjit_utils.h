@@ -22,11 +22,8 @@ DLTensor GetDLTensor(const value::Value& v);
 void GetOut(const value::Value& out, std::vector<DLTensor>* ret);
 ir::Type GetTensorType(const DLTensor& dlt);
 ir::Type GetTupleType(const std::vector<DLTensor>& dlts);
-registry::PackedFunc CompileOp(const ir::Op& op,                          //
-                               const ir::Attrs& attrs,                    //
-                               const std::vector<ir::Type>& param_types,  //
-                               const ir::Type& ret_type,                  //
-                               Context ctx);
+ir::Function LowerOp(const ir::Op& op, const ir::Attrs& attrs,
+                     const std::vector<ir::Type>& param_types, const ir::Type& ret_type);
 
 class TVMOpEnv : public op::OpEnv {
  public:
@@ -60,49 +57,95 @@ HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& 
   return key;
 }
 
+using FMNMLower = registry::TypedPackedFunc<ir::Function(const CallValues& call)>;
+using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm
 
-#define MNM_TVMJIT(FUNC, OP, SCHEMA, NORM, TYPE, HASH)             \
-  MetaCache<registry::PackedFunc> FUNC##CacheCpu;                  \
-  MetaCache<registry::PackedFunc> FUNC##CacheCuda;                 \
-  OpEnv* FUNC(const op::CallValues& call) {                        \
-    static const auto op = Op::Get(OP);                            \
-    const auto* args = call->args.as<SCHEMA>();                    \
-    const auto& ctx = call->ctx;                                   \
-    auto env = std::make_unique<TVMOpEnv>();                       \
-    /* Normalize inputs and outputs */                             \
-    GetOut(call->out, &env->outputs);                              \
-    Attrs attrs = NORM(env.get(), args);                           \
-    /* Normalize types */                                          \
-    std::vector<Type> param_types;                                 \
-    Type ret_type;                                                 \
-    TYPE(env.get(), &param_types, &ret_type);                      \
-    /* Determine which cache to look up */                         \
-    MetaCache<registry::PackedFunc>* cache;                        \
-    if (call->ctx.device_type == DevType::kCPU()) {                \
-      cache = &FUNC##CacheCpu;                                     \
-    } else if (call->ctx.device_type == DevType::kCUDA()) {        \
-      cache = &FUNC##CacheCuda;                                    \
-    } else {                                                       \
-      LOG(FATAL) << "NotImplementedError: ";                       \
-      throw;                                                       \
-    }                                                              \
-    /* Look up hash */                                             \
-    HashKey key = HASH(param_types, ret_type, args);               \
-    {                                                              \
-      std::lock_guard<std::mutex> lock(cache->mu);                 \
-      if (const auto* compiled = cache->Get(key.byte_vector)) {    \
-        env->f = *compiled;                                        \
-      } else {                                                     \
-        env->f = CompileOp(op, attrs, param_types, ret_type, ctx); \
-        cache->Set(key.byte_vector, env->f);                       \
-      }                                                            \
-    }                                                              \
-    /* Setup other parts of the environment */                     \
-    env->Setup();                                                  \
-    return env.release();                                          \
-  }                                                                \
-  MNM_OP_DISPATCH(OP, FUNC, DevType::kCPU(), "tvmjit");            \
-  MNM_OP_DISPATCH(OP, FUNC, DevType::kCUDA(), "tvmjit");
+#define MNM_TVMJIT(FUNC, OP, SCHEMA, NORM, TYPE, HASH)                                          \
+  MetaCache<registry::PackedFunc> FUNC##CacheBuildCpu;                                          \
+  MetaCache<registry::PackedFunc> FUNC##CacheBuildCuda;                                         \
+  MetaCache<ir::Function> FUNC##CacheLoweredFunc;                                               \
+  inline std::unique_ptr<TVMOpEnv> FUNC##SetupTVMOpEnv(const op::CallValues& call) {            \
+    auto env = std::make_unique<TVMOpEnv>();                                                    \
+    GetOut(call->out, &env->outputs);                                                           \
+    return std::move(env);                                                                      \
+  }                                                                                             \
+  template <typename RType>                                                                     \
+  inline RType FUNC##CacheCompile(TVMOpEnv* env, const SCHEMA* args, MetaCache<RType>* cache,   \
+                                  std::function<RType(const ir::Function&)> f_post_lower) {     \
+    static const auto op = Op::Get(OP);                                                         \
+    Attrs attrs = NORM(env, args);                                                              \
+    std::vector<Type> param_types;                                                              \
+    Type ret_type;                                                                              \
+    TYPE(env, &param_types, &ret_type);                                                         \
+    RType ret{nullptr};                                                                         \
+    HashKey key = HASH(param_types, ret_type, args);                                            \
+    {                                                                                           \
+      std::lock_guard<std::mutex> lock(cache->mu);                                              \
+      if (const auto* compiled = cache->Get(key.byte_vector)) {                                 \
+        ret = *compiled;                                                                        \
+      } else {                                                                                  \
+        auto lowered = LowerOp(op, attrs, param_types, ret_type);                               \
+        ret = f_post_lower(lowered);                                                            \
+        cache->Set(key.byte_vector, ret);                                                       \
+      }                                                                                         \
+    }                                                                                           \
+    return ret;                                                                                 \
+  }                                                                                             \
+  OpEnv* FUNC##Build(const op::CallValues& call) {                                              \
+    static auto engine = registry::GetPackedFunc("relay.backend._CompileEngineGlobal")();       \
+    static auto c_cache_key = registry::GetPackedFunc("relay.backend._make_CCacheKey");         \
+    static auto jit = registry::GetPackedFunc("relay.backend._CompileEngineJIT");               \
+    static auto engine_clear = registry::GetPackedFunc("relay.backend._CompileEngineClear");    \
+    const auto* args = call->args.as<SCHEMA>();                                                 \
+    CHECK(args != nullptr);                                                                     \
+    const auto& ctx = call->ctx;                                                                \
+    auto env = FUNC##SetupTVMOpEnv(call);                                                       \
+    tvm::Target target;                                                                         \
+    /* Determine cache and target */                                                            \
+    MetaCache<registry::PackedFunc>* cache;                                                     \
+    if (call->ctx.device_type == DevType::kCPU()) {                                             \
+      cache = &FUNC##CacheBuildCpu;                                                             \
+      target = tvm::Target("llvm");                                                             \
+    } else if (call->ctx.device_type == DevType::kCUDA()) {                                     \
+      cache = &FUNC##CacheBuildCuda;                                                            \
+      target = tvm::Target("cuda");                                                             \
+    } else {                                                                                    \
+      LOG(FATAL) << "NotImplementedError: target is not supported " << ctx.device_type.c_str(); \
+      throw;                                                                                    \
+    }                                                                                           \
+    std::function<registry::PackedFunc(const ir::Function&)> f_post_lower(                      \
+        [&](const ir::Function& f) {                                                            \
+          engine_clear(engine);                                                                 \
+          return jit(engine, c_cache_key(f, target));                                           \
+        });                                                                                     \
+    env->f = FUNC##CacheCompile(env.get(), args, cache, f_post_lower);                          \
+    /* Setup other parts of the environment */                                                  \
+    env->Setup();                                                                               \
+    return env.release();                                                                       \
+  }                                                                                             \
+  Attrs FUNC##Attr(const op::CallValues& call) {                                                \
+    const auto* args = call->args.as<SCHEMA>();                                                 \
+    CHECK(args != nullptr);                                                                     \
+    auto env = FUNC##SetupTVMOpEnv(call);                                                       \
+    Attrs attrs = NORM(env.get(), args);                                                        \
+    return attrs;                                                                               \
+  }                                                                                             \
+  ir::Function FUNC##Lower(const op::CallValues& call) {                                        \
+    static const std::function<ir::Function(const ir::Function&)> identity(                     \
+        [](const ir::Function& f) { return f; });                                               \
+    const auto& ctx = call->ctx;                                                                \
+    const SCHEMA* args = call->args.as<SCHEMA>();                                               \
+    CHECK(args != nullptr);                                                                     \
+    MetaCache<ir::Function>* cache;                                                             \
+    cache = &FUNC##CacheLoweredFunc;                                                            \
+    auto env = FUNC##SetupTVMOpEnv(call);                                                       \
+    return FUNC##CacheCompile(env.get(), args, cache, identity);                                \
+  }                                                                                             \
+  RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMLower>("FMNMLower", FUNC##Lower);       \
+  RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMAttr>("FMNMAttr", FUNC##Attr);          \
+  MNM_OP_DISPATCH(OP, FUNC##Build, DevType::kCPU(), "tvmjit");                                  \
+  MNM_OP_DISPATCH(OP, FUNC##Build, DevType::kCUDA(), "tvmjit");

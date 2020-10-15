@@ -67,40 +67,19 @@ void SetArgs(std::vector<DLTensor>* i, std::vector<DLTensor>* o, std::vector<TVM
   }
 }
 
-PackedFunc CompileOp(const Op& op,                          //
-                     const Attrs& attrs,                    //
-                     const std::vector<Type>& param_types,  //
-                     const Type& ret_type,                  //
-                     Context ctx) {
-  static auto engine = GetPackedFunc("relay.backend._CompileEngineGlobal")();
-  static auto c_cache_key = GetPackedFunc("relay.backend._make_CCacheKey");
-  static auto jit = GetPackedFunc("relay.backend._CompileEngineJIT");
-  static auto engine_clear = GetPackedFunc("relay.backend._CompileEngineClear");
+Function LowerOp(const Op& op, const Attrs& attrs, const std::vector<Type>& param_types,
+                 const Type& ret_type) {
   Function func;
-  {
-    std::vector<Var> params;
-    for (int i = 0, n = param_types.size(); i < n; ++i) {
-      auto var = mnm::ir::MakeVar("", param_types[i]);
-      var->checked_type_ = param_types[i];
-      params.push_back(var);
-    }
-    func = Function(params, Call(op, {params.begin(), params.end()}, attrs), ret_type, {});
-    func->body->checked_type_ = ret_type;
-    func->checked_type_ = FuncType(param_types, ret_type, {}, {});
+  std::vector<Var> params;
+  for (int i = 0, n = param_types.size(); i < n; ++i) {
+    auto var = mnm::ir::MakeVar("", param_types[i]);
+    var->checked_type_ = param_types[i];
+    params.push_back(var);
   }
-  tvm::Target target;
-  {
-    if (ctx.device_type == DevType::kCPU()) {
-      target = tvm::Target("llvm");
-    } else if (ctx.device_type == DevType::kCUDA()) {
-      target = tvm::Target("cuda");
-    } else {
-      LOG(FATAL) << "NotImplementedError: target is not supported " << ctx.device_type.c_str();
-      throw;
-    }
-  }
-  engine_clear(engine);
-  return jit(engine, c_cache_key(func, target));
+  func = Function(params, Call(op, {params.begin(), params.end()}, attrs), ret_type, {});
+  func->body->checked_type_ = ret_type;
+  func->checked_type_ = FuncType(param_types, ret_type, {}, {});
+  return func;
 }
 
 void TVMOpEnv::Setup() {
