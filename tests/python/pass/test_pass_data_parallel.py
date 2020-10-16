@@ -182,7 +182,7 @@ def test_dp(config):
         return tvm.relay.Function([x, y_true, c], let_2)
 
     m_model = TestModel()
-    m_model.to(ctx='cuda')
+    m_model.to(ctx=ctx)
     m_model.train_mode()
 
     m_x = randn([1, 3, config[1], config[1]], ctx=ctx, requires_grad=True)

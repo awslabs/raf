@@ -85,7 +85,7 @@ class ManifestAllocMutator : public ExprMutator {
       } else {
         std::vector<Expr> outs;
         for (size_t i = 0; i < out_types.size(); i++) {
-          outs.push_back(MakeStaticAllocation(&scope, out_types[i].as<TensorTypeNode>(), i));
+          outs.push_back(MakeStaticAllocation(&scope, out_types[i].as<TensorTypeNode>()));
         }
         auto invoke =
             Call(Op::Get("mnm.op.vm.invoke_op"),
@@ -118,7 +118,7 @@ class ManifestAllocMutator : public ExprMutator {
     return MakeConstant(IntValue::make(size));
   }
 
-  Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type, size_t i) {
+  Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type) {
     Expr shape = MakeConstant(type->shape);
     Expr size = ComputeStorage(type);
     Expr alignment = ComputeAlignment(type->dtype);
