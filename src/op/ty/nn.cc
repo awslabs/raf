@@ -17,6 +17,12 @@ namespace mnm {
 namespace op {
 namespace type {
 
+using schema::BatchNormArgs;
+using schema::BiasAddArgs;
+using schema::ConvArgs;
+using schema::ConvDxwArgs;
+using schema::PoolArgs;
+using schema::SoftmaxArgs;
 using tvm::Array;
 using tvm::Downcast;
 using tvm::Integer;
@@ -25,6 +31,7 @@ using tvm::relay::TensorType;
 using tvm::relay::Type;
 using namespace mnm::value;
 using namespace schema;
+using namespace mnm::type;
 
 Type Conv2DInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvArgs>();
@@ -126,6 +133,17 @@ Type BatchNormInferInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.batch_norm_infer", "BatchNormInfer", BatchNormInferInfer);
+
+Type BatchNormTrainInfer(const CallValues& value) {
+  const auto* args = value->args.as<BatchNormArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  TensorType running_mean = Downcast<TensorType>(GetType(args->running_mean));
+  TensorType running_var = Downcast<TensorType>(GetType(args->running_var));
+  return TupleType({x, running_mean, running_var});
+}
+
+MNM_OP_TYPE("mnm.op.batch_norm_train", "BatchNormTrain", BatchNormTrainInfer);
 
 template <typename T>
 Type GeneralAxisInfer(const CallValues& value) {

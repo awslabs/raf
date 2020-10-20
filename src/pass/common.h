@@ -11,43 +11,46 @@
 namespace mnm {
 namespace pass {
 
-using namespace mnm::ir;
-
 struct ExplicitLetList {
  public:
-  std::vector<Var> vars;
-  std::vector<Expr> exprs;
-  Var ret;
+  std::vector<ir::Var> vars;
+  std::vector<ir::Expr> exprs;
+  ir::Var ret;
 
-  Expr AsExpr() {
+  ir::Expr AsExpr() {
     CHECK_EQ(vars.size(), exprs.size());
-    Expr body = ret;
+    ir::Expr body = ret;
     int n = exprs.size();
     for (int i = n - 1; i >= 0; --i) {
-      body = Let(vars[i], exprs[i], body);
+      body = ir::Let(vars[i], exprs[i], body);
     }
     return body;
   }
 
-  static std::unique_ptr<ExplicitLetList> make(const Expr& node) {
+  static std::unique_ptr<ExplicitLetList> make(const ir::Expr& node) {
     std::unique_ptr<ExplicitLetList> ell = std::make_unique<ExplicitLetList>();
     Maker(ell.get()).VisitExpr(node);
     return ell;
   }
 
-  struct Maker : public ExprVisitor {
+  struct Maker : public ir::ExprVisitor {
     explicit Maker(ExplicitLetList* ell) : ell(ell) {
     }
-    void VisitExpr_(const LetNode* node) final {
+
+    void VisitExpr_(const ir::VarNode* node) final {
+      ell->ret = ir::GetRef<ir::Var>(node);
+    }
+
+    void VisitExpr_(const ir::LetNode* node) final {
       ell->vars.push_back(node->var);
       ell->exprs.push_back(node->value);
-      const Expr& expr = node->body;
-      if (expr->IsInstance<LetNode>()) {
-        ExprVisitor::VisitExpr(expr);  // tail call
-      } else if (expr->IsInstance<VarNode>()) {
-        ell->ret = Downcast<Var>(expr);
+      const ir::Expr& expr = node->body;
+      if (expr->IsInstance<ir::LetNode>()) {
+        VisitExpr(expr);  // tail call
+      } else if (expr->IsInstance<ir::VarNode>()) {
+        VisitExpr(expr);
       } else {
-        LOG(FATAL) << "ValueError: DataParallel pass assumes ANF";
+        LOG(FATAL) << "ValueError: assumes ANF";
         throw;
       }
     }

@@ -22,6 +22,8 @@ InferType = _APIS.get("mnm.pass_.InferType", None)
 LambdaLift = _APIS.get("mnm.pass_.LambdaLift", None)
 # Defined in ./src/pass/manifest_alloc.cc
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
+# Defined in ./src/pass/memory_share.cc
+MemShare = _APIS.get("mnm.pass_.MemShare", None)
 # Defined in ./src/pass/rename_vars.cc
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/fold_const.cc
