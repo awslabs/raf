@@ -29,8 +29,13 @@ DistContext DistContext::Global() {
   return inst;
 }
 
+void EnableDataParallel(bool enable) {
+  DistContext::Global()->enable_data_parallel = enable;
+}
+
 MNM_REGISTER_GLOBAL("mnm.distributed._make.DistContext").set_body_typed(DistContext::make);
 MNM_REGISTER_GLOBAL("mnm.distributed.Global").set_body_typed(DistContext::Global);
+MNM_REGISTER_GLOBAL("mnm.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
 
 MNM_REGISTER_OBJECT_REFLECT(DistContextObj);
 

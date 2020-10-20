@@ -12,6 +12,15 @@ class DistContext(Object):
     def __init__(self):
         self.__init_handle_by_constructor__(_make.DistContext)
 
+    @property
+    def enable_data_parallel(self):
+        return self.enable_data_parallel_
+
+    @enable_data_parallel.setter
+    def enable_data_parallel(self, value):
+        self.enable_data_parallel_ = value
+        ffi.EnableDataParallel(value)
+
 
 def get_context():
     return ffi.Global()
