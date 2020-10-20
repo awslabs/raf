@@ -2,14 +2,8 @@ import pytest
 import torch
 import mnm
 from mnm._ffi.pass_ import AutoDiff
+from mnm.testing import check_type, run_infer_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
-
-# pylint: disable=wrong-import-position
-from .utils import check_type, run_infer_type, randn, randn_torch
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
@@ -163,3 +157,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     bwd_ty = FuncType([dy_ty], dx_ty)
     checked_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
     check_type(m_func, checked_type)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

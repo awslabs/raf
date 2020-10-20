@@ -14,16 +14,11 @@ namespace op {
 namespace type {
 
 using namespace mnm::value;
-using schema::BinaryArgs;
-using schema::BinaryUfuncArgs;
-using tvm::relay::Type;
+using namespace mnm::op::schema;
+using namespace tvm;
+using namespace tvm::relay;
 
-Type BroadcastInfer(const CallValues& value) {
-  using namespace tvm;
-  using namespace tvm::relay;
-  const auto* args = value->args.as<BinaryUfuncArgs>();
-  TensorType x1 = Downcast<TensorType>(GetType(args->x1));
-  TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
   size_t ndim_1 = x1->shape.size();
   size_t ndim_2 = x2->shape.size();
   size_t ndim = std::max(ndim_1, ndim_2);
@@ -46,10 +41,42 @@ Type BroadcastInfer(const CallValues& value) {
       LOG(FATAL) << "Incompatible broadcast type " << x1 << " and " << x2;
     }
   }
+  return oshape;
+}
+
+Type BroadcastInfer(const CallValues& value) {
+  using namespace tvm;
+  using namespace tvm::relay;
+  const auto* args = value->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  TensorType x1 = Downcast<TensorType>(GetType(args->x1));
+  TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+  Array<PrimExpr> oshape = BroadcastShape(x1, x2);
   return TensorType(oshape, x1->dtype);
 }
 
+Type LogicalBroadcastInfer(const CallValues& value) {
+  using namespace tvm;
+  using namespace tvm::relay;
+  const auto* args = value->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  TensorType x1 = Downcast<TensorType>(GetType(args->x1));
+  TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+  Array<PrimExpr> oshape = BroadcastShape(x1, x2);
+  return TensorType(oshape, DataType::Bool(x1->dtype.lanes()));
+}
+
 MNM_OP_TYPE("mnm.op.add", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.subtract", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.multiply", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.divide", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.mod", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.less", "LogicalBroadcast", LogicalBroadcastInfer);
+MNM_OP_TYPE("mnm.op.greater", "LogicalBroadcast", LogicalBroadcastInfer);
+MNM_OP_TYPE("mnm.op.less_equal", "LogicalBroadcast", LogicalBroadcastInfer);
+MNM_OP_TYPE("mnm.op.greater_equal", "LogicalBroadcast", LogicalBroadcastInfer);
+MNM_OP_TYPE("mnm.op.equal", "LogicalBroadcast", LogicalBroadcastInfer);
+MNM_OP_TYPE("mnm.op.not_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 
 }  // namespace type
 }  // namespace op

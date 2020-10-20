@@ -1,15 +1,8 @@
 import pytest
 import mnm
 from mnm._ffi.pass_ import AutoDiff
+from mnm.testing import check_type, run_infer_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
-
-# pylint: disable=wrong-import-position
-from .utils import check_type, run_infer_type, randn, randn_torch
-
 
 @pytest.mark.parametrize("shape", [
     (1, 2, 3),
@@ -124,3 +117,7 @@ def test_batch_matmul(shape, dtype):
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
     check_type(m_func, desired_type)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

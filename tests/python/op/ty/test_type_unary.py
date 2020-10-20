@@ -2,13 +2,8 @@ import pytest
 import mnm
 from mnm._ffi.pass_ import AutoDiff
 from mnm._op import sym
+from mnm.testing import check_type, run_infer_type, randn
 from tvm.relay import TensorType, FuncType, TupleType
-
-if __name__ == "__main__":
-    pytest.main([__file__])
-
-# pylint: disable=wrong-import-position
-from .utils import check_type, run_infer_type, randn
 
 
 @pytest.mark.parametrize("op", [
@@ -63,3 +58,7 @@ def test_relu(op, shape, dtype):
         bwd_ty = FuncType([fwd_ty], fwd_ty)
         desired_type = FuncType([fwd_ty], TupleType([fwd_ty, bwd_ty]))
         check_type(m_func, desired_type)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])
