@@ -20,6 +20,7 @@ from tvm.relay import TensorType, FuncType, TupleType
     (sym.erf, True),
     (sym.sqrt, True),
     (sym.atan, False),
+    (sym.negative, False),
 ])
 @pytest.mark.parametrize("shape", [
     (),
@@ -28,7 +29,7 @@ from tvm.relay import TensorType, FuncType, TupleType
     (3, 7, 9),
 ])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_relu(op, shape, dtype):
+def test_unary(op, shape, dtype):
     op, backward = op
 
     class Unary(mnm.Model):

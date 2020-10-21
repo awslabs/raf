@@ -18,6 +18,7 @@ namespace type {
 using namespace mnm::value;
 using schema::UnaryArgs;
 using schema::UnaryDxArgs;
+using schema::UnaryUfuncArgs;
 using tvm::relay::Type;
 
 Type UnaryInfer(const CallValues& value) {
@@ -54,6 +55,15 @@ MNM_OP_TYPE("mnm.op.tanh_dx", "IdentityDx", UnaryDxInfer);
 MNM_OP_TYPE("mnm.op.sigmoid_dx", "IdentityDx", UnaryDxInfer);
 MNM_OP_TYPE("mnm.op.erf_dx", "IdentityDx", UnaryDxInfer);
 MNM_OP_TYPE("mnm.op.sqrt_dx", "IdentityDx", UnaryDxInfer);
+
+Type UnaryUfuncInfer(const CallValues& value) {
+  const auto* args = value->args.as<UnaryUfuncArgs>();
+  CHECK(args != nullptr);
+  // UnaryUfunc ops' outputs are identical with inputs
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op.negative", "IdentityUfunc", UnaryUfuncInfer);
 
 }  // namespace type
 }  // namespace op
