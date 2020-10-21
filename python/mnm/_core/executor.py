@@ -388,12 +388,12 @@ class VMCompiler:
         if isinstance(target, (str, tvm.target.Target)):
             dev_type = tvm.tir.IntImm(
                 "int32", tvm.nd.context(str(target)).device_type)
-            tgts[dev_type] = tvm.target.create(target)
+            tgts[dev_type] = tvm.target.Target(target)
         elif isinstance(target, dict):
             for dev, tgt in target.items():
                 dev_type = tvm.tir.IntImm(
                     "int32", tvm.nd.context(dev).device_type)
-                tgts[dev_type] = tvm.target.create(tgt)
+                tgts[dev_type] = tvm.target.Target(tgt)
         else:
             raise TypeError("target is expected to be str, tvm.target.Target, " +
                             "or dict of str to str/tvm.target.Target, but received " +
@@ -411,7 +411,7 @@ class VMCompiler:
         if not target_host:
             target_host = "llvm" if tvm.runtime.enabled("llvm") else "stackvm"
         if isinstance(target_host, str):
-            target_host = tvm.target.create(target_host)
+            target_host = tvm.target.Target(target_host)
         return target_host
 
 
