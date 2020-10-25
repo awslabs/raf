@@ -4,12 +4,15 @@ from mnm._op import sym
 from mnm.testing import check_type, run_infer_type, randn
 from tvm.relay import TensorType, FuncType
 
+
 @pytest.mark.parametrize("op", [
     sym.add,
     sym.subtract,
     sym.multiply,
     sym.divide,
     sym.mod,
+    sym.maximum,
+    sym.minimum,
 ])
 @pytest.mark.parametrize("shape", [
     [(10, 4), (5, 10, 1), (5, 10, 4)],

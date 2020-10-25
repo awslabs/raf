@@ -64,6 +64,7 @@ Type UnaryUfuncInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.negative", "IdentityUfunc", UnaryUfuncInfer);
+MNM_OP_TYPE("mnm.op.logical_not", "IdentityUfunc", UnaryUfuncInfer);
 
 }  // namespace type
 }  // namespace op

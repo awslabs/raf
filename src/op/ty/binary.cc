@@ -71,6 +71,8 @@ MNM_OP_TYPE("mnm.op.subtract", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.multiply", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.divide", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.mod", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.maximum", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.minimum", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.less", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.greater", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.less_equal", "LogicalBroadcast", LogicalBroadcastInfer);

@@ -34,6 +34,17 @@ def randn(shape, *, ctx="cpu", dtype="float32"):
     return m_x, n_x
 
 
+def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
+    """Helper function to generate a pair of mnm and numpy arrays with int"""
+    x = np.random.randint(low, high, shape)
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    assert list(x.shape) == list(shape)
+    n_x = x.astype(dtype)
+    m_x = mnm.array(n_x, ctx=ctx)
+    return m_x, n_x
+
+
 def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
     """Helper function to generate a pair of mnm and torch arrays"""
     x = np.random.randn(*shape) * std

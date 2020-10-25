@@ -4,6 +4,7 @@ from mnm._ffi.pass_ import AutoDiff
 from mnm.testing import check_type, run_infer_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
+
 @pytest.mark.parametrize("shape", [
     (1, 2, 3),
     (1, 5, 7),

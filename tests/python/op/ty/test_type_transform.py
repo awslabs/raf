@@ -3,18 +3,8 @@ import pytest
 import torch
 import mnm
 from mnm._ffi.pass_ import AutoDiff
-from mnm.testing import check_type, run_infer_type, randn, randn_torch
+from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
 from tvm.relay import TensorType, FuncType, TupleType
-
-
-def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
-    x = np.random.randint(low, high, shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
 
 
 # pylint: disable=too-many-locals, import-outside-toplevel, attribute-defined-outside-init
