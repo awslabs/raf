@@ -111,6 +111,66 @@ def test_layer_norm(shape, axis, eps, dtype):
     check_type(m_func, checked_type)
 
 
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
+@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("dilation", [1])
+@pytest.mark.parametrize("padding", [0, 1, 2])
+def test_conv2d(dtype, xshape, wshape, stride, dilation, padding): # pylint: disable=too-many-arguments
+    # N.B.: NCHW + OIHW
+    import torch.nn.functional as F
+
+    class Conv2D(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w):  # pylint: disable=no-self-use
+            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+
+    class Conv2DGrad(mnm.Model):
+        def build(self, grad_mode):
+            self._grad_mode = grad_mode
+
+        @mnm.model.trace
+        def forward(self, x_or_w, y, dy): # pylint: disable=inconsistent-return-statements
+            if self._grad_mode == "dx":
+                return mnm.conv2d_dx(x_or_w, y, dy, shape=xshape,
+                                     stride=stride, padding=padding, dilation=dilation, groups=1)
+            if self._grad_mode == "dw":
+                return mnm.conv2d_dw(x_or_w, y, dy, shape=wshape,
+                                     stride=stride, padding=padding, dilation=dilation, groups=1)
+
+    model = Conv2D()
+    # forward
+    m_x, t_x = randn_torch(xshape, std=0.001, dtype=dtype)
+    m_w, t_w = randn_torch(wshape, std=0.01, dtype=dtype)
+    m_y = model(m_x, m_w)
+    m_func = model.get_relay_func(m_x, m_w)
+    m_func = run_infer_type(m_func)
+    t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
+    x_ty = TensorType(xshape, dtype=dtype)
+    w_ty = TensorType(wshape, dtype=dtype)
+    y_ty = TensorType(t_y.shape, dtype=dtype)
+    expected_type = FuncType([x_ty, w_ty], y_ty)
+    check_type(m_func, expected_type)
+    # backward
+    # TODO(@XIAO-XIA): using AutoDiff to check backward after impl the type func of shape
+    dx_modle = Conv2DGrad("dx")
+    dw_modle = Conv2DGrad("dw")
+    m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype)
+    dy_ty = TensorType(t_dy.shape, dtype=dtype)
+    dx_func = dx_modle.get_relay_func(m_w, m_y, m_dy)
+    dw_func = dw_modle.get_relay_func(m_x, m_y, m_dy)
+    dx_func = run_infer_type(dx_func)
+    dw_func = run_infer_type(dw_func)
+    dx_checked_type = FuncType([w_ty, y_ty, dy_ty], x_ty)
+    dw_checked_type = FuncType([x_ty, y_ty, dy_ty], w_ty)
+    check_type(dx_func, dx_checked_type)
+    check_type(dw_func, dw_checked_type)
+
+
 # pylint: disable=no-self-use, too-many-arguments
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
