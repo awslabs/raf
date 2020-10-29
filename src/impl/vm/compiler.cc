@@ -647,10 +647,11 @@ void VMCompiler::Lower(Module mod, const TargetsMap& targets, const tvm::Target&
 
 Module VMCompiler::OptimizeModule(const Module& mod, const TargetsMap& targets) {
   auto m = pass::InferType(mod);
-  CHECK(targets_.size() == 1) << "Heterogeneous targets not supported.";
+  CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
   With<tvm::Target> tctx((*it).second);
-  return pass::ManifestAlloc(m);
+  m = pass::ManifestAlloc(m);
+  return pass::InplaceUpdate(m);
 }
 
 void VMCompiler::PopulateGlobalMap() {

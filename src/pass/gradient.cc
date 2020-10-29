@@ -28,7 +28,6 @@ namespace gradient {
 using namespace mnm::ir;
 using namespace mnm::op;
 using mnm::value::NoGradValue;
-using tvm::relay::LetList;
 
 struct Gradient : public ExprVisitor {
  public:

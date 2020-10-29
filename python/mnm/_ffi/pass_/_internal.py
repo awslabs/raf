@@ -18,6 +18,8 @@ FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
 FuseOps = _APIS.get("mnm.pass_.FuseOps", None)
 # Defined in ./src/pass/type_infer.cc
 InferType = _APIS.get("mnm.pass_.InferType", None)
+# Defined in ./src/pass/inplace_update.cc
+InplaceUpdate = _APIS.get("mnm.pass_.InplaceUpdate", None)
 # Defined in ./src/pass/lambda_lift.cc
 LambdaLift = _APIS.get("mnm.pass_.LambdaLift", None)
 # Defined in ./src/pass/manifest_alloc.cc

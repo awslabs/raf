@@ -747,8 +747,12 @@ Var LivenessAnalyzer::CreateTensorVar(const Type& type) {
  * \param func the function to be analyzed
  * \return the function with invalid memory sharing removed
  */
-ir::Function MemShare(ir::Function func) {
-  return memory_share::LivenessAnalyzer(func.operator->()).Run();
+ir::Module MemShare(ir::Module mod) {
+  tvm::Map<ir::GlobalVar, ir::Function> functions;
+  for (auto& kv : mod->functions) {
+    functions.Set(kv.first, memory_share::LivenessAnalyzer(kv.second.operator->()).Run());
+  }
+  return ir::Module::make(functions);
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.MemShare").set_body_typed(MemShare);

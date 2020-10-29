@@ -35,9 +35,9 @@ def debug_dump(expr):
 
 def optimize(func):
     mod = Module({_tvm.relay.GlobalVar("main"): func})
-    func = InferType(mod)["main"]
-    func = MemShare(func)
-    return func
+    mod = InferType(mod)
+    mod = MemShare(mod)
+    return mod["main"]
 
 
 def lower(model, *data):

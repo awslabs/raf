@@ -30,7 +30,6 @@ namespace manifest_alloc {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using tvm::relay::LetList;
 
 class ManifestAllocMutator : public ExprMutator {
  public:

@@ -13,8 +13,10 @@
 #include <string>
 #include "tvm/relay/type.h"
 
-namespace tvm {
-namespace relay {
+namespace mnm {
+namespace pass {
+
+using namespace mnm::ir;
 
 /*!
  * \brief LetList allow you to transform expression into variables, so you can copy them around.
@@ -39,7 +41,7 @@ class LetList {
    */
   Var Push(Var pv, Expr expr) {
     CHECK(!used_);
-    CHECK(WellFormed(expr));
+    CHECK(tvm::relay::WellFormed(expr));
     lets_.emplace_back(std::make_pair(pv, expr));
     return pv;
   }
@@ -121,5 +123,5 @@ class LetList {
   bool used_ = false;
 };
 
-}  // namespace relay
-}  // namespace tvm
+}  // namespace pass
+}  // namespace mnm

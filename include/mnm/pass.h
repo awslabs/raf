@@ -34,5 +34,13 @@ ir::Module InferType(ir::Module mod);
  * \return Transformed expression.
  */
 ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level);
+
+/*!
+ * \brief remove unnecessary memory allocation and perform inplace updates.
+ * \param mod The IR module.
+ * \return Transformed IR module.
+ */
+ir::Module InplaceUpdate(ir::Module mod);
+
 }  // namespace pass
 }  // namespace mnm
