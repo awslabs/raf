@@ -28,6 +28,7 @@ using tvm::Downcast;
 using tvm::Integer;
 using tvm::PrimExpr;
 using tvm::relay::TensorType;
+using tvm::relay::TupleType;
 using tvm::relay::Type;
 using namespace mnm::value;
 using namespace schema;
@@ -161,6 +162,21 @@ MNM_OP_TYPE("mnm.op.softmax", "Softmax", GeneralAxisInfer<SoftmaxArgs>);
 MNM_OP_TYPE("mnm.op.log_softmax", "LogSoftmax", GeneralAxisInfer<SoftmaxArgs>);
 MNM_OP_TYPE("mnm.op.softmax_dx", "SoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
 MNM_OP_TYPE("mnm.op.log_softmax_dx", "LogSoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
+
+Type BatchNormTrainDxwbInfer(const CallValues& value) {
+  const auto* args = value->args.as<BatchNormTrainDxwbArgs>();
+  CHECK(args != nullptr);
+  TensorType dx = Downcast<TensorType>(GetType(args->x));
+  TensorType dw = Downcast<TensorType>(GetType(args->w));
+  TensorType db = Downcast<TensorType>(GetType(args->b));
+  Array<Type> res;
+  res.push_back(dx);
+  res.push_back(dw);
+  res.push_back(db);
+  return TupleType(res);
+}
+
+MNM_OP_TYPE("mnm.op.batch_norm_train_dxwb", "BatchNormTrainDxwb", BatchNormTrainDxwbInfer);
 
 Type BiasAddInfer(const CallValues& value) {
   const auto* args = value->args.as<BiasAddArgs>();

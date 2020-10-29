@@ -60,6 +60,39 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     check_type(m_func, checked_type)
 
 
+# pylint: disable=attribute-defined-outside-init
+@pytest.mark.parametrize("shape", [
+    (5, 4, 6, 9),
+    (6, 5, 7, 10),
+    (12, 32, 6, 8),
+    (3, 7, 9)
+])
+@pytest.mark.parametrize("eps", [1e-05, 2e-05])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_batch_norm_train_dxwb(shape, eps, dtype):
+
+    class BatchNormTrainDxwb(mnm.Model):
+        def build(self, eps):
+            self._eps = eps
+
+        @mnm.model.trace
+        def forward(self, dy, x, w, b):
+            return mnm.batch_norm_train_dxwb(dy, x, w, b, self._eps)
+
+    model = BatchNormTrainDxwb(eps)
+    # forward
+    m_dy, _ = randn(shape, dtype=dtype)
+    m_x, _ = randn(shape, dtype=dtype)
+    m_w, _ = randn((shape[1],), dtype=dtype)
+    m_b, _ = randn((shape[1],), dtype=dtype)
+    m_func = model.get_relay_func(m_dy, m_x, m_w, m_b)
+    m_func = run_infer_type(m_func)
+    x_ty = TensorType(shape, dtype=dtype)
+    w_ty = TensorType((shape[1],), dtype=dtype)
+    expected_type = FuncType([x_ty, x_ty, w_ty, w_ty], TupleType([x_ty, w_ty, w_ty]))
+    check_type(m_func, expected_type)
+
+
 # pylint: disable=import-outside-toplevel, attribute-defined-outside-init
 @pytest.mark.parametrize("shape", [
     (5, 4, 6, 9),
