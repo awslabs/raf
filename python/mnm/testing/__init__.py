@@ -45,7 +45,7 @@ def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
+def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.0):
     """Helper function to generate a pair of mnm and torch arrays"""
     x = np.random.randn(*shape) * std
     if not isinstance(x, np.ndarray):
@@ -53,5 +53,5 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, ctx=ctx)
-    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
+    t_x = torch.tensor(n_x, requires_grad=requires_grad)  # pylint: disable=not-callable
     return m_x, t_x
