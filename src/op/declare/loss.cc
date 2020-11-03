@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/op/declare/nn.cc
- * \brief Declaration of nn-specific operators
+ * \file src/op/declare/loss.cc
+ * \brief Declaration of loss-specific operators
  */
 #include "mnm/op.h"
 #include "mnm/tensor.h"
@@ -20,6 +20,7 @@ MNM_OP_DECLARE("mnm.op.smooth_l1_loss", [](const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
   const DLTensor* true_ = args->y_true;
+  CHECK(pred->ndim == true_->ndim);
   for (int i = 0; i < pred->ndim; i++) CHECK_EQ(pred->shape[i], true_->shape[i]);
   call->out = TensorValue::Assemble(/*ctx=*/true_->ctx,
                                     /*dtype=*/true_->dtype,
