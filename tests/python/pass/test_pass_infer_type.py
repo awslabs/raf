@@ -6,6 +6,7 @@ from mnm._ffi.pass_ import InferType, AutoDiff, ExtractBinding
 from mnm._op import sym as op
 from tvm import relay
 
+
 def assert_has_type(expr, typ):
     checked_type = expr.checked_type
     if checked_type != typ:
@@ -38,7 +39,8 @@ def test_model_params():
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
-            self.b = mnm.array(np.arange(4).reshape([2, 1, 2]), dtype='float32')
+            self.b = mnm.array(np.arange(4).reshape(
+                [2, 1, 2]), dtype='float32')
 
         @mnm.model.trace
         def forward(self, a):
@@ -87,7 +89,8 @@ def test_any():
 
     check_any((relay.Any(), 3, relay.Any()), (2, relay.Any(), 4), (2, 4, 3))
     # broadcast
-    check_any((relay.Any(), 3, relay.Any()), (1, relay.Any(), 4), (relay.Any(), 4, 3))
+    check_any((relay.Any(), 3, relay.Any()),
+              (1, relay.Any(), 4), (relay.Any(), 4, 3))
 
 
 def test_incomplete_call():
@@ -146,6 +149,7 @@ def test_gradient_closure():
 
     check_backward((1, 3, 2), (1, 2, 3))
 
+
 def test_gradient_op():
     x_ty = relay.TensorType((1, 1, 224, 224))
     x = Symbol.make_var("x", x_ty)
@@ -165,6 +169,37 @@ def test_gradient_op():
         assert_has_type(func, expected_ty)
 
     check_relu_dx()
+
+
+def test_shape_op():
+    # pylint: disable=protected-access
+    shape = mnm._ffi.op.GetOp("mnm.op.shape")
+    conv2d_dx = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
+
+    konst0 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(0))
+    konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
+
+    x_ty = relay.TensorType((1, 1, 224, 224))
+    y_ty = relay.TensorType((1, 1, 222, 222))
+    w_ty = relay.TensorType((1, 1, 3, 3))
+
+    x = relay.var("x", shape=(1, 1, 224, 224))
+    w = relay.var("w", shape=(1, 1, 3, 3))
+    dy = relay.var("dy", shape=(1, 1, 222, 222))
+    y = relay.var("y", shape=(1, 1, 222, 222))
+
+    def check_conv2d_dx():
+        tmp0 = relay.var("tmp0")
+        c = relay.Call(shape, [x])
+        let_node = relay.Let(tmp0, relay.Call(
+            conv2d_dx, [w, y, dy, c, konst1, konst0, konst1, konst1]), tmp0)
+        func = relay.Function([x, w, dy, y], let_node)
+        func = run_infer_type(func)
+        expected_ty = relay.FuncType([x_ty, w_ty, y_ty, y_ty], x_ty)
+        assert_has_type(func, expected_ty)
+
+    check_conv2d_dx()
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

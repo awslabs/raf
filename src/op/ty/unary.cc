@@ -19,6 +19,10 @@ using namespace mnm::value;
 using schema::UnaryArgs;
 using schema::UnaryDxArgs;
 using schema::UnaryUfuncArgs;
+using tvm::Array;
+using tvm::Downcast;
+using tvm::relay::TensorType;
+using tvm::relay::TupleType;
 using tvm::relay::Type;
 
 Type UnaryInfer(const CallValues& value) {
@@ -65,6 +69,16 @@ Type UnaryUfuncInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.negative", "IdentityUfunc", UnaryUfuncInfer);
 MNM_OP_TYPE("mnm.op.logical_not", "IdentityUfunc", UnaryUfuncInfer);
+
+Type UnaryShapeInfer(const CallValues& value) {
+  const auto* args = value->args.as<UnaryArgs>();
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  Array<tvm::PrimExpr> shape;
+  shape.push_back(tvm::PrimExpr((int32_t)x->shape.size()));
+  return TensorType(shape, tvm::runtime::DataType::UInt(32));
+}
+
+MNM_OP_TYPE("mnm.op.shape", "Shape", UnaryShapeInfer);
 
 }  // namespace type
 }  // namespace op

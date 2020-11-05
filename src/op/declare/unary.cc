@@ -6,6 +6,7 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
+#include "../ty/utils.h"
 
 namespace mnm {
 namespace op {
@@ -13,6 +14,8 @@ namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
+using tvm::Array;
+using tvm::Downcast;
 
 #define MNM_SWITCH_SCALAR(var, value, body)                     \
   do {                                                          \
@@ -122,11 +125,16 @@ MNM_DECLARE_UNARY_OP("mnm.op.sqrt_dx", UnaryDx);
 void Shape(const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  const DLTensor* x = args->x;
+  auto x_type = op::type::GetType(args->x);
   std::vector<Value> shape;
-  std::for_each(x->shape, x->shape + x->ndim,
-                [&shape](int64_t x) { shape.push_back(ScalarValue::make(x)); });
-  call->out = TupleValue::make(shape);
+  if (auto* t_type = x_type.as<ir::TensorTypeNode>()) {
+    for (auto ty : t_type->shape) {
+      shape.push_back(ScalarValue::make(ty.as<ir::IntImmNode>()->value));
+    }
+    call->out = TupleValue::make(shape);
+  } else {
+    call->out = ir::NullValue<Value>();
+  }
   call->callee = ir::NullValue<OpValue>();
 }
 

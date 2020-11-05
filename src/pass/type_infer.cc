@@ -68,7 +68,33 @@ class TypeInferencer : public ExprMutator {
     return VisitExpr(mod_->Lookup(GetRef<GlobalVar>(op)));
   }
 
+  CallValues SchemaToValue(Array<Expr> args, const OpNode* op) {
+    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+    CallValues call_values = CallValues::make();
+    Array<Value> arg_values;
+    for (const auto& arg : args) {
+      if (var_value_map_.count(arg.as<VarNode>())) {
+        arg_values.push_back(GetValue(var_value_map_[arg.as<VarNode>()]));
+      } else {
+        arg_values.push_back(GetValue(arg));
+      }
+    }
+    call_values->args = fschema[GetRef<Op>(op)](arg_values);
+    call_values->callee = OpValue::make(GetRef<Op>(op));
+    return call_values;
+  }
   Expr VisitExpr_(const CallNode* call) override {
+    const OpNode* opn = call->op.as<OpNode>();
+    static const auto declare_op = Op::GetAttrMap<op::FMNMDeclare>("FMNMDeclare");
+    static std::unordered_set<std::string> shape_list{"mnm.op.shape"};
+    if (opn && shape_list.count(opn->name)) {
+      CallValues call_values = SchemaToValue(call->args, opn);
+      declare_op[GetRef<Op>(opn)](call_values);
+      if (call_values->out.defined()) {
+        Expr re = ir::MakeConstant(call_values->out);
+        return VisitExpr(re);
+      }
+    }
     Array<Expr> args;
     for (const auto& arg : call->args) {
       args.push_back(VisitExpr(arg));
@@ -95,15 +121,7 @@ class TypeInferencer : public ExprMutator {
         return IncompleteType(kType);
       }
     }
-    // convert to CallValue
-    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
-    CallValues call_values = CallValues::make();
-    Array<Value> arg_values;
-    for (const auto& arg : call->args) {
-      arg_values.push_back(GetValue(arg));
-    }
-    call_values->args = fschema[GetRef<Op>(op)](arg_values);
-    call_values->callee = OpValue::make(GetRef<Op>(op));
+    CallValues call_values = SchemaToValue(call->args, op);
     // invoke type inference
     auto fty = Downcast<FuncType>(op->checked_type());
     CHECK_EQ(fty->type_constraints.size(), 1);
@@ -133,8 +151,16 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* op) override {
-    Expr value = VisitExpr(op->value);
+    Expr ovalue = op->value;
     Var var = op->var;
+    Expr value = VisitExpr(ovalue);
+
+    const VarNode* v = value.as<VarNode>();
+    if (v && var_value_map_.count(v)) {
+      var_value_map_[op->var.get()] = var_value_map_[v];
+    } else {
+      var_value_map_[op->var.get()] = value;
+    }
     var->checked_type_ = value->checked_type();
     Expr body = VisitExpr(op->body);
     Let let(var, value, body);
@@ -186,6 +212,10 @@ class TypeInferencer : public ExprMutator {
 
  private:
   Module mod_;
+  // The var_value_map_ is used to track Let binding Expr
+  // E.g. Let %a = %b; Let %c = some_op(%a)
+  // The var_value_map_ will feed %b to some_op
+  std::unordered_map<const VarNode*, Expr> var_value_map_;
 };
 
 class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {

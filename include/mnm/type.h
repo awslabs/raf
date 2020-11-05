@@ -13,10 +13,11 @@
 
 #include "mnm/value.h"
 #include "mnm/op.h"
+#include "./registry.h"
 
 namespace mnm {
 namespace type {
-
+using namespace tvm;
 using tvm::relay::FuncType;
 using tvm::relay::IncompleteType;
 using tvm::relay::TensorType;
