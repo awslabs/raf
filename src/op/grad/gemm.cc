@@ -13,7 +13,8 @@ using namespace mnm::ir;
 using namespace mnm::value;
 
 template <bool transpose_a, bool transpose_b>
-Array<Expr> MatmulGradImpl(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> MatmulGradImpl(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                           const Expr& dy) {
   static auto op_nn = Op::Get("mnm.op.matmul");
   static auto op_nt = Op::Get("mnm.op.matmul_nt");
   static auto op_tn = Op::Get("mnm.op.matmul_tn");
@@ -61,7 +62,8 @@ MNM_OP_GRAD("mnm.op.matmul_nt", MatmulGradNT);
 MNM_OP_GRAD("mnm.op.matmul_tn", MatmulGradTN);
 MNM_OP_GRAD("mnm.op.matmul_tt", MatmulGradTT);
 
-Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                            const Expr& dy) {
   static auto batch_matmul = Op::Get("mnm.op.batch_matmul");
   static auto transpose = Op::Get("mnm.op.transpose");
   const CallNode* call = orig_call.as<CallNode>();
@@ -80,7 +82,8 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Var& y, const Expr& dy)
 
 MNM_OP_GRAD("mnm.op.batch_matmul", BatchMatmulGrad);
 
-Array<Expr> DenseGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> DenseGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                      const Expr& dy) {
   using namespace mnm::value;
   static auto op_dense = Op::Get("mnm.op.dense");
   static auto op_transpose = Op::Get("mnm.op.transpose");

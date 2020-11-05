@@ -544,6 +544,34 @@ void GatherNdDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type
 MNM_TVMJIT(GatherNdDx, "mnm.op.gather_nd_dx", GatherNdDxArgs, GatherNdDxNormalizer, GatherNdDxTyper,
            GenericHasher);
 
+Attrs SqueezeNormalizer(TVMOpEnv* env, const SqueezeArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs.resize(1);
+  env->inputs[0] = GetDLTensor(args->x);
+  auto attrs = make_object<SqueezeAttrs>();
+  std::vector<Integer> axis;
+  axis.reserve(args->axis.size());
+  for (size_t i = 0; i < args->axis.size(); ++i) {
+    axis.emplace_back(args->axis[i]);
+  }
+  attrs->axis = Array<Integer>(axis.begin(), axis.end());
+  return Attrs(attrs);
+}
+
+void SqueezeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = GetTensorType(env->outputs[0]);
+  *param_types = {GetTensorType(env->inputs[0])};
+}
+
+HashKey SqueezeHasher(const std::vector<Type>& param_types, const Type& y_type,
+                      const SqueezeArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(Squeeze, "mnm.op.squeeze", SqueezeArgs, SqueezeNormalizer, SqueezeTyper, SqueezeHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

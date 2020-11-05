@@ -16,7 +16,8 @@ Expr Shape(const Expr& expr) {
   return Call(op_shape, {expr});
 }
 
-Array<Expr> BiasAddGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                        const Expr& dy) {
   static auto reshape = Op::Get("mnm.op.reshape");
   static auto shape = Op::Get("mnm.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
@@ -26,7 +27,8 @@ Array<Expr> BiasAddGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
 
 template <const char* GradOp>
-Array<Expr> PoolGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> PoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                     const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
@@ -47,7 +49,8 @@ const char AVG_POOL2D_DX[] = "mnm.op.avg_pool2d_dx";
 auto AvgPool2dGrad = PoolGrad<AVG_POOL2D_DX>;
 MNM_OP_GRAD("mnm.op.avg_pool2d", AvgPool2dGrad);
 
-Array<Expr> Conv2dGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                       const Expr& dy) {
   // schema for conv2d is:
   //    x, w, stride, padding, dilation, groups
   // schema for conv2d_grad is:
@@ -72,7 +75,8 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 MNM_OP_GRAD("mnm.op.conv2d", Conv2dGrad);
 
 template <const char* GradOp>
-Array<Expr> UnaryGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> UnaryGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                      const Expr& dy) {
   // schema for relu is:
   //    x
   // schema for relu_dx is:
@@ -127,7 +131,8 @@ Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var& y, const Expr& 
 MNM_OP_FUSED_GRAD("mnm.op.batch_norm_train", BatchNormTrainGrad);
 
 template <const char* GradOp>
-Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                            const Expr& dy) {
   static auto op_dx = Op::Get(GradOp);
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
@@ -143,7 +148,8 @@ const char LOG_SOFTMAX_DX[] = "mnm.op.log_softmax_dx";
 auto LogSoftmaxGrad = SoftmaxGradImpl<LOG_SOFTMAX_DX>;
 MNM_OP_GRAD("mnm.op.log_softmax", LogSoftmaxGrad);
 
-Array<Expr> LayerNormGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                          const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.layer_norm_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);

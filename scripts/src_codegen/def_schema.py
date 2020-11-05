@@ -168,6 +168,12 @@ SCHEMAS = {
             cxx_normalizer="TensorTuple"),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
+    "nn.h::squeeze": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+    ],
     "nn.h::layer_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int64_t", cxx_default=-1),

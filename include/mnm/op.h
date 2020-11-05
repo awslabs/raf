@@ -108,6 +108,8 @@ using FPrimalGradient = registry::TypedPackedFunc<
     ir::Array<ir::Expr>(
         // orig_call: a relay::Call which invokes this operator
         const ir::Expr& orig_call,
+        // orig_args: Array of original args of the call node
+        const ir::Array<ir::Expr> orig_args,
         // computed_output: (optional) to which var the op's output binds to
         const ir::Var& computed_output,
         // out_grad: ograds

@@ -191,6 +191,13 @@ class SplitArgs : public ir::AttrsNode<SplitArgs> {
   MNM_OP_SCHEMA(SplitArgs, "mnm.args.split");
 };
 
+class SqueezeArgs : public ir::AttrsNode<SqueezeArgs> {
+ public:
+  value::BaseTensorValue x;
+  std::vector<int64_t> axis;
+  MNM_OP_SCHEMA(SqueezeArgs, "mnm.args.squeeze");
+};
+
 class StackArgs : public ir::AttrsNode<StackArgs> {
  public:
   std::vector<value::BaseTensorValue> x;

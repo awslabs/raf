@@ -141,7 +141,17 @@ struct Gradient : public ExprVisitor {
       }
       return ret;
     } else if (fpg.count(op)) {
-      return fpg[op](orig, let_var, _ograds);
+      Array<Expr> orig_args;
+      auto call = Downcast<Call>(orig);
+      for (auto arg : call->args) {
+        if (auto in_var = arg.as<VarNode>()) {
+          orig_args.push_back(var_to_expr[in_var]);
+        } else {
+          CHECK(arg.as<ConstantNode>() != nullptr);
+          orig_args.push_back(arg);
+        }
+      }
+      return fpg[op](orig, orig_args, let_var, _ograds);
     }
     LOG(FATAL) << "Gradient is not registered for operator " << op->name;
     throw;
@@ -217,6 +227,9 @@ struct Gradient : public ExprVisitor {
     const auto& exprs = ell->exprs;
     CHECK_EQ(vars.size(), exprs.size());
     int n = exprs.size();
+    for (int i = 0; i < n; ++i) {
+      var_to_expr[vars[i].operator->()] = exprs[i];
+    }
     for (int i = 0; i < n; ++i) {
       // a must-be tuple
       if (const auto* tuple = exprs[i].as<TupleNode>()) {
@@ -347,6 +360,7 @@ struct Gradient : public ExprVisitor {
   std::unique_ptr<ExplicitLetList> ell{nullptr};
   std::unordered_map<const VarNode*, int> tuple_length;
   std::unordered_map<const VarNode*, Array<Expr>> tuple_grads;
+  std::unordered_map<const VarNode*, Expr> var_to_expr;
   // initialized in Run
   LetList* ll = nullptr;
   // a variable that is set for each let expr

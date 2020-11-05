@@ -61,8 +61,8 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
     m_w.requires_grad = True
     m_y = model(m_x, m_w)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
-    rtol = 1e-4 if dtype == "float32" else 3e-2
-    atol = 1e-4 if dtype == "float32" else 3e-2
+    rtol = 1e-4 if dtype == "float32" else 4e-2
+    atol = 1e-4 if dtype == "float32" else 4e-2
     check(m_y, t_y, rtol=rtol, atol=atol)
     # backward
     m_dy, t_dy = randn(t_y.shape, dtype=dtype)

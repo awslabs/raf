@@ -429,13 +429,27 @@ def test_stack(params, ctx):
     m_i, n_i = [], []
     for shape in shapes:
         m_x, n_x = randn(shape, ctx=ctx)
+        m_x.requires_grad = True
         m_i.append(m_x)
         n_i.append(n_x)
+    output_shape = list(shapes[0])
+    output_shape.insert(axis, len(shapes))
     model = stack[len(m_i)](axis=axis)
+    # check forward
     m_y = model(*m_i)
     n_y = np.stack(n_i, axis=axis)
-    # check forward
     check(m_y, n_y)
+
+    # check backward
+    m_dy, n_dy = randn(output_shape, dtype='float32', ctx=ctx)
+    m_y.backward(m_dy)
+    axis = axis + len(shapes) if axis < 0 else axis
+    n_dy_split = np.split(n_dy, indices_or_sections=len(shapes), axis=axis)
+    n_dy_slices = list()
+    for n_dy_slice in n_dy_split:
+        n_dy_slices.append(np.squeeze(n_dy_slice, axis))
+    for m_x, n_dy_slice in zip(m_i, n_dy_slices):
+        check(m_x.grad, n_dy_slice)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -610,6 +624,32 @@ def test_gather_nd(dshape, ishape, ctx):
     # check backward
     m_y.backward(m_dy)
     check(m_x.grad, mx_x.grad.asnumpy())
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [(1, 3, 1)])
+@pytest.mark.parametrize("axis", [0, 2, (0, 2), None])
+def test_squeeze(shape, axis, ctx):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    # pylint: disable=no-self-use
+    class Squeeze(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.squeeze(x, axis=self._axis)
+
+    m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
+    m_x.requires_grad = False
+    model = Squeeze(axis=axis)
+    m_y = model(m_x)
+    # check forward
+    n_y = np.squeeze(n_x, axis)
+    check(m_y, n_y)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -132,7 +132,9 @@ static const char softmax_dx[] = "mnm.op.softmax_dx";
 static const char split[] = "mnm.op.split";
 static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
+static const char squeeze[] = "mnm.op.squeeze";
 static const char stack[] = "mnm.op.stack";
+static const char stack_dx[] = "mnm.op.stack_dx";
 static const char stream_sync[] = "mnm.op.stream_sync";
 static const char subtract[] = "mnm.op.subtract";
 static const char sum[] = "mnm.op.sum";
@@ -526,6 +528,13 @@ Attrs Split(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_TAPE(1, ffi2schema::ArrayLike, indices_or_sections);
   MNM_POD(2, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+Attrs Squeeze(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::SqueezeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
   return Attrs(attrs);
 }
 
@@ -1653,8 +1662,25 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt_dx").set_body([](TVMArgs args, TVMRetValue*
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.squeeze").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(squeeze, 2, ffi2schema::Squeeze,
+              schema::SqueezeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.stack").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(stack, 2, ffi2schema::Stack, schema::StackArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.stack_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(stack_dx, 2, ffi2schema::Stack, schema::StackArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
   MNM_SET_ENV(vpack->y, value);
@@ -2134,6 +2160,13 @@ Array<Expr> Split(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Squeeze(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, axis);
+  MNM_RET();
+}
+
 Array<Expr> Stack(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
@@ -2391,7 +2424,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx").set_body(MNM_SYMBOLIC_API(softmax_d
 MNM_REGISTER_GLOBAL("mnm.op.sym.split").set_body(MNM_SYMBOLIC_API(split, 3, Split));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt").set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx").set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.squeeze").set_body(MNM_SYMBOLIC_API(squeeze, 2, Squeeze));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stack").set_body(MNM_SYMBOLIC_API(stack, 2, Stack));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stack_dx").set_body(MNM_SYMBOLIC_API(stack_dx, 2, Stack));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync")
     .set_body(MNM_SYMBOLIC_API(stream_sync, 2, StreamControl));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
@@ -2846,6 +2881,14 @@ Attrs Split(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs Squeeze(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::SqueezeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Stack(const Array<Value>& values) {
   MNM_PRELUDE(1, 2, schema::StackArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
@@ -3159,7 +3202,11 @@ MNM_BIND_SCHEMA("mnm.op.split", names::split,
 MNM_BIND_SCHEMA("mnm.op.sqrt", names::sqrt, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sqrt_dx", names::sqrt_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.squeeze", names::squeeze,
+                value2schema::Squeeze);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stack", names::stack,
+                value2schema::Stack);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.stack_dx", names::stack_dx,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
                 value2schema::StreamControl);  // NOLINT(whitespace/line_length)
@@ -3230,6 +3277,7 @@ MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
+MNM_REGISTER_OBJECT_REFLECT(SqueezeArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);
 MNM_REGISTER_OBJECT_REFLECT(StreamControlArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);

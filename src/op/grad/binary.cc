@@ -11,7 +11,8 @@ namespace grad {
 
 using namespace mnm::ir;
 
-Array<Expr> AddGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
   // schema for relu is:
   //    x1, x2
   // schema for binary_dx is:
@@ -35,7 +36,8 @@ Array<Expr> AddGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 
 MNM_OP_GRAD("mnm.op.add", AddGrad);
 
-Array<Expr> MulGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> MulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
   static auto op_multiply = Op::Get("mnm.op.multiply");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 2);
@@ -56,7 +58,8 @@ Array<Expr> MulGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
 
 MNM_OP_GRAD("mnm.op.multiply", MulGrad);
 
-Array<Expr> DivGrad(const Expr& orig_call, const Var& y, const Expr& dy) {
+Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
   static auto op_divide = Op::Get("mnm.op.divide");
   static auto op_multiply = Op::Get("mnm.op.multiply");
   static auto op_negative = Op::Get("mnm.op.negative");

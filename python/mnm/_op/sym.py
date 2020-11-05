@@ -26,9 +26,9 @@ __all__ = [
     "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
     "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
     "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "stack", "stream_sync", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
+    "stream_sync", "subtract", "sum", "take", "take_dx",
+    "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -632,10 +632,20 @@ def sqrt_dx(x, y, dy):
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.sqrt_dx(x, y, dy))
 
+def squeeze(x, axis):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int_tuple(axis)
+    return Symbol.from_expr(ffi.squeeze(x, axis))
+
 def stack(x, axis=0):
     x = sym_utils.to_tensor_tuple(x)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.stack(x, axis))
+
+def stack_dx(x, axis=0):
+    x = sym_utils.to_tensor_tuple(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.stack_dx(x, axis))
 
 def stream_sync(x, stream_tag=0):
     x = sym_utils.to_tensor(x)

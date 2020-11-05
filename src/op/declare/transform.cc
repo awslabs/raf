@@ -316,6 +316,21 @@ MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
   call->ctx = y0->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+void StackDx(const CallValues& call) {
+  const auto* args = call->args.as<StackArgs>();
+  CHECK(args != nullptr);
+  const std::vector<BaseTensorValue>& x = args->x;
+  CHECK_GE(x.size(), 1U);
+  DLTensor* y0 = x[0];
+  int axis = NormalizeAxis(args->axis, y0->ndim);
+  call->callee = ir::NullValue<OpValue>();
+  ScalarValue sections_v = ScalarValue::make((int)x.size());
+  ScalarValue axis_v = ScalarValue::make(axis);
+  call->out = TupleValue::make({sections_v, axis_v});
+}
+
+MNM_OP_DECLARE("mnm.op.stack_dx", StackDx).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
@@ -489,6 +504,40 @@ MNM_OP_DECLARE("mnm.op.gather_nd_dx", [](const CallValues& call) {
                                     /*dtype=*/data->dtype,
                                     /*shape=*/shape);
   call->ctx = data->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
+  const auto* args = call->args.as<SqueezeArgs>();
+  CHECK(args != nullptr);
+  const std::vector<int64_t>& axis = args->axis;
+  const DLTensor* x = args->x;
+  int64_t* ishape = x->shape;
+  int ndim = x->ndim;
+  std::vector<int64_t> normalized_axis;
+
+  for (int i = 0; i < axis.size(); i++) {
+    normalized_axis.push_back(axis[i] >= 0 ? axis[i] : axis[i] + ndim);
+  }
+
+  std::vector<int64_t> oshape;
+  if (normalized_axis.size() != 0) {
+    for (int axis_dim = 0; axis_dim < ndim; ++axis_dim) {
+      if (std::find(normalized_axis.begin(), normalized_axis.end(), axis_dim) ==
+          normalized_axis.end()) {
+        oshape.push_back(ishape[axis_dim]);
+      } else {
+        CHECK_EQ(ishape[axis_dim], 1) << "Axis to be squeezed is not of size 1";
+      }
+    }
+  } else {
+    for (int axis_dim = 0; axis_dim < ndim; ++axis_dim) {
+      if (ishape[axis_dim] != 1) {
+        oshape.push_back(ishape[axis_dim]);
+      }
+    }
+  }
+  call->out = TensorValue::Assemble(x->ctx, x->dtype, oshape);
+  call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare

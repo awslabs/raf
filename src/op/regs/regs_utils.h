@@ -123,7 +123,8 @@ struct OpPack {
     auto fpg = ir::Op::GetAttrMap<FPrimalGradient>("FPrimalGradient");
     const auto* pack = VarPack::Get();
     if (fpg.count(op)) {
-      grads = fpg[op](pack->MakeCall(op, n_args), pack->y, pack->dy);
+      auto call = pack->MakeCall(op, n_args);
+      grads = fpg[op](call, call->args, pack->y, pack->dy);
       std::vector<ir::Expr> grads_defined;
       for (const ir::Expr& grad : grads_defined) {
         if (grad.defined()) {

@@ -11,7 +11,8 @@ namespace grad {
 
 using namespace mnm::ir;
 
-Array<Expr> SmoothL1LossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
+Array<Expr> SmoothL1LossGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
+                             const Expr& ograds) {
   static auto dtrue = Op::Get("mnm.op.smooth_l1_loss_dtrue");
   static auto dpred = Op::Get("mnm.op.smooth_l1_loss_dpred");
   const CallNode* call = orig_call.as<CallNode>();
@@ -23,7 +24,8 @@ Array<Expr> SmoothL1LossGrad(const Expr& orig_call, const Expr& y, const Expr& o
 
 MNM_OP_GRAD("mnm.op.smooth_l1_loss", SmoothL1LossGrad);
 
-Array<Expr> NllLossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
+Array<Expr> NllLossGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
+                        const Expr& ograds) {
   static auto dtrue = Op::Get("mnm.op.nll_loss_dtrue");
   static auto dpred = Op::Get("mnm.op.nll_loss_dpred");
   // TODO(@were): I am not sure how is the dy here.
@@ -38,7 +40,8 @@ Array<Expr> NllLossGrad(const Expr& orig_call, const Expr& y, const Expr& ograds
 
 MNM_OP_GRAD("mnm.op.nll_loss", NllLossGrad);
 
-Array<Expr> CrossEntropyGrad(const Expr& orig_call, const Expr& y, const Expr& ograds) {
+Array<Expr> CrossEntropyGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
+                             const Expr& ograds) {
   static auto dtrue = Op::Get("mnm.op.cross_entropy_dtrue");
   static auto dpred = Op::Get("mnm.op.cross_entropy_dpred");
   const CallNode* call = orig_call.as<CallNode>();

@@ -51,14 +51,20 @@ def test_mlp():
         check(mnm_params[name].grad, param.grad())
 
 
-@pytest.mark.parametrize("mode", ["rnn", "gru", "lstm"])
+# @pytest.mark.parametrize("mode", ["rnn", "gru", "lstm"])
+@pytest.mark.parametrize("mode", ["rnn"])
 @pytest.mark.parametrize("seq_len", [1])
-@pytest.mark.parametrize("input_size", [32, 64])
-@pytest.mark.parametrize("hidden_size", [32, 64])
-@pytest.mark.parametrize("num_layers", [1, 2])
-@pytest.mark.parametrize("batch", [1, 2])
+# @pytest.mark.parametrize("input_size", [32, 64])
+@pytest.mark.parametrize("input_size", [64])
+# @pytest.mark.parametrize("hidden_size", [32, 64])
+@pytest.mark.parametrize("hidden_size", [64])
+# @pytest.mark.parametrize("num_layers", [1, 2])
+@pytest.mark.parametrize("num_layers", [1])
+# @pytest.mark.parametrize("batch", [1, 2])
+@pytest.mark.parametrize("batch", [1])
 @pytest.mark.parametrize("init_states", [True])
-@pytest.mark.parametrize("bidirectional", [False, True])
+# @pytest.mark.parametrize("bidirectional", [False, True])
+@pytest.mark.parametrize("bidirectional", [False])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_rnn(mode, seq_len, input_size, hidden_size, num_layers,
              batch, init_states, bidirectional):
@@ -79,7 +85,7 @@ def test_rnn(mode, seq_len, input_size, hidden_size, num_layers,
     data_np = np.random.uniform(size=(seq_len, batch, input_size)).astype(dtype)
     data_mx = mx.nd.array(data_np)
     data_mnm = mnm.array(data_np, ctx=ctx)
-    data_mnm.requires_grad = False
+    data_mnm.requires_grad = True
 
     if init_states:
         shape_dict = {'data0': data_np.shape}
@@ -92,7 +98,7 @@ def test_rnn(mode, seq_len, input_size, hidden_size, num_layers,
             states_np.append(state)
             states_mx.append(mx.nd.array(state))
             state_mnm = mnm.array(state, ctx=ctx)
-            state_mnm.requires_grad = False
+            state_mnm.requires_grad = True
             shape_dict['data%s' % (i+1)] = state.shape
             inputs['data%s' % (i+1)] = state_mnm
         mx_out, mx_states = net(data_mx, states_mx)

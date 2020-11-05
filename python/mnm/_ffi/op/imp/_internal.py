@@ -197,7 +197,11 @@ sqrt = _APIS.get("mnm.op.imp.sqrt", None)
 # Defined in ./src/op/regs/regs.cc
 sqrt_dx = _APIS.get("mnm.op.imp.sqrt_dx", None)
 # Defined in ./src/op/regs/regs.cc
+squeeze = _APIS.get("mnm.op.imp.squeeze", None)
+# Defined in ./src/op/regs/regs.cc
 stack = _APIS.get("mnm.op.imp.stack", None)
+# Defined in ./src/op/regs/regs.cc
+stack_dx = _APIS.get("mnm.op.imp.stack_dx", None)
 # Defined in ./src/op/regs/regs.cc
 stream_sync = _APIS.get("mnm.op.imp.stream_sync", None)
 # Defined in ./src/op/regs/regs.cc

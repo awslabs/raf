@@ -27,9 +27,9 @@ __all__ = [
     "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
     "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
     "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "stack", "stream_sync", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
+    "stream_sync", "subtract", "sum", "take", "take_dx",
+    "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -731,10 +731,22 @@ def sqrt_dx(x, y, dy):
     return imp_utils.ret(ffi.sqrt_dx(x, y, dy))
 
 @set_module("mnm")
+def squeeze(x, axis):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int_tuple(axis)
+    return imp_utils.ret(ffi.squeeze(x, axis))
+
+@set_module("mnm")
 def stack(x, axis=0):
     x = imp_utils.to_tensor_tuple(x)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.stack(x, axis))
+
+@set_module("mnm")
+def stack_dx(x, axis=0):
+    x = imp_utils.to_tensor_tuple(x)
+    axis = imp_utils.to_int(axis)
+    return imp_utils.ret(ffi.stack_dx(x, axis))
 
 @set_module("mnm")
 def stream_sync(x, stream_tag=0):
