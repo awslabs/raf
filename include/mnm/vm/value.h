@@ -32,7 +32,7 @@ class VMClosureValueObj final : public ValueObj {
     v->Visit("_free_vars", &free_vars);
   }
   static constexpr const char* _type_key = "mnm.value.vm.VMClosureValue";
-  MNM_FINAL_OBJECT(ClosureValueObj, ValueObj);
+  MNM_FINAL_OBJECT(VMClosureValueObj, ValueObj);
 };
 
 /*! \brief reference to vm closure. */
