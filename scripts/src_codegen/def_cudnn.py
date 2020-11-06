@@ -155,8 +155,7 @@ class CUDNNDescriptor(object):
 
 class CUDNNAlgorithm(object):
 
-    def __init__(self, algo_ty, perf_ty, name, api, args, keys):
-        self.algo_ty = algo_ty
+    def __init__(self, perf_ty, name, api, args, keys):
         self.perf_ty = perf_ty
         self.name = name
         self.api = api
@@ -165,8 +164,8 @@ class CUDNNAlgorithm(object):
 
     def normalize(self, status):
         fmt = """
-MetaCache<{ALGO_T}> {CACHE};
-{ALGO_T} Find{ALGO_T}Wrapper(const std::vector<uint8_t> &key, {ARGS}) {{
+MetaCache<{PERF_T}> {CACHE};
+{PERF_T} Find{PERF_T}Wrapper(const std::vector<uint8_t> &key, {ARGS}) {{
   std::lock_guard<std::mutex> lock({CACHE}.mu);
   if (auto *val = {CACHE}.Get(key)) {{
     return *val;
@@ -178,8 +177,8 @@ MetaCache<{ALGO_T}> {CACHE};
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }}
-  {CACHE}.Set(key, res.algo);
-  return res.algo;
+  {CACHE}.Set(key, res);
+  return res;
 }}
 """.strip()
 
@@ -193,7 +192,7 @@ MetaCache<{ALGO_T}> {CACHE};
         for arg in api_args[1:]:
             name = arg.name
             if name in status.symbols.keys():
-                params.append(self.symbols[name])
+                params.append(status.symbols[name])
             elif name in status.attrs.keys():
                 params.append(name)
             elif name in self.args.keys():
@@ -202,20 +201,19 @@ MetaCache<{ALGO_T}> {CACHE};
                 assert False, f'{name} is missing!'
         finder_params = ', '.join(params)
 
-        if self.algo_ty not in status.wrappers.keys():
+        if self.perf_ty not in status.wrappers.keys():
             status.add_wrapper(
-                    self.algo_ty,
-                    fmt.format(ALGO_T=self.algo_ty,
-                       PERF_T=self.perf_ty,
-                       ARGS=decl_args,
-                       FINDER=call_cudnn_api(self.api, finder_params),
-                       CACHE=f'CacheFor{self.algo_ty}'))
+                    self.perf_ty,
+                    fmt.format(PERF_T=self.perf_ty,
+                               ARGS=decl_args,
+                               FINDER=call_cudnn_api(self.api, finder_params),
+                               CACHE=f'CacheFor{self.perf_ty}'))
 
         res = [f'HashKey {self.name}_hasher;']
         res += [f'{self.name}_hasher << ' + ' << '.join(self.keys) + ';']
         res += [f'const auto &{self.name}_key = {self.name}_hasher.byte_vector;']
-        res += [f'{self.name} = Find{self.algo_ty}Wrapper({self.name}_key, {site_params});']
-        status.add_attr(self.algo_ty, self.name)
+        res += [f'{self.name} = Find{self.perf_ty}Wrapper({self.name}_key, {site_params});']
+        status.add_attr(self.perf_ty, self.name)
         return res
 
 
@@ -295,7 +293,10 @@ MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_c
             if name in self.args.keys():
                 invoke.append(self.args[name])
             elif name in status.attrs.keys():
-                invoke.append(str(name))
+                if name == "algo":
+                    invoke.append("algo.algo")
+                else:
+                    invoke.append(str(name))
             else:
                 assert False, f'{name} is missing!'
         output = ''
@@ -453,8 +454,9 @@ def dispatch_conv(op, dims):
     conv_desc = CUDNNDescriptor('convDesc', [f'{dims}', 'BeginPtr(padding)', 'BeginPtr(stride)',
         'BeginPtr(dilation)', 'CUDNN_CROSS_CORRELATION', 'CUDNNDType(w->dtype)'],
         'Convolution', setter='cudnnSetConvolutionNdDescriptor')
+    pre_mathtype = AssignStatement('', '', 'if (ir::DataType(w->dtype).is_float16()) {cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);}', False)
+    group = AssignStatement('', '', 'cudnnSetConvolutionGroupCount(convDesc, args->groups)', False)
     algo = CUDNNAlgorithm(name='algo',
-                          algo_ty='cudnnConvolutionFwdAlgo_t',
                           perf_ty='cudnnConvolutionFwdAlgoPerf_t',
                           api='FindConvolutionForwardAlgorithm',
                           args={
@@ -471,9 +473,9 @@ def dispatch_conv(op, dims):
                             'yDesc_tt',
                           ])
     ws = CUDNNWorkSpace('workSpaceSizeInBytes', 'workSpace', 'GetConvolutionForwardWorkspaceSize',
-            ['xDesc', 'wDesc', 'convDesc', 'yDesc', 'algo', '&workSpaceSizeInBytes'])
-    group = AssignStatement('', '', 'cudnnSetConvolutionGroupCount(convDesc, args->groups)', False)
-    normalizers = [x, w, y, ] + stencil_args + [conv_desc, group, algo, ws]
+            ['xDesc', 'wDesc', 'convDesc', 'yDesc', 'algo.algo', '&workSpaceSizeInBytes'])
+    post_mathtype = AssignStatement('', '', 'cudnnSetConvolutionMathType(convDesc, algo.mathType)', False)
+    normalizers = [x, w, y, ] + stencil_args + [conv_desc, pre_mathtype, group, algo, ws, post_mathtype]
     return CUDNNDispatch(op=op,
                          api='ConvolutionForward',
                          arg_type='conv',
@@ -502,9 +504,9 @@ def dispatch_conv_dxw(op, xorw, dims):
     conv_desc = CUDNNDescriptor('convDesc', [f'{dims}', 'BeginPtr(padding)', 'BeginPtr(stride)',
         'BeginPtr(dilation)', 'CUDNN_CROSS_CORRELATION', 'CUDNNDType(x_or_w->dtype)'], 'Convolution',
         setter='cudnnSetConvolutionNdDescriptor')
+    pre_mathtype = AssignStatement('', '', 'if (ir::DataType(x_or_w->dtype).is_float16()) {cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);}', False)
     group = AssignStatement('', '', 'cudnnSetConvolutionGroupCount(convDesc, args->groups)', False)
     algo = CUDNNAlgorithm(name='algo',
-                          algo_ty=f'cudnnConvolutionBwd{xorw}Algo_t',
                           perf_ty=f'cudnnConvolutionBwd{xorw}AlgoPerf_t',
                           api=f'FindConvolutionBackward{xorw}Algorithm',
                           args={
@@ -521,8 +523,9 @@ def dispatch_conv_dxw(op, xorw, dims):
                             f'{diff.name}_tt',
                           ])
     ws = CUDNNWorkSpace('workSpaceSizeInBytes', 'workSpace', f'GetConvolutionBackward{xorw}WorkspaceSize',
-            [f'{x_or_w.name}', 'dyDesc', 'convDesc', f'{diff.name}', 'algo', '&workSpaceSizeInBytes'])
-    normalizers = [x, w, dy] + stencil_args + [conv_desc, group, algo, ws]
+            [f'{x_or_w.name}', 'dyDesc', 'convDesc', f'{diff.name}', 'algo.algo', '&workSpaceSizeInBytes'])
+    post_mathtype = AssignStatement('', '', 'cudnnSetConvolutionMathType(convDesc, algo.mathType)', False)
+    normalizers = [x, w, dy] + stencil_args + [conv_desc, pre_mathtype, group, algo, ws, post_mathtype]
     return CUDNNDispatch(op=op,
                          api=f'ConvolutionBackward{xorw}',
                          arg_type='conv_dxw',

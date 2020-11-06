@@ -31,13 +31,13 @@ using common::shape_utils::Shape2Strides;
 using dmlc::BeginPtr;
 using value::TupleValueObj;
 
-MetaCache<cudnnConvolutionBwdDataAlgo_t> CacheForcudnnConvolutionBwdDataAlgo_t;
-cudnnConvolutionBwdDataAlgo_t FindcudnnConvolutionBwdDataAlgo_tWrapper(
+MetaCache<cudnnConvolutionBwdDataAlgoPerf_t> CacheForcudnnConvolutionBwdDataAlgoPerf_t;
+cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tWrapper(
     const std::vector<uint8_t>& key, const cudnnFilterDescriptor_t wDesc,
     const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnTensorDescriptor_t dxDesc) {
-  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionBwdDataAlgo_t.mu);
-  if (auto* val = CacheForcudnnConvolutionBwdDataAlgo_t.Get(key)) {
+  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionBwdDataAlgoPerf_t.mu);
+  if (auto* val = CacheForcudnnConvolutionBwdDataAlgoPerf_t.Get(key)) {
     return *val;
   }
   int cnt;
@@ -48,17 +48,17 @@ cudnnConvolutionBwdDataAlgo_t FindcudnnConvolutionBwdDataAlgo_tWrapper(
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }
-  CacheForcudnnConvolutionBwdDataAlgo_t.Set(key, res.algo);
-  return res.algo;
+  CacheForcudnnConvolutionBwdDataAlgoPerf_t.Set(key, res);
+  return res;
 }
 
-MetaCache<cudnnConvolutionBwdFilterAlgo_t> CacheForcudnnConvolutionBwdFilterAlgo_t;
-cudnnConvolutionBwdFilterAlgo_t FindcudnnConvolutionBwdFilterAlgo_tWrapper(
+MetaCache<cudnnConvolutionBwdFilterAlgoPerf_t> CacheForcudnnConvolutionBwdFilterAlgoPerf_t;
+cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
     const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnFilterDescriptor_t dwDesc) {
-  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionBwdFilterAlgo_t.mu);
-  if (auto* val = CacheForcudnnConvolutionBwdFilterAlgo_t.Get(key)) {
+  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionBwdFilterAlgoPerf_t.mu);
+  if (auto* val = CacheForcudnnConvolutionBwdFilterAlgoPerf_t.Get(key)) {
     return *val;
   }
   int cnt;
@@ -69,17 +69,17 @@ cudnnConvolutionBwdFilterAlgo_t FindcudnnConvolutionBwdFilterAlgo_tWrapper(
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }
-  CacheForcudnnConvolutionBwdFilterAlgo_t.Set(key, res.algo);
-  return res.algo;
+  CacheForcudnnConvolutionBwdFilterAlgoPerf_t.Set(key, res);
+  return res;
 }
 
-MetaCache<cudnnConvolutionFwdAlgo_t> CacheForcudnnConvolutionFwdAlgo_t;
-cudnnConvolutionFwdAlgo_t FindcudnnConvolutionFwdAlgo_tWrapper(
+MetaCache<cudnnConvolutionFwdAlgoPerf_t> CacheForcudnnConvolutionFwdAlgoPerf_t;
+cudnnConvolutionFwdAlgoPerf_t FindcudnnConvolutionFwdAlgoPerf_tWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
     const cudnnFilterDescriptor_t wDesc, const cudnnConvolutionDescriptor_t convDesc,
     const cudnnTensorDescriptor_t yDesc) {
-  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionFwdAlgo_t.mu);
-  if (auto* val = CacheForcudnnConvolutionFwdAlgo_t.Get(key)) {
+  std::lock_guard<std::mutex> lock(CacheForcudnnConvolutionFwdAlgoPerf_t.mu);
+  if (auto* val = CacheForcudnnConvolutionFwdAlgoPerf_t.Get(key)) {
     return *val;
   }
   int cnt;
@@ -90,8 +90,8 @@ cudnnConvolutionFwdAlgo_t FindcudnnConvolutionFwdAlgo_tWrapper(
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
   }
-  CacheForcudnnConvolutionFwdAlgo_t.Set(key, res.algo);
-  return res.algo;
+  CacheForcudnnConvolutionFwdAlgoPerf_t.Set(key, res);
+  return res;
 }
 
 class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
@@ -393,7 +393,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   cudnnFilterDescriptor_t wDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnConvolutionDescriptor_t convDesc;
-  cudnnConvolutionFwdAlgo_t algo;
+  cudnnConvolutionFwdAlgoPerf_t algo;
   size_t workSpaceSizeInBytes;
   void* workSpace;
   explicit Conv2DImplementedByCUDNNConvolutionForward(const CallValues& cv) {
@@ -419,16 +419,20 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnSetConvolutionNdDescriptor(convDesc, 2, BeginPtr(padding), BeginPtr(stride),
                                                BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
                                                CUDNNDType(w->dtype)));
+    if (ir::DataType(w->dtype).is_float16()) {
+      cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);
+    };
     cudnnSetConvolutionGroupCount(convDesc, args->groups);
     HashKey algo_hasher;
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << xDesc_tt
                 << yDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionFwdAlgo_tWrapper(algo_key, xDesc, wDesc, convDesc, yDesc);
+    algo = FindcudnnConvolutionFwdAlgoPerf_tWrapper(algo_key, xDesc, wDesc, convDesc, yDesc);
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
-                                                       xDesc, wDesc, convDesc, yDesc, algo,
+                                                       xDesc, wDesc, convDesc, yDesc, algo.algo,
                                                        &workSpaceSizeInBytes));
     RequestWorkspace(&workSpace, cv->ctx, workSpaceSizeInBytes);
+    cudnnSetConvolutionMathType(convDesc, algo.mathType);
   }
 
  public:
@@ -449,7 +453,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     (void)out;
     CUDNN_CALL(cudnnConvolutionForward(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), xDesc,
-        x->data, wDesc, w->data, convDesc, algo, workSpace, workSpaceSizeInBytes,
+        x->data, wDesc, w->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
         CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
   }
   static OpEnv* make(const CallValues& cv) {
@@ -465,7 +469,7 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
   cudnnFilterDescriptor_t dwDesc;
   cudnnTensorDescriptor_t dyDesc;
   cudnnConvolutionDescriptor_t convDesc;
-  cudnnConvolutionBwdFilterAlgo_t algo;
+  cudnnConvolutionBwdFilterAlgoPerf_t algo;
   size_t workSpaceSizeInBytes;
   void* workSpace;
   explicit Conv2DDwImplementedByCUDNNConvolutionBackwardFilter(const CallValues& cv) {
@@ -491,16 +495,21 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     CUDNN_CALL(cudnnSetConvolutionNdDescriptor(convDesc, 2, BeginPtr(padding), BeginPtr(stride),
                                                BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
                                                CUDNNDType(x_or_w->dtype)));
+    if (ir::DataType(x_or_w->dtype).is_float16()) {
+      cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);
+    };
     cudnnSetConvolutionGroupCount(convDesc, args->groups);
     HashKey algo_hasher;
     algo_hasher << args->stride << args->padding << args->dilation << xDesc_tt << dyDesc_tt
                 << dwDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionBwdFilterAlgo_tWrapper(algo_key, xDesc, dyDesc, convDesc, dwDesc);
+    algo =
+        FindcudnnConvolutionBwdFilterAlgoPerf_tWrapper(algo_key, xDesc, dyDesc, convDesc, dwDesc);
     CUDNN_CALL(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-        CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algo,
+        CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algo.algo,
         &workSpaceSizeInBytes));
     RequestWorkspace(&workSpace, cv->ctx, workSpaceSizeInBytes);
+    cudnnSetConvolutionMathType(convDesc, algo.mathType);
   }
 
  public:
@@ -521,7 +530,7 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     (void)dy;
     CUDNN_CALL(cudnnConvolutionBackwardFilter(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), xDesc,
-        x_or_w->data, dyDesc, dy->data, convDesc, algo, workSpace, workSpaceSizeInBytes,
+        x_or_w->data, dyDesc, dy->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
         CUDNNDType(out->dtype).const_addr<0>(), dwDesc, out->data));
   }
   static OpEnv* make(const CallValues& cv) {
@@ -537,7 +546,7 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
   cudnnFilterDescriptor_t wDesc;
   cudnnTensorDescriptor_t dyDesc;
   cudnnConvolutionDescriptor_t convDesc;
-  cudnnConvolutionBwdDataAlgo_t algo;
+  cudnnConvolutionBwdDataAlgoPerf_t algo;
   size_t workSpaceSizeInBytes;
   void* workSpace;
   explicit Conv2DDxImplementedByCUDNNConvolutionBackwardData(const CallValues& cv) {
@@ -563,16 +572,20 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     CUDNN_CALL(cudnnSetConvolutionNdDescriptor(convDesc, 2, BeginPtr(padding), BeginPtr(stride),
                                                BeginPtr(dilation), CUDNN_CROSS_CORRELATION,
                                                CUDNNDType(x_or_w->dtype)));
+    if (ir::DataType(x_or_w->dtype).is_float16()) {
+      cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);
+    };
     cudnnSetConvolutionGroupCount(convDesc, args->groups);
     HashKey algo_hasher;
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << dyDesc_tt
                 << dxDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionBwdDataAlgo_tWrapper(algo_key, wDesc, dyDesc, convDesc, dxDesc);
+    algo = FindcudnnConvolutionBwdDataAlgoPerf_tWrapper(algo_key, wDesc, dyDesc, convDesc, dxDesc);
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
-                                                            wDesc, dyDesc, convDesc, dxDesc, algo,
-                                                            &workSpaceSizeInBytes));
+                                                            wDesc, dyDesc, convDesc, dxDesc,
+                                                            algo.algo, &workSpaceSizeInBytes));
     RequestWorkspace(&workSpace, cv->ctx, workSpaceSizeInBytes);
+    cudnnSetConvolutionMathType(convDesc, algo.mathType);
   }
 
  public:
@@ -593,7 +606,7 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     (void)dy;
     CUDNN_CALL(cudnnConvolutionBackwardData(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), wDesc,
-        x_or_w->data, dyDesc, dy->data, convDesc, algo, workSpace, workSpaceSizeInBytes,
+        x_or_w->data, dyDesc, dy->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
         CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
   }
   static OpEnv* make(const CallValues& cv) {

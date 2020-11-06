@@ -231,9 +231,10 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
-def test_mnm_batch_norm_train(shape, momentum, eps):
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     stats_shape = [shape[1]]
-    m_x, t_x = randn(shape)
+    m_x, t_x = randn(shape, dtype=dtype)
     m_m, t_m = randn(stats_shape)
     m_v, t_v = randn_pos(stats_shape)
     m_w, t_w = randn(stats_shape)
@@ -260,12 +261,14 @@ def test_mnm_batch_norm_train(shape, momentum, eps):
     check(m_m, t_m, rtol=1e-4, atol=1e-4)
     check(m_v, t_v, rtol=1e-4, atol=1e-4)
     # backward
-    m_dy, t_dy = randn(shape)
+    m_dy, t_dy = randn(shape, dtype=dtype)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
-    check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
-    check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
-    check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
+    rtol = 1e-4 if dtype == "float32" else 1e-3
+    atol = 1e-4 if dtype == "float32" else 1e-3
+    check(m_x.grad, t_x.grad, rtol=rtol, atol=atol)
+    check(m_w.grad, t_w.grad, rtol=rtol, atol=atol)
+    check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
