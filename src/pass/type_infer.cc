@@ -136,8 +136,15 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const RelayConstantNode* op) override {
-    using tensor::Tensor;
-    op->checked_type_ = GetValueType(TensorValue::make(Tensor::FromDLPack(op->data.ToDLPack())));
+    const ConstantNode* node = static_cast<const ConstantNode*>(op);
+    auto const_data = node->value;
+    // check if the constant is null
+    if (const_data.defined()) {
+      op->checked_type_ = GetValueType(Downcast<Value>(const_data));
+    } else {
+      // fake type info
+      op->checked_type_ = TensorType::Scalar(DataType::Int(64));
+    }
     return GetRef<Expr>(op);
   }
 

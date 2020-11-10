@@ -14,6 +14,28 @@ using namespace value;
 using namespace tvm;
 
 class ValueTyper : public ValueFunctor<Type(const Value&)> {
+  Type VisitValue_(const IntValueObj* value) override {
+    return TensorType::Scalar(DataType::Int(64));
+  }
+
+  Type VisitValue_(const FloatValueObj* value) override {
+    return TensorType::Scalar(DataType::Float(64));
+  }
+
+  Type VisitValue_(const BoolValueObj* value) override {
+    return TensorType::Scalar(DataType::Bool());
+  }
+
+  Type VisitValue_(const StringValueObj* value) override {
+    // fake type info
+    return TensorType::Scalar(DataType::Int(64));
+  }
+
+  Type VisitValue_(const NoGradValueObj* value) override {
+    // fake type info
+    return TensorType::Scalar(DataType::Int(64));
+  }
+
   Type VisitValue_(const TensorValueObj* value) override {
     const DLTensor* x = GetRef<Value>(value);
     auto shape = std::vector<Integer>(x->shape, x->shape + x->ndim);

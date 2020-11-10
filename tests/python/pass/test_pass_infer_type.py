@@ -201,5 +201,38 @@ def test_shape_op():
     check_conv2d_dx()
 
 
+# pylint: disable=import-outside-toplevel, protected-access
+def test_constant_tensor():
+    from mnm._ffi.ir.constant import ExtractValue
+    from mnm._ffi.value import ToTVM
+    m_c, n_c = randn((2, 2))
+    const_value = mnm._core.value.TensorValue.from_numpy(n_c)
+    const_value = mnm._ffi.ir._make.Constant(const_value)
+    func = relay.Function([], const_value)
+    func = run_infer_type(func)
+
+    expected_ty = relay.TensorType((2, 2))
+    assert str(func.body.checked_type) == str(expected_ty)
+    check(m_c, ToTVM(ExtractValue(func.body)).asnumpy())
+
+
+def test_constant_tensor_tuple():
+    from mnm._ffi.ir.constant import ExtractValue
+    from mnm._ffi.value import ToTVM
+    m_c1, n_c1 = randn((2, 2))
+    m_c2, n_c2 = randn((3, 3))
+    c1_value = mnm._core.value.TensorValue.from_numpy(n_c1)
+    c2_value = mnm._core.value.TensorValue.from_numpy(n_c2)
+    const_value = mnm._core.value.TupleValue([c1_value, c2_value])
+    const_value = mnm._ffi.ir._make.Constant(const_value)
+    func = relay.Function([], const_value)
+    func = run_infer_type(func)
+
+    expected_ty = relay.TupleType([relay.TensorType((2, 2)), relay.TensorType((3, 3))])
+    assert str(func.body.checked_type) == str(expected_ty)
+    check(m_c1, ToTVM(ExtractValue(func.body)[0]).asnumpy())
+    check(m_c2, ToTVM(ExtractValue(func.body)[1]).asnumpy())
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

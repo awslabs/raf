@@ -160,10 +160,10 @@ TensorValue MakeZeros(Context to_ctx, std::vector<int64_t>& shape) {
   for (const int64_t& elem : shape) {
     size *= elem;
   }
-  float a[size] = {0.0};
+  std::vector<float> a(size, 0.0);
   DType dtype = DType(DTypeCode::kFloat(), 32, 1);
   DLTensor tensor;
-  tensor.data = a;
+  tensor.data = a.data();
   tensor.ctx = Context(DevType::kCPU(), 0);
   tensor.dtype = dtype;
   tensor.shape = shape.data();
