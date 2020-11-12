@@ -22,13 +22,13 @@ __all__ = [
     "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
     "maximum", "mean", "mean_dx", "min", "minimum",
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
-    "stream_sync", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "nll_loss_dtrue", "non_max_suppression", "not_equal", "power", "relu",
+    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stack_dx", "stream_sync", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -525,6 +525,13 @@ def not_equal(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.not_equal(x1, x2, out, where))
+
+def power(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.power(x1, x2, out, where))
 
 def relu(x):
     x = sym_utils.to_any(x)

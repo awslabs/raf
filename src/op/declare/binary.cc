@@ -7,6 +7,7 @@
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
 #include "./declare_utils.h"
+#include <cmath>
 
 namespace mnm {
 namespace op {
@@ -114,6 +115,26 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.multiply", [](const CallValues& call) {
   const Value& x2 = args->x2;
   if (!args->out.defined() && !args->where.defined()) {
     MNM_BINARY_SCALAR(*, x1, x2);
+    MNM_BINARY_TENSOR(x1, x2);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
+MNM_REGISTER_BINARY_BCAST_OP("mnm.op.power", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+                        call->callee = ir::NullValue<OpValue>();
+                        double a1 = v1->data;
+                        double a2 = v2->data;
+                        double result = std::pow(a1, a2);
+                        call->out = ScalarValue::make(result);
+                        return;
+                      }));
     MNM_BINARY_TENSOR(x1, x2);
   }
   LOG(FATAL) << "NotImplementedError";

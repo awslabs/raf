@@ -159,6 +159,8 @@ non_max_suppression = _APIS.get("mnm.op.sym.non_max_suppression", None)
 # Defined in ./src/op/regs/regs.cc
 not_equal = _APIS.get("mnm.op.sym.not_equal", None)
 # Defined in ./src/op/regs/regs.cc
+power = _APIS.get("mnm.op.sym.power", None)
+# Defined in ./src/op/regs/regs.cc
 relu = _APIS.get("mnm.op.sym.relu", None)
 # Defined in ./src/op/regs/regs.cc
 relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)

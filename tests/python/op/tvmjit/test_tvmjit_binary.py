@@ -74,6 +74,7 @@ def test_binary_ops(ops, shape, dtype, ctx):
 @pytest.mark.parametrize("ops", [
     (torch.mul, mnm._op.sym.multiply),
     (torch.div, mnm._op.sym.divide),
+    (torch.pow, mnm._op.sym.power),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],

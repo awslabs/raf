@@ -23,13 +23,13 @@ __all__ = [
     "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
     "maximum", "mean", "mean_dx", "min", "minimum",
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
-    "stream_sync", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "nll_loss_dtrue", "non_max_suppression", "not_equal", "power", "relu",
+    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stack_dx", "stream_sync", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -604,6 +604,14 @@ def not_equal(x1, x2, out=None, where=None):
     out = imp_utils.to_any(out)
     where = imp_utils.to_any(where)
     return imp_utils.ret(ffi.not_equal(x1, x2, out, where))
+
+@set_module("mnm")
+def power(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.power(x1, x2, out, where))
 
 @set_module("mnm")
 def relu(x):
