@@ -24,17 +24,29 @@ namespace type {
  */
 tvm::Type GetType(value::Value value);
 
-/*! \brief Checks if two PrimExpr are equal
- * If the result cannot be determined, they are considered equal.
- * If inputs contain Any, they are considered equal.
+/*! \brief Checks if the two PrimExpr matches the comparator.
+ * If the result cannot be determined, it is considered true.
+ * If inputs contain Any, it is considered true.
  * This is useful for expr containing variables.
  *
  * \param lhs PrimExpr on the left hand side
  * \param rhs PrimExpr on the right hand side
+ * \param compare Comparator between lhs and rhs
  *
- * \return Whether they are equal
+ * \return Whether the two PrimExpr matches the comparator.
  */
-bool TypeCheckEqual(const tvm::PrimExpr& lhs, const tvm::PrimExpr& rhs);
+template <typename Comparator>
+bool TypeCheckCompare(const tvm::PrimExpr& lhs, const tvm::PrimExpr& rhs, Comparator compare) {
+  using namespace tvm;
+  if (lhs.as<tir::AnyNode>() || rhs.as<tir::AnyNode>()) {
+    return true;
+  }
+  PrimExpr diff = lhs - rhs;
+  if (const int64_t* pdiff = tir::as_const_int(diff)) {
+    return compare(pdiff[0], 0);
+  }
+  return true;
+}
 
 /*! \brief Checks if a PrimExpr evaluates to true.
  * If the result cannot be determined, it is considered true.

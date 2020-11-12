@@ -64,18 +64,6 @@ Type GetType(Value value) {
   return typer(value);
 }
 
-bool TypeCheckEqual(const tvm::PrimExpr& lhs, const tvm::PrimExpr& rhs) {
-  using namespace tvm;
-  if (lhs.as<tir::AnyNode>() || rhs.as<tir::AnyNode>()) {
-    return true;
-  }
-  PrimExpr diff = lhs - rhs;
-  if (const int64_t* pdiff = tir::as_const_int(diff)) {
-    return pdiff[0] == 0;
-  }
-  return true;
-}
-
 bool TypeCheck(const tvm::PrimExpr& cond) {
   using namespace tvm;
   if (const int64_t* pdiff = tir::as_const_int(cond)) {

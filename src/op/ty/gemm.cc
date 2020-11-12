@@ -35,8 +35,9 @@ Type MatmulInfer(const CallValues& value) {
   if (transpose_b) {
     std::swap(n2, m2);
   }
-  CHECK(TypeCheckEqual(m1, n2)) << "Matmul: shapes of x and y is inconsistent, "
-                                << " x shape=" << x->shape << ", y shape=" << y->shape;
+  CHECK(TypeCheckCompare(m1, n2, std::equal_to<int>()))
+      << "Matmul: shapes of x and y is inconsistent, "
+      << " x shape=" << x->shape << ", y shape=" << y->shape;
   Array<tvm::PrimExpr> oshape = {n1, m2};
   return TensorType(oshape, x->dtype);
 }
@@ -55,10 +56,12 @@ Type BatchMatmulInfer(const CallValues& value) {
   PrimExpr k2 = y->shape[0];
   PrimExpr n2 = y->shape[1];
   PrimExpr m2 = y->shape[2];
-  CHECK(TypeCheckEqual(m1, m2)) << "BatchMatmul: shapes of x and y is inconsistent, "
-                                << " x shape=" << x->shape << ", y shape=" << y->shape;
-  CHECK(TypeCheckEqual(k1, k2)) << "BatchMatmul: batch size of x and y is inconsistent, "
-                                << " x shape=" << x->shape << ", y shape=" << y->shape;
+  CHECK(TypeCheckCompare(m1, m2, std::equal_to<int>()))
+      << "BatchMatmul: shapes of x and y is inconsistent, "
+      << " x shape=" << x->shape << ", y shape=" << y->shape;
+  CHECK(TypeCheckCompare(k1, k2, std::equal_to<int>()))
+      << "BatchMatmul: batch size of x and y is inconsistent, "
+      << " x shape=" << x->shape << ", y shape=" << y->shape;
   Array<tvm::PrimExpr> oshape = {k1, n1, n2};
   return TensorType(oshape, x->dtype);
 }

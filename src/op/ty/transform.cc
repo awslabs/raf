@@ -81,11 +81,11 @@ Type ReshapeInfer(const CallValues& value) {
   PrimExpr size = 1;
   int tbd = -1;
   for (size_t i = 0; i < shape.size(); ++i) {
-    if (TypeCheckEqual(shape[i], -1)) {
+    if (TypeCheckCompare(shape[i], -1, std::equal_to<int>())) {
       CHECK_EQ(tbd, -1);
       tbd = i;
     } else {
-      if (TypeCheckEqual(shape[i], 0)) {
+      if (TypeCheckCompare(shape[i], 0, std::equal_to<int>())) {
         if (reverse) {
           CHECK_GE(ndim - (shape.size() - i), 0);
           shape.Set(i, x->shape[ndim - (shape.size() - i)]);
@@ -102,7 +102,7 @@ Type ReshapeInfer(const CallValues& value) {
     for (int i = 0; i < ndim; ++i) {
       x_size *= x->shape[i];
     }
-    CHECK(TypeCheckEqual(truncmod(x_size, size), 0));
+    CHECK(TypeCheckCompare(truncmod(x_size, size), 0, std::equal_to<int>()));
     shape.Set(tbd, div(x_size, size));
   }
   // check if reshaped shape is equal to the origin shape
@@ -114,7 +114,7 @@ Type ReshapeInfer(const CallValues& value) {
   for (auto s : shape) {
     reshaped *= s;
   }
-  CHECK(TypeCheckEqual(origin, reshaped))
+  CHECK(TypeCheckCompare(origin, reshaped, std::equal_to<int>()))
       << "ValueError: Number of elements mismatch after reshaping!";
   return TensorType(shape, x->dtype);
 }
@@ -176,7 +176,7 @@ Type ConcatenateInfer(const CallValues& value) {
     CHECK(y->shape.size() == y0->shape.size());
     for (int k = 0; k < y0->shape.size(); k++) {
       if (k != axis) {
-        CHECK(TypeCheckEqual(y->shape[k], y0->shape[k]));
+        CHECK(TypeCheckCompare(y->shape[k], y0->shape[k], std::equal_to<int>()));
       }
     }
     dimsize += y->shape[axis];
@@ -201,7 +201,7 @@ Type SplitInfer(const CallValues& value) {
     // Handling first type - integer scalar - sections
     int64_t sections = scalar->data;
     PrimExpr able_divide = truncmod(x->shape[axis], Integer(sections));
-    CHECK(TypeCheckEqual(able_divide, 0))
+    CHECK(TypeCheckCompare(able_divide, 0, std::equal_to<int>()))
         << "indices_or_sections need to be able to divide input.shape[axis]";
 
     for (size_t i = 0; i < sections; ++i) {
@@ -328,8 +328,8 @@ Type ReverseSequenceInfer(const CallValues& value) {
   TensorType sequence_length = Downcast<TensorType>(GetType(args->sequence_length));
   int batch_axis = args->batch_axis;
   int s_ndim = sequence_length->shape.size();
-  CHECK(TypeCheckEqual(s_ndim, 1));
-  CHECK(TypeCheckEqual(sequence_length->shape[0], x->shape[batch_axis]));
+  CHECK(TypeCheckCompare(s_ndim, 1, std::equal_to<int>()));
+  CHECK(TypeCheckCompare(sequence_length->shape[0], x->shape[batch_axis], std::equal_to<int>()));
   return x;
 }
 
@@ -389,7 +389,7 @@ Type StackInfer(const CallValues& value) {
     TensorType y = Downcast<TensorType>(i);
     CHECK(y->shape.size() == y0->shape.size());
     for (int k = 0; k < y0->shape.size(); k++) {
-      CHECK(TypeCheckEqual(y->shape[k], y0->shape[k]));
+      CHECK(TypeCheckCompare(y->shape[k], y0->shape[k], std::equal_to<int>()));
     }
     stack_dim += 1;
   }
@@ -407,6 +407,30 @@ Type StackInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.stack", "Stack", StackInfer);
+
+Type GatherNdInfer(const CallValues& value) {
+  const auto* args = value->args.as<GatherNdArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  TensorType indices = Downcast<TensorType>(GetType(args->indices));
+  PrimExpr ddim = static_cast<int>(data->shape.size());
+  PrimExpr idim = static_cast<int>(indices->shape.size());
+  PrimExpr odim = idim - 1 + ddim - indices->shape[0];
+  CHECK(TypeCheckCompare(indices->shape[0], ddim, std::less_equal<int>()));
+  Array<PrimExpr> oshape = {odim, -1};
+  return TensorType(oshape, data->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.gather_nd", "GatherNd", GatherNdInfer);
+
+Type GatherNdDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<GatherNdDxArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  return data;
+}
+
+MNM_OP_TYPE("mnm.op.gather_nd_dx", "GatherNdDx", GatherNdDxInfer);
 
 }  // namespace type
 }  // namespace op

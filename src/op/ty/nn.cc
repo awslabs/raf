@@ -61,7 +61,7 @@ Type Conv2DInfer(const CallValues& value) {
   PrimExpr h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
   PrimExpr w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   PrimExpr groups = Integer(args->groups);
-  CHECK(TypeCheckEqual(c_in / groups, in))
+  CHECK(TypeCheckCompare(c_in / groups, in, std::equal_to<int>()))
       << "Unmatched input channel " << c_in << " and weight channel size" << in
       << " with group size " << groups;
   return TensorType(Array<PrimExpr>{n_in, out, h_out, w_out}, x->dtype);

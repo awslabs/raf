@@ -27,8 +27,8 @@ Type SgdInfer(const CallValues& value) {
   CHECK_EQ(x0->shape.size(), dx->shape.size());
   CHECK_EQ(v0->shape.size(), dx->shape.size());
   for (size_t i = 0; i < dx->shape.size(); ++i) {
-    CHECK(TypeCheckEqual(x0->shape[i], dx->shape[i]));
-    CHECK(TypeCheckEqual(v0->shape[i], dx->shape[i]));
+    CHECK(TypeCheckCompare(x0->shape[i], dx->shape[i], std::equal_to<int>()));
+    CHECK(TypeCheckCompare(v0->shape[i], dx->shape[i], std::equal_to<int>()));
   }
   Array<Type> res;
   res.push_back(v0);

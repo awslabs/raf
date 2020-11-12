@@ -35,7 +35,7 @@ Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
       oshape.Set(ndim - 1 - i, rhs);
     } else if (rhs.as<AnyNode>()) {
       oshape.Set(ndim - 1 - i, lhs);
-    } else if (TypeCheckEqual(lhs, rhs)) {
+    } else if (TypeCheckCompare(lhs, rhs, std::equal_to<int>())) {
       oshape.Set(ndim - 1 - i, lhs);
     } else {
       LOG(FATAL) << "Incompatible broadcast type " << x1 << " and " << x2;

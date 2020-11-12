@@ -630,6 +630,37 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     # m_func = run_infer_type(m_func)
     # check_type(m_func, expected_type)
 
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("i_dtype", ["int64"])
+@pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
+@pytest.mark.parametrize("ishape", [[3, 4, 2], [4, 5, 3]])
+def test_gather_nd(dtype, i_dtype, dshape, ishape):
+    # pylint: disable=no-self-use
+    class GatherNd(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, data, indices):
+            return mnm.gather_nd(data, indices)
+    model = GatherNd()
+    m_x, _ = randn(dshape, dtype=dtype)
+    m_i = randint(ishape, high=dshape[0: ishape[-1]], dtype=i_dtype)[0]
+    m_i = mnm.transpose(m_i, axes=[len(ishape) - 1] + list(range(len(ishape) - 1)))
+    ty_data = TensorType(dshape, dtype=dtype)
+    ty_indices = TensorType(m_i.shape, dtype=i_dtype)
+    fwd_ty = TensorType((m_x.ndim + m_i.ndim - ishape[0], -1), dtype=dtype)
+    # check forward
+    m_func = model.get_relay_func(m_x, m_i)
+    m_func = run_infer_type(m_func)
+    desired_type = FuncType([ty_data, ty_indices], fwd_ty)
+    check_type(m_func, desired_type)
+    # check backward
+    m_func = AutoDiff(m_func)
+    m_func = run_infer_type(m_func)
+    bwd_ty = FuncType([fwd_ty], TupleType([ty_data, TensorType([], dtype=ty_indices.dtype)]))
+    desired_type = FuncType([ty_data, ty_indices], TupleType([fwd_ty, bwd_ty]))
+    check_type(m_func, desired_type)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
