@@ -35,16 +35,16 @@ Value GetValue(Type type);
 Value GetValue(Expr expr);
 
 #define MNM_NODE_NOT_IMPL(NodeType)                     \
-  Value VisitExpr_(const NodeType* node) override {     \
+  Expr VisitExpr_(const NodeType* node) override {      \
     LOG(FATAL) << "NotImplementedError: " << #NodeType; \
     throw;                                              \
   }
 
 class TypeInferencer : public ExprMutator {
  public:
-  // MNM_NODE_NOT_IMPL(RefReadNode)
-  // MNM_NODE_NOT_IMPL(RefWriteNode)
-  // MNM_NODE_NOT_IMPL(RefCreateNode)
+  MNM_NODE_NOT_IMPL(RefReadNode)
+  MNM_NODE_NOT_IMPL(RefWriteNode)
+  MNM_NODE_NOT_IMPL(RefCreateNode)
 
  public:
   TypeInferencer(Module mod) : mod_(mod) {
@@ -83,21 +83,29 @@ class TypeInferencer : public ExprMutator {
     call_values->callee = OpValue::make(GetRef<Op>(op));
     return call_values;
   }
+
   Expr VisitExpr_(const CallNode* call) override {
+    Array<Expr> args;
+    for (const auto& arg : call->args) {
+      args.push_back(VisitExpr(arg));
+    }
     const OpNode* opn = call->op.as<OpNode>();
     static const auto declare_op = Op::GetAttrMap<op::FMNMDeclare>("FMNMDeclare");
-    static std::unordered_set<std::string> shape_list{"mnm.op.shape"};
+    // We do constant-folding for shape-related operators by invoking their declare function,
+    // because they produce shape information which is required by type inference.
+    // The arguments (SchemaToValue(args)) passed to declare function
+    // can be either types or tensor values, depends on whether
+    // they have already been evaluated/constant-folded.
+    // Therefore it is essential to deal with both cases in their declare functions.
+    static std::unordered_set<std::string> shape_list{"mnm.op.shape", "mnm.op.get_reduce_axis",
+                                                      "mnm.op.get_kept_dims"};
     if (opn && shape_list.count(opn->name)) {
-      CallValues call_values = SchemaToValue(call->args, opn);
+      CallValues call_values = SchemaToValue(args, opn);
       declare_op[GetRef<Op>(opn)](call_values);
       if (call_values->out.defined()) {
         Expr re = ir::MakeConstant(call_values->out);
         return VisitExpr(re);
       }
-    }
-    Array<Expr> args;
-    for (const auto& arg : call->args) {
-      args.push_back(VisitExpr(arg));
     }
     Expr op = VisitExpr(call->op);
     Call ret = Call(op, args, call->attrs, call->type_args);

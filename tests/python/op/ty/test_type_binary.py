@@ -1,8 +1,9 @@
 import pytest
 import mnm
 from mnm._op import sym
+from mnm._ffi.pass_ import AutoDiff
 from mnm.testing import check_type, run_infer_type, randn
-from tvm.relay import TensorType, FuncType
+from tvm.relay import TensorType, FuncType, TupleType
 
 
 @pytest.mark.parametrize("op", [
@@ -41,7 +42,14 @@ def test_binary(op, shape, dtype):
     m_func = run_infer_type(m_func)
     desired_type = FuncType([t_a, t_b], t_c)
     check_type(m_func, desired_type)
-    # TODO(@hzfan): check backward. needs to fold const for get_reduce_axis
+    # check backward
+    # TODO(yzhliu): some operators are missing gradient registries.
+    if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract):
+        bwd_func = AutoDiff(m_func)
+        bwd_func = run_infer_type(bwd_func)
+        bwd_ty = FuncType([t_c], TupleType([t_a, t_b]))
+        desired_type = FuncType([t_a, t_b], TupleType([t_c, bwd_ty]))
+        check_type(bwd_func, desired_type)
 
 
 @pytest.mark.parametrize("op", [
@@ -79,7 +87,7 @@ def test_logiacal(op, shape, dtype):
     m_func = run_infer_type(m_func)
     desired_type = FuncType([t_a, t_b], t_c)
     check_type(m_func, desired_type)
-    # TODO(@hzfan): check backward. needs to fold const for get_reduce_axis
+    # TODO(@hzfan): check backward. missing gradient registries.
 
 
 if __name__ == "__main__":

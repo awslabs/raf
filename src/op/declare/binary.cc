@@ -3,10 +3,12 @@
  * \file src/op/declare/binary.cc
  * \brief Declaration of binary operators
  */
+#include <tvm/arith/analyzer.h>
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
 #include "./declare_utils.h"
+#include "../ty/utils.h"
 #include <cmath>
 
 namespace mnm {
@@ -303,26 +305,34 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
 void CollapseAxis(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  DLTensor* x1 = args->x1;
-  DLTensor* x2 = args->x2;
+
+  auto x1_type = op::type::GetType(args->x1);
+  auto x2_type = op::type::GetType(args->x2);
+
+  auto* t1_type = x1_type.as<ir::TensorTypeNode>();
+  auto* t2_type = x2_type.as<ir::TensorTypeNode>();
 
   call->callee = ir::NullValue<OpValue>();
-  call->ctx = x1->ctx;
 
-  CHECK_LE(x2->ndim, x1->ndim);
-  int offset = x1->ndim - x2->ndim;
-  ir::Array<Value> res;
-  for (int i = 0; i < offset; ++i) {
-    res.push_back(ScalarValue::make(i));
-  }
-  for (int i = 0; i < x2->ndim; ++i) {
-    if (x1->shape[i + offset] != x2->shape[i]) {
-      CHECK_EQ(x2->shape[i], 1) << "The collapsed dimension should be 1-sized!";
-      res.push_back(ScalarValue::make(i + offset));
+  if (t1_type && t2_type) {
+    CHECK_LE(t2_type->shape.size(), t1_type->shape.size());
+    int offset = t1_type->shape.size() - t2_type->shape.size();
+    ir::Array<Value> res;
+    for (int i = 0; i < offset; ++i) {
+      res.push_back(ScalarValue::make(i));
     }
+    tvm::arith::Analyzer analyzer;
+    for (int i = 0; i < t2_type->shape.size(); ++i) {
+      if (!analyzer.CanProve((t1_type->shape[i + offset] - t2_type->shape[i]) == 0)) {
+        auto* si = t2_type->shape[i].as<ir::IntImmNode>();
+        CHECK(si && si->value == 1) << "The collapsed dimension should be 1-sized!";
+        res.push_back(ScalarValue::make(i + offset));
+      }
+    }
+    call->out = TupleValue::make(res);
+  } else {
+    call->out = ir::NullValue<Value>();
   }
-
-  call->out = TupleValue::make(res);
 }
 
 // TODO(@icemelon9): Currently use opaque for shape related op.
@@ -331,26 +341,33 @@ MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis).set_attr<TOpPattern>("TOp
 void CollapseKeep(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  DLTensor* x1 = args->x1;
-  DLTensor* x2 = args->x2;
+  auto x1_type = op::type::GetType(args->x1);
+  auto x2_type = op::type::GetType(args->x2);
+
+  auto* t1_type = x1_type.as<ir::TensorTypeNode>();
+  auto* t2_type = x2_type.as<ir::TensorTypeNode>();
 
   call->callee = ir::NullValue<OpValue>();
-  call->ctx = x1->ctx;
 
-  CHECK_LE(x2->ndim, x1->ndim);
-  int offset = x1->ndim - x2->ndim;
-  ir::Array<Value> res;
-  for (int i = 0; i < offset; ++i) {
-    res.push_back(ScalarValue::make(0));
-  }
-  for (int i = 0; i < x2->ndim; ++i) {
-    if (x1->shape[i + offset] != x2->shape[i]) {
-      CHECK_EQ(x2->shape[i], 1) << "The collapsed dimension should be 1-sized!";
-      res.push_back(ScalarValue::make(1));
+  if (t1_type && t2_type) {
+    CHECK_LE(t2_type->shape.size(), t1_type->shape.size());
+    int offset = t1_type->shape.size() - t2_type->shape.size();
+    ir::Array<Value> res;
+    for (int i = 0; i < offset; ++i) {
+      res.push_back(ScalarValue::make(0));
     }
+    tvm::arith::Analyzer analyzer;
+    for (int i = 0; i < t2_type->shape.size(); ++i) {
+      if (!analyzer.CanProve((t1_type->shape[i + offset] - t2_type->shape[i]) == 0)) {
+        auto* si = t2_type->shape[i].as<ir::IntImmNode>();
+        CHECK(si && si->value == 1) << "The collapsed dimension should be 1-sized!";
+        res.push_back(ScalarValue::make(1));
+      }
+    }
+    call->out = TupleValue::make(res);
+  } else {
+    call->out = ir::NullValue<Value>();
   }
-
-  call->out = TupleValue::make(res);
 }
 
 // TODO(@icemelon9): Currently use opaque for shape related op.
