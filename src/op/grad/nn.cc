@@ -88,6 +88,29 @@ Array<Expr> UnaryGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
   return {Call(op_dx, {x, y, dy})};
 }
 
+Array<Expr> RsqrtGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                      const Expr& dy) {
+  static auto op_sqrt = Op::Get("mnm.op.sqrt");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_divide = Op::Get("mnm.op.divide");
+  static auto op_negative = Op::Get("mnm.op.negative");
+  static auto op_add = Op::Get("mnm.op.add");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call one = Call(op_divide, {x, x});
+  Call two = Call(op_add, {one, one});
+  Call half = Call(op_divide, {one, two});
+  Call neg_half = Call(op_negative, {half});
+  Call x_pow_2 = Call(op_multiply, {x, x});
+  Call x_pow_3 = Call(op_multiply, {x_pow_2, x});
+  Call sqrt_x_pow_3 = Call(op_sqrt, {x_pow_3});
+  Call rsqrt_x_pow_3 = Call(op_divide, {one, sqrt_x_pow_3});
+  Call dx = Call(op_multiply, {neg_half, rsqrt_x_pow_3});
+  return {Call(op_multiply, {dy, dx})};
+}
+MNM_OP_GRAD("mnm.op.rsqrt", RsqrtGrad);
+
 const char RELU_DX[] = "mnm.op.relu_dx";
 auto ReluGrad = UnaryGrad<RELU_DX>;
 MNM_OP_GRAD("mnm.op.relu", ReluGrad);

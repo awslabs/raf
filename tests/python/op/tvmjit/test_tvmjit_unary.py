@@ -33,8 +33,11 @@ def randn_pos(shape, *, ctx="cpu", dtype="float32"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
+def randn_torch(shape, *, ctx="cpu", dtype="float32", positive=False):
+    if positive:
+        x = np.abs(np.random.randn(*shape) + 1e-5)
+    else:
+        x = np.random.randn(*shape)
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)
@@ -144,6 +147,37 @@ def test_cache(ctx, shape, dtype):
     m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
     m_y, n_y = mnm.cos(m_x), np.cos(n_x)
     check(m_y, n_y)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize(
+    "ops",
+    [
+        (torch.rsqrt, mnm._op.sym.rsqrt),
+    ])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_unary_ops_pos_with_grad(ops, shape, dtype, ctx):
+    class Unary(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return m_op(x)
+    t_op, m_op = ops
+    model = Unary()
+    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx, positive=True)
+    m_x.requires_grad = True
+    m_y = model(m_x)
+    t_y = t_op(t_x)
+    # check forward
+    check_torch(m_y, t_y)
+    # check backward
+    m_dy, t_dy = randn_torch(shape, dtype=dtype, ctx=ctx)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check_torch(m_x.grad, t_x.grad)
 
 
 if __name__ == "__main__":

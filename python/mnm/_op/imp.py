@@ -25,11 +25,12 @@ __all__ = [
     "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
     "nll_loss_dtrue", "non_max_suppression", "not_equal", "power", "relu",
     "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
-    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stack_dx", "stream_sync", "subtract", "sum", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -652,6 +653,13 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     seq_axis = imp_utils.to_int(seq_axis)
     batch_axis = imp_utils.to_int(batch_axis)
     return imp_utils.ret(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
+
+@set_module("mnm")
+def rsqrt(x, out=None, where=None):
+    x = imp_utils.to_any(x)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.rsqrt(x, out, where))
 
 @set_module("mnm")
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):

@@ -68,6 +68,7 @@ MNM_TVMJIT(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxType
 MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper, GenericHasher);
 MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(Rsqrt, "mnm.op.rsqrt", UnaryUfuncArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Negative, "mnm.op.negative", UnaryUfuncArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
 MNM_TVMJIT(Sigmoid, "mnm.op.sigmoid", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);

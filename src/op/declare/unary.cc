@@ -7,6 +7,7 @@
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
 #include "../ty/utils.h"
+#include <cmath>
 
 namespace mnm {
 namespace op {
@@ -58,6 +59,23 @@ MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
   if (!args->out.defined() && !args->where.defined()) {
     MNM_UNARY_SCALAR(-, args->x);
     MNM_UNARY_TENSOR(args->x)
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
+MNM_DECLARE_UNARY_OP("mnm.op.rsqrt", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryUfuncArgs>();
+  CHECK(args != nullptr);
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_SWITCH_SCALAR(v, args->x, {
+      call->callee = ir::NullValue<OpValue>();
+      double a = v->data;
+      double result = 1.0 / sqrt(a);
+      call->out = ScalarValue::make(result);
+      return;
+    })
+    MNM_UNARY_TENSOR(args->x);
   }
   LOG(FATAL) << "NotImplementedError";
   throw;

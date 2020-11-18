@@ -120,6 +120,7 @@ static const char repeat[] = "mnm.op.repeat";
 static const char reshape[] = "mnm.op.reshape";
 static const char reverse[] = "mnm.op.reverse";
 static const char reverse_sequence[] = "mnm.op.reverse_sequence";
+static const char rsqrt[] = "mnm.op.rsqrt";
 static const char sequence_mask[] = "mnm.op.sequence_mask";
 static const char sgd[] = "mnm.op.sgd";
 static const char shape[] = "mnm.op.shape";
@@ -1555,6 +1556,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reverse_sequence").set_body([](TVMArgs args, TVM
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.rsqrt").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(rsqrt, 3, ffi2schema::UnaryUfunc,
+              schema::UnaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.sequence_mask").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sequence_mask, 4, ffi2schema::SequenceMask,
               schema::SequenceMaskArgs);  // NOLINT(whitespace/line_length)
@@ -2420,6 +2431,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.reshape").set_body(MNM_SYMBOLIC_API(reshape, 3, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, Reverse));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
     .set_body(MNM_SYMBOLIC_API(reverse_sequence, 4, ReverseSequence));
+MNM_REGISTER_GLOBAL("mnm.op.sym.rsqrt").set_body(MNM_SYMBOLIC_API(rsqrt, 3, UnaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
     .set_body(MNM_SYMBOLIC_API(sequence_mask, 4, SequenceMask));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd").set_body(MNM_SYMBOLIC_API(sgd, 5, Sgd));
@@ -3193,6 +3205,8 @@ MNM_BIND_SCHEMA("mnm.op.reverse", names::reverse,
                 value2schema::Reverse);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reverse_sequence", names::reverse_sequence,
                 value2schema::ReverseSequence);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.rsqrt", names::rsqrt,
+                value2schema::UnaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sequence_mask", names::sequence_mask,
                 value2schema::SequenceMask);                   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sgd", names::sgd, value2schema::Sgd);  // NOLINT(whitespace/line_length)

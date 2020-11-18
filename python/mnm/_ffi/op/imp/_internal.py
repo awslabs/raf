@@ -173,6 +173,8 @@ reverse = _APIS.get("mnm.op.imp.reverse", None)
 # Defined in ./src/op/regs/regs.cc
 reverse_sequence = _APIS.get("mnm.op.imp.reverse_sequence", None)
 # Defined in ./src/op/regs/regs.cc
+rsqrt = _APIS.get("mnm.op.imp.rsqrt", None)
+# Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.imp.sequence_mask", None)
 # Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.imp.sgd", None)

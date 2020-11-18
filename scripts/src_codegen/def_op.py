@@ -34,6 +34,7 @@ OPS = [
     Op(name="sigmoid", schema_name="unary"),
     Op(name="erf", schema_name="unary"),
     Op(name="sqrt", schema_name="unary"),
+    Op(name="rsqrt", schema_name="unary_ufunc"),
     Op(name="relu_dx", schema_name="unary_dx"),
     Op(name="tanh_dx", schema_name="unary_dx"),
     Op(name="sigmoid_dx", schema_name="unary_dx"),
