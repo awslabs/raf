@@ -503,6 +503,12 @@ def test_concatenate(params, dtype):
     y_ty = TensorType(t_y.shape, dtype=dtype)
     expected_type = FuncType(i_ty, y_ty)
     check_type(m_func, expected_type)
+    # backward
+    m_func = AutoDiff(m_func)
+    m_func = run_infer_type(m_func)
+    bwd_ty = FuncType([y_ty], TupleType(i_ty) if len(i_ty) > 1 else i_ty[0])
+    expected_type = FuncType(i_ty, TupleType([y_ty, bwd_ty]))
+    check_type(m_func, expected_type)
 
 
 # pylint: disable=no-self-use

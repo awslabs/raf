@@ -97,8 +97,8 @@ class TypeInferencer : public ExprMutator {
     // can be either types or tensor values, depends on whether
     // they have already been evaluated/constant-folded.
     // Therefore it is essential to deal with both cases in their declare functions.
-    static std::unordered_set<std::string> shape_list{"mnm.op.shape", "mnm.op.get_reduce_axis",
-                                                      "mnm.op.get_kept_dims"};
+    static std::unordered_set<std::string> shape_list{
+        "mnm.op.shape", "mnm.op.get_reduce_axis", "mnm.op.get_kept_dims", "mnm.op.concatenate_dx"};
     if (opn && shape_list.count(opn->name)) {
       CallValues call_values = SchemaToValue(args, opn);
       declare_op[GetRef<Op>(opn)](call_values);

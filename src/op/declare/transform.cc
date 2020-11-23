@@ -10,6 +10,7 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "./declare_utils.h"
+#include "../ty/utils.h"
 #include "../schema/ufunc.h"
 #include "../schema/likes.h"
 #include "../schema/nn.h"
@@ -358,18 +359,24 @@ MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 void ConcatenateDx(const CallValues& call) {
+  using tvm::relay::TensorType;
+  using tvm::relay::TensorTypeNode;
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
   const std::vector<BaseTensorValue>& x = args->x;
+  std::vector<TensorType> x_type;
   int axis = args->axis;
   ir::Array<Value> res;
-  if (x.size() > 0U) {
-    DLTensor* y0 = x[0];
-    axis = NormalizeAxis(axis, y0->ndim);
+  std::transform(x.begin(), x.end(), std::back_inserter(x_type), [](const BaseTensorValue& x) {
+    return ir::Downcast<TensorType>(type::GetType(x));
+  });
+  if (x_type.size() > 0U) {
+    axis = NormalizeAxis(axis, x_type[0]->shape.size());
     int64_t acc = 0;
-    for (size_t i = 0; i + 1 < x.size(); ++i) {
-      DLTensor* x0 = x[i];
-      acc += x0->shape[axis];
+    for (size_t i = 0; i + 1 < x_type.size(); ++i) {
+      const auto* si = x_type[i]->shape[axis].as<ir::IntImmNode>();
+      CHECK(si);
+      acc += si->value;
       res.push_back(ScalarValue::make(acc));
     }
   }
