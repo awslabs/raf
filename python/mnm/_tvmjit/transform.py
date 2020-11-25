@@ -9,7 +9,7 @@ _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 @register_compute("mnm.op.transpose_dx")
 def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     dy = inputs[2]
-    axes = list(_topi.util.get_const_tuple(attrs.axes))
+    axes = list(_topi.utils.get_const_tuple(attrs.axes))
     axes_inverse = axes.copy()
     for idx, i in enumerate(axes):
         axes_inverse[i] = idx
@@ -56,11 +56,11 @@ _reg.register_injective_schedule("mnm.op.clip_dx")
 @register_compute("mnm.op.gather_nd_dx")
 def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     data, indices, dy = inputs
-    ind_s = _topi.util.get_const_tuple(indices.shape)
+    ind_s = _topi.utils.get_const_tuple(indices.shape)
     ind_l = len(ind_s)
     x = ind_s[0]
     ind_s_1 = ind_s[1:]
-    data_s = _topi.util.get_const_tuple(data.shape)
+    data_s = _topi.utils.get_const_tuple(data.shape)
     data_s_0 = data_s[:x]
     def compute_match(*idx):
         ind_i = idx[:ind_l - 1]

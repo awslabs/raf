@@ -87,9 +87,9 @@ _reg.register_schedule("mnm.op.avg_pool2d", strategy.schedule_pool)
 @register_compute("mnm.op.avg_pool2d_dx")
 def compute_avg_pool2d_dx(attr, inputs, output_type):
     # pylint: disable=too-many-locals, unbalanced-tuple-unpacking, invalid-name, unused-argument, unused-variable
-    strides, padding, pool_size, layout = _topi.util.get_const_tuple(attr.strides), \
-                                          _topi.util.get_const_tuple(attr.padding), \
-                                          _topi.util.get_const_tuple(attr.pool_size), \
+    strides, padding, pool_size, layout = _topi.utils.get_const_tuple(attr.strides), \
+                                          _topi.utils.get_const_tuple(attr.padding), \
+                                          _topi.utils.get_const_tuple(attr.pool_size), \
                                           attr.layout
     ceil_mode, count_include_pad = attr.ceil_mode, attr.count_include_pad
     assert layout == "NCHW"
@@ -110,9 +110,9 @@ _reg.register_schedule("mnm.op.max_pool2d", strategy.schedule_pool)
 @register_compute("mnm.op.max_pool2d_dx")
 def compute_max_pool2d_dx(attr, inputs, output_type):
     # pylint: disable=too-many-locals, unbalanced-tuple-unpacking, invalid-name, unused-argument, unused-variable
-    strides, padding, pool_size, layout = _topi.util.get_const_tuple(attr.strides), \
-                                          _topi.util.get_const_tuple(attr.padding), \
-                                          _topi.util.get_const_tuple(attr.pool_size), \
+    strides, padding, pool_size, layout = _topi.utils.get_const_tuple(attr.strides), \
+                                          _topi.utils.get_const_tuple(attr.padding), \
+                                          _topi.utils.get_const_tuple(attr.pool_size), \
                                           attr.layout
     ceil_mode = attr.ceil_mode
     assert layout == "NCHW"
@@ -168,7 +168,7 @@ def compute_layer_norm(attr, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=too-many-locals
     x = inputs[0]
-    axis, eps = _topi.util.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
+    axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
     ndim = len(x.shape)
     if axis < 0:
         axis = ndim + axis
@@ -222,7 +222,7 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=unused-variable
     x, y, dy = inputs
-    axis, eps = _topi.util.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
+    axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
     ndim = len(x.shape)
     if axis < 0:
         axis = ndim + axis
@@ -335,9 +335,9 @@ def compute_conv2d_dx(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
-    strides, padding, dilation, layout = _topi.util.get_const_tuple(attr.strides), \
-                                         _topi.util.get_const_tuple(attr.padding), \
-                                         _topi.util.get_const_tuple(attr.dilation), \
+    strides, padding, dilation, layout = _topi.utils.get_const_tuple(attr.strides), \
+                                         _topi.utils.get_const_tuple(attr.padding), \
+                                         _topi.utils.get_const_tuple(attr.dilation), \
                                          attr.data_layout
     assert layout == "NCHW"
     assert dilation == (1, 1), "not support dilate now"
@@ -350,17 +350,17 @@ def compute_conv2d_dx(attr, inputs, output_type):
     # TODO: we can also leverage tvm's tensor-level autodiff
     # grads = _tvm.gradient(R, [X], head=dy)
 
-    data_shape = _topi.util.get_const_tuple(X.shape)
-    weight_shape = _topi.util.get_const_tuple(W.shape)
-    _, _, grad_h, grad_w = _topi.util.get_const_tuple(R.shape)
+    data_shape = _topi.utils.get_const_tuple(X.shape)
+    weight_shape = _topi.utils.get_const_tuple(W.shape)
+    _, _, grad_h, grad_w = _topi.utils.get_const_tuple(R.shape)
 
     batch, in_channel, in_h, in_w = data_shape
     out_channel, _, filter_h, filter_w = weight_shape
 
     # infer output_padding
     fpad_top, fpad_left, fpad_bottom, fpad_right = _get_pad_tuple(
-        _topi.util.get_const_tuple(attr.padding), (filter_h, filter_w))
-    stride_h, stride_w = _topi.util.get_const_tuple(attr.strides)
+        _topi.utils.get_const_tuple(attr.padding), (filter_h, filter_w))
+    stride_h, stride_w = _topi.utils.get_const_tuple(attr.strides)
     out_h = (grad_h - 1) * stride_h - fpad_top - fpad_bottom + filter_h
     out_w = (grad_w - 1) * stride_w - fpad_left - fpad_right + filter_w
     output_padding = (in_h - out_h, in_w - out_w)
@@ -381,9 +381,9 @@ def compute_conv2d_dw(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
-    strides, padding, dilation, layout = _topi.util.get_const_tuple(attr.strides), \
-                                         _topi.util.get_const_tuple(attr.padding), \
-                                         _topi.util.get_const_tuple(attr.dilation), \
+    strides, padding, dilation, layout = _topi.utils.get_const_tuple(attr.strides), \
+                                         _topi.utils.get_const_tuple(attr.padding), \
+                                         _topi.utils.get_const_tuple(attr.dilation), \
                                          attr.data_layout
     assert layout == "NCHW"
     assert dilation == (1, 1), "not support dilate now"
@@ -395,9 +395,9 @@ def compute_conv2d_dw(attr, inputs, output_type):
     # TODO: we can also leverage tvm's tensor-level autodiff
     # grads = _tvm.gradient(R, [W], head=dy)
 
-    data_shape = _topi.util.get_const_tuple(X.shape)
-    weight_shape = _topi.util.get_const_tuple(W.shape)
-    _, _, grad_h, grad_w = _topi.util.get_const_tuple(R.shape)
+    data_shape = _topi.utils.get_const_tuple(X.shape)
+    weight_shape = _topi.utils.get_const_tuple(W.shape)
+    _, _, grad_h, grad_w = _topi.utils.get_const_tuple(R.shape)
 
     batch, in_channel, in_h, in_w = data_shape
     out_channel, _, filter_h, filter_w = weight_shape
@@ -405,8 +405,8 @@ def compute_conv2d_dw(attr, inputs, output_type):
 
     # infer output_padding
     fpad_top, fpad_left, fpad_bottom, fpad_right = _get_pad_tuple(
-        _topi.util.get_const_tuple(attr.padding), (filter_h, filter_w))
-    stride_h, stride_w = _topi.util.get_const_tuple(attr.strides)
+        _topi.utils.get_const_tuple(attr.padding), (filter_h, filter_w))
+    stride_h, stride_w = _topi.utils.get_const_tuple(attr.strides)
     out_h = (grad_h - 1) * stride_h - fpad_top - fpad_bottom + filter_h
     out_w = (grad_w - 1) * stride_w - fpad_left - fpad_right + filter_w
 

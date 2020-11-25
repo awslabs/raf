@@ -9,8 +9,8 @@ _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 @register_compute("mnm.op.sum")
 def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,no-member
     x = inputs[0]
-    axes = list(_topi.util.get_const_tuple(attrs.axis))
-    keep = list(_topi.util.get_const_tuple(attrs.keepdims))
+    axes = list(_topi.utils.get_const_tuple(attrs.axis))
+    keep = list(_topi.utils.get_const_tuple(attrs.keepdims))
     if not keep:
         # TODO(@were): It seems that TVM create view may crash, I cannot directly return [x]
         return [_tvm.te.compute(x.shape, lambda *args: x(*args))] # pylint: disable=unnecessary-lambda
@@ -74,7 +74,7 @@ def mul_shapes(shape_list, axis_list):
 def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
     x = inputs[0]
     dy = inputs[2]
-    axis = list(_topi.util.get_const_tuple(attrs.axis))
+    axis = list(_topi.utils.get_const_tuple(attrs.axis))
     keepdims = attrs.keepdims
     shape_mul = mul_shapes(x.shape, axis)
     def _elem_div(*indices):
