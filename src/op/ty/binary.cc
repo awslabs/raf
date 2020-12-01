@@ -80,6 +80,23 @@ MNM_OP_TYPE("mnm.op.greater_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.equal", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.not_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 
+Type AxisTypeInfer(const CallValues& value) {
+  const auto* args = value->args.as<BinaryArgs>();
+  TensorType x1 = Downcast<TensorType>(GetType(args->x1));
+  TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+
+  if (x1.as<TensorTypeNode>() && x2.as<TensorTypeNode>()) {
+    CHECK_LE(x2->shape.size(), x1->shape.size());
+    Array<tvm::PrimExpr> shape;
+    shape.push_back(tvm::PrimExpr((int32_t)x1->shape.size()));
+    return TensorType(shape, tvm::runtime::DataType::UInt(32));
+  } else {
+    return IncompleteType(tvm::kType);
+  }
+}
+
+MNM_OP_TYPE("mnm.op.get_reduce_axis", "ReduceAxis", AxisTypeInfer);
+MNM_OP_TYPE("mnm.op.get_kept_dims", "KeptDims", AxisTypeInfer);
 }  // namespace type
 }  // namespace op
 }  // namespace mnm
