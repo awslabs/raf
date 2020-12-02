@@ -120,6 +120,14 @@ struct Gradient : public ExprVisitor {
     }
     return ret;
   }
+  bool IsDefined(const Array<Expr>& exprs) {
+    for (const auto& e : exprs) {
+      if (!e.defined()) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   Array<Expr> UpdateInputGrads(const Op& op,      // the operator called
                                const Expr& orig,  // relay.Call that contains this expression
@@ -131,6 +139,9 @@ struct Gradient : public ExprVisitor {
     static const auto ffpg = Op::GetAttrMap<FFusedPrimalGradient>("FFusedPrimalGradient");
     const VarNode* var = let_var.operator->();
     const Expr& _ograds = tuple_length.count(var) ? Tuple(ograds) : ograds[0];
+    if (!IsDefined(ograds)) {
+      return {NullValue<Var>()};
+    }
     if (ffpg.count(op)) {
       Array<Expr> ret = ffpg[op](orig, let_var, _ograds, igrads);
       // ensure intermediate results are bound to a relay::var
