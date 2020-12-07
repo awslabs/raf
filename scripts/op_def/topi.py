@@ -100,6 +100,8 @@ OP_MAP = {
     "mnm.op.max_pool2d": ["nn.max_pool2d", "", "kOpaque"],
     "mnm.op.get_valid_counts": ["get_valid_counts", "", "kInjective"],
     "mnm.op.non_max_suppression": ["non_max_suppression", "relay.attrs.NonMaxSuppressionAttrs", "kInjective"],
+    "mnm.op.compiler_begin": ["annotation.compiler_begin", "relay.attrs.CompilerAttrs", "kOpaque"],
+    "mnm.op.compiler_end": ["annotation.compiler_end", "relay.attrs.CompilerAttrs", "kOpaque"],
 }
 
 # pylint: enable=line-too-long

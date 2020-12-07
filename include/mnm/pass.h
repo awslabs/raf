@@ -42,5 +42,14 @@ ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level);
  */
 ir::Module InplaceUpdate(ir::Module mod);
 
+/*!
+ * \brief Wraps an expr with compiler_begin and compiler_end to indicate that
+ * this expr should be handled by the external compiler.
+ * \param expr Expression to be annotated.
+ * \param target he target backends for annotation.
+ * \return Transformed Expression.
+ */
+ir::Expr AnnotateTarget(ir::Expr expr, ir::Array<ir::String> target);
+
 }  // namespace pass
 }  // namespace mnm

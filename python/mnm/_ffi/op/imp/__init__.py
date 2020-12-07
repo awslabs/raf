@@ -26,6 +26,8 @@ from ._internal import ceil
 from ._internal import clip
 from ._internal import clip_dx
 from ._internal import collapse_sum_like
+from ._internal import compiler_begin
+from ._internal import compiler_end
 from ._internal import concatenate
 from ._internal import concatenate_dx
 from ._internal import conv2d

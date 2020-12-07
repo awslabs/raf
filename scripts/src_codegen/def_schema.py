@@ -399,6 +399,10 @@ SCHEMAS = {
         Arg(name="axis", cxx_type="int", cxx_default=-1),
         Arg(name="is_ascend", cxx_type="bool", cxx_default=True),
         Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
+    ],
+    "annotation.h::compiler": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="compiler", cxx_type="std::string"),
     ]
 }
 

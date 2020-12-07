@@ -11,6 +11,8 @@
 namespace mnm {
 namespace pass {
 
+using namespace tvm::relay;
+
 struct ExplicitLetList {
  public:
   std::vector<ir::Var> vars;
@@ -57,6 +59,26 @@ struct ExplicitLetList {
     ExplicitLetList* ell;
   };
 };
+
+/*!
+ * \brief Cache the compiler_begin annotation op to reduce registry lookup overhead
+ * \param void
+ * \return compiler_begin op
+ */
+inline const Op& CompilerBeginOp() {
+  static auto op = Op::Get("mnm.op.compiler_begin");
+  return op;
+}
+
+/*!
+ * \brief Cache the compiler_end annotation op to reduce registry lookup overhead
+ * \param void
+ * \return compiler_end op
+ */
+inline const Op& CompilerEndOp() {
+  static auto op = Op::Get("mnm.op.compiler_end");
+  return op;
+}
 
 };  // namespace pass
 };  // namespace mnm

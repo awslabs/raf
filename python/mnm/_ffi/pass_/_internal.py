@@ -2,6 +2,8 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+# Defined in ./src/pass/annotate_target.cc
+AnnotateTarget = _APIS.get("mnm.pass_.AnnotateTarget", None)
 # Defined in ./src/pass/data_parallel.cc
 AutoDataParallel = _APIS.get("mnm.pass_.AutoDataParallel", None)
 # Defined in ./src/pass/gradient.cc

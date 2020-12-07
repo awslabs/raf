@@ -89,6 +89,8 @@ class OpDispatch {
   registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
+using tvm::Attrs;
+using tvm::relay::Expr;
 using tvm::relay::kBroadcast;
 using tvm::relay::kCommReduce;
 using tvm::relay::kElemWise;
@@ -98,10 +100,14 @@ using tvm::relay::kOutEWiseFusable;
 using tvm::relay::kTuple;
 using tvm::relay::OpPatternKind;
 using tvm::relay::TOpPattern;
+using tvm::runtime::Array;
 
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
+
+using FMNMAnnotateTarget =
+    registry::TypedPackedFunc<bool(const Attrs& attrs, const Array<Expr>& args)>;
 
 using FPrimalGradient = registry::TypedPackedFunc<
     // returns: op's contribution to igrads

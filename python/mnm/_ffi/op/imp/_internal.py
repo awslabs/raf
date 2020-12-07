@@ -53,6 +53,10 @@ clip_dx = _APIS.get("mnm.op.imp.clip_dx", None)
 # Defined in ./src/op/regs/regs.cc
 collapse_sum_like = _APIS.get("mnm.op.imp.collapse_sum_like", None)
 # Defined in ./src/op/regs/regs.cc
+compiler_begin = _APIS.get("mnm.op.imp.compiler_begin", None)
+# Defined in ./src/op/regs/regs.cc
+compiler_end = _APIS.get("mnm.op.imp.compiler_end", None)
+# Defined in ./src/op/regs/regs.cc
 concatenate = _APIS.get("mnm.op.imp.concatenate", None)
 # Defined in ./src/op/regs/regs.cc
 concatenate_dx = _APIS.get("mnm.op.imp.concatenate_dx", None)

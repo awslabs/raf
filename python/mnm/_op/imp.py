@@ -13,24 +13,24 @@ __all__ = [
     "avg_pool2d_dx", "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train",
     "batch_norm_train_dxwb", "bias_add", "broadcast_to", "broadcast_to_like", "cast",
     "cast_like", "ceil", "clip", "clip_dx", "collapse_sum_like",
-    "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "cross_entropy", "cross_entropy_dpred", "cross_entropy_dtrue",
-    "dense", "divide", "equal", "erf", "erf_dx",
-    "exp", "expand_dims", "floor", "gather_nd", "gather_nd_dx",
-    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
-    "layer_norm", "layer_norm_dx", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
-    "maximum", "mean", "mean_dx", "min", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "power", "relu",
-    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
-    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stack_dx", "stream_sync", "subtract", "sum",
-    "take", "take_dx", "tanh", "tanh_dx", "transpose",
-    "transpose_dx",
+    "compiler_begin", "compiler_end", "concatenate", "concatenate_dx", "conv2d",
+    "conv2d_dw", "conv2d_dx", "copy", "cos", "cross_entropy",
+    "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "divide", "equal",
+    "erf", "erf_dx", "exp", "expand_dims", "floor",
+    "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
+    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "less",
+    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
+    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
+    "min", "minimum", "mod", "multiply", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
+    "power", "relu", "relu_dx", "repeat", "reshape",
+    "reverse", "reverse_sequence", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss", "smooth_l1_loss_dpred",
+    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -214,6 +214,18 @@ def collapse_sum_like(x, shape):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
     return imp_utils.ret(ffi.collapse_sum_like(x, shape))
+
+@set_module("mnm")
+def compiler_begin(x, compiler):
+    x = imp_utils.to_tensor(x)
+    compiler = imp_utils.to_string(compiler)
+    return imp_utils.ret(ffi.compiler_begin(x, compiler))
+
+@set_module("mnm")
+def compiler_end(x, compiler):
+    x = imp_utils.to_tensor(x)
+    compiler = imp_utils.to_string(compiler)
+    return imp_utils.ret(ffi.compiler_end(x, compiler))
 
 @set_module("mnm")
 def concatenate(x, axis=0):

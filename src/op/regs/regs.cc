@@ -13,6 +13,7 @@
 #include "./schema2value.h"
 #include "../schema/list_args.h"
 #include "../schema/algorithm.h"
+#include "../schema/annotation.h"
 #include "../schema/communication.h"
 #include "../schema/likes.h"
 #include "../schema/loss.h"
@@ -60,6 +61,8 @@ static const char ceil[] = "mnm.op.ceil";
 static const char clip[] = "mnm.op.clip";
 static const char clip_dx[] = "mnm.op.clip_dx";
 static const char collapse_sum_like[] = "mnm.op.collapse_sum_like";
+static const char compiler_begin[] = "mnm.op.compiler_begin";
+static const char compiler_end[] = "mnm.op.compiler_end";
 static const char concatenate[] = "mnm.op.concatenate";
 static const char concatenate_dx[] = "mnm.op.concatenate_dx";
 static const char conv2d[] = "mnm.op.conv2d";
@@ -296,6 +299,13 @@ Attrs CollapseLike(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::CollapseLikeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+Attrs Compiler(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::CompilerArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::String, compiler);
   return Attrs(attrs);
 }
 
@@ -949,6 +959,24 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.collapse_sum_like").set_body([](TVMArgs args, TV
               schema::CollapseLikeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.compiler_begin").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(compiler_begin, 2, ffi2schema::Compiler,
+              schema::CompilerArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->compiler));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.compiler_end").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(compiler_end, 2, ffi2schema::Compiler,
+              schema::CompilerArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->compiler));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1949,6 +1977,13 @@ Array<Expr> CollapseLike(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Compiler(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::String, compiler);
+  MNM_RET();
+}
+
 Array<Expr> Concatenate(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
@@ -2353,6 +2388,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.clip").set_body(MNM_SYMBOLIC_API(clip, 3, Clip))
 MNM_REGISTER_GLOBAL("mnm.op.sym.clip_dx").set_body(MNM_SYMBOLIC_API(clip_dx, 4, ClipDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
     .set_body(MNM_SYMBOLIC_API(collapse_sum_like, 2, CollapseLike));
+MNM_REGISTER_GLOBAL("mnm.op.sym.compiler_begin")
+    .set_body(MNM_SYMBOLIC_API(compiler_begin, 2, Compiler));
+MNM_REGISTER_GLOBAL("mnm.op.sym.compiler_end")
+    .set_body(MNM_SYMBOLIC_API(compiler_end, 2, Compiler));
 MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate")
     .set_body(MNM_SYMBOLIC_API(concatenate, 2, Concatenate));
 MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate_dx")
@@ -2643,6 +2682,14 @@ Attrs CollapseLike(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::CollapseLikeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Compiler(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::CompilerArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::String, compiler);
   return Attrs(attrs);
 }
 
@@ -3093,6 +3140,10 @@ MNM_BIND_SCHEMA("mnm.op.clip_dx", names::clip_dx,
                 value2schema::ClipDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", names::collapse_sum_like,
                 value2schema::CollapseLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.compiler_begin", names::compiler_begin,
+                value2schema::Compiler);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.compiler_end", names::compiler_end,
+                value2schema::Compiler);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate", names::concatenate,
                 value2schema::Concatenate);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate_dx", names::concatenate_dx,
@@ -3281,6 +3332,7 @@ MNM_REGISTER_OBJECT_REFLECT(CastLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(CompilerArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);

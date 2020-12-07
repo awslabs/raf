@@ -54,6 +54,8 @@ MNM_TVM_OP("mnm.op.cast_like", "cast_like");
 MNM_TVM_OP("mnm.op.ceil", "ceil");
 MNM_TVM_OP("mnm.op.clip", "clip");
 MNM_TVM_OP("mnm.op.collapse_sum_like", "collapse_sum_like");
+MNM_TVM_OP("mnm.op.compiler_begin", "annotation.compiler_begin");
+MNM_TVM_OP("mnm.op.compiler_end", "annotation.compiler_end");
 MNM_TVM_OP("mnm.op.concatenate", "concatenate");
 MNM_TVM_OP("mnm.op.copy", "copy");
 MNM_TVM_OP("mnm.op.cos", "cos");
