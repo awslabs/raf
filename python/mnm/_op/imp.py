@@ -25,12 +25,13 @@ __all__ = [
     "min", "minimum", "mod", "multiply", "negative",
     "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
     "power", "relu", "relu_dx", "repeat", "reshape",
-    "reverse", "reverse_sequence", "rsqrt", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "reverse", "reverse_sequence", "round", "rsqrt", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
+    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -667,6 +668,11 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     return imp_utils.ret(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
 @set_module("mnm")
+def round(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.round(x))
+
+@set_module("mnm")
 def rsqrt(x, out=None, where=None):
     x = imp_utils.to_any(x)
     out = imp_utils.to_any(out)
@@ -706,6 +712,16 @@ def sigmoid_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.sigmoid_dx(x, y, dy))
+
+@set_module("mnm")
+def sign(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.sign(x))
+
+@set_module("mnm")
+def sin(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.sin(x))
 
 @set_module("mnm")
 def smooth_l1_loss(y_true, y_pred):

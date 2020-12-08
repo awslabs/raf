@@ -177,6 +177,8 @@ reverse = _APIS.get("mnm.op.imp.reverse", None)
 # Defined in ./src/op/regs/regs.cc
 reverse_sequence = _APIS.get("mnm.op.imp.reverse_sequence", None)
 # Defined in ./src/op/regs/regs.cc
+round = _APIS.get("mnm.op.imp.round", None)
+# Defined in ./src/op/regs/regs.cc
 rsqrt = _APIS.get("mnm.op.imp.rsqrt", None)
 # Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.imp.sequence_mask", None)
@@ -188,6 +190,10 @@ shape = _APIS.get("mnm.op.imp.shape", None)
 sigmoid = _APIS.get("mnm.op.imp.sigmoid", None)
 # Defined in ./src/op/regs/regs.cc
 sigmoid_dx = _APIS.get("mnm.op.imp.sigmoid_dx", None)
+# Defined in ./src/op/regs/regs.cc
+sign = _APIS.get("mnm.op.imp.sign", None)
+# Defined in ./src/op/regs/regs.cc
+sin = _APIS.get("mnm.op.imp.sin", None)
 # Defined in ./src/op/regs/regs.cc
 smooth_l1_loss = _APIS.get("mnm.op.imp.smooth_l1_loss", None)
 # Defined in ./src/op/regs/regs.cc

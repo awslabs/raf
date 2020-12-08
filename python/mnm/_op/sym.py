@@ -24,12 +24,13 @@ __all__ = [
     "min", "minimum", "mod", "multiply", "negative",
     "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
     "power", "relu", "relu_dx", "repeat", "reshape",
-    "reverse", "reverse_sequence", "rsqrt", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx",
+    "reverse", "reverse_sequence", "round", "rsqrt", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
+    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -578,6 +579,10 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     batch_axis = sym_utils.to_int(batch_axis)
     return Symbol.from_expr(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
+def round(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.round(x))
+
 def rsqrt(x, out=None, where=None):
     x = sym_utils.to_any(x)
     out = sym_utils.to_any(out)
@@ -612,6 +617,14 @@ def sigmoid_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.sigmoid_dx(x, y, dy))
+
+def sign(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.sign(x))
+
+def sin(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.sin(x))
 
 def smooth_l1_loss(y_true, y_pred):
     y_true = sym_utils.to_tensor(y_true)

@@ -88,12 +88,15 @@ from ._internal import repeat
 from ._internal import reshape
 from ._internal import reverse
 from ._internal import reverse_sequence
+from ._internal import round
 from ._internal import rsqrt
 from ._internal import sequence_mask
 from ._internal import sgd
 from ._internal import shape
 from ._internal import sigmoid
 from ._internal import sigmoid_dx
+from ._internal import sign
+from ._internal import sin
 from ._internal import smooth_l1_loss
 from ._internal import smooth_l1_loss_dpred
 from ._internal import smooth_l1_loss_dtrue
