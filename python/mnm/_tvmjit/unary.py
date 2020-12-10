@@ -29,7 +29,7 @@ _reg.register_broadcast_schedule("mnm.op.tanh")
 def erf_dx_compute(attrs, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=unused-variable
-    x, dy, y = inputs
+    x, y, dy = inputs
     return [_tvm.te.compute(x.shape,
                             lambda *idx: _tvm.tir.const(2 / math.sqrt(math.pi), dtype=dy.dtype)
                             * _tvm.te.exp(-x[idx] * x[idx]) * dy[idx])]

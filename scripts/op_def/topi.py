@@ -46,6 +46,7 @@ OP_MAP = {
     "mnm.op.less": ["less", "", "kBroadcast"],
     "mnm.op.less_equal": ["less_equal", "", "kBroadcast"],
     "mnm.op.log": ["log", "", "kElemWise"],
+    "mnm.op.log_softmax": ["nn.log_softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
     "mnm.op.logical_and": ["logical_and", "", "kBroadcast"],
     "mnm.op.logical_not": ["logical_not", "", "kElemWise"],
     "mnm.op.logical_or": ["logical_or", "", "kBroadcast"],

@@ -3,34 +3,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 import mnm
-
-
-def get_ctx_list():
-    ret = ["cpu"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
-
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
-
-
-def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
+from mnm.testing import randn, get_ctx_list, randn_torch, with_seed
 
 
 def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
@@ -122,7 +95,6 @@ def test_dense(n, m, k, ctx):
     "funcs",
     [
         [mnm._op.sym.softmax, torch.softmax],
-        [mnm._op.sym.log_softmax, torch.log_softmax],
     ])
 def test_unary_with_axis(ctx, dtype, shape, axis, funcs):
     mnm_fwd, torch_fwd = funcs
@@ -152,6 +124,38 @@ def test_unary_with_axis(ctx, dtype, shape, axis, funcs):
     check_torch(m_x.grad, t_x.grad)
 
 
+# pylint: disable=no-member
+# pylint: disable=no-self-use
+# pylint: disable=protected-access
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [
+    [3, 2],
+    [1, 3]
+])
+def test_log_softmax(ctx, dtype, shape):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm._op.sym.log_softmax(x)
+
+    model = TestModel()
+    # forward
+    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype)
+    m_x.requires_grad = True
+    m_y = model(m_x)
+    t_y = torch.log_softmax(t_x, dim=-1)
+    check_torch(m_y, t_y)
+    # backward
+    m_dy, t_dy = randn_torch(shape, ctx=ctx, dtype=dtype)
+    t_y.backward(t_dy)
+    m_y.backward(m_dy)
+    check_torch(m_x.grad, t_x.grad)
+
+
+@with_seed(0)
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
     (5, 4, 6, 9),

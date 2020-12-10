@@ -80,6 +80,7 @@ MNM_TVM_OP("mnm.op.left_shift", "left_shift");
 MNM_TVM_OP("mnm.op.less", "less");
 MNM_TVM_OP("mnm.op.less_equal", "less_equal");
 MNM_TVM_OP("mnm.op.log", "log");
+MNM_TVM_OP("mnm.op.log_softmax", "nn.log_softmax");
 MNM_TVM_OP("mnm.op.logical_and", "logical_and");
 MNM_TVM_OP("mnm.op.logical_not", "logical_not");
 MNM_TVM_OP("mnm.op.logical_or", "logical_or");

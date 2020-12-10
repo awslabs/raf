@@ -74,9 +74,7 @@ def compute_softmax_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument, unused-variable, invalid-name
     x, y, dy = inputs[0], inputs[1], inputs[2]
     axis = attr.axis
-    softmax_out = _topi.nn.softmax(x, axis=axis)
-    grads = _tvm.te.gradient(softmax_out, [x], head=dy)
-    return grads
+    return [(dy - _topi.sum(dy * y, axis, True)) * y]
 
 # TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("mnm.op.softmax_dx")
@@ -127,15 +125,6 @@ def compute_max_pool2d_dx(attr, inputs, output_type):
 
 _reg.register_schedule("mnm.op.max_pool2d_dx", strategy.schedule_pool_grad)
 
-@register_compute("mnm.op.log_softmax")
-def compute_log_softmax(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    x = inputs[0]
-    axis = attr.axis
-    softmax_out = _topi.nn.softmax(x, axis=axis)
-    log_softmax_out = _topi.log(softmax_out)
-    return [log_softmax_out]
-
 _reg.register_injective_schedule("mnm.op.log_softmax")
 
 @register_compute("mnm.op.log_softmax_dx")
@@ -143,10 +132,9 @@ def compute_log_softmax_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument, unused-variable, invalid-name
     x, y, dy = inputs[0], inputs[1], inputs[2]
     axis = attr.axis
-    softmax_out = _topi.nn.softmax(x, axis=axis)
-    log_softmax_out = _topi.log(softmax_out)
-    grads = _tvm.te.gradient(log_softmax_out, [x], head=dy)
-    return grads
+    sm = _topi.nn.softmax(x, axis=axis)
+    grad = dy / sm
+    return [(grad - _topi.sum(grad * sm, axis, True)) * sm]
 
 # TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("mnm.op.log_softmax_dx")
@@ -156,10 +144,11 @@ def compute_relu_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=invalid-name
     # pylint: disable=unused-variable
-    X, dy, y = inputs[0], inputs[1], inputs[2]
-    R = _topi.nn.relu(X)
-    grads = _tvm.te.gradient(R, [X], head=dy)
-    return grads
+    X, y, dy = inputs[0], inputs[1], inputs[2]
+    assert _topi.utils.get_const_tuple(X.shape) == _topi.utils.get_const_tuple(dy.shape)
+    G = _tvm.te.compute(dy.shape, lambda *idx: _tvm.tir.if_then_else(
+        X[idx] < 0, _tvm.tir.const(0, dy.dtype), dy[idx]))
+    return [G]
 
 _reg.register_injective_schedule("mnm.op.relu_dx")
 

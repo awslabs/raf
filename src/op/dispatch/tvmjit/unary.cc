@@ -41,8 +41,8 @@ Attrs UnaryDxNormalizer(TVMOpEnv* env, const UnaryDxArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
   env->inputs = {
       GetDLTensor(args->x),
-      GetDLTensor(args->dy),
       GetDLTensor(args->y),
+      GetDLTensor(args->dy),
   };
   return Attrs();
 }

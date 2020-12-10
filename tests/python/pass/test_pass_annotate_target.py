@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import numpy as np
 import mnm
@@ -85,7 +86,7 @@ def test_multiple_ends():
     # annotate the ir with annotate_target pass
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model.get_relay_func(x)
+    func = model._internal(x).func
     func = AnnotateTarget(func, ["test"])
     expected_func = expected()
     print(expected_func)
@@ -169,7 +170,7 @@ def test_tuple():
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     y = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model.get_relay_func(x, y)
+    func = model._internal(x, y).func
     func = AnnotateTarget(func, [target])
     expected_func = expected()
     # check the structure of the expected ir and generated ir

@@ -1,5 +1,9 @@
 #pylint: disable=invalid-name,protected-access
 """Utilities for testing and benchmarks"""
+import logging
+import functools
+import random
+import sys
 import numpy as np
 import torch
 import mnm
@@ -9,6 +13,7 @@ from .._core.module import Module
 from .._core.executor import VMExecutor, VMCompiler
 from .._ffi import ir
 from .._ffi import pass_
+
 
 def run_infer_type(func):
     """Helper function to infer the type of the given function"""
@@ -102,3 +107,76 @@ def lower_vm_model(model, target_name, args):
     compiler = VMCompiler()
     mod, _ = compiler.optimize(mod, target_name)
     return mod[gvar]
+
+
+def default_logger():
+    """A logger used to output seed information to logs."""
+    logger = logging.getLogger(__name__)
+    # getLogger() lookups will return the same logger, but only add the handler once.
+    if len(logger.handlers) == 0:
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+        logger.addHandler(handler)
+        if logger.getEffectiveLevel() == logging.NOTSET:
+            logger.setLevel(logging.INFO)
+    return logger
+
+
+def with_seed(seed=None):
+    """
+    A decorator for test functions that manages rng seeds.
+
+    Parameters
+    ----------
+
+    seed : the seed to pass to np.random and random
+
+
+    This tests decorator sets the np and python random seeds identically
+    prior to each test, then outputs those seeds if the test fails or
+    if the test requires a fixed seed (as a reminder to make the test
+    more robust against random data).
+
+    @with_seed()
+    def test_ok_with_random_data():
+        ...
+
+    @with_seed(1234)
+    def test_not_ok_with_random_data():
+        ...
+
+    Use of the @with_seed() decorator for all tests creates
+    tests isolation and reproducability of failures.  When a
+    test fails, the decorator outputs the seed used.
+    """
+    def test_helper(orig_test):
+        @functools.wraps(orig_test)
+        def test_new(*args, **kwargs):
+            if seed is not None:
+                this_test_seed = seed
+                log_level = logging.INFO
+            else:
+                this_test_seed = np.random.randint(0, np.iinfo(np.int32).max)
+                log_level = logging.DEBUG
+            post_test_state = np.random.get_state()
+            np.random.seed(this_test_seed)
+            random.seed(this_test_seed)
+            logger = default_logger()
+            # 'pytest --logging-level=DEBUG' shows this msg even with an ensuing core dump.
+            pre_test_msg = ('Setting test np/python random seeds, use seed={}'
+                            ' to reproduce.').format(this_test_seed)
+            on_err_test_msg = ('Error seen with seeded test, use seed={}'
+                               ' to reproduce.').format(this_test_seed)
+            logger.log(log_level, pre_test_msg)
+            try:
+                orig_test(*args, **kwargs)
+            except:
+                # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
+                if log_level < logging.WARNING:
+                    logger.warning(on_err_test_msg)
+                raise
+            finally:
+                # Provide test-isolation for any test having this decorator
+                np.random.set_state(post_test_state)
+        return test_new
+    return test_helper
