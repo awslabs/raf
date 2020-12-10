@@ -41,7 +41,7 @@ def test_memory_alloc(ctx, shape):
     model_before = Model()
     model_before.infer_mode()
     m_x, _ = randn(shape, ctx=ctx)
-    func = model_before.get_relay_func(m_x)
+    func = model_before._internal(m_x).func
     mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})
     mod = mnm._ffi.pass_.InferType(mod)
     target_name = ctx if ctx != 'cpu' else 'llvm'

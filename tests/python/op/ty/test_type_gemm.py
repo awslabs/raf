@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import mnm
 from mnm._ffi.pass_ import AutoDiff
@@ -30,7 +31,7 @@ def test_dense(shape, dtype):
     m_a.requires_grad = True
     m_b.requires_grad = True
     # check forward
-    m_func = model.get_relay_func(m_a, m_b)
+    m_func = model._internal(m_a, m_b).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_func, desired_type)
@@ -71,7 +72,7 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
     a_ty = TensorType((n, k) if not transpose_a else (k, n), dtype=dtype)
     b_ty = TensorType((k, m) if not transpose_b else (m, k), dtype=dtype)
     # check forward
-    m_func = model.get_relay_func(m_a, m_b)
+    m_func = model._internal(m_a, m_b).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_func, desired_type)
@@ -108,7 +109,7 @@ def test_batch_matmul(shape, dtype):
     a_ty = TensorType((b, m, k), dtype=dtype)
     b_ty = TensorType((b, n, k), dtype=dtype)
     # check forward
-    m_func = model.get_relay_func(m_a, m_b)
+    m_func = model._internal(m_a, m_b).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_func, desired_type)

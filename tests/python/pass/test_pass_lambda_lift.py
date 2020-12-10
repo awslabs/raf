@@ -42,7 +42,7 @@ def test_basic(ctx, shape):
     m_x, _ = randn(shape, ctx=ctx)
     m_y, _ = randn(shape, ctx=ctx)
     _ = model(m_x, m_y)
-    func = model.get_relay_func()
+    func = model._internal().func
 
     # Run AutoDiff to get nested functions
     # The backward function will be lifted

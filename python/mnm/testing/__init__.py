@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name
+#pylint: disable=invalid-name,protected-access
 """Utilities for testing and benchmarks"""
 import numpy as np
 import torch
@@ -77,7 +77,7 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.
 def run_vm_model(model, ctx, args):
     """Helper function to execute model with VM"""
     mod = Module()
-    func = model.get_relay_func(*args)
+    func = model._internal(*args).func
     mod[tvm.ir.GlobalVar('main')] = func
     executor = VMExecutor(mod, ctx)
     out = executor.make_executor()(*args)
@@ -87,7 +87,7 @@ def run_vm_model(model, ctx, args):
 def compile_vm_model(model, ctx, args):
     """Helper function to compile model into VM bytecode"""
     mod = Module()
-    func = model.get_relay_func(*args)
+    func = model._internal(*args).func
     mod[tvm.ir.GlobalVar('main')] = func
     executor = VMExecutor(mod, ctx)
     return executor.executable.bytecode
@@ -96,7 +96,7 @@ def compile_vm_model(model, ctx, args):
 def lower_vm_model(model, target_name, args):
     """Helper function to lower model into optimized relay"""
     mod = Module()
-    func = model.get_relay_func(*args)
+    func = model._internal(*args).func
     gvar = tvm.ir.GlobalVar('main')
     mod[gvar] = func
     compiler = VMCompiler()

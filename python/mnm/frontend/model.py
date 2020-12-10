@@ -1,7 +1,7 @@
 """Model that wraps the IR converted from deep learning frameworks."""
 from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
-from mnm.model.trace import _unwrap
+from mnm.model.trace import _unwrap, _TraceRecord
 
 
 class FrameworkModel(BaseModel):
@@ -59,9 +59,18 @@ class FrameworkModel(BaseModel):
         for param in self.__arg_params.values():
             param.requires_grad = False
 
-    def get_relay_func(self, *args, **kwargs):
+    def _internal(self, *args, **kwargs):
+        """
+        Get internal IR information.
+
+        Returns
+        -------
+        record: _TraceRecord
+            The internal record.
+            Frontend Model only provides relay function via record.func for now.
+        """
         ret = self.__train_func if self._BaseModel__is_train else self.__infer_func
-        return ret
+        return _TraceRecord(func=ret, named_params=None, o_struct=None, mutations=None)
 
     def state(self, prefix="", recursive=True):
         return self.__arg_params

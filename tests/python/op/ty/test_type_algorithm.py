@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import mnm
 from mnm.testing import check_type, run_infer_type, randn
@@ -29,7 +30,7 @@ def test_argsort(shape, axis, is_ascend, dtype):
     model = Argsort(axis, is_ascend, dtype)
     # forward
     m_x, _ = randn(shape)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=m_x.dtype)
     y_ty = TensorType(shape, dtype=dtype)

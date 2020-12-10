@@ -188,7 +188,7 @@ def test_dp(config):
     m_x = randn([1, 3, config[1], config[1]], ctx=ctx, requires_grad=True)
     m_y = one_hot(batch_size=1, num_classes=config[2], ctx=ctx)
 
-    func_before = m_model.get_relay_func(m_x, m_y)
+    func_before = m_model._internal(m_x, m_y).func
     func_before = mnm._ffi.pass_.AutoDiff(func_before)
     print("Before auto parallel: ", func_before)
     func_after = mnm._ffi.pass_.AutoDataParallel(func_before)

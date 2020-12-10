@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import numpy as np
 import mnm
@@ -114,7 +115,7 @@ def test_bn():
     dtype = 'float32'
     data = mnm.array(np.ones(shape), dtype=dtype)
     model = Test(num_features=3)
-    func = model.get_relay_func(data)
+    func = model._internal(data).func
     variables, _, _ = explicit_let_list(func.body)
     running_mean = func.params[2]
     running_var = func.params[3]
@@ -183,7 +184,7 @@ def test_grad():
     # check backward
     check(new_x_1, new_x_2)
     # check ir
-    func = sgd.get_relay_func(dy)
+    func = sgd._internal(dy).func
     variables, _, _ = explicit_let_list(func.body)
     modelx = func.params[1]
     may_share = {

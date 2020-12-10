@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pprint
 import pytest
 import numpy as np
@@ -41,7 +42,7 @@ def optimize(func):
 
 
 def lower(model, *data):
-    func = model.get_relay_func(*data)
+    func = model._internal(*data).func
     return optimize(func)
 
 

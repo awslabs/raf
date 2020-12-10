@@ -1,5 +1,4 @@
 # pylint: disable=missing-module-docstring,missing-function-docstring
-import inspect
 import functools
 import sys
 from collections import OrderedDict, namedtuple
@@ -57,26 +56,7 @@ def trace(pyfunc):
     return new_pyfunc
 
 
-def _get_traced_func(model, traced_func, *args, **kwargs):
-    # TODO(hgt312): varargs and kwargs
-    pyfunc = traced_func.__wrapped__
-    func_name = get_func_name(pyfunc)
-    record = cacher.get_cache(model, "trace@" + func_name, None)
-    if record is not None:
-        return record.func
-    if args or kwargs:
-        args = [model] + list(args)
-    else:
-        sig = inspect.signature(pyfunc)
-        args = [model] + list(sig.parameters.keys())[1:]
-    record = _do_tracing(pyfunc, args, {})
-    cacher.set_cache(model, "trace@" + func_name, record)
-    return record.func
-
-
 # The logic of running a tracing record
-
-
 def _run_trace_record(record, args, kwargs):
     if kwargs:
         # TODO(@junrushao1994): implement it
@@ -108,9 +88,6 @@ def _unwrap(result):
     raise NotImplementedError(type(result))
 
 
-# The logic of tracing
-
-
 def _get_trace_record(pyfunc, args, kwargs):
     model = args[0]
     func_name = get_func_name(pyfunc)
@@ -122,6 +99,7 @@ def _get_trace_record(pyfunc, args, kwargs):
     return record
 
 
+# The logic of tracing
 def _do_tracing(pyfunc, args, kwargs):
     # Step 1. switch input arguments to symbols
     named_inputs, args, kwargs = _symbolize_inputs(pyfunc, args, kwargs)

@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import numpy as np
 import pytest
 import mnm
@@ -51,7 +52,7 @@ def test_model_params():
 
     model = Model()
     m_a, _ = randn((1, 2, 2))
-    func = model.get_relay_func(m_a)
+    func = model._internal(m_a).func
     func = run_infer_type(func)
     t_1 = relay.TensorType((1, 2, 2))
     t_2 = relay.TensorType((2, 1, 2))
@@ -81,7 +82,7 @@ def test_any():
         c_ty = relay.TensorType(shape_c)
         a = Symbol.make_var('a', a_ty)
         b = Symbol.make_var('b', b_ty)
-        func = model.get_relay_func(a, b)
+        func = model._internal(a, b).func
         func = run_infer_type(func)
         expected_ty = relay.FuncType([a_ty, b_ty], c_ty)
         # alpha_equal does not work for Any
@@ -115,7 +116,7 @@ def test_incomplete_call():
     model = Model()
     a = Symbol.make_var('a', a_ty)
     b = Symbol.make_var('b')
-    func = model.get_relay_func(a, b)
+    func = model._internal(a, b).func
     func = run_infer_type(func)
     expected_ty = relay.FuncType([a_ty, inc_ty()], inc_ty())
     # alpha_equal does not work for IncompleteType
@@ -139,7 +140,7 @@ def test_gradient_closure():
         x_ty = relay.TensorType(shape_x)
         y_ty = relay.TensorType(shape_y)
         x = Symbol.make_var('a', x_ty)
-        func = model.get_relay_func(x)
+        func = model._internal(x).func
         func = run_infer_type(func)
         func = AutoDiff(func)
         func = run_infer_type(func)

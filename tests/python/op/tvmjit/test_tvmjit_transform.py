@@ -3,8 +3,8 @@ import operator
 
 import numpy as np
 import pytest
-import mxnet as mx
 import torch
+import mxnet as mx
 import mnm
 import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 

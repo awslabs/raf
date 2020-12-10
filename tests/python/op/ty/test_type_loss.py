@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import numpy as np
 import torch
@@ -38,7 +39,7 @@ def test_sgd(shape, dtype, learning_rate, mu):
     m_x, _ = randn(shape, dtype=dtype)
     m_dx, _ = randn(shape, dtype=dtype)
     m_v, _ = randn(shape, dtype=dtype)
-    m_func = model.get_relay_func(m_x, m_dx, m_v)
+    m_func = model._internal(m_x, m_dx, m_v).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=dtype)
     expected_type = FuncType([x_ty, x_ty, x_ty], TupleType([x_ty, x_ty]))
@@ -66,7 +67,7 @@ def test_nll_loss(shape, dtype):
     ty_pred = TensorType((n, c), dtype=dtype)
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
-    m_func = model.get_relay_func(m_pred, m_true)
+    m_func = model._internal(m_pred, m_true).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
     check_type(m_func, desired_type)
@@ -103,7 +104,7 @@ def test_other_losses(loss_type, shape, dtype):
     ty_pred = TensorType(shape, dtype=dtype)
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
-    m_func = model.get_relay_func(m_pred, m_true)
+    m_func = model._internal(m_pred, m_true).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
     check_type(m_func, desired_type)

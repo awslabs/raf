@@ -89,7 +89,7 @@ def test_fold_const_ir(ctx, shape):
     model_before.infer_mode()
     m_x, _ = randn(shape, ctx=ctx)
 
-    func_before = model_before.get_relay_func(m_x)
+    func_before = model_before._internal(m_x).func
     print(func_before)
 
     # bind parameters

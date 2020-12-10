@@ -44,7 +44,7 @@ def test_vm(ctx, shape):
     model.infer_mode()
     m_x, _ = randn(shape, ctx=ctx)
     mod = Module()
-    func = model.get_relay_func(m_x)
+    func = model._internal(m_x).func
     mod[tvm.ir.GlobalVar('main')] = func
     executor = VMExecutor(mod, ctx)
     m_z = executor.make_executor()(m_x).asnumpy()
@@ -78,7 +78,7 @@ def test_tuple(ctx, shape):
     model.infer_mode()
     m_x, _ = randn(shape, ctx=ctx)
     mod = Module()
-    func = model.get_relay_func(m_x)
+    func = model._internal(m_x).func
     mod[tvm.ir.GlobalVar('main')] = func
     executor = VMExecutor(mod, ctx)
     m_y, m_z = executor.make_executor()(m_x)

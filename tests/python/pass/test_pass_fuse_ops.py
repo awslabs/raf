@@ -68,7 +68,7 @@ def test_fuse_simple():
 
     model = Model()
     m_x, _ = randn((10, 20), ctx="cpu")
-    func_before = model.get_relay_func(m_x)
+    func_before = model._internal(m_x).func
     func_before = run_infer_type(func_before)
     func_after = mnm._ffi.pass_.FuseOps(func_before, 3)
     func_after = run_infer_type(func_after)
@@ -158,7 +158,7 @@ def test_conv2d():
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), ctx="cpu")
-    func_before = model.get_relay_func(m_x)
+    func_before = model._internal(m_x).func
     func_before = run_infer_type(func_before)
     func_after = mnm._ffi.pass_.FuseOps(func_before, 3)
     func_after = run_infer_type(func_after)
@@ -214,7 +214,7 @@ def test_concatenate():
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), ctx="cpu")
-    before = model.get_relay_func(m_x)
+    before = model._internal(m_x).func
     before = run_infer_type(before)
     after = mnm._ffi.pass_.FuseOps(before, 3)
     after = run_infer_type(after)
@@ -261,7 +261,7 @@ def test_tuple_root():
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), ctx="cpu")
-    before = model.get_relay_func(m_x)
+    before = model._internal(m_x).func
     before = run_infer_type(before)
     after = mnm._ffi.pass_.FuseOps(before, 3)
     after = run_infer_type(after)

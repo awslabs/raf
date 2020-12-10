@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import mnm
 from mnm.testing import check_type, run_infer_type, randn
@@ -30,7 +31,7 @@ def test_get_valid_counts(inputs, dtype):
     score_threshold, id_index, score_index = inputs[1], inputs[2], inputs[3]
     model = GetValidCounts(score_threshold, id_index, score_index)
     # forward
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(inputs[0], dtype=dtype)
     valid_count_ty = TensorType((batch_size,), dtype="int32")
@@ -82,7 +83,7 @@ def test_non_max_suppression(return_indices, dtype):
     valid_count_ty = TensorType(np_valid_count.shape, dtype="int32")
     indices_ty = TensorType(np_indices.shape, dtype="int32")
     max_output_size_ty = TensorType(np_max_output_size.shape, dtype="int32")
-    m_func = model.get_relay_func(m_data, m_valid_count, m_indices, m_max_output_size)
+    m_func = model._internal(m_data, m_valid_count, m_indices, m_max_output_size).func
     m_func = run_infer_type(m_func)
 
     if return_indices:

@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import mnm
 from mnm._ffi.pass_ import AutoDiff
@@ -50,7 +51,7 @@ def test_unary(op, shape, dtype):
 
     # forward
     m_x, _ = randn(shape, dtype=dtype)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
 
     desired_type = FuncType([fwd_ty], fwd_ty)

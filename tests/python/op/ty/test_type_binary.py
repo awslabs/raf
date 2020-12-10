@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import mnm
 from mnm._op import sym
@@ -38,7 +39,7 @@ def test_binary(op, shape, dtype):
     # check forward
     m_a, _ = randn(s_a, dtype=dtype)
     m_b, _ = randn(s_b, dtype=dtype)
-    m_func = model.get_relay_func(m_a, m_b)
+    m_func = model._internal(m_a, m_b).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([t_a, t_b], t_c)
     check_type(m_func, desired_type)
@@ -83,7 +84,7 @@ def test_logiacal(op, shape, dtype):
     # check forward
     m_a, _ = randn(s_a, dtype=dtype)
     m_b, _ = randn(s_b, dtype=dtype)
-    m_func = model.get_relay_func(m_a, m_b)
+    m_func = model._internal(m_a, m_b).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([t_a, t_b], t_c)
     check_type(m_func, desired_type)

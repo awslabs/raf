@@ -1,12 +1,13 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Interactive interface for training & inference."""
+import inspect
 from collections import OrderedDict
 
 from mnm._core import cacher
 from mnm._core.core_utils import bfs, get_attr, get_named_attr, set_module
 from mnm._core.ndarray import ndarray
 
-from mnm.model.trace import _get_traced_func
+from mnm.model.trace import _get_trace_record
 
 
 @set_module("mnm")
@@ -24,7 +25,7 @@ class BaseModel:
     def infer_mode(self, recursive=True):
         _set_is_train(self, value=False, recursive=recursive)
 
-    def get_relay_func(self, *args, **kwargs):
+    def _internal(self, *args, **kwargs):
         raise NotImplementedError
 
     def state(self, prefix="", recursive=True):
@@ -57,9 +58,37 @@ class Model(BaseModel, cacher.Cacher):
         super(Model, self).infer_mode(recursive=recursive)
         cacher.invalidate(self, include_self=False, recursive=True)
 
-    def get_relay_func(self, *args, **kwargs):
+    def _internal(self, *args, **kwargs):
+        """
+        Get internal IR information.
+        TODO(yzhliu): we may consider APIs like following in the future.
+        model.set_input(...)
+        internal = model._internal()
+
+        Parameters
+        ----------
+        args : mnm.ndarray
+            The input data of the model.
+        kwargs : named inputs
+            Currently not supported.
+
+        Returns
+        -------
+        record: _TraceRecord
+            The traced record.
+            Get relay function by record.func, parameters by record.named_params.
+        """
         fwd_func = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
-        return _get_traced_func(self, fwd_func, *args, **kwargs)
+        pyfunc = fwd_func.__wrapped__
+        # TODO(hgt312): varargs and kwargs
+        if args or kwargs:
+            args = [self] + list(args)
+        else:
+            sig = inspect.signature(pyfunc)
+            args = [self] + list(sig.parameters.keys())[1:]
+
+        record = _get_trace_record(pyfunc, args, kwargs)
+        return record
 
 
 # pylint: disable=protected-access

@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import numpy as np
 import pytest
 import torch
@@ -32,7 +33,7 @@ def test_take(shape, axis, dtype):
     m_indices, n_indices = randint(shape[1], low=0, high=size)
     model = Take(axis)
     # forward
-    m_func = model.get_relay_func(m_x, m_indices)
+    m_func = model._internal(m_x, m_indices).func
     m_func = run_infer_type(m_func)
     n_y = np.take(n_x, n_indices, axis=axis, mode="clip")
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -75,7 +76,7 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     # forward
     m_x, n_x = randn(x_shape, dtype=dtype)
     m_length, n_length = randint([batch_size], low=0, high=max_length, dtype=dtype)
-    m_func = model.get_relay_func(m_x, m_length)
+    m_func = model._internal(m_x, m_length).func
     m_func = run_infer_type(m_func)
     n_y = npx.sequence_mask(n_x, n_length, axis=axis, mask_value=-10)
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -101,7 +102,7 @@ def test_reverse(shape, axis, dtype):
     m_x, n_x = randn(shape, dtype=dtype)
     model = Reverse(axis=axis)
     # forward
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     n_y = np.flip(n_x, axis=axis)
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -142,7 +143,7 @@ def test_reverse_sequence(inputs, axes, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     model = ReverseSequence(seq_axis, batch_axis)
     # forward
-    m_func = model.get_relay_func(m_x, m_seq_length)
+    m_func = model._internal(m_x, m_seq_length).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=dtype)
     seq_length_ty = TensorType(m_seq_length.shape, dtype="int64")
@@ -176,7 +177,7 @@ def test_broadcast_to(shape, dtype):
 
     model = BroadcastTo(shape[1])
     m_x, _ = randn(shape[0], dtype=dtype)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape[0], dtype=dtype)
     y_ty = TensorType(shape[1], dtype=dtype)
@@ -203,7 +204,7 @@ def test_broadcast_to_like(shape, dtype):
     model = BroadcastToLike()
     m_x, _ = randn(shape[0], dtype=dtype)
     broadcast_type, _ = randn(shape[1], dtype=dtype)
-    m_func = model.get_relay_func(m_x, broadcast_type)
+    m_func = model._internal(m_x, broadcast_type).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape[0], dtype=dtype)
     broadcast_ty = TensorType(shape[1], dtype=dtype)
@@ -235,7 +236,7 @@ def test_repeat(shape, repeats, axis, dtype):
     model = Repeat(repeats, axis)
     # forward
     m_x, n_x = randn(shape, dtype=dtype)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     n_y = np.repeat(n_x, repeats, axis)
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -296,7 +297,7 @@ def test_stack(params, dtype):
         i_ty.append(x_ty)
     model = stack[len(m_i)](axis=axis) # pylint: disable=not-callable
     # forward
-    m_func = model.get_relay_func(*m_i)
+    m_func = model._internal(*m_i).func
     m_func = run_infer_type(m_func)
     n_y = np.stack(n_i, axis=axis)
     y_ty = TensorType(n_y.shape, dtype=dtype)
@@ -324,7 +325,7 @@ def test_split(shape, axis, indices_or_sections, dtype):
     n_y = np.split(n_x, indices_or_sections=indices_or_sections, axis=axis)
     # forward
     model = Split(indices_or_sections, axis)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = []
@@ -360,7 +361,7 @@ def test_transpose(shape, dtype):
     axes = shape[1]
     model = Transpose(axes)
     m_x, n_x = randn(shape[0], dtype=dtype)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     n_y = np.transpose(n_x, shape[1])
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -403,7 +404,7 @@ def test_cast(shape, itype, otype):
     m_x, n_x = randn(shape, dtype=itype)
     model = Cast(otype)
     # forward
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     n_y = n_x.astype(otype)
     x_ty = TensorType(n_x.shape, dtype=itype)
@@ -436,7 +437,7 @@ def test_cast_like(shape, itype, otype):
     m_x, _ = randn(shape, dtype=itype)
     m_dtype_like, _ = randn(shape, dtype=otype)
     model = CastLike()
-    m_func = model.get_relay_func(m_x, m_dtype_like)
+    m_func = model._internal(m_x, m_dtype_like).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=itype)
     dtype_like_ty = TensorType(shape, dtype=otype)
@@ -497,7 +498,7 @@ def test_concatenate(params, dtype):
         t_i.append(t_x)
         i_ty.append(x_ty)
     model = concat[len(m_i)](axis=axis) # pylint: disable=not-callable
-    m_func = model.get_relay_func(*m_i)
+    m_func = model._internal(*m_i).func
     m_func = run_infer_type(m_func)
     t_y = torch.cat(t_i, dim=axis) # pylint: disable=no-member
     y_ty = TensorType(t_y.shape, dtype=dtype)
@@ -530,7 +531,7 @@ def test_clip(shape, a_min, a_max, dtype):
     m_x, n_x = randn(shape, dtype=dtype)
     model = Clip()
     # forward
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     n_y = np.clip(n_x, a_min, a_max)
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -575,7 +576,7 @@ def test_reshape(params, reverse, dtype):
     model = Reshape(shape=to_shape, reverse=reverse)
     # forward
     m_x, _ = randn(orig_shape, dtype=dtype)
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     x_ty = TensorType(orig_shape, dtype=dtype)
     if reverse:
@@ -614,7 +615,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     m_x, n_x = randn(shape, dtype=dtype)
     model = ExpandDims(axis, num_newaxis)
     # forward
-    m_func = model.get_relay_func(m_x)
+    m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     n_y = n_x
     if num_newaxis == 0:
@@ -656,7 +657,7 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     ty_indices = TensorType(m_i.shape, dtype=i_dtype)
     fwd_ty = TensorType((m_x.ndim + m_i.ndim - ishape[0], -1), dtype=dtype)
     # check forward
-    m_func = model.get_relay_func(m_x, m_i)
+    m_func = model._internal(m_x, m_i).func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([ty_data, ty_indices], fwd_ty)
     check_type(m_func, desired_type)
