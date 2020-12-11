@@ -96,7 +96,7 @@ def test_multiple_ends():
 
 def test_tuple():
     # pylint: disable=invalid-name, no-self-use, too-many-locals, unused-variable
-    target = "test_tuple"
+    target = "test_tuple_annotation"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
     def relu(attrs, args): # pylint: disable=unused-argument
@@ -153,7 +153,10 @@ def test_tuple():
         relu_call_y = _relay.Call(begin, [y], tvm.ir.make_node("mnm.args.compiler"))
         relu_call_y = _relay.Call(relu, [relu_call_y])
         relu_call_y = _relay.Call(end, [relu_call_y], tvm.ir.make_node("mnm.args.compiler"))
-        relu_tuple = _relay.Tuple([a1, a2])
+        relu_tuple1 = _relay.Call(begin, [a1], tvm.ir.make_node("mnm.args.compiler"))
+        relu_tuple2 = _relay.Call(begin, [a2], tvm.ir.make_node("mnm.args.compiler"))
+        relu_tuple = _relay.Tuple([relu_tuple1, relu_tuple2])
+        relu_tuple = _relay.Call(end, [relu_tuple], tvm.ir.make_node("mnm.args.compiler"))
         concat_call1 = _relay.Call(begin, [a3], tvm.ir.make_node("mnm.args.compiler"))
         concat_call2 = _relay.Call(begin, [const], tvm.ir.make_node("mnm.args.compiler"))
         concat_call = _relay.Call(concatenate, [concat_call1, concat_call2])

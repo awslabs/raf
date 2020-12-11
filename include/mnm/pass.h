@@ -51,5 +51,20 @@ ir::Module InplaceUpdate(ir::Module mod);
  */
 ir::Expr AnnotateTarget(ir::Expr expr, ir::Array<ir::String> target);
 
+/*!
+ * \brief After operators have been annotated with the targets that support
+ * them, this pass creates regions of the operators for each target. It
+ * is guaranteed that the regions will have a topological rodering so that
+ * no data dependency issue exist.
+ *
+ * This pass only introduces annotations to indicate the regions.
+ * partition_graph must subsequently be called to lift these regions out
+ * as external functions.
+ * \param expr Expression to be merged.
+ * \param merge_mode The merge policy.
+ * \return Transformed Expression.
+ */
+ir::Expr MergeCompilerRegions(ir::Expr expr, ir::String merge_mode);
+
 }  // namespace pass
 }  // namespace mnm

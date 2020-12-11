@@ -28,6 +28,8 @@ LambdaLift = _APIS.get("mnm.pass_.LambdaLift", None)
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
 # Defined in ./src/pass/memory_share.cc
 MemShare = _APIS.get("mnm.pass_.MemShare", None)
+# Defined in ./src/pass/merge_compiler_regions.cc
+MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 # Defined in ./src/pass/rename_vars.cc
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/fold_const.cc
