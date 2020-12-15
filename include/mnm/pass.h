@@ -27,6 +27,7 @@ ir::Module LambdaLift(ir::Module mod);
 ir::Module ManifestAlloc(ir::Module mod);
 ir::Expr CanonicalizeOps(ir::Expr expr);
 ir::Module InferType(ir::Module mod);
+ir::Expr InferType(ir::Expr expr);
 /*!
  * \brief Fuse the operators in the expression.
  * \param expr Expression to be fused.
@@ -66,5 +67,11 @@ ir::Expr AnnotateTarget(ir::Expr expr, ir::Array<ir::String> target);
  */
 ir::Expr MergeCompilerRegions(ir::Expr expr, ir::String merge_mode);
 
+/*!
+ * \brief Cast input(s) of some operators in the expression.
+ * \param expr Expression to be casted.
+ * \return Transformed Expression.
+ */
+ir::Expr AutoCast(ir::Expr func);
 }  // namespace pass
 }  // namespace mnm

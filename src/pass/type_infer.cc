@@ -11,6 +11,7 @@
 #include <tvm/relay/analysis.h>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "mnm/binding.h"
 #include "mnm/type.h"
 #include "../op/ty/utils.h"
@@ -445,7 +446,13 @@ ir::Module InferType(ir::Module mod) {
   return updated_mod;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed(InferType);
+ir::Expr InferType(ir::Expr func) {
+  return type_infer::TypeInferencer(ir::Module()).VisitExpr(func);
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([](ir::Module mod) {
+  return InferType(mod);
+});
 
 }  // namespace pass
 }  // namespace mnm

@@ -113,5 +113,19 @@ def test_build():
     model(m_x)
 
 
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+def test_build_fp16():
+    x = np.random.randn(1, 3, 32, 32)
+    m_x = mnm.array(x, dtype="float32", ctx="cuda")
+    model = ResNet50([3, 4, 6, 3])
+    model.to(ctx='cuda')
+    model.infer_mode()
+    m_y1 = model(m_x)
+    print("### Switch to AMP model")
+    amp_model = mnm.amp.autocast(model)
+    m_y2 = amp_model(m_x)
+    np.testing.assert_allclose(m_y1.asnumpy(), m_y2.asnumpy(), rtol=0.1, atol=0.1)
+
+
 if __name__ == "__main__":
-    test_build()
+    pytest.main([__file__])
