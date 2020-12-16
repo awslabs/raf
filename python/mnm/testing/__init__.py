@@ -45,6 +45,13 @@ def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
 
 
+def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
+    """Helper function to check if m_x and t_x are equal"""
+    m_x = m_x.asnumpy()
+    t_x = t_x.detach().cpu().numpy()
+    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+
+
 def randn(shape, *, ctx="cpu", dtype="float32"):
     """Helper function to generate a pair of mnm and numpy arrays"""
     x = np.random.randn(*shape)
@@ -67,9 +74,12 @@ def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.0):
+def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True,
+                mean=0.0, std=1.0, pos=False):
     """Helper function to generate a pair of mnm and torch arrays"""
-    x = np.random.randn(*shape) * std
+    x = np.random.randn(*shape) * std + mean
+    if pos:
+        x = np.abs(x)
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)

@@ -1,5 +1,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-module-docstring
+from functools import reduce
+import operator
 from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
@@ -430,3 +432,88 @@ def compute_conv2d_dw(attr, inputs, output_type):
     return [backward_weight]
 
 _reg.register_schedule("mnm.op.conv2d_dw", schedule_layer_norm)
+
+def average(data, axis):
+    shape = _topi.utils.get_const_tuple(data.shape)
+    shape = [shape[i] for i in axis]
+    size = reduce(operator.mul, shape, 1)
+    tot = _topi.sum(data, axis=axis)
+    return _topi.divide(tot, size)
+
+
+@register_compute("mnm.op.batch_norm_train")
+def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
+    x, running_m0, running_v0, w, b = inputs
+    momentum, eps = attrs.momentum, attrs.eps
+    shape = _topi.utils.get_const_tuple(x.shape)
+    ndim = len(shape)
+    axis = 1
+    num_newaxis = ndim - axis - 1
+    reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
+    reduce_shape = [shape[i] for i in reduce_axes]
+    reduce_size = reduce(operator.mul, reduce_shape, 1)
+    def pad(data):
+        return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
+    mean = average(x, axis=reduce_axes)
+    running_m = running_m0 * (1 - momentum) + mean * momentum
+    var = _topi.subtract(x, pad(mean))
+    var = _topi.multiply(var, var)
+    var = average(var, axis=reduce_axes)
+    running_v = running_v0 * (1 - momentum) + var * reduce_size / (reduce_size - 1) * momentum
+    var_add_eps = _topi.add(var, eps)
+    sqrt_var = _topi.sqrt(var_add_eps)
+    scale = _topi.divide(w, sqrt_var)
+    neg_mean = _topi.negative(mean)
+    shift = _topi.multiply(neg_mean, scale)
+    shift = _topi.add(shift, b)
+    y = _topi.add(_topi.multiply(x, pad(scale)), pad(shift))
+    return [y, running_m, running_v]
+
+_reg.register_injective_schedule("mnm.op.batch_norm_train")
+
+@register_compute("mnm.op.batch_norm_infer")
+def batch_norm_infer_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
+    x, running_m, running_v, w, b = inputs
+    eps = attrs.eps
+    shape = _topi.utils.get_const_tuple(x.shape)
+    ndim = len(shape)
+    axis = 1
+    num_newaxis = ndim - axis - 1
+    def pad(data):
+        return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
+    var_add_eps = _topi.add(running_v, eps)
+    sqrt_var = _topi.sqrt(var_add_eps)
+    scale = _topi.divide(w, sqrt_var)
+    neg_mean = _topi.negative(running_m)
+    shift = _topi.multiply(neg_mean, scale)
+    shift = _topi.add(shift, b)
+    y = _topi.add(_topi.multiply(x, pad(scale)), pad(shift))
+    return [y]
+
+_reg.register_injective_schedule("mnm.op.batch_norm_infer")
+
+@register_compute("mnm.op.batch_norm_train_dxwb")
+def batch_norm_train_dxwb_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
+    dy, x, w, _ = inputs
+    eps = attrs.eps
+    shape = _topi.utils.get_const_tuple(x.shape)
+    ndim = len(shape)
+    axis = 1
+    num_newaxis = ndim - axis - 1
+    reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
+    reduce_shape = [shape[i] for i in reduce_axes]
+    reduce_size = reduce(operator.mul, reduce_shape, 1)
+    def pad(data):
+        return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
+    mean = average(x, reduce_axes)
+    var = x - pad(mean)
+    var = var * var
+    var = average(var, reduce_axes)
+    inv_sqrt_var = 1 / _topi.sqrt(var + eps)
+    db = _topi.sum(dy, axis=reduce_axes)
+    dw = _topi.sum(dy * (x - pad(mean)) * pad(inv_sqrt_var), axis=reduce_axes)
+    dx = ((dy - pad(db / reduce_size) - (x - pad(mean)) * pad(dw * inv_sqrt_var) / reduce_size)
+          * pad(w * inv_sqrt_var))
+    return [dx, dw, db]
+
+_reg.register_injective_schedule("mnm.op.batch_norm_train_dxwb")

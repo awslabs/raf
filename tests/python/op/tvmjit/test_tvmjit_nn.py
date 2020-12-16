@@ -3,13 +3,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 import mnm
-from mnm.testing import randn, get_ctx_list, randn_torch, with_seed
-
-
-def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+from mnm.testing import randn, get_ctx_list, randn_torch, with_seed, check_torch
 
 
 def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
@@ -309,6 +303,74 @@ def test_matmul(ctx, dtype, n, k, m, transpose_a, transpose_b):
     m_c.backward(m_dc)
     t_c.backward(t_dc)
     check_torch(m_a.grad, t_a.grad, rtol=1e-4, atol=1e-4)
+    check_torch(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
+@pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
+@pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+def test_mnm_batch_norm_infer(shape, momentum, eps, ctx):  # pylint: disable=too-many-locals
+    stats_shape = [shape[1]]
+    m_x, t_x = randn_torch(shape, ctx=ctx)
+    m_m, t_m = randn_torch(stats_shape, ctx=ctx)
+    m_v, t_v = randn_torch(stats_shape, ctx=ctx, pos=True)
+    m_w, t_w = randn_torch(stats_shape, ctx=ctx)
+    m_b, t_b = randn_torch(stats_shape, ctx=ctx)
+    t_m.requires_grad = False
+    t_v.requires_grad = False
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+            return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+
+    model = TestModel()
+    m_y = model(m_x, m_m, m_v, m_w, m_b)
+    t_y = F.batch_norm(t_x, t_m, t_v, t_w, t_b, False, momentum, eps)
+    check_torch(m_y, t_y, rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
+@pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
+@pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+def test_mnm_batch_norm_train(shape, momentum, eps, ctx):  # pylint: disable=too-many-locals
+    stats_shape = [shape[1]]
+    m_x, t_x = randn_torch(shape, ctx=ctx)
+    m_m, t_m = randn_torch(stats_shape, ctx=ctx)
+    m_v, t_v = randn_torch(stats_shape, ctx=ctx, pos=True)
+    m_w, t_w = randn_torch(stats_shape, ctx=ctx)
+    m_b, t_b = randn_torch(stats_shape, ctx=ctx)
+    t_m.requires_grad = False
+    t_v.requires_grad = False
+    m_x.requires_grad = True
+    m_w.requires_grad = True
+    m_b.requires_grad = True
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+            result = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            return result[0]
+
+    # forward
+    model = TestModel()
+    m_y = model(m_x, m_m, m_v, m_w, m_b)
+    t_y = F.batch_norm(t_x, t_m, t_v, t_w, t_b, True, momentum, eps)
+    check_torch(m_y, t_y, rtol=1e-4, atol=1e-4)
+    check_torch(m_m, t_m, rtol=1e-4, atol=1e-4)
+    check_torch(m_v, t_v, rtol=1e-4, atol=1e-4)
+    # backward
+    m_dy, t_dy = randn_torch(shape, ctx=ctx)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check_torch(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
+    check_torch(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
     check_torch(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 

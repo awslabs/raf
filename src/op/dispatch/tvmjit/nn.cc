@@ -18,16 +18,7 @@ namespace tvmjit {
 
 using namespace mnm::ir;
 using namespace tvm_attrs;
-using schema::BiasAddArgs;
-using schema::BinaryArgs;
-using schema::ConvArgs;
-using schema::ConvDxwArgs;
-using schema::LayerNormArgs;
-using schema::LayerNormDxArgs;
-using schema::PoolArgs;
-using schema::PoolDxArgs;
-using schema::SoftmaxArgs;
-using schema::SoftmaxDxArgs;
+using namespace schema;
 
 Attrs GEMMNormalizer(TVMOpEnv* env, const BinaryArgs* args) {
   CHECK_EQ(env->outputs.size(), 1U);
@@ -465,6 +456,91 @@ HashKey LayerNormDxHasher(const std::vector<Type>& param_types, const Type& y_ty
 
 MNM_TVMJIT(LayerNormDx, "mnm.op.layer_norm_dx", LayerNormDxArgs, LayerNormDxNormalizer,
            LayerNormDxTyper, LayerNormDxHasher);
+
+struct BatchNormAttrs : public tvm::AttrsNode<BatchNormAttrs> {
+  double momentum;
+  double eps;
+  TVM_DECLARE_ATTRS(BatchNormAttrs, "attrs.BatchNormAttrs") {
+    TVM_ATTR_FIELD(momentum);
+    TVM_ATTR_FIELD(eps);
+  }
+};
+TVM_REGISTER_NODE_TYPE(BatchNormAttrs);
+
+Attrs BatchNormTrainNormalizer(TVMOpEnv* env, const BatchNormArgs* args) {
+  CHECK_EQ(env->outputs.size(), 3U);
+  env->inputs = {GetDLTensor(args->x), GetDLTensor(args->running_mean),
+                 GetDLTensor(args->running_var), GetDLTensor(args->w), GetDLTensor(args->b)};
+  auto attrs = make_object<BatchNormAttrs>();
+  attrs->momentum = args->momentum;
+  attrs->eps = args->eps;
+  return Attrs(attrs);
+}
+
+Attrs BatchNormInferNormalizer(TVMOpEnv* env, const BatchNormArgs* args) {
+  CHECK_EQ(env->outputs.size(), 1U);
+  env->inputs = {GetDLTensor(args->x), GetDLTensor(args->running_mean),
+                 GetDLTensor(args->running_var), GetDLTensor(args->w), GetDLTensor(args->b)};
+  auto attrs = make_object<BatchNormAttrs>();
+  attrs->momentum = args->momentum;
+  attrs->eps = args->eps;
+  return Attrs(attrs);
+}
+
+void BatchNormTrainTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = TupleType({GetTensorType(env->outputs[0]), GetTensorType(env->outputs[1]),
+                       GetTensorType(env->outputs[2])});
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
+                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3]),
+                  GetTensorType(env->inputs[4])};
+}
+
+void BatchNormInferTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = TupleType({GetTensorType(env->outputs[0])});
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
+                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3]),
+                  GetTensorType(env->inputs[4])};
+}
+
+HashKey BatchNormHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                        const BatchNormArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  key << args->momentum;
+  key << args->eps;
+  return key;
+}
+
+MNM_TVMJIT(BatchNormTrain, "mnm.op.batch_norm_train", BatchNormArgs, BatchNormTrainNormalizer,
+           BatchNormTrainTyper, BatchNormHasher);
+MNM_TVMJIT(BatchNormInfer, "mnm.op.batch_norm_infer", BatchNormArgs, BatchNormInferNormalizer,
+           BatchNormInferTyper, BatchNormHasher);
+
+Attrs BatchNormTrainDxwbNormalizer(TVMOpEnv* env, const BatchNormTrainDxwbArgs* args) {
+  CHECK_EQ(env->outputs.size(), 3U);
+  env->inputs = {GetDLTensor(args->dy), GetDLTensor(args->x), GetDLTensor(args->w),
+                 GetDLTensor(args->b)};
+  auto attrs = make_object<BatchNormAttrs>();
+  attrs->momentum = 0;  // momentum is not used in the gradient
+  attrs->eps = args->eps;
+  return Attrs(attrs);
+}
+
+void BatchNormTrainDxwbTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
+  *y_type = TupleType({GetTensorType(env->outputs[0]), GetTensorType(env->outputs[1]),
+                       GetTensorType(env->outputs[2])});
+  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
+                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3])};
+}
+
+HashKey BatchNormTrainDxwbHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                                 const BatchNormTrainDxwbArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  key << args->eps;
+  return key;
+}
+
+MNM_TVMJIT(BatchNormTrainDxwb, "mnm.op.batch_norm_train_dxwb", BatchNormTrainDxwbArgs,
+           BatchNormTrainDxwbNormalizer, BatchNormTrainDxwbTyper, BatchNormTrainDxwbHasher);
 
 }  // namespace tvmjit
 }  // namespace op
