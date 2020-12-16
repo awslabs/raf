@@ -65,6 +65,17 @@ class HashKey {
     return *this;
   }
 
+  inline HashKey& operator<<(const tvm::runtime::Optional<ir::Array<value::IntValue>> v) {
+    CHECK(v.defined());
+    byte_vector.push_back(13);
+    auto value = v.value();
+    for (int i = 0, n = value.size(); i < n; ++i) {
+      MNM_APPEND_BYTES(int64_t, 8, value[i]->data);
+    }
+    MNM_APPEND_BYTES(int64_t, 8, 0);
+    return *this;
+  }
+
   inline HashKey& operator<<(const ir::TensorType& v) {
     byte_vector.push_back(14);
     MNM_APPEND_BYTES(DLDataType, 4, v->dtype);

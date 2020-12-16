@@ -79,7 +79,7 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
   value::BaseTensorValue x_or_w;
   value::BaseTensorValue y;
   value::BaseTensorValue dy;
-  std::vector<int64_t> shape;
+  ir::Optional<ir::Array<value::IntValue>> shape;
   std::vector<int64_t> stride;
   std::vector<int64_t> padding;
   std::vector<int64_t> dilation;

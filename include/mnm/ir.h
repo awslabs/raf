@@ -25,6 +25,7 @@ using tvm::Array;
 using tvm::ArrayNode;
 using tvm::Map;
 using tvm::MapNode;
+using tvm::Optional;
 using tvm::String;
 
 // Scalars

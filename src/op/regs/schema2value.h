@@ -51,6 +51,14 @@ inline value::Value TupleInt(const std::vector<int64_t>& a) {
 inline value::Value IntOrTupleInt(const std::vector<int64_t>& a) {
   return TupleInt(a);
 }
+inline value::Value IntArray(const ir::Optional<ir::Array<value::IntValue>> a) {
+  MNM_PRELUDE();
+  Array<Value> ret;
+  for (const auto i : a.value()) {
+    ret.push_back(IntValue::make(i->data));
+  }
+  return TupleValue::make(std::move(ret));
+}
 inline value::Value TupleTensor(const std::vector<value::BaseTensorValue>& a) {
   MNM_PRELUDE();
   Array<Value> ret;

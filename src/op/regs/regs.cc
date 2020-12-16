@@ -336,7 +336,7 @@ Attrs ConvDxw(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x_or_w);
   MNM_TAPE(1, ffi2schema::Tensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
-  MNM_POD(3, ffi2schema::IntOrTupleInt, shape);
+  MNM_POD(3, ffi2schema::IntArray, shape);
   MNM_POD(4, ffi2schema::IntOrTupleInt, stride);
   MNM_POD(5, ffi2schema::IntOrTupleInt, padding);
   MNM_POD(6, ffi2schema::IntOrTupleInt, dilation);
@@ -1021,7 +1021,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dw").set_body([](TVMArgs args, TVMRetValu
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x_or_w));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntArray(schema->shape));
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->stride));
   MNM_SET_ENV(vpack->x[5], schema2value::IntOrTupleInt(schema->padding));
   MNM_SET_ENV(vpack->x[6], schema2value::IntOrTupleInt(schema->dilation));
@@ -1036,7 +1036,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dx").set_body([](TVMArgs args, TVMRetValu
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x_or_w));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntArray(schema->shape));
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->stride));
   MNM_SET_ENV(vpack->x[5], schema2value::IntOrTupleInt(schema->padding));
   MNM_SET_ENV(vpack->x[6], schema2value::IntOrTupleInt(schema->dilation));
@@ -2024,7 +2024,7 @@ Array<Expr> ConvDxw(const TVMArgs& values) {
   MNM_ARG(0, ffi2expr::Tensor, x_or_w);
   MNM_ARG(1, ffi2expr::Tensor, y);
   MNM_ARG(2, ffi2expr::Tensor, dy);
-  MNM_ARG(3, ffi2expr::IntOrTupleInt, shape);
+  MNM_ARG(3, ffi2expr::IntArray, shape);
   MNM_ARG(4, ffi2expr::IntOrTupleInt, stride);
   MNM_ARG(5, ffi2expr::IntOrTupleInt, padding);
   MNM_ARG(6, ffi2expr::IntOrTupleInt, dilation);
@@ -2738,7 +2738,7 @@ Attrs ConvDxw(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, x_or_w);
   MNM_REQUIRED(1, value2schema::Tensor, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
-  MNM_REQUIRED(3, value2schema::IntOrTupleInt, shape);
+  MNM_REQUIRED(3, value2schema::IntArray, shape);
   MNM_REQUIRED(4, value2schema::IntOrTupleInt, stride);
   MNM_REQUIRED(5, value2schema::IntOrTupleInt, padding);
   MNM_REQUIRED(6, value2schema::IntOrTupleInt, dilation);

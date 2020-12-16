@@ -14,6 +14,8 @@ namespace op {
 namespace regs {
 namespace value2schema {
 
+using mnm::ir::Array;
+
 #define MNM_PRELUDE_ALLOW_NULL() \
   using namespace mnm::value;    \
   using namespace mnm::ir;       \
@@ -90,6 +92,7 @@ inline std::string String(const value::Value& a) {
              << "\" is a string";
   throw;
 }
+
 inline std::vector<int64_t> TupleInt(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("tuple of integers");
   if (const auto* v = a.as<TupleValueObj>()) {
@@ -111,6 +114,7 @@ inline std::vector<int64_t> TupleInt(const value::Value& a) {
              << "\" is not tuple of integers";
   throw;
 }
+
 inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("an integer or tuple of integers");
   if (const auto* v = a.as<IntValueObj>()) {
@@ -135,6 +139,34 @@ inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
+
+inline ir::Optional<Array<value::IntValue>> IntArray(const value::Value& a) {
+  MNM_PRELUDE_DISALLOW_NULL("array of integers");
+  if (const auto* v = a.as<IntValueObj>()) {
+    return Array<value::IntValue>{value::IntValue::make(v->data)};
+  }
+  if (const auto* v = a.as<value::TupleValueObj>()) {
+    Array<value::IntValue> ret;
+    ret.reserve(v->fields.size());
+    for (const tvm::runtime::ObjectRef& i : v->fields) {
+      if (const auto* e = i.as<value::IntValueObj>()) {
+        ret.push_back(value::IntValue::make(e->data));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "
+                    "tuple of integers, because the "
+                 << ToOrdinal(ret.size()) << " member is of type \"" << i->GetTypeKey() << '"';
+      throw;
+    }
+    return ret;
+  } else if (auto* v = a.as<value::TensorTypeValueObj>()) {
+    return tvm::NullOpt;
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
+             << "\" is not an integer or tuple of integers";
+  throw;
+}
+
 inline std::vector<value::BaseTensorValue> TupleTensor(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("tuple of tensors");
   if (const auto* v = a.as<TupleValueObj>()) {

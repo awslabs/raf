@@ -133,6 +133,16 @@ TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
   return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data));
 }
 
+TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
+                                  const Array<IntValue> shape_array,
+                                  const std::vector<int64_t>& strides, void* const data) {
+  std::vector<int64_t> shape;
+  for (auto value : shape_array) {
+    shape.push_back(value->data);
+  }
+  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data));
+}
+
 TensorValue AssembleTensorValue(DLContext ctx, DLDataType dtype, Array<Integer> shape,
                                 Array<Integer> strides, void* data) {
   return TensorValue::make(

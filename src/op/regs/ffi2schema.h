@@ -114,6 +114,7 @@ inline std::string String(const registry::TVMArgValue& a) {
              << "\" is not a string";
   throw;
 }
+
 inline std::vector<int64_t> TupleInt(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
@@ -164,6 +165,34 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
+
+inline ir::Optional<ir::Array<value::IntValue>> IntArray(const registry::TVMArgValue& a) {
+  MNM_PRELUDE();
+  if (type_code == kDLInt) {
+    return ir::Array<value::IntValue>{value::IntValue::make(a.operator int64_t())};
+  }
+  const Object* _ptr = a.ptr<Object>();
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
+    ir::Array<value::IntValue> ret;
+    ret.reserve(n->size());
+    for (const ObjectRef& i : *n) {
+      if (const auto* e = i.as<IntImmNode>()) {
+        ret.push_back(value::IntValue::make(e->value));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "
+                    "tuple of integers, because the "
+                 << ToOrdinal(ret.size()) << " member is of type \"" << i->GetTypeKey() << '"';
+      throw;
+    }
+    return ret;
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
+             << "\" is not an integer or tuple of integers";
+  throw;
+}
+
 inline std::vector<value::BaseTensorValue> TupleTensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();

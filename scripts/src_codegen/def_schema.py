@@ -2,6 +2,8 @@ from collections import defaultdict
 
 from .codegen_utils import Arg
 
+OptionalIntArray = "ir::Optional<ir::Array<value::IntValue>>"
+
 SCHEMAS = {
     "nn.h::conv": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -80,8 +82,8 @@ SCHEMAS = {
         Arg(name="x_or_w", cxx_type="value::BaseTensorValue"),
         Arg(name="y", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
-        Arg(name="shape", cxx_type="std::vector<int64_t>",
-            cxx_normalizer="IntTuple"),
+        Arg(name="shape", cxx_type=OptionalIntArray,
+            cxx_normalizer="IntArray"),
         Arg(name="stride", cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
         Arg(name="padding",

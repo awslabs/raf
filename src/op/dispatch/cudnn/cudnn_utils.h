@@ -234,6 +234,25 @@ inline std::vector<int64_t> NormalizeScalarToTuple(const std::vector<int64_t>& v
   return n == 1 ? std::vector<int64_t>(numel, v[0]) : v;
 }
 
+template <int numel>
+inline std::vector<int64_t> NormalizeScalarToTuple(
+    const ir::Optional<ir::Array<value::IntValue>> v) {
+  CHECK(v.defined());
+  auto value = v.value();
+  int n = value.size();
+  CHECK(n == 1 || n == numel) << "ValueError: we only accept a single integer or a tuple of "
+                              << numel << " integers";
+  if (n == 1) {
+    return std::vector<int64_t>(numel, value[0]->data);
+  } else {
+    std::vector<int64_t> re;
+    for (auto i : value) {
+      re.push_back(i->data);
+    }
+    return re;
+  }
+}
+
 template <typename T>
 inline ir::Array<ir::Integer> ToArrayOfInteger(const std::vector<T>& v) {
   ir::Array<ir::Integer> res;

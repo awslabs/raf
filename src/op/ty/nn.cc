@@ -73,10 +73,15 @@ Type Conv2DDxwInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvDxwArgs>();
   CHECK(args != nullptr);
   TensorType dy = Downcast<TensorType>(GetType(args->dy));
-  std::vector<int64_t> shape = Pad<4>(args->shape);
   Array<PrimExpr> res;
-  for (int i = 0; i < shape.size(); ++i) res.push_back(Integer(shape[i]));
-  return TensorType(res, dy->dtype);
+  if (args->shape.defined()) {
+    for (auto value : args->shape.value()) {
+      res.push_back(Integer(value->data));
+    }
+    return TensorType(res, dy->dtype);
+  } else {
+    return IncompleteType(tvm::kType);
+  }
 }
 
 MNM_OP_TYPE("mnm.op.conv2d_dw", "Conv2dDxw", Conv2DDxwInfer);

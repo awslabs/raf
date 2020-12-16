@@ -140,10 +140,11 @@ MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
 void Conv2dDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvDxwArgs>();
   CHECK(args != nullptr);
+  CHECK(args->shape.defined());
   const DLTensor* x_or_w = args->x_or_w;
   call->out = TensorValue::Assemble(/*ctx=*/x_or_w->ctx,
                                     /*dtype=*/x_or_w->dtype,
-                                    /*shape=*/args->shape);
+                                    /*shape=*/args->shape.value());
   call->ctx = x_or_w->ctx;
 }
 

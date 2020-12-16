@@ -106,8 +106,10 @@ Attrs ConvDxwSchema2Attrs(const ConvDxwArgs* args) {
     attrs->dilation.push_back(IntImm(tvm::runtime::DataType::Int(64), dilation[i]));
   }
   // FIXME: (workaround) we use kernel size to store the shape of X (for dx) or W (for dw)
-  for (int i = 0; i < args->shape.size(); ++i) {
-    attrs->kernel_size.push_back(IntImm(tvm::runtime::DataType::Int(32), args->shape[i]));
+  CHECK(args->shape.defined());
+  auto shape = args->shape.value();
+  for (int i = 0; i < shape.size(); ++i) {
+    attrs->kernel_size.push_back(IntImm(tvm::runtime::DataType::Int(32), shape[i]->data));
   }
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();

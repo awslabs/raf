@@ -169,6 +169,33 @@ inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
              << "\" is not an integer or tuple of integers";
   throw;
 }
+
+inline ir::Expr IntArray(const registry::TVMArgValue& a) {
+  MNM_PRELUDE();
+  if (type_code == kDLInt) {
+    return MNM_CONST(TupleValue, tvm::Array<Value>({IntValue::make(a.operator int64_t())}));
+  }
+  const Object* _ptr = a.ptr<Object>();
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
+    Array<Value> ret;
+    for (const ObjectRef& i : *n) {
+      if (const auto* e = i.as<IntImmNode>()) {
+        ret.push_back(IntValue::make(e->value));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "
+                    "tuple of integers, because the "
+                 << ToOrdinal(ret.size()) << " member is of type \"" << i->GetTypeKey() << '"';
+      throw;
+    }
+    return MakeConstant(TupleValue::make(std::move(ret)));
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
+             << "\" is not an integer or tuple of integers";
+  throw;
+}
+
 inline ir::Expr TupleTensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   const Object* _ptr = a.ptr<Object>();

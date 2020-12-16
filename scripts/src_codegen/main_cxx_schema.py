@@ -62,7 +62,15 @@ def gen_arg(entry):
     elif isinstance(default, bool):
         default = str(default).lower()
     elif isinstance(default, (Number, str)):
-        default = str(default)
+        if entry.cxx_normalizer == "IntArray" and len(default) > 2:
+            value = default[1:-1].split(',')
+            re = "ir::Array<value::IntValue> {"
+            for i in value:
+                re += "value::IntValue::make(" + i + ")"
+            re += "}"
+            default = re
+        else:
+            default = str(default)
     else:
         raise NotImplementedError(entry)
     if default is None:
