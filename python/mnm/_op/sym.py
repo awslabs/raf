@@ -393,11 +393,9 @@ def log_softmax_dx(x, y, dy, axis=-1):
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.log_softmax_dx(x, y, dy, axis))
 
-def logical_not(x, out=None, where=None):
+def logical_not(x):
     x = sym_utils.to_any(x)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.logical_not(x, out, where))
+    return Symbol.from_expr(ffi.logical_not(x))
 
 def matmul(x1, x2):
     x1 = sym_utils.to_any(x1)
@@ -495,11 +493,9 @@ def multiply(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.multiply(x1, x2, out, where))
 
-def negative(x, out=None, where=None):
+def negative(x):
     x = sym_utils.to_any(x)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.negative(x, out, where))
+    return Symbol.from_expr(ffi.negative(x))
 
 def nll_loss(y_true, y_pred):
     y_true = sym_utils.to_tensor(y_true)
@@ -583,11 +579,9 @@ def round(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.round(x))
 
-def rsqrt(x, out=None, where=None):
+def rsqrt(x):
     x = sym_utils.to_any(x)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.rsqrt(x, out, where))
+    return Symbol.from_expr(ffi.rsqrt(x))
 
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
     x = sym_utils.to_tensor(x)

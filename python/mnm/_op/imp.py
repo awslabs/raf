@@ -454,11 +454,9 @@ def log_softmax_dx(x, y, dy, axis=-1):
     return imp_utils.ret(ffi.log_softmax_dx(x, y, dy, axis))
 
 @set_module("mnm")
-def logical_not(x, out=None, where=None):
+def logical_not(x):
     x = imp_utils.to_any(x)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.logical_not(x, out, where))
+    return imp_utils.ret(ffi.logical_not(x))
 
 @set_module("mnm")
 def matmul(x1, x2):
@@ -571,11 +569,9 @@ def multiply(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.multiply(x1, x2, out, where))
 
 @set_module("mnm")
-def negative(x, out=None, where=None):
+def negative(x):
     x = imp_utils.to_any(x)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.negative(x, out, where))
+    return imp_utils.ret(ffi.negative(x))
 
 @set_module("mnm")
 def nll_loss(y_true, y_pred):
@@ -673,11 +669,9 @@ def round(x):
     return imp_utils.ret(ffi.round(x))
 
 @set_module("mnm")
-def rsqrt(x, out=None, where=None):
+def rsqrt(x):
     x = imp_utils.to_any(x)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.rsqrt(x, out, where))
+    return imp_utils.ret(ffi.rsqrt(x))
 
 @set_module("mnm")
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):

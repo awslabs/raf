@@ -1,28 +1,8 @@
+# pylint: disable=attribute-defined-outside-init,no-self-use
 import numpy as np
 import pytest
 import mnm
-
-
-def get_ctx_list():
-    ret = ["cpu"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
-
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
-
-
-def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
+from mnm.testing import get_ctx_list, randn, check, run_vm_model
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -33,6 +13,14 @@ def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
     ((16, 500, 5), 0.95, -1, 0)
 ]) # pylint: disable=too-many-locals
 def test_get_valid_counts(inputs, ctx):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.get_valid_counts(x, score_threshold, id_index, score_index)
+
     dtype = "float32"
     m_x, np_data = randn(inputs[0], ctx=ctx)
     batch_size, num_anchor, elem_length = inputs[0]
@@ -55,30 +43,52 @@ def test_get_valid_counts(inputs, ctx):
                 for k in range(elem_length):
                     np_out2[i, j, k] = -1.0
                 np_out3[i, j] = -1
-    mx_out = mnm.get_valid_counts(m_x, score_threshold, id_index, score_index)
-    check(mx_out[0], np_out1, rtol=1e-3, atol=1e-04)
+    model = TestModel()
+    m_out = model(m_x)
+    v_out = run_vm_model(model, ctx, [m_x])
+    check(m_out[0], np_out1, rtol=1e-3, atol=1e-04)
+    check(v_out[0], np_out1, rtol=1e-3, atol=1e-04)
     if ctx == "cpu":
         # tvm get_valid_count for cuda doesn't do data rearrangement
-        check(mx_out[1], np_out2, rtol=1e-3, atol=1e-04)
-        check(mx_out[2], np_out3, rtol=1e-3, atol=1e-04)
+        check(m_out[1], np_out2, rtol=1e-3, atol=1e-04)
+        check(m_out[2], np_out3, rtol=1e-3, atol=1e-04)
+        check(v_out[1], np_out2, rtol=1e-3, atol=1e-04)
+        check(v_out[2], np_out3, rtol=1e-3, atol=1e-04)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 def test_nms(ctx):
-    def verify_nms(mx_data, mx_valid_count, mx_indices, mx_max_output_size, np_result, dshape, # pylint: disable=too-many-arguments
+    class TestModel(mnm.Model):
+        def build(self, force_suppress, top_k, return_indices):
+            self._force_suppress = force_suppress
+            self._top_k = top_k
+            self._return_indices = return_indices
+
+        @mnm.model.trace
+        def forward(self, data, valid_count, indices, max_output_size):
+            return mnm.non_max_suppression(data, valid_count, indices, max_output_size,
+                                           force_suppress=self._force_suppress, top_k=self._top_k,
+                                           return_indices=self._return_indices)
+
+    def verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, np_result, dshape, # pylint: disable=too-many-arguments
                    np_indices_result, force_suppress=False, top_k=2):
-        res = mnm.non_max_suppression(mx_data, mx_valid_count, mx_indices, mx_max_output_size,
-                                      force_suppress=force_suppress, top_k=top_k,
-                                      return_indices=False)
-        check(res, np_result, rtol=1e-5, atol=1e-07)
+        model = TestModel(force_suppress, top_k, False)
+        m_out = model(m_data, m_valid_count, m_indices, m_max_output_size)
+        v_out = run_vm_model(model, ctx, [m_data, m_valid_count, m_indices, m_max_output_size])
+        check(m_out, np_result, rtol=1e-5, atol=1e-07)
+        check(v_out, np_result, rtol=1e-5, atol=1e-07)
         if ctx == 'cpu':
-            res_indices = mnm.non_max_suppression(mx_data, mx_valid_count, mx_indices,
-                                                  mx_max_output_size, force_suppress=force_suppress,
-                                                  top_k=top_k, return_indices=True)
-            assert res_indices[0].shape == (dshape[0], dshape[1]) and \
-                   res_indices[0].dtype == "int32"
-            assert res_indices[1].shape == (dshape[0], 1) and res_indices[1].dtype == "int32"
-            check(res_indices[0], np_indices_result, rtol=1e-5, atol=1e-07)
+            model = TestModel(force_suppress, top_k, True)
+            m_out = model(m_data, m_valid_count, m_indices, m_max_output_size)
+            v_out = run_vm_model(model, ctx, [m_data, m_valid_count, m_indices, m_max_output_size])
+            assert m_out[0].shape == (dshape[0], dshape[1]) and \
+                   m_out[0].dtype == "int32"
+            assert m_out[1].shape == (dshape[0], 1) and m_out[1].dtype == "int32"
+            assert v_out[0].shape == (dshape[0], dshape[1]) and \
+                   v_out[0].dtype == "int32"
+            assert v_out[1].shape == (dshape[0], 1) and v_out[1].dtype == "int32"
+            check(m_out[0], np_indices_result, rtol=1e-5, atol=1e-07)
+            check(v_out[0], np_indices_result, rtol=1e-5, atol=1e-07)
 
 
     np_data = np.array([[[0, 0.8, 1, 20, 25, 45], [1, 0.7, 30, 60, 50, 80],
@@ -95,14 +105,14 @@ def test_nms(ctx):
     num_anchors = 5
     dshape = (1, num_anchors, 6)
 
-    mx_data = mnm.array(np_data, ctx=ctx)
-    mx_valid_count = mnm.array(np_valid_count, ctx=ctx)
-    mx_indices = mnm.array(np_indices, ctx=ctx)
-    mx_max_output_size = mnm.array(np_max_output_size, ctx=ctx)
+    m_data = mnm.array(np_data, ctx=ctx)
+    m_valid_count = mnm.array(np_valid_count, ctx=ctx)
+    m_indices = mnm.array(np_indices, ctx=ctx)
+    m_max_output_size = mnm.array(np_max_output_size, ctx=ctx)
 
-    verify_nms(mx_data, mx_valid_count, mx_indices, mx_max_output_size, np_result, dshape,
+    verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, np_result, dshape,
                np_indices_result, force_suppress=True)
-    verify_nms(mx_data, mx_valid_count, mx_indices, mx_max_output_size, np_result, dshape,
+    verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, np_result, dshape,
                np_indices_result)
 
 

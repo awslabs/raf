@@ -22,6 +22,8 @@ class Conv2d : public OpEnv {
   virtual ~Conv2d() = default;
   void Execute(const CallValues& call) override final {
   }
+  void Execute(const std::vector<Value>& inputs, Value output) override final {
+  }
 };
 
 // Implement 0 of "mnm.cpptest.conv2d"

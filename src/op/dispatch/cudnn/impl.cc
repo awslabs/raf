@@ -4,7 +4,6 @@
  * \file src/op/dispatch/cudnn/impl.cc
  * \brief Operator schema.
  */
-#include "../../op_utils.h"
 #include "../../schema/algorithm.h"
 #include "../../schema/annotation.h"
 #include "../../schema/communication.h"
@@ -19,18 +18,23 @@
 #include "../../schema/ufunc.h"
 #include "../../schema/vision.h"
 #include "./cudnn_utils.h"
+#include "mnm/ir.h"
+#include "mnm/op_utils.h"
 
 namespace mnm {
 namespace op {
 namespace cudnn {
 namespace generated {
 
+using namespace mnm::value;
+using namespace mnm::ir;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using common::shape_utils::PadDims;
 using common::shape_utils::Shape2Strides;
 using dmlc::BeginPtr;
-using value::TupleValueObj;
+
+static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
 
 MetaCache<cudnnConvolutionBwdDataAlgoPerf_t> CacheForcudnnConvolutionBwdDataAlgoPerf_t;
 cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tWrapper(
@@ -100,6 +104,10 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnPoolingDescriptor_t poolingDesc;
   explicit AvgPool2DImplementedByCUDNNPoolingForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.avg_pool2d");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::PoolArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -135,6 +143,15 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
+                                   CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                   CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
                                    CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                    CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -154,6 +171,12 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnPoolingDescriptor_t poolingDesc;
   explicit AvgPool2DDxImplementedByCUDNNPoolingBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.avg_pool2d_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::PoolDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -203,6 +226,18 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnPoolingBackward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
+                                    CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data, dyDesc,
+                                    dy->data, xDesc, x->data,
+                                    CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnPoolingBackward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
                                     CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data, dyDesc,
                                     dy->data, xDesc, x->data,
@@ -218,48 +253,76 @@ MNM_OP_DISPATCH("mnm.op.avg_pool2d_dx", AvgPool2DDxImplementedByCUDNNPoolingBack
 
 class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
-  cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t bnScaleBiasMeanVarDesc;
+  cudnnTensorDescriptor_t yDesc;
+  double epsilon;
+  double exponentialAverageFactor;
   explicit BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference(
       const CallValues& cv) {
+    auto op = Op::Get("mnm.op.batch_norm_infer");
+    this->arg_indices = {
+        fschema_index[op]("x"),           fschema_index[op]("running_mean"),
+        fschema_index[op]("running_var"), fschema_index[op]("w"),
+        fschema_index[op]("b"),
+    };
     auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
     (void)args;
     DLTensor* x = args->x;
     (void)x;
-    DLTensor* out = cv->out;
-    (void)out;
     DLTensor* w = args->w;
     (void)w;
+    DLTensor* out = cv->out;
+    (void)out;
     auto xDesc_tt = SquashTensorShape(x, {0, 1, 2, 3, x->ndim});
     xDesc = NormalizeTensorType(xDesc_tt);
-    auto yDesc_tt = SquashTensorShape(out, {0, 1, 2, 3, out->ndim});
-    yDesc = NormalizeTensorType(yDesc_tt);
     auto bnScaleBiasMeanVarDesc_tt = SquashTensorShape(w, {0, 0, 1, w->ndim});
     bnScaleBiasMeanVarDesc = NormalizeTensorType(bnScaleBiasMeanVarDesc_tt);
+    auto yDesc_tt = SquashTensorShape(out, {0, 1, 2, 3, out->ndim});
+    yDesc = NormalizeTensorType(yDesc_tt);
+    epsilon = args->eps;
+    exponentialAverageFactor = args->momentum;
   }
 
  public:
   ~BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference() {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(xDesc));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
     CUDNN_CALL(cudnnDestroyTensorDescriptor(bnScaleBiasMeanVarDesc));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
     (void)args;
     DLTensor* x = args->x;
     (void)x;
-    DLTensor* out = cv->out;
-    (void)out;
     DLTensor* w = args->w;
     (void)w;
+    DLTensor* out = cv->out;
+    (void)out;
+    DLTensor* running_mean = args->running_mean;
+    (void)running_mean;
+    DLTensor* running_var = args->running_var;
+    (void)running_var;
+    DLTensor* b = args->b;
+    (void)b;
     CUDNN_CALL(cudnnBatchNormalizationForwardInference(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
         CUDNNDType(x->dtype).const_addr<1>(), CUDNNDType(x->dtype).const_addr<0>(), xDesc, x->data,
-        yDesc, out->data, bnScaleBiasMeanVarDesc, w->data,
-        (args->b).as<value::TensorValueObj>()->tensor->data,
-        (args->running_mean).as<value::TensorValueObj>()->tensor->data,
-        (args->running_var).as<value::TensorValueObj>()->tensor->data, args->eps));
+        yDesc, out->data, bnScaleBiasMeanVarDesc, w->data, b->data, running_mean->data,
+        running_var->data, epsilon));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 5);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* running_mean = Downcast<TensorValue>(inputs[1]);
+    DLTensor* running_var = Downcast<TensorValue>(inputs[2]);
+    DLTensor* w = Downcast<TensorValue>(inputs[3]);
+    DLTensor* b = Downcast<TensorValue>(inputs[4]);
+    DLTensor* out = Downcast<TensorValue>(output);
+    CUDNN_CALL(cudnnBatchNormalizationForwardInference(
+        CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
+        CUDNNDType(x->dtype).const_addr<1>(), CUDNNDType(x->dtype).const_addr<0>(), xDesc, x->data,
+        yDesc, out->data, bnScaleBiasMeanVarDesc, w->data, b->data, running_mean->data,
+        running_var->data, epsilon));
   }
   static OpEnv* make(const CallValues& cv) {
     return new BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference(cv);
@@ -272,50 +335,78 @@ MNM_OP_DISPATCH("mnm.op.batch_norm_infer",
 
 class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
-  cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t bnScaleBiasMeanVarDesc;
+  cudnnTensorDescriptor_t yDesc;
+  double epsilon;
+  double exponentialAverageFactor;
   explicit BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.batch_norm_train");
+    this->arg_indices = {
+        fschema_index[op]("x"),           fschema_index[op]("running_mean"),
+        fschema_index[op]("running_var"), fschema_index[op]("w"),
+        fschema_index[op]("b"),
+    };
     auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
     (void)args;
-    auto* tv = const_cast<TupleValueObj*>(cv->out.as<TupleValueObj>());
+    TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     (void)x;
-    DLTensor* out0 = tv->fields[0];
-    (void)out0;
     DLTensor* w = args->w;
     (void)w;
+    DLTensor* out0 = tv->fields[0];
+    (void)out0;
     auto xDesc_tt = SquashTensorShape(x, {0, 1, 2, 3, x->ndim});
     xDesc = NormalizeTensorType(xDesc_tt);
-    auto yDesc_tt = SquashTensorShape(out0, {0, 1, 2, 3, out0->ndim});
-    yDesc = NormalizeTensorType(yDesc_tt);
     auto bnScaleBiasMeanVarDesc_tt = SquashTensorShape(w, {0, 0, 1, w->ndim});
     bnScaleBiasMeanVarDesc = NormalizeTensorType(bnScaleBiasMeanVarDesc_tt);
+    auto yDesc_tt = SquashTensorShape(out0, {0, 1, 2, 3, out0->ndim});
+    yDesc = NormalizeTensorType(yDesc_tt);
+    epsilon = args->eps;
+    exponentialAverageFactor = args->momentum;
   }
 
  public:
   ~BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining() {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(xDesc));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
     CUDNN_CALL(cudnnDestroyTensorDescriptor(bnScaleBiasMeanVarDesc));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(yDesc));
   }
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
     (void)args;
-    auto* tv = const_cast<TupleValueObj*>(cv->out.as<TupleValueObj>());
+    TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     (void)x;
-    DLTensor* out0 = tv->fields[0];
-    (void)out0;
     DLTensor* w = args->w;
     (void)w;
+    DLTensor* out0 = tv->fields[0];
+    (void)out0;
+    DLTensor* running_mean = args->running_mean;
+    (void)running_mean;
+    DLTensor* running_var = args->running_var;
+    (void)running_var;
+    DLTensor* b = args->b;
+    (void)b;
     CUDNN_CALL(cudnnBatchNormalizationForwardTraining(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
         CUDNNDType(x->dtype).const_addr<1>(), CUDNNDType(x->dtype).const_addr<0>(), xDesc, x->data,
-        yDesc, out0->data, bnScaleBiasMeanVarDesc, w->data,
-        (args->b).as<value::TensorValueObj>()->tensor->data, args->momentum,
-        (args->running_mean).as<value::TensorValueObj>()->tensor->data,
-        (args->running_var).as<value::TensorValueObj>()->tensor->data, args->eps, nullptr,
-        nullptr));
+        yDesc, out0->data, bnScaleBiasMeanVarDesc, w->data, b->data, exponentialAverageFactor,
+        running_mean->data, running_var->data, epsilon, nullptr, nullptr));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 5);
+    TupleValue tv = Downcast<TupleValue>(output);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* running_mean = Downcast<TensorValue>(inputs[1]);
+    DLTensor* running_var = Downcast<TensorValue>(inputs[2]);
+    DLTensor* w = Downcast<TensorValue>(inputs[3]);
+    DLTensor* b = Downcast<TensorValue>(inputs[4]);
+    DLTensor* out0 = Downcast<TensorValue>(tv->fields[0]);
+    CUDNN_CALL(cudnnBatchNormalizationForwardTraining(
+        CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
+        CUDNNDType(x->dtype).const_addr<1>(), CUDNNDType(x->dtype).const_addr<0>(), xDesc, x->data,
+        yDesc, out0->data, bnScaleBiasMeanVarDesc, w->data, b->data, exponentialAverageFactor,
+        running_mean->data, running_var->data, epsilon, nullptr, nullptr));
   }
   static OpEnv* make(const CallValues& cv) {
     return new BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining(cv);
@@ -331,10 +422,17 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
   cudnnTensorDescriptor_t dyDesc;
   cudnnTensorDescriptor_t dxDesc;
   cudnnTensorDescriptor_t dBnScaleBiasDesc;
+  double epsilon;
   explicit BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.batch_norm_train_dxwb");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("w"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::BatchNormTrainDxwbArgs>();
     (void)args;
-    auto* tv = const_cast<TupleValueObj*>(cv->out.as<TupleValueObj>());
+    TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     (void)x;
     DLTensor* dy = args->dy;
@@ -351,6 +449,7 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
     dxDesc = NormalizeTensorType(dxDesc_tt);
     auto dBnScaleBiasDesc_tt = SquashTensorShape(out1, {0, 0, 1, out1->ndim});
     dBnScaleBiasDesc = NormalizeTensorType(dBnScaleBiasDesc_tt);
+    epsilon = args->eps;
   }
 
  public:
@@ -363,7 +462,7 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::BatchNormTrainDxwbArgs>();
     (void)args;
-    auto* tv = const_cast<TupleValueObj*>(cv->out.as<TupleValueObj>());
+    TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     (void)x;
     DLTensor* dy = args->dy;
@@ -372,13 +471,29 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
     (void)out0;
     DLTensor* out1 = tv->fields[1];
     (void)out1;
+    DLTensor* w = args->w;
+    (void)w;
     CUDNN_CALL(cudnnBatchNormalizationBackward(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
         CUDNNDType(out0->dtype).const_addr<1>(), CUDNNDType(out0->dtype).const_addr<0>(),
         CUDNNDType(out1->dtype).const_addr<1>(), CUDNNDType(out1->dtype).const_addr<0>(), xDesc,
-        x->data, dyDesc, dy->data, dxDesc, out0->data, dBnScaleBiasDesc,
-        (args->w).as<value::TensorValueObj>()->tensor->data, out1->data,
-        tv->fields[2].operator DLTensor*()->data, args->eps, nullptr, nullptr));
+        x->data, dyDesc, dy->data, dxDesc, out0->data, dBnScaleBiasDesc, w->data, out1->data,
+        tv->fields[2].operator DLTensor*()->data, epsilon, nullptr, nullptr));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    TupleValue tv = Downcast<TupleValue>(output);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* w = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out0 = Downcast<TensorValue>(tv->fields[0]);
+    DLTensor* out1 = Downcast<TensorValue>(tv->fields[1]);
+    CUDNN_CALL(cudnnBatchNormalizationBackward(
+        CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_BATCHNORM_SPATIAL,
+        CUDNNDType(out0->dtype).const_addr<1>(), CUDNNDType(out0->dtype).const_addr<0>(),
+        CUDNNDType(out1->dtype).const_addr<1>(), CUDNNDType(out1->dtype).const_addr<0>(), xDesc,
+        x->data, dyDesc, dy->data, dxDesc, out0->data, dBnScaleBiasDesc, w->data, out1->data,
+        tv->fields[2].operator DLTensor*()->data, epsilon, nullptr, nullptr));
   }
   static OpEnv* make(const CallValues& cv) {
     return new BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward(cv);
@@ -398,6 +513,11 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   size_t workSpaceSizeInBytes;
   void* workSpace;
   explicit Conv2DImplementedByCUDNNConvolutionForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.conv2d");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("w"),
+    };
     auto args = cv->args.as<mnm::op::schema::ConvArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -408,9 +528,9 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     (void)out;
     auto xDesc_tt = SquashTensorShape(x, {});
     xDesc = NormalizeTensorType(xDesc_tt);
-    auto wDesc_tt = SquashTensorShape(w, {});
+    auto wDesc_tt = SquashTensorShape(args->w, {});
     (void)wDesc_tt;
-    wDesc = NormalizeFilter(w);
+    wDesc = NormalizeFilter(args->w);
     auto yDesc_tt = SquashTensorShape(out, {});
     yDesc = NormalizeTensorType(yDesc_tt);
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
@@ -452,6 +572,17 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     (void)w;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnConvolutionForward(
+        CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), xDesc,
+        x->data, wDesc, w->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
+        CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 2);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* w = Downcast<TensorValue>(inputs[1]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnConvolutionForward(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), xDesc,
         x->data, wDesc, w->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
@@ -474,6 +605,11 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
   size_t workSpaceSizeInBytes;
   void* workSpace;
   explicit Conv2DDwImplementedByCUDNNConvolutionBackwardFilter(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.conv2d_dw");
+    this->arg_indices = {
+        fschema_index[op]("x_or_w"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::ConvDxwArgs>();
     (void)args;
     DLTensor* x_or_w = args->x_or_w;
@@ -484,9 +620,9 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     (void)dy;
     auto xDesc_tt = SquashTensorShape(x_or_w, {});
     xDesc = NormalizeTensorType(xDesc_tt);
-    auto dwDesc_tt = SquashTensorShape(out, {});
+    auto dwDesc_tt = SquashTensorShape(cv->out, {});
     (void)dwDesc_tt;
-    dwDesc = NormalizeFilter(out);
+    dwDesc = NormalizeFilter(cv->out);
     auto dyDesc_tt = SquashTensorShape(dy, {});
     dyDesc = NormalizeTensorType(dyDesc_tt);
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
@@ -529,6 +665,17 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     (void)out;
     DLTensor* dy = args->dy;
     (void)dy;
+
+    CUDNN_CALL(cudnnConvolutionBackwardFilter(
+        CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), xDesc,
+        x_or_w->data, dyDesc, dy->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
+        CUDNNDType(out->dtype).const_addr<0>(), dwDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 2);
+    DLTensor* x_or_w = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
+    DLTensor* dy = Downcast<TensorValue>(inputs[1]);
     CUDNN_CALL(cudnnConvolutionBackwardFilter(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), xDesc,
         x_or_w->data, dyDesc, dy->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
@@ -551,6 +698,11 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
   size_t workSpaceSizeInBytes;
   void* workSpace;
   explicit Conv2DDxImplementedByCUDNNConvolutionBackwardData(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.conv2d_dx");
+    this->arg_indices = {
+        fschema_index[op]("x_or_w"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::ConvDxwArgs>();
     (void)args;
     DLTensor* out = cv->out;
@@ -561,9 +713,9 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     (void)dy;
     auto dxDesc_tt = SquashTensorShape(out, {});
     dxDesc = NormalizeTensorType(dxDesc_tt);
-    auto wDesc_tt = SquashTensorShape(x_or_w, {});
+    auto wDesc_tt = SquashTensorShape(args->x_or_w, {});
     (void)wDesc_tt;
-    wDesc = NormalizeFilter(x_or_w);
+    wDesc = NormalizeFilter(args->x_or_w);
     auto dyDesc_tt = SquashTensorShape(dy, {});
     dyDesc = NormalizeTensorType(dyDesc_tt);
     std::vector<int> stride = CastVector<int, int64_t>(NormalizeScalarToTuple<2>(args->stride));
@@ -605,6 +757,17 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     (void)x_or_w;
     DLTensor* dy = args->dy;
     (void)dy;
+
+    CUDNN_CALL(cudnnConvolutionBackwardData(
+        CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), wDesc,
+        x_or_w->data, dyDesc, dy->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
+        CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 2);
+    DLTensor* out = Downcast<TensorValue>(output);
+    DLTensor* x_or_w = Downcast<TensorValue>(inputs[0]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[1]);
     CUDNN_CALL(cudnnConvolutionBackwardData(
         CUDNNThreadEntry::ThreadLocal()->handle, CUDNNDType(out->dtype).const_addr<1>(), wDesc,
         x_or_w->data, dyDesc, dy->data, convDesc, algo.algo, workSpace, workSpaceSizeInBytes,
@@ -623,6 +786,10 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnSoftmaxMode_t mode;
   explicit LogSoftmaxImplementedByCUDNNSoftmaxForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.log_softmax");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -651,6 +818,15 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_LOG, mode,
+                                   CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                   CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_LOG, mode,
                                    CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                    CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -670,6 +846,12 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnSoftmaxMode_t mode;
   explicit LogSoftmaxDxImplementedByCUDNNSoftmaxBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.log_softmax_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::SoftmaxDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -712,6 +894,18 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnSoftmaxBackward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_LOG,
+                                    mode, CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
+                                    dyDesc, dy->data, CUDNNDType(out->dtype).const_addr<0>(),
+                                    dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnSoftmaxBackward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_LOG,
                                     mode, CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
                                     dyDesc, dy->data, CUDNNDType(out->dtype).const_addr<0>(),
@@ -730,6 +924,10 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnPoolingDescriptor_t poolingDesc;
   explicit MaxPool2DImplementedByCUDNNPoolingForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.max_pool2d");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::PoolArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -762,6 +960,15 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
+                                   CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                   CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
                                    CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                    CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -781,6 +988,12 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnPoolingDescriptor_t poolingDesc;
   explicit MaxPool2DDxImplementedByCUDNNPoolingBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.max_pool2d_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::PoolDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -827,6 +1040,18 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnPoolingBackward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
+                                    CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data, dyDesc,
+                                    dy->data, xDesc, x->data,
+                                    CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnPoolingBackward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
                                     CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data, dyDesc,
                                     dy->data, xDesc, x->data,
@@ -845,6 +1070,10 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnActivationDescriptor_t activationDesc;
   explicit ReluImplementedByCUDNNActivationForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.relu");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -873,6 +1102,15 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
+                                      CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                      CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                       CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                       CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -892,6 +1130,12 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnActivationDescriptor_t activationDesc;
   explicit ReluDxImplementedByCUDNNActivationBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.relu_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -934,6 +1178,18 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnActivationBackward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
+                                       CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
+                                       dyDesc, dy->data, xDesc, x->data,
+                                       CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnActivationBackward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                        CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
                                        dyDesc, dy->data, xDesc, x->data,
@@ -952,6 +1208,10 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnActivationDescriptor_t activationDesc;
   explicit SigmoidImplementedByCUDNNActivationForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.sigmoid");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -980,6 +1240,15 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
+                                      CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                      CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                       CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                       CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -999,6 +1268,12 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnActivationDescriptor_t activationDesc;
   explicit SigmoidDxImplementedByCUDNNActivationBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.sigmoid_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -1041,6 +1316,18 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnActivationBackward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
+                                       CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
+                                       dyDesc, dy->data, xDesc, x->data,
+                                       CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnActivationBackward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                        CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
                                        dyDesc, dy->data, xDesc, x->data,
@@ -1059,6 +1346,10 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnSoftmaxMode_t mode;
   explicit SoftmaxImplementedByCUDNNSoftmaxForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.softmax");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -1087,6 +1378,15 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
+                                   mode, CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                   CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
                                    mode, CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                    CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -1106,6 +1406,12 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnSoftmaxMode_t mode;
   explicit SoftmaxDxImplementedByCUDNNSoftmaxBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.softmax_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::SoftmaxDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -1148,6 +1454,18 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnSoftmaxBackward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
+                                    mode, CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
+                                    dyDesc, dy->data, CUDNNDType(out->dtype).const_addr<0>(),
+                                    dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnSoftmaxBackward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
                                     mode, CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
                                     dyDesc, dy->data, CUDNNDType(out->dtype).const_addr<0>(),
@@ -1166,6 +1484,10 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t yDesc;
   cudnnActivationDescriptor_t activationDesc;
   explicit TanhImplementedByCUDNNActivationForward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.tanh");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+    };
     auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -1194,6 +1516,15 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     (void)x;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
+                                      CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                      CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 1);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                       CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
                                       CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
@@ -1213,6 +1544,12 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnActivationDescriptor_t activationDesc;
   explicit TanhDxImplementedByCUDNNActivationBackward(const CallValues& cv) {
+    auto op = Op::Get("mnm.op.tanh_dx");
+    this->arg_indices = {
+        fschema_index[op]("x"),
+        fschema_index[op]("y"),
+        fschema_index[op]("dy"),
+    };
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
     DLTensor* x = args->x;
@@ -1255,6 +1592,18 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     (void)dy;
     DLTensor* out = cv->out;
     (void)out;
+
+    CUDNN_CALL(cudnnActivationBackward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
+                                       CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
+                                       dyDesc, dy->data, xDesc, x->data,
+                                       CUDNNDType(out->dtype).const_addr<0>(), dxDesc, out->data));
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    CHECK_EQ(inputs.size(), 3);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* y = Downcast<TensorValue>(inputs[1]);
+    DLTensor* dy = Downcast<TensorValue>(inputs[2]);
+    DLTensor* out = Downcast<TensorValue>(output);
     CUDNN_CALL(cudnnActivationBackward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
                                        CUDNNDType(out->dtype).const_addr<1>(), yDesc, y->data,
                                        dyDesc, dy->data, xDesc, x->data,

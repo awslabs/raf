@@ -4,6 +4,7 @@
  * \brief Unary operators bridged from TVM.
  */
 #include <array>
+#include "./tvm_attrs.h"
 #include "./tvmjit_utils.h"
 #include "../../schema/ufunc.h"
 #include "../../../common/shape_utils.h"
@@ -18,64 +19,63 @@ using schema::UnaryArgs;
 using schema::UnaryDxArgs;
 using schema::UnaryUfuncArgs;
 
-template <typename T>
-Attrs UnaryNormalizer(TVMOpEnv* env, const T* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->shape_slots.resize(1);
-  DLTensor& x = env->inputs[0] = GetDLTensor(args->x);
-  DLTensor& y = env->outputs[0];
-  std::vector<int64_t>& shape = env->shape_slots[0] = {GetNumel(x)};
-  x.ndim = y.ndim = 1;
-  x.shape = y.shape = dmlc::BeginPtr(shape);
-  x.strides = y.strides = nullptr;
-  return Attrs();
+std::vector<Value> UnarySchema2Args(const UnaryArgs* args) {
+  return {args->x};
 }
 
-void UnaryTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
+std::vector<std::string> UnarySchemaArgNames() {
+  return {"x"};
 }
 
-Attrs UnaryDxNormalizer(TVMOpEnv* env, const UnaryDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->y),
-      GetDLTensor(args->dy),
-  };
-  return Attrs();
+MNM_TVMJIT(Copy, "mnm.op.copy", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Abs, "mnm.op.abs", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Ceil, "mnm.op.ceil", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Floor, "mnm.op.floor", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Log, "mnm.op.log", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Exp, "mnm.op.exp", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Cos, "mnm.op.cos", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Sin, "mnm.op.sin", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Sign, "mnm.op.sign", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Round, "mnm.op.round", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Relu, "mnm.op.relu", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Rsqrt, "mnm.op.rsqrt", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Negative, "mnm.op.negative", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Sigmoid, "mnm.op.sigmoid", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Tanh, "mnm.op.tanh", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+
+std::vector<Value> UnaryDxSchema2Args(const UnaryDxArgs* args) {
+  return {args->x, args->y, args->dy};
 }
 
-void UnaryDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
+std::vector<std::string> UnaryDxSchemaArgNames() {
+  return {"x", "y", "dy"};
 }
 
-MNM_TVMJIT(Copy, "mnm.op.copy", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Abs, "mnm.op.abs", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Ceil, "mnm.op.ceil", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Floor, "mnm.op.floor", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Log, "mnm.op.log", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Exp, "mnm.op.exp", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Cos, "mnm.op.cos", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Sin, "mnm.op.sin", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Sign, "mnm.op.sign", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Round, "mnm.op.round", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Relu, "mnm.op.relu", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper, GenericHasher);
-MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxNormalizer, UnaryDxTyper, GenericHasher);
-MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Rsqrt, "mnm.op.rsqrt", UnaryUfuncArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Atan, "mnm.op.atan", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Negative, "mnm.op.negative", UnaryUfuncArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Sigmoid, "mnm.op.sigmoid", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
-MNM_TVMJIT(Tanh, "mnm.op.tanh", UnaryArgs, UnaryNormalizer, UnaryTyper, GenericHasher);
+MNM_TVMJIT(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
+           GenericAttrs, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

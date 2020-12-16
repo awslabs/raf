@@ -9,6 +9,7 @@
 #include "./tvmjit_utils.h"
 #include "./tvm_attrs.h"
 #include "../../schema/transform.h"
+#include "../../schema/likes.h"
 #include "../../schema/nn.h"
 #include "../../../common/shape_utils.h"
 
@@ -22,10 +23,15 @@ using namespace mnm::op::schema;
 using namespace tvm;
 using namespace ::tvm::relay;
 
-Attrs RepeatNormalizer(TVMOpEnv* env, const RepeatArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> RepeatSchema2Args(const RepeatArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> RepeatSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs RepeatSchema2Attrs(const RepeatArgs* args) {
   auto attrs = make_object<RepeatAttrs>();
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
@@ -36,11 +42,6 @@ Attrs RepeatNormalizer(TVMOpEnv* env, const RepeatArgs* args) {
   }
   attrs->repeats = args->repeats;
   return Attrs(attrs);
-}
-
-void RepeatTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey RepeatHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -55,13 +56,18 @@ HashKey RepeatHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Repeat, "mnm.op.repeat", RepeatArgs, RepeatNormalizer, RepeatTyper, RepeatHasher);
+MNM_TVMJIT(Repeat, "mnm.op.repeat", RepeatArgs, RepeatSchema2Args, RepeatSchemaArgNames,
+           RepeatSchema2Attrs, RepeatHasher);
 
-Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->indices);
+std::vector<Value> TakeSchema2Args(const TakeArgs* args) {
+  return {args->x, args->indices};
+}
+
+std::vector<std::string> TakeSchemaArgNames() {
+  return {"x", "indices"};
+}
+
+Attrs TakeSchema2Attrs(const TakeArgs* args) {
   auto attrs = make_object<TakeAttrs>();
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
@@ -74,11 +80,6 @@ Attrs TakeNormalizer(TVMOpEnv* env, const TakeArgs* args) {
   return Attrs(attrs);
 }
 
-void TakeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
-}
-
 HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, const TakeArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   if (args->axis.defined()) {
@@ -89,15 +90,18 @@ HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(Take, "mnm.op.take", TakeArgs, TakeNormalizer, TakeTyper, TakeHasher);
+MNM_TVMJIT(Take, "mnm.op.take", TakeArgs, TakeSchema2Args, TakeSchemaArgNames, TakeSchema2Attrs,
+           TakeHasher);
 
-Attrs TakeDxNormalizer(TVMOpEnv* env, const TakeDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(4);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->y);
-  env->inputs[2] = GetDLTensor(args->dy);
-  env->inputs[3] = GetDLTensor(args->indices);
+std::vector<Value> TakeDxSchema2Args(const TakeDxArgs* args) {
+  return {args->x, args->y, args->dy, args->indices};
+}
+
+std::vector<std::string> TakeDxSchemaArgNames() {
+  return {"x", "y", "dy", "indices"};
+}
+
+Attrs TakeDxSchema2Attrs(const TakeDxArgs* args) {
   auto attrs = make_object<TakeAttrs>();
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
@@ -108,12 +112,6 @@ Attrs TakeDxNormalizer(TVMOpEnv* env, const TakeDxArgs* args) {
   }
   attrs->mode = "wrap";
   return Attrs(attrs);
-}
-
-void TakeDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
-                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3])};
 }
 
 HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -127,22 +125,22 @@ HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(TakeDx, "mnm.op.take_dx", TakeDxArgs, TakeDxNormalizer, TakeDxTyper, TakeDxHasher);
+MNM_TVMJIT(TakeDx, "mnm.op.take_dx", TakeDxArgs, TakeDxSchema2Args, TakeDxSchemaArgNames,
+           TakeDxSchema2Attrs, TakeDxHasher);
 
-Attrs SequenceMaskNormalizer(TVMOpEnv* env, const SequenceMaskArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->sequence_length);
+std::vector<Value> SequenceMaskSchema2Args(const SequenceMaskArgs* args) {
+  return {args->x, args->sequence_length};
+}
+
+std::vector<std::string> SequenceMaskSchemaArgNames() {
+  return {"x", "sequence_length"};
+}
+
+Attrs SequenceMaskSchema2Attrs(const SequenceMaskArgs* args) {
   auto attrs = make_object<SequenceMaskAttrs>();
   attrs->mask_value = args->mask_value;
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void SequenceMaskTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
 }
 
 HashKey SequenceMaskHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -153,21 +151,21 @@ HashKey SequenceMaskHasher(const std::vector<Type>& param_types, const Type& y_t
   return key;
 }
 
-MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs, SequenceMaskNormalizer,
-           SequenceMaskTyper, SequenceMaskHasher);
+MNM_TVMJIT(SequenceMask, "mnm.op.sequence_mask", SequenceMaskArgs, SequenceMaskSchema2Args,
+           SequenceMaskSchemaArgNames, SequenceMaskSchema2Attrs, SequenceMaskHasher);
 
-Attrs ReverseNormalizer(TVMOpEnv* env, const ReverseArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> ReverseSchema2Args(const ReverseArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ReverseSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs ReverseSchema2Attrs(const ReverseArgs* args) {
   auto attrs = make_object<ReverseAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void ReverseTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey ReverseHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -177,22 +175,22 @@ HashKey ReverseHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Reverse, "mnm.op.reverse", ReverseArgs, ReverseNormalizer, ReverseTyper, ReverseHasher);
+MNM_TVMJIT(Reverse, "mnm.op.reverse", ReverseArgs, ReverseSchema2Args, ReverseSchemaArgNames,
+           ReverseSchema2Attrs, ReverseHasher);
 
-Attrs ReverseSequenceNormalizer(TVMOpEnv* env, const ReverseSequenceArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->sequence_length);
+std::vector<Value> ReverseSequenceSchema2Args(const ReverseSequenceArgs* args) {
+  return {args->x, args->sequence_length};
+}
+
+std::vector<std::string> ReverseSequenceSchemaArgNames() {
+  return {"x", "sequence_length"};
+}
+
+Attrs ReverseSequenceSchema2Attrs(const ReverseSequenceArgs* args) {
   auto attrs = make_object<ReverseSequenceAttrs>();
   attrs->seq_axis = args->seq_axis;
   attrs->batch_axis = args->batch_axis;
   return Attrs(attrs);
-}
-
-void ReverseSequenceTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
 }
 
 HashKey ReverseSequenceHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -204,12 +202,18 @@ HashKey ReverseSequenceHasher(const std::vector<Type>& param_types, const Type& 
 }
 
 MNM_TVMJIT(ReverseSequence, "mnm.op.reverse_sequence", ReverseSequenceArgs,
-           ReverseSequenceNormalizer, ReverseSequenceTyper, ReverseSequenceHasher);
+           ReverseSequenceSchema2Args, ReverseSequenceSchemaArgNames, ReverseSequenceSchema2Attrs,
+           ReverseSequenceHasher);
 
-Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> BroadcastToSchema2Args(const BroadcastToArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> BroadcastToSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs BroadcastToSchema2Attrs(const BroadcastToArgs* args) {
   auto attrs = make_object<InitOpAttrs>();
   std::vector<IndexExpr> shape;
   shape.reserve(args->shape.size());
@@ -220,18 +224,18 @@ Attrs BroadcastToNormalizer(TVMOpEnv* env, const BroadcastToArgs* args) {
   return Attrs(attrs);
 }
 
-void BroadcastToTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
+MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs, BroadcastToSchema2Args,
+           BroadcastToSchemaArgNames, BroadcastToSchema2Attrs, GenericHasher);
+
+std::vector<Value> TransposeSchema2Args(const TransposeArgs* args) {
+  return {args->x};
 }
 
-MNM_TVMJIT(BroadcastTo, "mnm.op.broadcast_to", BroadcastToArgs, BroadcastToNormalizer,
-           BroadcastToTyper, GenericHasher);
+std::vector<std::string> TransposeSchemaArgNames() {
+  return {"x"};
+}
 
-Attrs TransposeNormalizer(TVMOpEnv* env, const TransposeArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+Attrs TransposeSchema2Attrs(const TransposeArgs* args) {
   auto attrs = make_object<TransposeAttrs>();
   std::vector<Integer> axes;
   axes.reserve(args->axes.size());
@@ -240,11 +244,6 @@ Attrs TransposeNormalizer(TVMOpEnv* env, const TransposeArgs* args) {
   }
   attrs->axes = Array<Integer>(axes.begin(), axes.end());
   return Attrs(attrs);
-}
-
-void TransposeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey TransposeHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -254,15 +253,18 @@ HashKey TransposeHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeNormalizer, TransposeTyper,
-           TransposeHasher);
+MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeSchema2Args,
+           TransposeSchemaArgNames, TransposeSchema2Attrs, TransposeHasher);
 
-Attrs TransposeDxNormalizer(TVMOpEnv* env, const TransposeDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(3);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->y);
-  env->inputs[2] = GetDLTensor(args->dy);
+std::vector<Value> TransposeDxSchema2Args(const TransposeDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> TransposeDxSchemaArgNames() {
+  return {"x", "y", "dy"};
+}
+
+Attrs TransposeDxSchema2Attrs(const TransposeDxArgs* args) {
   auto attrs = make_object<TransposeAttrs>();
   std::vector<Integer> axes;
   axes.reserve(args->axes.size());
@@ -273,15 +275,6 @@ Attrs TransposeDxNormalizer(TVMOpEnv* env, const TransposeDxArgs* args) {
   return Attrs(attrs);
 }
 
-void TransposeDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
-}
-
 HashKey TransposeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
                           const TransposeDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
@@ -289,28 +282,40 @@ HashKey TransposeDxHasher(const std::vector<Type>& param_types, const Type& y_ty
   return key;
 }
 
-MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxNormalizer,
-           TransposeDxTyper, TransposeDxHasher);
+MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxSchema2Args,
+           TransposeDxSchemaArgNames, TransposeDxSchema2Attrs, TransposeDxHasher);
 
-Attrs BroadcastToLikeNormalizer(TVMOpEnv* env, const BroadcastToLikeArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->broadcast_type);
+std::vector<Value> BroadcastToLikeSchema2Args(const BroadcastToLikeArgs* args) {
+  return {args->x, args->broadcast_type};
+}
+
+std::vector<std::string> BroadcastToLikeSchemaArgNames() {
+  return {"x", "broadcast_type"};
+}
+
+Attrs BroadcastToLikeSchema2Attrs(const BroadcastToLikeArgs* args) {
   auto attrs = make_object<InitOpAttrs>();
   return Attrs(attrs);
 }
 
-Attrs SplitNormalizer(TVMOpEnv* env, const SplitArgs* args) {
-  using namespace tvm;
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+MNM_TVMJIT(BroadcastToLike, "mnm.op.broadcast_to_like", BroadcastToLikeArgs,
+           BroadcastToLikeSchema2Args, BroadcastToLikeSchemaArgNames, BroadcastToLikeSchema2Attrs,
+           GenericHasher);
+
+std::vector<Value> SplitSchema2Args(const SplitArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SplitSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs SplitSchema2Attrs(const SplitArgs* args) {
   auto attrs = make_object<SplitAttrs>();
   value::Value indices_or_sections = args->indices_or_sections;
   // Scalar is sections, Tuple value is indices
   if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
     int64_t sections = scalar->data;
-    CHECK_EQ(env->outputs.size(), sections);
     attrs->indices_or_sections = IntImm(ir::DataType::Int(32), sections);
   } else if (const auto* tup = indices_or_sections.as<TupleValueObj>()) {
     std::vector<int64_t> indices;
@@ -318,17 +323,11 @@ Attrs SplitNormalizer(TVMOpEnv* env, const SplitArgs* args) {
       auto int_value = field.as<IntValueObj>();
       indices.push_back(int_value->data);
     }
-    CHECK_EQ(env->outputs.size(), indices.size() + 1);
     attrs->indices_or_sections = mnm::common::shape_utils::StdVector2Array(indices);
   }
 
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void SplitTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTupleType(env->outputs);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey SplitHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -338,39 +337,25 @@ HashKey SplitHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Split, "mnm.op.split", SplitArgs, SplitNormalizer, SplitTyper, SplitHasher);
+MNM_TVMJIT(Split, "mnm.op.split", SplitArgs, SplitSchema2Args, SplitSchemaArgNames,
+           SplitSchema2Attrs, SplitHasher);
 
-void BroadcastToLikeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
+std::vector<Value> ConcatenateSchema2Args(const ConcatenateArgs* args) {
+  std::vector<Value> ret;
+  for (auto v : args->x) {
+    ret.push_back(v);
+  }
+  return ret;
 }
 
-MNM_TVMJIT(BroadcastToLike, "mnm.op.broadcast_to_like", BroadcastToLikeArgs,
-           BroadcastToLikeNormalizer, BroadcastToLikeTyper, GenericHasher);
+std::vector<std::string> ConcatenateSchemaArgNames() {
+  return {"x"};
+}
 
-Attrs ConcatenateNormalizer(TVMOpEnv* env, const ConcatenateArgs* args) {
-  using namespace tvm;
-  CHECK_EQ(env->outputs.size(), 1U);
-  const std::vector<BaseTensorValue>& x = args->x;
-  env->inputs.resize(x.size());
-  for (size_t i = 0; i < x.size(); ++i) {
-    env->inputs[i] = GetDLTensor(x[i]);
-  }
+Attrs ConcatenateSchema2Attrs(const ConcatenateArgs* args) {
   auto attrs = make_object<ConcatenateAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void ConcatenateTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  std::vector<Type> types;
-  for (size_t i = 0; i < env->inputs.size(); ++i) {
-    types.push_back(GetTensorType(env->inputs[i]));
-  }
-  *param_types = types;
 }
 
 HashKey ConcatenateHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -380,29 +365,25 @@ HashKey ConcatenateHasher(const std::vector<Type>& param_types, const Type& y_ty
   return key;
 }
 
-MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs, ConcatenateNormalizer,
-           ConcatenateTyper, ConcatenateHasher);
+MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs, ConcatenateSchema2Args,
+           ConcatenateSchemaArgNames, ConcatenateSchema2Attrs, ConcatenateHasher);
 
-Attrs StackNormalizer(TVMOpEnv* env, const StackArgs* args) {
-  using namespace tvm;
-  CHECK_EQ(env->outputs.size(), 1U);
-  const std::vector<BaseTensorValue>& x = args->x;
-  env->inputs.resize(x.size());
-  for (size_t i = 0; i < x.size(); ++i) {
-    env->inputs[i] = GetDLTensor(x[i]);
+std::vector<Value> StackSchema2Args(const StackArgs* args) {
+  std::vector<Value> ret;
+  for (auto v : args->x) {
+    ret.push_back(v);
   }
+  return ret;
+}
+
+std::vector<std::string> StackSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs StackSchema2Attrs(const StackArgs* args) {
   auto attrs = make_object<StackAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void StackTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  std::vector<Type> types;
-  for (size_t i = 0; i < env->inputs.size(); ++i) {
-    types.push_back(GetTensorType(env->inputs[i]));
-  }
-  *param_types = types;
 }
 
 HashKey StackHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -412,21 +393,22 @@ HashKey StackHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Stack, "mnm.op.stack", StackArgs, StackNormalizer, StackTyper, StackHasher);
+MNM_TVMJIT(Stack, "mnm.op.stack", StackArgs, StackSchema2Args, StackSchemaArgNames,
+           StackSchema2Attrs, StackHasher);
 
-Attrs ClipNormalizer(TVMOpEnv* env, const ClipArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> ClipSchema2Args(const ClipArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ClipSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs ClipSchema2Attrs(const ClipArgs* args) {
   auto attrs = make_object<ClipAttrs>();
   attrs->a_min = args->a_min;
   attrs->a_max = args->a_max;
   return Attrs(attrs);
-}
-
-void ClipTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey ClipHasher(const std::vector<Type>& param_types, const Type& y_type, const ClipArgs* args) {
@@ -436,22 +418,22 @@ HashKey ClipHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(Clip, "mnm.op.clip", ClipArgs, ClipNormalizer, ClipTyper, ClipHasher);
+MNM_TVMJIT(Clip, "mnm.op.clip", ClipArgs, ClipSchema2Args, ClipSchemaArgNames, ClipSchema2Attrs,
+           ClipHasher);
 
-Attrs ClipDxNormalizer(TVMOpEnv* env, const ClipDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->dy);
+std::vector<Value> ClipDxSchema2Args(const ClipDxArgs* args) {
+  return {args->x, args->dy};
+}
+
+std::vector<std::string> ClipDxSchemaArgNames() {
+  return {"x", "dy"};
+}
+
+Attrs ClipDxSchema2Attrs(const ClipDxArgs* args) {
   auto attrs = make_object<ClipAttrs>();
   attrs->a_min = args->a_min;
   attrs->a_max = args->a_max;
   return Attrs(attrs);
-}
-
-void ClipDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
 }
 
 HashKey ClipDxHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -462,20 +444,21 @@ HashKey ClipDxHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(ClipDx, "mnm.op.clip_dx", ClipDxArgs, ClipDxNormalizer, ClipDxTyper, ClipDxHasher);
+MNM_TVMJIT(ClipDx, "mnm.op.clip_dx", ClipDxArgs, ClipDxSchema2Args, ClipDxSchemaArgNames,
+           ClipDxSchema2Attrs, ClipDxHasher);
 
-Attrs CastNormalizer(TVMOpEnv* env, const CastArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->data);
+std::vector<Value> CastSchema2Args(const CastArgs* args) {
+  return {args->data};
+}
+
+std::vector<std::string> CastSchemaArgNames() {
+  return {"data"};
+}
+
+Attrs CastSchema2Attrs(const CastArgs* args) {
   auto attrs = make_object<CastAttrs>();
   attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
   return Attrs(attrs);
-}
-
-void CastTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey CastHasher(const std::vector<Type>& param_types, const Type& y_type, const CastArgs* args) {
@@ -484,70 +467,51 @@ HashKey CastHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(Cast, "mnm.op.cast", CastArgs, CastNormalizer, CastTyper, CastHasher);
+MNM_TVMJIT(Cast, "mnm.op.cast", CastArgs, CastSchema2Args, CastSchemaArgNames, CastSchema2Attrs,
+           CastHasher);
 
-Attrs CastLikeNormalizer(TVMOpEnv* env, const CastLikeArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->data);
-  env->inputs[1] = GetDLTensor(args->dtype_like);
-  return Attrs();
+std::vector<Value> CastLikeSchema2Args(const CastLikeArgs* args) {
+  return {args->data, args->dtype_like};
 }
 
-void CastLikeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1])};
+std::vector<std::string> CastLikeSchemaArgNames() {
+  return {"data", "dtype_like"};
 }
 
-MNM_TVMJIT(CastLike, "mnm.op.cast_like", CastLikeArgs, CastLikeNormalizer, CastLikeTyper,
-           GenericHasher);
+MNM_TVMJIT(CastLike, "mnm.op.cast_like", CastLikeArgs, CastLikeSchema2Args, CastLikeSchemaArgNames,
+           GenericAttrs, GenericHasher);
 
-Attrs GatherNdNormalizer(TVMOpEnv* env, const GatherNdArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->data),
-      GetDLTensor(args->indices),
-  };
-  return Attrs();
+std::vector<Value> GatherNdSchema2Args(const GatherNdArgs* args) {
+  return {args->data, args->indices};
 }
 
-void GatherNdTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
+std::vector<std::string> GatherNdSchemaArgNames() {
+  return {"data", "indices"};
 }
 
-MNM_TVMJIT(GatherNd, "mnm.op.gather_nd", GatherNdArgs, GatherNdNormalizer, GatherNdTyper,
-           GenericHasher);
+MNM_TVMJIT(GatherNd, "mnm.op.gather_nd", GatherNdArgs, GatherNdSchema2Args, GatherNdSchemaArgNames,
+           GenericAttrs, GenericHasher);
 
-Attrs GatherNdDxNormalizer(TVMOpEnv* env, const GatherNdDxArgs* args) {
-  using namespace tvm;
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(3);
-  env->inputs[0] = GetDLTensor(args->data);
-  env->inputs[1] = GetDLTensor(args->indices);
-  env->inputs[2] = GetDLTensor(args->dy);
-  return Attrs();
+std::vector<Value> GatherNdDxSchema2Args(const GatherNdDxArgs* args) {
+  return {args->data, args->indices, args->dy};
 }
 
-void GatherNdDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
+std::vector<std::string> GatherNdDxSchemaArgNames() {
+  return {"data", "indices", "dy"};
 }
 
-MNM_TVMJIT(GatherNdDx, "mnm.op.gather_nd_dx", GatherNdDxArgs, GatherNdDxNormalizer, GatherNdDxTyper,
-           GenericHasher);
+MNM_TVMJIT(GatherNdDx, "mnm.op.gather_nd_dx", GatherNdDxArgs, GatherNdDxSchema2Args,
+           GatherNdDxSchemaArgNames, GenericAttrs, GenericHasher);
 
-Attrs SqueezeNormalizer(TVMOpEnv* env, const SqueezeArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> SqueezeSchema2Args(const SqueezeArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SqueezeSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs SqueezeSchema2Attrs(const SqueezeArgs* args) {
   auto attrs = make_object<SqueezeAttrs>();
   std::vector<Integer> axis;
   axis.reserve(args->axis.size());
@@ -558,11 +522,6 @@ Attrs SqueezeNormalizer(TVMOpEnv* env, const SqueezeArgs* args) {
   return Attrs(attrs);
 }
 
-void SqueezeTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
-}
-
 HashKey SqueezeHasher(const std::vector<Type>& param_types, const Type& y_type,
                       const SqueezeArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
@@ -570,7 +529,62 @@ HashKey SqueezeHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Squeeze, "mnm.op.squeeze", SqueezeArgs, SqueezeNormalizer, SqueezeTyper, SqueezeHasher);
+MNM_TVMJIT(Squeeze, "mnm.op.squeeze", SqueezeArgs, SqueezeSchema2Args, SqueezeSchemaArgNames,
+           SqueezeSchema2Attrs, SqueezeHasher);
+
+std::vector<Value> ReshapeSchema2Args(const ReshapeArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ReshapeSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs ReshapeSchema2Attrs(const ReshapeArgs* args) {
+  auto attrs = make_object<ReshapeAttrs>();
+  for (auto dim : args->shape) {
+    attrs->newshape.push_back(dim);
+  }
+  attrs->reverse = args->reverse;
+  return Attrs(attrs);
+}
+
+HashKey ReshapeHasher(const std::vector<Type>& param_types, const Type& y_type,
+                      const ReshapeArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->shape;
+  key << args->reverse;
+  return key;
+}
+
+MNM_TVMJIT(Reshape, "mnm.op.reshape", ReshapeArgs, ReshapeSchema2Args, ReshapeSchemaArgNames,
+           ReshapeSchema2Attrs, ReshapeHasher);
+
+std::vector<Value> ExpandDimsSchema2Args(const ExpandDimsArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ExpandDimsSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs ExpandDimsSchema2Attrs(const ExpandDimsArgs* args) {
+  auto attrs = make_object<ExpandDimsAttrs>();
+  attrs->axis = args->axis;
+  attrs->num_newaxis = args->num_newaxis;
+  return Attrs(attrs);
+}
+
+HashKey ExpandDimsHasher(const std::vector<Type>& param_types, const Type& y_type,
+                         const ExpandDimsArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  key << args->num_newaxis;
+  return key;
+}
+
+MNM_TVMJIT(ExpandDims, "mnm.op.expand_dims", ExpandDimsArgs, ExpandDimsSchema2Args,
+           ExpandDimsSchemaArgNames, ExpandDimsSchema2Attrs, ExpandDimsHasher);
 
 }  // namespace tvmjit
 }  // namespace op

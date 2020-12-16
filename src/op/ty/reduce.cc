@@ -27,9 +27,14 @@ Type SumInfer(const CallValues& value) {
   const auto* args = value->args.as<SumArgs>();
   CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
+  auto ndim = x->shape.size();
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
   std::vector<int64_t> keep = args->keepdims;
+  if (axis.empty() && !keep.empty()) {
+    axis.resize(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+  }
   if (keep.size() == 1) {
     keep = std::vector<int64_t>(axis.size(), keep[0]);
   }
@@ -103,7 +108,7 @@ Type ReduceOutIntDType(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
   Array<PrimExpr> shape = GenerateReduceShape(args, x);
-  return TensorType(shape, tvm::runtime::DataType::Int(64));
+  return TensorType(shape, tvm::runtime::DataType::Int(32));
 }
 
 Type ReduceOutSameDType(const CallValues& value) {

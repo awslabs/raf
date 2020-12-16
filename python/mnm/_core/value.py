@@ -3,7 +3,7 @@
 from mnm._core.core_utils import ctx2str, register_node, str2ctx
 from mnm._ffi import value as ffi
 from mnm._ffi.ir._make import Constant as make_const_expr
-from mnm._ffi.value import _make
+from mnm._ffi.value import _make, ToTVM
 from mnm._lib import Object
 from mnm._lib import tvm_ndarray
 
@@ -83,6 +83,9 @@ class TensorValue(BaseTensorValue):
     @staticmethod
     def from_numpy(np_array):
         return TensorValue.from_tvm(tvm_ndarray(np_array))
+
+    def asnumpy(self):
+        return ToTVM(self).asnumpy()
 
 
 @register_node("mnm.value.TensorTypeValue")

@@ -23,20 +23,20 @@ using namespace mnm::op::schema;
 using namespace tvm;
 using namespace ::tvm::relay;
 
-Attrs GetValidCountsNormalizer(TVMOpEnv* env, const GetValidCountsArgs* args) {
-  CHECK_EQ(env->outputs.size(), 3U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->data);
+std::vector<Value> GetValidCountSchema2Args(const GetValidCountsArgs* args) {
+  return {args->data};
+}
+
+std::vector<std::string> GetValidCountSchemaArgNames() {
+  return {"data"};
+}
+
+Attrs GetValidCountsSchema2Attrs(const GetValidCountsArgs* args) {
   auto attrs = make_object<GetValidCountsAttrs>();
   attrs->score_threshold = args->score_threshold;
   attrs->id_index = args->id_index;
   attrs->score_index = args->score_index;
   return Attrs(attrs);
-}
-
-void GetValidCountsTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTupleType(env->outputs);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey GetValidCountsHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -48,15 +48,18 @@ HashKey GetValidCountsHasher(const std::vector<Type>& param_types, const Type& y
   return key;
 }
 
-MNM_TVMJIT(GetValidCounts, "mnm.op.get_valid_counts", GetValidCountsArgs, GetValidCountsNormalizer,
-           GetValidCountsTyper, GetValidCountsHasher);
+MNM_TVMJIT(GetValidCounts, "mnm.op.get_valid_counts", GetValidCountsArgs, GetValidCountSchema2Args,
+           GetValidCountSchemaArgNames, GetValidCountsSchema2Attrs, GetValidCountsHasher);
 
-Attrs NonMaxSuppressionNormalizer(TVMOpEnv* env, const NonMaxSuppressionArgs* args) {
-  env->inputs.resize(4);
-  env->inputs[0] = GetDLTensor(args->data);
-  env->inputs[1] = GetDLTensor(args->valid_count);
-  env->inputs[2] = GetDLTensor(args->indices);
-  env->inputs[3] = GetDLTensor(args->max_output_size);
+std::vector<Value> NonMaxSuppressionSchema2Args(const NonMaxSuppressionArgs* args) {
+  return {args->data, args->valid_count, args->indices, args->max_output_size};
+}
+
+std::vector<std::string> NonMaxSuppressionSchemaArgNames() {
+  return {"data", "valid_count", "indices", "max_output_size"};
+}
+
+Attrs NonMaxSuppressionSchema2Attrs(const NonMaxSuppressionArgs* args) {
   auto attrs = make_object<NonMaximumSuppressionAttrs>();
   attrs->iou_threshold = args->iou_threshold;
   attrs->force_suppress = args->force_suppress;
@@ -67,16 +70,6 @@ Attrs NonMaxSuppressionNormalizer(TVMOpEnv* env, const NonMaxSuppressionArgs* ar
   attrs->return_indices = args->return_indices;
   attrs->invalid_to_bottom = args->invalid_to_bottom;
   return Attrs(attrs);
-}
-
-void NonMaxSuppressionTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTupleType(env->outputs);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-      GetTensorType(env->inputs[3]),
-  };
 }
 
 HashKey NonMaxSuppressionHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -94,7 +87,8 @@ HashKey NonMaxSuppressionHasher(const std::vector<Type>& param_types, const Type
 }
 
 MNM_TVMJIT(NonMaxSuppression, "mnm.op.non_max_suppression", NonMaxSuppressionArgs,
-           NonMaxSuppressionNormalizer, NonMaxSuppressionTyper, NonMaxSuppressionHasher);
+           NonMaxSuppressionSchema2Args, NonMaxSuppressionSchemaArgNames,
+           NonMaxSuppressionSchema2Attrs, NonMaxSuppressionHasher);
 
 }  // namespace tvmjit
 }  // namespace op

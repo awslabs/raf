@@ -71,6 +71,7 @@ OP_MAP = {
     "mnm.op.right_shift": ["right_shift", "", "kBroadcast"],
     "mnm.op.round": ["round", "", "kElemWise"],
     "mnm.op.rsqrt": ["rsqrt", "", "kElemWise"],
+    "mnm.op.reshape": ["reshape", "relay.attrs.ReshapeAttrs", "kInjective"],
     "mnm.op.sequence_mask": ["sequence_mask", "relay.attrs.SequenceMaskAttrs", "kInjective"],
     "mnm.op.reverse_sequence": ["reverse_sequence", "relay.attrs.ReverseSequenceAttrs", "kInjective"],
     "mnm.op.sigmoid": ["sigmoid", "", "kElemWise"],

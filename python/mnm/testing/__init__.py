@@ -32,7 +32,7 @@ def check_type(expr, typ):
 
 def get_ctx_list():
     """Helper function to get all available contexts"""
-    ret = ["llvm"]
+    ret = ["cpu"]
     if mnm.build.with_cuda():
         ret.append("cuda")
     return ret
@@ -40,21 +40,25 @@ def get_ctx_list():
 
 def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     """Helper function to check if m_x and m_y are equal"""
-    m_x = m_x.asnumpy()
-    m_y = m_y.asnumpy()
+    def _convert(x):
+        if isinstance(x, (mnm.ndarray, mnm._core.value.TensorValue)):
+            return x.asnumpy()
+        if isinstance(x, torch.Tensor):
+            return x.detach().cpu().numpy()
+        if np.isscalar(x):
+            return np.array(x)
+        assert isinstance(x, np.ndarray), f"{type(x)} is not supported"
+        return x
+    m_x = _convert(m_x)
+    m_y = _convert(m_y)
     np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
 
 
-def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    """Helper function to check if m_x and t_x are equal"""
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
-
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
+def randn(shape, *, ctx="cpu", dtype="float32", positive=False):
     """Helper function to generate a pair of mnm and numpy arrays"""
     x = np.random.randn(*shape)
+    if positive:
+        x = np.abs(x) + 1e-5
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)
@@ -74,18 +78,17 @@ def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True,
-                mean=0.0, std=1.0, pos=False):
+def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.0, positive=False):
     """Helper function to generate a pair of mnm and torch arrays"""
-    x = np.random.randn(*shape) * std + mean
-    if pos:
-        x = np.abs(x)
+    x = np.random.randn(*shape) * std
+    if positive:
+        x = np.abs(x) + 1e-5
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, ctx=ctx)
-    t_x = torch.tensor(n_x, requires_grad=requires_grad)  # pylint: disable=not-callable
+    t_x = torch.tensor(n_x, requires_grad=requires_grad, device=ctx)  # pylint: disable=not-callable
     return m_x, t_x
 
 

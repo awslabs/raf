@@ -53,6 +53,7 @@ class OpEnv {
   OpEnv();
   virtual ~OpEnv();
   virtual void Execute(const CallValues& call) = 0;
+  virtual void Execute(const std::vector<value::Value>& inputs, value::Value output) = 0;
 
   void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
   void RequestStream(void** dest, const Context& ctx, int tag_idx);
@@ -61,6 +62,9 @@ class OpEnv {
   void BindExecutor(executor::Executor* executor);
   std::shared_ptr<requests::Requests> GetRequests() const;
   void SetOutputBuffer(std::vector<std::shared_ptr<memory_pool::Memory>> out_buf);
+
+  /*! \brief Input indices in the argument array. This is used by VM executor. */
+  std::vector<int> arg_indices;
 
  private:
   // Keep reference to output buffer so that the memory is released when OpEnv is destructed.
@@ -82,7 +86,7 @@ class OpDispatch {
  public:
   static TRegistry* Registry();
   static TDispatchList* Get(const ir::Op& op, DevType device_type);
-  static std::unique_ptr<OpEnv> Dispatch(const CallValues& call);
+  static std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
 
  public:
   std::string name;
@@ -110,6 +114,8 @@ using FMNMCastRule = registry::TypedPackedFunc<Array<ir::Integer>(const Array<Ex
 
 using FMNMAnnotateTarget =
     registry::TypedPackedFunc<bool(const Attrs& attrs, const Array<Expr>& args)>;
+
+using FMNMSchemaFieldIndex = registry::TypedPackedFunc<int(const std::string&)>;
 
 using FPrimalGradient = registry::TypedPackedFunc<
     // returns: op's contribution to igrads

@@ -40,6 +40,7 @@ using namespace mnm::value;
 using namespace mnm::registry;
 using namespace mnm::binding;
 using mnm::op::FMNMSchema;
+using mnm::op::FMNMSchemaFieldIndex;
 using mnm::executor::interpreter::InvokePrimitive;
 
 // Part 0. Op names
@@ -88,7 +89,14 @@ namespace names {{
 
 {VALUE_TO_SCHEMA_EPILOG}
 
-// Part 3.2. FMNMSchema API, uses "Part 3.1. Array<Value> to schema"
+// Part 3.2. Schema field index (for each schema)
+{SCHEMA_FIELD_IDX_PRELUDE}
+
+{SCHEMA_FIELD_IDX}
+
+{SCHEMA_FIELD_IDX_EPILOG}
+
+// Part 3.3. FMNMSchema API, uses Part 3.1 and Part 3.2
 {F_MNM_SCHEMA_PRELUDE}
 
 {F_MNM_SCHEMAS}
@@ -129,6 +137,8 @@ MNM_REGISTER_OBJECT_REFLECT(ListArgs);
     symbolic_apis = "\n".join(map(gen_symbolic_api, ops))
     # Part 3.1. Array<Value> to schema (for each schema)
     value2schemas = "\n\n".join(map(gen_value_to_schema, schemas))
+    # Part 3.2. Schema field index (for each schema)
+    schema_field_idx = "\n\n".join(map(gen_schema_field_idx, schemas))
     # Part 3.2. FMNMSchema API, uses "Part 3.1. Array<Value> to schema"
     f_mnm_schemas = "\n".join(map(gen_f_mnm_schema, ops))
     # The last part: registering schemas
@@ -143,6 +153,7 @@ MNM_REGISTER_OBJECT_REFLECT(ListArgs);
                        FFI_TO_EXPRS=ffi2exprs,
                        SYMBOLIC_APIS=symbolic_apis,
                        VALUE_TO_SCHEMAS=value2schemas,
+                       SCHEMA_FIELD_IDX=schema_field_idx,
                        F_MNM_SCHEMAS=f_mnm_schemas,
                        SCHEMA_REGS=schema_regs,
                        **globals())
@@ -522,7 +533,48 @@ MNM_{OPTION}({I}, value2schema::{NORM}, {ARG_NAME});
                                   N_ARG_LB=n_arg_lb, N_ARG_UB=n_arg_ub)
 
 
-# Part 3.2. FMNMSchema API, uses "Part 3.1. Array<Value> to schema"
+# Part 3.2. Schema field index (for each schema)
+
+
+SCHEMA_FIELD_IDX_PRELUDE = """
+namespace mnm {
+namespace op {
+namespace regs {
+namespace schema_field_idx {
+""".strip()
+
+SCHEMA_FIELD_IDX_EPILOG = """
+}  // namespace schema_field_idx
+}  // namespace regs
+}  // namespace op
+}  // namespace mnm
+""".strip()
+
+
+def gen_schema_field_idx(_schema):
+    VALUE_TO_SCHEMA = """
+template <const char* op_name>
+int {SCHEMA_NAME}(const std::string& field) {{
+{ARGS}
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}}
+""".strip()
+    ARG = """
+  if (field == "{FIELD}") {{
+    return {I};
+  }}
+""".strip()
+    schema_name, schema = _schema
+    schema_name = snake_to_pascal(schema_name)
+    args = []
+    for i, entry in enumerate(schema):
+        args.append(ARG.format(I=i, FIELD=entry.name))
+    args = "\n".join(map(add_no_lint, args))
+    return VALUE_TO_SCHEMA.format(SCHEMA_NAME=schema_name, ARGS=args)
+
+
+# Part 3.3. FMNMSchema API, uses Part 3.1 and Part 3.2
 
 F_MNM_SCHEMA_PRELUDE = """
 namespace mnm {
@@ -532,10 +584,14 @@ namespace f_mnm_schema {
 
 #define MNM_BIND_SCHEMA(op_str, op_name, schema) \\
   MNM_OP_REGISTER(op_str).set_attr<FMNMSchema>("FMNMSchema", schema<op_name>);
+
+#define MNM_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \\
+  MNM_OP_REGISTER(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
 """.strip()
 
 F_MNM_SCHEMA_EPILOG = """
 #undef MNM_BIND_SCHEMA
+#undef MNM_BIND_SCHEMA_FIELD_INDEX
 
 }  // namespace f_mnm_schema
 }  // namespace regs
@@ -547,6 +603,7 @@ F_MNM_SCHEMA_EPILOG = """
 def gen_f_mnm_schema(op):
     FMNMSchema = """
 MNM_BIND_SCHEMA("mnm.op.{OP_NAME}", names::{OP_NAME}, value2schema::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.{OP_NAME}", names::{OP_NAME}, schema_field_idx::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
 """.strip()
     op_name = op.name
     schema_name = snake_to_pascal(op.schema_name)

@@ -17,7 +17,7 @@ namespace op {
 namespace cublas {
 namespace manual {
 
-using value::Value;
+using namespace mnm::value;
 
 void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTensor* c) {
   auto handle = CUBlasThreadEntry::ThreadLocal()->handle;
@@ -71,6 +71,13 @@ template <bool transpose_a, bool transpose_b>
 class MatmulImpl : public mnm::op::OpEnv {
  public:
   explicit MatmulImpl(const CallValues& cv) {
+    static auto fschema_index =
+        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("mnm.op.matmul");
+    this->arg_indices = {
+        fschema_index[op]("x1"),
+        fschema_index[op]("x2"),
+    };
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
   }
@@ -79,6 +86,12 @@ class MatmulImpl : public mnm::op::OpEnv {
     std::string op_name = tvm::runtime::Downcast<value::OpValue>(cv->callee)->op->name;
     WITH_CUDA_PROFILER(cv->ctx, op_name, "ComputationOperator", {},
                        { GemmImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out); })
+  }
+  void Execute(const std::vector<Value>& inputs, Value output) {
+    DLTensor* x1 = ir::Downcast<TensorValue>(inputs[0]);
+    DLTensor* x2 = ir::Downcast<TensorValue>(inputs[1]);
+    DLTensor* out = ir::Downcast<TensorValue>(output);
+    GemmImpl(x1, transpose_a, x2, transpose_b, out);
   }
   static OpEnv* make(const CallValues& cv) {
     return new MatmulImpl<transpose_a, transpose_b>(cv);

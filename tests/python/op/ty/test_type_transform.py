@@ -640,7 +640,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("i_dtype", ["int64"])
 @pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
-@pytest.mark.parametrize("ishape", [[3, 4, 2], [4, 5, 3]])
+@pytest.mark.parametrize("ishape", [[3], [3, 2], [4, 5, 3]])
 def test_gather_nd(dtype, i_dtype, dshape, ishape):
     # pylint: disable=no-self-use
     class GatherNd(mnm.Model):
@@ -655,7 +655,15 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     m_i = mnm.transpose(m_i, axes=[len(ishape) - 1] + list(range(len(ishape) - 1)))
     ty_data = TensorType(dshape, dtype=dtype)
     ty_indices = TensorType(m_i.shape, dtype=i_dtype)
-    fwd_ty = TensorType((m_x.ndim + m_i.ndim - ishape[0], -1), dtype=dtype)
+    assert ishape[-1] <= len(dshape)
+    odim = len(ishape) - 1 + len(dshape) - ishape[-1]
+    oshape = []
+    for i in range(odim):
+        if i + 1 < len(ishape):
+            oshape.append(ishape[i])
+        else:
+            oshape.append(dshape[i + 1 - len(ishape) + ishape[-1]])
+    fwd_ty = TensorType(oshape, dtype=dtype)
     # check forward
     m_func = model._internal(m_x, m_i).func
     m_func = run_infer_type(m_func)

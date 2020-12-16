@@ -16,38 +16,23 @@ namespace tvmjit {
 
 using namespace mnm::ir;
 using namespace mnm::op::schema;
-using common::shape_utils::GetNumel;
 
-Attrs BinaryNormalizer(TVMOpEnv* env, const BinaryUfuncArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x1),
-      GetDLTensor(args->x2),
-  };
-  return Attrs();
-}
-
-void BinaryTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
-}
-
-MNM_TVMJIT(Add, "mnm.op.add", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper, GenericHasher);
-MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
-           GenericHasher);
-MNM_TVMJIT(Divide, "mnm.op.divide", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper, GenericHasher);
-MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
-           GenericHasher);
-MNM_TVMJIT(Power, "mnm.op.power", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper, GenericHasher);
-MNM_TVMJIT(Greater, "mnm.op.greater", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
-           GenericHasher);
-MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
-           GenericHasher);
-MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryUfuncArgs, BinaryNormalizer, BinaryTyper,
-           GenericHasher);
+MNM_TVMJIT(Add, "mnm.op.add", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Divide, "mnm.op.divide", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Power, "mnm.op.power", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Greater, "mnm.op.greater", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
 
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   Array<Integer> axis;
@@ -59,11 +44,15 @@ struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
 };
 TVM_REGISTER_NODE_TYPE(SumAttrs);
 
-Attrs SumNormalizer(TVMOpEnv* env, const SumArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-  };
+std::vector<Value> SumSchema2Args(const SumArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SumSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs SumSchema2Attrs(const SumArgs* args) {
   auto attrs = make_object<SumAttrs>();
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
     attrs->axis.push_back(args->axis[i]);
@@ -72,13 +61,6 @@ Attrs SumNormalizer(TVMOpEnv* env, const SumArgs* args) {
     attrs->keepdims.push_back(args->keepdims[i]);
   }
   return Attrs(attrs);
-}
-
-void SumTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-  };
 }
 
 HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, const SumArgs* args) {
@@ -90,7 +72,8 @@ HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, co
   return key;
 }
 
-MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumNormalizer, SumTyper, SumHasher);
+MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumSchema2Args, SumSchemaArgNames, SumSchema2Attrs,
+           SumHasher);
 
 }  // namespace tvmjit
 }  // namespace op

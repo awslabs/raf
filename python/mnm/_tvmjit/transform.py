@@ -29,11 +29,12 @@ _reg.register_injective_schedule("mnm.op.stack")
 _reg.register_injective_schedule("mnm.op.squeeze")
 _reg.register_injective_schedule("mnm.op.cast")
 _reg.register_injective_schedule("mnm.op.cast_like")
-
+_reg.register_injective_schedule("mnm.op.reshape")
 _reg.register_broadcast_schedule("mnm.op.broadcast_to")
 _reg.register_broadcast_schedule("mnm.op.broadcast_to_like")
 _reg.register_broadcast_schedule("mnm.op.clip")
 _reg.register_broadcast_schedule("mnm.op.repeat")
+_reg.register_broadcast_schedule("mnm.op.expand_dims")
 
 
 @register_compute("mnm.op.clip_dx")

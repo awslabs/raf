@@ -19,26 +19,34 @@ class Status(object):
         self.cudnn_apis = cudnn_apis
         self.symbols = symbols
         self.attrs = dict()
+        self.tensor_inputs = dict()
         self.casts = dict()
+        self.runtime_casts = dict()
         self.wrappers = wrappers
 
     def add_attr(self, ty, name):
-        assert name not in self.attrs.keys(), name
+        assert name not in self.attrs, name
         self.attrs[name] = ty
 
+    def add_tensor(self, ty, name):
+        assert name not in self.tensor_inputs, name
+        self.tensor_inputs[name] = ty
+
     def add_wrapper(self, key, func):
-        assert key not in self.wrappers.keys()
+        assert key not in self.wrappers
         self.wrappers[key] = func
 
     def add_cast(self, ty, name, value):
         self.casts[name] = (ty, value)
+
+    def add_runtime_cast(self, ty, name, value):
+        self.runtime_casts[name] = (ty, value)
 
     def set_hardcode(self, k, v):
         if k in self.symbols.keys():
             msg = f"You cannot override existing hardcode! {k}, {self.symbols[k]}, {v}"
             assert False, msg
         self.symbols[k] = v
-
 
     def get_destructors(self):
         res = [call_cudnn_api(f'Destroy{strip_type_commons(ty)}Descriptor', name)
@@ -52,6 +60,10 @@ class Status(object):
         casts = [f'{v[0]} {name} = {v[1]};\n    (void) {name};' for name, v in self.casts.items()]
         return '\n    '.join(casts)
 
+    def get_runtime_casts(self):
+        casts = [f'{v[0]} {name} = {v[1]};\n    (void) {name};' for name, v in self.runtime_casts.items()]
+        return '\n    '.join(casts)
+
 
 class ShapeWrapper(object):
 
@@ -63,30 +75,34 @@ class ShapeWrapper(object):
 
     def add_cast(self, status):
         assert '->' in self.tensor, self.tensor
-        name = self.tensor.split('->')[1]
-        status.add_cast('DLTensor*', name, self.tensor)
-        self.tensor = name
+        self.cast_ptr = self.tensor.split('->')[1]
+        status.add_cast('DLTensor*', self.cast_ptr, self.tensor)
+
+    def field_name(self):
+        assert '->' in self.tensor, self.tensor
+        return self.tensor.split('->')[1]
 
     def normalize(self, status):
         self.add_cast(status)
         slices = ''
         if self.flatten is not None:
-            slices = ', '.join(str(i).replace('<last>', f'{self.tensor}->ndim') for i in self.flatten)
-        res = [f'auto {self.name}_tt = SquashTensorShape({self.tensor}, {{{slices}}});']
+            slices = ', '.join(str(i).replace('<last>', f'{self.cast_ptr}->ndim') for i in self.flatten)
+        res = [f'auto {self.name}_tt = SquashTensorShape({self.cast_ptr}, {{{slices}}});']
         return res
+
 
 class CUDNNFilter(ShapeWrapper):
 
     # `flatten' is only for legacy normalization.
-    def __init__(self, name, ptr, tensor, flatten=None):
+    def __init__(self, name, api_arg, tensor, flatten=None):
         assert flatten is None
         ShapeWrapper.__init__(self, name, tensor, flatten, False)
-        self.ptr = ptr
+        self.api_arg = api_arg
 
     def normalize(self, status):
         ShapeWrapper.add_cast(self, status)
         status.add_attr(f'cudnnFilterDescriptor_t', self.name)
-        status.set_hardcode(self.ptr, f'{self.tensor}->data')
+        status.set_hardcode(self.api_arg, f'{self.cast_ptr}->data')
         res = [f'auto {self.name}_tt = SquashTensorShape({self.tensor}, {{}});']
         res += [f'(void) {self.name}_tt;']
         res += [f'{self.name} = NormalizeFilter({self.tensor});']
@@ -95,33 +111,55 @@ class CUDNNFilter(ShapeWrapper):
 
 class CUDNNTensor(ShapeWrapper):
 
-    def __init__(self, desc, ptr, tensor, flatten=None):
+    def __init__(self, desc, api_arg, tensor, flatten=None):
         ShapeWrapper.__init__(self, desc, tensor, flatten, True)
-        self.ptr = ptr
+        self.api_arg = api_arg
 
     def normalize(self, status):
         res = ShapeWrapper.normalize(self, status)
-        status.set_hardcode(self.ptr, f'{self.tensor}->data')
+        status.set_hardcode(self.api_arg, f'{self.cast_ptr}->data')
         status.add_attr(f'cudnnTensorDescriptor_t', self.name)
         res += [f'{self.name} = NormalizeTensorType({self.name}_tt);']
         return res
+
+class MNMTensor(object):
+    """MNMTensor is the tensor that doesn't require CUDNN tensor descriptors."""
+    def __init__(self, api_arg, tensor):
+        assert isinstance(api_arg, (str, list, tuple))
+        self.api_arg = api_arg
+        self.tensor = tensor
+
+    def field_name(self):
+        return self.tensor.split('->')[1]
+
+    def normalize(self, status):
+        assert '->' in self.tensor, self.tensor
+        self.cast_ptr = self.tensor.split('->')[1]
+        status.add_runtime_cast('DLTensor*', self.cast_ptr, self.tensor)
+        if isinstance(self.api_arg, (list, tuple)):
+            for n in self.api_arg:
+                status.set_hardcode(n, f'{self.cast_ptr}->data')
+        else:
+            status.set_hardcode(self.api_arg, f'{self.cast_ptr}->data')
+        return []
+
 
 def CUDNNOutput(Base):
 
     class Output(Base):
 
-        def __init__(self, desc, ptr, tensor, flatten=None):
-            Base.__init__(self, desc, ptr, tensor, flatten)
-            self.ptr = ptr
+        def __init__(self, desc, api_arg, tensor, flatten=None):
+            Base.__init__(self, desc, api_arg, tensor, flatten)
+            self.api_arg = api_arg
 
         def add_cast(self, status):
             if self.tensor == 'cv->out':
                 status.add_cast('DLTensor*', 'out', 'cv->out')
-                self.tensor = 'out'
+                self.cast_ptr = 'out'
             elif self.tensor.startswith('tv->fields['):
                 idx = int(self.tensor[len('tv->fields['):].rstrip(']'))
                 status.add_cast('DLTensor*', f'out{idx}', self.tensor)
-                self.tensor = f'out{idx}'
+                self.cast_ptr = f'out{idx}'
             else:
                 assert False, self.tensor
 
@@ -191,11 +229,11 @@ MetaCache<{PERF_T}> {CACHE};
         params = ['CUDNNThreadEntry::ThreadLocal()->handle']
         for arg in api_args[1:]:
             name = arg.name
-            if name in status.symbols.keys():
+            if name in status.symbols:
                 params.append(status.symbols[name])
-            elif name in status.attrs.keys():
+            elif name in status.attrs:
                 params.append(name)
-            elif name in self.args.keys():
+            elif name in self.args:
                 params.append(str(self.args[name]))
             else:
                 assert False, f'{name} is missing!'
@@ -219,17 +257,17 @@ MetaCache<{PERF_T}> {CACHE};
 
 class CUDNNWorkSpace(object):
 
-    def __init__(self, size, ptr, api, args):
+    def __init__(self, size, api_arg, api, args):
         self.size = size
-        self.ptr = ptr
+        self.api_arg = api_arg
         self.api = api
         self.args = ['CUDNNThreadEntry::ThreadLocal()->handle'] + args
 
     def normalize(self, status):
         status.add_attr('size_t', self.size)
-        status.add_attr('void *', self.ptr)
+        status.add_attr('void *', self.api_arg)
         res = [call_cudnn_api(self.api, ', '.join(self.args))]
-        res += [f'RequestWorkspace(&{self.ptr}, cv->ctx, {self.size});']
+        res += [f'RequestWorkspace(&{self.api_arg}, cv->ctx, {self.size});']
         return res
 
 class AssignStatement(object):
@@ -253,6 +291,7 @@ class CUDNNDispatch(object):
 class {CLASSNAME} : public mnm::op::OpEnv {{
   {ATTRS}
   explicit {CLASSNAME}(const CallValues &cv) {{
+    {ARG_INDICES}
     {CASTS}
     {CONSTRUCTOR}
   }}
@@ -262,6 +301,12 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
   }}
   void Execute(const CallValues &cv) {{
     {CASTS}
+    {RUNTIME_CASTS}
+    {INVOKE}
+  }}
+  void Execute(const std::vector<Value>& inputs, Value output) {{
+    {VM_CHECK_INPUTS}
+    {VM_CASTS}
     {INVOKE}
   }}
   static OpEnv *make(const CallValues &cv) {{
@@ -271,7 +316,6 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
 
 MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn");
 """.strip()
-
 
     def __init__(self, op, api, arg_type, normalizers, args, output=['DLTensor *']):
         self.op = op
@@ -287,34 +331,73 @@ MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_c
         constructor = [i.normalize(status) for i in self.normalizers]
         constructor = itertools.chain.from_iterable(constructor)
         constructor = '\n    '.join(constructor)
-        invoke = ['CUDNNThreadEntry::ThreadLocal()->handle']
-        for elem in cudnn_apis[f'cudnn{self.api}'][1:]:
-            name = elem.name
-            if name in self.args.keys():
-                invoke.append(self.args[name])
-            elif name in status.attrs.keys():
-                if name == "algo":
-                    invoke.append("algo.algo")
-                else:
-                    invoke.append(str(name))
-            else:
-                assert False, f'{name} is missing!'
-        output = ''
+
+        # prepare the arg indices
+        schema_fields = []
+        for arg in self.normalizers:
+            if isinstance(arg, (CUDNNOutputTensor, CUDNNOutputFilter)):
+                continue
+            if isinstance(arg, (ShapeWrapper, MNMTensor)):
+                schema_fields.append(f'fschema_index[op]("{arg.field_name()}"),')
+        arg_indices = """
+    auto op = Op::Get("mnm.op.{OP}");
+    this->arg_indices = {{
+      {FIELDS}
+    }};""".strip().format(OP=self.op, FIELDS="\n      ".join(schema_fields))
+
+        # casts
+        output_cast = ''
         if len(self.output) != 1:
-            output = 'auto *tv = const_cast<TupleValueObj*>(cv->out.as<TupleValueObj>());\n'
+            output_cast = 'TupleValue tv = Downcast<TupleValue>(cv->out);\n    '
         casts = """
     auto args = cv->args.as<mnm::op::schema::{TYPE}>();
     (void) args;
     {CASTS}
 """.strip().format(TYPE=codegen_utils.snake_to_pascal(self.arg_type)+"Args",
-                   CASTS=output + status.get_casts())
+                   CASTS=output_cast + status.get_casts())
+
+        # vm exec casts
+        num_inputs = 0
+        vm_casts = []
+        vm_output_cast = 'TupleValue tv = Downcast<TupleValue>(output);\n    ' if len(self.output) != 1 else ''
+        for arg in self.normalizers:
+            if isinstance(arg, (CUDNNOutputTensor, CUDNNOutputFilter)):
+                if len(self.output) != 1:
+                    vm_casts.append(f'DLTensor* {arg.cast_ptr} = Downcast<TensorValue>({arg.tensor});')
+                else:
+                    vm_casts.append(f'DLTensor* {arg.cast_ptr} = Downcast<TensorValue>(output);')
+            elif isinstance(arg, (ShapeWrapper, MNMTensor)):
+                vm_casts.append(f'DLTensor* {arg.cast_ptr} = Downcast<TensorValue>(inputs[{num_inputs}]);')
+                num_inputs += 1
+        vm_casts = vm_output_cast + "\n    ".join(vm_casts)
+        vm_check_inputs = f'CHECK_EQ(inputs.size(), {num_inputs});'
+
+        # invoke cudnn api
+        invoke = ['CUDNNThreadEntry::ThreadLocal()->handle']
+        for elem in cudnn_apis[f'cudnn{self.api}'][1:]:
+            name = elem.name
+            if name in self.args:
+                invoke.append(self.args[name])
+            elif name in status.attrs:
+                if name == "algo":
+                    invoke.append("algo.algo")
+                else:
+                    invoke.append(str(name))
+            elif name in status.tensor_inputs:
+                invoke.append(str(name))
+            else:
+                assert False, f'{name} is missing!'
         invoke = call_cudnn_api(self.api, ', '.join(invoke))
         return self.fmt.format(OP=self.op,
                                CLASSNAME=class_name,
                                ATTRS=status.get_attrs(),
+                               ARG_INDICES=arg_indices,
                                CONSTRUCTOR=constructor,
                                DESTRUCTOR=status.get_destructors(),
                                CASTS=casts,
+                               RUNTIME_CASTS=status.get_runtime_casts(),
+                               VM_CHECK_INPUTS=vm_check_inputs,
+                               VM_CASTS=vm_casts,
                                INVOKE=invoke)
 
 
@@ -396,9 +479,12 @@ def dispatch_pooling_dx(op, dims, mode):
 
 def dispatch_batchnorm_dxwb(op):
     x = CUDNNTensor('xDesc', 'x', 'args->x', [0, 1, 2, 3, '<last>'])
+    w = MNMTensor('bnScale', 'args->w')
     dy = CUDNNTensor('dyDesc', 'dy', 'args->dy', [0, 1, 2, 3, '<last>'])
     dx = CUDNNOutputTensor('dxDesc', 'dx', 'tv->fields[0]', [0, 1, 2, 3, '<last>'])
     dw = CUDNNOutputTensor('dBnScaleBiasDesc', 'dBnScaleResult', 'tv->fields[1]', [0, 0, 1, '<last>'])
+    epsilon = AssignStatement('double', 'epsilon', 'args->eps', True)
+    momentum = AssignStatement('double', 'exponentialAverageFactor', 'args->momentum', True)
 
     args = {
       'alphaDataDiff': constant(1, 'out0->dtype'),
@@ -407,18 +493,21 @@ def dispatch_batchnorm_dxwb(op):
       'betaParamDiff': constant(0, 'out1->dtype'),
 
       'mode': 'CUDNN_BATCHNORM_SPATIAL',
-      'epsilon': 'args->eps',
       'savedMean': 'nullptr',
       'savedInvVariance': 'nullptr',
-      'bnScale': '(args->w).as<value::TensorValueObj>()->tensor->data',
       'dBnBiasResult': 'tv->fields[2].operator DLTensor*()->data',
     }
 
-    return CUDNNDispatch(op, 'BatchNormalizationBackward', 'batch_norm_train_dxwb', [x, dy, dx, dw], args, ['DLTensor *'] * 3)
+    return CUDNNDispatch(op, 'BatchNormalizationBackward', 'batch_norm_train_dxwb', [x, w, dy, dx, dw, epsilon], args, ['DLTensor *'] * 3)
 
 def dispatch_batchnorm(op, api):
     x = CUDNNTensor('xDesc', 'x', 'args->x', [0, 1, 2, 3, '<last>'])
     w = CUDNNTensor('bnScaleBiasMeanVarDesc', 'bnScale', 'args->w', [0, 0, 1, '<last>'])
+    b = MNMTensor('bnBias', 'args->b')
+    running_mean = MNMTensor(['estimatedMean', 'resultRunningMean'], 'args->running_mean')
+    running_var = MNMTensor(['estimatedVariance', 'resultRunningVariance'], 'args->running_var')
+    epsilon = AssignStatement('double', 'epsilon', 'args->eps', True)
+    momentum = AssignStatement('double', 'exponentialAverageFactor', 'args->momentum', True)
     if op.endswith('_train'):
         y = CUDNNOutputTensor('yDesc', 'y', 'tv->fields[0]', [0, 1, 2, 3, '<last>'])
         out_types = ['DLTensor *'] * 3
@@ -429,19 +518,12 @@ def dispatch_batchnorm(op, api):
       'alpha': constant(1, 'x->dtype'),
       'beta': constant(0, 'x->dtype'),
       'mode': 'CUDNN_BATCHNORM_SPATIAL',
-      'bnBias': '(args->b).as<value::TensorValueObj>()->tensor->data',
-      'epsilon': 'args->eps',
-      'estimatedMean': '(args->running_mean).as<value::TensorValueObj>()->tensor->data',
-      'estimatedVariance': '(args->running_var).as<value::TensorValueObj>()->tensor->data',
-      'resultRunningMean': '(args->running_mean).as<value::TensorValueObj>()->tensor->data',
-      'resultRunningVariance': '(args->running_var).as<value::TensorValueObj>()->tensor->data',
-      'exponentialAverageFactor': 'args->momentum',
       'resultSaveMean': 'nullptr',
       'resultSaveVariance': 'nullptr',
       'resultSaveInvVariance': 'nullptr',
     }
 
-    return CUDNNDispatch(op, api, 'batch_norm', [x, y, w], args, out_types)
+    return CUDNNDispatch(op, api, 'batch_norm', [x, running_mean, running_var, w, b, y, epsilon, momentum], args, out_types)
 
 def dispatch_conv(op, dims):
     x = CUDNNTensor('xDesc', 'x', 'args->x')

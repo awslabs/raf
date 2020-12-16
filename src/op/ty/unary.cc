@@ -38,7 +38,6 @@ MNM_OP_TYPE("mnm.op.sin", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sign", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.round", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.relu", "Identity", UnaryInfer);
-
 MNM_OP_TYPE("mnm.op.tanh", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sigmoid", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.copy", "Identity", UnaryInfer);
@@ -48,6 +47,7 @@ MNM_OP_TYPE("mnm.op.floor", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.exp", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.erf", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sqrt", "Identity", UnaryInfer);
+MNM_OP_TYPE("mnm.op.rsqrt", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.atan", "Identity", UnaryInfer);
 
 Type UnaryDxInfer(const CallValues& value) {
@@ -70,8 +70,8 @@ Type UnaryUfuncInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.negative", "IdentityUfunc", UnaryUfuncInfer);
-MNM_OP_TYPE("mnm.op.logical_not", "IdentityUfunc", UnaryUfuncInfer);
+MNM_OP_TYPE("mnm.op.negative", "Identity", UnaryInfer);
+MNM_OP_TYPE("mnm.op.logical_not", "Identity", UnaryInfer);
 
 Type UnaryShapeInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();

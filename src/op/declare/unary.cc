@@ -27,7 +27,7 @@ using tvm::Downcast;
     } else if (const auto* var = (value).as<BoolValueObj>()) {  \
       body;                                                     \
     }                                                           \
-  } while (0);
+  } while (0)
 
 #define MNM_UNARY_SCALAR(op, x)                \
   MNM_SWITCH_SCALAR(v, x, {                    \
@@ -54,39 +54,33 @@ TensorValue MakeUnaryTensor(DLTensor* x) {
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
-  const auto* args = call->args.as<UnaryUfuncArgs>();
+  const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_UNARY_SCALAR(-, args->x);
-    MNM_UNARY_TENSOR(args->x)
-  }
+  MNM_UNARY_SCALAR(-, args->x);
+  MNM_UNARY_TENSOR(args->x)
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
 
 MNM_DECLARE_UNARY_OP("mnm.op.rsqrt", [](const CallValues& call) {
-  const auto* args = call->args.as<UnaryUfuncArgs>();
+  const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(v, args->x, {
-      call->callee = ir::NullValue<OpValue>();
-      double a = v->data;
-      double result = 1.0 / sqrt(a);
-      call->out = ScalarValue::make(result);
-      return;
-    })
-    MNM_UNARY_TENSOR(args->x);
-  }
+  MNM_SWITCH_SCALAR(v, args->x, {
+    call->callee = ir::NullValue<OpValue>();
+    double a = v->data;
+    double result = 1.0 / sqrt(a);
+    call->out = ScalarValue::make(result);
+    return;
+  });
+  MNM_UNARY_TENSOR(args->x);
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
 
 MNM_DECLARE_UNARY_OP("mnm.op.logical_not", [](const CallValues& call) {
-  const auto* args = call->args.as<UnaryUfuncArgs>();
+  const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_UNARY_SCALAR(!, args->x);
-  }
+  MNM_UNARY_SCALAR(!, args->x);
   LOG(FATAL) << "NotImplementedError";
   throw;
 });

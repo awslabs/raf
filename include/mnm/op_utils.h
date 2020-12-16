@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 #include <limits>
-#include "mnm/op.h"
+#include "./op.h"
+#include "./value.h"
 
 namespace mnm {
 namespace op {
@@ -89,6 +90,11 @@ class HashKey {
     }
     MNM_APPEND_BYTES(int64_t, 8, 0);
     return *this;
+  }
+
+  inline HashKey& operator<<(const value::TensorValue& v) {
+    DLTensor* t = v;
+    return operator<<(*t);
   }
 
   HashKey() {

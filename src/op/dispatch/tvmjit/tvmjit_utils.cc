@@ -18,23 +18,17 @@ using namespace mnm::registry;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 
-DLTensor GetDLTensor(const Value& v) {
-  DLTensor* ret = v;
-  return *ret;
-}
-
-void GetOut(const Value& out, std::vector<DLTensor>* ret) {
-  CHECK(ret->empty());
-  if (out->IsInstance<TensorValueObj>()) {
-    DLTensor* t = out;
-    ret->emplace_back(*t);
-  } else if (const auto* tv = out.as<TupleValueObj>()) {
+void GetDLTensor(const Value& v, std::vector<DLTensor>* tensors) {
+  if (v->IsInstance<TensorValueObj>()) {
+    DLTensor* t = v;
+    tensors->emplace_back(*t);
+  } else if (const auto* tv = v.as<TupleValueObj>()) {
     for (const auto& v : tv->fields) {
       DLTensor* t = v;
-      ret->emplace_back(*t);
+      tensors->emplace_back(*t);
     }
   } else {
-    LOG(FATAL) << "InternalError: TVMOpEnv does not deal with " << out->GetTypeKey();
+    LOG(FATAL) << "InternalError: TVMOpEnv does not deal with " << v->GetTypeKey();
     throw;
   }
 }
@@ -52,21 +46,6 @@ Type GetTupleType(const std::vector<DLTensor>& dlts) {
   return TupleType(types);
 }
 
-void SetArgs(std::vector<DLTensor>* i, std::vector<DLTensor>* o, std::vector<TVMValue>* values,
-             std::vector<int>* codes) {
-  int arity = i->size() + o->size();
-  values->resize(arity);
-  codes->resize(arity);
-  TVMArgsSetter setter(values->data(), codes->data());
-  int cnt = 0;
-  for (DLTensor& dlt : *i) {
-    setter(cnt++, &dlt);
-  }
-  for (DLTensor& dlt : *o) {
-    setter(cnt++, &dlt);
-  }
-}
-
 Function LowerOp(const Op& op, const Attrs& attrs, const std::vector<Type>& param_types,
                  const Type& ret_type) {
   Function func;
@@ -82,11 +61,25 @@ Function LowerOp(const Op& op, const Attrs& attrs, const std::vector<Type>& para
   return func;
 }
 
-void TVMOpEnv::Setup() {
-  SetArgs(&inputs, &outputs, &values, &codes);
+void SetArgs(std::vector<DLTensor>* i, std::vector<DLTensor>* o, std::vector<TVMValue>* values,
+             std::vector<int>* codes) {
+  int arity = i->size() + o->size();
+  values->resize(arity);
+  codes->resize(arity);
+  TVMArgsSetter setter(values->data(), codes->data());
+  int cnt = 0;
+  for (DLTensor& dlt : *i) {
+    setter(cnt++, &dlt);
+  }
+  for (DLTensor& dlt : *o) {
+    setter(cnt++, &dlt);
+  }
 }
 
 void TVMOpEnv::Execute(const op::CallValues& call) {
+  std::vector<TVMValue> values;
+  std::vector<int> codes;
+  SetArgs(&inputs, &outputs, &values, &codes);
   TVMArgs targs(values.data(), codes.data(), values.size());
   TVMRetValue rv;
   f.CallPacked(targs, &rv);
@@ -103,6 +96,21 @@ void TVMOpEnv::Execute(const op::CallValues& call) {
     LOG(FATAL) << "InternalError: internal error.";
     throw;
   }
+}
+
+void TVMOpEnv::Execute(const std::vector<Value>& inputs, Value output) {
+  this->inputs.clear();
+  this->outputs.clear();
+  for (auto val : inputs) {
+    GetDLTensor(val, &this->inputs);
+  }
+  GetDLTensor(output, &this->outputs);
+  std::vector<TVMValue> values;
+  std::vector<int> codes;
+  SetArgs(&this->inputs, &this->outputs, &values, &codes);
+  TVMArgs targs(values.data(), codes.data(), values.size());
+  TVMRetValue rv;
+  f.CallPacked(targs, &rv);
 }
 
 }  // namespace tvmjit

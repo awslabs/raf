@@ -30,6 +30,7 @@ using namespace mnm::registry;
 using namespace mnm::binding;
 using mnm::executor::interpreter::InvokePrimitive;
 using mnm::op::FMNMSchema;
+using mnm::op::FMNMSchemaFieldIndex;
 
 // Part 0. Op names
 namespace mnm {
@@ -1298,11 +1299,9 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.log_softmax_dx").set_body([](TVMArgs args, TVMRe
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.logical_not").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(logical_not, 3, ffi2schema::UnaryUfunc,
-              schema::UnaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(logical_not, 1, ffi2schema::Unary,
+              schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1455,11 +1454,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.multiply").set_body([](TVMArgs args, TVMRetValue
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.negative").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(negative, 3, ffi2schema::UnaryUfunc,
-              schema::UnaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(negative, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1595,11 +1591,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.round").set_body([](TVMArgs args, TVMRetValue* r
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.rsqrt").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(rsqrt, 3, ffi2schema::UnaryUfunc,
-              schema::UnaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(rsqrt, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->out));
-  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2460,8 +2453,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.log").set_body(MNM_SYMBOLIC_API(log, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax").set_body(MNM_SYMBOLIC_API(log_softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax_dx")
     .set_body(MNM_SYMBOLIC_API(log_softmax_dx, 4, SoftmaxDx));
-MNM_REGISTER_GLOBAL("mnm.op.sym.logical_not")
-    .set_body(MNM_SYMBOLIC_API(logical_not, 3, UnaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.logical_not").set_body(MNM_SYMBOLIC_API(logical_not, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul").set_body(MNM_SYMBOLIC_API(matmul, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_nt").set_body(MNM_SYMBOLIC_API(matmul_nt, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_tn").set_body(MNM_SYMBOLIC_API(matmul_tn, 2, Binary));
@@ -2477,7 +2469,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.min").set_body(MNM_SYMBOLIC_API(min, 3, Reduce))
 MNM_REGISTER_GLOBAL("mnm.op.sym.minimum").set_body(MNM_SYMBOLIC_API(minimum, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mod").set_body(MNM_SYMBOLIC_API(mod, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.multiply").set_body(MNM_SYMBOLIC_API(multiply, 4, BinaryUfunc));
-MNM_REGISTER_GLOBAL("mnm.op.sym.negative").set_body(MNM_SYMBOLIC_API(negative, 3, UnaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.negative").set_body(MNM_SYMBOLIC_API(negative, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss").set_body(MNM_SYMBOLIC_API(nll_loss, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dpred")
     .set_body(MNM_SYMBOLIC_API(nll_loss_dpred, 2, Loss));
@@ -2495,7 +2487,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
     .set_body(MNM_SYMBOLIC_API(reverse_sequence, 4, ReverseSequence));
 MNM_REGISTER_GLOBAL("mnm.op.sym.round").set_body(MNM_SYMBOLIC_API(round, 1, Unary));
-MNM_REGISTER_GLOBAL("mnm.op.sym.rsqrt").set_body(MNM_SYMBOLIC_API(rsqrt, 3, UnaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.rsqrt").set_body(MNM_SYMBOLIC_API(rsqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
     .set_body(MNM_SYMBOLIC_API(sequence_mask, 4, SequenceMask));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd").set_body(MNM_SYMBOLIC_API(sgd, 5, Sgd));
@@ -3115,7 +3107,951 @@ Attrs UnaryUfunc(const Array<Value>& values) {
 }  // namespace op
 }  // namespace mnm
 
-// Part 3.2. FMNMSchema API, uses "Part 3.1. Array<Value> to schema"
+// Part 3.2. Schema field index (for each schema)
+namespace mnm {
+namespace op {
+namespace regs {
+namespace schema_field_idx {
+
+template <const char* op_name>
+int Allreduce(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Argsort(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "is_ascend") {
+    return 2;
+  }
+  if (field == "dtype") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BatchNorm(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "running_mean") {
+    return 1;
+  }
+  if (field == "running_var") {
+    return 2;
+  }
+  if (field == "w") {
+    return 3;
+  }
+  if (field == "b") {
+    return 4;
+  }
+  if (field == "momentum") {
+    return 5;
+  }
+  if (field == "eps") {
+    return 6;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BatchNormTrainDxwb(const std::string& field) {
+  if (field == "dy") {
+    return 0;
+  }
+  if (field == "x") {
+    return 1;
+  }
+  if (field == "w") {
+    return 2;
+  }
+  if (field == "b") {
+    return 3;
+  }
+  if (field == "eps") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BiasAdd(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "bias") {
+    return 1;
+  }
+  if (field == "axis") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Binary(const std::string& field) {
+  if (field == "x1") {
+    return 0;
+  }
+  if (field == "x2") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BinaryDx(const std::string& field) {
+  if (field == "x1") {
+    return 0;
+  }
+  if (field == "x2") {
+    return 1;
+  }
+  if (field == "y") {
+    return 2;
+  }
+  if (field == "dy") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BinaryUfunc(const std::string& field) {
+  if (field == "x1") {
+    return 0;
+  }
+  if (field == "x2") {
+    return 1;
+  }
+  if (field == "out") {
+    return 2;
+  }
+  if (field == "where") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BroadcastTo(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "shape") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int BroadcastToLike(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "broadcast_type") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Cast(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "dtype") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int CastLike(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "dtype_like") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Clip(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "a_min") {
+    return 1;
+  }
+  if (field == "a_max") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ClipDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "dy") {
+    return 1;
+  }
+  if (field == "a_min") {
+    return 2;
+  }
+  if (field == "a_max") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int CollapseLike(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "shape") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Compiler(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "compiler") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Concatenate(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Conv(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "w") {
+    return 1;
+  }
+  if (field == "stride") {
+    return 2;
+  }
+  if (field == "padding") {
+    return 3;
+  }
+  if (field == "dilation") {
+    return 4;
+  }
+  if (field == "groups") {
+    return 5;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ConvDxw(const std::string& field) {
+  if (field == "x_or_w") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "shape") {
+    return 3;
+  }
+  if (field == "stride") {
+    return 4;
+  }
+  if (field == "padding") {
+    return 5;
+  }
+  if (field == "dilation") {
+    return 6;
+  }
+  if (field == "groups") {
+    return 7;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ExpandDims(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "num_newaxis") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int GatherNd(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "indices") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int GatherNdDx(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "indices") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int GetValidCounts(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "score_threshold") {
+    return 1;
+  }
+  if (field == "id_index") {
+    return 2;
+  }
+  if (field == "score_index") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int LayerNorm(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "eps") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int LayerNormDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "axis") {
+    return 3;
+  }
+  if (field == "eps") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int LocalResponseNorm(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "size") {
+    return 1;
+  }
+  if (field == "alpha") {
+    return 2;
+  }
+  if (field == "beta") {
+    return 3;
+  }
+  if (field == "k") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Loss(const std::string& field) {
+  if (field == "y_true") {
+    return 0;
+  }
+  if (field == "y_pred") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int NonMaxSuppression(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "valid_count") {
+    return 1;
+  }
+  if (field == "indices") {
+    return 2;
+  }
+  if (field == "max_output_size") {
+    return 3;
+  }
+  if (field == "iou_threshold") {
+    return 4;
+  }
+  if (field == "force_suppress") {
+    return 5;
+  }
+  if (field == "top_k") {
+    return 6;
+  }
+  if (field == "coord_start") {
+    return 7;
+  }
+  if (field == "score_index") {
+    return 8;
+  }
+  if (field == "id_index") {
+    return 9;
+  }
+  if (field == "return_indices") {
+    return 10;
+  }
+  if (field == "invalid_to_bottom") {
+    return 11;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Pool(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "kernel") {
+    return 1;
+  }
+  if (field == "stride") {
+    return 2;
+  }
+  if (field == "padding") {
+    return 3;
+  }
+  if (field == "dilation") {
+    return 4;
+  }
+  if (field == "ceil_mode") {
+    return 5;
+  }
+  if (field == "include_pad") {
+    return 6;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int PoolDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "kernel") {
+    return 3;
+  }
+  if (field == "stride") {
+    return 4;
+  }
+  if (field == "padding") {
+    return 5;
+  }
+  if (field == "dilation") {
+    return 6;
+  }
+  if (field == "ceil_mode") {
+    return 7;
+  }
+  if (field == "include_pad") {
+    return 8;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Reduce(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "keepdims") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ReduceDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "axis") {
+    return 3;
+  }
+  if (field == "keepdims") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Repeat(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "repeats") {
+    return 1;
+  }
+  if (field == "axis") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Reshape(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "shape") {
+    return 1;
+  }
+  if (field == "reverse") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Reverse(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ReverseSequence(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "sequence_length") {
+    return 1;
+  }
+  if (field == "seq_axis") {
+    return 2;
+  }
+  if (field == "batch_axis") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int SequenceMask(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "sequence_length") {
+    return 1;
+  }
+  if (field == "mask_value") {
+    return 2;
+  }
+  if (field == "axis") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Sgd(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "dx") {
+    return 1;
+  }
+  if (field == "v") {
+    return 2;
+  }
+  if (field == "learning_rate") {
+    return 3;
+  }
+  if (field == "mu") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Softmax(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int SoftmaxDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "axis") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Split(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "indices_or_sections") {
+    return 1;
+  }
+  if (field == "axis") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Squeeze(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Stack(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int StreamControl(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "stream_tag") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Sum(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "keepdims") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Take(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "indices") {
+    return 1;
+  }
+  if (field == "axis") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int TakeDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "indices") {
+    return 3;
+  }
+  if (field == "axis") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Ternary(const std::string& field) {
+  if (field == "x1") {
+    return 0;
+  }
+  if (field == "x2") {
+    return 1;
+  }
+  if (field == "x3") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int TernaryDx(const std::string& field) {
+  if (field == "x1") {
+    return 0;
+  }
+  if (field == "x2") {
+    return 1;
+  }
+  if (field == "x3") {
+    return 2;
+  }
+  if (field == "y") {
+    return 3;
+  }
+  if (field == "dy") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int TernaryUfunc(const std::string& field) {
+  if (field == "x1") {
+    return 0;
+  }
+  if (field == "x2") {
+    return 1;
+  }
+  if (field == "x3") {
+    return 2;
+  }
+  if (field == "out") {
+    return 3;
+  }
+  if (field == "where") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Transpose(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axes") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int TransposeDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "axes") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Unary(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int UnaryDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int UnaryUfunc(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "out") {
+    return 1;
+  }
+  if (field == "where") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+}  // namespace schema_field_idx
+}  // namespace regs
+}  // namespace op
+}  // namespace mnm
+
+// Part 3.3. FMNMSchema API, uses Part 3.1 and Part 3.2
 namespace mnm {
 namespace op {
 namespace regs {
@@ -3124,218 +4060,455 @@ namespace f_mnm_schema {
 #define MNM_BIND_SCHEMA(op_str, op_name, schema) \
   MNM_OP_REGISTER(op_str).set_attr<FMNMSchema>("FMNMSchema", schema<op_name>);
 
+#define MNM_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \
+  MNM_OP_REGISTER(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
+
 MNM_BIND_SCHEMA("mnm.op._allreduce", names::_allreduce,
-                value2schema::Allreduce);                        // NOLINT(whitespace/line_length)
+                value2schema::Allreduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allreduce", names::_allreduce,
+                            schema_field_idx::Allreduce);        // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.abs", names::abs,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.add", names::add,
-                value2schema::BinaryUfunc);                       // NOLINT(whitespace/line_length)
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.add", names::add,
+                            schema_field_idx::BinaryUfunc);       // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.all", names::all, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.all", names::all,
+                            schema_field_idx::Reduce);            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.any", names::any, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.any", names::any,
+                            schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmax", names::argmax,
                 value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.argmax", names::argmax,
+                            schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argmin", names::argmin,
                 value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.argmin", names::argmin,
+                            schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.argsort", names::argsort,
-                value2schema::Argsort);                            // NOLINT(whitespace/line_length)
+                value2schema::Argsort);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.argsort", names::argsort,
+                            schema_field_idx::Argsort);            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.atan", names::atan, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.atan", names::atan,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d", names::avg_pool2d,
                 value2schema::Pool);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.avg_pool2d", names::avg_pool2d,
+                            schema_field_idx::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.avg_pool2d_dx", names::avg_pool2d_dx,
                 value2schema::PoolDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.avg_pool2d_dx", names::avg_pool2d_dx,
+                            schema_field_idx::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_flatten", names::batch_flatten,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.batch_flatten", names::batch_flatten,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_matmul", names::batch_matmul,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.batch_matmul", names::batch_matmul,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_infer", names::batch_norm_infer,
                 value2schema::BatchNorm);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.batch_norm_infer", names::batch_norm_infer,
+                            schema_field_idx::BatchNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train", names::batch_norm_train,
                 value2schema::BatchNorm);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.batch_norm_train", names::batch_norm_train,
+                            schema_field_idx::BatchNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.batch_norm_train_dxwb", names::batch_norm_train_dxwb,
                 value2schema::BatchNormTrainDxwb);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX(
+    "mnm.op.batch_norm_train_dxwb", names::batch_norm_train_dxwb,
+    schema_field_idx::BatchNormTrainDxwb);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.bias_add", names::bias_add,
                 value2schema::BiasAdd);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.bias_add", names::bias_add,
+                            schema_field_idx::BiasAdd);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to", names::broadcast_to,
                 value2schema::BroadcastTo);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.broadcast_to", names::broadcast_to,
+                            schema_field_idx::BroadcastTo);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.broadcast_to_like", names::broadcast_to_like,
-                value2schema::BroadcastToLike);                   // NOLINT(whitespace/line_length)
+                value2schema::BroadcastToLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.broadcast_to_like", names::broadcast_to_like,
+                            schema_field_idx::BroadcastToLike);   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.cast", names::cast, value2schema::Cast);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cast", names::cast,
+                            schema_field_idx::Cast);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.cast_like", names::cast_like,
-                value2schema::CastLike);                           // NOLINT(whitespace/line_length)
+                value2schema::CastLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cast_like", names::cast_like,
+                            schema_field_idx::CastLike);           // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.ceil", names::ceil, value2schema::Unary);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.clip", names::clip, value2schema::Clip);   // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.ceil", names::ceil,
+                            schema_field_idx::Unary);             // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.clip", names::clip, value2schema::Clip);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.clip", names::clip,
+                            schema_field_idx::Clip);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.clip_dx", names::clip_dx,
                 value2schema::ClipDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.clip_dx", names::clip_dx,
+                            schema_field_idx::ClipDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", names::collapse_sum_like,
                 value2schema::CollapseLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.collapse_sum_like", names::collapse_sum_like,
+                            schema_field_idx::CollapseLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.compiler_begin", names::compiler_begin,
                 value2schema::Compiler);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.compiler_begin", names::compiler_begin,
+                            schema_field_idx::Compiler);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.compiler_end", names::compiler_end,
                 value2schema::Compiler);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.compiler_end", names::compiler_end,
+                            schema_field_idx::Compiler);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate", names::concatenate,
                 value2schema::Concatenate);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.concatenate", names::concatenate,
+                            schema_field_idx::Concatenate);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate_dx", names::concatenate_dx,
                 value2schema::Concatenate);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.concatenate_dx", names::concatenate_dx,
+                            schema_field_idx::Concatenate);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d", names::conv2d,
                 value2schema::Conv);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d", names::conv2d,
+                            schema_field_idx::Conv);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d_dw", names::conv2d_dw,
                 value2schema::ConvDxw);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d_dw", names::conv2d_dw,
+                            schema_field_idx::ConvDxw);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.conv2d_dx", names::conv2d_dx,
-                value2schema::ConvDxw);                            // NOLINT(whitespace/line_length)
+                value2schema::ConvDxw);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d_dx", names::conv2d_dx,
+                            schema_field_idx::ConvDxw);            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.copy", names::copy, value2schema::Unary);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.cos", names::cos, value2schema::Unary);    // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.copy", names::copy,
+                            schema_field_idx::Unary);            // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cos", names::cos, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cos", names::cos,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.cross_entropy", names::cross_entropy,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cross_entropy", names::cross_entropy,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.cross_entropy_dpred", names::cross_entropy_dpred,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cross_entropy_dpred", names::cross_entropy_dpred,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.cross_entropy_dtrue", names::cross_entropy_dtrue,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cross_entropy_dtrue", names::cross_entropy_dtrue,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.dense", names::dense,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.dense", names::dense,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.divide", names::divide,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.divide", names::divide,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.equal", names::equal,
-                value2schema::BinaryUfunc);                      // NOLINT(whitespace/line_length)
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.equal", names::equal,
+                            schema_field_idx::BinaryUfunc);      // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.erf", names::erf, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.erf", names::erf,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.erf_dx", names::erf_dx,
-                value2schema::UnaryDx);                          // NOLINT(whitespace/line_length)
+                value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.erf_dx", names::erf_dx,
+                            schema_field_idx::UnaryDx);          // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.exp", names::exp, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.exp", names::exp,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.expand_dims", names::expand_dims,
                 value2schema::ExpandDims);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.expand_dims", names::expand_dims,
+                            schema_field_idx::ExpandDims);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.floor", names::floor,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.floor", names::floor,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.gather_nd", names::gather_nd,
                 value2schema::GatherNd);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gather_nd", names::gather_nd,
+                            schema_field_idx::GatherNd);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.gather_nd_dx", names::gather_nd_dx,
                 value2schema::GatherNdDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gather_nd_dx", names::gather_nd_dx,
+                            schema_field_idx::GatherNdDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_kept_dims", names::get_kept_dims,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.get_kept_dims", names::get_kept_dims,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_reduce_axis", names::get_reduce_axis,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.get_reduce_axis", names::get_reduce_axis,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_valid_counts", names::get_valid_counts,
                 value2schema::GetValidCounts);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.get_valid_counts", names::get_valid_counts,
+                            schema_field_idx::GetValidCounts);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.greater", names::greater,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.greater", names::greater,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.greater_equal", names::greater_equal,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.greater_equal", names::greater_equal,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.layer_norm", names::layer_norm,
                 value2schema::LayerNorm);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.layer_norm", names::layer_norm,
+                            schema_field_idx::LayerNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.layer_norm_dx", names::layer_norm_dx,
                 value2schema::LayerNormDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.layer_norm_dx", names::layer_norm_dx,
+                            schema_field_idx::LayerNormDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.less", names::less,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.less", names::less,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.less_equal", names::less_equal,
-                value2schema::BinaryUfunc);                      // NOLINT(whitespace/line_length)
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.less_equal", names::less_equal,
+                            schema_field_idx::BinaryUfunc);      // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.log", names::log, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.log", names::log,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.log_softmax", names::log_softmax,
                 value2schema::Softmax);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.log_softmax", names::log_softmax,
+                            schema_field_idx::Softmax);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.log_softmax_dx", names::log_softmax_dx,
                 value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.log_softmax_dx", names::log_softmax_dx,
+                            schema_field_idx::SoftmaxDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.logical_not", names::logical_not,
-                value2schema::UnaryUfunc);  // NOLINT(whitespace/line_length)
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.logical_not", names::logical_not,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.matmul", names::matmul,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.matmul", names::matmul,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.matmul_nt", names::matmul_nt,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.matmul_nt", names::matmul_nt,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.matmul_tn", names::matmul_tn,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.matmul_tn", names::matmul_tn,
+                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.matmul_tt", names::matmul_tt,
-                value2schema::Binary);                            // NOLINT(whitespace/line_length)
+                value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.matmul_tt", names::matmul_tt,
+                            schema_field_idx::Binary);            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max", names::max, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.max", names::max,
+                            schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d", names::max_pool2d,
                 value2schema::Pool);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.max_pool2d", names::max_pool2d,
+                            schema_field_idx::Pool);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.max_pool2d_dx", names::max_pool2d_dx,
                 value2schema::PoolDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.max_pool2d_dx", names::max_pool2d_dx,
+                            schema_field_idx::PoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.maximum", names::maximum,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.maximum", names::maximum,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mean", names::mean,
                 value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mean", names::mean,
+                            schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mean_dx", names::mean_dx,
-                value2schema::ReduceDx);                          // NOLINT(whitespace/line_length)
+                value2schema::ReduceDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mean_dx", names::mean_dx,
+                            schema_field_idx::ReduceDx);          // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.min", names::min, value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.min", names::min,
+                            schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.minimum", names::minimum,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.minimum", names::minimum,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mod", names::mod,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mod", names::mod,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.multiply", names::multiply,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.multiply", names::multiply,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.negative", names::negative,
-                value2schema::UnaryUfunc);  // NOLINT(whitespace/line_length)
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.negative", names::negative,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.nll_loss", names::nll_loss,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.nll_loss", names::nll_loss,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.nll_loss_dpred", names::nll_loss_dpred,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.nll_loss_dpred", names::nll_loss_dpred,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.nll_loss_dtrue", names::nll_loss_dtrue,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.nll_loss_dtrue", names::nll_loss_dtrue,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.non_max_suppression", names::non_max_suppression,
                 value2schema::NonMaxSuppression);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.non_max_suppression", names::non_max_suppression,
+                            schema_field_idx::NonMaxSuppression);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.not_equal", names::not_equal,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.not_equal", names::not_equal,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.power", names::power,
-                value2schema::BinaryUfunc);                        // NOLINT(whitespace/line_length)
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.power", names::power,
+                            schema_field_idx::BinaryUfunc);        // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.relu", names::relu, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.relu", names::relu,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.relu_dx", names::relu_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.relu_dx", names::relu_dx,
+                            schema_field_idx::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.repeat", names::repeat,
                 value2schema::Repeat);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.repeat", names::repeat,
+                            schema_field_idx::Repeat);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reshape", names::reshape,
                 value2schema::Reshape);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reshape", names::reshape,
+                            schema_field_idx::Reshape);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reverse", names::reverse,
                 value2schema::Reverse);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reverse", names::reverse,
+                            schema_field_idx::Reverse);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reverse_sequence", names::reverse_sequence,
                 value2schema::ReverseSequence);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reverse_sequence", names::reverse_sequence,
+                            schema_field_idx::ReverseSequence);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.round", names::round,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.round", names::round,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.rsqrt", names::rsqrt,
-                value2schema::UnaryUfunc);  // NOLINT(whitespace/line_length)
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.rsqrt", names::rsqrt,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sequence_mask", names::sequence_mask,
-                value2schema::SequenceMask);                   // NOLINT(whitespace/line_length)
+                value2schema::SequenceMask);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sequence_mask", names::sequence_mask,
+                            schema_field_idx::SequenceMask);   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sgd", names::sgd, value2schema::Sgd);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sgd", names::sgd,
+                            schema_field_idx::Sgd);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.shape", names::shape,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.shape", names::shape,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sigmoid", names::sigmoid,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sigmoid", names::sigmoid,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sigmoid_dx", names::sigmoid_dx,
-                value2schema::UnaryDx);                            // NOLINT(whitespace/line_length)
+                value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sigmoid_dx", names::sigmoid_dx,
+                            schema_field_idx::UnaryDx);            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sign", names::sign, value2schema::Unary);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.sin", names::sin, value2schema::Unary);    // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sign", names::sign,
+                            schema_field_idx::Unary);            // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.sin", names::sin, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sin", names::sin,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.smooth_l1_loss", names::smooth_l1_loss,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.smooth_l1_loss", names::smooth_l1_loss,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.smooth_l1_loss_dpred", names::smooth_l1_loss_dpred,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.smooth_l1_loss_dpred", names::smooth_l1_loss_dpred,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.smooth_l1_loss_dtrue", names::smooth_l1_loss_dtrue,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.smooth_l1_loss_dtrue", names::smooth_l1_loss_dtrue,
+                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax", names::softmax,
                 value2schema::Softmax);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.softmax", names::softmax,
+                            schema_field_idx::Softmax);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.softmax_dx", names::softmax_dx,
                 value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.softmax_dx", names::softmax_dx,
+                            schema_field_idx::SoftmaxDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.split", names::split,
-                value2schema::Split);                              // NOLINT(whitespace/line_length)
+                value2schema::Split);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.split", names::split,
+                            schema_field_idx::Split);              // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sqrt", names::sqrt, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sqrt", names::sqrt,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sqrt_dx", names::sqrt_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sqrt_dx", names::sqrt_dx,
+                            schema_field_idx::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.squeeze", names::squeeze,
                 value2schema::Squeeze);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.squeeze", names::squeeze,
+                            schema_field_idx::Squeeze);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stack", names::stack,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stack", names::stack,
+                            schema_field_idx::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stack_dx", names::stack_dx,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stack_dx", names::stack_dx,
+                            schema_field_idx::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
                 value2schema::StreamControl);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_sync", names::stream_sync,
+                            schema_field_idx::StreamControl);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract,
-                value2schema::BinaryUfunc);                       // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);     // NOLINT(whitespace/line_length)
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.subtract", names::subtract,
+                            schema_field_idx::BinaryUfunc);    // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sum", names::sum,
+                            schema_field_idx::Sum);               // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.take", names::take, value2schema::Take);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.take", names::take,
+                            schema_field_idx::Take);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.take_dx", names::take_dx,
-                value2schema::TakeDx);                             // NOLINT(whitespace/line_length)
+                value2schema::TakeDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.take_dx", names::take_dx,
+                            schema_field_idx::TakeDx);             // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.tanh", names::tanh, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.tanh", names::tanh,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.tanh_dx", names::tanh_dx,
                 value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.tanh_dx", names::tanh_dx,
+                            schema_field_idx::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.transpose", names::transpose,
                 value2schema::Transpose);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.transpose", names::transpose,
+                            schema_field_idx::Transpose);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.transpose_dx", names::transpose_dx,
                 value2schema::TransposeDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.transpose_dx", names::transpose_dx,
+                            schema_field_idx::TransposeDx);  // NOLINT(whitespace/line_length)
 
 #undef MNM_BIND_SCHEMA
+#undef MNM_BIND_SCHEMA_FIELD_INDEX
 
 }  // namespace f_mnm_schema
 }  // namespace regs

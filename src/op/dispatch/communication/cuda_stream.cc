@@ -3,7 +3,8 @@
  * \file src/op/dispatch/communication/cuda_stream.cc
  * \brief Communication operators for cuda stream controlling.
  */
-#include "../../op_utils.h"
+#include <vector>
+#include "mnm/op_utils.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
@@ -24,6 +25,9 @@ class CudaStreamSync : public mnm::op::OpEnv {
     // Nothing
   }
   void Execute(const CallValues& cv) {
+    cudaStreamSynchronize((cudaStream_t)stream);
+  }
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
     cudaStreamSynchronize((cudaStream_t)stream);
   }
   static OpEnv* make(const CallValues& cv) {

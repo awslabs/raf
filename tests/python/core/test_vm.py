@@ -55,6 +55,10 @@ def test_vm(ctx, shape):
     assert len(executable.globals) == 1
     assert executable.globals[0] == 'main'
 
+    # execute 2nd time to reuse the op env
+    m_z = executor.vm.run(m_x).asnumpy()
+    np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [

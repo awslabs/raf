@@ -94,9 +94,32 @@ def get_func_name(pyfunc):
 
 
 def get_bound_args(pyfunc, args, kwargs) -> inspect.BoundArguments:
+    # pylint: disable=protected-access
     sig = inspect.signature(pyfunc)
     bound_args = sig.bind(*args, **kwargs)
     bound_args.apply_defaults()
+    # check if there's variable positional arguments
+    var_pos_name = None
+    for name, _ in bound_args.arguments.items():
+        if sig.parameters[name].kind == inspect.Parameter.VAR_POSITIONAL:
+            var_pos_name = name
+            break
+    if var_pos_name:
+        # expand the variable positional arguments and update the signature
+        new_params = []
+        for name, param in sig.parameters.items():
+            if name != var_pos_name:
+                new_params.append(param)
+                continue
+            for i, arg in enumerate(bound_args.arguments[name]):
+                new_name = f"_p{i}"
+                assert new_name not in bound_args.arguments
+                bound_args.arguments[new_name] = arg
+                new_params.append(
+                    inspect.Parameter(new_name, inspect.Parameter.POSITIONAL_OR_KEYWORD))
+        del bound_args.arguments[var_pos_name]
+        sig = sig.replace(parameters=new_params)
+        bound_args._signature = sig
     return bound_args
 
 

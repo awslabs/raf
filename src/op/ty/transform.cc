@@ -413,11 +413,20 @@ Type GatherNdInfer(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType data = Downcast<TensorType>(GetType(args->data));
   TensorType indices = Downcast<TensorType>(GetType(args->indices));
-  PrimExpr ddim = static_cast<int>(data->shape.size());
-  PrimExpr idim = static_cast<int>(indices->shape.size());
-  PrimExpr odim = idim - 1 + ddim - indices->shape[0];
-  CHECK(TypeCheckCompare(indices->shape[0], ddim, std::less_equal<int>()));
-  Array<PrimExpr> oshape = {odim, -1};
+  int indices_dim0 = indices->shape[0].as<IntImmNode>()->value;
+  int ddim = data->shape.size();
+  int idim = indices->shape.size();
+  int odim = idim - 1 + ddim - indices_dim0;
+  CHECK_LE(indices_dim0, ddim);
+
+  Array<PrimExpr> oshape;
+  for (int i = 0; i < odim; ++i) {
+    if (i + 1 < idim) {
+      oshape.push_back(indices->shape[i + 1]);
+    } else {
+      oshape.push_back(data->shape[i + 1 - idim + indices_dim0]);
+    }
+  }
   return TensorType(oshape, data->dtype);
 }
 
@@ -431,6 +440,42 @@ Type GatherNdDxInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.gather_nd_dx", "GatherNdDx", GatherNdDxInfer);
+
+Type SqueezeInfer(const CallValues& value) {
+  const auto* args = value->args.as<SqueezeArgs>();
+  CHECK(args != nullptr);
+  const std::vector<int64_t>& axis = args->axis;
+  TensorType xtype = Downcast<TensorType>(GetType(args->x));
+  auto ishape = xtype->shape;
+  int ndim = ishape.size();
+  std::vector<int64_t> normalized_axis;
+
+  for (int i = 0; i < axis.size(); i++) {
+    normalized_axis.push_back(axis[i] >= 0 ? axis[i] : axis[i] + ndim);
+  }
+
+  Array<PrimExpr> oshape;
+  if (normalized_axis.size() != 0) {
+    for (int axis_dim = 0; axis_dim < ndim; ++axis_dim) {
+      if (std::find(normalized_axis.begin(), normalized_axis.end(), axis_dim) ==
+          normalized_axis.end()) {
+        oshape.push_back(ishape[axis_dim]);
+      } else {
+        CHECK(TypeCheckCompare(ishape[axis_dim], 1, std::equal_to<int>()))
+            << "Axis to be squeezed is not of size 1";
+      }
+    }
+  } else {
+    for (int axis_dim = 0; axis_dim < ndim; ++axis_dim) {
+      if (!TypeCheckCompare(ishape[axis_dim], 1, std::equal_to<int>())) {
+        oshape.push_back(ishape[axis_dim]);
+      }
+    }
+  }
+  return TensorType(oshape, xtype->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.squeeze", "Squeeze", SqueezeInfer);
 
 }  // namespace type
 }  // namespace op

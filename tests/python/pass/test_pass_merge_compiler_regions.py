@@ -74,7 +74,7 @@ def test_single_input_output_merge():
         abs_call = _relay.Call(end, [abs_call], tvm.ir.make_node("mnm.args.compiler"))
         copy_call = _relay.Call(begin, [a2], tvm.ir.make_node("mnm.args.compiler"))
         copy_call = _relay.Call(copy, [copy_call])
-        negative_call = _relay.Call(negative, [a3, const, const])
+        negative_call = _relay.Call(negative, [a3])
         negative_call = _relay.Call(end, [negative_call], tvm.ir.make_node("mnm.args.compiler"))
         # make anf
         body = _relay.Let(a4, negative_call, a4)
@@ -90,6 +90,7 @@ def test_single_input_output_merge():
     func = model._internal(x).func
     func = AnnotateTarget(func, [target])
     func = MergeCompilerRegions(func)
+    print(func)
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)

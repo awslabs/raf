@@ -26,25 +26,19 @@ struct SgdAttrs : public tvm::AttrsNode<SgdAttrs> {
 };
 TVM_REGISTER_NODE_TYPE(SgdAttrs);
 
-Attrs SgdNormalizer(TVMOpEnv* env, const SgdArgs* args) {
-  CHECK_EQ(env->outputs.size(), 2U);
-  env->inputs.resize(3);
-  env->inputs[0] = GetDLTensor(args->x);
-  env->inputs[1] = GetDLTensor(args->dx);
-  env->inputs[2] = GetDLTensor(args->v);
+std::vector<Value> SgdSchema2Args(const SgdArgs* args) {
+  return {args->x, args->dx, args->v};
+}
+
+std::vector<std::string> SgdSchemaArgNames() {
+  return {"x", "dx", "v"};
+}
+
+Attrs SgdSchema2Attrs(const SgdArgs* args) {
   auto attrs = make_object<SgdAttrs>();
   attrs->learning_rate = args->learning_rate;
   attrs->mu = args->mu;
   return Attrs(attrs);
-}
-
-void SgdTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTupleType({env->outputs[0], env->outputs[1]});
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
 }
 
 HashKey SgdHasher(const std::vector<Type>& param_types, const Type& y_type, const SgdArgs* args) {
@@ -54,7 +48,8 @@ HashKey SgdHasher(const std::vector<Type>& param_types, const Type& y_type, cons
   return key;
 }
 
-MNM_TVMJIT(OptimizerSgd, "mnm.op.sgd", SgdArgs, SgdNormalizer, SgdTyper, SgdHasher);
+MNM_TVMJIT(OptimizerSgd, "mnm.op.sgd", SgdArgs, SgdSchema2Args, SgdSchemaArgNames, SgdSchema2Attrs,
+           SgdHasher);
 
 }  // namespace tvmjit
 }  // namespace op

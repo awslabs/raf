@@ -5,11 +5,11 @@
  */
 #include <tvm/relay/attrs/nn.h>
 #include <array>
+#include "mnm/op_utils.h"
 #include "./tvmjit_utils.h"
 #include "./tvm_attrs.h"
 #include "../../schema/ufunc.h"
 #include "../../schema/nn.h"
-#include "../../op_utils.h"
 #include "../../../common/shape_utils.h"
 
 namespace mnm {
@@ -20,47 +20,33 @@ using namespace mnm::ir;
 using namespace tvm_attrs;
 using namespace schema;
 
-Attrs GEMMNormalizer(TVMOpEnv* env, const BinaryArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x1),
-      GetDLTensor(args->x2),
-  };
-  return Attrs();
-}
-
-void GEMMTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
-}
-
-Attrs DenseNormalizer(TVMOpEnv* env, const BinaryArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x1),
-      GetDLTensor(args->x2),
-  };
+Attrs BinarySchema2DenseAttrs(const BinaryArgs* args) {
   auto attrs = make_object<tvm::relay::DenseAttrs>();
   return Attrs(attrs);
 }
 
-MNM_TVMJIT(BatchMatmul, "mnm.op.batch_matmul", BinaryArgs, GEMMNormalizer, GEMMTyper,
-           GenericHasher);
-MNM_TVMJIT(Matmul, "mnm.op.matmul", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
-MNM_TVMJIT(MatmulTN, "mnm.op.matmul_tn", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
-MNM_TVMJIT(MatmulNT, "mnm.op.matmul_nt", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
-MNM_TVMJIT(MatmulTT, "mnm.op.matmul_tt", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
-MNM_TVMJIT(Dense, "mnm.op.dense", BinaryArgs, DenseNormalizer, GEMMTyper, GenericHasher);
+MNM_TVMJIT(BatchMatmul, "mnm.op.batch_matmul", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Matmul, "mnm.op.matmul", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(MatmulTN, "mnm.op.matmul_tn", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(MatmulNT, "mnm.op.matmul_nt", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(MatmulTT, "mnm.op.matmul_tt", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(Dense, "mnm.op.dense", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           BinarySchema2DenseAttrs, GenericHasher);
 
-Attrs Conv2dNormalizer(TVMOpEnv* env, const ConvArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->w),
-  };
+std::vector<Value> ConvSchema2Args(const ConvArgs* args) {
+  return {args->x, args->w};
+}
+
+std::vector<std::string> ConvSchemaArgNames() {
+  return {"x", "w"};
+}
+
+Attrs ConvSchema2Attrs(const ConvArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
@@ -84,14 +70,6 @@ Attrs Conv2dNormalizer(TVMOpEnv* env, const ConvArgs* args) {
   return Attrs(attrs);
 }
 
-void Conv2dTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
-}
-
 HashKey Conv2dHasher(const std::vector<Type>& param_types, const Type& y_type,
                      const ConvArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
@@ -102,15 +80,18 @@ HashKey Conv2dHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Conv2d, "mnm.op.conv2d", ConvArgs, Conv2dNormalizer, Conv2dTyper, Conv2dHasher);
+MNM_TVMJIT(Conv2d, "mnm.op.conv2d", ConvArgs, ConvSchema2Args, ConvSchemaArgNames, ConvSchema2Attrs,
+           Conv2dHasher);
 
-Attrs Conv2dDxwNormalizer(TVMOpEnv* env, const ConvDxwArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x_or_w),
-      GetDLTensor(args->y),
-      GetDLTensor(args->dy),
-  };
+std::vector<Value> ConvDxwSchema2Args(const ConvDxwArgs* args) {
+  return {args->x_or_w, args->y, args->dy};
+}
+
+std::vector<std::string> ConvDxwSchemaArgNames() {
+  return {"x_or_w", "y", "dy"};
+}
+
+Attrs ConvDxwSchema2Attrs(const ConvDxwArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
@@ -137,15 +118,6 @@ Attrs Conv2dDxwNormalizer(TVMOpEnv* env, const ConvDxwArgs* args) {
   return Attrs(attrs);
 }
 
-void Conv2dDxwTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
-}
-
 HashKey Conv2dDxwHasher(const std::vector<Type>& param_types, const Type& y_type,
                         const ConvDxwArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
@@ -156,26 +128,23 @@ HashKey Conv2dDxwHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVMJIT(Conv2dDx, "mnm.op.conv2d_dx", ConvDxwArgs, Conv2dDxwNormalizer, Conv2dDxwTyper,
-           Conv2dDxwHasher);
-MNM_TVMJIT(Conv2dDw, "mnm.op.conv2d_dw", ConvDxwArgs, Conv2dDxwNormalizer, Conv2dDxwTyper,
-           Conv2dDxwHasher);
+MNM_TVMJIT(Conv2dDx, "mnm.op.conv2d_dx", ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
+           ConvDxwSchema2Attrs, Conv2dDxwHasher);
+MNM_TVMJIT(Conv2dDw, "mnm.op.conv2d_dw", ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
+           ConvDxwSchema2Attrs, Conv2dDxwHasher);
 
-Attrs SoftmaxNormalizer(TVMOpEnv* env, const SoftmaxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-  };
+std::vector<Value> SoftmaxSchema2Args(const SoftmaxArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SoftmaxSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs SoftmaxSchema2Attrs(const SoftmaxArgs* args) {
   auto attrs = make_object<tvm::relay::SoftmaxAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void SoftmaxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-  };
 }
 
 HashKey SoftmaxHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -185,25 +154,18 @@ HashKey SoftmaxHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-Attrs SoftmaxDxNormalizer(TVMOpEnv* env, const SoftmaxDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->y),
-      GetDLTensor(args->dy),
-  };
+std::vector<Value> SoftmaxDxSchema2Args(const SoftmaxDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> SoftmaxDxSchemaArgNames() {
+  return {"x", "y", "dy"};
+}
+
+Attrs SoftmaxDxSchema2Attrs(const SoftmaxDxArgs* args) {
   auto attrs = make_object<tvm::relay::SoftmaxAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void SoftmaxDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
 }
 
 HashKey SoftmaxDxHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -213,31 +175,27 @@ HashKey SoftmaxDxHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVMJIT(Softmax, "mnm.op.softmax", SoftmaxArgs, SoftmaxNormalizer, SoftmaxTyper, SoftmaxHasher);
-MNM_TVMJIT(SoftmaxDx, "mnm.op.softmax_dx", SoftmaxDxArgs, SoftmaxDxNormalizer, SoftmaxDxTyper,
-           SoftmaxDxHasher);
-MNM_TVMJIT(LogSoftmax, "mnm.op.log_softmax", SoftmaxArgs, SoftmaxNormalizer, SoftmaxTyper,
-           SoftmaxHasher);
-MNM_TVMJIT(LogSoftmaxDx, "mnm.op.log_softmax_dx", SoftmaxDxArgs, SoftmaxDxNormalizer,
-           SoftmaxDxTyper, SoftmaxDxHasher);
+MNM_TVMJIT(Softmax, "mnm.op.softmax", SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
+           SoftmaxSchema2Attrs, SoftmaxHasher);
+MNM_TVMJIT(SoftmaxDx, "mnm.op.softmax_dx", SoftmaxDxArgs, SoftmaxDxSchema2Args,
+           SoftmaxDxSchemaArgNames, SoftmaxDxSchema2Attrs, SoftmaxDxHasher);
+MNM_TVMJIT(LogSoftmax, "mnm.op.log_softmax", SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
+           SoftmaxSchema2Attrs, SoftmaxHasher);
+MNM_TVMJIT(LogSoftmaxDx, "mnm.op.log_softmax_dx", SoftmaxDxArgs, SoftmaxDxSchema2Args,
+           SoftmaxDxSchemaArgNames, SoftmaxDxSchema2Attrs, SoftmaxDxHasher);
 
-Attrs BiasAddNormalizer(TVMOpEnv* env, const BiasAddArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->bias),
-  };
+std::vector<Value> BiasAddSchema2Args(const BiasAddArgs* args) {
+  return {args->x, args->bias};
+}
+
+std::vector<std::string> BiasAddSchemaArgNames() {
+  return {"x", "bias"};
+}
+
+Attrs BiasAddSchema2Attrs(const BiasAddArgs* args) {
   auto attrs = make_object<tvm::relay::BiasAddAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
-}
-
-void BiasAddTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
 }
 
 HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -247,13 +205,18 @@ HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddNormalizer, BiasAddTyper, BiasAddHasher);
+MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddSchema2Args, BiasAddSchemaArgNames,
+           BiasAddSchema2Attrs, BiasAddHasher);
 
-Attrs MaxPool2DNormalizer(TVMOpEnv* env, const PoolArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-  };
+std::vector<Value> PoolSchema2Args(const PoolArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> PoolSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs MaxPoolSchema2Attrs(const PoolArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
@@ -273,11 +236,7 @@ Attrs MaxPool2DNormalizer(TVMOpEnv* env, const PoolArgs* args) {
   return Attrs(attrs);
 }
 
-Attrs AvgPool2DNormalizer(TVMOpEnv* env, const PoolArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-  };
+Attrs AvgPoolSchema2Attrs(const PoolArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
@@ -295,13 +254,6 @@ Attrs AvgPool2DNormalizer(TVMOpEnv* env, const PoolArgs* args) {
   attrs->count_include_pad = args->include_pad;
   attrs->layout = "NCHW";
   return Attrs(attrs);
-}
-
-void PoolTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-  };
 }
 
 HashKey PoolHasher(const std::vector<Type>& param_types, const Type& y_type, const PoolArgs* args) {
@@ -314,16 +266,20 @@ HashKey PoolHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(MaxPool2D, "mnm.op.max_pool2d", PoolArgs, MaxPool2DNormalizer, PoolTyper, PoolHasher);
-MNM_TVMJIT(AvgPool2D, "mnm.op.avg_pool2d", PoolArgs, AvgPool2DNormalizer, PoolTyper, PoolHasher);
+MNM_TVMJIT(MaxPool2D, "mnm.op.max_pool2d", PoolArgs, PoolSchema2Args, PoolSchemaArgNames,
+           MaxPoolSchema2Attrs, PoolHasher);
+MNM_TVMJIT(AvgPool2D, "mnm.op.avg_pool2d", PoolArgs, PoolSchema2Args, PoolSchemaArgNames,
+           AvgPoolSchema2Attrs, PoolHasher);
 
-Attrs AvgPool2DDxNormalizer(TVMOpEnv* env, const PoolDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->y),
-      GetDLTensor(args->dy),
-  };
+std::vector<Value> PoolDxSchema2Args(const PoolDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> PoolDxSchemaArgNames() {
+  return {"x", "y", "dy"};
+}
+
+Attrs AvgPoolDxSchema2Attrs(const PoolDxArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
@@ -343,13 +299,7 @@ Attrs AvgPool2DDxNormalizer(TVMOpEnv* env, const PoolDxArgs* args) {
   return Attrs(attrs);
 }
 
-Attrs MaxPool2DDxNormalizer(TVMOpEnv* env, const PoolDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->y),
-      GetDLTensor(args->dy),
-  };
+Attrs MaxPoolDxSchema2Attrs(const PoolDxArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
@@ -367,15 +317,6 @@ Attrs MaxPool2DDxNormalizer(TVMOpEnv* env, const PoolDxArgs* args) {
   attrs->layout = "NCHW";
   CHECK_EQ(args->include_pad, true);
   return Attrs(attrs);
-}
-
-void PoolDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
 }
 
 HashKey PoolDxHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -389,27 +330,25 @@ HashKey PoolDxHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(AvgPool2DDx, "mnm.op.avg_pool2d_dx", PoolDxArgs, AvgPool2DDxNormalizer, PoolDxTyper,
-           PoolDxHasher);
-MNM_TVMJIT(MaxPool2DDx, "mnm.op.max_pool2d_dx", PoolDxArgs, MaxPool2DDxNormalizer, PoolDxTyper,
-           PoolDxHasher);
+MNM_TVMJIT(AvgPool2DDx, "mnm.op.avg_pool2d_dx", PoolDxArgs, PoolDxSchema2Args, PoolDxSchemaArgNames,
+           AvgPoolDxSchema2Attrs, PoolDxHasher);
+MNM_TVMJIT(MaxPool2DDx, "mnm.op.max_pool2d_dx", PoolDxArgs, PoolDxSchema2Args, PoolDxSchemaArgNames,
+           MaxPoolDxSchema2Attrs, PoolDxHasher);
 
-Attrs LayerNormNormalizer(TVMOpEnv* env, const LayerNormArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> LayerNormSchema2Args(const LayerNormArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> LayerNormSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs LayerNormSchema2Attrs(const LayerNormArgs* args) {
   // attrs will be later passed to compute & schedule functions
   auto attrs = make_object<tvm::relay::LayerNormAttrs>();
   attrs->axis = args->axis;
   attrs->epsilon = args->eps;
   return Attrs(attrs);
-}
-
-void LayerNormTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-  };
 }
 
 HashKey LayerNormHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -420,30 +359,23 @@ HashKey LayerNormHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVMJIT(LayerNorm, "mnm.op.layer_norm", LayerNormArgs, LayerNormNormalizer, LayerNormTyper,
-           LayerNormHasher);
+MNM_TVMJIT(LayerNorm, "mnm.op.layer_norm", LayerNormArgs, LayerNormSchema2Args,
+           LayerNormSchemaArgNames, LayerNormSchema2Attrs, LayerNormHasher);
 
-Attrs LayerNormDxNormalizer(TVMOpEnv* env, const LayerNormDxArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {
-      GetDLTensor(args->x),
-      GetDLTensor(args->y),
-      GetDLTensor(args->dy),
-  };
+std::vector<Value> LayerNormDxSchema2Args(const LayerNormDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> LayerNormDxSchemaArgNames() {
+  return {"x", "y", "dy"};
+}
+
+Attrs LayerNormDxSchema2Attrs(const LayerNormDxArgs* args) {
   // attrs will be later passed to compute & schedule functions
   auto attrs = make_object<tvm::relay::LayerNormAttrs>();
   attrs->axis = args->axis;
   attrs->epsilon = args->eps;
   return Attrs(attrs);
-}
-
-void LayerNormDxTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-      GetTensorType(env->inputs[2]),
-  };
 }
 
 HashKey LayerNormDxHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -454,8 +386,8 @@ HashKey LayerNormDxHasher(const std::vector<Type>& param_types, const Type& y_ty
   return key;
 }
 
-MNM_TVMJIT(LayerNormDx, "mnm.op.layer_norm_dx", LayerNormDxArgs, LayerNormDxNormalizer,
-           LayerNormDxTyper, LayerNormDxHasher);
+MNM_TVMJIT(LayerNormDx, "mnm.op.layer_norm_dx", LayerNormDxArgs, LayerNormDxSchema2Args,
+           LayerNormDxSchemaArgNames, LayerNormDxSchema2Attrs, LayerNormDxHasher);
 
 struct BatchNormAttrs : public tvm::AttrsNode<BatchNormAttrs> {
   double momentum;
@@ -467,39 +399,19 @@ struct BatchNormAttrs : public tvm::AttrsNode<BatchNormAttrs> {
 };
 TVM_REGISTER_NODE_TYPE(BatchNormAttrs);
 
-Attrs BatchNormTrainNormalizer(TVMOpEnv* env, const BatchNormArgs* args) {
-  CHECK_EQ(env->outputs.size(), 3U);
-  env->inputs = {GetDLTensor(args->x), GetDLTensor(args->running_mean),
-                 GetDLTensor(args->running_var), GetDLTensor(args->w), GetDLTensor(args->b)};
+std::vector<Value> BatchNormSchema2Args(const BatchNormArgs* args) {
+  return {args->x, args->running_mean, args->running_var, args->w, args->b};
+}
+
+std::vector<std::string> BatchNormSchemaArgNames() {
+  return {"x", "running_mean", "running_var", "w", "b"};
+}
+
+Attrs BatchNormSchema2Attrs(const BatchNormArgs* args) {
   auto attrs = make_object<BatchNormAttrs>();
   attrs->momentum = args->momentum;
   attrs->eps = args->eps;
   return Attrs(attrs);
-}
-
-Attrs BatchNormInferNormalizer(TVMOpEnv* env, const BatchNormArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs = {GetDLTensor(args->x), GetDLTensor(args->running_mean),
-                 GetDLTensor(args->running_var), GetDLTensor(args->w), GetDLTensor(args->b)};
-  auto attrs = make_object<BatchNormAttrs>();
-  attrs->momentum = args->momentum;
-  attrs->eps = args->eps;
-  return Attrs(attrs);
-}
-
-void BatchNormTrainTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = TupleType({GetTensorType(env->outputs[0]), GetTensorType(env->outputs[1]),
-                       GetTensorType(env->outputs[2])});
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
-                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3]),
-                  GetTensorType(env->inputs[4])};
-}
-
-void BatchNormInferTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = TupleType({GetTensorType(env->outputs[0])});
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
-                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3]),
-                  GetTensorType(env->inputs[4])};
 }
 
 HashKey BatchNormHasher(const std::vector<Type>& param_types, const Type& ret_type,
@@ -510,26 +422,24 @@ HashKey BatchNormHasher(const std::vector<Type>& param_types, const Type& ret_ty
   return key;
 }
 
-MNM_TVMJIT(BatchNormTrain, "mnm.op.batch_norm_train", BatchNormArgs, BatchNormTrainNormalizer,
-           BatchNormTrainTyper, BatchNormHasher);
-MNM_TVMJIT(BatchNormInfer, "mnm.op.batch_norm_infer", BatchNormArgs, BatchNormInferNormalizer,
-           BatchNormInferTyper, BatchNormHasher);
+MNM_TVMJIT(BatchNormTrain, "mnm.op.batch_norm_train", BatchNormArgs, BatchNormSchema2Args,
+           BatchNormSchemaArgNames, BatchNormSchema2Attrs, BatchNormHasher);
+MNM_TVMJIT(BatchNormInfer, "mnm.op.batch_norm_infer", BatchNormArgs, BatchNormSchema2Args,
+           BatchNormSchemaArgNames, BatchNormSchema2Attrs, BatchNormHasher);
 
-Attrs BatchNormTrainDxwbNormalizer(TVMOpEnv* env, const BatchNormTrainDxwbArgs* args) {
-  CHECK_EQ(env->outputs.size(), 3U);
-  env->inputs = {GetDLTensor(args->dy), GetDLTensor(args->x), GetDLTensor(args->w),
-                 GetDLTensor(args->b)};
+std::vector<Value> BatchNormTrainDxwbSchema2Args(const BatchNormTrainDxwbArgs* args) {
+  return {args->dy, args->x, args->w, args->b};
+}
+
+std::vector<std::string> BatchNormTrainDxwbSchemaArgNames() {
+  return {"dy", "x", "w", "b"};
+}
+
+Attrs BatchNormTrainDxwbSchema2Attrs(const BatchNormTrainDxwbArgs* args) {
   auto attrs = make_object<BatchNormAttrs>();
   attrs->momentum = 0;  // momentum is not used in the gradient
   attrs->eps = args->eps;
   return Attrs(attrs);
-}
-
-void BatchNormTrainDxwbTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = TupleType({GetTensorType(env->outputs[0]), GetTensorType(env->outputs[1]),
-                       GetTensorType(env->outputs[2])});
-  *param_types = {GetTensorType(env->inputs[0]), GetTensorType(env->inputs[1]),
-                  GetTensorType(env->inputs[2]), GetTensorType(env->inputs[3])};
 }
 
 HashKey BatchNormTrainDxwbHasher(const std::vector<Type>& param_types, const Type& ret_type,
@@ -540,7 +450,8 @@ HashKey BatchNormTrainDxwbHasher(const std::vector<Type>& param_types, const Typ
 }
 
 MNM_TVMJIT(BatchNormTrainDxwb, "mnm.op.batch_norm_train_dxwb", BatchNormTrainDxwbArgs,
-           BatchNormTrainDxwbNormalizer, BatchNormTrainDxwbTyper, BatchNormTrainDxwbHasher);
+           BatchNormTrainDxwbSchema2Args, BatchNormTrainDxwbSchemaArgNames,
+           BatchNormTrainDxwbSchema2Attrs, BatchNormTrainDxwbHasher);
 
 }  // namespace tvmjit
 }  // namespace op

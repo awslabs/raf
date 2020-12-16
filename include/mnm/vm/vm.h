@@ -13,6 +13,8 @@
 #include "mnm/ir.h"
 #include "mnm/registry.h"
 #include "mnm/value.h"
+#include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/vm/bytecode.h"
 #include "mnm/vm/executable.h"
 #include "mnm/vm/value.h"
@@ -22,6 +24,7 @@ namespace executor {
 namespace vm {
 
 using namespace mnm::ir;
+using namespace mnm::op;
 using namespace mnm::value;
 using mnm::registry::PackedFunc;
 
@@ -74,9 +77,11 @@ struct VMFrame {
   Index args;
   /*! \brief A pointer into the caller function's instructions. */
   const Instruction* code;
-  /*! \brief Statically allocated space for objects */
+  /*! \brief Statically allocated space for objects. */
   std::vector<Value> register_file;
-  /*! \brief Register in caller's frame to put return value */
+  /*! \brief Indicate whether each register is constant. */
+  std::vector<bool> is_const;
+  /*! \brief Register in caller's frame to put return value. */
   RegName caller_return_register;
 
   VMFrame(Index pc, Index func_index, Index args, const Instruction* code, Index register_file_size)
@@ -85,9 +90,12 @@ struct VMFrame {
         args(args),
         code(code),
         register_file(register_file_size),
+        is_const(register_file_size, false),
         caller_return_register(0) {
   }
 };
+
+using OpEnvCache = MetaCache<std::shared_ptr<OpEnv>>;
 
 /*!
  * \brief The virtual machine.
@@ -232,6 +240,12 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * object to avoid rellocation of constants during inference.
    */
   std::vector<Value> const_pool_;
+
+  /*!
+   * \brief OpEnv cache. Each element in the vector stores the cache for the
+   * corresponding VM function. It's a map from pc to the OpEnv cache.
+   */
+  std::vector<std::unordered_map<Index, std::shared_ptr<OpEnvCache>>> op_env_cache_;
 };
 
 }  // namespace vm

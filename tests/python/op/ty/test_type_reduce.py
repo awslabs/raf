@@ -54,7 +54,7 @@ def test_reduce(op, shape, keepdims, dtype):
     else:
         ty_shape = t_y.shape
     if not same:
-        y_ty = TensorType(ty_shape, dtype="int64")
+        y_ty = TensorType(ty_shape, dtype="int32")
     else:
         y_ty = TensorType(ty_shape, dtype=dtype)
     desired_type = FuncType([x_ty], y_ty)
@@ -101,7 +101,7 @@ def test_reduce_all_any(op, shape, keepdims, dtype):
     t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)
     x_ty = TensorType(t_x.shape, dtype=dtype)
     if not same:
-        y_ty = TensorType(t_y.shape, dtype="int64")
+        y_ty = TensorType(t_y.shape, dtype="int32")
     else:
         y_ty = TensorType(t_y.shape, dtype=dtype)
     desired_type = FuncType([x_ty], y_ty)

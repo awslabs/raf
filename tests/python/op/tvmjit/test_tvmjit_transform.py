@@ -1,3 +1,4 @@
+# pylint: disable=protected-access,attribute-defined-outside-init,invalid-name
 from functools import reduce
 import operator
 
@@ -6,56 +7,18 @@ import pytest
 import torch
 import mxnet as mx
 import mnm
+from mnm.testing import get_ctx_list, randn, randn_torch, randint, check, run_vm_model
 import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 
 
-def get_ctx_list():
-    ret = ["cpu"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
+class TestModel(mnm.Model):
+    def build(self, op, **kwargs):
+        self.op = op
+        self.attrs = kwargs
 
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
-
-
-def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
-    x = np.random.randint(low, high, shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
-
-
-def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
-
-
-def randn_torch(shape, *, ctx="cpu", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    t_x = torch.tensor(x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+    @mnm.model.trace
+    def forward(self, *args):
+        return self.op(*args, **self.attrs)
 
 
 # pylint: disable=too-many-locals
@@ -69,22 +32,17 @@ def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
 ])
 @pytest.mark.parametrize("axis", [0, 1, -1])
 def test_take(shape, axis, ctx):
-    class Take(mnm.Model):
-        def build(self, axis):
-            self._axis = axis
-
-        @mnm.model.trace
-        def forward(self, x, indices):
-            return mnm.take(x, indices=indices, axis=self._axis)
     size = reduce(operator.mul, shape[0], 1) if axis is None else shape[0][axis]
     m_x, n_x = randn(shape[0], ctx=ctx)
     m_x.requires_grad = True
     m_indices, n_indices = randint(shape[1], low=0, high=size, ctx=ctx)
-    model = Take(axis)
+    model = TestModel(mnm._op.sym.take, axis=axis)
     m_y = model(m_x, m_indices)
+    v_y = run_vm_model(model, ctx, [m_x, m_indices])
     n_y = np.take(n_x, n_indices, axis=axis, mode="clip")
     # check forward
     check(m_y, n_y)
+    check(v_y, n_y)
     # check backward
     m_dy, n_dy = randn(n_y.shape, ctx=ctx)
     mx_x = mx.nd.array(n_x)
@@ -105,13 +63,16 @@ def test_take(shape, axis, ctx):
 @pytest.mark.parametrize("axis", [0, 1])
 def test_sequence_mask(max_length, batch_size, other_feature_dims,
                        axis, ctx):
+    model = TestModel(mnm._op.sym.sequence_mask, axis=axis, mask_value=-10)
     x_shape = [max_length, batch_size] if axis == 0 else [batch_size, max_length]
     x_shape += other_feature_dims
     m_x, n_x = randn(x_shape, ctx=ctx)
     m_length, n_length = randint([batch_size], low=0, high=max_length, ctx=ctx)
-    m_y = mnm.sequence_mask(m_x, m_length, axis=axis, mask_value=-10)
+    m_y = model(m_x, m_length)
+    v_y = run_vm_model(model, ctx, [m_x, m_length])
     n_y = npx.sequence_mask(n_x, n_length, axis=axis, mask_value=-10)
     check(m_y, n_y)
+    check(v_y, n_y)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -120,10 +81,13 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     [[4, 1, 1], [3, 4, 2, 2]]
 ])
 def test_broadcast_to(shape, ctx):
+    model = TestModel(mnm._op.sym.broadcast_to, shape=shape[1])
     m_x, n_x = randn(shape[0], ctx=ctx)
-    m_y = mnm.broadcast_to(m_x, shape[1])
+    m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
     n_y = np.broadcast_to(n_x, shape[1])
     check(m_y, n_y)
+    check(v_y, n_y)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -137,9 +101,12 @@ def test_repeat(shape, ctx):
     m_x, n_x = randn(shape, ctx=ctx)
     ndim = len(shape)
     for axis in range(-ndim, ndim):
-        m_y = mnm.repeat(m_x, 2, axis)
+        model = TestModel(mnm._op.sym.repeat, repeats=2, axis=axis)
+        m_y = model(m_x)
+        v_y = run_vm_model(model, ctx, [m_x])
         n_y = np.repeat(n_x, 2, axis)
         check(m_y, n_y)
+        check(v_y, n_y)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -153,24 +120,16 @@ def test_repeat(shape, ctx):
     [(4, 4, 4, 4), (1, 2, 3, 0)]
 ])  # pylint: disable-msg=too-many-locals
 def test_transpose(shape, ctx):
-
-    class Transpose(mnm.Model):
-        def build(self, axes=None):
-            self._axes = axes  # pylint: disable=attribute-defined-outside-init
-
-        @mnm.model.trace
-        def forward(self, x):
-            ret = mnm.transpose(x, self._axes)
-            return ret
-
     axes = shape[1]
-    model = Transpose(axes)
+    model = TestModel(mnm._op.sym.transpose, axes=axes)
     m_x, n_x = randn(shape[0], ctx=ctx)
     m_x.requires_grad = True
     m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
     n_y = np.transpose(n_x, shape[1])
     # check forward
     check(m_y, n_y)
+    check(v_y, n_y)
     # check backward
     y_shape = n_y.shape
     m_dy, n_dy = randn(y_shape, ctx=ctx)
@@ -192,11 +151,14 @@ def test_transpose(shape, ctx):
     [[4, 1, 1], [3, 4, 2, 2]]
 ])
 def test_broadcast_to_like(shape, ctx):
+    model = TestModel(mnm._op.sym.broadcast_to_like)
     m_x, n_x = randn(shape[0], ctx=ctx)
     m_broadcast_type, _ = randn(shape[1], ctx=ctx)
-    m_y = mnm.broadcast_to_like(m_x, m_broadcast_type)
+    m_y = model(m_x, m_broadcast_type)
+    v_y = run_vm_model(model, ctx, [m_x, m_broadcast_type])
     n_y = np.broadcast_to(n_x, shape[1])
     check(m_y, n_y)
+    check(v_y, n_y)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -208,23 +170,18 @@ def test_broadcast_to_like(shape, ctx):
     [(1, 4), (4, (1, 3))]
 ])
 def test_split(shape, axis, indices_or_sections, ctx):
-    class Split(mnm.Model):
-        def build(self, indices_or_sections, axis):
-            self._indices_or_sections = indices_or_sections
-            self._axis = axis
-
-        @mnm.model.trace
-        def forward(self, x):
-            ret = mnm.split(x, self._indices_or_sections, self._axis)
-            return ret
     m_x, n_x = randn(shape, ctx=ctx)
     n_y = np.split(n_x, indices_or_sections[0], axis=axis)
-    model = Split(indices_or_sections[0], axis)
+    model = TestModel(mnm._op.sym.split, indices_or_sections=indices_or_sections[0], axis=axis)
     m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
     # check forward
     assert len(m_y) == len(n_y)
     for m, n in zip(m_y, n_y):
         check(m, n)
+    assert len(v_y) == len(n_y)
+    for v, n in zip(v_y, n_y):
+        check(v, n)
     # check backward
     t_indices_or_sections = indices_or_sections[1]
     if isinstance(t_indices_or_sections, (tuple, list)):
@@ -240,14 +197,14 @@ def test_split(shape, axis, indices_or_sections, ctx):
     t_y = torch.split(t_x, t_indices_or_sections, dim=axis)
     t_y[0].backward(t_dy)
     m_y[0].backward(m_dy)
-    check_torch(m_x.grad, t_x.grad)
+    check(m_x.grad, t_x.grad)
     m_dy2, t_dy2 = randn_torch(m_y[1].shape, ctx=ctx)
     t_x2 = t_x.clone().detach()
     t_x2.requires_grad = True
     t_y2 = torch.split(t_x2, t_indices_or_sections, dim=axis)
     t_y2[1].backward(t_dy2)
     m_y[1].backward(m_dy2)
-    check_torch(m_x.grad, t_x2.grad)
+    check(m_x.grad, t_x2.grad)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -258,14 +215,6 @@ def test_split(shape, axis, indices_or_sections, ctx):
 ])
 @pytest.mark.parametrize("axes", [[0, 1]])
 def test_reverse_sequence(inputs, axes, ctx):
-    class ReverseSequence(mnm.Model):
-        def build(self, seq_axis, batch_axis):
-            self._seq_axis = seq_axis
-            self._batch_axis = batch_axis
-
-        @mnm.model.trace
-        def forward(self, x, seq_length):
-            return mnm.reverse_sequence(x, seq_length, self._seq_axis, self._batch_axis)
     shape = inputs["shape"]
     m_seq_length = mnm.array(inputs["seq_length"], dtype=int, ctx=ctx)
     mx_seq_length = mx.nd.array(inputs["seq_length"], dtype=int)
@@ -277,13 +226,15 @@ def test_reverse_sequence(inputs, axes, ctx):
     mx_dy = mx.nd.array(n_dy)
     mx_x.attach_grad()
     m_x.requires_grad = True
-    model = ReverseSequence(seq_axis, batch_axis)
+    model = TestModel(mnm._op.sym.reverse_sequence, seq_axis=seq_axis, batch_axis=batch_axis)
 
     m_y = model(m_x, m_seq_length)
+    v_y = run_vm_model(model, ctx, [m_x, m_seq_length])
     with mx.autograd.record():
         mx_y = mx.nd.SequenceReverse(mx_x, mx_seq_length, use_sequence_length=True)
         # check forward
         check(m_y, mx_y.asnumpy())
+        check(v_y, mx_y.asnumpy())
         mx_y.backward(mx_dy)
     m_y.backward(m_dy)
     # check backward
@@ -294,22 +245,16 @@ def test_reverse_sequence(inputs, axes, ctx):
 @pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
 @pytest.mark.parametrize("axis", [0, 1, 2])
 def test_reverse(shape, axis, ctx):
-    class Reverse(mnm.Model):
-        def build(self, axis):
-            self._axis = axis
-
-        @mnm.model.trace
-        def forward(self, x):
-            return mnm.reverse(x, self._axis)
-
     m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
     m_dy, n_dy = randn(shape, dtype='float32', ctx=ctx)
     m_x.requires_grad = True
-    model = Reverse(axis=axis)
+    model = TestModel(mnm._op.sym.reverse, axis=axis)
     m_y = model(m_x)
-    # check forward
+    v_y = run_vm_model(model, ctx, [m_x])
     n_y = np.flip(n_x, axis=axis)
+    # check forward
     check(m_y, n_y)
+    check(v_y, n_y)
     # check backward
     m_y.backward(m_dy)
     n_grad = np.flip(n_dy, axis=axis)
@@ -369,16 +314,17 @@ def test_concatenate(params, ctx):
         t_i.append(t_x)
     model = concat[len(m_i)](axis=axis)
     m_y = model(*m_i)
+    v_y = run_vm_model(model, ctx, m_i)
     t_y = torch.cat(t_i, dim=axis)
     # check forward
-    check_torch(m_y, t_y)
+    check(m_y, t_y)
+    check(v_y, t_y)
     # check backward
     m_dy, t_dy = randn_torch(tuple(t_y.size()), ctx=ctx)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     for m_x, t_x in zip(m_i, t_i):
-        check_torch(m_x.grad, t_x.grad)
-
+        check(m_x.grad, t_x.grad)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -437,8 +383,10 @@ def test_stack(params, ctx):
     model = stack[len(m_i)](axis=axis)
     # check forward
     m_y = model(*m_i)
+    v_y = run_vm_model(model, ctx, m_i)
     n_y = np.stack(n_i, axis=axis)
     check(m_y, n_y)
+    check(v_y, n_y)
 
     # check backward
     m_dy, n_dy = randn(output_shape, dtype='float32', ctx=ctx)
@@ -463,22 +411,16 @@ def test_clip(shape, a_min, a_max, ctx):
     # pylint: disable=no-member
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
-    class Clip(mnm.Model):
-        def build(self, shape):
-            self._shape = shape
-
-        @mnm.model.trace
-        def forward(self, x):
-            return mnm.clip(x, a_min, a_max)
-
     m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
     m_dy, n_dy = randn(shape, dtype='float32', ctx=ctx)
     m_x.requires_grad = True
-    model = Clip(shape=shape)
+    model = TestModel(mnm._op.sym.clip, a_min=a_min, a_max=a_max)
     m_y = model(m_x)
-    # check forward
+    v_y = run_vm_model(model, ctx, [m_x])
     n_y = np.clip(n_x, a_min, a_max)
+    # check forward
     check(m_y, n_y)
+    check(v_y, n_y)
     # check backward
     m_y.backward(m_dy)
     n_s = np.where(n_x <= a_min, 0, 1)
@@ -486,6 +428,7 @@ def test_clip(shape, a_min, a_max, ctx):
     n_s = np.where(n_x >= a_max, 0, 1)
     n_grad = n_s * n_grad
     check(m_x.grad, n_grad)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("params", [
@@ -498,27 +441,22 @@ def test_reshape(params, ctx):
     # pylint: disable=not-callable
     # pylint: disable=no-member
     # pylint: disable=too-many-locals
-    class Reshape(mnm.Model):
-        def build(self, shape):
-            self._shape = shape
-
-        @mnm.model.trace
-        def forward(self, x):
-            return mnm.reshape(x, shape=self._shape)
-
     orig_shape, to_shape = params["orig_shape"], params["to_shape"]
     m_x, n_x = randn(orig_shape, ctx=ctx)
     m_dy, n_dy = randn(to_shape, ctx=ctx)
     m_x.requires_grad = True
-    model = Reshape(shape=to_shape)
+    model = TestModel(mnm._op.sym.reshape, shape=to_shape)
     m_y = model(m_x)
-    # check forward
+    v_y = run_vm_model(model, ctx, [m_x])
     n_y = np.reshape(n_x, to_shape)
-    n_dy = np.reshape(n_dy, orig_shape)
+    # check forward
     check(m_y, n_y)
+    check(v_y, n_y)
     # check backward
     m_y.backward(m_dy)
+    n_dy = np.reshape(n_dy, orig_shape)
     check(m_x.grad, n_dy)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
@@ -532,19 +470,11 @@ def test_expand_dims(ctx, shape, axis, num_newaxis):
     # pylint: disable=not-callable
     # pylint: disable=no-member
     # pylint: disable=too-many-locals
-    class ExpandDims(mnm.Model):
-        def build(self, axis, num_newaxis):
-            self.axis = axis
-            self.num_newaxis = num_newaxis
-
-        @mnm.model.trace
-        def forward(self, x):
-            return mnm.expand_dims(x, axis=self.axis, num_newaxis=self.num_newaxis)
-
     m_x, n_x = randn(shape, ctx=ctx)
     m_x.requires_grad = True
-    model = ExpandDims(axis, num_newaxis)
+    model = TestModel(mnm._op.sym.expand_dims, axis=axis, num_newaxis=num_newaxis)
     m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
     # check forward
     n_y = n_x
     if num_newaxis == 0:
@@ -555,10 +485,12 @@ def test_expand_dims(ctx, shape, axis, num_newaxis):
         for _ in range(num_newaxis):
             n_y = np.expand_dims(n_y, axis=axis)
     check(m_y, n_y)
+    check(v_y, n_y)
     # check backward
     m_dy, n_dy = randn(m_y.shape, ctx=ctx)
     m_y.backward(m_dy)
     check(m_x.grad, np.reshape(n_dy, n_x.shape))
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
@@ -571,20 +503,15 @@ def test_cast(shape, ctx, itype, otype):
     if (itype, otype, ctx) == ("float64", "float16", "cpu"):
         return
 
-    class Cast(mnm.Model):
-        def build(self):
-            pass
-        @mnm.model.trace
-        def forward(self, data):  # pylint: disable=no-self-use
-            return mnm.cast(data, otype)
-
     m_x, n_x = randn(shape, ctx=ctx, dtype=itype)
     m_x.requires_grad = True
     # forward
-    model = Cast()
+    model = TestModel(mnm._op.sym.cast, dtype=otype)
     m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
     n_y = n_x.astype(otype)
     check(m_y, n_y)
+    check(v_y, n_y)
     # backward
     if (itype, otype, ctx) == ("float16", "float64", "cpu"):
         return
@@ -592,18 +519,12 @@ def test_cast(shape, ctx, itype, otype):
     m_y.backward(m_dy)
     check(m_x.grad, n_dy.astype(itype))
 
+
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
 @pytest.mark.parametrize("ishape", [[3, 4, 2], [4, 5, 3]])
 def test_gather_nd(dshape, ishape, ctx):
     # pylint: disable=no-self-use
-    class GatherNd(mnm.Model):
-        def build(self):
-            pass
-        @mnm.model.trace
-        def forward(self, data, indices):
-            return mnm.gather_nd(data, indices)
-
     m_x, n_x = randn(dshape, ctx=ctx)
     m_i = randint(ishape, high=dshape[0: ishape[-1]], ctx=ctx)[0]
     mx_x = mx.nd.array(n_x)
@@ -612,18 +533,21 @@ def test_gather_nd(dshape, ishape, ctx):
     idim = len(ishape)
     m_i = mnm.transpose(m_i, axes=[idim - 1] + list(range(idim - 1)))
     mx_i = mx.nd.array(m_i.asnumpy())
+    model = TestModel(mnm._op.sym.gather_nd)
     # check forward
-    model = GatherNd()
     m_y = model(m_x, m_i)
+    v_y = run_vm_model(model, ctx, [m_x, m_i])
     m_dy, n_dy = randn(m_y.shape, ctx=ctx)
     mx_dy = mx.nd.array(n_dy)
     with mx.autograd.record():
         mx_y = mx.nd.gather_nd(mx_x, mx_i)
         mx_y.backward(mx_dy)
     check(m_y, mx_y.asnumpy())
+    check(v_y, mx_y.asnumpy())
     # check backward
     m_y.backward(m_dy)
     check(m_x.grad, mx_x.grad.asnumpy())
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [(1, 3, 1)])
@@ -634,21 +558,16 @@ def test_squeeze(shape, axis, ctx):
     # pylint: disable=no-member
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
-    class Squeeze(mnm.Model):
-        def build(self, axis):
-            self._axis = axis
-
-        @mnm.model.trace
-        def forward(self, x):
-            return mnm.squeeze(x, axis=self._axis)
-
     m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
     m_x.requires_grad = False
-    model = Squeeze(axis=axis)
+    model = TestModel(mnm._op.sym.squeeze, axis=axis)
     m_y = model(m_x)
+    # TODO(@yzhliu): enable vm test after we have squeeze shape function
+    # v_y = run_vm_model(model, ctx, [m_x])
     # check forward
     n_y = np.squeeze(n_x, axis)
     check(m_y, n_y)
+    #check(v_y, n_y)
 
 
 if __name__ == "__main__":

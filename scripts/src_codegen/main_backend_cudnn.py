@@ -134,12 +134,15 @@ namespace op {{
 namespace cudnn {{
 namespace generated {{
 
-using value::TupleValueObj;
+using namespace mnm::value;
+using namespace mnm::ir;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using common::shape_utils::PadDims;
 using common::shape_utils::Shape2Strides;
 using dmlc::BeginPtr;
+
+static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
 
 {WRAPPERS}
 
@@ -149,10 +152,9 @@ using dmlc::BeginPtr;
 }}  // namespace op
 }}  // namespace mnm
 """.strip()
-    headers = [f'#include "../../schema/{i}"'
+    headers = ['#include "mnm/ir.h"', '#include "mnm/op_utils.h"', '#include "./cudnn_utils.h"']
+    headers += [f'#include "../../schema/{i}"'
                for i in os.listdir('src/op/schema/') if i.endswith('.h')]
-    headers += ['#include "./cudnn_utils.h"']
-    headers += ['#include "../../op_utils.h"']
     headers = '\n'.join(sorted(headers))
     wrappers = '\n\n'.join(sorted(wrappers.values()))
     open(path, 'w').write(fmt.format(FILENAME=path, HEADERS=headers, CLASSES=classes, WRAPPERS=wrappers) + "\n")

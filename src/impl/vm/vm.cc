@@ -119,6 +119,7 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
 void VirtualMachine::LoadExecutable(const Executable* exec) {
   CHECK(exec) << "The executable is not created yet.";
   exec_ = exec;
+  op_env_cache_.resize(exec_->functions.size());
 
   tvm::runtime::Module lib = exec_->lib;
   // Get the list of packed functions.
@@ -255,6 +256,7 @@ void VirtualMachine::RunLoop() {
           const_pool_[instr.const_index] = CopyTo(constant_obj, ctxs_[0]);
         }
         WriteRegister(instr.dst, const_pool_[instr.const_index]);
+        frames_.back().is_const[instr.dst] = true;
         pc_++;
         goto main_loop;
       }
@@ -380,28 +382,61 @@ void VirtualMachine::RunLoop() {
         }
       }
       case Opcode::InvokeJit: {
-        static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
-        auto call_values = CallValues::make();
         Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
-        auto op = Downcast<OpValue>(ReadRegister(instr.invoke_jit.op_reg));
-        call_values->callee = op;
+        HashKey key;
         Array<Value> args;
+        Value output;
+        // extract the input args and prepare the hash key to query op env
         for (Index i = 0; i < num_inputs; i++) {
-          args.push_back(ReadRegister(instr.invoke_jit.args[i]));
+          Index reg_idx = instr.invoke_jit.args[i];
+          auto reg = ReadRegister(reg_idx);
+          args.push_back(reg);
+          if (!frames_.back().is_const[reg_idx]) {
+            if (auto t = reg.as<TensorValueObj>()) {
+              key << GetRef<TensorValue>(t);
+            } else if (auto tup = reg.as<TupleValueObj>()) {
+              for (auto field : tup->fields) {
+                auto t = field.as<TensorValueObj>();
+                CHECK(t != nullptr);
+                key << GetRef<TensorValue>(t);
+              }
+            } else {
+              LOG(FATAL) << "Unsupported non-const register type: " << reg->GetTypeKey();
+            }
+          }
         }
-        call_values->args = fschema[op->op](args);
-        call_values->ctx = ctxs_[0];
+        // extract the output
         if (instr.invoke_jit.output_size == 1) {
-          call_values->out = ReadRegister(instr.invoke_jit.args[num_inputs]);
+          output = ReadRegister(instr.invoke_jit.args[num_inputs]);
         } else {
           Array<Value> outs;
           for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
             outs.push_back(ReadRegister(instr.invoke_jit.args[i]));
           }
-          call_values->out = TupleValue::make(outs);
+          output = TupleValue::make(outs);
         }
-        std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(call_values);
-        if (op_env != nullptr) {
+        // check the OpEnv cache
+        auto& func_cache = op_env_cache_[func_index_];
+        if (func_cache.find(pc_) == func_cache.end()) {
+          func_cache.emplace(pc_, std::make_shared<OpEnvCache>());
+        }
+        std::shared_ptr<OpEnvCache> op_env_cache = func_cache.at(pc_);
+        std::shared_ptr<OpEnv> op_env;
+        if (auto p = op_env_cache->Get(key.byte_vector)) {
+          // Cache hit. Reuse the OpEnv from the cache.
+          op_env = *p;
+        } else {
+          // Create a new OpEnv.
+          static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+          auto call_values = CallValues::make();
+          auto op = Downcast<OpValue>(ReadRegister(instr.invoke_jit.op_reg));
+          call_values->callee = op;
+          call_values->args = fschema[op->op](args);
+          call_values->ctx = ctxs_[0];
+          call_values->out = output;
+          op_env = OpDispatch::Dispatch(call_values);
+          CHECK(op_env != nullptr) << "ValueError: Cannot dispatch " << op->op->name << " @ "
+                                   << call_values->ctx.c_str();
           // TODO(vinx13): request stream
           std::shared_ptr<Requests> requests = op_env->GetRequests();
           for (size_t i = 0; i < requests->workspace.size(); i++) {
@@ -409,12 +444,16 @@ void VirtualMachine::RunLoop() {
             auto buf = memory_pool::Memory::Alloc(entry.ctx, entry.nbytes);
             *entry.dest = buf->data;
           }
-          op_env->Execute(call_values);
-        } else {
-          LOG(FATAL) << "ValueError: Cannot dispatch " << op->op->name << "@"
-                     << call_values->ctx.c_str();
-          throw;
+          // add to cache
+          op_env_cache->Set(key.byte_vector, op_env);
         }
+
+        std::vector<Value> inputs;
+        for (int i : op_env->arg_indices) {
+          CHECK_GE(i, 0) << "Invalid input index: " << i;
+          inputs.push_back(args[i]);
+        }
+        op_env->Execute(inputs, output);
         pc_++;
         goto main_loop;
       }

@@ -15,20 +15,12 @@ namespace tvmjit {
 using namespace mnm::ir;
 using schema::LossArgs;
 
-Attrs LossNormalizer(TVMOpEnv* env, const LossArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(2);
-  env->inputs[0] = GetDLTensor(args->y_true);
-  env->inputs[1] = GetDLTensor(args->y_pred);
-  return Attrs();
+std::vector<Value> LossSchema2Args(const LossArgs* args) {
+  return {args->y_true, args->y_pred};
 }
 
-void LossTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTensorType(env->outputs[0]);
-  *param_types = {
-      GetTensorType(env->inputs[0]),
-      GetTensorType(env->inputs[1]),
-  };
+std::vector<std::string> LossSchemaArgNames() {
+  return {"y_true", "y_pred"};
 }
 
 HashKey LossHasher(const std::vector<Type>& param_types, const Type& y_type, const LossArgs* args) {
@@ -39,19 +31,24 @@ HashKey LossHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(SmoothL1Loss, "mnm.op.smooth_l1_loss", LossArgs, LossNormalizer, LossTyper, LossHasher);
-MNM_TVMJIT(SmoothL1LossDpred, "mnm.op.smooth_l1_loss_dpred", LossArgs, LossNormalizer, LossTyper,
+MNM_TVMJIT(SmoothL1Loss, "mnm.op.smooth_l1_loss", LossArgs, LossSchema2Args, LossSchemaArgNames,
+           GenericAttrs, LossHasher);
+MNM_TVMJIT(SmoothL1LossDpred, "mnm.op.smooth_l1_loss_dpred", LossArgs, LossSchema2Args,
+           LossSchemaArgNames, GenericAttrs, LossHasher);
+MNM_TVMJIT(SmoothL1LossDtrue, "mnm.op.smooth_l1_loss_dtrue", LossArgs, LossSchema2Args,
+           LossSchemaArgNames, GenericAttrs, LossHasher);
+MNM_TVMJIT(NLLLoss, "mnm.op.nll_loss", LossArgs, LossSchema2Args, LossSchemaArgNames, GenericAttrs,
            LossHasher);
-MNM_TVMJIT(SmoothL1LossDtrue, "mnm.op.smooth_l1_loss_dtrue", LossArgs, LossNormalizer, LossTyper,
-           LossHasher);
-MNM_TVMJIT(NLLLoss, "mnm.op.nll_loss", LossArgs, LossNormalizer, LossTyper, LossHasher);
-MNM_TVMJIT(NllLossDpred, "mnm.op.nll_loss_dpred", LossArgs, LossNormalizer, LossTyper, LossHasher);
-MNM_TVMJIT(NllLossDtrue, "mnm.op.nll_loss_dtrue", LossArgs, LossNormalizer, LossTyper, LossHasher);
-MNM_TVMJIT(CrossEntropy, "mnm.op.cross_entropy", LossArgs, LossNormalizer, LossTyper, LossHasher);
-MNM_TVMJIT(CrossEntropyDpred, "mnm.op.cross_entropy_dpred", LossArgs, LossNormalizer, LossTyper,
-           LossHasher);
-MNM_TVMJIT(CrossEntropyDtrue, "mnm.op.cross_entropy_dtrue", LossArgs, LossNormalizer, LossTyper,
-           LossHasher);
+MNM_TVMJIT(NllLossDpred, "mnm.op.nll_loss_dpred", LossArgs, LossSchema2Args, LossSchemaArgNames,
+           GenericAttrs, LossHasher);
+MNM_TVMJIT(NllLossDtrue, "mnm.op.nll_loss_dtrue", LossArgs, LossSchema2Args, LossSchemaArgNames,
+           GenericAttrs, LossHasher);
+MNM_TVMJIT(CrossEntropy, "mnm.op.cross_entropy", LossArgs, LossSchema2Args, LossSchemaArgNames,
+           GenericAttrs, LossHasher);
+MNM_TVMJIT(CrossEntropyDpred, "mnm.op.cross_entropy_dpred", LossArgs, LossSchema2Args,
+           LossSchemaArgNames, GenericAttrs, LossHasher);
+MNM_TVMJIT(CrossEntropyDtrue, "mnm.op.cross_entropy_dtrue", LossArgs, LossSchema2Args,
+           LossSchemaArgNames, GenericAttrs, LossHasher);
 
 }  // namespace tvmjit
 }  // namespace op

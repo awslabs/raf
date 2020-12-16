@@ -210,7 +210,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       return call->out;
     }
     auto out_buf = AllocOutputBuffer(call->out);
-    std::unique_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
+    std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
     if (op_env != nullptr) {
       op_env->SetOutputBuffer(std::move(out_buf));
       InvokePrimitiveOpEnv(std::move(op_env), call);
@@ -221,7 +221,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     return call->out;
   }
 
-  void InvokePrimitiveOpEnv(std::unique_ptr<OpEnv> op_env, const CallValues& call) {
+  void InvokePrimitiveOpEnv(std::shared_ptr<OpEnv> op_env, const CallValues& call) {
     const Op& op = Downcast<OpValue>(call->callee)->op;
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {

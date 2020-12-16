@@ -3,7 +3,8 @@
  * \file src/op/dispatch/communication/nccl.cc
  * \brief Communication operators implmentated by NCCL
  */
-#include "../../op_utils.h"
+#include <vector>
+#include "mnm/op_utils.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
@@ -79,6 +80,10 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
                       (cudaStream_t)stream);
     }
+  }
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    // TODO(@icemelon9): add implementation for this
+    LOG(FATAL) << "Not implemented";
   }
   static OpEnv* make(const CallValues& cv) {
     return new NCCLAllReduce(cv);

@@ -3,8 +3,9 @@
  * \file src/op/dispatch/cudnn/conv.cc
  * \brief Manually-written cuDNN binding for conv2d
  */
+#include "mnm/ir.h"
+#include "mnm/op_utils.h"
 #include "../../schema/nn.h"
-#include "../../op_utils.h"
 #include "./cudnn_utils.h"
 
 namespace mnm {
@@ -12,11 +13,13 @@ namespace op {
 namespace cudnn {
 namespace manual {
 
+using namespace mnm::ir;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using common::shape_utils::MakeShape;
 using ir::Array;
 using ir::Attrs;
+using value::TensorValue;
 using value::Value;
 
 MetaCache<cudnnConvolutionFwdAlgo_t> _conv_fwd_alg_cache;
@@ -103,6 +106,17 @@ class ConvCUDNN : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnConvolutionForward(CUDNNThreadEntry::ThreadLocal()->handle, alpha, x_desc,
                                        x->data, w_desc, w->data, conv_desc, algo, ws, ws_size, beta,
                                        y_desc, y->data));
+    CUDA_CALL(cudaDeviceSynchronize());
+  }
+
+  void Execute(const std::vector<Value>& inputs, Value output) final {
+    CHECK_EQ(inputs.size(), 2);
+    DLTensor* x = Downcast<TensorValue>(inputs[0]);
+    DLTensor* w = Downcast<TensorValue>(inputs[1]);
+    DLTensor* out = Downcast<TensorValue>(output);
+    CUDNN_CALL(cudnnConvolutionForward(CUDNNThreadEntry::ThreadLocal()->handle, alpha, x_desc,
+                                       x->data, w_desc, w->data, conv_desc, algo, ws, ws_size, beta,
+                                       y_desc, out->data));
     CUDA_CALL(cudaDeviceSynchronize());
   }
 

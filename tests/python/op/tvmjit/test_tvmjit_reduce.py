@@ -1,24 +1,10 @@
+# pylint: disable=protected-access,attribute-defined-outside-init
 import numpy as np
 import pytest
 import torch
 import mnm
+from mnm.testing import get_ctx_list, randn, randn_torch, check, run_vm_model
 
-
-def get_ctx_list():
-    ret = ["cpu"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
-
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
 
 def randnbool(shape, *, ctx="cpu", dtype="float32"):
     x = np.random.randint(0, 2, size=shape)
@@ -29,50 +15,45 @@ def randnbool(shape, *, ctx="cpu", dtype="float32"):
     m_x = mnm.array(n_x, ctx=ctx)
     return m_x, n_x
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    t_x = torch.tensor(n_x, requires_grad=True)  # pylint: disable=not-callable
-    return m_x, t_x
 
-def check_torch(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
+class ReduceModel(mnm.Model):
+    def build(self, op, **kwargs):
+        self.op = op
+        self.attrs = kwargs
 
-def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
+    @mnm.model.trace
+    def forward(self, x):
+        return self.op(x, **self.attrs)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.argmax, mnm.argmax),
-        (np.argmin, mnm.argmin),
-        (np.amax, mnm.max),
-        (np.amin, mnm.min),
+        (np.argmax, mnm._op.sym.argmax),
+        (np.argmin, mnm._op.sym.argmin),
+        (np.amax, mnm._op.sym.max),
+        (np.amin, mnm._op.sym.min),
     ])
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("axis", [0, 1])
 def test_reduce_ops(ops, shape, dtype, axis, ctx):
     n_op, m_op = ops
+    model = ReduceModel(m_op, axis=axis)
     m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
-    m_x = m_op(m_x, axis)
-    n_x = n_op(n_x, axis)
-    check(m_x, n_x)
+    m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
+    n_y = n_op(n_x, axis)
+    check(m_y, n_y)
+    check(v_y, n_y)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.sum, mnm.sum)
+        (np.sum, mnm._op.sym.sum)
     ])
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -81,79 +62,76 @@ def test_reduce_ops(ops, shape, dtype, axis, ctx):
 # pylint: disable=too-many-arguments
 def test_reduce_keepdims_ops(ops, shape, dtype, axis, keepdims, ctx):
     n_op, m_op = ops
+    model = ReduceModel(m_op, axis=axis, keepdims=keepdims)
     m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
-    m_x = m_op(m_x, axis=axis, keepdims=keepdims)
-    n_x = n_op(n_x, axis=axis, keepdims=keepdims)
-    check(m_x, n_x)
+    m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
+    n_y = n_op(n_x, axis=axis, keepdims=keepdims)
+    check(m_y, n_y)
+    check(v_y, n_y)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.all, mnm.all),
-        (np.any, mnm.any),
+        (np.all, mnm._op.sym.all),
+        (np.any, mnm._op.sym.any),
     ])
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("axis", [(1), (0, 1), None])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_all_any_ops(ops, shape, axis, keepdims, ctx):
     n_op, m_op = ops
+    model = ReduceModel(m_op, axis=axis, keepdims=keepdims)
     m_x, n_x = randnbool(shape, dtype=bool, ctx=ctx)
-    m_x = m_op(m_x, axis=axis, keepdims=keepdims)
-    n_x = n_op(n_x, axis=axis, keepdims=keepdims)
-    check(m_x, n_x)
+    m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
+    n_y = n_op(n_x, axis=axis, keepdims=keepdims)
+    check(m_y, n_y)
+    check(v_y, n_y)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("axis", [(1), (0, 1)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("keepdims", [True, False])
-def test_mean_op_withaxis(shape, dtype, axis, keepdims, ctx):
-    class Mean(mnm.Model):
-        def build(self):
-            pass
-
-        @mnm.model.trace
-        def forward(self, x): # pylint: disable=no-self-use
-            return mnm.mean(x, axis, keepdims)
-
+def test_mean_op_with_axis(shape, dtype, axis, keepdims, ctx):
     m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx)
     m_x.requires_grad = True
-    model = Mean()
+    model = ReduceModel(mnm._op.sym.mean, axis=axis, keepdims=keepdims)
     # check forward
     m_y = model(m_x)
-    t_y = torch.mean(t_x, axis, keepdim=keepdims) # pylint: disable=no-member
-    check_torch(m_y, t_y)
-    # chack backward
+    v_y = run_vm_model(model, ctx, [m_x])
+    t_y = torch.mean(t_x, axis=axis, keepdim=keepdims) # pylint: disable=no-member
+    check(m_y, t_y)
+    check(v_y, t_y)
+    # check backward
     m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype, ctx=ctx)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
-    check_torch(m_x.grad, t_x.grad)
+    check(m_x.grad, t_x.grad)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_mean_op_withoutaxis(shape, dtype, ctx):
-    class Mean(mnm.Model):
-        def build(self):
-            pass
-
-        @mnm.model.trace
-        def forward(self, x): # pylint: disable=no-self-use
-            return mnm.mean(x)
-
+def test_mean_op_without_axis(shape, dtype, ctx):
     m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx)
     m_x.requires_grad = True
-    model = Mean()
+    model = ReduceModel(mnm._op.sym.mean)
     # check forward
     m_y = model(m_x)
+    v_y = run_vm_model(model, ctx, [m_x])
     t_y = torch.mean(t_x) # pylint: disable=no-member
-    check_torch(m_y, t_y)
+    check(m_y, t_y)
+    check(v_y, t_y)
     # chack backward
     m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype, ctx=ctx)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
-    check_torch(m_x.grad, t_x.grad)
+    check(m_x.grad, t_x.grad)
 
 
 if __name__ == "__main__":

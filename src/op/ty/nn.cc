@@ -9,9 +9,9 @@
 #include <tvm/ir/env_func.h>
 #include <vector>
 #include "mnm/type.h"
+#include "mnm/op_utils.h"
 #include "../schema/nn.h"
 #include "./utils.h"
-#include "../op_utils.h"
 
 namespace mnm {
 namespace op {

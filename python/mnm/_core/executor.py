@@ -5,7 +5,6 @@ import tvm
 from . import ndarray as _nd
 from .core_utils import str2ctx
 from .. import _ffi
-from .._core.value import TensorValue, TupleValue
 
 
 def interpret(expr, module=None):
@@ -386,11 +385,13 @@ class VMCompiler:
             raise ValueError("Target is not set in env or passed as argument.")
         tgts = {}
         if isinstance(target, (str, tvm.target.Target)):
+            target = "llvm" if target == "cpu" else target
             dev_type = tvm.tir.IntImm(
                 "int32", tvm.nd.context(str(target)).device_type)
             tgts[dev_type] = tvm.target.Target(target)
         elif isinstance(target, dict):
             for dev, tgt in target.items():
+                tgt = "llvm" if tgt == "cpu" else tgt
                 dev_type = tvm.tir.IntImm(
                     "int32", tvm.nd.context(dev).device_type)
                 tgts[dev_type] = tvm.target.Target(tgt)
@@ -411,6 +412,7 @@ class VMCompiler:
         if not target_host:
             target_host = "llvm" if tvm.runtime.enabled("llvm") else "stackvm"
         if isinstance(target_host, str):
+            target_host = "llvm" if target_host == "cpu" else target_host
             target_host = tvm.target.Target(target_host)
         return target_host
 
@@ -431,17 +433,6 @@ def _convert_args(args):
     for arg in args:
         _convert(arg, cargs)
     return cargs
-
-
-def _convert_result(result):
-    if isinstance(result, TensorValue):
-        return _nd.ndarray.from_tensor_value(result) # pylint: disable=no-member
-    if isinstance(result, TupleValue):
-        tup = []
-        for item in result:
-            tup.append(_convert_result(item))
-        return tuple(tup)
-    raise NotImplementedError(type(result))
 
 
 # pylint: disable=too-few-public-methods
@@ -568,4 +559,4 @@ class VirtualMachine:
         result : Object
             The output.
         """
-        return _convert_result(self.invoke("main", *args, **kwargs))
+        return self.invoke("main", *args, **kwargs)

@@ -15,18 +15,18 @@ using schema::CompilerArgs;
 using namespace tvm;
 using namespace tvm::relay;
 
-Attrs CompilerNormalizer(TVMOpEnv* env, const CompilerArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->x);
+std::vector<Value> CompilerSchema2Args(const CompilerArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> CompilerSchemaArgNames() {
+  return {"x"};
+}
+
+Attrs CompilerSchema2Attrs(const CompilerArgs* args) {
   auto attrs = make_object<CompilerAttrs>();
   attrs->compiler = args->compiler;
   return Attrs(attrs);
-}
-
-void CompilerTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  y_type[0] = GetTensorType(env->outputs[0]);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey CompilerHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -35,10 +35,10 @@ HashKey CompilerHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(CompilerBegin, "mnm.op.compiler_begin", CompilerArgs, CompilerNormalizer, CompilerTyper,
-           CompilerHasher);
-MNM_TVMJIT(CompilerEnd, "mnm.op.compiler_end", CompilerArgs, CompilerNormalizer, CompilerTyper,
-           CompilerHasher);
+MNM_TVMJIT(CompilerBegin, "mnm.op.compiler_begin", CompilerArgs, CompilerSchema2Args,
+           CompilerSchemaArgNames, CompilerSchema2Attrs, CompilerHasher);
+MNM_TVMJIT(CompilerEnd, "mnm.op.compiler_end", CompilerArgs, CompilerSchema2Args,
+           CompilerSchemaArgNames, CompilerSchema2Attrs, CompilerHasher);
 
 }  // namespace tvmjit
 }  // namespace op

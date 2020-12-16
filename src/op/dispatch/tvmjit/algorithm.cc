@@ -23,20 +23,20 @@ using namespace mnm::op::schema;
 using namespace tvm;
 using namespace ::tvm::relay;
 
-Attrs ArgsortNormalizer(TVMOpEnv* env, const ArgsortArgs* args) {
-  CHECK_EQ(env->outputs.size(), 1U);
-  env->inputs.resize(1);
-  env->inputs[0] = GetDLTensor(args->data);
+std::vector<Value> ArgsortSchema2Args(const ArgsortArgs* args) {
+  return {args->data};
+}
+
+std::vector<std::string> ArgsortSchemaArgNames() {
+  return {"data"};
+}
+
+Attrs ArgsortSchema2Attrs(const ArgsortArgs* args) {
   auto attrs = make_object<ArgsortAttrs>();
   attrs->axis = args->axis;
   attrs->is_ascend = args->is_ascend;
   attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
   return Attrs(attrs);
-}
-
-void ArgsortTyper(TVMOpEnv* env, std::vector<Type>* param_types, Type* y_type) {
-  *y_type = GetTupleType(env->outputs);
-  *param_types = {GetTensorType(env->inputs[0])};
 }
 
 HashKey ArgsortHasher(const std::vector<Type>& param_types, const Type& y_type,
@@ -48,7 +48,8 @@ HashKey ArgsortHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Argsort, "mnm.op.argsort", ArgsortArgs, ArgsortNormalizer, ArgsortTyper, ArgsortHasher);
+MNM_TVMJIT(Argsort, "mnm.op.argsort", ArgsortArgs, ArgsortSchema2Args, ArgsortSchemaArgNames,
+           ArgsortSchema2Attrs, ArgsortHasher);
 
 }  // namespace tvmjit
 }  // namespace op

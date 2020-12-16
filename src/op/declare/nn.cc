@@ -4,10 +4,10 @@
  * \brief Declaration of nn-specific operators
  */
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/tensor.h"
 #include "../schema/nn.h"
 #include "./declare_utils.h"
-#include "../op_utils.h"
 
 namespace mnm {
 namespace op {

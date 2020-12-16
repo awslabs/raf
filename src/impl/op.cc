@@ -45,11 +45,11 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
   return list.get();
 }
 
-std::unique_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
+std::shared_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
   const Op& op = Downcast<OpValue>(call->callee)->op;
   for (const auto& e : *OpDispatch::Get(op, call->ctx.device_type)) {
     const auto& maker = e.second;
-    std::unique_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
+    std::shared_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
     if (op_env) {
       return op_env;
     }
