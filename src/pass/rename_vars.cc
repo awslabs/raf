@@ -23,6 +23,17 @@ struct RenameVarsMutator : public ExprMutator {
     }
   }
 
+  Expr VisitExpr_(const FunctionNode* node) final {
+    for (const auto& param : node->params) {
+      if (var_map.find(param) == var_map.end()) {
+        const auto* var = param.as<ExtendedVarNode>();
+        var_map.Set(param,
+                    mnm::ir::MakeVar(var->name_hint(), var->type_annotation, var->may_share));
+      }
+    }
+    return ExprMutator::VisitExpr_(node);
+  }
+
   Expr VisitExpr_(const VarNode* node) final {
     return var_map.at(GetRef<Var>(node));
   }

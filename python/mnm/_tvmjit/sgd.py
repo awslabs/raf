@@ -7,10 +7,12 @@ from .._lib import _reg
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.sgd")
-def sgd_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    learning_rate, mu = attr.learning_rate, attr.mu  # pylint: disable=invalid-name
+def sgd_compute(attr, inputs, output_type):
+    # pylint: disable=unused-argument, invalid-name
+    learning_rate, mu = attr.learning_rate, attr.mu
     x0, dx, v0 = inputs
-
+    learning_rate = _tvm.tir.const(learning_rate, dtype=x0.dtype)
+    mu = _tvm.tir.const(mu, dtype=x0.dtype)
     def fcomputev(*args):
         return mu * v0(*args) + dx(*args)
 

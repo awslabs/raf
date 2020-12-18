@@ -6,23 +6,9 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
-
-
-def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    t_x = t_x.detach().cpu().numpy()
-    np.testing.assert_allclose(m_x, t_x, rtol=rtol, atol=atol)
-
-
-def one_hot(batch_size, num_classes, ctx="cuda", dtype="float32"):
-    targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
-    m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
-    t_x = torch.tensor(targets, requires_grad=False)  # pylint: disable=not-callable
-    assert list(m_x.shape) == [batch_size, num_classes]
-    assert list(t_x.shape) == [batch_size]
-    return m_x, t_x
+from mnm.testing import get_ctx_list, check, run_vm_model
+from mnm._lib import tvm, relay
+from mnm._core.module import Module
 
 
 def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0,
@@ -42,8 +28,20 @@ def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0,
     return m_x, t_x
 
 
+def one_hot(batch_size, num_classes, ctx="cuda", dtype="float32"):
+    targets = np.random.randint(0, num_classes, size=batch_size)
+    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
+    m_x[range(batch_size), targets] = 1
+    m_x = mnm.array(m_x, ctx=ctx)
+    t_x = torch.tensor(targets, requires_grad=False)  # pylint: disable=not-callable
+    assert list(m_x.shape) == [batch_size, num_classes]
+    assert list(t_x.shape) == [batch_size]
+    return m_x, t_x
+
+
 def t2m_param(param, ctx="cuda"):
-    return mnm.ndarray(param.detach().numpy(), ctx=ctx)  # pylint: disable=unexpected-keyword-arg
+    # pylint: disable=unexpected-keyword-arg
+    return mnm.ndarray(param.detach().numpy(), ctx=ctx)
 
 
 class TorchTest(nn.Module):  # pylint: disable=abstract-method
@@ -129,7 +127,7 @@ def test_sgd(config):
 
     for i in range(batch_size):
         t_optimizer.zero_grad()
-        m_x, t_x = randn([1, 3, config[1], config[1]], requires_grad=True)
+        m_x, t_x = randn([1, 3, config[1], config[1]], requires_grad=True, ctx="cuda")
         m_x.requires_grad = True
         m_y, t_y = one_hot(batch_size=1, num_classes=config[2])
         m_loss = m_model(m_x, m_y)
@@ -143,6 +141,110 @@ def test_sgd(config):
         check(m_model.bn1.w.grad, t_model.bn1.weight.grad, rtol=1e-4, atol=1e-4)
         check(m_model.bn1.b.grad, t_model.bn1.bias.grad, rtol=1e-4, atol=1e-4)
         m_optimizer.step()
+        t_optimizer.step()
+        check(m_model.conv1.w, t_model.conv1.weight, rtol=1e-4, atol=1e-4)
+        check(m_model.linear1.w, t_model.linear1.weight, rtol=1e-4, atol=1e-4)
+        check(m_model.linear1.b, t_model.linear1.bias, rtol=1e-4, atol=1e-4)
+        check(m_model.bn1.w, t_model.bn1.weight, rtol=1e-4, atol=1e-4)
+        check(m_model.bn1.b, t_model.bn1.bias, rtol=1e-4, atol=1e-4)
+
+
+class TorchSimpleTest(nn.Module):  # pylint: disable=abstract-method
+    def __init__(self, shape):
+        super(TorchSimpleTest, self).__init__()
+        self.x = torch.nn.Parameter(torch.randn(*shape))
+        self.x.requires_grad = True
+
+    def forward(self): # pylint: disable=arguments-differ
+        y = F.relu(self.x)
+        return y
+
+
+class MNMSimpleTest(mnm.Model):
+    # pylint: disable=attribute-defined-outside-init
+    def build(self, shape):
+        self.x = mnm.array(np.random.randn(*shape))
+
+    @mnm.model.trace
+    def forward(self):
+        y = mnm.relu(self.x)
+        return y
+
+
+def sgd_ir_optmizer(func):
+    # pylint: disable=protected-access
+    mod = Module()
+    mod[tvm.ir.GlobalVar('main')] = func
+    mod = mnm._ffi.pass_.LambdaLift(mod)
+    rmod = tvm.IRModule({})
+    for k, value in mod.functions.items():
+        value = value.with_attr("Inline", tvm.tir.IntImm("int32", 1))
+        rmod[k] = value
+    rmod = relay.transform.Inline()(rmod)
+    mod = Module(rmod.functions)
+    mod = mnm._ffi.pass_.FlattenLet(mod)
+    return mod["main"]
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+def test_traced_sgd_simple(ctx):
+    # pylint: disable=attribute-defined-outside-init
+    shape = (2, 2)
+    batch_size = 32
+    dtype = 'float32'
+    t_model = TorchSimpleTest(shape)
+    m_model = MNMSimpleTest(shape)
+    m_model.x = t2m_param(t_model.x, ctx=ctx)
+    m_model.train_mode()
+    t_model.train()
+    m_optimizer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+    t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
+    for i in range(batch_size):
+        m_dy, t_dy = randn(shape, ctx=ctx, requires_grad=False)
+        m_loss = run_vm_model(m_optimizer, ctx, [m_dy], sgd_ir_optmizer)
+        t_optimizer.zero_grad()
+        t_loss = t_model()
+        t_loss.backward(t_dy)
+        t_optimizer.step()
+        check(m_model.x, t_model.x, rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("config", [
+    (10, 32, 10),
+    (4, 28, 10),
+])
+def test_traced_sgd(config):
+    # pylint: disable=too-many-locals
+    ctx = "cuda"
+    t_model = TorchTest(config[1], config[2])
+    m_model = MNMTest(config[1], config[2])
+    m_model.to(ctx=ctx)
+    m_model.conv1.w = t2m_param(t_model.conv1.weight, ctx=ctx)
+    m_model.linear1.w = t2m_param(t_model.linear1.weight, ctx=ctx)
+    m_model.linear1.b = t2m_param(t_model.linear1.bias, ctx=ctx)
+    m_model.bn1.w = t2m_param(t_model.bn1.weight, ctx=ctx)
+    m_model.bn1.b = t2m_param(t_model.bn1.bias, ctx=ctx)
+    m_model.bn1.running_mean = t2m_param(t_model.bn1.running_mean, ctx=ctx)
+    m_model.bn1.running_var = t2m_param(t_model.bn1.running_var, ctx=ctx)
+
+    batch_size = config[0]
+    m_model.train_mode()
+    t_model.train()
+    m_model.bn1.running_mean.requires_grad = False
+    m_model.bn1.running_var.requires_grad = False
+    m_optimizer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+    t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
+
+    for i in range(batch_size):
+        m_dy, t_dy = randn((), std=0.0, mean=1.0, ctx=ctx, requires_grad=False)
+        m_x, t_x = randn([1, 3, config[1], config[1]], requires_grad=True, ctx=ctx)
+        m_x.requires_grad = True
+        m_y, t_y = one_hot(batch_size=1, num_classes=config[2], ctx=ctx)
+        m_loss = run_vm_model(m_optimizer, ctx, [m_dy, m_x, m_y], sgd_ir_optmizer)
+        t_optimizer.zero_grad()
+        t_loss = t_model(t_x, t_y)
+        t_loss.backward(t_dy)
         t_optimizer.step()
         check(m_model.conv1.w, t_model.conv1.weight, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.w, t_model.linear1.weight, rtol=1e-4, atol=1e-4)

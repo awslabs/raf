@@ -80,8 +80,9 @@ def test_grad(ctx):
     out_1 = sgd(dy)
     new_x_1 = model.x
     # VM
+    sgd = SGD(model)
     model.x = mnm.array(param, ctx=ctx)
-    out = run_vm_model(sgd, ctx, [dy, model.x])
+    out = run_vm_model(sgd, ctx, [dy])
     out_2 = out[0]
     new_x_2 = out[1]
     # check inplace

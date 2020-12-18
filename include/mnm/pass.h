@@ -73,5 +73,20 @@ ir::Expr MergeCompilerRegions(ir::Expr expr, ir::String merge_mode);
  * \return Transformed Expression.
  */
 ir::Expr AutoCast(ir::Expr func);
+
+/*!
+ * \brief inline backward function.
+ * \param func The IR function.
+ * \return inlined function.
+ */
+ir::Function InlineBackward(ir::Function func);
+
+/*!
+ * \brief Flatten nested let expressions
+ * \param mod The IR module.
+ * \return Transformed IR module.
+ */
+ir::Module FlattenLet(ir::Module mod);
+
 }  // namespace pass
 }  // namespace mnm

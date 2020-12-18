@@ -191,6 +191,8 @@ MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
 MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
+MNM_REGISTER_GLOBAL("mnm.value._make.ClosureValue").set_body_typed(ClosureValue::make);
+MNM_REGISTER_GLOBAL("mnm.value._make.NoGradValue").set_body_typed(NoGradValue::make);
 
 MNM_REGISTER_OBJECT_NO_REFLECT(ValueObj);
 MNM_REGISTER_OBJECT_NO_REFLECT(BaseTensorValueObj);
@@ -207,5 +209,6 @@ MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
 MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
 MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
 MNM_REGISTER_OBJECT_REFLECT(TensorTypeValueObj);
+MNM_REGISTER_OBJECT_REFLECT(NoGradValueObj);
 }  // namespace value
 }  // namespace mnm

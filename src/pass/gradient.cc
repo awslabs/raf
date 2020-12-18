@@ -29,6 +29,31 @@ using namespace mnm::ir;
 using namespace mnm::op;
 using mnm::value::NoGradValue;
 
+class ANFNormalizer : public ExprMutator {
+ public:
+  explicit ANFNormalizer(LetList* ll) : ll_(ll) {
+  }
+
+  Expr Normalize(const Expr& expr) {
+    if (expr.as<VarNode>() || expr.as<ConstantNode>() || expr.as<OpNode>()) {
+      return expr;
+    }
+    if (vmap_.find(expr) != vmap_.end()) {
+      return vmap_[expr];
+    }
+    return vmap_[expr] = ll_->Push(expr);
+  }
+
+  Expr VisitExpr(const Expr& expr) final {
+    Expr ret = ExprMutator::VisitExpr(expr);
+    return Normalize(ret);
+  }
+
+ private:
+  LetList* ll_;
+  std::unordered_map<Expr, Var, ObjectPtrHash, ObjectPtrEqual> vmap_;
+};
+
 struct Gradient : public ExprVisitor {
  public:
   // Closures are not supported
@@ -142,15 +167,9 @@ struct Gradient : public ExprVisitor {
     if (!IsDefined(ograds)) {
       return {NullValue<Var>()};
     }
+    Array<Expr> ret;
     if (ffpg.count(op)) {
-      Array<Expr> ret = ffpg[op](orig, let_var, _ograds, igrads);
-      // ensure intermediate results are bound to a relay::var
-      for (int i = 0, n = ret.size(); i < n; ++i) {
-        if (ret[i].defined() && !ret[i]->IsInstance<VarNode>()) {
-          ret.Set(i, ll->Push(ret[i]));
-        }
-      }
-      return ret;
+      ret = ffpg[op](orig, let_var, _ograds, igrads);
     } else if (fpg.count(op)) {
       Array<Expr> orig_args;
       auto call = Downcast<Call>(orig);
@@ -162,10 +181,19 @@ struct Gradient : public ExprVisitor {
           orig_args.push_back(arg);
         }
       }
-      return fpg[op](orig, orig_args, let_var, _ograds);
+      ret = fpg[op](orig, orig_args, let_var, _ograds);
+    } else {
+      LOG(FATAL) << "Gradient is not registered for operator " << op->name;
+      throw;
     }
-    LOG(FATAL) << "Gradient is not registered for operator " << op->name;
-    throw;
+    // ensure intermediate results are bound to a relay::var
+    ANFNormalizer normalizer(ll);
+    for (int i = 0, n = ret.size(); i < n; ++i) {
+      if (ret[i].defined() && !ret[i]->IsInstance<VarNode>()) {
+        ret.Set(i, normalizer(ret[i]));
+      }
+    }
+    return ret;
   }
 
   void WriteBackInputGrads(const Array<Expr>& vars, const Array<Expr>& igrads) {
