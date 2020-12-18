@@ -63,8 +63,6 @@ MNM_TVMJIT(Sigmoid, "mnm.op.sigmoid", UnaryArgs, UnarySchema2Args, UnarySchemaAr
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(Tanh, "mnm.op.tanh", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
            GenericHasher);
-MNM_TVMJIT(BatchFlatten, "mnm.op.batch_flatten", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
-           GenericAttrs, GenericHasher);
 
 std::vector<Value> UnaryDxSchema2Args(const UnaryDxArgs* args) {
   return {args->x, args->y, args->dy};

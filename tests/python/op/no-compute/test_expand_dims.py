@@ -15,6 +15,7 @@ def test_batch_flatten(shape, axis, num_newaxis):
     x = np.random.randn(*shape).astype("float32")
     x = mnm.array(x)
     y = mnm.expand_dims(x, axis=axis, num_newaxis=num_newaxis)
+    print(y.shape)
     if axis < 0:
         axis = len(shape) + axis + 1
     expected = shape[:axis] + [1] * num_newaxis + shape[axis:]

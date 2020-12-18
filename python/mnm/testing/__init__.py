@@ -13,7 +13,6 @@ from .._core.module import Module
 from .._core.executor import VMExecutor, VMCompiler
 from .._ffi import ir
 from .._ffi import pass_
-from ..model.trace import _get_func_inputs
 
 
 def run_infer_type(func):
@@ -79,10 +78,9 @@ def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, mean=0.0, std=1.0,
-                positive=False):
+def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.0, positive=False):
     """Helper function to generate a pair of mnm and torch arrays"""
-    x = np.random.randn(*shape) * std + mean
+    x = np.random.randn(*shape) * std
     if positive:
         x = np.abs(x) + 1e-5
     if not isinstance(x, np.ndarray):
@@ -94,17 +92,13 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, mean=0
     return m_x, t_x
 
 
-def run_vm_model(model, ctx, args, optimize=None):
+def run_vm_model(model, ctx, args):
     """Helper function to execute model with VM"""
-    record = model._internal(*args)
-    func = record.func
-    if optimize:
-        func = optimize(func)
     mod = Module()
+    func = model._internal(*args).func
     mod[tvm.ir.GlobalVar('main')] = func
-    inputs = _get_func_inputs(record, args, {}, get_handle=False)
     executor = VMExecutor(mod, ctx)
-    out = executor.make_executor()(*inputs)
+    out = executor.make_executor()(*args)
     return out
 
 

@@ -6,7 +6,6 @@ from mnm._ffi.ir._make import Constant as make_const_expr
 from mnm._ffi.value import _make, ToTVM
 from mnm._lib import Object
 from mnm._lib import tvm_ndarray
-from mnm._lib import relay as _relay
 
 
 @register_node("mnm.value.Value")
@@ -142,20 +141,3 @@ class TupleValue(Value):
     @property
     def _de_tuple(self):
         return ffi.DeTuple(self)
-
-
-@register_node("mnm.value.ClosureValue")
-class ClosureValue(Value):
-    def __init__(self, env, func):
-        assert isinstance(env, dict)
-        assert isinstance(func, _relay.Function)
-        for (key, value) in env.items():
-            assert isinstance(key, _relay.Var)
-            assert isinstance(value, Value)
-        self.__init_handle_by_constructor__(_make.ClosureValue, env, func)
-
-
-@register_node("mnm.value.NoGradValue")
-class NoGradValue(Value):
-    def __init__(self):
-        self.__init_handle_by_constructor__(_make.NoGradValue)

@@ -225,8 +225,8 @@ class ndarray:
         return arr
 
 
-class Symbol:
-    # pylint: disable=too-few-public-methods, protected-access
+class Symbol:  # pylint: disable=too-few-public-methods
+
     __slots__ = ["__handle"]
 
     def __init__(self):
@@ -236,7 +236,7 @@ class Symbol:
     def from_expr(expr):
         assert isinstance(expr, relay.Var)
         ret = Symbol()
-        ret.__handle = expr
+        ret.__handle = expr  # pylint: disable=protected-access
         return ret
 
     @staticmethod
@@ -257,31 +257,24 @@ class Symbol:
                  The Symbol with name_hint and type_annotation
         """
         ret = Symbol()
-        ret.__handle = BindSymbol(None, name_hint, type_annotation)
+        ret.__handle = BindSymbol(None, name_hint, type_annotation)  # pylint: disable=protected-access
         return ret
 
     @staticmethod
     def make_tuple(symbols, name_hint=""):
         expr = relay.Tuple(symbols)
         ret = Symbol()
-        ret.__handle = BindSymbol(expr, name_hint, None)
+        ret.__handle = BindSymbol(expr, name_hint, None)  # pylint: disable=protected-access
         return ret
 
     def __getitem__(self, item, name_hint=""):
         if isinstance(item, int):
             expr = relay.TupleGetItem(self.__handle, item)
             ret = Symbol()
-            ret.__handle = BindSymbol(expr, name_hint, None)
+            ret.__handle = BindSymbol(expr, name_hint, None)  # pylint: disable=protected-access
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")
-
-    def __call__(self, *args, name_hint=""):
-        relay_args = [arg.__handle for arg in args]
-        expr = relay.Call(self.__handle, relay_args)
-        ret = Symbol()
-        ret.__handle = BindSymbol(expr, name_hint, None)
-        return ret
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""

@@ -1,7 +1,6 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Utilities for core components."""
 import inspect
-import functools
 from collections import deque, OrderedDict
 
 from mnm._lib import _DLContext
@@ -170,30 +169,3 @@ def get_chained_attr(instance, names, default=None):
             return default
         instance = getattr(instance, name)
     return instance
-
-
-def with_signature(other, fmap):
-    """
-    Decorates a function (this) so that its signature becomes
-    fmap(this.parameters.values(), other.parameters.values())
-
-    Parameters
-    ----------
-    other: function
-    the other function
-
-    fmap: function
-    fuse the signature of two functions
-    """
-    def decorator(this):
-        @functools.wraps(this)
-        def wrapped(*args, **kwargs):
-            return this(*args, **kwargs)
-        s_other = inspect.signature(other)
-        s_this = inspect.signature(this)
-        p_other = list(s_other.parameters.values())
-        p_this = list(s_this.parameters.values())
-        s_this = s_this.replace(parameters=fmap(p_this, p_other))
-        wrapped.__signature__ = s_this
-        return wrapped
-    return decorator

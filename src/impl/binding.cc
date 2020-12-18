@@ -133,8 +133,7 @@ Value LookupBoundValue(Var var) {
 }
 
 ObjectRef DeTuple(Value value) {
-  if (value->IsInstance<ScalarValueObj>() || value->IsInstance<ClosureValueObj>() ||
-      value->IsInstance<NoGradValueObj>()) {
+  if (value->IsInstance<ScalarValueObj>() || value->IsInstance<ClosureValueObj>()) {
     return std::move(value);
   }
   if (value->IsInstance<TensorValueObj>()) {

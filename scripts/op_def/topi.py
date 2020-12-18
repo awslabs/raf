@@ -104,7 +104,6 @@ OP_MAP = {
     "mnm.op.non_max_suppression": ["non_max_suppression", "relay.attrs.NonMaxSuppressionAttrs", "kInjective"],
     "mnm.op.compiler_begin": ["annotation.compiler_begin", "relay.attrs.CompilerAttrs", "kOpaque"],
     "mnm.op.compiler_end": ["annotation.compiler_end", "relay.attrs.CompilerAttrs", "kOpaque"],
-    "mnm.op.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
 }
 
 # pylint: enable=line-too-long

@@ -169,49 +169,10 @@ class LambdaLifter : public ExprMutator {
   std::vector<Var> letrec_;
 };
 
-class Simplifier : public ExprMutator {
- public:
-  explicit Simplifier(Module module) : module_(module) {
-  }
-
-  Expr VisitExpr_(const LetNode* node) final {
-    if (node->value.as<GlobalVarNode>()) {
-      vmap_[node->var] = node->value;
-      return VisitExpr(node->body);
-    }
-    return ExprMutator::VisitExpr_(node);
-  }
-
-  Expr VisitExpr_(const VarNode* node) final {
-    Var var = GetRef<Var>(node);
-    if (vmap_.find(var) != vmap_.end()) {
-      return vmap_.at(var);
-    }
-    return ExprMutator::VisitExpr_(node);
-  }
-
-  ir::Module operator()() {
-    auto glob_funcs = module_->functions;
-    for (auto pair : glob_funcs) {
-      if (auto* n = pair.second.as<FunctionNode>()) {
-        auto func = GetRef<Function>(n);
-        func = Function(func->params, VisitExpr(func->body), func->ret_type, func->type_params,
-                        func->attrs);
-        module_->Add(pair.first, func, true);
-      }
-    }
-    return module_;
-  }
-
- private:
-  Module module_;
-  std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> vmap_;
-};
-
 }  // namespace lambda_lift
 
 ir::Module LambdaLift(ir::Module mod) {
-  return lambda_lift::Simplifier(lambda_lift::LambdaLifter(mod).Lift())();
+  return lambda_lift::LambdaLifter(mod).Lift();
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.LambdaLift").set_body_typed(LambdaLift);
