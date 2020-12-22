@@ -2,6 +2,7 @@
 # pylint: disable=missing-module-docstring
 from functools import reduce
 import operator
+from . import cuda
 from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
@@ -455,10 +456,11 @@ def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unu
     def pad(data):
         return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
     mean = average(x, axis=reduce_axes)
+    x_sq = _topi.multiply(x, x)
+    sq_mean = average(x_sq, axis=reduce_axes)
+    mean_sq = _topi.multiply(mean, mean)
+    var = sq_mean - mean_sq
     running_m = running_m0 * (1 - momentum) + mean * momentum
-    var = _topi.subtract(x, pad(mean))
-    var = _topi.multiply(var, var)
-    var = average(var, axis=reduce_axes)
     running_v = running_v0 * (1 - momentum) + var * reduce_size / (reduce_size - 1) * momentum
     var_add_eps = _topi.add(var, eps)
     sqrt_var = _topi.sqrt(var_add_eps)
@@ -469,7 +471,16 @@ def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unu
     y = _topi.add(_topi.multiply(x, pad(scale)), pad(shift))
     return [y, running_m, running_v]
 
-_reg.register_injective_schedule("mnm.op.batch_norm_train")
+
+# TODO(@hzfan): remove this
+# pylint: disable=unused-argument
+@strategy.schedule_reduce.register(["cuda", "gpu"], override=True)
+def schedule_reduce_cuda(attrs, outs, target):
+    """schedule reduction ops for cuda"""
+    with target:
+        return cuda.reduction.schedule_reduce(outs)
+
+_reg.register_reduce_schedule("mnm.op.batch_norm_train")
 
 @register_compute("mnm.op.batch_norm_infer")
 def batch_norm_infer_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
@@ -505,15 +516,18 @@ def batch_norm_train_dxwb_compute(attrs, inputs, output_type):  # pylint: disabl
     reduce_size = reduce(operator.mul, reduce_shape, 1)
     def pad(data):
         return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
-    mean = average(x, reduce_axes)
-    var = x - pad(mean)
-    var = var * var
-    var = average(var, reduce_axes)
+    mean = average(x, axis=reduce_axes)
+    x_sq = _topi.multiply(x, x)
+    sq_mean = average(x_sq, axis=reduce_axes)
+    mean_sq = _topi.multiply(mean, mean)
+    var = sq_mean - mean_sq
     inv_sqrt_var = 1 / _topi.sqrt(var + eps)
-    db = _topi.sum(dy, axis=reduce_axes)
-    dw = _topi.sum(dy * (x - pad(mean)) * pad(inv_sqrt_var), axis=reduce_axes)
+    sum_dy_x = _topi.sum(dy * x, axis=reduce_axes)
+    sum_dy = _topi.sum(dy, axis=reduce_axes)
+    db = sum_dy
+    dw = (sum_dy_x - mean * sum_dy) * inv_sqrt_var
     dx = ((dy - pad(db / reduce_size) - (x - pad(mean)) * pad(dw * inv_sqrt_var) / reduce_size)
           * pad(w * inv_sqrt_var))
     return [dx, dw, db]
 
-_reg.register_injective_schedule("mnm.op.batch_norm_train_dxwb")
+_reg.register_reduce_schedule("mnm.op.batch_norm_train_dxwb")
