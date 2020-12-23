@@ -37,6 +37,12 @@ class Extractor final : public ExprVisitor {
     EnqueueVar(node->tuple);
   }
 
+  void VisitExpr_(const IfNode* node) final {
+    EnqueueVar(node->cond);
+    EnqueueVar(node->true_branch);
+    EnqueueVar(node->false_branch);
+  }
+
   void EnqueueVar(const Expr& expr) {
     if (expr->IsInstance<ConstantNode>()) {
       return;

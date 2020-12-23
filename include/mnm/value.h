@@ -304,5 +304,11 @@ class VoidValue : public Value {
   MNM_OBJECT_REF(VoidValue, Value, VoidValueObj);
 };
 
+template <class T>
+T GetScalarValueData(const Value& value);
+
+template <>
+bool GetScalarValueData<bool>(const Value& value);
+
 }  // namespace value
 }  // namespace mnm

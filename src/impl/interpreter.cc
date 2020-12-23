@@ -165,7 +165,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const IfNode* node) override {
-    bool result = Downcast<BoolValue>(Eval(node->cond))->data;
+    bool result = GetScalarValueData<bool>(Eval(node->cond));
     return result ? Eval(node->true_branch) : Eval(node->false_branch);
   }
 

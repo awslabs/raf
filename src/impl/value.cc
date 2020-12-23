@@ -182,6 +182,26 @@ ObjectRef DeTuple(Value value) {
   throw;
 }
 
+template <>
+bool GetScalarValueData<bool>(const Value& value) {
+  using namespace tvm::runtime;
+  if (const auto* bvo = value.as<BoolValueObj>()) {
+    return bvo->data;
+  } else if (const auto* tvo = value.as<TensorValueObj>()) {
+    tensor::Tensor tensor = tvo->tensor;
+    DLContext cpu_ctx;
+    cpu_ctx.device_type = kDLCPU;
+    cpu_ctx.device_id = 0;
+    NDArray cpu_array = tensor.CopyTo(cpu_ctx);
+    CHECK_EQ(DataType(cpu_array->dtype), DataType::Bool());
+    CHECK_EQ(cpu_array->ndim, 0);
+    return reinterpret_cast<uint8_t*>(cpu_array->data)[0];
+  } else {
+    LOG(FATAL) << "Cannot convert " << value->GetTypeKey() << " to scalar bool.";
+  }
+  return false;
+}
+
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);
 MNM_REGISTER_GLOBAL("mnm.value.DeTuple").set_body_typed(DeTuple);
 MNM_REGISTER_GLOBAL("mnm.value.FromTVM").set_body_typed(FromTVM);
