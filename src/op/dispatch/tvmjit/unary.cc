@@ -23,7 +23,7 @@ std::vector<Value> UnarySchema2Args(const UnaryArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> UnarySchemaArgNames() {
+std::vector<std::string> UnarySchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -64,19 +64,61 @@ MNM_TVMJIT(Sigmoid, "mnm.op.sigmoid", UnaryArgs, UnarySchema2Args, UnarySchemaAr
 MNM_TVMJIT(Tanh, "mnm.op.tanh", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
            GenericHasher);
 
+struct UnaryDxAttr : public tvm::AttrsNode<UnaryDxAttr> {
+  std::string grad_mode;
+
+  TVM_DECLARE_ATTRS(UnaryDxAttr, "relay.attrs.UnaryDxAttr") {
+    TVM_ATTR_FIELD(grad_mode).describe(
+        "Indicate how to calculate the gradient: using input, output or both");
+  }
+};
+
+TVM_REGISTER_NODE_TYPE(UnaryDxAttr);
+
 std::vector<Value> UnaryDxSchema2Args(const UnaryDxArgs* args) {
-  return {args->x, args->y, args->dy};
+  CHECK(args->x.defined() || args->y.defined());
+  std::vector<Value> ret;
+  if (args->x.defined()) {
+    ret.push_back(args->x.value());
+  }
+  if (args->y.defined()) {
+    ret.push_back(args->y.value());
+  }
+  ret.push_back(args->dy);
+  return ret;
 }
 
-std::vector<std::string> UnaryDxSchemaArgNames() {
-  return {"x", "y", "dy"};
+std::vector<std::string> UnaryDxSchemaArgNames(const op::CallValues& call) {
+  const auto* args = call->args.as<UnaryDxArgs>();
+  CHECK(args->x.defined() || args->y.defined());
+  std::vector<std::string> ret;
+  if (args->x.defined()) {
+    ret.push_back("x");
+  }
+  if (args->y.defined()) {
+    ret.push_back("y");
+  }
+  ret.push_back("dy");
+
+  return ret;
 }
 
-MNM_TVMJIT(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
-           GenericAttrs, GenericHasher);
+Attrs UnaryDxSchema2Attrs(const UnaryDxArgs* args) {
+  auto attrs = make_object<UnaryDxAttr>();
+  CHECK(args->x.defined() || args->y.defined());
+  attrs->grad_mode = "both";
+  if (!args->x.defined()) {
+    attrs->grad_mode = "output";
+  } else if (!args->y.defined()) {
+    attrs->grad_mode = "input";
+  }
+  return Attrs(attrs);
+}
+
+MNM_TVMJIT_PLEVEL(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
+                  UnaryDxSchema2Attrs, GenericHasher, 20);
 MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
-           GenericAttrs, GenericHasher);
-
+           UnaryDxSchema2Attrs, GenericHasher);
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

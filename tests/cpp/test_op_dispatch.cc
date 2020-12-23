@@ -57,12 +57,13 @@ TEST(OpDispatch, Registry) {
   const auto* dispatch_list = OpDispatch::Get(Op::Get("mnm.cpptest.conv2d"), DevType::kCPU());
   ASSERT_EQ(dispatch_list->size(), 2);
   CallValues call;
-  for (const auto& e : *dispatch_list) {
-    const auto* op = static_cast<Conv2d*>(e.second(call));
+  for (const auto e : *dispatch_list) {
+    auto maker = e.maker;
+    const auto* op = static_cast<Conv2d*>(maker(call));
     ASSERT_NE(op, nullptr);
-    if (e.first == "mklShallowNN") {
+    if (e.backend == "mklShallowNN") {
       ASSERT_EQ(op->type, 0);
-    } else if (e.first == "sshadow") {
+    } else if (e.backend == "sshadow") {
       ASSERT_EQ(op->type, 1);
     } else {
       ASSERT_TRUE(false);

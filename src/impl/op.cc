@@ -47,8 +47,9 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
 
 std::shared_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
   const Op& op = Downcast<OpValue>(call->callee)->op;
-  for (const auto& e : *OpDispatch::Get(op, call->ctx.device_type)) {
-    const auto& maker = e.second;
+  TDispatchList* list = OpDispatch::Get(op, call->ctx.device_type);
+  for (const auto e : *list) {
+    const auto& maker = e.maker;
     std::shared_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
     if (op_env) {
       return op_env;
@@ -63,15 +64,27 @@ OpDispatch& OpDispatch::set_name(const std::string& name) {
 }
 
 OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& backend_name,
-                                     const FMakeOpEnv& op_env_maker) {
+                                     const FMakeOpEnv& op_env_maker, int plevel) {
   std::shared_ptr<TDispatchList> list = dispatch.Get(device_type);
   {
     std::lock_guard<std::mutex> lock(dispatch.mutex_);
-    if (list->count(backend_name)) {
-      LOG(FATAL) << "InternalError: operator " << name
-                 << " already has an implementation on backend " << backend_name;
+    for (auto e : *list) {
+      if (e.backend == backend_name) {
+        LOG(FATAL) << "InternalError: operator " << name
+                   << " already has an implementation on backend " << backend_name;
+      }
     }
-    (*list)[backend_name] = op_env_maker;
+    OpEnvMaker maker = OpEnvMaker{plevel, backend_name, op_env_maker};
+    auto it = list->begin();
+    for (; it != list->end(); ++it) {
+      if (plevel >= it->plevel) {
+        list->insert(it, maker);
+        break;
+      }
+    }
+    if (it == list->end()) {
+      list->push_back(maker);
+    }
   }
   return *this;
 }

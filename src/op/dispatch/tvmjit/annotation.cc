@@ -19,7 +19,7 @@ std::vector<Value> CompilerSchema2Args(const CompilerArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> CompilerSchemaArgNames() {
+std::vector<std::string> CompilerSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 

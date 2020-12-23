@@ -26,7 +26,7 @@ std::vector<value::Value> BinarySchema2Args(const T* args) {
   return {args->x1, args->x2};
 }
 
-inline std::vector<std::string> BinarySchemaArgNames() {
+inline std::vector<std::string> BinarySchemaArgNames(const op::CallValues& call) {
   return {"x1", "x2"};
 }
 

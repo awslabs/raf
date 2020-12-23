@@ -646,8 +646,8 @@ Attrs Unary(const TVMArgs& values, GradTape* tapes) {
 
 Attrs UnaryDx(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::UnaryDxArgs, 3);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::ArrayLike, x);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
+  MNM_TAPE(0, ffi2schema::ArrayLikeOptional, x);
+  MNM_TAPE(1, ffi2schema::TensorOptional, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   return Attrs(attrs);
 }
@@ -1126,8 +1126,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.erf").set_body([](TVMArgs args, TVMRetValue* ret
 MNM_REGISTER_GLOBAL("mnm.op.imp.erf_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(erf_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1537,8 +1537,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.relu").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.relu_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(relu_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1636,8 +1636,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid").set_body([](TVMArgs args, TVMRetValue*
 MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sigmoid_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1723,8 +1723,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sqrt_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1815,8 +1815,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.tanh").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.tanh_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(tanh_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -2334,8 +2334,8 @@ Array<Expr> Unary(const TVMArgs& values) {
 
 Array<Expr> UnaryDx(const TVMArgs& values) {
   MNM_PRELUDE(3);
-  MNM_ARG(0, ffi2expr::ArrayLike, x);
-  MNM_ARG(1, ffi2expr::Tensor, y);
+  MNM_ARG(0, ffi2expr::ArrayLikeOptional, x);
+  MNM_ARG(1, ffi2expr::TensorOptional, y);
   MNM_ARG(2, ffi2expr::Tensor, dy);
   MNM_RET();
 }
@@ -3083,8 +3083,8 @@ Attrs Unary(const Array<Value>& values) {
 template <const char* op_name>
 Attrs UnaryDx(const Array<Value>& values) {
   MNM_PRELUDE(3, 3, schema::UnaryDxArgs);
-  MNM_REQUIRED(0, value2schema::ArrayLike, x);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
+  MNM_REQUIRED(0, value2schema::ArrayLikeOptional, x);
+  MNM_REQUIRED(1, value2schema::TensorOptional, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   return Attrs(attrs);
 }

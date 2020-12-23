@@ -44,6 +44,22 @@ inline value::Value ArrayLike(const value::Value& a) {
              << "\" is not array-like";
   throw;
 }
+
+inline ir::Optional<value::Value> ArrayLikeOptional(const value::Value& a) {
+  if (!a.defined()) {
+    return tvm::NullOpt;
+  }
+  MNM_PRELUDE_ALLOW_NULL();
+  if (a->IsInstance<IntValueObj>() || a->IsInstance<FloatValueObj>() ||
+      a->IsInstance<BoolValueObj>() || a->IsInstance<BaseTensorValueObj>() ||
+      a->IsInstance<TupleValueObj>()) {
+    return a;
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
+             << "\" is not array-like";
+  throw;
+}
+
 inline value::BaseTensorValue Tensor(const value::Value& a) {
   MNM_PRELUDE_ALLOW_NULL();
   if (const auto* v = a.as<BaseTensorValueObj>()) {
@@ -53,6 +69,20 @@ inline value::BaseTensorValue Tensor(const value::Value& a) {
              << "\" is not a tensor";
   throw;
 }
+
+inline ir::Optional<value::BaseTensorValue> TensorOptional(const value::Value& a) {
+  if (!a.defined()) {
+    return tvm::NullOpt;
+  }
+  MNM_PRELUDE_ALLOW_NULL();
+  if (const auto* v = a.as<BaseTensorValueObj>()) {
+    return GetRef<BaseTensorValue>(v);
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
+             << "\" is not a tensor";
+  throw;
+}
+
 inline int64_t Int(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("an integer");
   if (const auto* v = a.as<IntValueObj>()) {

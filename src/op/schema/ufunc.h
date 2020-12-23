@@ -73,8 +73,8 @@ class UnaryArgs : public ir::AttrsNode<UnaryArgs> {
 
 class UnaryDxArgs : public ir::AttrsNode<UnaryDxArgs> {
  public:
-  value::Value x;
-  value::BaseTensorValue y;
+  ir::Optional<value::Value> x;
+  ir::Optional<value::BaseTensorValue> y;
   value::BaseTensorValue dy;
   MNM_OP_SCHEMA(UnaryDxArgs, "mnm.args.unary_dx");
 };

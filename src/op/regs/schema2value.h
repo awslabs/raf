@@ -21,25 +21,47 @@ namespace schema2value {
 inline value::Value ArrayLike(const value::Value& a) {
   return a;
 }
+
+inline value::Value ArrayLikeOptional(const ir::Optional<value::Value> a) {
+  if (a.defined()) {
+    return a.value();
+  } else {
+    return {};
+  }
+}
+
 inline value::Value Tensor(const value::BaseTensorValue& a) {
   return a;
 }
+
+inline value::Value TensorOptional(const ir::Optional<value::BaseTensorValue> a) {
+  if (a.defined()) {
+    return a.value();
+  } else {
+    return {};
+  }
+}
+
 inline value::Value Int(int64_t a) {
   MNM_PRELUDE();
   return IntValue::make(a);
 }
+
 inline value::Value Bool(bool a) {
   MNM_PRELUDE();
   return BoolValue::make(a);
 }
+
 inline value::Value Double(double a) {
   MNM_PRELUDE();
   return FloatValue::make(a);
 }
+
 inline value::Value String(const std::string& a) {
   MNM_PRELUDE();
   return StringValue::make(a);
 }
+
 inline value::Value TupleInt(const std::vector<int64_t>& a) {
   MNM_PRELUDE();
   Array<Value> ret;
@@ -48,9 +70,11 @@ inline value::Value TupleInt(const std::vector<int64_t>& a) {
   }
   return TupleValue::make(std::move(ret));
 }
+
 inline value::Value IntOrTupleInt(const std::vector<int64_t>& a) {
   return TupleInt(a);
 }
+
 inline value::Value IntArray(const ir::Optional<ir::Array<value::IntValue>> a) {
   MNM_PRELUDE();
   Array<Value> ret;
@@ -59,6 +83,7 @@ inline value::Value IntArray(const ir::Optional<ir::Array<value::IntValue>> a) {
   }
   return TupleValue::make(std::move(ret));
 }
+
 inline value::Value TupleTensor(const std::vector<value::BaseTensorValue>& a) {
   MNM_PRELUDE();
   Array<Value> ret;

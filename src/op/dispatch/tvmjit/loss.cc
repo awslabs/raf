@@ -19,7 +19,7 @@ std::vector<Value> LossSchema2Args(const LossArgs* args) {
   return {args->y_true, args->y_pred};
 }
 
-std::vector<std::string> LossSchemaArgNames() {
+std::vector<std::string> LossSchemaArgNames(const op::CallValues& call) {
   return {"y_true", "y_pred"};
 }
 

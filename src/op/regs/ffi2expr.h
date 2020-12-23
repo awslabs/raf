@@ -62,7 +62,51 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
   throw;
 }
 
+inline ir::Expr ArrayLikeOptional(const registry::TVMArgValue& a) {
+  MNM_PRELUDE();
+  if (type_code == kDLInt) {
+    return MNM_CONST(IntValue, a.operator int64_t());
+  }
+  if (type_code == kDLFloat) {
+    return MNM_CONST(FloatValue, a.operator double());
+  }
+  if (type_code == kTVMNullptr) {
+    return MakeConstant(NullValue<Value>());
+  }
+  const Object* _ptr = a.ptr<Object>();
+  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
+    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
+    ir::Array<Value> fields;
+    for (const ObjectRef& i : *n) {
+      if (const auto* e = i.as<IntImmNode>()) {
+        int64_t val = e->value;
+        fields.push_back(IntValue::make(val));
+        continue;
+      }
+      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
+                 << "because the " << ToOrdinal(fields.size()) << " member is of type \""
+                 << i->GetTypeKey() << '"';
+      throw;
+    }
+    return MNM_CONST(TupleValue, std::move(fields));
+  }
+
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
+             << "\" is not array-like";
+  throw;
+}
+
 inline ir::Expr Tensor(const registry::TVMArgValue& a) {
+  MNM_PRELUDE();
+  if (type_code == kTVMNDArrayHandle || type_code == kTVMNullptr) {
+    return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
+  }
+  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
+             << "\" is not a tensor";
+  throw;
+}
+
+inline ir::Expr TensorOptional(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kTVMNDArrayHandle || type_code == kTVMNullptr) {
     return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());

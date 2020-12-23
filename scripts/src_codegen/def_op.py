@@ -120,7 +120,6 @@ OPS = [
     Op(name="compiler_end", schema_name="compiler"),
 ]
 
-
 def by_name():
     result = dict()
     schemas = def_schema.by_name()

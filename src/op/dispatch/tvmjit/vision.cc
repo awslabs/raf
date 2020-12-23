@@ -27,7 +27,7 @@ std::vector<Value> GetValidCountSchema2Args(const GetValidCountsArgs* args) {
   return {args->data};
 }
 
-std::vector<std::string> GetValidCountSchemaArgNames() {
+std::vector<std::string> GetValidCountSchemaArgNames(const op::CallValues& call) {
   return {"data"};
 }
 
@@ -55,7 +55,7 @@ std::vector<Value> NonMaxSuppressionSchema2Args(const NonMaxSuppressionArgs* arg
   return {args->data, args->valid_count, args->indices, args->max_output_size};
 }
 
-std::vector<std::string> NonMaxSuppressionSchemaArgNames() {
+std::vector<std::string> NonMaxSuppressionSchemaArgNames(const op::CallValues& call) {
   return {"data", "valid_count", "indices", "max_output_size"};
 }
 

@@ -3,7 +3,8 @@ from collections import defaultdict
 from .codegen_utils import Arg
 
 OptionalIntArray = "ir::Optional<ir::Array<value::IntValue>>"
-
+OptionalValue = "ir::Optional<value::Value>"
+OptionalTensor = "ir::Optional<value::BaseTensorValue>"
 SCHEMAS = {
     "nn.h::conv": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -229,8 +230,8 @@ SCHEMAS = {
         Arg(name="x3", cxx_type="value::Value"),
     ],
     "ufunc.h::unary_dx": [
-        Arg(name="x", cxx_type="value::Value"),
-        Arg(name="y", cxx_type="value::BaseTensorValue"),
+        Arg(name="x", cxx_type=OptionalValue),
+        Arg(name="y", cxx_type=OptionalTensor),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
     ],
     "ufunc.h::binary_dx": [

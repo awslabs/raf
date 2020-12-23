@@ -57,7 +57,11 @@ class Status(object):
         return '\n  '.join(f'{ty} {name};' for name, ty in self.attrs.items())
 
     def get_casts(self):
-        casts = [f'{v[0]} {name} = {v[1]};\n    (void) {name};' for name, v in self.casts.items()]
+        casts=[]
+        for name, v in self.casts.items():
+            if("value()" in v[1]):
+                casts.append(f'CHECK({v[1][:-8]}.defined());')
+            casts.append(f'{v[0]} {name} = {v[1]};\n    (void) {name};')
         return '\n    '.join(casts)
 
     def get_runtime_casts(self):
@@ -75,12 +79,18 @@ class ShapeWrapper(object):
 
     def add_cast(self, status):
         assert '->' in self.tensor, self.tensor
-        self.cast_ptr = self.tensor.split('->')[1]
+        if ("value()" in self.tensor):
+            self.cast_ptr = self.tensor.split('->')[1].strip(".value()")
+        else:
+            self.cast_ptr = self.tensor.split('->')[1]
         status.add_cast('DLTensor*', self.cast_ptr, self.tensor)
 
     def field_name(self):
         assert '->' in self.tensor, self.tensor
-        return self.tensor.split('->')[1]
+        if ("value()" in self.tensor):
+            return self.tensor.split('->')[1].strip(".value()")
+        else:
+            return self.tensor.split('->')[1]
 
     def normalize(self, status):
         self.add_cast(status)
@@ -313,7 +323,6 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
     return new {CLASSNAME}(cv);
   }}
 }};
-
 MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn");
 """.strip()
 
@@ -413,8 +422,8 @@ def dispatch_unary(op, enum):
     return CUDNNDispatch(op, 'ActivationForward', 'unary', [x, y, act_desc], ALPHA_BETA)
 
 def dispatch_unary_dx(op, enum):
-    x = CUDNNTensor('xDesc', 'x', 'args->x', [0, '<last>'])
-    y = CUDNNTensor('yDesc', 'y', 'args->y', [0, '<last>'])
+    x = CUDNNTensor('xDesc', 'x', 'args->x.value()', [0, '<last>'])
+    y = CUDNNTensor('yDesc', 'y', 'args->y.value()', [0, '<last>'])
     dy = CUDNNTensor('dyDesc', 'dy', 'args->dy', [0, '<last>'])
     dx = CUDNNOutputTensor('dxDesc', 'dx', 'cv->out', [0, '<last>'])
     act_desc = CUDNNDescriptor('activationDesc', [enum, 'CUDNN_PROPAGATE_NAN', '0.0'], 'Activation')

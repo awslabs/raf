@@ -48,7 +48,7 @@ std::vector<Value> SumSchema2Args(const SumArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> SumSchemaArgNames() {
+std::vector<std::string> SumSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 

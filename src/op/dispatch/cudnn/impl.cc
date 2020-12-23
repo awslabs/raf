@@ -160,7 +160,6 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     return new AvgPool2DImplementedByCUDNNPoolingForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.avg_pool2d", AvgPool2DImplementedByCUDNNPoolingForward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -247,7 +246,6 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     return new AvgPool2DDxImplementedByCUDNNPoolingBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.avg_pool2d_dx", AvgPool2DDxImplementedByCUDNNPoolingBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -328,7 +326,6 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
     return new BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.batch_norm_infer",
                 BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference::make,
                 DevType::kCUDA(), "generated_cudnn");
@@ -412,7 +409,6 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
     return new BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.batch_norm_train",
                 BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining::make,
                 DevType::kCUDA(), "generated_cudnn");
@@ -499,7 +495,6 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
     return new BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.batch_norm_train_dxwb",
                 BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
@@ -592,7 +587,6 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     return new Conv2DImplementedByCUDNNConvolutionForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.conv2d", Conv2DImplementedByCUDNNConvolutionForward::make, DevType::kCUDA(),
                 "generated_cudnn");
 
@@ -685,7 +679,6 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     return new Conv2DDwImplementedByCUDNNConvolutionBackwardFilter(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.conv2d_dw", Conv2DDwImplementedByCUDNNConvolutionBackwardFilter::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -777,7 +770,6 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     return new Conv2DDxImplementedByCUDNNConvolutionBackwardData(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.conv2d_dx", Conv2DDxImplementedByCUDNNConvolutionBackwardData::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -835,7 +827,6 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     return new LogSoftmaxImplementedByCUDNNSoftmaxForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.log_softmax", LogSoftmaxImplementedByCUDNNSoftmaxForward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -915,7 +906,6 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     return new LogSoftmaxDxImplementedByCUDNNSoftmaxBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.log_softmax_dx", LogSoftmaxDxImplementedByCUDNNSoftmaxBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -977,7 +967,6 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     return new MaxPool2DImplementedByCUDNNPoolingForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.max_pool2d", MaxPool2DImplementedByCUDNNPoolingForward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -1061,7 +1050,6 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     return new MaxPool2DDxImplementedByCUDNNPoolingBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.max_pool2d_dx", MaxPool2DDxImplementedByCUDNNPoolingBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -1119,7 +1107,6 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     return new ReluImplementedByCUDNNActivationForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.relu", ReluImplementedByCUDNNActivationForward::make, DevType::kCUDA(),
                 "generated_cudnn");
 
@@ -1138,9 +1125,11 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     };
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
-    DLTensor* x = args->x;
+    CHECK(args->x.defined());
+    DLTensor* x = args->x.value();
     (void)x;
-    DLTensor* y = args->y;
+    CHECK(args->y.defined());
+    DLTensor* y = args->y.value();
     (void)y;
     DLTensor* dy = args->dy;
     (void)dy;
@@ -1170,9 +1159,11 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
-    DLTensor* x = args->x;
+    CHECK(args->x.defined());
+    DLTensor* x = args->x.value();
     (void)x;
-    DLTensor* y = args->y;
+    CHECK(args->y.defined());
+    DLTensor* y = args->y.value();
     (void)y;
     DLTensor* dy = args->dy;
     (void)dy;
@@ -1199,7 +1190,6 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     return new ReluDxImplementedByCUDNNActivationBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.relu_dx", ReluDxImplementedByCUDNNActivationBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -1257,7 +1247,6 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     return new SigmoidImplementedByCUDNNActivationForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.sigmoid", SigmoidImplementedByCUDNNActivationForward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -1276,9 +1265,11 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     };
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
-    DLTensor* x = args->x;
+    CHECK(args->x.defined());
+    DLTensor* x = args->x.value();
     (void)x;
-    DLTensor* y = args->y;
+    CHECK(args->y.defined());
+    DLTensor* y = args->y.value();
     (void)y;
     DLTensor* dy = args->dy;
     (void)dy;
@@ -1308,9 +1299,11 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
-    DLTensor* x = args->x;
+    CHECK(args->x.defined());
+    DLTensor* x = args->x.value();
     (void)x;
-    DLTensor* y = args->y;
+    CHECK(args->y.defined());
+    DLTensor* y = args->y.value();
     (void)y;
     DLTensor* dy = args->dy;
     (void)dy;
@@ -1337,7 +1330,6 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     return new SigmoidDxImplementedByCUDNNActivationBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.sigmoid_dx", SigmoidDxImplementedByCUDNNActivationBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -1395,7 +1387,6 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     return new SoftmaxImplementedByCUDNNSoftmaxForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make, DevType::kCUDA(),
                 "generated_cudnn");
 
@@ -1475,7 +1466,6 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     return new SoftmaxDxImplementedByCUDNNSoftmaxBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.softmax_dx", SoftmaxDxImplementedByCUDNNSoftmaxBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 
@@ -1533,7 +1523,6 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     return new TanhImplementedByCUDNNActivationForward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.tanh", TanhImplementedByCUDNNActivationForward::make, DevType::kCUDA(),
                 "generated_cudnn");
 
@@ -1552,9 +1541,11 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     };
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
-    DLTensor* x = args->x;
+    CHECK(args->x.defined());
+    DLTensor* x = args->x.value();
     (void)x;
-    DLTensor* y = args->y;
+    CHECK(args->y.defined());
+    DLTensor* y = args->y.value();
     (void)y;
     DLTensor* dy = args->dy;
     (void)dy;
@@ -1584,9 +1575,11 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
     (void)args;
-    DLTensor* x = args->x;
+    CHECK(args->x.defined());
+    DLTensor* x = args->x.value();
     (void)x;
-    DLTensor* y = args->y;
+    CHECK(args->y.defined());
+    DLTensor* y = args->y.value();
     (void)y;
     DLTensor* dy = args->dy;
     (void)dy;
@@ -1613,7 +1606,6 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     return new TanhDxImplementedByCUDNNActivationBackward(cv);
   }
 };
-
 MNM_OP_DISPATCH("mnm.op.tanh_dx", TanhDxImplementedByCUDNNActivationBackward::make,
                 DevType::kCUDA(), "generated_cudnn");
 }  // namespace generated

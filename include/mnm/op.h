@@ -74,14 +74,20 @@ class OpEnv {
 
 class OpDispatch {
   using FMakeOpEnv = std::function<OpEnv*(const CallValues& call)>;
-  using TDispatchList = std::unordered_map<std::string, FMakeOpEnv>;
+
+  struct OpEnvMaker {
+    int plevel;
+    std::string backend;
+    FMakeOpEnv maker;
+  };
+  using TDispatchList = std::list<OpEnvMaker>;
   using TRegistry = ::dmlc::Registry<OpDispatch>;
 
  public:
   OpDispatch() = default;
   OpDispatch& set_name(const std::string& name);
   OpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
-                           const FMakeOpEnv& op_env_maker);
+                           const FMakeOpEnv& op_env_maker, int plevel = 10);
 
  public:
   static TRegistry* Registry();
@@ -155,12 +161,15 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 #define MNM_OP_DECLARE(op_name, body) \
   RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FMNMDeclare>("FMNMDeclare", body)
 
+#define MNM_OP_DISPATCH_PLEVEL(op_name, op_env_maker, device_type, backend_name, plevel) \
+  DMLC_STR_CONCAT(_MNM_OP_DISPATCH_DEF, __COUNTER__) =                                   \
+      ::mnm::op::OpDispatch::Registry()                                                  \
+          ->__REGISTER_OR_GET__(op_name)                                                 \
+          .set_name(op_name)                                                             \
+          .add_dispatch(device_type, backend_name, op_env_maker, plevel)
+
 #define MNM_OP_DISPATCH(op_name, op_env_maker, device_type, backend_name) \
-  DMLC_STR_CONCAT(_MNM_OP_DISPATCH_DEF, __COUNTER__) =                    \
-      ::mnm::op::OpDispatch::Registry()                                   \
-          ->__REGISTER_OR_GET__(op_name)                                  \
-          .set_name(op_name)                                              \
-          .add_dispatch(device_type, backend_name, op_env_maker)
+  MNM_OP_DISPATCH_PLEVEL(op_name, op_env_maker, device_type, backend_name, 10)
 
 #define MNM_OP_SCHEMA(class_name, type_key)          \
   static constexpr const char* _type_key = type_key; \

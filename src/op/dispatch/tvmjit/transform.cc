@@ -27,7 +27,7 @@ std::vector<Value> RepeatSchema2Args(const RepeatArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> RepeatSchemaArgNames() {
+std::vector<std::string> RepeatSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -63,7 +63,7 @@ std::vector<Value> TakeSchema2Args(const TakeArgs* args) {
   return {args->x, args->indices};
 }
 
-std::vector<std::string> TakeSchemaArgNames() {
+std::vector<std::string> TakeSchemaArgNames(const op::CallValues& call) {
   return {"x", "indices"};
 }
 
@@ -97,7 +97,7 @@ std::vector<Value> TakeDxSchema2Args(const TakeDxArgs* args) {
   return {args->x, args->y, args->dy, args->indices};
 }
 
-std::vector<std::string> TakeDxSchemaArgNames() {
+std::vector<std::string> TakeDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "y", "dy", "indices"};
 }
 
@@ -132,7 +132,7 @@ std::vector<Value> SequenceMaskSchema2Args(const SequenceMaskArgs* args) {
   return {args->x, args->sequence_length};
 }
 
-std::vector<std::string> SequenceMaskSchemaArgNames() {
+std::vector<std::string> SequenceMaskSchemaArgNames(const op::CallValues& call) {
   return {"x", "sequence_length"};
 }
 
@@ -158,7 +158,7 @@ std::vector<Value> ReverseSchema2Args(const ReverseArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> ReverseSchemaArgNames() {
+std::vector<std::string> ReverseSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -182,7 +182,7 @@ std::vector<Value> ReverseSequenceSchema2Args(const ReverseSequenceArgs* args) {
   return {args->x, args->sequence_length};
 }
 
-std::vector<std::string> ReverseSequenceSchemaArgNames() {
+std::vector<std::string> ReverseSequenceSchemaArgNames(const op::CallValues& call) {
   return {"x", "sequence_length"};
 }
 
@@ -209,7 +209,7 @@ std::vector<Value> BroadcastToSchema2Args(const BroadcastToArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> BroadcastToSchemaArgNames() {
+std::vector<std::string> BroadcastToSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -231,7 +231,7 @@ std::vector<Value> TransposeSchema2Args(const TransposeArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> TransposeSchemaArgNames() {
+std::vector<std::string> TransposeSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -260,7 +260,7 @@ std::vector<Value> TransposeDxSchema2Args(const TransposeDxArgs* args) {
   return {args->x, args->y, args->dy};
 }
 
-std::vector<std::string> TransposeDxSchemaArgNames() {
+std::vector<std::string> TransposeDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "y", "dy"};
 }
 
@@ -289,7 +289,7 @@ std::vector<Value> BroadcastToLikeSchema2Args(const BroadcastToLikeArgs* args) {
   return {args->x, args->broadcast_type};
 }
 
-std::vector<std::string> BroadcastToLikeSchemaArgNames() {
+std::vector<std::string> BroadcastToLikeSchemaArgNames(const op::CallValues& call) {
   return {"x", "broadcast_type"};
 }
 
@@ -306,7 +306,7 @@ std::vector<Value> SplitSchema2Args(const SplitArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> SplitSchemaArgNames() {
+std::vector<std::string> SplitSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -348,7 +348,7 @@ std::vector<Value> ConcatenateSchema2Args(const ConcatenateArgs* args) {
   return ret;
 }
 
-std::vector<std::string> ConcatenateSchemaArgNames() {
+std::vector<std::string> ConcatenateSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -376,7 +376,7 @@ std::vector<Value> StackSchema2Args(const StackArgs* args) {
   return ret;
 }
 
-std::vector<std::string> StackSchemaArgNames() {
+std::vector<std::string> StackSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -400,7 +400,7 @@ std::vector<Value> ClipSchema2Args(const ClipArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> ClipSchemaArgNames() {
+std::vector<std::string> ClipSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -425,7 +425,7 @@ std::vector<Value> ClipDxSchema2Args(const ClipDxArgs* args) {
   return {args->x, args->dy};
 }
 
-std::vector<std::string> ClipDxSchemaArgNames() {
+std::vector<std::string> ClipDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "dy"};
 }
 
@@ -451,7 +451,7 @@ std::vector<Value> CastSchema2Args(const CastArgs* args) {
   return {args->data};
 }
 
-std::vector<std::string> CastSchemaArgNames() {
+std::vector<std::string> CastSchemaArgNames(const op::CallValues& call) {
   return {"data"};
 }
 
@@ -474,7 +474,7 @@ std::vector<Value> CastLikeSchema2Args(const CastLikeArgs* args) {
   return {args->data, args->dtype_like};
 }
 
-std::vector<std::string> CastLikeSchemaArgNames() {
+std::vector<std::string> CastLikeSchemaArgNames(const op::CallValues& call) {
   return {"data", "dtype_like"};
 }
 
@@ -485,7 +485,7 @@ std::vector<Value> GatherNdSchema2Args(const GatherNdArgs* args) {
   return {args->data, args->indices};
 }
 
-std::vector<std::string> GatherNdSchemaArgNames() {
+std::vector<std::string> GatherNdSchemaArgNames(const op::CallValues& call) {
   return {"data", "indices"};
 }
 
@@ -496,7 +496,7 @@ std::vector<Value> GatherNdDxSchema2Args(const GatherNdDxArgs* args) {
   return {args->data, args->indices, args->dy};
 }
 
-std::vector<std::string> GatherNdDxSchemaArgNames() {
+std::vector<std::string> GatherNdDxSchemaArgNames(const op::CallValues& call) {
   return {"data", "indices", "dy"};
 }
 
@@ -507,7 +507,7 @@ std::vector<Value> SqueezeSchema2Args(const SqueezeArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> SqueezeSchemaArgNames() {
+std::vector<std::string> SqueezeSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -536,7 +536,7 @@ std::vector<Value> ReshapeSchema2Args(const ReshapeArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> ReshapeSchemaArgNames() {
+std::vector<std::string> ReshapeSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -564,7 +564,7 @@ std::vector<Value> ExpandDimsSchema2Args(const ExpandDimsArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> ExpandDimsSchemaArgNames() {
+std::vector<std::string> ExpandDimsSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 

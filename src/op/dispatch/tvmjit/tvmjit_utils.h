@@ -62,7 +62,8 @@ using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
 }  // namespace op
 }  // namespace mnm
 
-#define MNM_TVMJIT(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH)         \
+#define MNM_TVMJIT_PLEVEL(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH,  \
+                          PLEVEL)                                                               \
   MetaCache<registry::PackedFunc> FUNC##CacheBuildCpu;                                          \
   MetaCache<registry::PackedFunc> FUNC##CacheBuildCuda;                                         \
   MetaCache<ir::Function> FUNC##CacheLoweredFunc;                                               \
@@ -111,7 +112,7 @@ using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
     static const auto op = Op::Get(OP);                                                         \
     auto env = new TVMOpEnv();                                                                  \
     auto fschema_index = Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");      \
-    for (auto field : SCHEMA_ARG_NAMES()) {                                                     \
+    for (auto field : SCHEMA_ARG_NAMES(call)) {                                                 \
       int idx = fschema_index[op](field);                                                       \
       CHECK_GE(idx, 0) << "Cannot find " << field << " in the schema for OP";                   \
       env->arg_indices.push_back(idx);                                                          \
@@ -153,5 +154,8 @@ using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
   }                                                                                             \
   RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMLower>("FMNMLower", FUNC##Lower);       \
   RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMAttr>("FMNMAttr", FUNC##Attr);          \
-  MNM_OP_DISPATCH(OP, FUNC##Build, DevType::kCPU(), "tvmjit");                                  \
-  MNM_OP_DISPATCH(OP, FUNC##Build, DevType::kCUDA(), "tvmjit");
+  MNM_OP_DISPATCH_PLEVEL(OP, FUNC##Build, DevType::kCPU(), "tvmjit", PLEVEL);                   \
+  MNM_OP_DISPATCH_PLEVEL(OP, FUNC##Build, DevType::kCUDA(), "tvmjit", PLEVEL);
+
+#define MNM_TVMJIT(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH) \
+  MNM_TVMJIT_PLEVEL(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, 10)

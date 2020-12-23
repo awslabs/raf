@@ -24,7 +24,7 @@ std::vector<Value> ReduceSchema2Args(const ReduceArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> ReduceSchemaArgNames() {
+std::vector<std::string> ReduceSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -77,7 +77,7 @@ std::vector<Value> ReduceDxSchema2Args(const ReduceDxArgs* args) {
   return {args->x, args->y, args->dy};
 }
 
-std::vector<std::string> ReduceDxSchemaArgNames() {
+std::vector<std::string> ReduceDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "y", "dy"};
 }
 

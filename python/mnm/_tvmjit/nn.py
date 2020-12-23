@@ -31,7 +31,6 @@ def take_dx_compute(attrs, inputs, output_type):
     B = _topi.sum(A, axis=tuple(range(axis, axis + idim)))
     return [B]
 
-
 _reg.register_injective_schedule("mnm.op.take_dx")
 
 _reg.register_strategy("mnm.op.dense", strategy.dense_strategy)
@@ -56,6 +55,7 @@ def compute_matmul(attr, inputs, output_type):
 @register_compute("mnm.op.matmul_tn")
 def compute_matmul_tn(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=True, transpose_b=False)
+
 
 @register_compute("mnm.op.matmul_nt")
 def compute_matmul_nt(attr, inputs, output_type):
@@ -96,7 +96,6 @@ def compute_avg_pool2d_dx(attr, inputs, output_type):
     assert layout == "NCHW"
     pt, pl = padding
     padding = (pt, pl, pt, pl)
-
     x, y, dy = inputs
     res = _topi.nn.pool(x, kernel=pool_size, stride=strides, padding=padding, pool_type='avg',
                         ceil_mode=ceil_mode, layout=layout, count_include_pad=count_include_pad)
@@ -147,10 +146,17 @@ def compute_relu_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=invalid-name
     # pylint: disable=unused-variable
-    X, y, dy = inputs[0], inputs[1], inputs[2]
-    assert _topi.utils.get_const_tuple(X.shape) == _topi.utils.get_const_tuple(dy.shape)
-    G = _tvm.te.compute(dy.shape, lambda *idx: _tvm.tir.if_then_else(
-        X[idx] < 0, _tvm.tir.const(0, dy.dtype), dy[idx]))
+    grad_mode = attr.grad_mode
+    if grad_mode == "both":
+        data, dy = inputs[0], inputs[2]
+    else:
+        data, dy = inputs[0], inputs[1]
+    # For y = relu(x), x or y can be used to calcluate graident
+    # if both x and y are given, we use x here
+    # Using x: return 0 if x < 0 else dy
+    # Using y: return 0 if y == 0 else dy
+    G = _tvm.te.compute(dy.shape, lambda *idx: _tvm.te.if_then_else(
+        data[idx] <= 0, _tvm.tir.const(0, dy.dtype), dy[idx]))
     return [G]
 
 _reg.register_injective_schedule("mnm.op.relu_dx")
@@ -440,7 +446,6 @@ def average(data, axis):
     size = reduce(operator.mul, shape, 1)
     tot = _topi.sum(data, axis=axis)
     return _topi.divide(tot, size)
-
 
 @register_compute("mnm.op.batch_norm_train")
 def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals

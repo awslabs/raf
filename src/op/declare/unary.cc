@@ -123,12 +123,18 @@ void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check
   const auto* args = call->args.as<UnaryDxArgs>();
   CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
+  CHECK(args->x.defined() || args->y.defined());
+  DLTensor* source;
+  if (args->x.defined()) {
+    source = args->x.value();
+  } else {
+    source = args->y.value();
+  }
+  std::vector<int64_t> shape(source->shape, source->shape + source->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/source->ctx,
+                                    /*dtype=*/source->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->ctx = source->ctx;
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.relu_dx", UnaryDx);

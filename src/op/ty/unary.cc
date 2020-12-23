@@ -53,8 +53,13 @@ MNM_OP_TYPE("mnm.op.atan", "Identity", UnaryInfer);
 Type UnaryDxInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryDxArgs>();
   CHECK(args != nullptr);
+  CHECK(args->x.defined() || args->y.defined());
   // Unary ops' outputs are identical with inputs
-  return GetType(args->x);
+  if (args->x.defined()) {
+    return GetType(args->x.value());
+  } else {
+    return GetType(args->y.value());
+  }
 }
 
 MNM_OP_TYPE("mnm.op.relu_dx", "IdentityDx", UnaryDxInfer);

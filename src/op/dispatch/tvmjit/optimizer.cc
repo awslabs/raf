@@ -30,7 +30,7 @@ std::vector<Value> SgdSchema2Args(const SgdArgs* args) {
   return {args->x, args->dx, args->v};
 }
 
-std::vector<std::string> SgdSchemaArgNames() {
+std::vector<std::string> SgdSchemaArgNames(const op::CallValues& call) {
   return {"x", "dx", "v"};
 }
 

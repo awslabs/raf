@@ -42,7 +42,7 @@ std::vector<Value> ConvSchema2Args(const ConvArgs* args) {
   return {args->x, args->w};
 }
 
-std::vector<std::string> ConvSchemaArgNames() {
+std::vector<std::string> ConvSchemaArgNames(const op::CallValues& call) {
   return {"x", "w"};
 }
 
@@ -87,7 +87,7 @@ std::vector<Value> ConvDxwSchema2Args(const ConvDxwArgs* args) {
   return {args->x_or_w, args->y, args->dy};
 }
 
-std::vector<std::string> ConvDxwSchemaArgNames() {
+std::vector<std::string> ConvDxwSchemaArgNames(const op::CallValues& call) {
   return {"x_or_w", "y", "dy"};
 }
 
@@ -139,7 +139,7 @@ std::vector<Value> SoftmaxSchema2Args(const SoftmaxArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> SoftmaxSchemaArgNames() {
+std::vector<std::string> SoftmaxSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -160,7 +160,7 @@ std::vector<Value> SoftmaxDxSchema2Args(const SoftmaxDxArgs* args) {
   return {args->x, args->y, args->dy};
 }
 
-std::vector<std::string> SoftmaxDxSchemaArgNames() {
+std::vector<std::string> SoftmaxDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "y", "dy"};
 }
 
@@ -190,7 +190,7 @@ std::vector<Value> BiasAddSchema2Args(const BiasAddArgs* args) {
   return {args->x, args->bias};
 }
 
-std::vector<std::string> BiasAddSchemaArgNames() {
+std::vector<std::string> BiasAddSchemaArgNames(const op::CallValues& call) {
   return {"x", "bias"};
 }
 
@@ -214,7 +214,7 @@ std::vector<Value> PoolSchema2Args(const PoolArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> PoolSchemaArgNames() {
+std::vector<std::string> PoolSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -277,7 +277,7 @@ std::vector<Value> PoolDxSchema2Args(const PoolDxArgs* args) {
   return {args->x, args->y, args->dy};
 }
 
-std::vector<std::string> PoolDxSchemaArgNames() {
+std::vector<std::string> PoolDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "y", "dy"};
 }
 
@@ -341,7 +341,7 @@ std::vector<Value> LayerNormSchema2Args(const LayerNormArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> LayerNormSchemaArgNames() {
+std::vector<std::string> LayerNormSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
@@ -368,7 +368,7 @@ std::vector<Value> LayerNormDxSchema2Args(const LayerNormDxArgs* args) {
   return {args->x, args->y, args->dy};
 }
 
-std::vector<std::string> LayerNormDxSchemaArgNames() {
+std::vector<std::string> LayerNormDxSchemaArgNames(const op::CallValues& call) {
   return {"x", "y", "dy"};
 }
 
@@ -405,7 +405,7 @@ std::vector<Value> BatchNormSchema2Args(const BatchNormArgs* args) {
   return {args->x, args->running_mean, args->running_var, args->w, args->b};
 }
 
-std::vector<std::string> BatchNormSchemaArgNames() {
+std::vector<std::string> BatchNormSchemaArgNames(const op::CallValues& call) {
   return {"x", "running_mean", "running_var", "w", "b"};
 }
 
@@ -433,7 +433,7 @@ std::vector<Value> BatchNormTrainDxwbSchema2Args(const BatchNormTrainDxwbArgs* a
   return {args->dy, args->x, args->w, args->b};
 }
 
-std::vector<std::string> BatchNormTrainDxwbSchemaArgNames() {
+std::vector<std::string> BatchNormTrainDxwbSchemaArgNames(const op::CallValues& call) {
   return {"dy", "x", "w", "b"};
 }
 

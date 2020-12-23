@@ -24,6 +24,8 @@ def to_any(a):
 def to_tensor(a):
     if isinstance(a, ndarray):
         return a._ndarray__handle  # pylint: disable=protected-access
+    if a is None:
+        return None
     if not isinstance(a, np.ndarray):
         a = np.array(a)
     # TODO(@junrushao1994): save this FFI call

@@ -27,7 +27,7 @@ std::vector<Value> ArgsortSchema2Args(const ArgsortArgs* args) {
   return {args->data};
 }
 
-std::vector<std::string> ArgsortSchemaArgNames() {
+std::vector<std::string> ArgsortSchemaArgNames(const op::CallValues& call) {
   return {"data"};
 }
 

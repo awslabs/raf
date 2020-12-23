@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
+from mnm.testing import with_seed
 
 
 def check(m_x, t_x, *, rtol=1e-5, atol=1e-5):
@@ -103,6 +104,7 @@ class MNMTest(mnm.Model):
 
 
 # pylint: disable=unused-variable
+@with_seed(0)
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("config", [
     (10, 32, 10),
