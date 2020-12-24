@@ -8,6 +8,7 @@ from . import frontend
 from . import amp
 from . import random
 from . import build
+from . import ir
 from . import model
 from . import _tvmjit
 from . import optim

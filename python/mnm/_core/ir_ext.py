@@ -4,6 +4,7 @@ from mnm._ffi.ir._make import Var as _Var
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
+
 class ExtendedVar(_tvm.relay.expr.Var):  # pylint: disable=too-many-ancestors
     """An extended var in meta.
 

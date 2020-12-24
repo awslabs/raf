@@ -102,10 +102,15 @@ tvm::runtime::NDArray MakeFakeTensor() {
   return array;
 }
 
-RelayConstant MakeConstant(ObjectRef node_ref) {
+ObjectPtr<ConstantNode> MakeConstantNode(ObjectRef node_ref) {
   ObjectPtr<ConstantNode> n = make_object<ConstantNode>();
   n->data = MakeFakeTensor();
   n->value = std::move(node_ref);
+  return n;
+}
+
+RelayConstant MakeConstant(ObjectRef node_ref) {
+  ObjectPtr<ConstantNode> n = MakeConstantNode(node_ref);
   return RelayConstant(n);
 }
 
