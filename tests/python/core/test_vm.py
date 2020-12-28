@@ -60,6 +60,46 @@ def test_vm(ctx, shape):
     np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
 
 
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    [3, 3],
+    [4, 4]
+])
+def test_cuda_graph(ctx, shape):
+    # pylint: disable=protected-access
+    class Model(mnm.Model):
+        # pylint: disable=attribute-defined-outside-init
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            y = mnm.add(x, x)
+            z = mnm.add(x, y)
+            return z
+
+    model = Model()
+    model.infer_mode()
+    m_x, _ = randn(shape, ctx=ctx)
+    mod = Module()
+    func = model._internal(m_x).func
+    mod[tvm.ir.GlobalVar('main')] = func
+    executor = VMExecutor(mod, ctx, enable_cuda_graph=True)
+    m_z = executor.make_executor()(m_x)
+    ref_z = model(m_x).asnumpy()
+    np.testing.assert_allclose(m_z.asnumpy(), ref_z, rtol=1e-5, atol=1e-5)
+
+    m_x2, _ = randn(shape, ctx=ctx)
+    m_z2 = executor.vm.run(m_x2)
+    ref_z2 = model(m_x2).asnumpy()
+    np.testing.assert_allclose(m_z2.asnumpy(), ref_z2, rtol=1e-5, atol=1e-5)
+
+    executable = executor.executable
+    assert len(executable.globals) == 1
+    assert executable.globals[0] == 'main'
+
+
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],

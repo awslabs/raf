@@ -9,6 +9,7 @@
 #include <tvm/runtime/container.h>
 #include <tvm/runtime/memory.h>
 #include <tvm/runtime/object.h>
+#include <tvm/runtime/device_api.h>
 
 #include <algorithm>
 #include <chrono>
@@ -23,6 +24,15 @@
 #include "mnm/vm/vm.h"
 #include "../../requests.h"
 
+#include "mnm/device_api.h"
+#include "mnm/registry.h"
+
+#if MNM_USE_CUDA
+#include "../../common/cuda_utils.h"
+#include "../../op/dispatch/cudnn/cudnn_utils.h"
+#include "../../op/dispatch/cublas/cublas_utils.h"
+#endif
+
 namespace mnm {
 namespace executor {
 namespace vm {
@@ -32,6 +42,62 @@ using namespace mnm::value;
 using namespace mnm::op;
 using namespace mnm::registry;
 using namespace mnm::requests;
+
+#if MNM_USE_CUDA
+void MNMSetStream(Context ctx, cudaStream_t stream) {
+  tvm::runtime::DeviceAPI::Get(ctx)->SetStream(ctx, stream);
+  mnm::op::cudnn::SetStream(stream);
+  mnm::op::cublas::SetStream(stream);
+}
+
+class VirtualMachine::CudaGraphImpl {
+ public:
+  CudaGraphImpl(Context ctx) : ctx_(ctx) {
+  }
+
+  ~CudaGraphImpl() {
+    DLOG(INFO) << "MNM_USE_CUDA " << MNM_USE_CUDA;
+    CUDA_CALL(cudaGraphDestroy(graph_));
+    CUDA_CALL(cudaGraphExecDestroy(exec));
+    CUDA_CALL(cudaStreamDestroy(stream_for_graph));
+  }
+
+  void GetKernelInfo() {
+    cudaGraphNode_t* nodes = NULL;
+    size_t numNodes = 0;
+    CUDA_CALL(cudaGraphGetNodes(graph_, nodes, &numNodes));
+    cudaKernelNodeParams* pNodeParams;
+    DLOG(INFO) << "Num of nodes in captured graph: " << (numNodes);
+    CHECK_GT(numNodes, 0) << "Generated CUDA Graph is empty";
+  }
+
+  void BeginCapture() {
+    stream_for_graph = static_cast<cudaStream_t>(
+        mnm::device_api::DeviceAPI::Get(ctx_.device_type)->CreateStream(ctx_));
+
+    MNMSetStream(ctx_, stream_for_graph);
+    CUDA_CALL(cudaStreamBeginCapture(stream_for_graph, cudaStreamCaptureModeRelaxed));
+  }
+
+  void EndCapture() {
+    CUDA_CALL(cudaStreamEndCapture(stream_for_graph, &graph_));
+    CUDA_CALL(cudaGraphInstantiate(&exec, graph_, NULL, NULL, 0));
+    GetKernelInfo();
+    is_captured = true;
+  }
+
+  void Invoke() {
+    CUDA_CALL(cudaGraphLaunch(exec, NULL));
+    CUDA_CALL(cudaStreamSynchronize(stream_for_graph));
+  }
+
+  bool is_captured = false;
+  cudaStream_t stream_for_graph;
+  cudaGraph_t graph_;
+  cudaGraphExec_t exec;
+  Context ctx_;
+};
+#endif
 
 inline StorageValue make_storage(size_t size, size_t alignment, DLDataType dtype_hint,
                                  Context ctx) {
@@ -82,8 +148,9 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
     });
   } else if (name == "init") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
+      enable_cuda_graph = args[0];
       std::vector<Context> contexts;
-      for (int i = 0; i < args.size(); ++i) {
+      for (int i = 1; i < args.size(); ++i) {
         DLContext ctx = args[i];
         contexts.push_back(ctx);
       }
@@ -107,8 +174,22 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
         Value arg = args[i];
         func_args[i - 1] = CopyTo(arg, ctx);
       }
-      inputs_.erase(func_name);
-      inputs_.emplace(func_name, func_args);
+      if (inputs_.find(func_name) != inputs_.end() && enable_cuda_graph) {
+        for (int i = 0; i < param_names.size(); i++) {
+          Value new_arg = func_args[i];
+          Value old_arg = inputs_[func_name][i];
+          if (new_arg.as<TensorValueObj>()) {
+            CHECK(old_arg.as<TensorValueObj>()) << "Value Type Mismatch, cannot copy";
+            Downcast<TensorValue>(new_arg)->tensor.CopyTo(Downcast<TensorValue>(old_arg)->tensor);
+          } else {
+            LOG(FATAL) << "Unsupported Value Type for reusing CUDA Graph";
+          }
+        }
+        DLOG(INFO) << "Input updated for Cached Graph";
+      } else {
+        inputs_.erase(func_name);
+        inputs_.emplace(func_name, func_args);
+      }
     });
   } else {
     LOG(FATAL) << "Unknown packed function: " << name;
@@ -182,10 +263,27 @@ void VirtualMachine::InvokeGlobal(const VMFunction& func, const std::vector<Valu
 }
 
 Value VirtualMachine::Invoke(const VMFunction& func, const std::vector<Value>& args) {
-  DLOG(INFO) << "Executing Function: " << std::endl << func;
-
+#if MNM_USE_CUDA
+  if (enable_cuda_graph) {
+    if (!cuda_graph_impl_) {
+      cuda_graph_impl_ = new CudaGraphImpl(ctxs_[0]);
+      cuda_graph_impl_->BeginCapture();
+      DLOG(INFO) << "BeginCapture";
+      InvokeGlobal(func, args);
+      RunLoop();
+      cuda_graph_impl_->EndCapture();
+      DLOG(INFO) << "GraphCaptured";
+    }
+    cuda_graph_impl_->Invoke();
+    DLOG(INFO) << "Invoked cached graph";
+  } else {
+    InvokeGlobal(func, args);
+    RunLoop();
+  }
+#else
   InvokeGlobal(func, args);
   RunLoop();
+#endif
   // TODO(wweic) ctx could be obtained from the ctxs list.
   // auto alloc = MemoryManager::Global()->GetAllocator(ctxs_[0]);
   // DLOG(INFO) << "Memory used: " << alloc->UsedMemory() << " B";

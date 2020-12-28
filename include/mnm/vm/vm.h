@@ -246,6 +246,22 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * corresponding VM function. It's a map from pc to the OpEnv cache.
    */
   std::vector<std::unordered_map<Index, std::shared_ptr<OpEnvCache>>> op_env_cache_;
+
+#if MNM_USE_CUDA
+  /*!
+   * \brief A class to store, cache and execute CUDA Graph
+   *
+   * Cached CUDA Graph is stored in this class, as well as
+   * stream for capturing.
+   */
+  class CudaGraphImpl;
+
+  /*! \brief A pointer into the CUDA Graph instance. */
+  CudaGraphImpl* cuda_graph_impl_ = nullptr;
+#endif
+
+  /*! \brief Indicates whether CUDA Graph is enabled when VM is initialized. */
+  bool enable_cuda_graph = false;
 };
 
 }  // namespace vm

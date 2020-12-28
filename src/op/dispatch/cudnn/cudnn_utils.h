@@ -262,6 +262,10 @@ inline ir::Array<ir::Integer> ToArrayOfInteger(const std::vector<T>& v) {
   return res;
 }
 
+inline void SetStream(cudaStream_t stream) {
+  cudnnSetStream(CUDNNThreadEntry::ThreadLocal()->handle, stream);
+}
+
 }  // namespace cudnn
 }  // namespace op
 }  // namespace mnm

@@ -97,6 +97,10 @@ inline const void* const_addr(cudaDataType_t dt) {
   throw;
 }
 
+inline void SetStream(cudaStream_t stream) {
+  cublasSetStream(CUBlasThreadEntry::ThreadLocal()->handle, stream);
+}
+
 }  // namespace cublas
 }  // namespace op
 }  // namespace mnm

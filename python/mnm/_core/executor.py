@@ -450,15 +450,17 @@ class VMExecutor:
         The runtime context to run the code on.
     """
 
-    def __init__(self, mod, ctx):
+    def __init__(self, mod, ctx, enable_cuda_graph=False):
         if mod is None:
             raise RuntimeError("Must provide module to get VM executor.")
+        if "gpu" not in ctx and "cuda" not in ctx:
+            enable_cuda_graph = False
         self.mod = mod
         self.target = ctx
         self.ctx = str2ctx(ctx)
         self.executable = compile(mod, self.target)
         self.vm = VirtualMachine(self.executable)
-        self.vm.init(self.ctx)
+        self.vm.init(enable_cuda_graph, self.ctx)
 
     def make_executor(self):
         """Create a vm executor"""
@@ -479,7 +481,7 @@ class VirtualMachine:
         self._invoke = self.mod["invoke"]
         self._set_input = self.mod["set_input"]
 
-    def init(self, ctx):
+    def init(self, enable_cuda_graph, ctx):
         """Initialize the context in the VM.
 
         Parameters
@@ -488,7 +490,7 @@ class VirtualMachine:
             The runtime context to run the code on.
         """
         args = [ctx]
-        self._init(*args)
+        self._init(enable_cuda_graph, *args)
 
     def set_input(self, func_name, *args, **kwargs):
         """Set the input to a function.
