@@ -21,9 +21,10 @@ using tensor::Tensor;
 using namespace mnm::ir;
 
 /*** Constructors ***/
-TensorValue TensorValue::make(tensor::Tensor tensor) {
+TensorValue TensorValue::make(tensor::Tensor tensor, std::shared_ptr<memory_pool::Memory> mem) {
   ObjectPtr<TensorValueObj> n = make_object<TensorValueObj>();
   n->tensor = std::move(tensor);
+  n->mem = std::move(mem);
   return TensorValue(n);
 }
 
@@ -129,18 +130,25 @@ Value::operator tensor::Tensor &() const {
 /*** TensorValue ***/
 TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
                                   const std::vector<int64_t>& shape,
-                                  const std::vector<int64_t>& strides, void* const data) {
-  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data));
+                                  const std::vector<int64_t>& strides, void* const data,
+                                  std::shared_ptr<memory_pool::Memory> mem) {
+  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data), std::move(mem));
 }
 
 TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
                                   const Array<IntValue> shape_array,
-                                  const std::vector<int64_t>& strides, void* const data) {
+                                  const std::vector<int64_t>& strides, void* const data,
+                                  std::shared_ptr<memory_pool::Memory> mem) {
   std::vector<int64_t> shape;
   for (auto value : shape_array) {
     shape.push_back(value->data);
   }
-  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data));
+  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data), std::move(mem));
+}
+
+TensorValue TensorValue::CreateView(const std::vector<int64_t>& shape,
+                                    const std::vector<int64_t>& strides) const {
+  return TensorValue::make((*this)->tensor.CreateView(shape, strides), (*this)->mem);
 }
 
 TensorValue AssembleTensorValue(DLContext ctx, DLDataType dtype, Array<Integer> shape,

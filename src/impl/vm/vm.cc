@@ -424,7 +424,7 @@ void VirtualMachine::RunLoop() {
         auto storage_obj = ReadRegister(instr.alloc_tensor.storage);
         auto storage = Downcast<StorageValue>(storage_obj);
         auto tensor = TensorValue::Assemble(ctxs_[0], instr.alloc_tensor.dtype, shape, {},
-                                            storage->buffer->data);
+                                            storage->buffer->data, storage->buffer);
         WriteRegister(instr.dst, tensor);
         pc_++;
         goto main_loop;

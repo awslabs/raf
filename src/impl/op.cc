@@ -142,10 +142,6 @@ std::shared_ptr<Requests> OpEnv::GetRequests() const {
   return this->impl;
 }
 
-void OpEnv::SetOutputBuffer(std::vector<std::shared_ptr<memory_pool::Memory>> out_buf) {
-  out_buf_ = std::move(out_buf);
-}
-
 void RunDeclare(const CallValues& call) {
   static const auto f_op_make_output = Op::GetAttrMap<FMNMDeclare>("FMNMDeclare");
   const Op& op = Downcast<OpValue>(call->callee)->op;

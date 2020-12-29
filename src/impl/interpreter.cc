@@ -209,10 +209,9 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     if (!call->callee.defined()) {
       return call->out;
     }
-    auto out_buf = AllocOutputBuffer(call->out);
+    AllocOutputBuffer(call->out);
     std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
     if (op_env != nullptr) {
-      op_env->SetOutputBuffer(std::move(out_buf));
       InvokePrimitiveOpEnv(std::move(op_env), call);
     } else {
       LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << call->ctx.c_str();
@@ -325,15 +324,18 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
  private:
-  std::vector<std::shared_ptr<Memory>> AllocOutputBuffer(Value& out) {
+  void AllocOutputBuffer(Value& out) {
     std::vector<DLTensor*> out_tensors;
+    std::vector<TensorValue> out_tvs;
     if (out->IsInstance<TensorValueObj>()) {
       DLTensor* t = out;
       out_tensors.emplace_back(t);
+      out_tvs.push_back(Downcast<TensorValue>(out));
     } else if (const auto* tv = out.as<TupleValueObj>()) {
       for (const auto& v : tv->fields) {
         DLTensor* t = v;
         out_tensors.emplace_back(t);
+        out_tvs.push_back(Downcast<TensorValue>(v));
       }
     } else if (out->IsInstance<VoidValueObj>()) {
       // do nothing.
@@ -341,15 +343,16 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       LOG(FATAL) << "InternalError: Interpreter does not deal with " << out->GetTypeKey();
       throw;
     }
-    std::vector<std::shared_ptr<Memory>> out_buf;
-    for (auto* dlt : out_tensors) {
+    CHECK_EQ(out_tensors.size(), out_tvs.size());
+    for (size_t i = 0; i < out_tensors.size(); ++i) {
+      DLTensor* dlt = out_tensors[i];
+      TensorValue tv = out_tvs[i];
       if (dlt->data == nullptr) {
         std::shared_ptr<Memory> memory = Memory::Alloc(dlt->ctx, BytesCompactTensor(*dlt));
         dlt->data = memory->data;
-        out_buf.push_back(memory);
+        tv->mem = std::move(memory);
       }
     }
-    return out_buf;
   }
 };
 

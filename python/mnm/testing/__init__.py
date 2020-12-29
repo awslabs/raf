@@ -38,6 +38,15 @@ def get_ctx_list():
     return ret
 
 
+def get_arr_addr(arr):
+    """Helper function to get the address of array"""
+    # pylint: disable=protected-access
+    if isinstance(arr, mnm.ndarray):
+        arr = arr._ndarray__value
+    assert isinstance(arr, mnm._core.value.TensorValue)
+    return mnm._ffi.value.ToTVM(arr).handle.contents.data
+
+
 def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     """Helper function to check if m_x and m_y are equal"""
     def _convert(x):

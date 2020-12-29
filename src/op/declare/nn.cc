@@ -14,6 +14,7 @@ namespace op {
 namespace declare {
 
 using namespace mnm::op::schema;
+using namespace mnm::ir;
 using namespace mnm::value;
 
 MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
@@ -116,10 +117,8 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   TensorValue y = TensorValue::Assemble(/*ctx=*/x->ctx,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape);
-  TensorValue running_mean =
-      TensorValue::make((args->running_mean).as<TensorValueObj>()->tensor.CreateView());
-  TensorValue running_var =
-      TensorValue::make((args->running_var).as<TensorValueObj>()->tensor.CreateView());
+  TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
+  TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);

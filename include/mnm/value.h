@@ -10,6 +10,7 @@
 #include <string>
 #include "./ir.h"
 #include "./tensor.h"
+#include "./memory_pool.h"
 
 namespace mnm {
 namespace op {
@@ -134,6 +135,7 @@ class BaseTensorValue : public Value {
 class TensorValueObj final : public BaseTensorValueObj {
  public:
   mutable tensor::Tensor tensor;
+  mutable std::shared_ptr<memory_pool::Memory> mem{nullptr};
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_tensor", &tensor);
   }
@@ -143,13 +145,18 @@ class TensorValueObj final : public BaseTensorValueObj {
 
 class TensorValue final : public BaseTensorValue {
  public:
-  static TensorValue make(tensor::Tensor tensor);
+  static TensorValue make(tensor::Tensor tensor,
+                          std::shared_ptr<memory_pool::Memory> mem = nullptr);
   static TensorValue Assemble(const Context& ctx, const DType& dtype,
                               const std::vector<int64_t>& shape,
-                              const std::vector<int64_t>& strides = {}, void* data = nullptr);
+                              const std::vector<int64_t>& strides = {}, void* data = nullptr,
+                              std::shared_ptr<memory_pool::Memory> mem = nullptr);
   static TensorValue Assemble(const Context& ctx, const DType& dtype,
                               const ir::Array<IntValue> shape,
-                              const std::vector<int64_t>& strides = {}, void* data = nullptr);
+                              const std::vector<int64_t>& strides = {}, void* data = nullptr,
+                              std::shared_ptr<memory_pool::Memory> mem = nullptr);
+  TensorValue CreateView(const std::vector<int64_t>& shape = {},
+                         const std::vector<int64_t>& strides = {}) const;
   MNM_OBJECT_REF(TensorValue, BaseTensorValue, TensorValueObj);
 };
 

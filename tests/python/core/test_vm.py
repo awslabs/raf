@@ -3,6 +3,7 @@ import numpy as np
 import mnm
 from mnm._core.executor import VMExecutor
 from mnm._core.module import Module
+from mnm.testing import get_arr_addr
 import tvm
 
 def get_ctx_list():
@@ -135,6 +136,37 @@ def test_tuple(ctx, shape):
     executable = executor.executable
     assert len(executable.globals) == 1
     assert executable.globals[0] == 'main'
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    [3, 3],
+    [4, 4]
+])
+def test_memory(ctx, shape):
+    # pylint: disable=protected-access
+    dtype = 'float32'
+    x = mnm.array(np.random.randn(*shape).astype(dtype), ctx=ctx)
+    t_1 = mnm.array(np.ones(shape, dtype=dtype) * 3)
+    t_2 = mnm.array(np.ones(shape, dtype=dtype) * 4)
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            y = mnm.relu(x)
+            return y
+
+    model = Model()
+    args = [x]
+    mod = Module()
+    func = model._internal(*args).func
+    mod[tvm.ir.GlobalVar('main')] = func
+    executor = VMExecutor(mod, ctx)
+    y = executor.make_executor()(*args)
+    out = mnm.add(t_1, t_2)
+    assert get_arr_addr(out) != get_arr_addr(y)
 
 
 if __name__ == "__main__":

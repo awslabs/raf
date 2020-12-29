@@ -23,6 +23,7 @@ namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
+using namespace mnm::ir;
 using common::shape_utils::IsCompact;
 using tensor::Tensor;
 
@@ -40,8 +41,7 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
       flat = flat * int64_t{dshape[i]};
     }
     call->callee = ir::NullValue<OpValue>();
-    call->out = TensorValue::make(Tensor(args->x).CreateView({dshape[0], flat}, {}, nullptr));
-    call->out->op_env = args->x->op_env;
+    call->out = Downcast<TensorValue>(args->x).CreateView({dshape[0], flat});
     return;
   }
   LOG(FATAL) << "NotImplementedError: for now we only support batch_flatten on contiguous tensor.";
@@ -87,8 +87,7 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
     int64_t origin = std::accumulate(x->shape, x->shape + x->ndim, 1LL, std::multiplies<int64_t>());
     int64_t reshaped = std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
     CHECK_EQ(origin, reshaped) << "ValueError: Number of elements mismatch after reshaping!";
-    call->out = TensorValue::make(Tensor(args->x).CreateView(shape));
-    call->out->op_env = args->x->op_env;
+    call->out = Downcast<TensorValue>(args->x).CreateView(shape);
     return;
   }
   LOG(FATAL) << "NotImplementedError: for now we only support reshape on contiguous tensor.";
@@ -143,8 +142,7 @@ MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   shape.insert(shape.begin() + axis, num_newaxis, 1);
   if (IsCompact(*x)) {
     call->callee = ir::NullValue<OpValue>();
-    call->out = TensorValue::make(Tensor(args->x).CreateView(shape));
-    call->out->op_env = args->x->op_env;
+    call->out = Downcast<TensorValue>(args->x).CreateView(shape);
     return;
   }
   LOG(FATAL) << "NotImplementedError: for now we only support expand_dims on contiguous tensor.";
