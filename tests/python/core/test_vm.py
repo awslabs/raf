@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import mnm
+from mnm.testing import run_infer_type, run_vm_model, check
 from mnm._core.executor import VMExecutor
 from mnm._core.module import Module
 from mnm.testing import get_arr_addr
@@ -167,6 +168,71 @@ def test_memory(ctx, shape):
     y = executor.make_executor()(*args)
     out = mnm.add(t_1, t_2)
     assert get_arr_addr(out) != get_arr_addr(y)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    [3, 3],
+    [4, 4]
+])
+def test_simple_fusion(ctx, shape):
+    # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
+    def ir_fusion(func):
+        func = run_infer_type(func)
+        func = mnm._ffi.pass_.FuseOps(func, 3)
+        func = run_infer_type(func)
+        return func
+
+    def check_e2e(model, ctx, args):
+        out_before = run_vm_model(model, ctx, args)
+        out_after = run_vm_model(model, ctx, args, ir_fusion)
+        check(out_before, out_after)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.add(x, x)
+            z = mnm.relu(y)
+            return z
+
+    model = Model()
+    model.infer_mode()
+    m_x, _ = randn(shape, ctx=ctx)
+    check_e2e(model, ctx, [m_x])
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+def test_split_fusion(ctx):
+    # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
+    shape = [3, 3]
+    def ir_fusion(func):
+        func = run_infer_type(func)
+        func = mnm._ffi.pass_.FuseOps(func, 3)
+        func = run_infer_type(func)
+        return func
+
+    def check_e2e(model, ctx, args):
+        out_before = run_vm_model(model, ctx, args)
+        out_after = run_vm_model(model, ctx, args, ir_fusion)
+        check(out_before, out_after)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.split(x, indices_or_sections=3, axis=0)
+            y = y[0]
+            z = mnm.relu(y)
+            return z
+
+    model = Model()
+    m_x, _ = randn(shape, ctx=ctx)
+    check_e2e(model, ctx, [m_x])
 
 
 if __name__ == "__main__":

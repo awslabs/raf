@@ -23,11 +23,15 @@ using executor::Executor;
 using ir::Array;
 using ir::Attrs;
 using ir::Downcast;
+using ir::Function;
 using ir::make_object;
 using ir::ObjectPtr;
 using ir::Op;
 using requests::Requests;
+using value::ClosureValue;
+using value::ClosureValueObj;
 using value::OpValue;
+using value::OpValueObj;
 using value::Value;
 
 CallValues CallValues::make(value::Value callee, ir::Attrs args) {
@@ -91,6 +95,55 @@ OpDispatch& OpDispatch::add_dispatch(DevType device_type, const std::string& bac
 
 OpDispatch::TRegistry* OpDispatch::Registry() {
   return TRegistry::Get();
+}
+
+// Implementation: FusedOpDispatch
+
+FusedOpDispatch* FusedOpDispatch::Get() {
+  static FusedOpDispatch inst;
+  return &inst;
+}
+
+FusedOpDispatch::TDispatchList* FusedOpDispatch::Get(DevType device_type) {
+  FusedOpDispatch* func_dispatch = Get();
+  std::shared_ptr<TDispatchList>& list = func_dispatch->dispatch.Get(device_type);
+  return list.get();
+}
+
+std::shared_ptr<OpEnv> FusedOpDispatch::Dispatch(const CallValues& call) {
+  const auto& func = Downcast<ClosureValue>(call->callee)->func;
+  for (const auto& e : *FusedOpDispatch::Get(call->ctx.device_type)) {
+    const auto& maker = e.second;
+    std::shared_ptr<OpEnv> func_env(static_cast<OpEnv*>(maker(call)));
+    if (func_env) {
+      return func_env;
+    }
+  }
+  return nullptr;
+}
+
+FusedOpDispatch& FusedOpDispatch::add_dispatch(DevType device_type, const std::string& backend_name,
+                                               const FMakeFuncEnv& func_env_maker) {
+  std::shared_ptr<TDispatchList> list = dispatch.Get(device_type);
+  {
+    std::lock_guard<std::mutex> lock(dispatch.mutex_);
+    if (list->count(backend_name)) {
+      LOG(FATAL) << "InternalError: fused functions"
+                 << " already have an implementation on backend " << backend_name;
+    }
+    (*list)[backend_name] = func_env_maker;
+  }
+  return *this;
+}
+
+std::shared_ptr<OpEnv> Dispatch(const CallValues& call) {
+  if (call->callee.as<value::OpValueObj>()) {
+    return OpDispatch::Dispatch(call);
+  } else if (call->callee.as<value::ClosureValueObj>()) {
+    return FusedOpDispatch::Dispatch(call);
+  }
+  LOG(FATAL) << "call->op type " << call->callee->GetTypeKey() << " unsupported";
+  return nullptr;
 }
 
 // Implementation: OpEnv

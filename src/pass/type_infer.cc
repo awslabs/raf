@@ -108,6 +108,20 @@ class TypeInferencer : public ExprMutator {
         return VisitExpr(re);
       }
     }
+    if (const FunctionNode* fn = call->op.as<FunctionNode>()) {
+      CHECK(fn->HasNonzeroAttr(tvm::relay::attr::kPrimitive))
+          << "A primitive function is expected in " << call->op;
+      CHECK_EQ(call->args.size(), fn->params.size());
+      for (size_t n = call->args.size(), i = 0; i < n; ++i) {
+        Expr arg = VisitExpr(call->args[i]);
+        const auto* v = arg.as<VarNode>();
+        if (v && var_value_map_.count(v)) {
+          var_value_map_[fn->params[i].get()] = var_value_map_[v];
+        } else {
+          var_value_map_[fn->params[i].get()] = arg;
+        }
+      }
+    }
     Expr op = VisitExpr(call->op);
     Call ret = Call(op, args, call->attrs, call->type_args);
     if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {

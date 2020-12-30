@@ -101,10 +101,12 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.
     return m_x, t_x
 
 
-def run_vm_model(model, ctx, args):
+def run_vm_model(model, ctx, args, optimize=None):
     """Helper function to execute model with VM"""
     mod = Module()
     func = model._internal(*args).func
+    if optimize is not None:
+        func = optimize(func)
     mod[tvm.ir.GlobalVar('main')] = func
     executor = VMExecutor(mod, ctx)
     out = executor.make_executor()(*args)

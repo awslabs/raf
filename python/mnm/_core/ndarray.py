@@ -220,9 +220,8 @@ class ndarray:
     @staticmethod
     def from_tensor_value(value):
         assert isinstance(value, TensorValue)
-        arr = ndarray(value.shape, dtype=value.dtype)
-        arr.__value = value # pylint: disable=protected-access
-        return arr
+        ret = ndarray(BindNDArray(value, None, ""))
+        return ret
 
 
 class Symbol:  # pylint: disable=too-few-public-methods

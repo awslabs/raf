@@ -92,6 +92,42 @@ class OpDispatch {
   registry::PerDevTypeStore<TDispatchList> dispatch;
 };
 
+/*!
+ * \brief Singleton dispatcher for fused ops
+ */
+class FusedOpDispatch {
+  using FMakeFuncEnv = std::function<OpEnv*(const CallValues& call)>;
+  using TDispatchList = std::unordered_map<std::string, FMakeFuncEnv>;
+
+ private:
+  FusedOpDispatch() = default;
+
+ public:
+  /*!
+   * \brief add a dispatch for a specific backend
+   * \param device_type the device type
+   * \param backend_name the backend name
+   * \param op_env_maker a function that converts a call value into the corresponding op env
+   */
+  FusedOpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
+                                const FMakeFuncEnv& op_env_maker);
+
+ public:
+  /*! \brief get the FusedOpDispatch instance */
+  static FusedOpDispatch* Get();
+  /*! \brief get the list of all available backends on a specific device */
+  static TDispatchList* Get(DevType device_type);
+  /*! \brief dispatch call to some backend according to its device */
+  static std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
+
+ public:
+  /*! \brief the list of backends and their dispatch mathods available on different devices */
+  registry::PerDevTypeStore<TDispatchList> dispatch;
+};
+
+/*! \brief dispatch (fused or un-fused) ops to backend implementation */
+std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
+
 using tvm::Attrs;
 using tvm::relay::Expr;
 using tvm::relay::kBroadcast;
@@ -149,6 +185,9 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 
 #define _MNM_OP_DISPATCH_DEF static DMLC_ATTRIBUTE_UNUSED ::mnm::op::OpDispatch& __make_##OpDispatch
 
+#define _MNM_FUNC_DISPATCH_DEF \
+  static DMLC_ATTRIBUTE_UNUSED ::mnm::op::FusedOpDispatch& __make_##FusedOpDispatch
+
 #define MNM_OP_REGISTER(op_name) RELAY_REGISTER_OP(op_name)
 
 #define MNM_OP_DECLARE(op_name, body) \
@@ -163,6 +202,10 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 
 #define MNM_OP_DISPATCH(op_name, op_env_maker, device_type, backend_name) \
   MNM_OP_DISPATCH_PLEVEL(op_name, op_env_maker, device_type, backend_name, 10)
+
+#define MNM_FUNC_DISPATCH(func_env_maker, device_type, backend_name) \
+  DMLC_STR_CONCAT(_MNM_FUNC_DISPATCH_DEF, __COUNTER__) =             \
+      ::mnm::op::FusedOpDispatch::Get()->add_dispatch(device_type, backend_name, func_env_maker)
 
 #define MNM_OP_SCHEMA(class_name, type_key)          \
   static constexpr const char* _type_key = type_key; \

@@ -946,8 +946,6 @@ class FuseMutator : private ExprMutator {
           new_args.push_back(new_value);
           let_inlined_.insert(arg);
         }
-      } else if (arg.as<ConstantNode>()) {
-        new_args.push_back(arg);
       } else {
         Expr new_arg = this->Mutate(arg);
         auto* arg_group = gmap_.at(arg.get())->FindRoot();

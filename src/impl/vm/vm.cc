@@ -527,14 +527,21 @@ void VirtualMachine::RunLoop() {
           // Create a new OpEnv.
           static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
           auto call_values = CallValues::make();
-          auto op = Downcast<OpValue>(ReadRegister(instr.invoke_jit.op_reg));
-          call_values->callee = op;
-          call_values->args = fschema[op->op](args);
+          Value callee = ReadRegister(instr.invoke_jit.op_reg);
+          const auto* op = callee.as<OpValueObj>();
+          const auto* closure = callee.as<ClosureValueObj>();
+          call_values->callee = callee;
+          if (op) {
+            call_values->args = fschema[op->op](args);
+          } else {
+            call_values->args = MakeListArgs(args);
+          }
           call_values->ctx = ctxs_[0];
           call_values->out = output;
-          op_env = OpDispatch::Dispatch(call_values);
-          CHECK(op_env != nullptr) << "ValueError: Cannot dispatch " << op->op->name << " @ "
-                                   << call_values->ctx.c_str();
+          op_env = Dispatch(call_values);
+          CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
+                                   << " @ " << call_values->ctx.c_str()
+                                   << (op ? op->op->name : PrettyPrint(closure->func));
           // TODO(vinx13): request stream
           std::shared_ptr<Requests> requests = op_env->GetRequests();
           for (size_t i = 0; i < requests->workspace.size(); i++) {

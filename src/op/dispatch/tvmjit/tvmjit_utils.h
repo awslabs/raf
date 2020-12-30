@@ -57,6 +57,8 @@ HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& 
 
 using FMNMLower = registry::TypedPackedFunc<ir::Function(const CallValues& call)>;
 using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
+using FMNMArgIndices =
+    registry::TypedPackedFunc<ir::Array<tvm::IntImm>(const op::CallValues& call)>;
 
 }  // namespace tvmjit
 }  // namespace op
@@ -144,6 +146,16 @@ using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
     CHECK(schema != nullptr);                                                                   \
     return SCHEMA2ATTRS(schema);                                                                \
   }                                                                                             \
+  Array<tvm::IntImm> FUNC##ArgIndices(const op::CallValues& call) {                             \
+    static const auto op = Op::Get(OP);                                                         \
+    static const auto fschema_index =                                                           \
+        Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex")[op];                   \
+    std::vector<tvm::IntImm> ret;                                                               \
+    for (const auto& field : SCHEMA_ARG_NAMES(call)) {                                          \
+      ret.push_back(tvm::IntImm(DataType::Int(32), fschema_index(field)));                      \
+    }                                                                                           \
+    return Array<tvm::IntImm>(ret);                                                             \
+  }                                                                                             \
   ir::Function FUNC##Lower(const op::CallValues& call) {                                        \
     static const std::function<ir::Function(const ir::Function&)> identity(                     \
         [](const ir::Function& f) { return f; });                                               \
@@ -154,6 +166,8 @@ using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
   }                                                                                             \
   RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMLower>("FMNMLower", FUNC##Lower);       \
   RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMAttr>("FMNMAttr", FUNC##Attr);          \
+  RELAY_REGISTER_OP(OP).set_attr<::mnm::op::tvmjit::FMNMArgIndices>("FMNMArgIndices",           \
+                                                                    FUNC##ArgIndices);          \
   MNM_OP_DISPATCH_PLEVEL(OP, FUNC##Build, DevType::kCPU(), "tvmjit", PLEVEL);                   \
   MNM_OP_DISPATCH_PLEVEL(OP, FUNC##Build, DevType::kCUDA(), "tvmjit", PLEVEL);
 
