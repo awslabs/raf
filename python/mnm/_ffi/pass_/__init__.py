@@ -16,5 +16,6 @@ from ._internal import LambdaLift
 from ._internal import ManifestAlloc
 from ._internal import MemShare
 from ._internal import MergeCompilerRegions
+from ._internal import PartitionGraph
 from ._internal import RenameVars
 from ._internal import is_constant

@@ -62,10 +62,22 @@ ir::Expr AnnotateTarget(ir::Expr expr, ir::Array<ir::String> target);
  * partition_graph must subsequently be called to lift these regions out
  * as external functions.
  * \param expr Expression to be merged.
- * \param merge_mode The merge policy.
  * \return Transformed Expression.
  */
-ir::Expr MergeCompilerRegions(ir::Expr expr, ir::String merge_mode);
+ir::Expr MergeCompilerRegions(ir::Expr expr);
+
+/*!
+ * \brief Partition an input function into multiple functions according based
+ * on the inserted annotation nodes (i.e. compiler_begin and compiler_end).
+ * These nodes are used as boundaries to partition the Relay function into
+ * multiple regions that can be offloaded to different accelerators/backends.
+ *
+ * Each of these paritioned functions, a.k.a regions, will be viewed as
+ * external functions, and they will use the provided compiler for codegen.
+ * \param expr Expression to be partition.
+ * \return Parartioned Expression.
+ */
+ir::Expr PartitionGraph(ir::Expr expr);
 
 /*!
  * \brief Cast input(s) of some operators in the expression.
