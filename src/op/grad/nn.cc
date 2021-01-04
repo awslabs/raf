@@ -3,6 +3,7 @@
  * \file src/op/grad/nn.cc
  * \brief Declaration of gradients
  */
+#include <mnm/value.h>
 #include "./grad_utils.h"
 
 namespace mnm {
@@ -38,6 +39,13 @@ Array<Expr> PoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   const Expr& dilation = call->args[4];
   const Expr& ceil_mode = call->args[5];
   const Expr& include_pad = call->args[6];
+  const Expr& layout = orig_args[7];
+  const auto* layout_const = layout.as<ConstantNode>();
+  if (layout_const) {
+    const auto* layout_str = layout_const->value.as<value::StringValueObj>();
+    CHECK(layout_str && layout_str->data == "NCHW")
+        << "PoolGrad support NCHW layout only. Layout = " << layout_str->data;
+  }
   return {Call(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
 }
 
@@ -66,6 +74,13 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const
   const Expr& padding = call->args[3];
   const Expr& dilation = call->args[4];
   const Expr& groups = call->args[5];
+  const Expr& layout = orig_args[6];
+  const auto* layout_const = layout.as<ConstantNode>();
+  if (layout_const) {
+    const auto* layout_str = layout_const->value.as<value::StringValueObj>();
+    CHECK(layout_str && layout_str->data == "NCHW")
+        << "PoolGrad support NCHW layout only. Layout = " << layout_str->data;
+  }
   // dx: w, y, dy, shape(x), stride, padding, dilation, groups
   // dw: x, y, dy, shape(w), stride, padding, dilation, groups
   return {Call(op_dx, {w, y, dy, Shape(x), stride, padding, dilation, groups}),

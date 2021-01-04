@@ -73,6 +73,16 @@ class ReverseArgs : public ir::AttrsNode<ReverseArgs> {
   MNM_OP_SCHEMA(ReverseArgs, "mnm.args.reverse");
 };
 
+class StridedSliceArgs : public ir::AttrsNode<StridedSliceArgs> {
+ public:
+  value::BaseTensorValue x;
+  std::vector<int64_t> begin;
+  std::vector<int64_t> end;
+  std::vector<int64_t> strides{};
+  std::string slice_mode{"end"};
+  MNM_OP_SCHEMA(StridedSliceArgs, "mnm.args.strided_slice");
+};
+
 class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
  public:
   value::BaseTensorValue x;

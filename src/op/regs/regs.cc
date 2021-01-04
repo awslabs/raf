@@ -117,7 +117,9 @@ static const char nll_loss_dpred[] = "mnm.op.nll_loss_dpred";
 static const char nll_loss_dtrue[] = "mnm.op.nll_loss_dtrue";
 static const char non_max_suppression[] = "mnm.op.non_max_suppression";
 static const char not_equal[] = "mnm.op.not_equal";
+static const char pad[] = "mnm.op.pad";
 static const char power[] = "mnm.op.power";
+static const char prod[] = "mnm.op.prod";
 static const char relu[] = "mnm.op.relu";
 static const char relu_dx[] = "mnm.op.relu_dx";
 static const char repeat[] = "mnm.op.repeat";
@@ -145,6 +147,7 @@ static const char squeeze[] = "mnm.op.squeeze";
 static const char stack[] = "mnm.op.stack";
 static const char stack_dx[] = "mnm.op.stack_dx";
 static const char stream_sync[] = "mnm.op.stream_sync";
+static const char strided_slice[] = "mnm.op.strided_slice";
 static const char subtract[] = "mnm.op.subtract";
 static const char sum[] = "mnm.op.sum";
 static const char take[] = "mnm.op.take";
@@ -321,13 +324,16 @@ Attrs Concatenate(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Conv(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::ConvArgs, 6);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::ConvArgs, 9);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_TAPE(1, ffi2schema::Tensor, w);
   MNM_POD(2, ffi2schema::IntOrTupleInt, stride);
   MNM_POD(3, ffi2schema::IntOrTupleInt, padding);
   MNM_POD(4, ffi2schema::IntOrTupleInt, dilation);
   MNM_POD(5, ffi2schema::Int, groups);
+  MNM_POD(6, ffi2schema::String, layout);
+  MNM_POD(7, ffi2schema::String, kernel_layout);
+  MNM_POD(8, ffi2schema::String, out_layout);
   return Attrs(attrs);
 }
 
@@ -428,8 +434,17 @@ Attrs NonMaxSuppression(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs Pad(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::PadArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, pad_width);
+  MNM_POD(2, ffi2schema::Double, pad_value);
+  MNM_POD(3, ffi2schema::String, pad_mode);
+  return Attrs(attrs);
+}
+
 Attrs Pool(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::PoolArgs, 7);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::PoolArgs, 8);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, kernel);
   MNM_POD(2, ffi2schema::IntOrTupleInt, stride);
@@ -437,6 +452,7 @@ Attrs Pool(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(4, ffi2schema::IntOrTupleInt, dilation);
   MNM_POD(5, ffi2schema::Bool, ceil_mode);
   MNM_POD(6, ffi2schema::Bool, include_pad);
+  MNM_POD(7, ffi2schema::String, layout);
   return Attrs(attrs);
 }
 
@@ -565,6 +581,16 @@ Attrs StreamControl(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::StreamControlArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, stream_tag);
+  return Attrs(attrs);
+}
+
+Attrs StridedSlice(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::StridedSliceArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, begin);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, end);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, strides);
+  MNM_POD(4, ffi2schema::String, slice_mode);
   return Attrs(attrs);
 }
 
@@ -800,7 +826,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.atan").set_body([](TVMArgs args, TVMRetValue* re
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.avg_pool2d").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(avg_pool2d, 7, ffi2schema::Pool, schema::PoolArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(avg_pool2d, 8, ffi2schema::Pool, schema::PoolArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->kernel));
   MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->stride));
@@ -808,6 +834,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.avg_pool2d").set_body([](TVMArgs args, TVMRetVal
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->dilation));
   MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->ceil_mode));
   MNM_SET_ENV(vpack->x[6], schema2value::Bool(schema->include_pad));
+  MNM_SET_ENV(vpack->x[7], schema2value::String(schema->layout));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1004,13 +1031,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.concatenate_dx").set_body([](TVMArgs args, TVMRe
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(conv2d, 6, ffi2schema::Conv, schema::ConvArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(conv2d, 9, ffi2schema::Conv, schema::ConvArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->w));
   MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->stride));
   MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->padding));
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->dilation));
   MNM_SET_ENV(vpack->x[5], schema2value::Int(schema->groups));
+  MNM_SET_ENV(vpack->x[6], schema2value::String(schema->layout));
+  MNM_SET_ENV(vpack->x[7], schema2value::String(schema->kernel_layout));
+  MNM_SET_ENV(vpack->x[8], schema2value::String(schema->out_layout));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1351,7 +1381,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.max").set_body([](TVMArgs args, TVMRetValue* ret
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.max_pool2d").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(max_pool2d, 7, ffi2schema::Pool, schema::PoolArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(max_pool2d, 8, ffi2schema::Pool, schema::PoolArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->kernel));
   MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->stride));
@@ -1359,6 +1389,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.max_pool2d").set_body([](TVMArgs args, TVMRetVal
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->dilation));
   MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->ceil_mode));
   MNM_SET_ENV(vpack->x[6], schema2value::Bool(schema->include_pad));
+  MNM_SET_ENV(vpack->x[7], schema2value::String(schema->layout));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1516,6 +1547,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.not_equal").set_body([](TVMArgs args, TVMRetValu
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.pad").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(pad, 4, ffi2schema::Pad, schema::PadArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->pad_width));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->pad_value));
+  MNM_SET_ENV(vpack->x[3], schema2value::String(schema->pad_mode));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.power").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(power, 4, ffi2schema::BinaryUfunc,
               schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -1523,6 +1564,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.power").set_body([](TVMArgs args, TVMRetValue* r
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
   MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.prod").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(prod, 3, ffi2schema::Reduce, schema::ReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->keepdims));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1760,6 +1810,18 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.stream_sync").set_body([](TVMArgs args, TVMRetVa
               schema::StreamControlArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_tag));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.strided_slice").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(strided_slice, 5, ffi2schema::StridedSlice,
+              schema::StridedSliceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->begin));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->end));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->strides));
+  MNM_SET_ENV(vpack->x[4], schema2value::String(schema->slice_mode));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2009,13 +2071,16 @@ Array<Expr> Concatenate(const TVMArgs& values) {
 }
 
 Array<Expr> Conv(const TVMArgs& values) {
-  MNM_PRELUDE(6);
+  MNM_PRELUDE(9);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Tensor, w);
   MNM_ARG(2, ffi2expr::IntOrTupleInt, stride);
   MNM_ARG(3, ffi2expr::IntOrTupleInt, padding);
   MNM_ARG(4, ffi2expr::IntOrTupleInt, dilation);
   MNM_ARG(5, ffi2expr::Int, groups);
+  MNM_ARG(6, ffi2expr::String, layout);
+  MNM_ARG(7, ffi2expr::String, kernel_layout);
+  MNM_ARG(8, ffi2expr::String, out_layout);
   MNM_RET();
 }
 
@@ -2116,8 +2181,17 @@ Array<Expr> NonMaxSuppression(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Pad(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, pad_width);
+  MNM_ARG(2, ffi2expr::Double, pad_value);
+  MNM_ARG(3, ffi2expr::String, pad_mode);
+  MNM_RET();
+}
+
 Array<Expr> Pool(const TVMArgs& values) {
-  MNM_PRELUDE(7);
+  MNM_PRELUDE(8);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::IntOrTupleInt, kernel);
   MNM_ARG(2, ffi2expr::IntOrTupleInt, stride);
@@ -2125,6 +2199,7 @@ Array<Expr> Pool(const TVMArgs& values) {
   MNM_ARG(4, ffi2expr::IntOrTupleInt, dilation);
   MNM_ARG(5, ffi2expr::Bool, ceil_mode);
   MNM_ARG(6, ffi2expr::Bool, include_pad);
+  MNM_ARG(7, ffi2expr::String, layout);
   MNM_RET();
 }
 
@@ -2256,6 +2331,16 @@ Array<Expr> StreamControl(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> StridedSlice(const TVMArgs& values) {
+  MNM_PRELUDE(5);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, begin);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, end);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, strides);
+  MNM_ARG(4, ffi2expr::String, slice_mode);
+  MNM_RET();
+}
+
 Array<Expr> Sum(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2382,7 +2467,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.argmax").set_body(MNM_SYMBOLIC_API(argmax, 3, Re
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmin").set_body(MNM_SYMBOLIC_API(argmin, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argsort").set_body(MNM_SYMBOLIC_API(argsort, 4, Argsort));
 MNM_REGISTER_GLOBAL("mnm.op.sym.atan").set_body(MNM_SYMBOLIC_API(atan, 1, Unary));
-MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d").set_body(MNM_SYMBOLIC_API(avg_pool2d, 7, Pool));
+MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d").set_body(MNM_SYMBOLIC_API(avg_pool2d, 8, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
     .set_body(MNM_SYMBOLIC_API(avg_pool2d_dx, 9, PoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.batch_flatten").set_body(MNM_SYMBOLIC_API(batch_flatten, 1, Unary));
@@ -2413,7 +2498,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate")
     .set_body(MNM_SYMBOLIC_API(concatenate, 2, Concatenate));
 MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate_dx")
     .set_body(MNM_SYMBOLIC_API(concatenate_dx, 2, Concatenate));
-MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d").set_body(MNM_SYMBOLIC_API(conv2d, 6, Conv));
+MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d").set_body(MNM_SYMBOLIC_API(conv2d, 9, Conv));
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dw").set_body(MNM_SYMBOLIC_API(conv2d_dw, 8, ConvDxw));
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dx").set_body(MNM_SYMBOLIC_API(conv2d_dx, 8, ConvDxw));
 MNM_REGISTER_GLOBAL("mnm.op.sym.copy").set_body(MNM_SYMBOLIC_API(copy, 1, Unary));
@@ -2459,7 +2544,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_nt").set_body(MNM_SYMBOLIC_API(matmul_nt,
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_tn").set_body(MNM_SYMBOLIC_API(matmul_tn, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_tt").set_body(MNM_SYMBOLIC_API(matmul_tt, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.max").set_body(MNM_SYMBOLIC_API(max, 3, Reduce));
-MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d").set_body(MNM_SYMBOLIC_API(max_pool2d, 7, Pool));
+MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d").set_body(MNM_SYMBOLIC_API(max_pool2d, 8, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
     .set_body(MNM_SYMBOLIC_API(max_pool2d_dx, 9, PoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.maximum").set_body(MNM_SYMBOLIC_API(maximum, 4, BinaryUfunc));
@@ -2478,7 +2563,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dtrue")
 MNM_REGISTER_GLOBAL("mnm.op.sym.non_max_suppression")
     .set_body(MNM_SYMBOLIC_API(non_max_suppression, 12, NonMaxSuppression));
 MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal").set_body(MNM_SYMBOLIC_API(not_equal, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.pad").set_body(MNM_SYMBOLIC_API(pad, 4, Pad));
 MNM_REGISTER_GLOBAL("mnm.op.sym.power").set_body(MNM_SYMBOLIC_API(power, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.prod").set_body(MNM_SYMBOLIC_API(prod, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu").set_body(MNM_SYMBOLIC_API(relu, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx").set_body(MNM_SYMBOLIC_API(relu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.repeat").set_body(MNM_SYMBOLIC_API(repeat, 3, Repeat));
@@ -2512,6 +2599,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.stack").set_body(MNM_SYMBOLIC_API(stack, 2, Stac
 MNM_REGISTER_GLOBAL("mnm.op.sym.stack_dx").set_body(MNM_SYMBOLIC_API(stack_dx, 2, Stack));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync")
     .set_body(MNM_SYMBOLIC_API(stream_sync, 2, StreamControl));
+MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
+    .set_body(MNM_SYMBOLIC_API(strided_slice, 5, StridedSlice));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 3, Sum));
 MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 3, Take));
@@ -2722,13 +2811,16 @@ Attrs Concatenate(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Conv(const Array<Value>& values) {
-  MNM_PRELUDE(2, 6, schema::ConvArgs);
+  MNM_PRELUDE(2, 9, schema::ConvArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Tensor, w);
   MNM_OPTIONAL(2, value2schema::IntOrTupleInt, stride);
   MNM_OPTIONAL(3, value2schema::IntOrTupleInt, padding);
   MNM_OPTIONAL(4, value2schema::IntOrTupleInt, dilation);
   MNM_OPTIONAL(5, value2schema::Int, groups);
+  MNM_OPTIONAL(6, value2schema::String, layout);
+  MNM_OPTIONAL(7, value2schema::String, kernel_layout);
+  MNM_OPTIONAL(8, value2schema::String, out_layout);
   return Attrs(attrs);
 }
 
@@ -2840,8 +2932,18 @@ Attrs NonMaxSuppression(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs Pad(const Array<Value>& values) {
+  MNM_PRELUDE(2, 4, schema::PadArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, pad_width);
+  MNM_OPTIONAL(2, value2schema::Double, pad_value);
+  MNM_OPTIONAL(3, value2schema::String, pad_mode);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Pool(const Array<Value>& values) {
-  MNM_PRELUDE(3, 7, schema::PoolArgs);
+  MNM_PRELUDE(3, 8, schema::PoolArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, kernel);
   MNM_REQUIRED(2, value2schema::IntOrTupleInt, stride);
@@ -2849,6 +2951,7 @@ Attrs Pool(const Array<Value>& values) {
   MNM_OPTIONAL(4, value2schema::IntOrTupleInt, dilation);
   MNM_OPTIONAL(5, value2schema::Bool, ceil_mode);
   MNM_OPTIONAL(6, value2schema::Bool, include_pad);
+  MNM_OPTIONAL(7, value2schema::String, layout);
   return Attrs(attrs);
 }
 
@@ -2992,6 +3095,17 @@ Attrs StreamControl(const Array<Value>& values) {
   MNM_PRELUDE(1, 2, schema::StreamControlArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_OPTIONAL(1, value2schema::Int, stream_tag);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs StridedSlice(const Array<Value>& values) {
+  MNM_PRELUDE(3, 5, schema::StridedSliceArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, begin);
+  MNM_REQUIRED(2, value2schema::IntOrTupleInt, end);
+  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, strides);
+  MNM_OPTIONAL(4, value2schema::String, slice_mode);
   return Attrs(attrs);
 }
 
@@ -3388,6 +3502,15 @@ int Conv(const std::string& field) {
   if (field == "groups") {
     return 5;
   }
+  if (field == "layout") {
+    return 6;
+  }
+  if (field == "kernel_layout") {
+    return 7;
+  }
+  if (field == "out_layout") {
+    return 8;
+  }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
 }
@@ -3594,6 +3717,24 @@ int NonMaxSuppression(const std::string& field) {
 }
 
 template <const char* op_name>
+int Pad(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "pad_width") {
+    return 1;
+  }
+  if (field == "pad_value") {
+    return 2;
+  }
+  if (field == "pad_mode") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Pool(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -3615,6 +3756,9 @@ int Pool(const std::string& field) {
   }
   if (field == "include_pad") {
     return 6;
+  }
+  if (field == "layout") {
+    return 7;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -3864,6 +4008,27 @@ int StreamControl(const std::string& field) {
   }
   if (field == "stream_tag") {
     return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int StridedSlice(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "begin") {
+    return 1;
+  }
+  if (field == "end") {
+    return 2;
+  }
+  if (field == "strides") {
+    return 3;
+  }
+  if (field == "slice_mode") {
+    return 4;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -4369,11 +4534,18 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.non_max_suppression", names::non_max_suppres
 MNM_BIND_SCHEMA("mnm.op.not_equal", names::not_equal,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.not_equal", names::not_equal,
-                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::BinaryUfunc);    // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.pad", names::pad, value2schema::Pad);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.pad", names::pad,
+                            schema_field_idx::Pad);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.power", names::power,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.power", names::power,
-                            schema_field_idx::BinaryUfunc);        // NOLINT(whitespace/line_length)
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.prod", names::prod,
+                value2schema::Reduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.prod", names::prod,
+                            schema_field_idx::Reduce);             // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.relu", names::relu, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.relu", names::relu,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
@@ -4477,6 +4649,10 @@ MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
                 value2schema::StreamControl);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_sync", names::stream_sync,
                             schema_field_idx::StreamControl);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.strided_slice", names::strided_slice,
+                value2schema::StridedSlice);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.strided_slice", names::strided_slice,
+                            schema_field_idx::StridedSlice);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.subtract", names::subtract,
@@ -4549,6 +4725,7 @@ MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(NonMaxSuppressionArgs);
+MNM_REGISTER_OBJECT_REFLECT(PadArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceArgs);
@@ -4565,6 +4742,7 @@ MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
 MNM_REGISTER_OBJECT_REFLECT(SqueezeArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);
 MNM_REGISTER_OBJECT_REFLECT(StreamControlArgs);
+MNM_REGISTER_OBJECT_REFLECT(StridedSliceArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeDxArgs);

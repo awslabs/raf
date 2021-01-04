@@ -237,6 +237,42 @@ def test_conv2d(ctx, dtype, xshape, wshape, stride, dilation, padding):
 
 @pytest.mark.parametrize("ctx", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
+@pytest.mark.parametrize("stride", [1, 2])
+@pytest.mark.parametrize("dilation", [1])
+@pytest.mark.parametrize("padding", [0, 1, 2])
+def test_conv2d_nhwc(ctx, dtype, xshape, wshape, stride, dilation, padding):
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments
+    # N.B.: NHWC + HWIO
+    # forward
+    class Conv2D(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w):  # pylint: disable=no-self-use
+            x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
+            w = mnm.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
+            conv = mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1,
+                              layout="NHWC", kernel_layout="HWIO", out_layout="NHWC")
+            # NHWC -> NCHW
+            return mnm.transpose(conv, (0, 3, 1, 2))
+
+    model = Conv2D()
+    m_x, t_x = randn_torch(xshape, std=0.001, ctx=ctx, dtype=dtype)
+    m_w, t_w = randn_torch(wshape, std=0.01, ctx=ctx, dtype=dtype)
+    # forward only for NHWC
+    m_x.requires_grad = False
+    m_w.requires_grad = False
+    m_y = model(m_x, m_w)
+    t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
+    check(m_y, t_y, rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.parametrize("ctx", ["cpu"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("kernel", [1, 2, 3, 4])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
@@ -275,6 +311,45 @@ def test_pool2d(ctx, dtype, data_shape, kernel, stride, padding, funcs):
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad)
+
+
+@pytest.mark.parametrize("ctx", ["cpu"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("kernel", [1, 2, 3, 4])
+@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("padding", [0, 1])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+    ])
+def test_pool2d_nhwc(ctx, dtype, data_shape, kernel, stride, padding, funcs):
+    # TODO(yzhliu): complement test case when ctx=cuda
+    # pylint: disable=too-many-locals, too-many-arguments
+    mnm_fwd, torch_fwd = funcs
+    if padding > kernel // 2:
+        return
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use
+            x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
+            pool = mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, layout="NHWC")
+            # NHWC -> NCHW
+            return mnm.transpose(pool, (0, 3, 1, 2))
+
+    model = TestModel()
+    m_x, t_x = randn_torch(data_shape, dtype=dtype, ctx=ctx)
+    # forward only for NHWC layout
+    m_x.requires_grad = False
+    m_y = model(m_x)
+    t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
+    check(m_y, t_y)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
@@ -408,6 +483,34 @@ def test_mnm_batch_norm_train(shape, momentum, eps, ctx):
     check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
     check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
     check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dimension", [
+    ((2, 3), (1, 1, 1, 1)),
+])
+@pytest.mark.parametrize("pad_value", [0, 2])
+@pytest.mark.parametrize("pad_mode", ["constant"])
+def test_pad(ctx, dtype, dimension, pad_value, pad_mode):
+    shape, pad_width = dimension
+
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, m_x):  # pylint: disable=no-self-use
+            return mnm.pad(m_x, pad_width, pad_value, pad_mode)
+
+    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype)
+    model = TestModel()
+    m_x.requires_grad = False
+    m_y = model(m_x)
+    t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)
+    check(m_y, t_y)
 
 
 if __name__ == "__main__":

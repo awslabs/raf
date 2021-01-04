@@ -570,5 +570,23 @@ def test_squeeze(shape, axis, ctx):
     #check(v_y, n_y)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("params", [
+    ((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2]),
+    ((3, 4, 3), [1, 1, 0], [4, 4, 3], [2, 1, 1]),
+    ((3, 4, 3), [1, -1, 0], [4, -5, 3], [2, -1, 1]),
+    ((3, 4, 3), [1, 0, 0], [2, 2, 3], [1, 1, 2]),
+    ((3, 4, 3), [1, -1, 0], [2, -3, 3], [1, -1, 1]),
+    ((3, 4, 3), [1, 1, 0], [4, 4, 3], [1, 1, 1]),
+    ((3, 4, 3), [0, 2, 0], [1, 2, 3], [1, 1, 1])
+])
+def test_strided_slice(ctx, params):
+    shape, begin, end, strides = params
+    m_x, n_x = randn(shape, ctx=ctx)
+    m_y = mnm.strided_slice(m_x, begin, end, strides)
+    t_y = npx.strided_slice_python(n_x, begin, end, strides)
+    check(m_y, t_y)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -98,6 +98,7 @@ MNM_TVM_OP("mnm.op.not_equal", "not_equal");
 MNM_TVM_OP("mnm.op.one_hot", "one_hot");
 MNM_TVM_OP("mnm.op.ones", "ones");
 MNM_TVM_OP("mnm.op.ones_like", "ones_like");
+MNM_TVM_OP("mnm.op.pad", "nn.pad");
 MNM_TVM_OP("mnm.op.power", "power");
 MNM_TVM_OP("mnm.op.prod", "prod");
 MNM_TVM_OP("mnm.op.reinterpret", "reinterpret");

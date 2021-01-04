@@ -252,5 +252,36 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     check_type(m_func, checked_type)
 
 
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dimension", [
+    ((2, 3), (1, 1, 1, 1)),
+])
+@pytest.mark.parametrize("pad_value", [0, 2])
+@pytest.mark.parametrize("pad_mode", ["constant"])
+def test_pad(dtype, dimension, pad_value, pad_mode):
+    shape, pad_width = dimension
+
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, m_x):  # pylint: disable=no-self-use
+            return mnm.pad(m_x, pad_width, pad_value, pad_mode)
+
+    m_x, t_x = randn_torch(shape, dtype=dtype)
+    model = TestModel()
+    m_x.requires_grad = False
+    m_func = model._internal(m_x).func
+    m_func = run_infer_type(m_func)
+    t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)
+    x_ty = TensorType(t_x.shape, dtype=dtype)
+    y_ty = TensorType(t_y.shape, dtype=dtype)
+    checked_type = FuncType([x_ty], y_ty)
+    check_type(m_func, checked_type)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

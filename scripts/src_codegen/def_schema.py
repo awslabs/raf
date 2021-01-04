@@ -25,6 +25,9 @@ SCHEMAS = {
             py_default=1,
             cxx_normalizer="IntTuple"),
         Arg(name="groups", cxx_type="int64_t", cxx_default=1),
+        Arg(name="layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
+        Arg(name="kernel_layout", cxx_type="std::string", cxx_default="\"OIHW\"", py_default="\"OIHW\""),
+        Arg(name="out_layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
     ],
     "nn.h::pool": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -46,6 +49,15 @@ SCHEMAS = {
             cxx_normalizer="IntTuple"),
         Arg(name="ceil_mode", cxx_type="bool", cxx_default=False),
         Arg(name="include_pad", cxx_type="bool", cxx_default=True),
+        Arg(name="layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
+    ],
+    "nn.h::pad": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        # [(w1, w2), ..., ]
+        Arg(name="pad_width", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(name="pad_value", cxx_type="double", cxx_default=0.0),
+        Arg(name="pad_mode", cxx_type="std::string",
+            cxx_default="\"constant\"", py_default="\"constant\""),
     ],
     "nn.h::softmax": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -333,6 +345,21 @@ SCHEMAS = {
     "transform.h::cast_like": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="dtype_like", cxx_type="value::BaseTensorValue"),
+    ],
+    "transform.h::strided_slice": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="begin",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="end",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="strides",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple",
+            cxx_default="{}", py_default="None"),
+        Arg(name="slice_mode", cxx_type="std::string",
+            cxx_default="\"end\"", py_default="\"end\""),
     ],
     "transform.h::expand_dims": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

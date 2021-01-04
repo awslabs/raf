@@ -94,5 +94,7 @@ class ExtendedVarNode : public VarNode {
  */
 Var MakeVar(const std::string& name_hint, Type type_annotation, Var may_share = {});
 
+String AsText(const ObjectRef& node);
+
 }  // namespace ir
 }  // namespace mnm

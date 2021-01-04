@@ -3,6 +3,7 @@
  * \file src/impl/ir_ext.cc
  * \brief MNM extension to TVM/Relay IR.
  */
+#include <printer/text_printer.h>
 #include "mnm/ir_ext.h"
 #include "mnm/registry.h"
 
@@ -151,6 +152,29 @@ Var SetMayShare(Var var, Var may_share) {
 Var GetMayShare(Var var) {
   const auto* vn = var.as<ExtendedVarNode>();
   return vn->may_share;
+}
+
+MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
+  auto annotate =
+      tvm::runtime::TypedPackedFunc<String(ObjectRef)>([](const ObjectRef& expr) -> String {
+        std::ostringstream os;
+        const auto* constant = expr.as<ConstantNode>();
+        if (constant) {
+          // erase "-114514"
+          os << "\b\b\b\b\b\b\bmnm.Constant(" << constant->value << ")";
+        }
+        if ((expr.as<ConstantNode>() || expr.as<CallNode>()) &&
+            Downcast<Expr>(expr)->checked_type_.defined()) {
+          tvm::relay::RelayTextPrinter printer(false, nullptr, nullptr);
+          os << " /* ty=" << printer.Print(Downcast<Expr>(expr)->checked_type()).str() << " */";
+        }
+        return String(os.str());
+      });
+  return tvm::AsText(value, false, annotate);
+});
+
+String AsText(const ObjectRef& node) {
+  return registry::GetPackedFunc("mnm.ir.AsText")(node);
 }
 
 MNM_REGISTER_GLOBAL("mnm.ir._make.Module").set_body_typed(Module::make);

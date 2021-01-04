@@ -163,7 +163,11 @@ non_max_suppression = _APIS.get("mnm.op.sym.non_max_suppression", None)
 # Defined in ./src/op/regs/regs.cc
 not_equal = _APIS.get("mnm.op.sym.not_equal", None)
 # Defined in ./src/op/regs/regs.cc
+pad = _APIS.get("mnm.op.sym.pad", None)
+# Defined in ./src/op/regs/regs.cc
 power = _APIS.get("mnm.op.sym.power", None)
+# Defined in ./src/op/regs/regs.cc
+prod = _APIS.get("mnm.op.sym.prod", None)
 # Defined in ./src/op/regs/regs.cc
 relu = _APIS.get("mnm.op.sym.relu", None)
 # Defined in ./src/op/regs/regs.cc
@@ -218,6 +222,8 @@ stack = _APIS.get("mnm.op.sym.stack", None)
 stack_dx = _APIS.get("mnm.op.sym.stack_dx", None)
 # Defined in ./src/op/regs/regs.cc
 stream_sync = _APIS.get("mnm.op.sym.stream_sync", None)
+# Defined in ./src/op/regs/regs.cc
+strided_slice = _APIS.get("mnm.op.sym.strided_slice", None)
 # Defined in ./src/op/regs/regs.cc
 subtract = _APIS.get("mnm.op.sym.subtract", None)
 # Defined in ./src/op/regs/regs.cc

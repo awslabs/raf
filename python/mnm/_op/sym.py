@@ -23,14 +23,14 @@ __all__ = [
     "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
     "min", "minimum", "mod", "multiply", "negative",
     "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
-    "power", "relu", "relu_dx", "repeat", "reshape",
-    "reverse", "reverse_sequence", "round", "rsqrt", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
-    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stack_dx", "stream_sync", "subtract", "sum",
-    "take", "take_dx", "tanh", "tanh_dx", "transpose",
-    "transpose_dx",
+    "pad", "power", "prod", "relu", "relu_dx",
+    "repeat", "reshape", "reverse", "reverse_sequence", "round",
+    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
+    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
+    "strided_slice", "subtract", "sum", "take", "take_dx",
+    "tanh", "tanh_dx", "transpose", "transpose_dx",
 ]
 
 def _allreduce(x):
@@ -83,7 +83,7 @@ def atan(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.atan(x))
 
-def avg_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
+def avg_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True, layout="NCHW"):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
     stride = sym_utils.to_int_tuple(stride)
@@ -91,7 +91,8 @@ def avg_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, includ
     dilation = sym_utils.to_int_tuple(dilation)
     ceil_mode = sym_utils.to_bool(ceil_mode)
     include_pad = sym_utils.to_bool(include_pad)
-    return Symbol.from_expr(ffi.avg_pool2d(x, kernel, stride, padding, dilation, ceil_mode, include_pad))
+    layout = sym_utils.to_string(layout)
+    return Symbol.from_expr(ffi.avg_pool2d(x, kernel, stride, padding, dilation, ceil_mode, include_pad, layout))
 
 def avg_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad):
     x = sym_utils.to_tensor(x)
@@ -210,14 +211,17 @@ def concatenate_dx(x, axis=0):
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.concatenate_dx(x, axis))
 
-def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1):
+def conv2d(x, w, stride=1, padding=0, dilation=1, groups=1, layout="NCHW", kernel_layout="OIHW", out_layout="NCHW"):
     x = sym_utils.to_tensor(x)
     w = sym_utils.to_tensor(w)
     stride = sym_utils.to_int_tuple(stride)
     padding = sym_utils.to_int_tuple(padding)
     dilation = sym_utils.to_int_tuple(dilation)
     groups = sym_utils.to_int(groups)
-    return Symbol.from_expr(ffi.conv2d(x, w, stride, padding, dilation, groups))
+    layout = sym_utils.to_string(layout)
+    kernel_layout = sym_utils.to_string(kernel_layout)
+    out_layout = sym_utils.to_string(out_layout)
+    return Symbol.from_expr(ffi.conv2d(x, w, stride, padding, dilation, groups, layout, kernel_layout, out_layout))
 
 def conv2d_dw(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     x_or_w = sym_utils.to_tensor(x_or_w)
@@ -423,7 +427,7 @@ def max(x, axis=(), keepdims=False):
     keepdims = sym_utils.to_bool(keepdims)
     return Symbol.from_expr(ffi.max(x, axis, keepdims))
 
-def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True):
+def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True, layout="NCHW"):
     x = sym_utils.to_tensor(x)
     kernel = sym_utils.to_int_tuple(kernel)
     stride = sym_utils.to_int_tuple(stride)
@@ -431,7 +435,8 @@ def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, includ
     dilation = sym_utils.to_int_tuple(dilation)
     ceil_mode = sym_utils.to_bool(ceil_mode)
     include_pad = sym_utils.to_bool(include_pad)
-    return Symbol.from_expr(ffi.max_pool2d(x, kernel, stride, padding, dilation, ceil_mode, include_pad))
+    layout = sym_utils.to_string(layout)
+    return Symbol.from_expr(ffi.max_pool2d(x, kernel, stride, padding, dilation, ceil_mode, include_pad, layout))
 
 def max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad):
     x = sym_utils.to_tensor(x)
@@ -534,12 +539,25 @@ def not_equal(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.not_equal(x1, x2, out, where))
 
+def pad(x, pad_width, pad_value=0.0, pad_mode="constant"):
+    x = sym_utils.to_tensor(x)
+    pad_width = sym_utils.to_int_tuple(pad_width)
+    pad_value = sym_utils.to_double(pad_value)
+    pad_mode = sym_utils.to_string(pad_mode)
+    return Symbol.from_expr(ffi.pad(x, pad_width, pad_value, pad_mode))
+
 def power(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.power(x1, x2, out, where))
+
+def prod(x, axis=(), keepdims=False):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int_tuple(axis)
+    keepdims = sym_utils.to_bool(keepdims)
+    return Symbol.from_expr(ffi.prod(x, axis, keepdims))
 
 def relu(x):
     x = sym_utils.to_any(x)
@@ -682,6 +700,14 @@ def stream_sync(x, stream_tag=0):
     x = sym_utils.to_tensor(x)
     stream_tag = sym_utils.to_int(stream_tag)
     return Symbol.from_expr(ffi.stream_sync(x, stream_tag))
+
+def strided_slice(x, begin, end, strides=None, slice_mode="end"):
+    x = sym_utils.to_tensor(x)
+    begin = sym_utils.to_int_tuple(begin)
+    end = sym_utils.to_int_tuple(end)
+    strides = sym_utils.to_int_tuple(strides)
+    slice_mode = sym_utils.to_string(slice_mode)
+    return Symbol.from_expr(ffi.strided_slice(x, begin, end, strides, slice_mode))
 
 def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

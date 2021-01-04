@@ -125,6 +125,7 @@ MNM_OP_TYPE("mnm.op.max", "Max", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.min", "Min", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.all", "All", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.any", "Any", ReduceOutSameDType);
+MNM_OP_TYPE("mnm.op.prod", "Prod", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", ReduceOutSameDType);
 

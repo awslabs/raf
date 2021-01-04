@@ -103,6 +103,8 @@ def test_conv2d():
     def expected():
         konst0 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(0))
         konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
+        konst_nchw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("NCHW"))
+        konst_oihw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("OIHW"))
         default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
@@ -121,11 +123,14 @@ def test_conv2d():
             relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "int64")
-        c = relay.var("p6", shape=(1,))
-        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5])
+        p6 = relay.var("p6", "int64")
+        p7 = relay.var("p7", "int64")
+        p8 = relay.var("p8", "int64")
+        c = relay.var("c", shape=(1,))
+        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
         y1 = relay.Call(add_op, [y, c, default, default])
         y = relay.Call(add_op, [y, y1, default, default])
-        f1 = relay.Function([x, w, p2, p3, p4, p5, c], y)
+        f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, c], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         # segment 2
@@ -136,8 +141,11 @@ def test_conv2d():
             relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "int64")
-        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5])
-        f2 = relay.Function([x, w, p2, p3, p4, p5], y)
+        p6 = relay.var("p6", "int64")
+        p7 = relay.var("p7", "int64")
+        p8 = relay.var("p8", "int64")
+        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
+        f2 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8], y)
         f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         # segment 3
@@ -148,10 +156,13 @@ def test_conv2d():
             relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "int64")
-        offset = relay.var("p6", shape=(1, 16, 64, 64))
-        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5])
+        p6 = relay.var("p6", "int64")
+        p7 = relay.var("p7", "int64")
+        p8 = relay.var("p8", "int64")
+        offset = relay.var("offset", shape=(1, 16, 64, 64))
+        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
         y = relay.Call(add_op, [y, offset, default, default])
-        f3 = relay.Function([x, w, p2, p3, p4, p5, offset], y)
+        f3 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, offset], y)
         f3 = f3.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         # compose
@@ -164,9 +175,12 @@ def test_conv2d():
         a4 = relay.var("a4")
         a6 = relay.var("a6")
         a7 = relay.var("a7")
-        let3 = relay.Let(a7, relay.Call(f3, [a4, w2, konst1, konst0, konst1, konst1, a6]), a7)
-        let2 = relay.Let(a6, relay.Call(f2, [a4, w3, konst1, konst1, konst1, konst1]), let3)
-        let1 = relay.Let(a4, relay.Call(f1, [a1, w1, konst1, konst1, konst1, konst1, c]), let2)
+        let3 = relay.Let(a7, relay.Call(f3, [a4, w2, konst1, konst0, konst1, konst1,
+                                             konst_nchw, konst_oihw, konst_nchw, a6]), a7)
+        let2 = relay.Let(a6, relay.Call(f2, [a4, w3, konst1, konst1, konst1, konst1,
+                                             konst_nchw, konst_oihw, konst_nchw]), let3)
+        let1 = relay.Let(a4, relay.Call(f1, [a1, w1, konst1, konst1, konst1, konst1,
+                                             konst_nchw, konst_oihw, konst_nchw, c]), let2)
         let = relay.Let(a1, relay.Call(f0, [x, c]), let1)
         return relay.Function([x, c, w1, w2, w3], let)
 
@@ -201,6 +215,7 @@ def test_concatenate():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
         konst3 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(3))
+        knchw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("NCHW"))
         true = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(True))
         false = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(False))
         default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
@@ -214,8 +229,9 @@ def test_concatenate():
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "bool")
         p6 = relay.var("p6", "bool")
-        pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6])
-        f1 = relay.Function([p0, p1, p2, p3, p4, p5, p6], pooled)
+        p7 = relay.var("p7", "int64")
+        pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6, p7])
+        f1 = relay.Function([p0, p1, p2, p3, p4, p5, p6, p7], pooled)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         p0 = relay.var("p0", shape=shape)
@@ -231,7 +247,8 @@ def test_concatenate():
         a1 = relay.var("a1")
         a4 = relay.var("a4")
         let2 = relay.Let(a4, relay.Call(f2, [a1, x, c]), a4)
-        let1 = relay.Let(a1, relay.Call(f1, [x, konst3, konst1, konst1, konst1, false, true]), let2)
+        let1 = relay.Let(a1, relay.Call(f1, [x, konst3, konst1, konst1, konst1,
+                                             false, true, knchw]), let2)
         return relay.Function([x, c], let1)
 
     model = Model()
@@ -262,6 +279,7 @@ def test_tuple_root():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
         konst3 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(3))
+        knchw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("NCHW"))
         true = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(True))
         false = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(False))
         default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
@@ -275,11 +293,12 @@ def test_tuple_root():
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "bool")
         p6 = relay.var("p6", "bool")
-        c = relay.var("p7", shape=(1,))
+        p7 = relay.var("p7", "int64")
+        c = relay.var("c", shape=(1,))
 
-        pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6])
+        pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6, p7])
         out = relay.Call(add_op, [pooled, c, default, default])
-        f = relay.Function([p0, p1, p2, p3, p4, p5, p6, c], out)
+        f = relay.Function([p0, p1, p2, p3, p4, p5, p6, p7, c], out)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         x = relay.var("x", shape=shape)
@@ -288,7 +307,7 @@ def test_tuple_root():
         a3 = relay.var("a3")
         let3 = relay.Let(a3, relay.Tuple([a2, x]), a3)
         let2 = relay.Let(
-            a2, relay.Call(f, [x, konst3, konst1, konst1, konst1, false, true, c]), let3)
+            a2, relay.Call(f, [x, konst3, konst1, konst1, konst1, false, true, knchw, c]), let3)
         return relay.Function([x, c], let2)
 
     model = Model()

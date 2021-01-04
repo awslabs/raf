@@ -4,6 +4,8 @@
  * \brief MNM value underlying implementation
  */
 #include "tvm/runtime/ndarray.h"
+#include <tvm/node/functor.h>
+#include <tvm/ir/module.h>
 #include "mnm/executor.h"
 #include "mnm/ir.h"
 #include "mnm/registry.h"
@@ -235,5 +237,49 @@ MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
 MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
 MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
 MNM_REGISTER_OBJECT_REFLECT(TensorTypeValueObj);
+
+using tvm::ReprPrinter;
+using tvm::runtime::ObjectRef;
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<TupleValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const TupleValueObj*>(ref.get());
+      p->stream << "TupleValue(" << node->fields << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<IntValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const IntValueObj*>(ref.get());
+      p->stream << "IntValue(" << node->data << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<FloatValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const FloatValueObj*>(ref.get());
+      p->stream << "FloatValue(" << node->data << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<BoolValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const BoolValueObj*>(ref.get());
+      p->stream << "BoolValue(" << node->data << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<StringValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const StringValueObj*>(ref.get());
+      p->stream << "StringValue(" << node->data << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<TensorValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const TensorValueObj*>(ref.get());
+      p->stream << "TensorValue(";
+      for (int i = 0; i < node->tensor->ndim; ++i) {
+        p->stream << node->tensor->shape[i];
+        if (i != node->tensor->ndim - 1) p->stream << ", ";
+      }
+      p->stream << ")";
+    });
+
 }  // namespace value
 }  // namespace mnm

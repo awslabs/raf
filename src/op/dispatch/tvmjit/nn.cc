@@ -48,7 +48,7 @@ std::vector<std::string> ConvSchemaArgNames(const op::CallValues& call) {
 
 Attrs ConvSchema2Attrs(const ConvArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> padding = args->padding.size() > 1 ? args->padding : Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
   auto attrs = make_object<Conv2DAttrs>();
   for (int i = 0; i < stride.size(); ++i) {
@@ -63,9 +63,9 @@ Attrs ConvSchema2Attrs(const ConvArgs* args) {
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();
   attrs->kernel_size = NullValue<Array<tvm::relay::IndexExpr> >();
-  attrs->data_layout = "NCHW";
-  attrs->kernel_layout = "OIHW";
-  attrs->out_layout = "NCHW";
+  attrs->data_layout = args->layout;
+  attrs->kernel_layout = args->kernel_layout;
+  attrs->out_layout = args->out_layout;
 
   return Attrs(attrs);
 }
@@ -220,7 +220,7 @@ std::vector<std::string> PoolSchemaArgNames(const op::CallValues& call) {
 
 Attrs MaxPoolSchema2Attrs(const PoolArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> padding = args->padding.size() > 1 ? args->padding : Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   auto attrs = make_object<tvm::relay::MaxPool2DAttrs>();
   for (int i = 0; i < stride.size(); ++i) {
@@ -233,14 +233,14 @@ Attrs MaxPoolSchema2Attrs(const PoolArgs* args) {
     attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel[i]));
   }
   attrs->ceil_mode = args->ceil_mode;
-  attrs->layout = "NCHW";
+  attrs->layout = args->layout;
   CHECK_EQ(args->include_pad, true);
   return Attrs(attrs);
 }
 
 Attrs AvgPoolSchema2Attrs(const PoolArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
+  std::vector<int64_t> padding = args->padding.size() > 1 ? args->padding : Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   auto attrs = make_object<tvm::relay::AvgPool2DAttrs>();
   for (int i = 0; i < stride.size(); ++i) {
@@ -254,7 +254,7 @@ Attrs AvgPoolSchema2Attrs(const PoolArgs* args) {
   }
   attrs->ceil_mode = args->ceil_mode;
   attrs->count_include_pad = args->include_pad;
-  attrs->layout = "NCHW";
+  attrs->layout = args->layout;
   return Attrs(attrs);
 }
 
@@ -454,6 +454,39 @@ HashKey BatchNormTrainDxwbHasher(const std::vector<Type>& param_types, const Typ
 MNM_TVMJIT(BatchNormTrainDxwb, "mnm.op.batch_norm_train_dxwb", BatchNormTrainDxwbArgs,
            BatchNormTrainDxwbSchema2Args, BatchNormTrainDxwbSchemaArgNames,
            BatchNormTrainDxwbSchema2Attrs, BatchNormTrainDxwbHasher);
+
+std::vector<Value> PadSchema2Args(const PadArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> PadSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs PadSchema2Attrs(const PadArgs* args) {
+  // attrs will be later passed to compute & schedule functions
+  auto attrs = make_object<tvm::relay::PadAttrs>();
+  Array<Array<Integer> > pad_width;
+  for (int i = 0; i < args->pad_width.size(); i += 2) {
+    Array<Integer> width{Integer(args->pad_width[i]), Integer(args->pad_width[i + 1])};
+    pad_width.push_back(width);
+  }
+  attrs->pad_width = pad_width;
+  attrs->pad_value = args->pad_value;
+  attrs->pad_mode = args->pad_mode;
+  return Attrs(attrs);
+}
+
+HashKey PadHasher(const std::vector<Type>& param_types, const Type& y_type, const PadArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->pad_width;
+  key << args->pad_value;
+  key << args->pad_mode;
+  return key;
+}
+
+MNM_TVMJIT(Pad, "mnm.op.pad", PadArgs, PadSchema2Args, PadSchemaArgNames, PadSchema2Attrs,
+           PadHasher);
 
 }  // namespace tvmjit
 }  // namespace op

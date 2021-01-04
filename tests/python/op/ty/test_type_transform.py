@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 import torch
 import mnm
+import tvm.topi.testing as npx
 from mnm._ffi.pass_ import AutoDiff
 from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
 from tvm.relay import TensorType, FuncType, TupleType
@@ -58,8 +59,6 @@ def test_take(shape, axis, dtype):
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_sequence_mask(max_length, batch_size, other_feature_dims,
                        axis, dtype):
-    import tvm.topi.testing as npx
-
     class SequenceMask(mnm.Model):
         def build(self, mask_value, axis=0):
             self._axis = axis
@@ -674,6 +673,40 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     m_func = run_infer_type(m_func)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_data, TensorType([], dtype=ty_indices.dtype)]))
     desired_type = FuncType([ty_data, ty_indices], TupleType([fwd_ty, bwd_ty]))
+    check_type(m_func, desired_type)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("params", [
+    ((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2]),
+    ((3, 4, 3), [1, 1, 0], [4, 4, 3], [2, 1, 1]),
+    ((3, 4, 3), [1, -1, 0], [4, -5, 3], [2, -1, 1]),
+    ((3, 4, 3), [1, 0, 0], [2, 2, 3], [1, 1, 2]),
+    ((3, 4, 3), [1, -1, 0], [2, -3, 3], [1, -1, 1]),
+    ((3, 4, 3), [1, 1, 0], [4, 4, 3], [1, 1, 1]),
+    ((3, 4, 3), [0, 2, 0], [1, 2, 3], [1, 1, 1])
+])
+def test_strided_slice(dtype, params):
+    class StridedSlice(mnm.Model):
+        def build(self, begin, end, strides):
+            self.begin = begin
+            self.end = end
+            self.strides = strides
+
+        @mnm.model.trace
+        def forward(self, data):
+            return mnm.strided_slice(data, self.begin, self.end, self.strides)
+
+    shape, begin, end, strides = params
+    model = StridedSlice(begin, end, strides)
+    m_x, n_x = randn(shape, dtype=dtype)
+    n_y = npx.strided_slice_python(n_x, begin, end, strides)
+
+    m_func = model._internal(m_x).func
+    m_func = run_infer_type(m_func)
+    x_ty = TensorType(n_x.shape, dtype=dtype)
+    y_ty = TensorType(n_y.shape, dtype=dtype)
+    desired_type = FuncType([x_ty], y_ty)
     check_type(m_func, desired_type)
 
 

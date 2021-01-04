@@ -88,6 +88,7 @@ MNM_DECLARE_REDUCE_OP("mnm.op.min", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.all", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.any", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.mean", ReduceOutSame);
+MNM_DECLARE_REDUCE_OP("mnm.op.prod", ReduceOutSame);
 MNM_DECLARE_REDUCE_DX_OP("mnm.op.mean_dx", ReduceDxOutSame);
 
 }  // namespace declare

@@ -53,7 +53,8 @@ def test_reduce_ops(ops, shape, dtype, axis, ctx):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.sum, mnm._op.sym.sum)
+        (np.sum, mnm._op.sym.sum),
+        (np.prod, mnm._op.sym.prod)
     ])
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

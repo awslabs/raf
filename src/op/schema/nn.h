@@ -71,6 +71,9 @@ class ConvArgs : public ir::AttrsNode<ConvArgs> {
   std::vector<int64_t> padding{0};
   std::vector<int64_t> dilation{1};
   int64_t groups{1};
+  std::string layout{"NCHW"};
+  std::string kernel_layout{"OIHW"};
+  std::string out_layout{"NCHW"};
   MNM_OP_SCHEMA(ConvArgs, "mnm.args.conv");
 };
 
@@ -115,6 +118,15 @@ class LocalResponseNormArgs : public ir::AttrsNode<LocalResponseNormArgs> {
   MNM_OP_SCHEMA(LocalResponseNormArgs, "mnm.args.local_response_norm");
 };
 
+class PadArgs : public ir::AttrsNode<PadArgs> {
+ public:
+  value::BaseTensorValue x;
+  std::vector<int64_t> pad_width;
+  double pad_value{0.0};
+  std::string pad_mode{"constant"};
+  MNM_OP_SCHEMA(PadArgs, "mnm.args.pad");
+};
+
 class PoolArgs : public ir::AttrsNode<PoolArgs> {
  public:
   value::BaseTensorValue x;
@@ -124,6 +136,7 @@ class PoolArgs : public ir::AttrsNode<PoolArgs> {
   std::vector<int64_t> dilation{1};
   bool ceil_mode{false};
   bool include_pad{true};
+  std::string layout{"NCHW"};
   MNM_OP_SCHEMA(PoolArgs, "mnm.args.pool");
 };
 

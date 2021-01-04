@@ -81,7 +81,9 @@ from ._internal import nll_loss_dpred
 from ._internal import nll_loss_dtrue
 from ._internal import non_max_suppression
 from ._internal import not_equal
+from ._internal import pad
 from ._internal import power
+from ._internal import prod
 from ._internal import relu
 from ._internal import relu_dx
 from ._internal import repeat
@@ -109,6 +111,7 @@ from ._internal import squeeze
 from ._internal import stack
 from ._internal import stack_dx
 from ._internal import stream_sync
+from ._internal import strided_slice
 from ._internal import subtract
 from ._internal import sum
 from ._internal import take

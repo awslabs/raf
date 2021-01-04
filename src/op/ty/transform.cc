@@ -441,6 +441,102 @@ Type GatherNdDxInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.gather_nd_dx", "GatherNdDx", GatherNdDxInfer);
 
+Type StridedSliceInfer(const CallValues& value) {
+  const auto* args = value->args.as<StridedSliceArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->x));
+
+  auto dshape = data->shape;
+  int64_t num_axis = dshape.size();
+
+  CHECK(!args->begin.empty()) << "strided_slice received invalid begin";
+  CHECK(!args->end.empty()) << "strided_slice received invalid end";
+  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+
+  // calculate output shape
+  std::vector<PrimExpr> oshape(num_axis);
+  // stride will be set as 1 if slice mode is enabled
+  std::vector<int64_t> stride_vec(num_axis, 1);
+  if (args->slice_mode == "end") {
+    CHECK(!args->strides.empty()) << "strided_slice received invalid strides";
+    CHECK_EQ(args->begin.size(), args->strides.size()) << "begin.size() != strides.size()";
+    for (size_t i = 0; i < args->strides.size(); ++i) {
+      stride_vec[i] = args->strides[i];
+    }
+  }
+  const int64_t max_range = std::numeric_limits<int64_t>::max();
+  std::vector<int64_t> begin_vec;
+  for (size_t i = 0; i < args->begin.size(); ++i) {
+    begin_vec.push_back(args->begin[i]);
+  }
+  for (int64_t i = begin_vec.size(); i < num_axis; ++i) {
+    begin_vec.push_back(stride_vec[i] > 0 ? 0 : max_range);
+  }
+
+  std::vector<int64_t> end_vec;
+  for (size_t i = 0; i < args->end.size(); ++i) {
+    if (args->slice_mode == "size") {
+      if (args->end[i] < 0) {
+        end_vec.push_back(max_range);
+      } else {
+        end_vec.push_back(begin_vec[i] + args->end[i]);
+      }
+    } else if (args->slice_mode == "end") {
+      end_vec.push_back(args->end[i]);
+    } else {
+      LOG(FATAL) << "Unsupported slice mode: " << args->slice_mode;
+    }
+  }
+  for (int64_t i = end_vec.size(); i < num_axis; ++i) {
+    end_vec.push_back(stride_vec[i] < 0 ? 0 : max_range);
+  }
+
+  for (int64_t i = 0; i < num_axis; ++i) {
+    int64_t stride_v = stride_vec[i];
+    int64_t begin_v = begin_vec[i];
+    int64_t end_v = end_vec[i];
+
+    if ((stride_v == 1 && begin_v == 0 && end_v == max_range) ||
+        (stride_v == -1 && begin_v == max_range && end_v == 0)) {
+      // Quick path, do not slice this dimension.
+      oshape[i] = dshape[i];
+      continue;
+    }
+    // Normal path, require the shape to be concrete integer.
+    // Require concrete integer as symbolic inference of min/max
+    // can get complicated and not very helpful.
+    auto dim_size_expr = dshape[i];
+    const auto* dim_size_int = dim_size_expr.as<IntImmNode>();
+    CHECK(dim_size_int) << "Symbolic data shape is not supported yet.";
+    int64_t dim_size = dim_size_int->value;
+
+    begin_v = (begin_v < 0) ? dim_size + begin_v : begin_v;
+    end_v = (end_v < 0) ? dim_size + end_v : end_v;
+
+    int64_t slice_range;
+    int64_t step;
+    if (stride_v < 0) {
+      if (end_v < -1) end_v = -1;
+      CHECK_LE(end_v, begin_v) << "strided_slice get empty slice at axis " << i;
+      begin_v = std::min(dim_size - 1, begin_v);
+      slice_range = begin_v - end_v;
+      step = -stride_v;
+    } else {
+      if (begin_v < 0) begin_v = 0;
+      CHECK_GE(stride_v, 0);
+      CHECK_LE(begin_v, end_v) << "strided_slice get invalid slice at axis " << i;
+      end_v = std::min(dim_size, end_v);
+      slice_range = end_v - begin_v;
+      step = stride_v;
+    }
+    oshape[i] = Integer((slice_range + step - 1) / step);
+  }
+
+  return TensorType(oshape, data->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.strided_slice", "StridedSlice", StridedSliceInfer);
+
 Type SqueezeInfer(const CallValues& value) {
   const auto* args = value->args.as<SqueezeArgs>();
   CHECK(args != nullptr);

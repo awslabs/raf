@@ -108,6 +108,15 @@ class HashKey {
     return operator<<(*t);
   }
 
+  inline HashKey& operator<<(const std::string& v) {
+    byte_vector.push_back(16);
+    for (int i = 0, n = v.size(); i < n; ++i) {
+      MNM_APPEND_BYTES(int8_t, 1, v[i]);
+    }
+    MNM_APPEND_BYTES(int64_t, 8, 0);
+    return *this;
+  }
+
   HashKey() {
     byte_vector.reserve(1024);
   }
@@ -156,6 +165,21 @@ static std::vector<int64_t> Pad(const std::vector<int64_t>& a) {
   int size = a.size();
   CHECK(size == 1 || size == n);
   return size == 1 ? std::vector<int64_t>(n, a[0]) : a;
+}
+
+static void GetPadHW(const std::vector<int64_t>& padding, int64_t* pad_h, int64_t* pad_w) {
+  if (padding.size() == 1) {
+    *pad_h = padding[0] * 2;
+    *pad_w = padding[0] * 2;
+  } else if (padding.size() == 2) {
+    *pad_h = padding[0] * 2;
+    *pad_w = padding[1] * 2;
+  } else if (padding.size() == 4) {
+    *pad_h = padding[0] + padding[2];
+    *pad_w = padding[1] + padding[3];
+  } else {
+    CHECK_EQ(padding.size(), 4) << " Padding size should be 1, 2 or 4, but got " << padding.size();
+  }
 }
 
 }  // namespace op

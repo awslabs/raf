@@ -3,6 +3,7 @@
  * \file src/op/declare/nn.cc
  * \brief Declaration of nn-specific operators
  */
+#include <tvm/tir/data_layout.h>
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
 #include "mnm/tensor.h"
@@ -17,7 +18,7 @@ using namespace mnm::op::schema;
 using namespace mnm::ir;
 using namespace mnm::value;
 
-MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
+void Conv2D(const CallValues& call) {
   // N.B.: NCHW + OIHW
   const auto* args = call->args.as<ConvArgs>();
   CHECK(args != nullptr);
@@ -27,32 +28,64 @@ MNM_OP_DECLARE("mnm.op.conv2d", [](const CallValues& call) {
   CHECK_EQ(w->ndim, 4);
   // TODO(@junrushao1994): deduce ctx here
   std::vector<int64_t> stride = Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
-  int64_t n_in = x->shape[0];
-  int64_t c_in = x->shape[1];
-  int64_t h_in = x->shape[2];
-  int64_t w_in = x->shape[3];
-  int64_t out = w->shape[0];
-  int64_t in = w->shape[1];
-  int64_t kernel_h = w->shape[2];
-  int64_t kernel_w = w->shape[3];
+
+  tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> in_shape{
+      tvm::Integer(x->shape[0]),
+      tvm::Integer(x->shape[1]),
+      tvm::Integer(x->shape[2]),
+      tvm::Integer(x->shape[3]),
+  };
+  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "OIHW");
+  tvm::Array<tvm::PrimExpr> w_shape{
+      tvm::Integer(w->shape[0]),
+      tvm::Integer(w->shape[1]),
+      tvm::Integer(w->shape[2]),
+      tvm::Integer(w->shape[3]),
+  };
+
+  in_shape = data_layout_converter.ForwardShape(in_shape);
+  w_shape = w_layout_converter.ForwardShape(w_shape);
+
+  int64_t n_in = in_shape[0].as<tvm::IntImmNode>()->value;
+  int64_t c_in = in_shape[1].as<tvm::IntImmNode>()->value;
+  int64_t h_in = in_shape[2].as<tvm::IntImmNode>()->value;
+  int64_t w_in = in_shape[3].as<tvm::IntImmNode>()->value;
+  int64_t out = w_shape[0].as<tvm::IntImmNode>()->value;
+  int64_t in = w_shape[1].as<tvm::IntImmNode>()->value;
+  int64_t kernel_h = w_shape[2].as<tvm::IntImmNode>()->value;
+  int64_t kernel_w = w_shape[3].as<tvm::IntImmNode>()->value;
   int64_t stride_h = stride[0];
   int64_t stride_w = stride[1];
-  int64_t pad_h = padding[0];
-  int64_t pad_w = padding[1];
+
+  int64_t pad_h;
+  int64_t pad_w;
+  GetPadHW(args->padding, &pad_h, &pad_w);
+
   int64_t dilate_h = dilation[0];
   int64_t dilate_w = dilation[1];
-  int64_t h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
-  int64_t w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+  int64_t h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
+  int64_t w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   int64_t groups = args->groups;
-  CHECK_EQ(c_in / groups, in) << "Unmatched input channel " << c_in << " and weight channel size"
+  CHECK_EQ(c_in / groups, in) << "Unmatched input channel " << c_in << " and weight channel size "
                               << in << " with group size " << groups;
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/{n_in, out, h_out, w_out});
+
+  tvm::tir::BijectiveLayout out_layout_converter(args->out_layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> oshape{tvm::Integer(n_in), tvm::Integer(out), tvm::Integer(h_out),
+                                   tvm::Integer(w_out)};
+  oshape = out_layout_converter.BackwardShape(oshape);
+
+  call->out = TensorValue::Assemble(
+      /*ctx=*/x->ctx,
+      /*dtype=*/x->dtype,
+      /*shape=*/
+      {oshape[0].as<tvm::IntImmNode>()->value, oshape[1].as<tvm::IntImmNode>()->value,
+       oshape[2].as<tvm::IntImmNode>()->value, oshape[3].as<tvm::IntImmNode>()->value});
   call->ctx = x->ctx;
-}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+}
+
+MNM_OP_DECLARE("mnm.op.conv2d", Conv2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 void Pool2D(const CallValues& call) {
   // NCHW
@@ -62,32 +95,42 @@ void Pool2D(const CallValues& call) {
   CHECK_EQ(x->ndim, 4);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   std::vector<int64_t> stride = args->stride.empty() ? kernel : Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
-  int64_t n_in = x->shape[0];
-  int64_t c_in = x->shape[1];
-  int64_t h_in = x->shape[2];
-  int64_t w_in = x->shape[3];
+  tvm::tir::BijectiveLayout layout_converter(args->layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> ishape{tvm::Integer(x->shape[0]), tvm::Integer(x->shape[1]),
+                                   tvm::Integer(x->shape[2]), tvm::Integer(x->shape[3])};
+  ishape = layout_converter.ForwardShape(ishape);
+  int64_t n_in = ishape[0].as<tvm::IntImmNode>()->value;
+  int64_t c_in = ishape[1].as<tvm::IntImmNode>()->value;
+  int64_t h_in = ishape[2].as<tvm::IntImmNode>()->value;
+  int64_t w_in = ishape[3].as<tvm::IntImmNode>()->value;
   int64_t kernel_h = kernel[0];
   int64_t kernel_w = kernel[1];
   int64_t stride_h = stride[0];
   int64_t stride_w = stride[1];
-  int64_t pad_h = padding[0];
-  int64_t pad_w = padding[1];
+  int64_t pad_h;
+  int64_t pad_w;
+  GetPadHW(args->padding, &pad_h, &pad_w);
   int64_t dilate_h = dilation[0];
   int64_t dilate_w = dilation[1];
   int64_t h_out, w_out;
   CHECK(dilate_h == 1 && dilate_w == 1) << "Pooling does not support dilation!";
   if (!args->ceil_mode) {
-    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
-    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
+    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   } else {
-    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
-    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
+    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
+    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
   }
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/{n_in, c_in, h_out, w_out});
+  tvm::Array<tvm::PrimExpr> oshape{tvm::Integer(n_in), tvm::Integer(c_in), tvm::Integer(h_out),
+                                   tvm::Integer(w_out)};
+  oshape = layout_converter.BackwardShape(oshape);
+  call->out = TensorValue::Assemble(
+      /*ctx=*/x->ctx,
+      /*dtype=*/x->dtype,
+      /*shape=*/
+      {oshape[0].as<tvm::IntImmNode>()->value, oshape[1].as<tvm::IntImmNode>()->value,
+       oshape[2].as<tvm::IntImmNode>()->value, oshape[3].as<tvm::IntImmNode>()->value});
   call->ctx = x->ctx;
 }
 
@@ -239,6 +282,39 @@ void LayerNormDx(const CallValues& call) {
   call->ctx = x->ctx;
 }
 MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
+void Pad(const CallValues& call) {
+  const auto* args = call->args.as<PadArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* data = args->x;
+
+  CHECK(args->pad_width.size() % 2 == 0);
+  // check that pad widths match lengths
+  CHECK(data->ndim == args->pad_width.size() / 2)
+      << "There should be as many pad width pairs as shape dimensions "
+      << "but the shape has " << data->ndim << " dimensions "
+      << "and there are " << args->pad_width.size() / 2 << " pad width pairs.";
+
+  // each pad width element should be a pair of positive integers
+  std::vector<int64_t> oshape;
+  for (size_t i = 0; i < args->pad_width.size(); i += 2) {
+    auto width1 = args->pad_width[i];
+    auto width2 = args->pad_width[i + 1];
+    CHECK(width1 >= 0) << "Param width elements should be positive but first pad width at "
+                       << "index " << i << " is " << width1 << ".";
+    CHECK(width2 >= 0) << "Param width elements should be positive but first pad width at "
+                       << "index " << i << " is " << width2 << ".";
+
+    auto padding = width1 + width2;
+    oshape.push_back(data->shape[i / 2] + padding);
+  }
+
+  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+                                    /*dtype=*/data->dtype,
+                                    /*shape=*/oshape);
+  call->ctx = data->ctx;
+}
+MNM_OP_DECLARE("mnm.op.pad", Pad).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare
 }  // namespace op

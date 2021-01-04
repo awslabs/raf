@@ -5,6 +5,7 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
+#include <tvm/tir/data_layout.h>
 #include <tvm/node/container.h>
 #include <tvm/ir/env_func.h>
 #include <vector>
@@ -42,8 +43,10 @@ Type Conv2DInfer(const CallValues& value) {
   CHECK_EQ(x->shape.size(), 4);
   CHECK_EQ(w->shape.size(), 4);
   std::vector<int64_t> stride = Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
+  int64_t pad_h_int;
+  int64_t pad_w_int;
+  GetPadHW(args->padding, &pad_h_int, &pad_w_int);
   PrimExpr n_in = x->shape[0];
   PrimExpr c_in = x->shape[1];
   PrimExpr h_in = x->shape[2];
@@ -54,12 +57,12 @@ Type Conv2DInfer(const CallValues& value) {
   PrimExpr kernel_w = w->shape[3];
   PrimExpr stride_h = Integer(stride[0]);
   PrimExpr stride_w = Integer(stride[1]);
-  PrimExpr pad_h = Integer(padding[0]);
-  PrimExpr pad_w = Integer(padding[1]);
+  PrimExpr pad_h = Integer(pad_h_int);
+  PrimExpr pad_w = Integer(pad_w_int);
   PrimExpr dilate_h = Integer(dilation[0]);
   PrimExpr dilate_w = Integer(dilation[1]);
-  PrimExpr h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
-  PrimExpr w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+  PrimExpr h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
+  PrimExpr w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   PrimExpr groups = Integer(args->groups);
   CHECK(TypeCheckCompare(c_in / groups, in, std::equal_to<int>()))
       << "Unmatched input channel " << c_in << " and weight channel size" << in
@@ -92,30 +95,35 @@ Type Pool2DInfer(const CallValues& value) {
   TensorType x = Downcast<TensorType>(GetType(args->x));
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   std::vector<int64_t> stride = args->stride.empty() ? kernel : Pad<2>(args->stride);
-  std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
-  PrimExpr n_in = x->shape[0];
-  PrimExpr c_in = x->shape[1];
-  PrimExpr h_in = x->shape[2];
-  PrimExpr w_in = x->shape[3];
+  tvm::tir::BijectiveLayout layout_converter(args->layout, "NCHW");
+  Array<PrimExpr> shape = layout_converter.ForwardShape(x->shape);
+  PrimExpr n_in = shape[0];
+  PrimExpr c_in = shape[1];
+  PrimExpr h_in = shape[2];
+  PrimExpr w_in = shape[3];
   PrimExpr kernel_h = Integer(kernel[0]);
   PrimExpr kernel_w = Integer(kernel[1]);
   PrimExpr stride_h = Integer(stride[0]);
   PrimExpr stride_w = Integer(stride[1]);
-  PrimExpr pad_h = Integer(padding[0]);
-  PrimExpr pad_w = Integer(padding[1]);
+  int64_t pad_h_int;
+  int64_t pad_w_int;
+  GetPadHW(args->padding, &pad_h_int, &pad_w_int);
+  PrimExpr pad_h = Integer(pad_h_int);
+  PrimExpr pad_w = Integer(pad_w_int);
   PrimExpr dilate_h = Integer(dilation[0]);
   PrimExpr dilate_w = Integer(dilation[1]);
   PrimExpr h_out, w_out;
   CHECK(dilation[0] == 1 && dilation[1] == 1) << "Pooling does not support dilation!";
   if (!args->ceil_mode) {
-    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
-    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
+    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   } else {
-    h_out = (h_in + 2 * pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
-    w_out = (w_in + 2 * pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
+    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
+    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
   }
-  return TensorType(Array<PrimExpr>{n_in, c_in, h_out, w_out}, x->dtype);
+  Array<PrimExpr> oshape{n_in, c_in, h_out, w_out};
+  return TensorType(layout_converter.BackwardShape(oshape), x->dtype);
 }
 
 MNM_OP_TYPE("mnm.op.max_pool2d", "Pool2D", Pool2DInfer);
@@ -192,6 +200,37 @@ MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
 
 MNM_OP_TYPE("mnm.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
 MNM_OP_TYPE("mnm.op.layer_norm_dx", "LayerNormDx", GeneralDxInfer<LayerNormDxArgs>);
+
+Type PadInfer(const CallValues& value) {
+  const auto* args = value->args.as<PadArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->x));
+
+  CHECK(args->pad_width.size() % 2 == 0);
+  // check that pad widths match lengths
+  CHECK(data->shape.size() == args->pad_width.size() / 2)
+      << "There should be as many pad width pairs as shape dimensions "
+      << "but the shape has " << data->shape.size() << " dimensions "
+      << "and there are " << args->pad_width.size() / 2 << " pad width pairs.";
+
+  // each pad width element should be a pair of positive integers
+  std::vector<PrimExpr> oshape;
+  for (size_t i = 0; i < args->pad_width.size(); i += 2) {
+    auto width1 = args->pad_width[i];
+    auto width2 = args->pad_width[i + 1];
+    CHECK(width1 >= 0) << "Param width elements should be positive but first pad width at "
+                       << "index " << i << " is " << width1 << ".";
+    CHECK(width2 >= 0) << "Param width elements should be positive but first pad width at "
+                       << "index " << i << " is " << width2 << ".";
+
+    auto padding = Integer(width1 + width2);
+    oshape.push_back(data->shape[i / 2] + padding);
+  }
+
+  return TensorType(oshape, data->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.pad", "Pad", PadInfer);
 
 }  // namespace type
 }  // namespace op

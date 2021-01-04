@@ -5,10 +5,12 @@
  */
 #include <array>
 #include <numeric>
+#include <mnm/tvmjit/reduce.h>
 #include "./tvm_attrs.h"
 #include "./tvmjit_utils.h"
 #include "../../schema/reduce.h"
 #include "../../../common/shape_utils.h"
+#include "../../schema/likes.h"
 
 namespace mnm {
 namespace op {
@@ -72,6 +74,8 @@ MNM_TVMJIT(Any, "mnm.op.any", ReduceArgs, ReduceSchema2Args, ReduceSchemaArgName
            ReduceSchema2Attrs, ReduceHasher);
 MNM_TVMJIT(Mean, "mnm.op.mean", ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
            ReduceSchema2Attrs, ReduceHasher);
+MNM_TVMJIT(Prod, "mnm.op.prod", ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
+           ReduceSchema2Attrs, ReduceHasher);
 
 std::vector<Value> ReduceDxSchema2Args(const ReduceDxArgs* args) {
   return {args->x, args->y, args->dy};
@@ -113,6 +117,39 @@ HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_typ
 
 MNM_TVMJIT(MeanDx, "mnm.op.mean_dx", ReduceDxArgs, ReduceDxSchema2Args, ReduceDxSchemaArgNames,
            ReduceDxSchema2Attrs, ReduceDxHasher);  // NOLINT
+
+TVM_REGISTER_NODE_TYPE(SumAttrs);
+
+std::vector<Value> SumSchema2Args(const SumArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SumSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs SumSchema2Attrs(const SumArgs* args) {
+  auto attrs = make_object<SumAttrs>();
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    attrs->axis.push_back(args->axis[i]);
+  }
+  for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
+    attrs->keepdims.push_back(args->keepdims[i]);
+  }
+  return Attrs(attrs);
+}
+
+HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, const SumArgs* args) {
+  HashKey key = GenericHasher<std::nullptr_t>(param_types, ret_type, nullptr);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    key << args->axis[i];
+    key << args->keepdims[i];
+  }
+  return key;
+}
+
+MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumSchema2Args, SumSchemaArgNames, SumSchema2Attrs,
+           SumHasher);
 
 }  // namespace tvmjit
 }  // namespace op
