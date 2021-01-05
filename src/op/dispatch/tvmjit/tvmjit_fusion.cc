@@ -151,6 +151,12 @@ class Meta2TVM : public ExprMutator {
     return ret;
   }
 
+  Expr VisitExpr(const Expr& expr) override {
+    auto ret = ExprMutator::VisitExpr(expr);
+    ret->checked_type_ = expr->checked_type();
+    return ret;
+  }
+
   Expr VisitExpr_(const VarNode* node) override {
     input_.insert(GetRef<Var>(node));
     return GetRef<Var>(node);
@@ -172,9 +178,7 @@ class Meta2TVM : public ExprMutator {
         input_.insert(GetRef<Var>(vn));
       }
     }
-    Call ret = Call(node->op, inputs, op_tvm_attr);
-    ret->checked_type_ = node->checked_type();
-    return ret;
+    return Call(node->op, inputs, op_tvm_attr);
   }
 
   Expr VisitExpr_(const FunctionNode* node) override {

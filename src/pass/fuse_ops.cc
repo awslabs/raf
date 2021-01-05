@@ -6,7 +6,9 @@
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/binding.h"
+#include "mnm/pass.h"
 #include "support/arena.h"
+#include "tvm/relay/op_attr_types.h"
 
 namespace mnm {
 namespace pass {
@@ -180,6 +182,14 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     graph_.post_dfs_order.push_back(node);
   }
 
+  Expr GetExpr(const Expr& expr) {
+    auto it = let_binding_.find(expr);
+    if (it != let_binding_.end()) {
+      return it->second;
+    }
+    return expr;
+  }
+
   // Post order tree
   void VisitExpr_(const FunctionNode* op) final {
     for (auto param : op->params) {
@@ -233,13 +243,8 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     const auto* rtype = call->checked_type().as<TensorTypeNode>();
     // pass the analysis back to all the children it references.
     for (size_t i = 0; i < call->args.size(); ++i) {
-      auto arg = call->args[i];
+      auto arg = GetExpr(call->args[i]);
       const auto* arg_type = arg->checked_type().as<TensorTypeNode>();
-      // check if the arg is bound to another expr
-      auto it = let_binding_.find(arg);
-      if (it != let_binding_.end()) {
-        arg = it->second;
-      }
       // specifically check if result type is the same as arguments type
       OpPatternKind edge_pattern = op_pattern;
       if (edge_pattern == kBroadcast && arg_type != nullptr && rtype != nullptr &&
@@ -256,7 +261,8 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     CHECK(graph_.node_map.count(op));
     Node* tuple_node = graph_.node_map.at(op);
     tuple_node->pattern = kTuple;
-    for (const Expr& field : op->fields) {
+    for (Expr field : op->fields) {
+      field = GetExpr(field);
       if (field->checked_type().as<TensorTypeNode>()) {
         this->Update(field, tuple_node, kInjective);
       } else {
@@ -288,7 +294,8 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
       CHECK(graph_.node_map.count(op));
       Node* node = graph_.node_map.at(op);
       node->pattern = kInjective;
-      this->Update(op->tuple, node, kInjective);
+      Expr tuple = GetExpr(op->tuple);
+      this->Update(tuple, node, kInjective);
     }
     ExprVisitor::VisitExpr_(op);
     this->AddNode(op);
@@ -304,7 +311,6 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     this->Update(op->body, nullptr, kOpaque);
     let_binding_.emplace(op->var, op->value);
     ExprVisitor::VisitExpr_(op);
-    this->AddNode(op);
   }
 
   void VisitExpr_(const IfNode* op) final {
@@ -361,9 +367,12 @@ class DominatorTree {
 
     std::string DebugDump() {
       std::ostringstream os;
-      os << "gnode=<" << gnode->DebugDump() << ">, depth=" << depth << ", pattern=" << pattern;
+      os << "gnode=<" << gnode->DebugDump() << ">, depth=" << depth << ", pattern=" << pattern
+         << ", parent=";
       if (parent) {
-        os << ", parent=" << parent->gnode->index;
+        os << parent->gnode->index;
+      } else {
+        os << "null";
       }
       return os.str();
     }
@@ -697,8 +706,6 @@ class GraphPartitioner {
         if (group_node->pattern > kInjective) continue;
         Group* dom_parent_group = groups_[dom_parent_gindex];
         Group* dom_root_group = dom_parent_group->FindRoot();
-        // If dom node group has a tuple as its root, we do not fuse tuple fields into it
-        if (dom_root_group->pattern == kTuple) continue;
         if (dom_parent_group->pattern == kTuple && dom_root_group->pattern <= kInjective) {
           // Now we know the tuple has been fused into subsequent injective ops
           auto fcond = [](OpPatternKind kind, bool is_sink) { return kind <= kInjective; };
@@ -716,8 +723,6 @@ class GraphPartitioner {
           group_node->FindRoot() == groups_[dom_parent_gindex]->FindRoot()) {
         continue;
       }
-      // Do not fuse into tuple for now
-      if (groups_[dom_parent_gindex]->pattern == kTuple) continue;
       // Try to fuse current node to its post-dominator.
       if (group_node->pattern == kOutEWiseFusable) {
         if (phase != 0) continue;
@@ -744,7 +749,7 @@ class GraphPartitioner {
               return kind <= kInjective;
             } else {
               return (kind <= kBroadcast || kind == kCommReduce || kind == kInjective ||
-                      kind == kOutEWiseFusable);
+                      kind == kOutEWiseFusable || kind == kTuple);
             }
           };
           if (CheckPath(graph_node, dom_node->parent->gnode, fcond)) {
@@ -774,12 +779,21 @@ std::vector<GraphPartitioner::Group*> GraphPartitioner::Partition(
   if (opt_level_ == 0) return std::move(groups_);
   // get post dominator tree
   auto post_dom_tree = DominatorTree::PostDom(arena_, graph);
+  // The following line can be used for debug the post dominator tree
+  // LOG(INFO) << post_dom_tree.DebugDump();
   // run fusion algorithm.
   for (int phase = 0; phase < 3; ++phase) {
     this->RunFuse(graph, post_dom_tree, phase);
   }
   return std::move(groups_);
 }
+
+struct HasCallVisitor : ExprVisitor {
+  bool has_call = false;
+  void VisitExpr_(const CallNode* op) final {
+    has_call = true;
+  }
+};
 
 class FuseMutator : private ExprMutator {
  public:
@@ -877,12 +891,19 @@ class FuseMutator : private ExprMutator {
 
   Expr VisitExpr_(const TupleNode* tuple) {
     auto* ret_group = gmap_.at(tuple)->FindRoot();
-    if (ret_group->root_ref == tuple) {
-      return ExprMutator::VisitExpr_(tuple);
-    }
-    // This tuple is an intermediate node in the group
     Array<Expr> new_fields = GetNewArguments(tuple->fields, ret_group);
-    return Tuple(new_fields);
+    if (ret_group->root_ref != tuple) {
+      // This tuple is an intermediate node in the group
+      return Tuple(new_fields);
+    }
+    // This tuple is the root of group
+    HasCallVisitor visitor;
+    visitor.VisitExpr(Tuple(new_fields));
+    if (visitor.has_call) {
+      // Other ops have been fused into this tuple
+      return MakeNewFunction(ret_group, tuple->checked_type(), Tuple(new_fields));
+    }
+    return ExprMutator::VisitExpr_(tuple);
   }
 
   Expr VisitExpr_(const TupleGetItemNode* tuple_get) {
@@ -903,6 +924,7 @@ class FuseMutator : private ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* let) {
+    auto ret_group = gmap_.at(let->var.get())->FindRoot();
     auto new_value = Mutate(let->value);
     let_binding_.emplace(let->var, std::make_pair(let->value, new_value));
     auto new_body = Mutate(let->body);
@@ -915,12 +937,7 @@ class FuseMutator : private ExprMutator {
 
   Expr MakeNewFunction(GraphPartitioner::Group* group, Type ret_type, Expr body) {
     // If the function has no call, it is not a primitive function.
-    struct HasCallVisitor : ExprVisitor {
-      bool has_call = false;
-      void VisitExpr_(const CallNode* op) final {
-        has_call = true;
-      }
-    } visitor;
+    HasCallVisitor visitor;
     visitor(body);
     const GroupInfo& ginfo = ginfo_[group];
     auto func = Function(ginfo.params, body, ret_type, {});

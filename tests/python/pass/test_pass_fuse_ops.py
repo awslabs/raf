@@ -3,9 +3,11 @@ import numpy as np
 import pytest
 import mnm
 from mnm.model import Conv2d
+from mnm.model.trace import trace_mutate_attr
 from mnm.testing import run_infer_type
 import tvm
 from tvm import relay
+
 
 def t2m_param(param, ctx="cuda"):
     return mnm.ndarray(param, ctx=ctx)  # pylint: disable=unexpected-keyword-arg
@@ -319,6 +321,86 @@ def test_tuple_root():
     func_expected = expected((1, 16, 64, 64))
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(after, func_expected)
+
+
+def test_sgd():
+    shape = [2, 3, 4]
+    dtype = 'float32'
+    ctx = "llvm"
+    class Model(mnm.Model):
+        def build(self):
+            self.reset()
+
+        def reset(self):
+            self.x = mnm.array(np.random.randn(*shape).astype(dtype), ctx=ctx)
+
+        @mnm.model.trace
+        def forward(self, dy):  # pylint: disable=no-self-use
+            y = mnm.relu(self.x)
+            dx = mnm.relu_dx(self.x, y, dy)
+            return y, dx
+
+    class SGD(mnm.Model):
+        def build(self, model, lr=0.1, mu=0.01):
+            self.model = model
+            self.lr = lr
+            self.mu = mu
+            self.reset()
+
+        def reset(self):
+            self.v = mnm.array(np.zeros(shape, dtype=dtype), ctx=ctx)
+            self.model.reset()
+
+        @mnm.model.trace
+        def forward(self, dy):
+            out = self.model(dy)
+            y = out[0]
+            dx = out[1]
+            # update params
+            sgd_out = mnm.sgd(self.model.x, dx, self.v, self.lr, self.mu)
+            new_v = sgd_out[0]
+            new_x = sgd_out[1]
+            trace_mutate_attr(self.model, "x", new_x)
+            trace_mutate_attr(self, "v", new_v)
+            return y
+
+    def expected():
+        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
+        relu_dx_op = mnm._ffi.op.GetOp("mnm.op.relu_dx")
+        sgd_op = mnm._ffi.op.GetOp("mnm.op.sgd")
+        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
+
+        x = relay.var("p0", shape=shape)
+        dy = relay.var("p1", shape=shape)
+        v = relay.var("p2", shape=shape)
+        y = relay.Call(relu_op, [x])
+        y1 = relay.Call(relu_dx_op, [x, y, dy])
+        y2 = relay.Call(sgd_op, [x, y1, v, default, default])
+        out = relay.Tuple([y, relay.TupleGetItem(y2, 1), relay.TupleGetItem(y2, 0)])
+        f = relay.Function([x, dy, v], out)
+        f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+
+        x = relay.var("model.x", shape=shape)
+        dy = relay.var("dy", shape=shape)
+        v = relay.var("v", shape=shape)
+        a6 = relay.var("a6")
+        let = relay.Let(a6, relay.Call(f, [x, dy, v]), a6)
+        return relay.Function([dy, v, x], let)
+
+    m_param, _ = randn(shape, ctx=ctx)
+    n_v = np.zeros(shape, dtype=dtype)
+    m_dy, _ = randn(shape, ctx=ctx)
+    model = Model()
+    sgd = SGD(model)
+    model.x = m_param
+    sgd.v = mnm.array(n_v, ctx=ctx)
+    func = sgd._internal(m_dy).func
+    func = run_infer_type(func)
+    func = mnm._ffi.pass_.FuseOps(func, 3)
+    func = run_infer_type(func)
+    func_expected = expected()
+    func_expected = run_infer_type(func_expected)
+    assert tvm.ir.structural_equal(func, func_expected)
 
 
 if __name__ == "__main__":
