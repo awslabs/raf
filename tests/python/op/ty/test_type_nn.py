@@ -150,7 +150,8 @@ def test_layer_norm(shape, axis, eps, dtype):
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
 @pytest.mark.parametrize("dilation", [1])
 @pytest.mark.parametrize("padding", [0, 1, 2])
-def test_conv2d(dtype, xshape, wshape, stride, dilation, padding): # pylint: disable=too-many-arguments
+@pytest.mark.parametrize("is_nhwc", [False, True])
+def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # pylint: disable=too-many-arguments
     # N.B.: NCHW + OIHW
     import torch.nn.functional as F
 
@@ -160,7 +161,15 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding): # pylint: dis
 
         @mnm.model.trace
         def forward(self, x, w):  # pylint: disable=no-self-use
-            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+            layout, kernel_layout = ("NCHW", "OIHW") if not is_nhwc else ("NHWC", "HWIO")
+            if is_nhwc:
+                x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
+                w = mnm.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
+            ret = mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1,
+                             layout=layout, kernel_layout=kernel_layout, out_layout=layout)
+            if is_nhwc:
+                ret = mnm.transpose(ret, (0, 3, 1, 2))  # NHWC -> NCHW
+            return ret
 
     class Conv2DGrad(mnm.Model):
         def build(self, grad_mode):
@@ -188,20 +197,21 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding): # pylint: dis
     y_ty = TensorType(t_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty, w_ty], y_ty)
     check_type(m_func, expected_type)
-    # backward
-    # TODO(@XIAO-XIA): using AutoDiff to check backward after impl the type func of shape
-    dx_modle = Conv2DGrad("dx")
-    dw_modle = Conv2DGrad("dw")
-    m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype)
-    dy_ty = TensorType(t_dy.shape, dtype=dtype)
-    dx_func = dx_modle._internal(m_w, m_y, m_dy).func
-    dw_func = dw_modle._internal(m_x, m_y, m_dy).func
-    dx_func = run_infer_type(dx_func)
-    dw_func = run_infer_type(dw_func)
-    dx_checked_type = FuncType([w_ty, y_ty, dy_ty], x_ty)
-    dw_checked_type = FuncType([x_ty, y_ty, dy_ty], w_ty)
-    check_type(dx_func, dx_checked_type)
-    check_type(dw_func, dw_checked_type)
+    if not is_nhwc:
+        # NHWC layout is not supported in backward yet.
+        # TODO(@XIAO-XIA): using AutoDiff to check backward after impl the type func of shape
+        dx_modle = Conv2DGrad("dx")
+        dw_modle = Conv2DGrad("dw")
+        m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype)
+        dy_ty = TensorType(t_dy.shape, dtype=dtype)
+        dx_func = dx_modle._internal(m_w, m_y, m_dy).func
+        dw_func = dw_modle._internal(m_x, m_y, m_dy).func
+        dx_func = run_infer_type(dx_func)
+        dw_func = run_infer_type(dw_func)
+        dx_checked_type = FuncType([w_ty, y_ty, dy_ty], x_ty)
+        dw_checked_type = FuncType([x_ty, y_ty, dy_ty], w_ty)
+        check_type(dx_func, dx_checked_type)
+        check_type(dw_func, dw_checked_type)
 
 
 # pylint: disable=no-self-use, too-many-arguments
