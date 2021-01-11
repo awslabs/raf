@@ -172,6 +172,19 @@ Array<Expr> CastGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
 
 MNM_OP_GRAD("mnm.op.cast", CastGrad);
 
+Array<Expr> GatherGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                       const Expr& dy) {
+  static auto gather_dx = Op::Get("mnm.op.gather_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& data = call->args[0];
+  const Expr& axis = call->args[1];
+  const Expr& indices = call->args[2];
+  return {Call(gather_dx, {data, axis, indices, dy})};
+}
+
+MNM_OP_GRAD("mnm.op.gather", GatherGrad);
+
 Array<Expr> GatherNdGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                          const Expr& dy) {
   static auto gather_nd_dx = Op::Get("mnm.op.gather_nd_dx");

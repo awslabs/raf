@@ -408,6 +408,33 @@ Type StackInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.stack", "Stack", StackInfer);
 
+Type GatherInfer(const CallValues& value) {
+  const auto* args = value->args.as<GatherArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  int axis = args->axis;
+  TensorType indices = Downcast<TensorType>(GetType(args->indices));
+
+  size_t idim = indices->shape.size();
+
+  Array<PrimExpr> oshape;
+  for (size_t i = 0; i < idim; i++) {
+    oshape.push_back(indices->shape[i]);
+  }
+  return TensorType(oshape, data->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.gather", "Gather", GatherInfer);
+
+Type GatherDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<GatherDxArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  return data;
+}
+
+MNM_OP_TYPE("mnm.op.gather_dx", "GatherDx", GatherDxInfer);
+
 Type GatherNdInfer(const CallValues& value) {
   const auto* args = value->args.as<GatherNdArgs>();
   CHECK(args != nullptr);

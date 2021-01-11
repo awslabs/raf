@@ -51,6 +51,23 @@ class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
   MNM_OP_SCHEMA(ExpandDimsArgs, "mnm.args.expand_dims");
 };
 
+class GatherArgs : public ir::AttrsNode<GatherArgs> {
+ public:
+  value::BaseTensorValue data;
+  int axis;
+  value::BaseTensorValue indices;
+  MNM_OP_SCHEMA(GatherArgs, "mnm.args.gather");
+};
+
+class GatherDxArgs : public ir::AttrsNode<GatherDxArgs> {
+ public:
+  value::BaseTensorValue data;
+  int axis;
+  value::BaseTensorValue indices;
+  value::BaseTensorValue dy;
+  MNM_OP_SCHEMA(GatherDxArgs, "mnm.args.gather_dx");
+};
+
 class GatherNdArgs : public ir::AttrsNode<GatherNdArgs> {
  public:
   value::BaseTensorValue data;

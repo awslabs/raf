@@ -46,6 +46,8 @@ from ._internal import erf_dx
 from ._internal import exp
 from ._internal import expand_dims
 from ._internal import floor
+from ._internal import gather
+from ._internal import gather_dx
 from ._internal import gather_nd
 from ._internal import gather_nd_dx
 from ._internal import get_kept_dims

@@ -17,21 +17,22 @@ __all__ = [
     "conv2d_dw", "conv2d_dx", "copy", "cos", "cross_entropy",
     "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "divide", "equal",
     "erf", "erf_dx", "exp", "expand_dims", "floor",
-    "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
-    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
-    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
-    "min", "minimum", "mod", "multiply", "negative",
-    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
-    "pad", "power", "prod", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "round",
-    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "gather", "gather_dx", "gather_nd", "gather_nd_dx", "get_kept_dims",
+    "get_reduce_axis", "get_valid_counts", "greater", "greater_equal", "layer_norm",
+    "layer_norm_dx", "less", "less_equal", "log", "log_softmax",
+    "log_softmax_dx", "logical_not", "matmul", "matmul_nt", "matmul_tn",
+    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
+    "mean", "mean_dx", "min", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "non_max_suppression", "not_equal", "pad", "power", "prod",
+    "relu", "relu_dx", "repeat", "reshape", "reverse",
+    "reverse_sequence", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stack_dx", "stream_sync", "strided_slice", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx",
 ]
 
 @set_module("mnm")
@@ -356,6 +357,21 @@ def expand_dims(x, axis, num_newaxis=1):
 def floor(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.floor(x))
+
+@set_module("mnm")
+def gather(data, axis, indices):
+    data = imp_utils.to_tensor(data)
+    axis = imp_utils.to_int(axis)
+    indices = imp_utils.to_tensor(indices)
+    return imp_utils.ret(ffi.gather(data, axis, indices))
+
+@set_module("mnm")
+def gather_dx(data, axis, indices, dy):
+    data = imp_utils.to_tensor(data)
+    axis = imp_utils.to_int(axis)
+    indices = imp_utils.to_tensor(indices)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.gather_dx(data, axis, indices, dy))
 
 @set_module("mnm")
 def gather_nd(data, indices):

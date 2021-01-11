@@ -415,6 +415,17 @@ SCHEMAS = {
             cxx_type="std::vector<value::BaseTensorValue>",
             cxx_normalizer="TensorTuple"),
     ],
+    "transform.h::gather": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int"),
+        Arg(name="indices", cxx_type="value::BaseTensorValue"),
+    ],
+    "transform.h::gather_dx": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int"),
+        Arg(name="indices", cxx_type="value::BaseTensorValue"),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+    ],
     "transform.h::gather_nd": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="indices", cxx_type="value::BaseTensorValue"),

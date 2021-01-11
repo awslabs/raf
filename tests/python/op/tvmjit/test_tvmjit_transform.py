@@ -521,6 +521,38 @@ def test_cast(shape, ctx, itype, otype):
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("dshape", [[2, 2, 2], [2, 3], [10, 11, 12, 13]])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_gather(dshape, axis, ctx):
+    class Gather(mnm.Model):
+        def build(self, axis):
+            self.axis = axis
+        @mnm.model.trace
+        def forward(self, data, indices):
+            return mnm.gather(data, self.axis, indices)
+
+    # pylint: disable=no-self-use
+    m_x, n_x = randn(dshape, ctx=ctx)
+    m_x.requires_grad = True
+    m_i, n_i = randint(dshape, high=dshape[axis], ctx=ctx)
+    model = Gather(axis)
+    # check forward
+    m_y = model(m_x, m_i)
+    v_y = run_vm_model(model, ctx, [m_x, m_i])
+    torch_x = torch.from_numpy(n_x)
+    torch_x.requires_grad = True
+    m_dy, n_dy = randn(m_y.shape, ctx=ctx)
+    torch_dy = torch.from_numpy(n_dy)
+    torch_y = torch.gather(torch_x, axis, torch.from_numpy(n_i))
+    torch_y.backward(torch_dy)
+    m_y.backward(m_dy)
+    check(m_y, torch_y.detach().numpy())
+    check(v_y, torch_y.detach().numpy())
+    # checkout backward
+    check(torch_x.grad, m_x.grad)
+
+
+@pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
 @pytest.mark.parametrize("ishape", [[3, 4, 2], [4, 5, 3]])
 def test_gather_nd(dshape, ishape, ctx):

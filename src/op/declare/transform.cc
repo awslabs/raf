@@ -573,6 +573,35 @@ MNM_OP_DECLARE("mnm.op.cast_like", [](const CallValues& call) {
   call->ctx = dtype_like->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
+MNM_OP_DECLARE("mnm.op.gather", [](const CallValues& call) {
+  const auto* args = call->args.as<GatherArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* data = args->data;
+  int axis = NormalizeAxis(args->axis, data->ndim);
+  const DLTensor* indices = args->indices;
+  int64_t* ishape = indices->shape;
+
+  int idim = indices->ndim;
+  std::vector<int64_t> oshape(idim, -1);
+  for (int i = 0; i < idim; ++i) {
+    oshape[i] = ishape[i];
+  }
+
+  call->out = TensorValue::Assemble(data->ctx, data->dtype, oshape);
+  call->ctx = data->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.gather_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<GatherDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* data = args->data;
+  std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+                                    /*dtype=*/data->dtype,
+                                    /*shape=*/shape);
+  call->ctx = data->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.gather_nd", [](const CallValues& call) {
   const auto* args = call->args.as<GatherNdArgs>();
   CHECK(args != nullptr);

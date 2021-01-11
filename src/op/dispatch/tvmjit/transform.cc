@@ -481,6 +481,54 @@ std::vector<std::string> CastLikeSchemaArgNames(const op::CallValues& call) {
 MNM_TVMJIT(CastLike, "mnm.op.cast_like", CastLikeArgs, CastLikeSchema2Args, CastLikeSchemaArgNames,
            GenericAttrs, GenericHasher);
 
+std::vector<Value> GatherSchema2Args(const GatherArgs* args) {
+  return {args->data, args->indices};
+}
+
+std::vector<std::string> GatherSchemaArgNames(const op::CallValues& call) {
+  return {"data", "indices"};
+}
+
+Attrs GatherSchema2Attrs(const GatherArgs* args) {
+  auto attrs = make_object<GatherAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+HashKey GatherHasher(const std::vector<Type>& param_types, const Type& y_type,
+                     const GatherArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(Gather, "mnm.op.gather", GatherArgs, GatherSchema2Args, GatherSchemaArgNames,
+           GatherSchema2Attrs, GatherHasher);
+
+std::vector<Value> GatherDxSchema2Args(const GatherDxArgs* args) {
+  return {args->data, args->indices, args->dy};
+}
+
+std::vector<std::string> GatherDxSchemaArgNames(const op::CallValues& call) {
+  return {"data", "indices", "dy"};
+}
+
+Attrs GatherDxSchema2Attrs(const GatherDxArgs* args) {
+  auto attrs = make_object<GatherAttrs>();
+  attrs->axis = args->axis;
+  return Attrs(attrs);
+}
+
+HashKey GatherDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                       const GatherDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  return key;
+}
+
+MNM_TVMJIT(GatherDx, "mnm.op.gather_dx", GatherDxArgs, GatherDxSchema2Args, GatherDxSchemaArgNames,
+           GatherDxSchema2Attrs, GatherDxHasher);
+
 std::vector<Value> GatherNdSchema2Args(const GatherNdArgs* args) {
   return {args->data, args->indices};
 }

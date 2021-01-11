@@ -84,5 +84,27 @@ def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
     ret = _topi.sum(temp, axis=tuple(range(0, ind_l - 1)))
     return [ret]
 
+@register_compute("mnm.op.gather_dx")
+def gather_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=invalid-name
+    # pylint: disable=unused-variable
+    data, indices, dy = inputs
+    axis = int(attrs.axis)
+    dim = len(data.shape)
+    if axis < 0:
+        assert axis > -dim
+        axis = dim + axis
+    shape = dy.shape[:axis+1] + [data.shape[axis],] + dy.shape[axis + 1:]
+    A = _tvm.te.compute(shape, lambda *idx:
+                        _tvm.tir.if_then_else(idx[axis + 1] ==
+                                              indices[idx[: axis + 1] + idx[axis + 2:]],
+                                              dy[idx[: axis + 1] + idx[axis + 2:]],
+                                              _tvm.tir.const(0, dy.dtype)))
+    B = _topi.sum(A, axis=axis)
+    return [B]
+
+_reg.register_injective_schedule("mnm.op.gather")
+_reg.register_injective_schedule("mnm.op.gather_dx")
 _reg.register_injective_schedule("mnm.op.gather_nd")
 _reg.register_injective_schedule("mnm.op.gather_nd_dx")

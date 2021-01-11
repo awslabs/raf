@@ -70,6 +70,7 @@ MNM_TVM_OP("mnm.op.floor_divide", "floor_divide");
 MNM_TVM_OP("mnm.op.floor_mod", "floor_mod");
 MNM_TVM_OP("mnm.op.full", "full");
 MNM_TVM_OP("mnm.op.full_like", "full_like");
+MNM_TVM_OP("mnm.op.gather", "gather");
 MNM_TVM_OP("mnm.op.gather_nd", "gather_nd");
 MNM_TVM_OP("mnm.op.get_valid_counts", "get_valid_counts");
 MNM_TVM_OP("mnm.op.greater", "greater");

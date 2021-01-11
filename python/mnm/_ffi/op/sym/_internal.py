@@ -93,6 +93,10 @@ expand_dims = _APIS.get("mnm.op.sym.expand_dims", None)
 # Defined in ./src/op/regs/regs.cc
 floor = _APIS.get("mnm.op.sym.floor", None)
 # Defined in ./src/op/regs/regs.cc
+gather = _APIS.get("mnm.op.sym.gather", None)
+# Defined in ./src/op/regs/regs.cc
+gather_dx = _APIS.get("mnm.op.sym.gather_dx", None)
+# Defined in ./src/op/regs/regs.cc
 gather_nd = _APIS.get("mnm.op.sym.gather_nd", None)
 # Defined in ./src/op/regs/regs.cc
 gather_nd_dx = _APIS.get("mnm.op.sym.gather_nd_dx", None)
