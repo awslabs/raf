@@ -85,5 +85,28 @@ ir::Expr PartitionGraph(ir::Expr expr);
  * \return Transformed Expression.
  */
 ir::Expr AutoCast(ir::Expr func);
+
+/*!
+ * \brief Inline the Let stmt that assigns a var to another and TupleGetItem that can be simplified.
+ * \param expr Expression to be inlined.
+ * \return Transformed Expression.
+ */
+ir::Expr InlineLet(ir::Expr expr);
+
+/*! \brief Remove expressions which does not effect the program result.
+ *
+ * It will remove let bindings which are not referenced.
+ *
+ * For example, this pass should turn `let a = 1 in 2` into `2`,
+ * as the value of the expression does not depend on a.
+ *
+ * As another example, `let a = 1 in a` will be optimized into 1.
+ *
+ * \param expr Expression to be transformed.
+ *
+ * \return Transformed Expression.
+ */
+ir::Expr DeadCodeElimination(const ir::Expr& expr);
+
 }  // namespace pass
 }  // namespace mnm

@@ -14,6 +14,8 @@ AutoDiff = _APIS.get("mnm.pass_.AutoDiff", None)
 BindParam = _APIS.get("mnm.pass_.BindParam", None)
 # Defined in ./src/pass/canonicalize_ops.cc
 CanonicalizeOps = _APIS.get("mnm.pass_.CanonicalizeOps", None)
+# Defined in ./src/pass/dead_code.cc
+DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
 # Defined in ./src/pass/extract_binding.cc
 ExtractBinding = _APIS.get("mnm.pass_.ExtractBinding", None)
 # Defined in ./src/pass/fold_const.cc
@@ -22,6 +24,8 @@ FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
 FuseOps = _APIS.get("mnm.pass_.FuseOps", None)
 # Defined in ./src/pass/type_infer.cc
 InferType = _APIS.get("mnm.pass_.InferType", None)
+# Defined in ./src/pass/inline_let.cc
+InlineLet = _APIS.get("mnm.pass_.InlineLet", None)
 # Defined in ./src/pass/inplace_update.cc
 InplaceUpdate = _APIS.get("mnm.pass_.InplaceUpdate", None)
 # Defined in ./src/pass/lambda_lift.cc
