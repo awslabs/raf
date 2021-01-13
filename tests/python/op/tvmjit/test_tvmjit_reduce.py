@@ -99,8 +99,7 @@ def test_all_any_ops(ops, shape, axis, keepdims, ctx):
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_mean_op_with_axis(shape, dtype, axis, keepdims, ctx):
-    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx, requires_grad=True)
     model = ReduceModel(mnm._op.sym.mean, axis=axis, keepdims=keepdims)
     # check forward
     m_y = model(m_x)
@@ -119,8 +118,7 @@ def test_mean_op_with_axis(shape, dtype, axis, keepdims, ctx):
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_mean_op_without_axis(shape, dtype, ctx):
-    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx, requires_grad=True)
     model = ReduceModel(mnm._op.sym.mean)
     # check forward
     m_y = model(m_x)

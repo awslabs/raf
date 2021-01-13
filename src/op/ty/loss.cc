@@ -15,6 +15,7 @@ namespace type {
 using namespace tvm;
 using namespace tvm::relay;
 using schema::LossArgs;
+using schema::LossDtpArgs;
 
 Type NLLLossInfer(const CallValues& value) {
   const auto* args = value->args.as<LossArgs>();
@@ -29,7 +30,7 @@ Type NLLLossInfer(const CallValues& value) {
 }
 
 Type NLLLossBack(const CallValues& value) {
-  const auto* args = value->args.as<LossArgs>();
+  const auto* args = value->args.as<LossDtpArgs>();
   CHECK(args != nullptr);
   TensorType pred = Downcast<TensorType>(GetType(args->y_pred));
   TensorType true_ = Downcast<TensorType>(GetType(args->y_true));

@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 
 import mnm
+from mnm.testing import run_vm_model, check, get_ctx_list
 
 
 @pytest.mark.parametrize("shape", [(1, ()), (5, (5,))])
@@ -21,15 +22,30 @@ def test_batch_flatten_error(shape):
     [5, 3, 2],
     [5, 2, 2, 2]
 ])
-def test_batch_flatten(shape):
+@pytest.mark.parametrize("ctx", get_ctx_list())
+def test_batch_flatten(shape, ctx):
+    class Model(mnm.model.Model):
+        # pylint: disable=no-self-use
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.batch_flatten(x)
+
     x = np.random.randn(*shape).astype("float32")
     x = mnm.array(x)
-    y = mnm.batch_flatten(x)
-    expcected = (5, functools.reduce(operator.mul, list(x.shape)[1:]))
-    assert y.shape == expcected
-    dy = mnm.reshape(y, mnm.shape(x))
+    # imperative
+    y_i = mnm.batch_flatten(x)
+    expected = (5, functools.reduce(operator.mul, list(x.shape)[1:]))
+    assert y_i.shape == expected
+    dy = mnm.reshape(y_i, mnm.shape(x))
     assert dy.shape == x.shape
     assert (x.asnumpy() == dy.asnumpy()).all()
+    # traced
+    model = Model()
+    y_t = run_vm_model(model, ctx, [x])
+    check(y_t, y_i)
 
 
 if __name__ == "__main__":

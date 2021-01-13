@@ -36,6 +36,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     model = Softmax()
     # forward
     m_x, t_x = randn_torch(shape, dtype=dtype)
+    t_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
             m_func = model._internal(m_x).func
@@ -242,6 +243,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     model = Pool2D()
     # forward
     m_x, t_x = randn_torch(data_shape, dtype=dtype)
+    t_x.requires_grad = True
     m_y = model(m_x)
     m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
@@ -283,7 +285,6 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
 
     m_x, t_x = randn_torch(shape, dtype=dtype)
     model = TestModel()
-    m_x.requires_grad = False
     m_func = model._internal(m_x).func
     m_func = run_infer_type(m_func)
     t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)

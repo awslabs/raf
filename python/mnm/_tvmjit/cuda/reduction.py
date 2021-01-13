@@ -111,7 +111,10 @@ def schedule_reduce(outs):
         """Internal traverse function"""
         if tag.is_broadcast(operator.tag):
             if operator not in scheduled_ops:
-                schedule_injective_from_existing(sch, operator.output(0))
+                if sch[operator].is_output:
+                    schedule_injective_from_existing(sch, operator.output(0))
+                else:
+                    sch[operator].compute_inline()
             for tensor in operator.input_tensors:
                 traverse_after_reduce(tensor.op)
         elif operator.tag == "comm_reduce":

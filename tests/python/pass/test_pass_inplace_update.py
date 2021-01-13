@@ -71,17 +71,17 @@ def test_grad(ctx):
             return out
 
     shape = [2, 3, 4]
-    param = np.random.randn(*shape)
+    param = mnm.array(np.random.randn(*shape), ctx=ctx)
     dy = mnm.array(np.random.randn(*shape), ctx=ctx)
     model = Model(shape)
     sgd = SGD(model)
     # Interpreter
-    model.x = mnm.array(param, ctx=ctx)
+    model.x.update(param)
     out_1 = sgd(dy)
     new_x_1 = model.x
     # VM
-    model.x = mnm.array(param, ctx=ctx)
-    out = run_vm_model(sgd, ctx, [dy, model.x])
+    model.x.update(param)
+    out = run_vm_model(sgd, ctx, [dy])
     out_2 = out[0]
     new_x_2 = out[1]
     # check inplace
@@ -110,7 +110,7 @@ def test_grad(ctx):
     # 13: 33 10 5 1 1 8 11 12 1   # invoke_jit $10 (in: $1, $8, $11, $12, out: $1)
     # 14: 23 2 13 4 1   # alloc_tuple $13 [$4,$1]
     # 15: 1 13   # ret $13
-    model.x = mnm.array(param, ctx=ctx)
+    model.x.update(param)
     bytecode = compile_vm_model(sgd, ctx, [dy, model.x])
     assert bytecode.count("alloc_tensor") == 2
 

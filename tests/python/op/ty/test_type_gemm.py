@@ -64,10 +64,8 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
     # initialize
     model = TestModel()
     n, m, k = shape
-    m_a, _ = randn_torch((n, k) if not transpose_a else (k, n), dtype=dtype)
-    m_b, _ = randn_torch((k, m) if not transpose_b else (m, k), dtype=dtype)
-    m_a.requires_grad = True
-    m_b.requires_grad = True
+    m_a, _ = randn_torch((n, k) if not transpose_a else (k, n), dtype=dtype, requires_grad=True)
+    m_b, _ = randn_torch((k, m) if not transpose_b else (m, k), dtype=dtype, requires_grad=True)
     fwd_ty = TensorType((n, m), dtype=dtype)
     a_ty = TensorType((n, k) if not transpose_a else (k, n), dtype=dtype)
     b_ty = TensorType((k, m) if not transpose_b else (m, k), dtype=dtype)

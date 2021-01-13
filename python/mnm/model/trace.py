@@ -58,19 +58,8 @@ def trace(pyfunc):
 
 # The logic of running a tracing record
 def _run_trace_record(record, args, kwargs):
-    if kwargs:
-        # TODO(@junrushao1994): implement it
-        raise NotImplementedError("keyword arguments not supported yet.")
-    func_inputs = []
-    for arg in args[1:]:
-        if not isinstance(arg, ndarray):
-            raise NotImplementedError("Only ndarray is supported for now")
-        handle = arg._ndarray__handle  # pylint: disable=protected-access
-        func_inputs.append(handle)
-    for param in record.named_params.values():
-        handle = param._ndarray__handle  # pylint: disable=protected-access
-        func_inputs.append(handle)
-
+    # pylint: disable=protected-access
+    func_inputs = _get_func_inputs(record, args[1:], kwargs)
     result = _unwrap(RunModel(record.func, func_inputs))
     if not isinstance(result, list):
         result = [result]
@@ -80,12 +69,32 @@ def _run_trace_record(record, args, kwargs):
     return _unflatten_from_struct(result, record.o_struct)
 
 
+def _get_func_inputs(record, args, kwargs, get_handle=True):
+    # pylint: disable=protected-access
+    if kwargs:
+        # TODO(@junrushao1994): implement it
+        raise NotImplementedError("keyword arguments not supported yet.")
+    func_inputs = []
+    for arg in args:
+        if isinstance(arg, ndarray):
+            handle = arg._ndarray__handle if get_handle else arg
+        elif isinstance(arg, Symbol):
+            handle = arg._Symbol__handle if get_handle else arg
+        else:
+            raise NotImplementedError("Not supported arg type: ", type(arg))
+        func_inputs.append(handle)
+    for param in record.named_params.values():
+        handle = param._ndarray__handle if get_handle else param
+        func_inputs.append(handle)
+    return func_inputs
+
+
 def _unwrap(result):
     if isinstance(result, relay.Var):
         return ndarray(result)
     if isinstance(result, Array):
         return [_unwrap(x) for x in result]
-    raise NotImplementedError(type(result))
+    return result
 
 
 def _get_trace_record(pyfunc, args, kwargs):

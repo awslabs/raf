@@ -18,6 +18,14 @@ class LossArgs : public ir::AttrsNode<LossArgs> {
   value::BaseTensorValue y_pred;
   MNM_OP_SCHEMA(LossArgs, "mnm.args.loss");
 };
+
+class LossDtpArgs : public ir::AttrsNode<LossDtpArgs> {
+ public:
+  value::BaseTensorValue dy;
+  value::BaseTensorValue y_true;
+  value::BaseTensorValue y_pred;
+  MNM_OP_SCHEMA(LossDtpArgs, "mnm.args.loss_dtp");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

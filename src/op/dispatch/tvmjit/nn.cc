@@ -274,11 +274,11 @@ MNM_TVMJIT(AvgPool2D, "mnm.op.avg_pool2d", PoolArgs, PoolSchema2Args, PoolSchema
            AvgPoolSchema2Attrs, PoolHasher);
 
 std::vector<Value> PoolDxSchema2Args(const PoolDxArgs* args) {
-  return {args->x, args->y, args->dy};
+  return {args->dy, args->x};
 }
 
 std::vector<std::string> PoolDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy"};
+  return {"dy", "x"};
 }
 
 Attrs AvgPoolDxSchema2Attrs(const PoolDxArgs* args) {

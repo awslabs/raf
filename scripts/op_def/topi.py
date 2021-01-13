@@ -101,11 +101,14 @@ OP_MAP = {
     "mnm.op.pad": ["nn.pad", "relay.attrs.PadAttrs", "kOpaque"],
     "mnm.op.relu": ["nn.relu", "", "kInjective"],
     "mnm.op.avg_pool2d": ["nn.avg_pool2d", "", "kOpaque"],
+    "mnm.op.avg_pool2d_dx": ["nn.avg_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
     "mnm.op.max_pool2d": ["nn.max_pool2d", "", "kOpaque"],
+    "mnm.op.max_pool2d_dx": ["nn.max_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
     "mnm.op.get_valid_counts": ["get_valid_counts", "", "kInjective"],
     "mnm.op.non_max_suppression": ["non_max_suppression", "relay.attrs.NonMaxSuppressionAttrs", "kInjective"],
     "mnm.op.compiler_begin": ["annotation.compiler_begin", "relay.attrs.CompilerAttrs", "kOpaque"],
     "mnm.op.compiler_end": ["annotation.compiler_end", "relay.attrs.CompilerAttrs", "kOpaque"],
+    "mnm.op.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
 }
 
 # pylint: enable=line-too-long

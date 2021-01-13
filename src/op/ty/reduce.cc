@@ -41,6 +41,9 @@ Type SumInfer(const CallValues& value) {
   CHECK_EQ(axis.size(), keep.size());
   std::vector<std::pair<int64_t, int64_t>> axis_info;
   for (int i = 0, n = axis.size(); i < n; ++i) {
+    if (axis[i] < 0) {
+      axis[i] += x->shape.size();
+    }
     axis_info.emplace_back(axis[i], keep[i]);
   }
   std::sort(axis_info.begin(), axis_info.end());

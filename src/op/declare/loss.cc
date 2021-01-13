@@ -64,7 +64,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss", [](const CallValues& call) {
 }).set_attr<TOpPattern>("TOpPattern", kCommReduce);
 
 MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues& call) {
-  const auto* args = call->args.as<LossArgs>();
+  const auto* args = call->args.as<LossDtpArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
   const DLTensor* true_ = args->y_true;
@@ -78,7 +78,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues& call) {
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.nll_loss_dtrue", [](const CallValues& call) {
-  const auto* args = call->args.as<LossArgs>();
+  const auto* args = call->args.as<LossDtpArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
   const DLTensor* true_ = args->y_true;

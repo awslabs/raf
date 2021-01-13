@@ -190,8 +190,7 @@ def test_split(shape, axis, indices_or_sections, ctx):
         t_indices_or_sections = t_indices_or_sections[1] + (r_section, )
     else:
         t_indices_or_sections = int(shape[axis]/t_indices_or_sections)
-    m_x, t_x = randn_torch(shape, ctx=ctx)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(shape, ctx=ctx, requires_grad=True)
     m_y = model(m_x)
     m_dy, t_dy = randn_torch(m_y[0].shape, ctx=ctx)
     t_y = torch.split(t_x, t_indices_or_sections, dim=axis)
@@ -308,8 +307,7 @@ def test_concatenate(params, ctx):
     shapes, axis = params["shapes"], params["axis"]
     m_i, t_i = [], []
     for shape in shapes:
-        m_x, t_x = randn_torch(shape, ctx=ctx)
-        m_x.requires_grad = True
+        m_x, t_x = randn_torch(shape, ctx=ctx, requires_grad=True)
         m_i.append(m_x)
         t_i.append(t_x)
     model = concat[len(m_i)](axis=axis)

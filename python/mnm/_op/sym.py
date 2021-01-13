@@ -521,15 +521,17 @@ def nll_loss(y_true, y_pred):
     y_pred = sym_utils.to_tensor(y_pred)
     return Symbol.from_expr(ffi.nll_loss(y_true, y_pred))
 
-def nll_loss_dpred(y_true, y_pred):
+def nll_loss_dpred(dy, y_true, y_pred):
+    dy = sym_utils.to_tensor(dy)
     y_true = sym_utils.to_tensor(y_true)
     y_pred = sym_utils.to_tensor(y_pred)
-    return Symbol.from_expr(ffi.nll_loss_dpred(y_true, y_pred))
+    return Symbol.from_expr(ffi.nll_loss_dpred(dy, y_true, y_pred))
 
-def nll_loss_dtrue(y_true, y_pred):
+def nll_loss_dtrue(dy, y_true, y_pred):
+    dy = sym_utils.to_tensor(dy)
     y_true = sym_utils.to_tensor(y_true)
     y_pred = sym_utils.to_tensor(y_pred)
-    return Symbol.from_expr(ffi.nll_loss_dtrue(y_true, y_pred))
+    return Symbol.from_expr(ffi.nll_loss_dtrue(dy, y_true, y_pred))
 
 def non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold=0.5, force_suppress=False, top_k=-1, coord_start=2, score_index=1, id_index=0, return_indices=True, invalid_to_bottom=False):
     data = sym_utils.to_tensor(data)

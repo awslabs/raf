@@ -211,6 +211,11 @@ SCHEMAS = {
         Arg(name="y_true", cxx_type="value::BaseTensorValue"),
         Arg(name="y_pred", cxx_type="value::BaseTensorValue"),
     ],
+    "loss.h::loss_dtp": [
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="y_true", cxx_type="value::BaseTensorValue"),
+        Arg(name="y_pred", cxx_type="value::BaseTensorValue"),
+    ],
     "ufunc.h::unary_ufunc": [
         Arg(name="x", cxx_type="value::Value"),
         Arg(name="out", cxx_type="value::Value", cxx_default="nullptr"),

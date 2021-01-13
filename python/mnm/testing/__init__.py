@@ -13,6 +13,7 @@ from .._core.module import Module
 from .._core.executor import VMExecutor, VMCompiler
 from .._ffi import ir
 from .._ffi import pass_
+from ..model.trace import _get_func_inputs
 
 
 def run_infer_type(func):
@@ -47,19 +48,22 @@ def get_arr_addr(arr):
     return mnm._ffi.value.ToTVM(arr).handle.contents.data
 
 
+def asnumpy(x):
+    """Helper function to convert x to numpy"""
+    if isinstance(x, (mnm.ndarray, mnm._core.value.TensorValue)):
+        return x.asnumpy()
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().numpy()
+    if np.isscalar(x):
+        return np.array(x)
+    assert isinstance(x, np.ndarray), f"{type(x)} is not supported"
+    return x
+
+
 def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     """Helper function to check if m_x and m_y are equal"""
-    def _convert(x):
-        if isinstance(x, (mnm.ndarray, mnm._core.value.TensorValue)):
-            return x.asnumpy()
-        if isinstance(x, torch.Tensor):
-            return x.detach().cpu().numpy()
-        if np.isscalar(x):
-            return np.array(x)
-        assert isinstance(x, np.ndarray), f"{type(x)} is not supported"
-        return x
-    m_x = _convert(m_x)
-    m_y = _convert(m_y)
+    m_x = asnumpy(m_x)
+    m_y = asnumpy(m_y)
     np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
 
 
@@ -87,7 +91,7 @@ def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.0, positive=False):
+def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=False, std=1.0, positive=False):
     """Helper function to generate a pair of mnm and torch arrays"""
     x = np.random.randn(*shape) * std
     if positive:
@@ -97,19 +101,22 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=True, std=1.
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, ctx=ctx)
+    m_x.requires_grad = requires_grad
     t_x = torch.tensor(n_x, requires_grad=requires_grad, device=ctx)  # pylint: disable=not-callable
     return m_x, t_x
 
 
 def run_vm_model(model, ctx, args, optimize=None):
     """Helper function to execute model with VM"""
-    mod = Module()
-    func = model._internal(*args).func
-    if optimize is not None:
+    record = model._internal(*args)
+    func = record.func
+    if optimize:
         func = optimize(func)
+    mod = Module()
     mod[tvm.ir.GlobalVar('main')] = func
+    inputs = _get_func_inputs(record, args, {}, get_handle=False)
     executor = VMExecutor(mod, ctx)
-    out = executor.make_executor()(*args)
+    out = executor.make_executor()(*inputs)
     return out
 
 

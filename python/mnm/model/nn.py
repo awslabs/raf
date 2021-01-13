@@ -138,7 +138,7 @@ class Linear(Model):
 
     @trace
     def forward(self, x):
-        out = sym.matmul_nt(x, self.w)
+        out = sym.dense(x, self.w)
         if self.bias:
             out = sym.add(out, self.b)
         return out

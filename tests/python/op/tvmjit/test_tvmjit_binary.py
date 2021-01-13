@@ -60,10 +60,8 @@ def test_binary_ops(ops, shape, dtype, ctx):
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_binary_ops_with_grad(ops, shape, dtype, ctx):
     t_op, m_op = ops
-    m_x1, t_x1 = randn_torch(shape[0], dtype=dtype, ctx=ctx)
-    m_x2, t_x2 = randn_torch(shape[1], dtype=dtype, ctx=ctx)
-    m_x1.requires_grad = True
-    m_x2.requires_grad = True
+    m_x1, t_x1 = randn_torch(shape[0], dtype=dtype, ctx=ctx, requires_grad=True)
+    m_x2, t_x2 = randn_torch(shape[1], dtype=dtype, ctx=ctx, requires_grad=True)
     model = BinaryModel(m_op)
     # check forward
     m_y = model(m_x1, m_x2)

@@ -34,9 +34,8 @@ def test_smooth_l1_loss(ctx, shape):
             return mnm.smooth_l1_loss(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch(shape, ctx=ctx)
+    m_pred, t_pred = randn_torch(shape, ctx=ctx, requires_grad=True)
     m_true, t_true = randn_torch(shape, ctx=ctx)
-    m_pred.requires_grad = True
     # forward
     t_loss = F.smooth_l1_loss(t_pred, t_true)
     m_loss = model(y_true=m_pred, y_pred=m_true)
@@ -62,9 +61,8 @@ def test_nll_loss(ctx, n, c):
             return mnm.nll_loss(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch((n, c), ctx=ctx)
+    m_pred, t_pred = randn_torch((n, c), ctx=ctx, requires_grad=True)
     m_true, t_true = one_hot(n, c, ctx=ctx)
-    m_pred.requires_grad = True
     # forward
     t_loss = F.nll_loss(t_pred, t_true)
     m_loss = model(y_true=m_true, y_pred=m_pred)
@@ -72,8 +70,9 @@ def test_nll_loss(ctx, n, c):
     check(m_loss, t_loss)
     check(v_loss, t_loss)
     # backward
-    t_loss.backward()
-    m_loss.backward()
+    m_dy, t_dy = randn_torch((), ctx=ctx)
+    t_loss.backward(t_dy)
+    m_loss.backward(m_dy)
     check(m_pred.grad, t_pred.grad)
 
 
@@ -90,9 +89,8 @@ def test_cross_entropy(ctx, n, c):
             return mnm.cross_entropy(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch((n, c), ctx=ctx)
+    m_pred, t_pred = randn_torch((n, c), ctx=ctx, requires_grad=True)
     m_true, t_true = one_hot(n, c, ctx=ctx)
-    m_pred.requires_grad = True
     # forward
     t_loss = F.cross_entropy(t_pred, t_true)
     m_loss = model(y_true=m_true, y_pred=m_pred)
@@ -112,9 +110,9 @@ def test_cross_entropy(ctx, n, c):
 ])
 @pytest.mark.parametrize("ctx", get_ctx_list())
 def test_broadcast_add(shape, ctx):
-    m_a, t_a = randn_torch(shape, ctx=ctx)
+    m_a, t_a = randn_torch(shape, ctx=ctx, requires_grad=True)
     n = len(shape)
-    m_b, t_b = randn_torch([shape[1]] + [1] * (n - 2), ctx=ctx)
+    m_b, t_b = randn_torch([shape[1]] + [1] * (n - 2), ctx=ctx, requires_grad=True)
     t_y = t_a + t_b
     m_y = mnm.add(m_a, m_b)
     check(m_y, t_y)

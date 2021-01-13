@@ -182,8 +182,25 @@ const char SOFTMAX_DX[] = "mnm.op.softmax_dx";
 auto SoftmaxGrad = SoftmaxGradImpl<SOFTMAX_DX>;
 MNM_OP_GRAD("mnm.op.softmax", SoftmaxGrad);
 
-const char LOG_SOFTMAX_DX[] = "mnm.op.log_softmax_dx";
-auto LogSoftmaxGrad = SoftmaxGradImpl<LOG_SOFTMAX_DX>;
+Array<Expr> LogSoftmaxGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                           const Expr& dy) {
+  using namespace mnm::value;
+  static auto op_softmax = Op::Get("mnm.op.softmax");
+  static auto op_sum = Op::Get("mnm.op.sum");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_subtract = Op::Get("mnm.op.subtract");
+  static auto op_divide = Op::Get("mnm.op.divide");
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& x = call->args[0];
+  const Expr& axis = call->args[1];
+  Expr softmax = Call(op_softmax, {x, axis});
+  Expr keep_dims = MakeConstant(IntValue::make(1));
+  Expr e_1 = Call(op_sum, {dy, axis, keep_dims});
+  Expr e_2 = Call(op_multiply, {e_1, softmax});
+  Expr e_3 = Call(op_subtract, {dy, e_2});
+  return {e_3};
+}
+
 MNM_OP_GRAD("mnm.op.log_softmax", LogSoftmaxGrad);
 
 Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,

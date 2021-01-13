@@ -114,7 +114,7 @@ def test_dp(config):
         var_closure = tvm.relay.var('closure')
 
         op_nll_loss_dtrue = mnm._ffi.op.GetOp('mnm.op.nll_loss_dtrue')
-        expr_x1 = tvm.relay.Call(op_nll_loss_dtrue, [y_true, var_a1])
+        expr_x1 = tvm.relay.Call(op_nll_loss_dtrue, [dy, y_true, var_a1])
         var_x1 = tvm.relay.var('x1')
 
         expr_t0 = tvm.relay.Tuple([var_x1])
@@ -124,7 +124,7 @@ def test_dp(config):
         var_g = tvm.relay.var('g')
 
         op_nll_loss_dpred = mnm._ffi.op.GetOp('mnm.op.nll_loss_dpred')
-        expr_x2 = tvm.relay.Call(op_nll_loss_dpred, [y_true, var_a1])
+        expr_x2 = tvm.relay.Call(op_nll_loss_dpred, [dy, y_true, var_a1])
         var_x2 = tvm.relay.var('x2')
 
         op_matmul_nt = mnm._ffi.op.GetOp('mnm.op.matmul_nt')

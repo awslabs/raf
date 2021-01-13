@@ -436,6 +436,14 @@ Attrs Loss(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs LossDtp(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::LossDtpArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, dy);
+  MNM_TAPE(1, ffi2schema::Tensor, y_true);
+  MNM_TAPE(2, ffi2schema::Tensor, y_pred);
+  return Attrs(attrs);
+}
+
 Attrs NonMaxSuppression(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::NonMaxSuppressionArgs, 12);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, data);
@@ -1539,19 +1547,21 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.nll_loss").set_body([](TVMArgs args, TVMRetValue
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.nll_loss_dpred").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(nll_loss_dpred, 2, ffi2schema::Loss,
-              schema::LossArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_PRELUDE(nll_loss_dpred, 3, ffi2schema::LossDtp,
+              schema::LossDtpArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->y_pred));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.nll_loss_dtrue").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(nll_loss_dtrue, 2, ffi2schema::Loss,
-              schema::LossArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_PRELUDE(nll_loss_dtrue, 3, ffi2schema::LossDtp,
+              schema::LossDtpArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_true));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->y_pred));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2220,6 +2230,14 @@ Array<Expr> Loss(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> LossDtp(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, dy);
+  MNM_ARG(1, ffi2expr::Tensor, y_true);
+  MNM_ARG(2, ffi2expr::Tensor, y_pred);
+  MNM_RET();
+}
+
 Array<Expr> NonMaxSuppression(const TVMArgs& values) {
   MNM_PRELUDE(12);
   MNM_ARG(0, ffi2expr::Tensor, data);
@@ -2615,9 +2633,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.multiply").set_body(MNM_SYMBOLIC_API(multiply, 4
 MNM_REGISTER_GLOBAL("mnm.op.sym.negative").set_body(MNM_SYMBOLIC_API(negative, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss").set_body(MNM_SYMBOLIC_API(nll_loss, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dpred")
-    .set_body(MNM_SYMBOLIC_API(nll_loss_dpred, 2, Loss));
+    .set_body(MNM_SYMBOLIC_API(nll_loss_dpred, 3, LossDtp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dtrue")
-    .set_body(MNM_SYMBOLIC_API(nll_loss_dtrue, 2, Loss));
+    .set_body(MNM_SYMBOLIC_API(nll_loss_dtrue, 3, LossDtp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.non_max_suppression")
     .set_body(MNM_SYMBOLIC_API(non_max_suppression, 12, NonMaxSuppression));
 MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal").set_body(MNM_SYMBOLIC_API(not_equal, 4, BinaryUfunc));
@@ -2987,6 +3005,15 @@ Attrs Loss(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::LossArgs);
   MNM_REQUIRED(0, value2schema::Tensor, y_true);
   MNM_REQUIRED(1, value2schema::Tensor, y_pred);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs LossDtp(const Array<Value>& values) {
+  MNM_PRELUDE(3, 3, schema::LossDtpArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, dy);
+  MNM_REQUIRED(1, value2schema::Tensor, y_true);
+  MNM_REQUIRED(2, value2schema::Tensor, y_pred);
   return Attrs(attrs);
 }
 
@@ -3779,6 +3806,21 @@ int Loss(const std::string& field) {
   }
   if (field == "y_pred") {
     return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int LossDtp(const std::string& field) {
+  if (field == "dy") {
+    return 0;
+  }
+  if (field == "y_true") {
+    return 1;
+  }
+  if (field == "y_pred") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -4638,13 +4680,13 @@ MNM_BIND_SCHEMA("mnm.op.nll_loss", names::nll_loss,
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.nll_loss", names::nll_loss,
                             schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.nll_loss_dpred", names::nll_loss_dpred,
-                value2schema::Loss);  // NOLINT(whitespace/line_length)
+                value2schema::LossDtp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.nll_loss_dpred", names::nll_loss_dpred,
-                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::LossDtp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.nll_loss_dtrue", names::nll_loss_dtrue,
-                value2schema::Loss);  // NOLINT(whitespace/line_length)
+                value2schema::LossDtp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.nll_loss_dtrue", names::nll_loss_dtrue,
-                            schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::LossDtp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.non_max_suppression", names::non_max_suppression,
                 value2schema::NonMaxSuppression);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.non_max_suppression", names::non_max_suppression,
@@ -4844,6 +4886,7 @@ MNM_REGISTER_OBJECT_REFLECT(LayerNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
+MNM_REGISTER_OBJECT_REFLECT(LossDtpArgs);
 MNM_REGISTER_OBJECT_REFLECT(NonMaxSuppressionArgs);
 MNM_REGISTER_OBJECT_REFLECT(PadArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);

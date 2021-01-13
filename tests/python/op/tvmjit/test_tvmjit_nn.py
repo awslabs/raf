@@ -101,8 +101,7 @@ def test_unary_with_axis(ctx, dtype, shape, axis, funcs):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype, requires_grad=True)
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
             m_y = model(m_x)
@@ -138,8 +137,7 @@ def test_log_softmax(ctx, dtype, shape):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype, requires_grad=True)
     m_y = model(m_x)
     v_y = run_vm_model(model, ctx, [m_x])
     t_y = torch.log_softmax(t_x, dim=-1)
@@ -218,10 +216,8 @@ def test_conv2d(ctx, dtype, xshape, wshape, stride, dilation, padding):
 
     model = Conv2D()
     # forward
-    m_x, t_x = randn_torch(xshape, std=0.001, ctx=ctx, dtype=dtype)
-    m_w, t_w = randn_torch(wshape, std=0.01, ctx=ctx, dtype=dtype)
-    m_x.requires_grad = True
-    m_w.requires_grad = True
+    m_x, t_x = randn_torch(xshape, std=0.001, ctx=ctx, dtype=dtype, requires_grad=True)
+    m_w, t_w = randn_torch(wshape, std=0.01, ctx=ctx, dtype=dtype, requires_grad=True)
     m_y = model(m_x, m_w)
     v_y = run_vm_model(model, ctx, [m_x, m_w])
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
@@ -264,8 +260,6 @@ def test_conv2d_nhwc(ctx, dtype, xshape, wshape, stride, dilation, padding):
     m_x, t_x = randn_torch(xshape, std=0.001, ctx=ctx, dtype=dtype)
     m_w, t_w = randn_torch(wshape, std=0.01, ctx=ctx, dtype=dtype)
     # forward only for NHWC
-    m_x.requires_grad = False
-    m_w.requires_grad = False
     m_y = model(m_x, m_w)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
@@ -299,8 +293,7 @@ def test_pool2d(ctx, dtype, data_shape, kernel, stride, padding, funcs):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(data_shape, dtype=dtype, ctx=ctx)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(data_shape, dtype=dtype, ctx=ctx, requires_grad=True)
     m_y = model(m_x)
     v_y = run_vm_model(model, ctx, [m_x])
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
@@ -344,9 +337,8 @@ def test_pool2d_nhwc(ctx, dtype, data_shape, kernel, stride, padding, funcs):
             return mnm.transpose(pool, (0, 3, 1, 2))
 
     model = TestModel()
-    m_x, t_x = randn_torch(data_shape, dtype=dtype, ctx=ctx)
+    m_x, t_x = randn_torch(data_shape, dtype=dtype, ctx=ctx, requires_grad=False)
     # forward only for NHWC layout
-    m_x.requires_grad = False
     m_y = model(m_x)
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
     check(m_y, t_y)
@@ -372,10 +364,10 @@ def test_matmul(ctx, dtype, n, k, m, transpose_a, transpose_b):
             return mnm_op(m_a, m_b)
     # forward
     model = TestModel()
-    m_a, t_a = randn_torch((n, k) if not transpose_a else (k, n), ctx=ctx, dtype=dtype)
-    m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k), ctx=ctx, dtype=dtype)
-    m_a.requires_grad = True
-    m_b.requires_grad = True
+    m_a, t_a = randn_torch((n, k) if not transpose_a else (k, n),
+                           ctx=ctx, dtype=dtype, requires_grad=True)
+    m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k),
+                           ctx=ctx, dtype=dtype, requires_grad=True)
     m_c = model(m_a, m_b)
     v_c = run_vm_model(model, ctx, [m_a, m_b])
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
@@ -400,8 +392,6 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, ctx):
     m_v, t_v = randn_torch(stats_shape, ctx=ctx, positive=True)
     m_w, t_w = randn_torch(stats_shape, ctx=ctx)
     m_b, t_b = randn_torch(stats_shape, ctx=ctx)
-    t_m.requires_grad = False
-    t_v.requires_grad = False
 
     class TestModel(mnm.Model):
         def build(self):
@@ -418,18 +408,6 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, ctx):
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
 
 
-# TODO(@hzfan, @icemelon9): improve the API for better inplace tracing and move
-# this function to mnm.testing
-def run_vm_model_inplace(model, ctx, intrp_args, vm_args):
-    """Helper function to execute model with VM"""
-    mod = mnm._core.module.Module()
-    func = model._internal(*intrp_args).func
-    mod[mnm._lib.tvm.ir.GlobalVar('main')] = func
-    executor = mnm._core.executor.VMExecutor(mod, ctx)
-    out = executor.make_executor()(*vm_args)
-    return out
-
-
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
@@ -437,18 +415,13 @@ def run_vm_model_inplace(model, ctx, intrp_args, vm_args):
 def test_mnm_batch_norm_train(shape, momentum, eps, ctx):
     # pylint: disable=attribute-defined-outside-init
     stats_shape = [shape[1]]
-    m_x, t_x = randn_torch(shape, ctx=ctx)
+    m_x, t_x = randn_torch(shape, ctx=ctx, requires_grad=True)
     m_m, t_m = randn_torch(stats_shape, ctx=ctx)
     m_v, t_v = randn_torch(stats_shape, ctx=ctx, positive=True)
-    m_w, t_w = randn_torch(stats_shape, ctx=ctx)
-    m_b, t_b = randn_torch(stats_shape, ctx=ctx)
+    m_w, t_w = randn_torch(stats_shape, ctx=ctx, requires_grad=True)
+    m_b, t_b = randn_torch(stats_shape, ctx=ctx, requires_grad=True)
     np_m = m_m.asnumpy()
     np_v = m_v.asnumpy()
-    t_m.requires_grad = False
-    t_v.requires_grad = False
-    m_x.requires_grad = True
-    m_w.requires_grad = True
-    m_b.requires_grad = True
 
     class TestModel(mnm.Model):
         def build(self, m_m, m_v):
@@ -470,12 +443,12 @@ def test_mnm_batch_norm_train(shape, momentum, eps, ctx):
     check(m_m, t_m, rtol=1e-4, atol=1e-4)
     check(m_v, t_v, rtol=1e-4, atol=1e-4)
     # forward vm
-    v_m = mnm.array(np_m, ctx=ctx)
-    v_v = mnm.array(np_v, ctx=ctx)
-    v_y = run_vm_model_inplace(model, ctx, [m_x, m_w, m_b], [m_x, m_w, m_b, v_m, v_v])[0]
+    model.m_m = mnm.array(np_m, ctx=ctx)
+    model.m_v = mnm.array(np_v, ctx=ctx)
+    v_y = run_vm_model(model, ctx, [m_x, m_w, m_b])[0]
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
-    check(v_m, t_m, rtol=1e-4, atol=1e-4)
-    check(v_v, t_v, rtol=1e-4, atol=1e-4)
+    check(model.m_m, t_m, rtol=1e-4, atol=1e-4)
+    check(model.m_v, t_v, rtol=1e-4, atol=1e-4)
     # backward
     m_dy, t_dy = randn_torch(shape, ctx=ctx)
     m_y.backward(m_dy)
@@ -507,7 +480,6 @@ def test_pad(ctx, dtype, dimension, pad_value, pad_mode):
 
     m_x, t_x = randn_torch(shape, ctx=ctx, dtype=dtype)
     model = TestModel()
-    m_x.requires_grad = False
     m_y = model(m_x)
     t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)
     check(m_y, t_y)

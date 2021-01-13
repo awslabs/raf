@@ -89,49 +89,14 @@ _reg.register_injective_schedule("mnm.op.softmax_dx")
 _reg.register_schedule("mnm.op.avg_pool2d", strategy.schedule_pool)
 # TODO(@XIAO-XIA): cuda schedule should be complemented after the implementation of auto schedule
 
-@register_compute("mnm.op.avg_pool2d_dx")
-def compute_avg_pool2d_dx(attr, inputs, output_type):
-    # pylint: disable=too-many-locals, unbalanced-tuple-unpacking, invalid-name, unused-argument, unused-variable
-    strides, padding, pool_size, layout = _topi.utils.get_const_tuple(attr.strides), \
-                                          _topi.utils.get_const_tuple(attr.padding), \
-                                          _topi.utils.get_const_tuple(attr.pool_size), \
-                                          attr.layout
-    ceil_mode, count_include_pad = attr.ceil_mode, attr.count_include_pad
-    assert layout == "NCHW"
-    pt, pl = padding
-    padding = (pt, pl, pt, pl)
-    x, y, dy = inputs
-    res = _topi.nn.pool(x, kernel=pool_size, stride=strides, padding=padding, pool_type='avg',
-                        ceil_mode=ceil_mode, layout=layout, count_include_pad=count_include_pad)
-    grads = _tvm.te.gradient(res, [x], head=dy)
-    return grads
-
 _reg.register_schedule("mnm.op.avg_pool2d_dx", strategy.schedule_pool_grad)
 
 _reg.register_schedule("mnm.op.max_pool2d", strategy.schedule_pool)
 # TODO(@XIAO-XIA): cuda schedule should be complemented after the implementation of auto schedule
 
-@register_compute("mnm.op.max_pool2d_dx")
-def compute_max_pool2d_dx(attr, inputs, output_type):
-    # pylint: disable=too-many-locals, unbalanced-tuple-unpacking, invalid-name, unused-argument, unused-variable
-    strides, padding, pool_size, layout = _topi.utils.get_const_tuple(attr.strides), \
-                                          _topi.utils.get_const_tuple(attr.padding), \
-                                          _topi.utils.get_const_tuple(attr.pool_size), \
-                                          attr.layout
-    ceil_mode = attr.ceil_mode
-    assert layout == "NCHW"
-    pt, pl = padding
-    padding = (pt, pl, pt, pl)
-
-    x, y, dy = inputs
-    res = _topi.nn.pool(x, kernel=pool_size, stride=strides, padding=padding,
-                        pool_type='max', ceil_mode=ceil_mode, layout=layout)
-    grads = _tvm.te.gradient(res, [x], head=dy)
-    return grads
-
 _reg.register_schedule("mnm.op.max_pool2d_dx", strategy.schedule_pool_grad)
 
-_reg.register_injective_schedule("mnm.op.log_softmax")
+_reg.register_schedule("mnm.op.log_softmax", strategy.schedule_log_softmax)
 
 @register_compute("mnm.op.log_softmax_dx")
 def compute_log_softmax_dx(attr, inputs, output_type):

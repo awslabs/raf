@@ -64,8 +64,7 @@ def test_unary_ops(ops, shape, dtype, ctx):
 def test_unary_ops_with_grad(ops, shape, dtype, ctx):
     t_op, m_op = ops
     model = UnaryModel(m_op)
-    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx)
-    m_x.requires_grad = True
+    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx, requires_grad=True)
     m_y = model(m_x)
     v_y = run_vm_model(model, ctx, [m_x])
     t_y = t_op(t_x)

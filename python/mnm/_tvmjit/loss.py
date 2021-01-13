@@ -80,9 +80,9 @@ _reg.register_injective_schedule("mnm.op.nll_loss")
 
 @register_compute("mnm.op.nll_loss_dpred")
 def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    true, _ = inputs
+    dy, true, _ = inputs
     n, c = true.shape
-    return [_tvm.te.compute((n, c), lambda x, y: -true[x, y] / n)]
+    return [_tvm.te.compute((n, c), lambda x, y: -true[x, y] / n) * dy]
 
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dpred")
@@ -90,9 +90,9 @@ _reg.register_broadcast_schedule("mnm.op.nll_loss_dpred")
 
 @register_compute("mnm.op.nll_loss_dtrue")
 def nllloss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    _, pred = inputs
+    dy, _, pred = inputs
     n, c = pred.shape
-    return [_tvm.te.compute((n, c), lambda x, y: -pred[x, y] / n)]
+    return [_tvm.te.compute((n, c), lambda x, y: -pred[x, y] / n) * dy]
 
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dtrue")
