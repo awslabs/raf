@@ -108,5 +108,11 @@ ir::Expr InlineLet(ir::Expr expr);
  */
 ir::Expr DeadCodeElimination(const ir::Expr& expr);
 
+/*! \brief Convert Relay IR to Meta IR.
+ * \param obj tvm::IRModule or ir::Expr
+ * \return ir::Module or ir::Expr
+ */
+tvm::ObjectRef FromRelay(tvm::ObjectRef obj);
+
 }  // namespace pass
 }  // namespace mnm
