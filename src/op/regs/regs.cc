@@ -395,7 +395,7 @@ Attrs GatherNdDx(const TVMArgs& values, GradTape* tapes) {
 Attrs GetValidCounts(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::GetValidCountsArgs, 4);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, data);
-  MNM_POD(1, ffi2schema::Double, score_threshold);
+  MNM_TAPE(1, ffi2schema::Tensor, score_threshold);
   MNM_POD(2, ffi2schema::Int, id_index);
   MNM_POD(3, ffi2schema::Int, score_index);
   return Attrs(attrs);
@@ -450,7 +450,7 @@ Attrs NonMaxSuppression(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, valid_count);
   MNM_TAPE(2, ffi2schema::Tensor, indices);
   MNM_TAPE(3, ffi2schema::Tensor, max_output_size);
-  MNM_POD(4, ffi2schema::Double, iou_threshold);
+  MNM_TAPE(4, ffi2schema::Tensor, iou_threshold);
   MNM_POD(5, ffi2schema::Bool, force_suppress);
   MNM_POD(6, ffi2schema::Int, top_k);
   MNM_POD(7, ffi2schema::Int, coord_start);
@@ -1275,7 +1275,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.get_valid_counts").set_body([](TVMArgs args, TVM
   MNM_PRELUDE(get_valid_counts, 4, ffi2schema::GetValidCounts,
               schema::GetValidCountsArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
-  MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->score_threshold));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->score_threshold));
   MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->id_index));
   MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->score_index));
   MNM_SET_ENV(vpack->y, value);
@@ -1573,7 +1573,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.non_max_suppression").set_body([](TVMArgs args, 
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->valid_count));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->indices));
   MNM_SET_ENV(vpack->x[3], schema2value::Tensor(schema->max_output_size));
-  MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->iou_threshold));
+  MNM_SET_ENV(vpack->x[4], schema2value::Tensor(schema->iou_threshold));
   MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->force_suppress));
   MNM_SET_ENV(vpack->x[6], schema2value::Int(schema->top_k));
   MNM_SET_ENV(vpack->x[7], schema2value::Int(schema->coord_start));
@@ -2189,7 +2189,7 @@ Array<Expr> GatherNdDx(const TVMArgs& values) {
 Array<Expr> GetValidCounts(const TVMArgs& values) {
   MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, data);
-  MNM_ARG(1, ffi2expr::Double, score_threshold);
+  MNM_ARG(1, ffi2expr::Tensor, score_threshold);
   MNM_ARG(2, ffi2expr::Int, id_index);
   MNM_ARG(3, ffi2expr::Int, score_index);
   MNM_RET();
@@ -2244,7 +2244,7 @@ Array<Expr> NonMaxSuppression(const TVMArgs& values) {
   MNM_ARG(1, ffi2expr::Tensor, valid_count);
   MNM_ARG(2, ffi2expr::Tensor, indices);
   MNM_ARG(3, ffi2expr::Tensor, max_output_size);
-  MNM_ARG(4, ffi2expr::Double, iou_threshold);
+  MNM_ARG(4, ffi2expr::Tensor, iou_threshold);
   MNM_ARG(5, ffi2expr::Bool, force_suppress);
   MNM_ARG(6, ffi2expr::Int, top_k);
   MNM_ARG(7, ffi2expr::Int, coord_start);
@@ -2961,9 +2961,9 @@ Attrs GatherNdDx(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs GetValidCounts(const Array<Value>& values) {
-  MNM_PRELUDE(1, 4, schema::GetValidCountsArgs);
+  MNM_PRELUDE(2, 4, schema::GetValidCountsArgs);
   MNM_REQUIRED(0, value2schema::Tensor, data);
-  MNM_OPTIONAL(1, value2schema::Double, score_threshold);
+  MNM_REQUIRED(1, value2schema::Tensor, score_threshold);
   MNM_OPTIONAL(2, value2schema::Int, id_index);
   MNM_OPTIONAL(3, value2schema::Int, score_index);
   return Attrs(attrs);
@@ -3019,12 +3019,12 @@ Attrs LossDtp(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs NonMaxSuppression(const Array<Value>& values) {
-  MNM_PRELUDE(4, 12, schema::NonMaxSuppressionArgs);
+  MNM_PRELUDE(5, 12, schema::NonMaxSuppressionArgs);
   MNM_REQUIRED(0, value2schema::Tensor, data);
   MNM_REQUIRED(1, value2schema::Tensor, valid_count);
   MNM_REQUIRED(2, value2schema::Tensor, indices);
   MNM_REQUIRED(3, value2schema::Tensor, max_output_size);
-  MNM_OPTIONAL(4, value2schema::Double, iou_threshold);
+  MNM_REQUIRED(4, value2schema::Tensor, iou_threshold);
   MNM_OPTIONAL(5, value2schema::Bool, force_suppress);
   MNM_OPTIONAL(6, value2schema::Int, top_k);
   MNM_OPTIONAL(7, value2schema::Int, coord_start);

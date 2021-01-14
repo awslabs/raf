@@ -317,5 +317,8 @@ T GetScalarValueData(const Value& value);
 template <>
 bool GetScalarValueData<bool>(const Value& value);
 
+template <>
+float GetScalarValueData<float>(const Value& value);
+
 }  // namespace value
 }  // namespace mnm

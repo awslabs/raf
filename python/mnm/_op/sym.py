@@ -346,9 +346,9 @@ def get_reduce_axis(x1, x2):
     x2 = sym_utils.to_any(x2)
     return Symbol.from_expr(ffi.get_reduce_axis(x1, x2))
 
-def get_valid_counts(data, score_threshold=0, id_index=0, score_index=1):
+def get_valid_counts(data, score_threshold, id_index=0, score_index=1):
     data = sym_utils.to_tensor(data)
-    score_threshold = sym_utils.to_double(score_threshold)
+    score_threshold = sym_utils.to_tensor(score_threshold)
     id_index = sym_utils.to_int(id_index)
     score_index = sym_utils.to_int(score_index)
     return Symbol.from_expr(ffi.get_valid_counts(data, score_threshold, id_index, score_index))
@@ -533,12 +533,12 @@ def nll_loss_dtrue(dy, y_true, y_pred):
     y_pred = sym_utils.to_tensor(y_pred)
     return Symbol.from_expr(ffi.nll_loss_dtrue(dy, y_true, y_pred))
 
-def non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold=0.5, force_suppress=False, top_k=-1, coord_start=2, score_index=1, id_index=0, return_indices=True, invalid_to_bottom=False):
+def non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold, force_suppress=False, top_k=-1, coord_start=2, score_index=1, id_index=0, return_indices=True, invalid_to_bottom=False):
     data = sym_utils.to_tensor(data)
     valid_count = sym_utils.to_tensor(valid_count)
     indices = sym_utils.to_tensor(indices)
     max_output_size = sym_utils.to_tensor(max_output_size)
-    iou_threshold = sym_utils.to_double(iou_threshold)
+    iou_threshold = sym_utils.to_tensor(iou_threshold)
     force_suppress = sym_utils.to_bool(force_suppress)
     top_k = sym_utils.to_int(top_k)
     coord_start = sym_utils.to_int(coord_start)

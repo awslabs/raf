@@ -206,10 +206,26 @@ bool GetScalarValueData<bool>(const Value& value) {
     CHECK_EQ(DataType(cpu_array->dtype), DataType::Bool());
     CHECK_EQ(cpu_array->ndim, 0);
     return reinterpret_cast<uint8_t*>(cpu_array->data)[0];
-  } else {
-    LOG(FATAL) << "Cannot convert " << value->GetTypeKey() << " to scalar bool.";
   }
-  return false;
+  LOG(FATAL) << "Cannot convert " << value->GetTypeKey() << " to scalar bool.";
+}
+
+template <>
+float GetScalarValueData<float>(const Value& value) {
+  using namespace tvm::runtime;
+  if (const auto* fvo = value.as<FloatValueObj>()) {
+    return fvo->data;
+  } else if (const auto* tvo = value.as<TensorValueObj>()) {
+    tensor::Tensor tensor = tvo->tensor;
+    DLContext cpu_ctx;
+    cpu_ctx.device_type = kDLCPU;
+    cpu_ctx.device_id = 0;
+    NDArray cpu_array = tensor.CopyTo(cpu_ctx);
+    CHECK_EQ(DataType(cpu_array->dtype), DataType::Float(32));
+    CHECK_EQ(cpu_array->ndim, 0);
+    return reinterpret_cast<float*>(cpu_array->data)[0];
+  }
+  LOG(FATAL) << "Cannot convert " << value->GetTypeKey() << " to scalar float.";
 }
 
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);

@@ -399,9 +399,9 @@ def get_reduce_axis(x1, x2):
     return imp_utils.ret(ffi.get_reduce_axis(x1, x2))
 
 @set_module("mnm")
-def get_valid_counts(data, score_threshold=0, id_index=0, score_index=1):
+def get_valid_counts(data, score_threshold, id_index=0, score_index=1):
     data = imp_utils.to_tensor(data)
-    score_threshold = imp_utils.to_double(score_threshold)
+    score_threshold = imp_utils.to_tensor(score_threshold)
     id_index = imp_utils.to_int(id_index)
     score_index = imp_utils.to_int(score_index)
     return imp_utils.ret(ffi.get_valid_counts(data, score_threshold, id_index, score_index))
@@ -615,12 +615,12 @@ def nll_loss_dtrue(dy, y_true, y_pred):
     return imp_utils.ret(ffi.nll_loss_dtrue(dy, y_true, y_pred))
 
 @set_module("mnm")
-def non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold=0.5, force_suppress=False, top_k=-1, coord_start=2, score_index=1, id_index=0, return_indices=True, invalid_to_bottom=False):
+def non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold, force_suppress=False, top_k=-1, coord_start=2, score_index=1, id_index=0, return_indices=True, invalid_to_bottom=False):
     data = imp_utils.to_tensor(data)
     valid_count = imp_utils.to_tensor(valid_count)
     indices = imp_utils.to_tensor(indices)
     max_output_size = imp_utils.to_tensor(max_output_size)
-    iou_threshold = imp_utils.to_double(iou_threshold)
+    iou_threshold = imp_utils.to_tensor(iou_threshold)
     force_suppress = imp_utils.to_bool(force_suppress)
     top_k = imp_utils.to_int(top_k)
     coord_start = imp_utils.to_int(coord_start)

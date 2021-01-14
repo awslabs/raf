@@ -24,16 +24,17 @@ using namespace tvm;
 using namespace ::tvm::relay;
 
 std::vector<Value> GetValidCountSchema2Args(const GetValidCountsArgs* args) {
-  return {args->data};
+  return {args->data, args->score_threshold};
 }
 
 std::vector<std::string> GetValidCountSchemaArgNames(const op::CallValues& call) {
-  return {"data"};
+  return {"data", "score_threshold"};
 }
 
 Attrs GetValidCountsSchema2Attrs(const GetValidCountsArgs* args) {
   auto attrs = make_object<GetValidCountsAttrs>();
-  attrs->score_threshold = args->score_threshold;
+  attrs->score_threshold =
+      FloatImm(DataType::Float(32), GetScalarValueData<float>(args->score_threshold));
   attrs->id_index = args->id_index;
   attrs->score_index = args->score_index;
   return Attrs(attrs);
@@ -52,16 +53,17 @@ MNM_TVMJIT(GetValidCounts, "mnm.op.get_valid_counts", GetValidCountsArgs, GetVal
            GetValidCountSchemaArgNames, GetValidCountsSchema2Attrs, GetValidCountsHasher);
 
 std::vector<Value> NonMaxSuppressionSchema2Args(const NonMaxSuppressionArgs* args) {
-  return {args->data, args->valid_count, args->indices, args->max_output_size};
+  return {args->data, args->valid_count, args->indices, args->max_output_size, args->iou_threshold};
 }
 
 std::vector<std::string> NonMaxSuppressionSchemaArgNames(const op::CallValues& call) {
-  return {"data", "valid_count", "indices", "max_output_size"};
+  return {"data", "valid_count", "indices", "max_output_size", "iou_threshold"};
 }
 
 Attrs NonMaxSuppressionSchema2Attrs(const NonMaxSuppressionArgs* args) {
   auto attrs = make_object<NonMaximumSuppressionAttrs>();
-  attrs->iou_threshold = args->iou_threshold;
+  attrs->iou_threshold =
+      FloatImm(DataType::Float(32), GetScalarValueData<float>(args->iou_threshold));
   attrs->force_suppress = args->force_suppress;
   attrs->top_k = args->top_k;
   attrs->coord_start = args->coord_start;

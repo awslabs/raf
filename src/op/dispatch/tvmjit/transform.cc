@@ -593,7 +593,9 @@ Attrs ReshapeSchema2Attrs(const ReshapeArgs* args) {
   for (auto dim : args->shape) {
     attrs->newshape.push_back(dim);
   }
-  attrs->reverse = args->reverse;
+  // FIXME(comaniac): attrs->reverse has been removed on Relay side so we get rid of
+  // that attribute here. It might be an issue with reshape(shape, reverse=True).
+  CHECK(!args->reverse);
   return Attrs(attrs);
 }
 
