@@ -114,5 +114,12 @@ ir::Expr DeadCodeElimination(const ir::Expr& expr);
  */
 tvm::ObjectRef FromRelay(tvm::ObjectRef obj);
 
+/*!
+ * \brief inline backward function.
+ * \param func The IR function.
+ * \return inlined function.
+ */
+ir::Function InlineBackward(ir::Function func);
+
 }  // namespace pass
 }  // namespace mnm

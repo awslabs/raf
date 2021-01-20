@@ -13,6 +13,7 @@ from ._internal import FoldConstant
 from ._internal import FromRelay
 from ._internal import FuseOps
 from ._internal import InferType
+from ._internal import InlineBackward
 from ._internal import InlineLet
 from ._internal import InplaceUpdate
 from ._internal import LambdaLift
