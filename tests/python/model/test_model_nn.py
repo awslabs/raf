@@ -57,7 +57,8 @@ def test_model_conv2d(stride, dilation, padding, bias):
     m_x, t_x = randn([8, 3, 32, 32], std=0.001, requires_grad=True)
     m_w, t_w = randn([16, 3, 3, 3], std=0.01, requires_grad=True)
     if bias:
-        m_b, t_b = randn([16, 1, 1], std=0.001, requires_grad=True)
+        m_b, t_b = randn([16], std=0.001, requires_grad=True)
+        t_b = t_b.unsqueeze(1).unsqueeze(2)
     model = mnm.model.Conv2d(in_channels=3,
                              out_channels=16,
                              kernel_size=3,

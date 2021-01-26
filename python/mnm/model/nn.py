@@ -57,7 +57,7 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
                        dilation=self.dilation,
                        groups=self.groups)
         if self.b is not None:
-            x = sym.add(x, self.b)
+            x = sym.bias_add(x, self.b)
         return x
 
 
