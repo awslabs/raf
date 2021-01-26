@@ -123,6 +123,7 @@ OPS = [
     Op(name="argsort", schema_name="argsort"),
     Op(name="compiler_begin", schema_name="compiler"),
     Op(name="compiler_end", schema_name="compiler"),
+    Op(name="full", schema_name="full"),
 ]
 
 def by_name():

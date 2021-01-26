@@ -447,6 +447,13 @@ SCHEMAS = {
     "annotation.h::compiler": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="compiler", cxx_type="std::string"),
+    ],
+    "transform.h::full": [
+        Arg(name="fill_value", cxx_type="value::BaseTensorValue"),
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
     ]
 }
 

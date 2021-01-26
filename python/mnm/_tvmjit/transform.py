@@ -35,6 +35,7 @@ _reg.register_broadcast_schedule("mnm.op.broadcast_to_like")
 _reg.register_broadcast_schedule("mnm.op.clip")
 _reg.register_broadcast_schedule("mnm.op.repeat")
 _reg.register_broadcast_schedule("mnm.op.expand_dims")
+_reg.register_injective_schedule("mnm.op.full")
 _reg.register_injective_schedule("mnm.op.batch_flatten")
 
 

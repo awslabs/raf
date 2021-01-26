@@ -51,6 +51,14 @@ class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
   MNM_OP_SCHEMA(ExpandDimsArgs, "mnm.args.expand_dims");
 };
 
+class FullArgs : public ir::AttrsNode<FullArgs> {
+ public:
+  value::BaseTensorValue fill_value;
+  std::vector<int64_t> shape;
+  std::string dtype{"int"};
+  MNM_OP_SCHEMA(FullArgs, "mnm.args.full");
+};
+
 class GatherArgs : public ir::AttrsNode<GatherArgs> {
  public:
   value::BaseTensorValue data;

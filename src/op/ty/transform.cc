@@ -600,6 +600,21 @@ Type SqueezeInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.squeeze", "Squeeze", SqueezeInfer);
 
+Type FullInfer(const CallValues& value) {
+  const auto* args = value->args.as<FullArgs>();
+  CHECK(args != nullptr);
+  TensorType fill_value = Downcast<TensorType>(GetType(args->fill_value));
+  Array<tvm::PrimExpr> shape;
+  for (int i = 0; i < args->shape.size(); ++i) {
+    CHECK_GE(args->shape[i], 1);
+    shape.push_back((int32_t)args->shape[i]);
+  }
+
+  return TensorType(shape, fill_value->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.full", "Full", FullInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

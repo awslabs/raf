@@ -636,6 +636,37 @@ HashKey ExpandDimsHasher(const std::vector<Type>& param_types, const Type& y_typ
 MNM_TVMJIT(ExpandDims, "mnm.op.expand_dims", ExpandDimsArgs, ExpandDimsSchema2Args,
            ExpandDimsSchemaArgNames, ExpandDimsSchema2Attrs, ExpandDimsHasher);
 
+std::vector<Value> FullSchema2Args(const FullArgs* args) {
+  return {args->fill_value};
+}
+
+std::vector<std::string> FullSchemaArgNames(const op::CallValues& call) {
+  return {"fill_value"};
+}
+
+Attrs FullSchema2Attrs(const FullArgs* args) {
+  auto attrs = make_object<InitOpAttrs>();
+  std::vector<Integer> shape;
+  shape.reserve(args->shape.size());
+  for (size_t i = 0; i < args->shape.size(); ++i) {
+    shape.emplace_back(args->shape[i]);
+  }
+
+  attrs->shape = Array<Integer>(shape.begin(), shape.end());
+  attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
+  return Attrs(attrs);
+}
+
+HashKey FullHasher(const std::vector<Type>& param_types, const Type& y_type, const FullArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->shape;
+  key << ir::String2DLDataType(args->dtype);
+  return key;
+}
+
+MNM_TVMJIT(Full, "mnm.op.full", FullArgs, FullSchema2Args, FullSchemaArgNames, FullSchema2Attrs,
+           FullHasher);
+
 std::vector<Value> StridedSliceSchema2Args(const StridedSliceArgs* args) {
   return {args->x};
 }

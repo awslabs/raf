@@ -671,6 +671,21 @@ MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
   call->ctx = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
+  const auto* args = call->args.as<FullArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* fill_value = args->fill_value;
+  std::vector<int64_t> shape(args->shape.begin(), args->shape.end());
+  CHECK_GE(shape.size(), 1);
+  std::string dtype = args->dtype;
+  for (int i = 0; i < shape.size(); ++i) {
+    CHECK_GE(shape[i], 1);
+  }
+
+  call->ctx = fill_value->ctx;
+  call->out = TensorValue::Assemble(call->ctx, fill_value->dtype, shape);
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm
