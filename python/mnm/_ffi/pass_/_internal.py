@@ -24,6 +24,8 @@ FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
 FromRelay = _APIS.get("mnm.pass_.FromRelay", None)
 # Defined in ./src/pass/fuse_ops.cc
 FuseOps = _APIS.get("mnm.pass_.FuseOps", None)
+# Defined in ./src/pass/grad_arg_select.cc
+GradientInputSelection = _APIS.get("mnm.pass_.GradientInputSelection", None)
 # Defined in ./src/pass/type_infer.cc
 InferType = _APIS.get("mnm.pass_.InferType", None)
 # Defined in ./src/pass/inline_backward.cc

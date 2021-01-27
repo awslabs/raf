@@ -7,9 +7,9 @@ from .codegen_utils import NORM_MAP, snake_to_pascal, write_to_file
 # TODO(@junrushao1994): this is used to be compatible with legacy
 NORM_CONVERTER = {
     "ToAny": "ArrayLike",
-    "ToAnyOptional": "ArrayLikeOptional", 
+    "ToAnyOptional": "OptionalArrayLike", 
     "ToTensor": "Tensor",
-    "ToTensorOptional": "TensorOptional",
+    "ToOptionalTensor": "OptionalTensor",
     "ToInt": "Int",
     "ToBool": "Bool",
     "ToString": "String",
@@ -250,7 +250,7 @@ Attrs {SCHEMA_NAME}(const TVMArgs& values, GradTape* tapes) {{
     for i, entry in enumerate(schema):
         norm = NORM_CONVERTER[NORM_MAP[entry.cxx_normalizer or entry.cxx_type]]
         arg_name = entry.name
-        if norm in ["ArrayLike", "Tensor", "ArrayLikeOptional", "TensorOptional"]:
+        if norm in ["ArrayLike", "Tensor", "OptionalArrayLike", "OptionalTensor"]:
             option = "TAPE"
         else:
             option = "POD"

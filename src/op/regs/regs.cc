@@ -343,7 +343,7 @@ Attrs Conv(const TVMArgs& values, GradTape* tapes) {
 Attrs ConvDxw(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::ConvDxwArgs, 8);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x_or_w);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
+  MNM_TAPE(1, ffi2schema::OptionalTensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   MNM_POD(3, ffi2schema::IntArray, shape);
   MNM_POD(4, ffi2schema::IntOrTupleInt, stride);
@@ -708,8 +708,8 @@ Attrs Unary(const TVMArgs& values, GradTape* tapes) {
 
 Attrs UnaryDx(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::UnaryDxArgs, 3);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::ArrayLikeOptional, x);
-  MNM_TAPE(1, ffi2schema::TensorOptional, y);
+  MNM_TAPE(0, ffi2schema::OptionalArrayLike, x);
+  MNM_TAPE(1, ffi2schema::OptionalTensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   return Attrs(attrs);
 }
@@ -1085,7 +1085,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dw").set_body([](TVMArgs args, TVMRetValu
   MNM_PRELUDE(conv2d_dw, 8, ffi2schema::ConvDxw,
               schema::ConvDxwArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x_or_w));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[3], schema2value::IntArray(schema->shape));
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->stride));
@@ -1100,7 +1100,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_dx").set_body([](TVMArgs args, TVMRetValu
   MNM_PRELUDE(conv2d_dx, 8, ffi2schema::ConvDxw,
               schema::ConvDxwArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x_or_w));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[3], schema2value::IntArray(schema->shape));
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->stride));
@@ -1192,8 +1192,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.erf").set_body([](TVMArgs args, TVMRetValue* ret
 MNM_REGISTER_GLOBAL("mnm.op.imp.erf_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(erf_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::OptionalArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1654,8 +1654,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.relu").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.relu_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(relu_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::OptionalArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1753,8 +1753,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid").set_body([](TVMArgs args, TVMRetValue*
 MNM_REGISTER_GLOBAL("mnm.op.imp.sigmoid_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sigmoid_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::OptionalArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1840,8 +1840,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.sqrt_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sqrt_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::OptionalArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -1944,8 +1944,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.tanh").set_body([](TVMArgs args, TVMRetValue* re
 MNM_REGISTER_GLOBAL("mnm.op.imp.tanh_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(tanh_dx, 3, ffi2schema::UnaryDx,
               schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLikeOptional(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::TensorOptional(schema->y));
+  MNM_SET_ENV(vpack->x[0], schema2value::OptionalArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -2154,7 +2154,7 @@ Array<Expr> Conv(const TVMArgs& values) {
 Array<Expr> ConvDxw(const TVMArgs& values) {
   MNM_PRELUDE(8);
   MNM_ARG(0, ffi2expr::Tensor, x_or_w);
-  MNM_ARG(1, ffi2expr::Tensor, y);
+  MNM_ARG(1, ffi2expr::OptionalTensor, y);
   MNM_ARG(2, ffi2expr::Tensor, dy);
   MNM_ARG(3, ffi2expr::IntArray, shape);
   MNM_ARG(4, ffi2expr::IntOrTupleInt, stride);
@@ -2519,8 +2519,8 @@ Array<Expr> Unary(const TVMArgs& values) {
 
 Array<Expr> UnaryDx(const TVMArgs& values) {
   MNM_PRELUDE(3);
-  MNM_ARG(0, ffi2expr::ArrayLikeOptional, x);
-  MNM_ARG(1, ffi2expr::TensorOptional, y);
+  MNM_ARG(0, ffi2expr::OptionalArrayLike, x);
+  MNM_ARG(1, ffi2expr::OptionalTensor, y);
   MNM_ARG(2, ffi2expr::Tensor, dy);
   MNM_RET();
 }
@@ -2931,7 +2931,7 @@ template <const char* op_name>
 Attrs ConvDxw(const Array<Value>& values) {
   MNM_PRELUDE(8, 8, schema::ConvDxwArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x_or_w);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
+  MNM_REQUIRED(1, value2schema::OptionalTensor, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   MNM_REQUIRED(3, value2schema::IntArray, shape);
   MNM_REQUIRED(4, value2schema::IntOrTupleInt, stride);
@@ -3337,8 +3337,8 @@ Attrs Unary(const Array<Value>& values) {
 template <const char* op_name>
 Attrs UnaryDx(const Array<Value>& values) {
   MNM_PRELUDE(3, 3, schema::UnaryDxArgs);
-  MNM_REQUIRED(0, value2schema::ArrayLikeOptional, x);
-  MNM_REQUIRED(1, value2schema::TensorOptional, y);
+  MNM_REQUIRED(0, value2schema::OptionalArrayLike, x);
+  MNM_REQUIRED(1, value2schema::OptionalTensor, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   return Attrs(attrs);
 }

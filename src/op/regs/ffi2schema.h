@@ -61,7 +61,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
   throw;
 }
 
-inline ir::Optional<value::Value> ArrayLikeOptional(const registry::TVMArgValue& a,
+inline ir::Optional<value::Value> OptionalArrayLike(const registry::TVMArgValue& a,
                                                     binding::GradTape* tape) {
   MNM_PRELUDE();
   if (type_code == kTVMNullptr) {
@@ -115,7 +115,7 @@ inline value::BaseTensorValue Tensor(const registry::TVMArgValue& a, binding::Gr
   throw;
 }
 
-inline ir::Optional<value::BaseTensorValue> TensorOptional(const registry::TVMArgValue& a,
+inline ir::Optional<value::BaseTensorValue> OptionalTensor(const registry::TVMArgValue& a,
                                                            binding::GradTape* tape) {
   MNM_PRELUDE();
   if (type_code == kTVMNullptr) {

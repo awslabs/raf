@@ -22,7 +22,7 @@ inline value::Value ArrayLike(const value::Value& a) {
   return a;
 }
 
-inline value::Value ArrayLikeOptional(const ir::Optional<value::Value> a) {
+inline value::Value OptionalArrayLike(const ir::Optional<value::Value> a) {
   if (a.defined()) {
     return a.value();
   } else {
@@ -34,7 +34,7 @@ inline value::Value Tensor(const value::BaseTensorValue& a) {
   return a;
 }
 
-inline value::Value TensorOptional(const ir::Optional<value::BaseTensorValue> a) {
+inline value::Value OptionalTensor(const ir::Optional<value::BaseTensorValue> a) {
   if (a.defined()) {
     return a.value();
   } else {

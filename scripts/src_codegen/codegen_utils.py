@@ -59,7 +59,7 @@ NORM_MAP = {
     "value::Value": "ToAny",
     "ir::Optional<value::Value>": "ToAnyOptional",
     "value::BaseTensorValue": "ToTensor",
-    "ir::Optional<value::BaseTensorValue>": "ToTensorOptional",
+    "ir::Optional<value::BaseTensorValue>": "ToOptionalTensor",
     "IntTuple": "ToIntTuple",
     "IntArray": "ToIntArray",
     "OptionalIntTuple": "ToOptionalIntTuple",

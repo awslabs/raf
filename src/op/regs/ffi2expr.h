@@ -62,7 +62,7 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
   throw;
 }
 
-inline ir::Expr ArrayLikeOptional(const registry::TVMArgValue& a) {
+inline ir::Expr OptionalArrayLike(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
     return MNM_CONST(IntValue, a.operator int64_t());
@@ -106,7 +106,7 @@ inline ir::Expr Tensor(const registry::TVMArgValue& a) {
   throw;
 }
 
-inline ir::Expr TensorOptional(const registry::TVMArgValue& a) {
+inline ir::Expr OptionalTensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kTVMNDArrayHandle || type_code == kTVMNullptr) {
     return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());

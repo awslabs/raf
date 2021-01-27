@@ -83,7 +83,7 @@ SCHEMAS = {
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="bias", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int64_t", cxx_default=1),
-    ],
+    ], 
     "nn.h::local_response_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="size", cxx_type="int64_t"),
@@ -93,7 +93,7 @@ SCHEMAS = {
     ],
     "nn.h::conv_dxw": [
         Arg(name="x_or_w", cxx_type="value::BaseTensorValue"),
-        Arg(name="y", cxx_type="value::BaseTensorValue"),
+        Arg(name="y", cxx_type=OptionalTensor),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="shape", cxx_type=OptionalIntArray,
             cxx_normalizer="IntArray"),

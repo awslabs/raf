@@ -20,6 +20,12 @@ ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
 ir::Module LambdaLift(ir::Module mod);
 /*!
+ * \brief gradient operator input selection.
+ * \param func The main Function.
+ * \return Transformed Function.
+ */
+ir::Function GradInputSelect(ir::Function func);
+/*!
  * \brief Manifest memory allocation.
  * \param mod The IR module.
  * \return Transformed IR module.

@@ -222,3 +222,5 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 #define MNM_OP_FUSED_GRAD(op_name, body)                                                       \
   RELAY_REGISTER_OP(op_name).set_attr<::mnm::op::FFusedPrimalGradient>("FFusedPrimalGradient", \
                                                                        body);
+#define MNM_OP_GRAD_SKIP_INPUTS(op_name, body) \
+  RELAY_REGISTER_OP(op_name).set_attr<std::string>("GradientInputSkip", body);

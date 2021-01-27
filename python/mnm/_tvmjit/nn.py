@@ -229,7 +229,6 @@ def _get_pad_tuple(padding, kernel):
 
     kernel : tuple of int
         Conv kernel size
-
     Returns
     -------
     pad_top : int
@@ -309,8 +308,11 @@ def compute_conv2d_dx(attr, inputs, output_type):
     assert layout == "NCHW"
     assert dilation == (1, 1), "not support dilate now"
     assert attr.groups == 1, "only support groups == 1 for now"
-
-    W, y, dy = inputs[0], inputs[1], inputs[2]
+    use_output = attr.use_output
+    if use_output:
+        W, dy = inputs[0], inputs[2]
+    else:
+        W, dy = inputs[0], inputs[1]
     X = _tvm.te.placeholder(shape=attr.kernel_size, dtype=dy.dtype)
     R = _topi.nn.conv2d(X, W, strides, padding, dilation, layout)
 
@@ -355,7 +357,12 @@ def compute_conv2d_dw(attr, inputs, output_type):
     assert layout == "NCHW"
     assert dilation == (1, 1), "not support dilate now"
     assert attr.groups == 1, "only support groups == 1 for now"
-    X, y, dy = inputs[0], inputs[1], inputs[2]
+
+    use_output = attr.use_output
+    if use_output:
+        X, dy = inputs[0], inputs[2]
+    else:
+        X, dy = inputs[0], inputs[1]
 
     W = _tvm.te.placeholder(shape=attr.kernel_size, dtype=X.dtype)
     R = _topi.nn.conv2d(X, W, strides, padding, dilation, layout)

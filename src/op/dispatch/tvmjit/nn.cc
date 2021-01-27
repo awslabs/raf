@@ -83,19 +83,110 @@ HashKey Conv2dHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Conv2d, "mnm.op.conv2d", ConvArgs, ConvSchema2Args, ConvSchemaArgNames, ConvSchema2Attrs,
            Conv2dHasher);
 
+using tvm::relay::IndexExpr;
+struct Conv2dDxwAttrs : public tvm::AttrsNode<Conv2dDxwAttrs> {
+  Array<IndexExpr> strides;
+  Array<IndexExpr> padding;
+  Array<IndexExpr> dilation;
+  int groups;
+  IndexExpr channels;
+  Array<IndexExpr> kernel_size;
+  std::string data_layout;
+  std::string kernel_layout;
+  std::string out_layout;
+  DataType out_dtype;
+  bool use_output;
+  TVM_DECLARE_ATTRS(Conv2dDxwAttrs, "relay.attrs.Conv2dDxwAttrs") {
+    TVM_ATTR_FIELD(strides)
+        .set_default(Array<IndexExpr>({1, 1}))
+        .describe("Specifies the strides of the convolution.");
+    TVM_ATTR_FIELD(padding)
+        .set_default(Array<IndexExpr>({0, 0}))
+        .describe(
+            "If padding is non-zero, then the input is implicitly zero-padded"
+            "Padding support both symmetric and asymmetric as"
+            "one int : same padding used on all sides"
+            "two int : bottom, right will use same padding as top, left"
+            "four int : padding width in the order of (top, left, bottom, right)");
+    TVM_ATTR_FIELD(dilation)
+        .set_default(Array<IndexExpr>({1, 1}))
+        .describe("Specifies the dilation rate to use for dilated convolution.");
+    TVM_ATTR_FIELD(groups).set_default(1).describe(
+        "Controls the connections between inputs and outputs."
+        "At groups=1, all inputs are convolved to all outputs."
+        "At groups=2, the operation becomes equivalent to having two convolution"
+        "layers side by side, each seeing half the input channels, and producing"
+        "half the output channels, and both subsequently concatenated.");
+    TVM_ATTR_FIELD(channels)
+        .describe(
+            "The number of output channels in the convolution."
+            " If it is not set, inferred by shape of the weight.")
+        .set_default(NullValue<IndexExpr>());
+    TVM_ATTR_FIELD(kernel_size)
+        .describe("Specifies the dimensions of the convolution window.")
+        .set_default(NullValue<Array<IndexExpr> >());
+    TVM_ATTR_FIELD(data_layout)
+        .set_default("NCHW")
+        .describe(
+            "Dimension ordering of input data. Can be 'NCHW', 'NHWC', etc."
+            "'N', 'C', 'H', 'W' stands for batch, channel, height, and width"
+            "dimensions respectively. Convolution is applied on the 'H' and"
+            "'W' dimensions.");
+    TVM_ATTR_FIELD(kernel_layout)
+        .set_default("OIHW")
+        .describe(
+            "Dimension ordering of weight. Can be 'OIHW', 'OIHW16o16i', etc."
+            "'O', 'I', 'H', 'W' stands for num_filter, input_channel, height, and width"
+            "dimensions respectively.");
+    TVM_ATTR_FIELD(out_layout)
+        .set_default("")
+        .describe(
+            "Dimension ordering of output. Can be 'NCHW', 'NHWC', etc."
+            "'N', 'C', 'H', 'W' stands for batch, channel, height, and width"
+            "dimensions respectively. Default to be same as input layout.");
+
+    // use 0 bits to indicate none.
+    TVM_ATTR_FIELD(out_dtype)
+        .set_default(NullValue<DataType>())
+        .describe("Output data type, set to explicit type under mixed precision setting");
+
+    TVM_ATTR_FIELD(use_output).set_default(true).describe("whether use output to compute gradient");
+  }
+};
+
+TVM_REGISTER_NODE_TYPE(Conv2dDxwAttrs);
+
 std::vector<Value> ConvDxwSchema2Args(const ConvDxwArgs* args) {
-  return {args->x_or_w, args->y, args->dy};
+  std::vector<Value> re;
+  re.push_back(args->x_or_w);
+  if (args->y.defined()) {
+    re.push_back(args->y.value());
+  }
+  re.push_back(args->dy);
+  return re;
 }
 
 std::vector<std::string> ConvDxwSchemaArgNames(const op::CallValues& call) {
-  return {"x_or_w", "y", "dy"};
+  const auto* args = call->args.as<ConvDxwArgs>();
+  std::vector<std::string> ret;
+  ret.push_back("x_or_w");
+  if (args->y.defined()) {
+    ret.push_back("y");
+  }
+  ret.push_back("dy");
+  return ret;
 }
 
 Attrs ConvDxwSchema2Attrs(const ConvDxwArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> padding = Pad<2>(args->padding);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);
-  auto attrs = make_object<Conv2DAttrs>();
+  auto attrs = make_object<Conv2dDxwAttrs>();
+  if (args->y.defined()) {
+    attrs->use_output = true;
+  } else {
+    attrs->use_output = false;
+  }
   for (int i = 0; i < stride.size(); ++i) {
     attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
   }
@@ -130,10 +221,10 @@ HashKey Conv2dDxwHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVMJIT(Conv2dDx, "mnm.op.conv2d_dx", ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
-           ConvDxwSchema2Attrs, Conv2dDxwHasher);
-MNM_TVMJIT(Conv2dDw, "mnm.op.conv2d_dw", ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
-           ConvDxwSchema2Attrs, Conv2dDxwHasher);
+MNM_TVMJIT_PLEVEL(Conv2dDx, "mnm.op.conv2d_dx", ConvDxwArgs, ConvDxwSchema2Args,
+                  ConvDxwSchemaArgNames, ConvDxwSchema2Attrs, Conv2dDxwHasher, 9);
+MNM_TVMJIT_PLEVEL(Conv2dDw, "mnm.op.conv2d_dw", ConvDxwArgs, ConvDxwSchema2Args,
+                  ConvDxwSchemaArgNames, ConvDxwSchema2Attrs, Conv2dDxwHasher, 9);
 
 std::vector<Value> SoftmaxSchema2Args(const SoftmaxArgs* args) {
   return {args->x};
