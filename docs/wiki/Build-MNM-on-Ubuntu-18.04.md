@@ -7,9 +7,9 @@ This article introduces how to build MNM using CMake.
 
 ```bash
 sudo apt-get install ccache      # ccache is used to accelerate build
-                     cmake       # hmm, cmake is required to run cmake
                      git
-
+sudo snap install cmake --classic # hmm, cmake is required to run cmake
+                                  # the cmake version installed by apt is too old
 ```
 
 </details>
@@ -31,14 +31,43 @@ sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev           \
 
 </details>
 
-**(Optional) CUDA.** To run with latest CUDA, it is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-downloads). The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network).
+**(Optional) CUDA.** To run with latest CUDA, it is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-downloads). The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network). 
+Then the CUDA paths need to be specified. 
+The following lines can be inserted to the `.bashrc` file for auto loading (see bonus below).
 
-**(Optional) cuDNN.** NVIDIA provides cuDNN separately on its website, which requires additional account registration. Please follow the [link](https://developer.nvidia.com/rdp/cudnn-download), and following command yo decompress cuDNN.
+<details>
+
+```bash
+# this is for CUDA 11.2
+export CUDA_HOME=/usr/local/cuda
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64
+export PATH=$PATH:$CUDA_HOME/bin
+```
+
+**(Optional) cuDNN.** NVIDIA provides cuDNN separately on its website, which requires additional account registration. Please follow the [link](https://developer.nvidia.com/rdp/cudnn-download).
+One can either download the tar ball file for Linux and use the following command to decompress cuDNN and specify the path, or download the `.deb` file to install.
 
 <details>
 
 ```bash
 tar zxvf cudnn-SOME-SUFFIX.tgz
+```
+
+</details>
+
+**(Optional) NCCL** NCCL is required for distributed training.
+Like cuDNN, NVIDIA requires account registration to download NCCL. The detailed download and installation steps can be found from this [link](https://docs.nvidia.com/deeplearning/nccl/install-guide/index.html#down).
+A `.deb` file can be used for installation, specified by the CUDA version, the CPU architecture, and the OS.
+The local installer allows local installation after downloading, and the network installer is much smaller but requires network connection for installation.
+
+**(Optional) MPI** Meta uses MPI to do multi-process launch. 
+Any MPI implementation (e.g., OpenMPI, MPICH) is OK to serve this purpose.
+The following command is used to install MPICH.
+
+<details>
+
+```bash
+sudo apt-get install mpich
 ```
 
 </details>
@@ -71,6 +100,7 @@ make -j$(nproc)
 ## Step 3. Run MNM
 
 Here we come to the not-that-good part: to run MNM, one should properly set the environment variables.
+Again, the `export` commands can be put in `.bashrc` for auto loading (see bonus below).
 
 <details>
 
