@@ -224,8 +224,8 @@ class ndarray:
         return ret
 
 
-class Symbol:  # pylint: disable=too-few-public-methods
-
+class Symbol:
+    # pylint: disable=too-few-public-methods, protected-access
     __slots__ = ["__handle"]
 
     def __init__(self):
@@ -235,7 +235,7 @@ class Symbol:  # pylint: disable=too-few-public-methods
     def from_expr(expr):
         assert isinstance(expr, relay.Var)
         ret = Symbol()
-        ret.__handle = expr  # pylint: disable=protected-access
+        ret.__handle = expr
         return ret
 
     @staticmethod
@@ -256,21 +256,21 @@ class Symbol:  # pylint: disable=too-few-public-methods
                  The Symbol with name_hint and type_annotation
         """
         ret = Symbol()
-        ret.__handle = BindSymbol(None, name_hint, type_annotation)  # pylint: disable=protected-access
+        ret.__handle = BindSymbol(None, name_hint, type_annotation)
         return ret
 
     @staticmethod
     def make_tuple(symbols, name_hint=""):
         expr = relay.Tuple(symbols)
         ret = Symbol()
-        ret.__handle = BindSymbol(expr, name_hint, None)  # pylint: disable=protected-access
+        ret.__handle = BindSymbol(expr, name_hint, None)
         return ret
 
     def __getitem__(self, item, name_hint=""):
         if isinstance(item, int):
             expr = relay.TupleGetItem(self.__handle, item)
             ret = Symbol()
-            ret.__handle = BindSymbol(expr, name_hint, None)  # pylint: disable=protected-access
+            ret.__handle = BindSymbol(expr, name_hint, None)
             return ret
         raise NotImplementedError(
             "Only constant integers are supported for now.")

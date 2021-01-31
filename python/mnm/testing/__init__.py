@@ -91,9 +91,10 @@ def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=False, std=1.0, positive=False):
+def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
+                positive=False):
     """Helper function to generate a pair of mnm and torch arrays"""
-    x = np.random.randn(*shape) * std
+    x = np.random.randn(*shape) * std + mean
     if positive:
         x = np.abs(x) + 1e-5
     if not isinstance(x, np.ndarray):

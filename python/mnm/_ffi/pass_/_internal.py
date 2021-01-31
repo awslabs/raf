@@ -46,5 +46,7 @@ MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 PartitionGraph = _APIS.get("mnm.pass_.PartitionGraph", None)
 # Defined in ./src/pass/rename_vars.cc
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
+# Defined in ./src/pass/substitute.cc
+Substitute = _APIS.get("mnm.pass_.Substitute", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)

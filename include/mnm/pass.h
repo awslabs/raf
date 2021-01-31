@@ -127,5 +127,13 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj);
  */
 ir::Function InlineBackward(ir::Function func);
 
+/*!
+ * \brief Substitute variables in expr
+ * \param expr The expression
+ * \param args_map The substitution rule
+ * \return Transformed expression
+ */
+ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map);
+
 }  // namespace pass
 }  // namespace mnm

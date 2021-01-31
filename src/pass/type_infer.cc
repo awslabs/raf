@@ -184,7 +184,10 @@ class TypeInferencer : public ExprMutator {
     Expr ovalue = op->value;
     Var var = op->var;
     Expr value = VisitExpr(ovalue);
-
+    if (value.as<ConstantNode>()) {
+      memo_[var] = value;
+      return VisitExpr(op->body);
+    }
     const VarNode* v = value.as<VarNode>();
     if (v && var_value_map_.count(v)) {
       var_value_map_[op->var.get()] = var_value_map_[v];
