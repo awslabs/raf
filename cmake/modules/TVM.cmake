@@ -13,10 +13,6 @@ set_target_properties(tvm tvm_runtime PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
-add_custom_target(tvm_runtime_fix # PRE_BUILD
-                  COMMAND cd ${PROJECT_SOURCE_DIR} &&
-                  patch -f -p1 < ${PROJECT_SOURCE_DIR}/3rdparty/tvm_patch/tvm_fix.patch && echo 1 || echo 0)
-add_dependencies(tvm_runtime tvm_runtime_fix)
 # Avoid the side effect on cache variables introduced by tvm
 unset(USE_CUDA CACHE)
 unset(USE_OPENCL CACHE)

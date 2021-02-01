@@ -29,6 +29,14 @@ Type AllReduceInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", AllReduceInfer);
 
+Type StreamInfer(const CallValues& value) {
+  const auto* args = value->args.as<StreamControlArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op.stream_sync", "StreamSync", StreamInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

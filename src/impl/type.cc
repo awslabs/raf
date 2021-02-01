@@ -45,6 +45,8 @@ OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
 
   auto func_type = FuncType(arg_types, out_param, type_params, {type_inference});
 
+  op->op_type = func_type;
+
   return func_type;
 }
 
