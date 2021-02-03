@@ -636,5 +636,32 @@ def test_strided_slice(ctx, params):
     check(m_y, t_y)
 
 
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("shape", [
+    (1, 4, 1),
+    (3, 4, 2, 2),
+    (4, 1, 1),
+    (1, 2, 4, 1)
+])
+def test_where(shape, ctx):
+    # pylint: disable=no-self-use, not-callable
+    class WhereModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, condition, x, y):
+            return mnm.where(condition, x, y)
+
+    m_model = WhereModel()
+    m_condition, n_condition = randint(shape, low=0, high=1, ctx=ctx, dtype="bool")
+    t_condition = torch.tensor(n_condition, device=ctx)
+    m_x, t_x = randn_torch(shape, ctx=ctx)
+    m_y, t_y = randn_torch(shape, ctx=ctx)
+    m_res = m_model(m_condition, m_x, m_y)
+    t_res = torch.where(t_condition, t_x, t_y)
+    check(m_res, t_res)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

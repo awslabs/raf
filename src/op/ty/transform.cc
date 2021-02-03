@@ -615,6 +615,14 @@ Type FullInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.full", "Full", FullInfer);
 
+Type WhereInfer(const CallValues& value) {
+  const auto* args = value->args.as<WhereArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op.where", "Where", WhereInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

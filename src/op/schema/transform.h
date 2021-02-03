@@ -123,6 +123,14 @@ class TransposeDxArgs : public ir::AttrsNode<TransposeDxArgs> {
   std::vector<int64_t> axes{};
   MNM_OP_SCHEMA(TransposeDxArgs, "mnm.args.transpose_dx");
 };
+
+class WhereArgs : public ir::AttrsNode<WhereArgs> {
+ public:
+  value::BaseTensorValue condition;
+  value::BaseTensorValue x;
+  value::BaseTensorValue y;
+  MNM_OP_SCHEMA(WhereArgs, "mnm.args.where");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

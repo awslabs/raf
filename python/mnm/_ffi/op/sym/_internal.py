@@ -246,3 +246,5 @@ tanh_dx = _APIS.get("mnm.op.sym.tanh_dx", None)
 transpose = _APIS.get("mnm.op.sym.transpose", None)
 # Defined in ./src/op/regs/regs.cc
 transpose_dx = _APIS.get("mnm.op.sym.transpose_dx", None)
+# Defined in ./src/op/regs/regs.cc
+where = _APIS.get("mnm.op.sym.where", None)

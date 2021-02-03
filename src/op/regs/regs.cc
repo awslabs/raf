@@ -159,6 +159,7 @@ static const char tanh[] = "mnm.op.tanh";
 static const char tanh_dx[] = "mnm.op.tanh_dx";
 static const char transpose[] = "mnm.op.transpose";
 static const char transpose_dx[] = "mnm.op.transpose_dx";
+static const char where[] = "mnm.op.where";
 }  // namespace names
 }  // namespace regs
 }  // namespace op
@@ -719,6 +720,14 @@ Attrs UnaryUfunc(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::ArrayLike, x);
   MNM_TAPE(1, ffi2schema::ArrayLike, out);
   MNM_TAPE(2, ffi2schema::ArrayLike, where);
+  return Attrs(attrs);
+}
+
+Attrs Where(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::WhereArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, condition);
+  MNM_TAPE(1, ffi2schema::Tensor, x);
+  MNM_TAPE(2, ffi2schema::Tensor, y);
   return Attrs(attrs);
 }
 
@@ -1971,6 +1980,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.transpose_dx").set_body([](TVMArgs args, TVMRetV
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.where").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(where, 3, ffi2schema::Where, schema::WhereArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->condition));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 #undef MNM_RET
 #undef MNM_SET_ENV
 #undef MNM_PRELUDE
@@ -2533,6 +2551,14 @@ Array<Expr> UnaryUfunc(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Where(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, condition);
+  MNM_ARG(1, ffi2expr::Tensor, x);
+  MNM_ARG(2, ffi2expr::Tensor, y);
+  MNM_RET();
+}
+
 #undef MNM_RET
 #undef MNM_ARG
 #undef MNM_PRELUDE
@@ -2713,6 +2739,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx").set_body(MNM_SYMBOLIC_API(tanh_dx, 3, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
     .set_body(MNM_SYMBOLIC_API(transpose_dx, 4, TransposeDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
 
 #undef MNM_SYMBOLIC_API
 
@@ -3349,6 +3376,15 @@ Attrs UnaryUfunc(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::ArrayLike, x);
   MNM_OPTIONAL(1, value2schema::ArrayLike, out);
   MNM_OPTIONAL(2, value2schema::ArrayLike, where);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Where(const Array<Value>& values) {
+  MNM_PRELUDE(3, 3, schema::WhereArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, condition);
+  MNM_REQUIRED(1, value2schema::Tensor, x);
+  MNM_REQUIRED(2, value2schema::Tensor, y);
   return Attrs(attrs);
 }
 
@@ -4414,6 +4450,21 @@ int UnaryUfunc(const std::string& field) {
   return -1;
 }
 
+template <const char* op_name>
+int Where(const std::string& field) {
+  if (field == "condition") {
+    return 0;
+  }
+  if (field == "x") {
+    return 1;
+  }
+  if (field == "y") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
 }  // namespace schema_field_idx
 }  // namespace regs
 }  // namespace op
@@ -4896,6 +4947,10 @@ MNM_BIND_SCHEMA("mnm.op.transpose_dx", names::transpose_dx,
                 value2schema::TransposeDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.transpose_dx", names::transpose_dx,
                             schema_field_idx::TransposeDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.where", names::where,
+                value2schema::Where);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.where", names::where,
+                            schema_field_idx::Where);  // NOLINT(whitespace/line_length)
 
 #undef MNM_BIND_SCHEMA
 #undef MNM_BIND_SCHEMA_FIELD_INDEX
@@ -4972,6 +5027,7 @@ MNM_REGISTER_OBJECT_REFLECT(TransposeDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryUfuncArgs);
+MNM_REGISTER_OBJECT_REFLECT(WhereArgs);
 }  // namespace
 }  // namespace schema
 }  // namespace op

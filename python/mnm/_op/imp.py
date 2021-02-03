@@ -32,7 +32,7 @@ __all__ = [
     "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
     "stack", "stack_dx", "stream_sync", "strided_slice", "subtract",
     "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "transpose", "transpose_dx", "where",
 ]
 
 @set_module("mnm")
@@ -902,3 +902,10 @@ def transpose_dx(x, y, dy, axes=None):
     dy = imp_utils.to_tensor(dy)
     axes = imp_utils.to_int_tuple(axes)
     return imp_utils.ret(ffi.transpose_dx(x, y, dy, axes))
+
+@set_module("mnm")
+def where(condition, x, y):
+    condition = imp_utils.to_tensor(condition)
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    return imp_utils.ret(ffi.where(condition, x, y))

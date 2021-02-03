@@ -706,6 +706,31 @@ HashKey StridedSliceHasher(const std::vector<Type>& param_types, const Type& y_t
 MNM_TVMJIT(StridedSlice, "mnm.op.strided_slice", StridedSliceArgs, StridedSliceSchema2Args,
            StridedSliceSchemaArgNames, StridedSliceSchema2Attrs, StridedSliceHasher);
 
+std::vector<Value> WhereSchema2Args(const WhereArgs* args) {
+  return {args->condition, args->x, args->y};
+}
+
+std::vector<std::string> WhereSchemaArgNames(const op::CallValues& call) {
+  return {"condition", "x", "y"};
+}
+
+Attrs WhereSchema2Attrs(const WhereArgs* args) {
+  auto attrs = make_object<InitOpAttrs>();
+  return Attrs(attrs);
+}
+
+HashKey WhereHasher(const std::vector<Type>& param_types, const Type& y_type,
+                    const WhereArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->condition;
+  key << args->x;
+  key << args->y;
+  return key;
+}
+
+MNM_TVMJIT(Where, "mnm.op.where", WhereArgs, WhereSchema2Args, WhereSchemaArgNames,
+           WhereSchema2Attrs, WhereHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

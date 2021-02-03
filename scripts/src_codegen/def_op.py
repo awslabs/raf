@@ -124,6 +124,7 @@ OPS = [
     Op(name="compiler_begin", schema_name="compiler"),
     Op(name="compiler_end", schema_name="compiler"),
     Op(name="full", schema_name="full"),
+    Op(name="where", schema_name="where"),
 ]
 
 def by_name():

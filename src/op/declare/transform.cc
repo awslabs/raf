@@ -686,6 +686,19 @@ MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
   call->out = TensorValue::Assemble(call->ctx, fill_value->dtype, shape);
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {
+  const auto* args = call->args.as<WhereArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* condition = args->condition;
+  const DLTensor* x = args->x;
+  const DLTensor* y = args->y;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->ctx = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -31,7 +31,7 @@ __all__ = [
     "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
     "stack", "stack_dx", "stream_sync", "strided_slice", "subtract",
     "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx",
+    "transpose", "transpose_dx", "where",
 ]
 
 def _allreduce(x):
@@ -779,3 +779,9 @@ def transpose_dx(x, y, dy, axes=None):
     dy = sym_utils.to_tensor(dy)
     axes = sym_utils.to_int_tuple(axes)
     return Symbol.from_expr(ffi.transpose_dx(x, y, dy, axes))
+
+def where(condition, x, y):
+    condition = sym_utils.to_tensor(condition)
+    x = sym_utils.to_tensor(x)
+    y = sym_utils.to_tensor(y)
+    return Symbol.from_expr(ffi.where(condition, x, y))
