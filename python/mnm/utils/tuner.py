@@ -33,19 +33,11 @@ def extract_tuning_tasks(func, target, args):
         auto_scheduler.relay_integration.TracingMode.EXTRACT_COMPLEX_TASK_ONLY
     )
     with env:
-        with tvm.transform.PassContext(
-                opt_level=3,
-                config={
-                    "relay.backend.use_auto_scheduler": True,
-                    "relay.backend.disable_compile_engine_cache": True,
-                },
-                disabled_pass={"AutoSchedulerLayoutRewrite"},
-        ):
-            # TODO(comaniac): Whether to make a new thread?
-            mod = Module()
-            mod[tvm.ir.GlobalVar("main")] = func
-            executor = VMExecutor(mod, target)
-            executor.make_executor()(*args)
+        # TODO(comaniac): Whether to make a new thread?
+        mod = Module()
+        mod[tvm.ir.GlobalVar("main")] = func
+        executor = VMExecutor(mod, target)
+        executor.make_executor()(*args)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
 
@@ -107,19 +99,13 @@ def profile_vm_func_with_schedule(func, ctx, args, log_file=None):
 
     # Get rid of the first run because it includes the compilation.
     executor = VMExecutor(mod, ctx)
-    with auto_scheduler.ApplyHistoryBest(log_file):
-        with tvm.transform.PassContext(
-                opt_level=3,
-                config={"relay.backend.use_auto_scheduler": True},
-                disabled_pass={"AutoSchedulerLayoutRewrite"},
-        ):
-            executor.make_executor()(*args)
+    executor.make_executor(log_file)(*args)
 
     # Run N times to profile the latency.
     latencies = []
     for _ in range(10):
         start = time.time()
-        out = executor.make_executor()(*args)
+        out = executor.make_executor(log_file)(*args)
         out.asnumpy()
         latencies.append(time.time() - start)
     print("Latency (ms): %.2f ms" % (np.median(latencies) * 1000))

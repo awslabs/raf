@@ -2,6 +2,7 @@
 # pylint: disable=no-else-return, unidiomatic-typecheck, undefined-variable, invalid-name, redefined-builtin, no-self-use
 import numpy as np
 import tvm
+from tvm import auto_scheduler, autotvm
 from . import ndarray as _nd
 from .core_utils import str2ctx
 from .. import _ffi
@@ -462,10 +463,33 @@ class VMExecutor:
         self.vm = VirtualMachine(self.executable)
         self.vm.init(enable_cuda_graph, self.ctx)
 
-    def make_executor(self):
-        """Create a vm executor"""
+    def make_executor(self, sch_file=None):
+        """Create a VM executor.
+
+        Parameters
+        ----------
+        sch_file: Optional[str]
+            The tuned schedule file path.
+
+        Returns
+        -------
+        executor: Callable
+            The VM executor
+        """
+        auto_scheduler_dispatch_context = auto_scheduler.ApplyHistoryBest(sch_file)
+
         def _vm_wrapper(*args, **kwargs):
-            return self.vm.run(*args, **kwargs)
+            old_autotvm_silent = autotvm.GLOBAL_SCOPE.silent
+            autotvm.GLOBAL_SCOPE.silent = True
+            # TODO(comaniac): Add include_compatible=True after syncing TVM to upstream.
+            with auto_scheduler_dispatch_context:
+                with tvm.transform.PassContext(
+                        config={"relay.backend.use_auto_scheduler": True},
+                        disabled_pass={"AutoSchedulerLayoutRewrite"},
+                ):
+                    ret = self.vm.run(*args, **kwargs)
+            autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
+            return ret
         return _vm_wrapper
 
 class VirtualMachine:
