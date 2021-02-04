@@ -589,7 +589,7 @@ def test_squeeze(shape, axis, ctx):
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
     m_x, n_x = randn(shape, dtype='float32', ctx=ctx)
-    m_x.requires_grad = False
+    m_x.requires_grad = True
     model = TestModel(mnm._op.sym.squeeze, axis=axis)
     m_y = model(m_x)
     # TODO(@yzhliu): enable vm test after we have squeeze shape function
@@ -598,6 +598,13 @@ def test_squeeze(shape, axis, ctx):
     n_y = np.squeeze(n_x, axis)
     check(m_y, n_y)
     #check(v_y, n_y)
+    # check backward
+    newshape = np.shape(n_y)
+    m_dy, n_dy = randn(newshape, ctx=ctx)
+    m_y.backward(m_dy)
+    n_dy = np.reshape(n_dy, shape)
+    check(m_x.grad, n_dy)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("dtype", ["int64", "float32"])
@@ -617,6 +624,7 @@ def test_full(shape, dtype, ctx):
     # check forward
     n_y = np.full(fill_value=n_x, shape=shape)
     check(m_y, n_y)
+
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("params", [
@@ -665,3 +673,4 @@ def test_where(shape, ctx):
 
 if __name__ == "__main__":
     pytest.main([__file__])
+    

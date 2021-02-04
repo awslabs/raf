@@ -149,6 +149,16 @@ Array<Expr> ReshapeGrad(const Expr& orig_call, const Array<Expr> orig_args, cons
 
 MNM_OP_GRAD("mnm.op.reshape", ReshapeGrad);
 
+Array<Expr> SqueezeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                        const Expr& dy) {
+  static auto reshape = Op::Get("mnm.op.reshape");
+  static auto shape = Op::Get("mnm.op.shape");
+  const CallNode* call = orig_call.as<CallNode>();
+  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
+}
+
+MNM_OP_GRAD("mnm.op.squeeze", SqueezeGrad);
+
 Array<Expr> TakeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.take_dx");
