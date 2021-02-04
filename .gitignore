@@ -104,3 +104,23 @@ cmake-build-debug/
 
 #others	
 .sudo_as_admin_successful
+
+# Library files
+*.so
+*.dylib
+*.dll
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+
+# Vim temporary files
+*.swp
+*.swo
+
+# Object files
+*.o
+*.obj
