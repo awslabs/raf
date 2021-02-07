@@ -63,6 +63,7 @@ from ._internal import less_equal
 from ._internal import log
 from ._internal import log_softmax
 from ._internal import log_softmax_dx
+from ._internal import logical_and
 from ._internal import logical_not
 from ._internal import matmul
 from ._internal import matmul_nt

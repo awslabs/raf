@@ -302,6 +302,19 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
   throw;
 });
 
+MNM_REGISTER_BINARY_BCAST_OP("mnm.op.logical_and", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_BINARY_SCALAR(&&, x1, x2);
+    MNM_BINARY_TENSOR(x1, x2);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
 void CollapseAxis(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);

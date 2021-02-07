@@ -60,6 +60,7 @@ def test_binary(op, shape, dtype):
     sym.greater_equal,
     sym.equal,
     sym.not_equal,
+    sym.logical_and
 ])
 @pytest.mark.parametrize("shape", [
     [(10, 4), (5, 10, 1), (5, 10, 4)]

@@ -99,6 +99,7 @@ static const char less_equal[] = "mnm.op.less_equal";
 static const char log[] = "mnm.op.log";
 static const char log_softmax[] = "mnm.op.log_softmax";
 static const char log_softmax_dx[] = "mnm.op.log_softmax_dx";
+static const char logical_and[] = "mnm.op.logical_and";
 static const char logical_not[] = "mnm.op.logical_not";
 static const char matmul[] = "mnm.op.matmul";
 static const char matmul_nt[] = "mnm.op.matmul_nt";
@@ -1402,6 +1403,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.log_softmax_dx").set_body([](TVMArgs args, TVMRe
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.logical_and").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(logical_and, 4, ffi2schema::BinaryUfunc,
+              schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.logical_not").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(logical_not, 1, ffi2schema::Unary,
               schema::UnaryArgs);  // NOLINT(whitespace/line_length)
@@ -2667,6 +2679,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.log").set_body(MNM_SYMBOLIC_API(log, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax").set_body(MNM_SYMBOLIC_API(log_softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax_dx")
     .set_body(MNM_SYMBOLIC_API(log_softmax_dx, 4, SoftmaxDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.logical_and")
+    .set_body(MNM_SYMBOLIC_API(logical_and, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.logical_not").set_body(MNM_SYMBOLIC_API(logical_not, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul").set_body(MNM_SYMBOLIC_API(matmul, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.matmul_nt").set_body(MNM_SYMBOLIC_API(matmul_nt, 2, Binary));
@@ -4718,6 +4732,10 @@ MNM_BIND_SCHEMA("mnm.op.log_softmax_dx", names::log_softmax_dx,
                 value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.log_softmax_dx", names::log_softmax_dx,
                             schema_field_idx::SoftmaxDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.logical_and", names::logical_and,
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.logical_and", names::logical_and,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.logical_not", names::logical_not,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.logical_not", names::logical_not,

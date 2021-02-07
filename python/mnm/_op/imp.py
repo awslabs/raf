@@ -20,19 +20,19 @@ __all__ = [
     "full", "gather", "gather_dx", "gather_nd", "gather_nd_dx",
     "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
     "layer_norm", "layer_norm_dx", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
-    "maximum", "mean", "mean_dx", "min", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "pad", "power",
-    "prod", "relu", "relu_dx", "repeat", "reshape",
-    "reverse", "reverse_sequence", "round", "rsqrt", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
-    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
-    "softmax_dx", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stack_dx", "stream_sync", "strided_slice", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx", "where",
+    "log_softmax", "log_softmax_dx", "logical_and", "logical_not", "matmul",
+    "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
+    "max_pool2d_dx", "maximum", "mean", "mean_dx", "min",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "pad",
+    "power", "prod", "relu", "relu_dx", "repeat",
+    "reshape", "reverse", "reverse_sequence", "round", "rsqrt",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
+    "softmax", "softmax_dx", "split", "sqrt", "sqrt_dx",
+    "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx", "where",
 ]
 
 @set_module("mnm")
@@ -479,6 +479,14 @@ def log_softmax_dx(x, y, dy, axis=-1):
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.log_softmax_dx(x, y, dy, axis))
+
+@set_module("mnm")
+def logical_and(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.logical_and(x1, x2, out, where))
 
 @set_module("mnm")
 def logical_not(x):

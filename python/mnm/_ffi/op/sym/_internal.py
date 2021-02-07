@@ -127,6 +127,8 @@ log_softmax = _APIS.get("mnm.op.sym.log_softmax", None)
 # Defined in ./src/op/regs/regs.cc
 log_softmax_dx = _APIS.get("mnm.op.sym.log_softmax_dx", None)
 # Defined in ./src/op/regs/regs.cc
+logical_and = _APIS.get("mnm.op.sym.logical_and", None)
+# Defined in ./src/op/regs/regs.cc
 logical_not = _APIS.get("mnm.op.sym.logical_not", None)
 # Defined in ./src/op/regs/regs.cc
 matmul = _APIS.get("mnm.op.sym.matmul", None)

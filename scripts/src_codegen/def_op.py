@@ -125,6 +125,7 @@ OPS = [
     Op(name="compiler_end", schema_name="compiler"),
     Op(name="full", schema_name="full"),
     Op(name="where", schema_name="where"),
+    Op(name="logical_and", schema_name="binary_ufunc"),
 ]
 
 def by_name():

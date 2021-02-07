@@ -76,6 +76,27 @@ def test_binary_ops_with_grad(ops, shape, dtype, ctx):
     check(m_x1.grad, t_x1.grad)
     check(m_x2.grad, t_x2.grad)
 
+#logical_and only allows bool input s
+@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("ops", [
+    (np.logical_and, mnm._op.sym.logical_and),
+])
+@pytest.mark.parametrize("shape", [
+    [(), (1, 2)],
+    [(1, 2), (2, 1)],
+    [(3, 3), (1, 1)]
+])
+@pytest.mark.parametrize("dtype", ["bool"])
+def test_binary_bool_ops(ops, shape, dtype, ctx):
+    n_op, m_op = ops
+    model = BinaryModel(m_op)
+    m_x1, n_x1 = randn(shape[0], dtype=dtype, ctx=ctx)
+    m_x2, n_x2 = randn(shape[1], dtype=dtype, ctx=ctx)
+    m_y = model(m_x1, m_x2)
+    v_y = run_vm_model(model, ctx, [m_x1, m_x2])
+    n_y = n_op(n_x1, n_x2)
+    check(m_y, n_y)
+    check(v_y, n_y)
 
 if __name__ == "__main__":
     pytest.main([__file__])
