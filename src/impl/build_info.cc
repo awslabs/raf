@@ -12,8 +12,12 @@ std::string GitVersion() {
   return MNM_GIT_VERSION;
 }
 
-std::string UseCUDA() {
-  return MNM_USE_CUDA;
+bool UseCUDA() {
+#ifdef MNM_USE_CUDA
+  return true;
+#else
+  return false;
+#endif
 }
 
 std::string UseCuDNN() {

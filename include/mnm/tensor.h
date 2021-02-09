@@ -60,7 +60,7 @@ class Tensor : public tvm::runtime::NDArray {
   }
 
   // Empty strides indicates contiguous, will generate correct strides automatically
-  static Tensor make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
+  static Tensor make(const Device& dev, const DType& dtype, const std::vector<int64_t>& shape,
                      const std::vector<int64_t>& strides = {}, void* data = nullptr);
 
   static Tensor FromDLPack(DLManagedTensor* tensor);

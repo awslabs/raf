@@ -88,17 +88,17 @@ Function ModuleLookupStr(Module mod, const std::string& name) {
 tvm::runtime::NDArray MakeFakeTensor() {
   static int64_t a[1] = {-114514};
   static int64_t b[1] = {1};
-  Context ctx = mnm::Context(mnm::DevType::kCPU(), 0);
+  Device dev = mnm::Device(mnm::DevType::kCPU(), 0);
   DType dtype = mnm::DType(mnm::DTypeCode::kInt(), 64, 1);
   DLTensor tensor;
   tensor.data = a;
-  tensor.ctx = ctx;
+  tensor.ctx = dev;
   tensor.dtype = dtype;
   tensor.shape = b;
   tensor.ndim = 0;
   tensor.strides = nullptr;
   tensor.byte_offset = 0;
-  auto array = tvm::runtime::NDArray::Empty({}, dtype, ctx);
+  auto array = tvm::runtime::NDArray::Empty({}, dtype, dev);
   array.CopyFrom(&tensor);
   return array;
 }

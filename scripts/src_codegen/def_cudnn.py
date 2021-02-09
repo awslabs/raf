@@ -277,7 +277,7 @@ class CUDNNWorkSpace(object):
         status.add_attr('size_t', self.size)
         status.add_attr('void *', self.api_arg)
         res = [call_cudnn_api(self.api, ', '.join(self.args))]
-        res += [f'RequestWorkspace(&{self.api_arg}, cv->ctx, {self.size});']
+        res += [f'RequestWorkspace(&{self.api_arg}, cv->device, {self.size});']
         return res
 
 class AssignStatement(object):

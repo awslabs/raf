@@ -51,7 +51,7 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
 
 std::shared_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
   const Op& op = Downcast<OpValue>(call->callee)->op;
-  TDispatchList* list = OpDispatch::Get(op, call->ctx.device_type);
+  TDispatchList* list = OpDispatch::Get(op, call->device.device_type);
   for (const auto e : *list) {
     const auto& maker = e.maker;
     std::shared_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
@@ -112,7 +112,7 @@ FusedOpDispatch::TDispatchList* FusedOpDispatch::Get(DevType device_type) {
 
 std::shared_ptr<OpEnv> FusedOpDispatch::Dispatch(const CallValues& call) {
   const auto& func = Downcast<ClosureValue>(call->callee)->func;
-  for (const auto& e : *FusedOpDispatch::Get(call->ctx.device_type)) {
+  for (const auto& e : *FusedOpDispatch::Get(call->device.device_type)) {
     const auto& maker = e.second;
     std::shared_ptr<OpEnv> func_env(static_cast<OpEnv*>(maker(call)));
     if (func_env) {
@@ -161,17 +161,17 @@ OpEnv::~OpEnv() {
   }
 }
 
-void OpEnv::RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes) {
+void OpEnv::RequestWorkspace(void** dest, const Device& dev, int64_t nbytes) {
   int index = impl->workspace.size();
-  impl->workspace.push_back({dest, ctx, nbytes, nullptr});
+  impl->workspace.push_back({dest, dev, nbytes, nullptr});
   if (impl->executor != nullptr) {
     impl->executor->RequestWorkspace(impl.get(), index);
   }
 }
 
-void OpEnv::RequestStream(void** dest, const Context& ctx, int tag_idx) {
+void OpEnv::RequestStream(void** dest, const Device& dev, int tag_idx) {
   int index = impl->stream.size();
-  impl->stream.push_back({dest, ctx, tag_idx, index, nullptr});
+  impl->stream.push_back({dest, dev, tag_idx, index, nullptr});
   if (impl->executor != nullptr) {
     impl->executor->RequestStream(impl.get(), index);
   }

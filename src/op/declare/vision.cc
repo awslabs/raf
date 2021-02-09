@@ -30,7 +30,7 @@ MNM_OP_DECLARE("mnm.op.get_valid_counts", [](const CallValues& call) {
   ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), oshape_indices));
 
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  call->ctx = data->ctx;
+  call->device = data->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
@@ -54,7 +54,7 @@ MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
                                       /*dtype=*/data->dtype,
                                       /*shape=*/dshape);
   }
-  call->ctx = data->ctx;
+  call->device = data->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare

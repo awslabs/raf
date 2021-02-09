@@ -5,7 +5,7 @@ import torch.nn as nn
 
 import mnm
 from mnm.model import BatchNorm, Conv2d, Linear, Sequential
-from mnm.testing import run_infer_type, run_vm_model, check, randn_torch, get_ctx_list, asnumpy
+from mnm.testing import run_infer_type, run_vm_model, check, randn_torch, get_device_list, asnumpy
 from mnm._core.core_utils import get_chained_attr
 
 
@@ -80,10 +80,10 @@ def set_param(model, name, value):
     setattr(ins, name[-1], value)
 
 
-def init(m_model, t_model, layers, ctx="cuda"):
+def init(m_model, t_model, layers, device="cuda"):
     # pylint: disable=no-member, line-too-long, too-many-statements
     for m_name, t_w in param_map(t_model, layers).items():
-        set_param(m_model, m_name, mnm.array(asnumpy(t_w), ctx=ctx))
+        set_param(m_model, m_name, mnm.array(asnumpy(t_w), device=device))
 
 
 def check_params(m_model, t_model, layers):
@@ -93,13 +93,13 @@ def check_params(m_model, t_model, layers):
         check(m_w, t_w, atol=1e-3, rtol=1e-3)
 
 
-def one_hot(batch_size, num_classes, ctx="cuda", dtype="float32"):
+def one_hot(batch_size, num_classes, device="cuda", dtype="float32"):
     # pylint: disable=not-callable
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = np.zeros([batch_size, num_classes], dtype=dtype)
     m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
-    t_x = torch.tensor(targets, requires_grad=False, device=ctx)
+    m_x = mnm.array(m_x, device=device)
+    t_x = torch.tensor(targets, requires_grad=False, device=device)
     assert list(m_x.shape) == [batch_size, num_classes]
     assert list(t_x.shape) == [batch_size]
     return m_x, t_x
@@ -301,10 +301,10 @@ class TorchResNet50(nn.Module):
 def test_build():
     x = np.random.randn(1, 3, 32, 32)
     y = np.random.randn(1, 10)
-    m_x = mnm.array(x, dtype="float32", ctx="cuda")
-    m_y = mnm.array(y, dtype='float32', ctx='cuda')
+    m_x = mnm.array(x, dtype="float32", device="cuda")
+    m_y = mnm.array(y, dtype='float32', device='cuda')
     model = MNMResNet50([3, 4, 6, 3])
-    model.to(ctx='cuda')
+    model.to(device='cuda')
     print("### Switch to training mode")
     model.train_mode()
     model(m_x, m_y)
@@ -316,9 +316,9 @@ def test_build():
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_build_fp16():
     x = np.random.randn(1, 3, 32, 32)
-    m_x = mnm.array(x, dtype="float32", ctx="cuda")
+    m_x = mnm.array(x, dtype="float32", device="cuda")
     model = MNMResNet50([3, 4, 6, 3])
-    model.to(ctx='cuda')
+    model.to(device='cuda')
     model.infer_mode()
     m_y1 = model(m_x)
     print("### Switch to AMP model")
@@ -327,9 +327,9 @@ def test_build_fp16():
     np.testing.assert_allclose(m_y1.asnumpy(), m_y2.asnumpy(), rtol=0.1, atol=0.1)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("fuse", [False, True])
-def test_vm_forward(ctx, fuse):
+def test_vm_forward(device, fuse):
     def ir_fusion(func):
         # pylint: disable=protected-access
         func = run_infer_type(func)
@@ -343,16 +343,16 @@ def test_vm_forward(ctx, fuse):
     layers = [3, 4, 6, 3]
     ir_optimizer = ir_fusion if fuse else ir_identity
     m_model = MNMResNet50(layers)
-    m_model.to(ctx=ctx)
+    m_model.to(device=device)
     t_model = TorchResNet50(layers)
-    t_model.to(ctx)
-    init(m_model, t_model, layers, ctx=ctx)
-    m_x, t_x = randn_torch([1, 3, 32, 32], requires_grad=True, ctx=ctx)
-    m_y, t_y = one_hot(batch_size=1, num_classes=10, ctx=ctx)
+    t_model.to(device)
+    init(m_model, t_model, layers, device=device)
+    m_x, t_x = randn_torch([1, 3, 32, 32], requires_grad=True, device=device)
+    m_y, t_y = one_hot(batch_size=1, num_classes=10, device=device)
     m_x.requires_grad = True
     m_model.train_mode()
     t_model.train()
-    m_loss = run_vm_model(m_model, ctx, [m_x, m_y], ir_optimizer)[0]
+    m_loss = run_vm_model(m_model, device, [m_x, m_y], ir_optimizer)[0]
     t_loss = t_model(t_x, t_y)
     check(m_loss, t_loss)
     check_params(m_model, t_model, layers)

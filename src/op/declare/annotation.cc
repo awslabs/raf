@@ -1,3 +1,4 @@
+
 /*!
  * Copyright (c) 2020 by Contributors
  * \file src/op/declare/annotation.cc
@@ -23,7 +24,7 @@ MNM_OP_DECLARE("mnm.op.compiler_begin", [](const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
@@ -35,7 +36,7 @@ MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare

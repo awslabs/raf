@@ -31,11 +31,11 @@ class BaseModel:
     def state(self, prefix="", recursive=True):
         return _get_param_dict(self, prefix=prefix, recursive=recursive)
 
-    def to(self, *, ctx=None, dtype=None):  # pylint: disable=invalid-name
+    def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
         # TODO(@junrushao1994): do we control cache invalidation?
         for model in _get_model_dict(self, prefix="", recursive=True).values():
             for name, param in _get_attr_params_key_value(model).items():
-                param = param.to(ctx=ctx, dtype=dtype)
+                param = param.to(device=device, dtype=dtype)
                 setattr(model, name, param)
 
 

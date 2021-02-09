@@ -85,7 +85,7 @@ class ConvCUDNN : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                        x_desc, w_desc, conv_desc, y_desc, algo,
                                                        &ws_size));
-    RequestWorkspace(&ws, call->ctx, ws_size);
+    RequestWorkspace(&ws, call->device, ws_size);
 
     alpha = CUDNNDType(y->dtype).const_addr<1>();
     beta = CUDNNDType(y->dtype).const_addr<0>();

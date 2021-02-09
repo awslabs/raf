@@ -2,17 +2,17 @@
 import numpy as np
 import pytest
 import mnm
-from mnm.testing import get_ctx_list, randn, check, run_vm_model
+from mnm.testing import get_device_list, randn, check, run_vm_model
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("inputs", [
     ((1, 2500, 6), 0, 0, 1),
     ((1, 2500, 5), -1, -1, 0),
     ((3, 1000, 6), 0.55, 1, 0),
     ((16, 500, 5), 0.95, -1, 0)
 ]) # pylint: disable=too-many-locals
-def test_get_valid_counts(inputs, ctx):
+def test_get_valid_counts(inputs, device):
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -22,11 +22,11 @@ def test_get_valid_counts(inputs, ctx):
             return mnm.get_valid_counts(x, y, id_index, score_index)
 
     dtype = "float32"
-    m_x, np_data = randn(inputs[0], ctx=ctx)
+    m_x, np_data = randn(inputs[0], device=device)
     batch_size, num_anchor, elem_length = inputs[0]
     score_threshold, id_index, score_index = inputs[1], inputs[2], inputs[3]
     np_s = np.array(score_threshold).astype("float32")
-    m_s = mnm.array(np_s, ctx=ctx)
+    m_s = mnm.array(np_s, device=device)
     np_out1 = np.zeros(shape=(batch_size,))
     np_out2 = np.zeros(shape=inputs[0]).astype(dtype)
     np_out3 = np.zeros(shape=(batch_size, num_anchor))
@@ -47,10 +47,10 @@ def test_get_valid_counts(inputs, ctx):
                 np_out3[i, j] = -1
     model = TestModel()
     m_out = model(m_x, m_s)
-    v_out = run_vm_model(model, ctx, [m_x, m_s])
+    v_out = run_vm_model(model, device, [m_x, m_s])
     check(m_out[0], np_out1, rtol=1e-3, atol=1e-04)
     check(v_out[0], np_out1, rtol=1e-3, atol=1e-04)
-    if ctx == "cpu":
+    if device == "cpu":
         # tvm get_valid_count for cuda doesn't do data rearrangement
         check(m_out[1], np_out2, rtol=1e-3, atol=1e-04)
         check(m_out[2], np_out3, rtol=1e-3, atol=1e-04)
@@ -58,8 +58,8 @@ def test_get_valid_counts(inputs, ctx):
         check(v_out[2], np_out3, rtol=1e-3, atol=1e-04)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_nms(ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_nms(device):
     # pylint: disable=too-many-locals
     class TestModel(mnm.Model):
         def build(self, force_suppress, top_k, return_indices):
@@ -79,14 +79,14 @@ def test_nms(ctx):
         # pylint: disable=too-many-arguments
         model = TestModel(force_suppress, top_k, False)
         m_out = model(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold)
-        v_out = run_vm_model(model, ctx, [
+        v_out = run_vm_model(model, device, [
             m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold])
         check(m_out, np_result, rtol=1e-5, atol=1e-07)
         check(v_out, np_result, rtol=1e-5, atol=1e-07)
-        if ctx == 'cpu':
+        if device == 'cpu':
             model = TestModel(force_suppress, top_k, True)
             m_out = model(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold)
-            v_out = run_vm_model(model, ctx, [
+            v_out = run_vm_model(model, device, [
                 m_data, m_valid_count, m_indices, m_max_output_size,
                 m_iou_threshold])
             assert m_out[0].shape == (dshape[0], dshape[1]) and \
@@ -114,11 +114,11 @@ def test_nms(ctx):
     num_anchors = 5
     dshape = (1, num_anchors, 6)
 
-    m_data = mnm.array(np_data, ctx=ctx)
-    m_valid_count = mnm.array(np_valid_count, ctx=ctx)
-    m_indices = mnm.array(np_indices, ctx=ctx)
-    m_max_output_size = mnm.array(np_max_output_size, ctx=ctx)
-    m_iou_threshold = mnm.array(np_iou_threshold, ctx=ctx)
+    m_data = mnm.array(np_data, device=device)
+    m_valid_count = mnm.array(np_valid_count, device=device)
+    m_indices = mnm.array(np_indices, device=device)
+    m_max_output_size = mnm.array(np_max_output_size, device=device)
+    m_iou_threshold = mnm.array(np_iou_threshold, device=device)
 
     verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold, np_result,
                dshape, np_indices_result, force_suppress=True)

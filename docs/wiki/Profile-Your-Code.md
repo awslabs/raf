@@ -59,7 +59,7 @@ for (int i = 0, n = req->memory.size(); i < n; ++i) {
 
 ``` cpp
 // Using BASE_PROFLIER to profile, the code snippet is the last argument of this macro.
-WITH_BASE_PROFILER(call->ctx, op->name, "MemoryRequest",
+WITH_BASE_PROFILER(call->dev, op->name, "MemoryRequest",
               {"Count: " + std::to_string(req->memory.size())}, {
                 for (int i = 0, n = req->memory.size(); i < n; ++i) {
                   RequestMemory(req.get(), i);

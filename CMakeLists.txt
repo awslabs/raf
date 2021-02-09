@@ -40,6 +40,8 @@ set(MNM_INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dmlc-core/include/
 )
 
+set(MNM_CXXFLAGS "")
+
 set(MNM_BACKEND_INCLUDE_DIRS
   ${MNM_CUDA_INCLUDE}
   ${MNM_CUDNN_INCLUDE}
@@ -65,7 +67,6 @@ set_property(
   APPEND
   PROPERTY COMPILE_DEFINITIONS
   MNM_GIT_VERSION="${MNM_GIT_VERSION}"
-  MNM_USE_CUDA="${MNM_USE_CUDA}"
   MNM_USE_LLVM="${MNM_USE_LLVM}"
   MNM_USE_CUDNN="${MNM_USE_CUDNN}"
   MNM_USE_MPI="${MNM_USE_MPI}"
@@ -96,6 +97,7 @@ else ()
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cu
     ${CMAKE_CURRENT_LIST_DIR}/src/profiler/cuda/*.cc
   )
+  set(MNM_CXX_FLAGS ${MNM_CXX_FALGS} -DMNM_USE_CUDA)
 endif()
 
 if (${MNM_USE_CUDNN} STREQUAL "OFF")
@@ -134,6 +136,7 @@ set(MNM_SOURCE_FILES
 add_library(mnm ${MNM_SOURCE_FILES})
 target_include_directories(mnm PRIVATE ${MNM_INCLUDE_DIRS})
 target_include_directories(mnm SYSTEM PRIVATE ${MNM_BACKEND_INCLUDE_DIRS})
+target_compile_options(mnm PRIVATE ${MNM_CXX_FLAGS})
 target_link_libraries(mnm PRIVATE ${MNM_LINK_LIBS} ${MNM_BACKEND_LINK_LIBS})
 target_compile_features(mnm PRIVATE cxx_std_14)
 

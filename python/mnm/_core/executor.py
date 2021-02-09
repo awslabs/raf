@@ -84,7 +84,6 @@ class Executable:
             f = relay.Function([x], x + x)
             mod = relay.Module({"main": f})
             # create a Relay VM.
-            ctx = tvm.cpu()
             target = "llvm"
             executable = mnm._core.vm.compile(mod, target)
             code, lib = executable.save()
@@ -100,7 +99,7 @@ class Executable:
             des_exec = mnm._core.vm.Executable.load_exec(loaded_code, loaded_code)
             # execute the deserialized executable.
             x_data = np.random.rand(10, 10).astype('float32')
-            des_vm = mnm._core.vm.VirtualMachine(des_exec, ctx)
+            des_vm = mnm._core.vm.VirtualMachine(des_exec, "cpu")
             res = des_vm.run(x_data)
             print(res.asnumpy())
         """
@@ -301,7 +300,7 @@ class VMCompiler:
         inputs = {}
         for name, param in params.items():
             if isinstance(param, np.ndarray):
-                param = _nd.array(param, ctx=tvm.cpu(0))
+                param = _nd.array(param, device="cpu")
                 inputs[name] = param
             else:
                 assert isinstance(param, _nd.ndarray)
@@ -421,7 +420,7 @@ class VMCompiler:
 # pylint: disable=protected-access
 def _convert(arg, cargs):
     if isinstance(arg, np.ndarray):
-        nd_arr = _nd.array(arg, ctx=tvm.cpu(0))
+        nd_arr = _nd.array(arg, device="cpu")
         cargs.append(nd_arr._ndarray__value)
     elif isinstance(arg, _nd.ndarray):
         cargs.append(arg._ndarray__value)
@@ -447,21 +446,21 @@ class VMExecutor:
     mod : :py:class:`~Module`
         The module to support the execution.
 
-    ctx : str
+    device : str
         The runtime context to run the code on.
     """
 
-    def __init__(self, mod, ctx, enable_cuda_graph=False):
+    def __init__(self, mod, device, enable_cuda_graph=False):
         if mod is None:
             raise RuntimeError("Must provide module to get VM executor.")
-        if "gpu" not in ctx and "cuda" not in ctx:
+        if "gpu" not in device and "cuda" not in device:
             enable_cuda_graph = False
         self.mod = mod
-        self.target = ctx
-        self.ctx = str2ctx(ctx)
+        self.target = device
+        self.device = str2ctx(device)
         self.executable = compile(mod, self.target)
         self.vm = VirtualMachine(self.executable)
-        self.vm.init(enable_cuda_graph, self.ctx)
+        self.vm.init(enable_cuda_graph, self.device)
 
     def make_executor(self, sch_file=None):
         """Create a VM executor.
@@ -505,15 +504,15 @@ class VirtualMachine:
         self._invoke = self.mod["invoke"]
         self._set_input = self.mod["set_input"]
 
-    def init(self, enable_cuda_graph, ctx):
+    def init(self, enable_cuda_graph, device):
         """Initialize the context in the VM.
 
         Parameters
         ----------
-        ctx : :py:class:`TVMContext`
+        device : :py:class:`TVMContext`
             The runtime context to run the code on.
         """
-        args = [ctx]
+        args = [device]
         self._init(enable_cuda_graph, *args)
 
     def set_input(self, func_name, *args, **kwargs):

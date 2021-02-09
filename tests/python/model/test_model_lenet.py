@@ -5,8 +5,7 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear
-
-from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
+from mnm.testing import check, one_hot_torch, randn_torch, t2m_param
 
 class TorchLeNet(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
@@ -93,8 +92,9 @@ class MNMLeNet(mnm.Model):
 ])
 def test_lenet(config):
     t_model = TorchLeNet(*config)
+    t_model.to(device='cuda')
     m_model = MNMLeNet(*config)
-    m_model.to(ctx='cuda')
+    m_model.to(device='cuda')
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.conv2.w = t2m_param(t_model.conv2.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
@@ -103,8 +103,8 @@ def test_lenet(config):
     m_model.linear2.b = t2m_param(t_model.linear2.bias)
     m_model.linear3.w = t2m_param(t_model.linear3.weight)
     m_model.linear3.b = t2m_param(t_model.linear3.bias)
-    m_x, t_x = randn([1, 3, config[0], config[0]])
-    m_y, t_y = one_hot(batch_size=1, num_classes=config[1])
+    m_x, t_x = randn_torch([1, 3, config[0], config[0]], device="cuda")
+    m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[1], device="cuda")
     m_x.requires_grad = True
 
     print("### Switch to training mode")

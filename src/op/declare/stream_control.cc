@@ -24,7 +24,7 @@ void StreamSync(const CallValues& call) {
   auto& tag = args->stream_tag;
   auto& data = args->x;
   const DLTensor* x = data;
-  call->ctx = x->ctx;
+  call->device = x->ctx;
   call->out = VoidValue::make();
 }
 

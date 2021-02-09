@@ -51,7 +51,7 @@ def test_output_view(view_op):
     np.testing.assert_equal(y1.asnumpy() * 2, y2.asnumpy())
 
     if mnm.build.with_cuda():
-        x = x.to(ctx='cuda')
+        x = x.to(device='cuda')
         model3 = TestOutputViewGPU()
         y1 = model1(x)
         y3 = model3(x)

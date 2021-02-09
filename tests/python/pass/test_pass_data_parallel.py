@@ -9,16 +9,16 @@ from mnm import distributed as dist
 import tvm
 
 
-def one_hot(batch_size, num_classes, ctx="cuda", dtype="float32"):
+def one_hot(batch_size, num_classes, device="cuda", dtype="float32"):
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = np.zeros([batch_size, num_classes], dtype=dtype)
     m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
+    m_x = mnm.array(m_x, device=device)
     assert list(m_x.shape) == [batch_size, num_classes]
     return m_x
 
 
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0,
+def randn(shape, *, device="cuda", dtype="float32", std=1.0, mean=0.0,
           requires_grad=False, positive=False):
     if positive:
         x = np.abs(np.random.randn(*shape)) * std + mean
@@ -28,7 +28,7 @@ def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0,
         x = np.array(x)
     assert list(x.shape) == list(shape)
     x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
+    m_x = mnm.array(x, device=device)
     if requires_grad:
         m_x.requires_grad = True
     return m_x
@@ -72,8 +72,8 @@ class MNMTest(mnm.Model):
 def test_dp(config):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
-    ctx = f"cuda({dctx.local_rank})"
-    const = randn([1, 3, config[1], config[1]], ctx=ctx)
+    device = f"cuda({dctx.local_rank})"
+    const = randn([1, 3, config[1], config[1]], device=device)
 
     class TestModel(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -182,11 +182,11 @@ def test_dp(config):
         return tvm.relay.Function([x, y_true, c], let_2)
 
     m_model = TestModel()
-    m_model.to(ctx=ctx)
+    m_model.to(device=device)
     m_model.train_mode()
 
-    m_x = randn([1, 3, config[1], config[1]], ctx=ctx, requires_grad=True)
-    m_y = one_hot(batch_size=1, num_classes=config[2], ctx=ctx)
+    m_x = randn([1, 3, config[1], config[1]], device=device, requires_grad=True)
+    m_y = one_hot(batch_size=1, num_classes=config[2], device=device)
 
     func_before = m_model._internal(m_x, m_y).func
     func_before = mnm._ffi.pass_.AutoDiff(func_before)

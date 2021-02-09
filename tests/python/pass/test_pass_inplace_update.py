@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import mnm
 from mnm.model.trace import trace_mutate_attr
-from mnm.testing import get_ctx_list, check, compile_vm_model, run_vm_model
+from mnm.testing import get_device_list, check, compile_vm_model, run_vm_model
 from mnm._core.ir_ext import ExtendedVar
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
@@ -31,8 +31,8 @@ def debug_dump(expr):
     pprint.pprint(may_share)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_grad(ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_grad(device):
     # pylint: disable=too-many-locals, too-many-arguments, attribute-defined-outside-init
     class Model(mnm.Model):
         def build(self, shape):
@@ -40,7 +40,7 @@ def test_grad(ctx):
             self.reset()
 
         def reset(self):
-            self.x = mnm.array(np.random.randn(*self.shape), ctx=ctx)
+            self.x = mnm.array(np.random.randn(*self.shape), device=device)
 
         @mnm.model.trace
         def forward(self):  # pylint: disable=no-self-use
@@ -71,8 +71,8 @@ def test_grad(ctx):
             return out
 
     shape = [2, 3, 4]
-    param = mnm.array(np.random.randn(*shape), ctx=ctx)
-    dy = mnm.array(np.random.randn(*shape), ctx=ctx)
+    param = mnm.array(np.random.randn(*shape), device=device)
+    dy = mnm.array(np.random.randn(*shape), device=device)
     model = Model(shape)
     sgd = SGD(model)
     # Interpreter
@@ -81,7 +81,7 @@ def test_grad(ctx):
     new_x_1 = model.x
     # VM
     model.x.update(param)
-    out = run_vm_model(sgd, ctx, [dy])
+    out = run_vm_model(sgd, device, [dy])
     out_2 = out[0]
     new_x_2 = out[1]
     # check inplace
@@ -111,7 +111,7 @@ def test_grad(ctx):
     # 14: 23 2 13 4 1   # alloc_tuple $13 [$4,$1]
     # 15: 1 13   # ret $13
     model.x.update(param)
-    bytecode = compile_vm_model(sgd, ctx, [dy, model.x])
+    bytecode = compile_vm_model(sgd, device, [dy, model.x])
     assert bytecode.count("alloc_tensor") == 2
 
 

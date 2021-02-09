@@ -54,7 +54,7 @@ void Sum(const CallValues& call) {
       ++j;
     }
   }
-  call->ctx = x->ctx;
+  call->device = x->ctx;
   call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
 }
 

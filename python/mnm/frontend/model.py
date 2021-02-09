@@ -75,10 +75,10 @@ class FrameworkModel(BaseModel):
     def state(self, prefix="", recursive=True):
         return self.__arg_params
 
-    def to(self, *, ctx=None, dtype=None):  # pylint: disable=invalid-name
+    def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
         for name, param in self.__arg_params.items():
-            new_param = param.to(ctx=ctx, dtype=dtype)
+            new_param = param.to(device=device, dtype=dtype)
             self.__arg_params[name] = new_param
         for name, param in self.__aux_params.items():
-            new_param = param.to(ctx=ctx, dtype=dtype)
+            new_param = param.to(device=device, dtype=dtype)
             self.__aux_params[name] = new_param

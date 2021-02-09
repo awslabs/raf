@@ -25,12 +25,12 @@ The default memory pool strategy is page_unit_pool. If you want to use no_pool, 
 # Using default strategy
 import mnm
 
-ctx = 'cuda'
+device = 'cuda'
 
 data = ...
 label = ...
 model = ...
-mode.to(ctx)
+mode.to(device)
 loss = model(data, label)
 loss.backward()
 ...
@@ -43,14 +43,14 @@ import mnm
 from mnm._ffi.memory_pool import InitPool, RemovePool
 from mnm._core.core_utils import str2ctx
 
-ctx = 'cuda'
+device = 'cuda'
 pool_name = 'no_pool'
-InitPool(str2ctx(ctx), pool_name)
+InitPool(str2ctx(device), pool_name)
 
 data = ...
 label = ...
 model = ...
-mode.to(ctx)
+mode.to(device)
 model.train_mode()
 loss = model(data, label)
 loss.backward()
@@ -66,27 +66,27 @@ import mnm
 from mnm._ffi.memory_pool import InitPool, RemovePool
 from mnm._core.core_utils import str2ctx
 
-ctx = 'cuda'
+device = 'cuda'
 # Start with no_pool
-InitPool(str2ctx(ctx), 'no_pool')
+InitPool(str2ctx(device), 'no_pool')
 
 data = ...
 label = ...
 model = ...
-mode.to(ctx)
+mode.to(device)
 model.train_mode()
 for i in range(10):
     if i%2 == 0:
         # Use no_pool for the even iter
-        InitPool(str2ctx(ctx), 'no_pool')
+        InitPool(str2ctx(device), 'no_pool')
     else:
         # Use page_unit_pool for the odd iter
-        InitPool(str2ctx(ctx), 'page_unit_pool')
+        InitPool(str2ctx(device), 'page_unit_pool')
     loss = model(data, label)
     loss.backward()
 model.infer_mode()
 # Use the default pool strategy
-RemovePool(str2ctx(ctx))
+RemovePool(str2ctx(device))
 model(m_x)
 ...
 

@@ -52,15 +52,16 @@ class BatchNorm(mnm.Model):
         n_f = self.num_features
         self.running_mean = ndarray(np.zeros(n_f, dtype="float32"),
                                     name="running_mean",
-                                    ctx=get_chained_attr(self, ["running_mean", "ctx"], "cpu"))
+                                    device=get_chained_attr(self, ["running_mean", "device"],
+                                                            "cpu"))
         self.running_var = ndarray(np.ones(n_f, dtype="float32"),
                                    name="running_var",
-                                   ctx=get_chained_attr(self, ["running_var", "ctx"], "cpu"))
+                                   device=get_chained_attr(self, ["running_var", "device"], "cpu"))
         if self.affine:
             self.w = ndarray(np.ones(n_f, dtype="float32"),
-                             name="w", ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
+                             name="w", device=get_chained_attr(self, ["w", "device"], "cpu"))
             self.b = ndarray(np.zeros(n_f, dtype="float32"),
-                             name="b", ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
+                             name="b", device=get_chained_attr(self, ["b", "device"], "cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 

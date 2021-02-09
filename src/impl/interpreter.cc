@@ -214,7 +214,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     if (op_env != nullptr) {
       InvokePrimitiveOpEnv(std::move(op_env), call);
     } else {
-      LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << call->ctx.c_str();
+      LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << call->device.c_str();
       throw;
     }
     return call->out;
@@ -226,7 +226,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     {
       // note: Request workspace, workspace is kind of special memory which will be freed once this
       // op is done.
-      WITH_BASE_PROFILER(call->ctx, op->name, "WorkspaceRequest",
+      WITH_BASE_PROFILER(call->device, op->name, "WorkspaceRequest",
                          {"Count: " + std::to_string(req->workspace.size())}, {
                            for (int i = 0, n = req->workspace.size(); i < n; ++i) {
                              RequestWorkspace(req.get(), i);
@@ -235,7 +235,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
       // note: Request stream, every op will run on a given stream. For op that executed on cuda,
       // the default one is cuda DefautlStream. Currently, all ops are running on default stream.
-      WITH_BASE_PROFILER(call->ctx, op->name, "StreamRequest",
+      WITH_BASE_PROFILER(call->device, op->name, "StreamRequest",
                          {"Count: " + std::to_string(req->stream.size())}, {
                            for (int i = 0, n = req->stream.size(); i < n; ++i) {
                              RequestStream(req.get(), i);
@@ -244,7 +244,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
       // note: Request distributed resources, operators like allreduce needs such resources.
       // Currently, the distributed resources only contain a communicator.
-      WITH_BASE_PROFILER(call->ctx, op->name, "DistributedRequest",
+      WITH_BASE_PROFILER(call->device, op->name, "DistributedRequest",
                          {"Count: " + std::to_string(req->distributed.size())}, {
                            for (int i = 0, n = req->distributed.size(); i < n; ++i) {
                              RequestDistributed(req.get(), i);
@@ -253,7 +253,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     }
 
     // note: Execute the Operator.
-    WITH_BASE_PROFILER(call->ctx, op->name, "CUDA_CALL", {}, { op_env->Execute(call); });
+    WITH_BASE_PROFILER(call->device, op->name, "CUDA_CALL", {}, { op_env->Execute(call); });
 
     {
       // note: Force op to run synchronously.
@@ -262,7 +262,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       }
 
       // note: Free the workspace of this op.
-      WITH_BASE_PROFILER(call->ctx, op->name, "WorkspaceClear", {}, {
+      WITH_BASE_PROFILER(call->device, op->name, "WorkspaceClear", {}, {
         req->workspace.clear();
         req->workspace.shrink_to_fit();
       });
@@ -306,14 +306,14 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   void RequestWorkspace(Requests* req, int index) override {
     Requests::WorkspaceRequest& entry = req->workspace[index];
     CHECK(entry.memory == nullptr);
-    std::shared_ptr<Memory> memory = Memory::Alloc(entry.ctx, entry.nbytes);
+    std::shared_ptr<Memory> memory = Memory::Alloc(entry.device, entry.nbytes);
     *entry.dest = memory->data;
     entry.memory = memory;
   }
 
   void RequestStream(Requests* req, int index) override {
     Requests::StreamRequest& entry = req->stream[index];
-    std::shared_ptr<Stream> stream = Stream::Get(entry.ctx, entry.tag_idx, entry.stream_idx);
+    std::shared_ptr<Stream> stream = Stream::Get(entry.device, entry.tag_idx, entry.stream_idx);
     *entry.dest = stream->data();
     entry.stream = stream;
   }

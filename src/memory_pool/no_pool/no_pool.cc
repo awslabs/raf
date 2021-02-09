@@ -4,6 +4,7 @@
  * \brief No memory pool
  */
 #include <atomic>
+#include "mnm/base.h"
 #include "mnm/device_api.h"
 #include "mnm/memory_pool.h"
 #include "mnm/registry.h"
@@ -16,9 +17,9 @@ using device_api::DeviceAPI;
 
 class NonOwnedMemory final : public Memory {
  public:
-  explicit NonOwnedMemory(void* data, const Context& ctx, std::shared_ptr<DeviceAPI> api) {
+  explicit NonOwnedMemory(void* data, const Device& dev, std::shared_ptr<DeviceAPI> api) {
     this->data = data;
-    this->ctx = ctx;
+    this->device = dev;
     this->api = std::move(api);
   }
 
@@ -34,9 +35,9 @@ class NonOwnedMemory final : public Memory {
 
 class NoPool final : public MemoryPool {
  public:
-  explicit NoPool(Context ctx) {
-    this->ctx = ctx;
-    this->api = DeviceAPI::Get(ctx.device_type);
+  explicit NoPool(Device dev) {
+    this->device = dev;
+    this->api = DeviceAPI::Get(dev.device_type);
   }
 
   std::shared_ptr<Memory> Alloc(int64_t nbytes, int64_t alignment) override {
@@ -45,7 +46,7 @@ class NoPool final : public MemoryPool {
     if (nbytes > 0) {
       data = api->AllocMemory(nbytes, alignment);
     }
-    return std::make_shared<NonOwnedMemory>(data, ctx, api);
+    return std::make_shared<NonOwnedMemory>(data, device, api);
   }
 
   std::vector<std::shared_ptr<Memory>> AllocBatch(const std::vector<int64_t>& nbytes,
@@ -63,7 +64,7 @@ class NoPool final : public MemoryPool {
     return new NoPool(ctx);
   }
 
-  Context ctx;
+  Device device;
   std::shared_ptr<DeviceAPI> api;
 };
 

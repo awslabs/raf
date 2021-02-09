@@ -40,7 +40,7 @@ using tvm::Downcast;
   if (x->IsInstance<TensorValueObj>()) {        \
     const TensorValue& tv = MakeUnaryTensor(x); \
     call->out = tv;                             \
-    call->ctx = tv->tensor->ctx;                \
+    call->device = tv->tensor->ctx;             \
     return;                                     \
   }
 
@@ -93,7 +93,7 @@ void Unary(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
   for (int i = 0, e = shape.size(); i < e; ++i) {
     if (shape[i] == 0) {
       call->callee = ir::NullValue<OpValue>();
@@ -134,7 +134,7 @@ void UnaryDx(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/source->ctx,
                                     /*dtype=*/source->dtype,
                                     /*shape=*/shape);
-  call->ctx = source->ctx;
+  call->device = source->ctx;
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.relu_dx", UnaryDx);

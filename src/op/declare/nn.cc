@@ -82,7 +82,7 @@ void Conv2D(const CallValues& call) {
       /*shape=*/
       {oshape[0].as<tvm::IntImmNode>()->value, oshape[1].as<tvm::IntImmNode>()->value,
        oshape[2].as<tvm::IntImmNode>()->value, oshape[3].as<tvm::IntImmNode>()->value});
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.conv2d", Conv2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
@@ -131,7 +131,7 @@ void Pool2D(const CallValues& call) {
       /*shape=*/
       {oshape[0].as<tvm::IntImmNode>()->value, oshape[1].as<tvm::IntImmNode>()->value,
        oshape[2].as<tvm::IntImmNode>()->value, oshape[3].as<tvm::IntImmNode>()->value});
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
@@ -146,7 +146,7 @@ void Softmax(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
@@ -163,7 +163,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
   TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
@@ -176,7 +176,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape);
   call->out = y;
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 void Conv2dDxw(const CallValues& call) {
@@ -187,7 +187,7 @@ void Conv2dDxw(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x_or_w->ctx,
                                     /*dtype=*/x_or_w->dtype,
                                     /*shape=*/args->shape.value());
-  call->ctx = x_or_w->ctx;
+  call->device = x_or_w->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
@@ -201,7 +201,7 @@ void Pool2DDx(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.max_pool2d_dx", Pool2DDx)
@@ -217,7 +217,7 @@ void SoftmaxDx(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.softmax_dx", SoftmaxDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
@@ -240,7 +240,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
                                          /*dtype=*/w->dtype,
                                          /*shape=*/wshape);
   call->out = TupleValue::make(tvm::Array<Value>({dx, dw, db}));
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 void BiasAdd(const CallValues& call) {
@@ -253,7 +253,7 @@ void BiasAdd(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd).set_attr<TOpPattern>("TOpPattern", kBroadcast);
@@ -267,7 +267,7 @@ void LayerNorm(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 MNM_OP_DECLARE("mnm.op.layer_norm", LayerNorm).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
@@ -279,7 +279,7 @@ void LayerNormDx(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
 }
 MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
@@ -312,7 +312,7 @@ void Pad(const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/oshape);
-  call->ctx = data->ctx;
+  call->device = data->ctx;
 }
 MNM_OP_DECLARE("mnm.op.pad", Pad).set_attr<TOpPattern>("TOpPattern", kInjective);
 

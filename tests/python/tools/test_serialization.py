@@ -11,7 +11,7 @@ from mnm.model.trace import _unwrap
 
 def test_ext_constant():
     def expected():
-        x_const, _ = randn((1, 3, 8, 8), ctx="cpu")
+        x_const, _ = randn((1, 3, 8, 8), device="cpu")
         x_value = mnm._core.value.TensorValue.from_numpy(x_const.asnumpy())
         x = mnm._ffi.ir._make.Constant(x_value)
         max_pool2d_op = mnm._ffi.op.GetOp("mnm.op.max_pool2d")

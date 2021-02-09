@@ -547,7 +547,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                        xDesc, wDesc, convDesc, yDesc, algo.algo,
                                                        &workSpaceSizeInBytes));
-    RequestWorkspace(&workSpace, cv->ctx, workSpaceSizeInBytes);
+    RequestWorkspace(&workSpace, cv->device, workSpaceSizeInBytes);
     cudnnSetConvolutionMathType(convDesc, algo.mathType);
   }
 
@@ -639,7 +639,7 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     CUDNN_CALL(cudnnGetConvolutionBackwardFilterWorkspaceSize(
         CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algo.algo,
         &workSpaceSizeInBytes));
-    RequestWorkspace(&workSpace, cv->ctx, workSpaceSizeInBytes);
+    RequestWorkspace(&workSpace, cv->device, workSpaceSizeInBytes);
     cudnnSetConvolutionMathType(convDesc, algo.mathType);
   }
 
@@ -730,7 +730,7 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                             wDesc, dyDesc, convDesc, dxDesc,
                                                             algo.algo, &workSpaceSizeInBytes));
-    RequestWorkspace(&workSpace, cv->ctx, workSpaceSizeInBytes);
+    RequestWorkspace(&workSpace, cv->device, workSpaceSizeInBytes);
     cudnnSetConvolutionMathType(convDesc, algo.mathType);
   }
 

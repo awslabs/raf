@@ -4,27 +4,27 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import get_ctx_list, randn_torch, check, run_vm_model
+from mnm.testing import get_device_list, randn_torch, check, run_vm_model
 
 
-def one_hot(batch_size, num_classes, ctx="cpu", dtype="float32"):
+def one_hot(batch_size, num_classes, device="cpu", dtype="float32"):
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = np.zeros([batch_size, num_classes], dtype=dtype)
     m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
-    t_x = torch.tensor(targets, device=ctx, requires_grad=False)  # pylint: disable=not-callable
+    m_x = mnm.array(m_x, device=device)
+    t_x = torch.tensor(targets, device=device, requires_grad=False)  # pylint: disable=not-callable
     assert list(m_x.shape) == [batch_size, num_classes]
     assert list(t_x.shape) == [batch_size]
     return m_x, t_x
 
 
-@pytest.mark.parametrize("ctx", ['cpu'])
+@pytest.mark.parametrize("device", ['cpu'])
 @pytest.mark.parametrize("shape", [
     [3],
     [1, 2],
     [1, 2, 5],
 ])
-def test_smooth_l1_loss(ctx, shape):
+def test_smooth_l1_loss(device, shape):
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -34,12 +34,12 @@ def test_smooth_l1_loss(ctx, shape):
             return mnm.smooth_l1_loss(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch(shape, ctx=ctx, requires_grad=True)
-    m_true, t_true = randn_torch(shape, ctx=ctx)
+    m_pred, t_pred = randn_torch(shape, device=device, requires_grad=True)
+    m_true, t_true = randn_torch(shape, device=device)
     # forward
     t_loss = F.smooth_l1_loss(t_pred, t_true)
     m_loss = model(y_true=m_pred, y_pred=m_true)
-    v_loss = run_vm_model(model, ctx, [m_true, m_pred])
+    v_loss = run_vm_model(model, device, [m_true, m_pred])
     check(m_loss, t_loss)
     check(v_loss, t_loss)
     # backward
@@ -48,10 +48,10 @@ def test_smooth_l1_loss(ctx, shape):
     check(m_pred.grad, t_pred.grad)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("n", [3, 5, 7])
 @pytest.mark.parametrize("c", [2, 4, 6])
-def test_nll_loss(ctx, n, c):
+def test_nll_loss(device, n, c):
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -61,25 +61,25 @@ def test_nll_loss(ctx, n, c):
             return mnm.nll_loss(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch((n, c), ctx=ctx, requires_grad=True)
-    m_true, t_true = one_hot(n, c, ctx=ctx)
+    m_pred, t_pred = randn_torch((n, c), device=device, requires_grad=True)
+    m_true, t_true = one_hot(n, c, device=device)
     # forward
     t_loss = F.nll_loss(t_pred, t_true)
     m_loss = model(y_true=m_true, y_pred=m_pred)
-    v_loss = run_vm_model(model, ctx, [m_true, m_pred])
+    v_loss = run_vm_model(model, device, [m_true, m_pred])
     check(m_loss, t_loss)
     check(v_loss, t_loss)
     # backward
-    m_dy, t_dy = randn_torch((), ctx=ctx)
+    m_dy, t_dy = randn_torch((), device=device)
     t_loss.backward(t_dy)
     m_loss.backward(m_dy)
     check(m_pred.grad, t_pred.grad)
 
 
-@pytest.mark.parametrize("ctx", ['cpu'])
+@pytest.mark.parametrize("device", ['cpu'])
 @pytest.mark.parametrize("n", [3, 5, 7])
 @pytest.mark.parametrize("c", [2, 4, 6])
-def test_cross_entropy(ctx, n, c):
+def test_cross_entropy(device, n, c):
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -89,12 +89,12 @@ def test_cross_entropy(ctx, n, c):
             return mnm.cross_entropy(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch((n, c), ctx=ctx, requires_grad=True)
-    m_true, t_true = one_hot(n, c, ctx=ctx)
+    m_pred, t_pred = randn_torch((n, c), device=device, requires_grad=True)
+    m_true, t_true = one_hot(n, c, device=device)
     # forward
     t_loss = F.cross_entropy(t_pred, t_true)
     m_loss = model(y_true=m_true, y_pred=m_pred)
-    v_loss = run_vm_model(model, ctx, [m_true, m_pred])
+    v_loss = run_vm_model(model, device, [m_true, m_pred])
     check(m_loss, t_loss)
     check(v_loss, t_loss)
     # backward
@@ -108,15 +108,15 @@ def test_cross_entropy(ctx, n, c):
     (3, 16, 128, 128),
     (3, 16),
 ])
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_broadcast_add(shape, ctx):
-    m_a, t_a = randn_torch(shape, ctx=ctx, requires_grad=True)
+@pytest.mark.parametrize("device", get_device_list())
+def test_broadcast_add(shape, device):
+    m_a, t_a = randn_torch(shape, device=device, requires_grad=True)
     n = len(shape)
-    m_b, t_b = randn_torch([shape[1]] + [1] * (n - 2), ctx=ctx, requires_grad=True)
+    m_b, t_b = randn_torch([shape[1]] + [1] * (n - 2), device=device, requires_grad=True)
     t_y = t_a + t_b
     m_y = mnm.add(m_a, m_b)
     check(m_y, t_y)
-    m_dy, t_dy = randn_torch(m_y.shape, ctx=ctx)
+    m_dy, t_dy = randn_torch(m_y.shape, device=device)
     t_y.backward(t_dy)
 
     def mnm_add_dx(m_dy, m_x):

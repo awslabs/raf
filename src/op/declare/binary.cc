@@ -40,7 +40,7 @@ using namespace mnm::value;
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
     const TensorValue& tv = MakeBinaryTensor(x1, x2);                         \
     call->out = tv;                                                           \
-    call->ctx = tv->tensor->ctx;                                              \
+    call->device = tv->tensor->ctx;                                           \
     return;                                                                   \
   }
 
@@ -48,7 +48,7 @@ using namespace mnm::value;
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
     const TensorValue& tv = MakeBinaryTensor(x1, x2, true);                   \
     call->out = tv;                                                           \
-    call->ctx = tv->tensor->ctx;                                              \
+    call->device = tv->tensor->ctx;                                           \
     return;                                                                   \
   }
 

@@ -23,7 +23,7 @@ class ndarray:
             offset=0,
             strides=None,
             order=None,
-            ctx=None,
+            device=None,
             name=""):
         arg_0 = shape
         if isinstance(arg_0, relay.Var):
@@ -43,7 +43,7 @@ class ndarray:
                                  order=order)
             # NDArray is treated as relay.Constant
             self.__handle = BindNDArray(
-                _np_to_tensor_value(npa, ctx=ctx), None, name)
+                _np_to_tensor_value(npa, device=device), None, name)
         self.__requires_grad = False
 
     def __setitem__(self, key, value):
@@ -53,7 +53,7 @@ class ndarray:
                 assert isinstance(value, np.ndarray)
                 assert value.shape == self.shape
                 value = _np_to_tensor_value(value.astype(self.dtype),
-                                            ctx=self.ctx)
+                                            device=self.device)
                 self.__handle = BindNDArray(
                     value, None, self.__handle.name_hint)
                 return
@@ -93,7 +93,7 @@ class ndarray:
         shape_handle = dltensor.shape
         strides_handle = dltensor.strides
         # Refresh cached values
-        self.ctx = ctx2str(dltensor.ctx)
+        self.device = ctx2str(dltensor.ctx)
         self.dtype = dltensor.dtype
         self.ndim = ndim
         self.shape = tuple(shape_handle[i] for i in range(ndim))
@@ -104,7 +104,7 @@ class ndarray:
         fmt = "{}\n<NDArray [{}] @ {}, dtype={}>"
         shape = " x ".join(map(str, self.shape))
         npa = ToTVM(self.__value).asnumpy()
-        return fmt.format(str(npa), shape, self.ctx, self.dtype)
+        return fmt.format(str(npa), shape, self.device, self.dtype)
 
     def __repr__(self):
         return str(self)
@@ -113,12 +113,12 @@ class ndarray:
         return ToTVM(self.__value).asnumpy()  # pylint: disable=protected-access
 
     @property
-    def ctx(self):
-        return self.__ctx
+    def device(self):
+        return self.__device
 
-    @ctx.setter
-    def ctx(self, ctx):
-        self.__ctx = ctx
+    @device.setter
+    def device(self, device):
+        self.__device = device
 
     @property
     def ndim(self):
@@ -160,13 +160,13 @@ class ndarray:
     def byte_offset(self, byte_offset):
         self.__byte_offset = byte_offset
 
-    def to(self, *, ctx=None, dtype=None):  # pylint: disable=invalid-name
+    def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
         npa = self.asnumpy()
         if dtype is not None:
             npa = npa.astype(dtype)
-        if ctx is None:
-            ctx = self.ctx
-        ret = ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, ""))
+        if device is None:
+            device = self.device
+        ret = ndarray(BindNDArray(_np_to_tensor_value(npa, device=device), None, ""))
         ret.requires_grad = self.requires_grad
         return ret
 
@@ -301,15 +301,15 @@ class Symbol:
         return divide(self, other)
 
 
-def _np_to_tensor_value(npa, ctx=None):
+def _np_to_tensor_value(npa, device=None):
     def _tensor_value(obj):
-        ctx = "cpu"
+        device = "cpu"
         dtype = str(obj.dtype)
         shape = list(obj.shape)
         strides = [x // obj.itemsize for x in obj.strides]
         data = obj.ctypes.data_as(ctypes.c_void_p)
         assert len(shape) == len(strides)
-        return TensorValue.assemble(ctx=ctx,
+        return TensorValue.assemble(device=device,
                                     dtype=dtype,
                                     shape=shape,
                                     strides=strides,
@@ -321,12 +321,12 @@ def _np_to_tensor_value(npa, ctx=None):
         ctypes.pythonapi.Py_IncRef(pyobj)
         return void_p
 
-    if ctx is None:
+    if device is None:
         result = _tensor_value(npa)
         MarkNumpy(result._tensor, _manager_ctx(npa))  # pylint: disable=protected-access
         return result
 
-    return TensorValue.from_tvm(tvm_ndarray(npa, ctx=str2ctx(ctx)))
+    return TensorValue.from_tvm(tvm_ndarray(npa, ctx=str2ctx(device)))
 
 
 @set_module("mnm")
@@ -338,7 +338,7 @@ def array(
         order='K',
         subok=False,
         ndmin=0,
-        ctx=None,
+        device=None,
         name=""):
     import numpy as np  # pylint: disable=import-outside-toplevel
     npa = np.array(object,
@@ -347,7 +347,7 @@ def array(
                    order=order,
                    subok=subok,
                    ndmin=ndmin)
-    return ndarray(BindNDArray(_np_to_tensor_value(npa, ctx=ctx), None, name))
+    return ndarray(BindNDArray(_np_to_tensor_value(npa, device=device), None, name))
 
 
 _DL_MANAGED_TENSOR_PTR = ctypes.POINTER(_DLManagedTensor)

@@ -43,23 +43,23 @@ using namespace mnm::op;
 using namespace mnm::registry;
 using namespace mnm::requests;
 
-#if MNM_USE_CUDA
-void MNMSetStream(Context ctx, cudaStream_t stream) {
-  tvm::runtime::DeviceAPI::Get(ctx)->SetStream(ctx, stream);
+#ifdef MNM_USE_CUDA
+void MNMSetStream(Device dev, cudaStream_t stream) {
+  tvm::runtime::DeviceAPI::Get(dev)->SetStream(dev, stream);
   mnm::op::cudnn::SetStream(stream);
   mnm::op::cublas::SetStream(stream);
 }
 
 class VirtualMachine::CudaGraphImpl {
  public:
-  CudaGraphImpl(Context ctx) : ctx_(ctx) {
+  CudaGraphImpl(Device dev) : device_(dev) {
+    DLOG(INFO) << "Use Cuda Graph";
   }
 
   ~CudaGraphImpl() {
-    DLOG(INFO) << "MNM_USE_CUDA " << MNM_USE_CUDA;
     CUDA_CALL(cudaGraphDestroy(graph_));
-    CUDA_CALL(cudaGraphExecDestroy(exec));
-    CUDA_CALL(cudaStreamDestroy(stream_for_graph));
+    CUDA_CALL(cudaGraphExecDestroy(exec_));
+    CUDA_CALL(cudaStreamDestroy(stream_for_graph_));
   }
 
   void GetKernelInfo() {
@@ -72,47 +72,47 @@ class VirtualMachine::CudaGraphImpl {
   }
 
   void BeginCapture() {
-    stream_for_graph = static_cast<cudaStream_t>(
-        mnm::device_api::DeviceAPI::Get(ctx_.device_type)->CreateStream(ctx_));
+    stream_for_graph_ = static_cast<cudaStream_t>(
+        mnm::device_api::DeviceAPI::Get(device_.device_type)->CreateStream(device_));
 
-    MNMSetStream(ctx_, stream_for_graph);
-    CUDA_CALL(cudaStreamBeginCapture(stream_for_graph, cudaStreamCaptureModeRelaxed));
+    MNMSetStream(device_, stream_for_graph_);
+    CUDA_CALL(cudaStreamBeginCapture(stream_for_graph_, cudaStreamCaptureModeRelaxed));
   }
 
   void EndCapture() {
-    CUDA_CALL(cudaStreamEndCapture(stream_for_graph, &graph_));
-    CUDA_CALL(cudaGraphInstantiate(&exec, graph_, NULL, NULL, 0));
+    CUDA_CALL(cudaStreamEndCapture(stream_for_graph_, &graph_));
+    CUDA_CALL(cudaGraphInstantiate(&exec_, graph_, NULL, NULL, 0));
     GetKernelInfo();
-    is_captured = true;
+    is_captured_ = true;
   }
 
   void Invoke() {
-    CUDA_CALL(cudaGraphLaunch(exec, NULL));
-    CUDA_CALL(cudaStreamSynchronize(stream_for_graph));
+    CUDA_CALL(cudaGraphLaunch(exec_, NULL));
+    CUDA_CALL(cudaStreamSynchronize(stream_for_graph_));
   }
 
-  bool is_captured = false;
-  cudaStream_t stream_for_graph;
+ private:
+  bool is_captured_ = false;
+  cudaStream_t stream_for_graph_;
   cudaGraph_t graph_;
-  cudaGraphExec_t exec;
-  Context ctx_;
+  cudaGraphExec_t exec_;
+  Device device_;
 };
 #endif
 
-inline StorageValue make_storage(size_t size, size_t alignment, DLDataType dtype_hint,
-                                 Context ctx) {
-  auto buffer = memory_pool::Memory::Alloc(ctx, size);
+inline StorageValue make_storage(size_t size, size_t alignment, DLDataType dtype_hint, Device dev) {
+  auto buffer = memory_pool::Memory::Alloc(dev, size);
   return StorageValue::make(buffer);
 }
 
-inline Value CopyTo(Value src, const DLContext& ctx) {
+inline Value CopyTo(Value src, const Device& dev) {
   if (!src.defined()) {
     return src;
   }
   if (src.as<TensorValueObj>()) {
     auto tensor = Downcast<TensorValue>(src)->tensor;
-    if (tensor->ctx.device_type != ctx.device_type) {
-      return TensorValue::make(tensor::Tensor(tensor.CopyTo(ctx)));
+    if (tensor->ctx.device_type != dev.device_type) {
+      return TensorValue::make(tensor::Tensor(tensor.CopyTo(dev)));
     }
     return src;
   }
@@ -120,7 +120,7 @@ inline Value CopyTo(Value src, const DLContext& ctx) {
     std::vector<Value> ret;
     TupleValue tup = Downcast<TupleValue>(src);
     for (size_t i = 0; i < tup->fields.size(); ++i) {
-      ret.push_back(CopyTo(tup->fields[i], ctx));
+      ret.push_back(CopyTo(tup->fields[i], dev));
     }
     return TupleValue::make(ret);
   }
@@ -149,12 +149,12 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
   } else if (name == "init") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
       enable_cuda_graph = args[0];
-      std::vector<Context> contexts;
+      std::vector<Device> devices;
       for (int i = 1; i < args.size(); ++i) {
-        DLContext ctx = args[i];
-        contexts.push_back(ctx);
+        DLContext dev = args[i];
+        devices.push_back(dev);
       }
-      this->Init(contexts);
+      this->Init(devices);
     });
   } else if (name == "set_input") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
@@ -166,13 +166,13 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
       const auto& vm_func = exec_->functions[func_index];
       const auto& param_names = vm_func.params;
       // TODO(icemelon9): For heterogeneous execution, get input device information
-      TVMContext ctx = ctxs_[0];
+      TVMContext dev = devices_[0];
       CHECK_EQ(args.size() - 1, param_names.size())
           << "The number of provided parameters doesn't match the number of arguments";
       std::vector<Value> func_args(param_names.size());
       for (int i = 1; i < args.size(); ++i) {
         Value arg = args[i];
-        func_args[i - 1] = CopyTo(arg, ctx);
+        func_args[i - 1] = CopyTo(arg, dev);
       }
       if (inputs_.find(func_name) != inputs_.end() && enable_cuda_graph) {
         for (int i = 0; i < param_names.size(); i++) {
@@ -219,18 +219,18 @@ void VirtualMachine::LoadExecutable(const Executable* exec) {
   }
 }
 
-Context VirtualMachine::GetParamsContext() const {
-  CHECK(!ctxs_.empty()) << "Context has not been initialized yet.";
+Device VirtualMachine::GetParamsDevice() const {
+  CHECK(!devices_.empty()) << "Devices have not been initialized yet.";
 
   // Use the fallback device if no device index is available.
-  int fallback_device_type = static_cast<int>(ctxs_[0].device_type);
-  // TODO(wweic): For heterogeneous execution, get device information from byte
+  int fallback_device_type = static_cast<int>(devices_[0].device_type);
+  // TODO(@zhiics): For heterogeneous execution, get device information from byte
 
   const auto& cit =
-      std::find_if(ctxs_.begin(), ctxs_.end(), [&fallback_device_type](const TVMContext& c) {
-        return fallback_device_type == static_cast<int>(c.device_type);
+      std::find_if(devices_.begin(), devices_.end(), [&fallback_device_type](const Device& d) {
+        return fallback_device_type == static_cast<int>(d.device_type);
       });
-  return (cit == ctxs_.end() ? ctxs_[0] : *cit);
+  return (cit == devices_.end() ? devices_[0] : *cit);
 }
 
 void VirtualMachine::PushFrame(Index arg_count, Index ret_pc, const VMFunction& vm_func) {
@@ -266,7 +266,7 @@ Value VirtualMachine::Invoke(const VMFunction& func, const std::vector<Value>& a
 #if MNM_USE_CUDA
   if (enable_cuda_graph) {
     if (!cuda_graph_impl_) {
-      cuda_graph_impl_ = new CudaGraphImpl(ctxs_[0]);
+      cuda_graph_impl_ = new CudaGraphImpl(devices_[0]);
       cuda_graph_impl_->BeginCapture();
       DLOG(INFO) << "BeginCapture";
       InvokeGlobal(func, args);
@@ -284,9 +284,6 @@ Value VirtualMachine::Invoke(const VMFunction& func, const std::vector<Value>& a
   InvokeGlobal(func, args);
   RunLoop();
 #endif
-  // TODO(wweic) ctx could be obtained from the ctxs list.
-  // auto alloc = MemoryManager::Global()->GetAllocator(ctxs_[0]);
-  // DLOG(INFO) << "Memory used: " << alloc->UsedMemory() << " B";
   return return_register_;
 }
 
@@ -299,8 +296,8 @@ Value VirtualMachine::Invoke(const std::string& name, const std::vector<Value>& 
   return Invoke(exec_->functions[func_index_], args);
 }
 
-void VirtualMachine::Init(const std::vector<Context>& ctxs) {
-  ctxs_ = ctxs;
+void VirtualMachine::Init(const std::vector<Device>& devices) {
+  devices_ = devices;
 }
 
 inline void VirtualMachine::WriteRegister(Index r, const Value& val) {
@@ -350,8 +347,8 @@ void VirtualMachine::RunLoop() {
         }
 
         if (!const_pool_[instr.const_index].defined()) {
-          // TODO(wweic) ctx could be obtained from the ctxs list.
-          const_pool_[instr.const_index] = CopyTo(constant_obj, ctxs_[0]);
+          // TODO(@zhiics): device could be obtained from the device list.
+          const_pool_[instr.const_index] = CopyTo(constant_obj, devices_[0]);
         }
         WriteRegister(instr.dst, const_pool_[instr.const_index]);
         frames_.back().is_const[instr.dst] = true;
@@ -423,8 +420,8 @@ void VirtualMachine::RunLoop() {
 
         auto storage_obj = ReadRegister(instr.alloc_tensor.storage);
         auto storage = Downcast<StorageValue>(storage_obj);
-        auto tensor = TensorValue::Assemble(ctxs_[0], instr.alloc_tensor.dtype, shape, {},
-                                            storage->buffer->data, storage->buffer);
+        auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor.dtype,
+                                            shape, {}, storage->buffer->data, storage->buffer);
         WriteRegister(instr.dst, tensor);
         pc_++;
         goto main_loop;
@@ -458,8 +455,8 @@ void VirtualMachine::RunLoop() {
                    << " dtype_hint="
                    << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
-        auto ctx = GetContext(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-        auto storage = make_storage(size, alignment, instr.alloc_storage.dtype_hint, ctx);
+        auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
+        auto storage = make_storage(size, alignment, instr.alloc_storage.dtype_hint, dev);
         WriteRegister(instr.dst, storage);
         pc_++;
         goto main_loop;
@@ -536,17 +533,17 @@ void VirtualMachine::RunLoop() {
           } else {
             call_values->args = MakeListArgs(args);
           }
-          call_values->ctx = ctxs_[0];
+          call_values->device = devices_[0];
           call_values->out = output;
           op_env = Dispatch(call_values);
           CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
-                                   << " @ " << call_values->ctx.c_str()
+                                   << " @ " << call_values->device.c_str()
                                    << (op ? op->op->name : PrettyPrint(closure->func));
           // TODO(vinx13): request stream
           std::shared_ptr<Requests> requests = op_env->GetRequests();
           for (size_t i = 0; i < requests->workspace.size(); i++) {
             Requests::WorkspaceRequest& entry = requests->workspace[i];
-            auto buf = memory_pool::Memory::Alloc(entry.ctx, entry.nbytes);
+            auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
             *entry.dest = buf->data;
           }
           // add to cache
@@ -564,17 +561,6 @@ void VirtualMachine::RunLoop() {
       }
     }
   }
-}
-
-Context VirtualMachine::GetContext(DevType device_type, int device_id) {
-  for (auto& ctx : ctxs_) {
-    if (ctx.device_type == device_type && ctx.device_id == device_id) {
-      return ctx;
-    }
-  }
-  LOG(FATAL) << "Context with device_type=" << device_type << " device_id=" << device_id
-             << " not found";
-  return Context();
 }
 
 tvm::runtime::Module CreateVirtualMachine(const Executable* exec) {

@@ -1,21 +1,9 @@
 # pylint: disable=protected-access
 import pytest
-import numpy as np
-import torch
 import mnm
 from mnm._ffi.pass_ import AutoDiff
-from mnm.testing import check_type, run_infer_type, randn
+from mnm.testing import check_type, run_infer_type, randn, one_hot_torch
 from tvm.relay import TensorType, FuncType, TupleType
-
-def one_hot(batch_size, num_classes, ctx="cpu", dtype="float32"):
-    targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
-    m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
-    t_x = torch.tensor(targets, requires_grad=False)  # pylint: disable=not-callable
-    assert list(m_x.shape) == [batch_size, num_classes]
-    assert list(t_x.shape) == [batch_size]
-    return m_x, t_x
 
 
 # pylint: disable=invalid-name, attribute-defined-outside-init
@@ -63,7 +51,7 @@ def test_nll_loss(shape, dtype):
     model = TestModel()
     n, c = shape
     m_pred, _ = randn((n, c), dtype=dtype)
-    m_true, _ = one_hot(n, c, dtype=dtype)
+    m_true, _ = one_hot_torch(n, c, dtype=dtype)
     ty_pred = TensorType((n, c), dtype=dtype)
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward

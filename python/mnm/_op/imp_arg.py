@@ -29,9 +29,9 @@ def Bool(a):  # pylint: disable=invalid-name
     return bool(a)
 
 
-def Context(a):  # pylint: disable=invalid-name
+def Device(a):  # pylint: disable=invalid-name
     if not isinstance(a, str):
-        raise TypeError("Cannot convert to context")
+        raise TypeError("Cannot convert to device")
     return a
 
 

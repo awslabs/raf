@@ -4,40 +4,13 @@ import pytest
 import mnm
 from mnm.model import Conv2d
 from mnm.model.trace import trace_mutate_attr
-from mnm.testing import run_infer_type
+from mnm.testing import run_infer_type, randn
 import tvm
 from tvm import relay
 
 
-def t2m_param(param, ctx="cuda"):
-    return mnm.ndarray(param, ctx=ctx)  # pylint: disable=unexpected-keyword-arg
-
-
-def get_ctx_list():
-    ret = ["cpu"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
-
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    m_x.requires_grad = True
-    return m_x, n_x
-
-
-def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
-
-
 def test_fuse_simple():
-    konst, _ = randn((1,), ctx="cpu")
+    konst, _ = randn((1,), device="cpu")
 
     class Model(mnm.Model):
         def build(self):
@@ -69,7 +42,7 @@ def test_fuse_simple():
         return relay.Function([x, y], ret)
 
     model = Model()
-    m_x, _ = randn((10, 20), ctx="cpu")
+    m_x, _ = randn((10, 20), device="cpu")
     func_before = model._internal(m_x).func
     func_before = run_infer_type(func_before)
     func_after = mnm._ffi.pass_.FuseOps(func_before, 3)
@@ -79,7 +52,7 @@ def test_fuse_simple():
 
 
 def test_conv2d():
-    rand, _ = randn((1,), ctx="cpu")
+    rand, _ = randn((1,), device="cpu")
 
     class Model(mnm.Model):
         def build(self):
@@ -187,7 +160,7 @@ def test_conv2d():
         return relay.Function([x, c, w1, w2, w3], let)
 
     model = Model()
-    m_x, _ = randn((1, 16, 64, 64), ctx="cpu")
+    m_x, _ = randn((1, 16, 64, 64), device="cpu")
     func_before = model._internal(m_x).func
     func_before = run_infer_type(func_before)
     func_after = mnm._ffi.pass_.FuseOps(func_before, 3)
@@ -199,7 +172,7 @@ def test_conv2d():
 
 def test_concatenate():
     """Test fusion case involving concat op and Tuple node"""
-    rand, _ = randn((1,), ctx="cpu")
+    rand, _ = randn((1,), device="cpu")
 
     class Model(mnm.Model):
         def build(self):
@@ -254,7 +227,7 @@ def test_concatenate():
         return relay.Function([x, c], let1)
 
     model = Model()
-    m_x, _ = randn((1, 16, 64, 64), ctx="cpu")
+    m_x, _ = randn((1, 16, 64, 64), device="cpu")
     before = model._internal(m_x).func
     before = run_infer_type(before)
     after = mnm._ffi.pass_.FuseOps(before, 3)
@@ -265,7 +238,7 @@ def test_concatenate():
 
 def test_tuple_root():
     """Test fusion case where Tuple node is the root in its group"""
-    rand, _ = randn((1,), ctx="cpu")
+    rand, _ = randn((1,), device="cpu")
 
     class Model(mnm.Model):
         def build(self):
@@ -313,7 +286,7 @@ def test_tuple_root():
         return relay.Function([x, c], let2)
 
     model = Model()
-    m_x, _ = randn((1, 16, 64, 64), ctx="cpu")
+    m_x, _ = randn((1, 16, 64, 64), device="cpu")
     before = model._internal(m_x).func
     before = run_infer_type(before)
     after = mnm._ffi.pass_.FuseOps(before, 3)
@@ -326,13 +299,13 @@ def test_tuple_root():
 def test_sgd():
     shape = [2, 3, 4]
     dtype = 'float32'
-    ctx = "llvm"
+    device = "llvm"
     class Model(mnm.Model):
         def build(self):
             self.reset()
 
         def reset(self):
-            self.x = mnm.array(np.random.randn(*shape).astype(dtype), ctx=ctx)
+            self.x = mnm.array(np.random.randn(*shape).astype(dtype), device=device)
 
         @mnm.model.trace
         def forward(self, dy):  # pylint: disable=no-self-use
@@ -348,7 +321,7 @@ def test_sgd():
             self.reset()
 
         def reset(self):
-            self.v = mnm.array(np.zeros(shape, dtype=dtype), ctx=ctx)
+            self.v = mnm.array(np.zeros(shape, dtype=dtype), device=device)
             self.model.reset()
 
         @mnm.model.trace
@@ -387,13 +360,13 @@ def test_sgd():
         let = relay.Let(a6, relay.Call(f, [x, dy, v]), a6)
         return relay.Function([dy, v, x], let)
 
-    m_param, _ = randn(shape, ctx=ctx)
+    m_param, _ = randn(shape, device=device)
     n_v = np.zeros(shape, dtype=dtype)
-    m_dy, _ = randn(shape, ctx=ctx)
+    m_dy, _ = randn(shape, device=device)
     model = Model()
     sgd = SGD(model)
     model.x = m_param
-    sgd.v = mnm.array(n_v, ctx=ctx)
+    sgd.v = mnm.array(n_v, device=device)
     func = sgd._internal(m_dy).func
     func = run_infer_type(func)
     func = mnm._ffi.pass_.FuseOps(func, 3)

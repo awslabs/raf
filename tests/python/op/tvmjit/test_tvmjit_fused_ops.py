@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import mnm
-from mnm.testing import get_ctx_list, run_infer_type, run_vm_model
+from mnm.testing import get_device_list, run_infer_type, run_vm_model
 
 
 def ir_fuser(func):
@@ -13,8 +13,8 @@ def ir_fuser(func):
     return func
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_avg_pool2d_dx_fuse_relu_dx(ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_avg_pool2d_dx_fuse_relu_dx(device):
     # pylint: disable=attribute-defined-outside-init, unnecessary-pass
     class AvgPoolDxReLUDx(mnm.Model):
         def build(self, y, dy, relu_x, relu_dy):
@@ -31,14 +31,14 @@ def test_avg_pool2d_dx_fuse_relu_dx(ctx):
             out = mnm.relu_dx(pooldx, self.relu_x, self.relu_dy)
             return out
 
-    x = mnm.array(np.random.randn(8, 3, 32, 32), dtype="float64", ctx=ctx)
+    x = mnm.array(np.random.randn(8, 3, 32, 32), dtype="float64", device=device)
     relu_x = mnm.relu(x)
-    relu_dy = mnm.array(np.random.randn(*relu_x.shape), dtype="float64", ctx=ctx)
+    relu_dy = mnm.array(np.random.randn(*relu_x.shape), dtype="float64", device=device)
     y = mnm.avg_pool2d(relu_x, kernel=3, stride=1, padding=0,
                        dilation=1, ceil_mode=False, include_pad=True)
-    dy = mnm.array(np.random.randn(*y.shape), dtype="float64", ctx=ctx)
+    dy = mnm.array(np.random.randn(*y.shape), dtype="float64", device=device)
     model = AvgPoolDxReLUDx(y, dy, relu_x, relu_dy)
-    run_vm_model(model, ctx, [x], ir_fuser)
+    run_vm_model(model, device, [x], ir_fuser)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ namespace mnm {
 namespace memory_pool {
 
 using registry::GetPackedFunc;
-using registry::PerContextStore;
+using registry::PerDeviceStore;
 
 static std::unordered_map<int, std::string> default_strategies = {
     {DevType(DevType::kCPU()), "page_unit_pool"},
@@ -26,21 +26,21 @@ class MemoryPoolManager {
     return instance;
   }
 
-  MemoryPool* GetPool(const Context& ctx, const std::string& name) {
+  MemoryPool* GetPool(const Device& dev, const std::string& name) {
     thread_local char maker_name[128];
-    std::shared_ptr<MemoryPool>& result = reg.Get(ctx);
+    std::shared_ptr<MemoryPool>& result = reg.Get(dev);
     if (result == nullptr) {
       std::lock_guard<std::mutex> lock(reg.mutex_);
       if (result == nullptr) {
         // ok, it is truly a nullptr
         if (name == "") {
-          const std::string& default_name = default_strategies[ctx.device_type];
+          const std::string& default_name = default_strategies[dev.device_type];
           snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s",
                    default_name.c_str());
         } else {
           snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", name.c_str());
         }
-        void* ret = GetPackedFunc(maker_name)(ctx.operator DLContext());
+        void* ret = GetPackedFunc(maker_name)(dev.operator DLContext());
         result.reset(static_cast<MemoryPool*>(ret));
         return result.get();
       }
@@ -50,41 +50,41 @@ class MemoryPoolManager {
     return result.get();
   }
 
-  void Remove(const Context& ctx) {
+  void Remove(const Device& dev) {
     std::lock_guard<std::mutex> lock(reg.mutex_);
-    std::shared_ptr<MemoryPool>& result = reg.Get(ctx);
+    std::shared_ptr<MemoryPool>& result = reg.Get(dev);
     result = nullptr;
   }
 
  public:
-  PerContextStore<MemoryPool, false> reg;
+  PerDeviceStore<MemoryPool, false> reg;
 };
 
-std::shared_ptr<Memory> Memory::Alloc(const Context& ctx, int64_t nbytes, int64_t alignment) {
+std::shared_ptr<Memory> Memory::Alloc(const Device& dev, int64_t nbytes, int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  return mgr->GetPool(ctx, "")->Alloc(nbytes, alignment);
+  return mgr->GetPool(dev, "")->Alloc(nbytes, alignment);
 }
 
-std::vector<std::shared_ptr<Memory> > Memory::AllocBatch(const Context& ctx,
+std::vector<std::shared_ptr<Memory> > Memory::AllocBatch(const Device& dev,
                                                          const std::vector<int64_t>& nbytes,
                                                          int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  return mgr->GetPool(ctx, "")->AllocBatch(nbytes, alignment);
+  return mgr->GetPool(dev, "")->AllocBatch(nbytes, alignment);
 }
 
-void Memory::RemovePool(const Context& ctx) {
+void Memory::RemovePool(const Device& dev) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  mgr->Remove(ctx);
+  mgr->Remove(dev);
 }
 
-MemoryPool* Memory::GetPool(const Context& ctx) {
+MemoryPool* Memory::GetPool(const Device& dev) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  return mgr->GetPool(ctx, "");
+  return mgr->GetPool(dev, "");
 }
 
-MemoryPool* Memory::InitPool(const Context& ctx, const std::string& name) {
+MemoryPool* Memory::InitPool(const Device& dev, const std::string& name) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  return mgr->GetPool(ctx, name);
+  return mgr->GetPool(dev, name);
 }
 
 /*!

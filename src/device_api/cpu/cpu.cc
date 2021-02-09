@@ -41,23 +41,23 @@ class CPUDeviceAPI final : public DeviceAPI {
 #endif
   }
 
-  void* CreateStream(const Context&) override {
+  void* CreateStream(const Device&) override {
     throw;
   }
 
-  void FreeStream(const Context&, void* stream) override {
+  void FreeStream(const Device&, void* stream) override {
     throw;
   }
 
-  void SyncStream(const Context& prev_ctx, void* prev, void* next) override {
+  void SyncStream(const Device& prev_dev, void* prev, void* next) override {
     throw;
   }
 
-  void WaitDevice(const Context&) override {
+  void WaitDevice(const Device&) override {
     throw;
   }
 
-  void WaitStream(const Context&, void* stream) override {
+  void WaitStream(const Device&, void* stream) override {
     throw;
   }
 

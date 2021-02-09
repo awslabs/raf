@@ -44,7 +44,7 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
             _, fan_in, _, _ = self.w_shape
             bound = 1.0 / math.sqrt(fan_in)
             self.b = uniform(-bound, bound, self.b_shape, name="b",
-                             ctx=get_chained_attr(self, ["b", "ctx"], default="cpu"))
+                             device=get_chained_attr(self, ["b", "device"], default="cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -78,15 +78,16 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
         n_f = self.num_features
         self.running_mean = ndarray(np.zeros(n_f, dtype="float32"),
                                     name="running_mean",
-                                    ctx=get_chained_attr(self, ["running_mean", "ctx"], "cpu"))
+                                    device=get_chained_attr(self, ["running_mean", "device"],
+                                                            "cpu"))
         self.running_var = ndarray(np.ones(n_f, dtype="float32"),
                                    name="running_var",
-                                   ctx=get_chained_attr(self, ["running_var", "ctx"], "cpu"))
+                                   device=get_chained_attr(self, ["running_var", "device"], "cpu"))
         if self.affine:
             self.w = ndarray(np.ones(n_f, dtype="float32"),
-                             name="w", ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
+                             name="w", device=get_chained_attr(self, ["w", "device"], "cpu"))
             self.b = ndarray(np.zeros(n_f, dtype="float32"),
-                             name="b", ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
+                             name="b", device=get_chained_attr(self, ["b", "device"], "cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 
@@ -127,12 +128,12 @@ class Linear(Model):
 
     def reset(self):
         self.w = kaiming_uniform((self.out_features, self.in_features), name="w",
-                                 ctx=get_chained_attr(self, ["w", "ctx"], "cpu"))
+                                 device=get_chained_attr(self, ["w", "device"], "cpu"))
         if self.bias:
             fan_in = self.in_features
             bound = 1.0 / math.sqrt(fan_in)
             self.b = uniform(-bound, bound, [self.out_features], name="b",
-                             ctx=get_chained_attr(self, ["b", "ctx"], "cpu"))
+                             device=get_chained_attr(self, ["b", "device"], "cpu"))
 
     # pylint: enable=attribute-defined-outside-init
 

@@ -45,12 +45,12 @@ def test_allreduce_with_tensor():
 
     model = TestModel()
     rank, local_rank = get_node_info()
-    ctx = f"cuda({local_rank})"
+    device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
-    x = mnm.array(x, ctx=ctx)
+    x = mnm.array(x, device=device)
     if rank == 0:
         print(f"{rank} - X: ", x)
-    model.to(ctx=ctx)
+    model.to(device=device)
     y = model(x)
     if rank == 0:
         target_y = x.asnumpy() * (1+2)
@@ -74,14 +74,14 @@ def test_allreduce_with_tensor_list():
 
     model = TestModel()
     rank, local_rank = get_node_info()
-    ctx = f"cuda({local_rank})"
+    device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
-    x1 = mnm.array(x1, ctx=ctx)
-    x2 = mnm.array(x2, ctx=ctx)
+    x1 = mnm.array(x1, device=device)
+    x2 = mnm.array(x2, device=device)
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
-    model.to(ctx=ctx)
+    model.to(device=device)
     y = model(x1, x2)
     if rank == 0:
         target_y = mnm.concatenate([x1, x2]).asnumpy() * (1+2)

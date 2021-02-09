@@ -85,7 +85,7 @@ class Stream final {
 
   void* data() const;
 
-  static std::shared_ptr<Stream> Get(const Context& ctx, int tag_idx, int index);
+  static std::shared_ptr<Stream> Get(const Device& dev, int tag_idx, int index);
 
   void Wait() const;
 

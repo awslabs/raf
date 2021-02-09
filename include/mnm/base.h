@@ -50,12 +50,12 @@ class DevType final : public EnumBase<DevType, 13, int32_t, int> {
   }
 };
 
-class Context {
+class Device {
  public:
-  Context() = default;
-  Context(DevType device_type, int device_id) : device_type(device_type), device_id(device_id) {
+  Device() = default;
+  Device(DevType device_type, int device_id) : device_type(device_type), device_id(device_id) {
   }
-  Context(TVMContext context)  // NOLINT(runtime/explicit)
+  Device(TVMContext context)  // NOLINT(runtime/explicit)
       : device_type(context.device_type), device_id(context.device_id) {
   }
   operator TVMContext() const {
@@ -66,10 +66,10 @@ class Context {
     snprintf(buffer, sizeof(buffer), "%s(%d)", device_type.c_str(), device_id);
     return buffer;
   }
-  bool operator==(const Context& other) {
+  bool operator==(const Device& other) {
     return device_type == other.device_type && device_id == other.device_id;
   }
-  bool operator!=(const Context& other) {
+  bool operator!=(const Device& other) {
     return !(*this == other);
   }
 

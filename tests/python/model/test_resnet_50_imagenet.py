@@ -4,8 +4,7 @@ import torch.nn as nn
 
 import mnm
 from mnm.model import BatchNorm, Conv2d, Linear, Sequential
-
-from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
+from mnm.testing import check, one_hot_torch, randn_torch, t2m_param
 
 
 class TorchBottleneck(nn.Module):  # pylint: disable=abstract-method
@@ -225,6 +224,7 @@ class MNMResNet50(mnm.Model):  # pylint: disable=too-many-instance-attributes
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     t_model = TorchResNet50([3, 4, 6, 3])
+    t_model.to(device="cuda")
     m_model = MNMResNet50([3, 4, 6, 3])
     # pylint: disable=no-member,line-too-long
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
@@ -495,8 +495,8 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
 
     m_model.fc1.w = t2m_param(t_model.fc1.weight)
     m_model.fc1.b = t2m_param(t_model.fc1.bias)
-    m_x, t_x = randn([1, 3, 224, 224], requires_grad=True)  # pylint: disable=unused-variable
-    m_y, t_y = one_hot(batch_size=1, num_classes=1000)
+    m_x, t_x = randn_torch([1, 3, 224, 224], requires_grad=True, device="cuda")  # pylint: disable=unused-variable
+    m_y, t_y = one_hot_torch(batch_size=1, num_classes=1000, device="cuda")
     m_x.requires_grad = True
     m_model.train_mode()
     t_model.train()

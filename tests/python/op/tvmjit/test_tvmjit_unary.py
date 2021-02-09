@@ -5,7 +5,7 @@ from scipy import special
 import torch
 
 import mnm
-from mnm.testing import get_ctx_list, randn, randn_torch, run_vm_model, check
+from mnm.testing import get_device_list, randn, randn_torch, run_vm_model, check
 
 
 class UnaryModel(mnm.Model):
@@ -17,7 +17,7 @@ class UnaryModel(mnm.Model):
         return self.op(x)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -37,12 +37,12 @@ class UnaryModel(mnm.Model):
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_unary_ops(ops, shape, dtype, ctx):
+def test_unary_ops(ops, shape, dtype, device):
     n_op, m_op = ops
     model = UnaryModel(m_op)
-    m_x, n_x = randn(shape, dtype=dtype, ctx=ctx)
+    m_x, n_x = randn(shape, dtype=dtype, device=device)
     m_y = model(m_x)
-    v_y = run_vm_model(model, ctx, [m_x])
+    v_y = run_vm_model(model, device, [m_x])
     n_y = n_op(n_x)
     check(m_y, n_y)
     check(v_y, n_y)
@@ -51,7 +51,7 @@ def test_unary_ops(ops, shape, dtype, ctx):
 # pylint: disable=no-member
 # pylint: disable=protected-access
 # pylint: disable=no-self-use
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -61,46 +61,46 @@ def test_unary_ops(ops, shape, dtype, ctx):
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_unary_ops_with_grad(ops, shape, dtype, ctx):
+def test_unary_ops_with_grad(ops, shape, dtype, device):
     t_op, m_op = ops
     model = UnaryModel(m_op)
-    m_x, t_x = randn_torch(shape, dtype=dtype, ctx=ctx, requires_grad=True)
+    m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True)
     m_y = model(m_x)
-    v_y = run_vm_model(model, ctx, [m_x])
+    v_y = run_vm_model(model, device, [m_x])
     t_y = t_op(t_x)
     # check forward
     check(m_y, t_y)
     check(v_y, t_y)
     # check backward
-    m_dy, t_dy = randn_torch(shape, dtype=dtype, ctx=ctx)
+    m_dy, t_dy = randn_torch(shape, dtype=dtype, device=device)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
     (np.log, mnm._op.sym.log),
     (np.sqrt, mnm._op.sym.sqrt),
 ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_unary_ops_pos(ops, shape, dtype, ctx):
+def test_unary_ops_pos(ops, shape, dtype, device):
     n_op, m_op = ops
     model = UnaryModel(m_op)
-    m_x, n_x = randn(shape, dtype=dtype, ctx=ctx, positive=True)
+    m_x, n_x = randn(shape, dtype=dtype, device=device, positive=True)
     m_y = model(m_x)
-    v_y = run_vm_model(model, ctx, [m_x])
+    v_y = run_vm_model(model, device, [m_x])
     n_y = n_op(n_x)
     check(m_y, n_y)
     check(v_y, n_y)
 
 
 # TODO(@icemelon9, @yzhliu): shape op doesn't work in the trace, so cannot test in VM.
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_shape(ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_shape(device):
     shape = (3, 6, 9)
-    m_x = mnm.array(np.random.randn(*shape).astype('float32'), ctx=ctx)
+    m_x = mnm.array(np.random.randn(*shape).astype('float32'), device=device)
     m_shape = mnm.shape(m_x)
     assert tuple(m_shape) == shape
 

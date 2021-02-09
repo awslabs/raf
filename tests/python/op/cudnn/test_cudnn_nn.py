@@ -27,8 +27,8 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(xshape, ctx="cuda", std=0.001, dtype=dtype, requires_grad=True)
-    m_w, t_w = randn_torch(wshape, ctx="cuda", std=0.01, dtype=dtype, requires_grad=True)
+    m_x, t_x = randn_torch(xshape, device="cuda", std=0.001, dtype=dtype, requires_grad=True)
+    m_w, t_w = randn_torch(wshape, device="cuda", std=0.01, dtype=dtype, requires_grad=True)
     m_y = model(m_x, m_w)
     v_y = run_vm_model(model, "cuda", [m_x, m_w])
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
@@ -37,7 +37,7 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
     check(m_y, t_y, rtol=rtol, atol=atol)
     check(v_y, t_y, rtol=rtol, atol=atol)
     # backward
-    m_dy, t_dy = randn_torch(t_y.shape, ctx="cuda", dtype=dtype)
+    m_dy, t_dy = randn_torch(t_y.shape, device="cuda", dtype=dtype)
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad, rtol=rtol, atol=atol)
@@ -74,14 +74,14 @@ def test_mnm_unary(shape, funcs):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(shape, ctx="cuda", requires_grad=True)
+    m_x, t_x = randn_torch(shape, device="cuda", requires_grad=True)
     m_y = model(m_x)
     v_y = run_vm_model(model, "cuda", [m_x])
     t_y = torch_fwd(t_x)
     check(m_y, t_y)
     check(v_y, t_y)
     # backward
-    m_dy, t_dy = randn_torch(shape, ctx="cuda")
+    m_dy, t_dy = randn_torch(shape, device="cuda")
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad)
@@ -117,7 +117,7 @@ def test_mnm_softmax(shape, axis, funcs):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(shape, ctx="cuda", requires_grad=True)
+    m_x, t_x = randn_torch(shape, device="cuda", requires_grad=True)
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
             m_y = model(m_x)
@@ -128,7 +128,7 @@ def test_mnm_softmax(shape, axis, funcs):
     check(m_y, t_y)
     check(v_y, t_y)
     # backward
-    m_dy, t_dy = randn_torch(shape, ctx="cuda")
+    m_dy, t_dy = randn_torch(shape, device="cuda")
     t_y.backward(t_dy)
     m_y.backward(m_dy)
     check(m_x.grad, t_x.grad)
@@ -160,14 +160,14 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch([8, 3, 32, 32], ctx="cuda", requires_grad=True)
+    m_x, t_x = randn_torch([8, 3, 32, 32], device="cuda", requires_grad=True)
     m_y = model(m_x)
     v_y = run_vm_model(model, "cuda", [m_x])
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
     check(m_y, t_y)
     check(v_y, t_y)
     # backward
-    m_dy, t_dy = randn_torch(m_y.shape, ctx="cuda")
+    m_dy, t_dy = randn_torch(m_y.shape, device="cuda")
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad)
@@ -179,11 +179,11 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
 def test_mnm_batch_norm_infer(shape, momentum, eps):
     stats_shape = [shape[1]]
-    m_x, t_x = randn_torch(shape, ctx="cuda")
-    m_m, t_m = randn_torch(stats_shape, ctx="cuda")
-    m_v, t_v = randn_torch(stats_shape, ctx="cuda", positive=True)
-    m_w, t_w = randn_torch(stats_shape, ctx="cuda")
-    m_b, t_b = randn_torch(stats_shape, ctx="cuda")
+    m_x, t_x = randn_torch(shape, device="cuda")
+    m_m, t_m = randn_torch(stats_shape, device="cuda")
+    m_v, t_v = randn_torch(stats_shape, device="cuda", positive=True)
+    m_w, t_w = randn_torch(stats_shape, device="cuda")
+    m_b, t_b = randn_torch(stats_shape, device="cuda")
 
     class TestModel(mnm.Model):
         def build(self):
@@ -208,11 +208,11 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     stats_shape = [shape[1]]
-    m_x, t_x = randn_torch(shape, dtype=dtype, ctx="cuda", requires_grad=True)
-    m_mean, t_mean = randn_torch(stats_shape, ctx="cuda")
-    m_var, t_var = randn_torch(stats_shape, ctx="cuda", positive=True)
-    m_w, t_w = randn_torch(stats_shape, ctx="cuda", requires_grad=True)
-    m_b, t_b = randn_torch(stats_shape, ctx="cuda", requires_grad=True)
+    m_x, t_x = randn_torch(shape, dtype=dtype, device="cuda", requires_grad=True)
+    m_mean, t_mean = randn_torch(stats_shape, device="cuda")
+    m_var, t_var = randn_torch(stats_shape, device="cuda", positive=True)
+    m_w, t_w = randn_torch(stats_shape, device="cuda", requires_grad=True)
+    m_b, t_b = randn_torch(stats_shape, device="cuda", requires_grad=True)
     np_mean = m_mean.asnumpy()
     np_var = m_var.asnumpy()
 
@@ -231,14 +231,14 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_mean, t_mean, rtol=1e-4, atol=1e-4)
     check(m_var, t_var, rtol=1e-4, atol=1e-4)
-    m_mean = mnm.array(np_mean, ctx="cuda")
-    m_var = mnm.array(np_var, ctx="cuda")
+    m_mean = mnm.array(np_mean, device="cuda")
+    m_var = mnm.array(np_var, device="cuda")
     v_y = run_vm_model(model, "cuda", [m_x, m_mean, m_var, m_w, m_b])
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_mean, t_mean, rtol=1e-4, atol=1e-4)
     check(m_var, t_var, rtol=1e-4, atol=1e-4)
     # backward
-    m_dy, t_dy = randn_torch(shape, dtype=dtype, ctx="cuda")
+    m_dy, t_dy = randn_torch(shape, dtype=dtype, device="cuda")
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     rtol = 1e-4 if dtype == "float32" else 1e-3
@@ -268,9 +268,9 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
     # forward
     model = TestModel()
     m_a, t_a = randn_torch((n, k) if not transpose_a else (k, n),
-                           dtype=dtype, ctx="cuda", requires_grad=True)
+                           dtype=dtype, device="cuda", requires_grad=True)
     m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k),
-                           dtype=dtype, ctx="cuda", requires_grad=True)
+                           dtype=dtype, device="cuda", requires_grad=True)
     m_c = model(m_a, m_b)
     v_c = run_vm_model(model, "cuda", [m_a, m_b])
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
@@ -279,7 +279,7 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
     check(m_c, t_c, rtol=rtol, atol=atol)
     check(v_c, t_c, rtol=rtol, atol=atol)
     # backward
-    m_dc, t_dc = randn_torch(m_c.shape, dtype=dtype, ctx="cuda")
+    m_dc, t_dc = randn_torch(m_c.shape, dtype=dtype, device="cuda")
     m_c.backward(m_dc)
     t_c.backward(t_dc)
     check(m_a.grad, t_a.grad, rtol=rtol, atol=atol)

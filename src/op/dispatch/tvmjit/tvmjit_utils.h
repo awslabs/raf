@@ -110,7 +110,7 @@ using FMNMArgIndices =
     static auto c_cache_key = registry::GetPackedFunc("relay.backend._make_CCacheKey");         \
     static auto jit = registry::GetPackedFunc("relay.backend._CompileEngineJIT");               \
     static auto engine_clear = registry::GetPackedFunc("relay.backend._CompileEngineClear");    \
-    const auto& ctx = call->ctx;                                                                \
+    const auto& dev = call->device;                                                             \
     static const auto op = Op::Get(OP);                                                         \
     auto env = new TVMOpEnv();                                                                  \
     auto fschema_index = Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");      \
@@ -122,14 +122,14 @@ using FMNMArgIndices =
     tvm::Target target;                                                                         \
     /* Determine cache and target */                                                            \
     MetaCache<registry::PackedFunc>* cache;                                                     \
-    if (ctx.device_type == DevType::kCPU()) {                                                   \
+    if (dev.device_type == DevType::kCPU()) {                                                   \
       cache = &FUNC##CacheBuildCpu;                                                             \
       target = tvm::Target("llvm");                                                             \
-    } else if (ctx.device_type == DevType::kCUDA()) {                                           \
+    } else if (dev.device_type == DevType::kCUDA()) {                                           \
       cache = &FUNC##CacheBuildCuda;                                                            \
       target = tvm::Target("cuda");                                                             \
     } else {                                                                                    \
-      LOG(FATAL) << "NotImplementedError: target is not supported " << ctx.device_type.c_str(); \
+      LOG(FATAL) << "NotImplementedError: target is not supported " << dev.device_type.c_str(); \
       throw;                                                                                    \
     }                                                                                           \
     std::function<registry::PackedFunc(const ir::Function&)> f_post_lower(                      \

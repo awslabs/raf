@@ -6,40 +6,8 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
-from mnm.testing import with_seed, get_ctx_list, check, run_vm_model
-
-
-def one_hot(batch_size, num_classes, ctx="cuda", dtype="float32"):
-    targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
-    m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, ctx=ctx)
-    t_x = torch.tensor(targets, requires_grad=False)  # pylint: disable=not-callable
-    assert list(m_x.shape) == [batch_size, num_classes]
-    assert list(t_x.shape) == [batch_size]
-    return m_x, t_x
-
-
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0, mean=0.0,
-          requires_grad=False, positive=False):
-    if positive:
-        x = np.abs(np.random.randn(*shape)) * std + mean
-    else:
-        x = np.random.randn(*shape) * std + mean
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    if requires_grad:
-        m_x.requires_grad = True
-    t_x = torch.tensor(x, requires_grad=requires_grad)  # pylint: disable=not-callable
-    return m_x, t_x
-
-
-def t2m_param(param, ctx="cuda"):
-    # pylint: disable=unexpected-keyword-arg
-    return mnm.ndarray(param.detach().numpy(), ctx=ctx)
+from mnm.testing import with_seed, get_device_list, check, run_vm_model, \
+    one_hot_torch, randn_torch, t2m_param
 
 
 class TorchTest(nn.Module):  # pylint: disable=abstract-method
@@ -107,8 +75,9 @@ class MNMTest(mnm.Model):
 ])
 def test_sgd(config):
     t_model = TorchTest(config[1], config[2])
+    t_model.to(device='cuda')
     m_model = MNMTest(config[1], config[2])
-    m_model.to(ctx='cuda')
+    m_model.to(device='cuda')
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
     m_model.linear1.b = t2m_param(t_model.linear1.bias)
@@ -126,9 +95,9 @@ def test_sgd(config):
 
     for i in range(batch_size):
         t_optimizer.zero_grad()
-        m_x, t_x = randn([1, 3, config[1], config[1]], requires_grad=True, ctx="cuda")
+        m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device="cuda")
         m_x.requires_grad = True
-        m_y, t_y = one_hot(batch_size=1, num_classes=config[2])
+        m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device="cuda")
         m_loss = m_model(m_x, m_y)
         t_loss = t_model(t_x, t_y)
         m_loss.backward()
@@ -170,22 +139,23 @@ class MNMSimpleTest(mnm.Model):
         return y
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_traced_sgd_simple(ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_traced_sgd_simple(device):
     # pylint: disable=attribute-defined-outside-init
     shape = (2, 2)
     batch_size = 32
     dtype = 'float32'
     t_model = TorchSimpleTest(shape)
+    t_model.to(device)
     m_model = MNMSimpleTest(shape)
-    m_model.x = t2m_param(t_model.x, ctx=ctx)
+    m_model.x = t2m_param(t_model.x, device=device)
     m_model.train_mode()
     t_model.train()
     m_optimizer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
     t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
     for i in range(batch_size):
-        m_dy, t_dy = randn(shape, ctx=ctx, requires_grad=False)
-        m_loss = run_vm_model(m_optimizer, ctx, [m_dy])
+        m_dy, t_dy = randn_torch(shape, device=device, requires_grad=False)
+        m_loss = run_vm_model(m_optimizer, device, [m_dy])
         t_optimizer.zero_grad()
         t_loss = t_model()
         t_loss.backward(t_dy)
@@ -200,17 +170,18 @@ def test_traced_sgd_simple(ctx):
 ])
 def test_traced_sgd(config):
     # pylint: disable=too-many-locals
-    ctx = "cuda"
+    device = "cuda"
     t_model = TorchTest(config[1], config[2])
+    t_model.to(device=device)
     m_model = MNMTest(config[1], config[2])
-    m_model.to(ctx=ctx)
-    m_model.conv1.w = t2m_param(t_model.conv1.weight, ctx=ctx)
-    m_model.linear1.w = t2m_param(t_model.linear1.weight, ctx=ctx)
-    m_model.linear1.b = t2m_param(t_model.linear1.bias, ctx=ctx)
-    m_model.bn1.w = t2m_param(t_model.bn1.weight, ctx=ctx)
-    m_model.bn1.b = t2m_param(t_model.bn1.bias, ctx=ctx)
-    m_model.bn1.running_mean = t2m_param(t_model.bn1.running_mean, ctx=ctx)
-    m_model.bn1.running_var = t2m_param(t_model.bn1.running_var, ctx=ctx)
+    m_model.to(device=device)
+    m_model.conv1.w = t2m_param(t_model.conv1.weight, device=device)
+    m_model.linear1.w = t2m_param(t_model.linear1.weight, device=device)
+    m_model.linear1.b = t2m_param(t_model.linear1.bias, device=device)
+    m_model.bn1.w = t2m_param(t_model.bn1.weight, device=device)
+    m_model.bn1.b = t2m_param(t_model.bn1.bias, device=device)
+    m_model.bn1.running_mean = t2m_param(t_model.bn1.running_mean, device=device)
+    m_model.bn1.running_var = t2m_param(t_model.bn1.running_var, device=device)
 
     batch_size = config[0]
     m_model.train_mode()
@@ -221,11 +192,11 @@ def test_traced_sgd(config):
     t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
 
     for i in range(batch_size):
-        m_dy, t_dy = randn((), std=0.0, mean=1.0, ctx=ctx, requires_grad=False)
-        m_x, t_x = randn([1, 3, config[1], config[1]], requires_grad=True, ctx=ctx)
+        m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
+        m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device=device)
         m_x.requires_grad = True
-        m_y, t_y = one_hot(batch_size=1, num_classes=config[2], ctx=ctx)
-        m_loss = run_vm_model(m_optimizer, ctx, [m_dy, m_x, m_y])
+        m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device=device)
+        m_loss = run_vm_model(m_optimizer, device, [m_dy, m_x, m_y])
         t_optimizer.zero_grad()
         t_loss = t_model(t_x, t_y)
         t_loss.backward(t_dy)

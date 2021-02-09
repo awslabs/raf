@@ -31,7 +31,7 @@ def check_type(expr, typ):
         raise RuntimeError(f"Type mismatch {checked_type} vs {typ}")
 
 
-def get_ctx_list():
+def get_device_list():
     """Helper function to get all available contexts"""
     ret = ["cpu"]
     if mnm.build.with_cuda():
@@ -67,7 +67,7 @@ def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
 
 
-def randn(shape, *, ctx="cpu", dtype="float32", positive=False):
+def randn(shape, *, device="cpu", dtype="float32", positive=False, requires_grad=False):
     """Helper function to generate a pair of mnm and numpy arrays"""
     x = np.random.randn(*shape)
     if positive:
@@ -76,22 +76,23 @@ def randn(shape, *, ctx="cpu", dtype="float32", positive=False):
         x = np.array(x)
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
+    m_x = mnm.array(n_x, device=device)
+    m_x.requires_grad = requires_grad
     return m_x, n_x
 
 
-def randint(shape, *, low=0, high=None, ctx="cpu", dtype="int64"):
+def randint(shape, *, low=0, high=None, device="cpu", dtype="int64"):
     """Helper function to generate a pair of mnm and numpy arrays with int"""
     x = np.random.randint(low, high, shape)
     if not isinstance(x, np.ndarray):
         x = np.array(x)
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
+    m_x = mnm.array(n_x, device=device)
     return m_x, n_x
 
 
-def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
+def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
                 positive=False):
     """Helper function to generate a pair of mnm and torch arrays"""
     x = np.random.randn(*shape) * std + mean
@@ -101,13 +102,30 @@ def randn_torch(shape, *, ctx="cpu", dtype="float32", requires_grad=False, mean=
         x = np.array(x)
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
+    m_x = mnm.array(n_x, device=device)
     m_x.requires_grad = requires_grad
-    t_x = torch.tensor(n_x, requires_grad=requires_grad, device=ctx)  # pylint: disable=not-callable
+    t_x = torch.tensor(n_x, requires_grad=requires_grad, device=device)  # pylint: disable=not-callable
     return m_x, t_x
 
 
-def run_vm_model(model, ctx, args, optimize=None):
+def one_hot_torch(batch_size, num_classes, device="cpu", dtype="float32"):
+    """Helper function to generate one hot tensors in mnm and torch"""
+    targets = np.random.randint(0, num_classes, size=batch_size)
+    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
+    m_x[range(batch_size), targets] = 1
+    m_x = mnm.array(m_x, device=device)
+    t_x = torch.tensor(targets, requires_grad=False, device=device)  # pylint: disable=not-callable
+    assert list(m_x.shape) == [batch_size, num_classes]
+    assert list(t_x.shape) == [batch_size]
+    return m_x, t_x
+
+
+def t2m_param(param, device="cuda"):
+    """Helper function to convert torch parameter to mnm ndarray"""
+    return mnm.ndarray(param.detach().cpu().numpy(), device=device)  # pylint: disable=unexpected-keyword-arg
+
+
+def run_vm_model(model, device, args, optimize=None):
     """Helper function to execute model with VM"""
     record = model._internal(*args)
     func = record.func
@@ -116,17 +134,17 @@ def run_vm_model(model, ctx, args, optimize=None):
     mod = Module()
     mod[tvm.ir.GlobalVar('main')] = func
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    executor = VMExecutor(mod, ctx)
+    executor = VMExecutor(mod, device)
     out = executor.make_executor()(*inputs)
     return out
 
 
-def compile_vm_model(model, ctx, args):
+def compile_vm_model(model, device, args):
     """Helper function to compile model into VM bytecode"""
     mod = Module()
     func = model._internal(*args).func
     mod[tvm.ir.GlobalVar('main')] = func
-    executor = VMExecutor(mod, ctx)
+    executor = VMExecutor(mod, device)
     return executor.executable.bytecode
 
 

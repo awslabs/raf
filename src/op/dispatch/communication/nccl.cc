@@ -25,7 +25,7 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   void* communicator;
   explicit NCCLAllReduce(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
-    RequestStream(&stream, cv->ctx, StreamTagEnum::CudaCommunicate());
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
     auto& tv = args->x;
     for (int i = 0; i < tv.size(); ++i) {
@@ -35,7 +35,7 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       total_size += size;
     }
     if (tv.size() == 1) return;
-    RequestWorkspace(&fused_data, cv->ctx, total_size);
+    RequestWorkspace(&fused_data, cv->device, total_size);
   }
 
  public:

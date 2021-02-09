@@ -3,8 +3,7 @@ import torch
 
 import mnm
 from mnm.model import Conv2d, BatchNorm
-
-from utils import check, randn # pylint: disable=E0401
+from mnm.testing import check, randn_torch, t2m_param
 
 
 class MNMBottleNeck(mnm.Model):
@@ -92,10 +91,6 @@ class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
         return out
 
 
-def t2m_param(param):
-    return mnm.ndarray(param.detach().numpy(), ctx="cuda")  # pylint: disable=unexpected-keyword-arg
-
-
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("config", [
     ((64, 64, 1), (16, 64, 32, 32)),
@@ -111,6 +106,7 @@ def t2m_param(param):
 def test_bottleneck(config, is_train):
     m_block = MNMBottleNeck(*config[0])
     t_block = TorchPreActBottleneck(*config[0])
+    t_block.to("cuda")
     # set the parameters to be exactly the same
     # pylint: disable=attribute-defined-outside-init,invalid-name
     m_block.bn1.w = t2m_param(t_block.bn1.weight)
@@ -139,11 +135,11 @@ def test_bottleneck(config, is_train):
         m_block.infer_mode()
         t_block.eval()
     # run the model
-    m_x, t_x = randn(config[1], requires_grad=is_train)
+    m_x, t_x = randn_torch(config[1], requires_grad=is_train, device="cuda")
     t_y = t_block(t_x)
     m_y = m_block(m_x)
     if is_train:
-        m_dy, t_dy = randn(m_y.shape, std=m_y.asnumpy().std() * 0.0001)
+        m_dy, t_dy = randn_torch(m_y.shape, std=m_y.asnumpy().std() * 0.0001, device="cuda")
         t_y.backward(t_dy)
         m_y.backward(m_dy)
     # check outputs

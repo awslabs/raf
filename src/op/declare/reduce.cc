@@ -56,7 +56,7 @@ void ReduceOutInt(const CallValues& call) {
   DLTensor* x = args->x;
   std::vector<int64_t> shape;
   GenerateReduceShape(args, x, &shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
   call->out = TensorValue::Assemble(x->ctx, DType(DTypeCode::kInt(), 32), shape);
 }
 
@@ -65,7 +65,7 @@ void ReduceOutSame(const CallValues& call) {
   DLTensor* x = args->x;
   std::vector<int64_t> shape;
   GenerateReduceShape(args, x, &shape);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
   call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
 }
 
@@ -75,7 +75,7 @@ void ReduceDxOutSame(const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->ctx = x->ctx;
+  call->device = x->ctx;
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);

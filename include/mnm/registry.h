@@ -96,13 +96,13 @@ namespace mnm {
 namespace registry {
 
 template <class EntryType, bool create_default = true>
-class PerContextStore {
+class PerDeviceStore {
  public:
   using EntryPtr = std::shared_ptr<EntryType>;
 
-  PerContextStore() = default;
+  PerDeviceStore() = default;
 
-  ~PerContextStore() DMLC_THROW_EXCEPTION {
+  ~PerDeviceStore() DMLC_THROW_EXCEPTION {
     for (auto& outer : entries_) {
       for (EntryPtr& entry : outer) {
         entry = nullptr;
@@ -110,10 +110,10 @@ class PerContextStore {
     }
   }
 
-  EntryPtr& Get(Context ctx) {
-    int dev_type_int = ctx.device_type;
-    EnsureCapacity(dev_type_int, ctx.device_id);
-    EntryPtr& ret = entries_[dev_type_int][ctx.device_id];
+  EntryPtr& Get(Device dev) {
+    int dev_type_int = dev.device_type;
+    EnsureCapacity(dev_type_int, dev.device_id);
+    EntryPtr& ret = entries_[dev_type_int][dev.device_id];
     if (create_default) {
       CreateMissing(&ret);
     }

@@ -3,48 +3,48 @@
 #include <mnm/base.h>
 #include <mnm/memory_pool.h>
 
-using mnm::Context;
+using mnm::Device;
 using mnm::DevType;
 using mnm::kDefaultMemoryAlignment;
 using mnm::memory_pool::Memory;
 using mnm::memory_pool::MemoryPool;
 
 TEST(NoPool, CPU) {
-  Context ctx{DevType::kCPU(), 0};
-  Memory::InitPool(ctx, "no_pool");
+  Device dev{DevType::kCPU(), 0};
+  Memory::InitPool(dev, "no_pool");
   {
-    std::shared_ptr<Memory> result = Memory::Alloc(ctx, 0);
+    std::shared_ptr<Memory> result = Memory::Alloc(dev, 0);
     ASSERT_EQ(result.use_count(), 1);
     ASSERT_EQ(result->data, nullptr);
   }
   for (int memory : {11, 19, 2019, 1024124}) {
     for (int align : {16, (int)kDefaultMemoryAlignment, 512, 1024, 4096}) {
-      std::shared_ptr<Memory> result = Memory::Alloc(ctx, memory, align);
+      std::shared_ptr<Memory> result = Memory::Alloc(dev, memory, align);
       ASSERT_EQ(result.use_count(), 1);
       int64_t address = (int64_t)result->data;
       ASSERT_EQ(address % align, 0);
     }
   }
-  Memory::RemovePool(ctx);
+  Memory::RemovePool(dev);
 }
 
 TEST(PageUnitPool, CPU) {
-  Context ctx{DevType::kCPU(), 0};
-  Memory::InitPool(ctx, "page_unit_pool");
+  Device dev{DevType::kCPU(), 0};
+  Memory::InitPool(dev, "page_unit_pool");
   {
-    std::shared_ptr<Memory> result = Memory::Alloc(ctx, 0);
+    std::shared_ptr<Memory> result = Memory::Alloc(dev, 0);
     ASSERT_EQ(result.use_count(), 1);
     ASSERT_EQ(result->data, nullptr);
   }
   for (int memory : {11, 19, 2019, 1024124}) {
     for (int align : {16, (int)kDefaultMemoryAlignment, 512, 1024, 4096}) {
-      std::shared_ptr<Memory> result = Memory::Alloc(ctx, memory, align);
+      std::shared_ptr<Memory> result = Memory::Alloc(dev, memory, align);
       ASSERT_EQ(result.use_count(), 2);
       int64_t address = (int64_t)result->data;
       ASSERT_EQ(address % align, 0);
     }
   }
-  Memory::RemovePool(ctx);
+  Memory::RemovePool(dev);
 }
 
 int main(int argc, char** argv) {

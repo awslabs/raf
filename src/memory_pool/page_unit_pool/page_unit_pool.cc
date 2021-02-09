@@ -24,9 +24,9 @@ using device_api::DeviceAPI;
  */
 class NonOwnedMemory final : public Memory {
  public:
-  explicit NonOwnedMemory(void* data, const Context& ctx, std::shared_ptr<DeviceAPI> api) {
+  explicit NonOwnedMemory(void* data, const Device& dev, std::shared_ptr<DeviceAPI> api) {
     this->data = data;
-    this->ctx = ctx;
+    this->device = dev;
     this->api = std::move(api);
   }
 
@@ -60,9 +60,9 @@ class NonOwnedMemory final : public Memory {
  */
 class PageUnitPool final : public MemoryPool {
  public:
-  explicit PageUnitPool(Context ctx) {
-    this->ctx = ctx;
-    this->api = DeviceAPI::Get(ctx.device_type);
+  explicit PageUnitPool(Device dev) {
+    this->device = dev;
+    this->api = DeviceAPI::Get(dev.device_type);
   }
 
   std::shared_ptr<Memory> Alloc(int64_t nbytes, int64_t alignment) override {
@@ -88,11 +88,11 @@ class PageUnitPool final : public MemoryPool {
     void* data = nullptr;
     if (nbytes > 0) {
       data = api->AllocMemory(nbytes, alignment);
-      std::shared_ptr<Memory> new_mem = std::make_shared<NonOwnedMemory>(data, ctx, api);
+      std::shared_ptr<Memory> new_mem = std::make_shared<NonOwnedMemory>(data, device, api);
       _pool[nbytes].push_back(new_mem);
       return new_mem;
     } else {
-      return std::make_shared<NonOwnedMemory>(data, ctx, api);
+      return std::make_shared<NonOwnedMemory>(data, device, api);
     }
   }
 
@@ -112,7 +112,7 @@ class PageUnitPool final : public MemoryPool {
   }
 
  private:
-  Context ctx;
+  Device device;
   /*! \brief The size of each memory page (exponent). */
   static const int64_t page_size_exp = 12;
   /*! \brief The pointer to the DeviceAPI which determines the context of memory. */

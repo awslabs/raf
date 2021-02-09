@@ -26,7 +26,7 @@ using tvm::relay::Type;
 
 class FakeValueCreator : public TypeFunctor<Value(const Type& n)> {
  public:
-  FakeValueCreator(Context ctx) : ctx_(ctx) {
+  FakeValueCreator(Device dev) : device_(dev) {
   }
 
   Value VisitType_(const TensorTypeNode* node) override {
@@ -40,7 +40,7 @@ class FakeValueCreator : public TypeFunctor<Value(const Type& n)> {
         LOG(FATAL) << "unsupported type " << idim->GetTypeKey();
       }
     }
-    return TensorValue::Assemble(ctx_, dtype, shape);
+    return TensorValue::Assemble(device_, dtype, shape);
   }
 
   Value VisitType_(const TupleTypeNode* node) override {
@@ -52,11 +52,11 @@ class FakeValueCreator : public TypeFunctor<Value(const Type& n)> {
   }
 
  private:
-  Context ctx_;
+  Device device_;
 };
 
-Value GetFakeValue(const Type& type, const Context& ctx) {
-  FakeValueCreator creator(ctx);
+Value GetFakeValue(const Type& type, const Device& dev) {
+  FakeValueCreator creator(dev);
   return creator(type);
 }
 
@@ -65,7 +65,7 @@ Value GetFakeValue(const Type& type, const Context& ctx) {
 class CallValuesGetter : public ExprMutator {
  public:
   CallValuesGetter(const CallValues& call)
-      : func_(Downcast<ClosureValue>(call->callee)->func), ctx_(call->ctx) {
+      : func_(Downcast<ClosureValue>(call->callee)->func), device_(call->device) {
     Array<Value> args = GetListArgs(call->args);
     CHECK_EQ(args.size(), func_->params.size());
     size_t num = args.size();
@@ -100,7 +100,7 @@ class CallValuesGetter : public ExprMutator {
       } else if (vmap_.find(new_arg) != vmap_.end()) {
         fake_args.push_back(vmap_.at(new_arg));
       } else {
-        fake_args.push_back(GetFakeValue(node->args[i]->checked_type(), ctx_));
+        fake_args.push_back(GetFakeValue(node->args[i]->checked_type(), device_));
       }
     }
     CallValues op_call_values = CallValues::make({}, fschema(fake_args));
@@ -129,8 +129,8 @@ class CallValuesGetter : public ExprMutator {
  private:
   /*! \brief maps from params to values */
   std::unordered_map<Expr, Value, ObjectPtrHash, ObjectPtrEqual> vmap_;
-  /*! \brief ctx */
-  Context ctx_;
+  /*! \brief The device to compile for. */
+  Device device_;
   /*! \brief the primitive function to be analyzed */
   Function func_;
 };
@@ -215,14 +215,14 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   static auto jit = registry::GetPackedFunc("relay.backend._CompileEngineJIT");
   static auto engine_clear = registry::GetPackedFunc("relay.backend._CompileEngineClear");
   auto env = std::make_unique<TVMOpEnv>();
-  Context ctx = call->ctx;
+  Device dev = call->device;
   tvm::Target target;
-  if (ctx.device_type == DevType::kCPU()) {
+  if (dev.device_type == DevType::kCPU()) {
     target = tvm::Target("llvm");
-  } else if (ctx.device_type == DevType::kCUDA()) {
+  } else if (dev.device_type == DevType::kCUDA()) {
     target = tvm::Target("cuda");
   } else {
-    LOG(FATAL) << "NotImplementedError: target is not supported " << ctx.device_type.c_str();
+    LOG(FATAL) << "NotImplementedError: target is not supported " << dev.device_type.c_str();
     throw;
   }
   Meta2TVM meta_to_tvm(call);

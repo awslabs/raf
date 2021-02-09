@@ -63,18 +63,18 @@ def extract_tuning_tasks(func, target, args):
     return tasks, weights
 
 
-def run_tuning(func, ctx, args, log_file):
+def run_tuning(func, device, args, log_file):
     """Tune the given tasks"""
 
     print("Extracting tasks...")
-    tasks, weights = extract_tuning_tasks(func, ctx, args)
+    tasks, weights = extract_tuning_tasks(func, device, args)
     for idx, (task, weight) in enumerate(zip(tasks, weights)):
         print("=== Task %d (weight %d) ===" % (idx, weight))
         print(task.compute_dag)
 
     print("Tuning...")
 
-    measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
+    measure_device = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
 
     tuner = auto_scheduler.TaskScheduler(tasks, weights)
 
@@ -84,21 +84,21 @@ def run_tuning(func, ctx, args, log_file):
 
     tune_option = auto_scheduler.TuningOptions(
         num_measure_trials=n_trials,
-        runner=measure_ctx.runner,
+        runner=measure_device.runner,
         measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
     )
     tuner.tune(tune_option)
-    del measure_ctx
+    del measure_device
     print("Done tuning")
 
 
-def profile_vm_func_with_schedule(func, ctx, args, log_file=None):
+def profile_vm_func_with_schedule(func, device, args, log_file=None):
     """Helper function to execute model with VM with tuned schedules"""
     mod = Module()
     mod[tvm.ir.GlobalVar("main")] = func
 
     # Get rid of the first run because it includes the compilation.
-    executor = VMExecutor(mod, ctx)
+    executor = VMExecutor(mod, device)
     executor.make_executor(log_file)(*args)
 
     # Run N times to profile the latency.
@@ -113,7 +113,7 @@ def profile_vm_func_with_schedule(func, ctx, args, log_file=None):
     return out
 
 
-def run_test(ctx):
+def run_test(device):
     """Run the test script"""
     # pylint: disable=no-self-use, invalid-name
 
@@ -141,19 +141,19 @@ def run_test(ctx):
     model = Model()
     model.infer_mode()
 
-    m_x, _ = randn((n, ci, h, w), ctx=ctx)
-    m_w, _ = randn((co, ci, 3, 3), ctx=ctx)
+    m_x, _ = randn((n, ci, h, w), device=device)
+    m_w, _ = randn((co, ci, 3, 3), device=device)
     func = run_fusion(model, [m_x, m_w])
 
     # Profile with the fallback schedules (~1.15 ms in this example on g4dn).
-    profile_vm_func_with_schedule(func, ctx, [m_x, m_w])
+    profile_vm_func_with_schedule(func, device, [m_x, m_w])
 
     # Tuning
     log_file = "tuning.json"
-    run_tuning(func, ctx, [m_x, m_w], log_file)
+    run_tuning(func, device, [m_x, m_w], log_file)
 
     # Profile with the tuned schedules (~0.99 ms in this example on g4dn after 256 trials).
-    profile_vm_func_with_schedule(func, ctx, [m_x, m_w], log_file)
+    profile_vm_func_with_schedule(func, device, [m_x, m_w], log_file)
 
 
 if __name__ == "__main__":

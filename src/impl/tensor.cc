@@ -75,7 +75,7 @@ class Tensor::Impl {
     delete super_ptr;
   }
 
-  static Tensor Make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
+  static Tensor Make(const Device& dev, const DType& dtype, const std::vector<int64_t>& shape,
                      const std::vector<int64_t>& strides, void* data) {
     if (!strides.empty()) {
       CHECK_EQ(shape.size(), strides.size());
@@ -86,7 +86,7 @@ class Tensor::Impl {
     container->shape_ = shape;
     container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
     container->dl_tensor.data = data;
-    container->dl_tensor.ctx = ctx;
+    container->dl_tensor.ctx = dev;
     container->dl_tensor.ndim = shape.size();
     container->dl_tensor.dtype = dtype;
     container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
@@ -151,9 +151,9 @@ Tensor Tensor::CreateView(const std::vector<int64_t>& shape, const std::vector<i
   return Tensor::Impl::CreateView(*this, shape, strides, data);
 }
 
-Tensor Tensor::make(const Context& ctx, const DType& dtype, const std::vector<int64_t>& shape,
+Tensor Tensor::make(const Device& dev, const DType& dtype, const std::vector<int64_t>& shape,
                     const std::vector<int64_t>& strides, void* data) {
-  return Tensor::Impl::Make(ctx, dtype, shape, strides, data);
+  return Tensor::Impl::Make(dev, dtype, shape, strides, data);
 }
 
 Tensor Tensor::FromDLPack(DLManagedTensor* tensor) {

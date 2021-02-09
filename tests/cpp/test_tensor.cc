@@ -9,7 +9,7 @@
 #include <mnm/base.h>
 #include <mnm/tensor.h>
 
-using mnm::Context;
+using mnm::Device;
 using mnm::DevType;
 using mnm::DType;
 using mnm::DTypeCode;
@@ -39,12 +39,12 @@ class MNMTester {
 
 TEST(Tensor, make_no_strides_no_data) {
   const int ndim = 3;
-  Context ctx(DevType::kCPU(), 0);       // cpu(0)
+  Device dev(DevType::kCPU(), 0);        // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
   std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
   std::vector<int64_t> strides = MNMTester::CalcStrides(shape);
   // call make
-  Tensor tensor = Tensor::make(ctx, dtype, shape);
+  Tensor tensor = Tensor::make(dev, dtype, shape);
   // check ndim
   ASSERT_EQ(tensor->ndim, ndim);
   // check data
@@ -69,12 +69,12 @@ TEST(Tensor, make_no_strides_no_data) {
 TEST(Tensor, make_no_strides) {
   const int ndim = 3;
   void* data = (void*)0x0001;
-  Context ctx(DevType::kCPU(), 0);       // cpu(0)
+  Device dev(DevType::kCPU(), 0);        // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
   std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
   std::vector<int64_t> strides = MNMTester::CalcStrides(shape);
   // call make
-  Tensor tensor = Tensor::make(ctx, dtype, shape, {}, data);
+  Tensor tensor = Tensor::make(dev, dtype, shape, {}, data);
   // check ndim
   ASSERT_EQ(tensor->ndim, ndim);
   // check data
@@ -99,12 +99,12 @@ TEST(Tensor, make_no_strides) {
 TEST(Tensor, make_given_all_fields) {
   const int ndim = 3;
   void* data = (void*)0x0001;
-  Context ctx(DevType::kCPU(), 0);       // cpu(0)
+  Device dev(DevType::kCPU(), 0);        // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
   std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
   std::vector<int64_t> strides = MNMTester::RandomShape(ndim);
   // call make
-  Tensor tensor = Tensor::make(ctx, dtype, shape, strides, data);
+  Tensor tensor = Tensor::make(dev, dtype, shape, strides, data);
   // check ndim
   ASSERT_EQ(tensor->ndim, ndim);
   // check data

@@ -42,7 +42,7 @@ class TensorValue(BaseTensorValue):
         return handle.contents.data
 
     @property
-    def ctx(self):
+    def device(self):
         return ctx2str(self.dltensor_handle.contents.ctx)
 
     @property
@@ -73,8 +73,8 @@ class TensorValue(BaseTensorValue):
         return handle.contents.byte_offset
 
     @staticmethod
-    def assemble(shape, dtype, ctx, strides=None, data=None):
-        return ffi.AssembleTensorValue(str2ctx(ctx), dtype, shape, strides,
+    def assemble(shape, dtype, device, strides=None, data=None):
+        return ffi.AssembleTensorValue(str2ctx(device), dtype, shape, strides,
                                        data)
 
     @staticmethod

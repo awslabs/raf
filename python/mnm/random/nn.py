@@ -35,20 +35,20 @@ def _calc_gain(nonlinearity, param=None):
     raise NotImplementedError("gain for nonlinearity: " + str(nonlinearity))
 
 
-def xavier_uniform(shape, gain=1.0, name="", dtype='float32', ctx='cpu'):
+def xavier_uniform(shape, gain=1.0, name="", dtype='float32', device='cpu'):
     fan_in, fan_out = _calc_fan_in_out(shape)
     a = gain * np.sqrt(6.0 / (fan_in + fan_out))
-    return uniform(low=-a, high=a, shape=shape, name=name, dtype=dtype, ctx=ctx)
+    return uniform(low=-a, high=a, shape=shape, name=name, dtype=dtype, device=device)
 
 
-def xavier_normal(shape, gain=1.0, name="", dtype='float32', ctx='cpu'):
+def xavier_normal(shape, gain=1.0, name="", dtype='float32', device='cpu'):
     fan_in, fan_out = _calc_fan_in_out(shape)
     std = gain * math.sqrt(2.0 / (fan_in + fan_out))
-    return normal(mean=0.0, std=std, shape=shape, name=name, dtype=dtype, ctx=ctx)
+    return normal(mean=0.0, std=std, shape=shape, name=name, dtype=dtype, device=device)
 
 
 def kaiming_uniform(shape, a=0, mode='fan_in', nonlinearity="leaky_relu", name="", # pylint: disable=too-many-arguments
-                    dtype='float32', ctx='cpu'):
+                    dtype='float32', device='cpu'):
     fan_in, fan_out = _calc_fan_in_out(shape)
     if mode == "fan_in":
         fan = fan_in
@@ -59,11 +59,11 @@ def kaiming_uniform(shape, a=0, mode='fan_in', nonlinearity="leaky_relu", name="
     gain = _calc_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)
     bound = math.sqrt(3.0) * std
-    return uniform(low=-bound, high=bound, shape=shape, name=name, dtype=dtype, ctx=ctx)
+    return uniform(low=-bound, high=bound, shape=shape, name=name, dtype=dtype, device=device)
 
 
 def kaiming_normal(shape, a=0, mode='fan_in', nonlinearity="leaky_relu", name="", # pylint: disable=too-many-arguments
-                   dtype='float32', ctx='cpu'):
+                   dtype='float32', device='cpu'):
     fan_in, fan_out = _calc_fan_in_out(shape)
     if mode == "fan_in":
         fan = fan_in
@@ -73,4 +73,4 @@ def kaiming_normal(shape, a=0, mode='fan_in', nonlinearity="leaky_relu", name=""
         raise ValueError("Cannot recognize mode in kaiming_uniform", mode)
     gain = _calc_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)
-    return normal(0, std, name=name, dtype=dtype, ctx=ctx)
+    return normal(0, std, name=name, dtype=dtype, device=device)

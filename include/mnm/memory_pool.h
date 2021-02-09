@@ -27,24 +27,24 @@ class Memory {
   virtual ~Memory() = default;
 
  public:
-  static std::shared_ptr<Memory> Alloc(const Context& ctx, int64_t nbytes,
+  static std::shared_ptr<Memory> Alloc(const Device& dev, int64_t nbytes,
                                        int64_t alignment = kDefaultMemoryAlignment);
   static std::vector<std::shared_ptr<Memory> > AllocBatch(
-      const Context& ctx, const std::vector<int64_t>& nbytes,
+      const Device& dev, const std::vector<int64_t>& nbytes,
       int64_t alignment = kDefaultMemoryAlignment);
 
   // means "no longer considered as allocator when asking for new memory."
-  static void RemovePool(const Context& ctx);
+  static void RemovePool(const Device& dev);
 
-  static MemoryPool* GetPool(const Context& ctx);
+  static MemoryPool* GetPool(const Device& dev);
 
-  static MemoryPool* InitPool(const Context& ctx, const std::string& name);
+  static MemoryPool* InitPool(const Device& dev, const std::string& name);
 
  public:
   /*! \brief The pointer to the allocated chunk of memory. */
   void* data = nullptr;
   /*! \brief The context of the allocated chunk of memory. */
-  Context ctx{};
+  Device device{};
 };
 
 /*!

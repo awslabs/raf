@@ -156,7 +156,7 @@ ObjectRef DeTuple(Value value) {
   throw;
 }
 
-TensorValue MakeZeros(Context to_ctx, std::vector<int64_t>& shape) {
+TensorValue MakeZeros(Device to_dev, std::vector<int64_t>& shape) {
   int64_t size = 1;
   for (const int64_t& elem : shape) {
     size *= elem;
@@ -165,13 +165,13 @@ TensorValue MakeZeros(Context to_ctx, std::vector<int64_t>& shape) {
   DType dtype = DType(DTypeCode::kFloat(), 32, 1);
   DLTensor tensor;
   tensor.data = a.data();
-  tensor.ctx = Context(DevType::kCPU(), 0);
+  tensor.ctx = Device(DevType::kCPU(), 0);
   tensor.dtype = dtype;
   tensor.shape = shape.data();
   tensor.ndim = shape.size();
   tensor.strides = nullptr;
   tensor.byte_offset = 0;
-  auto array = tvm::runtime::NDArray::Empty(shape, dtype, to_ctx);
+  auto array = tvm::runtime::NDArray::Empty(shape, dtype, to_dev);
   array.CopyFrom(&tensor);
   return TensorValue::make(Tensor::FromDLPack(array.ToDLPack()));
 }
@@ -181,9 +181,9 @@ Expr MakeZeros(Value value) {
     return MakeConstant(ScalarValue::make(0.0));
   } else if (const auto* tensor = value.as<TensorValueObj>()) {
     const Tensor& a = tensor->tensor;
-    Context x_ctx = a->ctx;
+    Device x_dev = a->ctx;
     std::vector<int64_t> shape(a->shape, a->shape + a->ndim);
-    return MakeConstant(MakeZeros(x_ctx, shape));
+    return MakeConstant(MakeZeros(x_dev, shape));
   } else if (const auto* tuple = value.as<TupleValueObj>()) {
     int n = static_cast<int>(tuple->fields.size());
     std::vector<Expr> zeros(n);
@@ -256,27 +256,27 @@ Var LookupGrad(Var var) {
   return tape.defined() ? tape->grad : NullValue<Var>();
 }
 
-TensorValue MakeOnes(Context to_ctx) {
+TensorValue MakeOnes(Device to_dev) {
   static float a[1] = {1.0};
   static int64_t b[1] = {1};
   DType dtype = DType(DTypeCode::kFloat(), 32, 1);
   DLTensor tensor;
   tensor.data = a;
-  tensor.ctx = Context(DevType::kCPU(), 0);
+  tensor.ctx = Device(DevType::kCPU(), 0);
   tensor.dtype = dtype;
   tensor.shape = b;
   tensor.ndim = 0;
   tensor.strides = nullptr;
   tensor.byte_offset = 0;
-  auto array = tvm::runtime::NDArray::Empty({}, dtype, to_ctx);
+  auto array = tvm::runtime::NDArray::Empty({}, dtype, to_dev);
   array.CopyFrom(&tensor);
   return TensorValue::make(Tensor::FromDLPack(array.ToDLPack()));
 }
 
 void Backward(Var var, Var dy_var) {
-  Context y_ctx = Downcast<TensorValue>(LookupBoundValue(var))->tensor->ctx;
+  Device y_dev = Downcast<TensorValue>(LookupBoundValue(var))->tensor->ctx;
   Value dy = dy_var.defined() ? Downcast<NDArrayBinding>(LookupBinding(dy_var.operator->()))->value
-                              : MakeOnes(y_ctx);
+                              : MakeOnes(y_dev);
   GradTape tape = Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->tape;
   if (!tape.defined()) {
     return;

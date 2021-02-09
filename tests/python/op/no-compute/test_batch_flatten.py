@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 import mnm
-from mnm.testing import run_vm_model, check, get_ctx_list
+from mnm.testing import run_vm_model, check, get_device_list
 
 
 @pytest.mark.parametrize("shape", [(1, ()), (5, (5,))])
@@ -22,8 +22,8 @@ def test_batch_flatten_error(shape):
     [5, 3, 2],
     [5, 2, 2, 2]
 ])
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_batch_flatten(shape, ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_batch_flatten(shape, device):
     class Model(mnm.model.Model):
         # pylint: disable=no-self-use
         def build(self):
@@ -44,7 +44,7 @@ def test_batch_flatten(shape, ctx):
     assert (x.asnumpy() == dy.asnumpy()).all()
     # traced
     model = Model()
-    y_t = run_vm_model(model, ctx, [x])
+    y_t = run_vm_model(model, device, [x])
     check(y_t, y_i)
 
 

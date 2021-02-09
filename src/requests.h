@@ -17,21 +17,21 @@ class Requests {
  public:
   struct MemoryRequest {
     void** dest;
-    Context ctx;
+    Device device;
     int64_t nbytes;
     std::shared_ptr<memory_pool::Memory> memory;
   };
 
   struct WorkspaceRequest {
     void** dest;
-    Context ctx;
+    Device device;
     int64_t nbytes;
     std::shared_ptr<memory_pool::Memory> memory;
   };
 
   struct StreamRequest {
     void** dest;
-    Context ctx;
+    Device device;
     int tag_idx;
     int stream_idx;
     std::shared_ptr<stream_pool::Stream> stream;

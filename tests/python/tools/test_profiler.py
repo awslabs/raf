@@ -4,16 +4,7 @@ import numpy as np
 import mnm
 from mnm._op import sym
 from mnm.utils import profiler
-
-
-def randn(shape, *, ctx="cuda", dtype="float32", std=1.0):
-    x = np.random.randn(*shape) * std
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, ctx=ctx)
-    return m_x
+from mnm.testing import randn
 
 
 class TestNet(mnm.Model):
@@ -49,15 +40,15 @@ class TestCuda(mnm.Model):
 @pytest.mark.parametrize("i", [0])
 def test_profiler_with_cuda(i):
     profiler.start()
-    ctx = "cuda({})".format(i)
-    print("ctx:", ctx)
+    device = "cuda({})".format(i)
+    print("device:", device)
     n = 4
     k = 8
     m = 4
-    m_x = randn((n, k))
-    m_y = randn((k, m))
+    m_x, _ = randn((n, k))
+    m_y, _ = randn((k, m))
     model = TestCuda()
-    model.to(ctx=ctx)
+    model.to(device=device)
     print("### Switch to training mode")
     model.train_mode()
     for epoch in range(5):
@@ -78,12 +69,12 @@ def test_profiler_with_cuda(i):
 def test_profiler_without_cuda(i):
     profiler.start()
     batch_size = 16
-    ctx = "cpu({})".format(i)
+    device = "cpu({})".format(i)
     features = 4
     x = np.arange(features*batch_size).reshape(batch_size, features)
     y = np.arange(features*batch_size).reshape(batch_size, features)
-    m_x = mnm.array(x, dtype="float32", ctx=ctx, name='cck-m_x')
-    m_y = mnm.array(y, dtype='float32', ctx=ctx, name='cck-m_y')
+    m_x = mnm.array(x, dtype="float32", device=device, name='cck-m_x')
+    m_y = mnm.array(y, dtype='float32', device=device, name='cck-m_y')
     model = TestNet((0, 1))
     print("### Switch to training mode")
     model.train_mode()

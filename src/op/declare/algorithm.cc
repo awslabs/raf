@@ -25,7 +25,7 @@ MNM_OP_DECLARE("mnm.op.argsort", [](const CallValues& call) {
   call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/oshape);
-  call->ctx = data->ctx;
+  call->device = data->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare

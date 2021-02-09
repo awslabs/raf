@@ -19,8 +19,8 @@ void Ones(const CallValues& call) {
   CHECK(args != nullptr);
   const std::vector<int64_t>& shape = args->shape;
   // TODO(@junrushao1994): hacky here
-  call->ctx = Context(DevType::kCUDA(), 0);
-  call->out = TensorValue::Assemble(call->ctx, DType(DTypeCode::kFloat(), 32), shape);
+  call->device = Device(DevType::kCUDA(), 0);
+  call->out = TensorValue::Assemble(call->device, DType(DTypeCode::kFloat(), 32), shape);
 }
 
 MNM_OP_DECLARE("mnm.op.ones", Ones).set_attr<TOpPattern>("TOpPattern", kElemWise);

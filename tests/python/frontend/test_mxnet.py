@@ -25,13 +25,13 @@ def test_mlp():
 
     data_np = np.ones((1, 3, 224, 224), dtype="float32")
     data_mx = mx.nd.array(data_np)
-    data_mnm = mnm.array(data_np, ctx='cuda')
+    data_mnm = mnm.array(data_np, device='cuda')
     data_mnm.requires_grad = True
     data_mx.attach_grad()
     # test infer
     res_mx = net(data_mx)
     model = mnm.frontend.from_mxnet(net, ['data'])
-    model.to(ctx='cuda')
+    model.to(device='cuda')
     model.infer_mode()
     res_mnm = model(data_mnm)
     check(res_mnm, res_mx)
@@ -41,7 +41,7 @@ def test_mlp():
     model.train_mode()
     res_mnm = model(data_mnm)
     check(res_mnm, res_mx)
-    dy = mnm.array(np.ones((1, 10), dtype="float32"), ctx='cuda')
+    dy = mnm.array(np.ones((1, 10), dtype="float32"), device='cuda')
     res_mx.backward()
     res_mnm.backward(dy)
     check(data_mnm.grad, data_mx.grad)
@@ -78,13 +78,13 @@ def test_rnn(mode, seq_len, input_size, hidden_size, num_layers,
     net.initialize()
     net.hybridize()
 
-    ctx = 'gpu'
+    device = 'gpu'
     dtype = "float32"
     directions = 2 if bidirectional else 1
     np.random.seed(0)
     data_np = np.random.uniform(size=(seq_len, batch, input_size)).astype(dtype)
     data_mx = mx.nd.array(data_np)
-    data_mnm = mnm.array(data_np, ctx=ctx)
+    data_mnm = mnm.array(data_np, device=device)
     data_mnm.requires_grad = True
 
     if init_states:
@@ -97,7 +97,7 @@ def test_rnn(mode, seq_len, input_size, hidden_size, num_layers,
             state = np.random.uniform(size=state_shape).astype(dtype)
             states_np.append(state)
             states_mx.append(mx.nd.array(state))
-            state_mnm = mnm.array(state, ctx=ctx)
+            state_mnm = mnm.array(state, device=device)
             state_mnm.requires_grad = True
             shape_dict['data%s' % (i+1)] = state.shape
             inputs['data%s' % (i+1)] = state_mnm
@@ -116,7 +116,7 @@ def test_rnn(mode, seq_len, input_size, hidden_size, num_layers,
     # TODO - What should be the input names
     model = mnm.frontend.from_mxnet(mx_sym, inputs_name=['data'],
                                     arg_params=mx_params)
-    model.to(ctx=ctx)
+    model.to(device=device)
     model.infer_mode()
 
     op_res = model(**inputs)

@@ -10,7 +10,7 @@ from tvm import relay
 def test_inline():
     class Model(mnm.Model):
         def build(self):
-            self.w, _ = randn((20, 15), ctx="cpu")
+            self.w, _ = randn((20, 15), device="cpu")
 
         @mnm.model.trace
         def forward(self, x, dy):
@@ -77,8 +77,8 @@ def test_inline():
         return relay.Function([x, dy, w], let1)
 
     model = Model()
-    m_x, _ = randn((10, 20), ctx="cpu")
-    m_dy, _ = randn((10, 15), ctx="cpu")
+    m_x, _ = randn((10, 20), device="cpu")
+    m_dy, _ = randn((10, 15), device="cpu")
     func = model._internal(m_x, m_dy).func
     func = run_infer_type(func)
     func = run_infer_type(mnm._ffi.pass_.InlineLet(func))

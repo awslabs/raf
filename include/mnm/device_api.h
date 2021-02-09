@@ -21,18 +21,18 @@ class DeviceAPI {
   virtual void FreeMemory(void* ptr) = 0;
 
   // Stream
-  virtual void* CreateStream(const Context& ctx) = 0;
+  virtual void* CreateStream(const Device& dev) = 0;
 
-  virtual void FreeStream(const Context& ctx, void* stream) = 0;
+  virtual void FreeStream(const Device& dev, void* stream) = 0;
 
   // will call the device api of `next_ctx` to wait for `prev`
   // therefore, we should the assumption that `after.ctx == device_api.ctx`
-  virtual void SyncStream(const Context& prev_ctx, void* prev, void* next) = 0;
+  virtual void SyncStream(const Device& prev_dev, void* prev, void* next) = 0;
 
   // Granularity of synchronization
-  virtual void WaitDevice(const Context& ctx) = 0;
+  virtual void WaitDevice(const Device& dev) = 0;
 
-  virtual void WaitStream(const Context& ctx, void* stream) = 0;
+  virtual void WaitStream(const Device& dev, void* stream) = 0;
 
  public:
   static std::shared_ptr<DeviceAPI> Get(DevType device_type);

@@ -3,8 +3,9 @@ import numpy as np
 import pytest
 import mnm
 from mnm._core.ndarray import Symbol
-from mnm._ffi.pass_ import InferType, AutoDiff, ExtractBinding
+from mnm._ffi.pass_ import AutoDiff, ExtractBinding
 from mnm._op import sym as op
+from mnm.testing import check, randn, run_infer_type
 from tvm import relay
 
 
@@ -12,28 +13,6 @@ def assert_has_type(expr, typ):
     checked_type = expr.checked_type
     if checked_type != typ:
         raise RuntimeError(f"Type mismatch {checked_type} vs {typ}")
-
-
-def check(m_x, n_x, *, rtol=1e-5, atol=1e-5):
-    m_x = m_x.asnumpy()
-    np.testing.assert_allclose(m_x, n_x, rtol=rtol, atol=atol)
-
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
-
-
-def run_infer_type(func):
-    # pylint: disable=protected-access
-    mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})
-    mod = InferType(mod)
-    return mod['main']
 
 
 def test_model_params():

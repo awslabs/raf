@@ -4,32 +4,16 @@ import mnm
 from mnm.testing import run_infer_type, run_vm_model, check
 from mnm._core.executor import VMExecutor
 from mnm._core.module import Module
-from mnm.testing import get_arr_addr
+from mnm.testing import get_arr_addr, get_device_list, randn
 import tvm
 
-def get_ctx_list():
-    ret = ["llvm"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
 
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    m_x.requires_grad = True
-    return m_x, n_x
-
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_vm(ctx, shape):
+def test_vm(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -44,11 +28,11 @@ def test_vm(ctx, shape):
 
     model = Model()
     model.infer_mode()
-    m_x, _ = randn(shape, ctx=ctx)
+    m_x, _ = randn(shape, device=device)
     mod = Module()
     func = model._internal(m_x).func
     mod[tvm.ir.GlobalVar('main')] = func
-    executor = VMExecutor(mod, ctx)
+    executor = VMExecutor(mod, device)
     m_z = executor.make_executor()(m_x).asnumpy()
     ref_z = model(m_x).asnumpy()
     np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
@@ -63,12 +47,11 @@ def test_vm(ctx, shape):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("ctx", get_ctx_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_cuda_graph(ctx, shape):
+def test_cuda_graph(shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -81,18 +64,19 @@ def test_cuda_graph(ctx, shape):
             z = mnm.add(x, y)
             return z
 
+    dev = "cuda"
     model = Model()
     model.infer_mode()
-    m_x, _ = randn(shape, ctx=ctx)
+    m_x, _ = randn(shape, device=dev)
     mod = Module()
     func = model._internal(m_x).func
     mod[tvm.ir.GlobalVar('main')] = func
-    executor = VMExecutor(mod, ctx, enable_cuda_graph=True)
+    executor = VMExecutor(mod, dev, enable_cuda_graph=True)
     m_z = executor.make_executor()(m_x)
     ref_z = model(m_x).asnumpy()
     np.testing.assert_allclose(m_z.asnumpy(), ref_z, rtol=1e-5, atol=1e-5)
 
-    m_x2, _ = randn(shape, ctx=ctx)
+    m_x2, _ = randn(shape, device=dev)
     m_z2 = executor.vm.run(m_x2)
     ref_z2 = model(m_x2).asnumpy()
     np.testing.assert_allclose(m_z2.asnumpy(), ref_z2, rtol=1e-5, atol=1e-5)
@@ -102,12 +86,12 @@ def test_cuda_graph(ctx, shape):
     assert executable.globals[0] == 'main'
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_tuple(ctx, shape):
+def test_tuple(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -122,11 +106,11 @@ def test_tuple(ctx, shape):
 
     model = Model()
     model.infer_mode()
-    m_x, _ = randn(shape, ctx=ctx)
+    m_x, _ = randn(shape, device=device)
     mod = Module()
     func = model._internal(m_x).func
     mod[tvm.ir.GlobalVar('main')] = func
-    executor = VMExecutor(mod, ctx)
+    executor = VMExecutor(mod, device)
     m_y, m_z = executor.make_executor()(m_x)
     m_y, m_z = m_y.asnumpy(), m_z.asnumpy()
     ref_y, ref_z = model(m_x)
@@ -139,15 +123,15 @@ def test_tuple(ctx, shape):
     assert executable.globals[0] == 'main'
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_memory(ctx, shape):
+def test_memory(device, shape):
     # pylint: disable=protected-access
     dtype = 'float32'
-    x = mnm.array(np.random.randn(*shape).astype(dtype), ctx=ctx)
+    x = mnm.array(np.random.randn(*shape).astype(dtype), device=device)
     t_1 = mnm.array(np.ones(shape, dtype=dtype) * 3)
     t_2 = mnm.array(np.ones(shape, dtype=dtype) * 4)
     class Model(mnm.Model):
@@ -164,18 +148,18 @@ def test_memory(ctx, shape):
     mod = Module()
     func = model._internal(*args).func
     mod[tvm.ir.GlobalVar('main')] = func
-    executor = VMExecutor(mod, ctx)
+    executor = VMExecutor(mod, device)
     y = executor.make_executor()(*args)
     out = mnm.add(t_1, t_2)
     assert get_arr_addr(out) != get_arr_addr(y)
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_simple_fusion(ctx, shape):
+def test_simple_fusion(device, shape):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     def ir_fusion(func):
         func = run_infer_type(func)
@@ -183,9 +167,9 @@ def test_simple_fusion(ctx, shape):
         func = run_infer_type(func)
         return func
 
-    def check_e2e(model, ctx, args):
-        out_before = run_vm_model(model, ctx, args)
-        out_after = run_vm_model(model, ctx, args, ir_fusion)
+    def check_e2e(model, device, args):
+        out_before = run_vm_model(model, device, args)
+        out_after = run_vm_model(model, device, args, ir_fusion)
         check(out_before, out_after)
 
     class Model(mnm.Model):
@@ -200,12 +184,12 @@ def test_simple_fusion(ctx, shape):
 
     model = Model()
     model.infer_mode()
-    m_x, _ = randn(shape, ctx=ctx)
-    check_e2e(model, ctx, [m_x])
+    m_x, _ = randn(shape, device=device)
+    check_e2e(model, device, [m_x])
 
 
-@pytest.mark.parametrize("ctx", get_ctx_list())
-def test_split_fusion(ctx):
+@pytest.mark.parametrize("device", get_device_list())
+def test_split_fusion(device):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     shape = [3, 3]
     def ir_fusion(func):
@@ -214,9 +198,9 @@ def test_split_fusion(ctx):
         func = run_infer_type(func)
         return func
 
-    def check_e2e(model, ctx, args):
-        out_before = run_vm_model(model, ctx, args)
-        out_after = run_vm_model(model, ctx, args, ir_fusion)
+    def check_e2e(model, device, args):
+        out_before = run_vm_model(model, device, args)
+        out_after = run_vm_model(model, device, args, ir_fusion)
         check(out_before, out_after)
 
     class Model(mnm.Model):
@@ -231,9 +215,11 @@ def test_split_fusion(ctx):
             return z
 
     model = Model()
-    m_x, _ = randn(shape, ctx=ctx)
-    check_e2e(model, ctx, [m_x])
+    m_x, _ = randn(shape, device=device)
+    check_e2e(model, device, [m_x])
 
 
 if __name__ == "__main__":
+    # print(mnm.build.with_cuda())
+    # test_cuda_graph([3, 3])
     pytest.main([__file__])

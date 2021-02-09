@@ -162,8 +162,8 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   const Executable* exec_;
   /*! \brief The function name to inputs mapping. */
   std::unordered_map<std::string, std::vector<Value>> inputs_;
-  /*! \brief The set of TVM contexts the VM is currently executing on. */
-  std::vector<Context> ctxs_;
+  /*! \brief The set of devices the VM is currently executing on. */
+  std::vector<Device> devices_;
 
   /*! \brief Push a call frame on to the call stack. */
   void PushFrame(Index arg_count, Index ret_pc, const VMFunction& vm_func);
@@ -213,19 +213,16 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   Value Invoke(const std::string& name, const std::vector<Value>& args);
 
   /*!
-   * \brief Initialize the virtual machine for a set of contexts.
-   * \param contexts The set of TVM contexts.
+   * \brief Initialize the virtual machine for a set of devices.
+   * \param devices The set of devices.
    */
-  void Init(const std::vector<Context>& contexts);
+  void Init(const std::vector<Device>& devices);
 
   /*! \brief Run VM dispatch loop. */
   void RunLoop();
 
   /*! \brief Get device context for params. */
-  Context GetParamsContext() const;
-
-  /*! \brief Get context by device type and id. */
-  Context GetContext(DevType device_type, int device_id);
+  Device GetParamsDevice() const;
 
  private:
   /*!

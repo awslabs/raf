@@ -4,8 +4,7 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Linear
-
-from utils import check, one_hot, randn, t2m_param # pylint: disable=E0401
+from mnm.testing import check, one_hot_torch, randn_torch, t2m_param
 
 
 class TorchMlp(nn.Module):  # pylint: disable=abstract-method
@@ -51,6 +50,7 @@ class MNMMlp(mnm.Model):
 def test_mlp(config, is_train):
     m_model = MNMMlp(*config)
     t_model = TorchMlp(*config)
+    t_model.to(device="cuda")
     m_model.fc1.w = t2m_param(t_model.fc1.weight)
     m_model.fc1.b = t2m_param(t_model.fc1.bias)
     m_model.fc2.w = t2m_param(t_model.fc2.weight)
@@ -58,8 +58,8 @@ def test_mlp(config, is_train):
     m_model.fc3.w = t2m_param(t_model.fc3.weight)
     m_model.fc3.b = t2m_param(t_model.fc3.bias)
 
-    m_x, t_x = randn((1, config[0]), requires_grad=is_train)
-    m_y, t_y = one_hot(batch_size=1, num_classes=config[-1])
+    m_x, t_x = randn_torch((1, config[0]), requires_grad=is_train, device="cuda")
+    m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[-1])
     if is_train:
         m_model.train_mode()
         t_model.train()
@@ -69,7 +69,7 @@ def test_mlp(config, is_train):
     m_y = m_model(m_x)
     t_y = t_model(t_x)
     if is_train:
-        m_dy, t_dy = randn(m_y.shape, std=m_y.asnumpy().std() * 0.0001)
+        m_dy, t_dy = randn_torch(m_y.shape, std=m_y.asnumpy().std() * 0.0001, device="cuda")
         t_y.backward(t_dy)
         m_y.backward(m_dy)
         check(m_model.fc1.w.grad, t_model.fc1.weight.grad, rtol=1e-4, atol=1e-4)

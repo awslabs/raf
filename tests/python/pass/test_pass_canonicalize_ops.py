@@ -1,17 +1,7 @@
-import numpy as np
 import pytest
 import mnm
-from mnm.testing import run_infer_type
+from mnm.testing import run_infer_type, randn
 import tvm
-
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    return m_x, n_x
 
 def test_canonicalize_ops_bias_add_ir():
     x, _ = randn((3, 2, 2))

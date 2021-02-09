@@ -41,14 +41,14 @@ size = dctx.size
 local_rank = dctx.local_rank
 local_size = dctx.local_size
 
-ctx = f'cuda({local_rank})'
+device = f'cuda({local_rank})'
 ```
 
 Then you can use allreduce operators.
 
 ``` python
 x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-x = mnm.array(x, ctx=ctx)
+x = mnm.array(x, device=device)
 print("Before allreduce: ", x)
 x = mnm.allreduce(x) # or: x = mnm.allreduce([x])
 print("After allreduce : ", x)

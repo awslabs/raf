@@ -1,31 +1,14 @@
 import pytest
-import numpy as np
 import mnm
 from mnm._lib import relay
+from mnm.testing import randn, get_device_list
 
-def randn(shape, *, ctx="cpu", dtype="float32"):
-    x = np.random.randn(*shape)
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, ctx=ctx)
-    m_x.requires_grad = True
-    return m_x, n_x
-
-
-def get_ctx_list():
-    ret = ["cpu"]
-    if mnm.build.with_cuda():
-        ret.append("cuda")
-    return ret
-
-@pytest.mark.parametrize("ctx", get_ctx_list())
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_basic(ctx, shape):
+def test_basic(device, shape):
     # pylint: disable=protected-access
     # Create a symbolic model and run it
     class Add(mnm.Model):
@@ -39,8 +22,8 @@ def test_basic(ctx, shape):
 
     # Get a Relay func
     model = Add()
-    m_x, _ = randn(shape, ctx=ctx)
-    m_y, _ = randn(shape, ctx=ctx)
+    m_x, _ = randn(shape, device=device, requires_grad=True)
+    m_y, _ = randn(shape, device=device, requires_grad=True)
     _ = model(m_x, m_y)
     func = model._internal().func
 

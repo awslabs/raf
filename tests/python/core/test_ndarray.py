@@ -22,14 +22,14 @@ def test_mutation():
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-def test_move_ctx():
+def test_move_device():
     a = mnm.array([1, 2, 3], dtype='float32')
-    a = a.to(ctx='cuda')
-    assert a.ctx.startswith('cuda')
+    a = a.to(device='cuda')
+    assert a.device.startswith('cuda')
     np.testing.assert_allclose(np.array([1, 2, 3], dtype='float32'), a.asnumpy())
 
 
 if __name__ == "__main__":
     test_requires_grad()
     test_mutation()
-    test_move_ctx()
+    test_move_device()

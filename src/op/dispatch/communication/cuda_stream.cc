@@ -17,7 +17,7 @@ class CudaStreamSync : public mnm::op::OpEnv {
   explicit CudaStreamSync(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::StreamControlArgs>();
     auto& stream_tag_id = args->stream_tag;
-    RequestStream(&stream, cv->ctx, stream_tag_id);
+    RequestStream(&stream, cv->device, stream_tag_id);
   }
 
  public:

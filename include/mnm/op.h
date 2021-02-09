@@ -32,7 +32,7 @@ class CallValuesNode : public ir::Object {
   mutable value::Value callee;
   mutable ir::Attrs args;
   mutable value::Value out;
-  mutable Context ctx;
+  mutable Device device;
 
  public:
   static constexpr const char* _type_key = "mnm.op.CallValues";
@@ -55,8 +55,8 @@ class OpEnv {
   virtual void Execute(const CallValues& call) = 0;
   virtual void Execute(const std::vector<value::Value>& inputs, value::Value output) = 0;
 
-  void RequestWorkspace(void** dest, const Context& ctx, int64_t nbytes);
-  void RequestStream(void** dest, const Context& ctx, int tag_idx);
+  void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
+  void RequestStream(void** dest, const Device& device, int tag_idx);
   void RequestDistributed(void** dest);
 
   void BindExecutor(executor::Executor* executor);

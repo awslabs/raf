@@ -130,14 +130,14 @@ Value::operator tensor::Tensor &() const {
 }
 
 /*** TensorValue ***/
-TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
+TensorValue TensorValue::Assemble(const Device& dev, const DType& dtype,
                                   const std::vector<int64_t>& shape,
                                   const std::vector<int64_t>& strides, void* const data,
                                   std::shared_ptr<memory_pool::Memory> mem) {
-  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data), std::move(mem));
+  return TensorValue::make(Tensor::make(dev, dtype, shape, strides, data), std::move(mem));
 }
 
-TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
+TensorValue TensorValue::Assemble(const Device& dev, const DType& dtype,
                                   const Array<IntValue> shape_array,
                                   const std::vector<int64_t>& strides, void* const data,
                                   std::shared_ptr<memory_pool::Memory> mem) {
@@ -145,7 +145,7 @@ TensorValue TensorValue::Assemble(const Context& ctx, const DType& dtype,
   for (auto value : shape_array) {
     shape.push_back(value->data);
   }
-  return TensorValue::make(Tensor::make(ctx, dtype, shape, strides, data), std::move(mem));
+  return TensorValue::make(Tensor::make(dev, dtype, shape, strides, data), std::move(mem));
 }
 
 TensorValue TensorValue::CreateView(const std::vector<int64_t>& shape,

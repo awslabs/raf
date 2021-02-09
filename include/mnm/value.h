@@ -147,11 +147,11 @@ class TensorValue final : public BaseTensorValue {
  public:
   static TensorValue make(tensor::Tensor tensor,
                           std::shared_ptr<memory_pool::Memory> mem = nullptr);
-  static TensorValue Assemble(const Context& ctx, const DType& dtype,
+  static TensorValue Assemble(const Device& dev, const DType& dtype,
                               const std::vector<int64_t>& shape,
                               const std::vector<int64_t>& strides = {}, void* data = nullptr,
                               std::shared_ptr<memory_pool::Memory> mem = nullptr);
-  static TensorValue Assemble(const Context& ctx, const DType& dtype,
+  static TensorValue Assemble(const Device& dev, const DType& dtype,
                               const ir::Array<IntValue> shape,
                               const std::vector<int64_t>& strides = {}, void* data = nullptr,
                               std::shared_ptr<memory_pool::Memory> mem = nullptr);

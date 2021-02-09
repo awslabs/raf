@@ -34,7 +34,7 @@ class SGD:
         for i, x in enumerate(params):
             assert isinstance(x, ndarray), "Only `mnm.ndarray' can be optimized!"
             npa = np.zeros(x.shape, dtype=x.dtype)
-            v_i = ndarray(npa, ctx=x.ctx, name=f'sgd.{i}.v')
+            v_i = ndarray(npa, device=x.device, name=f'sgd.{i}.v')
             self.params.append((x, v_i))
 
     def step(self):
@@ -82,7 +82,7 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                     if x.requires_grad is True:
                         assert isinstance(x, ndarray), "Only `mnm.ndarray' can be optimized!"
                         npa = np.zeros(x.shape, dtype=x.dtype)
-                        v_i = ndarray(npa, ctx=x.ctx, name=f'{name}.v')
+                        v_i = ndarray(npa, device=x.device, name=f'{name}.v')
                         setattr(self, f'{name}.v', v_i)
                         self.params[x._ndarray__handle] = (name, x, v_i)
 
