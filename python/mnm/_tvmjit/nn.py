@@ -111,6 +111,7 @@ def compute_log_softmax_dx(attr, inputs, output_type):
 _reg.register_injective_schedule("mnm.op.log_softmax_dx")
 
 @register_compute("mnm.op.relu_dx")
+@_tvm.te.tag_scope(tag=_tvm.topi.tag.ELEMWISE)
 def compute_relu_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=invalid-name
