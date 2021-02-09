@@ -607,23 +607,37 @@ def test_squeeze(shape, axis, ctx):
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
-@pytest.mark.parametrize("dtype", ["int64", "float32"])
-@pytest.mark.parametrize("shape", [(1, 3, 1), (2, 3, 4), (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(1, 3, 1), (2, 3, 4),
+                                   (5, 5, 5, 5, 5, 5), (224, 224, 3),
+                                   (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)])
 def test_full(shape, dtype, ctx):
     # pylint: disable=attribute-defined-outside-init
     # pylint: disable=not-callable
     # pylint: disable=no-member
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
-    x = np.random.rand(1)[0]
-    m_x = mnm.array(x, dtype=dtype, ctx=ctx)
-    n_x = x.astype(dtype)
-    m_x.requires_grad = False
+    x = np.random.rand(1) * 100
+    m_x = mnm.array(x[0], dtype=dtype, ctx=ctx)
+    n_x = x[0].astype(dtype)
+    m_x.requires_grad = True
     model = TestModel(mnm._op.sym.full, shape=shape)
     m_y = model(m_x)
     # check forward
     n_y = np.full(fill_value=n_x, shape=shape)
+    v_y = run_vm_model(model, ctx, [m_x])
     check(m_y, n_y)
+    check(v_y, n_y)
+    # check backward
+    mx_x = mx.nd.array(x)
+    mx_x.attach_grad()
+    m_dy, n_dy = randn(shape, ctx=ctx)
+    mx_dy = mx.nd.array(n_dy)
+    with mx.autograd.record():
+        mx_y = mx.nd.full(val=mx_x, shape=shape, dtype=dtype)
+        mx_y.backward(mx_dy)
+    m_y.backward(m_dy)
+    check(m_x.grad, mx_x.grad.asnumpy(), rtol=0.1, atol=0.1)
 
 
 @pytest.mark.parametrize("ctx", get_ctx_list())
