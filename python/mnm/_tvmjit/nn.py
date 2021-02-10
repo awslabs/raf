@@ -453,15 +453,6 @@ def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unu
     y = _topi.add(_topi.multiply(x, pad(scale)), pad(shift))
     return [y, running_m, running_v]
 
-
-# TODO(@hzfan): remove this
-# pylint: disable=unused-argument
-@strategy.schedule_reduce.register(["cuda", "gpu"], override=True)
-def schedule_reduce_cuda(attrs, outs, target):
-    """schedule reduction ops for cuda"""
-    with target:
-        return cuda.reduction.schedule_reduce(outs)
-
 _reg.register_reduce_schedule("mnm.op.batch_norm_train")
 
 @register_compute("mnm.op.batch_norm_infer")

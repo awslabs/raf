@@ -475,12 +475,12 @@ class VMExecutor:
         executor: Callable
             The VM executor
         """
-        auto_scheduler_dispatch_context = auto_scheduler.ApplyHistoryBest(sch_file)
+        auto_scheduler_dispatch_context = \
+            auto_scheduler.ApplyHistoryBest(sch_file, include_compatible=True)
 
         def _vm_wrapper(*args, **kwargs):
             old_autotvm_silent = autotvm.GLOBAL_SCOPE.silent
             autotvm.GLOBAL_SCOPE.silent = True
-            # TODO(comaniac): Add include_compatible=True after syncing TVM to upstream.
             with auto_scheduler_dispatch_context:
                 with tvm.transform.PassContext(
                         config={"relay.backend.use_auto_scheduler": True},
