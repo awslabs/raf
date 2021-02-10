@@ -126,6 +126,60 @@ Array<Expr> RsqrtGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 }
 MNM_OP_GRAD("mnm.op.rsqrt", RsqrtGrad);
 
+Array<Expr> CosGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
+  static auto op_sin = Op::Get("mnm.op.sin");
+  static auto op_negative = Op::Get("mnm.op.negative");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call sin_x = Call(op_sin, {x});
+  Call dx = Call(op_negative, {sin_x});
+  return {Call(op_multiply, {dy, dx})};
+}
+MNM_OP_GRAD("mnm.op.cos", CosGrad);
+
+Array<Expr> SinGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
+  static auto op_cos = Op::Get("mnm.op.cos");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call dx = Call(op_cos, {x});
+  return {Call(op_multiply, {dy, dx})};
+}
+MNM_OP_GRAD("mnm.op.sin", SinGrad);
+
+Array<Expr> ExpGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
+  static auto op_exp = Op::Get("mnm.op.exp");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call dx = Call(op_exp, {x});
+  return {Call(op_multiply, {dy, dx})};
+}
+MNM_OP_GRAD("mnm.op.exp", ExpGrad);
+
+Array<Expr> AtanGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                     const Expr& dy) {
+  static auto op_divide = Op::Get("mnm.op.divide");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_add = Op::Get("mnm.op.add");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call one = Call(op_divide, {x, x});
+  Call x_square = Call(op_multiply, {x, x});
+  Call denominator = Call(op_add, {x_square, one});
+  Call dx = Call(op_divide, {one, denominator});
+  return {Call(op_multiply, {dy, dx})};
+}
+MNM_OP_GRAD("mnm.op.atan", AtanGrad);
+
 const char RELU_DX[] = "mnm.op.relu_dx";
 auto ReluGrad = UnaryGrad<RELU_DX>;
 MNM_OP_GRAD("mnm.op.relu", ReluGrad);

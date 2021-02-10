@@ -58,6 +58,10 @@ def test_unary_ops(ops, shape, dtype, device):
         (torch.erf, mnm._op.sym.erf),
         (torch.nn.ReLU(), mnm._op.sym.relu),
         (torch.rsqrt, mnm._op.sym.rsqrt),
+        (torch.cos, mnm._op.sym.cos),
+        (torch.sin, mnm._op.sym.sin),
+        (torch.exp, mnm._op.sym.exp),
+        (torch.atan, mnm._op.sym.atan),
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
