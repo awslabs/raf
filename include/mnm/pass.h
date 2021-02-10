@@ -14,7 +14,14 @@ namespace mnm {
 namespace pass {
 using tvm::AsText;
 using tvm::relay::FreeVars;
-ir::Function AutoDiff(ir::Function func);
+/*!
+ * \brief Automatic Differentiation.
+ * \param func Input function.
+ * \param requires_grads If input(s) of function requires gradient. It is in the same order as
+ * func->param. If empty, input(s) with float datatype requires gradient.
+ * \return Transformed Function.
+ */
+ir::Function AutoDiff(ir::Function func, ir::Array<tvm::Bool> requires_grads = {});
 ir::Function AutoDataParallel(ir::Function func);
 ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);

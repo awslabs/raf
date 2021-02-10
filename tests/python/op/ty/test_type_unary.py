@@ -51,7 +51,9 @@ def test_unary(op, shape, dtype):
 
     # forward
     m_x, _ = randn(shape, dtype=dtype)
-    m_func = model._internal(m_x).func
+    m_x.requires_grad = True
+    record = model._internal(m_x)
+    m_func = record.func
     m_func = run_infer_type(m_func)
 
     desired_type = FuncType([fwd_ty], fwd_ty)
@@ -59,7 +61,7 @@ def test_unary(op, shape, dtype):
 
     # check backward
     if backward:
-        m_func = AutoDiff(m_func)
+        m_func = AutoDiff(m_func, record.requires_grads)
         m_func = run_infer_type(m_func)
         bwd_ty = FuncType([fwd_ty], fwd_ty)
         desired_type = FuncType([fwd_ty], TupleType([fwd_ty, bwd_ty]))

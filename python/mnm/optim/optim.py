@@ -64,7 +64,7 @@ def with_autodiff(model):
             # pylint: disable=protected-access, missing-function-docstring
             record = self.model._internal(*args, **kwargs)
             dy = calc_dy(dy, record)
-            func = AutoDiff(record.func)
+            func = AutoDiff(record.func, record.requires_grads)
             func = InlineBackward(func)
             inputs = _get_func_inputs(record, args, kwargs)
             inputs = inputs + [get_symbol_handle(dy)]

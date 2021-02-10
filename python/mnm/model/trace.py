@@ -19,6 +19,7 @@ _TraceRecord = namedtuple(
         "named_params",  # Model parameters that are extra inputs to the relay.Function
         "o_struct",  # Structure of the outputs
         "mutations",  # [model, attr_name]
+        "requires_grads",  # If input(s) of function requires gradient
     ])
 
 
@@ -130,7 +131,8 @@ def _do_tracing(pyfunc, args, kwargs):
     return _TraceRecord(func=func,
                         named_params=named_params,
                         o_struct=o_struct,
-                        mutations=mutations)
+                        mutations=mutations,
+                        requires_grads=[])
 
 
 def _symbolize_inputs(pyfunc, args, kwargs):

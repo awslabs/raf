@@ -1,6 +1,5 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Interactive interface for training & inference."""
-import inspect
 from collections import OrderedDict
 
 from mnm._core import cacher
@@ -81,13 +80,18 @@ class Model(BaseModel, cacher.Cacher):
         fwd_func = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
         pyfunc = fwd_func.__wrapped__
         # TODO(hgt312): varargs and kwargs
-        if args or kwargs:
-            args = [self] + list(args)
-        else:
-            sig = inspect.signature(pyfunc)
-            args = [self] + list(sig.parameters.keys())[1:]
+        args = [self] + list(args)
 
         record = _get_trace_record(pyfunc, args, kwargs)
+        record.requires_grads.clear()
+        for arg in args[1:]:
+            if isinstance(arg, ndarray):
+                record.requires_grads.append(arg.requires_grad)
+            else:
+                record.requires_grads.clear()
+                return record
+        for key in record.named_params:
+            record.requires_grads.append(record.named_params[key].requires_grad)
         return record
 
 

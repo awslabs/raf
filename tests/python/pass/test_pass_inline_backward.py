@@ -52,8 +52,11 @@ def test_basic():
     model.train_mode()
     m_x, _ = randn(shape)
     m_y, _ = randn(shape)
-    func = model._internal(m_x, m_y).func
-    func = mnm._ffi.pass_.AutoDiff(func)
+    m_x.requires_grad = True
+    m_y.requires_grad = True
+    record = model._internal(m_x, m_y)
+    func = record.func
+    func = mnm._ffi.pass_.AutoDiff(func, record.requires_grads)
     inlined_func = mnm._ffi.pass_.InlineBackward(func)
     assert tvm.ir.structural_equal(inlined_func, expected(shape))
 

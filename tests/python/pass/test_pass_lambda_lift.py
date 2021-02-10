@@ -24,12 +24,12 @@ def test_basic(device, shape):
     model = Add()
     m_x, _ = randn(shape, device=device, requires_grad=True)
     m_y, _ = randn(shape, device=device, requires_grad=True)
-    _ = model(m_x, m_y)
-    func = model._internal().func
+    record = model._internal(m_x, m_y)
+    func = record.func
 
     # Run AutoDiff to get nested functions
     # The backward function will be lifted
-    func = mnm._ffi.pass_.AutoDiff(func)
+    func = mnm._ffi.pass_.AutoDiff(func, record.requires_grads)
 
     # Create a Meta module and set the func as main
     mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})

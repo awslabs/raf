@@ -29,6 +29,7 @@ using tvm::Optional;
 using tvm::String;
 
 // Scalars
+using tvm::Bool;
 using tvm::Integer;
 using tvm::IntImm;
 using tvm::IntImmNode;

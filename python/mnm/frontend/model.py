@@ -70,7 +70,21 @@ class FrameworkModel(BaseModel):
             Frontend Model only provides relay function via record.func for now.
         """
         ret = self.__train_func if self._BaseModel__is_train else self.__infer_func
-        return _TraceRecord(func=ret, named_params=None, o_struct=None, mutations=None)
+        requires_grads = list()
+        arg_index = 0
+        for var_node in ret.params:
+            var_name = var_node.name_hint
+            if var_name in self.__arg_params:
+                requires_grads.append(self.__arg_params[var_name].requires_grad)
+            elif var_name in self.__aux_params:
+                requires_grads.append(self.__aux_params[var_name].requires_grad)
+            elif var_name in kwargs:
+                requires_grads.append(kwargs[var_name].requires_grad)
+            else:
+                requires_grads.append(args[arg_index].requires_grad)
+                arg_index += 1
+        return _TraceRecord(func=ret, named_params=None, o_struct=None,
+                            mutations=None, requires_grads=requires_grads)
 
     def state(self, prefix="", recursive=True):
         return self.__arg_params

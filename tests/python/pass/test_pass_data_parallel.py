@@ -187,9 +187,12 @@ def test_dp(config):
 
     m_x = randn([1, 3, config[1], config[1]], device=device, requires_grad=True)
     m_y = one_hot(batch_size=1, num_classes=config[2], device=device)
+    m_x.requires_grad = True
+    m_y.requires_grad = True
 
-    func_before = m_model._internal(m_x, m_y).func
-    func_before = mnm._ffi.pass_.AutoDiff(func_before)
+    record = m_model._internal(m_x, m_y)
+    func_before = record.func
+    func_before = mnm._ffi.pass_.AutoDiff(func_before, record.requires_grads)
     print("Before auto parallel: ", func_before)
     func_after = mnm._ffi.pass_.AutoDataParallel(func_before)
     print("After auto parallel: ", func_after)

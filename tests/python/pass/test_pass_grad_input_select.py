@@ -11,6 +11,7 @@ def test_conv2d():
     class Model(mnm.Model):
         def build(self):
             self.w, _ = randn((1, 1, 3, 3))
+            self.w.requires_grad = True
 
         @mnm.model.trace
         def forward(self, x):
@@ -80,9 +81,11 @@ def test_conv2d():
 
     model = Model()
     m_x, _ = randn((1, 1, 224, 224))
-    func_before = model._internal(m_x).func
+    m_x.requires_grad = True
+    record = model._internal(m_x)
+    func_before = record.func
     func_before = run_infer_type(func_before)
-    func_before = AutoDiff(func_before)
+    func_before = AutoDiff(func_before, record.requires_grads)
     func_before = run_infer_type(func_before)
     func_after = GradientInputSelection(func_before)
     func_after = run_infer_type(func_after)

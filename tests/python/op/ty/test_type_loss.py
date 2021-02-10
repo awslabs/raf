@@ -6,7 +6,7 @@ from mnm.testing import check_type, run_infer_type, randn, one_hot_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
 
-# pylint: disable=invalid-name, attribute-defined-outside-init
+# pylint: disable=invalid-name, attribute-defined-outside-init, too-many-locals
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("shape", [[4, 4]])
 @pytest.mark.parametrize("learning_rate", [0.01, 0.05])
@@ -52,15 +52,18 @@ def test_nll_loss(shape, dtype):
     n, c = shape
     m_pred, _ = randn((n, c), dtype=dtype)
     m_true, _ = one_hot_torch(n, c, dtype=dtype)
+    m_pred.requires_grad = True
+    m_true.requires_grad = True
     ty_pred = TensorType((n, c), dtype=dtype)
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
-    m_func = model._internal(m_pred, m_true).func
+    record = model._internal(m_pred, m_true)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
     check_type(m_func, desired_type)
     # backward
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
@@ -89,15 +92,18 @@ def test_other_losses(loss_type, shape, dtype):
     model = TestModel()
     m_true, _ = randn(shape, dtype=dtype)
     m_pred, _ = randn(shape, dtype=dtype)
+    m_true.requires_grad = True
+    m_pred.requires_grad = True
     ty_pred = TensorType(shape, dtype=dtype)
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
-    m_func = model._internal(m_pred, m_true).func
+    record = model._internal(m_pred, m_true)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
     check_type(m_func, desired_type)
     # backward
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))

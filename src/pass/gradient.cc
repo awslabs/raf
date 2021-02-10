@@ -73,7 +73,22 @@ struct Gradient : public ExprVisitor {
   MNM_NODE_NOT_IMPL(GlobalVarNode);  // replace GlobalVar with adjoint
 
  public:
-  explicit Gradient(const FunctionNode* func) : func(func), ell(ExplicitLetList::make(func->body)) {
+  explicit Gradient(const FunctionNode* func_, const ir::Array<tvm::Bool>& requires_grads_)
+      : func(func_), ell(ExplicitLetList::make(func_->body)) {
+    // If size of requires_grads_ is 0, check the inputs' datatype.
+    if (requires_grads_.size() == 0) {
+      for (const Var& param : func->params) {
+        const VarNode* var = param.operator->();
+        const auto tensor_type = Downcast<TensorType>(var->type_annotation);
+        requires_grads[var] = tensor_type->dtype.is_float();
+      }
+    } else {
+      CHECK_EQ(func->params.size(), requires_grads_.size());
+      for (int i = 0; i < func->params.size(); ++i) {
+        const VarNode* var = func->params[i].operator->();
+        requires_grads[var] = requires_grads_[i];
+      }
+    }
     InitTuple();
   }
 
@@ -168,11 +183,11 @@ struct Gradient : public ExprVisitor {
       return {NullValue<Var>()};
     }
     Array<Expr> ret;
+    auto call = Downcast<Call>(orig);
     if (ffpg.count(op)) {
       ret = ffpg[op](orig, let_var, _ograds, igrads);
     } else if (fpg.count(op)) {
       Array<Expr> orig_args;
-      auto call = Downcast<Call>(orig);
       for (auto arg : call->args) {
         if (auto in_var = arg.as<VarNode>()) {
           orig_args.push_back(var_to_expr[in_var]);
@@ -182,6 +197,14 @@ struct Gradient : public ExprVisitor {
         }
       }
       ret = fpg[op](orig, orig_args, let_var, _ograds);
+      // if not 'requires_grad', set return to null
+      for (int i = 0, n = ret.size(); i < n; ++i) {
+        if (auto in_var = call->args[i].as<VarNode>()) {
+          if (requires_grads[in_var] == false) {
+            ret.Set(i, NullValue<Var>());
+          }
+        }
+      }
     } else {
       LOG(FATAL) << "Gradient is not registered for operator " << op->name;
       throw;
@@ -265,6 +288,9 @@ struct Gradient : public ExprVisitor {
     const auto& vars = ell->vars;
     const auto& exprs = ell->exprs;
     CHECK_EQ(vars.size(), exprs.size());
+    for (const auto& var : vars) {
+      requires_grads[var.operator->()] = true;
+    }
     int n = exprs.size();
     for (int i = 0; i < n; ++i) {
       var_to_expr[vars[i].operator->()] = exprs[i];
@@ -400,6 +426,7 @@ struct Gradient : public ExprVisitor {
   std::unordered_map<const VarNode*, int> tuple_length;
   std::unordered_map<const VarNode*, Array<Expr>> tuple_grads;
   std::unordered_map<const VarNode*, Expr> var_to_expr;
+  std::unordered_map<const VarNode*, bool> requires_grads;
   // initialized in Run
   LetList* ll = nullptr;
   // a variable that is set for each let expr
@@ -408,8 +435,8 @@ struct Gradient : public ExprVisitor {
 
 }  // namespace gradient
 
-ir::Function AutoDiff(ir::Function func) {
-  return gradient::Gradient(func.operator->()).Run();
+ir::Function AutoDiff(ir::Function func, ir::Array<tvm::Bool> requires_grads) {
+  return gradient::Gradient(func.operator->(), requires_grads).Run();
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);

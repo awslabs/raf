@@ -29,6 +29,7 @@ using pass::FoldConstant;
 
 ObjectRef RunModel(Function func, Array<Expr> args) {
   std::vector<GradTape> grads;
+  ir::Array<Bool> requires_grads;
   grads.reserve(args.size());
   bool requires_grad = false;
   for (const Expr& arg : args) {
@@ -37,6 +38,7 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
         if (bound->tape.defined()) {
           requires_grad = true;
         }
+        requires_grads.push_back(Bool(bound->tape.defined()));
         grads.push_back(bound->tape);
       }
     }
@@ -55,7 +57,7 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
   // run canonicalize ops pass (it needs "inter type pass" to work properly.)
   func = Downcast<Function>(CanonicalizeOps(func));
   // run auto diff pass
-  func = AutoDiff(func);
+  func = AutoDiff(func, requires_grads);
 
   // run auto parallel
   if (distributed::DistContext::Global()->enable_data_parallel) {

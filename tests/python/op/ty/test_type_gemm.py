@@ -31,12 +31,13 @@ def test_dense(shape, dtype):
     m_a.requires_grad = True
     m_b.requires_grad = True
     # check forward
-    m_func = model._internal(m_a, m_b).func
+    record = model._internal(m_a, m_b)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_func, desired_type)
     # check backward
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
@@ -66,16 +67,19 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
     n, m, k = shape
     m_a, _ = randn_torch((n, k) if not transpose_a else (k, n), dtype=dtype, requires_grad=True)
     m_b, _ = randn_torch((k, m) if not transpose_b else (m, k), dtype=dtype, requires_grad=True)
+    m_a.requires_grad = True
+    m_b.requires_grad = True
     fwd_ty = TensorType((n, m), dtype=dtype)
     a_ty = TensorType((n, k) if not transpose_a else (k, n), dtype=dtype)
     b_ty = TensorType((k, m) if not transpose_b else (m, k), dtype=dtype)
     # check forward
-    m_func = model._internal(m_a, m_b).func
+    record = model._internal(m_a, m_b)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_func, desired_type)
     # check backward
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
@@ -107,12 +111,13 @@ def test_batch_matmul(shape, dtype):
     a_ty = TensorType((b, m, k), dtype=dtype)
     b_ty = TensorType((b, n, k), dtype=dtype)
     # check forward
-    m_func = model._internal(m_a, m_b).func
+    record = model._internal(m_a, m_b)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_func, desired_type)
     # check backward
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))

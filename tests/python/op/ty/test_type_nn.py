@@ -36,13 +36,15 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     model = Softmax()
     # forward
     m_x, t_x = randn_torch(shape, dtype=dtype)
+    m_x.requires_grad = True
     t_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
             m_func = model._internal(m_x).func
             m_func = run_infer_type(m_func)
         return
-    m_func = model._internal(m_x).func
+    record = model._internal(m_x)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     t_y = torch_fwd(t_x, dim=axis)
     x_ty = TensorType(t_x.shape, dtype=dtype)
@@ -51,7 +53,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     check_type(m_func, checked_type)
     # backward
     _, t_dy = randn_torch(shape, dtype=dtype)
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     t_y.backward(t_dy)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
@@ -121,10 +123,12 @@ def test_layer_norm(shape, axis, eps, dtype):
     mx_model.initialize(ctx=mx.cpu(0))
     # forward
     m_x, n_x = randn(shape, dtype=dtype)
+    m_x.requires_grad = True
     mx_x = mx.nd.array(n_x)
     mx_x.attach_grad()
     m_y = model(m_x)
-    m_func = model._internal(m_x).func
+    record = model._internal(m_x)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     _, n_dy = randn(m_y.shape, dtype=dtype)
     mx_dy = mx.nd.array(n_dy)
@@ -137,7 +141,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     checked_type = FuncType([x_ty], y_ty)
     check_type(m_func, checked_type)
     # check backward
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     dx_ty = TensorType(mx_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
@@ -243,9 +247,11 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     model = Pool2D()
     # forward
     m_x, t_x = randn_torch(data_shape, dtype=dtype)
+    m_x.requires_grad = True
     t_x.requires_grad = True
     m_y = model(m_x)
-    m_func = model._internal(m_x).func
+    record = model._internal(m_x)
+    m_func = record.func
     m_func = run_infer_type(m_func)
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
     x_ty = TensorType(t_x.shape, dtype=dtype)
@@ -255,7 +261,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     # backward
     _, t_dy = randn_torch(m_y.shape, dtype=dtype)
     t_y.backward(t_dy)
-    m_func = AutoDiff(m_func)
+    m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
