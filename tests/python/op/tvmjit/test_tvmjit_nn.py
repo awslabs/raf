@@ -198,12 +198,14 @@ def test_layer_norm(device, shape, axis, eps, dtype):
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
-@pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
+@pytest.mark.parametrize("shapes", [
+    ((4, 256, 32, 32), (64, 256, 1, 1)),
+    ((8, 3, 32, 32), (16, 3, 3, 3)),
+])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
 @pytest.mark.parametrize("dilation", [1])
 @pytest.mark.parametrize("padding", [0, 1, 2])
-def test_conv2d(device, dtype, xshape, wshape, stride, dilation, padding):
+def test_conv2d(device, dtype, shapes, stride, dilation, padding):
     # pylint: disable=too-many-arguments
     # N.B.: NCHW + OIHW
     # forward
@@ -216,6 +218,7 @@ def test_conv2d(device, dtype, xshape, wshape, stride, dilation, padding):
 
     model = Conv2D()
     # forward
+    xshape, wshape = shapes
     m_x, t_x = randn_torch(xshape, std=0.001, device=device, dtype=dtype, requires_grad=True)
     m_w, t_w = randn_torch(wshape, std=0.01, device=device, dtype=dtype, requires_grad=True)
     m_y = model(m_x, m_w)

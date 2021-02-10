@@ -164,7 +164,7 @@ def schedule_layer_norm_cuda(attrs, outs, target):
     # pylint: disable=invalid-name
     with target:
         out = outs[0]
-        s = _topi.cuda.schedule_injective(outs)
+        s = cuda.injective.schedule_injective(outs)
         # fuse axes and split into bx and tx then bind
         scheduled_ops = []
         num_thread = 64

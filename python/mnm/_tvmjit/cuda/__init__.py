@@ -1,2 +1,2 @@
 """Compute definition and schedules for TVM cuda operators"""
-from . import reduction
+from . import reduction, injective
