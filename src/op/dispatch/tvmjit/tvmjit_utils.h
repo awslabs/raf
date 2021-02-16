@@ -93,15 +93,12 @@ using FMNMArgIndices =
     }                                                                                           \
     RType ret{nullptr};                                                                         \
     HashKey key = HASH(param_types, ret_type, schema);                                          \
-    {                                                                                           \
-      std::lock_guard<std::mutex> lock(cache->mu);                                              \
-      if (const auto* compiled = cache->Get(key.byte_vector)) {                                 \
-        ret = *compiled;                                                                        \
-      } else {                                                                                  \
-        auto lowered = LowerOp(op, attrs, param_types, ret_type);                               \
-        ret = f_post_lower(lowered);                                                            \
-        cache->Set(key.byte_vector, ret);                                                       \
-      }                                                                                         \
+    if (const auto* compiled = cache->Get(key.byte_vector)) {                                   \
+      ret = *compiled;                                                                          \
+    } else {                                                                                    \
+      auto lowered = LowerOp(op, attrs, param_types, ret_type);                                 \
+      ret = f_post_lower(lowered);                                                              \
+      cache->Set(key.byte_vector, ret);                                                         \
     }                                                                                           \
     return ret;                                                                                 \
   }                                                                                             \

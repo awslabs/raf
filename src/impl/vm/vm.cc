@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <vector>
 
@@ -21,6 +23,7 @@
 #include "mnm/ir.h"
 #include "mnm/op.h"
 #include "mnm/value.h"
+#include "mnm/vm/bytecode.h"
 #include "mnm/vm/vm.h"
 #include "../../requests.h"
 
@@ -42,6 +45,97 @@ using namespace mnm::value;
 using namespace mnm::op;
 using namespace mnm::registry;
 using namespace mnm::requests;
+
+inline Value CopyTo(Value src, const Device& dev) {
+  if (!src.defined()) {
+    return src;
+  }
+  if (src.as<TensorValueObj>()) {
+    auto tensor = Downcast<TensorValue>(src)->tensor;
+    if (tensor->ctx.device_type != dev.device_type) {
+      return TensorValue::make(tensor::Tensor(tensor.CopyTo(dev)));
+    }
+    return src;
+  }
+  if (src.as<TupleValueObj>()) {
+    std::vector<Value> ret;
+    TupleValue tup = Downcast<TupleValue>(src);
+    for (size_t i = 0; i < tup->fields.size(); ++i) {
+      ret.push_back(CopyTo(tup->fields[i], dev));
+    }
+    return TupleValue::make(ret);
+  }
+  return src;
+}
+
+MNM_REGISTER_OBJECT_REFLECT(VMContextObj);
+
+VMContext VMContext::make(const Executable* exec) {
+  auto ptr = make_object<VMContextObj>();
+  ptr->exec = exec;
+  return VMContext(ptr);
+}
+
+inline Value VMContext::ReadRegister(Index reg) const {
+  auto self = this->operator->();
+  return self->frames.back().register_file[reg];
+}
+
+inline void VMContext::WriteRegister(Index reg, const Value& val) {
+  auto self = this->operator->();
+  self->frames.back().register_file[reg] = val;
+}
+
+inline int64_t VMContext::LoadScalarInt(Index r) const {
+  int32_t result;
+  const auto& obj = ReadRegister(r);
+  auto int_value = Downcast<IntValue>(obj);
+  return int_value->data;
+}
+
+inline bool VMContext::IsConst(Index reg) const {
+  auto self = this->operator->();
+  return self->frames.back().is_const[reg];
+}
+
+inline void VMContext::PushFrame(Index func_index, const std::vector<Value>& args,
+                                 RegName ret_reg) {
+  auto self = this->operator->();
+  const auto& func = self->exec->functions[func_index];
+  CHECK_EQ(func.params.size(), args.size())
+      << "Number of arguments mismatches: " << func.params.size() << " vs " << args.size();
+  auto ret_pc = self->pc + 1;
+  auto frame = VMFrame(func_index, ret_pc, ret_reg, args.size(), func.register_file_size);
+  self->frames.push_back(frame);
+  for (size_t i = 0; i < args.size(); ++i) {
+    WriteRegister(i, args[i]);
+  }
+  self->func_index = func_index;
+  self->code = func.instructions.data();
+  self->pc = 0;
+}
+
+inline Index VMContext::PopFrame() {
+  auto self = this->operator->();
+  CHECK_GT(self->frames.size(), 0);
+  const VMFrame& fr = self->frames.back();
+  self->func_index = fr.caller_func_index;
+  self->pc = fr.caller_return_pc;
+  self->code = self->exec->functions[self->func_index].instructions.data();
+  self->frames.pop_back();
+  return fr.caller_return_register;
+}
+
+std::shared_ptr<OpEnvCache> VMFuncOpEnvCache::Get(Index pc) {
+  std::lock_guard<std::mutex> lock(mu_);
+  auto it = cache_map_.find(pc);
+  if (it != cache_map_.end()) {
+    return it->second;
+  }
+  auto cache = std::make_shared<OpEnvCache>();
+  cache_map_.emplace(pc, cache);
+  return cache;
+}
 
 #ifdef MNM_USE_CUDA
 void MNMSetStream(Device dev, cudaStream_t stream) {
@@ -100,96 +194,31 @@ class VirtualMachine::CudaGraphImpl {
 };
 #endif
 
-inline StorageValue make_storage(size_t size, size_t alignment, DLDataType dtype_hint, Device dev) {
-  auto buffer = memory_pool::Memory::Alloc(dev, size);
-  return StorageValue::make(buffer);
-}
-
-inline Value CopyTo(Value src, const Device& dev) {
-  if (!src.defined()) {
-    return src;
-  }
-  if (src.as<TensorValueObj>()) {
-    auto tensor = Downcast<TensorValue>(src)->tensor;
-    if (tensor->ctx.device_type != dev.device_type) {
-      return TensorValue::make(tensor::Tensor(tensor.CopyTo(dev)));
-    }
-    return src;
-  }
-  if (src.as<TupleValueObj>()) {
-    std::vector<Value> ret;
-    TupleValue tup = Downcast<TupleValue>(src);
-    for (size_t i = 0; i < tup->fields.size(); ++i) {
-      ret.push_back(CopyTo(tup->fields[i], dev));
-    }
-    return TupleValue::make(ret);
-  }
-  return src;
-}
-
 PackedFunc VirtualMachine::GetFunction(const std::string& name,
                                        const ObjectPtr<Object>& sptr_to_self) {
-  if (name == "invoke") {
+  if (name == "run") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
-      CHECK(exec_) << "The executable is not created yet.";
-      std::string func_name = args[0];
-      auto git = exec_->global_map.find(func_name);
-      CHECK(git != exec_->global_map.end())
-          << "Cannot find function " << func_name << " in the executable";
-      auto func = exec_->functions[git->second];
-      if (func.params.empty()) {
-        *rv = Invoke(func, {});
-      } else {
-        auto it = inputs_.find(func_name);
-        CHECK(it != inputs_.end()) << "Input has not been set for function " << func_name;
-        const std::vector<Value>& func_args = it->second;
-        *rv = Invoke(func, func_args);
-      }
+      VMContext ctx = args[0];
+      *rv = Run(ctx);
     });
-  } else if (name == "init") {
+  } else if (name == "set_devices") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
-      enable_cuda_graph = args[0];
       std::vector<Device> devices;
-      for (int i = 1; i < args.size(); ++i) {
+      for (int i = 0; i < args.size(); ++i) {
         DLContext dev = args[i];
         devices.push_back(dev);
       }
-      this->Init(devices);
+      this->SetDevices(devices);
     });
-  } else if (name == "set_input") {
+  } else if (name == "prepare_context") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
-      CHECK(exec_) << "The executable is not created yet.";
+      CHECK(exec_) << "The executable is not loaded yet.";
       std::string func_name = args[0];
-      auto gvit = exec_->global_map.find(func_name);
-      CHECK(gvit != exec_->global_map.end()) << "Cannot find function " << func_name;
-      auto func_index = gvit->second;
-      const auto& vm_func = exec_->functions[func_index];
-      const auto& param_names = vm_func.params;
-      // TODO(icemelon9): For heterogeneous execution, get input device information
-      TVMContext dev = devices_[0];
-      CHECK_EQ(args.size() - 1, param_names.size())
-          << "The number of provided parameters doesn't match the number of arguments";
-      std::vector<Value> func_args(param_names.size());
-      for (int i = 1; i < args.size(); ++i) {
-        Value arg = args[i];
-        func_args[i - 1] = CopyTo(arg, dev);
+      std::vector<Value> inputs(args.size() - 1);
+      for (size_t i = 1; i < args.size(); ++i) {
+        inputs[i - 1] = args[i];
       }
-      if (inputs_.find(func_name) != inputs_.end() && enable_cuda_graph) {
-        for (int i = 0; i < param_names.size(); i++) {
-          Value new_arg = func_args[i];
-          Value old_arg = inputs_[func_name][i];
-          if (new_arg.as<TensorValueObj>()) {
-            CHECK(old_arg.as<TensorValueObj>()) << "Value Type Mismatch, cannot copy";
-            Downcast<TensorValue>(new_arg)->tensor.CopyTo(Downcast<TensorValue>(old_arg)->tensor);
-          } else {
-            LOG(FATAL) << "Unsupported Value Type for reusing CUDA Graph";
-          }
-        }
-        DLOG(INFO) << "Input updated for Cached Graph";
-      } else {
-        inputs_.erase(func_name);
-        inputs_.emplace(func_name, func_args);
-      }
+      *rv = PrepareVMContext(func_name, inputs);
     });
   } else {
     LOG(FATAL) << "Unknown packed function: " << name;
@@ -200,7 +229,9 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
 void VirtualMachine::LoadExecutable(const Executable* exec) {
   CHECK(exec) << "The executable is not created yet.";
   exec_ = exec;
-  op_env_cache_.resize(exec_->functions.size());
+  for (int i = 0; i < exec_->functions.size(); ++i) {
+    op_env_cache_.push_back(std::make_shared<VMFuncOpEnvCache>());
+  }
 
   tvm::runtime::Module lib = exec_->lib;
   // Get the list of packed functions.
@@ -219,6 +250,85 @@ void VirtualMachine::LoadExecutable(const Executable* exec) {
   }
 }
 
+VMContext VirtualMachine::PrepareVMContext(const std::string& func_name,
+                                           const std::vector<Value>& inputs) {
+  auto gvit = exec_->global_map.find(func_name);
+  CHECK(gvit != exec_->global_map.end()) << "Cannot find function " << func_name;
+  auto func_index = gvit->second;
+  const auto& vm_func = exec_->functions[func_index];
+  CHECK_EQ(inputs.size(), vm_func.params.size())
+      << "The number of inputs doesn't match the number of parameters for function " << func_name;
+
+  auto fcreate_ctx = [&]() {
+    auto ctx = VMContext::make(exec_);
+    ctx->entry_func_index = func_index;
+    ctx->inputs.resize(inputs.size());
+    // TODO(@zhiics, @icemelon9): For heterogeneous execution, get input device information
+    Device dev = devices_[0];
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      ctx->inputs[i] = CopyTo(inputs[i], dev);
+    }
+    return ctx;
+  };
+#ifdef MNM_USE_CUDA
+  if (enable_cuda_graph_) {
+    std::lock_guard<std::mutex> lock(cuda_graph_mutex_);
+    // Check if there is another context using the CUDA graph
+    CHECK(!cuda_graph_occupied_) << "VM in CUDA graph mode doesn't support concurrent execution";
+    if (!cuda_graph_ctx_.defined() || cuda_graph_ctx_->entry_func_index != func_index) {
+      // Initialize the cuda graph context for the first time, or reset the cuda graph context
+      // because this time invokes a different function
+      cuda_graph_impl_ = nullptr;
+      cuda_graph_ctx_ = fcreate_ctx();
+    } else {
+      for (int i = 0; i < inputs.size(); i++) {
+        Value new_arg = inputs[i];
+        Value graph_arg = cuda_graph_ctx_->inputs[i];
+        if (new_arg.as<TensorValueObj>()) {
+          CHECK(graph_arg.as<TensorValueObj>()) << "Value type mismatch, cannot copy";
+          Downcast<TensorValue>(new_arg)->tensor.CopyTo(Downcast<TensorValue>(graph_arg)->tensor);
+        } else {
+          LOG(FATAL) << "Unsupported Value Type for reusing CUDA Graph";
+        }
+      }
+      DLOG(INFO) << "Updated the inputs to the cached CUDA Graph.";
+    }
+    cuda_graph_occupied_ = true;
+    return cuda_graph_ctx_;
+  }
+#endif
+  auto ctx = fcreate_ctx();
+  return ctx;
+}
+
+Value VirtualMachine::Run(VMContext ctx) {
+  auto frun = [&]() {
+    ctx.PushFrame(ctx->entry_func_index, ctx->inputs, -1);
+    RunLoop(ctx);
+  };
+#ifdef MNM_USE_CUDA
+  if (enable_cuda_graph_) {
+    CHECK(ctx.get() == cuda_graph_ctx_.get()) << "Wrong VMContext provided for CUDA graph.";
+    if (!cuda_graph_impl_) {
+      cuda_graph_impl_ = new CudaGraphImpl(devices_[0]);
+      DLOG(INFO) << "Begin capturing CUDA graph.";
+      cuda_graph_impl_->BeginCapture();
+      frun();
+      cuda_graph_impl_->EndCapture();
+      DLOG(INFO) << "CUDA graph captured.";
+    }
+    cuda_graph_impl_->Invoke();
+    std::lock_guard<std::mutex> lock(cuda_graph_mutex_);
+    cuda_graph_occupied_ = false;
+    // TODO(@icemelon9, @zhiics): May need to copy the return register to the host device to
+    // avoid data race
+    return ctx->return_register;
+  }
+#endif
+  frun();
+  return ctx->return_register;
+}
+
 Device VirtualMachine::GetParamsDevice() const {
   CHECK(!devices_.empty()) << "Devices have not been initialized yet.";
 
@@ -233,105 +343,37 @@ Device VirtualMachine::GetParamsDevice() const {
   return (cit == devices_.end() ? devices_[0] : *cit);
 }
 
-void VirtualMachine::PushFrame(Index arg_count, Index ret_pc, const VMFunction& vm_func) {
-  auto frame = VMFrame(ret_pc, func_index_, arg_count, code_, vm_func.register_file_size);
-  frames_.push_back(frame);
-}
-
-Index VirtualMachine::PopFrame() {
-  CHECK_GT(frames_.size(), 0);
-  const VMFrame& fr = frames_.back();
-  func_index_ = fr.func_index;
-  code_ = fr.code;
-  pc_ = fr.pc;
-  auto call_stack_size = frames_.size();
-  frames_.pop_back();
-  return call_stack_size;
-}
-
-void VirtualMachine::InvokeGlobal(const VMFunction& func, const std::vector<Value>& args) {
-  DLOG(INFO) << "Invoking global " << func.name << " " << args.size();
-
-  PushFrame(func.params.size(), this->pc_ + 1, func);
-  for (size_t i = 0; i < args.size(); ++i) {
-    WriteRegister(i, args[i]);
-  }
-  DLOG(INFO) << "func.params= " << func.params.size();
-
-  code_ = func.instructions.data();
-  pc_ = 0;
-}
-
-Value VirtualMachine::Invoke(const VMFunction& func, const std::vector<Value>& args) {
-#if MNM_USE_CUDA
-  if (enable_cuda_graph) {
-    if (!cuda_graph_impl_) {
-      cuda_graph_impl_ = new CudaGraphImpl(devices_[0]);
-      cuda_graph_impl_->BeginCapture();
-      DLOG(INFO) << "BeginCapture";
-      InvokeGlobal(func, args);
-      RunLoop();
-      cuda_graph_impl_->EndCapture();
-      DLOG(INFO) << "GraphCaptured";
-    }
-    cuda_graph_impl_->Invoke();
-    DLOG(INFO) << "Invoked cached graph";
-  } else {
-    InvokeGlobal(func, args);
-    RunLoop();
-  }
-#else
-  InvokeGlobal(func, args);
-  RunLoop();
-#endif
-  return return_register_;
-}
-
-Value VirtualMachine::Invoke(const std::string& name, const std::vector<Value>& args) {
-  CHECK(exec_) << "The executable has not been created yet.";
-  auto it = exec_->global_map.find(name);
-  CHECK(it != exec_->global_map.end()) << "Cannot find function " << name << " in the executable";
-  auto func_index_ = it->second;
-  DLOG(INFO) << "Invoke Global " << name << " at index " << func_index_;
-  return Invoke(exec_->functions[func_index_], args);
-}
-
-void VirtualMachine::Init(const std::vector<Device>& devices) {
+void VirtualMachine::SetDevices(const std::vector<Device>& devices) {
   devices_ = devices;
+  bool has_gpu = false;
+  for (const Device& dev : devices) {
+    if (dev.device_type == DevType::kCUDA()) {
+      has_gpu = true;
+      break;
+    }
+  }
+  if (!has_gpu) {
+    enable_cuda_graph_ = false;
+  }
 }
 
-inline void VirtualMachine::WriteRegister(Index r, const Value& val) {
-  frames_.back().register_file[r] = val;
-}
-
-inline Value VirtualMachine::ReadRegister(Index r) const {
-  return frames_.back().register_file[r];
-}
-
-inline int64_t VirtualMachine::LoadScalarInt(Index r) const {
-  int32_t result;
-  const auto& obj = ReadRegister(r);
-  auto int_value = Downcast<IntValue>(obj);
-  return int_value->data;
-}
-
-void VirtualMachine::RunLoop() {
+void VirtualMachine::RunLoop(VMContext ctx) {
   CHECK(this->exec_);
-  CHECK(this->code_);
-  pc_ = 0;
-  Index frame_start = frames_.size();
+  CHECK_GT(ctx->frames.size(), 0) << "The call stack is empty";
+  CHECK(ctx->code);
+  ctx->pc = 0;
   while (true) {
   main_loop:
-    auto const& instr = code_[this->pc_];
+    auto const& instr = ctx->code[ctx->pc];
 #if USE_RELAY_DEBUG
     InstructionPrint(std::cout, instr);
 #endif  // USE_RELAY_DEBUG
 
     switch (instr.op) {
       case Opcode::Move: {
-        Value from_obj = ReadRegister(instr.from);
-        WriteRegister(instr.dst, from_obj);
-        pc_++;
+        Value from_obj = ctx.ReadRegister(instr.from);
+        ctx.WriteRegister(instr.dst, from_obj);
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::Fatal: {
@@ -350,63 +392,61 @@ void VirtualMachine::RunLoop() {
           // TODO(@zhiics): device could be obtained from the device list.
           const_pool_[instr.const_index] = CopyTo(constant_obj, devices_[0]);
         }
-        WriteRegister(instr.dst, const_pool_[instr.const_index]);
-        frames_.back().is_const[instr.dst] = true;
-        pc_++;
+        ctx.WriteRegister(instr.dst, const_pool_[instr.const_index]);
+        ctx->frames.back().is_const[instr.dst] = true;
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::LoadConsti: {
-        WriteRegister(instr.dst, IntValue::make(instr.load_consti.val));
-        pc_++;
+        ctx.WriteRegister(instr.dst, IntValue::make(instr.load_consti.val));
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::InvokeFunc: {
         std::vector<Value> args;
         for (Index i = 0; i < instr.invoke_func.num_args; ++i) {
-          args.push_back(ReadRegister(instr.invoke_func.args[i]));
+          args.push_back(ctx.ReadRegister(instr.invoke_func.args[i]));
         }
-        InvokeGlobal(exec_->functions[instr.invoke_func.func_index], args);
-        frames_.back().caller_return_register = instr.dst;
+        ctx.PushFrame(instr.invoke_func.func_index, args, instr.dst);
         goto main_loop;
       }
       case Opcode::InvokePacked: {
         LOG(FATAL) << "Not supported.";
       }
       case Opcode::InvokeClosure: {
-        auto closure = Downcast<VMClosureValue>(ReadRegister(instr.invoke_closure.closure));
+        auto closure = Downcast<VMClosureValue>(ctx.ReadRegister(instr.invoke_closure.closure));
         std::vector<Value> args;
         for (auto free_var : closure->free_vars) {
           args.push_back(free_var);
         }
         for (Index i = 0; i < instr.invoke_closure.num_args; ++i) {
-          args.push_back(ReadRegister(instr.invoke_closure.args[i]));
+          args.push_back(ctx.ReadRegister(instr.invoke_closure.args[i]));
         }
-        InvokeGlobal(exec_->functions[closure->func_index], args);
-        frames_.back().caller_return_register = instr.dst;
+        ctx.PushFrame(closure->func_index, args, instr.dst);
         goto main_loop;
       }
       case Opcode::GetField: {
-        auto object = ReadRegister(instr.get_field.object);
+        auto object = ctx.ReadRegister(instr.get_field.object);
         const auto& tuple = Downcast<TupleValue>(object);
         auto field = tuple->fields[instr.get_field.field_index];
-        WriteRegister(instr.dst, field);
-        pc_++;
+        ctx.WriteRegister(instr.dst, field);
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::Goto: {
-        pc_ += instr.pc_offset;
+        ctx->pc += instr.pc_offset;
         goto main_loop;
       }
       case Opcode::If: {
-        int32_t test_val = LoadScalarInt(instr.if_op.test);
-        int32_t target_val = LoadScalarInt(instr.if_op.target);
+        int32_t test_val = ctx.LoadScalarInt(instr.if_op.test);
+        int32_t target_val = ctx.LoadScalarInt(instr.if_op.target);
 
         if (test_val == target_val) {
           CHECK_NE(instr.if_op.true_offset, 0);
-          pc_ += instr.if_op.true_offset;
+          ctx->pc += instr.if_op.true_offset;
         } else {
           CHECK_NE(instr.if_op.false_offset, 0);
-          pc_ += instr.if_op.false_offset;
+          ctx->pc += instr.if_op.false_offset;
         }
 
         goto main_loop;
@@ -418,12 +458,12 @@ void VirtualMachine::RunLoop() {
           shape[i] = instr.alloc_tensor.shape[i];
         }
 
-        auto storage_obj = ReadRegister(instr.alloc_tensor.storage);
+        auto storage_obj = ctx.ReadRegister(instr.alloc_tensor.storage);
         auto storage = Downcast<StorageValue>(storage_obj);
         auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor.dtype,
                                             shape, {}, storage->buffer->data, storage->buffer);
-        WriteRegister(instr.dst, tensor);
-        pc_++;
+        ctx.WriteRegister(instr.dst, tensor);
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::AllocTensorReg: {
@@ -432,23 +472,24 @@ void VirtualMachine::RunLoop() {
       case Opcode::AllocTuple: {
         Array<Value> fields;
         for (Index i = 0; i < instr.alloc_tuple.num_fields; ++i) {
-          fields.push_back(ReadRegister(instr.alloc_tuple.fields[i]));
+          fields.push_back(ctx.ReadRegister(instr.alloc_tuple.fields[i]));
         }
-        WriteRegister(instr.dst, TupleValue::make(fields));
-        pc_++;
+        ctx.WriteRegister(instr.dst, TupleValue::make(fields));
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::AllocClosure: {
         std::vector<Value> free_vars;
         for (Index i = 0; i < instr.alloc_closure.num_free_vars; i++) {
-          free_vars.push_back(ReadRegister(instr.alloc_closure.free_vars[i]));
+          free_vars.push_back(ctx.ReadRegister(instr.alloc_closure.free_vars[i]));
         }
-        WriteRegister(instr.dst, VMClosureValue::make(instr.alloc_closure.func_index, free_vars));
-        pc_++;
+        auto clo = VMClosureValue::make(instr.alloc_closure.func_index, free_vars);
+        ctx.WriteRegister(instr.dst, clo);
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::AllocStorage: {
-        auto size = LoadScalarInt(instr.alloc_storage.allocation_size);
+        auto size = ctx.LoadScalarInt(instr.alloc_storage.allocation_size);
         auto alignment = instr.alloc_storage.alignment;
 
         DLOG(INFO) << "AllocStorage: allocation_size=" << size << " alignment=" << alignment
@@ -456,23 +497,24 @@ void VirtualMachine::RunLoop() {
                    << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
         auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-        auto storage = make_storage(size, alignment, instr.alloc_storage.dtype_hint, dev);
-        WriteRegister(instr.dst, storage);
-        pc_++;
+        auto buffer = memory_pool::Memory::Alloc(dev, size);
+        auto storage = StorageValue::make(buffer);
+        ctx.WriteRegister(instr.dst, storage);
+        ctx->pc++;
         goto main_loop;
       }
       case Opcode::Ret: {
         // If we have hit the point from which we started
         // running, we should return to the caller breaking
         // the dispatch loop.
-        return_register_ = ReadRegister(instr.result);
-        auto caller_return_register = frames_.back().caller_return_register;
+        auto ret_val = ctx.ReadRegister(instr.result);
+        auto caller_return_register = ctx.PopFrame();
 
-        if (PopFrame() == frame_start) {
+        if (caller_return_register < 0) {
+          ctx->return_register = ret_val;
           return;
-          // Otherwise we are just returning from a local call.
-        } else {
-          WriteRegister(caller_return_register, return_register_);
+        } else {  // Otherwise we are just returning from a local call.
+          ctx.WriteRegister(caller_return_register, ret_val);
           goto main_loop;
         }
       }
@@ -484,9 +526,9 @@ void VirtualMachine::RunLoop() {
         // extract the input args and prepare the hash key to query op env
         for (Index i = 0; i < num_inputs; i++) {
           Index reg_idx = instr.invoke_jit.args[i];
-          auto reg = ReadRegister(reg_idx);
+          auto reg = ctx.ReadRegister(reg_idx);
           args.push_back(reg);
-          if (!frames_.back().is_const[reg_idx]) {
+          if (!ctx.IsConst(reg_idx)) {
             if (auto t = reg.as<TensorValueObj>()) {
               key << GetRef<TensorValue>(t);
             } else if (auto tup = reg.as<TupleValueObj>()) {
@@ -502,21 +544,17 @@ void VirtualMachine::RunLoop() {
         }
         // extract the output
         if (instr.invoke_jit.output_size == 1) {
-          output = ReadRegister(instr.invoke_jit.args[num_inputs]);
+          output = ctx.ReadRegister(instr.invoke_jit.args[num_inputs]);
         } else {
           Array<Value> outs;
           for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
-            outs.push_back(ReadRegister(instr.invoke_jit.args[i]));
+            outs.push_back(ctx.ReadRegister(instr.invoke_jit.args[i]));
           }
           output = TupleValue::make(outs);
         }
         // check the OpEnv cache
-        auto& func_cache = op_env_cache_[func_index_];
-        if (func_cache.find(pc_) == func_cache.end()) {
-          func_cache.emplace(pc_, std::make_shared<OpEnvCache>());
-        }
-        std::shared_ptr<OpEnvCache> op_env_cache = func_cache.at(pc_);
         std::shared_ptr<OpEnv> op_env;
+        auto op_env_cache = op_env_cache_[ctx->func_index]->Get(ctx->pc);
         if (auto p = op_env_cache->Get(key.byte_vector)) {
           // Cache hit. Reuse the OpEnv from the cache.
           op_env = *p;
@@ -524,7 +562,7 @@ void VirtualMachine::RunLoop() {
           // Create a new OpEnv.
           static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
           auto call_values = CallValues::make();
-          Value callee = ReadRegister(instr.invoke_jit.op_reg);
+          Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
           const auto* op = callee.as<OpValueObj>();
           const auto* closure = callee.as<ClosureValueObj>();
           call_values->callee = callee;
@@ -556,24 +594,25 @@ void VirtualMachine::RunLoop() {
           inputs.push_back(args[i]);
         }
         op_env->Execute(inputs, output);
-        pc_++;
+        ctx->pc++;
         goto main_loop;
       }
     }
   }
 }
 
-tvm::runtime::Module CreateVirtualMachine(const Executable* exec) {
-  auto vm = make_object<VirtualMachine>();
+tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph) {
+  auto vm = make_object<VirtualMachine>(enable_cuda_graph);
   vm->LoadExecutable(exec);
   return tvm::runtime::Module(vm);
 }
 
 MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
+  bool enable_cuda_graph = args[1];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec) << "The virtual machine executable has not been defined yet.";
-  *rv = CreateVirtualMachine(exec);
+  *rv = CreateVirtualMachine(exec, enable_cuda_graph);
 });
 
 }  // namespace vm

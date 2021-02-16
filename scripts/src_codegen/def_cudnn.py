@@ -214,7 +214,6 @@ class CUDNNAlgorithm(object):
         fmt = """
 MetaCache<{PERF_T}> {CACHE};
 {PERF_T} Find{PERF_T}Wrapper(const std::vector<uint8_t> &key, {ARGS}) {{
-  std::lock_guard<std::mutex> lock({CACHE}.mu);
   if (auto *val = {CACHE}.Get(key)) {{
     return *val;
   }}

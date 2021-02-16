@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <mutex>
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -130,18 +131,17 @@ class HashKey {
 template <typename T>
 class MetaCache {
  public:
-  std::unordered_map<std::string, T> cached_;
-  std::mutex mu;
-
   ~MetaCache() = default;
 
   bool Has(const std::vector<uint8_t>& key) {
     const std::string s(key.begin(), key.end());
+    std::lock_guard<std::mutex> lock(mu_);
     return cached_.count(s);
   }
 
   const T* Get(const std::vector<uint8_t>& key) {
     const std::string s(key.begin(), key.end());
+    std::lock_guard<std::mutex> lock(mu_);
     auto iter = cached_.find(s);
     if (iter == cached_.end()) {
       return nullptr;
@@ -151,6 +151,7 @@ class MetaCache {
 
   void Set(const std::vector<uint8_t>& key, T val) {
     const std::string s(key.begin(), key.end());
+    std::lock_guard<std::mutex> lock(mu_);
     auto iter = cached_.find(s);
     if (iter != cached_.end()) {
       LOG(FATAL) << "KeyError: The key is already cached!";
@@ -158,6 +159,10 @@ class MetaCache {
     }
     cached_.emplace(s, val);
   }
+
+ private:
+  std::unordered_map<std::string, T> cached_;
+  std::mutex mu_;
 };
 
 template <int n>

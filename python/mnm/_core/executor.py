@@ -4,8 +4,9 @@ import numpy as np
 import tvm
 from tvm import auto_scheduler, autotvm
 from . import ndarray as _nd
-from .core_utils import str2ctx
+from .core_utils import register_node, str2ctx
 from .. import _ffi
+from .._core.value import Value
 
 
 def interpret(expr, module=None):
@@ -435,11 +436,15 @@ def _convert_args(args):
     return cargs
 
 
+@register_node("mnm.vm.VMContext")
+class VMContext(Value):
+    """The VMContext holds the runtime data for an execution in the VM."""
+
+
 # pylint: disable=too-few-public-methods
 class VMExecutor:
     """
-    An implementation of the executor interface for
-    the Meta VM.
+    An implementation of the executor interface for the Meta VM.
 
     Parameters
     ----------
@@ -459,8 +464,7 @@ class VMExecutor:
         self.target = device
         self.device = str2ctx(device)
         self.executable = compile(mod, self.target)
-        self.vm = VirtualMachine(self.executable)
-        self.vm.init(enable_cuda_graph, self.device)
+        self.vm = VirtualMachine(self.executable, self.device, enable_cuda_graph=enable_cuda_graph)
 
     def make_executor(self, sch_file=None):
         """Create a VM executor.
@@ -491,32 +495,34 @@ class VMExecutor:
             return ret
         return _vm_wrapper
 
-class VirtualMachine:
-    """Relay VM runtime."""
 
-    def __init__(self, exe):
+class VirtualMachine:
+    """Relay VM runtime.
+
+    Parameters
+    ----------
+    exe : Executable
+        The VM executable.
+
+    device : :py:class:`TVMContext`
+        The runtime context to run the code on.
+
+    enable_cuda_graph : bool
+        Whether use CUDA graph.
+    """
+    def __init__(self, exe, device, enable_cuda_graph=False):
         if not isinstance(exe, Executable):
             raise TypeError("mod is expected to be the type of Executable, but received {}"
                             .format(type(exe)))
-        self.mod = _ffi.vm.VirtualMachine(exe.module)
+        self.module = _ffi.vm.VirtualMachine(exe.module, enable_cuda_graph)
         self._exec = exe
-        self._init = self.mod["init"]
-        self._invoke = self.mod["invoke"]
-        self._set_input = self.mod["set_input"]
+        self._set_devices = self.module["set_devices"]
+        self._prepare_context = self.module["prepare_context"]
+        self._run = self.module["run"]
+        self._set_devices(device)
 
-    def init(self, enable_cuda_graph, device):
-        """Initialize the context in the VM.
-
-        Parameters
-        ----------
-        device : :py:class:`TVMContext`
-            The runtime context to run the code on.
-        """
-        args = [device]
-        self._init(enable_cuda_graph, *args)
-
-    def set_input(self, func_name, *args, **kwargs):
-        """Set the input to a function.
+    def prepare_context(self, func_name, *args, **kwargs):
+        """Create and initiliaze a VM Context given the name of function to invoke and arguments.
 
         Parameters
         ----------
@@ -528,6 +534,11 @@ class VirtualMachine:
 
         kwargs: dict of str to mnm.ndarray or np.ndarray
             Named arguments to the function.
+
+        Returns
+        -------
+        result : VMContext
+            The initialized VM context.
         """
         if kwargs:
             func_params = self._exec.get_function_params(func_name)
@@ -543,18 +554,18 @@ class VirtualMachine:
                     idx += 1
             args = new_args
         cargs = _convert_args(args)
-        self._set_input(func_name, *cargs)
+        return self._prepare_context(func_name, *cargs)
 
-    def invoke(self, func_name, *args, **kwargs):
-        """Invoke a function.
+    def run(self, *args, func_name="main", **kwargs):
+        """Run the virtual machine.
 
         Parameters
         ----------
+        args : list[mnm.ndarray] or list[np.ndarray]
+            The arguments to the function.
+
         func_name : str
-            The name of the function.
-
-        args : list[mnm.ndarray] or list[np.ndarray]
-            The arguments to the function.
+            The name of function to run.
 
         kwargs: dict of str to mnm.ndarray or np.ndarray
             Named arguments to the function.
@@ -564,24 +575,5 @@ class VirtualMachine:
         result : Object
             The output.
         """
-        if args or kwargs:
-            self.set_input(func_name, *args, **kwargs)
-        return self._invoke(func_name)
-
-    def run(self, *args, **kwargs):
-        """Run the main function.
-
-        Parameters
-        ----------
-        args : list[mnm.ndarray] or list[np.ndarray]
-            The arguments to the function.
-
-        kwargs: dict of str to mnm.ndarray or np.ndarray
-            Named arguments to the function.
-
-        Returns
-        -------
-        result : Object
-            The output.
-        """
-        return self.invoke("main", *args, **kwargs)
+        ctx = self.prepare_context(func_name, *args, **kwargs)
+        return self._run(ctx)

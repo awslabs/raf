@@ -220,6 +220,4 @@ def test_split_fusion(device):
 
 
 if __name__ == "__main__":
-    # print(mnm.build.with_cuda())
-    # test_cuda_graph([3, 3])
     pytest.main([__file__])
