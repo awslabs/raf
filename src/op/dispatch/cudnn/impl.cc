@@ -11,6 +11,7 @@
 #include "../../schema/likes.h"
 #include "../../schema/list_args.h"
 #include "../../schema/loss.h"
+#include "../../schema/memory.h"
 #include "../../schema/nn.h"
 #include "../../schema/optimizer.h"
 #include "../../schema/reduce.h"

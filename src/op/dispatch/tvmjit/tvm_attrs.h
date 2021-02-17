@@ -7,6 +7,7 @@
 #include "tvm/ir/attrs.h"
 #include "tvm/relay/attrs/nn.h"
 #include "tvm/relay/attrs/reduce.h"
+#include "tvm/relay/attrs/device_copy.h"
 #include "../../schema/ufunc.h"
 
 namespace mnm {
@@ -15,6 +16,7 @@ namespace tvmjit {
 namespace tvm_attrs {
 using tvm::relay::BiasAddAttrs;
 using tvm::relay::Conv2DAttrs;
+using tvm::relay::DeviceCopyAttrs;
 using tvm::relay::ReduceAttrs;
 }  // namespace tvm_attrs
 

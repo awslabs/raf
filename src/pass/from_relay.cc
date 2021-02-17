@@ -92,6 +92,15 @@ MNM_OP_FROM_RELAY("nn.avg_pool2d", [](const Attrs& attrs, const Array<Expr>& arg
   return Call(op, new_args);
 });
 
+MNM_OP_FROM_RELAY("device_copy", [](const Attrs& attrs, const Array<Expr>& args) {
+  static const Op& op = Op::Get("mnm.op.device_copy");
+  Array<Expr> new_args = args;
+  const auto* device_copy_attr = attrs.as<DeviceCopyAttrs>();
+  new_args.push_back(MakeConstant(IntValue::make(device_copy_attr->src_dev_type)));
+  new_args.push_back(MakeConstant(IntValue::make(device_copy_attr->dst_dev_type)));
+  return Call(op, new_args);
+});
+
 struct FromRelayMutator : public ExprMutator {
  public:
   FromRelayMutator() {

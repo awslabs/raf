@@ -459,7 +459,13 @@ SCHEMAS = {
         Arg(name="condition", cxx_type="value::BaseTensorValue"),
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="y", cxx_type="value::BaseTensorValue"),
-    ]
+    ],
+    "memory.h::device_copy": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        # TODO(zhiics) Maybe we should use TVMContext directly?
+        Arg(name="src_dev_type", cxx_type="int", cxx_default=0),
+        Arg(name="dst_dev_type", cxx_type="int", cxx_default=0),
+    ],
 }
 
 

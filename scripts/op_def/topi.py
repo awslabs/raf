@@ -109,6 +109,7 @@ OP_MAP = {
     "mnm.op.compiler_begin": ["annotation.compiler_begin", "relay.attrs.CompilerAttrs", "kOpaque"],
     "mnm.op.compiler_end": ["annotation.compiler_end", "relay.attrs.CompilerAttrs", "kOpaque"],
     "mnm.op.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
+    "mnm.op.device_copy": ["device_copy", "relay.attrs.DeviceCopyAttrs", "kOpaque"],
 }
 
 # pylint: enable=line-too-long
@@ -175,7 +176,7 @@ def collect_op():
         op_name = op_name.value
         if is_black_listed(op_name):
             continue
-        op: relay.Op = get_op(op_name) # pylint: disable=no-member
+        op: relay.Op = get_op(op_name)  # pylint: disable=no-member
         assert op.name == op_name
         attrs = op.attrs_type_key
         fcompute = op.get_attr("FTVMCompute")

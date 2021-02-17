@@ -79,6 +79,8 @@ cross_entropy_dtrue = _APIS.get("mnm.op.imp.cross_entropy_dtrue", None)
 # Defined in ./src/op/regs/regs.cc
 dense = _APIS.get("mnm.op.imp.dense", None)
 # Defined in ./src/op/regs/regs.cc
+device_copy = _APIS.get("mnm.op.imp.device_copy", None)
+# Defined in ./src/op/regs/regs.cc
 divide = _APIS.get("mnm.op.imp.divide", None)
 # Defined in ./src/op/regs/regs.cc
 equal = _APIS.get("mnm.op.imp.equal", None)

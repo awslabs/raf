@@ -17,6 +17,7 @@
 #include "../schema/communication.h"
 #include "../schema/likes.h"
 #include "../schema/loss.h"
+#include "../schema/memory.h"
 #include "../schema/nn.h"
 #include "../schema/optimizer.h"
 #include "../schema/reduce.h"
@@ -75,6 +76,7 @@ static const char cross_entropy[] = "mnm.op.cross_entropy";
 static const char cross_entropy_dpred[] = "mnm.op.cross_entropy_dpred";
 static const char cross_entropy_dtrue[] = "mnm.op.cross_entropy_dtrue";
 static const char dense[] = "mnm.op.dense";
+static const char device_copy[] = "mnm.op.device_copy";
 static const char divide[] = "mnm.op.divide";
 static const char equal[] = "mnm.op.equal";
 static const char erf[] = "mnm.op.erf";
@@ -352,6 +354,14 @@ Attrs ConvDxw(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(5, ffi2schema::IntOrTupleInt, padding);
   MNM_POD(6, ffi2schema::IntOrTupleInt, dilation);
   MNM_POD(7, ffi2schema::Int, groups);
+  return Attrs(attrs);
+}
+
+Attrs DeviceCopy(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::DeviceCopyArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::Int, src_dev_type);
+  MNM_POD(2, ffi2schema::Int, dst_dev_type);
   return Attrs(attrs);
 }
 
@@ -1166,6 +1176,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.dense").set_body([](TVMArgs args, TVMRetValue* r
   MNM_PRELUDE(dense, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.device_copy").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(device_copy, 3, ffi2schema::DeviceCopy,
+              schema::DeviceCopyArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->src_dev_type));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->dst_dev_type));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2194,6 +2214,14 @@ Array<Expr> ConvDxw(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> DeviceCopy(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Int, src_dev_type);
+  MNM_ARG(2, ffi2expr::Int, dst_dev_type);
+  MNM_RET();
+}
+
 Array<Expr> ExpandDims(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2647,6 +2675,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dpred")
 MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dtrue")
     .set_body(MNM_SYMBOLIC_API(cross_entropy_dtrue, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.dense").set_body(MNM_SYMBOLIC_API(dense, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.device_copy")
+    .set_body(MNM_SYMBOLIC_API(device_copy, 3, DeviceCopy));
 MNM_REGISTER_GLOBAL("mnm.op.sym.divide").set_body(MNM_SYMBOLIC_API(divide, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.equal").set_body(MNM_SYMBOLIC_API(equal, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.erf").set_body(MNM_SYMBOLIC_API(erf, 1, Unary));
@@ -2979,6 +3009,15 @@ Attrs ConvDxw(const Array<Value>& values) {
   MNM_REQUIRED(5, value2schema::IntOrTupleInt, padding);
   MNM_REQUIRED(6, value2schema::IntOrTupleInt, dilation);
   MNM_REQUIRED(7, value2schema::Int, groups);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs DeviceCopy(const Array<Value>& values) {
+  MNM_PRELUDE(1, 3, schema::DeviceCopyArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_OPTIONAL(1, value2schema::Int, src_dev_type);
+  MNM_OPTIONAL(2, value2schema::Int, dst_dev_type);
   return Attrs(attrs);
 }
 
@@ -3730,6 +3769,21 @@ int ConvDxw(const std::string& field) {
   }
   if (field == "groups") {
     return 7;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int DeviceCopy(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "src_dev_type") {
+    return 1;
+  }
+  if (field == "dst_dev_type") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -4640,6 +4694,10 @@ MNM_BIND_SCHEMA("mnm.op.dense", names::dense,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.dense", names::dense,
                             schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.device_copy", names::device_copy,
+                value2schema::DeviceCopy);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.device_copy", names::device_copy,
+                            schema_field_idx::DeviceCopy);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.divide", names::divide,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.divide", names::divide,
@@ -5003,6 +5061,7 @@ MNM_REGISTER_OBJECT_REFLECT(CompilerArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
+MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherArgs);

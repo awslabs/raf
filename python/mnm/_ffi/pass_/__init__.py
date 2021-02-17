@@ -7,6 +7,7 @@ from ._internal import AutoDataParallel
 from ._internal import AutoDiff
 from ._internal import BindParam
 from ._internal import CanonicalizeOps
+from ._internal import ContextAnalysis
 from ._internal import DeadCodeElimination
 from ._internal import ExtractBinding
 from ._internal import FoldConstant

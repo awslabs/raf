@@ -126,6 +126,7 @@ OPS = [
     Op(name="full", schema_name="full"),
     Op(name="where", schema_name="where"),
     Op(name="logical_and", schema_name="binary_ufunc"),
+    Op(name="device_copy", schema_name="device_copy"),
 ]
 
 def by_name():
