@@ -82,6 +82,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/op/regs/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/grad/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/tvmjit/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/from_relay/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/ty/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
