@@ -51,6 +51,31 @@ HashKey ArgsortHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Argsort, "mnm.op.argsort", ArgsortArgs, ArgsortSchema2Args, ArgsortSchemaArgNames,
            ArgsortSchema2Attrs, ArgsortHasher);
 
+std::vector<Value> SortSchema2Args(const SortArgs* args) {
+  return {args->data};
+}
+
+std::vector<std::string> SortSchemaArgNames(const op::CallValues& call) {
+  return {"data"};
+}
+
+Attrs SortSchema2Attrs(const SortArgs* args) {
+  auto attrs = make_object<ArgsortAttrs>();
+  attrs->axis = args->axis;
+  attrs->is_ascend = args->is_ascend;
+  return Attrs(attrs);
+}
+
+HashKey SortHasher(const std::vector<Type>& param_types, const Type& y_type, const SortArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  key << args->is_ascend;
+  return key;
+}
+
+MNM_TVMJIT(Sort, "mnm.op.sort", SortArgs, SortSchema2Args, SortSchemaArgNames, SortSchema2Attrs,
+           SortHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

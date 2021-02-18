@@ -28,6 +28,15 @@ Type ArgsortInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.argsort", "Argsort", ArgsortInfer);
 
+Type SortInfer(const CallValues& value) {
+  const auto* args = value->args.as<SortArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  return data;
+}
+
+MNM_OP_TYPE("mnm.op.sort", "Sort", SortInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

@@ -29,10 +29,11 @@ __all__ = [
     "repeat", "reshape", "reverse", "reverse_sequence", "round",
     "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx", "where",
+    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
+    "stream_sync", "strided_slice", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "where",
 ]
 
 @set_module("mnm")
@@ -808,6 +809,13 @@ def softmax_dx(x, y, dy, axis=-1):
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.softmax_dx(x, y, dy, axis))
+
+@set_module("mnm")
+def sort(data, axis=-1, is_ascend=True):
+    data = imp_utils.to_tensor(data)
+    axis = imp_utils.to_int(axis)
+    is_ascend = imp_utils.to_bool(is_ascend)
+    return imp_utils.ret(ffi.sort(data, axis, is_ascend))
 
 @set_module("mnm")
 def split(x, indices_or_sections=None, axis=0):

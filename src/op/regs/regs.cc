@@ -146,6 +146,7 @@ static const char smooth_l1_loss_dpred[] = "mnm.op.smooth_l1_loss_dpred";
 static const char smooth_l1_loss_dtrue[] = "mnm.op.smooth_l1_loss_dtrue";
 static const char softmax[] = "mnm.op.softmax";
 static const char softmax_dx[] = "mnm.op.softmax_dx";
+static const char sort[] = "mnm.op.sort";
 static const char split[] = "mnm.op.split";
 static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
@@ -600,6 +601,14 @@ Attrs SoftmaxDx(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   MNM_POD(3, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+Attrs Sort(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::SortArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::Int, axis);
+  MNM_POD(2, ffi2schema::Bool, is_ascend);
   return Attrs(attrs);
 }
 
@@ -1862,6 +1871,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.softmax_dx").set_body([](TVMArgs args, TVMRetVal
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.sort").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(sort, 3, ffi2schema::Sort, schema::SortArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->is_ascend));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.split").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(split, 3, ffi2schema::Split, schema::SplitArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
@@ -2460,6 +2478,14 @@ Array<Expr> SoftmaxDx(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Sort(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_ARG(2, ffi2expr::Bool, is_ascend);
+  MNM_RET();
+}
+
 Array<Expr> Split(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2764,6 +2790,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.smooth_l1_loss_dtrue")
     .set_body(MNM_SYMBOLIC_API(smooth_l1_loss_dtrue, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax").set_body(MNM_SYMBOLIC_API(softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.softmax_dx").set_body(MNM_SYMBOLIC_API(softmax_dx, 4, SoftmaxDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.sort").set_body(MNM_SYMBOLIC_API(sort, 3, Sort));
 MNM_REGISTER_GLOBAL("mnm.op.sym.split").set_body(MNM_SYMBOLIC_API(split, 3, Split));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt").set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx").set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
@@ -3282,6 +3309,15 @@ Attrs SoftmaxDx(const Array<Value>& values) {
   MNM_REQUIRED(1, value2schema::Tensor, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   MNM_OPTIONAL(3, value2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Sort(const Array<Value>& values) {
+  MNM_PRELUDE(1, 3, schema::SortArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_OPTIONAL(1, value2schema::Int, axis);
+  MNM_OPTIONAL(2, value2schema::Bool, is_ascend);
   return Attrs(attrs);
 }
 
@@ -4270,6 +4306,21 @@ int SoftmaxDx(const std::string& field) {
 }
 
 template <const char* op_name>
+int Sort(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "is_ascend") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Split(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -4962,7 +5013,10 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.softmax", names::softmax,
 MNM_BIND_SCHEMA("mnm.op.softmax_dx", names::softmax_dx,
                 value2schema::SoftmaxDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.softmax_dx", names::softmax_dx,
-                            schema_field_idx::SoftmaxDx);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::SoftmaxDx);         // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.sort", names::sort, value2schema::Sort);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sort", names::sort,
+                            schema_field_idx::Sort);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.split", names::split,
                 value2schema::Split);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.split", names::split,
@@ -5088,6 +5142,7 @@ MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(SortArgs);
 MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
 MNM_REGISTER_OBJECT_REFLECT(SqueezeArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);

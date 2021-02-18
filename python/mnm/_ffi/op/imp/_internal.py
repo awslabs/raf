@@ -219,6 +219,8 @@ softmax = _APIS.get("mnm.op.imp.softmax", None)
 # Defined in ./src/op/regs/regs.cc
 softmax_dx = _APIS.get("mnm.op.imp.softmax_dx", None)
 # Defined in ./src/op/regs/regs.cc
+sort = _APIS.get("mnm.op.imp.sort", None)
+# Defined in ./src/op/regs/regs.cc
 split = _APIS.get("mnm.op.imp.split", None)
 # Defined in ./src/op/regs/regs.cc
 sqrt = _APIS.get("mnm.op.imp.sqrt", None)

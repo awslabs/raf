@@ -121,6 +121,7 @@ OPS = [
     Op(name="gather_nd", schema_name="gather_nd"),
     Op(name="gather_nd_dx", schema_name="gather_nd_dx"),
     Op(name="argsort", schema_name="argsort"),
+    Op(name="sort", schema_name="sort"),
     Op(name="compiler_begin", schema_name="compiler"),
     Op(name="compiler_end", schema_name="compiler"),
     Op(name="full", schema_name="full"),

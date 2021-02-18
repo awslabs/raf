@@ -28,10 +28,11 @@ __all__ = [
     "repeat", "reshape", "reverse", "reverse_sequence", "round",
     "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx", "where",
+    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
+    "stream_sync", "strided_slice", "subtract", "sum", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "where",
 ]
 
 def _allreduce(x):
@@ -699,6 +700,12 @@ def softmax_dx(x, y, dy, axis=-1):
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.softmax_dx(x, y, dy, axis))
+
+def sort(data, axis=-1, is_ascend=True):
+    data = sym_utils.to_tensor(data)
+    axis = sym_utils.to_int(axis)
+    is_ascend = sym_utils.to_bool(is_ascend)
+    return Symbol.from_expr(ffi.sort(data, axis, is_ascend))
 
 def split(x, indices_or_sections=None, axis=0):
     x = sym_utils.to_tensor(x)

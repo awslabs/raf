@@ -109,6 +109,7 @@ from ._internal import smooth_l1_loss_dpred
 from ._internal import smooth_l1_loss_dtrue
 from ._internal import softmax
 from ._internal import softmax_dx
+from ._internal import sort
 from ._internal import split
 from ._internal import sqrt
 from ._internal import sqrt_dx

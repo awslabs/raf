@@ -20,6 +20,14 @@ class ArgsortArgs : public ir::AttrsNode<ArgsortArgs> {
   std::string dtype{"int"};
   MNM_OP_SCHEMA(ArgsortArgs, "mnm.args.argsort");
 };
+
+class SortArgs : public ir::AttrsNode<SortArgs> {
+ public:
+  value::BaseTensorValue data;
+  int axis{-1};
+  bool is_ascend{true};
+  MNM_OP_SCHEMA(SortArgs, "mnm.args.sort");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm
