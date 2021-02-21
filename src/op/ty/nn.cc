@@ -18,12 +18,6 @@ namespace mnm {
 namespace op {
 namespace type {
 
-using schema::BatchNormArgs;
-using schema::BiasAddArgs;
-using schema::ConvArgs;
-using schema::ConvDxwArgs;
-using schema::PoolArgs;
-using schema::SoftmaxArgs;
 using tvm::Array;
 using tvm::Downcast;
 using tvm::Integer;
@@ -149,6 +143,19 @@ Type Pool2DInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.max_pool2d", "Pool2D", Pool2DInfer);
 MNM_OP_TYPE("mnm.op.avg_pool2d", "Pool2D", Pool2DInfer);
 
+Type AdaptivePool2DInfer(const CallValues& value) {
+  const auto* args = value->args.as<AdaptivePoolArgs>();
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> in_shape = data_layout_converter.ForwardShape(x->shape);
+  std::vector<PrimExpr> oshape{in_shape[0], in_shape[1], Integer(args->shape[0]),
+                               Integer(args->shape[1])};
+  return TensorType(data_layout_converter.BackwardShape(oshape), x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.adaptive_max_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
+MNM_OP_TYPE("mnm.op.adaptive_avg_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
+
 template <typename T>
 Type GeneralDxInfer(const CallValues& value) {
   const auto* args = value->args.as<T>();
@@ -159,6 +166,10 @@ Type GeneralDxInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.max_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
 MNM_OP_TYPE("mnm.op.avg_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
+MNM_OP_TYPE("mnm.op.adaptive_max_pool2d_dx", "AdaptivePool2DDx",
+            GeneralDxInfer<AdaptivePoolDxArgs>);
+MNM_OP_TYPE("mnm.op.adaptive_avg_pool2d_dx", "AdaptivePool2DDx",
+            GeneralDxInfer<AdaptivePoolDxArgs>);
 
 Type BatchNormInferInfer(const CallValues& value) {
   const auto* args = value->args.as<BatchNormArgs>();

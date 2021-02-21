@@ -35,6 +35,10 @@ using tvm::te::Tensor;
           })
 
 MNM_TVM_OP("mnm.op.abs", "abs");
+MNM_TVM_OP("mnm.op.adaptive_avg_pool2d", "nn.adaptive_avg_pool2d");
+MNM_TVM_OP("mnm.op.adaptive_avg_pool2d_dx", "nn.avg_pool2d_grad");
+MNM_TVM_OP("mnm.op.adaptive_max_pool2d", "nn.adaptive_max_pool2d");
+MNM_TVM_OP("mnm.op.adaptive_max_pool2d_dx", "nn.max_pool2d_grad");
 MNM_TVM_OP("mnm.op.add", "add");
 MNM_TVM_OP("mnm.op.all", "all");
 MNM_TVM_OP("mnm.op.any", "any");

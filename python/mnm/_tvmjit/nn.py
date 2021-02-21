@@ -105,6 +105,11 @@ _reg.register_schedule("mnm.op.max_pool2d", strategy.schedule_pool)
 
 _reg.register_schedule("mnm.op.max_pool2d_dx", strategy.schedule_pool_grad)
 
+_reg.register_schedule("mnm.op.adaptive_avg_pool2d", strategy.schedule_adaptive_pool)
+_reg.register_schedule("mnm.op.adaptive_avg_pool2d_dx", strategy.schedule_pool_grad)
+_reg.register_schedule("mnm.op.adaptive_max_pool2d", strategy.schedule_adaptive_pool)
+_reg.register_schedule("mnm.op.adaptive_max_pool2d_dx", strategy.schedule_pool_grad)
+
 _reg.register_schedule("mnm.op.log_softmax", strategy.schedule_log_softmax)
 
 @register_compute("mnm.op.log_softmax_dx")

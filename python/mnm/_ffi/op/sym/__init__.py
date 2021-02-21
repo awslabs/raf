@@ -3,6 +3,10 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from ._internal import _allreduce
 from ._internal import abs
+from ._internal import adaptive_avg_pool2d
+from ._internal import adaptive_avg_pool2d_dx
+from ._internal import adaptive_max_pool2d
+from ._internal import adaptive_max_pool2d_dx
 from ._internal import add
 from ._internal import all
 from ._internal import any

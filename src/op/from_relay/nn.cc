@@ -99,6 +99,17 @@ MNM_OP_FROM_RELAY("nn.avg_pool2d", "mnm.op.avg_pool2d",
                     return mnm_args;
                   });
 
+Array<Expr> AdaptivePoolFromRelay(const Attrs& attrs, const Array<Expr>& args) {
+  Array<Expr> mnm_args = args;
+  const auto* relay_attrs = attrs.as<AdaptivePool2DAttrs>();
+  mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->output_size)));
+  mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->layout)));
+  return mnm_args;
+}
+
+MNM_OP_FROM_RELAY("nn.adaptive_max_pool2d", "mnm.op.adaptive_max_pool2d", AdaptivePoolFromRelay);
+MNM_OP_FROM_RELAY("nn.adaptive_avg_pool2d", "mnm.op.adaptive_avg_pool2d", AdaptivePoolFromRelay);
+
 MNM_OP_FROM_RELAY("nn.layer_norm", "mnm.op.layer_norm",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;

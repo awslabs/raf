@@ -12,6 +12,23 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class AdaptivePoolArgs : public ir::AttrsNode<AdaptivePoolArgs> {
+ public:
+  value::BaseTensorValue x;
+  std::vector<int64_t> shape;
+  std::string layout{"NCHW"};
+  MNM_OP_SCHEMA(AdaptivePoolArgs, "mnm.args.adaptive_pool");
+};
+
+class AdaptivePoolDxArgs : public ir::AttrsNode<AdaptivePoolDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
+  std::vector<int64_t> shape;
+  MNM_OP_SCHEMA(AdaptivePoolDxArgs, "mnm.args.adaptive_pool_dx");
+};
+
 class BatchNormArgs : public ir::AttrsNode<BatchNormArgs> {
  public:
   value::BaseTensorValue x;

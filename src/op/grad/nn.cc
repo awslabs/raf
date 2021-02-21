@@ -57,6 +57,31 @@ const char AVG_POOL2D_DX[] = "mnm.op.avg_pool2d_dx";
 auto AvgPool2dGrad = PoolGrad<AVG_POOL2D_DX>;
 MNM_OP_GRAD("mnm.op.avg_pool2d", AvgPool2dGrad);
 
+template <const char* GradOp>
+Array<Expr> AdaptivePoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                             const Expr& dy) {
+  static auto op_dx = Op::Get(GradOp);
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& x = call->args[0];
+  const Expr& shape = call->args[1];
+  const Expr& layout = call->args[2];
+  const auto* layout_const = layout.as<ConstantNode>();
+  if (layout_const) {
+    const auto* layout_str = layout_const->value.as<value::StringValueObj>();
+    CHECK(layout_str && layout_str->data == "NCHW")
+        << "AdaptivePoolGrad support NCHW layout only. Layout = " << layout_str->data;
+  }
+  return {Call(op_dx, {x, y, dy, shape})};
+}
+
+const char ADAPTIVE_MAX_POOL2D_DX[] = "mnm.op.adaptive_max_pool2d_dx";
+auto AdaptiveMaxPool2dGrad = AdaptivePoolGrad<ADAPTIVE_MAX_POOL2D_DX>;
+MNM_OP_GRAD("mnm.op.adaptive_max_pool2d", AdaptiveMaxPool2dGrad);
+
+const char ADAPTIVE_AVG_POOL2D_DX[] = "mnm.op.adaptive_avg_pool2d_dx";
+auto AdaptiveAvgPool2dGrad = AdaptivePoolGrad<ADAPTIVE_AVG_POOL2D_DX>;
+MNM_OP_GRAD("mnm.op.adaptive_avg_pool2d", AdaptiveAvgPool2dGrad);
+
 Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                        const Expr& dy) {
   // schema for conv2d is:

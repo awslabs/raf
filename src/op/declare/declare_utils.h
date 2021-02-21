@@ -15,6 +15,19 @@ inline int NormalizeAxis(int axis, int ndim) {
   return axis < 0 ? axis + ndim : axis;
 }
 
+template <typename T>
+inline void DeclareGeneralDx(const CallValues& call) {
+  using namespace mnm::value;
+  const auto* args = call->args.as<T>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->ctx;
+}
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -644,6 +644,36 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
     check_from_relay(model, r_func, [m_x])
 
 
+@pytest.mark.parametrize("out_shape", [(1, 1), (4, 4)])
+@pytest.mark.parametrize("layout", ["NCHW", "NHWC"])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        [mnm._op.sym.adaptive_max_pool2d, _relay.nn.adaptive_max_pool2d],
+        [mnm._op.sym.adaptive_avg_pool2d, _relay.nn.adaptive_avg_pool2d],
+    ])
+def test_mnm_adaptive_pool2d(out_shape, layout, funcs):
+    mnm_fwd, relay_fwd = funcs
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm_fwd(x, shape=out_shape, layout=layout)
+
+    model = TestModel()
+    m_x, _ = randn([8, 3, 32, 32])
+
+    # relay ir
+    r_x = _relay.var("x", shape=[8, 3, 32, 32])
+    r_c = relay_fwd(r_x, out_shape, layout)
+    r_func = _relay.Function(params=[r_x], body=r_c)
+
+    check_from_relay(model, r_func, [m_x])
+
+
 @pytest.mark.skip(reason="Meta layer_norm misses gamma and beta")
 @pytest.mark.parametrize("shape", [(5, 4, 6, 9)])
 @pytest.mark.parametrize("axis", [2])

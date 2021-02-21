@@ -187,5 +187,14 @@ static void GetPadHW(const std::vector<int64_t>& padding, int64_t* pad_h, int64_
   }
 }
 
+inline void GetAdaptivePoolKernel(int64_t ind, int64_t outd, int64_t* kernel_size, int64_t* stride,
+                                  int64_t* padding) {
+  CHECK_EQ(ind % outd, 0) << "Not supported: input dimension = " << ind
+                          << ", output dimension = " << outd;
+  *stride = ind / outd;
+  *kernel_size = ind - (outd - 1) * *stride;
+  *padding = 0;
+}
+
 }  // namespace op
 }  // namespace mnm

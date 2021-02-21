@@ -1,4 +1,4 @@
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, no-self-use
 import numpy as np
 import pytest
 import torch
@@ -18,7 +18,7 @@ def test_batch_matmul(b, n, m, k, device):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, m_a, m_b):  # pylint: disable=no-self-use
+        def forward(self, m_a, m_b):
             return mnm.batch_matmul(m_a, m_b)
     # check forward
     model = BatchMatmul()
@@ -49,7 +49,7 @@ def test_dense(n, m, k, device):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, m_a, m_b):  # pylint: disable=no-self-use
+        def forward(self, m_a, m_b):
             return mnm.dense(m_a, m_b)
     # check forward
     model = Dense()
@@ -71,7 +71,6 @@ def test_dense(n, m, k, device):
 
 
 # pylint: disable=no-member
-# pylint: disable=no-self-use
 # pylint: disable=protected-access
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -119,7 +118,6 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
 
 
 # pylint: disable=no-member
-# pylint: disable=no-self-use
 # pylint: disable=protected-access
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -213,7 +211,7 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, x, w):  # pylint: disable=no-self-use
+        def forward(self, x, w):
             return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
 
     model = Conv2D()
@@ -251,7 +249,7 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
             pass
 
         @mnm.model.trace
-        def forward(self, x, w):  # pylint: disable=no-self-use
+        def forward(self, x, w):
             x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
             w = mnm.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
             conv = mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1,
@@ -291,7 +289,7 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use
+        def forward(self, x):
             return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding)
 
     model = TestModel()
@@ -300,6 +298,39 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs):
     m_y = model(m_x)
     v_y = run_vm_model(model, device, [m_x])
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
+    check(m_y, t_y)
+    check(v_y, t_y)
+    # backward
+    m_dy, t_dy = randn_torch(m_y.shape, dtype=dtype, device=device)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check(m_x.grad, t_x.grad)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("out_shape", [(1, 1), (4, 4)])
+@pytest.mark.parametrize(
+    "funcs",
+    [
+        [mnm._op.sym.adaptive_max_pool2d, torch.nn.functional.adaptive_max_pool2d],
+        [mnm._op.sym.adaptive_avg_pool2d, torch.nn.functional.adaptive_avg_pool2d],
+    ])
+def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
+    mnm_fwd, torch_fwd = funcs
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm_fwd(x, out_shape)
+    model = TestModel()
+    # forward
+    m_x, t_x = randn_torch(data_shape, dtype=dtype, device=device, requires_grad=True)
+    m_y = model(m_x)
+    v_y = run_vm_model(model, device, [m_x])
+    t_y = torch_fwd(t_x, out_shape)
     check(m_y, t_y)
     check(v_y, t_y)
     # backward
@@ -333,7 +364,7 @@ def test_pool2d_nhwc(device, dtype, data_shape, kernel, stride, padding, funcs):
             pass
 
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use
+        def forward(self, x):
             x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
             pool = mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, layout="NHWC")
             # NHWC -> NCHW
@@ -360,7 +391,7 @@ def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, m_a, m_b):  # pylint: disable=no-self-use
+        def forward(self, m_a, m_b):
             mnm_op = [[mnm.matmul, mnm.matmul_nt],
                       [mnm.matmul_tn, mnm.matmul_tt]]
             mnm_op = mnm_op[transpose_a][transpose_b]
@@ -400,7 +431,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+        def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=too-many-arguments
             return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
 
     model = TestModel()
@@ -415,6 +446,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+@with_seed(0)
 def test_mnm_batch_norm_train(shape, momentum, eps, device):
     # pylint: disable=attribute-defined-outside-init
     stats_shape = [shape[1]]
@@ -432,7 +464,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
             self.m_v = m_v
 
         @mnm.model.trace
-        def forward(self, m_x, m_w, m_b):  # pylint: disable=no-self-use,too-many-arguments
+        def forward(self, m_x, m_w, m_b):  # pylint: disable=too-many-arguments
             result = mnm.batch_norm_train(m_x, self.m_m, self.m_v, m_w, m_b, momentum, eps)
             trace_mutate_attr(self, "m_m", result[1])
             trace_mutate_attr(self, "m_v", result[2])
@@ -478,7 +510,7 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
             pass
 
         @mnm.model.trace
-        def forward(self, m_x):  # pylint: disable=no-self-use
+        def forward(self, m_x):
             return mnm.pad(m_x, pad_width, pad_value, pad_mode)
 
     m_x, t_x = randn_torch(shape, device=device, dtype=dtype)

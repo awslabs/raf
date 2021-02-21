@@ -8,32 +8,32 @@ from mnm._core.core_utils import set_module
 from . import imp_utils
 
 __all__ = [
-    "_allreduce", "abs", "add", "all", "any",
-    "argmax", "argmin", "argsort", "atan", "avg_pool2d",
-    "avg_pool2d_dx", "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train",
-    "batch_norm_train_dxwb", "bias_add", "broadcast_to", "broadcast_to_like", "cast",
-    "cast_like", "ceil", "clip", "clip_dx", "collapse_sum_like",
-    "compiler_begin", "compiler_end", "concatenate", "concatenate_dx", "conv2d",
-    "conv2d_dw", "conv2d_dx", "copy", "cos", "cross_entropy",
-    "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy", "divide",
-    "equal", "erf", "erf_dx", "exp", "expand_dims",
-    "floor", "full", "gather", "gather_dx", "gather_nd",
-    "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
-    "greater_equal", "layer_norm", "layer_norm_dx", "less", "less_equal",
-    "log", "log_softmax", "log_softmax_dx", "logical_and", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
-    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
-    "min", "minimum", "mod", "multiply", "negative",
-    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
-    "pad", "power", "prod", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "round",
-    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
-    "stream_sync", "strided_slice", "subtract", "sum", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
-    "where",
+    "_allreduce", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx", "adaptive_max_pool2d",
+    "adaptive_max_pool2d_dx", "add", "all", "any", "argmax",
+    "argmin", "argsort", "atan", "avg_pool2d", "avg_pool2d_dx",
+    "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
+    "bias_add", "broadcast_to", "broadcast_to_like", "cast", "cast_like",
+    "ceil", "clip", "clip_dx", "collapse_sum_like", "compiler_begin",
+    "compiler_end", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
+    "conv2d_dx", "copy", "cos", "cross_entropy", "cross_entropy_dpred",
+    "cross_entropy_dtrue", "dense", "device_copy", "divide", "equal",
+    "erf", "erf_dx", "exp", "expand_dims", "floor",
+    "full", "gather", "gather_dx", "gather_nd", "gather_nd_dx",
+    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
+    "layer_norm", "layer_norm_dx", "less", "less_equal", "log",
+    "log_softmax", "log_softmax_dx", "logical_and", "logical_not", "matmul",
+    "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
+    "max_pool2d_dx", "maximum", "mean", "mean_dx", "min",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "pad",
+    "power", "prod", "relu", "relu_dx", "repeat",
+    "reshape", "reverse", "reverse_sequence", "round", "rsqrt",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
+    "softmax", "softmax_dx", "sort", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
+    "strided_slice", "subtract", "sum", "take", "take_dx",
+    "tanh", "tanh_dx", "transpose", "transpose_dx", "where",
 ]
 
 @set_module("mnm")
@@ -45,6 +45,36 @@ def _allreduce(x):
 def abs(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.abs(x))
+
+@set_module("mnm")
+def adaptive_avg_pool2d(x, shape, layout="NCHW"):
+    x = imp_utils.to_tensor(x)
+    shape = imp_utils.to_int_tuple(shape)
+    layout = imp_utils.to_string(layout)
+    return imp_utils.ret(ffi.adaptive_avg_pool2d(x, shape, layout))
+
+@set_module("mnm")
+def adaptive_avg_pool2d_dx(x, y, dy, shape):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    shape = imp_utils.to_int_tuple(shape)
+    return imp_utils.ret(ffi.adaptive_avg_pool2d_dx(x, y, dy, shape))
+
+@set_module("mnm")
+def adaptive_max_pool2d(x, shape, layout="NCHW"):
+    x = imp_utils.to_tensor(x)
+    shape = imp_utils.to_int_tuple(shape)
+    layout = imp_utils.to_string(layout)
+    return imp_utils.ret(ffi.adaptive_max_pool2d(x, shape, layout))
+
+@set_module("mnm")
+def adaptive_max_pool2d_dx(x, y, dy, shape):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    shape = imp_utils.to_int_tuple(shape)
+    return imp_utils.ret(ffi.adaptive_max_pool2d_dx(x, y, dy, shape))
 
 @set_module("mnm")
 def add(x1, x2, out=None, where=None):

@@ -7,6 +7,14 @@ _allreduce = _APIS.get("mnm.op.sym._allreduce", None)
 # Defined in ./src/op/regs/regs.cc
 abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc
+adaptive_avg_pool2d = _APIS.get("mnm.op.sym.adaptive_avg_pool2d", None)
+# Defined in ./src/op/regs/regs.cc
+adaptive_avg_pool2d_dx = _APIS.get("mnm.op.sym.adaptive_avg_pool2d_dx", None)
+# Defined in ./src/op/regs/regs.cc
+adaptive_max_pool2d = _APIS.get("mnm.op.sym.adaptive_max_pool2d", None)
+# Defined in ./src/op/regs/regs.cc
+adaptive_max_pool2d_dx = _APIS.get("mnm.op.sym.adaptive_max_pool2d_dx", None)
+# Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.sym.add", None)
 # Defined in ./src/op/regs/regs.cc
 all = _APIS.get("mnm.op.sym.all", None)

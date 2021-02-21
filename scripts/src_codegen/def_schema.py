@@ -51,6 +51,13 @@ SCHEMAS = {
         Arg(name="include_pad", cxx_type="bool", cxx_default=True),
         Arg(name="layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
     ],
+    "nn.h::adaptive_pool": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
+    ],
     "nn.h::pad": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         # [(w1, w2), ..., ]
@@ -125,6 +132,14 @@ SCHEMAS = {
             cxx_normalizer="IntTuple"),
         Arg(name="ceil_mode", cxx_type="bool"),
         Arg(name="include_pad", cxx_type="bool"),
+    ],
+    "nn.h::adaptive_pool_dx": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="y", cxx_type="value::BaseTensorValue"),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
     ],
     "nn.h::softmax_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

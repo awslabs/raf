@@ -301,7 +301,8 @@ HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddSchema2Args, BiasAddSchemaArgNames,
            BiasAddSchema2Attrs, BiasAddHasher);
 
-std::vector<Value> PoolSchema2Args(const PoolArgs* args) {
+template <typename T>
+std::vector<Value> PoolSchema2Args(const T* args) {
   return {args->x};
 }
 
@@ -359,12 +360,37 @@ HashKey PoolHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(MaxPool2D, "mnm.op.max_pool2d", PoolArgs, PoolSchema2Args, PoolSchemaArgNames,
+MNM_TVMJIT(MaxPool2D, "mnm.op.max_pool2d", PoolArgs, PoolSchema2Args<PoolArgs>, PoolSchemaArgNames,
            MaxPoolSchema2Attrs, PoolHasher);
-MNM_TVMJIT(AvgPool2D, "mnm.op.avg_pool2d", PoolArgs, PoolSchema2Args, PoolSchemaArgNames,
+MNM_TVMJIT(AvgPool2D, "mnm.op.avg_pool2d", PoolArgs, PoolSchema2Args<PoolArgs>, PoolSchemaArgNames,
            AvgPoolSchema2Attrs, PoolHasher);
 
-std::vector<Value> PoolDxSchema2Args(const PoolDxArgs* args) {
+Attrs AdaptivePoolSchema2Attrs(const AdaptivePoolArgs* args) {
+  const DLTensor* x = args->x;
+  auto attrs = make_object<tvm::relay::AdaptivePool2DAttrs>();
+  for (size_t i = 0; i < args->shape.size(); ++i) {
+    attrs->output_size.push_back(Integer(args->shape[i]));
+  }
+  attrs->layout = args->layout;
+  return Attrs(attrs);
+}
+
+HashKey AdaptivePoolHasher(const std::vector<Type>& param_types, const Type& y_type,
+                           const AdaptivePoolArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->shape;
+  return key;
+}
+
+MNM_TVMJIT(AdaptiveMaxPool2D, "mnm.op.adaptive_max_pool2d", AdaptivePoolArgs,
+           PoolSchema2Args<AdaptivePoolArgs>, PoolSchemaArgNames, AdaptivePoolSchema2Attrs,
+           AdaptivePoolHasher);
+MNM_TVMJIT(AdaptiveAvgPool2D, "mnm.op.adaptive_avg_pool2d", AdaptivePoolArgs,
+           PoolSchema2Args<AdaptivePoolArgs>, PoolSchemaArgNames, AdaptivePoolSchema2Attrs,
+           AdaptivePoolHasher);
+
+template <typename T>
+std::vector<Value> PoolDxSchema2Args(const T* args) {
   return {args->dy, args->x};
 }
 
@@ -423,10 +449,61 @@ HashKey PoolDxHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(AvgPool2DDx, "mnm.op.avg_pool2d_dx", PoolDxArgs, PoolDxSchema2Args, PoolDxSchemaArgNames,
-           AvgPoolDxSchema2Attrs, PoolDxHasher);
-MNM_TVMJIT(MaxPool2DDx, "mnm.op.max_pool2d_dx", PoolDxArgs, PoolDxSchema2Args, PoolDxSchemaArgNames,
-           MaxPoolDxSchema2Attrs, PoolDxHasher);
+MNM_TVMJIT(AvgPool2DDx, "mnm.op.avg_pool2d_dx", PoolDxArgs, PoolDxSchema2Args<PoolDxArgs>,
+           PoolDxSchemaArgNames, AvgPoolDxSchema2Attrs, PoolDxHasher);
+MNM_TVMJIT(MaxPool2DDx, "mnm.op.max_pool2d_dx", PoolDxArgs, PoolDxSchema2Args<PoolDxArgs>,
+           PoolDxSchemaArgNames, MaxPoolDxSchema2Attrs, PoolDxHasher);
+
+Attrs AdaptiveAvgPoolDxSchema2Attrs(const AdaptivePoolDxArgs* args) {
+  const DLTensor* x = args->x;
+  auto attrs = make_object<tvm::relay::AvgPool2DAttrs>();
+  std::vector<int64_t> out_hw = args->shape;
+  std::vector<int64_t> in_hw = {/*h=*/x->shape[2], /*w=*/x->shape[3]};
+  CHECK_EQ(out_hw.size(), in_hw.size());
+  for (size_t i = 0; i < out_hw.size(); ++i) {
+    int64_t stride, kernel_size, padding;
+    GetAdaptivePoolKernel(in_hw[i], out_hw[i], &kernel_size, &stride, &padding);
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride));
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding));
+    attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel_size));
+  }
+  attrs->ceil_mode = false;
+  attrs->count_include_pad = true;
+  attrs->layout = "NCHW";
+  return Attrs(attrs);
+}
+
+Attrs AdaptiveMaxPoolDxSchema2Attrs(const AdaptivePoolDxArgs* args) {
+  const DLTensor* x = args->x;
+  auto attrs = make_object<tvm::relay::MaxPool2DAttrs>();
+  std::vector<int64_t> out_hw = args->shape;
+  std::vector<int64_t> in_hw = {/*h=*/x->shape[2], /*w=*/x->shape[3]};
+  CHECK_EQ(out_hw.size(), in_hw.size());
+  for (size_t i = 0; i < out_hw.size(); ++i) {
+    int64_t stride, kernel_size, padding;
+    GetAdaptivePoolKernel(in_hw[i], out_hw[i], &kernel_size, &stride, &padding);
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride));
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding));
+    attrs->pool_size.push_back(IntImm(tvm::runtime::DataType::Int(64), kernel_size));
+  }
+  attrs->ceil_mode = false;
+  attrs->layout = "NCHW";
+  return Attrs(attrs);
+}
+
+HashKey AdaptivePoolDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                             const AdaptivePoolDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->shape;
+  return key;
+}
+
+MNM_TVMJIT(AdaptiveAvgPool2DDx, "mnm.op.adaptive_avg_pool2d_dx", AdaptivePoolDxArgs,
+           PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames,
+           AdaptiveAvgPoolDxSchema2Attrs, AdaptivePoolDxHasher);
+MNM_TVMJIT(AdaptiveMaxPool2DDx, "mnm.op.adaptive_max_pool2d_dx", AdaptivePoolDxArgs,
+           PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames,
+           AdaptiveMaxPoolDxSchema2Attrs, AdaptivePoolDxHasher);
 
 std::vector<Value> LayerNormSchema2Args(const LayerNormArgs* args) {
   return {args->x};

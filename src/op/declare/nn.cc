@@ -137,6 +137,38 @@ void Pool2D(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 MNM_OP_DECLARE("mnm.op.avg_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
+void AdaptivePool2D(const CallValues& call) {
+  const auto* args = call->args.as<AdaptivePoolArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  CHECK_EQ(x->ndim, 4);
+  tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> in_shape;
+  for (int i = 0; i < x->ndim; ++i) {
+    in_shape.push_back(tvm::Integer(x->shape[i]));
+  }
+  in_shape = data_layout_converter.ForwardShape(in_shape);
+  tvm::Array<tvm::PrimExpr> out_shape{in_shape[0], in_shape[1], Integer(args->shape[0]),
+                                      Integer(args->shape[1])};
+  out_shape = data_layout_converter.BackwardShape(out_shape);
+  std::vector<int64_t> out;
+  for (size_t i = 0; i < out_shape.size(); ++i) {
+    const auto* s = out_shape[i].as<IntImmNode>();
+    CHECK(s != nullptr);
+    out.push_back(s->value);
+  }
+  call->out = TensorValue::Assemble(
+      /*ctx=*/x->ctx,
+      /*dtype=*/x->dtype,
+      /*shape=*/out);
+  call->device = x->ctx;
+}
+
+MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d", AdaptivePool2D)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d", AdaptivePool2D)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+
 void Softmax(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxArgs>();
   CHECK(args != nullptr);
@@ -193,35 +225,18 @@ void Conv2dDxw(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
-void Pool2DDx(const CallValues& call) {
-  const auto* args = call->args.as<PoolDxArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
-  call->device = x->ctx;
-}
-
-MNM_OP_DECLARE("mnm.op.max_pool2d_dx", Pool2DDx)
+MNM_OP_DECLARE("mnm.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>)
     .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", Pool2DDx)
+MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>)
     .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-
-void SoftmaxDx(const CallValues& call) {
-  const auto* args = call->args.as<SoftmaxDxArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
-  call->device = x->ctx;
-}
-
-MNM_OP_DECLARE("mnm.op.softmax_dx", SoftmaxDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
-MNM_OP_DECLARE("mnm.op.log_softmax_dx", SoftmaxDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.log_softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormTrainDxwbArgs>();
@@ -270,18 +285,8 @@ void LayerNorm(const CallValues& call) {
   call->device = x->ctx;
 }
 MNM_OP_DECLARE("mnm.op.layer_norm", LayerNorm).set_attr<TOpPattern>("TOpPattern", kOpaque);
-
-void LayerNormDx(const CallValues& call) {
-  const auto* args = call->args.as<LayerNormDxArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
-  call->device = x->ctx;
-}
-MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.layer_norm_dx", DeclareGeneralDx<LayerNormDxArgs>)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 void Pad(const CallValues& call) {
   const auto* args = call->args.as<PadArgs>();
