@@ -31,15 +31,17 @@ class TestModel(mnm.Model):
     [(1, 1), (2, 2, 2)],
 ])
 @pytest.mark.parametrize("axis", [0, 1, -1])
-def test_take(shape, axis, device):
+@pytest.mark.parametrize("mode", ["clip", "wrap"])
+def test_take(shape, axis, device, mode):
     size = reduce(operator.mul, shape[0], 1) if axis is None else shape[0][axis]
+    size = size + 10
     m_x, n_x = randn(shape[0], device=device)
     m_x.requires_grad = True
     m_indices, n_indices = randint(shape[1], low=0, high=size, device=device)
-    model = TestModel(mnm._op.sym.take, axis=axis)
+    model = TestModel(mnm._op.sym.take, axis=axis, mode=mode)
     m_y = model(m_x, m_indices)
     v_y = run_vm_model(model, device, [m_x, m_indices])
-    n_y = np.take(n_x, n_indices, axis=axis, mode="clip")
+    n_y = np.take(n_x, n_indices, axis=axis, mode=mode)
     # check forward
     check(m_y, n_y)
     check(v_y, n_y)
@@ -50,7 +52,7 @@ def test_take(shape, axis, device):
     mx_dy = mx.nd.array(n_dy)
     mx_indices = mx.nd.array(n_indices)
     with mx.autograd.record():
-        mx_y = mx.nd.take(mx_x, indices=mx_indices, axis=axis, mode="clip")
+        mx_y = mx.nd.take(mx_x, indices=mx_indices, axis=axis, mode=mode)
         mx_y.backward(mx_dy)
     m_y.backward(m_dy)
     check(m_x.grad, mx_x.grad.asnumpy())

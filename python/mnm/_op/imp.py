@@ -885,20 +885,22 @@ def sum(x, axis=(), keepdims=0):
     return imp_utils.ret(ffi.sum(x, axis, keepdims))
 
 @set_module("mnm")
-def take(x, indices, axis=None):
+def take(x, indices, axis=None, mode="clip"):
     x = imp_utils.to_tensor(x)
     indices = imp_utils.to_tensor(indices)
     axis = imp_utils.to_any(axis)
-    return imp_utils.ret(ffi.take(x, indices, axis))
+    mode = imp_utils.to_string(mode)
+    return imp_utils.ret(ffi.take(x, indices, axis, mode))
 
 @set_module("mnm")
-def take_dx(x, y, dy, indices, axis=None):
+def take_dx(x, y, dy, indices, axis=None, mode="clip"):
     x = imp_utils.to_tensor(x)
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     indices = imp_utils.to_tensor(indices)
     axis = imp_utils.to_any(axis)
-    return imp_utils.ret(ffi.take_dx(x, y, dy, indices, axis))
+    mode = imp_utils.to_string(mode)
+    return imp_utils.ret(ffi.take_dx(x, y, dy, indices, axis, mode))
 
 @set_module("mnm")
 def tanh(x):

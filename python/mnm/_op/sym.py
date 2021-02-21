@@ -764,19 +764,21 @@ def sum(x, axis=(), keepdims=0):
     keepdims = sym_utils.to_int_tuple(keepdims)
     return Symbol.from_expr(ffi.sum(x, axis, keepdims))
 
-def take(x, indices, axis=None):
+def take(x, indices, axis=None, mode="clip"):
     x = sym_utils.to_tensor(x)
     indices = sym_utils.to_tensor(indices)
     axis = sym_utils.to_any(axis)
-    return Symbol.from_expr(ffi.take(x, indices, axis))
+    mode = sym_utils.to_string(mode)
+    return Symbol.from_expr(ffi.take(x, indices, axis, mode))
 
-def take_dx(x, y, dy, indices, axis=None):
+def take_dx(x, y, dy, indices, axis=None, mode="clip"):
     x = sym_utils.to_tensor(x)
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     indices = sym_utils.to_tensor(indices)
     axis = sym_utils.to_any(axis)
-    return Symbol.from_expr(ffi.take_dx(x, y, dy, indices, axis))
+    mode = sym_utils.to_string(mode)
+    return Symbol.from_expr(ffi.take_dx(x, y, dy, indices, axis, mode))
 
 def tanh(x):
     x = sym_utils.to_any(x)

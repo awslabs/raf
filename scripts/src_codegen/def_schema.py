@@ -136,6 +136,7 @@ SCHEMAS = {
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="indices", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
+        Arg(name="mode", cxx_type="std::string", cxx_default="\"clip\"", py_default="\"clip\""),
     ],
     "nn.h::take_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -143,6 +144,7 @@ SCHEMAS = {
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="indices", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
+        Arg(name="mode", cxx_type="std::string", cxx_default="\"clip\"", py_default="\"clip\""),
     ],
     "nn.h::repeat": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

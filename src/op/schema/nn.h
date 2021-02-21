@@ -223,6 +223,7 @@ class TakeArgs : public ir::AttrsNode<TakeArgs> {
   value::BaseTensorValue x;
   value::BaseTensorValue indices;
   value::Value axis{nullptr};
+  std::string mode{"clip"};
   MNM_OP_SCHEMA(TakeArgs, "mnm.args.take");
 };
 
@@ -233,6 +234,7 @@ class TakeDxArgs : public ir::AttrsNode<TakeDxArgs> {
   value::BaseTensorValue dy;
   value::BaseTensorValue indices;
   value::Value axis{nullptr};
+  std::string mode{"clip"};
   MNM_OP_SCHEMA(TakeDxArgs, "mnm.args.take_dx");
 };
 }  // namespace schema

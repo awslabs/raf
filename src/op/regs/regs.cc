@@ -660,20 +660,22 @@ Attrs Sum(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Take(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::TakeArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::TakeArgs, 4);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_TAPE(1, ffi2schema::Tensor, indices);
   MNM_TAPE(2, ffi2schema::ArrayLike, axis);
+  MNM_POD(3, ffi2schema::String, mode);
   return Attrs(attrs);
 }
 
 Attrs TakeDx(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::TakeDxArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::TakeDxArgs, 6);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_TAPE(1, ffi2schema::Tensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   MNM_TAPE(3, ffi2schema::Tensor, indices);
   MNM_TAPE(4, ffi2schema::ArrayLike, axis);
+  MNM_POD(5, ffi2schema::String, mode);
   return Attrs(attrs);
 }
 
@@ -1973,22 +1975,24 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sum").set_body([](TVMArgs args, TVMRetValue* ret
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.take").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(take, 3, ffi2schema::Take, schema::TakeArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(take, 4, ffi2schema::Take, schema::TakeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->indices));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->axis));
+  MNM_SET_ENV(vpack->x[3], schema2value::String(schema->mode));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.take_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(take_dx, 5, ffi2schema::TakeDx,
+  MNM_PRELUDE(take_dx, 6, ffi2schema::TakeDx,
               schema::TakeDxArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[3], schema2value::Tensor(schema->indices));
   MNM_SET_ENV(vpack->x[4], schema2value::ArrayLike(schema->axis));
+  MNM_SET_ENV(vpack->x[5], schema2value::String(schema->mode));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2534,20 +2538,22 @@ Array<Expr> Sum(const TVMArgs& values) {
 }
 
 Array<Expr> Take(const TVMArgs& values) {
-  MNM_PRELUDE(3);
+  MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Tensor, indices);
   MNM_ARG(2, ffi2expr::ArrayLike, axis);
+  MNM_ARG(3, ffi2expr::String, mode);
   MNM_RET();
 }
 
 Array<Expr> TakeDx(const TVMArgs& values) {
-  MNM_PRELUDE(5);
+  MNM_PRELUDE(6);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Tensor, y);
   MNM_ARG(2, ffi2expr::Tensor, dy);
   MNM_ARG(3, ffi2expr::Tensor, indices);
   MNM_ARG(4, ffi2expr::ArrayLike, axis);
+  MNM_ARG(5, ffi2expr::String, mode);
   MNM_RET();
 }
 
@@ -2803,8 +2809,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
     .set_body(MNM_SYMBOLIC_API(strided_slice, 5, StridedSlice));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 3, Sum));
-MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 3, Take));
-MNM_REGISTER_GLOBAL("mnm.op.sym.take_dx").set_body(MNM_SYMBOLIC_API(take_dx, 5, TakeDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 4, Take));
+MNM_REGISTER_GLOBAL("mnm.op.sym.take_dx").set_body(MNM_SYMBOLIC_API(take_dx, 6, TakeDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh").set_body(MNM_SYMBOLIC_API(tanh, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx").set_body(MNM_SYMBOLIC_API(tanh_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
@@ -3376,21 +3382,23 @@ Attrs Sum(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Take(const Array<Value>& values) {
-  MNM_PRELUDE(2, 3, schema::TakeArgs);
+  MNM_PRELUDE(2, 4, schema::TakeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Tensor, indices);
   MNM_OPTIONAL(2, value2schema::ArrayLike, axis);
+  MNM_OPTIONAL(3, value2schema::String, mode);
   return Attrs(attrs);
 }
 
 template <const char* op_name>
 Attrs TakeDx(const Array<Value>& values) {
-  MNM_PRELUDE(4, 5, schema::TakeDxArgs);
+  MNM_PRELUDE(4, 6, schema::TakeDxArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Tensor, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   MNM_REQUIRED(3, value2schema::Tensor, indices);
   MNM_OPTIONAL(4, value2schema::ArrayLike, axis);
+  MNM_OPTIONAL(5, value2schema::String, mode);
   return Attrs(attrs);
 }
 
@@ -4418,6 +4426,9 @@ int Take(const std::string& field) {
   if (field == "axis") {
     return 2;
   }
+  if (field == "mode") {
+    return 3;
+  }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
 }
@@ -4438,6 +4449,9 @@ int TakeDx(const std::string& field) {
   }
   if (field == "axis") {
     return 4;
+  }
+  if (field == "mode") {
+    return 5;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

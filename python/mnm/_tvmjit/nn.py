@@ -17,17 +17,26 @@ def take_dx_compute(attrs, inputs, output_type):
     # pylint: disable=invalid-name
     # pylint: disable=unused-variable
     x, y, dy, indices = inputs
-    axis = int(attrs.axis)
+    axis, mode = int(attrs.axis), attrs.mode
     idim = len(indices.shape)
     # infer axis when negative
     dim = len(x.shape)
     if -dim < axis < 0:
         axis = dim + axis
+    if mode == "clip":
+        normalized = _topi.minimum(_topi.maximum(indices, 0), x.shape[axis] - 1)
+    elif mode == "wrap":
+        normalized = _topi.mod(_topi.mod(indices, x.shape[axis]) + x.shape[axis], x.shape[axis])
+    else:
+        raise ValueError("Not supported mode: " + mode)
     shape = dy.shape[:axis + idim] + [x.shape[axis],] + dy.shape[axis + idim:]
-    A = _tvm.te.compute(shape, lambda *idx:
-                        _tvm.tir.if_then_else(idx[axis + idim] == indices[idx[axis: axis + idim]],
-                                              dy[idx[:axis + idim] + idx[axis + idim + 1:]],
-                                              _tvm.tir.const(0, dy.dtype)))
+    A = _tvm.te.compute(
+        shape,
+        lambda *idx: _tvm.tir.if_then_else(
+            idx[axis + idim] == normalized[idx[axis: axis + idim]],
+            dy[idx[:axis + idim] + idx[axis + idim + 1:]],
+            _tvm.tir.const(0, dy.dtype)
+        ))
     B = _topi.sum(A, axis=tuple(range(axis, axis + idim)))
     return [B]
 

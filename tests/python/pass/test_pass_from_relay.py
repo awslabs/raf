@@ -115,29 +115,31 @@ def test_repeat(shape, repeats, axis, dtype):
 @pytest.mark.parametrize("shape", [[(5, 4, 3), (1, 2)]])
 @pytest.mark.parametrize("axis", [-1])
 @pytest.mark.parametrize("dtype", ["float32"])
-def test_take(shape, axis, dtype):
+@pytest.mark.parametrize("mode", ["clip", "wrap"])
+def test_take(shape, axis, dtype, mode):
     # pylint:disable=import-outside-toplevel
     from functools import reduce
     import operator
 
     class Take(mnm.Model):
-        def build(self, axis):
+        def build(self, axis, mode):
             self._axis = axis
+            self._mode = mode
 
         @mnm.model.trace
         def forward(self, x, indices):
-            return mnm.take(x, indices=indices, axis=self._axis)
+            return mnm.take(x, indices=indices, axis=self._axis, mode=self._mode)
 
     size = reduce(operator.mul, shape[0],
                   1) if axis is None else shape[0][axis]
     m_x, _ = randn(shape[0], dtype=dtype)
     m_indices, _ = randint(shape[1], low=0, high=size)
-    model = Take(axis)
+    model = Take(axis, mode)
 
     r_x = _relay.var("x", shape=shape[0])
     r_indices = _relay.var("i", shape=shape[1], dtype="int64")
     r_func = _relay.Function(params=[r_x, r_indices], body=_relay.take(
-        r_x, r_indices, axis, mode="clip"))
+        r_x, r_indices, axis, mode=mode))
 
     check_from_relay(model, r_func, [m_x, m_indices])
 

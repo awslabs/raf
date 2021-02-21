@@ -76,7 +76,7 @@ Attrs TakeSchema2Attrs(const TakeArgs* args) {
   } else {
     attrs->axis = NullValue<Integer>();
   }
-  attrs->mode = "clip";
+  attrs->mode = args->mode;
   return Attrs(attrs);
 }
 
@@ -87,6 +87,7 @@ HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, con
     CHECK(v != nullptr);
     key << v->data;
   }
+  key << args->mode;
   return key;
 }
 
@@ -110,7 +111,7 @@ Attrs TakeDxSchema2Attrs(const TakeDxArgs* args) {
   } else {
     attrs->axis = NullValue<Integer>();
   }
-  attrs->mode = "wrap";
+  attrs->mode = args->mode;
   return Attrs(attrs);
 }
 
@@ -122,6 +123,7 @@ HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
     CHECK(v != nullptr);
     key << v->data;
   }
+  key << args->mode;
   return key;
 }
 

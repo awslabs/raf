@@ -21,8 +21,8 @@ MNM_OP_FROM_RELAY("repeat", "mnm.op.repeat", [&](const Attrs& attrs, const Array
 MNM_OP_FROM_RELAY("take", "mnm.op.take", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<TakeAttrs>();
-  CHECK_EQ(relay_attrs->mode, "clip") << "Failed to convert take: Only support clip mode";
   mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->mode)));
   return mnm_args;
 });
 

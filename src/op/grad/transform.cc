@@ -163,11 +163,12 @@ Array<Expr> TakeGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
                      const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.take_dx");
   const CallNode* call = orig_call.as<CallNode>();
-  CHECK_EQ(call->args.size(), 3);
+  CHECK_EQ(call->args.size(), 4);
   const Expr& x = call->args[0];
   const Expr& indices = call->args[1];
   const Expr& axis = call->args[2];
-  return {Call(op_dx, {x, y, dy, indices, axis})};
+  const Expr& mode = call->args[3];
+  return {Call(op_dx, {x, y, dy, indices, axis, mode})};
 }
 
 MNM_OP_GRAD("mnm.op.take", TakeGrad);
