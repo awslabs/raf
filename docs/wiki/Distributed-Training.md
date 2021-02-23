@@ -68,6 +68,32 @@ if (op->name != "mnm.op._allreduce") req->stream[i].stream->Wait();
 
 *note: We have ensured that communication operators will run on specific stream (different with computation operators).*
 
+To launch a data parallel training job, currenlt you can use mpirun, for exmaple:
+
+```bash
+# The following command will run data parallel training on single machine with 4 gpus.
+mpirun -np 4 python3 scripts/distributed/dist_example.py
+
+# The following command will run data parallel training on 2 machines with 4 gpus each.
+mpirun -H node1:4,node2:4 python3 scripts/distributed/dist_example.py
+# or using hostfile to specify hosts and number of gpus on each hosts.
+mpirun -np 8 --hostfile my_hosts.txt python3 scripts/distributed/dist_example.py
+```
+
+If you are using OpenMPI, the hostfile my_hosts.txt will be like:
+
+```txt
+node1 slots=4
+node2 slots=4
+```
+
+If you are using MPICH, the hostfile my_hosts.txt will be like:
+
+```txt
+node1:4
+node2:4
+```
+
 ### Basic design
 
 Design a new Pass for the IR. Add a communication operator (eg. allreduce) after the gradient of a parameter is generated.
