@@ -23,18 +23,18 @@
 #include <unistd.h>
 #endif
 
-#define WITH_BASE_PROFILER(CTX, NAME, CAT, ARGS, CODE_SNIPPET)                                   \
-  {                                                                                              \
-    bool profiling = profiler::Profiler::Get()->IsProfiling();                                   \
-    if (profiling) {                                                                             \
-      profiler::ProfilerBaseHelper phelper(profiling, CTX.device_id, CTX.device_type, NAME, CAT, \
-                                           ARGS);                                                \
-      phelper.start();                                                                           \
-      CODE_SNIPPET                                                                               \
-      phelper.stop();                                                                            \
-    } else {                                                                                     \
-      CODE_SNIPPET                                                                               \
-    }                                                                                            \
+#define WITH_BASE_PROFILER(DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)                                 \
+  {                                                                                               \
+    bool profiling = profiler::Profiler::Get()->IsProfiling();                                    \
+    if (profiling) {                                                                              \
+      profiler::ProfilerBaseHelper phelper(profiling, DEVICE.device_id, DEVICE.device_type, NAME, \
+                                           CAT, ARGS);                                            \
+      phelper.start();                                                                            \
+      CODE_SNIPPET                                                                                \
+      phelper.stop();                                                                             \
+    } else {                                                                                      \
+      CODE_SNIPPET                                                                                \
+    }                                                                                             \
   }
 
 namespace mnm {
@@ -149,6 +149,7 @@ class Profiler {
   void AddNewProfileStat(std::string categories, std::string name, uint64_t start_time,
                          uint64_t end_time, const std::vector<std::string>& args);
   std::string GetProfile();
+  std::vector<ProfileStat> GetProfileStats();
   inline bool IsProfiling() {
     return profiling_;
   }

@@ -67,6 +67,19 @@ std::string Profiler::GetProfile() {
   return ss.str();
 }
 
+std::vector<ProfileStat> Profiler::GetProfileStats() {
+  std::lock_guard<std::recursive_mutex> lock{this->m_};
+  std::vector<ProfileStat> results;
+
+  ProfileStat* stat;
+  while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
+    CHECK_NOTNULL(stat);
+    results.push_back(*stat);
+  }
+
+  return results;
+}
+
 DeviceStats::~DeviceStats() {
   std::shared_ptr<TQueue> es = opr_exec_stats_;
   if (es) {

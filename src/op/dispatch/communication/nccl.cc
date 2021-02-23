@@ -7,6 +7,8 @@
 #include "mnm/op_utils.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
+#include <chrono>
+#include <thread>
 
 namespace mnm {
 namespace op {
@@ -43,6 +45,11 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     // Nothing
   }
   void Execute(const CallValues& cv) {
+    // // We can use sleep to test communication scheduling locally.
+    // using namespace std::this_thread;
+    // using namespace std::chrono;
+    // sleep_until(system_clock::now() + nanoseconds(200));
+
     void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     // Fuse Tensor
@@ -69,7 +76,6 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     // Allreduce
     NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclSum,
                             (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-
     // UnFuse Tensor
     value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(cv->out);
     auto& of = out->fields;

@@ -148,7 +148,10 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       return InvokeClosure(call_values);
     } else if (const auto* op = call_values->callee.as<OpValueObj>()) {
       call_values->args = fschema[op->op](args);
-      return InvokePrimitive(call_values);
+      Value output_value;
+      WITH_BASE_PROFILER(call_values->device, op->op->name, "SchedulingCommunication", {},
+                         { output_value = InvokePrimitive(call_values); });
+      return output_value;
     }
     LOG(FATAL) << "ValueError: type " << call_values->callee->GetTypeKey() << " is not callable";
     throw;

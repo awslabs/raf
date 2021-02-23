@@ -21,6 +21,33 @@ class DistContext(Object):
         self.enable_data_parallel_ = value
         ffi.EnableDataParallel(value)
 
+    @property
+    def overlap_comm_forward(self):
+        return self.overlap_comm_forward_
+
+    @overlap_comm_forward.setter
+    def overlap_comm_forward(self, value):
+        self.overlap_comm_forward_ = value
+        ffi.OverlapCommForward(value)
+
+    @property
+    def auto_dp_profiling_start_iter(self):
+        return self.auto_dp_profiling_start_iter_
+
+    @auto_dp_profiling_start_iter.setter
+    def auto_dp_profiling_start_iter(self, value):
+        self.auto_dp_profiling_start_iter_ = value
+        ffi.AudoDPProfilingStartIter(value)
+
+    @property
+    def auto_dp_profiling_end_iter(self):
+        return self.auto_dp_profiling_end_iter_
+
+    @auto_dp_profiling_end_iter.setter
+    def auto_dp_profiling_end_iter(self, value):
+        self.auto_dp_profiling_end_iter_ = value
+        ffi.AudoDPProfilingEndIter(value)
+
 
 def get_context():
     return ffi.Global()

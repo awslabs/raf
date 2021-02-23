@@ -14,20 +14,28 @@ class DistContext;
 
 class DistContextObj : public ir::Object {
  public:
-  bool enable_data_parallel = false;
+  int scheduling_param = 0;
+  int iteration = 0;
   int root_rank = 0;
   int rank = 0;
   int size = 0;
   int local_rank = 0;
   int local_size = 0;
+  bool enable_data_parallel = false;
+  bool overlap_comm_forward = false;
+  int auto_dp_profiling_start_iter = 2;
+  int auto_dp_profiling_end_iter = 4;
 
   void VisitAttrs(tvm::AttrVisitor* v) {
-    v->Visit("enable_data_parallel", &enable_data_parallel);
     v->Visit("root_rank", &root_rank);
     v->Visit("rank", &rank);
     v->Visit("size", &size);
     v->Visit("local_rank", &local_rank);
     v->Visit("local_size", &local_size);
+    v->Visit("enable_data_parallel", &enable_data_parallel);
+    v->Visit("overlap_comm_forward", &overlap_comm_forward);
+    v->Visit("auto_dp_profiling_start_iter", &auto_dp_profiling_start_iter);
+    v->Visit("auto_dp_profiling_end_iter", &auto_dp_profiling_end_iter);
   }
 
  public:
