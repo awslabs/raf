@@ -891,7 +891,7 @@ def sqrt_dx(x, y, dy):
     return imp_utils.ret(ffi.sqrt_dx(x, y, dy))
 
 @set_module("mnm")
-def squeeze(x, axis):
+def squeeze(x, axis=None):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     return imp_utils.ret(ffi.squeeze(x, axis))

@@ -204,7 +204,9 @@ SCHEMAS = {
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axis",
             cxx_type="std::vector<int64_t>",
-            cxx_normalizer="IntTuple"),
+            cxx_normalizer="IntTuple",
+            cxx_default="{}",
+            py_default="None"),
     ],
     "nn.h::layer_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

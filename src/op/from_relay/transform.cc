@@ -139,7 +139,12 @@ MNM_GENERIC_ATTR_OP_FROM_RELAY("gather_nd", "mnm.op.gather_nd");
 MNM_OP_FROM_RELAY("squeeze", "mnm.op.squeeze", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<SqueezeAttrs>();
-  mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->axis)));
+  if (relay_attrs->axis.defined()) {
+    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->axis)));
+  } else {
+    Array<Integer> empty;
+    mnm_args.push_back(MakeConstant(ArrayToIntTuple(empty)));
+  }
   return mnm_args;
 });
 

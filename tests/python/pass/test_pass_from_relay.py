@@ -1,5 +1,6 @@
 # pylint: disable=protected-access, too-many-locals, attribute-defined-outside-init, no-self-use
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, missing-module-docstring, missing-function-docstring
+# pylint: disable=missing-class-docstring
 from operator import attrgetter
 
 import pytest
@@ -370,6 +371,26 @@ def test_stack(shapes, axis, dtype):
 
     check_from_relay(model, r_func, args)
 
+@pytest.mark.parametrize("shape", [[1, 4, 1, 2]])
+@pytest.mark.parametrize("axis", [[0], None])
+@pytest.mark.parametrize("dtype", ["float32"])
+def test_squeeze(shape, axis, dtype):
+
+    class Squeeze(mnm.Model):
+        def build(self, axis):
+            self._axis = axis
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.squeeze(x, self._axis)
+
+    model = Squeeze(axis)
+    m_x, _ = randn(shape, dtype=dtype)
+
+    r_var = _relay.var("x", shape=shape, dtype=dtype)
+    r_func = _relay.Function(params=[r_var], body=_relay.squeeze(r_var, axis))
+
+    check_from_relay(model, r_func, [m_x])
 
 @pytest.mark.parametrize("shape", [(2, 4, 1, 3), (1, 2, 3)])
 @pytest.mark.parametrize("a_min", [0.3])

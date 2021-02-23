@@ -770,7 +770,7 @@ def sqrt_dx(x, y, dy):
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.sqrt_dx(x, y, dy))
 
-def squeeze(x, axis):
+def squeeze(x, axis=None):
     x = sym_utils.to_tensor(x)
     axis = sym_utils.to_int_tuple(axis)
     return Symbol.from_expr(ffi.squeeze(x, axis))

@@ -35,8 +35,10 @@ struct FromRelayMutator : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) final {
     static auto fmap = Op::GetAttrMap<op::FMNMFromRelay>("FMNMFromRelay");
-    CHECK(node->op.as<OpNode>() != nullptr) << "Callee is not an operator!\n"
-                                            << AsText(GetRef<Call>(node), false);
+    if (node->op.as<OpNode>() == nullptr) {
+      return Call(node->op, node->args, node->attrs);
+    }
+
     const Op& op = Downcast<Op>(node->op);
     if (fmap.count(op)) {
       try {
