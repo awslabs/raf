@@ -63,7 +63,8 @@ def extract_tuning_tasks(func, target, args):
     return tasks, weights
 
 
-def run_tuning(func, device, args, log_file):
+def run_tuning(func, device, args, log_file, *, load_log_file=None,
+               n_trials=lambda l: 32 * min(l, 10)):
     """Tune the given tasks"""
 
     print("Extracting tasks...")
@@ -76,11 +77,12 @@ def run_tuning(func, device, args, log_file):
 
     measure_device = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
 
-    tuner = auto_scheduler.TaskScheduler(tasks, weights)
+    tuner = auto_scheduler.TaskScheduler(tasks, weights, load_log_file=load_log_file)
 
     # The total trials for tuning all tasks. Here we apply a simple equation
     # to determine the trails.
-    n_trials = 32 * min(len(tasks), 10)
+    if callable(n_trials):
+        n_trials = n_trials(len(tasks))
 
     tune_option = auto_scheduler.TuningOptions(
         num_measure_trials=n_trials,

@@ -54,7 +54,7 @@ class CPUDeviceAPI final : public DeviceAPI {
   }
 
   void WaitDevice(const Device&) override {
-    throw;
+    // Do nothing
   }
 
   void WaitStream(const Device&, void* stream) override {

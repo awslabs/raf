@@ -16,3 +16,5 @@ Load_Executable = _APIS.get("mnm.vm.Load_Executable", None)
 VMCompiler = _APIS.get("mnm.vm.VMCompiler", None)
 # Defined in ./src/impl/vm/vm.cc
 VirtualMachine = _APIS.get("mnm.vm.VirtualMachine", None)
+# Defined in ./src/impl/vm/vm_profiler.cc
+VirtualMachineProfiler = _APIS.get("mnm.vm.VirtualMachineProfiler", None)

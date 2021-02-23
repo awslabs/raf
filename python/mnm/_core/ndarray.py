@@ -261,10 +261,15 @@ class Symbol:
 
     @staticmethod
     def make_tuple(symbols, name_hint=""):
-        expr = relay.Tuple(symbols)
-        ret = Symbol()
-        ret.__handle = BindSymbol(expr, name_hint, None)
-        return ret
+        def as_relay_expr(symbol):
+            if isinstance(symbol, Symbol):
+                return symbol.__handle
+            if isinstance(symbol, relay.Expr):
+                return symbol
+            raise TypeError("Cannot convert to relay expr")
+        symbol_handles = [as_relay_expr(symbol) for symbol in symbols]
+        expr = relay.Tuple(symbol_handles)
+        return Symbol.from_expr(BindSymbol(expr, name_hint, None))
 
     def __getitem__(self, item, name_hint=""):
         if isinstance(item, int):

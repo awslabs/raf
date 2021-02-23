@@ -61,6 +61,37 @@ Function LowerOp(const Op& op, const Attrs& attrs, const std::vector<Type>& para
   return func;
 }
 
+std::string GetUniqueName(std::string name) {
+  static std::unordered_map<std::string, int> name_map;
+  for (size_t i = 0; i < name.length(); ++i) {
+    if (name[i] == '.') name[i] = '_';
+  }
+  while (true) {
+    auto it = name_map.find(name);
+    if (it == name_map.end()) {
+      name_map[name] = 1;
+      return name;
+    } else {
+      std::ostringstream os;
+      os << name << "_" << it->second;
+      ++(it->second);
+      name = os.str();
+    }
+  }
+  return name;
+}
+
+std::string TruncateName(std::string name) {
+  constexpr static size_t kMaxFuncNameLength = 80;
+  if (name.size() > kMaxFuncNameLength) {
+    std::stringstream truncated_name;
+    truncated_name << name.substr(0, kMaxFuncNameLength);
+    truncated_name << "_" << std::hash<std::string>{}(name) << "_";
+    name = truncated_name.str();
+  }
+  return name;
+}
+
 void SetArgs(std::vector<DLTensor>* i, std::vector<DLTensor>* o, std::vector<TVMValue>* values,
              std::vector<int>* codes) {
   int arity = i->size() + o->size();

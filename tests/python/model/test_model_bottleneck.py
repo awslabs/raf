@@ -6,7 +6,7 @@ from mnm.model import Conv2d, BatchNorm
 from mnm.testing import check, randn_torch, t2m_param
 
 
-class MNMBottleNeck(mnm.Model):
+class MNMBottleneck(mnm.Model):
     expansion = 4
 
     # pylint: disable=attribute-defined-outside-init
@@ -104,9 +104,11 @@ class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
 ])
 @pytest.mark.parametrize("is_train", [True, False])
 def test_bottleneck(config, is_train):
-    m_block = MNMBottleNeck(*config[0])
+    # pylint: disable=too-many-locals
+    m_block = MNMBottleneck(*config[0])
     t_block = TorchPreActBottleneck(*config[0])
     t_block.to("cuda")
+    m_block.to(device="cuda")
     # set the parameters to be exactly the same
     # pylint: disable=attribute-defined-outside-init,invalid-name
     m_block.bn1.w = t2m_param(t_block.bn1.weight)

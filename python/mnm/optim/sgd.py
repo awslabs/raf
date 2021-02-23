@@ -1,11 +1,12 @@
 """SGD optimizer."""
 import numpy as np
 from .._core.core_utils import get_chained_attr, with_signature
-from .._core.ndarray import ndarray
+from .._core.ndarray import ndarray, array
 from .optim import with_autodiff
 from ..model import trace, Model, trace_mutate_attr
 from ..model.trace import _get_func_inputs
-from .._op import imp, sym
+from .._op import imp
+from .._op.sym import multiply, add, subtract
 
 
 # pylint: disable=too-few-public-methods
@@ -75,8 +76,8 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 # pylint: disable=missing-function-docstring
                 self.model = model
                 self.ad_model = with_autodiff(model)
-                self.learning_rate = learning_rate
-                self.momentum = momentum
+                self.learning_rate = array(learning_rate, dtype='float32')
+                self.momentum = array(momentum, dtype='float32')
                 self.params = {}
                 for name, x in self.model.state().items():
                     if x.requires_grad is True:
@@ -98,9 +99,8 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                     if param in self.params:
                         dxi = dxs[i] if len(inputs) > 1 else dxs
                         name, x, v = self.params[param]
-                        ret = sym.sgd(x, dxi, v, self.learning_rate, self.momentum)
-                        new_v = ret[0]
-                        new_x = ret[1]
+                        new_v = add(multiply(self.momentum, v), dxi)
+                        new_x = subtract(x, multiply(self.learning_rate, new_v))
                         param_model = get_chained_attr(self.model, name.split('.')[:-1])
                         trace_mutate_attr(param_model, name.split('.')[-1], new_x)
                         trace_mutate_attr(self, f'{name}.v', new_v)

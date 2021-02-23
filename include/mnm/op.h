@@ -63,6 +63,8 @@ class OpEnv {
   std::shared_ptr<requests::Requests> GetRequests() const;
   /*! \brief Input indices in the argument array. This is used by VM executor. */
   std::vector<int> arg_indices;
+  /*! \brief OpEnv name*/
+  std::string env_name;
 };
 
 class OpDispatch {

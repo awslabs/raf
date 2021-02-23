@@ -1,4 +1,5 @@
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-statements
+# pylint: disable=no-self-use
 import pytest
 import mnm
 from mnm._core.ndarray import Symbol
@@ -91,6 +92,42 @@ def test_inline():
 
     func = run_infer_type(mnm._ffi.pass_.FuseOps(func, 3))
     func_expected = run_infer_type(expected3())
+    assert tvm.ir.structural_equal(func, func_expected)
+
+
+def test_nested_tuple():
+    shape = (10, 20)
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, y):
+            tup1 = Symbol.make_tuple([x,])
+            tup2 = Symbol.make_tuple([y,])
+            tup = Symbol.make_tuple([tup1, tup2])
+            x1 = tup[0]
+            y1 = x1[0]
+            return y1
+
+    def expected():
+        x = relay.var("x", shape=shape)
+        y = relay.var("y", shape=shape)
+        a1 = relay.var("a1")
+        a2 = relay.var("a2")
+        a3 = relay.var("a3")
+        let3 = relay.Let(a3, relay.Tuple([a1, a2]), x)
+        let2 = relay.Let(a2, relay.Tuple([y,]), let3)
+        let1 = relay.Let(a1, relay.Tuple([x,]), let2)
+        return relay.Function([x, y], let1)
+
+    m_x, _ = randn(shape, device="cpu")
+    m_y, _ = randn(shape, device="cpu")
+    model = Model()
+    func = model._internal(m_x, m_y).func
+    func = run_infer_type(func)
+    func = run_infer_type(mnm._ffi.pass_.InlineLet(func))
+    func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func, func_expected)
 
 

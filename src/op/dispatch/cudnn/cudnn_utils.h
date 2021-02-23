@@ -17,6 +17,7 @@
 #include "mnm/value.h"
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
+#include "../tvmjit/tvmjit_utils.h"
 
 #define CUDNN_CALL(func)                                                      \
   do {                                                                        \

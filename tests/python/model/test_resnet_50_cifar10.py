@@ -1,24 +1,42 @@
 import pytest
+import numpy as np
 import torch
 
 import mnm
-from mnm.testing import check, randn_torch, run_vm_model, get_device_list, resnet
+from mnm.testing import resnet_cifar10 as resnet
+from mnm.testing import run_vm_model, check, randn_torch, get_device_list, with_seed
 from mnm.testing.utils import ir_simplify, ir_fusion
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-def test_r50_v1_imagenet():
-    device = "cuda"
-    m_model, t_model = resnet.get_model([3, 4, 6, 3])
-    m_model.to(device=device)
-    t_model.to(device)
-    m_in, t_in = resnet.get_input(batch_size=1, device=device)
-    m_loss = m_model(*m_in)
-    t_loss = t_model(*t_in)
-    m_loss.backward()
-    t_loss.backward()
-    check(m_loss, t_loss)
-    resnet.check_params(m_model, t_model)
+def test_build():
+    x = np.random.randn(1, 3, 32, 32)
+    y = np.random.randn(1, 10)
+    m_x = mnm.array(x, dtype="float32", device="cuda")
+    m_y = mnm.array(y, dtype='float32', device='cuda')
+    model = resnet.MNMResNet50([3, 4, 6, 3])
+    model.to(device='cuda')
+    print("### Switch to training mode")
+    model.train_mode()
+    model(m_x, m_y)
+    print("### Switch to infer mode")
+    model.infer_mode()
+    model(m_x)
+
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@with_seed(0)
+def test_build_fp16():
+    x = np.random.randn(1, 3, 32, 32)
+    m_x = mnm.array(x, dtype="float32", device="cuda")
+    model = resnet.MNMResNet50([3, 4, 6, 3])
+    model.to(device='cuda')
+    model.infer_mode()
+    m_y1 = model(m_x)
+    print("### Switch to AMP model")
+    amp_model = mnm.amp.autocast(model)
+    m_y2 = amp_model(m_x)
+    np.testing.assert_allclose(m_y1.asnumpy(), m_y2.asnumpy(), rtol=0.1, atol=0.1)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -28,12 +46,12 @@ def test_vm_forward(device, fuse):
     ir_optimizer = ir_fusion if fuse else ir_simplify
     m_model, t_model = resnet.get_model(layers)
     m_model.to(device=device)
-    t_model.to(device)
+    t_model.to(device=device)
     m_in, t_in = resnet.get_input(batch_size=1, device=device)
     m_loss = run_vm_model(m_model, device, [*m_in], ir_optimizer)[0]
     t_loss = t_model(*t_in)
-    check(m_loss, t_loss, atol=1e-3, rtol=1e-3)
-    resnet.check_params(m_model, t_model, atol=1e-3, rtol=1e-3)
+    check(m_loss, t_loss)
+    resnet.check_params(m_model, t_model)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -53,8 +71,8 @@ def test_vm_backward(device, fuse):
     t_loss = t_model(*t_in)
     t_loss.backward(t_dy)
     t_optimizer.step()
-    check(m_loss, t_loss, atol=1e-3, rtol=1e-3)
-    resnet.check_params(m_model, t_model, atol=1e-2, rtol=1e-2)
+    check(m_loss, t_loss)
+    resnet.check_params(m_model, t_model)
 
 
 if __name__ == "__main__":

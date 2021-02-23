@@ -16,6 +16,7 @@
 #include <fstream>
 #include <sstream>
 #include "base.h"
+#include "device_api.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
@@ -156,7 +157,7 @@ class Profiler {
 
  private:
   DeviceStats profile_stats_;
-  bool profiling_;
+  bool profiling_{false};
   std::recursive_mutex m_;
   uint64_t init_time_;
 };
@@ -166,34 +167,50 @@ class ProfilerBaseHelper {
   ProfilerBaseHelper(bool profiling, uint32_t dev_id, mnm::DevType dev_type, std::string name,
                      std::string categories, std::vector<std::string> args = {})
       : profiling_(profiling),
-        dev_id_(dev_id),
-        dev_type_(dev_type),
+        device_(Device(dev_type, dev_id)),
         name_(name),
         categories_(categories),
         args(args) {
+    if (dev_type != mnm::DevType::kUnknown()) {
+      dev_api_ = device_api::DeviceAPI::Get(dev_type);
+    }
   }
   void start();
   void stop();
 
  protected:
+  /*! \brief whether the profiler is recording */
   const bool profiling_;
-  uint32_t dev_id_;
-  mnm::DevType dev_type_;
+  /*! \brief the device on which profiled code runs */
+  Device device_;
+  /*! \brief the name annotation of profiling results */
   std::string name_;
+  /*! \brief the category annotation of profiling results */
   std::string categories_;
+  /*! \brief profiler start time */
   uint64_t start_time_;
+  /*! \brief profiler end time */
   uint64_t end_time_;
+  /*! \brief the api of the device on which profiled code runs */
+  std::shared_ptr<device_api::DeviceAPI> dev_api_;
+  /*! \brief the arguments annotation */
   std::vector<std::string> args;
 };
 
 inline void ProfilerBaseHelper::start() {
   if (profiling_) {
+    if (dev_api_) {
+      dev_api_->WaitDevice(device_);
+    }
     start_time_ = ProfileStat::NowInMicrosec();
   }
 }
 
 inline void ProfilerBaseHelper::stop() {
   if (profiling_) {
+    if (dev_api_) {
+      dev_api_->WaitDevice(device_);
+    }
     end_time_ = ProfileStat::NowInMicrosec();
     Profiler::Get()->AddNewProfileStat(categories_, name_, start_time_, end_time_, args);
   }

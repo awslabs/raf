@@ -25,6 +25,19 @@ ir::Type GetTensorType(const DLTensor& dlt);
 ir::Type GetTupleType(const std::vector<DLTensor>& dlts);
 ir::Function LowerOp(const ir::Op& op, const ir::Attrs& attrs,
                      const std::vector<ir::Type>& param_types, const ir::Type& ret_type);
+/*!
+ * \brief Find an unallocated name for the given name.
+ * \param name The given name
+ * \return An unallocated name with a unique suffix attached
+ */
+std::string GetUniqueName(std::string name);
+
+/*!
+ * \brief Truncate the given name to fit in 80 characters
+ * \param name The given name
+ * \return The truncated name
+ */
+std::string TruncateName(std::string name);
 
 class TVMOpEnv : public op::OpEnv {
  public:
@@ -135,6 +148,7 @@ using FMNMArgIndices =
           return jit(engine, c_cache_key(f, target));                                           \
         });                                                                                     \
     env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                                \
+    env->env_name = TruncateName(GetUniqueName(op->name.operator std::string()));               \
     return env;                                                                                 \
   }                                                                                             \
   Attrs FUNC##Attr(const op::CallValues& call) {                                                \

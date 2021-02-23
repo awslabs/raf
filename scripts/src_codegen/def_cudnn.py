@@ -303,6 +303,7 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
     {ARG_INDICES}
     {CASTS}
     {CONSTRUCTOR}
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.{OP}"));
   }}
  public:
   ~{CLASSNAME}() {{

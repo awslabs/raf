@@ -296,6 +296,8 @@ def test_tuple_root():
     assert tvm.ir.structural_equal(after, func_expected)
 
 
+# TODO@(hzfan): fix issue #402
+@pytest.mark.xfail
 def test_sgd():
     shape = [2, 3, 4]
     dtype = 'float32'

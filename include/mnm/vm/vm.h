@@ -284,6 +284,9 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   /*! \brief Get device context for params. */
   Device GetParamsDevice() const;
 
+  /*! \brief Execute OpEnv */
+  virtual void ExecuteOpEnv(OpEnv*, const std::vector<value::Value>& inputs, value::Value output);
+
  private:
   /*!
    * \brief The constant pool for runtime. It caches the device dependent

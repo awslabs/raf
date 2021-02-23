@@ -43,7 +43,7 @@ class LetInliner : public ExprMutator {
   }
 
   Expr VisitExpr_(const TupleGetItemNode* node) {
-    auto tup = node->tuple;
+    auto tup = VisitExpr(node->tuple);
     auto it = tuple_map_.find(tup);
     if (it != tuple_map_.end()) {
       Tuple tuple = it->second;

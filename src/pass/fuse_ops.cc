@@ -706,6 +706,9 @@ class GraphPartitioner {
         if (group_node->pattern > kInjective) continue;
         Group* dom_parent_group = groups_[dom_parent_gindex];
         Group* dom_root_group = dom_parent_group->FindRoot();
+        // TODO(@hzfan): remove this
+        // If dom node group has a tuple as its root, we do not fuse tuple fields into it
+        if (dom_root_group->pattern == kTuple) continue;
         if (dom_parent_group->pattern == kTuple && dom_root_group->pattern <= kInjective) {
           // Now we know the tuple has been fused into subsequent injective ops
           auto fcond = [](OpPatternKind kind, bool is_sink) { return kind <= kInjective; };
@@ -717,7 +720,9 @@ class GraphPartitioner {
         }
         continue;
       }
-
+      // TODO(@hzfan): remove this
+      // Do not fuse into tuple for now
+      if (groups_[dom_parent_gindex]->pattern == kTuple) continue;
       // Skip if current node is already fused to the parent.
       if (groups_[dom_parent_gindex] != nullptr &&
           group_node->FindRoot() == groups_[dom_parent_gindex]->FindRoot()) {

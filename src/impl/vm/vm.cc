@@ -25,12 +25,14 @@
 #include "mnm/value.h"
 #include "mnm/vm/bytecode.h"
 #include "mnm/vm/vm.h"
+#include "mnm/device_api.h"
+#include "mnm/profiler.h"
 #include "../../requests.h"
 
 #include "mnm/device_api.h"
 #include "mnm/registry.h"
 
-#if MNM_USE_CUDA
+#ifdef MNM_USE_CUDA
 #include "../../common/cuda_utils.h"
 #include "../../op/dispatch/cudnn/cudnn_utils.h"
 #include "../../op/dispatch/cublas/cublas_utils.h"
@@ -45,6 +47,7 @@ using namespace mnm::value;
 using namespace mnm::op;
 using namespace mnm::registry;
 using namespace mnm::requests;
+using namespace mnm::device_api;
 
 inline Value CopyTo(Value src, const Device& dev) {
   if (!src.defined()) {
@@ -593,7 +596,7 @@ void VirtualMachine::RunLoop(VMContext ctx) {
           CHECK_GE(i, 0) << "Invalid input index: " << i;
           inputs.push_back(args[i]);
         }
-        op_env->Execute(inputs, output);
+        ExecuteOpEnv(op_env.get(), inputs, output);
         ctx->pc++;
         goto main_loop;
       }
@@ -605,6 +608,11 @@ tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cu
   auto vm = make_object<VirtualMachine>(enable_cuda_graph);
   vm->LoadExecutable(exec);
   return tvm::runtime::Module(vm);
+}
+
+void VirtualMachine::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
+                                  value::Value output) {
+  op_env->Execute(inputs, output);
 }
 
 MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

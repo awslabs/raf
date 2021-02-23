@@ -49,6 +49,7 @@ class MNMMlp(mnm.Model):
 @pytest.mark.parametrize("is_train", [True, False])
 def test_mlp(config, is_train):
     m_model = MNMMlp(*config)
+    m_model.to(device="cuda")
     t_model = TorchMlp(*config)
     t_model.to(device="cuda")
     m_model.fc1.w = t2m_param(t_model.fc1.weight)

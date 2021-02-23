@@ -175,7 +175,7 @@ tvm::runtime::NDArray ToTVM(TensorValue value) {
 }
 
 ObjectRef DeTuple(Value value) {
-  if (value->IsInstance<TensorValueObj>()) {
+  if (value->IsInstance<TensorValueObj>() || value->IsInstance<NoGradValueObj>()) {
     return std::move(value);
   }
   if (const auto* tuple = value.as<TupleValueObj>()) {

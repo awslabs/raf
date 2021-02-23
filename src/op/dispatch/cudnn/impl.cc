@@ -126,6 +126,7 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
         args->include_pad ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING
                           : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
         CUDNN_PROPAGATE_NAN, 2, BeginPtr(kernel), BeginPtr(padding), BeginPtr(stride)));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.avg_pool2d"));
   }
 
  public:
@@ -202,6 +203,7 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
         args->include_pad ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING
                           : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
         CUDNN_PROPAGATE_NAN, 2, BeginPtr(kernel), BeginPtr(padding), BeginPtr(stride)));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.avg_pool2d_dx"));
   }
 
  public:
@@ -277,6 +279,7 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
     yDesc = NormalizeTensorType(yDesc_tt);
     epsilon = args->eps;
     exponentialAverageFactor = args->momentum;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.batch_norm_infer"));
   }
 
  public:
@@ -358,6 +361,7 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
     yDesc = NormalizeTensorType(yDesc_tt);
     epsilon = args->eps;
     exponentialAverageFactor = args->momentum;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.batch_norm_train"));
   }
 
  public:
@@ -444,6 +448,7 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
     auto dBnScaleBiasDesc_tt = SquashTensorShape(out1, {0, 0, 1, out1->ndim});
     dBnScaleBiasDesc = NormalizeTensorType(dBnScaleBiasDesc_tt);
     epsilon = args->eps;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.batch_norm_train_dxwb"));
   }
 
  public:
@@ -547,6 +552,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
                                                        &workSpaceSizeInBytes));
     RequestWorkspace(&workSpace, cv->device, workSpaceSizeInBytes);
     cudnnSetConvolutionMathType(convDesc, algo.mathType);
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.conv2d"));
   }
 
  public:
@@ -639,6 +645,7 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
         &workSpaceSizeInBytes));
     RequestWorkspace(&workSpace, cv->device, workSpaceSizeInBytes);
     cudnnSetConvolutionMathType(convDesc, algo.mathType);
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.conv2d_dw"));
   }
 
  public:
@@ -730,6 +737,7 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
                                                             algo.algo, &workSpaceSizeInBytes));
     RequestWorkspace(&workSpace, cv->device, workSpaceSizeInBytes);
     cudnnSetConvolutionMathType(convDesc, algo.mathType);
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.conv2d_dx"));
   }
 
  public:
@@ -794,6 +802,7 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.log_softmax"));
   }
 
  public:
@@ -863,6 +872,7 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.log_softmax_dx"));
   }
 
  public:
@@ -933,6 +943,7 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreatePoolingDescriptor(&poolingDesc));
     CUDNN_CALL(cudnnSetPoolingNdDescriptor(poolingDesc, CUDNN_POOLING_MAX, CUDNN_PROPAGATE_NAN, 2,
                                            BeginPtr(kernel), BeginPtr(padding), BeginPtr(stride)));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.max_pool2d"));
   }
 
  public:
@@ -1006,6 +1017,7 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreatePoolingDescriptor(&poolingDesc));
     CUDNN_CALL(cudnnSetPoolingNdDescriptor(poolingDesc, CUDNN_POOLING_MAX, CUDNN_PROPAGATE_NAN, 2,
                                            BeginPtr(kernel), BeginPtr(padding), BeginPtr(stride)));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.max_pool2d_dx"));
   }
 
  public:
@@ -1073,6 +1085,7 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_RELU,
                                             CUDNN_PROPAGATE_NAN, 0.0));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.relu"));
   }
 
  public:
@@ -1144,6 +1157,7 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_RELU,
                                             CUDNN_PROPAGATE_NAN, 0.0));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.relu_dx"));
   }
 
  public:
@@ -1213,6 +1227,7 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_SIGMOID,
                                             CUDNN_PROPAGATE_NAN, 0.0));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.sigmoid"));
   }
 
  public:
@@ -1284,6 +1299,7 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_SIGMOID,
                                             CUDNN_PROPAGATE_NAN, 0.0));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.sigmoid_dx"));
   }
 
  public:
@@ -1354,6 +1370,7 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.softmax"));
   }
 
  public:
@@ -1423,6 +1440,7 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
     mode = GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1
                ? CUDNN_SOFTMAX_MODE_INSTANCE
                : CUDNN_SOFTMAX_MODE_CHANNEL;
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.softmax_dx"));
   }
 
  public:
@@ -1489,6 +1507,7 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_TANH,
                                             CUDNN_PROPAGATE_NAN, 0.0));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.tanh"));
   }
 
  public:
@@ -1560,6 +1579,7 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnCreateActivationDescriptor(&activationDesc));
     CUDNN_CALL(cudnnSetActivationDescriptor(activationDesc, CUDNN_ACTIVATION_TANH,
                                             CUDNN_PROPAGATE_NAN, 0.0));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.tanh_dx"));
   }
 
  public:

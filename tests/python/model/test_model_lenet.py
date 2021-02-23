@@ -103,9 +103,8 @@ def test_lenet(config):
     m_model.linear2.b = t2m_param(t_model.linear2.bias)
     m_model.linear3.w = t2m_param(t_model.linear3.weight)
     m_model.linear3.b = t2m_param(t_model.linear3.bias)
-    m_x, t_x = randn_torch([1, 3, config[0], config[0]], device="cuda")
+    m_x, t_x = randn_torch([1, 3, config[0], config[0]], requires_grad=True, device="cuda")
     m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[1], device="cuda")
-    m_x.requires_grad = True
 
     print("### Switch to training mode")
     m_model.train_mode()

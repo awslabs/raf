@@ -72,6 +72,7 @@ class CallValuesGetter : public ExprMutator {
     for (size_t i = 0; i < num; ++i) {
       vmap_[func_->params[i]] = args[i];
     }
+    readable_name_stream << "fused";
   }
 
   void operator()() {
@@ -93,6 +94,7 @@ class CallValuesGetter : public ExprMutator {
     auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema")[op];
     Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
     std::vector<Value> fake_args;
+    readable_name_stream << "_" << op->name;
     for (size_t i = 0; i < node->args.size(); ++i) {
       Expr new_arg = VisitExpr(node->args[i]);
       if (const auto* cn = new_arg.as<ConstantNode>()) {
@@ -125,6 +127,8 @@ class CallValuesGetter : public ExprMutator {
  public:
   /*! \brief maps CallNode to CallValues, with fake intermediate results */
   std::unordered_map<Expr, CallValues, ObjectPtrHash, ObjectPtrEqual> call_values;
+  /*! \brief String stream for function name */
+  std::ostringstream readable_name_stream;
 
  private:
   /*! \brief maps from params to values */
@@ -193,12 +197,15 @@ class Meta2TVM : public ExprMutator {
         arg_indices.push_back(i);
       }
     }
+    func_name = call_values_getter_.readable_name_stream.str();
     return Function(Array<Var>(new_params), new_body, node->ret_type, {});
   }
 
  public:
   /*! \brief the indices of fused function params that correspond to tvm non-attr */
   std::vector<int> arg_indices;
+  /*! \brief readable function name */
+  std::string func_name;
 
  private:
   /*! \brief convert CallNode to CallValues */
@@ -227,9 +234,11 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   }
   Meta2TVM meta_to_tvm(call);
   Function func = Downcast<Function>(meta_to_tvm());
+  // TODO(@hzfan): add cache for meta
   engine_clear(engine);
   env->f = jit(engine, c_cache_key(func, target));
   env->arg_indices = meta_to_tvm.arg_indices;
+  env->env_name = TruncateName(GetUniqueName(meta_to_tvm.func_name));
   Array<Value> args = GetListArgs(call->args);
   for (const int& i : env->arg_indices) {
     GetDLTensor(args[i], &env->inputs);
