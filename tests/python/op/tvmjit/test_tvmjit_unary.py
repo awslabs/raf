@@ -34,6 +34,8 @@ class UnaryModel(mnm.Model):
         (special.erf, mnm._op.sym.erf),  # pylint: disable=no-member
         (np.negative, mnm._op.sym.negative),
         (np.cos, mnm._op.sym.cos),
+        (np.zeros_like, mnm._op.sym.zeros_like),
+        (np.ones_like, mnm._op.sym.ones_like),
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

@@ -14,16 +14,50 @@ namespace init {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-void Ones(const CallValues& call) {
-  const auto* args = call->args.as<ShapeDtypeArgs>();
+MNM_OP_DECLARE("mnm.op.zeros", [](const CallValues& call) {
+  const auto* args = call->args.as<InitOpArgs>();
   CHECK(args != nullptr);
-  const std::vector<int64_t>& shape = args->shape;
-  // TODO(@junrushao1994): hacky here
-  call->device = Device(DevType::kCUDA(), 0);
-  call->out = TensorValue::Assemble(call->device, DType(DTypeCode::kFloat(), 32), shape);
-}
+  std::string dtype = args->dtype;
+  std::vector<int64_t> shape(args->shape);
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  TVMContext tvm_ctx = (*f)(args->device);
+  Device device(tvm_ctx);
+  call->out = TensorValue::Assemble(/*ctx=*/device,
+                                    /*dtype=*/ir::String2DLDataType(dtype),
+                                    /*shape=*/shape);
+  call->device = device;
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
-MNM_OP_DECLARE("mnm.op.ones", Ones).set_attr<TOpPattern>("TOpPattern", kElemWise);
+MNM_OP_DECLARE("mnm.op.ones", [](const CallValues& call) {
+  const auto* args = call->args.as<InitOpArgs>();
+  CHECK(args != nullptr);
+  std::string dtype = args->dtype;
+  std::vector<int64_t> shape(args->shape);
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  TVMContext tvm_ctx = (*f)(args->device);
+  Device device(tvm_ctx);
+  call->out = TensorValue::Assemble(/*ctx=*/device,
+                                    /*dtype=*/ir::String2DLDataType(dtype),
+                                    /*shape=*/shape);
+  call->device = device;
+}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
+MNM_OP_DECLARE("mnm.op.one_hot", [](const CallValues& call) {
+  const auto* args = call->args.as<OneHotArgs>();
+  CHECK(args != nullptr);
+  std::string dtype = args->dtype;
+  DLTensor* indices = args->indices;
+  std::vector<int64_t> shape(indices->shape, indices->shape + indices->ndim);
+  CHECK_GE(args->depth, 0);
+  shape.push_back(args->depth);
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  TVMContext tvm_ctx = (*f)(args->device);
+  Device device(tvm_ctx);
+  call->out = TensorValue::Assemble(/*ctx=*/device,
+                                    /*dtype=*/ir::String2DLDataType(dtype),
+                                    /*shape=*/shape);
+  call->device = device;
+}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 }  // namespace init
 }  // namespace op

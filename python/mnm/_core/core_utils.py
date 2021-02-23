@@ -4,6 +4,7 @@ import inspect
 import functools
 from collections import deque, OrderedDict
 
+from mnm._lib import tvm
 from mnm._lib import _DLContext
 from mnm._lib import _NodeBase as NodeBase  # pylint: disable=unused-import
 from mnm._lib import _register_object as _register_node
@@ -69,6 +70,7 @@ def ctx2str(ctx: _DLContext) -> str:
     return mask[dev_type] + "(" + str(dev_id) + ")"
 
 
+@tvm._ffi.register_func("mnm._core.core_utils.str2ctx") # pylint: disable=protected-access
 def str2ctx(name: str) -> _DLContext:
     return _STR2CTX[name]
 

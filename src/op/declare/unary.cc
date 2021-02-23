@@ -118,6 +118,8 @@ MNM_DECLARE_UNARY_OP("mnm.op.round", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.erf", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.sqrt", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.atan", Unary);
+MNM_DECLARE_UNARY_OP("mnm.op.zeros_like", Unary);
+MNM_DECLARE_UNARY_OP("mnm.op.ones_like", Unary);
 
 void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check

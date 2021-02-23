@@ -65,6 +65,10 @@ MNM_TVMJIT(Tanh, "mnm.op.tanh", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames
            GenericHasher);
 MNM_TVMJIT(BatchFlatten, "mnm.op.batch_flatten", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
            GenericAttrs, GenericHasher);
+MNM_TVMJIT(ZerosLike, "mnm.op.zeros_like", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(OnesLike, "mnm.op.ones_like", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
+           GenericAttrs, GenericHasher);
 
 struct UnaryDxAttr : public tvm::AttrsNode<UnaryDxAttr> {
   std::string grad_mode;

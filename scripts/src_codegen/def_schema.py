@@ -488,6 +488,22 @@ SCHEMAS = {
         Arg(name="src_dev_type", cxx_type="int", cxx_default=0),
         Arg(name="dst_dev_type", cxx_type="int", cxx_default=0),
     ],
+    "init.h::init_op": [
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
+        Arg(name="device", cxx_type="std::string", cxx_default="\"cpu\"", py_default="\"cpu\"",),
+    ],
+    "init.h::one_hot": [
+        Arg(name="indices", cxx_type="value::BaseTensorValue"),
+        Arg(name="on_value", cxx_type="value::BaseTensorValue"),
+        Arg(name="off_value", cxx_type="value::BaseTensorValue"),
+        Arg(name="depth", cxx_type="int64_t"),
+        Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
+        Arg(name="device", cxx_type="std::string", cxx_default="\"cpu\"", py_default="\"cpu\"",),
+    ],
 }
 
 

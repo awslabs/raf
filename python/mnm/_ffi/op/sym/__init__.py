@@ -90,6 +90,9 @@ from ._internal import nll_loss_dpred
 from ._internal import nll_loss_dtrue
 from ._internal import non_max_suppression
 from ._internal import not_equal
+from ._internal import one_hot
+from ._internal import ones
+from ._internal import ones_like
 from ._internal import pad
 from ._internal import power
 from ._internal import prod
@@ -131,3 +134,5 @@ from ._internal import tanh_dx
 from ._internal import transpose
 from ._internal import transpose_dx
 from ._internal import where
+from ._internal import zeros
+from ._internal import zeros_like

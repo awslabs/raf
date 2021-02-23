@@ -15,6 +15,7 @@
 #include "../schema/algorithm.h"
 #include "../schema/annotation.h"
 #include "../schema/communication.h"
+#include "../schema/init.h"
 #include "../schema/likes.h"
 #include "../schema/loss.h"
 #include "../schema/memory.h"
@@ -127,6 +128,9 @@ static const char nll_loss_dpred[] = "mnm.op.nll_loss_dpred";
 static const char nll_loss_dtrue[] = "mnm.op.nll_loss_dtrue";
 static const char non_max_suppression[] = "mnm.op.non_max_suppression";
 static const char not_equal[] = "mnm.op.not_equal";
+static const char one_hot[] = "mnm.op.one_hot";
+static const char ones[] = "mnm.op.ones";
+static const char ones_like[] = "mnm.op.ones_like";
 static const char pad[] = "mnm.op.pad";
 static const char power[] = "mnm.op.power";
 static const char prod[] = "mnm.op.prod";
@@ -168,6 +172,8 @@ static const char tanh_dx[] = "mnm.op.tanh_dx";
 static const char transpose[] = "mnm.op.transpose";
 static const char transpose_dx[] = "mnm.op.transpose_dx";
 static const char where[] = "mnm.op.where";
+static const char zeros[] = "mnm.op.zeros";
+static const char zeros_like[] = "mnm.op.zeros_like";
 }  // namespace names
 }  // namespace regs
 }  // namespace op
@@ -444,6 +450,14 @@ Attrs GetValidCounts(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs InitOp(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::InitOpArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::IntOrTupleInt, shape);
+  MNM_POD(1, ffi2schema::String, dtype);
+  MNM_POD(2, ffi2schema::String, device);
+  return Attrs(attrs);
+}
+
 Attrs LayerNorm(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::LayerNormArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
@@ -501,6 +515,18 @@ Attrs NonMaxSuppression(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(9, ffi2schema::Int, id_index);
   MNM_POD(10, ffi2schema::Bool, return_indices);
   MNM_POD(11, ffi2schema::Bool, invalid_to_bottom);
+  return Attrs(attrs);
+}
+
+Attrs OneHot(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::OneHotArgs, 7);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, indices);
+  MNM_TAPE(1, ffi2schema::Tensor, on_value);
+  MNM_TAPE(2, ffi2schema::Tensor, off_value);
+  MNM_POD(3, ffi2schema::Int, depth);
+  MNM_POD(4, ffi2schema::Int, axis);
+  MNM_POD(5, ffi2schema::String, dtype);
+  MNM_POD(6, ffi2schema::String, device);
   return Attrs(attrs);
 }
 
@@ -1731,6 +1757,37 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.not_equal").set_body([](TVMArgs args, TVMRetValu
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.one_hot").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(one_hot, 7, ffi2schema::OneHot,
+              schema::OneHotArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->indices));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->on_value));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->off_value));
+  MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->depth));
+  MNM_SET_ENV(vpack->x[4], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[5], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[6], schema2value::String(schema->device));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.ones").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(ones, 3, ffi2schema::InitOp, schema::InitOpArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->device));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.ones_like").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(ones_like, 1, ffi2schema::Unary,
+              schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.pad").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(pad, 4, ffi2schema::Pad, schema::PadArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
@@ -2108,6 +2165,23 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.where").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.zeros").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(zeros, 3, ffi2schema::InitOp, schema::InitOpArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::IntOrTupleInt(schema->shape));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->device));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.zeros_like").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(zeros_like, 1, ffi2schema::Unary,
+              schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 #undef MNM_RET
 #undef MNM_SET_ENV
 #undef MNM_PRELUDE
@@ -2383,6 +2457,14 @@ Array<Expr> GetValidCounts(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> InitOp(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::IntOrTupleInt, shape);
+  MNM_ARG(1, ffi2expr::String, dtype);
+  MNM_ARG(2, ffi2expr::String, device);
+  MNM_RET();
+}
+
 Array<Expr> LayerNorm(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2440,6 +2522,18 @@ Array<Expr> NonMaxSuppression(const TVMArgs& values) {
   MNM_ARG(9, ffi2expr::Int, id_index);
   MNM_ARG(10, ffi2expr::Bool, return_indices);
   MNM_ARG(11, ffi2expr::Bool, invalid_to_bottom);
+  MNM_RET();
+}
+
+Array<Expr> OneHot(const TVMArgs& values) {
+  MNM_PRELUDE(7);
+  MNM_ARG(0, ffi2expr::Tensor, indices);
+  MNM_ARG(1, ffi2expr::Tensor, on_value);
+  MNM_ARG(2, ffi2expr::Tensor, off_value);
+  MNM_ARG(3, ffi2expr::Int, depth);
+  MNM_ARG(4, ffi2expr::Int, axis);
+  MNM_ARG(5, ffi2expr::String, dtype);
+  MNM_ARG(6, ffi2expr::String, device);
   MNM_RET();
 }
 
@@ -2858,6 +2952,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.nll_loss_dtrue")
 MNM_REGISTER_GLOBAL("mnm.op.sym.non_max_suppression")
     .set_body(MNM_SYMBOLIC_API(non_max_suppression, 12, NonMaxSuppression));
 MNM_REGISTER_GLOBAL("mnm.op.sym.not_equal").set_body(MNM_SYMBOLIC_API(not_equal, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.one_hot").set_body(MNM_SYMBOLIC_API(one_hot, 7, OneHot));
+MNM_REGISTER_GLOBAL("mnm.op.sym.ones").set_body(MNM_SYMBOLIC_API(ones, 3, InitOp));
+MNM_REGISTER_GLOBAL("mnm.op.sym.ones_like").set_body(MNM_SYMBOLIC_API(ones_like, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.pad").set_body(MNM_SYMBOLIC_API(pad, 4, Pad));
 MNM_REGISTER_GLOBAL("mnm.op.sym.power").set_body(MNM_SYMBOLIC_API(power, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.prod").set_body(MNM_SYMBOLIC_API(prod, 3, Reduce));
@@ -2907,6 +3004,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose,
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
     .set_body(MNM_SYMBOLIC_API(transpose_dx, 4, TransposeDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
+MNM_REGISTER_GLOBAL("mnm.op.sym.zeros").set_body(MNM_SYMBOLIC_API(zeros, 3, InitOp));
+MNM_REGISTER_GLOBAL("mnm.op.sym.zeros_like").set_body(MNM_SYMBOLIC_API(zeros_like, 1, Unary));
 
 #undef MNM_SYMBOLIC_API
 
@@ -3228,6 +3327,15 @@ Attrs GetValidCounts(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs InitOp(const Array<Value>& values) {
+  MNM_PRELUDE(1, 3, schema::InitOpArgs);
+  MNM_REQUIRED(0, value2schema::IntOrTupleInt, shape);
+  MNM_OPTIONAL(1, value2schema::String, dtype);
+  MNM_OPTIONAL(2, value2schema::String, device);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs LayerNorm(const Array<Value>& values) {
   MNM_PRELUDE(1, 3, schema::LayerNormArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
@@ -3290,6 +3398,19 @@ Attrs NonMaxSuppression(const Array<Value>& values) {
   MNM_OPTIONAL(9, value2schema::Int, id_index);
   MNM_OPTIONAL(10, value2schema::Bool, return_indices);
   MNM_OPTIONAL(11, value2schema::Bool, invalid_to_bottom);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs OneHot(const Array<Value>& values) {
+  MNM_PRELUDE(4, 7, schema::OneHotArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, indices);
+  MNM_REQUIRED(1, value2schema::Tensor, on_value);
+  MNM_REQUIRED(2, value2schema::Tensor, off_value);
+  MNM_REQUIRED(3, value2schema::Int, depth);
+  MNM_OPTIONAL(4, value2schema::Int, axis);
+  MNM_OPTIONAL(5, value2schema::String, dtype);
+  MNM_OPTIONAL(6, value2schema::String, device);
   return Attrs(attrs);
 }
 
@@ -4084,6 +4205,21 @@ int GetValidCounts(const std::string& field) {
 }
 
 template <const char* op_name>
+int InitOp(const std::string& field) {
+  if (field == "shape") {
+    return 0;
+  }
+  if (field == "dtype") {
+    return 1;
+  }
+  if (field == "device") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int LayerNorm(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -4204,6 +4340,33 @@ int NonMaxSuppression(const std::string& field) {
   }
   if (field == "invalid_to_bottom") {
     return 11;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int OneHot(const std::string& field) {
+  if (field == "indices") {
+    return 0;
+  }
+  if (field == "on_value") {
+    return 1;
+  }
+  if (field == "off_value") {
+    return 2;
+  }
+  if (field == "depth") {
+    return 3;
+  }
+  if (field == "axis") {
+    return 4;
+  }
+  if (field == "dtype") {
+    return 5;
+  }
+  if (field == "device") {
+    return 6;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -5098,7 +5261,19 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.non_max_suppression", names::non_max_suppres
 MNM_BIND_SCHEMA("mnm.op.not_equal", names::not_equal,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.not_equal", names::not_equal,
-                            schema_field_idx::BinaryUfunc);    // NOLINT(whitespace/line_length)
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.one_hot", names::one_hot,
+                value2schema::OneHot);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.one_hot", names::one_hot,
+                            schema_field_idx::OneHot);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.ones", names::ones,
+                value2schema::InitOp);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.ones", names::ones,
+                            schema_field_idx::InitOp);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.ones_like", names::ones_like,
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.ones_like", names::ones_like,
+                            schema_field_idx::Unary);          // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.pad", names::pad, value2schema::Pad);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.pad", names::pad,
                             schema_field_idx::Pad);  // NOLINT(whitespace/line_length)
@@ -5253,6 +5428,14 @@ MNM_BIND_SCHEMA("mnm.op.where", names::where,
                 value2schema::Where);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.where", names::where,
                             schema_field_idx::Where);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.zeros", names::zeros,
+                value2schema::InitOp);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.zeros", names::zeros,
+                            schema_field_idx::InitOp);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.zeros_like", names::zeros_like,
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.zeros_like", names::zeros_like,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 
 #undef MNM_BIND_SCHEMA
 #undef MNM_BIND_SCHEMA_FIELD_INDEX
@@ -5297,12 +5480,14 @@ MNM_REGISTER_OBJECT_REFLECT(GatherDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherNdArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherNdDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(GetValidCountsArgs);
+MNM_REGISTER_OBJECT_REFLECT(InitOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossDtpArgs);
 MNM_REGISTER_OBJECT_REFLECT(NonMaxSuppressionArgs);
+MNM_REGISTER_OBJECT_REFLECT(OneHotArgs);
 MNM_REGISTER_OBJECT_REFLECT(PadArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);

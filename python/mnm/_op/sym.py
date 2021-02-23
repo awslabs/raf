@@ -24,15 +24,16 @@ __all__ = [
     "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
     "max_pool2d_dx", "maximum", "mean", "mean_dx", "min",
     "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "pad",
-    "power", "prod", "relu", "relu_dx", "repeat",
-    "reshape", "reverse", "reverse_sequence", "round", "rsqrt",
-    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
-    "softmax", "softmax_dx", "sort", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx", "where",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
+    "ones", "ones_like", "pad", "power", "prod",
+    "relu", "relu_dx", "repeat", "reshape", "reverse",
+    "reverse_sequence", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "strided_slice", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx", "where", "zeros", "zeros_like",
 ]
 
 def _allreduce(x):
@@ -601,6 +602,26 @@ def not_equal(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.not_equal(x1, x2, out, where))
 
+def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device="cpu"):
+    indices = sym_utils.to_tensor(indices)
+    on_value = sym_utils.to_tensor(on_value)
+    off_value = sym_utils.to_tensor(off_value)
+    depth = sym_utils.to_int(depth)
+    axis = sym_utils.to_int(axis)
+    dtype = sym_utils.to_string(dtype)
+    device = sym_utils.to_string(device)
+    return Symbol.from_expr(ffi.one_hot(indices, on_value, off_value, depth, axis, dtype, device))
+
+def ones(shape, dtype="int32", device="cpu"):
+    shape = sym_utils.to_int_tuple(shape)
+    dtype = sym_utils.to_string(dtype)
+    device = sym_utils.to_string(device)
+    return Symbol.from_expr(ffi.ones(shape, dtype, device))
+
+def ones_like(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.ones_like(x))
+
 def pad(x, pad_width, pad_value=0.0, pad_mode="constant"):
     x = sym_utils.to_tensor(x)
     pad_width = sym_utils.to_int_tuple(pad_width)
@@ -833,3 +854,13 @@ def where(condition, x, y):
     x = sym_utils.to_tensor(x)
     y = sym_utils.to_tensor(y)
     return Symbol.from_expr(ffi.where(condition, x, y))
+
+def zeros(shape, dtype="int32", device="cpu"):
+    shape = sym_utils.to_int_tuple(shape)
+    dtype = sym_utils.to_string(dtype)
+    device = sym_utils.to_string(device)
+    return Symbol.from_expr(ffi.zeros(shape, dtype, device))
+
+def zeros_like(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.zeros_like(x))

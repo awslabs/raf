@@ -181,6 +181,12 @@ non_max_suppression = _APIS.get("mnm.op.imp.non_max_suppression", None)
 # Defined in ./src/op/regs/regs.cc
 not_equal = _APIS.get("mnm.op.imp.not_equal", None)
 # Defined in ./src/op/regs/regs.cc
+one_hot = _APIS.get("mnm.op.imp.one_hot", None)
+# Defined in ./src/op/regs/regs.cc
+ones = _APIS.get("mnm.op.imp.ones", None)
+# Defined in ./src/op/regs/regs.cc
+ones_like = _APIS.get("mnm.op.imp.ones_like", None)
+# Defined in ./src/op/regs/regs.cc
 pad = _APIS.get("mnm.op.imp.pad", None)
 # Defined in ./src/op/regs/regs.cc
 power = _APIS.get("mnm.op.imp.power", None)
@@ -262,3 +268,7 @@ transpose = _APIS.get("mnm.op.imp.transpose", None)
 transpose_dx = _APIS.get("mnm.op.imp.transpose_dx", None)
 # Defined in ./src/op/regs/regs.cc
 where = _APIS.get("mnm.op.imp.where", None)
+# Defined in ./src/op/regs/regs.cc
+zeros = _APIS.get("mnm.op.imp.zeros", None)
+# Defined in ./src/op/regs/regs.cc
+zeros_like = _APIS.get("mnm.op.imp.zeros_like", None)

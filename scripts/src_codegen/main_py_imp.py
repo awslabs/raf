@@ -7,7 +7,7 @@ from .codegen_utils import split_chunks, write_to_file
 
 def gen_file():
     FILE = """
-# pylint: disable=invalid-name,line-too-long
+# pylint: disable=invalid-name,line-too-long, too-many-lines
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=protected-access

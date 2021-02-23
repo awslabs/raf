@@ -87,6 +87,8 @@ Type UnaryShapeInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.shape", "Shape", UnaryShapeInfer);
+MNM_OP_TYPE("mnm.op.zeros_like", "Identity", UnaryInfer);
+MNM_OP_TYPE("mnm.op.ones_like", "Identity", UnaryInfer);
 
 }  // namespace type
 }  // namespace op

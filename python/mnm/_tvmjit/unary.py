@@ -35,3 +35,5 @@ def erf_dx_compute(attrs, inputs, output_type):
                             * _tvm.te.exp(-x[idx] * x[idx]) * dy[idx])]
 
 _reg.register_broadcast_schedule("mnm.op.erf_dx")
+_reg.register_injective_schedule("mnm.op.zeros_like")
+_reg.register_injective_schedule("mnm.op.ones_like")

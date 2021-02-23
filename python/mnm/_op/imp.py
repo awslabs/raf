@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,line-too-long
+# pylint: disable=invalid-name,line-too-long, too-many-lines
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=protected-access
@@ -25,15 +25,16 @@ __all__ = [
     "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
     "max_pool2d_dx", "maximum", "mean", "mean_dx", "min",
     "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "pad",
-    "power", "prod", "relu", "relu_dx", "repeat",
-    "reshape", "reverse", "reverse_sequence", "round", "rsqrt",
-    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
-    "softmax", "softmax_dx", "sort", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx", "where",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
+    "ones", "ones_like", "pad", "power", "prod",
+    "relu", "relu_dx", "repeat", "reshape", "reverse",
+    "reverse_sequence", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "strided_slice", "subtract",
+    "sum", "take", "take_dx", "tanh", "tanh_dx",
+    "transpose", "transpose_dx", "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -692,6 +693,29 @@ def not_equal(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.not_equal(x1, x2, out, where))
 
 @set_module("mnm")
+def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device="cpu"):
+    indices = imp_utils.to_tensor(indices)
+    on_value = imp_utils.to_tensor(on_value)
+    off_value = imp_utils.to_tensor(off_value)
+    depth = imp_utils.to_int(depth)
+    axis = imp_utils.to_int(axis)
+    dtype = imp_utils.to_string(dtype)
+    device = imp_utils.to_string(device)
+    return imp_utils.ret(ffi.one_hot(indices, on_value, off_value, depth, axis, dtype, device))
+
+@set_module("mnm")
+def ones(shape, dtype="int32", device="cpu"):
+    shape = imp_utils.to_int_tuple(shape)
+    dtype = imp_utils.to_string(dtype)
+    device = imp_utils.to_string(device)
+    return imp_utils.ret(ffi.ones(shape, dtype, device))
+
+@set_module("mnm")
+def ones_like(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.ones_like(x))
+
+@set_module("mnm")
 def pad(x, pad_width, pad_value=0.0, pad_mode="constant"):
     x = imp_utils.to_tensor(x)
     pad_width = imp_utils.to_int_tuple(pad_width)
@@ -964,3 +988,15 @@ def where(condition, x, y):
     x = imp_utils.to_tensor(x)
     y = imp_utils.to_tensor(y)
     return imp_utils.ret(ffi.where(condition, x, y))
+
+@set_module("mnm")
+def zeros(shape, dtype="int32", device="cpu"):
+    shape = imp_utils.to_int_tuple(shape)
+    dtype = imp_utils.to_string(dtype)
+    device = imp_utils.to_string(device)
+    return imp_utils.ret(ffi.zeros(shape, dtype, device))
+
+@set_module("mnm")
+def zeros_like(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.zeros_like(x))
