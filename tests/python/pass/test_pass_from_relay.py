@@ -27,6 +27,7 @@ def check_from_relay(m_model, r_func, args):
     new_model = FrameworkModel(new_func, new_func, {}, {})
     outs = new_model(*args)
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
+    assert len(ref_outs) == len(outs)
     for ref_out, out in zip(ref_outs, outs):
         check(ref_out, out)
 
@@ -721,8 +722,8 @@ def test_mnm_layer_norm(shape, axis, eps, dtype):
 
     check_from_relay(model, r_func, [m_x])
 
-@pytest.mark.parametrize("shape", [[8, 8, 8, 8]])
-def test_mnm_batch_norm_infer(shape):
+@pytest.mark.parametrize("shape", [[32, 3, 224, 224]])
+def test_mnm_batch_norm_train(shape):
     momentum = 0.1
     eps = 1e-5
     stats_shape = [shape[1]]
@@ -737,18 +738,18 @@ def test_mnm_batch_norm_infer(shape):
             pass
 
         @mnm.model.trace
-        def forward(self, m_x, m_m, m_v, m_w, m_b):
-            return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+        def forward(self, m_x, m_w, m_b, m_m, m_v):
+            return mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
 
     model = BatchNorm()
 
     r_x = _relay.var("x", shape=shape)
-    r_g = _relay.var("g", shape=stats_shape)
+    r_w = _relay.var("w", shape=stats_shape)
     r_b = _relay.var("b", shape=stats_shape)
     r_m = _relay.var("m", shape=stats_shape)
     r_v = _relay.var("v", shape=stats_shape)
-    r_func = _relay.Function(params=[r_x, r_g, r_b, r_m, r_v], body=_relay.nn.batch_norm(
-        r_x, r_g, r_b, r_m, r_v, epsilon=eps).astuple())
+    r_func = _relay.Function(params=[r_x, r_w, r_b, r_m, r_v], body=_relay.nn.batch_norm(
+        r_x, r_w, r_b, r_m, r_v, epsilon=eps).astuple())
 
     check_from_relay(model, r_func, [m_x, m_m, m_v, m_w, m_b])
 

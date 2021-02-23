@@ -119,10 +119,15 @@ MNM_OP_FROM_RELAY("nn.layer_norm", "mnm.op.layer_norm",
                     return mnm_args;
                   });
 
-MNM_OP_FROM_RELAY("nn.batch_norm", "mnm.op.batch_norm_infer",
+MNM_OP_FROM_RELAY("nn.batch_norm", "mnm.op.batch_norm_train",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> mnm_args;
                     const auto* relay_attrs = attrs.as<BatchNormAttrs>();
+                    mnm_args.push_back(args[0]);                              // x
+                    mnm_args.push_back(args[3]);                              // running_mean
+                    mnm_args.push_back(args[4]);                              // running_var
+                    mnm_args.push_back(args[1]);                              // w
+                    mnm_args.push_back(args[2]);                              // b
                     mnm_args.push_back(MakeConstant(FloatValue::make(0.1)));  // momentum
                     mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->epsilon)));
                     return mnm_args;
