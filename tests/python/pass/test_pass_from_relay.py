@@ -32,6 +32,23 @@ def check_from_relay(m_model, r_func, args):
         check(ref_out, out)
 
 
+def test_mnm_constant():
+    data = mnm.array(1)
+
+    def expected():
+        a1 = _relay.var("a1")  # pylint: disable=invalid-name
+        t_value = mnm._core.value.TensorValue.from_numpy(data.asnumpy())
+        constant = mnm._ffi.ir._make.Constant(t_value)
+        let = _relay.Let(a1, constant, a1)
+        return _relay.Function([], let)
+
+    r_func = _relay.Function([], _relay.const(1))
+    m_func = FromRelay(r_func)
+    assert _tvm.ir.structural_equal(m_func, expected())
+    model = FrameworkModel(m_func, m_func, {}, {})
+    check(data, model())
+
+
 @pytest.mark.parametrize("op_name", [
     "copy", "abs", "ceil", "floor", "log", "exp", "cos", "sin", "sign", "round",
     "relu", "erf", "sqrt", "rsqrt", "atan", "negative", "sigmoid", "tanh", "batch_flatten"

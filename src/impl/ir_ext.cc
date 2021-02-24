@@ -105,7 +105,8 @@ tvm::runtime::NDArray MakeFakeTensor() {
 
 ObjectPtr<ConstantNode> MakeConstantNode(ObjectRef node_ref) {
   ObjectPtr<ConstantNode> n = make_object<ConstantNode>();
-  n->data = MakeFakeTensor();
+  static const auto fake_tensor = MakeFakeTensor();
+  n->data = fake_tensor;
   n->value = std::move(node_ref);
   return n;
 }

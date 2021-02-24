@@ -25,6 +25,17 @@ struct FromRelayMutator : public ExprMutator {
     return var_map_.at(GetRef<Var>(node));
   }
 
+  Expr VisitExpr_(const RelayConstantNode* node) final {
+    // check if it is a Meta Constant
+    static const auto fake_tensor = MakeConstant(NullValue<Value>());
+    if (node->data->data == fake_tensor->data->data) {
+      return GetRef<Expr>(node);
+    }
+    static const auto& from_tvm = registry::GetPackedFunc("mnm.value.FromTVM");
+    auto tv = from_tvm(node->data);
+    return MakeConstant(tv);
+  }
+
   Expr VisitExpr_(const LetNode* node) final {
     const Var& var = node->var;
     CHECK_EQ(var_map_.count(var), 0) << "IR is malformed: cannot bind the same var twice";
