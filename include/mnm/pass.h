@@ -142,5 +142,12 @@ ir::Function InlineBackward(ir::Function func);
  */
 ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map);
 
+/*!
+ * \brief Convert A-normal form to dataflow graph.
+ * \param expr The expression
+ * \return Transformed expression
+ */
+ir::Expr ToDataflow(ir::Expr expr);
+
 }  // namespace pass
 }  // namespace mnm

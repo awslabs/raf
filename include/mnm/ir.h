@@ -147,6 +147,7 @@ using tvm::relay::ExprFunctor;
 using tvm::relay::ExprMutator;
 using tvm::relay::ExprRewriter;
 using tvm::relay::ExprVisitor;
+using tvm::relay::MixedModeMutator;
 using tvm::relay::MixedModeVisitor;
 
 }  // namespace ir

@@ -50,5 +50,7 @@ PartitionGraph = _APIS.get("mnm.pass_.PartitionGraph", None)
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/substitute.cc
 Substitute = _APIS.get("mnm.pass_.Substitute", None)
+# Defined in ./src/pass/to_dataflow.cc
+ToDataflow = _APIS.get("mnm.pass_.ToDataflow", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
