@@ -53,13 +53,17 @@ struct FromRelayMutator : public ExprMutator {
     const Op& op = Downcast<Op>(node->op);
     if (fmap.count(op)) {
       try {
-        Call new_call = Downcast<Call>(fmap[op](node->attrs, node->args));
-        tvm::Array<Expr> call_args;
-        for (auto arg : new_call->args) {
-          auto new_arg = this->Mutate(arg);
-          call_args.push_back(new_arg);
+        auto new_expr = fmap[op](node->attrs, node->args);
+        if (new_expr.as<CallNode>()) {
+          Call new_call = Downcast<Call>(new_expr);
+          tvm::Array<Expr> call_args;
+          for (auto arg : new_call->args) {
+            auto new_arg = this->Mutate(arg);
+            call_args.push_back(new_arg);
+          }
+          return Call(new_call->op, call_args);
         }
-        return Call(new_call->op, call_args);
+        return this->Mutate(new_expr);
       } catch (const dmlc::Error& e) {
         LOG(WARNING) << e.what();
       }

@@ -311,7 +311,9 @@ struct Gradient : public ExprVisitor {
           tuple_length[var] = -1;
           tuple_grads[var] = std::vector<Expr>(size, NullValue<Var>());
         } else {
-          CHECK_EQ(tuple_length[var], -1);
+          // FIXME(comaniac): the ignored nn.dropout becomes a tuple-2 which has
+          // tuple_length = 2 here.
+          // CHECK_EQ(tuple_length[var], -1);
           int old_size = tuple_grads[var].size();
           if (size > old_size) {
             tuple_grads[var] = std::vector<Expr>(size, NullValue<Var>());

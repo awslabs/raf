@@ -148,6 +148,19 @@ MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Ex
   return mnm_args;
 });
 
+// FIXME: Meta does not have nn.dropout so we simply ignore this node when converting
+// from Relay by passing arguments. We should fix this converter when nn.dropout is available.
+RELAY_REGISTER_OP("nn.dropout")
+    .set_attr<op::FMNMFromRelay>("FMNMFromRelay", [](const Attrs& attrs, const Array<Expr>& args) {
+      LOG(WARNING) << "nn.dropout is unavailable in Meta, ignored";
+      const auto* relay_attrs = attrs.as<DropoutAttrs>();
+
+      Array<Expr> ret;
+      ret.push_back(args[0]);
+      ret.push_back(MakeConstant(FloatValue::make(2)));
+      return Tuple(std::move(ret));
+    });
+
 }  // namespace from_relay
 }  // namespace op
 }  // namespace mnm
