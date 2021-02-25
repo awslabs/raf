@@ -1,6 +1,6 @@
 """SGD optimizer."""
 import numpy as np
-from .._core.core_utils import get_chained_attr, with_signature
+from .._core.core_utils import get_chained_attr
 from .._core.ndarray import ndarray, array
 from .optim import with_autodiff
 from ..model import trace, Model, trace_mutate_attr
@@ -88,13 +88,11 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         self.params[x._ndarray__handle] = (name, x, v_i)
 
             @trace
-            @with_signature(model.forward,
-                            lambda this, other: this[:-2] + other)
-            def forward(self, dy, *args, **kwargs):
+            def forward(self, dy, *args):
                 # pylint: disable=missing-function-docstring, invalid-name
-                y, dxs = self.ad_model(dy, *args, **kwargs)
-                record = self.ad_model._internal(dy, *args, **kwargs)
-                inputs = _get_func_inputs(record, args, kwargs)
+                y, dxs = self.ad_model(dy, *args)
+                record = self.ad_model._internal(dy, *args)
+                inputs = _get_func_inputs(record, args, {})
                 for i, param in enumerate(inputs):
                     if param in self.params:
                         dxi = dxs[i] if len(inputs) > 1 else dxs

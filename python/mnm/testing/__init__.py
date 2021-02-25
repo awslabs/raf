@@ -5,6 +5,7 @@ import functools
 import random
 import sys
 import numpy as np
+import mxnet as mx
 import torch
 import mnm
 import tvm
@@ -54,6 +55,8 @@ def asnumpy(x):
         return x.asnumpy()
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
+    if isinstance(x, mx.nd.NDArray):
+        return x.asnumpy()
     if np.isscalar(x):
         return np.array(x)
     assert isinstance(x, np.ndarray), f"{type(x)} is not supported"
@@ -106,6 +109,24 @@ def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, me
     m_x.requires_grad = requires_grad
     t_x = torch.tensor(n_x, requires_grad=requires_grad, device=device)  # pylint: disable=not-callable
     return m_x, t_x
+
+
+def randn_mxnet(shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
+                positive=False):
+    """Helper function to generate a pair of mnm and mxnet arrays"""
+    x = np.random.randn(*shape) * std + mean
+    if positive:
+        x = np.abs(x) + 1e-5
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    assert list(x.shape) == list(shape)
+    n_x = x.astype(dtype)
+    m_x = mnm.array(n_x, device=device)
+    m_x.requires_grad = requires_grad
+    mx_x = mx.nd.array(n_x, dtype=dtype, ctx=mx.cpu())
+    if requires_grad:
+        mx_x.attach_grad()
+    return m_x, mx_x
 
 
 def one_hot_torch(batch_size, num_classes, device="cpu", dtype="float32"):

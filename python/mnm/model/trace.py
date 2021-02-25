@@ -29,7 +29,7 @@ def trace_mutate_attr(obj, attr_name, symbol):
     assert last is not None
     assert last.name == "trace"
     if (obj, attr_name) not in last.mutate:
-        arr = getattr(obj, attr_name)
+        arr = obj.state()[attr_name]
         assert isinstance(arr, ndarray)
     else:
         arr = last.mutate[(obj, attr_name)][0]

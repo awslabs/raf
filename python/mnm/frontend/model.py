@@ -1,7 +1,61 @@
 """Model that wraps the IR converted from deep learning frameworks."""
+# pylint: disable=protected-access
+from tvm import relay
+
 from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
+from mnm._core.ndarray import ndarray, Symbol
+from mnm._ffi.pass_ import Substitute
+
+
+def _get_func_inputs(model, args, kwargs, get_handle=True):
+    arg_index = 0
+    res = []
+    func = model._FrameworkModel__train_func \
+        if model._BaseModel__is_train else model._FrameworkModel__infer_func
+    for var_node in func.params:
+        var_name = var_node.name_hint
+        if var_name in model._FrameworkModel__arg_params:
+            res.append(model._FrameworkModel__arg_params[var_name])
+        elif var_name in model._FrameworkModel__aux_params:
+            res.append(model._FrameworkModel__aux_params[var_name])
+        elif var_name in kwargs:
+            res.append(kwargs[var_name])
+        else:
+            res.append(args[arg_index])
+            arg_index += 1
+    if get_handle:
+        res = [i._ndarray__handle for i in res]
+    return res
+
+
+def annotate_func_params(func, args):
+    """Annotate func parameters with the type of args
+
+    Parameters
+    ----------
+    func : relay.Function
+        the function to be annotated
+
+    args : list[ndarray]
+        function input arguments
+
+    Returns
+    -------
+    return : relay.Function
+        the annotated function
+    """
+    def get_type(arg):
+        if isinstance(arg, ndarray):
+            return relay.TensorType(shape=arg.shape, dtype=arg.dtype)
+        if isinstance(arg, Symbol):
+            return arg._Symbol__handle.type_annotation
+        raise TypeError("Not supported: ", type(arg))
+    params = [relay.Var(param.name_hint, get_type(arg)) for param, arg in zip(func.params, args)]
+    vmap = dict(zip(func.params, params))
+    body = Substitute(func.body, vmap)
+    return relay.Function(params, body)
 
 
 class FrameworkModel(BaseModel):
@@ -34,19 +88,7 @@ class FrameworkModel(BaseModel):
         func = self.__infer_func
         if self._BaseModel__is_train:
             func = self.__train_func
-        func_inputs = list()
-        arg_index = 0
-        for var_node in func.params:
-            var_name = var_node.name_hint
-            if var_name in self.__arg_params:
-                func_inputs.append(self.__arg_params[var_name]._ndarray__handle)
-            elif var_name in self.__aux_params:
-                func_inputs.append(self.__aux_params[var_name]._ndarray__handle)
-            elif var_name in kwargs:
-                func_inputs.append(kwargs[var_name]._ndarray__handle)
-            else:
-                func_inputs.append(args[arg_index]._ndarray__handle)
-                arg_index += 1
+        func_inputs = _get_func_inputs(self, args, kwargs)
         return _unwrap(RunModel(func, func_inputs))
 
     def train_mode(self, recursive=True):
@@ -69,25 +111,23 @@ class FrameworkModel(BaseModel):
             The internal record.
             Frontend Model only provides relay function via record.func for now.
         """
-        ret = self.__train_func if self._BaseModel__is_train else self.__infer_func
-        requires_grads = list()
-        arg_index = 0
-        for var_node in ret.params:
-            var_name = var_node.name_hint
-            if var_name in self.__arg_params:
-                requires_grads.append(self.__arg_params[var_name].requires_grad)
-            elif var_name in self.__aux_params:
-                requires_grads.append(self.__aux_params[var_name].requires_grad)
-            elif var_name in kwargs:
-                requires_grads.append(kwargs[var_name].requires_grad)
-            else:
-                requires_grads.append(args[arg_index].requires_grad)
-                arg_index += 1
-        return _TraceRecord(func=ret, named_params=None, o_struct=None,
+        func = self.__train_func if self._BaseModel__is_train else self.__infer_func
+        func_inputs = _get_func_inputs(self, args, kwargs, get_handle=False)
+        func = annotate_func_params(func, func_inputs)
+        requires_grads = [i.requires_grad if isinstance(i, ndarray) else None for i in func_inputs]
+        if None in requires_grads:
+            requires_grads = []
+        named_params = {}
+        named_params.update(self.__arg_params)
+        named_params.update(self.__aux_params)
+        return _TraceRecord(func=func, named_params=named_params, o_struct=None,
                             mutations=None, requires_grads=requires_grads)
 
-    def state(self, prefix="", recursive=True):
-        return self.__arg_params
+    def _state(self):
+        state = {}
+        state.update(self.__arg_params)
+        state.update(self.__aux_params)
+        return state
 
     def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
         for name, param in self.__arg_params.items():

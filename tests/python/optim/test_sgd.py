@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+import mxnet as mx
+from mxnet import gluon
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,7 +9,7 @@ import torch.nn.functional as F
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
 from mnm.testing import with_seed, get_device_list, check, run_vm_model, \
-    one_hot_torch, randn_torch, t2m_param
+    one_hot_torch, randn_torch, t2m_param, randn_mxnet
 
 
 class TorchTest(nn.Module):  # pylint: disable=abstract-method
@@ -206,6 +208,36 @@ def test_traced_sgd(config):
         check(m_model.linear1.b, t_model.linear1.bias, rtol=1e-4, atol=1e-4)
         check(m_model.bn1.w, t_model.bn1.weight, rtol=1e-4, atol=1e-4)
         check(m_model.bn1.b, t_model.bn1.bias, rtol=1e-4, atol=1e-4)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+def test_framework_model(device):
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(128, activation='relu'))
+        net.add(gluon.nn.Dense(64, activation='relu'))
+        net.add(gluon.nn.Dense(10))
+    net.initialize(mx.init.Xavier(magnitude=2.24))
+    mx_trainer = gluon.Trainer(
+        net.collect_params(),
+        'sgd', {'learning_rate': 0.1, 'momentum': 0.01}
+    )
+    x, mx_x = randn_mxnet((1, 3, 224, 224), requires_grad=True, device=device)
+    dy, mx_dy = randn_mxnet((1, 10), device=device)
+    net(mx_x)
+    model = mnm.frontend.from_mxnet(net, ['x'])
+    model.train_mode()
+    model.to(device=device)
+    trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(model)
+    with mx.autograd.record():
+        mx_loss = net(mx_x)
+    mx_loss.backward(mx_dy)
+    mx_trainer.step(1)
+    loss = run_vm_model(trainer, device, [dy, x])[0]
+    check(loss, mx_loss)
+    params = model.state()
+    for name, param in net.collect_params().items():
+        check(params[name], param.data())
 
 
 if __name__ == "__main__":

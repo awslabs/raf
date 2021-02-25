@@ -56,6 +56,7 @@ def test_vm_forward(device, fuse):
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("fuse", [False, True])
+@with_seed(0)
 def test_vm_backward(device, fuse):
     layers = [1, 1, 1, 1]
     ir_optimizer = ir_fusion if fuse else ir_simplify

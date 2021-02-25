@@ -23,9 +23,11 @@ class SubstitueMutator : public ExprMutator {
   Expr VisitExpr_(const LetNode* op) final {
     CHECK(!args_map_.count(op->var)) << "Cannot bind an internel variable in let";
     const auto* var = static_cast<const ExtendedVarNode*>(op->var.get());
-    Expr may_share = VisitExpr(var->may_share);
-    const auto* msv = may_share.as<VarNode>();
-    var->may_share = msv ? GetRef<Var>(msv) : Var();
+    if (var->may_share.defined()) {
+      Expr may_share = VisitExpr(var->may_share);
+      const auto* msv = may_share.as<VarNode>();
+      var->may_share = msv ? GetRef<Var>(msv) : Var();
+    }
     return ExprMutator::VisitExpr_(op);
   }
 
