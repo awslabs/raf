@@ -56,6 +56,7 @@ class FullArgs : public ir::AttrsNode<FullArgs> {
   value::BaseTensorValue fill_value;
   std::vector<int64_t> shape;
   std::string dtype{"int"};
+  std::string device{"cpu"};
   MNM_OP_SCHEMA(FullArgs, "mnm.args.full");
 };
 

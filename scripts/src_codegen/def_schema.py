@@ -478,6 +478,7 @@ SCHEMAS = {
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
         Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
+        Arg(name="device", cxx_type="std::string", cxx_default="\"cpu\"", py_default="\"cpu\"",),
     ],
     "transform.h::where": [
         Arg(name="condition", cxx_type="value::BaseTensorValue"),

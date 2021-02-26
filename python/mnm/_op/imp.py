@@ -398,11 +398,12 @@ def floor(x):
     return imp_utils.ret(ffi.floor(x))
 
 @set_module("mnm")
-def full(fill_value, shape, dtype="int32"):
+def full(fill_value, shape, dtype="int32", device="cpu"):
     fill_value = imp_utils.to_tensor(fill_value)
     shape = imp_utils.to_int_tuple(shape)
     dtype = imp_utils.to_string(dtype)
-    return imp_utils.ret(ffi.full(fill_value, shape, dtype))
+    device = imp_utils.to_string(device)
+    return imp_utils.ret(ffi.full(fill_value, shape, dtype, device))
 
 @set_module("mnm")
 def gather(data, axis, indices):

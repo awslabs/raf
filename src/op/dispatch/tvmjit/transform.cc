@@ -663,6 +663,7 @@ HashKey FullHasher(const std::vector<Type>& param_types, const Type& y_type, con
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->shape;
   key << ir::String2DLDataType(args->dtype);
+  key << args->device;
   return key;
 }
 

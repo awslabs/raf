@@ -12,7 +12,7 @@ from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
 
-def check_from_relay(m_model, r_func, args):
+def check_from_relay(m_model, r_func, args, check_model_structure=True, device="cpu"):
     m_func = m_model._internal(*args).func
     ref_outs = m_model(*args)
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
@@ -22,9 +22,15 @@ def check_from_relay(m_model, r_func, args):
     except Exception as err:  # pylint: disable=broad-except
         assert False, "Failed to convert the Relay function:\n%s\nReason:\n%s" % (
             str(r_func), str(err))
-    assert _tvm.ir.structural_equal(
-        m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
+
+    if check_model_structure:
+        assert _tvm.ir.structural_equal(
+            m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
+
     new_model = FrameworkModel(new_func, new_func, {}, {})
+    if device == "cuda":
+        args = [arg.to(device=device) for arg in args]
+        new_model.to(device=device)
     outs = new_model(*args)
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
     assert len(ref_outs) == len(outs)
@@ -607,6 +613,27 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
         params=[r_x], body=_relay.expand_dims(r_x, axis, num_newaxis))
 
     check_from_relay(model, r_func, [m_x])
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("shape", [[3, 2]])
+@pytest.mark.parametrize("val", [1])
+def test_full(shape, val):
+    class Full(mnm.Model):
+        def build(self, val, shape):
+            self.val = val
+            self.shape = shape
+
+        @mnm.model.trace
+        def forward(self):
+            return mnm.full(self.val, self.shape, "int64")
+
+    model = Full(val, shape)
+
+    r_c = _relay.const(val)
+    r_func = _relay.Function(params=[], body=_relay.full(r_c, shape=shape, dtype="int64"))
+
+    # Test constant mirgration using CUDA.
+    check_from_relay(model, r_func, [], check_model_structure=False, device="cuda")
 
 
 @pytest.mark.parametrize("dtype", ["float32"])

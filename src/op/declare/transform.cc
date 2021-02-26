@@ -683,6 +683,14 @@ MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
     CHECK_GE(shape[i], 1);
   }
 
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  TVMContext tvm_ctx = (*f)(args->device);
+  Device device(tvm_ctx);
+
+  if (tvm_ctx.device_type != fill_value->ctx.device_type) {
+    LOG(WARNING) << "\"full\" is offloaded to " << tvm_ctx.device_type << " but fill_value is on "
+                 << fill_value->ctx.device_type;
+  }
   call->device = fill_value->ctx;
   call->out = TensorValue::Assemble(call->device, fill_value->dtype, shape);
 }).set_attr<TOpPattern>("TOpPattern", kInjective);

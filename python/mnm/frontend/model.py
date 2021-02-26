@@ -1,12 +1,12 @@
 """Model that wraps the IR converted from deep learning frameworks."""
-# pylint: disable=protected-access
+# pylint: disable=protected-access, attribute-defined-outside-init
 from tvm import relay
 
 from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
 from mnm._core.ndarray import ndarray, Symbol
-from mnm._ffi.pass_ import Substitute
+from mnm._ffi.pass_ import AssignDevice, Substitute
 
 
 def _get_func_inputs(model, args, kwargs, get_handle=True):
@@ -75,6 +75,8 @@ class FrameworkModel(BaseModel):
     aux_params : Dict[str, ndarray]
         Auxiliary params, not learnable
     """
+    # pylint: disable=invalid-name
+
     def __init__(self, train_func, infer_func, arg_params, aux_params):
         super(FrameworkModel, self).__init__()
         self.__train_func = train_func
@@ -92,12 +94,12 @@ class FrameworkModel(BaseModel):
         return _unwrap(RunModel(func, func_inputs))
 
     def train_mode(self, recursive=True):
-        self._BaseModel__is_train = True  # pylint: disable=invalid-name, attribute-defined-outside-init
+        self._BaseModel__is_train = True
         for param in self.__arg_params.values():
             param.requires_grad = True
 
     def infer_mode(self, recursive=True):
-        self._BaseModel__is_train = False  # pylint: disable=invalid-name, attribute-defined-outside-init
+        self._BaseModel__is_train = False
         for param in self.__arg_params.values():
             param.requires_grad = False
 
@@ -129,10 +131,15 @@ class FrameworkModel(BaseModel):
         state.update(self.__aux_params)
         return state
 
-    def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
+    def to(self, *, device=None, dtype=None):
         for name, param in self.__arg_params.items():
             new_param = param.to(device=device, dtype=dtype)
             self.__arg_params[name] = new_param
         for name, param in self.__aux_params.items():
             new_param = param.to(device=device, dtype=dtype)
             self.__aux_params[name] = new_param
+
+        if self._BaseModel__is_train:
+            self.__train_func = AssignDevice(self.__train_func, device)
+        else:
+            self.__infer_func = AssignDevice(self.__infer_func, device)

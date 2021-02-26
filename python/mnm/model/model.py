@@ -5,7 +5,6 @@ from collections import OrderedDict
 from mnm._core import cacher
 from mnm._core.core_utils import bfs, get_attr, get_named_attr, set_module
 from mnm._core.ndarray import ndarray
-
 from mnm.model.trace import _get_trace_record
 
 

@@ -149,5 +149,13 @@ ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map);
  */
 ir::Expr ToDataflow(ir::Expr expr);
 
+/*!
+ * \brief Replace init and constant ops with the assigned device.
+ * \param expr Expression to be mutated.
+ * \param device The target device.
+ * \return Transformed expression.
+ */
+ir::Expr AssignDevice(ir::Expr expr, std::string device);
+
 }  // namespace pass
 }  // namespace mnm

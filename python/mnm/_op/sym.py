@@ -346,11 +346,12 @@ def floor(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.floor(x))
 
-def full(fill_value, shape, dtype="int32"):
+def full(fill_value, shape, dtype="int32", device="cpu"):
     fill_value = sym_utils.to_tensor(fill_value)
     shape = sym_utils.to_int_tuple(shape)
     dtype = sym_utils.to_string(dtype)
-    return Symbol.from_expr(ffi.full(fill_value, shape, dtype))
+    device = sym_utils.to_string(device)
+    return Symbol.from_expr(ffi.full(fill_value, shape, dtype, device))
 
 def gather(data, axis, indices):
     data = sym_utils.to_tensor(data)
