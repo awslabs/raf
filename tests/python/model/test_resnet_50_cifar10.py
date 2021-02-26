@@ -41,6 +41,7 @@ def test_build_fp16():
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("fuse", [False, True])
+@with_seed(0)
 def test_vm_forward(device, fuse):
     layers = [3, 4, 6, 3]
     ir_optimizer = ir_fusion if fuse else ir_simplify

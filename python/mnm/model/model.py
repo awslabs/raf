@@ -85,15 +85,36 @@ class Model(BaseModel, cacher.Cacher):
         args = [self] + list(args)
 
         record = _get_trace_record(pyfunc, args, kwargs)
-        record.requires_grads.clear()
-        for arg in args[1:]:
-            if isinstance(arg, ndarray):
-                record.requires_grads.append(arg.requires_grad)
+        r_func = record.func
+        # already cached
+        if len(record.requires_grads) != 0:
+            assert len(r_func.params) == len(record.requires_grads)
+            return record
+        # do not care `requires_grads`
+        if len(args) + len(kwargs) == 1:
+            return record
+
+        assert len(r_func.params) + 1 == len(args) + len(kwargs) + len(record.named_params)
+        arg_index = 1
+        for var_node in r_func.params:
+            var_name = var_node.name_hint
+            if var_name in record.named_params:
+                record.requires_grads.append(record.named_params[var_name].requires_grad)
+            elif var_name in kwargs:
+                arg = kwargs[var_name]
+                if isinstance(arg, ndarray):
+                    record.requires_grads.append(arg.requires_grad)
+                else:
+                    record.requires_grads.clear()
+                    return record
             else:
-                record.requires_grads.clear()
-                return record
-        for key in record.named_params:
-            record.requires_grads.append(record.named_params[key].requires_grad)
+                arg = args[arg_index]
+                if isinstance(arg, ndarray):
+                    record.requires_grads.append(arg.requires_grad)
+                    arg_index += 1
+                else:
+                    record.requires_grads.clear()
+                    return record
         return record
 
     def _state(self):

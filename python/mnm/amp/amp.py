@@ -1,6 +1,5 @@
 """Functions for enabling AMP (automatic mixed precision)."""
 # pylint: disable=protected-access
-
 from mnm._ffi.pass_ import AutoCast
 from mnm._lib import relay
 from mnm.frontend.model import FrameworkModel
