@@ -1,5 +1,5 @@
 """The frontend that converts PyTorch models to Meta models via Relay."""
-
+from collections import OrderedDict
 import torch
 
 from .._core.ndarray import ndarray
@@ -67,5 +67,10 @@ def from_pytorch(model, shape_dict):
     shape_list = [(input_name, input_shape)]
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
     func = FromRelay(relay_mod["main"])
-    meta_params = {name: ndarray(data.asnumpy()) for name, data in relay_params.items()}
+    meta_params = OrderedDict()
+    for var in relay_mod["main"].params:
+        name = var.name_hint
+        if name in relay_params:
+            meta_params[name] = ndarray(relay_params[name].asnumpy())
+    assert len(meta_params) == len(relay_params)
     return FrameworkModel(func, func, meta_params, {})
