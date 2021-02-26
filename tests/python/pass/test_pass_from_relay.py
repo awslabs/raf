@@ -49,6 +49,42 @@ def test_mnm_constant():
     check(data, model())
 
 
+def test_mnm_module():
+    f1 = _relay.GlobalVar("f1")  # pylint: disable=invalid-name
+    def get_tvm_mod():
+        x = _relay.var("x", shape=(1, 100))
+        tanh = _relay.tanh(x)
+        tvm_mod = _tvm.IRModule()
+        tvm_mod[f1] = _relay.Function([x], tanh)
+
+        y = _relay.var("y", shape=(1, 100))
+        out = f1(y)
+        main = _relay.GlobalVar("main")
+        tvm_mod[main] = _relay.Function([y], out)
+        return tvm_mod
+
+    def expected():
+        a1 = _relay.var("a1")  # pylint: disable=invalid-name
+        x = _relay.var("x", shape=(1, 100))
+        tanh_op = mnm._ffi.op.GetOp("mnm.op.tanh")
+        let = _relay.Let(a1, _relay.Call(tanh_op, [x]), a1)
+        f1_out = _relay.Function([x], let)
+        mod = mnm._ffi.ir._make.Module({f1: f1_out})
+
+        a1 = _relay.var("a1")  # pylint: disable=invalid-name
+        y = _relay.var("y", shape=(1, 100))
+        let = _relay.Let(a1, _relay.Call(f1, [y]), a1)
+        main_out = _relay.Function([y], let)
+        mod[_relay.GlobalVar("main")] = main_out
+        return mod
+
+    tvm_mod = get_tvm_mod()
+    mod = FromRelay(tvm_mod)
+    expected_mod = expected()
+    assert _tvm.ir.structural_equal(mod["f1"], expected_mod["f1"])
+    assert _tvm.ir.structural_equal(mod["main"], expected_mod["main"])
+
+
 @pytest.mark.parametrize("op_name", [
     "copy", "abs", "ceil", "floor", "log", "exp", "cos", "sin", "sign", "round",
     "relu", "erf", "sqrt", "rsqrt", "atan", "negative", "sigmoid", "tanh", "batch_flatten"

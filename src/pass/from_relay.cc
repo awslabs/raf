@@ -47,7 +47,12 @@ struct FromRelayMutator : public ExprMutator {
   Expr VisitExpr_(const CallNode* node) final {
     static auto fmap = Op::GetAttrMap<op::FMNMFromRelay>("FMNMFromRelay");
     if (node->op.as<OpNode>() == nullptr) {
-      return Call(node->op, node->args, node->attrs);
+      tvm::Array<Expr> call_args;
+      for (auto arg : node->args) {
+        auto new_arg = this->Mutate(arg);
+        call_args.push_back(new_arg);
+      }
+      return Call(node->op, call_args, node->attrs);
     }
 
     const Op& op = Downcast<Op>(node->op);
@@ -120,7 +125,8 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
     std::stringstream unsupported_ops_ss;
     for (auto& kv : relay_mod->functions) {
       auto mutator = from_relay::FromRelayMutator();
-      functions.Set(kv.first, tvm::Downcast<ir::Function>(mutator.Mutate(kv.second)));
+      auto expr = mutator.Mutate(kv.second);
+      functions.Set(kv.first, tvm::Downcast<ir::Function>(expr));
       unsupported_ops_ss << mutator.ListUnsupportedOps();
     }
     if (unsupported_ops_ss.rdbuf()->in_avail() > 0) {
