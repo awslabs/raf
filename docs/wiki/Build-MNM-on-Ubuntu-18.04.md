@@ -31,18 +31,22 @@ sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev           \
 
 </details>
 
-**(Optional) CUDA.** To run with latest CUDA, it is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-downloads). The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network). 
+**(Optional) CUDA.** Meta currently recommend to use CUDA 11.0. 
+It is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-11.0-download-archive). 
+The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network). 
 Then the CUDA paths need to be specified. 
 The following lines can be inserted to the `.bashrc` file for auto loading (see bonus below).
 
 <details>
 
 ```bash
-# this is for CUDA 11.2
+# this is for CUDA 11.0
 export CUDA_HOME=/usr/local/cuda
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64
 export PATH=$PATH:$CUDA_HOME/bin
 ```
+
+</details>
 
 **(Optional) cuDNN.** NVIDIA provides cuDNN separately on its website, which requires additional account registration. Please follow the [link](https://developer.nvidia.com/rdp/cudnn-download).
 One can either download the tar ball file for Linux and use the following command to decompress cuDNN and specify the path, or download the `.deb` file to install.
