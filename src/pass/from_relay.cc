@@ -16,6 +16,14 @@ using namespace mnm::value;
 using namespace tvm;
 using namespace ::tvm::relay;
 
+// We set the parameters to be Meta model attributes, so their names
+// have to be valid variable names in Python.
+String ValidateRelayParamName(const String var_name) {
+  auto name_str = std::string(var_name->data);
+  std::replace(name_str.begin(), name_str.end(), '.', '_');
+  return String(name_str);
+}
+
 struct FromRelayMutator : public ExprMutator {
  public:
   FromRelayMutator() {
@@ -82,7 +90,8 @@ struct FromRelayMutator : public ExprMutator {
   Expr VisitExpr_(const FunctionNode* node) final {
     Array<Var> params;
     for (auto param : node->params) {
-      Var new_param = mnm::ir::MakeVar(param->name_hint(), param->type_annotation);
+      auto name_hint = ValidateRelayParamName(param->name_hint());
+      Var new_param = mnm::ir::MakeVar(name_hint, param->type_annotation);
       params.push_back(new_param);
       var_map_.Set(param, new_param);
     }
@@ -153,5 +162,7 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.FromRelay").set_body_typed(FromRelay);
+MNM_REGISTER_GLOBAL("mnm.pass_.validate_relay_param_name")
+    .set_body_typed(from_relay::ValidateRelayParamName);
 }  // namespace pass
 }  // namespace mnm

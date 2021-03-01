@@ -28,3 +28,4 @@ from ._internal import RenameVars
 from ._internal import Substitute
 from ._internal import ToDataflow
 from ._internal import is_constant
+from ._internal import validate_relay_param_name

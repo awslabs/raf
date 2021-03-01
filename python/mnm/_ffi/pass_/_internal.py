@@ -56,3 +56,5 @@ Substitute = _APIS.get("mnm.pass_.Substitute", None)
 ToDataflow = _APIS.get("mnm.pass_.ToDataflow", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
+# Defined in ./src/pass/from_relay.cc
+validate_relay_param_name = _APIS.get("mnm.pass_.validate_relay_param_name", None)

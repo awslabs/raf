@@ -4,7 +4,7 @@ import torch
 
 from .._core.ndarray import ndarray
 from .._lib import relay
-from .._ffi.pass_ import FromRelay
+from .._ffi.pass_ import FromRelay, validate_relay_param_name
 from ..frontend.model import FrameworkModel
 
 
@@ -71,6 +71,6 @@ def from_pytorch(model, shape_dict):
     for var in relay_mod["main"].params:
         name = var.name_hint
         if name in relay_params:
-            meta_params[name] = ndarray(relay_params[name].asnumpy())
+            meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].asnumpy())
     assert len(meta_params) == len(relay_params)
     return FrameworkModel(func, func, meta_params, {})

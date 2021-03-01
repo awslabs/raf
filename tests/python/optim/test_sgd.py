@@ -211,7 +211,7 @@ def test_traced_sgd(config):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-def test_framework_model(device):
+def test_mxnet_model(device):
     net = gluon.nn.HybridSequential()
     with net.name_scope():
         net.add(gluon.nn.Dense(128, activation='relu'))
