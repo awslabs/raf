@@ -98,7 +98,6 @@ def test_sgd(config):
     for i in range(batch_size):
         t_optimizer.zero_grad()
         m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device="cuda")
-        m_x.requires_grad = True
         m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device="cuda")
         m_loss = m_model(m_x, m_y)
         t_loss = t_model(t_x, t_y)
@@ -188,15 +187,12 @@ def test_traced_sgd(config):
     batch_size = config[0]
     m_model.train_mode()
     t_model.train()
-    m_model.bn1.running_mean.requires_grad = False
-    m_model.bn1.running_var.requires_grad = False
     m_optimizer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
     t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
 
     for i in range(batch_size):
         m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
         m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device=device)
-        m_x.requires_grad = True
         m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device=device)
         m_loss = run_vm_model(m_optimizer, device, [m_dy, m_x, m_y])
         t_optimizer.zero_grad()

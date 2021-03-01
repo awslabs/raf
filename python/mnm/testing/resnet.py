@@ -341,11 +341,6 @@ def get_model(num_blocks):
     init(m_model, t_model)
     m_model.train_mode()
     t_model.train()
-    # TODO(@hzfan): remove this after sgd handles NoGradValue
-    for m_name in param_map(m_model, t_model):
-        if "running_mean" in m_name or "running_var" in m_name:
-            param = get_param(m_model, m_name)
-            param.requires_grad = False
     return m_model, t_model
 
 

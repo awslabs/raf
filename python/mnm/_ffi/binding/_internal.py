@@ -9,6 +9,8 @@ BindNDArray = _APIS.get("mnm.binding.BindNDArray", None)
 # Defined in ./src/impl/binding.cc
 BindSymbol = _APIS.get("mnm.binding.BindSymbol", None)
 # Defined in ./src/impl/binding.cc
+LookupBoundExpr = _APIS.get("mnm.binding.LookupBoundExpr", None)
+# Defined in ./src/impl/binding.cc
 LookupBoundValue = _APIS.get("mnm.binding.LookupBoundValue", None)
 # Defined in ./src/impl/binding.cc
 LookupGrad = _APIS.get("mnm.binding.LookupGrad", None)

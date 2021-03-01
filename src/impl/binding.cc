@@ -132,6 +132,10 @@ Value LookupBoundValue(Var var) {
   return Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->value;
 }
 
+Expr LookupBoundExpr(Var var) {
+  return Downcast<SymbolBinding>(LookupBinding(var.operator->()))->expr;
+}
+
 ObjectRef DeTuple(Value value) {
   if (value->IsInstance<ScalarValueObj>() || value->IsInstance<ClosureValueObj>() ||
       value->IsInstance<NoGradValueObj>()) {
@@ -306,6 +310,7 @@ MNM_REGISTER_GLOBAL("mnm.binding.BindNDArray").set_body_typed(BindNDArray);
 MNM_REGISTER_GLOBAL("mnm.binding.BindSymbol").set_body_typed(BindSymbol);
 MNM_REGISTER_GLOBAL("mnm.binding.RebindNDArray").set_body_typed(RebindNDArray);
 MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundValue").set_body_typed(LookupBoundValue);
+MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundExpr").set_body_typed(LookupBoundExpr);
 MNM_REGISTER_GLOBAL("mnm.binding.SetRequiresGrad").set_body_typed(SetRequiresGrad);
 MNM_REGISTER_GLOBAL("mnm.binding.Backward").set_body_typed(Backward);
 MNM_REGISTER_GLOBAL("mnm.binding.LookupGrad").set_body_typed(LookupGrad);
