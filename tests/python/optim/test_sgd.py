@@ -206,6 +206,7 @@ def test_traced_sgd(config):
         check(m_model.bn1.b, t_model.bn1.bias, rtol=1e-4, atol=1e-4)
 
 
+@with_seed(0)
 @pytest.mark.parametrize("device", get_device_list())
 def test_mxnet_model(device):
     net = gluon.nn.HybridSequential()
@@ -230,10 +231,10 @@ def test_mxnet_model(device):
     mx_loss.backward(mx_dy)
     mx_trainer.step(1)
     loss = run_vm_model(trainer, device, [dy, x])[0]
-    check(loss, mx_loss)
+    check(loss, mx_loss, rtol=1e-4, atol=1e-4)
     params = model.state()
     for name, param in net.collect_params().items():
-        check(params[name], param.data())
+        check(params[name], param.data(), rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":
