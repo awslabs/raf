@@ -48,7 +48,7 @@ class TypeInferencer : public ExprMutator {
   MNM_NODE_NOT_IMPL(RefCreateNode)
 
  public:
-  TypeInferencer(Module mod) : mod_(mod) {
+  TypeInferencer(Module& mod) : mod_(mod) {
   }
 
   Type GetValueType(const Value& v) {
@@ -66,7 +66,7 @@ class TypeInferencer : public ExprMutator {
 
   Expr VisitExpr_(const GlobalVarNode* op) override {
     CHECK(mod_.defined());
-    return VisitExpr(mod_->Lookup(GetRef<GlobalVar>(op)));
+    return std::move(GetRef<GlobalVar>(op));
   }
 
   CallValues SchemaToValue(Array<Expr> args, const OpNode* op) {
@@ -126,6 +126,8 @@ class TypeInferencer : public ExprMutator {
     Call ret = Call(op, args, call->attrs, call->type_args);
     if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {
       ret->checked_type_ = InferClosure(ret, fn);
+    } else if (const GlobalVarNode* gvn = ret->op.as<GlobalVarNode>()) {
+      ret->checked_type_ = InferClosure(ret, mod_->Lookup(GetRef<GlobalVar>(gvn)).get());
     } else if (const OpNode* opn = ret->op.as<OpNode>()) {
       ret->checked_type_ = InferPrimitive(ret, opn);
     } else {
@@ -446,25 +448,37 @@ Type Unify(const Type& src, const Type& dst) {
 
 }  // namespace type_infer
 
-ir::Module InferType(ir::Module mod) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
-  auto ti = type_infer::TypeInferencer(updated_mod);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto func = tvm::runtime::Downcast<ir::Function>(ti.VisitExpr(kv.second));
-      updated_funcs.emplace_back(kv.first, func);
+void AddGlobalTypes(ir::Module mod) {
+  std::vector<std::pair<ir::GlobalVar, ir::Function> > updates;
+  for (const auto& it : mod->functions) {
+    if (auto* func_node = it.second.as<ir::FunctionNode>()) {
+      ir::Function func = ir::Function(ir::make_object<ir::FunctionNode>(*func_node));
+      func->checked_type_ = func->func_type_annotation();
+      updates.push_back({it.first, tvm::runtime::Downcast<ir::Function>(func)});
     }
   }
 
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
+  for (const auto& pair : updates) {
+    mod->Add(pair.first, pair.second, true);
+  }
+}
+
+ir::Module InferType(ir::Module mod) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  AddGlobalTypes(updated_mod);
+  auto ti = type_infer::TypeInferencer(updated_mod);
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      auto func = tvm::runtime::Downcast<ir::Function>(ti.VisitExpr(kv.second));
+      updated_mod->Add(kv.first, func, true);
+    }
   }
   return updated_mod;
 }
 
 ir::Expr InferType(ir::Expr func) {
-  return type_infer::TypeInferencer(ir::Module()).VisitExpr(func);
+  auto mod = ir::Module::Global();
+  return type_infer::TypeInferencer(mod).VisitExpr(func);
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([](ir::Module mod) {

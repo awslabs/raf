@@ -1,9 +1,10 @@
 # pylint: disable=protected-access
 import numpy as np
 import pytest
+import tvm
 import mnm
 from mnm._core.ndarray import Symbol
-from mnm._ffi.pass_ import AutoDiff, ExtractBinding
+from mnm._ffi.pass_ import AutoDiff, ExtractBinding, FromRelay, InferType
 from mnm._op import sym as op
 from mnm.testing import check, randn, run_infer_type
 from tvm import relay
@@ -13,6 +14,67 @@ def assert_has_type(expr, typ):
     checked_type = expr.checked_type
     if checked_type != typ:
         raise RuntimeError(f"Type mismatch {checked_type} vs {typ}")
+
+
+def test_mnm_module():
+    f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
+    main = relay.GlobalVar("main")
+    def get_tvm_mod():
+        x = relay.var("x", shape=(1, 100))
+        tanh = relay.tanh(x)
+        out = tanh
+        tvm_mod = tvm.IRModule()
+        tvm_mod[f1] = relay.Function([x], out)
+
+        y = relay.var("y", shape=(1, 100))
+        out = f1(y)
+        tvm_mod[main] = relay.Function([y], out)
+        return tvm_mod
+
+    tvm_mod = get_tvm_mod()
+    mod = FromRelay(tvm_mod)
+    mod = InferType(mod)
+
+    t_1 = relay.TensorType((1, 100))
+    t_2 = relay.TensorType((1, 100))
+    expected_ty = relay.FuncType([t_1], t_2)
+    assert mod[f1].checked_type == expected_ty
+    assert mod[main].checked_type == expected_ty
+
+
+def test_mnm_recursive_function():
+    f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
+    main = relay.GlobalVar("main")
+    def get_recursive_mod():
+        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        mod = tvm.IRModule()
+
+        # Recursive function f
+        ti32 = relay.scalar_type("int32")
+        n = relay.var("n", ti32)
+        x = relay.var("x", shape=(1, 100), dtype="float32")
+        with sb.if_scope(relay.equal(n, relay.const(0, ti32))):
+            sb.ret(x)
+        with sb.else_scope():
+            sb.ret(f1(relay.subtract(n, relay.const(1, ti32)), relay.tanh(x)))
+        mod[f1] = relay.Function([n, x], sb.get())
+
+        n1 = relay.var("n1", ti32)  # pylint: disable=invalid-name
+        y = relay.var("y", shape=(1, 100), dtype="float32")
+        out = f1(n1, y)
+        mod[main] = relay.Function([n1, y], out)
+        return mod
+
+    tvm_mod = get_recursive_mod()
+    mod = FromRelay(tvm_mod)
+    mod = InferType(mod)
+
+    t_0 = relay.scalar_type(dtype="int32")
+    t_1 = relay.TensorType((1, 100))
+    t_2 = relay.TensorType((1, 100))
+    expected_ty = relay.FuncType([t_0, t_1], t_2)
+    assert mod[f1].checked_type == expected_ty
+    assert mod[main].checked_type == expected_ty
 
 
 def test_model_params():
