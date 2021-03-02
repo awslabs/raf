@@ -18,6 +18,8 @@
 #include "../common/shape_utils.h"
 #include "../requests.h"
 
+#include <list>
+
 namespace mnm {
 namespace executor {
 namespace interpreter {
@@ -163,8 +165,15 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const LetNode* node) override {
-    SymbolTable::AddVar var(st, node->var, Eval(node->value));
-    return Eval(node->body);
+    Expr body = GetRef<Let>(node);
+    // Iteratively visit let nodes to avoid stack overflow.
+    std::list<SymbolTable::AddVar> add_vars;
+    while (body->IsInstance<LetNode>()) {
+      Let let = Downcast<Let>(body);
+      add_vars.emplace_back(st, let->var, Eval(let->value));
+      body = let->body;
+    }
+    return Eval(body);
   }
 
   Value VisitExpr_(const IfNode* node) override {

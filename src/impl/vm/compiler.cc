@@ -299,10 +299,16 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
   }
 
   void VisitExpr_(const LetNode* let_node) {
-    DLOG(INFO) << PrettyPrint(let_node->value);
-    this->VisitExpr(let_node->value);
-    var_register_map_.insert({let_node->var, this->last_register_});
-    this->VisitExpr(let_node->body);
+    Expr body = GetRef<Let>(let_node);
+    // Iteratively visit let nodes to avoid stack overflow.
+    while (body->IsInstance<LetNode>()) {
+      Let let = Downcast<Let>(body);
+      DLOG(INFO) << PrettyPrint(let->value);
+      this->VisitExpr(let->value);
+      var_register_map_.insert({let->var, this->last_register_});
+      body = let->body;
+    }
+    this->VisitExpr(body);
   }
 
   void VisitExpr_(const TupleGetItemNode* get_node) {
