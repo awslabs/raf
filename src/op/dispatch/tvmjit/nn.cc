@@ -84,6 +84,8 @@ MNM_TVMJIT(Conv2d, "mnm.op.conv2d", ConvArgs, ConvSchema2Args, ConvSchemaArgName
            Conv2dHasher);
 
 using tvm::relay::IndexExpr;
+/*! \brief Attributes used in layer_norm operator */
+
 struct Conv2dDxwAttrs : public tvm::AttrsNode<Conv2dDxwAttrs> {
   Array<IndexExpr> strides;
   Array<IndexExpr> padding;
@@ -505,19 +507,57 @@ MNM_TVMJIT(AdaptiveMaxPool2DDx, "mnm.op.adaptive_max_pool2d_dx", AdaptivePoolDxA
            PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames,
            AdaptiveMaxPoolDxSchema2Attrs, AdaptivePoolDxHasher);
 
+struct LayerNormAttrs : public tvm::AttrsNode<LayerNormAttrs> {
+  int axis;
+  double epsilon;
+  bool set_scale_bias;
+  TVM_DECLARE_ATTRS(LayerNormAttrs, "relay.attrs.LayerNormAttrs") {
+    TVM_ATTR_FIELD(axis).set_default(-1).describe("Specify which shape axis denotes the channel.");
+    TVM_ATTR_FIELD(epsilon).set_default(1e-5).describe(
+        "Small float added to variance to avoid dividing by zero");
+    TVM_ATTR_FIELD(set_scale_bias)
+        .set_default(true)
+        .describe("whether set scale and bias for layer norm");
+  }
+};  // struct LayerNormAttrs
+
+TVM_REGISTER_NODE_TYPE(LayerNormAttrs);
+
 std::vector<Value> LayerNormSchema2Args(const LayerNormArgs* args) {
-  return {args->x};
+  std::vector<Value> re;
+  re.push_back(args->x);
+  if (args->scale.defined()) {
+    re.push_back(args->scale.value());
+  }
+  if (args->bias.defined()) {
+    re.push_back(args->bias.value());
+  }
+  return re;
 }
 
 std::vector<std::string> LayerNormSchemaArgNames(const op::CallValues& call) {
-  return {"x"};
+  const auto* args = call->args.as<LayerNormArgs>();
+  std::vector<std::string> ret;
+  ret.push_back("x");
+  if (args->scale.defined()) {
+    ret.push_back("scale");
+  }
+  if (args->scale.defined()) {
+    ret.push_back("bias");
+  }
+  return ret;
 }
 
 Attrs LayerNormSchema2Attrs(const LayerNormArgs* args) {
   // attrs will be later passed to compute & schedule functions
-  auto attrs = make_object<tvm::relay::LayerNormAttrs>();
+  auto attrs = make_object<LayerNormAttrs>();
   attrs->axis = args->axis;
   attrs->epsilon = args->eps;
+  if (args->scale.defined()) {
+    attrs->set_scale_bias = true;
+  } else {
+    attrs->set_scale_bias = false;
+  }
   return Attrs(attrs);
 }
 
@@ -533,18 +573,36 @@ MNM_TVMJIT(LayerNorm, "mnm.op.layer_norm", LayerNormArgs, LayerNormSchema2Args,
            LayerNormSchemaArgNames, LayerNormSchema2Attrs, LayerNormHasher);
 
 std::vector<Value> LayerNormDxSchema2Args(const LayerNormDxArgs* args) {
-  return {args->x, args->y, args->dy};
+  std::vector<Value> re;
+  re.push_back(args->x);
+  if (args->scale.defined()) {
+    re.push_back(args->scale.value());
+  }
+  re.push_back(args->dy);
+  return re;
 }
 
 std::vector<std::string> LayerNormDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy"};
+  const auto* args = call->args.as<LayerNormDxArgs>();
+  std::vector<std::string> ret;
+  ret.push_back("x");
+  if (args->scale.defined()) {
+    ret.push_back("scale");
+  }
+  ret.push_back("dy");
+  return ret;
 }
 
 Attrs LayerNormDxSchema2Attrs(const LayerNormDxArgs* args) {
   // attrs will be later passed to compute & schedule functions
-  auto attrs = make_object<tvm::relay::LayerNormAttrs>();
+  auto attrs = make_object<LayerNormAttrs>();
   attrs->axis = args->axis;
   attrs->epsilon = args->eps;
+  if (args->scale.defined()) {
+    attrs->set_scale_bias = true;
+  } else {
+    attrs->set_scale_bias = false;
+  }
   return Attrs(attrs);
 }
 

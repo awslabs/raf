@@ -1,8 +1,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file src/op/grad/nn.cc
- * \brief Declaration of gradients
- */
+ * \brief Declaration of gradients */
 #include <mnm/value.h>
 #include "./grad_utils.h"
 
@@ -288,9 +287,15 @@ Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, co
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& x = call->args[0];
-  const Expr& axis = call->args[1];
-  const Expr& eps = call->args[2];
-  return {Call(op_dx, {x, y, dy, axis, eps})};
+  const Expr& scale = call->args[1];
+  const Expr& axis = call->args[3];
+  const Expr& eps = call->args[4];
+  const Expr& ret = Call(op_dx, {x, scale, dy, axis, eps});
+  return {
+      TupleGetItem(ret, 0),
+      TupleGetItem(ret, 1),
+      TupleGetItem(ret, 2),
+  };
 }
 
 MNM_OP_GRAD("mnm.op.layer_norm", LayerNormGrad);

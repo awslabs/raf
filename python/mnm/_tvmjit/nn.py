@@ -149,11 +149,21 @@ _reg.register_injective_schedule("mnm.op.relu_dx")
 def compute_layer_norm(attr, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=too-many-locals
+    set_scale = attr.set_scale_bias
     x = inputs[0]
+    if set_scale:
+        scale = inputs[1]
+        bias = inputs[2]
     axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
     ndim = len(x.shape)
     if axis < 0:
         axis = ndim + axis
+    def pad(data, target):
+        newaxis = []
+        for i in range(ndim):
+            if i != axis:
+                newaxis.append(i)
+        return _topi.expand_like(data, target, newaxis)
     count = _tvm.tir.const(1, dtype=x.dtype)
     count *= x.shape[axis]
     reduce_axes = [axis]
@@ -164,6 +174,10 @@ def compute_layer_norm(attr, inputs, output_type):
     x_var = _topi.divide(sq_diff_sum, count)
     denominator = _topi.sqrt(_topi.add(x_var, eps))
     out = _topi.divide(_topi.subtract(x, x_mean), denominator)
+    if set_scale:
+        pscale = pad(scale, out)
+        out = _topi.multiply(pscale, out)
+        out = _topi.add(out, pad(bias, out))
     return [out]
 
 @generic_func
@@ -203,7 +217,11 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument
     # pylint: disable=too-many-locals
     # pylint: disable=unused-variable
-    x, y, dy = inputs
+    set_scale = attr.set_scale_bias
+    if set_scale:
+        x, scale, dy = inputs
+    else:
+        x, dy = inputs[0], inputs[1]
     axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
     ndim = len(x.shape)
     if axis < 0:
@@ -221,6 +239,15 @@ def compute_layer_norm_dx(attr, inputs, output_type):
 
     bar_x = _topi.divide(xmu, denominator)
     w = _topi.divide(dy, denominator)
+    def pad(data, target):
+        newaxis = []
+        for i in range(ndim):
+            if i != axis:
+                newaxis.append(i)
+        return _topi.expand_like(data, target, newaxis)
+
+    if set_scale:
+        w = w * pad(scale, w)
     w_sum = _topi.sum(w, reduce_axes, keepdims=True)
     mean_w = _topi.divide(w_sum, count)
     w_times_bar_x = _topi.multiply(w, bar_x)
@@ -228,6 +255,13 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     mean_w_times_bar_x = _topi.divide(w_times_bar_x_sum, count)
     dx = _topi.subtract(w, mean_w)
     dx = _topi.subtract(dx, _topi.multiply(bar_x, mean_w_times_bar_x))
+    if set_scale:
+        shape = _topi.utils.get_const_tuple(x.shape)
+        reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
+        reduce_shape = [shape[i] for i in reduce_axes]
+        dw = _topi.sum(dy * (x  - x_mean) / denominator, axis=reduce_axes)
+        db = _topi.sum(dy, axis=reduce_axes)
+        return [dx, dw, db]
     return [dx]
 
 _reg.register_schedule("mnm.op.layer_norm_dx", schedule_layer_norm)

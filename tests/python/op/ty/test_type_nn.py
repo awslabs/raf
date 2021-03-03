@@ -115,19 +115,22 @@ def test_layer_norm(shape, axis, eps, dtype):
             self._eps = eps
 
         @mnm.model.trace
-        def forward(self, x):
-            return mnm.layer_norm(x, axis=self._axis, eps=self._eps)
+        def forward(self, x, scale, bias):
+            return mnm.layer_norm(x, scale, bias, axis=self._axis, eps=self._eps)
 
     model = LayerNorm(axis, eps)
-    mx_model = mx.gluon.nn.LayerNorm(axis=axis, epsilon=eps, center=False, scale=False)
+    mx_model = mx.gluon.nn.LayerNorm(axis=axis, epsilon=eps)
     mx_model.initialize(ctx=mx.cpu(0))
     # forward
     m_x, n_x = randn(shape, dtype=dtype)
+    m_scale, _ = randn([shape[axis]], dtype=dtype)
+    m_bias, _ = randn([shape[axis]], dtype=dtype)
     m_x.requires_grad = True
     mx_x = mx.nd.array(n_x)
     mx_x.attach_grad()
-    m_y = model(m_x)
-    record = model._internal(m_x)
+
+    m_y = model(m_x, m_scale, m_bias)
+    record = model._internal(m_x, m_scale, m_bias)
     m_func = record.func
     m_func = run_infer_type(m_func)
     _, n_dy = randn(m_y.shape, dtype=dtype)
@@ -136,16 +139,19 @@ def test_layer_norm(shape, axis, eps, dtype):
         mx_y = mx_model(mx_x)
         mx_y.backward(mx_dy)
     x_ty = TensorType(mx_x.shape, dtype=dtype)
+    scale_ty = TensorType([mx_x.shape[axis]], dtype=dtype)
+    bias_ty = TensorType([mx_x.shape[axis]], dtype=dtype)
     y_ty = TensorType(mx_y.shape, dtype=dtype)
     dy_ty = TensorType(mx_dy.shape, dtype=dtype)
-    checked_type = FuncType([x_ty], y_ty)
+    checked_type = FuncType([x_ty, scale_ty, bias_ty], y_ty)
     check_type(m_func, checked_type)
     # check backward
     m_func = AutoDiff(m_func, record.requires_grads)
     m_func = run_infer_type(m_func)
+    int_type = TensorType((), "int64")
     dx_ty = TensorType(mx_x.grad.shape, dtype=dtype)
-    bwd_ty = FuncType([dy_ty], dx_ty)
-    checked_type = FuncType([y_ty], TupleType([x_ty, bwd_ty]))
+    bwd_ty = FuncType([dy_ty], TupleType([dx_ty, int_type, int_type]))
+    checked_type = FuncType([x_ty, scale_ty, bias_ty], TupleType([x_ty, bwd_ty]))
     check_type(m_func, checked_type)
 
 

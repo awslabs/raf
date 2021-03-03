@@ -230,7 +230,24 @@ Type BiasAddInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
 
 MNM_OP_TYPE("mnm.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
-MNM_OP_TYPE("mnm.op.layer_norm_dx", "LayerNormDx", GeneralDxInfer<LayerNormDxArgs>);
+
+Type LayerNormDxbInfer(const CallValues& value) {
+  const auto* args = value->args.as<LayerNormDxArgs>();
+  CHECK(args != nullptr);
+  TensorType dx = Downcast<TensorType>(GetType(args->x));
+  if (args->scale.defined()) {
+    TensorType dw = Downcast<TensorType>(GetType(args->scale.value()));
+    Array<Type> res;
+    res.push_back(dx);
+    res.push_back(dw);
+    res.push_back(dw);
+    return TupleType(res);
+  } else {
+    return dx;
+  }
+}
+
+MNM_OP_TYPE("mnm.op.layer_norm_dx", "LayerNormDx", LayerNormDxbInfer);
 
 Type PadInfer(const CallValues& value) {
   const auto* args = value->args.as<PadArgs>();

@@ -210,12 +210,14 @@ SCHEMAS = {
     ],
     "nn.h::layer_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="scale", cxx_type=OptionalTensor),
+        Arg(name="bias", cxx_type=OptionalTensor),
         Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
         Arg(name="eps", cxx_type="double", cxx_default=1e-5),
     ],
     "nn.h::layer_norm_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="y", cxx_type="value::BaseTensorValue"),
+        Arg(name="scale", cxx_type=OptionalTensor),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
         Arg(name="eps", cxx_type="double", cxx_default=1e-5),

@@ -495,20 +495,22 @@ def greater_equal(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.greater_equal(x1, x2, out, where))
 
 @set_module("mnm")
-def layer_norm(x, axis=-1, eps=1e-05):
+def layer_norm(x, scale, bias, axis=-1, eps=1e-05):
     x = imp_utils.to_tensor(x)
+    scale = imp_utils.to_tensor(scale)
+    bias = imp_utils.to_tensor(bias)
     axis = imp_utils.to_int(axis)
     eps = imp_utils.to_double(eps)
-    return imp_utils.ret(ffi.layer_norm(x, axis, eps))
+    return imp_utils.ret(ffi.layer_norm(x, scale, bias, axis, eps))
 
 @set_module("mnm")
-def layer_norm_dx(x, y, dy, axis=-1, eps=1e-05):
+def layer_norm_dx(x, scale, dy, axis=-1, eps=1e-05):
     x = imp_utils.to_tensor(x)
-    y = imp_utils.to_tensor(y)
+    scale = imp_utils.to_tensor(scale)
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int(axis)
     eps = imp_utils.to_double(eps)
-    return imp_utils.ret(ffi.layer_norm_dx(x, y, dy, axis, eps))
+    return imp_utils.ret(ffi.layer_norm_dx(x, scale, dy, axis, eps))
 
 @set_module("mnm")
 def less(x1, x2, out=None, where=None):

@@ -430,19 +430,21 @@ def greater_equal(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.greater_equal(x1, x2, out, where))
 
-def layer_norm(x, axis=-1, eps=1e-05):
+def layer_norm(x, scale, bias, axis=-1, eps=1e-05):
     x = sym_utils.to_tensor(x)
+    scale = sym_utils.to_tensor(scale)
+    bias = sym_utils.to_tensor(bias)
     axis = sym_utils.to_int(axis)
     eps = sym_utils.to_double(eps)
-    return Symbol.from_expr(ffi.layer_norm(x, axis, eps))
+    return Symbol.from_expr(ffi.layer_norm(x, scale, bias, axis, eps))
 
-def layer_norm_dx(x, y, dy, axis=-1, eps=1e-05):
+def layer_norm_dx(x, scale, dy, axis=-1, eps=1e-05):
     x = sym_utils.to_tensor(x)
-    y = sym_utils.to_tensor(y)
+    scale = sym_utils.to_tensor(scale)
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int(axis)
     eps = sym_utils.to_double(eps)
-    return Symbol.from_expr(ffi.layer_norm_dx(x, y, dy, axis, eps))
+    return Symbol.from_expr(ffi.layer_norm_dx(x, scale, dy, axis, eps))
 
 def less(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

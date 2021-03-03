@@ -776,7 +776,6 @@ def test_mnm_adaptive_pool2d(out_shape, layout, funcs):
     check_from_relay(model, r_func, [m_x])
 
 
-@pytest.mark.skip(reason="Meta layer_norm misses gamma and beta")
 @pytest.mark.parametrize("shape", [(5, 4, 6, 9)])
 @pytest.mark.parametrize("axis", [2])
 @pytest.mark.parametrize("eps", [1e-05])
@@ -788,19 +787,21 @@ def test_mnm_layer_norm(shape, axis, eps, dtype):
             self._eps = eps
 
         @mnm.model.trace
-        def forward(self, x):
-            return mnm.layer_norm(x, axis=self._axis, eps=self._eps)
+        def forward(self, x, w, b):
+            return mnm.layer_norm(x, w, b, axis=self._axis, eps=self._eps)
 
     model = LayerNorm(axis, eps)
     m_x, _ = randn(shape, dtype=dtype)
+    m_w, _ = randn([shape[axis]], dtype=dtype)
+    m_b, _ = randn([shape[axis]], dtype=dtype)
 
     r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_w = _relay.var("w", shape=[shape[0]], dtype=dtype)
-    r_b = _relay.var("b", shape=[shape[0]], dtype=dtype)
+    r_w = _relay.var("w", shape=[shape[axis]], dtype=dtype)
+    r_b = _relay.var("b", shape=[shape[axis]], dtype=dtype)
     r_func = _relay.Function(
         params=[r_x, r_w, r_b], body=_relay.nn.layer_norm(r_x, r_w, r_b, axis, eps))
 
-    check_from_relay(model, r_func, [m_x])
+    check_from_relay(model, r_func, [m_x, m_w, m_b])
 
 @pytest.mark.parametrize("shape", [[32, 3, 224, 224]])
 def test_mnm_batch_norm_train(shape):

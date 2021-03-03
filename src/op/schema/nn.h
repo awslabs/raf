@@ -110,6 +110,8 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
 class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
  public:
   value::BaseTensorValue x;
+  ir::Optional<value::BaseTensorValue> scale;
+  ir::Optional<value::BaseTensorValue> bias;
   int64_t axis{-1};
   double eps{1e-05};
   MNM_OP_SCHEMA(LayerNormArgs, "mnm.args.layer_norm");
@@ -118,7 +120,7 @@ class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
 class LayerNormDxArgs : public ir::AttrsNode<LayerNormDxArgs> {
  public:
   value::BaseTensorValue x;
-  value::BaseTensorValue y;
+  ir::Optional<value::BaseTensorValue> scale;
   value::BaseTensorValue dy;
   int64_t axis{-1};
   double eps{1e-05};

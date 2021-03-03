@@ -285,8 +285,33 @@ void LayerNorm(const CallValues& call) {
   call->device = x->ctx;
 }
 MNM_OP_DECLARE("mnm.op.layer_norm", LayerNorm).set_attr<TOpPattern>("TOpPattern", kOpaque);
-MNM_OP_DECLARE("mnm.op.layer_norm_dx", DeclareGeneralDx<LayerNormDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOpaque);
+
+void LayerNormDx(const CallValues& call) {
+  const auto* args = call->args.as<LayerNormDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> xshape(x->shape, x->shape + x->ndim);
+  TensorValue dx = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                         /*dtype=*/x->dtype,
+                                         /*shape=*/xshape);
+  if (args->scale.defined()) {
+    const DLTensor* w = args->scale.value();
+    std::vector<int64_t> wshape(w->shape, w->shape + w->ndim);
+
+    TensorValue dw = TensorValue::Assemble(/*ctx=*/w->ctx,
+                                           /*dtype=*/w->dtype,
+                                           /*shape=*/wshape);
+    TensorValue db = TensorValue::Assemble(/*ctx=*/w->ctx,
+                                           /*dtype=*/w->dtype,
+                                           /*shape=*/wshape);
+    call->out = TupleValue::make(tvm::Array<Value>({dx, dw, db}));
+  } else {
+    call->out = dx;
+  }
+  call->device = x->ctx;
+}
+
+MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 void Pad(const CallValues& call) {
   const auto* args = call->args.as<PadArgs>();

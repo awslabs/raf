@@ -491,17 +491,19 @@ Attrs InitOp(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs LayerNorm(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::LayerNormArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::LayerNormArgs, 5);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_POD(1, ffi2schema::Int, axis);
-  MNM_POD(2, ffi2schema::Double, eps);
+  MNM_TAPE(1, ffi2schema::OptionalTensor, scale);
+  MNM_TAPE(2, ffi2schema::OptionalTensor, bias);
+  MNM_POD(3, ffi2schema::Int, axis);
+  MNM_POD(4, ffi2schema::Double, eps);
   return Attrs(attrs);
 }
 
 Attrs LayerNormDx(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::LayerNormDxArgs, 5);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
+  MNM_TAPE(1, ffi2schema::OptionalTensor, scale);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   MNM_POD(3, ffi2schema::Int, axis);
   MNM_POD(4, ffi2schema::Double, eps);
@@ -1521,11 +1523,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.greater_equal").set_body([](TVMArgs args, TVMRet
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.layer_norm").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(layer_norm, 3, ffi2schema::LayerNorm,
+  MNM_PRELUDE(layer_norm, 5, ffi2schema::LayerNorm,
               schema::LayerNormArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
-  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->eps));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->scale));
+  MNM_SET_ENV(vpack->x[2], schema2value::OptionalTensor(schema->bias));
+  MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->eps));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1534,7 +1538,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.layer_norm_dx").set_body([](TVMArgs args, TVMRet
   MNM_PRELUDE(layer_norm_dx, 5, ffi2schema::LayerNormDx,
               schema::LayerNormDxArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->scale));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->axis));
   MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->eps));
@@ -2560,17 +2564,19 @@ Array<Expr> InitOp(const TVMArgs& values) {
 }
 
 Array<Expr> LayerNorm(const TVMArgs& values) {
-  MNM_PRELUDE(3);
+  MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Int, axis);
-  MNM_ARG(2, ffi2expr::Double, eps);
+  MNM_ARG(1, ffi2expr::OptionalTensor, scale);
+  MNM_ARG(2, ffi2expr::OptionalTensor, bias);
+  MNM_ARG(3, ffi2expr::Int, axis);
+  MNM_ARG(4, ffi2expr::Double, eps);
   MNM_RET();
 }
 
 Array<Expr> LayerNormDx(const TVMArgs& values) {
   MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Tensor, y);
+  MNM_ARG(1, ffi2expr::OptionalTensor, scale);
   MNM_ARG(2, ffi2expr::Tensor, dy);
   MNM_ARG(3, ffi2expr::Int, axis);
   MNM_ARG(4, ffi2expr::Double, eps);
@@ -3015,7 +3021,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.get_valid_counts")
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater").set_body(MNM_SYMBOLIC_API(greater, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
     .set_body(MNM_SYMBOLIC_API(greater_equal, 4, BinaryUfunc));
-MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm").set_body(MNM_SYMBOLIC_API(layer_norm, 3, LayerNorm));
+MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm").set_body(MNM_SYMBOLIC_API(layer_norm, 5, LayerNorm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm_dx")
     .set_body(MNM_SYMBOLIC_API(layer_norm_dx, 5, LayerNormDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.less").set_body(MNM_SYMBOLIC_API(less, 4, BinaryUfunc));
@@ -3467,10 +3473,12 @@ Attrs InitOp(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs LayerNorm(const Array<Value>& values) {
-  MNM_PRELUDE(1, 3, schema::LayerNormArgs);
+  MNM_PRELUDE(3, 5, schema::LayerNormArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_OPTIONAL(1, value2schema::Int, axis);
-  MNM_OPTIONAL(2, value2schema::Double, eps);
+  MNM_REQUIRED(1, value2schema::OptionalTensor, scale);
+  MNM_REQUIRED(2, value2schema::OptionalTensor, bias);
+  MNM_OPTIONAL(3, value2schema::Int, axis);
+  MNM_OPTIONAL(4, value2schema::Double, eps);
   return Attrs(attrs);
 }
 
@@ -3478,7 +3486,7 @@ template <const char* op_name>
 Attrs LayerNormDx(const Array<Value>& values) {
   MNM_PRELUDE(3, 5, schema::LayerNormDxArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
+  MNM_REQUIRED(1, value2schema::OptionalTensor, scale);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   MNM_OPTIONAL(3, value2schema::Int, axis);
   MNM_OPTIONAL(4, value2schema::Double, eps);
@@ -4411,11 +4419,17 @@ int LayerNorm(const std::string& field) {
   if (field == "x") {
     return 0;
   }
-  if (field == "axis") {
+  if (field == "scale") {
     return 1;
   }
-  if (field == "eps") {
+  if (field == "bias") {
     return 2;
+  }
+  if (field == "axis") {
+    return 3;
+  }
+  if (field == "eps") {
+    return 4;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -4426,7 +4440,7 @@ int LayerNormDx(const std::string& field) {
   if (field == "x") {
     return 0;
   }
-  if (field == "y") {
+  if (field == "scale") {
     return 1;
   }
   if (field == "dy") {
