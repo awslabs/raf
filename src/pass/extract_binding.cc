@@ -17,6 +17,12 @@ using namespace mnm::binding;
 
 class Extractor final : public ExprVisitor {
  public:
+  explicit Extractor(const Array<Var>& ignores) {
+    for (const Var& var : ignores) {
+      this->ignore.insert(var.get());
+    }
+  }
+
   void VisitExpr_(const VarNode* var) final {
     LOG(FATAL) << "Should not be here";
   }
@@ -74,7 +80,8 @@ class Extractor final : public ExprVisitor {
   std::vector<const VarNode*> queue;
   std::unordered_map<const VarNode*, int> in_degree;
   std::unordered_map<const VarNode*, const ExprNode*> bindings;
-  int phase;
+  std::unordered_set<const VarNode*> ignore;
+  int phase{};
 
   Expr Run(const Var& var) {
     // Calculate the in_degree of each var
@@ -84,6 +91,9 @@ class Extractor final : public ExprVisitor {
     while (!queue.empty()) {
       const VarNode* var = queue.back();
       queue.pop_back();
+      if (ignore.find(var) != ignore.end()) {
+        continue;
+      }
       const auto& binding = LookupBinding(var);
       CHECK(binding.defined()) << "Unbinded variable " << GetRef<Var>(var);
       if (const auto* sym = binding.as<SymbolBindingObj>()) {
@@ -121,8 +131,8 @@ class Extractor final : public ExprVisitor {
   }
 };
 
-Expr ExtractBinding(Var var) {
-  return Extractor().Run(var);
+Expr ExtractBinding(const Var& var, const Array<Var>& ignore) {
+  return Extractor(ignore).Run(var);
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.ExtractBinding").set_body_typed(ExtractBinding);

@@ -199,7 +199,7 @@ def test_gradient_op():
     def get_type_func(net):
         # pylint: disable=protected-access
         body = net._Symbol__handle
-        body = ExtractBinding(body)
+        body = ExtractBinding(body, [])
         func = relay.Function(relay.analysis.free_vars(body), body)
         func = run_infer_type(func)
         return func

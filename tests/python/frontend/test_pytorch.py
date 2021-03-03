@@ -1,14 +1,14 @@
 # pylint:disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
 # pylint:disable=not-callable,abstract-method,too-many-locals
-import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 import mnm
+from mnm._op import sym
 from mnm.frontend import from_pytorch
-from mnm.testing import randn_torch, check, run_vm_model
+from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model
 
 
 class TorchLeNet(nn.Module):
@@ -69,38 +69,48 @@ def test_lenet(shape_dict, mode):
         check(m_y, t_y, rtol=1e-4, atol=1e-4)
         return
 
-    # Prepare dy.
-    one_hot = np.random.randint(0, 10, size=batch_size)
-    np_data = np.zeros([batch_size, 10], dtype="float32")
-    np_data[range(batch_size), one_hot] = 1
-    m_dy = mnm.array(np_data, device=device)
-    t_dy = torch.tensor(np_data, requires_grad=False, device=device)
+    m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+    m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
+
+    # append loss function
+    out = m_model.record(m_x)
+    y_pred = sym.log_softmax(out)
+    loss = sym.nll_loss(m_ytrue, y_pred)
+    m_model = m_model + loss
 
     if mode == "backward":
         m_x.requires_grad = True
 
         m_model.train_mode()
         t_model.train()
-        m_y = m_model(m_x)
-        t_y = t_model(t_x)
-        check(m_y, t_y)
 
-        m_y.backward(m_dy)
-        t_y.backward(t_dy)
-        check(m_y, t_y, rtol=1e-4, atol=1e-4)
+        m_loss = m_model(m_x, m_ytrue)
+
+        t_y = t_model(t_x)
+        t_ypred = torch.log_softmax(t_y, dim=-1)
+        t_loss = F.nll_loss(t_ypred, t_ytrue)
+
+        check(m_loss, t_loss)
+
+        m_loss.backward()
+        t_loss.backward()
+        check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
     else:
         assert mode == "sgd"
 
         m_model.train_mode()
         m_model.to(device=device)
+
         m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
-        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x])[0]
+        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue])[0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()
 
         t_trainer.zero_grad()
-        t_loss = t_model(t_x)
+        t_y = t_model(t_x)
+        t_ypred = torch.log_softmax(t_y, dim=-1)
+        t_loss = F.nll_loss(t_ypred, t_ytrue)
         t_loss.backward(t_dy)
         t_trainer.step()
         check(m_loss, t_loss)

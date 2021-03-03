@@ -35,8 +35,8 @@ Type Conv2DInfer(const CallValues& value) {
 
   TensorType x = Downcast<TensorType>(GetType(args->x));
   TensorType w = Downcast<TensorType>(GetType(args->w));
-  CHECK_EQ(x->shape.size(), 4);
-  CHECK_EQ(w->shape.size(), 4);
+  CHECK_EQ(x->shape.size(), 4) << x->shape;
+  CHECK_EQ(w->shape.size(), 4) << w->shape;
 
   std::vector<int64_t> stride = Pad<2>(args->stride);
   std::vector<int64_t> dilation = Pad<2>(args->dilation);

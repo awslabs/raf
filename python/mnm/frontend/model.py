@@ -6,7 +6,7 @@ from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
 from mnm._core.ndarray import ndarray, Symbol
-from mnm._ffi.pass_ import AssignDevice, Substitute
+from mnm._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend
 
 
 def _get_func_inputs(model, args, kwargs, get_handle=True):
@@ -28,6 +28,16 @@ def _get_func_inputs(model, args, kwargs, get_handle=True):
     if get_handle:
         res = [i._ndarray__handle for i in res]
     return res
+
+
+def _get_func_output_var(func):
+    body = func.body
+    while not isinstance(body, relay.Var):
+        if isinstance(body, relay.Let):
+            body = body.body
+        else:
+            raise NotImplementedError("Not supported type: ", type(body))
+    return body
 
 
 def annotate_func_params(func, args):
@@ -85,6 +95,7 @@ class FrameworkModel(BaseModel):
         self.__aux_params = aux_params
         for param in self.__aux_params.values():
             param.requires_grad = False
+        self.__recorded = None
 
     def __call__(self, *args, **kwargs):
         func = self.__infer_func
@@ -92,6 +103,34 @@ class FrameworkModel(BaseModel):
             func = self.__train_func
         func_inputs = _get_func_inputs(self, args, kwargs)
         return _unwrap(RunModel(func, func_inputs))
+
+    def record(self, *args, **kwargs):
+        """
+        Get the return symbol of the function
+
+        Returns
+        -------
+        ret: Symbol
+            The return symbol, via which user can build new layers and append to existing Model.
+        """
+        r = self._internal(*args, **kwargs)
+        # (function, num_argument)
+        self.__recorded = (r.func, len(args) + len(kwargs))
+        return Symbol.from_expr(_get_func_output_var(r.func))
+
+    def __add__(self, other):
+        if not self.__recorded:
+            raise ValueError("Call model.record first to get the output symbols.")
+        func, num_orig_arg = self.__recorded
+        ret_var = _get_func_output_var(func)
+        other = ExtractBinding(other._Symbol__handle, [ret_var])
+        new_body = ExprAppend(func.body, other)
+        free_vars = relay.analysis.free_vars(new_body)
+        # [arguments, parameters]
+        new_params = free_vars[0:num_orig_arg] + free_vars[len(func.params):] \
+                     + free_vars[num_orig_arg:len(func.params)]
+        new_func = relay.Function(new_params, new_body)
+        return FrameworkModel(new_func, new_func, self.__arg_params, self.__aux_params)
 
     def train_mode(self, recursive=True):
         self._BaseModel__is_train = True

@@ -176,7 +176,7 @@ def _construct_func_body(outputs):
         body = body[0]
     else:
         body = Symbol.make_tuple(body)._Symbol__handle  # pylint: disable=protected-access
-    return ExtractBinding(body)
+    return ExtractBinding(body, [])
 
 
 def _get_used_params(model, body, named_inputs):

@@ -387,7 +387,7 @@ def _from_mxnet_impl(symbol, is_train):
         body = body[0]
     else:
         body = Symbol.make_tuple(body)._Symbol__handle
-    body = ExtractBinding(body)
+    body = ExtractBinding(body, [])
     func = relay.Function(relay.analysis.free_vars(body), body)
     return func
 
