@@ -25,6 +25,7 @@
 #include "../schema/transform.h"
 #include "../schema/ufunc.h"
 #include "../schema/vision.h"
+#include "../schema/vm.h"
 
 using namespace mnm::ir;
 using namespace mnm::value;
@@ -39,7 +40,10 @@ namespace mnm {
 namespace op {
 namespace regs {
 namespace names {
+static const char _alloc_storage[] = "mnm.op._alloc_storage";
+static const char _alloc_tensor[] = "mnm.op._alloc_tensor";
 static const char _allreduce[] = "mnm.op._allreduce";
+static const char _invoke_op[] = "mnm.op._invoke_op";
 static const char abs[] = "mnm.op.abs";
 static const char adaptive_avg_pool2d[] = "mnm.op.adaptive_avg_pool2d";
 static const char adaptive_avg_pool2d_dx[] = "mnm.op.adaptive_avg_pool2d_dx";
@@ -205,9 +209,36 @@ namespace ffi2schema {
                     << "Expected " << n << ", but get " << size;                           \
   auto attrs = make_object<obj>();
 
+Attrs AllocStorage(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::AllocStorageArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::ArrayLike, size);
+  MNM_TAPE(1, ffi2schema::ArrayLike, alignment);
+  MNM_POD(2, ffi2schema::Int, device_type);
+  MNM_POD(3, ffi2schema::Int, device_id);
+  MNM_POD(4, ffi2schema::String, dtype);
+  return Attrs(attrs);
+}
+
+Attrs AllocTensor(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::AllocTensorArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, storage);
+  MNM_TAPE(1, ffi2schema::ArrayLike, shape);
+  MNM_POD(2, ffi2schema::String, dtype);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, assert_shape);
+  return Attrs(attrs);
+}
+
 Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::AllreduceArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+Attrs InvokeOp(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::InvokeOpArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::ArrayLike, func);
+  MNM_TAPE(1, ffi2schema::ArrayLike, inputs);
+  MNM_TAPE(2, ffi2schema::ArrayLike, outputs);
   return Attrs(attrs);
 }
 
@@ -860,10 +891,43 @@ namespace imperative {
       ClosureValue::make(/*env=*/std::move(env), /*func=*/Function({vpack->dy}, body, {}, {})), \
       {prev_tapes.begin(), prev_tapes.begin() + n_tapes});
 
+MNM_REGISTER_GLOBAL("mnm.op.imp._alloc_storage").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_alloc_storage, 5, ffi2schema::AllocStorage,
+              schema::AllocStorageArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->size));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->alignment));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->device_type));
+  MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->device_id));
+  MNM_SET_ENV(vpack->x[4], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._alloc_tensor").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_alloc_tensor, 4, ffi2schema::AllocTensor,
+              schema::AllocTensorArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->storage));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->shape));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->assert_shape));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(_allreduce, 1, ffi2schema::Allreduce,
               schema::AllreduceArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._invoke_op").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_invoke_op, 3, ffi2schema::InvokeOp,
+              schema::InvokeOpArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->func));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->inputs));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->outputs));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2214,9 +2278,36 @@ namespace ffi2expr {
 
 #define MNM_RET() return Array<Expr>(result);
 
+Array<Expr> AllocStorage(const TVMArgs& values) {
+  MNM_PRELUDE(5);
+  MNM_ARG(0, ffi2expr::ArrayLike, size);
+  MNM_ARG(1, ffi2expr::ArrayLike, alignment);
+  MNM_ARG(2, ffi2expr::Int, device_type);
+  MNM_ARG(3, ffi2expr::Int, device_id);
+  MNM_ARG(4, ffi2expr::String, dtype);
+  MNM_RET();
+}
+
+Array<Expr> AllocTensor(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, storage);
+  MNM_ARG(1, ffi2expr::ArrayLike, shape);
+  MNM_ARG(2, ffi2expr::String, dtype);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, assert_shape);
+  MNM_RET();
+}
+
 Array<Expr> Allreduce(const TVMArgs& values) {
   MNM_PRELUDE(1);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_RET();
+}
+
+Array<Expr> InvokeOp(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::ArrayLike, func);
+  MNM_ARG(1, ffi2expr::ArrayLike, inputs);
+  MNM_ARG(2, ffi2expr::ArrayLike, outputs);
   MNM_RET();
 }
 
@@ -2835,7 +2926,12 @@ namespace symbolic {
     }                                                            \
   }
 
+MNM_REGISTER_GLOBAL("mnm.op.sym._alloc_storage")
+    .set_body(MNM_SYMBOLIC_API(_alloc_storage, 5, AllocStorage));
+MNM_REGISTER_GLOBAL("mnm.op.sym._alloc_tensor")
+    .set_body(MNM_SYMBOLIC_API(_alloc_tensor, 4, AllocTensor));
 MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 1, Allreduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym._invoke_op").set_body(MNM_SYMBOLIC_API(_invoke_op, 3, InvokeOp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
     .set_body(MNM_SYMBOLIC_API(adaptive_avg_pool2d, 3, AdaptivePool));
@@ -3056,9 +3152,39 @@ namespace value2schema {
   }
 
 template <const char* op_name>
+Attrs AllocStorage(const Array<Value>& values) {
+  MNM_PRELUDE(4, 5, schema::AllocStorageArgs);
+  MNM_REQUIRED(0, value2schema::ArrayLike, size);
+  MNM_REQUIRED(1, value2schema::ArrayLike, alignment);
+  MNM_REQUIRED(2, value2schema::Int, device_type);
+  MNM_REQUIRED(3, value2schema::Int, device_id);
+  MNM_OPTIONAL(4, value2schema::String, dtype);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs AllocTensor(const Array<Value>& values) {
+  MNM_PRELUDE(2, 4, schema::AllocTensorArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, storage);
+  MNM_REQUIRED(1, value2schema::ArrayLike, shape);
+  MNM_OPTIONAL(2, value2schema::String, dtype);
+  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, assert_shape);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Allreduce(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::AllreduceArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs InvokeOp(const Array<Value>& values) {
+  MNM_PRELUDE(3, 3, schema::InvokeOpArgs);
+  MNM_REQUIRED(0, value2schema::ArrayLike, func);
+  MNM_REQUIRED(1, value2schema::ArrayLike, inputs);
+  MNM_REQUIRED(2, value2schema::ArrayLike, outputs);
   return Attrs(attrs);
 }
 
@@ -3735,9 +3861,63 @@ namespace regs {
 namespace schema_field_idx {
 
 template <const char* op_name>
+int AllocStorage(const std::string& field) {
+  if (field == "size") {
+    return 0;
+  }
+  if (field == "alignment") {
+    return 1;
+  }
+  if (field == "device_type") {
+    return 2;
+  }
+  if (field == "device_id") {
+    return 3;
+  }
+  if (field == "dtype") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int AllocTensor(const std::string& field) {
+  if (field == "storage") {
+    return 0;
+  }
+  if (field == "shape") {
+    return 1;
+  }
+  if (field == "dtype") {
+    return 2;
+  }
+  if (field == "assert_shape") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Allreduce(const std::string& field) {
   if (field == "x") {
     return 0;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int InvokeOp(const std::string& field) {
+  if (field == "func") {
+    return 0;
+  }
+  if (field == "inputs") {
+    return 1;
+  }
+  if (field == "outputs") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -4927,10 +5107,22 @@ namespace f_mnm_schema {
 #define MNM_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \
   MNM_OP_REGISTER(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
 
+MNM_BIND_SCHEMA("mnm.op._alloc_storage", names::_alloc_storage,
+                value2schema::AllocStorage);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._alloc_storage", names::_alloc_storage,
+                            schema_field_idx::AllocStorage);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._alloc_tensor", names::_alloc_tensor,
+                value2schema::AllocTensor);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._alloc_tensor", names::_alloc_tensor,
+                            schema_field_idx::AllocTensor);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op._allreduce", names::_allreduce,
                 value2schema::Allreduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allreduce", names::_allreduce,
-                            schema_field_idx::Allreduce);        // NOLINT(whitespace/line_length)
+                            schema_field_idx::Allreduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._invoke_op", names::_invoke_op,
+                value2schema::InvokeOp);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._invoke_op", names::_invoke_op,
+                            schema_field_idx::InvokeOp);         // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.abs", names::abs,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
@@ -5458,7 +5650,10 @@ namespace op {
 namespace schema {
 namespace {
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
+MNM_REGISTER_OBJECT_REFLECT(AllocStorageArgs);
+MNM_REGISTER_OBJECT_REFLECT(AllocTensorArgs);
 MNM_REGISTER_OBJECT_REFLECT(AllreduceArgs);
+MNM_REGISTER_OBJECT_REFLECT(InvokeOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ArgsortArgs);

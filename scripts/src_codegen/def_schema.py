@@ -507,6 +507,29 @@ SCHEMAS = {
         Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
         Arg(name="device", cxx_type="std::string", cxx_default="\"cpu\"", py_default="\"cpu\"",),
     ],
+    "vm.h::_alloc_storage": [
+        Arg(name="size", cxx_type="value::Value"),
+        Arg(name="alignment", cxx_type="value::Value"),
+        Arg(name="device_type", cxx_type="int"),
+        Arg(name="device_id", cxx_type="int"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"",
+            py_default="\"float32\""),
+    ],
+    "vm.h::_alloc_tensor": [
+        Arg(name="storage", cxx_type="value::BaseTensorValue"),
+        Arg(name="shape", cxx_type="value::Value"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"",
+            py_default="\"float32\""),
+        Arg(name="assert_shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple",
+            cxx_default="{}", py_default="None"),
+    ],
+    "vm.h::_invoke_op": [
+        Arg(name="func", cxx_type="value::Value"),
+        Arg(name="inputs", cxx_type="value::Value"),
+        Arg(name="outputs", cxx_type="value::Value"),
+    ],
 }
 
 

@@ -383,19 +383,14 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     if (op.as<OpNode>()) {
       OpMatch<void> matcher;
       matcher
-          .Match("mnm.op.vm.invoke_op",
+          .Match("mnm.op._invoke_op",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 3);
                    EmitInvokeOp(args[0], args[1], args[2]);
                  })
-          .Match("mnm.op.vm.alloc_tensor",
+          .Match("mnm.op._alloc_tensor",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 2);
-
-                   // Get the attributes.
-                   auto alloc_attrs = attrs.as<tvm::relay::AllocTensorAttrs>();
-                   CHECK(alloc_attrs != nullptr) << "must be the alloc tensor attrs";
-                   auto dtype = alloc_attrs->dtype;
+                   CHECK_EQ(args.size(), 4);
 
                    // The storage will be passed dynamically.
                    this->VisitExpr(args[0]);
@@ -404,6 +399,13 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    // If the shape is constant then we will emit a static tensor allocation
                    // instruction.
                    auto const_shape = args[1].as<ConstantNode>();
+
+                   // dtype
+                   CHECK(args[2]->IsInstance<ConstantNode>());
+                   auto dtype_val = args[2].as<ConstantNode>()->value;
+                   CHECK(dtype_val->IsInstance<StringValueObj>());
+                   std::string dtype_s = dtype_val.as<StringValueObj>()->data;
+                   DataType dtype(String2DLDataType(dtype_s));
 
                    if (const_shape) {
                      Shape shape = Downcast<Shape>(const_shape->value);
@@ -420,26 +422,40 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                      LOG(FATAL) << "Not suported";
                    }
                  })
-          .Match("mnm.op.vm.alloc_storage",
+          .Match("mnm.op._alloc_storage",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 2);
+                   CHECK_EQ(args.size(), 5);
                    // Compute the size of the allocation.
                    this->VisitExpr(args[0]);
                    auto size_register = last_register_;
 
+                   // Alignment
                    CHECK(args[1]->IsInstance<ConstantNode>());
                    auto align_val = args[1].as<ConstantNode>()->value;
                    CHECK(align_val->IsInstance<IntValueObj>());
                    Index alignment = align_val.as<IntValueObj>()->data;
 
-                   // Get the dtype hint from the attributes.
-                   auto alloc_attrs = attrs.as<tvm::relay::AllocStorageAttrs>();
-                   CHECK(alloc_attrs != nullptr) << "must be the alloc tensor attrs";
-                   auto dtype = alloc_attrs->dtype;
+                   // device type
+                   CHECK(args[2]->IsInstance<ConstantNode>());
+                   auto device_type_val = args[2].as<ConstantNode>()->value;
+                   CHECK(device_type_val->IsInstance<IntValueObj>());
+                   Index device_type = device_type_val.as<IntValueObj>()->data;
 
-                   Emit(Instruction::AllocStorage(size_register, alignment, dtype,
-                                                  alloc_attrs->device_type, alloc_attrs->device_id,
-                                                  NewRegister()));
+                   // device id
+                   CHECK(args[3]->IsInstance<ConstantNode>());
+                   auto device_id_val = args[3].as<ConstantNode>()->value;
+                   CHECK(device_id_val->IsInstance<IntValueObj>());
+                   Index device_id = device_id_val.as<IntValueObj>()->data;
+
+                   // dtype
+                   CHECK(args[4]->IsInstance<ConstantNode>());
+                   auto dtype_val = args[4].as<ConstantNode>()->value;
+                   CHECK(dtype_val->IsInstance<StringValueObj>());
+                   std::string dtype_s = dtype_val.as<StringValueObj>()->data;
+                   DataType dtype(String2DLDataType(dtype_s));
+
+                   Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
+                                                  device_id, NewRegister()));
                  })
           .Match("memory.kill",
                  [](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {

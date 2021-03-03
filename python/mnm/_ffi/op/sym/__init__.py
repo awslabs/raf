@@ -1,7 +1,10 @@
 """Auto generated. Do not touch."""
 # pylint: disable=redefined-builtin
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+from ._internal import _alloc_storage
+from ._internal import _alloc_tensor
 from ._internal import _allreduce
+from ._internal import _invoke_op
 from ._internal import abs
 from ._internal import adaptive_avg_pool2d
 from ._internal import adaptive_avg_pool2d_dx

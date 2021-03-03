@@ -12,6 +12,7 @@
 #include "mnm/value.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
+#include "../op/from_relay/from_relay_utils.h"
 #include "tvm/relay/attrs/memory.h"
 
 namespace tvm {
@@ -30,6 +31,7 @@ namespace manifest_alloc {
 
 using namespace mnm::ir;
 using namespace mnm::value;
+using namespace mnm::op::from_relay;
 
 class ManifestAllocMutator : public ExprMutator {
  public:
@@ -89,7 +91,7 @@ class ManifestAllocMutator : public ExprMutator {
           outs.push_back(MakeStaticAllocation(&scope, out_types[i].as<TensorTypeNode>()));
         }
         auto invoke =
-            Call(Op::Get("mnm.op.vm.invoke_op"),
+            Call(Op::Get("mnm.op._invoke_op"),
                  Array<Expr>{scope.Push(node->op), Tuple(new_args), Tuple(Array<Expr>(outs))});
         scope.Push(invoke);
         return tvm::relay::ToTupleType(ret_type, outs);
@@ -127,21 +129,37 @@ class ManifestAllocMutator : public ExprMutator {
     return MakeConstant(IntValue::make(size));
   }
 
+  Expr MakeAllocStorage(const Array<Expr>& args, int device_type, int device_id,
+                        const tvm::runtime::DataType& dtype) {
+    static const Op& op = Op::Get("mnm.op._alloc_storage");
+    Array<Expr> new_args = args;
+    new_args.push_back(MakeConstant(IntValue::make(device_type)));
+    new_args.push_back(MakeConstant(IntValue::make(device_id)));
+    new_args.push_back(MakeConstant(StringValue::make(DLDataType2String(dtype))));
+    return Call(op, new_args);
+  }
+
+  Expr MakeAllocTensor(const Array<Expr>& args, const Expr& assert_shape,
+                       const tvm::runtime::DataType& dtype) {
+    static const Op& op = Op::Get("mnm.op._alloc_tensor");
+    Array<Expr> new_args = args;
+    new_args.push_back(MakeConstant(StringValue::make(DLDataType2String(dtype))));
+    new_args.push_back(assert_shape);
+    return Call(op, new_args);
+  }
+
   Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type) {
     Expr shape = MakeConstant(type->shape);
     Expr size = ComputeStorage(type);
     Expr alignment = ComputeAlignment(type->dtype);
     auto alloc_storage_attrs = make_object<tvm::relay::AllocStorageAttrs>();
-    alloc_storage_attrs->dtype = type->dtype;
+    auto dtype = type->dtype;
     auto target = tvm::Target::Current();
-    alloc_storage_attrs->device_type = target.defined() ? target->kind->device_type : kDLCPU;
-    alloc_storage_attrs->device_id = 0;
-    auto storage = scope->Push(Call(Op::Get("mnm.op.vm.alloc_storage"),
-                                    Array<Expr>{size, alignment}, Attrs(alloc_storage_attrs)));
-    auto alloc_tensor_attrs = make_object<tvm::relay::AllocTensorAttrs>();
-    alloc_tensor_attrs->dtype = type->dtype;
-    auto tensor = scope->Push(Call(Op::Get("mnm.op.vm.alloc_tensor"), Array<Expr>{storage, shape},
-                                   Attrs(alloc_tensor_attrs)));
+    auto device_type = target.defined() ? target->kind->device_type : kDLCPU;
+    int device_id = 0;
+    auto storage = scope->Push(MakeAllocStorage(Array<Expr>{size, alignment},
+                                                static_cast<int>(device_type), device_id, dtype));
+    auto tensor = scope->Push(MakeAllocTensor(Array<Expr>{storage, shape}, shape, dtype));
     return tensor;
   }
 

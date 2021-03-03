@@ -165,7 +165,16 @@ class TypeInferencer : public ExprMutator {
     auto const_data = node->value;
     // check if the constant is null
     if (const_data.defined()) {
-      op->checked_type_ = GetValueType(Downcast<Value>(const_data));
+      if (const ArrayNode* arr = const_data.as<ArrayNode>()) {
+        Array<PrimExpr> shape;
+        for (const auto& it : *arr) {
+          CHECK(it->IsInstance<IntImmNode>());
+          shape.push_back(static_cast<int32_t>((Downcast<IntImm>(it))->value));
+        }
+        op->checked_type_ = TensorType(shape, op->tensor_type()->dtype);
+      } else {
+        op->checked_type_ = GetValueType(Downcast<Value>(const_data));
+      }
     } else {
       // fake type info
       op->checked_type_ = TensorType::Scalar(DataType::Int(64));
@@ -412,6 +421,7 @@ class TypeGetter : public TypeFunctor<Value(const Type&)> {
   Value VisitType_(const TensorTypeNode* op) {
     return TensorTypeValue::make(GetRef<TensorType>(op));
   }
+
   Value VisitType_(const TupleTypeNode* op) {
     Array<Value> ret;
     for (const auto& ty : op->fields) {
@@ -419,11 +429,23 @@ class TypeGetter : public TypeFunctor<Value(const Type&)> {
     }
     return TupleValue::make(ret);
   }
+
+  Value VisitType_(const FuncTypeNode* op) {
+    // FuncType doesn't really carry value so we return void
+    return VoidValue::make();
+  }
 };
 
 class ValueGetter : public ExprFunctor<Value(const Expr&)> {
   Value VisitExpr_(const RelayConstantNode* op) {
     const ConstantNode* node = static_cast<const ConstantNode*>(op);
+    if (const ArrayNode* arr = node->value.as<ArrayNode>()) {
+      Array<Value> fields;
+      for (const auto& it : *arr) {
+        fields.push_back(IntValue::make((Downcast<IntImm>(it))->value));
+      }
+      return TupleValue::make(fields);
+    }
     return node->value.defined() ? Downcast<Value>(node->value) : NullValue<Value>();
   }
 

@@ -137,6 +137,9 @@ OPS = [
     Op(name="ones", schema_name="init_op"),
     Op(name="ones_like", schema_name="unary"),
     Op(name="one_hot", schema_name="one_hot"),
+    Op(name="_alloc_storage", schema_name="_alloc_storage"),
+    Op(name="_alloc_tensor", schema_name="_alloc_tensor"),
+    Op(name="_invoke_op", schema_name="_invoke_op"),
 ]
 
 def by_name():

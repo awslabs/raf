@@ -18,6 +18,7 @@
 #include "../../schema/transform.h"
 #include "../../schema/ufunc.h"
 #include "../../schema/vision.h"
+#include "../../schema/vm.h"
 #include "./cudnn_utils.h"
 #include "mnm/ir.h"
 #include "mnm/op_utils.h"

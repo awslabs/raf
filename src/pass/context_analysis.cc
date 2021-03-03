@@ -55,9 +55,9 @@ namespace context_analysis {
 
 // Cache ops
 static const Op& device_copy_op = Op::Get("mnm.op.device_copy");
-static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
-static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
-static const Op& invoke_op = Op::Get("mnm.op.vm.invoke_op");
+static const Op& alloc_storage_op = Op::Get("mnm.op._alloc_storage");
+static const Op& alloc_tensor_op = Op::Get("mnm.op._alloc_tensor");
+static const Op& invoke_op = Op::Get("mnm.op._invoke_op");
 
 class DeviceDomain;
 using DeviceDomainPtr = std::shared_ptr<DeviceDomain>;
