@@ -45,11 +45,20 @@ struct FromRelayMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* node) final {
-    const Var& var = node->var;
-    CHECK_EQ(var_map_.count(var), 0) << "IR is malformed: cannot bind the same var twice";
-    Var new_var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
-    var_map_.Set(var, new_var);
-    return mnm::ir::Let(new_var, Mutate(node->value), Mutate(node->body));
+    auto pre_visit = [this](const LetNode* op) {
+      const Var& var = op->var;
+      CHECK_EQ(var_map_.count(var), 0) << "IR is malformed: cannot bind the same var twice";
+      Var new_var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
+      var_map_.Set(var, new_var);
+      this->Mutate(op->value);
+    };
+    auto post_visit = [this](const LetNode* op) {
+      Expr value = this->Mutate(op->value);
+      Expr body = this->Mutate(op->body);
+      this->memo_[GetRef<Expr>(op)] = Let(var_map_[op->var], value, body);
+    };
+    ExpandANormalForm(node, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(node)];
   }
 
   Expr VisitExpr_(const CallNode* node) final {
@@ -118,7 +127,7 @@ struct FromRelayMutator : public ExprMutator {
   /*! \brief The counter of bound variables. */
   int num_bound_var_ = 0;
   /*! \brief Map from var in Relay graph to the converted Meta graph. */
-  Map<Var, Expr> var_map_;
+  Map<Var, Var> var_map_;
   /*! \brief Map from unsupported op name to the appearance. */
   std::unordered_map<String, int> unsupported_ops_;
 };

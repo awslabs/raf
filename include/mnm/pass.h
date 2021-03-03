@@ -13,6 +13,7 @@
 namespace mnm {
 namespace pass {
 using tvm::AsText;
+using tvm::relay::ExpandANormalForm;
 using tvm::relay::FreeVars;
 /*!
  * \brief Automatic Differentiation.
