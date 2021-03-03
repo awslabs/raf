@@ -38,7 +38,7 @@ inline Expr Cast(Expr x, DataType dtype) {
   return Call(op, {x, f32_constant}, {});
 }
 
-struct InsertCastVisitor : public ExprVisitor {
+struct InsertCastVisitor : public MixedModeVisitor {
  public:
   InsertCastVisitor() {
   }
@@ -49,31 +49,41 @@ struct InsertCastVisitor : public ExprVisitor {
 
   void VisitExpr_(const LetNode* node) final {
     static auto frule = Op::GetAttrMap<op::FMNMCastRule>("FMNMCastRule");
-    if (node->value->IsInstance<CallNode>()) {
-      const CallNode* call = node->value.as<CallNode>();
-      if (call->op.as<OpNode>() != nullptr) {
-        const Op op = Downcast<Op>(call->op);
-        if (frule.count(op)) {
-          // infertype
-          ell->ret = node->var;
-          Expr inferred_expr = InferType(ell->AsExpr());
-          auto rules = frule[op](call->args);
-          InsertCastCall(node, call, rules);
-          return;
+    auto pre_visit = [this](const LetNode* node_) {
+      if (node_->value->IsInstance<CallNode>()) {
+        const CallNode* call = node_->value.as<CallNode>();
+        if (call->op.as<OpNode>() != nullptr) {
+          const Op op = Downcast<Op>(call->op);
+          if (frule.count(op)) {
+            // infertype
+            ell->ret = node_->var;
+            Expr inferred_expr = InferType(ell->AsExpr());
+            auto rules = frule[op](call->args);
+            InsertCastCall(node_, call, rules);
+            return;
+          }
         }
       }
-    }
-    // insert a line
-    ell->vars.push_back(node->var);
-    ell->exprs.push_back(node->value);
-    ExprVisitor::VisitExpr(node->body);
+      // insert a line
+      ell->vars.push_back(node_->var);
+      ell->exprs.push_back(node_->value);
+    };
+    auto post_visit = [this](const LetNode* node_) {
+      this->VisitExpr(node_->body);
+      this->visit_counter_[node_] += 1;
+    };
+    ExpandANormalForm(node, pre_visit, post_visit);
   }
 
   Function Run(const Expr& expr) {
     if (expr->IsInstance<FunctionNode>()) {
       Function func = Downcast<Function>(expr);
       for (const auto& p : func->params) {
-        InferType(p);
+        if (p->type_annotation.defined()) {
+          p->checked_type_ = p->type_annotation;
+        } else {
+          LOG(FATAL) << "Some param(s) is missing type annotation!";
+        }
       }
       ExprVisitor::VisitExpr(func->body);
       return Function(func->params, ell->AsExpr(), Type(), {}, {});
@@ -126,7 +136,6 @@ struct InsertCastVisitor : public ExprVisitor {
     Call new_call = Call(call->op, call_args, call->attrs, call->type_args);
     ell->vars.push_back(let->var);
     ell->exprs.push_back(new_call);
-    ExprVisitor::VisitExpr(let->body);
   }
 
   void CastTupleElements(const Expr arg, DataType dtype) {
