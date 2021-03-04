@@ -36,6 +36,36 @@ Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
 
 MNM_OP_GRAD("mnm.op.add", AddGrad);
 
+Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& x1 = call->args[0];
+  const Expr& x2 = call->args[1];
+
+  auto f = [&dy](const Expr& x) {
+    static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
+    static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
+    static auto sum = Op::Get("mnm.op.sum");
+    Call axes = Call(collapse_axis, {dy, x});
+    Call keep = Call(collapse_keep, {dy, x});
+    return Call(sum, {dy, axes, keep});
+  };
+
+  auto fs = [&dy](const Expr& x) {
+    static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
+    static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
+    static auto sum = Op::Get("mnm.op.sum");
+    static auto neg = Op::Get("mnm.op.negative");
+    Call axes = Call(collapse_axis, {dy, x});
+    Call keep = Call(collapse_keep, {dy, x});
+    Call value = Call(sum, {dy, axes, keep});
+    return Call(neg, {value});
+  };
+  return {f(x1), fs(x2)};
+}
+MNM_OP_GRAD("mnm.op.subtract", SubGrad);
+
 Array<Expr> MulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
   static auto op_multiply = Op::Get("mnm.op.multiply");
