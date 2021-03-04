@@ -33,11 +33,7 @@ class BaseModel:
         return _get_param_dict(self, prefix=prefix, recursive=recursive)
 
     def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
-        # TODO(@junrushao1994): do we control cache invalidation?
-        for model in _get_model_dict(self, prefix="", recursive=True).values():
-            for name, param in _get_attr_params_key_value(model).items():
-                param = param.to(device=device, dtype=dtype)
-                setattr(model, name, param)
+        raise NotImplementedError
 
 
 class Model(BaseModel, cacher.Cacher):
@@ -53,11 +49,11 @@ class Model(BaseModel, cacher.Cacher):
 
     def train_mode(self, recursive=True):
         super(Model, self).train_mode(recursive=recursive)
-        cacher.invalidate(self, include_self=False, recursive=True)
+        cacher.invalidate(self, include_self=True, recursive=True)
 
     def infer_mode(self, recursive=True):
         super(Model, self).infer_mode(recursive=recursive)
-        cacher.invalidate(self, include_self=False, recursive=True)
+        cacher.invalidate(self, include_self=True, recursive=True)
 
     def _internal(self, *args, **kwargs):
         """
@@ -119,6 +115,15 @@ class Model(BaseModel, cacher.Cacher):
 
     def _state(self):
         return _get_attr_params_key_value(self)
+
+    def to(self, *, device=None, dtype=None, invalidate=True):  # pylint: disable=arguments-differ
+        for model in _get_model_dict(self, prefix="", recursive=True).values():
+            for name, param in _get_attr_params_key_value(model).items():
+                param = param.to(device=device, dtype=dtype)
+                setattr(model, name, param)
+        if invalidate:
+            cacher.invalidate(self, include_self=True, recursive=True)
+
 
 # pylint: disable=protected-access
 

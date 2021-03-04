@@ -3,7 +3,8 @@ import torch
 
 import mnm
 from mnm.model import Conv2d, BatchNorm
-from mnm.testing import check, randn_torch, t2m_param
+from mnm.testing import check, randn, randn_torch, t2m_param, get_device_list
+from mnm._lib import tvm
 
 
 class MNMBottleneck(mnm.Model):
@@ -177,6 +178,24 @@ def test_bottleneck(config, is_train):
         if "running_" not in m_name:
             print(m_name)
             check(m_v.grad, t_v.grad, rtol=1e-2, atol=1e-2)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+def test_model_invalidate(device):
+    # pylint: disable=protected-access,no-member
+    model = MNMBottleneck(64, 64, 1)
+    model.to(device=device)
+    m_x, _ = randn((16, 64, 32, 32), requires_grad=True, device=device)
+    # mode change
+    model.train_mode()
+    train_func = model._internal(m_x).func
+    model.infer_mode()
+    infer_func = model._internal(m_x).func
+    assert not tvm.ir.structural_equal(train_func, infer_func)
+    # to
+    model.to(device=device, invalidate=True)
+    assert len(model._Cacher__cache) == 0
+    # pylint: enable=protected-access,no-member
 
 
 if __name__ == "__main__":
