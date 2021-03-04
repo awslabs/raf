@@ -107,6 +107,7 @@ MNM_OP_DISPATCH("mnm.op.matmul", MatmulNN::make, DevType::kCUDA(), "cublas");
 MNM_OP_DISPATCH("mnm.op.matmul_nt", MatmulNT::make, DevType::kCUDA(), "cublas");
 MNM_OP_DISPATCH("mnm.op.matmul_tn", MatmulTN::make, DevType::kCUDA(), "cublas");
 MNM_OP_DISPATCH("mnm.op.matmul_tt", MatmulTT::make, DevType::kCUDA(), "cublas");
+MNM_OP_DISPATCH("mnm.op.dense", MatmulNT::make, DevType::kCUDA(), "cublas");
 
 }  // namespace manual
 }  // namespace cublas

@@ -53,6 +53,7 @@ def op_cast_rule_matmul(args):
 register_op_cast_rule("mnm.op.batch_matmul", op_cast_rule_matmul)
 register_op_cast_rule("mnm.op.matmul", op_cast_rule_matmul)
 register_op_cast_rule("mnm.op.matmul_nt", op_cast_rule_matmul)
+register_op_cast_rule("mnm.op.dense", op_cast_rule_matmul)
 register_op_cast_rule("mnm.op.matmul_tn", op_cast_rule_matmul)
 register_op_cast_rule("mnm.op.matmul_tt", op_cast_rule_matmul)
 
