@@ -128,6 +128,7 @@ from ._internal import stack
 from ._internal import stack_dx
 from ._internal import stream_sync
 from ._internal import strided_slice
+from ._internal import strided_slice_dx
 from ._internal import subtract
 from ._internal import sum
 from ._internal import take

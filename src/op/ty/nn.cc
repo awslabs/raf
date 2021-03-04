@@ -156,14 +156,6 @@ Type AdaptivePool2DInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.adaptive_max_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
 MNM_OP_TYPE("mnm.op.adaptive_avg_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
 
-template <typename T>
-Type GeneralDxInfer(const CallValues& value) {
-  const auto* args = value->args.as<T>();
-  CHECK(args != nullptr);
-  TensorType x = Downcast<TensorType>(GetType(args->x));
-  return x;
-}
-
 MNM_OP_TYPE("mnm.op.max_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
 MNM_OP_TYPE("mnm.op.avg_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
 MNM_OP_TYPE("mnm.op.adaptive_max_pool2d_dx", "AdaptivePool2DDx",

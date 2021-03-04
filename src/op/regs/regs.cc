@@ -167,6 +167,7 @@ static const char stack[] = "mnm.op.stack";
 static const char stack_dx[] = "mnm.op.stack_dx";
 static const char stream_sync[] = "mnm.op.stream_sync";
 static const char strided_slice[] = "mnm.op.strided_slice";
+static const char strided_slice_dx[] = "mnm.op.strided_slice_dx";
 static const char subtract[] = "mnm.op.subtract";
 static const char sum[] = "mnm.op.sum";
 static const char take[] = "mnm.op.take";
@@ -729,6 +730,17 @@ Attrs StridedSlice(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(2, ffi2schema::IntOrTupleInt, end);
   MNM_POD(3, ffi2schema::IntOrTupleInt, strides);
   MNM_POD(4, ffi2schema::String, slice_mode);
+  return Attrs(attrs);
+}
+
+Attrs StridedSliceDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::StridedSliceDxArgs, 6);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, begin);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, end);
+  MNM_POD(4, ffi2schema::IntOrTupleInt, strides);
+  MNM_POD(5, ffi2schema::String, slice_mode);
   return Attrs(attrs);
 }
 
@@ -2146,6 +2158,19 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.strided_slice").set_body([](TVMArgs args, TVMRet
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.strided_slice_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(strided_slice_dx, 6, ffi2schema::StridedSliceDx,
+              schema::StridedSliceDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->begin));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->end));
+  MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->strides));
+  MNM_SET_ENV(vpack->x[5], schema2value::String(schema->slice_mode));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.subtract").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(subtract, 4, ffi2schema::BinaryUfunc,
               schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
@@ -2805,6 +2830,17 @@ Array<Expr> StridedSlice(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> StridedSliceDx(const TVMArgs& values) {
+  MNM_PRELUDE(6);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, begin);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, end);
+  MNM_ARG(4, ffi2expr::IntOrTupleInt, strides);
+  MNM_ARG(5, ffi2expr::String, slice_mode);
+  MNM_RET();
+}
+
 Array<Expr> Sum(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -3099,6 +3135,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync")
     .set_body(MNM_SYMBOLIC_API(stream_sync, 2, StreamControl));
 MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
     .set_body(MNM_SYMBOLIC_API(strided_slice, 5, StridedSlice));
+MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice_dx")
+    .set_body(MNM_SYMBOLIC_API(strided_slice_dx, 6, StridedSliceDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 3, Sum));
 MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 4, Take));
@@ -3736,6 +3774,18 @@ Attrs StridedSlice(const Array<Value>& values) {
   MNM_REQUIRED(2, value2schema::IntOrTupleInt, end);
   MNM_OPTIONAL(3, value2schema::IntOrTupleInt, strides);
   MNM_OPTIONAL(4, value2schema::String, slice_mode);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs StridedSliceDx(const Array<Value>& values) {
+  MNM_PRELUDE(4, 6, schema::StridedSliceDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_REQUIRED(2, value2schema::IntOrTupleInt, begin);
+  MNM_REQUIRED(3, value2schema::IntOrTupleInt, end);
+  MNM_OPTIONAL(4, value2schema::IntOrTupleInt, strides);
+  MNM_OPTIONAL(5, value2schema::String, slice_mode);
   return Attrs(attrs);
 }
 
@@ -4907,6 +4957,30 @@ int StridedSlice(const std::string& field) {
 }
 
 template <const char* op_name>
+int StridedSliceDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "dy") {
+    return 1;
+  }
+  if (field == "begin") {
+    return 2;
+  }
+  if (field == "end") {
+    return 3;
+  }
+  if (field == "strides") {
+    return 4;
+  }
+  if (field == "slice_mode") {
+    return 5;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Sum(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -5608,6 +5682,10 @@ MNM_BIND_SCHEMA("mnm.op.strided_slice", names::strided_slice,
                 value2schema::StridedSlice);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.strided_slice", names::strided_slice,
                             schema_field_idx::StridedSlice);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.strided_slice_dx", names::strided_slice_dx,
+                value2schema::StridedSliceDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.strided_slice_dx", names::strided_slice_dx,
+                            schema_field_idx::StridedSliceDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.subtract", names::subtract,
@@ -5723,6 +5801,7 @@ MNM_REGISTER_OBJECT_REFLECT(SqueezeArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);
 MNM_REGISTER_OBJECT_REFLECT(StreamControlArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceArgs);
+MNM_REGISTER_OBJECT_REFLECT(StridedSliceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeDxArgs);

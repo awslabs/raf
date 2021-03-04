@@ -709,6 +709,44 @@ HashKey StridedSliceHasher(const std::vector<Type>& param_types, const Type& y_t
 MNM_TVMJIT(StridedSlice, "mnm.op.strided_slice", StridedSliceArgs, StridedSliceSchema2Args,
            StridedSliceSchemaArgNames, StridedSliceSchema2Attrs, StridedSliceHasher);
 
+std::vector<Value> StridedSliceDxSchema2Args(const StridedSliceDxArgs* args) {
+  return {args->x, args->dy};
+}
+
+std::vector<std::string> StridedSliceDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "dy"};
+}
+
+Attrs StridedSliceDxSchema2Attrs(const StridedSliceDxArgs* args) {
+  auto attrs = make_object<StridedSliceAttrs>();
+  CHECK_EQ(args->begin.size(), args->end.size());
+  CHECK_EQ(args->begin.size(), args->strides.size());
+  std::vector<Integer> begin, end, strides;
+  for (int i = 0; i < args->begin.size(); ++i) {
+    begin.emplace_back(args->begin[i]);
+    end.emplace_back(args->end[i]);
+    strides.emplace_back(args->strides[i]);
+  }
+  attrs->begin = Array<Integer>(begin.begin(), begin.end());
+  attrs->end = Array<Integer>(end.begin(), end.end());
+  attrs->strides = Array<Integer>(strides.begin(), strides.end());
+  attrs->slice_mode = args->slice_mode;
+  return Attrs(attrs);
+}
+
+HashKey StridedSliceDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                             const StridedSliceDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->begin;
+  key << args->end;
+  key << args->strides;
+  key << args->slice_mode;
+  return key;
+}
+
+MNM_TVMJIT(StridedSliceDx, "mnm.op.strided_slice_dx", StridedSliceDxArgs, StridedSliceDxSchema2Args,
+           StridedSliceDxSchemaArgNames, StridedSliceDxSchema2Attrs, StridedSliceDxHasher);
+
 std::vector<Value> WhereSchema2Args(const WhereArgs* args) {
   return {args->condition, args->x, args->y};
 }

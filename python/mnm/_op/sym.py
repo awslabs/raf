@@ -32,9 +32,9 @@ __all__ = [
     "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
     "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
     "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
-    "stream_sync", "strided_slice", "subtract", "sum", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
-    "where", "zeros", "zeros_like",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx", "where", "zeros", "zeros_like",
 ]
 
 def _alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
@@ -822,6 +822,15 @@ def strided_slice(x, begin, end, strides=None, slice_mode="end"):
     strides = sym_utils.to_int_tuple(strides)
     slice_mode = sym_utils.to_string(slice_mode)
     return Symbol.from_expr(ffi.strided_slice(x, begin, end, strides, slice_mode))
+
+def strided_slice_dx(x, dy, begin, end, strides=None, slice_mode="end"):
+    x = sym_utils.to_tensor(x)
+    dy = sym_utils.to_tensor(dy)
+    begin = sym_utils.to_int_tuple(begin)
+    end = sym_utils.to_int_tuple(end)
+    strides = sym_utils.to_int_tuple(strides)
+    slice_mode = sym_utils.to_string(slice_mode)
+    return Symbol.from_expr(ffi.strided_slice_dx(x, dy, begin, end, strides, slice_mode))
 
 def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

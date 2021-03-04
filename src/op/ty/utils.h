@@ -58,6 +58,14 @@ bool TypeCheckCompare(const tvm::PrimExpr& lhs, const tvm::PrimExpr& rhs, Compar
  */
 bool TypeCheck(const tvm::PrimExpr& cond);
 
+template <typename T>
+tvm::Type GeneralDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<T>();
+  CHECK(args != nullptr);
+  tvm::TensorType x = tvm::Downcast<tvm::TensorType>(GetType(args->x));
+  return x;
+}
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

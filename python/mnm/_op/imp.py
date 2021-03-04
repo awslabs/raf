@@ -33,9 +33,9 @@ __all__ = [
     "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
     "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
     "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
-    "stream_sync", "strided_slice", "subtract", "sum", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
-    "where", "zeros", "zeros_like",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx", "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -950,6 +950,16 @@ def strided_slice(x, begin, end, strides=None, slice_mode="end"):
     strides = imp_utils.to_int_tuple(strides)
     slice_mode = imp_utils.to_string(slice_mode)
     return imp_utils.ret(ffi.strided_slice(x, begin, end, strides, slice_mode))
+
+@set_module("mnm")
+def strided_slice_dx(x, dy, begin, end, strides=None, slice_mode="end"):
+    x = imp_utils.to_tensor(x)
+    dy = imp_utils.to_tensor(dy)
+    begin = imp_utils.to_int_tuple(begin)
+    end = imp_utils.to_int_tuple(end)
+    strides = imp_utils.to_int_tuple(strides)
+    slice_mode = imp_utils.to_string(slice_mode)
+    return imp_utils.ret(ffi.strided_slice_dx(x, dy, begin, end, strides, slice_mode))
 
 @set_module("mnm")
 def subtract(x1, x2, out=None, where=None):

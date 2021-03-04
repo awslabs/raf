@@ -109,6 +109,17 @@ class StridedSliceArgs : public ir::AttrsNode<StridedSliceArgs> {
   MNM_OP_SCHEMA(StridedSliceArgs, "mnm.args.strided_slice");
 };
 
+class StridedSliceDxArgs : public ir::AttrsNode<StridedSliceDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue dy;
+  std::vector<int64_t> begin;
+  std::vector<int64_t> end;
+  std::vector<int64_t> strides{};
+  std::string slice_mode{"end"};
+  MNM_OP_SCHEMA(StridedSliceDxArgs, "mnm.args.strided_slice_dx");
+};
+
 class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
  public:
   value::BaseTensorValue x;

@@ -218,6 +218,21 @@ Array<Expr> FullGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
 
 MNM_OP_GRAD("mnm.op.full", FullGrad);
 
+Array<Expr> StridedSliceGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                             const Expr& dy) {
+  static auto op_slice_dx = Op::Get("mnm.op.strided_slice_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  const Expr& begin = call->args[1];
+  const Expr& end = call->args[2];
+  const Expr& strides = call->args[3];
+  const Expr& mod = call->args[4];
+  return {Call(op_slice_dx, {x, dy, begin, end, strides, mod})};
+}
+
+MNM_OP_GRAD("mnm.op.strided_slice", StridedSliceGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

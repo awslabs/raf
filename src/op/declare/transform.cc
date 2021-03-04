@@ -247,6 +247,34 @@ MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
   throw;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
+MNM_OP_DECLARE("mnm.op.strided_slice_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<StridedSliceDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* data = args->x;
+
+  auto dshape = data->shape;
+  int64_t num_axis = data->ndim;
+
+  CHECK(!args->begin.empty()) << "strided_slice received invalid begin";
+  CHECK(!args->end.empty()) << "strided_slice received invalid end";
+  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+
+  // calculate output shape
+  std::vector<int64_t> oshape(num_axis);
+  // stride will be set as 1 if slice mode is enabled
+  std::vector<int64_t> stride_vec(num_axis, 1);
+  if (IsCompact(*data)) {
+    call->device = data->ctx;
+    std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
+    call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+                                      /*dtype=*/data->dtype,
+                                      /*shape=*/shape);
+    return;
+  }
+  LOG(FATAL) << "NotImplementedError: for now we only support strided_slice on contiguous tensor.";
+  throw;
+}).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+
 MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues& call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
   CHECK(args != nullptr);

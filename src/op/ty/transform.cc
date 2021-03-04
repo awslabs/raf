@@ -563,6 +563,7 @@ Type StridedSliceInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.strided_slice", "StridedSlice", StridedSliceInfer);
+MNM_OP_TYPE("mnm.op.strided_slice_dx", "StridedSliceDx", GeneralDxInfer<StridedSliceDxArgs>);
 
 Type SqueezeInfer(const CallValues& value) {
   const auto* args = value->args.as<SqueezeArgs>();

@@ -98,6 +98,7 @@ OPS = [
     Op(name="repeat", schema_name="repeat"),
     Op(name="expand_dims", schema_name="expand_dims"),
     Op(name="strided_slice", schema_name="strided_slice"),
+    Op(name="strided_slice_dx", schema_name="strided_slice_dx"),
     Op(name="sequence_mask", schema_name="sequence_mask"),
     Op(name="reverse_sequence", schema_name="reverse_sequence"),
     Op(name="reverse", schema_name="reverse"),

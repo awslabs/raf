@@ -257,6 +257,8 @@ stream_sync = _APIS.get("mnm.op.sym.stream_sync", None)
 # Defined in ./src/op/regs/regs.cc
 strided_slice = _APIS.get("mnm.op.sym.strided_slice", None)
 # Defined in ./src/op/regs/regs.cc
+strided_slice_dx = _APIS.get("mnm.op.sym.strided_slice_dx", None)
+# Defined in ./src/op/regs/regs.cc
 subtract = _APIS.get("mnm.op.sym.subtract", None)
 # Defined in ./src/op/regs/regs.cc
 sum = _APIS.get("mnm.op.sym.sum", None)

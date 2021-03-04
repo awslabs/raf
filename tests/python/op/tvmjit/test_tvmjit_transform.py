@@ -650,7 +650,7 @@ def test_full(shape, dtype, device):
     ((3, 4, 3), [1, 0, 0], [2, 2, 3], [1, 1, 2]),
     ((3, 4, 3), [1, -1, 0], [2, -3, 3], [1, -1, 1]),
     ((3, 4, 3), [1, 1, 0], [4, 4, 3], [1, 1, 1]),
-    ((3, 4, 3), [0, 2, 0], [1, 2, 3], [1, 1, 1])
+    ((3, 4, 3), [0, 2, 0], [1, 3, 3], [1, 1, 1])
 ])
 def test_strided_slice(device, params):
     shape, begin, end, strides = params
@@ -658,6 +658,9 @@ def test_strided_slice(device, params):
     m_y = mnm.strided_slice(m_x, begin, end, strides)
     t_y = npx.strided_slice_python(n_x, begin, end, strides)
     check(m_y, t_y)
+    dx = mnm.strided_slice_dx(m_x, m_y, begin, end, strides)
+    test_x = mnm.strided_slice(dx, begin, end, strides)
+    check(test_x, m_y)
 
 
 @pytest.mark.parametrize("device", get_device_list())

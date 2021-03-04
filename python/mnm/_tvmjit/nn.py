@@ -44,6 +44,21 @@ _reg.register_injective_schedule("mnm.op.take_dx")
 
 _reg.register_injective_schedule("mnm.op.pad")
 _reg.register_injective_schedule("mnm.op.strided_slice")
+
+@register_compute("mnm.op.strided_slice_dx")
+def strided_slice_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=invalid-name
+    # pylint: disable=unused-variable
+    x, dy = inputs[0], inputs[1]
+    begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
+    X = _tvm.te.placeholder(shape=x.shape, dtype=dy.dtype)
+    R = _topi.nn.strided_slice(X, begin, end, strides, slice_mode)
+    grads = _tvm.te.gradient(R, [X], head=dy)
+    return grads
+
+_reg.register_injective_schedule("mnm.op.strided_slice_dx")
+
 _reg.register_injective_schedule("mnm.op.prod")
 
 _reg.register_strategy("mnm.op.dense", strategy.dense_strategy)
