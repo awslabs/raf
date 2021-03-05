@@ -21,7 +21,7 @@ def test_init_ops(op, shape, dtype):
             return self.op(shape=self.shape, dtype=self.dtype)
 
     model = InitOpModel(op, shape, dtype)
-    m_func = model._internal().func
+    m_func = model._internal().mod['main']
     m_func = run_infer_type(m_func)
     ty = TensorType(shape, dtype=dtype)
     desired_type = FuncType([], ty)
@@ -46,7 +46,7 @@ def test_one_hot(indices_shape, depth, dtype):
     m_indices, _ = randint(shape=indices_shape, high=10)
     m_on_value = mnm.array(1, dtype="int32")
     m_off_value = mnm.array(0, dtype="int32")
-    m_func = model._internal(m_indices, m_on_value, m_off_value).func
+    m_func = model._internal(m_indices, m_on_value, m_off_value).mod['main']
     m_func = run_infer_type(m_func)
     indices_ty = TensorType(indices_shape, dtype="int64")
     value_ty = TensorType((), dtype="int32")

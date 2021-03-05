@@ -162,7 +162,7 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
       graph_.node_map[key] = current;
     }
     if (parent != nullptr) {
-      auto* link = arena_->make<LinkNode<IndexedForwardGraph::Edge> >();
+      auto* link = arena_->make<LinkNode<IndexedForwardGraph::Edge>>();
       link->value.node = parent;
       link->value.pattern = pattern;
       current->outputs.Push(link);
@@ -1002,7 +1002,29 @@ ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level) {
   return fuse_ops::FuseMutator().Transform(expr, fuse_opt_level);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed(FuseOps);
+// TODO - Cleanup when pass manager is introduced.
+ir::Module FuseOps(const ir::Module mod, int fuse_opt_level) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
+  auto inliner = fuse_ops::FuseMutator();
+
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      auto expr = inliner.Transform(kv.second, fuse_opt_level);
+      auto func = tvm::runtime::Downcast<ir::Function>(expr);
+      updated_funcs.emplace_back(kv.first, func);
+    }
+  }
+
+  for (const auto& it : updated_funcs) {
+    updated_mod->Add(it.first, it.second, true);
+  }
+  return updated_mod;
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed([](ir::Module mod, int fuse_opt_level) {
+  return FuseOps(mod, fuse_opt_level);
+});
 
 }  // namespace pass
 }  // namespace mnm

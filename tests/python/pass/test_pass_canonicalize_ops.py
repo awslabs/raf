@@ -32,7 +32,7 @@ def test_canonicalize_ops_bias_add_ir():
         return tvm.relay.Function([x_var, bias_var], body)
 
     model_before = ModelWithBiasAdd(bias)
-    func_before = model_before._internal(x).func
+    func_before = model_before._internal(x).mod['main']
     # infer type
     func_infer_type = run_infer_type(func_before)
     # canonicalize ops

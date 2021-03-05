@@ -1,6 +1,5 @@
 import pytest
 import mnm
-from mnm._lib import relay
 from mnm.testing import randn, get_device_list
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -25,14 +24,11 @@ def test_basic(device, shape):
     m_x, _ = randn(shape, device=device, requires_grad=True)
     m_y, _ = randn(shape, device=device, requires_grad=True)
     record = model._internal(m_x, m_y)
-    func = record.func
+    mod = record.mod
 
     # Run AutoDiff to get nested functions
     # The backward function will be lifted
-    func = mnm._ffi.pass_.AutoDiff(func, record.requires_grads)
-
-    # Create a Meta module and set the func as main
-    mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})
+    mod = mnm._ffi.pass_.AutoDiff(mod, record.requires_grads)
 
     # Call Lambda lift pass on the Meta module
     lifted_mod = mnm._ffi.pass_.LambdaLift(mod)

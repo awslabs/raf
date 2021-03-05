@@ -44,7 +44,7 @@ def test_reduce(op, shape, keepdims, dtype):
     #forward
     m_x, t_x = randn_torch(shape, dtype=dtype)
 
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
 
     t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)
@@ -96,7 +96,7 @@ def test_reduce_all_any(op, shape, keepdims, dtype):
     #forward
     m_x, t_x = randn_torch(shape, dtype=dtype, requires_grad=False)
 
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
 
     t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)

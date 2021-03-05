@@ -437,11 +437,29 @@ struct Gradient : public ExprVisitor {
 
 }  // namespace gradient
 
-ir::Function AutoDiff(ir::Function func, ir::Array<tvm::Bool> requires_grads) {
-  return gradient::Gradient(func.operator->(), requires_grads).Run();
+ir::Module AutoDiff(ir::Module mod, ir::Array<tvm::Bool> requires_grads) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
+
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      Function func;
+      auto reverse_ad = gradient::Gradient(kv.second.get(), requires_grads);
+      func = tvm::runtime::Downcast<ir::Function>(reverse_ad.Run());
+      updated_funcs.emplace_back(kv.first, func);
+    }
+  }
+
+  for (const auto& it : updated_funcs) {
+    updated_mod->Add(it.first, it.second, true);
+  }
+  return updated_mod;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);
+MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff")
+    .set_body_typed([](ir::Module mod, ir::Array<tvm::Bool> requires_grads) {
+      return AutoDiff(mod, requires_grads);
+    });
 
 }  // namespace pass
 }  // namespace mnm

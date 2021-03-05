@@ -47,7 +47,7 @@ def test_allreduce_with_tensor():
     device = f"cuda({local_rank})"
     x = np.ones(shape=shape, dtype=dtype) * (rank+1)
     x = mnm.array(x, device=device)
-    m_func = model._internal(x).func
+    m_func = model._internal(x).mod['main']
     m_func = run_infer_type(m_func)
     t_a = TensorType(shape, dtype=dtype)
     t_b = TensorType(shape, dtype=dtype)
@@ -79,7 +79,7 @@ def test_allreduce_with_tensor_list():
     x1 = mnm.array(x1, device=device)
     x2 = mnm.array(x2, device=device)
     # infertype test for list of input
-    m_func = model._internal(x1, x2).func
+    m_func = model._internal(x1, x2).mod['main']
     m_func = run_infer_type(m_func)
     t_x1 = TensorType(shape1, dtype=dtype)
     t_x2 = TensorType(shape2, dtype=dtype)

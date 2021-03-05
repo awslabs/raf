@@ -171,10 +171,13 @@ def run_tuning(model, device, args, log_file, *, optimize=None,
     print("Done tuning. Records saved in %s" % log_file)
 
 
-def profile_vm_func_with_schedule(func, device, args, log_file=None):
+def profile_vm_func_with_schedule(expr, device, args, log_file=None):
     """Helper function to execute model with VM with tuned schedules"""
-    mod = Module()
-    mod[tvm.ir.GlobalVar("main")] = func
+    if isinstance(expr, Module):
+        mod = expr
+    else:
+        mod = Module()
+        mod[tvm.ir.GlobalVar("main")] = expr
 
     # Get rid of the first run because it includes the compilation.
     executor = VMExecutor(mod, device)
@@ -222,18 +225,18 @@ def run_test(device):
 
     m_x, _ = randn((n, ci, h, w), device=device)
     m_w, _ = randn((co, ci, 3, 3), device=device)
-    func = model._internal(m_x, m_w).func
-    func = ir_fusion(model)
+    mod = model._internal(m_x, m_w).mod
+    mod = ir_fusion(mod)
 
     # Profile with the fallback schedules (~1.15 ms in this example on g4dn).
-    profile_vm_func_with_schedule(func, device, [m_x, m_w])
+    profile_vm_func_with_schedule(mod, device, [m_x, m_w])
 
     # Tuning
     log_file = "tuning.json"
-    run_tuning(func, device, [m_x, m_w], log_file, n_trials=128)
+    run_tuning(mod['main'], device, [m_x, m_w], log_file, n_trials=128)
 
     # Profile with the tuned schedules (~0.99 ms in this example on g4dn after 256 trials).
-    profile_vm_func_with_schedule(func, device, [m_x, m_w], log_file)
+    profile_vm_func_with_schedule(mod, device, [m_x, m_w], log_file)
 
 
 if __name__ == "__main__":

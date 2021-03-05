@@ -1,6 +1,7 @@
 import pytest
 import mnm
-from mnm._lib import tvm, relay
+from mnm._lib import tvm
+from mnm._core.module import Module
 from mnm.testing import get_device_list, randn
 
 
@@ -25,8 +26,8 @@ def test_memory_alloc(device, shape):
     model_before = Model()
     model_before.infer_mode()
     m_x, _ = randn(shape, device=device)
-    func = model_before._internal(m_x).func
-    mod = mnm._ffi.ir._make.Module({relay.GlobalVar("main"): func})
+    func = model_before._internal(m_x).mod['main']
+    mod = Module.from_expr(func)
     mod = mnm._ffi.pass_.InferType(mod)
     target_name = device if device != 'cpu' else 'llvm'
     with tvm.target.Target(target_name):

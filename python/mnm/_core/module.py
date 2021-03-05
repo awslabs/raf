@@ -16,7 +16,13 @@ class Module(Object):
         self.__init_handle_by_constructor__(_make.Module, functions)
 
     def __setitem__(self, var, func):
-        ffi.Add(self, var, func)
+        if isinstance(var, str):
+            ffi.Add(self, ffi.GetGlobalVar(self, var), func)
+        elif isinstance(var, relay.GlobalVar):
+            ffi.Add(self, var, func)
+        else:
+            raise NotImplementedError(
+                f"Module function assigment for type {type(var)} is not supported")
 
     def __getitem__(self, var):
         if isinstance(var, str):
@@ -25,6 +31,28 @@ class Module(Object):
             return ffi.Lookup(self, var)
         raise NotImplementedError(
             f"Module lookup for type {type(var)} is not supported")
+
+    @staticmethod
+    def from_expr(expr, global_funcs=None):
+        """Construct a module from a standalone expression.
+
+        Parameters
+        ----------
+        expr: RelayExpr
+            The starting expression
+
+        global_funcs: Optional[dict]
+            Map of global vars to function definitions
+
+        Returns
+        -------
+        mod: Module
+            A module containing the passed definitions,
+            where expr is set as the entry point
+            (wrapped in a function if necessary)
+        """
+        funcs = global_funcs if global_funcs is not None else {}
+        return ffi.FromExpr(expr, funcs)
 
 
 def get_global():

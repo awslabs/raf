@@ -3,6 +3,7 @@ import pytest
 import mnm
 from mnm.testing import get_device_list, randn, check
 from mnm._core.ndarray import get_ndarray_handle, ndarray
+from mnm._core.module import Module
 from mnm._lib import relay
 from mnm._ffi.model import RunModel
 
@@ -46,7 +47,8 @@ def test_basic_if(device, shape):
     m_q, n_q = randn((), device=device)
     inputs = [m_x, m_p, m_q]
     inputs = [get_ndarray_handle(arg) for arg in inputs]
-    m_y = RunModel(func, inputs)
+    mod = Module.from_expr(func)
+    m_y = RunModel(mod, inputs)
     m_y = ndarray(m_y)
     if n_p[()] <= n_q[()]:
         n_y = np.cos(n_x) + n_x

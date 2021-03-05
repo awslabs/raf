@@ -4,16 +4,19 @@
 from operator import attrgetter
 
 import pytest
+import numpy as np
 import mnm
 from mnm.frontend import FrameworkModel
-from mnm.testing import randint, randn, check
+from mnm.testing import randint, randn, check, utils
 from mnm._ffi.pass_ import FromRelay
+from mnm._core.module import Module
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
 
 def check_from_relay(m_model, r_func, args, check_model_structure=True, device="cpu"):
-    m_func = m_model._internal(*args).func
+    m_mod = m_model._internal(*args).mod
+    m_func = m_mod['main']
     ref_outs = m_model(*args)
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
 
@@ -27,7 +30,7 @@ def check_from_relay(m_model, r_func, args, check_model_structure=True, device="
         assert _tvm.ir.structural_equal(
             m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
 
-    new_model = FrameworkModel(new_func, new_func, {}, {})
+    new_model = FrameworkModel(m_mod, m_mod, {}, {})
     if device == "cuda":
         args = [arg.to(device=device) for arg in args]
         new_model.to(device=device)
@@ -50,8 +53,9 @@ def test_mnm_constant():
 
     r_func = _relay.Function([], _relay.const(1))
     m_func = FromRelay(r_func)
+    m_mod = Module.from_expr(m_func)
     assert _tvm.ir.structural_equal(m_func, expected())
-    model = FrameworkModel(m_func, m_func, {}, {})
+    model = FrameworkModel(m_mod, m_mod, {}, {})
     check(data, model())
 
 
@@ -85,10 +89,20 @@ def test_mnm_module():
         return mod
 
     tvm_mod = get_tvm_mod()
-    mod = FromRelay(tvm_mod)
+    m_mod = FromRelay(tvm_mod)
     expected_mod = expected()
-    assert _tvm.ir.structural_equal(mod["f1"], expected_mod["f1"])
-    assert _tvm.ir.structural_equal(mod["main"], expected_mod["main"])
+    assert _tvm.ir.structural_equal(m_mod["f1"], expected_mod["f1"])
+    assert _tvm.ir.structural_equal(m_mod["main"], expected_mod["main"])
+
+    model = FrameworkModel(m_mod, m_mod, {}, {})
+
+    m_x, n_x = randn((1, 100))
+
+    # Check that VM can execute multi-module functions
+    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], utils.ir_fusion)
+    m_out = vm_executor(*args)
+    ref_out = np.tanh(n_x)
+    check(m_out, ref_out)
 
 
 @pytest.mark.parametrize("op_name", [

@@ -32,7 +32,12 @@ Expr AssignDeviceFullOp(const CallNode* node, const Array<Expr> args,
   if (node->args.size() < 4) {
     call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
   } else {
-    call_device = Device(static_cast<TVMContext>((*str2ctx)(node->args[3])));
+    auto device_name_node = (node->args[3]).as<ir::ConstantNode>();
+    CHECK(device_name_node);
+    auto device_name_string_obj = device_name_node->value.as<StringValueObj>();
+    CHECK(device_name_string_obj);
+    std::string device_name_str = device_name_string_obj->data;
+    call_device = Device(static_cast<TVMContext>((*str2ctx)(device_name_str)));
   }
 
   // Get the target device.
@@ -226,7 +231,27 @@ ir::Expr AssignDevice(ir::Expr expr, std::string device) {
   return assign_device::DeviceAssigner(device).Mutate(expr);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AssignDevice").set_body_typed(AssignDevice);
+// TODO - Cleanup when pass manager is introduced.
+ir::Module AssignDevice(ir::Module mod, std::string device) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
+  auto assigner = assign_device::DeviceAssigner(device);
+
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      auto func = tvm::runtime::Downcast<ir::Function>(assigner.Mutate(kv.second));
+      updated_funcs.emplace_back(kv.first, func);
+    }
+  }
+
+  for (const auto& it : updated_funcs) {
+    updated_mod->Add(it.first, it.second, true);
+  }
+  return updated_mod;
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.AssignDevice")
+    .set_body_typed([](ir::Module mod, std::string device) { return AssignDevice(mod, device); });
 
 }  // namespace pass
 }  // namespace mnm

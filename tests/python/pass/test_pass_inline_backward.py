@@ -55,8 +55,9 @@ def test_basic():
     m_x.requires_grad = True
     m_y.requires_grad = True
     record = model._internal(m_x, m_y)
-    func = record.func
-    func = mnm._ffi.pass_.AutoDiff(func, record.requires_grads)
+    mod = record.mod
+    mod = mnm._ffi.pass_.AutoDiff(mod, record.requires_grads)
+    func = mod['main']
     inlined_func = mnm._ffi.pass_.InlineBackward(func)
     assert tvm.ir.structural_equal(inlined_func, expected(shape))
 
@@ -85,12 +86,12 @@ def test_no_backward():
     m_y, _ = randn(shape)
 
     model1 = Model1()
-    func = model1._internal(m_x, m_y).func
+    func = model1._internal(m_x, m_y).mod['main']
     inlined_func = mnm._ffi.pass_.InlineBackward(func)
     assert tvm.ir.structural_equal(inlined_func, func)
 
     model2 = Model2()
-    func = model2._internal(m_x, m_y).func
+    func = model2._internal(m_x, m_y).mod['main']
     inlined_func = mnm._ffi.pass_.InlineBackward(func)
     assert tvm.ir.structural_equal(inlined_func, func)
 

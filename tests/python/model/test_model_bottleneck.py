@@ -188,9 +188,9 @@ def test_model_invalidate(device):
     m_x, _ = randn((16, 64, 32, 32), requires_grad=True, device=device)
     # mode change
     model.train_mode()
-    train_func = model._internal(m_x).func
+    train_func = model._internal(m_x).mod['main']
     model.infer_mode()
-    infer_func = model._internal(m_x).func
+    infer_func = model._internal(m_x).mod['main']
     assert not tvm.ir.structural_equal(train_func, infer_func)
     # to
     model.to(device=device, invalidate=True)

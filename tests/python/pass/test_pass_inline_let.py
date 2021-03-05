@@ -80,19 +80,19 @@ def test_inline():
     model = Model()
     m_x, _ = randn((10, 20), device="cpu")
     m_dy, _ = randn((10, 15), device="cpu")
-    func = model._internal(m_x, m_dy).func
-    func = run_infer_type(func)
-    func = run_infer_type(mnm._ffi.pass_.InlineLet(func))
+    mod = model._internal(m_x, m_dy).mod
+    mod = run_infer_type(mod)
+    mod = run_infer_type(mnm._ffi.pass_.InlineLet(mod))
     func_expected = run_infer_type(expected1())
-    assert tvm.ir.structural_equal(func, func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
-    func = run_infer_type(mnm._ffi.pass_.DeadCodeElimination(func))
+    mod = run_infer_type(mnm._ffi.pass_.DeadCodeElimination(mod))
     func_expected = run_infer_type(expected2())
-    assert tvm.ir.structural_equal(func, func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
-    func = run_infer_type(mnm._ffi.pass_.FuseOps(func, 3))
+    mod = run_infer_type(mnm._ffi.pass_.FuseOps(mod, 3))
     func_expected = run_infer_type(expected3())
-    assert tvm.ir.structural_equal(func, func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
 def test_nested_tuple():
@@ -124,11 +124,11 @@ def test_nested_tuple():
     m_x, _ = randn(shape, device="cpu")
     m_y, _ = randn(shape, device="cpu")
     model = Model()
-    func = model._internal(m_x, m_y).func
-    func = run_infer_type(func)
-    func = run_infer_type(mnm._ffi.pass_.InlineLet(func))
+    mod = model._internal(m_x, m_y).mod
+    mod = run_infer_type(mod)
+    mod = run_infer_type(mnm._ffi.pass_.InlineLet(mod))
     func_expected = run_infer_type(expected())
-    assert tvm.ir.structural_equal(func, func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
 if __name__ == "__main__":

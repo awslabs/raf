@@ -25,6 +25,7 @@ class ModuleObj : public ir::Object {
   Function Lookup(const std::string& name) const;
   bool ContainGlobalVar(const std::string& name) const;
   GlobalVar GetGlobalVar(const std::string& str) const;
+  static Module FromExpr(const Expr& expr, const tvm::Map<GlobalVar, Function>& global_funcs);
 
  public:
   static constexpr const char* _type_key = "mnm.ir.Module";

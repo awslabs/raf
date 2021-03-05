@@ -3,9 +3,7 @@ import numpy as np
 import mnm
 from mnm.testing import run_infer_type, run_vm_model, check
 from mnm._core.executor import VMExecutor
-from mnm._core.module import Module
 from mnm.testing import get_arr_addr, get_device_list, randn
-import tvm
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -29,9 +27,7 @@ def test_vm(device, shape):
     model = Model()
     model.infer_mode()
     m_x, _ = randn(shape, device=device)
-    mod = Module()
-    func = model._internal(m_x).func
-    mod[tvm.ir.GlobalVar('main')] = func
+    mod = model._internal(m_x).mod
     executor = VMExecutor(mod, device)
     m_z = executor.make_executor()(m_x).asnumpy()
     ref_z = model(m_x).asnumpy()
@@ -68,9 +64,7 @@ def test_cuda_graph(shape):
     model = Model()
     model.infer_mode()
     m_x, _ = randn(shape, device=dev)
-    mod = Module()
-    func = model._internal(m_x).func
-    mod[tvm.ir.GlobalVar('main')] = func
+    mod = model._internal(m_x).mod
     executor = VMExecutor(mod, dev, enable_cuda_graph=True)
     m_z = executor.make_executor()(m_x)
     ref_z = model(m_x).asnumpy()
@@ -107,9 +101,7 @@ def test_tuple(device, shape):
     model = Model()
     model.infer_mode()
     m_x, _ = randn(shape, device=device)
-    mod = Module()
-    func = model._internal(m_x).func
-    mod[tvm.ir.GlobalVar('main')] = func
+    mod = model._internal(m_x).mod
     executor = VMExecutor(mod, device)
     m_y, m_z = executor.make_executor()(m_x)
     m_y, m_z = m_y.asnumpy(), m_z.asnumpy()
@@ -145,9 +137,7 @@ def test_memory(device, shape):
 
     model = Model()
     args = [x]
-    mod = Module()
-    func = model._internal(*args).func
-    mod[tvm.ir.GlobalVar('main')] = func
+    mod = model._internal(*args).mod
     executor = VMExecutor(mod, device)
     y = executor.make_executor()(*args)
     out = mnm.add(t_1, t_2)
@@ -161,11 +151,11 @@ def test_memory(device, shape):
 ])
 def test_simple_fusion(device, shape):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
-    def ir_fusion(func):
-        func = run_infer_type(func)
-        func = mnm._ffi.pass_.FuseOps(func, 3)
-        func = run_infer_type(func)
-        return func
+    def ir_fusion(mod):
+        mod = run_infer_type(mod)
+        mod = mnm._ffi.pass_.FuseOps(mod, 3)
+        mod = run_infer_type(mod)
+        return mod
 
     def check_e2e(model, device, args):
         out_before = run_vm_model(model, device, args)
@@ -192,11 +182,11 @@ def test_simple_fusion(device, shape):
 def test_split_fusion(device):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     shape = [3, 3]
-    def ir_fusion(func):
-        func = run_infer_type(func)
-        func = mnm._ffi.pass_.FuseOps(func, 3)
-        func = run_infer_type(func)
-        return func
+    def ir_fusion(mod):
+        mod = run_infer_type(mod)
+        mod = mnm._ffi.pass_.FuseOps(mod, 3)
+        mod = run_infer_type(mod)
+        return mod
 
     def check_e2e(model, device, args):
         out_before = run_vm_model(model, device, args)

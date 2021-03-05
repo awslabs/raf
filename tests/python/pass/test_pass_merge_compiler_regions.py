@@ -87,7 +87,7 @@ def test_single_input_output_merge():
     # annotate ir and merge compiler regions
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).func
+    func = model._internal(x).mod['main']
     func = AnnotateTarget(func, [target])
     func = MergeCompilerRegions(func)
     print(func)
@@ -198,7 +198,7 @@ def test_diamond_merge():
     # annotate ir and merge compiler regions
     model = MergeableModel()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).func
+    func = model._internal(x).mod['main']
     func = AnnotateTarget(func, [target])
     func = MergeCompilerRegions(func)
     expected_func = expected()
@@ -289,7 +289,7 @@ def test_tuple_merge():
     # annotate ir and merge compiler regions
     model = MergeableModel()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).func
+    func = model._internal(x).mod['main']
     func = AnnotateTarget(func, [target])
     func = MergeCompilerRegions(func)
     expected_func = expected()

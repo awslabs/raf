@@ -17,9 +17,9 @@ def autocast(model):
     """
     assert model._Cacher__cache.keys() != 0, \
            "Please run model or run function `get_relay_func` once."
-    func = model._internal().func
-    func = AutoCast(func)
-    return FrameworkModel(func, func, model.state(), dict())
+    mod = model._internal().mod
+    mod['main'] = AutoCast(mod['main'])
+    return FrameworkModel(mod, mod, model.state(), dict())
 
 
 class CustomCastRule:

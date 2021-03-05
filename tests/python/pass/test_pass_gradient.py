@@ -101,8 +101,8 @@ def test_no_grad2(device):
 
     m_record = model._internal(m_x, m_y)
     # backward
-    m_func = mnm._ffi.pass_.AutoDiff(m_record.func, m_record.requires_grads)
-    assert tvm.ir.structural_equal(m_func, expected())
+    m_mod = mnm._ffi.pass_.AutoDiff(m_record.mod, m_record.requires_grads)
+    assert tvm.ir.structural_equal(m_mod['main'], expected())
 
 
 if __name__ == "__main__":

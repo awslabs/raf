@@ -96,7 +96,7 @@ def test_diamond():
     # annotate ir and merge compiler regions
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).func
+    func = model._internal(x).mod['main']
     func = AnnotateTarget(func, [target])
     func = MergeCompilerRegions(func)
     func = PartitionGraph(func)
@@ -237,7 +237,7 @@ def test_tuple():
     # annotate ir and merge compiler regions
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).func
+    func = model._internal(x).mod['main']
     func = AnnotateTarget(func, [target1, target2])
     func = MergeCompilerRegions(func)
     func = PartitionGraph(func)

@@ -27,7 +27,8 @@ using pass::BindParam;
 using pass::CanonicalizeOps;
 using pass::FoldConstant;
 
-ObjectRef RunModel(Function func, Array<Expr> args) {
+ObjectRef RunModel(ir::Module mod, Array<Expr> args) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
   std::vector<GradTape> grads;
   ir::Array<Bool> requires_grads;
   grads.reserve(args.size());
@@ -44,20 +45,24 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
     }
   }
 
-  auto mod = Module::Global();
+  // TODO - Revisit which passes require update due to presence of module
+  Function func = updated_mod->Lookup("main");
   func = Downcast<Function>(BindParam(func, args));
   if (!requires_grad) {
     // TODO(haibin): add simplify inference pass - simplify the compute of
     // BN, LN, Dropout, GN, etc.
     func = Downcast<Function>(CanonicalizeOps(func));
-    func = Downcast<Function>(FoldConstant(func, mod));
+    func = Downcast<Function>(FoldConstant(func, updated_mod));
     auto call_node = Call(func, args);
-    return DeTuple(Interpret(call_node));
+    return DeTuple(Interpret(call_node, updated_mod));
   }
   // run canonicalize ops pass (it needs "inter type pass" to work properly.)
   func = Downcast<Function>(CanonicalizeOps(func));
   // run auto diff pass
-  func = AutoDiff(func, requires_grads);
+  // TODO (janimesh) - Clean this up when pass manager is introduced
+  updated_mod->Add(updated_mod->GetGlobalVar("main"), func, true);
+  updated_mod = AutoDiff(updated_mod, requires_grads);
+  func = updated_mod->Lookup("main");
 
   // run auto parallel
   if (distributed::DistContext::Global()->enable_data_parallel) {
@@ -65,8 +70,8 @@ ObjectRef RunModel(Function func, Array<Expr> args) {
   }
 
   // run const folding pass
-  func = Downcast<Function>(FoldConstant(func, mod));
-  TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args)));
+  func = Downcast<Function>(FoldConstant(func, updated_mod));
+  TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args), updated_mod));
   CHECK_EQ(result->fields.size(), 2U);
   return DeStruct(/*value=*/result->fields[0],
                   /*bp=*/Downcast<ClosureValue>(result->fields[1]),

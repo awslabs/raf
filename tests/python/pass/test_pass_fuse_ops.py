@@ -43,12 +43,12 @@ def test_fuse_simple():
 
     model = Model()
     m_x, _ = randn((10, 20), device="cpu")
-    func_before = model._internal(m_x).func
-    func_before = run_infer_type(func_before)
-    func_after = mnm._ffi.pass_.FuseOps(func_before, 3)
-    func_after = run_infer_type(func_after)
+    mod_before = model._internal(m_x).mod
+    mod_before = run_infer_type(mod_before)
+    mod_after = mnm._ffi.pass_.FuseOps(mod_before, 3)
+    mod_after = run_infer_type(mod_after)
     func_expected = run_infer_type(expected((10, 20)))
-    assert tvm.ir.structural_equal(func_after, func_expected)
+    assert tvm.ir.structural_equal(mod_after['main'], func_expected)
 
 
 def test_conv2d():
@@ -161,13 +161,13 @@ def test_conv2d():
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
-    func_before = model._internal(m_x).func
-    func_before = run_infer_type(func_before)
-    func_after = mnm._ffi.pass_.FuseOps(func_before, 3)
-    func_after = run_infer_type(func_after)
+    mod_before = model._internal(m_x).mod
+    mod_before = run_infer_type(mod_before)
+    mod_after = mnm._ffi.pass_.FuseOps(mod_before, 3)
+    mod_after = run_infer_type(mod_after)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
-    assert tvm.ir.structural_equal(func_after, func_expected)
+    assert tvm.ir.structural_equal(mod_after['main'], func_expected)
 
 
 def test_concatenate():
@@ -228,12 +228,12 @@ def test_concatenate():
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
-    before = model._internal(m_x).func
+    before = model._internal(m_x).mod
     before = run_infer_type(before)
     after = mnm._ffi.pass_.FuseOps(before, 3)
     after = run_infer_type(after)
     func_expected = run_infer_type(expected((1, 16, 64, 64)))
-    assert tvm.ir.structural_equal(after, func_expected)
+    assert tvm.ir.structural_equal(after['main'], func_expected)
 
 
 def test_tuple_root():
@@ -287,13 +287,13 @@ def test_tuple_root():
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
-    before = model._internal(m_x).func
+    before = model._internal(m_x).mod
     before = run_infer_type(before)
     after = mnm._ffi.pass_.FuseOps(before, 3)
     after = run_infer_type(after)
     func_expected = expected((1, 16, 64, 64))
     func_expected = run_infer_type(func_expected)
-    assert tvm.ir.structural_equal(after, func_expected)
+    assert tvm.ir.structural_equal(after['main'], func_expected)
 
 
 # TODO@(hzfan): fix issue #402
@@ -369,13 +369,13 @@ def test_sgd():
     sgd = SGD(model)
     model.x = m_param
     sgd.v = mnm.array(n_v, device=device)
-    func = sgd._internal(m_dy).func
-    func = run_infer_type(func)
-    func = mnm._ffi.pass_.FuseOps(func, 3)
-    func = run_infer_type(func)
+    mod = sgd._internal(m_dy).mod
+    mod = run_infer_type(mod)
+    mod = mnm._ffi.pass_.FuseOps(mod, 3)
+    mod = run_infer_type(mod)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
-    assert tvm.ir.structural_equal(func, func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
 if __name__ == "__main__":

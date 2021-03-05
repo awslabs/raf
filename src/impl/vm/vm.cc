@@ -108,7 +108,7 @@ inline void VMContext::PushFrame(Index func_index, const std::vector<Value>& arg
   CHECK_EQ(func.params.size(), args.size())
       << "Number of arguments mismatches: " << func.params.size() << " vs " << args.size();
   auto ret_pc = self->pc + 1;
-  auto frame = VMFrame(func_index, ret_pc, ret_reg, args.size(), func.register_file_size);
+  auto frame = VMFrame(self->func_index, ret_pc, ret_reg, args.size(), func.register_file_size);
   self->frames.push_back(frame);
   for (size_t i = 0; i < args.size(); ++i) {
     WriteRegister(i, args[i]);

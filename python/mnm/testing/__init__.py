@@ -17,10 +17,11 @@ from .._ffi import pass_
 from ..model.trace import _get_func_inputs
 
 
-def run_infer_type(func):
-    """Helper function to infer the type of the given function"""
-    main = tvm.relay.GlobalVar("main")
-    mod = ir._make.Module({main: func})
+def run_infer_type(expr):
+    """Helper function to infer the type of the given expr """
+    if isinstance(expr, Module):
+        return pass_.InferType(expr)
+    mod = Module.from_expr(expr)
     mod = pass_.InferType(mod)
     return mod["main"]
 
@@ -149,11 +150,9 @@ def t2m_param(param, device="cuda"):
 def run_vm_model(model, device, args, optimize=None):
     """Helper function to execute model with VM"""
     record = model._internal(*args)
-    func = record.func
+    mod = record.mod
     if optimize:
-        func = optimize(func)
-    mod = Module()
-    mod[tvm.ir.GlobalVar('main')] = func
+        mod = optimize(mod)
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
     executor = VMExecutor(mod, device)
     out = executor.make_executor()(*inputs)
@@ -162,22 +161,18 @@ def run_vm_model(model, device, args, optimize=None):
 
 def compile_vm_model(model, device, args):
     """Helper function to compile model into VM bytecode"""
-    mod = Module()
-    func = model._internal(*args).func
-    mod[tvm.ir.GlobalVar('main')] = func
+    mod = model._internal(*args).mod
     executor = VMExecutor(mod, device)
     return executor.executable.bytecode
 
 
 def lower_vm_model(model, target_name, args):
     """Helper function to lower model into optimized relay"""
-    mod = Module()
-    func = model._internal(*args).func
-    gvar = tvm.ir.GlobalVar('main')
-    mod[gvar] = func
+    mod = model._internal(*args).mod
     compiler = VMCompiler()
     mod, _ = compiler.optimize(mod, target_name)
-    return mod[gvar]
+    # TODO (janimesh) - Revisit where the output is used
+    return mod['main']
 
 
 def default_logger():

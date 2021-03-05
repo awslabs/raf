@@ -93,7 +93,7 @@ def test_model_params():
 
     model = Model()
     m_a, _ = randn((1, 2, 2))
-    func = model._internal(m_a).func
+    func = model._internal(m_a).mod['main']
     func = run_infer_type(func)
     t_1 = relay.TensorType((1, 2, 2))
     t_2 = relay.TensorType((2, 1, 2))
@@ -123,7 +123,7 @@ def test_any():
         c_ty = relay.TensorType(shape_c)
         a = Symbol.make_var('a', a_ty)
         b = Symbol.make_var('b', b_ty)
-        func = model._internal(a, b).func
+        func = model._internal(a, b).mod['main']
         func = run_infer_type(func)
         expected_ty = relay.FuncType([a_ty, b_ty], c_ty)
         # alpha_equal does not work for Any
@@ -157,7 +157,7 @@ def test_incomplete_call():
     model = Model()
     a = Symbol.make_var('a', a_ty)
     b = Symbol.make_var('b')
-    func = model._internal(a, b).func
+    func = model._internal(a, b).mod['main']
     func = run_infer_type(func)
     expected_ty = relay.FuncType([a_ty, inc_ty()], inc_ty())
     # alpha_equal does not work for IncompleteType
@@ -181,10 +181,11 @@ def test_gradient_closure():
         x_ty = relay.TensorType(shape_x)
         y_ty = relay.TensorType(shape_y)
         x = Symbol.make_var('a', x_ty)
-        func = model._internal(x).func
-        func = run_infer_type(func)
-        func = AutoDiff(func, [True])
-        func = run_infer_type(func)
+        mod = model._internal(x).mod
+        mod = InferType(mod)
+        mod = AutoDiff(mod, [True])
+        mod = InferType(mod)
+        func = mod['main']
         bwd_ty = relay.FuncType([y_ty], x_ty)
         expected_ty = relay.FuncType([x_ty], relay.TupleType([y_ty, bwd_ty]))
         assert_has_type(func, expected_ty)

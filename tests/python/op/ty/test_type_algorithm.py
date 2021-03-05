@@ -2,7 +2,7 @@
 import pytest
 import mnm
 from mnm.testing import check_type, run_infer_type, randn
-from mnm._ffi.pass_ import AutoDiff
+from mnm._ffi.pass_ import AutoDiff, InferType
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -31,7 +31,7 @@ def test_argsort(shape, axis, is_ascend, dtype):
     model = Argsort(axis, is_ascend, dtype)
     # forward
     m_x, _ = randn(shape)
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=m_x.dtype)
     y_ty = TensorType(shape, dtype=dtype)
@@ -39,7 +39,7 @@ def test_argsort(shape, axis, is_ascend, dtype):
     check_type(m_func, expected_type)
 
 
-# pylint: disable=attribute-defined-outside-init
+# pylint: disable=attribute-defined-outside-init, too-many-locals
 @pytest.mark.parametrize("shape", [
     (2, 3, 4),
     (1, 4, 6),
@@ -65,18 +65,18 @@ def test_sort(shape, axis, is_ascend, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     m_x.requires_grad = True
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     x_ty = TensorType(shape, dtype=m_x.dtype)
     y_ty = TensorType(shape, dtype=m_x.dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([y_ty], x_ty)
     desired_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 
 if __name__ == "__main__":

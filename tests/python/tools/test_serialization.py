@@ -5,6 +5,7 @@ import mnm
 from tvm import relay
 from mnm.testing import check, randn
 from mnm._core.ir_ext import extended_var
+from mnm._core.module import Module
 from mnm._ffi.model import RunModel
 from mnm.model.trace import _unwrap
 
@@ -26,12 +27,14 @@ def test_ext_constant():
         return relay.Function([], let)
 
     func_origin = expected()
-    out_origin = _unwrap(RunModel(func_origin, []))
+    mod_origin = Module.from_expr(func_origin)
+    out_origin = _unwrap(RunModel(mod_origin, []))
 
     json = mnm.ir.save_json(func_origin)
 
     func_loaded = tvm.ir.load_json(json)
-    out_loaded = _unwrap(RunModel(func_loaded, []))
+    mod_loaded = Module.from_expr(func_loaded)
+    out_loaded = _unwrap(RunModel(mod_loaded, []))
 
     assert tvm.ir.structural_equal(func_loaded, func_origin)
     check(out_origin, out_loaded)

@@ -1,7 +1,7 @@
 import pytest
 import torch
 import mnm
-from mnm._ffi.pass_ import AutoDiff
+from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
@@ -40,27 +40,27 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     t_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(ValueError):
-            m_func = model._internal(m_x).func
+            m_func = model._internal(m_x).mod['main']
             m_func = run_infer_type(m_func)
         return
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     t_y = torch_fwd(t_x, dim=axis)
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
     checked_type = FuncType([x_ty], y_ty)
-    check_type(m_func, checked_type)
+    check_type(m_mod['main'], checked_type)
     # backward
     _, t_dy = randn_torch(shape, dtype=dtype)
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     t_y.backward(t_dy)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     checked_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, checked_type)
+    check_type(m_mod['main'], checked_type)
 
 
 # pylint: disable=attribute-defined-outside-init
@@ -88,7 +88,7 @@ def test_batch_norm_train_dxwb(shape, eps, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     m_w, _ = randn((shape[1],), dtype=dtype)
     m_b, _ = randn((shape[1],), dtype=dtype)
-    m_func = model._internal(m_dy, m_x, m_w, m_b).func
+    m_func = model._internal(m_dy, m_x, m_w, m_b).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=dtype)
     w_ty = TensorType((shape[1],), dtype=dtype)
@@ -131,8 +131,8 @@ def test_layer_norm(shape, axis, eps, dtype):
 
     m_y = model(m_x, m_scale, m_bias)
     record = model._internal(m_x, m_scale, m_bias)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     _, n_dy = randn(m_y.shape, dtype=dtype)
     mx_dy = mx.nd.array(n_dy)
     with mx.autograd.record():
@@ -144,15 +144,15 @@ def test_layer_norm(shape, axis, eps, dtype):
     y_ty = TensorType(mx_y.shape, dtype=dtype)
     dy_ty = TensorType(mx_dy.shape, dtype=dtype)
     checked_type = FuncType([x_ty, scale_ty, bias_ty], y_ty)
-    check_type(m_func, checked_type)
+    check_type(m_mod['main'], checked_type)
     # check backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     int_type = TensorType((), "int64")
     dx_ty = TensorType(mx_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], TupleType([dx_ty, int_type, int_type]))
     checked_type = FuncType([x_ty, scale_ty, bias_ty], TupleType([x_ty, bwd_ty]))
-    check_type(m_func, checked_type)
+    check_type(m_mod['main'], checked_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -200,7 +200,7 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
     m_x, t_x = randn_torch(xshape, std=0.001, dtype=dtype)
     m_w, t_w = randn_torch(wshape, std=0.01, dtype=dtype)
     m_y = model(m_x, m_w)
-    m_func = model._internal(m_x, m_w).func
+    m_func = model._internal(m_x, m_w).mod['main']
     m_func = run_infer_type(m_func)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     x_ty = TensorType(xshape, dtype=dtype)
@@ -215,8 +215,8 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
         dw_modle = Conv2DGrad("dw")
         m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype)
         dy_ty = TensorType(t_dy.shape, dtype=dtype)
-        dx_func = dx_modle._internal(m_w, m_y, m_dy).func
-        dw_func = dw_modle._internal(m_x, m_y, m_dy).func
+        dx_func = dx_modle._internal(m_w, m_y, m_dy).mod['main']
+        dw_func = dw_modle._internal(m_x, m_y, m_dy).mod['main']
         dx_func = run_infer_type(dx_func)
         dw_func = run_infer_type(dw_func)
         dx_checked_type = FuncType([w_ty, y_ty, dy_ty], x_ty)
@@ -257,23 +257,23 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     t_x.requires_grad = True
     m_y = model(m_x)
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
     checked_type = FuncType([x_ty], y_ty)
-    check_type(m_func, checked_type)
+    check_type(m_mod['main'], checked_type)
     # backward
     _, t_dy = randn_torch(m_y.shape, dtype=dtype)
     t_y.backward(t_dy)
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     checked_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, checked_type)
+    check_type(m_mod['main'], checked_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -297,7 +297,7 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
 
     m_x, t_x = randn_torch(shape, dtype=dtype)
     model = TestModel()
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
     t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)
     x_ty = TensorType(t_x.shape, dtype=dtype)

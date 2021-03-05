@@ -1,7 +1,7 @@
 # pylint: disable=protected-access
 import pytest
 import mnm
-from mnm._ffi.pass_ import AutoDiff
+from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, one_hot_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
@@ -27,7 +27,7 @@ def test_sgd(shape, dtype, learning_rate, mu):
     m_x, _ = randn(shape, dtype=dtype)
     m_dx, _ = randn(shape, dtype=dtype)
     m_v, _ = randn(shape, dtype=dtype)
-    m_func = model._internal(m_x, m_dx, m_v).func
+    m_func = model._internal(m_x, m_dx, m_v).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=dtype)
     expected_type = FuncType([x_ty, x_ty, x_ty], TupleType([x_ty, x_ty]))
@@ -58,16 +58,16 @@ def test_nll_loss(shape, dtype):
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
     record = model._internal(m_pred, m_true)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("shape", [
@@ -98,16 +98,16 @@ def test_other_losses(loss_type, shape, dtype):
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
     record = model._internal(m_pred, m_true)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 if __name__ == "__main__":
     pytest.main([__file__])

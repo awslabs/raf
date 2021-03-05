@@ -6,6 +6,7 @@
 #include <printer/text_printer.h>
 #include "mnm/ir_ext.h"
 #include "mnm/registry.h"
+#include "mnm/pass.h"
 
 namespace mnm {
 namespace ir {
@@ -68,13 +69,30 @@ Module Module::make(Map<GlobalVar, Function> functions) {
   return Module(n);
 }
 
+Module ModuleObj::FromExpr(const Expr& expr, const tvm::Map<GlobalVar, Function>& global_funcs) {
+  auto mod = Module::make(global_funcs);
+  auto main_gv = GlobalVar("main");
+  Function func;
+  if (auto* func_node = expr.as<FunctionNode>()) {
+    func = Downcast<Function>(expr);
+  } else {
+    func = Function(pass::FreeVars(expr), expr, Type(), {}, {});
+  }
+  mod->Add(main_gv, func);
+  return mod;
+}
+
 Module Module::Global() {
   static Module inst = Module::make({});
   return inst;
 }
 
 void ModuleAdd(Module mod, GlobalVar var, Function func) {
-  mod->Add(var, func);
+  mod->Add(var, func, true);
+}
+
+GlobalVar ModuleGetGlobalVar(Module mod, const std::string& name) {
+  return mod->GetGlobalVar(name);
 }
 
 Function ModuleLookup(Module mod, GlobalVar var) {
@@ -83,6 +101,10 @@ Function ModuleLookup(Module mod, GlobalVar var) {
 
 Function ModuleLookupStr(Module mod, const std::string& name) {
   return mod->Lookup(name);
+}
+
+Module ModuleFromExpr(const Expr& expr, const tvm::Map<GlobalVar, Function>& global_funcs) {
+  return ModuleObj::FromExpr(expr, global_funcs);
 }
 
 tvm::runtime::NDArray MakeFakeTensor() {
@@ -187,6 +209,8 @@ MNM_REGISTER_GLOBAL("mnm.ir.variable.GetMayShare").set_body_typed(GetMayShare);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
 MNM_REGISTER_GLOBAL("mnm.ir.module.LookupStr").set_body_typed(ModuleLookupStr);
+MNM_REGISTER_GLOBAL("mnm.ir.module.GetGlobalVar").set_body_typed(ModuleGetGlobalVar);
+MNM_REGISTER_GLOBAL("mnm.ir.module.FromExpr").set_body_typed(ModuleFromExpr);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(Module::Global);
 
 MNM_REGISTER_OBJECT_REFLECT(ModuleObj);

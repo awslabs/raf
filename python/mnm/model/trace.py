@@ -6,6 +6,7 @@ from collections import OrderedDict, namedtuple
 from mnm._core import cacher
 from mnm._core.core_utils import get_bound_args, get_func_name
 from mnm._core.global_scope import SCOPE
+from mnm._core.module import Module
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
 from mnm._ffi.ir.variable import SetMayShare
@@ -15,7 +16,7 @@ from mnm._lib import relay, Array
 _TraceRecord = namedtuple(
     "_TraceRecord",
     [
-        "func",  # The relay.Function constructed by tracing
+        "mod",  # The relay.Function constructed by tracing
         "named_params",  # Model parameters that are extra inputs to the relay.Function
         "o_struct",  # Structure of the outputs
         "mutations",  # [model, attr_name]
@@ -61,7 +62,7 @@ def trace(pyfunc):
 def _run_trace_record(record, args, kwargs):
     # pylint: disable=protected-access
     func_inputs = _get_func_inputs(record, args[1:], kwargs)
-    result = _unwrap(RunModel(record.func, func_inputs))
+    result = _unwrap(RunModel(record.mod, func_inputs))
     if not isinstance(result, list):
         result = [result]
     for obj, attr in reversed(record.mutations):
@@ -128,7 +129,8 @@ def _do_tracing(pyfunc, args, kwargs):
     # Step 4. and extra model parameters and finally make the relay.Func
     func, named_params = _make_func(args[0], named_inputs,
                                     output + mutate_symbols)
-    return _TraceRecord(func=func,
+    mod = Module.from_expr(func)
+    return _TraceRecord(mod=mod,
                         named_params=named_params,
                         o_struct=o_struct,
                         mutations=mutations,

@@ -1,7 +1,7 @@
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements
 import pytest
 import mnm
-from mnm._ffi.pass_ import AutoDiff, GradientInputSelection
+from mnm._ffi.pass_ import AutoDiff, GradientInputSelection, InferType
 from mnm._lib import tvm
 from mnm._lib import relay
 from mnm.testing import randn, run_infer_type
@@ -83,10 +83,11 @@ def test_conv2d():
     m_x, _ = randn((1, 1, 224, 224))
     m_x.requires_grad = True
     record = model._internal(m_x)
-    func_before = record.func
-    func_before = run_infer_type(func_before)
-    func_before = AutoDiff(func_before, record.requires_grads)
-    func_before = run_infer_type(func_before)
+    mod_before = record.mod
+    mod_before = InferType(mod_before)
+    mod_before = AutoDiff(mod_before, record.requires_grads)
+    mod_before = InferType(mod_before)
+    func_before = mod_before['main']
     func_after = GradientInputSelection(func_before)
     func_after = run_infer_type(func_after)
     func_expected = expected()

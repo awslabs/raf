@@ -66,11 +66,11 @@ def from_pytorch(model, shape_dict):
 
     shape_list = [(input_name, input_shape)]
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
-    func = FromRelay(relay_mod["main"])
+    meta_mod = FromRelay(relay_mod)
     meta_params = OrderedDict()
     for var in relay_mod["main"].params:
         name = var.name_hint
         if name in relay_params:
             meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].asnumpy())
     assert len(meta_params) == len(relay_params)
-    return FrameworkModel(func, func, meta_params, {})
+    return FrameworkModel(meta_mod, meta_mod, meta_params, {})

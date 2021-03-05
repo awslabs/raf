@@ -69,7 +69,7 @@ def test_fold_const_ir(device, shape):
     model_before.infer_mode()
     m_x, _ = randn(shape, device=device, requires_grad=True)
 
-    func_before = model_before._internal(m_x).func
+    func_before = model_before._internal(m_x).mod['main']
 
     # bind parameters
     args = [m_x._ndarray__handle, model_before.c._ndarray__handle]

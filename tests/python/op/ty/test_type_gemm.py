@@ -1,8 +1,8 @@
 # pylint: disable=protected-access
 import pytest
 import mnm
-from mnm._ffi.pass_ import AutoDiff
-from mnm.testing import check_type, run_infer_type, randn, randn_torch
+from mnm._ffi.pass_ import AutoDiff, InferType
+from mnm.testing import check_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -32,16 +32,17 @@ def test_dense(shape, dtype):
     m_b.requires_grad = True
     # check forward
     record = model._internal(m_a, m_b)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
     # check backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 @pytest.mark.parametrize("shape", [
     (1, 2, 3),
@@ -74,16 +75,16 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
     b_ty = TensorType((k, m) if not transpose_b else (m, k), dtype=dtype)
     # check forward
     record = model._internal(m_a, m_b)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
     # check backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 @pytest.mark.parametrize("shape", [
     (1, 1, 2, 3),
@@ -112,16 +113,16 @@ def test_batch_matmul(shape, dtype):
     b_ty = TensorType((b, n, k), dtype=dtype)
     # check forward
     record = model._internal(m_a, m_b)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
     # check backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 
 if __name__ == "__main__":

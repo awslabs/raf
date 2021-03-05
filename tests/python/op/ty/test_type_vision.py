@@ -33,7 +33,7 @@ def test_get_valid_counts(inputs, dtype):
     m_s = mnm.array(np_s)
     model = GetValidCounts(id_index, score_index)
     # forward
-    m_func = model._internal(m_x, m_s).func
+    m_func = model._internal(m_x, m_s).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(inputs[0], dtype=dtype)
     s_ty = TensorType(np_s.shape, dtype="float32")
@@ -89,7 +89,7 @@ def test_non_max_suppression(return_indices, dtype):
     max_output_size_ty = TensorType(np_max_output_size.shape, dtype="int32")
     iou_threshold_ty = TensorType(np_iou_threshold.shape, dtype="float32")
     m_func = model._internal(
-        m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold).func
+        m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold).mod['main']
     m_func = run_infer_type(m_func)
 
     if return_indices:

@@ -73,7 +73,7 @@ class Model(BaseModel, cacher.Cacher):
         -------
         record: _TraceRecord
             The traced record.
-            Get relay function by record.func, parameters by record.named_params.
+            Get meta module by record.mod, parameters by record.named_params.
         """
         fwd_func = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
         pyfunc = fwd_func.__wrapped__
@@ -81,7 +81,8 @@ class Model(BaseModel, cacher.Cacher):
         args = [self] + list(args)
 
         record = _get_trace_record(pyfunc, args, kwargs)
-        r_func = record.func
+        m_mod = record.mod
+        r_func = m_mod['main']
         # already cached
         if len(record.requires_grads) != 0:
             assert len(r_func.params) == len(record.requires_grads)

@@ -1,9 +1,9 @@
 # pylint: disable=protected-access
 import pytest
 import mnm
-from mnm._ffi.pass_ import AutoDiff
+from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm._op import sym
-from mnm.testing import check_type, run_infer_type, randn
+from mnm.testing import check_type, randn
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -55,19 +55,19 @@ def test_unary(op, shape, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     m_x.requires_grad = True
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
 
     desired_type = FuncType([fwd_ty], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
     # check backward
     if backward:
-        m_func = AutoDiff(m_func, record.requires_grads)
-        m_func = run_infer_type(m_func)
+        m_mod = AutoDiff(m_mod, record.requires_grads)
+        m_mod = InferType(m_mod)
         bwd_ty = FuncType([fwd_ty], fwd_ty)
         desired_type = FuncType([fwd_ty], TupleType([fwd_ty, bwd_ty]))
-        check_type(m_func, desired_type)
+        check_type(m_mod['main'], desired_type)
 
 
 if __name__ == "__main__":

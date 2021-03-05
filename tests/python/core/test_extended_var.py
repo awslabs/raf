@@ -116,7 +116,7 @@ def test_bn():
     dtype = 'float32'
     data = mnm.array(np.ones(shape), dtype=dtype)
     model = Test(num_features=3)
-    func = model._internal(data).func
+    func = model._internal(data).mod['main']
     variables, _, _ = explicit_let_list(func.body)
     running_mean = func.params[2]
     running_var = func.params[3]
@@ -185,7 +185,7 @@ def test_grad():
     # check backward
     check(new_x_1, new_x_2)
     # check ir
-    func = sgd._internal(dy).func
+    func = sgd._internal(dy).mod['main']
     variables, _, _ = explicit_let_list(func.body)
     modelx = func.params[1]
     may_share = {

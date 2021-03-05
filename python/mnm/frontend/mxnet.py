@@ -6,6 +6,7 @@ import json
 
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._core.ndarray import array as mnm_array
+from mnm._core.module import Module as mnm_module
 from mnm._ffi.pass_ import ExtractBinding
 from mnm._lib import relay
 from mnm._op import sym as op
@@ -444,5 +445,7 @@ def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, t
         if v.name_hint in _extra_aux_params:
             meta_aux_params[v.name_hint] = ndarray(_extra_aux_params[v.name_hint])
 
-    front_model = FrameworkModel(train_func, infer_func, meta_arg_params, meta_aux_params)
+    train_mod = mnm_module({relay.GlobalVar('main'): train_func})
+    infer_mod = mnm_module({relay.GlobalVar('main'): infer_func})
+    front_model = FrameworkModel(train_mod, infer_mod, meta_arg_params, meta_aux_params)
     return front_model

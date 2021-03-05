@@ -7,13 +7,15 @@ from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
 from mnm._core.ndarray import ndarray, Symbol
 from mnm._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend
+from mnm._core.module import Module
 
 
-def _get_func_inputs(model, args, kwargs, get_handle=True):
+def _get_main_func_params(model, args, kwargs, get_handle=True):
     arg_index = 0
     res = []
-    func = model._FrameworkModel__train_func \
-        if model._BaseModel__is_train else model._FrameworkModel__infer_func
+    mod = model._FrameworkModel__train_mod \
+        if model._BaseModel__is_train else model._FrameworkModel__infer_mod
+    func = mod['main']
     for var_node in func.params:
         var_name = var_node.name_hint
         if var_name in model._FrameworkModel__arg_params:
@@ -40,7 +42,7 @@ def _get_func_output_var(func):
     return body
 
 
-def annotate_func_params(func, args):
+def annotate_main_func_params(func, args):
     """Annotate func parameters with the type of args
 
     Parameters
@@ -73,11 +75,11 @@ class FrameworkModel(BaseModel):
 
     Parameters
     ----------
-    train_func : Expr
-        Function contains both forward and backward computation.
+    train_mod : Meta module
+        Module contains both forward and backward computation.
 
-    infer_func : Expr
-        Forward function
+    infer_mod : Meta module
+        Forward module
 
     arg_params : Dict[str, ndarray]
         Model parameters
@@ -87,10 +89,12 @@ class FrameworkModel(BaseModel):
     """
     # pylint: disable=invalid-name
 
-    def __init__(self, train_func, infer_func, arg_params, aux_params):
+    def __init__(self, train_mod, infer_mod, arg_params, aux_params):
         super(FrameworkModel, self).__init__()
-        self.__train_func = train_func
-        self.__infer_func = infer_func
+        assert isinstance(train_mod, Module)
+        assert isinstance(infer_mod, Module)
+        self.__train_mod = train_mod
+        self.__infer_mod = infer_mod
         self.__arg_params = arg_params
         self.__aux_params = aux_params
         for param in self.__aux_params.values():
@@ -98,11 +102,11 @@ class FrameworkModel(BaseModel):
         self.__recorded = None
 
     def __call__(self, *args, **kwargs):
-        func = self.__infer_func
+        mod = self.__infer_mod
         if self._BaseModel__is_train:
-            func = self.__train_func
-        func_inputs = _get_func_inputs(self, args, kwargs)
-        return _unwrap(RunModel(func, func_inputs))
+            mod = self.__train_mod
+        func_inputs = _get_main_func_params(self, args, kwargs)
+        return _unwrap(RunModel(mod, func_inputs))
 
     def record(self, *args, **kwargs):
         """
@@ -115,13 +119,14 @@ class FrameworkModel(BaseModel):
         """
         r = self._internal(*args, **kwargs)
         # (function, num_argument)
-        self.__recorded = (r.func, len(args) + len(kwargs))
-        return Symbol.from_expr(_get_func_output_var(r.func))
+        self.__recorded = (r.mod, len(args) + len(kwargs))
+        return Symbol.from_expr(_get_func_output_var(r.mod['main']))
 
     def __add__(self, other):
         if not self.__recorded:
             raise ValueError("Call model.record first to get the output symbols.")
-        func, num_orig_arg = self.__recorded
+        mod, num_orig_arg = self.__recorded
+        func = mod['main']
         ret_var = _get_func_output_var(func)
         other = ExtractBinding(other._Symbol__handle, [ret_var])
         new_body = ExprAppend(func.body, other)
@@ -130,7 +135,8 @@ class FrameworkModel(BaseModel):
         new_params = free_vars[0:num_orig_arg] + free_vars[len(func.params):] \
                      + free_vars[num_orig_arg:len(func.params)]
         new_func = relay.Function(new_params, new_body)
-        return FrameworkModel(new_func, new_func, self.__arg_params, self.__aux_params)
+        new_mod = Module.from_expr(new_func)
+        return FrameworkModel(new_mod, new_mod, self.__arg_params, self.__aux_params)
 
     def train_mode(self, recursive=True):
         self._BaseModel__is_train = True
@@ -150,18 +156,18 @@ class FrameworkModel(BaseModel):
         -------
         record: _TraceRecord
             The internal record.
-            Frontend Model only provides relay function via record.func for now.
+            Frontend Model only provides relay function via record.mod for now.
         """
-        func = self.__train_func if self._BaseModel__is_train else self.__infer_func
-        func_inputs = _get_func_inputs(self, args, kwargs, get_handle=False)
-        func = annotate_func_params(func, func_inputs)
+        mod = self.__train_mod if self._BaseModel__is_train else self.__infer_mod
+        func_inputs = _get_main_func_params(self, args, kwargs, get_handle=False)
+        mod['main'] = annotate_main_func_params(mod['main'], func_inputs)
         requires_grads = [i.requires_grad if isinstance(i, ndarray) else None for i in func_inputs]
         if None in requires_grads:
             requires_grads = []
         named_params = {}
         named_params.update(self.__arg_params)
         named_params.update(self.__aux_params)
-        return _TraceRecord(func=func, named_params=named_params, o_struct=None,
+        return _TraceRecord(mod=mod, named_params=named_params, o_struct=None,
                             mutations=None, requires_grads=requires_grads)
 
     def _state(self):
@@ -179,6 +185,6 @@ class FrameworkModel(BaseModel):
             self.__aux_params[name] = new_param
 
         if self._BaseModel__is_train:
-            self.__train_func = AssignDevice(self.__train_func, device)
+            self.__train_mod = AssignDevice(self.__train_mod, device)
         else:
-            self.__infer_func = AssignDevice(self.__infer_func, device)
+            self.__infer_mod = AssignDevice(self.__infer_mod, device)

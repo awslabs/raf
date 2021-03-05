@@ -73,7 +73,28 @@ ir::Expr InlineLet(ir::Expr expr) {
   return inline_let::LetInliner().VisitExpr(expr);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InlineLet").set_body_typed(InlineLet);
+// TODO - Cleanup when pass manager is introduced.
+ir::Module InlineLet(ir::Module mod) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
+  auto inliner = inline_let::LetInliner();
+
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      auto func = tvm::runtime::Downcast<ir::Function>(inliner.Mutate(kv.second));
+      updated_funcs.emplace_back(kv.first, func);
+    }
+  }
+
+  for (const auto& it : updated_funcs) {
+    updated_mod->Add(it.first, it.second, true);
+  }
+  return updated_mod;
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.InlineLet").set_body_typed([](ir::Module mod) {
+  return InlineLet(mod);
+});
 
 }  // namespace pass
 }  // namespace mnm

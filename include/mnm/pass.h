@@ -17,12 +17,12 @@ using tvm::relay::ExpandANormalForm;
 using tvm::relay::FreeVars;
 /*!
  * \brief Automatic Differentiation.
- * \param func Input function.
+ * \param mod Input module.
  * \param requires_grads If input(s) of function requires gradient. It is in the same order as
  * func->param. If empty, input(s) with float datatype requires gradient.
  * \return Transformed Function.
  */
-ir::Function AutoDiff(ir::Function func, ir::Array<tvm::Bool> requires_grads = {});
+ir::Module AutoDiff(ir::Module mod, ir::Array<tvm::Bool> requires_grads = {});
 ir::Function AutoDataParallel(ir::Function func);
 ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
@@ -157,6 +157,14 @@ ir::Expr ToDataflow(ir::Expr expr);
  * \return Transformed expression.
  */
 ir::Expr AssignDevice(ir::Expr expr, std::string device);
+
+// TODO - Cleanup after pass manager is introduced. These passes are Function passes.
+// Once pass manager is introduced, the pass manager can iterate over the functions.
+// For now, the overloaded functions are iterating over functions.
+ir::Module AssignDevice(ir::Module mod, std::string device);
+ir::Module FuseOps(ir::Module mod, int fuse_opt_level);
+ir::Module InlineLet(ir::Module mod);
+ir::Module DeadCodeElimination(const ir::Module mod);
 
 }  // namespace pass
 }  // namespace mnm

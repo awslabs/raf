@@ -6,7 +6,7 @@ import mnm
 from mnm._op import sym
 from mnm.model.trace import trace_mutate_attr
 from mnm._ffi.pass_ import MemShare, InferType
-from mnm._ffi.ir._make import Module
+from mnm._core.module import Module
 from mnm._core.ir_ext import ExtendedVar, extended_var
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
@@ -35,14 +35,14 @@ def debug_dump(expr):
 
 
 def optimize(func):
-    mod = Module({_tvm.relay.GlobalVar("main"): func})
+    mod = Module.from_expr(func)
     mod = InferType(mod)
     mod = MemShare(mod)
     return mod["main"]
 
 
 def lower(model, *data):
-    func = model._internal(*data).func
+    func = model._internal(*data).mod['main']
     return optimize(func)
 
 

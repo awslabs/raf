@@ -6,7 +6,6 @@ from ..model.trace import _get_func_inputs
 from ..model import Model, trace
 from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType
 from .._ffi.ir.variable import SetMayShare
-from .._ffi.ir._make import Module
 from .._ffi.binding import BindSymbol
 from .._lib import tvm
 
@@ -64,14 +63,13 @@ def with_autodiff(model):
             # pylint: disable=protected-access, missing-function-docstring
             record = self.model._internal(*args)
             dy = calc_dy(dy, record)
-            main = tvm.relay.GlobalVar("main")
-            mod = Module({main: record.func})
+            mod = record.mod
             mod = InferType(mod)
-            func = AutoDiff(mod[main], record.requires_grads)
-            func = InlineBackward(func)
+            mod = AutoDiff(mod, record.requires_grads)
+            mod['main'] = InlineBackward(mod['main'])
             inputs = _get_func_inputs(record, args, {})
             inputs = inputs + [get_symbol_handle(dy)]
-            out = inline(func, inputs)
+            out = inline(mod['main'], inputs)
             y = out[0]
             dxs = out[1]
             return y, dxs

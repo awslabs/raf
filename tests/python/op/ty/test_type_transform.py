@@ -4,7 +4,7 @@ import pytest
 import torch
 import mnm
 import tvm.topi.testing as npx
-from mnm._ffi.pass_ import AutoDiff
+from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
 from tvm.relay import TensorType, FuncType, TupleType
 
@@ -36,22 +36,22 @@ def test_take(shape, axis, dtype):
     model = Take(axis)
     # forward
     record = model._internal(m_x, m_indices)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     n_y = np.take(n_x, n_indices, axis=axis, mode="clip")
     x_ty = TensorType(n_x.shape, dtype=dtype)
     indices_ty = TensorType(n_indices.shape, dtype=m_indices.dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty, indices_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     dy_ty = TensorType(n_y.shape, dtype=dtype)
     dx_ty = TensorType(n_x.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], TupleType([dx_ty, TensorType([], dtype=m_indices.dtype)]))
     expected_type = FuncType([x_ty, indices_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("max_length", [3, 4, 5, 6])
@@ -77,14 +77,14 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     # forward
     m_x, n_x = randn(x_shape, dtype=dtype)
     m_length, n_length = randint([batch_size], low=0, high=max_length, dtype=dtype)
-    m_func = model._internal(m_x, m_length).func
-    m_func = run_infer_type(m_func)
+    m_mod = model._internal(m_x, m_length).mod
+    m_mod = InferType(m_mod)
     n_y = npx.sequence_mask(n_x, n_length, axis=axis, mask_value=-10)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     length_ty = TensorType(n_length.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty, length_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -105,20 +105,20 @@ def test_reverse(shape, axis, dtype):
     model = Reverse(axis=axis)
     # forward
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     n_y = np.flip(n_x, axis=axis)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     dy_ty, dx_ty = y_ty, x_ty
     bwd_ty = FuncType([dy_ty], dx_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -148,20 +148,20 @@ def test_reverse_sequence(inputs, axes, dtype):
     model = ReverseSequence(seq_axis, batch_axis)
     # forward
     record = model._internal(m_x, m_seq_length)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     x_ty = TensorType(shape, dtype=dtype)
     seq_length_ty = TensorType(m_seq_length.shape, dtype="int64")
     y_ty = TensorType(shape, dtype=dtype)
     expected_type = FuncType([x_ty, seq_length_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     dy_ty, dx_ty = y_ty, x_ty
     bwd_ty = FuncType([dy_ty], TupleType([dx_ty, TensorType([], dtype="int64")]))
     expected_type = FuncType([x_ty, seq_length_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("shape", [
@@ -182,7 +182,7 @@ def test_broadcast_to(shape, dtype):
 
     model = BroadcastTo(shape[1])
     m_x, _ = randn(shape[0], dtype=dtype)
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape[0], dtype=dtype)
     y_ty = TensorType(shape[1], dtype=dtype)
@@ -209,7 +209,7 @@ def test_broadcast_to_like(shape, dtype):
     model = BroadcastToLike()
     m_x, _ = randn(shape[0], dtype=dtype)
     broadcast_type, _ = randn(shape[1], dtype=dtype)
-    m_func = model._internal(m_x, broadcast_type).func
+    m_func = model._internal(m_x, broadcast_type).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape[0], dtype=dtype)
     broadcast_ty = TensorType(shape[1], dtype=dtype)
@@ -241,7 +241,7 @@ def test_repeat(shape, repeats, axis, dtype):
     model = Repeat(repeats, axis)
     # forward
     m_x, n_x = randn(shape, dtype=dtype)
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
     n_y = np.repeat(n_x, repeats, axis)
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -302,7 +302,7 @@ def test_stack(params, dtype):
         i_ty.append(x_ty)
     model = stack[len(m_i)](axis=axis) # pylint: disable=not-callable
     # forward
-    m_func = model._internal(*m_i).func
+    m_func = model._internal(*m_i).mod['main']
     m_func = run_infer_type(m_func)
     n_y = np.stack(n_i, axis=axis)
     y_ty = TensorType(n_y.shape, dtype=dtype)
@@ -330,7 +330,7 @@ def test_split(shape, axis, indices_or_sections, dtype):
     n_y = np.split(n_x, indices_or_sections=indices_or_sections, axis=axis)
     # forward
     model = Split(indices_or_sections, axis)
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = []
@@ -368,14 +368,14 @@ def test_transpose(shape, dtype):
     m_x, n_x = randn(shape[0], dtype=dtype)
     m_x.requires_grad = True
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     n_y = np.transpose(n_x, shape[1])
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty], y_ty)
     # forward
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
     y_shape = n_y.shape
     _, n_dy = randn(y_shape, dtype=dtype)
@@ -390,9 +390,9 @@ def test_transpose(shape, dtype):
     dx_ty = TensorType(n_x_grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
-    check_type(m_func, expected_type)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
@@ -413,21 +413,21 @@ def test_cast(shape, itype, otype):
     model = Cast(otype)
     # forward
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     n_y = n_x.astype(otype)
     x_ty = TensorType(n_x.shape, dtype=itype)
     y_ty = TensorType(n_y.shape, dtype=otype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     dy_ty = TensorType(n_y.shape, dtype=otype)
     dx_ty = TensorType(n_x.shape, dtype=itype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
@@ -446,7 +446,7 @@ def test_cast_like(shape, itype, otype):
     m_x, _ = randn(shape, dtype=itype)
     m_dtype_like, _ = randn(shape, dtype=otype)
     model = CastLike()
-    m_func = model._internal(m_x, m_dtype_like).func
+    m_func = model._internal(m_x, m_dtype_like).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=itype)
     dtype_like_ty = TensorType(shape, dtype=otype)
@@ -509,18 +509,18 @@ def test_concatenate(params, dtype):
         i_ty.append(x_ty)
     model = concat[len(m_i)](axis=axis) # pylint: disable=not-callable
     record = model._internal(*m_i)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     t_y = torch.cat(t_i, dim=axis) # pylint: disable=no-member
     y_ty = TensorType(t_y.shape, dtype=dtype)
     expected_type = FuncType(i_ty, y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([y_ty], TupleType(i_ty) if len(i_ty) > 1 else i_ty[0])
     expected_type = FuncType(i_ty, TupleType([y_ty, bwd_ty]))
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 # pylint: disable=no-self-use
@@ -544,19 +544,19 @@ def test_clip(shape, a_min, a_max, dtype):
     model = Clip()
     # forward
     record = model._internal(m_x)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     n_y = np.clip(n_x, a_min, a_max)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # check backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([y_ty], x_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("params", [
@@ -591,22 +591,22 @@ def test_reshape(params, reverse, dtype):
     m_x, _ = randn(orig_shape, dtype=dtype)
     m_x.requires_grad = True
     record = model._internal(m_x)  # pylint: disable=unused-variable
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     x_ty = TensorType(orig_shape, dtype=dtype)
     if reverse:
         y_ty = TensorType(reverse_infer_shape, dtype=dtype)
     else:
         y_ty = TensorType(infer_shape, dtype=dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # check backward
     # TODO(@XIAO-XIA): uncomment after impl the type funcs of shape
-    # m_func = AutoDiff(m_func, record.requires_grads)
-    # m_func = run_infer_type(m_func)
+    # m_mod = AutoDiff(m_mod, record.requires_grads)
+    # m_mod = InferType(m_mod)
     # bwd_ty = FuncType([y_ty], x_ty)
     # expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    # check_type(m_func, expected_type)
+    # check_type(m_mod['main], expected_type)
 
 
 @pytest.mark.parametrize("shape", [
@@ -632,8 +632,8 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     model = ExpandDims(axis, num_newaxis)
     # forward
     record = model._internal(m_x)  # pylint: disable=unused-variable
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     n_y = n_x
     if num_newaxis == 0:
         pass
@@ -645,14 +645,14 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
     # backward
     # TODO(@XIAO-XIA): uncomment after impl the type funcs of shape and reshape
     # bwd_ty = FuncType([y_ty], x_ty)
     # expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    # m_func = AutoDiff(m_func, record.requires_grads)
-    # m_func = run_infer_type(m_func)
-    # check_type(m_func, expected_type)
+    # m_mod = AutoDiff(m_mod, record.requires_grads)
+    # m_mod = InferType(m_mod)
+    # check_type(m_mod['main], expected_type)
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("i_dtype", ["int64"])
@@ -684,16 +684,16 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     fwd_ty = TensorType(oshape, dtype=dtype)
     # check forward
     record = model._internal(m_x, m_i)
-    m_func = record.func
-    m_func = run_infer_type(m_func)
+    m_mod = record.mod
+    m_mod = InferType(m_mod)
     desired_type = FuncType([ty_data, ty_indices], fwd_ty)
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
     # check backward
-    m_func = AutoDiff(m_func, record.requires_grads)
-    m_func = run_infer_type(m_func)
+    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = InferType(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_data, TensorType([], dtype=ty_indices.dtype)]))
     desired_type = FuncType([ty_data, ty_indices], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_func, desired_type)
+    check_type(m_mod['main'], desired_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -722,7 +722,7 @@ def test_strided_slice(dtype, params):
     m_x, n_x = randn(shape, dtype=dtype)
     n_y = npx.strided_slice_python(n_x, begin, end, strides)
 
-    m_func = model._internal(m_x).func
+    m_func = model._internal(m_x).mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
