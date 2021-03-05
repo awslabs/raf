@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory>
 #include "dlpack/dlpack.h"
+#include "tvm/relay/transform.h"
+#include "tvm/ir/expr.h"
 #include "tvm/runtime/c_runtime_api.h"
 #include "mnm/ir.h"
 #include "mnm/value.h"
@@ -66,6 +68,15 @@ HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& 
     key << ir::Downcast<ir::TensorType>(ret_type);
   }
   return key;
+}
+
+/*!
+ * \brief Return whether the auto scheduler task extraction mode is enabled in the pass context.
+ */
+inline bool IsAutoSchedulerTaskExtractionEnabled() {
+  return tvm::relay::transform::PassContext::Current()
+      ->GetConfig<tvm::Bool>("mnm.tvmjit.extract_task", tvm::Bool(false))
+      .value();
 }
 
 using FMNMLower = registry::TypedPackedFunc<ir::Function(const CallValues& call)>;

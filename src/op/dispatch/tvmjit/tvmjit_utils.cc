@@ -141,8 +141,17 @@ void TVMOpEnv::Execute(const std::vector<Value>& inputs, Value output) {
   SetArgs(&this->inputs, &this->outputs, &values, &codes);
   TVMArgs targs(values.data(), codes.data(), values.size());
   TVMRetValue rv;
+
+  // Skip the execution if we are in the task extraction mode since
+  // we do not care about the correctness.
+  if (IsAutoSchedulerTaskExtractionEnabled()) {
+    return;
+  }
+
   f.CallPacked(targs, &rv);
 }
+
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.tvmjit.extract_task", tvm::Bool);
 
 }  // namespace tvmjit
 }  // namespace op
