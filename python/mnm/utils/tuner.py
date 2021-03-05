@@ -20,13 +20,13 @@ from tvm.auto_scheduler.measure import MeasureErrorNo
 from tvm.auto_scheduler.measure_record import RecordReader
 
 
-def extract_tuning_tasks(func, device, args):
+def extract_tuning_tasks(mod, device, args):
     """Extract tuning tasks from the given function and the target.
 
     Parameters
     ----------
-    func: relay.Function
-        The function to be extracted.
+    mod: Module
+        The module to be extracted.
 
     device: str
         The target device.
@@ -47,8 +47,6 @@ def extract_tuning_tasks(func, device, args):
     )
     with env_tracing_task:
         # TODO(comaniac): Whether to make a new thread?
-        mod = Module()
-        mod[tvm.ir.GlobalVar("main")] = func
         executor = VMExecutor(mod, device)
         with tvm.transform.PassContext(
                 config={"relay.backend.use_auto_scheduler": True,
@@ -115,13 +113,13 @@ def run_tuning(model, device, args, log_file, *, optimize=None,
     # pylint: disable=protected-access
 
     record = model._internal(*args)
-    func = record.func
+    mod = record.mod
     if optimize:
-        func = optimize(func)
+        mod = optimize(mod)
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
 
     print("Extracting tasks...")
-    tasks, weights = extract_tuning_tasks(func, device, inputs)
+    tasks, weights = extract_tuning_tasks(mod, device, inputs)
     ori_task_num = len(tasks)
 
     if only_tune_new_tasks and os.path.exists(log_file):
