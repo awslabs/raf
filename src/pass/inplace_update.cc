@@ -76,10 +76,34 @@ class InplaceVisitor : public ExprFunctor<void(const Expr& n)> {
 class InplaceRewriter : public ExprMutator {
  public:
   Expr VisitExpr_(const LetNode* node) override {
-    if (visitor_.vmap.count(node->var) > 0) {
-      return VisitExpr(node->body);
-    }
-    return ExprMutator::VisitExpr_(node);
+    // record the origin implementation here:
+    // if (visitor_.vmap.count(node->var) > 0) {
+    //   return VisitExpr(node->body);
+    // }
+    // return ExprMutator::VisitExpr_(node);
+    auto pre_visit = [this](const LetNode* op) {
+      if (visitor_.vmap.count(op->var) == 0) {
+        this->VisitExpr(op->var);
+        this->VisitExpr(op->value);
+      }
+    };
+    auto post_visit = [this](const LetNode* op) {
+      auto expr = GetRef<Expr>(op);
+      Expr body = this->VisitExpr(op->body);
+      if (visitor_.vmap.count(op->var) > 0) {
+        this->memo_[expr] = body;
+      } else {
+        Var var = Downcast<Var>(this->VisitExpr(op->var));
+        Expr value = this->VisitExpr(op->value);
+        if (var.same_as(op->var) && value.same_as(op->value) && body.same_as(op->body)) {
+          this->memo_[expr] = expr;
+        } else {
+          this->memo_[expr] = Let(var, value, body);
+        }
+      }
+    };
+    ExpandANormalForm(node, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(node)];
   }
 
   Expr VisitExpr_(const VarNode* node) override {
