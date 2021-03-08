@@ -1,5 +1,5 @@
 # pylint:disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
-# pylint:disable=not-callable,abstract-method,too-many-locals
+# pylint:disable=not-callable,abstract-method,too-many-locals,invalid-name
 import pytest
 import torch
 import torch.nn as nn
@@ -70,6 +70,96 @@ def test_lenet(shape_dict, mode):
         return
 
     m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+    m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
+
+    # append loss function
+    out = m_model.record(m_x)
+    y_pred = sym.log_softmax(out)
+    loss = sym.nll_loss(m_ytrue, y_pred)
+    m_model = m_model + loss
+
+    if mode == "backward":
+        m_x.requires_grad = True
+
+        m_model.train_mode()
+        t_model.train()
+
+        m_loss = m_model(m_x, m_ytrue)
+
+        t_y = t_model(t_x)
+        t_ypred = torch.log_softmax(t_y, dim=-1)
+        t_loss = F.nll_loss(t_ypred, t_ytrue)
+
+        check(m_loss, t_loss)
+
+        m_loss.backward()
+        t_loss.backward()
+        check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
+    else:
+        assert mode == "sgd"
+
+        m_model.train_mode()
+        m_model.to(device=device)
+
+        m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue])[0]
+
+        t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
+        t_model.train()
+
+        t_trainer.zero_grad()
+        t_y = t_model(t_x)
+        t_ypred = torch.log_softmax(t_y, dim=-1)
+        t_loss = F.nll_loss(t_ypred, t_ytrue)
+        t_loss.backward(t_dy)
+        t_trainer.step()
+        check(m_loss, t_loss)
+
+
+class TorchConvBn(nn.Module):
+    def __init__(self):
+        super(TorchConvBn, self).__init__()
+        self.conv = nn.Conv2d(in_channels=3,
+                              out_channels=6,
+                              kernel_size=5)
+        self.bn = torch.nn.BatchNorm2d(6)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        x = x.view(x.shape[0], -1)
+        return x
+
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
+@pytest.mark.parametrize("mode", ["backward", "sgd"])
+def test_conv_bn(shape_dict, mode):
+    # Fix https://github.com/meta-project/meta/issues/463
+    device = "cuda"
+    input_shape = list(shape_dict.values())[0][0]
+    batch_size = input_shape[0]
+
+    # Prepare two models.
+    t_model = TorchConvBn()
+    m_model = from_pytorch(t_model, shape_dict)
+
+    # Set the target device.
+    t_model.to(device=device)
+    m_model.to(device=device)
+
+    # Prepare data.
+    m_x, t_x = randn_torch(input_shape, device=device)
+
+    if mode == "forward":
+        m_model.infer_mode()
+        t_model.eval()
+        m_y = m_model(m_x)
+        t_y = t_model(t_x)
+        check(m_y, t_y, rtol=1e-4, atol=1e-4)
+        return
+
+    m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=6 * 24 * 24, device=device)
     m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
 
     # append loss function

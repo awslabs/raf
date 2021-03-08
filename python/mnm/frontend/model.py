@@ -133,7 +133,7 @@ class FrameworkModel(BaseModel):
         free_vars = relay.analysis.free_vars(new_body)
         # [arguments, parameters]
         new_params = free_vars[0:num_orig_arg] + free_vars[len(func.params):] \
-                     + free_vars[num_orig_arg:len(func.params)]
+                     + func.params[num_orig_arg:]
         new_func = relay.Function(new_params, new_body)
         new_mod = Module.from_expr(new_func)
         return FrameworkModel(new_mod, new_mod, self.__arg_params, self.__aux_params)
