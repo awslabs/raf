@@ -8,20 +8,24 @@ import numpy as np
 import mnm
 from mnm.frontend import FrameworkModel
 from mnm.testing import randint, randn, check, utils
-from mnm._ffi.pass_ import FromRelay
+from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import Module
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
 
-def check_from_relay(m_model, r_func, args, check_model_structure=True, device="cpu"):
+def check_from_relay(m_model, r_func, args, check_model_structure=True,
+                     check_correctness=True, device="cpu"):
     m_mod = m_model._internal(*args).mod
-    m_func = m_mod['main']
+    m_func = m_mod["main"]
     ref_outs = m_model(*args)
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
 
     try:
-        new_func = FromRelay(r_func)
+        r_mod = _tvm.IRModule()
+        r_mod["main"] = r_func
+        new_mod = FromRelay(r_mod)
+        new_func = new_mod["main"]
     except Exception as err:  # pylint: disable=broad-except
         assert False, "Failed to convert the Relay function:\n%s\nReason:\n%s" % (
             str(r_func), str(err))
@@ -30,15 +34,18 @@ def check_from_relay(m_model, r_func, args, check_model_structure=True, device="
         assert _tvm.ir.structural_equal(
             m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
 
-    new_model = FrameworkModel(m_mod, m_mod, {}, {})
+    assert InferType(new_mod), "Type error of the model from Relay"
+
+    new_model = FrameworkModel(new_mod, new_mod, {}, {})
     if device == "cuda":
         args = [arg.to(device=device) for arg in args]
         new_model.to(device=device)
     outs = new_model(*args)
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
-    assert len(ref_outs) == len(outs)
-    for ref_out, out in zip(ref_outs, outs):
-        check(ref_out, out)
+    if check_correctness:
+        assert len(ref_outs) == len(outs)
+        for ref_out, out in zip(ref_outs, outs):
+            check(ref_out, out)
 
 
 def test_mnm_constant():
@@ -61,6 +68,7 @@ def test_mnm_constant():
 
 def test_mnm_module():
     f1 = _relay.GlobalVar("f1")  # pylint: disable=invalid-name
+
     def get_tvm_mod():
         x = _relay.var("x", shape=(1, 100))
         tanh = _relay.tanh(x)
@@ -99,7 +107,8 @@ def test_mnm_module():
     m_x, n_x = randn((1, 100))
 
     # Check that VM can execute multi-module functions
-    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], utils.ir_fusion)
+    vm_executor, args = utils.get_vm_executor(
+        model, 'cpu', [m_x], utils.ir_fusion)
     m_out = vm_executor(*args)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
@@ -445,6 +454,7 @@ def test_stack(shapes, axis, dtype):
 
     check_from_relay(model, r_func, args)
 
+
 @pytest.mark.parametrize("shape", [[1, 4, 1, 2]])
 @pytest.mark.parametrize("axis", [[0], None])
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -465,6 +475,7 @@ def test_squeeze(shape, axis, dtype):
     r_func = _relay.Function(params=[r_var], body=_relay.squeeze(r_var, axis))
 
     check_from_relay(model, r_func, [m_x])
+
 
 @pytest.mark.parametrize("shape", [(2, 4, 1, 3), (1, 2, 3)])
 @pytest.mark.parametrize("a_min", [0.3])
@@ -628,6 +639,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
 
     check_from_relay(model, r_func, [m_x])
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[3, 2]])
 @pytest.mark.parametrize("val", [1])
@@ -644,10 +656,12 @@ def test_full(shape, val):
     model = Full(val, shape)
 
     r_c = _relay.const(val)
-    r_func = _relay.Function(params=[], body=_relay.full(r_c, shape=shape, dtype="int64"))
+    r_func = _relay.Function(params=[], body=_relay.full(
+        r_c, shape=shape, dtype="int64"))
 
     # Test constant mirgration using CUDA.
-    check_from_relay(model, r_func, [], check_model_structure=False, device="cuda")
+    check_from_relay(model, r_func, [],
+                     check_model_structure=False, device="cuda")
 
 
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -746,11 +760,8 @@ def test_contrib_dropout(shape, p):
     r_c = _relay.nn.dropout(r_x, rate=p)
     r_func = _relay.Function(params=[r_x], body=r_c)
 
-    m_mod = model._internal(m_x).mod
-    m_func = m_mod['main']
-    new_func = FromRelay(r_func)
-    assert _tvm.ir.structural_equal(
-        m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
+    # We cannot check the correctness for now due to random generated mask.
+    check_from_relay(model, r_func, [m_x], check_correctness=False)
 
 
 @pytest.mark.parametrize("kernel", [1, 2, 3])
@@ -843,6 +854,7 @@ def test_mnm_layer_norm(shape, axis, eps, dtype):
 
     check_from_relay(model, r_func, [m_x, m_w, m_b])
 
+
 @pytest.mark.parametrize("shape", [[32, 3, 224, 224]])
 def test_mnm_batch_norm_train(shape):
     momentum = 0.1
@@ -873,6 +885,7 @@ def test_mnm_batch_norm_train(shape):
         r_x, r_w, r_b, r_m, r_v, epsilon=eps).astuple())
 
     check_from_relay(model, r_func, [m_x, m_m, m_v, m_w, m_b])
+
 
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dimension", [((2, 3), ((1, 1), (2, 2)))])

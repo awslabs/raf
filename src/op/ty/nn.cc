@@ -223,7 +223,11 @@ MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
 
 Type ContribDropoutInfer(const CallValues& value) {
   const auto* args = value->args.as<DropoutArgs>();
-  return GetType(args->x);
+  Array<Type> res;
+  TensorType x_ty = Downcast<TensorType>(GetType(args->x));
+  res.push_back(x_ty);
+  res.push_back(TensorType(x_ty->shape, DataType::Float(32)));
+  return TupleType(res);
 }
 
 MNM_OP_TYPE("mnm.op._contrib_dropout", "ContribDropout", ContribDropoutInfer);
