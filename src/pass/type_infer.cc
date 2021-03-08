@@ -130,6 +130,18 @@ class TypeInferencer : public ExprMutator {
       ret->checked_type_ = InferClosure(ret, mod_->Lookup(GetRef<GlobalVar>(gvn)).get());
     } else if (const OpNode* opn = ret->op.as<OpNode>()) {
       ret->checked_type_ = InferPrimitive(ret, opn);
+    } else if (const VarNode* var_node = ret->op.as<VarNode>()) {
+      // The var node can be a result of the output type of a func call. A var node
+      // here is valid if it points to a function. Check that the type is a FuncType
+      // and the args of the Call match the type of the FuncType. If yes, return the
+      // FuncType's ret_type.
+      const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
+      CHECK(fty_node);
+      for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
+        Type arg_type = fty_node->arg_types[i];
+        CHECK(tvm::StructuralEqual()(arg_type, ret->args[0]->checked_type()));
+      }
+      ret->checked_type_ = fty_node->ret_type;
     } else {
       LOG(FATAL) << "Invalid op type: " << call->op->GetTypeKey();
     }

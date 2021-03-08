@@ -77,6 +77,33 @@ def test_mnm_recursive_function():
     assert mod[main].checked_type == expected_ty
 
 
+def test_mnm_return_function():
+    f = relay.GlobalVar("f")  # pylint: disable=invalid-name
+    main = relay.GlobalVar("main")
+    def get_tvm_mod():
+        tvm_mod = tvm.IRModule()
+
+        y = relay.var("y", shape=(1, 100))
+        z = relay.var("z", shape=(1, 100))
+        tanh = relay.add(y, z)
+        closure = relay.Function([y], tanh)
+        tvm_mod[f] = relay.Function([z], closure)
+
+        x = relay.var("x", shape=(1, 100))
+        a = relay.var("a", shape=(1, 100))
+        closure = f(x)
+        closure_call = relay.Call(closure, [a])
+        tvm_mod[main] = relay.Function([x, a], closure_call)
+        return tvm_mod
+
+    tvm_mod = get_tvm_mod()
+    mod = FromRelay(tvm_mod)
+    mod = InferType(mod)
+
+    t_1 = relay.TensorType((1, 100))
+    assert mod[main].ret_type == t_1
+
+
 def test_model_params():
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init

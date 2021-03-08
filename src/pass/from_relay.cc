@@ -69,7 +69,7 @@ struct FromRelayMutator : public ExprMutator {
         auto new_arg = this->Mutate(arg);
         call_args.push_back(new_arg);
       }
-      return Call(node->op, call_args, node->attrs);
+      return Call(this->Mutate(node->op), call_args, node->attrs);
     }
 
     const Op& op = Downcast<Op>(node->op);
