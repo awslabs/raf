@@ -727,6 +727,32 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
     check_from_relay(model, r_func, [m_x, m_w])
 
 
+@pytest.mark.parametrize("shape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("p", [0.3, 0.7])
+def test_contrib_dropout(shape, p):
+    # pylint: disable=invalid-name,no-member
+    class ContribDropout(mnm.Model):
+        def build(self, p):
+            self.p = p
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm._contrib_dropout(x, self.p)[0]
+
+    model = ContribDropout(p)
+    m_x, _ = randn(shape)
+
+    r_x = _relay.var("x", shape=shape)
+    r_c = _relay.nn.dropout(r_x, rate=p)
+    r_func = _relay.Function(params=[r_x], body=r_c)
+
+    m_mod = model._internal(m_x).mod
+    m_func = m_mod['main']
+    new_func = FromRelay(r_func)
+    assert _tvm.ir.structural_equal(
+        m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
+
+
 @pytest.mark.parametrize("kernel", [1, 2, 3])
 @pytest.mark.parametrize("stride", [1, 2])
 @pytest.mark.parametrize("padding", [0, 1])

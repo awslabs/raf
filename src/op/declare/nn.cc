@@ -272,7 +272,26 @@ void BiasAdd(const CallValues& call) {
 }
 
 MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd).set_attr<TOpPattern>("TOpPattern", kBroadcast);
-;
+
+void ContribDropout(const CallValues& call) {
+  const auto* args = call->args.as<DropoutArgs>();
+  CHECK(args != nullptr);
+  LOG(WARNING) << "The random API and IR for dropout are still under design";
+  const DLTensor* x = args->x;
+  const int64_t p = args->p;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  TensorValue output = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                             /*dtype=*/x->dtype,
+                                             /*shape=*/shape);
+  TensorValue mask = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                           /*dtype=*/DType(DTypeCode::kFloat(), 32),
+                                           /*shape=*/shape);
+  call->out = TupleValue::make(tvm::Array<Value>({output, mask}));
+  call->device = x->ctx;
+}
+
+MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropout)
+    .set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 void LayerNorm(const CallValues& call) {
   const auto* args = call->args.as<LayerNormArgs>();

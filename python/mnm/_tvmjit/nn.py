@@ -8,6 +8,7 @@ from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
 from .._lib import strategy
+from .._lib import random
 
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
@@ -138,6 +139,30 @@ def compute_log_softmax_dx(attr, inputs, output_type):
 
 # TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("mnm.op.log_softmax_dx")
+
+@register_compute("mnm.op._contrib_dropout")
+def compute_contrib_dropout(attr, inputs, output_type):
+    # pylint: disable=invalid-name, unused-argument
+    x = inputs[0]
+    p = attr.rate
+    if (x.dtype != "float32" and x.dtype != "float64"):
+        raise TypeError("input array of mnm.dropout is expected to be the type of float32 " +
+                        "or float64, but received {}".format(x.dtype))
+    if p < 0. or p >= 1:
+        raise ValueError('p is out of interval')
+    retain_p = _tvm.tir.const(1 - p, x.dtype)
+    mask = random.uniform(0, 1, x.shape)
+    ret = _tvm.te.compute(x.shape, lambda *ix: _tvm.te.if_then_else(
+        mask[ix] <= _tvm.tir.const(p, "float32"),
+        _tvm.tir.const(0, x.dtype),
+        x[ix] / retain_p))
+    mask = _tvm.te.compute(x.shape, lambda *ix: _tvm.te.if_then_else(
+        mask[ix] <= _tvm.tir.const(p, "float32"),
+        _tvm.tir.const(0, "float32"),
+        _tvm.tir.const(1, "float32")))
+    return [ret, mask]
+
+_reg.register_injective_schedule("mnm.op._contrib_dropout")
 
 @register_compute("mnm.op.relu_dx")
 @_tvm.te.tag_scope(tag=_tvm.topi.tag.ELEMWISE)

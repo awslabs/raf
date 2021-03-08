@@ -107,6 +107,13 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
   MNM_OP_SCHEMA(ConvDxwArgs, "mnm.args.conv_dxw");
 };
 
+class DropoutArgs : public ir::AttrsNode<DropoutArgs> {
+ public:
+  value::BaseTensorValue x;
+  double p{0.5};
+  MNM_OP_SCHEMA(DropoutArgs, "mnm.args.dropout");
+};
+
 class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
  public:
   value::BaseTensorValue x;

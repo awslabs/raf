@@ -90,7 +90,11 @@ SCHEMAS = {
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="bias", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int64_t", cxx_default=1),
-    ], 
+    ],
+    "nn.h::dropout": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="p", cxx_type="double", cxx_default=0.5),
+    ],
     "nn.h::local_response_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="size", cxx_type="int64_t"),

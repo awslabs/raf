@@ -43,6 +43,7 @@ namespace names {
 static const char _alloc_storage[] = "mnm.op._alloc_storage";
 static const char _alloc_tensor[] = "mnm.op._alloc_tensor";
 static const char _allreduce[] = "mnm.op._allreduce";
+static const char _contrib_dropout[] = "mnm.op._contrib_dropout";
 static const char _invoke_op[] = "mnm.op._invoke_op";
 static const char abs[] = "mnm.op.abs";
 static const char adaptive_avg_pool2d[] = "mnm.op.adaptive_avg_pool2d";
@@ -422,6 +423,13 @@ Attrs DeviceCopy(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, data);
   MNM_POD(1, ffi2schema::Int, src_dev_type);
   MNM_POD(2, ffi2schema::Int, dst_dev_type);
+  return Attrs(attrs);
+}
+
+Attrs Dropout(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::DropoutArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Double, p);
   return Attrs(attrs);
 }
 
@@ -932,6 +940,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetVal
   MNM_PRELUDE(_allreduce, 1, ffi2schema::Allreduce,
               schema::AllreduceArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._contrib_dropout").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_contrib_dropout, 2, ffi2schema::Dropout,
+              schema::DropoutArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->p));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2522,6 +2539,13 @@ Array<Expr> DeviceCopy(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Dropout(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Double, p);
+  MNM_RET();
+}
+
 Array<Expr> ExpandDims(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -2973,6 +2997,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym._alloc_storage")
 MNM_REGISTER_GLOBAL("mnm.op.sym._alloc_tensor")
     .set_body(MNM_SYMBOLIC_API(_alloc_tensor, 4, AllocTensor));
 MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 1, Allreduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
+    .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 2, Dropout));
 MNM_REGISTER_GLOBAL("mnm.op.sym._invoke_op").set_body(MNM_SYMBOLIC_API(_invoke_op, 3, InvokeOp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
@@ -3432,6 +3458,14 @@ Attrs DeviceCopy(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, data);
   MNM_OPTIONAL(1, value2schema::Int, src_dev_type);
   MNM_OPTIONAL(2, value2schema::Int, dst_dev_type);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Dropout(const Array<Value>& values) {
+  MNM_PRELUDE(1, 2, schema::DropoutArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_OPTIONAL(1, value2schema::Double, p);
   return Attrs(attrs);
 }
 
@@ -4339,6 +4373,18 @@ int DeviceCopy(const std::string& field) {
 }
 
 template <const char* op_name>
+int Dropout(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "p") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int ExpandDims(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -5207,6 +5253,10 @@ MNM_BIND_SCHEMA("mnm.op._allreduce", names::_allreduce,
                 value2schema::Allreduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allreduce", names::_allreduce,
                             schema_field_idx::Allreduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._contrib_dropout", names::_contrib_dropout,
+                value2schema::Dropout);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._contrib_dropout", names::_contrib_dropout,
+                            schema_field_idx::Dropout);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op._invoke_op", names::_invoke_op,
                 value2schema::InvokeOp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._invoke_op", names::_invoke_op,
@@ -5767,6 +5817,7 @@ MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
+MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherArgs);

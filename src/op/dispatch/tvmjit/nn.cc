@@ -303,6 +303,30 @@ HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddSchema2Args, BiasAddSchemaArgNames,
            BiasAddSchema2Attrs, BiasAddHasher);
 
+std::vector<Value> ContribDropoutSchema2Args(const DropoutArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ContribDropoutSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs ContribDropoutSchema2Attrs(const DropoutArgs* args) {
+  auto attrs = make_object<tvm::relay::DropoutAttrs>();
+  attrs->rate = args->p;
+  return Attrs(attrs);
+}
+
+HashKey ContribDropoutHasher(const std::vector<Type>& param_types, const Type& y_type,
+                             const DropoutArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->p;
+  return key;
+}
+
+MNM_TVMJIT(Dropout, "mnm.op._contrib_dropout", DropoutArgs, ContribDropoutSchema2Args,
+           ContribDropoutSchemaArgNames, ContribDropoutSchema2Attrs, ContribDropoutHasher);
+
 template <typename T>
 std::vector<Value> PoolSchema2Args(const T* args) {
   return {args->x};

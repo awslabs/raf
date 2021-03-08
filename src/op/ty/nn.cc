@@ -221,6 +221,13 @@ Type BiasAddInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
 
+Type ContribDropoutInfer(const CallValues& value) {
+  const auto* args = value->args.as<DropoutArgs>();
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op._contrib_dropout", "ContribDropout", ContribDropoutInfer);
+
 MNM_OP_TYPE("mnm.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
 
 Type LayerNormDxbInfer(const CallValues& value) {
