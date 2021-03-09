@@ -6,7 +6,7 @@
 #pragma once
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
-#include <tvm/node/container.h>
+#include <tvm/runtime/container.h>
 #include <tvm/ir/env_func.h>
 #include <tvm/tir/expr.h>
 #include "mnm/op.h"

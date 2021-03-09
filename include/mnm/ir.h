@@ -7,7 +7,7 @@
 #include <string>
 #include "tvm/runtime/object.h"
 #include "tvm/runtime/data_type.h"
-#include "tvm/node/container.h"
+#include "tvm/runtime/container.h"
 #include "tvm/node/node.h"
 #include "tvm/relay/base.h"
 #include "tvm/relay/expr.h"
