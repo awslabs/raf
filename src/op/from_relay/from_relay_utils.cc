@@ -78,6 +78,16 @@ TupleValue ArrayToIntTuple(const ArrayNode& arr) {
   return TupleValue::make(std::move(ret));
 }
 
+Var GetMayShare(const Expr& var) {
+  const auto* vn = var.as<ExtendedVarNode>();
+  CHECK(vn);
+  while (vn->may_share.defined()) {
+    vn = vn->may_share.as<ExtendedVarNode>();
+    CHECK(vn);
+  }
+  return GetRef<Var>(vn);
+}
+
 }  // namespace from_relay
 }  // namespace op
 }  // namespace mnm

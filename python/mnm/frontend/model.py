@@ -6,7 +6,7 @@ from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
 from mnm._core.ndarray import ndarray, Symbol
-from mnm._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend
+from mnm._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend, InferType
 from mnm._core.module import Module
 
 
@@ -119,8 +119,13 @@ class FrameworkModel(BaseModel):
         """
         r = self._internal(*args, **kwargs)
         # (function, num_argument)
-        self.__recorded = (r.mod, len(args) + len(kwargs))
-        return Symbol.from_expr(_get_func_output_var(r.mod['main']))
+        mod = InferType(r.mod)
+        self.__recorded = (mod, len(args) + len(kwargs))
+        ret_var = _get_func_output_var(mod['main'])
+        ret = Symbol.from_expr(ret_var)
+        if isinstance(ret_var.checked_type, relay.TupleType):
+            ret = ret[0]
+        return ret
 
     def __add__(self, other):
         if not self.__recorded:
@@ -128,6 +133,10 @@ class FrameworkModel(BaseModel):
         mod, num_orig_arg = self.__recorded
         func = mod['main']
         ret_var = _get_func_output_var(func)
+        if isinstance(ret_var.checked_type, relay.TupleType):
+            ret = Symbol.from_expr(ret_var)
+            other = [other,] + [ret[i + 1] for i in range(len(ret_var.checked_type.fields) - 1)]
+            other = Symbol.make_tuple(other)
         other = ExtractBinding(other._Symbol__handle, [ret_var])
         new_body = ExprAppend(func.body, other)
         free_vars = relay.analysis.free_vars(new_body)

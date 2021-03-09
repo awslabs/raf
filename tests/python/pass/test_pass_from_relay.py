@@ -872,7 +872,11 @@ def test_mnm_batch_norm_train(shape):
 
         @mnm.model.trace
         def forward(self, m_x, m_w, m_b, m_m, m_v):
-            return mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            res = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            y = res[0]
+            new_m = res[1]
+            new_v = res[2]
+            return (y, new_m, new_v)
 
     model = BatchNorm()
 
@@ -882,7 +886,7 @@ def test_mnm_batch_norm_train(shape):
     r_m = _relay.var("m", shape=stats_shape)
     r_v = _relay.var("v", shape=stats_shape)
     r_func = _relay.Function(params=[r_x, r_w, r_b, r_m, r_v], body=_relay.nn.batch_norm(
-        r_x, r_w, r_b, r_m, r_v, epsilon=eps).astuple())
+        r_x, r_w, r_b, r_m, r_v, epsilon=eps)[0])
 
     check_from_relay(model, r_func, [m_x, m_m, m_v, m_w, m_b])
 

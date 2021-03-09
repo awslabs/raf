@@ -1,4 +1,5 @@
 """Traced Optimizers"""
+from mnm.frontend.model import _get_func_output_var
 from .._core.ndarray import Symbol, get_symbol_handle
 from .._core.value import NoGradValue, Value
 from .._core.ir_ext import ExtendedVar
@@ -13,14 +14,12 @@ from .._lib import tvm
 def calc_dy(dy, record):
     """ relay function returns output + mutation. In backward, mutation needs empty gradient. """
     # pylint: disable=protected-access
-    if record.mutations is None:
-        return dy
+    mod = InferType(record.mod)
+    ret_var = _get_func_output_var(mod["main"])
     dout = [get_symbol_handle(dy)]
-    for (obj, attr) in record.mutations:
-        x = getattr(obj, attr, None)
-        assert x is not None
-        grad = NoGradValue()
-        dout.append(Value.as_const_expr(grad))
+    if isinstance(ret_var.checked_type, tvm.relay.TupleType):
+        dout.extend([Value.as_const_expr(NoGradValue())
+                     for i in range(len(ret_var.checked_type.fields) - 1)])
     return Symbol.make_tuple(dout) if len(dout) > 1 else dy
 
 

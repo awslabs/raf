@@ -179,6 +179,8 @@ using FFusedPrimalGradient = registry::TypedPackedFunc<
         const ir::Array<ir::Expr>& in_grad)>;
 
 using FMNMFromRelay = registry::TypedPackedFunc<Expr(const Attrs& attrs, const Array<Expr>& args)>;
+using FMNMMutationFromRelay =
+    registry::TypedPackedFunc<Array<Array<Expr>>(const ir::Var& var, const ir::Call& call)>;
 
 void RunDeclare(const CallValues& call);
 ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);

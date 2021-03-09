@@ -25,6 +25,10 @@ using namespace ::tvm::relay;
                                      return Call(op, mnm_args);                            \
                                    })
 
+#define MNM_OP_MUTATION_FROM_RELAY(RELAY_OP_NAME, MNM_OP_MUTATION) \
+  RELAY_REGISTER_OP(RELAY_OP_NAME)                                 \
+      .set_attr<op::FMNMMutationFromRelay>("FMNMMutationFromRelay", MNM_OP_MUTATION)
+
 #define MNM_BINARY_UFUNC_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                                 \
   MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
     Array<Expr> mnm_args = args;                                                                   \
@@ -44,6 +48,7 @@ TupleValue ArrayToIntTuple(const Array<IndexExpr>& arr);
 TupleValue ArrayToIntTuple(const Array<Integer>& arr);
 TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr);
 TupleValue ArrayToIntTuple(const ArrayNode& arr);
+Var GetMayShare(const Expr& var);
 
 }  // namespace from_relay
 }  // namespace op

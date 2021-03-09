@@ -133,6 +133,16 @@ MNM_OP_FROM_RELAY("nn.batch_norm", "mnm.op.batch_norm_train",
                     return mnm_args;
                   });
 
+Array<Array<Expr>> BatchNormMutationFromRelay(const Var& var, const Call& call) {
+  Array<Array<Expr>> res = {
+      {GetMayShare(call->args[1]), TupleGetItem(var, 1)},  // running_mean
+      {GetMayShare(call->args[2]), TupleGetItem(var, 2)}   // running_var
+  };
+  return res;
+}
+
+MNM_OP_MUTATION_FROM_RELAY("nn.batch_norm", BatchNormMutationFromRelay);
+
 MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<PadAttrs>();

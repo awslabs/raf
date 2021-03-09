@@ -25,7 +25,9 @@ class SubstitueMutator : public ExprMutator {
     if (var->may_share.defined()) {
       Expr may_share = VisitExpr(var->may_share);
       const auto* msv = may_share.as<VarNode>();
-      var->may_share = msv ? GetRef<Var>(msv) : Var();
+      Var new_var = MakeVar(var->name_hint(), var->type_annotation, msv ? GetRef<Var>(msv) : Var());
+      args_map_.Set(op->var, new_var);
+      return Let(new_var, VisitExpr(op->value), VisitExpr(op->body));
     }
     return ExprMutator::VisitExpr_(op);
   }
@@ -49,7 +51,7 @@ class SubstitueMutator : public ExprMutator {
 
  private:
   /*! \brief substitute var with expr */
-  const tvm::Map<Var, Expr>& args_map_;
+  tvm::Map<Var, Expr> args_map_;
 };
 
 class ExprAppendMutator : public ExprMutator {

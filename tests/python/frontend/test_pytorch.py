@@ -9,7 +9,7 @@ import mnm
 from mnm._op import sym
 from mnm.frontend import from_pytorch
 from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model
-
+from mnm.testing.utils import ir_fusion
 
 class TorchLeNet(nn.Module):
     def __init__(self, input_shape=28, num_classes=10):
@@ -134,7 +134,8 @@ class TorchConvBn(nn.Module):
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
 @pytest.mark.parametrize("mode", ["backward", "sgd"])
-def test_conv_bn(shape_dict, mode):
+@pytest.mark.parametrize("fuse", [False, True])
+def test_conv_bn(shape_dict, mode, fuse):
     # Fix https://github.com/meta-project/meta/issues/463
     device = "cuda"
     input_shape = list(shape_dict.values())[0][0]
@@ -174,7 +175,7 @@ def test_conv_bn(shape_dict, mode):
         m_model.train_mode()
         t_model.train()
 
-        m_loss = m_model(m_x, m_ytrue)
+        m_loss = m_model(m_x, m_ytrue)[0]
 
         t_y = t_model(t_x)
         t_ypred = torch.log_softmax(t_y, dim=-1)
@@ -192,7 +193,8 @@ def test_conv_bn(shape_dict, mode):
         m_model.to(device=device)
 
         m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
-        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue])[0]
+        m_loss = run_vm_model(
+            m_trainer, device, [m_dy, m_x, m_ytrue], ir_fusion if fuse else None)[0][0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()
@@ -204,6 +206,32 @@ def test_conv_bn(shape_dict, mode):
         t_loss.backward(t_dy)
         t_trainer.step()
         check(m_loss, t_loss)
+
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
+def test_batch_norm_train(shape_dict):
+    device = "cuda"
+    input_shape = list(shape_dict.values())[0][0]
+
+    # Prepare two models.
+    t_model = nn.BatchNorm2d(input_shape[1])
+    m_model = from_pytorch(t_model, shape_dict)
+
+    # Set the target device.
+    t_model.to(device=device)
+    m_model.to(device=device)
+
+    # Prepare data.
+    m_x, t_x = randn_torch(input_shape, device=device)
+
+    m_model.train_mode()
+    t_model.train()
+    m_y = run_vm_model(m_model, device, [m_x], optimize=ir_fusion)[0]
+    t_y = t_model(t_x)
+    check(m_y, t_y, rtol=1e-4, atol=1e-4)
+    check(m_model.state()["model_running_mean"], t_model.running_mean)
+    check(m_model.state()["model_running_var"], t_model.running_var)
 
 
 if __name__ == "__main__":
