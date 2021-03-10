@@ -29,6 +29,7 @@ class TestModel(mnm.Model):
     [(5, 4, 3), (1, 2)],
     [(6, 5), (2, 2)],
     [(1, 1), (2, 2, 2)],
+    [(6, 5), ()],
 ])
 @pytest.mark.parametrize("axis", [0, 1, -1])
 @pytest.mark.parametrize("mode", ["clip", "wrap"])
@@ -48,12 +49,14 @@ def test_take(shape, axis, device, mode):
     # check backward
     m_dy, n_dy = randn(n_y.shape, device=device)
     mx_x = mx.nd.array(n_x)
-    mx_x.attach_grad()
     mx_dy = mx.nd.array(n_dy)
-    mx_indices = mx.nd.array(n_indices)
+    mx_x.attach_grad()
+    mx_indices = mx.nd.array(n_indices if len(n_indices.shape) > 0 else [n_indices[()]])
     with mx.autograd.record():
         mx_y = mx.nd.take(mx_x, indices=mx_indices, axis=axis, mode=mode)
-        mx_y.backward(mx_dy)
+    if len(n_indices.shape) == 0:
+        mx_dy = mx.nd.reshape(mx_dy, mx_y.shape)  # mx.nd.take does not support 0-dim indices
+    mx_y.backward(mx_dy)
     m_y.backward(m_dy)
     check(m_x.grad, mx_x.grad.asnumpy())
 

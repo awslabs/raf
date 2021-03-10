@@ -38,7 +38,7 @@ def take_dx_compute(attrs, inputs, output_type):
             dy[idx[:axis + idim] + idx[axis + idim + 1:]],
             _tvm.tir.const(0, dy.dtype)
         ))
-    B = _topi.sum(A, axis=tuple(range(axis, axis + idim)))
+    B = _topi.sum(A, axis=tuple(range(axis, axis + idim))) if idim > 0 else A
     return [B]
 
 _reg.register_injective_schedule("mnm.op.take_dx")
