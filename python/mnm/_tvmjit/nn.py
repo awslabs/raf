@@ -159,7 +159,7 @@ def compute_contrib_dropout(attr, inputs, output_type):
     mask = _tvm.te.compute(x.shape, lambda *ix: _tvm.te.if_then_else(
         mask[ix] <= _tvm.tir.const(p, "float32"),
         _tvm.tir.const(0, "float32"),
-        _tvm.tir.const(1, "float32")))
+        _tvm.tir.const(1 / (1 - p), "float32")))
     return [ret, mask]
 
 _reg.register_injective_schedule("mnm.op._contrib_dropout")

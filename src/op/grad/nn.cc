@@ -26,6 +26,19 @@ Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, cons
 
 MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
 
+Array<Expr> ContribDropoutGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                               const Expr& dym) {
+  static auto cast_like = Op::Get("mnm.op.cast_like");
+  static auto multiply = Op::Get("mnm.op.multiply");
+  const CallNode* call = orig_call.as<CallNode>();
+  const Expr& mask = TupleGetItem(y, 1);
+  const Expr& dy = AsTupleExpr(dym, 2)[0];
+  Call cast_mask = Call(cast_like, {mask, dy});
+  return {Call(multiply, {dy, cast_mask})};
+}
+
+MNM_OP_GRAD("mnm.op._contrib_dropout", ContribDropoutGrad);
+
 template <const char* GradOp>
 Array<Expr> PoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
