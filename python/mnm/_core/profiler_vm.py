@@ -16,6 +16,7 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         self._set_devices = self.module["set_devices"]
         self._prepare_context = self.module["prepare_context"]
         self._get_stat = self.module["get_stat"]
+        self._get_interm_tensors = self.module["get_interm_tensors"]
         self._reset = self.module["reset"]
         self._run = self.module["run"]
         self._set_devices(device)
@@ -36,6 +37,18 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         """
         return self._get_stat(sort_by_time)
 
+    def get_interm_tensors(self):
+        """Get the intermediate results
+
+        Returns
+        -------
+        ret : Array[Str], Array[Array[Value]], Array[Value]
+            op names, op inputs, op outputs
+        """
+        res = self._get_interm_tensors()
+        names, ins, outs = res["names"], res["inputs"], res["outputs"]
+        return names, ins, outs
+
     def reset(self):
         """Reset statistics"""
         self._reset()
@@ -53,6 +66,9 @@ class VMProfilerExecutor(executor.VMExecutor):
 
     device : str
         The runtime device to run the code on.
+
+    enable_cuda_graph : bool
+        Whether to enable cuda graph
     """
     def __init__(self, mod, device, enable_cuda_graph=False):
         super(VMProfilerExecutor, self).__init__(mod, device, enable_cuda_graph)
@@ -76,3 +92,13 @@ class VMProfilerExecutor(executor.VMExecutor):
             The execution statistics in string.
         """
         return self.vm.get_stat(sort_by_time)
+
+    def get_interm_tensors(self):
+        """Get the intermediate results
+
+        Returns
+        -------
+        ret : Array[Str], Array[Array[Value]], Array[Value]
+            op names, op inputs, op outputs
+        """
+        return self.vm.get_interm_tensors()

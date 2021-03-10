@@ -31,8 +31,16 @@ class VirtualMachineProfiler : public VirtualMachine {
                     value::Value output) final;
 
  private:
+  /*! \brief the duration of op call */
   std::unordered_map<OpEnv*, std::vector<double>> op_durations_;
+  /*! \brief the number of times of op call*/
   std::unordered_map<OpEnv*, int> op_invokes_;
+  /*! \brief all op envs sorted in invoke order */
+  std::vector<OpEnv*> op_envs_;
+  /*! \brief the inputs for op_envs_ */
+  std::vector<std::vector<value::Value>> op_inputs_;
+  /*! \brief the outputs for op_envs_ */
+  std::vector<value::Value> op_outputs_;
 };
 
 }  // namespace vm

@@ -20,9 +20,38 @@ namespace mnm {
 namespace executor {
 namespace vm {
 
+Value CopyTo(Value src, const Device& dev);
+
 PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
                                                const ObjectPtr<Object>& sptr_to_self) {
-  if (name == "get_stat") {
+  using namespace device_api;
+  if (name == "get_interm_tensors") {
+    return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+      ICHECK_EQ(args.size(), 0U);
+      Device cpu(DevType::kCPU(), 0);
+      Array<String> names;
+      Array<Array<Value>> inputs;
+      Array<Value> outputs;
+      for (const auto& device : devices_) {
+        const std::shared_ptr<DeviceAPI> device_api = DeviceAPI::Get(device.device_type);
+        device_api->WaitDevice(device);
+      }
+      CHECK_EQ(op_inputs_.size(), op_outputs_.size());
+      CHECK_EQ(op_inputs_.size(), op_envs_.size());
+      size_t num = op_inputs_.size();
+      for (size_t i = 0; i < num; ++i) {
+        names.push_back(op_envs_[i]->env_name);
+        outputs.push_back(CopyTo(op_outputs_[i], cpu));
+        Array<Value> input;
+        for (const auto& v : op_inputs_[i]) {
+          input.push_back(CopyTo(v, cpu));
+        }
+        inputs.push_back(input);
+      }
+      Map<String, ObjectRef> res{{"names", names}, {"inputs", inputs}, {"outputs", outputs}};
+      *rv = res;
+    });
+  } else if (name == "get_stat") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       ICHECK_EQ(args.size(), 1U);
       std::vector<std::pair<OpEnv*, double>> op_acc_time;
@@ -68,6 +97,9 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       op_durations_.clear();
       op_invokes_.clear();
+      op_outputs_.clear();
+      op_inputs_.clear();
+      op_envs_.clear();
     });
   } else {
     return VirtualMachine::GetFunction(name, sptr_to_self);
@@ -77,6 +109,9 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
 void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                                           value::Value output) {
   using namespace device_api;
+  op_inputs_.push_back(inputs);
+  op_outputs_.push_back(output);
+  op_envs_.push_back(op_env);
   for (const auto& device : devices_) {
     const std::shared_ptr<DeviceAPI> device_api = DeviceAPI::Get(device.device_type);
     device_api->WaitDevice(device);
@@ -99,7 +134,7 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
   op_invokes_[op_env]++;
 }
 
-tvm::runtime::Module CreateVirtualMachineDebug(const Executable* exec, bool enable_cuda_graph) {
+tvm::runtime::Module CreateVirtualMachineProfiler(const Executable* exec, bool enable_cuda_graph) {
   auto vm = make_object<VirtualMachineProfiler>(enable_cuda_graph);
   vm->LoadExecutable(exec);
   return tvm::runtime::Module(vm);
@@ -111,7 +146,7 @@ MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachineProfiler")
       bool enable_cuda_graph = args[1];
       const auto* exec = dynamic_cast<Executable*>(mod.operator->());
       CHECK(exec) << "The virtual machine executable has not been defined yet.";
-      *rv = CreateVirtualMachineDebug(exec, enable_cuda_graph);
+      *rv = CreateVirtualMachineProfiler(exec, enable_cuda_graph);
     });
 
 }  // namespace vm
