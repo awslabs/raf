@@ -15,7 +15,7 @@
 
 namespace mnm {
 namespace pass {
-namespace to_dataflow {
+namespace to_dataflow_graph {
 
 using namespace mnm::ir;
 using namespace mnm::op;
@@ -62,13 +62,35 @@ class DFGConverter : public MixedModeMutator {
  private:
   std::unordered_map<const VarNode*, Expr> let_map_;
 };
-}  // namespace to_dataflow
+}  // namespace to_dataflow_graph
 
-ir::Expr ToDataflow(ir::Expr expr) {
-  return to_dataflow::DFGConverter().Mutate(expr);
+ir::Expr ToDataflowGraph(ir::Expr expr) {
+  return to_dataflow_graph::DFGConverter().Mutate(expr);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ToDataflow").set_body_typed(ToDataflow);
+// TODO - Cleanup when pass manager is introduced.
+ir::Module ToDataflowGraph(ir::Module mod) {
+  ir::Module updated_mod = ir::Module::make(mod->functions);
+  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
+  auto converter = to_dataflow_graph::DFGConverter();
+
+  for (auto kv : updated_mod->functions) {
+    if (kv.second.as<ir::FunctionNode>()) {
+      auto expr = converter.Mutate(kv.second);
+      auto func = tvm::runtime::Downcast<ir::Function>(expr);
+      updated_funcs.emplace_back(kv.first, func);
+    }
+  }
+
+  for (const auto& it : updated_funcs) {
+    updated_mod->Add(it.first, it.second, true);
+  }
+  return updated_mod;
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.ToDataflowGraph").set_body_typed([](ir::Module mod) {
+  return ToDataflowGraph(mod);
+});
 
 }  // namespace pass
 }  // namespace mnm

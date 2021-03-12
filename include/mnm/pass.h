@@ -148,7 +148,7 @@ ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map);
  * \param expr The expression
  * \return Transformed expression
  */
-ir::Expr ToDataflow(ir::Expr expr);
+ir::Expr ToDataflowGraph(ir::Expr expr);
 
 /*!
  * \brief Replace init and constant ops with the assigned device.
@@ -171,7 +171,25 @@ ir::Module LiftBranchBody(ir::Module mod);
 ir::Module AssignDevice(ir::Module mod, std::string device);
 ir::Module FuseOps(ir::Module mod, int fuse_opt_level);
 ir::Module InlineLet(ir::Module mod);
-ir::Module DeadCodeElimination(const ir::Module mod);
+ir::Module DeadCodeElimination(ir::Module mod);
+ir::Module ToDataflowGraph(ir::Module mod);
+
+/*!
+ * \brief Turn a dataflow graph into Administrative Normal Form, or A-Normal Form (ANF).
+ *
+ * It will turn an expression that is in a graph form (with sharing implicit),
+ * to an expression with explicit sharing (A-Normal Form).
+ *
+ * The scope of the root expression is the global scope.
+ *
+ * The scope of any non root expression is the least common ancestor of all it's scope.
+ *
+ * Values are ordered by post-DFS order in each scope.
+ *
+ * \param mod The input module.
+ * \return Transformed moduel.
+ */
+ir::Module ToANormalForm(ir::Module mod);
 
 }  // namespace pass
 }  // namespace mnm

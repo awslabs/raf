@@ -28,6 +28,7 @@ from ._internal import MergeCompilerRegions
 from ._internal import PartitionGraph
 from ._internal import RenameVars
 from ._internal import Substitute
-from ._internal import ToDataflow
+from ._internal import ToANormalForm
+from ._internal import ToDataflowGraph
 from ._internal import is_constant
 from ._internal import validate_relay_param_name

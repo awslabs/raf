@@ -1003,7 +1003,7 @@ ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level) {
 }
 
 // TODO - Cleanup when pass manager is introduced.
-ir::Module FuseOps(const ir::Module mod, int fuse_opt_level) {
+ir::Module FuseOps(ir::Module mod, int fuse_opt_level) {
   ir::Module updated_mod = ir::Module::make(mod->functions);
   std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
   auto inliner = fuse_ops::FuseMutator();

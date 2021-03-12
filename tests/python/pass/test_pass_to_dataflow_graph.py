@@ -35,8 +35,8 @@ def test_simple():
 
     model = Model()
     m_x, _ = randn((10, 20), device="cpu")
-    func_before = model._internal(m_x).mod['main']
-    func_after = run_infer_type(mnm._ffi.pass_.ToDataflow(func_before))
+    mod = model._internal(m_x).mod
+    func_after = run_infer_type(mnm._ffi.pass_.ToDataflowGraph(mod))["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
 
@@ -70,8 +70,8 @@ def test_tuple():
     model = Model()
     m_x, _ = randn((10, 20))
     m_y, _ = randn((10, 1))
-    func_before = model._internal(m_x, m_y).mod['main']
-    func_after = run_infer_type(mnm._ffi.pass_.ToDataflow(func_before))
+    mod = model._internal(m_x, m_y).mod
+    func_after = run_infer_type(mnm._ffi.pass_.ToDataflowGraph(mod))["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
 
@@ -107,8 +107,8 @@ def test_diamond():
     model = Model()
     m_x, _ = randn((10, 20))
     m_y, _ = randn((10, 1))
-    func_before = model._internal(m_x, m_y).mod['main']
-    func_after = run_infer_type(mnm._ffi.pass_.ToDataflow(func_before))
+    mod = model._internal(m_x, m_y).mod
+    func_after = run_infer_type(mnm._ffi.pass_.ToDataflowGraph(mod))["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
 
