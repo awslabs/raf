@@ -21,6 +21,7 @@ from ._internal import InlineBackward
 from ._internal import InlineLet
 from ._internal import InplaceUpdate
 from ._internal import LambdaLift
+from ._internal import LiftBranchBody
 from ._internal import ManifestAlloc
 from ._internal import MemShare
 from ._internal import MergeCompilerRegions

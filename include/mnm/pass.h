@@ -158,6 +158,13 @@ ir::Expr ToDataflow(ir::Expr expr);
  */
 ir::Expr AssignDevice(ir::Expr expr, std::string device);
 
+/*!
+ * \brief Lifts if true and false branches to global functions.
+ * \param mod The module to be mutated.
+ * \return Transformed module.
+ */
+ir::Module LiftBranchBody(ir::Module mod);
+
 // TODO - Cleanup after pass manager is introduced. These passes are Function passes.
 // Once pass manager is introduced, the pass manager can iterate over the functions.
 // For now, the overloaded functions are iterating over functions.

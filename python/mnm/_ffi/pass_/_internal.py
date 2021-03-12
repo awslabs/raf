@@ -42,6 +42,8 @@ InlineLet = _APIS.get("mnm.pass_.InlineLet", None)
 InplaceUpdate = _APIS.get("mnm.pass_.InplaceUpdate", None)
 # Defined in ./src/pass/lambda_lift.cc
 LambdaLift = _APIS.get("mnm.pass_.LambdaLift", None)
+# Defined in ./src/pass/lift_branch_body.cc
+LiftBranchBody = _APIS.get("mnm.pass_.LiftBranchBody", None)
 # Defined in ./src/pass/manifest_alloc.cc
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
 # Defined in ./src/pass/memory_share.cc

@@ -95,6 +95,14 @@ GlobalVar ModuleGetGlobalVar(Module mod, const std::string& name) {
   return mod->GetGlobalVar(name);
 }
 
+Array<GlobalVar> ModuleGetGlobalVars(Module mod) {
+  Array<GlobalVar> gvars;
+  for (auto gvar_func : mod->functions) {
+    gvars.push_back(gvar_func.first);
+  }
+  return gvars;
+}
+
 Function ModuleLookup(Module mod, GlobalVar var) {
   return mod->Lookup(var);
 }
@@ -210,6 +218,7 @@ MNM_REGISTER_GLOBAL("mnm.ir.module.Add").set_body_typed(ModuleAdd);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Lookup").set_body_typed(ModuleLookup);
 MNM_REGISTER_GLOBAL("mnm.ir.module.LookupStr").set_body_typed(ModuleLookupStr);
 MNM_REGISTER_GLOBAL("mnm.ir.module.GetGlobalVar").set_body_typed(ModuleGetGlobalVar);
+MNM_REGISTER_GLOBAL("mnm.ir.module.GetGlobalVars").set_body_typed(ModuleGetGlobalVars);
 MNM_REGISTER_GLOBAL("mnm.ir.module.FromExpr").set_body_typed(ModuleFromExpr);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(Module::Global);
 

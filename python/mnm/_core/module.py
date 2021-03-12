@@ -2,7 +2,7 @@
 """Module that consists of global variables and functions."""
 import mnm._ffi.ir.module as ffi
 from mnm._core.core_utils import register_node
-from mnm._ffi.ir import _make
+from mnm._ffi.ir import _make, AsText
 from mnm._lib import Object
 from mnm._lib import relay
 
@@ -31,6 +31,15 @@ class Module(Object):
             return ffi.Lookup(self, var)
         raise NotImplementedError(
             f"Module lookup for type {type(var)} is not supported")
+
+    def get_global_vars(self):
+        return ffi.GetGlobalVars(self)
+
+    def __str__(self):
+        mod_str = str()
+        for gvar in self.get_global_vars():
+            mod_str += str(gvar) + " : " + str(AsText(self[gvar])) + "\n"
+        return mod_str
 
     @staticmethod
     def from_expr(expr, global_funcs=None):
