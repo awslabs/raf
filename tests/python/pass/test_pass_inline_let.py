@@ -55,11 +55,6 @@ def test_inline():
         return relay.Function([x, dy, w], let1)
 
     def expected3():
-        x = relay.var("p0", shape=(10, 20))
-        y = relay.Call(transpose_op, [x, default_vec])
-        f1 = relay.Function([x], y)
-        f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-
         x = relay.var("p01", shape=(20, 10))
         y = relay.var("p1", shape=(10, 15))
         z = relay.var("p2", shape=(20, 15))
@@ -74,7 +69,7 @@ def test_inline():
         a1 = relay.var("a1")
         a5 = relay.var("a5")
         let5 = relay.Let(a5, relay.Call(f2, [a1, dy, w]), a5)
-        let1 = relay.Let(a1, relay.Call(f1, [x]), let5)
+        let1 = relay.Let(a1, relay.Call(transpose_op, [x, default_vec]), let5)
         return relay.Function([x, dy, w], let1)
 
     model = Model()

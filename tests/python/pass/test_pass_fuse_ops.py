@@ -1,4 +1,5 @@
-# pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements
+# pylint: disable=attribute-defined-outside-init,invalid-name,protected-access
+# pylint: disable=too-many-locals,too-many-statements,too-many-arguments,no-self-use
 import numpy as np
 import pytest
 import mnm
@@ -84,12 +85,6 @@ def test_conv2d():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
 
-        # segment 0
-        x = relay.var("p0", shape=(1, 16, 64, 64))
-        y = relay.var("p1", shape=(1,))
-        f0 = relay.Function([x, y], relay.Call(add_op, [x, y, default, default]))
-        f0 = f0.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-
         # segment 1
         x = relay.var("p0", shape=(1, 16, 64, 64))
         w = relay.var("p1", shape=(16, 16, 3, 3))
@@ -101,27 +96,12 @@ def test_conv2d():
         p6 = relay.var("p6", "int64")
         p7 = relay.var("p7", "int64")
         p8 = relay.var("p8", "int64")
-        c = relay.var("c", shape=(1,))
+        p9 = relay.var("p9", shape=(1,))
         y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
-        y1 = relay.Call(add_op, [y, c, default, default])
+        y1 = relay.Call(add_op, [y, p9, default, default])
         y = relay.Call(add_op, [y, y1, default, default])
-        f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, c], y)
+        f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p9], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-
-        # segment 2
-        x = relay.var("p0", shape=(1, 16, 64, 64))
-        w = relay.var("p1", shape=(16, 16, 3, 3))
-        p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
-        p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
-        p5 = relay.var("p5", "int64")
-        p6 = relay.var("p6", "int64")
-        p7 = relay.var("p7", "int64")
-        p8 = relay.var("p8", "int64")
-        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
-        f2 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8], y)
-        f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         # segment 3
         x = relay.var("p0", shape=(1, 16, 64, 64))
@@ -134,10 +114,10 @@ def test_conv2d():
         p6 = relay.var("p6", "int64")
         p7 = relay.var("p7", "int64")
         p8 = relay.var("p8", "int64")
-        offset = relay.var("offset", shape=(1, 16, 64, 64))
+        p91 = relay.var("p91", shape=(1, 16, 64, 64))
         y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
-        y = relay.Call(add_op, [y, offset, default, default])
-        f3 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, offset], y)
+        y = relay.Call(add_op, [y, p91, default, default])
+        f3 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p91], y)
         f3 = f3.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         # compose
@@ -152,11 +132,11 @@ def test_conv2d():
         a7 = relay.var("a7")
         let3 = relay.Let(a7, relay.Call(f3, [a4, w2, konst1, konst0, konst1, konst1,
                                              konst_nchw, konst_oihw, konst_nchw, a6]), a7)
-        let2 = relay.Let(a6, relay.Call(f2, [a4, w3, konst1, konst1, konst1, konst1,
-                                             konst_nchw, konst_oihw, konst_nchw]), let3)
+        let2 = relay.Let(a6, relay.Call(conv2d_op, [a4, w3, konst1, konst1, konst1, konst1,
+                                                    konst_nchw, konst_oihw, konst_nchw]), let3)
         let1 = relay.Let(a4, relay.Call(f1, [a1, w1, konst1, konst1, konst1, konst1,
                                              konst_nchw, konst_oihw, konst_nchw, c]), let2)
-        let = relay.Let(a1, relay.Call(f0, [x, c]), let1)
+        let = relay.Let(a1, relay.Call(add_op, [x, c, default, default]), let1)
         return relay.Function([x, c, w1, w2, w3], let)
 
     model = Model()
@@ -196,20 +176,6 @@ def test_concatenate():
         default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
 
         p0 = relay.var("p0", shape=shape)
-        p1 = relay.var("p1", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
-        p2 = relay.var("p2", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
-        p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
-        p5 = relay.var("p5", "bool")
-        p6 = relay.var("p6", "bool")
-        p7 = relay.var("p7", "int64")
-        pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6, p7])
-        f1 = relay.Function([p0, p1, p2, p3, p4, p5, p6, p7], pooled)
-        f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-
-        p0 = relay.var("p0", shape=shape)
         p1 = relay.var("p0", shape=shape)
         p2 = relay.var("p2", shape=(1,))
         concat = relay.Call(concat_op, [relay.Tuple([p0, p1]), konst1])
@@ -222,8 +188,8 @@ def test_concatenate():
         a1 = relay.var("a1")
         a4 = relay.var("a4")
         let2 = relay.Let(a4, relay.Call(f2, [a1, x, c]), a4)
-        let1 = relay.Let(a1, relay.Call(f1, [x, konst3, konst1, konst1, konst1,
-                                             false, true, knchw]), let2)
+        let1 = relay.Let(a1, relay.Call(max_pool2d_op, [x, konst3, konst1, konst1, konst1,
+                                                        false, true, knchw]), let2)
         return relay.Function([x, c], let1)
 
     model = Model()
@@ -295,6 +261,40 @@ def test_tuple_root():
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(after['main'], func_expected)
 
+def test_single_w_tuple():
+    """Call nodes that cannot be fused should not be in a function."""
+    shape = [32, 3, 224, 224]
+    momentum = 0.1
+    eps = 1e-5
+    stats_shape = [shape[1]]
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, m_x, m_w, m_b, m_m, m_v):
+            res = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            y = res[0]
+            y = mnm.relu(y)
+            new_m = res[1]
+            new_v = res[2]
+            return (y, new_m, new_v)
+
+    model = Model()
+    m_x, _ = randn(shape)
+    m_m, _ = randn(stats_shape)
+    m_v, _ = randn(stats_shape, positive=True)
+    m_w, _ = randn(stats_shape)
+    m_b, _ = randn(stats_shape)
+    before = model._internal(m_x, m_w, m_b, m_m, m_v).mod
+    before = run_infer_type(before)
+    after = mnm._ffi.pass_.FuseOps(before, 3)
+    after = run_infer_type(after)
+    # BatchNorm and ReLU cannot be fused together and each of them
+    # will not form a function, so fusion should have no effect in this case.
+    assert tvm.ir.structural_equal(after["main"], before["main"])
+
 
 # TODO@(hzfan): fix issue #402
 @pytest.mark.xfail
@@ -310,7 +310,7 @@ def test_sgd():
             self.x = mnm.array(np.random.randn(*shape).astype(dtype), device=device)
 
         @mnm.model.trace
-        def forward(self, dy):  # pylint: disable=no-self-use
+        def forward(self, dy):
             y = mnm.relu(self.x)
             dx = mnm.relu_dx(self.x, y, dy)
             return y, dx

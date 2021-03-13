@@ -543,14 +543,15 @@ class GraphPartitioner {
       if (root_ref) {
         os << ", " << GetRef<ObjectRef>(root_ref);
       }
-      os << ", #nodes=" << num_nodes << ", pattern=" << pattern << ", root=" << FindRoot();
+      os << ", #call_nodes=" << num_call_nodes << ", pattern=" << pattern
+         << ", root=" << FindRoot();
       return os.str();
     }
 
     /*!
-     * \brief The number of nodes belonging to this group
+     * \brief The number of call nodes belonging to this group.
      */
-    uint32_t num_nodes{1};
+    uint32_t num_call_nodes{0};
   };
   /*!
    * \brief Partition a graph.
@@ -629,7 +630,7 @@ class GraphPartitioner {
    */
   void MergeFromTo(Group* child, Group* parent) {
     // update the number of nodes of the parent group
-    parent->num_nodes += child->num_nodes;
+    parent->num_call_nodes += child->num_call_nodes;
     child = child->FindRoot();
     parent = parent->FindRoot();
     if (child == parent) return;
@@ -675,6 +676,7 @@ class GraphPartitioner {
       auto* group_node = arena_->make<Group>();
       group_node->pattern = graph_node->pattern;
       group_node->root_ref = graph_node->ref;
+      group_node->num_call_nodes += (group_node->root_ref->IsInstance<CallNode>()) ? 1 : 0;
       // set master ref if necessary.
       if (group_node->pattern == kOutEWiseFusable) {
         group_node->master_ref = graph_node->ref;
@@ -699,7 +701,8 @@ class GraphPartitioner {
       size_t dom_parent_gindex = dom_node->parent->gnode->index;
 
       // refuse the fusion if too many ops are going to be fused together
-      if (groups_[dom_parent_gindex]->num_nodes + group_node->num_nodes > kMaxFusedOps) continue;
+      if (groups_[dom_parent_gindex]->num_call_nodes + group_node->num_call_nodes > kMaxFusedOps)
+        continue;
 
       if (phase == 2) {
         // Fuse injective ops into intermediate tuples, if any
@@ -876,6 +879,12 @@ class FuseMutator : private ExprMutator {
       //        return ExprMutator::VisitExpr(call->args[0]);
       //      }
       auto* ret_group = gmap_.at(call)->FindRoot();
+
+      if (ret_group->num_call_nodes == 1) {
+        // Skip the group with only one call node.
+        return ExprMutator::VisitExpr_(call);
+      }
+
       Array<Expr> new_args = GetNewArguments(call->args, ret_group);
 
       auto new_call = Call(call->op, new_args, call->attrs, call->type_args);
@@ -896,6 +905,7 @@ class FuseMutator : private ExprMutator {
 
   Expr VisitExpr_(const TupleNode* tuple) {
     auto* ret_group = gmap_.at(tuple)->FindRoot();
+
     Array<Expr> new_fields = GetNewArguments(tuple->fields, ret_group);
     if (ret_group->root_ref != tuple) {
       // This tuple is an intermediate node in the group
@@ -904,7 +914,7 @@ class FuseMutator : private ExprMutator {
     // This tuple is the root of group
     HasCallVisitor visitor;
     visitor.VisitExpr(Tuple(new_fields));
-    if (visitor.has_call) {
+    if (visitor.has_call && ret_group->num_call_nodes > 1) {
       // Other ops have been fused into this tuple
       return MakeNewFunction(ret_group, tuple->checked_type(), Tuple(new_fields));
     }
@@ -913,6 +923,11 @@ class FuseMutator : private ExprMutator {
 
   Expr VisitExpr_(const TupleGetItemNode* tuple_get) {
     auto* ret_group = gmap_.at(tuple_get)->FindRoot();
+    if (ret_group->num_call_nodes == 1) {
+      // Skip the group with only one call node.
+      return ExprMutator::VisitExpr_(tuple_get);
+    }
+
     auto new_tuple = GetNewArguments({tuple_get->tuple}, ret_group)[0];
     auto new_node = TupleGetItem(new_tuple, tuple_get->index);
     if (ret_group->root_ref == tuple_get) {
@@ -930,6 +945,11 @@ class FuseMutator : private ExprMutator {
 
   Expr VisitExpr_(const LetNode* let) {
     auto ret_group = gmap_.at(let->var.get())->FindRoot();
+    if (ret_group->num_call_nodes == 1) {
+      // Skip the group with only one call node.
+      return ExprMutator::VisitExpr_(let);
+    }
+
     auto new_value = Mutate(let->value);
     let_binding_.emplace(let->var, std::make_pair(let->value, new_value));
     auto new_body = Mutate(let->body);
