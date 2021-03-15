@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 import mnm
 from mnm.frontend import FrameworkModel
-from mnm.testing import randint, randn, check, utils
+from mnm.testing import get_device_list, randint, randn, check, utils
 from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import Module
 from mnm._lib import tvm as _tvm
@@ -740,10 +740,12 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
 
     check_from_relay(model, r_func, [m_x, m_w])
 
-
+# FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
+@pytest.mark.xfail
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("p", [0.3, 0.7])
-def test_contrib_dropout(shape, p):
+def test_contrib_dropout(device, shape, p):
     # pylint: disable=invalid-name,no-member
     class ContribDropout(mnm.Model):
         def build(self, p):
@@ -761,7 +763,7 @@ def test_contrib_dropout(shape, p):
     r_func = _relay.Function(params=[r_x], body=r_c)
 
     # We cannot check the correctness for now due to random generated mask.
-    check_from_relay(model, r_func, [m_x], check_correctness=False)
+    check_from_relay(model, r_func, [m_x], check_correctness=False, device=device)
 
 
 @pytest.mark.parametrize("kernel", [1, 2, 3])

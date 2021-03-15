@@ -158,13 +158,24 @@ MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Ex
   return mnm_args;
 });
 
-MNM_OP_FROM_RELAY("nn.dropout", "mnm.op._contrib_dropout",
-                  [&](const Attrs& attrs, const Array<Expr>& args) {
-                    Array<Expr> mnm_args = args;
-                    const auto* relay_attrs = attrs.as<DropoutAttrs>();
-                    mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->rate)));
-                    return mnm_args;
-                  });
+// FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
+// MNM_OP_FROM_RELAY("nn.dropout", "mnm.op._contrib_dropout",
+//                   [&](const Attrs& attrs, const Array<Expr>& args) {
+//                     Array<Expr> mnm_args = args;
+//                     const auto* relay_attrs = attrs.as<DropoutAttrs>();
+//                     mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->rate)));
+//                     return mnm_args;
+//                   });
+RELAY_REGISTER_OP("nn.dropout")
+    .set_attr<op::FMNMFromRelay>("FMNMFromRelay", [](const Attrs& attrs, const Array<Expr>& args) {
+      LOG(WARNING) << "nn.dropout is unavailable in Meta, ignored";
+      const auto* relay_attrs = attrs.as<DropoutAttrs>();
+
+      Array<Expr> ret;
+      ret.push_back(args[0]);
+      ret.push_back(MakeConstant(FloatValue::make(2)));
+      return Tuple(std::move(ret));
+    });
 
 }  // namespace from_relay
 }  // namespace op

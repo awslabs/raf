@@ -83,13 +83,17 @@ struct FromRelayMutator : public ExprMutator {
     if (fmap.count(op)) {
       try {
         auto new_expr = fmap[op](node->attrs, node->args);
-        Call new_call = Downcast<Call>(new_expr);
-        tvm::Array<Expr> call_args;
-        for (auto arg : new_call->args) {
-          auto new_arg = this->Mutate(arg);
-          call_args.push_back(new_arg);
+        if (new_expr.as<CallNode>()) {
+          Call new_call = Downcast<Call>(new_expr);
+          tvm::Array<Expr> call_args;
+          for (auto arg : new_call->args) {
+            auto new_arg = this->Mutate(arg);
+            call_args.push_back(new_arg);
+          }
+          res = Call(new_call->op, call_args);
+        } else {
+          return this->Mutate(new_expr);
         }
-        res = Call(new_call->op, call_args);
       } catch (const dmlc::Error& e) {
         LOG(WARNING) << e.what();
         // Return the orignial Relay call and make a record for unsupported ops
