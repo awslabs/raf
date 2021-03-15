@@ -191,8 +191,12 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
         std::ostringstream os;
         const auto* constant = expr.as<ConstantNode>();
         if (constant) {
-          // erase "-114514"
-          os << "\b\b\b\b\b\b\bmnm.Constant(" << constant->value << ")";
+          // \b to erase "-114514"
+          if (constant->value.defined()) {
+            os << "\b\b\b\b\b\b\bmnm.Constant(" << constant->value << ")";
+          } else {
+            os << "\b\b\b\b\b\b\bmnm.Constant(nullptr)";
+          }
         }
         if ((expr.as<ConstantNode>() || expr.as<CallNode>()) &&
             Downcast<Expr>(expr)->checked_type_.defined()) {

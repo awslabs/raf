@@ -214,8 +214,8 @@ SCHEMAS = {
     ],
     "nn.h::layer_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="scale", cxx_type=OptionalTensor),
-        Arg(name="bias", cxx_type=OptionalTensor),
+        Arg(name="scale", cxx_type=OptionalTensor, cxx_default="nullptr"),
+        Arg(name="bias", cxx_type=OptionalTensor, cxx_default="nullptr"),
         Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
         Arg(name="eps", cxx_type="double", cxx_default=1e-5),
     ],

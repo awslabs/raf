@@ -117,8 +117,8 @@ class DropoutArgs : public ir::AttrsNode<DropoutArgs> {
 class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
  public:
   value::BaseTensorValue x;
-  ir::Optional<value::BaseTensorValue> scale;
-  ir::Optional<value::BaseTensorValue> bias;
+  ir::Optional<value::BaseTensorValue> scale{nullptr};
+  ir::Optional<value::BaseTensorValue> bias{nullptr};
   int64_t axis{-1};
   double eps{1e-05};
   MNM_OP_SCHEMA(LayerNormArgs, "mnm.args.layer_norm");

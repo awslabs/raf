@@ -3545,10 +3545,10 @@ Attrs InitOp(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs LayerNorm(const Array<Value>& values) {
-  MNM_PRELUDE(3, 5, schema::LayerNormArgs);
+  MNM_PRELUDE(1, 5, schema::LayerNormArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::OptionalTensor, scale);
-  MNM_REQUIRED(2, value2schema::OptionalTensor, bias);
+  MNM_OPTIONAL(1, value2schema::OptionalTensor, scale);
+  MNM_OPTIONAL(2, value2schema::OptionalTensor, bias);
   MNM_OPTIONAL(3, value2schema::Int, axis);
   MNM_OPTIONAL(4, value2schema::Double, eps);
   return Attrs(attrs);

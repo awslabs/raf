@@ -148,6 +148,7 @@ def test_log_softmax(device, dtype, shape):
     check(m_x.grad, t_x.grad)
 
 
+# pylint: disable=too-many-arguments
 @with_seed(0)
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
@@ -159,52 +160,66 @@ def test_log_softmax(device, dtype, shape):
 @pytest.mark.parametrize("axis", [0, 1, 2, -1])
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_layer_norm(device, shape, axis, eps, dtype):
+@pytest.mark.parametrize("learnable_affine_transform", [False, True])
+def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform):
     # pylint: disable=import-outside-toplevel
     # pylint: disable=attribute-defined-outside-init
     import mxnet as mx
+
     class LayerNorm(mnm.Model):
         def build(self, axis, eps):
             self._axis = axis
             self._eps = eps
 
         @mnm.model.trace
-        def forward(self, x, scale, bias):
-            return mnm.layer_norm(x, scale, bias, axis=self._axis, eps=self._eps)
+        def forward(self, *inputs):
+            return mnm.layer_norm(*inputs, axis=self._axis, eps=self._eps)
+
     m_model = LayerNorm(axis, eps)
     m_model.to(device=device, dtype=dtype)
-    mx_model = mx.gluon.nn.LayerNorm(axis=axis, epsilon=eps)
+    mx_model = mx.gluon.nn.LayerNorm(axis=axis, epsilon=eps,
+                                     center=learnable_affine_transform,
+                                     scale=learnable_affine_transform)
     mx_model.initialize(ctx=mx.cpu(0))
+
     m_x, n_x = randn(shape, device=device, dtype=dtype)
-    m_scale, n_scale = randn([shape[axis]], device=device, dtype=dtype)
-    m_bias, n_bias = randn([shape[axis]], device=device, dtype=dtype)
     mx_x = mx.nd.array(n_x)
-    mx_scale = mx.nd.array(n_scale)
-    mx_bias = mx.nd.array(n_bias)
     m_x.requires_grad = True
     mx_x.attach_grad()
-    mx_scale.attach_grad()
-    mx_bias.attach_grad()
-    mx_model.gamma.set_data(mx_scale)
-    mx_model.beta.set_data(mx_bias)
-    # check forward
-    m_y = m_model(m_x, m_scale, m_bias)
-    v_y = run_vm_model(m_model, device, [m_x, m_scale, m_bias])
+
+    if learnable_affine_transform:
+        m_scale, n_scale = randn([shape[axis]], device=device, dtype=dtype)
+        m_bias, n_bias = randn([shape[axis]], device=device, dtype=dtype)
+        m_scale.requires_grad = True
+        m_bias.requires_grad = True
+        mx_scale = mx.nd.array(n_scale)
+        mx_bias = mx.nd.array(n_bias)
+        mx_scale.attach_grad()
+        mx_bias.attach_grad()
+        mx_model.gamma.set_data(mx_scale)
+        mx_model.beta.set_data(mx_bias)
+        # check forward
+        m_y = m_model(m_x, m_scale, m_bias)
+        v_y = run_vm_model(m_model, device, [m_x, m_scale, m_bias])
+    else:
+        m_y = m_model(m_x)
+        v_y = run_vm_model(m_model, device, [m_x])
+
     m_dy, n_dy = randn(m_y.shape, device=device, dtype=dtype)
     mx_dy = mx.nd.array(n_dy)
     with mx.autograd.record():
         mx_y = mx_model(mx_x)
         mx_y.backward(mx_dy)
-        mx_dw = mx_model.gamma.grad()
-        mx_db = mx_model.beta.grad()
 
     check(m_y, mx_y.asnumpy(), rtol=1e-4, atol=1e-4)
     check(v_y, mx_y.asnumpy(), rtol=1e-4, atol=1e-4)
     # check backward
-    dx, dw, db = mnm.layer_norm_dx(m_x, m_scale, m_dy, axis, eps)
-    check(dx, mx_x.grad.asnumpy(), rtol=1e-4, atol=1e-4)
-    check(db, mx_db.asnumpy(), rtol=1e-4, atol=1e-4)
-    check(dw, mx_dw.asnumpy(), rtol=1e-4, atol=1e-4)
+    m_y.backward(m_dy)
+    check(m_x.grad, mx_x.grad.asnumpy(), rtol=1e-4, atol=1e-4)
+    if learnable_affine_transform:
+        check(m_scale.grad, mx_model.gamma.grad().asnumpy(), rtol=1e-4, atol=1e-4)
+        check(m_bias.grad, mx_model.beta.grad().asnumpy(), rtol=1e-4, atol=1e-4)
+
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

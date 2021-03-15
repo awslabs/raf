@@ -304,6 +304,11 @@ Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, co
   const Expr& axis = call->args[3];
   const Expr& eps = call->args[4];
   const Expr& ret = Call(op_dx, {x, scale, dy, axis, eps});
+  const auto* kscale = scale.as<tvm::relay::ConstantNode>();
+  if (kscale && !static_cast<const ConstantNode*>(kscale)->value.defined()) {
+    // scale and bias are not learnable parameters.
+    return {ret};
+  }
   return {
       TupleGetItem(ret, 0),
       TupleGetItem(ret, 1),

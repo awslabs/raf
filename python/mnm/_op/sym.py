@@ -435,7 +435,7 @@ def greater_equal(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.greater_equal(x1, x2, out, where))
 
-def layer_norm(x, scale, bias, axis=-1, eps=1e-05):
+def layer_norm(x, scale=None, bias=None, axis=-1, eps=1e-05):
     x = sym_utils.to_tensor(x)
     scale = sym_utils.to_tensor(scale)
     bias = sym_utils.to_tensor(bias)

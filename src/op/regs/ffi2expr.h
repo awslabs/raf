@@ -98,7 +98,7 @@ inline ir::Expr OptionalArrayLike(const registry::TVMArgValue& a) {
 
 inline ir::Expr Tensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
-  if (type_code == kTVMNDArrayHandle || type_code == kTVMNullptr) {
+  if (type_code == kTVMNDArrayHandle) {
     return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
@@ -108,7 +108,9 @@ inline ir::Expr Tensor(const registry::TVMArgValue& a) {
 
 inline ir::Expr OptionalTensor(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
-  if (type_code == kTVMNDArrayHandle || type_code == kTVMNullptr) {
+  if (type_code == kTVMNullptr) {
+    return MakeConstant(Value());
+  } else if (type_code == kTVMNDArrayHandle) {
     return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
