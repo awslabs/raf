@@ -32,6 +32,7 @@ using binding::BindNDArray;
 using binding::DeTuple;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
+using binding::SymbolBindingObj;
 using common::shape_utils::BytesCompactTensor;
 using memory_pool::Memory;
 using requests::Requests;
@@ -51,6 +52,10 @@ class SymbolTable {
     if (!entry.defined()) {
       LOG(FATAL) << "could not find variable binding for " << var->name_hint();
       throw;
+    }
+    if (const auto* sym = entry.as<SymbolBindingObj>()) {
+      CHECK(sym->expr.defined());
+      return Interpret(sym->expr);
     }
     return Downcast<NDArrayBinding>(entry)->value;
   }

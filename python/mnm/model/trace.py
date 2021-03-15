@@ -82,6 +82,9 @@ def _get_func_inputs(record, args, kwargs, get_handle=True):
             handle = arg._ndarray__handle if get_handle else arg
         elif isinstance(arg, Symbol):
             handle = arg._Symbol__handle if get_handle else arg
+        elif isinstance(arg, (tuple, list)):
+            sym = Symbol.make_tuple([i._ndarray__handle for i in arg])
+            handle = sym._Symbol__handle if get_handle else arg
         else:
             raise NotImplementedError("Not supported arg type: ", type(arg))
         func_inputs.append(handle)
@@ -139,19 +142,23 @@ def _do_tracing(pyfunc, args, kwargs):
 
 def _symbolize_inputs(pyfunc, args, kwargs):
     # TODO(@junrushao1994): support varargs and kwargs
+    def get_type(x):
+        if isinstance(x, ndarray):
+            return relay.TensorType(shape=x.shape, dtype=x.dtype)
+        if isinstance(x, (tuple, list)):
+            return relay.TupleType([get_type(i) for i in x])
+        raise NotImplementedError("Type is not supported: ", type(x))
     bound_args = get_bound_args(pyfunc, args, kwargs)
     named_inputs = OrderedDict()
     for name, value in list(bound_args.arguments.items())[1:]:  # pylint: disable=unused-variable
-        if isinstance(value, ndarray):
+        if isinstance(value, (tuple, list, ndarray)):
             bound_args.arguments[name] = \
                     named_inputs[name] = \
-                    Symbol.make_var(name_hint=name,
-                                    type_annotation=relay.TensorType(shape=value.shape,
-                                                                     dtype=value.dtype))
+                    Symbol.make_var(name_hint=name, type_annotation=get_type(value))
         elif isinstance(value, Symbol):
             bound_args.arguments[name] = named_inputs[name] = value
         else:
-            raise NotImplementedError("Only ndarray and Symbol are supported for now")
+            raise NotImplementedError("Type is not supported: ", type(value))
     return named_inputs, bound_args.args, bound_args.kwargs
 
 
