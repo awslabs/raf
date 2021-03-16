@@ -59,10 +59,12 @@ Type BatchMatmulInfer(const CallValues& value) {
   CHECK(TypeCheckCompare(m1, m2, std::equal_to<int>()))
       << "BatchMatmul: shapes of x and y is inconsistent, "
       << " x shape=" << x->shape << ", y shape=" << y->shape;
-  CHECK(TypeCheckCompare(k1, k2, std::equal_to<int>()))
-      << "BatchMatmul: batch size of x and y is inconsistent, "
-      << " x shape=" << x->shape << ", y shape=" << y->shape;
-  Array<tvm::PrimExpr> oshape = {k1, n1, n2};
+  int64_t k1_v = k1.as<IntImmNode>()->value;
+  int64_t k2_v = k2.as<IntImmNode>()->value;
+  CHECK(k1_v == k2_v || k1_v == 1 || k2_v == 1)
+      << "Incompatible broadcast type " << x << " and " << y;
+  PrimExpr k = (k1_v > k2_v) ? k1 : k2;
+  Array<tvm::PrimExpr> oshape = {k, n1, n2};
   return TensorType(oshape, x->dtype);
 }
 

@@ -40,6 +40,37 @@ def test_batch_matmul(b, n, m, k, device):
 
 
 @pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("b", [2, 4])
+@pytest.mark.parametrize("n", [2, 4])
+@pytest.mark.parametrize("m", [2, 4])
+@pytest.mark.parametrize("k", [2, 4])
+def test_batch_matmul_broadcast(b, n, m, k, device):
+    class BatchMatmul(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, m_a, m_b):
+            return mnm.batch_matmul(m_a, m_b)
+    # check forward
+    model = BatchMatmul()
+    m_a, n_a = randn((b, m, k), device=device)
+    m_b, n_b = randn((1, n, k), device=device)
+    m_a.requires_grad = True
+    m_b.requires_grad = True
+    m_c = model(m_a, m_b)
+    v_c = run_vm_model(model, device, [m_a, m_b])
+    n_c = np.matmul(n_a, np.transpose(n_b, (0, 2, 1)))
+    check(m_c, n_c)
+    check(v_c, n_c)
+    # check backward
+    m_dy, n_dy = randn(m_c.shape, device=device)
+    m_c.backward(m_dy)
+    n_dyt = np.transpose(n_dy, (0, 2, 1))
+    check(m_a.grad, np.matmul(n_dy, n_b))
+    check(m_b.grad, np.sum(np.matmul(n_dyt, n_a), axis=0, keepdims=True))
+
+
+@pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("n", [1, 2, 4])
 @pytest.mark.parametrize("m", [1, 2, 4])
 @pytest.mark.parametrize("k", [1, 2, 4])

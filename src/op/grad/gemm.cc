@@ -74,10 +74,17 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Array<Expr> orig_args, 
   auto dy_trans = Call(transpose, {dy, axes_expr});
   auto b_trans = Call(transpose, {b, axes_expr});
   auto a_trans = Call(transpose, {a, axes_expr});
-  return {
-      Call(batch_matmul, {dy, b_trans}),
-      Call(batch_matmul, {dy_trans, a_trans}),
+  auto da = Call(batch_matmul, {dy, b_trans});
+  auto db = Call(batch_matmul, {dy_trans, a_trans});
+  auto f = [](const Expr& dx, const Expr& x) {
+    static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
+    static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
+    static auto sum = Op::Get("mnm.op.sum");
+    Call axes = Call(collapse_axis, {dx, x});
+    Call keep = Call(collapse_keep, {dx, x});
+    return Call(sum, {dx, axes, keep});
   };
+  return {f(da, a), f(db, b)};
 }
 
 MNM_OP_GRAD("mnm.op.batch_matmul", BatchMatmulGrad);

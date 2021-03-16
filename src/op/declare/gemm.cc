@@ -71,11 +71,13 @@ MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
   int64_t n2 = b->shape[1];
   int64_t m2 = b->shape[2];
   CHECK_EQ(m1, m2);
-  CHECK_EQ(k1, k2);
+  CHECK(k1 == k2 || k1 == 1 || k2 == 1)
+      << "Incompatible broadcast batch size " << k1 << " and " << k2;
+  int64_t k = k1 > k2 ? k1 : k2;
   CHECK(a->dtype.code == kDLFloat && (a->dtype.bits == 32 || a->dtype.bits == 64))
       << "Only float and double are supported!";
   call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype,
-                                    /*shape=*/std::vector<int64_t>{k1, n1, n2});
+                                    /*shape=*/std::vector<int64_t>{k, n1, n2});
   call->device = a->ctx;
   if (!k1 || !k2 || !n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
