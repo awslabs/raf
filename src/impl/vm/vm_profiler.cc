@@ -27,28 +27,14 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
   using namespace device_api;
   if (name == "get_interm_tensors") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+      CHECK(cache_interm_tensors_)
+          << "No intermediate tensor is cached. Please use "
+          << "cache_interm_tensors=True to create the VirtualMachineProfiler";
       ICHECK_EQ(args.size(), 0U);
-      Device cpu(DevType::kCPU(), 0);
-      Array<String> names;
-      Array<Array<Value>> inputs;
-      Array<Value> outputs;
-      for (const auto& device : devices_) {
-        const std::shared_ptr<DeviceAPI> device_api = DeviceAPI::Get(device.device_type);
-        device_api->WaitDevice(device);
-      }
-      CHECK_EQ(op_inputs_.size(), op_outputs_.size());
-      CHECK_EQ(op_inputs_.size(), op_envs_.size());
-      size_t num = op_inputs_.size();
-      for (size_t i = 0; i < num; ++i) {
-        names.push_back(op_envs_[i]->env_name);
-        outputs.push_back(CopyTo(op_outputs_[i], cpu));
-        Array<Value> input;
-        for (const auto& v : op_inputs_[i]) {
-          input.push_back(CopyTo(v, cpu));
-        }
-        inputs.push_back(input);
-      }
-      Map<String, ObjectRef> res{{"names", names}, {"inputs", inputs}, {"outputs", outputs}};
+      CHECK_EQ(op_inputs_.size(), op_names_.size());
+      CHECK_EQ(op_outputs_.size(), op_names_.size());
+      Map<String, ObjectRef> res{
+          {"names", op_names_}, {"inputs", op_inputs_}, {"outputs", op_outputs_}};
       *rv = res;
     });
   } else if (name == "get_stat") {
@@ -99,7 +85,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       op_invokes_.clear();
       op_outputs_.clear();
       op_inputs_.clear();
-      op_envs_.clear();
+      op_names_.clear();
     });
   } else {
     return VirtualMachine::GetFunction(name, sptr_to_self);
@@ -109,9 +95,6 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
 void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                                           value::Value output) {
   using namespace device_api;
-  op_inputs_.push_back(inputs);
-  op_outputs_.push_back(output);
-  op_envs_.push_back(op_env);
   for (const auto& device : devices_) {
     const std::shared_ptr<DeviceAPI> device_api = DeviceAPI::Get(device.device_type);
     device_api->WaitDevice(device);
@@ -132,10 +115,22 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
   }
   op_durations_[op_env].push_back(op_duration * 1e6);
   op_invokes_[op_env]++;
+
+  if (cache_interm_tensors_) {
+    static Device cpu(DevType::kCPU(), 0);
+    Array<Value> input;
+    for (const auto& v : inputs) {
+      input.push_back(CopyTo(v, cpu));
+    }
+    op_inputs_.push_back(input);
+    op_outputs_.push_back(CopyTo(output, cpu));
+    op_names_.push_back(op_env->env_name);
+  }
 }
 
-tvm::runtime::Module CreateVirtualMachineProfiler(const Executable* exec, bool enable_cuda_graph) {
-  auto vm = make_object<VirtualMachineProfiler>(enable_cuda_graph);
+tvm::runtime::Module CreateVirtualMachineProfiler(const Executable* exec, bool enable_cuda_graph,
+                                                  bool cache_interm_tensors) {
+  auto vm = make_object<VirtualMachineProfiler>(enable_cuda_graph, cache_interm_tensors);
   vm->LoadExecutable(exec);
   return tvm::runtime::Module(vm);
 }
@@ -144,9 +139,10 @@ MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachineProfiler")
     .set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       tvm::runtime::Module mod = args[0];
       bool enable_cuda_graph = args[1];
+      bool cache_interm_tensors = args[2];
       const auto* exec = dynamic_cast<Executable*>(mod.operator->());
       CHECK(exec) << "The virtual machine executable has not been defined yet.";
-      *rv = CreateVirtualMachineProfiler(exec, enable_cuda_graph);
+      *rv = CreateVirtualMachineProfiler(exec, enable_cuda_graph, cache_interm_tensors);
     });
 
 }  // namespace vm

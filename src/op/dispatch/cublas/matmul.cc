@@ -7,6 +7,7 @@
 #include "mnm/op.h"
 
 #include "../../schema/ufunc.h"
+#include "../tvmjit/tvmjit_utils.h"
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 #include "./cublas_utils.h"
@@ -80,6 +81,13 @@ class MatmulImpl : public mnm::op::OpEnv {
     };
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
+    std::string op_name = "mnm.op.matmul";
+    if (transpose_a || transpose_b) {
+      op_name += "_";
+      op_name += (transpose_a) ? "t" : "n";
+      op_name += (transpose_b) ? "t" : "n";
+    }
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName(op_name));
   }
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<op::schema::BinaryArgs>();

@@ -27,7 +27,7 @@ def test_vm_debug(device, shape):
     model.infer_mode()
     m_x, _ = randn(shape, device=device)
     mod = model._internal(m_x).mod
-    executor = VMProfilerExecutor(mod, device)
+    executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
     m_z = executor.make_executor()(m_x).asnumpy()
     ref_x = m_x.asnumpy()
     ref_y = ref_x + ref_x

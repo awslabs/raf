@@ -10,9 +10,10 @@ from . import executor
 class VirtualMachineProfiler(executor.VirtualMachine):
     """Relay profile VM runtime."""
 
-    def __init__(self, exe, device, enable_cuda_graph=False):
+    def __init__(self, exe, device, enable_cuda_graph=False, cache_interm_tensors=False):
         super(VirtualMachineProfiler, self).__init__(exe, device, enable_cuda_graph)
-        self.module = _ffi.vm.VirtualMachineProfiler(exe.module, enable_cuda_graph)
+        self.module = _ffi.vm.VirtualMachineProfiler(exe.module, enable_cuda_graph,
+                                                     cache_interm_tensors)
         self._set_devices = self.module["set_devices"]
         self._prepare_context = self.module["prepare_context"]
         self._get_stat = self.module["get_stat"]
@@ -70,9 +71,10 @@ class VMProfilerExecutor(executor.VMExecutor):
     enable_cuda_graph : bool
         Whether to enable cuda graph
     """
-    def __init__(self, mod, device, enable_cuda_graph=False):
+    def __init__(self, mod, device, enable_cuda_graph=False, cache_interm_tensors=False):
         super(VMProfilerExecutor, self).__init__(mod, device, enable_cuda_graph)
-        self.vm = VirtualMachineProfiler(self.executable, self.device, enable_cuda_graph)
+        self.vm = VirtualMachineProfiler(self.executable, self.device, enable_cuda_graph,
+                                         cache_interm_tensors)
 
     def reset(self):
         """Reset statistics"""
