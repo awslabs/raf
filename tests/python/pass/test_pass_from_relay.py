@@ -921,5 +921,25 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
     check_from_relay(model, r_func, [m_x])
 
 
+@pytest.mark.parametrize("shape", [(4, 3, 4, 5)])
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("keep", [0, 1])
+def test_sum(shape, axis, keep):
+    class Sum(mnm.Model):
+        def build(self, axis, keep):
+            self.axis = axis
+            self.keep = keep
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.sum(x, self.axis, self.keep)
+    model = Sum(axis, keep)
+    m_x, _ = randn(shape)
+    r_x = _relay.var("x", shape=shape)
+    r_func = _relay.Function(params=[r_x], body=_relay.sum(r_x, axis, keep))
+
+    check_from_relay(model, r_func, [m_x])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
