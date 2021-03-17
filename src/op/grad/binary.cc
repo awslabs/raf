@@ -65,6 +65,19 @@ Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   return {f(x1), fs(x2)};
 }
 MNM_OP_GRAD("mnm.op.subtract", SubGrad);
+Array<Expr> RightshiftGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                           const Expr& dy) {
+  // give zero gradient for any input gradient
+  static auto op_zeros = Op::Get("mnm.op.zeros");
+  static auto op_shape = Op::Get("mnm.op.shape");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& x = call->args[0];
+  Call zeros = Call(op_zeros, {Call(op_shape, {x})});
+  return {zeros};
+}
+
+MNM_OP_GRAD("mnm.op.right_shift", RightshiftGrad);
 
 Array<Expr> MulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {

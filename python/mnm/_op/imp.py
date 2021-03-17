@@ -29,13 +29,14 @@ __all__ = [
     "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
     "ones_like", "pad", "power", "prod", "relu",
     "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
-    "round", "rsqrt", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx", "where", "zeros", "zeros_like",
+    "right_shift", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx", "trunc", "where",
+    "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -813,6 +814,14 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     return imp_utils.ret(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
 @set_module("mnm")
+def right_shift(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.right_shift(x1, x2, out, where))
+
+@set_module("mnm")
 def round(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.round(x))
@@ -1025,6 +1034,11 @@ def transpose_dx(x, y, dy, axes=None):
     dy = imp_utils.to_tensor(dy)
     axes = imp_utils.to_int_tuple(axes)
     return imp_utils.ret(ffi.transpose_dx(x, y, dy, axes))
+
+@set_module("mnm")
+def trunc(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.trunc(x))
 
 @set_module("mnm")
 def where(condition, x, y):

@@ -36,6 +36,7 @@ class UnaryModel(mnm.Model):
         (np.cos, mnm._op.sym.cos),
         (np.zeros_like, mnm._op.sym.zeros_like),
         (np.ones_like, mnm._op.sym.ones_like),
+        (np.trunc, mnm._op.sym.trunc),
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -64,6 +65,7 @@ def test_unary_ops(ops, shape, dtype, device):
         (torch.sin, mnm._op.sym.sin),
         (torch.exp, mnm._op.sym.exp),
         (torch.atan, mnm._op.sym.atan),
+        (torch.trunc, mnm._op.sym.trunc),
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

@@ -62,6 +62,8 @@ OPS = [
     Op(name="not_equal", schema_name="binary_ufunc"),
     Op(name="maximum", schema_name="binary_ufunc"),
     Op(name="minimum", schema_name="binary_ufunc"),
+    Op(name="right_shift", schema_name="binary_ufunc"),
+    Op(name="trunc", schema_name="unary"),
     Op(name="matmul", schema_name="binary"),
     Op(name="matmul_nt", schema_name="binary"),
     Op(name="matmul_tn", schema_name="binary"),

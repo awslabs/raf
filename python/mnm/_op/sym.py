@@ -28,13 +28,14 @@ __all__ = [
     "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
     "ones_like", "pad", "power", "prod", "relu",
     "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
-    "round", "rsqrt", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "take", "take_dx", "tanh", "tanh_dx",
-    "transpose", "transpose_dx", "where", "zeros", "zeros_like",
+    "right_shift", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
+    "subtract", "sum", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx", "trunc", "where",
+    "zeros", "zeros_like",
 ]
 
 def _alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
@@ -706,6 +707,13 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     batch_axis = sym_utils.to_int(batch_axis)
     return Symbol.from_expr(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
+def right_shift(x1, x2, out=None, where=None):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.right_shift(x1, x2, out, where))
+
 def round(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.round(x))
@@ -887,6 +895,10 @@ def transpose_dx(x, y, dy, axes=None):
     dy = sym_utils.to_tensor(dy)
     axes = sym_utils.to_int_tuple(axes)
     return Symbol.from_expr(ffi.transpose_dx(x, y, dy, axes))
+
+def trunc(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.trunc(x))
 
 def where(condition, x, y):
     condition = sym_utils.to_tensor(condition)

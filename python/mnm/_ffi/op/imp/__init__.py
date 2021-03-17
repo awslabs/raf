@@ -106,6 +106,7 @@ from ._internal import repeat
 from ._internal import reshape
 from ._internal import reverse
 from ._internal import reverse_sequence
+from ._internal import right_shift
 from ._internal import round
 from ._internal import rsqrt
 from ._internal import sequence_mask
@@ -138,6 +139,7 @@ from ._internal import tanh
 from ._internal import tanh_dx
 from ._internal import transpose
 from ._internal import transpose_dx
+from ._internal import trunc
 from ._internal import where
 from ._internal import zeros
 from ._internal import zeros_like

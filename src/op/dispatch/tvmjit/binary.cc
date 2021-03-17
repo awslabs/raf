@@ -35,6 +35,8 @@ MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryUfuncArgs, BinarySchema2Args, Binary
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(LogicalAnd, "mnm.op.logical_and", BinaryUfuncArgs, BinarySchema2Args,
            BinarySchemaArgNames, GenericAttrs, GenericHasher);
+MNM_TVMJIT(Right_shift, "mnm.op.right_shift", BinaryUfuncArgs, BinarySchema2Args,
+           BinarySchemaArgNames, GenericAttrs, GenericHasher);
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

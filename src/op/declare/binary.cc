@@ -220,6 +220,30 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
   throw;
 });
 
+MNM_REGISTER_BINARY_BCAST_OP("mnm.op.right_shift", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                        if (!s1->IsInstance<IntValueObj>() || !s2->IsInstance<IntValueObj>()) {
+                          LOG(FATAL) << "func 'right_shift' not supported for the input types";
+                          throw;
+                        }
+                        call->callee = ir::NullValue<OpValue>();
+                        int64_t a1 = s1->data;
+                        int64_t a2 = s2->data;
+                        int64_t result = a1 >> a2;
+                        call->out = ScalarValue::make(result);
+                        return;
+                      }));
+    MNM_BINARY_TENSOR(x1, x2);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);

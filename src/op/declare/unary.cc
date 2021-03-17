@@ -8,6 +8,7 @@
 #include "../schema/ufunc.h"
 #include "../ty/utils.h"
 #include <cmath>
+#include "math.h"
 
 namespace mnm {
 namespace op {
@@ -120,6 +121,21 @@ MNM_DECLARE_UNARY_OP("mnm.op.sqrt", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.atan", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.zeros_like", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.ones_like", Unary);
+
+MNM_DECLARE_UNARY_OP("mnm.op.trunc", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+  MNM_SWITCH_SCALAR(v, args->x, {
+    call->callee = ir::NullValue<OpValue>();
+    double a = v->data;
+    double result = trunc(a);
+    call->out = ScalarValue::make(result);
+    return;
+  });
+  MNM_UNARY_TENSOR(args->x);
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
 
 void UnaryDx(const CallValues& call) {
   // TODO(@junrushao1994): sanity check

@@ -163,6 +163,19 @@ Array<Expr> RsqrtGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 }
 MNM_OP_GRAD("mnm.op.rsqrt", RsqrtGrad);
 
+Array<Expr> TruncGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                      const Expr& dy) {
+  // give zero gradient for any gradient
+  static auto op_zeros = Op::Get("mnm.op.zeros");
+  static auto op_shape = Op::Get("mnm.op.shape");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call zeros = Call(op_zeros, {Call(op_shape, {x})});
+  return {zeros};
+}
+MNM_OP_GRAD("mnm.op.trunc", TruncGrad);
+
 Array<Expr> CosGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
   static auto op_sin = Op::Get("mnm.op.sin");

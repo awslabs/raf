@@ -69,6 +69,8 @@ MNM_TVMJIT(ZerosLike, "mnm.op.zeros_like", UnaryArgs, UnarySchema2Args, UnarySch
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(OnesLike, "mnm.op.ones_like", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames,
            GenericAttrs, GenericHasher);
+MNM_TVMJIT(Trunc, "mnm.op.trunc", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
 
 struct UnaryDxAttr : public tvm::AttrsNode<UnaryDxAttr> {
   std::string grad_mode;

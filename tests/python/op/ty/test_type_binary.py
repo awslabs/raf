@@ -15,11 +15,13 @@ from tvm.relay import TensorType, FuncType, TupleType
     sym.mod,
     sym.maximum,
     sym.minimum,
+    sym.right_shift,
 ])
 @pytest.mark.parametrize("shape", [
     [(10, 4), (5, 10, 1), (5, 10, 4)],
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32", "float64", "uint32", "int32", "int64",
+                                   "uint8", "int16"])
 def test_binary(op, shape, dtype):
     # pylint: disable=too-many-locals
     class Binary(mnm.Model):
@@ -48,7 +50,7 @@ def test_binary(op, shape, dtype):
     check_type(m_mod['main'], desired_type)
     # check backward
     # TODO(yzhliu): some operators are missing gradient registries.
-    if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract):
+    if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract, sym.right_shift):
         bwd_mod = AutoDiff(m_mod, record.requires_grads)
         bwd_mod = InferType(bwd_mod)
         bwd_func = bwd_mod['main']

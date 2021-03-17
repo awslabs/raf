@@ -34,7 +34,7 @@ def from_pytorch(model, shape_dict):
         """A wrapper to process the forward output. This is required for object detection
         models which have multiple outputs.
         """
-        # pylint: disable=missing-function-docstring, abstract-method
+        # pylint: disable=missing-function-docstring, abstract-method ,arguments-differ
 
         # Enforce the output order of object detection models.
         od_model_output_keys = ["boxes", "scores", "labels", "masks"]

@@ -213,6 +213,8 @@ reverse = _APIS.get("mnm.op.imp.reverse", None)
 # Defined in ./src/op/regs/regs.cc
 reverse_sequence = _APIS.get("mnm.op.imp.reverse_sequence", None)
 # Defined in ./src/op/regs/regs.cc
+right_shift = _APIS.get("mnm.op.imp.right_shift", None)
+# Defined in ./src/op/regs/regs.cc
 round = _APIS.get("mnm.op.imp.round", None)
 # Defined in ./src/op/regs/regs.cc
 rsqrt = _APIS.get("mnm.op.imp.rsqrt", None)
@@ -276,6 +278,8 @@ tanh_dx = _APIS.get("mnm.op.imp.tanh_dx", None)
 transpose = _APIS.get("mnm.op.imp.transpose", None)
 # Defined in ./src/op/regs/regs.cc
 transpose_dx = _APIS.get("mnm.op.imp.transpose_dx", None)
+# Defined in ./src/op/regs/regs.cc
+trunc = _APIS.get("mnm.op.imp.trunc", None)
 # Defined in ./src/op/regs/regs.cc
 where = _APIS.get("mnm.op.imp.where", None)
 # Defined in ./src/op/regs/regs.cc

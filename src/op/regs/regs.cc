@@ -145,6 +145,7 @@ static const char repeat[] = "mnm.op.repeat";
 static const char reshape[] = "mnm.op.reshape";
 static const char reverse[] = "mnm.op.reverse";
 static const char reverse_sequence[] = "mnm.op.reverse_sequence";
+static const char right_shift[] = "mnm.op.right_shift";
 static const char round[] = "mnm.op.round";
 static const char rsqrt[] = "mnm.op.rsqrt";
 static const char sequence_mask[] = "mnm.op.sequence_mask";
@@ -177,6 +178,7 @@ static const char tanh[] = "mnm.op.tanh";
 static const char tanh_dx[] = "mnm.op.tanh_dx";
 static const char transpose[] = "mnm.op.transpose";
 static const char transpose_dx[] = "mnm.op.transpose_dx";
+static const char trunc[] = "mnm.op.trunc";
 static const char where[] = "mnm.op.where";
 static const char zeros[] = "mnm.op.zeros";
 static const char zeros_like[] = "mnm.op.zeros_like";
@@ -1973,6 +1975,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reverse_sequence").set_body([](TVMArgs args, TVM
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.right_shift").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(right_shift, 4, ffi2schema::BinaryUfunc,
+              schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.round").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(round, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
@@ -2264,6 +2277,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.transpose_dx").set_body([](TVMArgs args, TVMRetV
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axes));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.trunc").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(trunc, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3132,6 +3152,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.reshape").set_body(MNM_SYMBOLIC_API(reshape, 3, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, Reverse));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
     .set_body(MNM_SYMBOLIC_API(reverse_sequence, 4, ReverseSequence));
+MNM_REGISTER_GLOBAL("mnm.op.sym.right_shift")
+    .set_body(MNM_SYMBOLIC_API(right_shift, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.round").set_body(MNM_SYMBOLIC_API(round, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.rsqrt").set_body(MNM_SYMBOLIC_API(rsqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
@@ -3172,6 +3194,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx").set_body(MNM_SYMBOLIC_API(tanh_dx, 3, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
     .set_body(MNM_SYMBOLIC_API(transpose_dx, 4, TransposeDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.trunc").set_body(MNM_SYMBOLIC_API(trunc, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros").set_body(MNM_SYMBOLIC_API(zeros, 3, InitOp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros_like").set_body(MNM_SYMBOLIC_API(zeros_like, 1, Unary));
@@ -5645,6 +5668,10 @@ MNM_BIND_SCHEMA("mnm.op.reverse_sequence", names::reverse_sequence,
                 value2schema::ReverseSequence);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reverse_sequence", names::reverse_sequence,
                             schema_field_idx::ReverseSequence);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.right_shift", names::right_shift,
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.right_shift", names::right_shift,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.round", names::round,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.round", names::round,
@@ -5765,6 +5792,10 @@ MNM_BIND_SCHEMA("mnm.op.transpose_dx", names::transpose_dx,
                 value2schema::TransposeDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.transpose_dx", names::transpose_dx,
                             schema_field_idx::TransposeDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.trunc", names::trunc,
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.trunc", names::trunc,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.where", names::where,
                 value2schema::Where);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.where", names::where,

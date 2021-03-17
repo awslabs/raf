@@ -20,8 +20,8 @@ class BinaryModel(mnm.Model):
     (np.add, mnm._op.sym.add),
     (np.subtract, mnm._op.sym.subtract),
     (np.maximum, mnm._op.sym.maximum),
-    (np.minimum, mnm._op.sym.minimum),
     (np.greater, mnm._op.sym.greater),
+    (np.minimum, mnm._op.sym.minimum),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
@@ -100,6 +100,43 @@ def test_binary_bool_ops(ops, shape, dtype, device):
     n_y = n_op(n_x1, n_x2)
     check(m_y, n_y)
     check(v_y, n_y)
+
+
+# pylint: disable=no-member
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=protected-access
+# pylint: disable=no-self-use
+#pylint: disable=too-many-locals
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("ops", [
+    (np.right_shift, mnm._op.sym.right_shift),
+])
+@pytest.mark.parametrize("shape", [
+    [(), (1, 2)],
+    [(1, 2), (2, 1)],
+    [(3, 3), (1, 1)]
+])
+@pytest.mark.parametrize("dtype", ["uint16", "uint8", "uint32"])
+def test_int_ops_with_grad(ops, shape, dtype, device):
+    n_op, m_op = ops
+    model = BinaryModel(m_op)
+    m_x1, n_x1 = randn(shape[0], dtype=dtype, device=device)
+    m_x2, n_x2 = randn(shape[1], dtype=dtype, device=device)
+    m_x1.requires_grad = True
+    m_x2.requires_grad = True
+
+    # check forward
+    m_y = model(m_x1, m_x2)
+    v_y = run_vm_model(model, device, [m_x1, m_x2])
+    n_y = n_op(n_x1, n_x2)
+    check(m_y, n_y)
+    check(v_y, n_y)
+    # check backward
+    m_dy = randn(m_y.shape, dtype=dtype, device=device)[0]
+    m_y.backward(m_dy)
+    check(m_x1.grad, 0.)
+
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

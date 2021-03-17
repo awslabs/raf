@@ -49,6 +49,7 @@ MNM_OP_TYPE("mnm.op.erf", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sqrt", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.rsqrt", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.atan", "Identity", UnaryInfer);
+MNM_OP_TYPE("mnm.op.trunc", "Identity", UnaryInfer);
 
 Type UnaryDxInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryDxArgs>();
