@@ -5,6 +5,7 @@
  */
 #pragma once
 #include <string>
+#include "tvm/ir/module.h"
 #include "tvm/runtime/object.h"
 #include "tvm/runtime/data_type.h"
 #include "tvm/runtime/container.h"
@@ -58,6 +59,11 @@ using tvm::runtime::ObjectPtrHash;
 using tvm::runtime::ObjectRef;
 using tvm::runtime::String2DLDataType;
 using tvm::runtime::TypeIndex;
+
+// TVM IRModule
+using tvm::BaseFunc;
+using tvm::IRModule;
+using tvm::IRModuleNode;
 
 // Relay Expression
 using tvm::relay::Expr;

@@ -8,6 +8,7 @@
 #include "./op.h"
 #include "./stream_pool.h"
 #include "./value.h"
+#include "ir.h"
 
 namespace mnm {
 namespace requests {
@@ -29,7 +30,7 @@ class Executor {
 };
 
 namespace interpreter {
-value::Value Interpret(ir::Expr expr, ir::Module mod = ir::NullValue<ir::Module>());
+value::Value Interpret(ir::Expr expr, ir::Optional<ir::IRModule> mod = {});
 value::Value InvokePrimitive(const op::CallValues& call);
 value::Value InvokeClosure(const op::CallValues& call);
 }  // namespace interpreter

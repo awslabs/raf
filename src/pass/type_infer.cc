@@ -48,7 +48,7 @@ class TypeInferencer : public ExprMutator {
   MNM_NODE_NOT_IMPL(RefCreateNode)
 
  public:
-  TypeInferencer(Module& mod) : mod_(mod) {
+  TypeInferencer(IRModule& mod) : mod_(mod) {
   }
 
   Type GetValueType(const Value& v) {
@@ -127,7 +127,8 @@ class TypeInferencer : public ExprMutator {
     if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {
       ret->checked_type_ = InferClosure(ret, fn);
     } else if (const GlobalVarNode* gvn = ret->op.as<GlobalVarNode>()) {
-      ret->checked_type_ = InferClosure(ret, mod_->Lookup(GetRef<GlobalVar>(gvn)).get());
+      ret->checked_type_ =
+          InferClosure(ret, Downcast<Function>(mod_->Lookup(GetRef<GlobalVar>(gvn))).get());
     } else if (const OpNode* opn = ret->op.as<OpNode>()) {
       ret->checked_type_ = InferPrimitive(ret, opn);
     } else if (const VarNode* var_node = ret->op.as<VarNode>()) {
@@ -267,7 +268,7 @@ class TypeInferencer : public ExprMutator {
   }
 
  private:
-  Module mod_;
+  IRModule mod_;
   // The var_value_map_ is used to track Let binding Expr
   // E.g. Let %a = %b; Let %c = some_op(%a)
   // The var_value_map_ will feed %b to some_op
@@ -482,7 +483,7 @@ Type Unify(const Type& src, const Type& dst) {
 
 }  // namespace type_infer
 
-void AddGlobalTypes(ir::Module mod) {
+void AddGlobalTypes(ir::IRModule mod) {
   std::vector<std::pair<ir::GlobalVar, ir::Function> > updates;
   for (const auto& it : mod->functions) {
     if (auto* func_node = it.second.as<ir::FunctionNode>()) {
@@ -497,8 +498,8 @@ void AddGlobalTypes(ir::Module mod) {
   }
 }
 
-ir::Module InferType(ir::Module mod) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
+ir::IRModule InferType(ir::IRModule mod) {
+  ir::IRModule updated_mod = ir::IRModule(mod->functions);
   AddGlobalTypes(updated_mod);
   auto ti = type_infer::TypeInferencer(updated_mod);
   for (auto kv : updated_mod->functions) {
@@ -511,11 +512,11 @@ ir::Module InferType(ir::Module mod) {
 }
 
 ir::Expr InferType(ir::Expr func) {
-  auto mod = ir::Module::Global();
+  auto mod = ir::GlobalModule();
   return type_infer::TypeInferencer(mod).VisitExpr(func);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([](ir::Module mod) {
+MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([](ir::IRModule mod) {
   return InferType(mod);
 });
 

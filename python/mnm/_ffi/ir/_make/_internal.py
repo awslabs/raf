@@ -5,6 +5,4 @@ from mnm._lib import _APIS
 # Defined in ./src/impl/ir_ext.cc
 Constant = _APIS.get("mnm.ir._make.Constant", None)
 # Defined in ./src/impl/ir_ext.cc
-Module = _APIS.get("mnm.ir._make.Module", None)
-# Defined in ./src/impl/ir_ext.cc
 Var = _APIS.get("mnm.ir._make.Var", None)

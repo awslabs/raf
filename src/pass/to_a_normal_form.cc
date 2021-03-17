@@ -197,15 +197,16 @@ Expr ToANormalFormExpr(const Expr& expr) {
   return to_a_normal_form::Fill::ToANormalForm(expr, dg, &scopes.first);
 }
 
-Module ToANormalForm(Module m) {
-  tvm::Map<GlobalVar, Function> updates;
+IRModule ToANormalForm(IRModule m) {
+  tvm::Map<GlobalVar, BaseFunc> updates;
   auto funcs = m->functions;
   for (const auto& it : funcs) {
     ICHECK_EQ(FreeVars(it.second).size(), 0);
     if (const auto* n = it.second.as<FunctionNode>()) {
       if (n->GetAttr<String>(tvm::relay::attr::kCompiler).defined()) continue;
     }
-    Expr ret = TransformF([&](const Expr& e) { return ToANormalFormExpr(e); }, it.second);
+    Expr ret = TransformF([&](const Expr& e) { return ToANormalFormExpr(e); },
+                          Downcast<Function>(it.second));
     ICHECK_EQ(FreeVars(ret).size(), 0)
         << AsText(ret) << "should not has free vars: " << FreeVars(ret);
     updates.Set(it.first, Downcast<Function>(ret));

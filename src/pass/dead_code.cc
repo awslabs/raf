@@ -28,8 +28,8 @@ ir::Expr DeadCodeElimination(const ir::Expr& expr) {
 }
 
 // TODO - Cleanup when pass manager is introduced.
-ir::Module DeadCodeElimination(const ir::Module mod) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
+ir::IRModule DeadCodeElimination(const ir::IRModule mod) {
+  ir::IRModule updated_mod = ir::IRModule(mod->functions);
   std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
   for (auto kv : updated_mod->functions) {
     if (kv.second.as<ir::FunctionNode>()) {
@@ -45,7 +45,7 @@ ir::Module DeadCodeElimination(const ir::Module mod) {
   return updated_mod;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.DeadCodeElimination").set_body_typed([](ir::Module mod) {
+MNM_REGISTER_GLOBAL("mnm.pass_.DeadCodeElimination").set_body_typed([](ir::IRModule mod) {
   return DeadCodeElimination(mod);
 });
 

@@ -611,7 +611,7 @@ void VMCompiler::SetParam(const std::string& name, Value data_in) {
   params_[name] = data_in;
 }
 
-void VMCompiler::Lower(Module mod, const TargetsMap& targets, const tvm::Target& target_host) {
+void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Target& target_host) {
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   if (params_.size()) {
     BaseFunc base_func = mod->Lookup("main");
@@ -669,7 +669,7 @@ void VMCompiler::Lower(Module mod, const TargetsMap& targets, const tvm::Target&
   }
 }
 
-Module VMCompiler::OptimizeModule(const Module& mod, const TargetsMap& targets) {
+IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targets) {
   auto m = pass::InferType(mod);
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
@@ -696,7 +696,7 @@ PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Obje
   if (name == "lower") {
     return PackedFunc([sptr_to_self, this](TVMArgs args, TVMRetValue* rv) {
       CHECK_EQ(args.num_args, 3);
-      Module mod = args[0];
+      IRModule mod = args[0];
       this->Lower(mod, args[1], args[2]);
     });
   } else if (name == "get_executable") {

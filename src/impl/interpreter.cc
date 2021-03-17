@@ -103,7 +103,7 @@ class SymbolTable {
 class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Executor {
  public:
   SymbolTable st;
-  Module mod{nullptr};
+  IRModule mod{nullptr};
 
  public:
   Interpreter() = default;
@@ -384,9 +384,9 @@ class IntrpThreadEntry {
   Interpreter exec;
 };
 
-Value Interpret(Expr expr, Module mod) {
+Value Interpret(Expr expr, Optional<IRModule> mod) {
   Interpreter* intrp = IntrpThreadEntry::ThreadLocal();
-  intrp->mod = mod.defined() ? mod : Module::Global();
+  intrp->mod = mod.defined() ? mod.value() : GlobalModule();
   auto ret = intrp->Eval(expr);
   intrp->mod = {};
   intrp->st.tab = {};
@@ -409,7 +409,7 @@ Value InvokeClosure(const CallValues& call) {
   return ret;
 }
 
-ObjectRef _Interpret(Expr expr, Module mod) {
+ObjectRef _Interpret(Expr expr, Optional<IRModule> mod) {
   return DeTuple(Interpret(expr, mod));
 }
 

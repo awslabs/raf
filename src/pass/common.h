@@ -168,6 +168,7 @@ inline Expr RemoveAnnotation(const Expr& expr, const Op& ann_op) {
     }
   } else {
     LOG(FATAL) << "ValueError: unknown op";
+    return Expr();
   }
 }
 

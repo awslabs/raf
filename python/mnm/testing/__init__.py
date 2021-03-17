@@ -10,7 +10,7 @@ import torch
 import mnm
 import tvm
 
-from .._core.module import Module
+from .._core.module import IRModule
 from .._core.executor import VMExecutor, VMCompiler
 from .._ffi import ir
 from .._ffi import pass_
@@ -19,9 +19,9 @@ from ..model.trace import _get_func_inputs
 
 def run_infer_type(expr):
     """Helper function to infer the type of the given expr """
-    if isinstance(expr, Module):
+    if isinstance(expr, IRModule):
         return pass_.InferType(expr)
-    mod = Module.from_expr(expr)
+    mod = IRModule.from_expr(expr)
     mod = pass_.InferType(mod)
     return mod["main"]
 

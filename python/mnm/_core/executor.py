@@ -16,7 +16,7 @@ def interpret(expr, module=None):
     ----------
     expr : relay.Call
         The function together with its arguments.
-    module : mnm.ir.Module
+    module : mnm.ir.IRModule
         The module captures the global variables and functions.
 
     Returns

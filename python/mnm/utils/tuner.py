@@ -10,7 +10,7 @@ import tvm
 
 import mnm
 from mnm._core.executor import VMExecutor
-from mnm._core.module import Module
+from mnm._core.module import IRModule
 from mnm.model.trace import _get_func_inputs
 from mnm.testing import randn
 from mnm.testing.utils import ir_fusion
@@ -25,7 +25,7 @@ def extract_tuning_tasks(mod, device, args):
 
     Parameters
     ----------
-    mod: Module
+    mod: IRModule
         The module to be extracted.
 
     device: str
@@ -171,10 +171,10 @@ def run_tuning(model, device, args, log_file, *, optimize=None,
 
 def profile_vm_func_with_schedule(expr, device, args, log_file=None):
     """Helper function to execute model with VM with tuned schedules"""
-    if isinstance(expr, Module):
+    if isinstance(expr, IRModule):
         mod = expr
     else:
-        mod = Module()
+        mod = IRModule()
         mod[tvm.ir.GlobalVar("main")] = expr
 
     # Get rid of the first run because it includes the compilation.

@@ -82,7 +82,7 @@ using MapFunction = StdMap<Function>;
 
 class LivenessAnalyzer {
  public:
-  LivenessAnalyzer(const FunctionNode* func) : func_(func) {
+  LivenessAnalyzer(const Function& func) : func_(func) {
   }
 
   Function Run() {
@@ -363,7 +363,7 @@ class LivenessAnalyzer {
 
  private:
   /*! \brief the function to be analyzed */
-  const FunctionNode* func_;
+  const Function& func_;
   /*! \brief whether func_ contains closure invoke */
   bool failure_{false};
   /*! \brief maps a var to the set of real or fake variables which share memory with the key */
@@ -747,12 +747,13 @@ Var LivenessAnalyzer::CreateTensorVar(const Type& type) {
  * \param func the function to be analyzed
  * \return the function with invalid memory sharing removed
  */
-ir::Module MemShare(ir::Module mod) {
-  tvm::Map<ir::GlobalVar, ir::Function> functions;
+ir::IRModule MemShare(ir::IRModule mod) {
+  tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
   for (auto& kv : mod->functions) {
-    functions.Set(kv.first, memory_share::LivenessAnalyzer(kv.second.operator->()).Run());
+    functions.Set(kv.first,
+                  memory_share::LivenessAnalyzer(Downcast<ir::Function>(kv.second)).Run());
   }
-  return ir::Module::make(functions);
+  return ir::IRModule(functions);
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.MemShare").set_body_typed(MemShare);

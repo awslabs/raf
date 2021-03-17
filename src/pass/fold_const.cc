@@ -50,7 +50,7 @@ class ConstantChecker : private ExprVisitor {
 
 class ConstantFolder : public ExprMutator {
  public:
-  explicit ConstantFolder(Module module) : module_(module) {
+  explicit ConstantFolder(IRModule module) : module_(module) {
   }
 
   Expr VisitExpr_(const LetNode* op) final {
@@ -119,7 +119,7 @@ class ConstantFolder : public ExprMutator {
   // Internal constant checker
   ConstantChecker checker_;
   // Module
-  Module module_;
+  IRModule module_;
 
   // Convert value to expression.
   Expr ObjectToExpr(const ObjectRef& value) {
@@ -150,7 +150,7 @@ class ConstantFolder : public ExprMutator {
   Expr ConstEvaluate(Expr expr) {
     // TODO(haibin): run fuse_op, infer_type passes before execution
     // when these passes are ready
-    auto module = ir::Module::Global();
+    auto module = GlobalModule();
     return ObjectToExpr(executor::interpreter::Interpret(expr, module));
   }
 };
@@ -200,7 +200,7 @@ bool IsConstant(const ir::Expr& e) {
   return fold_const::ConstantChecker().IsConstant(e);
 }
 
-ir::Expr FoldConstant(ir::Expr expr, ir::Module mod) {
+ir::Expr FoldConstant(ir::Expr expr, ir::IRModule mod) {
   return fold_const::ConstantFolder(mod).Mutate(expr);
 }
 

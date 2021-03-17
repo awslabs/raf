@@ -69,8 +69,8 @@ ir::Expr ToDataflowGraph(ir::Expr expr) {
 }
 
 // TODO - Cleanup when pass manager is introduced.
-ir::Module ToDataflowGraph(ir::Module mod) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
+ir::IRModule ToDataflowGraph(ir::IRModule mod) {
+  ir::IRModule updated_mod = ir::IRModule(mod->functions);
   std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
   auto converter = to_dataflow_graph::DFGConverter();
 
@@ -88,7 +88,7 @@ ir::Module ToDataflowGraph(ir::Module mod) {
   return updated_mod;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ToDataflowGraph").set_body_typed([](ir::Module mod) {
+MNM_REGISTER_GLOBAL("mnm.pass_.ToDataflowGraph").set_body_typed([](ir::IRModule mod) {
   return ToDataflowGraph(mod);
 });
 

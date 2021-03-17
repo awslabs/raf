@@ -19,8 +19,8 @@ using namespace mnm::op;
 
 class BranchBodyLift : public MixedModeMutator {
  public:
-  explicit BranchBodyLift(Module module) : unique_name_counter_(0) {
-    module_ = ir::Module::make(module->functions);
+  explicit BranchBodyLift(IRModule module) : unique_name_counter_(0) {
+    module_ = ir::IRModule(module->functions);
   }
 
   Expr VisitExpr_(const IfNode* if_node) final {
@@ -69,7 +69,7 @@ class BranchBodyLift : public MixedModeMutator {
     return new_if;
   }
 
-  ir::Module Lift() {
+  ir::IRModule Lift() {
     auto glob_funcs = module_->functions;
     for (auto pair : glob_funcs) {
       if (auto* n = pair.second.as<FunctionNode>()) {
@@ -92,13 +92,13 @@ class BranchBodyLift : public MixedModeMutator {
 
  private:
   // initialized in constructor
-  Module module_;
+  IRModule module_;
   int unique_name_counter_;
 };
 
 }  // namespace lift_branch_body
 
-ir::Module LiftBranchBody(ir::Module mod) {
+ir::IRModule LiftBranchBody(ir::IRModule mod) {
   return lift_branch_body::BranchBodyLift(mod).Lift();
 }
 

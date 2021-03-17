@@ -22,8 +22,8 @@ class IRRewrite4Loader : public ir::ExprMutator {
   }
 };
 
-std::string SaveJSON(const ir::Module& mod) {
-  ir::Module inst = ir::Module::make({});
+std::string SaveJSON(const ir::IRModule& mod) {
+  ir::IRModule inst = ir::IRModule();
   for (auto kv : mod->functions) {
     ir::Expr func = IRRewrite4Loader()(kv.second);
     inst->Add(kv.first, Downcast<ir::Function>(func));
@@ -37,8 +37,8 @@ std::string SaveJSON(const ir::Expr& expr) {
 }
 
 std::string SaveJSON(const ir::ObjectRef& n) {
-  if (const ir::ModuleObj* m = n.as<ir::ModuleObj>()) {
-    return SaveJSON(ir::GetRef<ir::Module>(m));
+  if (const ir::IRModuleNode* m = n.as<ir::IRModuleNode>()) {
+    return SaveJSON(ir::GetRef<ir::IRModule>(m));
   } else if (const ir::FunctionNode* f = n.as<ir::FunctionNode>()) {
     return SaveJSON(ir::GetRef<ir::Function>(f));
   } else if (const ir::ExprNode* e = n.as<ir::ExprNode>()) {

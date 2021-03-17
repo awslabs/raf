@@ -22,11 +22,11 @@ using tvm::relay::FreeVars;
  * func->param. If empty, input(s) with float datatype requires gradient.
  * \return Transformed Function.
  */
-ir::Module AutoDiff(ir::Module mod, ir::Array<tvm::Bool> requires_grads = {});
+ir::IRModule AutoDiff(ir::IRModule mod, ir::Array<tvm::Bool> requires_grads = {});
 ir::Function AutoDataParallel(ir::Function func);
-ir::Expr FoldConstant(ir::Expr expr, ir::Module mod);
+ir::Expr FoldConstant(ir::Expr expr, ir::IRModule mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
-ir::Module LambdaLift(ir::Module mod);
+ir::IRModule LambdaLift(ir::IRModule mod);
 /*!
  * \brief gradient operator input selection.
  * \param func The main Function.
@@ -38,9 +38,9 @@ ir::Function GradInputSelect(ir::Function func);
  * \param mod The IR module.
  * \return Transformed IR module.
  */
-ir::Module ManifestAlloc(ir::Module mod);
+ir::IRModule ManifestAlloc(ir::IRModule mod);
 ir::Expr CanonicalizeOps(ir::Expr expr);
-ir::Module InferType(ir::Module mod);
+ir::IRModule InferType(ir::IRModule mod);
 ir::Expr InferType(ir::Expr expr);
 /*!
  * \brief Fuse the operators in the expression.
@@ -55,7 +55,7 @@ ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level);
  * \param mod The IR module.
  * \return Transformed IR module.
  */
-ir::Module InplaceUpdate(ir::Module mod);
+ir::IRModule InplaceUpdate(ir::IRModule mod);
 
 /*!
  * \brief Wraps an expr with compiler_begin and compiler_end to indicate that
@@ -124,7 +124,7 @@ ir::Expr DeadCodeElimination(const ir::Expr& expr);
 
 /*! \brief Convert Relay IR to Meta IR.
  * \param obj tvm::IRModule or ir::Expr
- * \return ir::Module or ir::Expr
+ * \return ir::IRModule or ir::Expr
  */
 tvm::ObjectRef FromRelay(tvm::ObjectRef obj);
 
@@ -163,16 +163,16 @@ ir::Expr AssignDevice(ir::Expr expr, std::string device);
  * \param mod The module to be mutated.
  * \return Transformed module.
  */
-ir::Module LiftBranchBody(ir::Module mod);
+ir::IRModule LiftBranchBody(ir::IRModule mod);
 
 // TODO - Cleanup after pass manager is introduced. These passes are Function passes.
 // Once pass manager is introduced, the pass manager can iterate over the functions.
 // For now, the overloaded functions are iterating over functions.
-ir::Module AssignDevice(ir::Module mod, std::string device);
-ir::Module FuseOps(ir::Module mod, int fuse_opt_level);
-ir::Module InlineLet(ir::Module mod);
-ir::Module DeadCodeElimination(ir::Module mod);
-ir::Module ToDataflowGraph(ir::Module mod);
+ir::IRModule AssignDevice(ir::IRModule mod, std::string device);
+ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level);
+ir::IRModule InlineLet(ir::IRModule mod);
+ir::IRModule DeadCodeElimination(ir::IRModule mod);
+ir::IRModule ToDataflowGraph(ir::IRModule mod);
 
 /*!
  * \brief Turn a dataflow graph into Administrative Normal Form, or A-Normal Form (ANF).
@@ -189,7 +189,7 @@ ir::Module ToDataflowGraph(ir::Module mod);
  * \param mod The input module.
  * \return Transformed moduel.
  */
-ir::Module ToANormalForm(ir::Module mod);
+ir::IRModule ToANormalForm(ir::IRModule mod);
 
 }  // namespace pass
 }  // namespace mnm

@@ -6,7 +6,7 @@ import json
 
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._core.ndarray import array as mnm_array
-from mnm._core.module import Module as mnm_module
+from mnm._core.module import IRModule as mnm_module
 from mnm._ffi.pass_ import ExtractBinding
 from mnm._lib import relay
 from mnm._op import sym as op

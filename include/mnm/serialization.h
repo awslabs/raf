@@ -28,7 +28,7 @@ class ConstantNode : public ir::ConstantNode {
  * \param node node registered in tvm node system.
  * \return serialized JSON string
  */
-std::string SaveJSON(const ir::Module& node);
+std::string SaveJSON(const ir::IRModule& node);
 std::string SaveJSON(const ir::Expr& node);
 std::string SaveJSON(const ir::ObjectRef& node);
 

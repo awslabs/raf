@@ -1023,8 +1023,8 @@ ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level) {
 }
 
 // TODO - Cleanup when pass manager is introduced.
-ir::Module FuseOps(ir::Module mod, int fuse_opt_level) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
+ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level) {
+  ir::IRModule updated_mod = ir::IRModule(mod->functions);
   std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
   auto inliner = fuse_ops::FuseMutator();
 
@@ -1042,7 +1042,7 @@ ir::Module FuseOps(ir::Module mod, int fuse_opt_level) {
   return updated_mod;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed([](ir::Module mod, int fuse_opt_level) {
+MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed([](ir::IRModule mod, int fuse_opt_level) {
   return FuseOps(mod, fuse_opt_level);
 });
 

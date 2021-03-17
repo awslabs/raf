@@ -9,7 +9,7 @@ import mnm
 from mnm.frontend import FrameworkModel
 from mnm.testing import get_device_list, randint, randn, check, utils
 from mnm._ffi.pass_ import FromRelay, InferType
-from mnm._core.module import Module
+from mnm._core.module import IRModule
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
@@ -60,7 +60,7 @@ def test_mnm_constant():
 
     r_func = _relay.Function([], _relay.const(1))
     m_func = FromRelay(r_func)
-    m_mod = Module.from_expr(m_func)
+    m_mod = IRModule.from_expr(m_func)
     assert _tvm.ir.structural_equal(m_func, expected())
     model = FrameworkModel(m_mod, m_mod, {}, {})
     check(data, model())
@@ -87,7 +87,7 @@ def test_mnm_module():
         tanh_op = mnm._ffi.op.GetOp("mnm.op.tanh")
         let = _relay.Let(a1, _relay.Call(tanh_op, [x]), a1)
         f1_out = _relay.Function([x], let)
-        mod = mnm._ffi.ir._make.Module({f1: f1_out})
+        mod = IRModule({f1: f1_out})
 
         a1 = _relay.var("a1")  # pylint: disable=invalid-name
         y = _relay.var("y", shape=(1, 100))

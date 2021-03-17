@@ -2,7 +2,7 @@ import pytest
 import mnm
 from mnm.testing import randn
 from mnm._lib import relay, tvm
-from mnm._core.module import Module
+from mnm._core.module import IRModule
 from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
 # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
 
@@ -32,7 +32,7 @@ def test_basic(ctx, shape):
     func = model._internal().mod['main']
 
     # Create a Meta module and set the func as main
-    mod = Module.from_expr(func)
+    mod = IRModule.from_expr(func)
     # Propagate types.
     mod = InferType(mod)
 
@@ -102,7 +102,7 @@ def test_memory_alloc(shape):
     model_before.infer_mode()
     m_x, _ = randn(shape, device=ctx)
     func = model_before._internal(m_x).mod['main']
-    mod = Module.from_expr(func)
+    mod = IRModule.from_expr(func)
     mod = InferType(mod)
     with tvm.target.Target(ctx):
         mod = mnm._ffi.pass_.ManifestAlloc(mod)

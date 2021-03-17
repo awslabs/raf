@@ -7,7 +7,7 @@ from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
 from mnm._core.ndarray import ndarray, Symbol
 from mnm._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend, InferType
-from mnm._core.module import Module
+from mnm._core.module import IRModule
 
 
 def _get_main_func_params(model, args, kwargs, get_handle=True):
@@ -91,8 +91,8 @@ class FrameworkModel(BaseModel):
 
     def __init__(self, train_mod, infer_mod, arg_params, aux_params):
         super(FrameworkModel, self).__init__()
-        assert isinstance(train_mod, Module)
-        assert isinstance(infer_mod, Module)
+        assert isinstance(train_mod, IRModule)
+        assert isinstance(infer_mod, IRModule)
         self.__train_mod = train_mod
         self.__infer_mod = infer_mod
         self.__arg_params = arg_params
@@ -144,7 +144,7 @@ class FrameworkModel(BaseModel):
         new_params = free_vars[0:num_orig_arg] + free_vars[len(func.params):] \
                      + func.params[num_orig_arg:]
         new_func = relay.Function(new_params, new_body)
-        new_mod = Module.from_expr(new_func)
+        new_mod = IRModule.from_expr(new_func)
         return FrameworkModel(new_mod, new_mod, self.__arg_params, self.__aux_params)
 
     def train_mode(self, recursive=True):

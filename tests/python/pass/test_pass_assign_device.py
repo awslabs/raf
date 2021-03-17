@@ -7,7 +7,7 @@ import tvm
 from tvm import relay as _relay
 from mnm.frontend import FrameworkModel
 from mnm._ffi.pass_ import FromRelay
-from mnm._core.module import Module
+from mnm._core.module import IRModule
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[3, 2]])
@@ -17,7 +17,7 @@ def test_full(shape, val):
     r_c = _relay.const(val)
     r_func = _relay.Function(params=[], body=_relay.full(r_c, shape=shape, dtype="int64"))
     m_func = FromRelay(r_func)
-    m_mod = Module.from_expr(m_func)
+    m_mod = IRModule.from_expr(m_func)
 
     m_model = FrameworkModel(m_mod, m_mod, {}, {})
     m_model.to(device="cuda")

@@ -133,13 +133,13 @@ class InplaceRewriter : public ExprMutator {
 
 }  // namespace inplace_update
 
-ir::Module InplaceUpdate(ir::Module mod) {
-  tvm::Map<ir::GlobalVar, ir::Function> functions;
+ir::IRModule InplaceUpdate(ir::IRModule mod) {
+  tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
   for (auto& kv : mod->functions) {
-    functions.Set(kv.first,
-                  tvm::Downcast<ir::Function>(inplace_update::InplaceRewriter()(kv.second)));
+    functions.Set(kv.first, tvm::Downcast<Function>(
+                                inplace_update::InplaceRewriter()(Downcast<Function>(kv.second))));
   }
-  return ir::Module::make(functions);
+  return ir::IRModule(functions);
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InplaceUpdate").set_body_typed(InplaceUpdate);

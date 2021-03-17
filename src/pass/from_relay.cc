@@ -175,7 +175,7 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
   if (obj->IsInstance<tvm::IRModuleNode>()) {
     auto mod = Downcast<tvm::IRModule>(obj);
     auto relay_mod = tvm::relay::transform::ToANormalForm()(mod);
-    tvm::Map<ir::GlobalVar, ir::Function> functions;
+    tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
     std::stringstream unsupported_ops_ss;
     for (auto& kv : relay_mod->functions) {
       auto mutator = from_relay::FromRelayMutator();
@@ -187,7 +187,7 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
       LOG(FATAL) << "One or more ops cannot be converted:\n" << unsupported_ops_ss.str();
       throw;
     }
-    return ir::Module::make(functions);
+    return ir::IRModule(functions);
   } else if (obj->IsInstance<ExprNode>()) {
     auto expr = Downcast<Expr>(obj);
     auto new_expr = tvm::relay::transform::ToANormalForm(expr);

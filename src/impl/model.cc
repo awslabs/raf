@@ -27,8 +27,8 @@ using pass::BindParam;
 using pass::CanonicalizeOps;
 using pass::FoldConstant;
 
-ObjectRef RunModel(ir::Module mod, Array<Expr> args) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
+ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
+  ir::IRModule updated_mod = ir::IRModule(mod->functions);
   std::vector<GradTape> grads;
   ir::Array<Bool> requires_grads;
   grads.reserve(args.size());
@@ -46,7 +46,7 @@ ObjectRef RunModel(ir::Module mod, Array<Expr> args) {
   }
 
   // TODO - Revisit which passes require update due to presence of module
-  Function func = updated_mod->Lookup("main");
+  Function func = Downcast<Function>(updated_mod->Lookup("main"));
   func = Downcast<Function>(BindParam(func, args));
   if (!requires_grad) {
     // TODO(haibin): add simplify inference pass - simplify the compute of
@@ -62,7 +62,7 @@ ObjectRef RunModel(ir::Module mod, Array<Expr> args) {
   // TODO (janimesh) - Clean this up when pass manager is introduced
   updated_mod->Add(updated_mod->GetGlobalVar("main"), func, true);
   updated_mod = AutoDiff(updated_mod, requires_grads);
-  func = updated_mod->Lookup("main");
+  func = Downcast<Function>(updated_mod->Lookup("main"));
 
   // run auto parallel
   if (distributed::DistContext::Global()->enable_data_parallel) {

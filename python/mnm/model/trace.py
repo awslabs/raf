@@ -6,7 +6,7 @@ from collections import OrderedDict, namedtuple
 from mnm._core import cacher
 from mnm._core.core_utils import get_bound_args, get_func_name
 from mnm._core.global_scope import SCOPE
-from mnm._core.module import Module
+from mnm._core.module import IRModule
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
 from mnm._ffi.ir.variable import SetMayShare
@@ -132,7 +132,7 @@ def _do_tracing(pyfunc, args, kwargs):
     # Step 4. and extra model parameters and finally make the relay.Func
     func, named_params = _make_func(args[0], named_inputs,
                                     output + mutate_symbols)
-    mod = Module.from_expr(func)
+    mod = IRModule.from_expr(func)
     return _TraceRecord(mod=mod,
                         named_params=named_params,
                         o_struct=o_struct,

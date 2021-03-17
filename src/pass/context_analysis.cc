@@ -144,7 +144,7 @@ DeviceDomainPtr Join(const DeviceDomainPtr& lhs, const DeviceDomainPtr& rhs) {
  */
 class ContextAnalyzer : public MixedModeVisitor {
  public:
-  ContextAnalyzer(const Module& mod, const GlobalVar& current_func,
+  ContextAnalyzer(const IRModule& mod, const GlobalVar& current_func,
                   const Device& default_context)
       : MixedModeVisitor(9),  // the number of repeated visits a node can perform
         mod_(mod),
@@ -608,7 +608,7 @@ class ContextAnalyzer : public MixedModeVisitor {
   /* \brief The cpu context. */
   Device cpu_ctx_;
   /* \brief The module that helps context analysis. */
-  const Module& mod_;
+  const IRModule& mod_;
   /* \brief The current function that is being analyzed. */
   GlobalVar current_func_;
   /* \brief The default device that could be attached to an expression. */
@@ -627,7 +627,7 @@ class ContextAnalyzer : public MixedModeVisitor {
 
 }  // namespace context_analysis
 
-AnalysisResultMap ContextAnalysis(const Module& mod, const DLContext& default_context) {
+AnalysisResultMap ContextAnalysis(const IRModule& mod, const DLContext& default_context) {
   auto entry = mod->GetGlobalVar("main");
   auto ca = context_analysis::ContextAnalyzer(mod, entry, default_context);
   auto expr = mod->Lookup(entry);
@@ -637,7 +637,8 @@ AnalysisResultMap ContextAnalysis(const Module& mod, const DLContext& default_co
 
 // Unpack the device type and deivce id fields in DLContext for PackedFunc calls
 // as DLContext is not in the object system.
-PackedAnalysisResultMap ContextAnalysisPacked(const Module& mod, const DLContext& default_context) {
+PackedAnalysisResultMap ContextAnalysisPacked(const IRModule& mod,
+                                              const DLContext& default_context) {
   PackedAnalysisResultMap ret;
   auto res = ContextAnalysis(mod, default_context);
   for (const auto& it : res) {

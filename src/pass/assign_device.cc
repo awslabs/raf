@@ -232,8 +232,8 @@ ir::Expr AssignDevice(ir::Expr expr, std::string device) {
 }
 
 // TODO - Cleanup when pass manager is introduced.
-ir::Module AssignDevice(ir::Module mod, std::string device) {
-  ir::Module updated_mod = ir::Module::make(mod->functions);
+ir::IRModule AssignDevice(ir::IRModule mod, std::string device) {
+  ir::IRModule updated_mod = ir::IRModule(mod->functions);
   std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
   auto assigner = assign_device::DeviceAssigner(device);
 
@@ -251,7 +251,7 @@ ir::Module AssignDevice(ir::Module mod, std::string device) {
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AssignDevice")
-    .set_body_typed([](ir::Module mod, std::string device) { return AssignDevice(mod, device); });
+    .set_body_typed([](ir::IRModule mod, std::string device) { return AssignDevice(mod, device); });
 
 }  // namespace pass
 }  // namespace mnm

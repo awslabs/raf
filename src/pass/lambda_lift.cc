@@ -28,7 +28,7 @@ Function MarkClosure(Function func) {
 
 class LambdaLifter : public ExprMutator {
  public:
-  explicit LambdaLifter(Module module) : module_(module) {
+  explicit LambdaLifter(IRModule module) : module_(module) {
   }
 
   Expr VisitExpr_(const LetNode* let_node) final {
@@ -149,7 +149,7 @@ class LambdaLifter : public ExprMutator {
     }
   }
 
-  ir::Module Lift() {
+  ir::IRModule Lift() {
     auto glob_funcs = module_->functions;
     for (auto pair : glob_funcs) {
       if (auto* n = pair.second.as<FunctionNode>()) {
@@ -164,14 +164,14 @@ class LambdaLifter : public ExprMutator {
 
  private:
   // initialized in constructor
-  Module module_;
+  IRModule module_;
   std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> lambda_map_;
   std::vector<Var> letrec_;
 };
 
 }  // namespace lambda_lift
 
-ir::Module LambdaLift(ir::Module mod) {
+ir::IRModule LambdaLift(ir::IRModule mod) {
   return lambda_lift::LambdaLifter(mod).Lift();
 }
 
