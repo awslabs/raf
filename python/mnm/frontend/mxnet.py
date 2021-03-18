@@ -106,14 +106,14 @@ def _mx_pooling(inputs, attrs, is_train):
 
     if pool_type == "max":
         if global_pool:
-            raise NotImplementedError
+            return [op.adaptive_max_pool2d(inputs[0], shape=(1, 1))]
         return _pool2d(op.max_pool2d, False)
     if pool_type == "avg":
         if global_pool:
-            raise NotImplementedError
-            # return [op.avg_pool2d(inputs[0], 4, 4)]
+            return [op.adaptive_avg_pool2d(inputs[0], shape=(1, 1))]
         return _pool2d(op.avg_pool2d, True)
     raise NotImplementedError
+
 
 
 def _mx_activations(inputs, attrs, is_train):

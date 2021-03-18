@@ -141,6 +141,17 @@ def one_hot_torch(batch_size, num_classes, device="cpu", dtype="float32"):
     assert list(t_x.shape) == [batch_size]
     return m_x, t_x
 
+def one_hot_mxnet(batch_size, num_classes, device="cpu", dtype="float32"):
+    """Helper function to generate one hot tensors in mnm and torch"""
+    targets = np.random.randint(0, num_classes, size=batch_size)
+    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
+    m_x[range(batch_size), targets] = 1
+    mnm_x = mnm.array(m_x, device=device)
+
+    mx_x = mx.nd.array(targets, ctx=mx.cpu())  # pylint: disable=not-callable
+    assert list(mnm_x.shape) == [batch_size, num_classes]
+    assert list(mx_x.shape) == [batch_size]
+    return mnm_x, mx_x
 
 def t2m_param(param, device="cuda"):
     """Helper function to convert torch parameter to mnm ndarray"""
