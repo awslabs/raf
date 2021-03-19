@@ -74,11 +74,13 @@ def test_mnm_module():
         tanh = _relay.tanh(x)
         tvm_mod = _tvm.IRModule()
         tvm_mod[f1] = _relay.Function([x], tanh)
+        tvm_mod = _relay.transform.InferType()(tvm_mod)
 
         y = _relay.var("y", shape=(1, 100))
         out = f1(y)
         main = _relay.GlobalVar("main")
         tvm_mod[main] = _relay.Function([y], out)
+        tvm_mod = _relay.transform.InferType()(tvm_mod)
         return tvm_mod
 
     def expected():
@@ -920,6 +922,36 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
 
     check_from_relay(model, r_func, [m_x])
 
+@pytest.mark.parametrize("trans", [[False, False], [False, True], [True, False], [True, True]])
+def test_dense_pattern(trans):
+
+    class TransposeDense(mnm.Model):
+        def build(self, trans):
+            self.op_name = "matmul"
+            if trans[0] or not trans[1]:
+                self.op_name += "_"
+                self.op_name += "t" if trans[0] else "n"
+                # dense is matmul_nt so the second input is already transposed
+                self.op_name += "n" if trans[1] else "t"
+
+        @mnm.model.trace
+        def forward(self, m_x, m_y):
+            x = mnm.relu(m_x)
+            return getattr(mnm, self.op_name)(x, m_y)
+
+    model = TransposeDense(trans)
+    m_x, _ = randn((10, 10), dtype="float32")
+    m_y, _ = randn((10, 10), dtype="float32")
+
+    r_x = _relay.var("x", shape=(10, 10), dtype="float32")
+    r_y = _relay.var("x", shape=(10, 10), dtype="float32")
+    tran_x = _relay.nn.relu(r_x)
+    tran_x = _relay.transpose(tran_x) if trans[0] else tran_x
+    tran_y = _relay.transpose(r_y) if trans[1] else r_y
+    r_out = _relay.nn.dense(tran_x, tran_y)
+    r_func = _relay.Function(params=[r_x, r_y], body=r_out)
+
+    check_from_relay(model, r_func, [m_x, m_y])
 
 @pytest.mark.parametrize("shape", [(4, 3, 4, 5)])
 @pytest.mark.parametrize("axis", [0, 1])

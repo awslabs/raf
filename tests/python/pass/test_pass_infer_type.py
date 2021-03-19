@@ -25,10 +25,12 @@ def test_mnm_module():
         out = tanh
         tvm_mod = tvm.IRModule()
         tvm_mod[f1] = relay.Function([x], out)
+        tvm_mod = relay.transform.InferType()(tvm_mod)
 
         y = relay.var("y", shape=(1, 100))
         out = f1(y)
         tvm_mod[main] = relay.Function([y], out)
+        tvm_mod = relay.transform.InferType()(tvm_mod)
         return tvm_mod
 
     tvm_mod = get_tvm_mod()
@@ -58,11 +60,13 @@ def test_mnm_recursive_function():
         with sb.else_scope():
             sb.ret(f1(relay.subtract(n, relay.const(1, ti32)), relay.tanh(x)))
         mod[f1] = relay.Function([n, x], sb.get())
+        mod = relay.transform.InferType()(mod)
 
         n1 = relay.var("n1", ti32)  # pylint: disable=invalid-name
         y = relay.var("y", shape=(1, 100), dtype="float32")
         out = f1(n1, y)
         mod[main] = relay.Function([n1, y], out)
+        mod = relay.transform.InferType()(mod)
         return mod
 
     tvm_mod = get_recursive_mod()
@@ -88,12 +92,14 @@ def test_mnm_return_function():
         tanh = relay.add(y, z)
         closure = relay.Function([y], tanh)
         tvm_mod[f] = relay.Function([z], closure)
+        tvm_mod = relay.transform.InferType()(tvm_mod)
 
         x = relay.var("x", shape=(1, 100))
         a = relay.var("a", shape=(1, 100))
         closure = f(x)
         closure_call = relay.Call(closure, [a])
         tvm_mod[main] = relay.Function([x, a], closure_call)
+        tvm_mod = relay.transform.InferType()(tvm_mod)
         return tvm_mod
 
     tvm_mod = get_tvm_mod()

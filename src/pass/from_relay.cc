@@ -3,10 +3,12 @@
  * \file from_relay.cc
  * \brief Build meta ir from Relay
  */
+#include <map>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
+#include "../op/from_relay/from_relay_utils.h"
 
 namespace mnm {
 namespace pass {
@@ -16,6 +18,73 @@ using namespace mnm::ir;
 using namespace mnm::value;
 using namespace tvm;
 using namespace ::tvm::relay;
+
+struct RelaySimplifyPattern {
+ public:
+  /*! \brief The converter to convert the matched Relay composite function to a Meta call.
+   *  \param func The composite function to be converted.
+   *  \param args The argument array of the converted op.
+   */
+  virtual Call converter(Function func, Array<Expr> args) = 0;
+
+  /*! \brief The data flow pattern to match the Relay graph. */
+  DFPattern pattern;
+  /*! \brief The customized checker to further check if the matched pattern is valid. */
+  PackedFunc check;
+};
+
+struct SimplifyDense : RelaySimplifyPattern {
+ public:
+  SimplifyDense() {
+    // The dense pattern that matches transposes of its inputs.
+    DFPattern in_1 = IsWildcard();
+    DFPattern in_2 = IsWildcard();
+    in_1 = IsOp("transpose")({IsWildcard()}) || in_1;
+    in_2 = IsOp("transpose")({IsWildcard()}) || in_2;
+    this->pattern = IsOp("nn.dense")({in_1, in_2});
+
+    // Checker always returns true
+    this->check = PackedFunc([](TVMArgs args, TVMRetValue* rv) { *rv = true; });
+  }
+
+  Call converter(Function func, Array<Expr> args) {
+    // nn.dense is equal to matmul_nt so the second input is already transposed
+    bool transposes[] = {false, true};
+
+    // Check possible transposes
+    static Op op_transpose = Op::Get("transpose");
+    auto dense = Downcast<Call>(func->body);
+    for (size_t i = 0; i < 2; ++i) {
+      auto trans_call = dense->args[i].as<CallNode>();
+      if (trans_call && Downcast<Op>(trans_call->op) == op_transpose) {
+        auto attrs = GetRef<Call>(trans_call)->attrs.as<TransposeAttrs>();
+        if (attrs->axes.defined()) {
+          auto axes = mnm::op::from_relay::ArrayToInt(attrs->axes);
+          for (size_t j = 0; j < 2; ++j) {  // Support negative axis
+            axes[j] += (axes[j] < 0) ? 2 : 0;
+          }
+          transposes[i] = (axes[0] == 1 && axes[1] == 0) ? !transposes[i] : transposes[i];
+        } else {  // Empty means reverse.
+          transposes[i] = !transposes[i];
+        }
+      }
+    }
+
+    // Dispatch to the proper matmul based on the transposes
+    std::string op_name = "mnm.op.matmul";
+    if (transposes[0] || transposes[1]) {
+      op_name += '_';
+      op_name += (transposes[0]) ? 't' : 'n';
+      op_name += (transposes[1]) ? 't' : 'n';
+    }
+
+    const Op& op = Op::Get(op_name);
+    return Call(op, args);
+  }
+};
+
+static const std::unordered_map<String, std::shared_ptr<RelaySimplifyPattern>> composite_patterns{
+    {String("dense"), std::shared_ptr<RelaySimplifyPattern>(new SimplifyDense)}};
 
 // We set the parameters to be Meta model attributes, so their names
 // have to be valid variable names in Python.
@@ -27,9 +96,6 @@ String ValidateRelayParamName(const String var_name) {
 
 struct FromRelayMutator : public ExprMutator {
  public:
-  FromRelayMutator() {
-  }
-
   Expr VisitExpr_(const VarNode* node) final {
     return var_map_.at(GetRef<Var>(node));
   }
@@ -52,7 +118,7 @@ struct FromRelayMutator : public ExprMutator {
       Var new_var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
       var_map_.Set(var, new_var);
       curr_let_var_ = new_var;
-      this->Mutate(op->value);
+      var_value_map_.insert({var, this->Mutate(op->value)});
     };
     auto post_visit = [this](const LetNode* op) {
       Expr value = this->Mutate(op->value);
@@ -60,13 +126,56 @@ struct FromRelayMutator : public ExprMutator {
       if (body.as<VarNode>()) {
         body = MakeRet(Downcast<Var>(body));
       }
-      this->memo_[GetRef<Expr>(op)] = Let(var_map_[op->var], value, body);
+
+      auto expr = GetRef<Expr>(op);
+      if (value->IsInstance<FunctionNode>() &&
+          Downcast<Function>(value)->GetAttr<String>(relay::attr::kComposite)) {
+        // Discard composite functions because their callers will be substitited to an op
+        this->memo_[expr] = body;
+      } else {
+        this->memo_[expr] = Let(var_map_[op->var], value, body);
+      }
     };
     ExpandANormalForm(node, pre_visit, post_visit);
     return memo_[GetRef<Expr>(node)];
   }
 
   Expr VisitExpr_(const CallNode* node) final {
+    // If this node is calling a composite op, convert it to a Meta op using pattern converter
+    bool is_composite_op = true;
+
+    // Try to trace back to find the composite function
+    Expr curr_op = node->op;
+    const VarNode* var_node;
+    while ((var_node = curr_op.as<VarNode>())) {
+      auto var = GetRef<Var>(var_node);
+      auto it = var_value_map_.find(GetRef<Var>(var_node));
+      if (it != var_value_map_.end()) {
+        curr_op = it->second;
+      } else {
+        is_composite_op = false;
+        break;
+      }
+    }
+    // Convert the composite function call with the Meta op
+    if (is_composite_op) {
+      if (auto func = curr_op.as<FunctionNode>()) {
+        if (auto comp_name = func->GetAttr<String>(relay::attr::kComposite)) {
+          auto comp_name_str = comp_name.value();
+          CHECK_GT(composite_patterns.count(comp_name_str), 0)
+              << "Unrecognized composite: " << comp_name_str;
+
+          tvm::Array<Expr> call_args;
+          for (auto arg : node->args) {
+            auto new_arg = VisitExpr(arg);
+            call_args.push_back(new_arg);
+          }
+          return composite_patterns.at(comp_name_str)->converter(GetRef<Function>(func), call_args);
+        }
+      }
+    }
+
+    // This node is calling a single op so convert it to a Meta op using the op converter
     static auto fmap = Op::GetAttrMap<op::FMNMFromRelay>("FMNMFromRelay");
     static auto fmutation = Op::GetAttrMap<op::FMNMMutationFromRelay>("FMNMMutationFromRelay");
     if (node->op.as<OpNode>() == nullptr) {
@@ -120,7 +229,13 @@ struct FromRelayMutator : public ExprMutator {
       params.push_back(new_param);
       var_map_.Set(param, new_param);
     }
-    return Function(params, Mutate(node->body), {}, {});
+
+    auto body = node->body;
+    if (!node->GetAttr<String>(relay::attr::kComposite)) {
+      // Do not mutate composite functions, because the pattern rewriter is based on Relay ops
+      body = Mutate(body);
+    }
+    return Function(params, body, {}, {}, node->attrs, node->span);
   }
 
   Expr MakeRet(Var ret) {
@@ -160,6 +275,8 @@ struct FromRelayMutator : public ExprMutator {
   int num_bound_var_ = 0;
   /*! \brief Map from var in Relay graph to the converted Meta graph. */
   Map<Var, Var> var_map_;
+  /*! \brief Map from var in Relay graph to the converted Meta graph value. */
+  std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> var_value_map_;
   /*! \brief Map from unsupported op name to the appearance. */
   std::unordered_map<String, int> unsupported_ops_;
   /*! \brief Map from function parameters to their updated values */
@@ -167,13 +284,36 @@ struct FromRelayMutator : public ExprMutator {
   /*! \brief The current let variable */
   Var curr_let_var_;
 };
+
 }  // namespace from_relay
 using namespace tvm;
 using namespace tvm::relay;
 
+Function PartitionPatterns(Function func) {
+  Function ret = func;
+  for (auto name_n_pattern : mnm::pass::from_relay::composite_patterns) {
+    auto pattern = name_n_pattern.second;
+    Map<String, ObjectRef> attrs;
+    attrs.Set("Composite", name_n_pattern.first);
+    attrs.Set("Primitive", Integer(1));
+    ret = Downcast<Function>(PartitionPattern(pattern->pattern, ret, attrs, pattern->check));
+  }
+  return ret;
+}
+
 tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
   if (obj->IsInstance<tvm::IRModuleNode>()) {
     auto mod = Downcast<tvm::IRModule>(obj);
+    mod = tvm::relay::transform::SimplifyExpr()(mod);
+    mod = tvm::relay::transform::EliminateCommonSubexpr()(mod);
+    mod = tvm::relay::transform::CombineParallelBatchMatmul()(mod);
+
+    // Partition Meta-specific Relay simplify patterns
+    for (auto& kv : mod->functions) {
+      auto func = PartitionPatterns(Downcast<Function>(kv.second));
+      mod->Update(kv.first, func);
+    }
+
     auto relay_mod = tvm::relay::transform::ToANormalForm()(mod);
     tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
     std::stringstream unsupported_ops_ss;
@@ -190,8 +330,17 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
     return ir::IRModule(functions);
   } else if (obj->IsInstance<ExprNode>()) {
     auto expr = Downcast<Expr>(obj);
-    auto new_expr = tvm::relay::transform::ToANormalForm(expr);
-    Let let = Downcast<Let>(new_expr);
+
+    // Simplify expr and partition Meta-specific Relay simplify patterns
+    auto mod = IRModule::FromExpr(expr);
+    mod = tvm::relay::transform::SimplifyExpr()(mod);
+    mod = tvm::relay::transform::EliminateCommonSubexpr()(mod);
+    mod = tvm::relay::transform::CombineParallelBatchMatmul()(mod);
+    expr = mod->Lookup("main");
+    auto func = PartitionPatterns(Downcast<Function>(expr));
+
+    auto anf_expr = tvm::relay::transform::ToANormalForm(func);
+    Let let = Downcast<Let>(anf_expr);
     auto mutator = from_relay::FromRelayMutator();
     auto ret = mutator.Mutate(let->value);
     auto unsupported_ops_str = mutator.ListUnsupportedOps();

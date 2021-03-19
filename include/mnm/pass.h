@@ -6,6 +6,7 @@
 #pragma once
 
 #include "tvm/relay/analysis.h"
+#include "tvm/relay/dataflow_matcher.h"
 #include "tvm/relay/transform.h"
 #include "mnm/ir.h"
 #include "mnm/ir_ext.h"
