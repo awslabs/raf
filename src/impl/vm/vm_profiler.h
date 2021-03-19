@@ -34,6 +34,8 @@ class VirtualMachineProfiler : public VirtualMachine {
  private:
   /*! \brief the duration of op call */
   std::unordered_map<OpEnv*, std::vector<double>> op_durations_;
+  /*! \brief the input and output shape string of op call */
+  std::unordered_map<OpEnv*, std::string> op_shapes_;
   /*! \brief the number of times of op call*/
   std::unordered_map<OpEnv*, int> op_invokes_;
   /*! \brief whether to cache intermediate tensors */

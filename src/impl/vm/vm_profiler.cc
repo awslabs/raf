@@ -22,6 +22,33 @@ namespace vm {
 
 Value CopyTo(Value src, const Device& dev);
 
+std::string GetShapeStr(const Value& value) {
+  std::stringstream ss;
+  ss << "(";
+  if (const auto* tvo = value.as<TensorValueObj>()) {
+    const auto& tensor = tvo->tensor;
+    auto ndim = tensor->ndim;
+    for (size_t i = 0; i < ndim; ++i) {
+      ss << tensor->shape[i];
+      if (ndim == 1 || i < ndim - 1) {
+        ss << ",";
+      }
+    }
+  } else if (const auto* tuple = value.as<TupleValueObj>()) {
+    int size = static_cast<int>(tuple->fields.size());
+    for (size_t i = 0; i < size; ++i) {
+      if (i > 0) {
+        ss << ",";
+      }
+      ss << GetShapeStr(tuple->fields[i]);
+    }
+  } else {
+    ss << value->GetTypeKey();
+  }
+  ss << ")";
+  return ss.str();
+}
+
 PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
                                                const ObjectPtr<Object>& sptr_to_self) {
   using namespace device_api;
@@ -39,7 +66,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
     });
   } else if (name == "get_stat") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
-      ICHECK_EQ(args.size(), 1U);
+      ICHECK_EQ(args.size(), 2U);
       std::vector<std::pair<OpEnv*, double>> op_acc_time;
       for (auto kv : op_durations_) {
         auto val =
@@ -56,19 +83,25 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       double total_duration = 0.0;
       int64_t total_packed_funcs = 0;
       std::ostringstream os;
-      os << std::setw(80) << std::left << "#OpName"
-         << "\t" << std::setw(10) << std::left << "#InvokeCount"
+      bool show_shape = args[1];
+      auto title = (show_shape) ? "#OpNameNShape" : "#OpName";
+      os << std::setw(80) << std::left << title << "\t" << std::setw(10) << std::left
+         << "#InvokeCount"
          << "\t"
          << "#Duration(us): Sum/Mean/Min/Max" << std::endl;
 
       for (auto kv : op_acc_time) {
+        std::string name = kv.first->env_name;
+        if (show_shape) {
+          name += " " + op_shapes_[kv.first];
+        }
         auto vals = op_durations_[kv.first];
         auto sum = kv.second;
         auto mean = sum / static_cast<double>(vals.size());
         auto min_value = *std::min_element(vals.begin(), vals.end());
         auto max_value = *std::max_element(vals.begin(), vals.end());
 
-        os << std::setw(80) << std::left << kv.first->env_name << "\t" << std::setw(10) << std::left
+        os << std::setw(80) << std::left << name << "\t" << std::setw(10) << std::left
            << op_invokes_[kv.first] << "\t" << sum << "/" << mean << "/" << min_value << "/"
            << max_value << std::endl;
 
@@ -82,6 +115,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
   } else if (name == "reset") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       op_durations_.clear();
+      op_shapes_.clear();
       op_invokes_.clear();
       op_outputs_.clear();
       op_inputs_.clear();
@@ -112,6 +146,18 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
     CHECK(op_invokes_.find(op_env) == op_invokes_.end());
     op_durations_[op_env] = {};
     op_invokes_[op_env] = 0;
+
+    std::stringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      if (i > 0) {
+        ss << ",";
+      }
+      ss << GetShapeStr(inputs[i]);
+    }
+    ss << "]";
+    ss << "," << GetShapeStr(output);
+    op_shapes_[op_env] = ss.str();
   }
   op_durations_[op_env].push_back(op_duration * 1e6);
   op_invokes_[op_env]++;

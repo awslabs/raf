@@ -22,21 +22,24 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         self._run = self.module["run"]
         self._set_devices(device)
 
-    def get_stat(self, sort_by_time=True):
+    def get_stat(self, sort_by_time=True, show_shape=True):
         """Get the statistics of executed ops.
 
         Parameters
         ----------
         sort_by_time: bool
-           Set to indicate the returned results are sorted by execution time in
-           the descending order. It will be printed in the random order otherwise.
+            Set to indicate the returned results are sorted by execution time in
+            the descending order. It will be printed in the random order otherwise.
+
+        show_shape: bool
+            Whether to display input and output shapes of executed ops. Default True.
 
         Returns
         -------
         ret : str
             The execution statistics in string.
         """
-        return self._get_stat(sort_by_time)
+        return self._get_stat(sort_by_time, show_shape)
 
     def get_interm_tensors(self):
         """Get the intermediate results
@@ -80,20 +83,23 @@ class VMProfilerExecutor(executor.VMExecutor):
         """Reset statistics"""
         self.vm.reset()
 
-    def get_stat(self, sort_by_time=True):
+    def get_stat(self, sort_by_time=True, show_shape=True):
         """Get the statistics of executed ops.
 
         Parameters
         ----------
         sort_by_time: bool
-           Set to indicate the returned results are sorted by execution time in
-           the descending order. It will be printed in the random order otherwise.
+            Set to indicate the returned results are sorted by execution time in
+            the descending order. It will be printed in the random order otherwise.
+
+        show_shape: bool
+            Whether to display input and output shapes of executed ops. Default True.
 
         Returns
         -------
             The execution statistics in string.
         """
-        return self.vm.get_stat(sort_by_time)
+        return self.vm.get_stat(sort_by_time, show_shape)
 
     def get_interm_tensors(self):
         """Get the intermediate results
