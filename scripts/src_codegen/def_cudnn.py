@@ -323,16 +323,17 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
     return new {CLASSNAME}(cv);
   }}
 }};
-MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn");
+MNM_OP_DISPATCH_PLEVEL("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn", {PLEVEL});
 """.strip()
 
-    def __init__(self, op, api, arg_type, normalizers, args, output=['DLTensor *']):
+    def __init__(self, op, api, arg_type, normalizers, args, output=['DLTensor *'], plevel=10):
         self.op = op
         self.api = api
         self.arg_type = arg_type
         self.normalizers = normalizers
         self.args = args.copy()
         self.output = output
+        self.plevel = plevel
 
     def normalize(self, ops, schema, cudnn_apis, wrappers):
         class_name = f'{codegen_utils.snake_to_pascal(self.op)}ImplementedByCUDNN{self.api}'
@@ -407,7 +408,8 @@ MNM_OP_DISPATCH("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_c
                                RUNTIME_CASTS=status.get_runtime_casts(),
                                VM_CHECK_INPUTS=vm_check_inputs,
                                VM_CASTS=vm_casts,
-                               INVOKE=invoke)
+                               INVOKE=invoke,
+                               PLEVEL=self.plevel)
 
 
 def constant(v, ty_src='out->dtype'):
@@ -451,7 +453,8 @@ def dispatch_softmax_dx(op, algorithm):
     mode = """GetTensorTypeDim(xDesc_tt, 1) == 1 && GetTensorTypeDim(xDesc_tt, 2) == 1 ?
     CUDNN_SOFTMAX_MODE_INSTANCE : CUDNN_SOFTMAX_MODE_CHANNEL"""
     mode = AssignStatement('cudnnSoftmaxMode_t', 'mode', mode, True)
-    return CUDNNDispatch(op, 'SoftmaxBackward', 'softmax_dx', [axis, x, y, dy, dx, mode], consts)
+    return CUDNNDispatch(op, 'SoftmaxBackward', 'softmax_dx', [axis, x, y, dy, dx, mode], consts,
+                         plevel=7)
 
 def normalize_scalar_to_tuple(dim, name):
     return f'CastVector<int, int64_t>(NormalizeScalarToTuple<{dim}>({name}))'

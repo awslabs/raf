@@ -158,7 +158,14 @@ using FMNMArgIndices =
           engine_clear(engine);                                                                 \
           return jit(engine, c_cache_key(f, target));                                           \
         });                                                                                     \
-    env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                                \
+    try {                                                                                       \
+      env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                              \
+    } catch (const dmlc::Error& e) {                                                            \
+      if (!IsAutoSchedulerTaskExtractionEnabled()) {                                            \
+        /* Invalid implementation. Return nullptr to let dispatcher select the next one */      \
+        return nullptr;                                                                         \
+      }                                                                                         \
+    }                                                                                           \
     env->env_name = TruncateName(GetUniqueName(op->name.operator std::string()));               \
     return env;                                                                                 \
   }                                                                                             \
