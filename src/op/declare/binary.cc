@@ -372,6 +372,36 @@ void CollapseAxis(const CallValues& call) {
   }
 }
 
+MNM_REGISTER_BINARY_BCAST_OP("mnm.op.left_shift", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  if (!args->out.defined() && !args->where.defined()) {
+    MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                        if (s2->data < 0) {
+                          LOG(FATAL) << "ValueError: Negative shift count";
+                          throw;
+                        }
+
+                        call->callee = ir::NullValue<OpValue>();
+                        if (s1->IsInstance<IntValueObj>() && s2->IsInstance<IntValueObj>()) {
+                          int64_t a1 = s1->data;
+                          int64_t a2 = s2->data;
+                          int64_t result = a1 << a2;
+                          call->out = ScalarValue::make(result);
+                        } else {
+                          LOG(FATAL) << "ValueError: Int value expected";
+                          throw;
+                        }
+                        return;
+                      }));
+    MNM_BINARY_TENSOR(x1, x2);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
+});
+
 // TODO(@icemelon9): Currently use opaque for shape related op.
 MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis).set_attr<TOpPattern>("TOpPattern", kOpaque);
 

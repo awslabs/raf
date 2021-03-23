@@ -82,6 +82,7 @@ MNM_OP_TYPE("mnm.op.greater_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.equal", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.not_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 MNM_OP_TYPE("mnm.op.logical_and", "LogicalBroadcast", LogicalBroadcastInfer);
+MNM_OP_TYPE("mnm.op.left_shift", "Broadcast", BroadcastInfer);
 
 Type AxisTypeInfer(const CallValues& value) {
   const auto* args = value->args.as<BinaryArgs>();

@@ -110,6 +110,7 @@ def test_binary_bool_ops(ops, shape, dtype, device):
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
     (np.right_shift, mnm._op.sym.right_shift),
+    (np.left_shift, mnm._op.sym.left_shift)
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],

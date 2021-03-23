@@ -21,22 +21,22 @@ __all__ = [
     "erf_dx", "exp", "expand_dims", "floor", "full",
     "gather", "gather_dx", "gather_nd", "gather_nd_dx", "get_kept_dims",
     "get_reduce_axis", "get_valid_counts", "greater", "greater_equal", "layer_norm",
-    "layer_norm_dx", "less", "less_equal", "log", "log_softmax",
-    "log_softmax_dx", "logical_and", "logical_not", "matmul", "matmul_nt",
-    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
-    "maximum", "mean", "mean_dx", "min", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
-    "ones_like", "pad", "power", "prod", "relu",
-    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
-    "right_shift", "round", "rsqrt", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
-    "subtract", "sum", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx", "trunc", "where",
-    "zeros", "zeros_like",
+    "layer_norm_dx", "left_shift", "less", "less_equal", "log",
+    "log_softmax", "log_softmax_dx", "logical_and", "logical_not", "matmul",
+    "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
+    "max_pool2d_dx", "maximum", "mean", "mean_dx", "min",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
+    "ones", "ones_like", "pad", "power", "prod",
+    "relu", "relu_dx", "repeat", "reshape", "reverse",
+    "reverse_sequence", "right_shift", "round", "rsqrt", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
+    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
+    "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "take", "take_dx",
+    "tanh", "tanh_dx", "transpose", "transpose_dx", "trunc",
+    "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -518,6 +518,14 @@ def layer_norm_dx(x, scale, dy, axis=-1, eps=1e-05):
     axis = imp_utils.to_int(axis)
     eps = imp_utils.to_double(eps)
     return imp_utils.ret(ffi.layer_norm_dx(x, scale, dy, axis, eps))
+
+@set_module("mnm")
+def left_shift(x1, x2, out=None, where=None):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.left_shift(x1, x2, out, where))
 
 @set_module("mnm")
 def less(x1, x2, out=None, where=None):

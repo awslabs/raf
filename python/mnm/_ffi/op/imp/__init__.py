@@ -67,6 +67,7 @@ from ._internal import greater
 from ._internal import greater_equal
 from ._internal import layer_norm
 from ._internal import layer_norm_dx
+from ._internal import left_shift
 from ._internal import less
 from ._internal import less_equal
 from ._internal import log

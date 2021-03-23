@@ -135,6 +135,8 @@ layer_norm = _APIS.get("mnm.op.sym.layer_norm", None)
 # Defined in ./src/op/regs/regs.cc
 layer_norm_dx = _APIS.get("mnm.op.sym.layer_norm_dx", None)
 # Defined in ./src/op/regs/regs.cc
+left_shift = _APIS.get("mnm.op.sym.left_shift", None)
+# Defined in ./src/op/regs/regs.cc
 less = _APIS.get("mnm.op.sym.less", None)
 # Defined in ./src/op/regs/regs.cc
 less_equal = _APIS.get("mnm.op.sym.less_equal", None)

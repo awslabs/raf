@@ -106,6 +106,7 @@ static const char greater[] = "mnm.op.greater";
 static const char greater_equal[] = "mnm.op.greater_equal";
 static const char layer_norm[] = "mnm.op.layer_norm";
 static const char layer_norm_dx[] = "mnm.op.layer_norm_dx";
+static const char left_shift[] = "mnm.op.left_shift";
 static const char less[] = "mnm.op.less";
 static const char less_equal[] = "mnm.op.less_equal";
 static const char log[] = "mnm.op.log";
@@ -1573,6 +1574,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.layer_norm_dx").set_body([](TVMArgs args, TVMRet
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[3], schema2value::Int(schema->axis));
   MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->eps));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.left_shift").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(left_shift, 4, ffi2schema::BinaryUfunc,
+              schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3106,6 +3118,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm").set_body(MNM_SYMBOLIC_API(layer_norm, 5, LayerNorm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm_dx")
     .set_body(MNM_SYMBOLIC_API(layer_norm_dx, 5, LayerNormDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.left_shift").set_body(MNM_SYMBOLIC_API(left_shift, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.less").set_body(MNM_SYMBOLIC_API(less, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.less_equal").set_body(MNM_SYMBOLIC_API(less_equal, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log").set_body(MNM_SYMBOLIC_API(log, 1, Unary));
@@ -5517,6 +5530,10 @@ MNM_BIND_SCHEMA("mnm.op.layer_norm_dx", names::layer_norm_dx,
                 value2schema::LayerNormDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.layer_norm_dx", names::layer_norm_dx,
                             schema_field_idx::LayerNormDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.left_shift", names::left_shift,
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.left_shift", names::left_shift,
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.less", names::less,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.less", names::less,

@@ -144,6 +144,7 @@ OPS = [
     Op(name="_alloc_storage", schema_name="_alloc_storage"),
     Op(name="_alloc_tensor", schema_name="_alloc_tensor"),
     Op(name="_invoke_op", schema_name="_invoke_op"),
+    Op(name="left_shift", schema_name="binary_ufunc"),
 ]
 
 def by_name():

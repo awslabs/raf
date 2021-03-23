@@ -16,6 +16,7 @@ from tvm.relay import TensorType, FuncType, TupleType
     sym.maximum,
     sym.minimum,
     sym.right_shift,
+    sym.left_shift,
 ])
 @pytest.mark.parametrize("shape", [
     [(10, 4), (5, 10, 1), (5, 10, 4)],
@@ -50,7 +51,7 @@ def test_binary(op, shape, dtype):
     check_type(m_mod['main'], desired_type)
     # check backward
     # TODO(yzhliu): some operators are missing gradient registries.
-    if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract, sym.right_shift):
+    if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract):
         bwd_mod = AutoDiff(m_mod, record.requires_grads)
         bwd_mod = InferType(bwd_mod)
         bwd_func = bwd_mod['main']

@@ -68,16 +68,37 @@ MNM_OP_GRAD("mnm.op.subtract", SubGrad);
 Array<Expr> RightshiftGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                            const Expr& dy) {
   // give zero gradient for any input gradient
-  static auto op_zeros = Op::Get("mnm.op.zeros");
-  static auto op_shape = Op::Get("mnm.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 2);
-  const Expr& x = call->args[0];
-  Call zeros = Call(op_zeros, {Call(op_shape, {x})});
-  return {zeros};
+  const Expr& x1 = call->args[0];
+  const Expr& x2 = call->args[1];
+  auto f = [&dy](const Expr& x) {
+    static auto op_zeros_like = Op::Get("mnm.op.zeros_like");
+    Call zero = Call(op_zeros_like, {x});
+    return zero;
+  };
+
+  return {f(x1), f(x2)};
 }
 
 MNM_OP_GRAD("mnm.op.right_shift", RightshiftGrad);
+
+Array<Expr> LeftShiftGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                          const Expr& dy) {
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& x1 = call->args[0];
+  const Expr& x2 = call->args[1];
+  auto f = [&dy](const Expr& x) {
+    static auto op_zeros_like = Op::Get("mnm.op.zeros_like");
+    Call zero = Call(op_zeros_like, {x});
+    return zero;
+  };
+
+  return {f(x1), f(x2)};
+}
+
+MNM_OP_GRAD("mnm.op.left_shift", LeftShiftGrad);
 
 Array<Expr> MulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
