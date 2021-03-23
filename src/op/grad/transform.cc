@@ -35,6 +35,18 @@ Array<Expr> TransposeGrad(const Expr& orig_call, const Array<Expr> orig_args, co
 
 MNM_OP_GRAD("mnm.op.transpose", TransposeGrad);
 
+Array<Expr> SwapAxisGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                         const Expr& dy) {
+  static auto swap_axis = Op::Get("mnm.op.swap_axis");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& axes1 = call->args[1];
+  const Expr& axes2 = call->args[2];
+  return {Call(swap_axis, {dy, axes1, axes2})};
+}
+
+MNM_OP_GRAD("mnm.op.swap_axis", SwapAxisGrad);
+
 Array<Expr> StackGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.split");

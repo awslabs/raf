@@ -134,6 +134,7 @@ from ._internal import strided_slice
 from ._internal import strided_slice_dx
 from ._internal import subtract
 from ._internal import sum
+from ._internal import swap_axis
 from ._internal import take
 from ._internal import take_dx
 from ._internal import tanh

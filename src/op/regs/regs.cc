@@ -173,6 +173,7 @@ static const char strided_slice[] = "mnm.op.strided_slice";
 static const char strided_slice_dx[] = "mnm.op.strided_slice_dx";
 static const char subtract[] = "mnm.op.subtract";
 static const char sum[] = "mnm.op.sum";
+static const char swap_axis[] = "mnm.op.swap_axis";
 static const char take[] = "mnm.op.take";
 static const char take_dx[] = "mnm.op.take_dx";
 static const char tanh[] = "mnm.op.tanh";
@@ -760,6 +761,14 @@ Attrs Sum(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
   MNM_POD(2, ffi2schema::IntOrTupleInt, keepdims);
+  return Attrs(attrs);
+}
+
+Attrs SwapAxis(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::SwapAxisArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Int, axis1);
+  MNM_POD(2, ffi2schema::Int, axis2);
   return Attrs(attrs);
 }
 
@@ -2233,6 +2242,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sum").set_body([](TVMArgs args, TVMRetValue* ret
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.swap_axis").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(swap_axis, 3, ffi2schema::SwapAxis,
+              schema::SwapAxisArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis1));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->axis2));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.take").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(take, 4, ffi2schema::Take, schema::TakeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
@@ -2905,6 +2924,14 @@ Array<Expr> Sum(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> SwapAxis(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Int, axis1);
+  MNM_ARG(2, ffi2expr::Int, axis2);
+  MNM_RET();
+}
+
 Array<Expr> Take(const TVMArgs& values) {
   MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -3200,6 +3227,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice_dx")
     .set_body(MNM_SYMBOLIC_API(strided_slice_dx, 6, StridedSliceDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 3, Sum));
+MNM_REGISTER_GLOBAL("mnm.op.sym.swap_axis").set_body(MNM_SYMBOLIC_API(swap_axis, 3, SwapAxis));
 MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 4, Take));
 MNM_REGISTER_GLOBAL("mnm.op.sym.take_dx").set_body(MNM_SYMBOLIC_API(take_dx, 6, TakeDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh").set_body(MNM_SYMBOLIC_API(tanh, 1, Unary));
@@ -3865,6 +3893,15 @@ Attrs Sum(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axis);
   MNM_OPTIONAL(2, value2schema::IntOrTupleInt, keepdims);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs SwapAxis(const Array<Value>& values) {
+  MNM_PRELUDE(3, 3, schema::SwapAxisArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Int, axis1);
+  MNM_REQUIRED(2, value2schema::Int, axis2);
   return Attrs(attrs);
 }
 
@@ -5078,6 +5115,21 @@ int Sum(const std::string& field) {
 }
 
 template <const char* op_name>
+int SwapAxis(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis1") {
+    return 1;
+  }
+  if (field == "axis2") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Take(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -5786,7 +5838,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.subtract", names::subtract,
                             schema_field_idx::BinaryUfunc);    // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sum", names::sum,
-                            schema_field_idx::Sum);               // NOLINT(whitespace/line_length)
+                            schema_field_idx::Sum);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.swap_axis", names::swap_axis,
+                value2schema::SwapAxis);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.swap_axis", names::swap_axis,
+                            schema_field_idx::SwapAxis);          // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.take", names::take, value2schema::Take);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.take", names::take,
                             schema_field_idx::Take);  // NOLINT(whitespace/line_length)
@@ -5902,6 +5958,7 @@ MNM_REGISTER_OBJECT_REFLECT(StreamControlArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);
+MNM_REGISTER_OBJECT_REFLECT(SwapAxisArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TakeDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryArgs);

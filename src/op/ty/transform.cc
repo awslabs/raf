@@ -53,6 +53,28 @@ Type TransposeDxInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.transpose_dx", "TransposeDx", TransposeDxInfer);
 
+Type SwapAxisInfer(const CallValues& value) {
+  const auto* args = value->args.as<SwapAxisArgs>();
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  size_t ndim = x->shape.size();
+  int axis1 = args->axis1;
+  int axis2 = args->axis2;
+  CHECK_NE(axis1, axis2);
+  Array<tvm::PrimExpr> oshape;
+  for (int i = 0; i < ndim; i++) {
+    if (axis1 == i) {
+      oshape.push_back(x->shape[axis2]);
+    } else if (axis2 == i) {
+      oshape.push_back(x->shape[axis1]);
+    } else {
+      oshape.push_back(x->shape[i]);
+    }
+  }
+  return TensorType(oshape, x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.swap_axis", "SwapAxis", SwapAxisInfer);
+
 Type BatchFlattenInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
   CHECK(args != nullptr);

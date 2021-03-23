@@ -7,7 +7,6 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/reduce.h"
-
 namespace mnm {
 namespace op {
 namespace declare {

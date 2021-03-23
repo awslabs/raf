@@ -34,9 +34,9 @@ __all__ = [
     "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
     "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
     "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
-    "strided_slice_dx", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx", "trunc",
-    "where", "zeros", "zeros_like",
+    "strided_slice_dx", "subtract", "sum", "swap_axis", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "trunc", "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -998,6 +998,13 @@ def sum(x, axis=(), keepdims=0):
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_int_tuple(keepdims)
     return imp_utils.ret(ffi.sum(x, axis, keepdims))
+
+@set_module("mnm")
+def swap_axis(x, axis1, axis2):
+    x = imp_utils.to_tensor(x)
+    axis1 = imp_utils.to_int(axis1)
+    axis2 = imp_utils.to_int(axis2)
+    return imp_utils.ret(ffi.swap_axis(x, axis1, axis2))
 
 @set_module("mnm")
 def take(x, indices, axis=None, mode="clip"):

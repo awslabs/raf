@@ -772,6 +772,42 @@ HashKey WhereHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Where, "mnm.op.where", WhereArgs, WhereSchema2Args, WhereSchemaArgNames,
            WhereSchema2Attrs, WhereHasher);
 
+struct SwapAxisAttrs : public tvm::AttrsNode<SwapAxisAttrs> {
+  int axis1;
+  int axis2;
+  TVM_DECLARE_ATTRS(SwapAxisAttrs, "attrs.SwapAxisAttrs") {
+    TVM_ATTR_FIELD(axis1);
+    TVM_ATTR_FIELD(axis2);
+  }
+};
+TVM_REGISTER_NODE_TYPE(SwapAxisAttrs);
+
+std::vector<Value> SwapAxisSchema2Args(const SwapAxisArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SwapAxisSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs SwapAxisSchema2Attrs(const SwapAxisArgs* args) {
+  auto attrs = make_object<SwapAxisAttrs>();
+  attrs->axis1 = args->axis1;
+  attrs->axis2 = args->axis2;
+  return Attrs(attrs);
+}
+
+HashKey SwapAxisHasher(const std::vector<Type>& param_types, const Type& y_type,
+                       const SwapAxisArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis1;
+  key << args->axis2;
+  return key;
+}
+
+MNM_TVMJIT(SwapAxis, "mnm.op.swap_axis", SwapAxisArgs, SwapAxisSchema2Args, SwapAxisSchemaArgNames,
+           SwapAxisSchema2Attrs, SwapAxisHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

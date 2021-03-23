@@ -33,9 +33,9 @@ __all__ = [
     "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
     "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
     "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
-    "strided_slice_dx", "subtract", "sum", "take", "take_dx",
-    "tanh", "tanh_dx", "transpose", "transpose_dx", "trunc",
-    "where", "zeros", "zeros_like",
+    "strided_slice_dx", "subtract", "sum", "swap_axis", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "trunc", "where", "zeros", "zeros_like",
 ]
 
 def _alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
@@ -864,6 +864,12 @@ def sum(x, axis=(), keepdims=0):
     axis = sym_utils.to_int_tuple(axis)
     keepdims = sym_utils.to_int_tuple(keepdims)
     return Symbol.from_expr(ffi.sum(x, axis, keepdims))
+
+def swap_axis(x, axis1, axis2):
+    x = sym_utils.to_tensor(x)
+    axis1 = sym_utils.to_int(axis1)
+    axis2 = sym_utils.to_int(axis2)
+    return Symbol.from_expr(ffi.swap_axis(x, axis1, axis2))
 
 def take(x, indices, axis=None, mode="clip"):
     x = sym_utils.to_tensor(x)

@@ -353,6 +353,11 @@ SCHEMAS = {
             cxx_default="{}",
             py_default="None"),
     ],
+    "transform.h::swap_axis": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis1", cxx_type="int"),
+        Arg(name="axis2", cxx_type="int"),
+    ],
     "transform.h::reverse": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int", cxx_default=0),

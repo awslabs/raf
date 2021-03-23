@@ -3,7 +3,6 @@
 from .._lib import register_compute
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
-
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.transpose_dx")
@@ -16,9 +15,20 @@ def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
     out = _topi.transpose(dy, axes=tuple(axes_inverse))
     return [out]
 
+@register_compute("mnm.op.swap_axis")
+def swap_axis_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    axis1, axis2 = attrs.axis1, attrs.axis2
+    x = inputs[0]
+    ndim = len(x.shape)
+    axes = list(range(ndim))
+    axes[axis1] = axis2
+    axes[axis2] = axis1
+    out = _topi.transpose(x, axes=axes)
+    return [out]
 
 _reg.register_injective_schedule("mnm.op.transpose_dx")
 _reg.register_injective_schedule("mnm.op.transpose")
+_reg.register_injective_schedule("mnm.op.swap_axis")
 _reg.register_injective_schedule("mnm.op.split")
 _reg.register_injective_schedule("mnm.op.take")
 _reg.register_injective_schedule("mnm.op.sequence_mask")

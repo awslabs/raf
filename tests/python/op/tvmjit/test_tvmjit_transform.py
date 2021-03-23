@@ -21,9 +21,9 @@ class TestModel(mnm.Model):
         return self.op(*args, **self.attrs)
 
 
-# pylint: disable=too-many-locals
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=no-member
+#pylint: disable=too-many-locals
+#pylint: disable=attribute-defined-outside-init
+#pylint: disable=no-member
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     [(5, 4, 3), (1, 2)],
@@ -147,6 +147,41 @@ def test_transpose(shape, device):
         n_x_grad = np.transpose(n_dy)
     m_y.backward(m_dy)
     check(m_x.grad, n_x_grad)
+
+
+@pytest.mark.parametrize("shape", [
+    (5, 2),
+    (1, 2),
+    (2, 3, 2),
+    (6, 2, 5),
+    (5, 2, 2),
+    (1, 2, 3, 4),
+])
+@pytest.mark.parametrize("axis", [
+    (0, 1),
+    (0, 2),
+    (2, 1),
+    (1, 3),
+])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("device", get_device_list())
+def test_swap_axis(shape, dtype, axis, device):# pylint: disable=unused-argument
+    if max(axis) < len(shape):
+        model = TestModel(mnm._op.sym.swap_axis, axis1=axis[0], axis2=axis[1])
+        m_x, n_x = randn(shape, device=device)
+        m_x.requires_grad = True
+        m_y = model(m_x)
+        v_y = run_vm_model(model, device, [m_x])
+        n_y = np.swapaxes(n_x, axis[0], axis[1])
+        # check forward
+        check(m_y, n_y)
+        check(v_y, n_y)
+        # check backward
+        y_shape = n_y.shape
+        m_dy, n_dy = randn(y_shape, device=device)
+        n_x_grad = np.swapaxes(n_dy, axis[0], axis[1])
+        m_y.backward(m_dy)
+        check(m_x.grad, n_x_grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())

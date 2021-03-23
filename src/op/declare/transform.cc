@@ -392,6 +392,30 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
   call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
+  const auto* args = call->args.as<SwapAxisArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  int axis1 = args->axis1;
+  int axis2 = args->axis2;
+  int ndim = x->ndim;
+
+  CHECK(0 <= axis1 && axis1 <= ndim - 1)
+      << "ValueError: invalid argument of operation swapaxis ,axis1 = " << axis1
+      << " on ndim = " << ndim;
+  CHECK(0 <= axis2 && axis2 <= ndim - 1)
+      << "ValueError: invalid argument of operation swapaxis ,axis2 = " << axis2
+      << " on ndim = " << ndim;
+  CHECK(axis1 != axis2)
+      << "ValueError: invalid argument of operation swapaxis , axis1 and axis2 can not be the same";
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  int temp = shape[axis2];
+  shape[axis2] = shape[axis1];
+  shape[axis1] = temp;
+  call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
+  call->device = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToLikeArgs>();
   CHECK(args != nullptr);

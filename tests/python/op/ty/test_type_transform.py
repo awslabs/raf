@@ -394,6 +394,58 @@ def test_transpose(shape, dtype):
     m_mod = InferType(m_mod)
     check_type(m_mod['main'], expected_type)
 
+@pytest.mark.parametrize("shape", [
+    (5, 2),
+    (1, 2),
+    (2, 3, 2),
+    (6, 2, 5),
+    (5, 2, 2),
+    (1, 2, 3, 4),
+])
+@pytest.mark.parametrize("axis", [
+    (0, 1),
+    (0, 2),
+    (2, 1),
+    (1, 3),
+])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_swap_axis(shape, dtype, axis):
+
+    class SwapAxis(mnm.Model):
+        def build(self, axes=None):
+            self._axes1 = axes[0]
+            self._axes2 = axes[1]
+
+        @mnm.model.trace
+        def forward(self, x):
+            ret = mnm.swap_axis(x, self._axes1, self._axes2)
+            return ret
+    if max(axis) < len(shape):
+        axes = axis
+        model = SwapAxis(axes)
+        m_x, n_x = randn(shape, dtype=dtype)
+        m_x.requires_grad = True
+        record = model._internal(m_x)
+        m_mod = record.mod
+        m_func = InferType(m_mod)
+        n_y = np.swapaxes(n_x, axes[0], axes[1])
+        x_ty = TensorType(n_x.shape, dtype=dtype)
+        y_ty = TensorType(n_y.shape, dtype=dtype)
+        expected_type = FuncType([x_ty], y_ty)
+        # forward
+        check_type(m_func['main'], expected_type)
+        # backward
+        y_shape = n_y.shape
+        _, n_dy = randn(y_shape, dtype=dtype)
+        n_x_grad = np.swapaxes(n_dy, axes[0], axes[1])
+        dy_ty = TensorType(n_dy.shape, dtype=dtype)
+        dx_ty = TensorType(n_x_grad.shape, dtype=dtype)
+        bwd_ty = FuncType([dy_ty], dx_ty)
+        expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
+        m_func = AutoDiff(m_func, record.requires_grads)
+        m_func = run_infer_type(m_func)
+        check_type(m_func['main'], expected_type)
+
 
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
 @pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
@@ -428,6 +480,7 @@ def test_cast(shape, itype, otype):
     bwd_ty = FuncType([dy_ty], dx_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
     check_type(m_mod['main'], expected_type)
+
 
 
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])

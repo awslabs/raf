@@ -94,6 +94,7 @@ OPS = [
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),
     Op(name="shape", schema_name="unary"),
+    Op(name="swap_axis", schema_name="swap_axis"),
     Op(name="take", schema_name="take"),
     Op(name="take_dx", schema_name="take_dx"),
     Op(name="dense", schema_name="binary"),

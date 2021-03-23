@@ -269,6 +269,8 @@ subtract = _APIS.get("mnm.op.imp.subtract", None)
 # Defined in ./src/op/regs/regs.cc
 sum = _APIS.get("mnm.op.imp.sum", None)
 # Defined in ./src/op/regs/regs.cc
+swap_axis = _APIS.get("mnm.op.imp.swap_axis", None)
+# Defined in ./src/op/regs/regs.cc
 take = _APIS.get("mnm.op.imp.take", None)
 # Defined in ./src/op/regs/regs.cc
 take_dx = _APIS.get("mnm.op.imp.take_dx", None)

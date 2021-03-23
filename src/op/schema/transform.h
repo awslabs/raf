@@ -120,6 +120,14 @@ class StridedSliceDxArgs : public ir::AttrsNode<StridedSliceDxArgs> {
   MNM_OP_SCHEMA(StridedSliceDxArgs, "mnm.args.strided_slice_dx");
 };
 
+class SwapAxisArgs : public ir::AttrsNode<SwapAxisArgs> {
+ public:
+  value::BaseTensorValue x;
+  int axis1;
+  int axis2;
+  MNM_OP_SCHEMA(SwapAxisArgs, "mnm.args.swap_axis");
+};
+
 class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
  public:
   value::BaseTensorValue x;
