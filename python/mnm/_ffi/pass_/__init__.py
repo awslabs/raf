@@ -27,6 +27,7 @@ from ._internal import MemShare
 from ._internal import MergeCompilerRegions
 from ._internal import PartitionGraph
 from ._internal import RenameVars
+from ._internal import SimplifyExpr
 from ._internal import Substitute
 from ._internal import ToANormalForm
 from ._internal import ToDataflowGraph

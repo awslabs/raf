@@ -5,7 +5,7 @@ from .._core.value import NoGradValue, Value
 from .._core.ir_ext import ExtendedVar
 from ..model.trace import _get_func_inputs
 from ..model import Model, trace
-from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType
+from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType, SimplifyExpr
 from .._ffi.ir.variable import SetMayShare
 from .._ffi.binding import BindSymbol
 from .._lib import tvm
@@ -65,6 +65,8 @@ def with_autodiff(model):
             mod = record.mod
             mod = InferType(mod)
             mod = AutoDiff(mod, record.requires_grads)
+            mod = InferType(mod)
+            mod = SimplifyExpr(mod)
             mod['main'] = InlineBackward(mod['main'])
             inputs = _get_func_inputs(record, args, {})
             inputs = inputs + [get_symbol_handle(dy)]

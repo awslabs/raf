@@ -123,6 +123,14 @@ ir::Expr InlineLet(ir::Expr expr);
  */
 ir::Expr DeadCodeElimination(const ir::Expr& expr);
 
+/*! \brief Simplifies commonly seen patterns that can be removed at compile time.
+ *
+ * \param expr Expression to be transformed.
+ *
+ * \return Transformed Expression.
+ */
+ir::Expr SimplifyExpr(const ir::Expr& expr);
+
 /*! \brief Convert Relay IR to Meta IR.
  * \param obj tvm::IRModule or ir::Expr
  * \return ir::IRModule or ir::Expr
@@ -173,6 +181,7 @@ ir::IRModule AssignDevice(ir::IRModule mod, std::string device);
 ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level);
 ir::IRModule InlineLet(ir::IRModule mod);
 ir::IRModule DeadCodeElimination(ir::IRModule mod);
+ir::IRModule SimplifyExpr(ir::IRModule mod);
 ir::IRModule ToDataflowGraph(ir::IRModule mod);
 
 /*!
