@@ -6,4 +6,4 @@ source ./ci/env.sh
 
 echo "Cleanup data..."
 BUILD_DIR=$1
-cd $BUILD_DIR && find . -type f ! -name 'config.cmake' -delete && find . -type d -delete && cd ..
+cd $BUILD_DIR && find . -type f,l ! -name 'config.cmake' -delete && find . -type d -delete && cd ..
