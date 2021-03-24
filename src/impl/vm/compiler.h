@@ -6,7 +6,6 @@
 #pragma once
 #include <tvm/ir/error.h>
 #include <tvm/relay/expr_functor.h>
-#include <tvm/support/logging.h>
 #include <tvm/relay/transform.h>
 #include <memory>
 #include <string>

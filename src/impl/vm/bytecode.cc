@@ -5,7 +5,6 @@
  */
 
 #include <dmlc/memory_io.h>
-#include <tvm/support/logging.h>
 #include <tvm/runtime/container.h>
 #include <tvm/runtime/memory.h>
 #include <tvm/runtime/object.h>

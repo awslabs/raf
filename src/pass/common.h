@@ -40,22 +40,19 @@ struct ExplicitLetList {
     explicit Maker(ExplicitLetList* ell) : ell(ell) {
     }
 
-    void VisitExpr_(const ir::VarNode* node) final {
-      ell->ret = ir::GetRef<ir::Var>(node);
-    }
-
     void VisitExpr_(const ir::LetNode* node) final {
-      ell->vars.push_back(node->var);
-      ell->exprs.push_back(node->value);
-      const ir::Expr& expr = node->body;
-      if (expr->IsInstance<ir::LetNode>()) {
-        VisitExpr(expr);  // tail call
-      } else if (expr->IsInstance<ir::VarNode>()) {
-        VisitExpr(expr);
-      } else {
-        LOG(FATAL) << "ValueError: assumes ANF";
-        throw;
-      }
+      auto pre_visit = [this](const LetNode* op) {
+        ell->vars.push_back(op->var);
+        ell->exprs.push_back(op->value);
+        const ir::Expr& expr = op->body;
+        CHECK(expr->IsInstance<ir::LetNode>() || expr->IsInstance<ir::VarNode>())
+            << "ValueError: assumes ANF";
+        if (expr->IsInstance<ir::VarNode>()) {
+          ell->ret = ir::Downcast<ir::Var>(expr);
+        }
+      };
+      auto post_visit = [this](const LetNode* op) {};
+      ExpandANormalForm(node, pre_visit, post_visit);
     }
     ExplicitLetList* ell;
   };
