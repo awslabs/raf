@@ -6,7 +6,7 @@ from tvm import auto_scheduler, autotvm
 from . import ndarray as _nd
 from .core_utils import register_node, str2ctx
 from .. import _ffi
-from .._core.value import Value
+from .._core.value import Value, TupleValue
 
 
 def interpret(expr, module=None):
@@ -419,20 +419,19 @@ class VMCompiler:
 
 
 # pylint: disable=protected-access
-def _convert(arg, cargs):
+def _convert(arg):
     if isinstance(arg, np.ndarray):
         nd_arr = _nd.array(arg, device="cpu")
-        cargs.append(nd_arr._ndarray__value)
-    elif isinstance(arg, _nd.ndarray):
-        cargs.append(arg._ndarray__value)
-    else:
-        raise TypeError("Unsupported type: %s" % (type(arg)))
+        return nd_arr._ndarray__value
+    if isinstance(arg, _nd.ndarray):
+        return arg._ndarray__value
+    if isinstance(arg, (tuple, list)):
+        return TupleValue([_convert(x) for x in arg])
+    raise TypeError("Unsupported type: %s" % (type(arg)))
 
 
 def _convert_args(args):
-    cargs = []
-    for arg in args:
-        _convert(arg, cargs)
+    cargs = [_convert(arg) for arg in args]
     return cargs
 
 

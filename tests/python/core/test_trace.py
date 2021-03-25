@@ -2,7 +2,7 @@
 import pytest
 
 import mnm
-from mnm.testing import randn, get_device_list, check
+from mnm.testing import randn, get_device_list, check, run_vm_model
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -22,6 +22,8 @@ def test_tup_inputs(device):
     m_y, n_y = randn(shape, device=device)
     m_z = m_model((m_x, m_y))
     n_z = n_x + n_y
+    check(m_z, n_z)
+    m_z = run_vm_model(m_model, device, [(m_x, m_y)])
     check(m_z, n_z)
 
 

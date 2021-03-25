@@ -40,6 +40,10 @@ class InplaceVisitor : public ExprFunctor<void(const Expr& n)> {
     const auto& exprs = ell_->exprs;
     CHECK_EQ(vars.size(), exprs.size());
     int n = exprs.size();
+    for (const auto& var : func->params) {
+      simplify_.Set(var, var);
+      binding_.Set(var, var);
+    }
     for (int i = 0; i < n; ++i) {
       let_var_ = vars[i];
       simplify_.Set(let_var_, let_var_);
