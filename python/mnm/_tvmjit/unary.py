@@ -24,6 +24,16 @@ _reg.register_broadcast_schedule("mnm.op.relu")
 _reg.register_broadcast_schedule("mnm.op.negative")
 _reg.register_broadcast_schedule("mnm.op.sigmoid")
 _reg.register_broadcast_schedule("mnm.op.tanh")
+
+@register_compute("mnm.op.tanh_dx")
+def tanh_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # grad = dy * (1 - tanh(x) * tanh(x)) = dy * (1 - y * y)
+    x, y, dy = inputs
+    return [_tvm.te.compute(x.shape, lambda *idx: dy[idx] * (1 - y[idx] * y[idx]),
+                            tag=_tvm.topi.tag.ELEMWISE)]
+
+_reg.register_broadcast_schedule("mnm.op.tanh_dx")
 _reg.register_broadcast_schedule("mnm.op.trunc")
 
 @register_compute("mnm.op.erf_dx")
@@ -33,7 +43,8 @@ def erf_dx_compute(attrs, inputs, output_type):
     x, y, dy = inputs
     return [_tvm.te.compute(x.shape,
                             lambda *idx: _tvm.tir.const(2 / math.sqrt(math.pi), dtype=dy.dtype)
-                            * _tvm.te.exp(-x[idx] * x[idx]) * dy[idx])]
+                            * _tvm.te.exp(-x[idx] * x[idx]) * dy[idx],
+                            tag=_tvm.topi.tag.ELEMWISE)]
 
 _reg.register_broadcast_schedule("mnm.op.erf_dx")
 _reg.register_injective_schedule("mnm.op.zeros_like")

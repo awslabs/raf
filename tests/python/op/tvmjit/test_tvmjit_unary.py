@@ -66,6 +66,7 @@ def test_unary_ops(ops, shape, dtype, device):
         (torch.exp, mnm._op.sym.exp),
         (torch.atan, mnm._op.sym.atan),
         (torch.trunc, mnm._op.sym.trunc),
+        (torch.tanh, mnm._op.sym.tanh)
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
