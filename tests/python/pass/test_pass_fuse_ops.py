@@ -202,7 +202,7 @@ def test_concatenate():
     assert tvm.ir.structural_equal(after['main'], func_expected)
 
 
-def test_tuple_root():
+def test_tuple_root_fuse():
     """Test fusion case where Tuple node is the root in its group"""
     rand, _ = randn((1,), device="cpu")
 
@@ -260,6 +260,29 @@ def test_tuple_root():
     func_expected = expected((1, 16, 64, 64))
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(after['main'], func_expected)
+
+def test_tuple_root_no_fuse():
+    """Test no fusion case where Tuple node is the root in its group."""
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b, c):
+            return mnm.concatenate((a, b, c))
+
+    model = Model()
+    m_a, _ = randn((128,))
+    m_b, _ = randn((128,))
+    m_c, _ = randn((128,))
+    before = model._internal(m_a, m_b, m_c).mod
+    before = run_infer_type(before)
+    after = mnm._ffi.pass_.FuseOps(before, 3)
+    after = run_infer_type(after)
+    # The group of tuple and concatenate won't be fused due to no call node,
+    # so fusion pass has no effect in this case.
+    assert tvm.ir.structural_equal(after["main"], before["main"])
 
 def test_single_w_tuple():
     """Call nodes that cannot be fused should not be in a function."""

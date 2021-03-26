@@ -906,6 +906,11 @@ class FuseMutator : private ExprMutator {
   Expr VisitExpr_(const TupleNode* tuple) {
     auto* ret_group = gmap_.at(tuple)->FindRoot();
 
+    if (ret_group->num_call_nodes <= 1) {
+      // Skip the group with 0 or 1 call node.
+      return ExprMutator::VisitExpr_(tuple);
+    }
+
     Array<Expr> new_fields = GetNewArguments(tuple->fields, ret_group);
     if (ret_group->root_ref != tuple) {
       // This tuple is an intermediate node in the group
@@ -914,11 +919,11 @@ class FuseMutator : private ExprMutator {
     // This tuple is the root of group
     HasCallVisitor visitor;
     visitor.VisitExpr(Tuple(new_fields));
-    if (visitor.has_call && ret_group->num_call_nodes > 1) {
+    if (visitor.has_call) {
       // Other ops have been fused into this tuple
       return MakeNewFunction(ret_group, tuple->checked_type(), Tuple(new_fields));
     }
-    return ExprMutator::VisitExpr_(tuple);
+    return Tuple(new_fields);
   }
 
   Expr VisitExpr_(const TupleGetItemNode* tuple_get) {
