@@ -1,3 +1,4 @@
+# pylint: disable=too-many-locals, no-self-use
 # pylint: disable=protected-access,attribute-defined-outside-init,invalid-name
 from functools import reduce
 import operator
@@ -726,6 +727,34 @@ def test_where(shape, device):
     m_res = m_model(m_condition, m_x, m_y)
     t_res = torch.where(t_condition, t_x, t_y)
     check(m_res, t_res)
+
+
+@pytest.mark.parametrize("data_shape, index_shapes", [
+    ((10, 5), [(3, 4), (3, 1)]),
+    ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])
+])
+def test_adv_index(data_shape, index_shapes):
+    class Index(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, index0, index1):
+            return mnm.adv_index([x, index0, index1])
+
+    m_x, np_x = randn(data_shape)
+    np_indices = []
+    m_indices = []
+    model = Index()
+    for i, index_shape in enumerate(index_shapes):
+        limit = data_shape[i]
+        index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
+        np_indices.append(index)
+        m_indices.append(mnm.array(index))
+
+    np_out = np_x[tuple(np_indices)]
+    m_out = model(m_x, m_indices[0], m_indices[1])
+    check(m_out, np_out)
 
 
 if __name__ == "__main__":

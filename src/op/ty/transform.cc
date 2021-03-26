@@ -23,6 +23,40 @@ using tvm::relay::Type;
 using namespace tvm;
 using namespace relay;
 
+Type AdvIndexInfer(const CallValues& value) {
+  const auto* args = value->args.as<AdvIndexArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->inputs[0]));
+  auto x_shape = x->shape;
+  auto x_dim = x->shape.size();
+  TensorType index0 = Downcast<TensorType>(GetType(args->inputs[1]));
+  std::vector<int64_t> shape;
+  for (int j = 0; j < index0->shape.size(); ++j) {
+    shape.push_back(index0->shape[j].as<IntImmNode>()->value);
+  }
+  if (args->inputs.size() - 1 < x_dim) {
+    for (int j = args->inputs.size() - 1; j < x_dim; ++j) {
+      shape.push_back(x_shape[j].as<IntImmNode>()->value);
+    }
+
+  } else {
+    for (int i = 2; i < args->inputs.size(); ++i) {
+      TensorType index = Downcast<TensorType>(GetType(args->inputs[i]));
+      for (int j = 0; j < index->shape.size(); ++j) {
+        shape[j] = shape[j] == 1 ? index->shape[j].as<IntImmNode>()->value : shape[j];
+      }
+    }
+  }
+  Array<tvm::PrimExpr> oshape;
+  for (int i = 0; i < shape.size(); ++i) {
+    int32_t s = shape[i];
+    oshape.push_back(PrimExpr(s));
+  }
+  return TensorType(oshape, x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.adv_index", "AdvIndex", AdvIndexInfer);
+
 Type TransposeInfer(const CallValues& value) {
   const auto* args = value->args.as<TransposeArgs>();
   const std::vector<int64_t>& axes = args->axes;

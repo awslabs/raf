@@ -12,6 +12,12 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class AdvIndexArgs : public ir::AttrsNode<AdvIndexArgs> {
+ public:
+  std::vector<value::BaseTensorValue> inputs;
+  MNM_OP_SCHEMA(AdvIndexArgs, "mnm.args.adv_index");
+};
+
 class CastArgs : public ir::AttrsNode<CastArgs> {
  public:
   value::BaseTensorValue data;

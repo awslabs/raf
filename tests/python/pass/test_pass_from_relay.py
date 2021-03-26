@@ -1,6 +1,6 @@
 # pylint: disable=protected-access, too-many-locals, attribute-defined-outside-init, no-self-use
 # pylint: disable=too-many-arguments, missing-module-docstring, missing-function-docstring
-# pylint: disable=missing-class-docstring
+# pylint: disable=missing-class-docstring, too-many-lines
 from operator import attrgetter
 
 import pytest
@@ -108,7 +108,7 @@ def test_mnm_module():
 
     m_x, n_x = randn((1, 100))
 
-    # Check that VM can execute multi-module functions
+# Check that VM can execute multi-module functions
     vm_executor, args = utils.get_vm_executor(
         model, 'cpu', [m_x], utils.ir_fusion)
     m_out = vm_executor(*args)
@@ -971,6 +971,36 @@ def test_sum(shape, axis, keep):
     r_func = _relay.Function(params=[r_x], body=_relay.sum(r_x, axis, keep))
 
     check_from_relay(model, r_func, [m_x])
+
+
+@pytest.mark.parametrize("data_shape, index_shapes", [
+    ((10, 5), [(3, 4), (3, 1)]),
+    ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])
+])
+def test_adv_index(data_shape, index_shapes):
+    class Index(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, index0, index1):
+            return mnm.adv_index([x, index0, index1])
+
+    dtype = "float32"
+    m_x, _ = randn(data_shape)
+    m_indices = []
+    model = Index()
+    inputs = [_relay.var("data", _relay.TensorType(data_shape, dtype))]
+    for i, index_shape in enumerate(index_shapes):
+        limit = data_shape[i]
+        index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
+        m_indices.append(mnm.array(index))
+        inputs.append(_relay.var("index_{}".format(i), _relay.TensorType(index_shape, "int64")))
+
+    out = _relay.op.adv_index(inputs)
+    r_func = _relay.Function(inputs, out)
+
+    check_from_relay(model, r_func, [m_x, m_indices[0], m_indices[1]])
 
 
 if __name__ == "__main__":

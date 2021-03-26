@@ -49,6 +49,17 @@ _reg.register_injective_schedule("mnm.op.full")
 _reg.register_injective_schedule("mnm.op.batch_flatten")
 
 
+@register_compute("mnm.op.adv_index")
+def adv_index_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    data = inputs[0]
+    indices = inputs[1:]
+    out = _topi.adv_index(data, indices)
+    return [out]
+
+
+_reg.register_injective_schedule("mnm.op.adv_index")
+
+
 @register_compute("mnm.op.clip_dx")
 def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     x = inputs[0]

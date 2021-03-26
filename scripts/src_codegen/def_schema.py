@@ -335,6 +335,11 @@ SCHEMAS = {
             py_default=()),
         Arg(name="keepdims", cxx_type="bool", cxx_default=False),
     ],
+    "transform.h::adv_index": [
+        Arg(name="inputs",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple"),
+    ],
     "transform.h::transpose": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axes",

@@ -27,6 +27,34 @@ using namespace mnm::ir;
 using common::shape_utils::IsCompact;
 using tensor::Tensor;
 
+MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
+  const auto* args = call->args.as<AdvIndexArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->inputs[0];
+  auto x_shape = x->shape;
+  auto x_dim = x->ndim;
+  const DLTensor* index0 = args->inputs[1];
+  std::vector<int64_t> shape;
+  for (int j = 0; j < index0->ndim; ++j) {
+    shape.push_back(index0->shape[j]);
+  }
+  if (args->inputs.size() - 1 < x_dim) {
+    for (int j = args->inputs.size() - 1; j < x_dim; ++j) {
+      shape.push_back(x_shape[j]);
+    }
+  } else {
+    for (int i = 2; i < args->inputs.size(); ++i) {
+      const DLTensor* index = args->inputs[i];
+      for (int j = 0; j < index->ndim; ++j) {
+        CHECK(shape[j] == index->shape[j] || shape[j] == 1 || index->shape[j] == 1);
+        shape[j] = shape[j] == 1 ? index->shape[j] : shape[j];
+      }
+    }
+  }
+  call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
+  call->device = x->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
 MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);

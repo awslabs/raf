@@ -9,33 +9,33 @@ from . import sym_utils
 __all__ = [
     "_alloc_storage", "_alloc_tensor", "_allreduce", "_contrib_dropout", "_invoke_op",
     "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx", "adaptive_max_pool2d", "adaptive_max_pool2d_dx",
-    "add", "all", "any", "argmax", "argmin",
-    "argsort", "atan", "avg_pool2d", "avg_pool2d_dx", "batch_flatten",
-    "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add",
-    "broadcast_to", "broadcast_to_like", "cast", "cast_like", "ceil",
-    "clip", "clip_dx", "collapse_sum_like", "compiler_begin", "compiler_end",
-    "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "cross_entropy", "cross_entropy_dpred", "cross_entropy_dtrue",
-    "dense", "device_copy", "divide", "equal", "erf",
-    "erf_dx", "exp", "expand_dims", "floor", "full",
-    "gather", "gather_dx", "gather_nd", "gather_nd_dx", "get_kept_dims",
-    "get_reduce_axis", "get_valid_counts", "greater", "greater_equal", "layer_norm",
-    "layer_norm_dx", "left_shift", "less", "less_equal", "log",
-    "log_softmax", "log_softmax_dx", "logical_and", "logical_not", "matmul",
-    "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
-    "max_pool2d_dx", "maximum", "mean", "mean_dx", "min",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
-    "ones", "ones_like", "pad", "power", "prod",
-    "relu", "relu_dx", "repeat", "reshape", "reverse",
-    "reverse_sequence", "right_shift", "round", "rsqrt", "sequence_mask",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
-    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
-    "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
-    "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
-    "strided_slice_dx", "subtract", "sum", "swap_axis", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
-    "trunc", "where", "zeros", "zeros_like",
+    "add", "adv_index", "all", "any", "argmax",
+    "argmin", "argsort", "atan", "avg_pool2d", "avg_pool2d_dx",
+    "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
+    "bias_add", "broadcast_to", "broadcast_to_like", "cast", "cast_like",
+    "ceil", "clip", "clip_dx", "collapse_sum_like", "compiler_begin",
+    "compiler_end", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
+    "conv2d_dx", "copy", "cos", "cross_entropy", "cross_entropy_dpred",
+    "cross_entropy_dtrue", "dense", "device_copy", "divide", "equal",
+    "erf", "erf_dx", "exp", "expand_dims", "floor",
+    "full", "gather", "gather_dx", "gather_nd", "gather_nd_dx",
+    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
+    "layer_norm", "layer_norm_dx", "left_shift", "less", "less_equal",
+    "log", "log_softmax", "log_softmax_dx", "logical_and", "logical_not",
+    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
+    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
+    "min", "minimum", "mod", "multiply", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
+    "one_hot", "ones", "ones_like", "pad", "power",
+    "prod", "relu", "relu_dx", "repeat", "reshape",
+    "reverse", "reverse_sequence", "right_shift", "round", "rsqrt",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
+    "softmax", "softmax_dx", "sort", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
+    "strided_slice", "strided_slice_dx", "subtract", "sum", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "transpose",
+    "transpose_dx", "trunc", "where", "zeros", "zeros_like",
 ]
 
 def _alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
@@ -104,6 +104,10 @@ def add(x1, x2, out=None, where=None):
     out = sym_utils.to_any(out)
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.add(x1, x2, out, where))
+
+def adv_index(inputs):
+    inputs = sym_utils.to_tensor_tuple(inputs)
+    return Symbol.from_expr(ffi.adv_index(inputs))
 
 def all(x, axis=(), keepdims=False):
     x = sym_utils.to_tensor(x)

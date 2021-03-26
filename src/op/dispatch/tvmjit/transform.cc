@@ -23,6 +23,21 @@ using namespace mnm::op::schema;
 using namespace tvm;
 using namespace ::tvm::relay;
 
+std::vector<Value> AdvIndexSchema2Args(const AdvIndexArgs* args) {
+  std::vector<Value> ret;
+  for (auto v : args->inputs) {
+    ret.push_back(v);
+  }
+  return ret;
+}
+
+std::vector<std::string> AdvIndexSchemaArgNames(const op::CallValues& call) {
+  return {"inputs"};
+}
+
+MNM_TVMJIT(AdvIndex, "mnm.op.adv_index", AdvIndexArgs, AdvIndexSchema2Args, AdvIndexSchemaArgNames,
+           GenericAttrs, GenericHasher);
+
 std::vector<Value> RepeatSchema2Args(const RepeatArgs* args) {
   return {args->x};
 }

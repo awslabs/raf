@@ -10,6 +10,9 @@ namespace mnm {
 namespace op {
 namespace from_relay {
 
+MNM_OP_FROM_RELAY("adv_index", "mnm.op.adv_index",
+                  [&](const Attrs& attrs, const Array<Expr>& args) { return args; });
+
 MNM_OP_FROM_RELAY("repeat", "mnm.op.repeat", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<RepeatAttrs>();

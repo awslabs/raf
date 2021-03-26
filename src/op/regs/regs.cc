@@ -51,6 +51,7 @@ static const char adaptive_avg_pool2d_dx[] = "mnm.op.adaptive_avg_pool2d_dx";
 static const char adaptive_max_pool2d[] = "mnm.op.adaptive_max_pool2d";
 static const char adaptive_max_pool2d_dx[] = "mnm.op.adaptive_max_pool2d_dx";
 static const char add[] = "mnm.op.add";
+static const char adv_index[] = "mnm.op.adv_index";
 static const char all[] = "mnm.op.all";
 static const char any[] = "mnm.op.any";
 static const char argmax[] = "mnm.op.argmax";
@@ -262,6 +263,12 @@ Attrs AdaptivePoolDx(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, y);
   MNM_TAPE(2, ffi2schema::Tensor, dy);
   MNM_POD(3, ffi2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+Attrs AdvIndex(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::AdvIndexArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, inputs);
   return Attrs(attrs);
 }
 
@@ -1033,6 +1040,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.add").set_body([](TVMArgs args, TVMRetValue* ret
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
   MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.adv_index").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(adv_index, 1, ffi2schema::AdvIndex,
+              schema::AdvIndexArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->inputs));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2425,6 +2440,12 @@ Array<Expr> AdaptivePoolDx(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> AdvIndex(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::TupleTensor, inputs);
+  MNM_RET();
+}
+
 Array<Expr> Argsort(const TVMArgs& values) {
   MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, data);
@@ -3069,6 +3090,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_max_pool2d")
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_max_pool2d_dx")
     .set_body(MNM_SYMBOLIC_API(adaptive_max_pool2d_dx, 4, AdaptivePoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.add").set_body(MNM_SYMBOLIC_API(add, 4, BinaryUfunc));
+MNM_REGISTER_GLOBAL("mnm.op.sym.adv_index").set_body(MNM_SYMBOLIC_API(adv_index, 1, AdvIndex));
 MNM_REGISTER_GLOBAL("mnm.op.sym.all").set_body(MNM_SYMBOLIC_API(all, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.any").set_body(MNM_SYMBOLIC_API(any, 3, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmax").set_body(MNM_SYMBOLIC_API(argmax, 3, Reduce));
@@ -3338,6 +3360,13 @@ Attrs AdaptivePoolDx(const Array<Value>& values) {
   MNM_REQUIRED(1, value2schema::Tensor, y);
   MNM_REQUIRED(2, value2schema::Tensor, dy);
   MNM_REQUIRED(3, value2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs AdvIndex(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::AdvIndexArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, inputs);
   return Attrs(attrs);
 }
 
@@ -4116,6 +4145,15 @@ int AdaptivePoolDx(const std::string& field) {
   }
   if (field == "shape") {
     return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int AdvIndex(const std::string& field) {
+  if (field == "inputs") {
+    return 0;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -5371,7 +5409,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.adaptive_max_pool2d_dx", names::adaptive_max
 MNM_BIND_SCHEMA("mnm.op.add", names::add,
                 value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.add", names::add,
-                            schema_field_idx::BinaryUfunc);       // NOLINT(whitespace/line_length)
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.adv_index", names::adv_index,
+                value2schema::AdvIndex);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.adv_index", names::adv_index,
+                            schema_field_idx::AdvIndex);          // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.all", names::all, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.all", names::all,
                             schema_field_idx::Reduce);            // NOLINT(whitespace/line_length)
@@ -5902,6 +5944,7 @@ MNM_REGISTER_OBJECT_REFLECT(AllreduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(InvokeOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(AdvIndexArgs);
 MNM_REGISTER_OBJECT_REFLECT(ArgsortArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);

@@ -25,6 +25,8 @@ adaptive_max_pool2d_dx = _APIS.get("mnm.op.imp.adaptive_max_pool2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.imp.add", None)
 # Defined in ./src/op/regs/regs.cc
+adv_index = _APIS.get("mnm.op.imp.adv_index", None)
+# Defined in ./src/op/regs/regs.cc
 all = _APIS.get("mnm.op.imp.all", None)
 # Defined in ./src/op/regs/regs.cc
 any = _APIS.get("mnm.op.imp.any", None)
