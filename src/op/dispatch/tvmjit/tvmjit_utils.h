@@ -153,6 +153,7 @@ using FMNMArgIndices =
       LOG(FATAL) << "NotImplementedError: target is not supported " << dev.device_type.c_str(); \
       throw;                                                                                    \
     }                                                                                           \
+    env->env_name = TruncateName(GetUniqueName(op->name.operator std::string()));               \
     std::function<registry::PackedFunc(const ir::Function&)> f_post_lower(                      \
         [&](const ir::Function& f) {                                                            \
           engine_clear(engine);                                                                 \
@@ -163,10 +164,10 @@ using FMNMArgIndices =
     } catch (const dmlc::Error& e) {                                                            \
       if (!IsAutoSchedulerTaskExtractionEnabled()) {                                            \
         /* Invalid implementation. Return nullptr to let dispatcher select the next one */      \
+        DLOG(INFO) << "Failed to JIT " << env->env_name << ": " << e.what();                    \
         return nullptr;                                                                         \
       }                                                                                         \
     }                                                                                           \
-    env->env_name = TruncateName(GetUniqueName(op->name.operator std::string()));               \
     return env;                                                                                 \
   }                                                                                             \
   Attrs FUNC##Attr(const op::CallValues& call) {                                                \

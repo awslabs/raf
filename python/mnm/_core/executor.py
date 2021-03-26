@@ -1,12 +1,15 @@
 """Execute the program."""
 # pylint: disable=no-else-return, unidiomatic-typecheck, undefined-variable, invalid-name, redefined-builtin, no-self-use
+import os
 import numpy as np
 import tvm
 from tvm import auto_scheduler, autotvm
+from tvm.auto_scheduler.dispatcher import ApplyHistoryBest
 from . import ndarray as _nd
 from .core_utils import register_node, str2ctx
 from .. import _ffi
 from .._core.value import Value, TupleValue
+
 
 
 def interpret(expr, module=None):
@@ -278,6 +281,67 @@ def compile(mod, target=None, target_host=None, params=None):
     return Executable(compiler.get_exec())
 
 
+class MetaFallbackContext(ApplyHistoryBest):
+    """
+    The Meta fallback dispatch context, which queries the builtin schedules and outputs
+    the message when missed. This is used as the root context for Meta.
+
+    Parameters
+    ----------
+    verbose: int
+        The verbose level (0-3) for missing schedules. Default 2.
+        verbose 0 disables all messages; verbose 1 only shows the warning when
+        builtin schedule files are missing; verbose 2 prints warnings for ops
+        that missed schedules; verbose 3 is based on verbose 2 but with the compute DAG of the op.
+    """
+
+    def __init__(self, verbose=2):
+        # Load the builtin schedules
+        fallback_sch_log = ""
+        if "MNM_HOME" in os.environ:
+            fallback_sch_log = os.path.join(os.environ["MNM_HOME"], "sch/latest.json")
+        elif verbose > 0:
+            print('Cannot find Meta builtin schedules because "MNM_HOME" is not set')
+
+        if verbose > 0 and not os.path.exists(fallback_sch_log):
+            print("Cannot find Meta builtin schedules in %s" % fallback_sch_log)
+        super(MetaFallbackContext, self).__init__(fallback_sch_log, include_compatible=True)
+
+        self.verbose = verbose
+
+        # The schedule missing message memory to avoid duplications.
+        self.memory = set()
+
+    def query(self, target, workload_key, has_complex_op, dag, func_name):
+        # pylint: disable=too-many-arguments
+        # Query the builtin schedules.
+        ret = self._query_inside(target, workload_key, func_name)
+        if ret is not None:
+            return ret
+
+        key = (str(target), workload_key)
+        if key in self.memory:
+            return None
+
+        # Print the message due to no valid schedule.
+        if has_complex_op and self.verbose >= 2:
+            msg = (
+                f"Cannot find tuned schdule for op={func_name}, target={target}"
+            )
+            if self.verbose == 3:
+                msg += (
+                    f", workload_key={workload_key}\n"
+                    f"Compute DAG info:\n{dag}"
+                    f"-----------------------------------\n"
+                )
+            if msg not in self.memory:
+                self.memory.add(msg)
+                print(msg)
+
+        self.memory.add(key)
+        return None
+
+
 class VMCompiler:
     """Compiler that compiles Relay module to VM executable."""
 
@@ -464,6 +528,7 @@ class VMExecutor:
         self.device = str2ctx(device)
         self.executable = compile(mod, self.target)
         self.vm = VirtualMachine(self.executable, self.device, enable_cuda_graph=enable_cuda_graph)
+        self.auto_scheduler_fallback_context = None
 
     def make_executor(self, sch_file=None):
         """Create a VM executor.
@@ -478,19 +543,30 @@ class VMExecutor:
         executor: Callable
             The VM executor
         """
+        if self.auto_scheduler_fallback_context is None:
+            verbose = os.environ["MNM_SCH_VERBOSE"] if "MNM_SCH_VERBOSE" in os.environ else 2
+            self.auto_scheduler_fallback_context = MetaFallbackContext(verbose=verbose)
         auto_scheduler_dispatch_context = \
             auto_scheduler.ApplyHistoryBest(sch_file, include_compatible=True)
 
         def _vm_wrapper(*args, **kwargs):
+            # Backup current configurations
+            old_auto_scheduler_fallback_context = auto_scheduler.DispatchContext.current
             old_autotvm_silent = autotvm.GLOBAL_SCOPE.silent
+
+            auto_scheduler.DispatchContext.current = self.auto_scheduler_fallback_context
             autotvm.GLOBAL_SCOPE.silent = True
+
             with auto_scheduler_dispatch_context:
                 with tvm.transform.PassContext(
                         config={"relay.backend.use_auto_scheduler": True},
                         disabled_pass={"AutoSchedulerLayoutRewrite"},
                 ):
                     ret = self.vm.run(*args, **kwargs)
+
+            # Recover the configurations
             autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
+            auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context
             return ret
         return _vm_wrapper
 
