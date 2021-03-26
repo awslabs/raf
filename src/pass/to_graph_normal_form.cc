@@ -15,13 +15,33 @@
 
 namespace mnm {
 namespace pass {
-namespace to_dataflow_graph {
+namespace to_graph_normal_form {
 
 using namespace mnm::ir;
 using namespace mnm::op;
 using namespace tvm::support;
 
-class DFGConverter : public MixedModeMutator {
+class UseVarVisitor : public ExprVisitor {
+ public:
+  explicit UseVarVisitor(const Var& v) : v_(v) {
+  }
+
+  static bool UseVar(const Var& v, const Expr& e) {
+    UseVarVisitor uv(v);
+    uv(e);
+    return uv.use_var_;
+  }
+
+ private:
+  bool use_var_ = false;
+  Var v_;
+
+  void VisitExpr_(const VarNode* vn) override {
+    use_var_ = use_var_ || (v_ == GetRef<Var>(vn));
+  }
+};
+
+class GNFConverter : public MixedModeMutator {
  public:
   Expr VisitExpr_(const LetNode* ln) final {
     Expr body = GetRef<Let>(ln);
@@ -37,6 +57,7 @@ class DFGConverter : public MixedModeMutator {
         scopes.emplace_back(let->var, new_value);
         body = let->body;
       } else {
+        new_value = WrapRec(let->var, new_value);
         let_map_.emplace(let->var.get(), new_value);
         scopes.emplace_back(Var(), Expr());
         body = let->body;
@@ -60,19 +81,24 @@ class DFGConverter : public MixedModeMutator {
   }
 
  private:
+  Expr WrapRec(const Var& var, const Expr& val) {
+    bool use_var = UseVarVisitor::UseVar(var, val);
+    return use_var ? Let(var, val, var) : val;
+  }
+
   std::unordered_map<const VarNode*, Expr> let_map_;
 };
-}  // namespace to_dataflow_graph
+}  // namespace to_graph_normal_form
 
-ir::Expr ToDataflowGraph(ir::Expr expr) {
-  return to_dataflow_graph::DFGConverter().Mutate(expr);
+ir::Expr ToGraphNormalForm(ir::Expr expr) {
+  return to_graph_normal_form::GNFConverter().Mutate(expr);
 }
 
 // TODO - Cleanup when pass manager is introduced.
-ir::IRModule ToDataflowGraph(ir::IRModule mod) {
+ir::IRModule ToGraphNormalForm(ir::IRModule mod) {
   ir::IRModule updated_mod = ir::IRModule(mod->functions);
   std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  auto converter = to_dataflow_graph::DFGConverter();
+  auto converter = to_graph_normal_form::GNFConverter();
 
   for (auto kv : updated_mod->functions) {
     if (kv.second.as<ir::FunctionNode>()) {
@@ -88,8 +114,8 @@ ir::IRModule ToDataflowGraph(ir::IRModule mod) {
   return updated_mod;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ToDataflowGraph").set_body_typed([](ir::IRModule mod) {
-  return ToDataflowGraph(mod);
+MNM_REGISTER_GLOBAL("mnm.pass_.ToGraphNormalForm").set_body_typed([](ir::IRModule mod) {
+  return ToGraphNormalForm(mod);
 });
 
 }  // namespace pass

@@ -60,8 +60,8 @@ SimplifyExpr = _APIS.get("mnm.pass_.SimplifyExpr", None)
 Substitute = _APIS.get("mnm.pass_.Substitute", None)
 # Defined in ./src/pass/to_a_normal_form.cc
 ToANormalForm = _APIS.get("mnm.pass_.ToANormalForm", None)
-# Defined in ./src/pass/to_dataflow_graph.cc
-ToDataflowGraph = _APIS.get("mnm.pass_.ToDataflowGraph", None)
+# Defined in ./src/pass/to_graph_normal_form.cc
+ToGraphNormalForm = _APIS.get("mnm.pass_.ToGraphNormalForm", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
 # Defined in ./src/pass/from_relay.cc
