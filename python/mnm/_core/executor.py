@@ -3,6 +3,7 @@
 import os
 import numpy as np
 import tvm
+from tvm._ffi.runtime_ctypes import TVMByteArray
 from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler.dispatcher import ApplyHistoryBest
 from . import ndarray as _nd
@@ -127,10 +128,10 @@ class Executable:
             An executable constructed using the provided artifacts.
         """
         if isinstance(bytecode, (bytes, str)):
-            code = bytearray(bytecode)
+            bytecode = bytearray(bytecode)
         elif not isinstance(bytecode, (bytearray, TVMByteArray)):
             raise TypeError("bytecode is expected to be the type of bytearray " +
-                            "or TVMByteArray, but received {}".format(type(code)))
+                            "or TVMByteArray, but received {}".format(type(bytecode)))
 
         if lib is not None and not isinstance(lib, tvm.runtime.Module):
             raise TypeError("lib is expected to be the type of tvm.runtime.Module" +
@@ -544,7 +545,7 @@ class VMExecutor:
             The VM executor
         """
         if self.auto_scheduler_fallback_context is None:
-            verbose = os.environ["MNM_SCH_VERBOSE"] if "MNM_SCH_VERBOSE" in os.environ else 2
+            verbose = int(os.environ["MNM_SCH_VERBOSE"]) if "MNM_SCH_VERBOSE" in os.environ else 2
             self.auto_scheduler_fallback_context = MetaFallbackContext(verbose=verbose)
         auto_scheduler_dispatch_context = \
             auto_scheduler.ApplyHistoryBest(sch_file, include_compatible=True)
