@@ -1048,12 +1048,11 @@ def transpose(x, axes=None):
     return imp_utils.ret(ffi.transpose(x, axes))
 
 @set_module("mnm")
-def transpose_dx(x, y, dy, axes=None):
-    x = imp_utils.to_tensor(x)
-    y = imp_utils.to_tensor(y)
+def transpose_dx(dy, axes=None, primal_shape=None):
     dy = imp_utils.to_tensor(dy)
     axes = imp_utils.to_int_tuple(axes)
-    return imp_utils.ret(ffi.transpose_dx(x, y, dy, axes))
+    primal_shape = imp_utils.to_int_tuple(primal_shape)
+    return imp_utils.ret(ffi.transpose_dx(dy, axes, primal_shape))
 
 @set_module("mnm")
 def trunc(x):

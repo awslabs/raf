@@ -412,12 +412,12 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
   const auto* args = call->args.as<TransposeDxArgs>();
   CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
-                                    /*dtype=*/x->dtype,
+  const DLTensor* dy = args->dy;
+  std::vector<int64_t> shape = args->primal_shape;
+  call->out = TensorValue::Assemble(/*ctx=*/dy->ctx,
+                                    /*dtype=*/dy->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = dy->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {

@@ -143,10 +143,9 @@ class TransposeArgs : public ir::AttrsNode<TransposeArgs> {
 
 class TransposeDxArgs : public ir::AttrsNode<TransposeDxArgs> {
  public:
-  value::BaseTensorValue x;
-  value::BaseTensorValue y;
   value::BaseTensorValue dy;
   std::vector<int64_t> axes{};
+  std::vector<int64_t> primal_shape{};
   MNM_OP_SCHEMA(TransposeDxArgs, "mnm.args.transpose_dx");
 };
 

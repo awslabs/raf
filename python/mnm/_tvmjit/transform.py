@@ -7,7 +7,7 @@ _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.transpose_dx")
 def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
-    dy = inputs[2]
+    dy = inputs[0]
     axes = list(_topi.utils.get_const_tuple(attrs.axes))
     axes_inverse = axes.copy()
     for idx, i in enumerate(axes):

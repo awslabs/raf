@@ -274,11 +274,11 @@ MNM_TVMJIT(Transpose, "mnm.op.transpose", TransposeArgs, TransposeSchema2Args,
            TransposeSchemaArgNames, TransposeSchema2Attrs, TransposeHasher);
 
 std::vector<Value> TransposeDxSchema2Args(const TransposeDxArgs* args) {
-  return {args->x, args->y, args->dy};
+  return {args->dy};
 }
 
 std::vector<std::string> TransposeDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy"};
+  return {"dy"};
 }
 
 Attrs TransposeDxSchema2Attrs(const TransposeDxArgs* args) {

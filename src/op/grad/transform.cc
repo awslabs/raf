@@ -26,11 +26,12 @@ MNM_OP_GRAD("mnm.op.batch_flatten", BatchFlattenGrad);
 Array<Expr> TransposeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                           const Expr& dy) {
   static auto transpose_dx = Op::Get("mnm.op.transpose_dx");
+  static auto shape = Op::Get("mnm.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
-  const Expr& x = call->args[0];
   const Expr& axes = call->args[1];
-  return {Call(transpose_dx, {x, y, dy, axes})};
+  const Expr& primal_shape = Call(shape, {call->args[0]});
+  return {Call(transpose_dx, {dy, axes, primal_shape})};
 }
 
 MNM_OP_GRAD("mnm.op.transpose", TransposeGrad);

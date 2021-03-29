@@ -906,12 +906,11 @@ def transpose(x, axes=None):
     axes = sym_utils.to_int_tuple(axes)
     return Symbol.from_expr(ffi.transpose(x, axes))
 
-def transpose_dx(x, y, dy, axes=None):
-    x = sym_utils.to_tensor(x)
-    y = sym_utils.to_tensor(y)
+def transpose_dx(dy, axes=None, primal_shape=None):
     dy = sym_utils.to_tensor(dy)
     axes = sym_utils.to_int_tuple(axes)
-    return Symbol.from_expr(ffi.transpose_dx(x, y, dy, axes))
+    primal_shape = sym_utils.to_int_tuple(primal_shape)
+    return Symbol.from_expr(ffi.transpose_dx(dy, axes, primal_shape))
 
 def trunc(x):
     x = sym_utils.to_any(x)

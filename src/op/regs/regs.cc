@@ -835,11 +835,10 @@ Attrs Transpose(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs TransposeDx(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::TransposeDxArgs, 4);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
-  MNM_TAPE(2, ffi2schema::Tensor, dy);
-  MNM_POD(3, ffi2schema::IntOrTupleInt, axes);
+  MNM_PRELUDE(schema::TransposeDxArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, dy);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, axes);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, primal_shape);
   return Attrs(attrs);
 }
 
@@ -2317,12 +2316,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.transpose").set_body([](TVMArgs args, TVMRetValu
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.transpose_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(transpose_dx, 4, ffi2schema::TransposeDx,
+  MNM_PRELUDE(transpose_dx, 3, ffi2schema::TransposeDx,
               schema::TransposeDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axes));
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axes));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->primal_shape));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3009,11 +3007,10 @@ Array<Expr> Transpose(const TVMArgs& values) {
 }
 
 Array<Expr> TransposeDx(const TVMArgs& values) {
-  MNM_PRELUDE(4);
-  MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Tensor, y);
-  MNM_ARG(2, ffi2expr::Tensor, dy);
-  MNM_ARG(3, ffi2expr::IntOrTupleInt, axes);
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, dy);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, axes);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, primal_shape);
   MNM_RET();
 }
 
@@ -3256,7 +3253,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.tanh").set_body(MNM_SYMBOLIC_API(tanh, 1, Unary)
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx").set_body(MNM_SYMBOLIC_API(tanh_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
-    .set_body(MNM_SYMBOLIC_API(transpose_dx, 4, TransposeDx));
+    .set_body(MNM_SYMBOLIC_API(transpose_dx, 3, TransposeDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.trunc").set_body(MNM_SYMBOLIC_API(trunc, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros").set_body(MNM_SYMBOLIC_API(zeros, 3, InitOp));
@@ -3997,11 +3994,10 @@ Attrs Transpose(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs TransposeDx(const Array<Value>& values) {
-  MNM_PRELUDE(3, 4, schema::TransposeDxArgs);
-  MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
-  MNM_REQUIRED(2, value2schema::Tensor, dy);
-  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, axes);
+  MNM_PRELUDE(1, 3, schema::TransposeDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, dy);
+  MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axes);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, primal_shape);
   return Attrs(attrs);
 }
 
@@ -5280,17 +5276,14 @@ int Transpose(const std::string& field) {
 
 template <const char* op_name>
 int TransposeDx(const std::string& field) {
-  if (field == "x") {
+  if (field == "dy") {
     return 0;
   }
-  if (field == "y") {
+  if (field == "axes") {
     return 1;
   }
-  if (field == "dy") {
+  if (field == "primal_shape") {
     return 2;
-  }
-  if (field == "axes") {
-    return 3;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

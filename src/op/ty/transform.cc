@@ -82,7 +82,12 @@ MNM_OP_TYPE("mnm.op.transpose", "Transpose", TransposeInfer);
 Type TransposeDxInfer(const CallValues& value) {
   const auto* args = value->args.as<TransposeDxArgs>();
   CHECK(args != nullptr);
-  return GetType(args->x);
+  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  Array<tvm::PrimExpr> oshape;
+  for (auto dim : args->primal_shape) {
+    oshape.push_back(IntImm(DataType::Int(32), dim));
+  }
+  return TensorType(oshape, dy->dtype);
 }
 
 MNM_OP_TYPE("mnm.op.transpose_dx", "TransposeDx", TransposeDxInfer);
