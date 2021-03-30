@@ -169,5 +169,41 @@ inline Expr RemoveAnnotation(const Expr& expr, const Op& ann_op) {
   }
 }
 
+class VarSubstitutor : public MixedModeMutator {
+ public:
+  explicit VarSubstitutor(const tvm::Map<Var, Var> mapping) : mapping_(mapping) {
+  }
+
+  Expr VisitExpr_(const VarNode* var_node) final {
+    Var var = GetRef<Var>(var_node);
+    if (mapping_.count(var)) {
+      return mapping_.at(var);
+    }
+    return var;
+  }
+  Expr Substitute(const Expr& expr) {
+    return this->Mutate(expr);
+  }
+
+ private:
+  tvm::Map<Var, Var> mapping_;
+};
+
+static inline Function CreateGlobalFunc(const Array<Var>& free_vars, const Expr& body,
+                                        Type type_annotation) {
+  // As this is a global function, create new vars and set them as free vars for the function
+  // using old vars results in malformed-ir because they are not available in this scope.
+  Array<Var> new_free_vars;
+  tvm::Map<Var, Var> mapping;
+  for (auto old_free_var : free_vars) {
+    Var new_free_var =
+        mnm::ir::MakeVar(old_free_var->name_hint(), old_free_var->type_annotation, {});
+    new_free_vars.push_back(new_free_var);
+    mapping.Set(old_free_var, new_free_var);
+  }
+  // The old vars might be used in the body, Substitute them with the new vars
+  auto new_body = VarSubstitutor(mapping).Substitute(body);
+  return Function(new_free_vars, new_body, type_annotation, {});
+}
 };  // namespace pass
 };  // namespace mnm

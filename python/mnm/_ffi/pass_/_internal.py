@@ -24,6 +24,8 @@ DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
 ExprAppend = _APIS.get("mnm.pass_.ExprAppend", None)
 # Defined in ./src/pass/extract_binding.cc
 ExtractBinding = _APIS.get("mnm.pass_.ExtractBinding", None)
+# Defined in ./src/pass/flatten_closure.cc
+FlattenClosure = _APIS.get("mnm.pass_.FlattenClosure", None)
 # Defined in ./src/pass/fold_const.cc
 FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
 # Defined in ./src/pass/from_relay.cc

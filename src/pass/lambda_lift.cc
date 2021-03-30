@@ -9,6 +9,7 @@
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
+#include "./common.h"
 
 namespace mnm {
 namespace pass {
@@ -16,6 +17,7 @@ namespace lambda_lift {
 
 using namespace mnm::ir;
 using namespace mnm::op;
+using namespace tvm::relay::transform;
 
 inline std::string GenerateName(const Function& func) {
   size_t hash = tvm::StructuralHash()(func);
@@ -26,9 +28,48 @@ Function MarkClosure(Function func) {
   return WithAttr(std::move(func), tvm::relay::attr::kClosure, tvm::Integer(1));
 }
 
+Expr ANFNormalizer(const Let& let) {
+  const LetNode* let_node = let.get();
+
+  // Simplifies
+  // let %a3 = @lifted_name4372026607701689919(%y);
+  // %a3
+  // to simply @lifted_name4372026607701689919(%y);
+  if (tvm::StructuralEqual()(let_node->var, let_node->body)) {
+    if (auto call = let_node->value.as<CallNode>()) {
+      if (call->op.as<GlobalVarNode>()) {
+        return let_node->value;
+      }
+    }
+  }
+
+  // Lambda lift can lead to scenarios where the lifted global call is not present in let binding
+  // The following code finds such scenarios
+  // free_var %a, %b, free_var %y;
+  // %0 = @lifted_name3932855059181273852(%y); --> This is not let binding
+  // let %a13 = %0(%a, %b);
+  // %a13
+  //
+  // This above gets simplified to
+  //    let %gvar = @lifted_name4372026607701689919(%y);
+  //    let %a13 = %gvar(%a, %b);
+  if (auto value_call_node = let_node->value.as<CallNode>()) {
+    if (auto op_call_node = value_call_node->op.as<CallNode>()) {
+      mnm::ir::Var gvar("gvar", {});
+      auto new_let = Let(
+          gvar, GetRef<Call>(op_call_node),
+          Let(let_node->var,
+              Call(gvar, value_call_node->args, value_call_node->attrs, value_call_node->type_args),
+              let_node->body));
+      return new_let;
+    }
+  }
+  return let;
+}
+
 class LambdaLifter : public ExprMutator {
  public:
-  explicit LambdaLifter(IRModule module) : module_(module) {
+  explicit LambdaLifter(ir::IRModule module) : module_(module) {
   }
 
   Expr VisitExpr_(const LetNode* let_node) final {
@@ -44,7 +85,8 @@ class LambdaLifter : public ExprMutator {
       letrec_.pop_back();
     }
     auto body = VisitExpr(let_node->body);
-    return Let(let_node->var, value, body);
+    auto new_let = Let(let_node->var, value, body);
+    return ANFNormalizer(new_let);
   }
 
   Expr VisitExpr_(const CallNode* call_node) final {
@@ -120,7 +162,7 @@ class LambdaLifter : public ExprMutator {
     if (captured_vars.size() == 0) {
       lifted_func = Function(body->params, body->body, {}, {});
     } else {
-      lifted_func = Function(captured_vars, body, func->func_type_annotation(), {});
+      lifted_func = CreateGlobalFunc(captured_vars, body, func->func_type_annotation());
       lifted_func = MarkClosure(lifted_func);
     }
 
@@ -164,7 +206,7 @@ class LambdaLifter : public ExprMutator {
 
  private:
   // initialized in constructor
-  IRModule module_;
+  ir::IRModule module_;
   std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> lambda_map_;
   std::vector<Var> letrec_;
 };

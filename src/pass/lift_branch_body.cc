@@ -9,6 +9,7 @@
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
+#include "./common.h"
 
 namespace mnm {
 namespace pass {
@@ -21,6 +22,17 @@ class BranchBodyLift : public MixedModeMutator {
  public:
   explicit BranchBodyLift(IRModule module) : unique_name_counter_(0) {
     module_ = ir::IRModule(module->functions);
+  }
+
+  Expr VisitExpr_(const LetNode* let_node) final {
+    if (auto func = let_node->value.as<FunctionNode>()) {
+      if (!func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+        closure_vars_.insert(let_node->var.get());
+      }
+    }
+    auto value = VisitExpr(let_node->value);
+    auto body = VisitExpr(let_node->body);
+    return Let(let_node->var, value, body);
   }
 
   Expr VisitExpr_(const IfNode* if_node) final {
@@ -44,7 +56,13 @@ class BranchBodyLift : public MixedModeMutator {
     Array<Expr> free_vars(free_vars_set.begin(), free_vars_set.end());
     Array<Var> func_params;
     for (auto free_var : free_vars) {
-      func_params.push_back(mnm::ir::Var(Downcast<Var>(free_var)));
+      Var fv = Downcast<Var>(free_var);
+      // If there is a closure and it is called in the branch bodies. The closure var will also be
+      // lifted. This will cause problems if the closure was recrusive. So, we should first run
+      // Lambda lift and then apply LiftBranchBody
+      CHECK(closure_vars_.count(fv.get()) == 0)
+          << "There are closure calls in the branch bodies. Apply LambdaLift pass";
+      func_params.push_back(mnm::ir::Var(fv));
     }
 
     // both true and false branch will have same ret type, set the return type of the global
@@ -52,13 +70,13 @@ class BranchBodyLift : public MixedModeMutator {
     auto if_node_ret_type = if_node->true_branch->checked_type_;
 
     // Create new functions for the true and false branches.
-    Function true_branch_func = Function(func_params, true_branch, if_node_ret_type, {});
+    Function true_branch_func = CreateGlobalFunc(func_params, true_branch, if_node_ret_type);
     GlobalVar true_branch_gvar = GlobalVar("true_branch_" + std::to_string(unique_name_counter_));
     module_->Add(true_branch_gvar, true_branch_func);
     auto new_true_branch = Call(true_branch_gvar, free_vars);
     new_true_branch->checked_type_ = if_node_ret_type;
 
-    Function false_branch_func = Function(func_params, false_branch, if_node_ret_type, {});
+    Function false_branch_func = CreateGlobalFunc(func_params, false_branch, if_node_ret_type);
     GlobalVar false_branch_gvar = GlobalVar("false_branch_" + std::to_string(unique_name_counter_));
     module_->Add(false_branch_gvar, false_branch_func);
     auto new_false_branch = Call(false_branch_gvar, free_vars);
@@ -93,6 +111,7 @@ class BranchBodyLift : public MixedModeMutator {
  private:
   // initialized in constructor
   IRModule module_;
+  std::unordered_set<const VarNode*> closure_vars_;
   int unique_name_counter_;
 };
 

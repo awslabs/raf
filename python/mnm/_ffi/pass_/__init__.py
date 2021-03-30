@@ -12,6 +12,7 @@ from ._internal import ContextAnalysis
 from ._internal import DeadCodeElimination
 from ._internal import ExprAppend
 from ._internal import ExtractBinding
+from ._internal import FlattenClosure
 from ._internal import FoldConstant
 from ._internal import FromRelay
 from ._internal import FuseOps

@@ -174,6 +174,16 @@ ir::Expr AssignDevice(ir::Expr expr, std::string device);
  */
 ir::IRModule LiftBranchBody(ir::IRModule mod);
 
+/*!
+ * \brief This is applied after Lambda lifting. Lambda lifting pass lifts the closures to global
+ * scope, but the lifted global function still has the closure within. This makes AD harder. This
+ * pass flattens the global functions that are marked Closure, and then changes the call sites
+ * accordingly. This helps AD pass where it is difficult to handle closures.
+ * \param mod The module to be mutated.
+ * \return Transformed module.
+ */
+ir::IRModule FlattenClosure(ir::IRModule mod);
+
 // TODO - Cleanup after pass manager is introduced. These passes are Function passes.
 // Once pass manager is introduced, the pass manager can iterate over the functions.
 // For now, the overloaded functions are iterating over functions.

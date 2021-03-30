@@ -1,42 +1,38 @@
 import pytest
 import tvm
-import mnm
-from mnm.testing import randn, get_device_list
-from mnm._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody
+from mnm._ffi.pass_ import LambdaLift, FromRelay, FlattenClosure, LiftBranchBody
 from tvm import relay
 
-@pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
-def test_basic(device, shape):
-    # pylint: disable=protected-access
-    # Create a symbolic model and run it
-    class Add(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
-        def build(self):
-            pass
+def test_closure():
+    def get_mod():
+        mod = tvm.IRModule()
 
-        @mnm.model.trace
-        def forward(self, x, y):  # pylint: disable=no-self-use
-            return mnm.add(x, y)
+        x = relay.var("x", shape=(1, 100), dtype="float32")
+        y = relay.var("y", shape=(1, 100), dtype="float32") # captured vars
+        x_tanh = relay.tanh(x)
+        y_tanh = relay.tanh(y)
+        add = relay.add(x_tanh, y_tanh)
+        closure_vars = [x]
+        func = relay.Function(closure_vars, add)
 
-    # Get a Relay func
-    model = Add()
-    m_x, _ = randn(shape, device=device, requires_grad=True)
-    m_y, _ = randn(shape, device=device, requires_grad=True)
-    record = model._internal(m_x, m_y)
-    mod = record.mod
+        closure = relay.var("closure")
+        let = relay.Let(closure, func, closure)
 
-    # Run AutoDiff to get nested functions
-    # The backward function will be lifted
-    mod = AutoDiff(mod, record.requires_grads)
+        z = relay.var("z", shape=(1, 100), dtype="float32")
+        body = relay.Call(let, [z])
+        mod['main'] = relay.Function([y, z], body)
+        return mod
 
-    # Call Lambda lift pass on the Meta module
-    lifted_mod = LambdaLift(mod)
+    tvm_mod = get_mod()
+    mod = FromRelay(tvm_mod)
+    assert len(mod.get_global_vars()) == 1
+    mod = LambdaLift(mod)
+    mod = FlattenClosure(mod)
+    assert len(mod.get_global_vars()) == 2
+    # Check that function body are not closures
+    for gvar in mod.get_global_vars():
+        assert isinstance(mod[gvar].body, tvm.relay.Let)
 
-    assert len(lifted_mod.functions) == 2
 
 def test_while_loop():
     """
@@ -88,12 +84,14 @@ def test_while_loop():
     tvm_mod = get_recursive_mod()
     mod = FromRelay(tvm_mod)
     assert len(mod.get_global_vars()) == 1
-    try:
-        mod = LiftBranchBody(mod)
-        assert False, "LiftBranchBody pass should have failed"
-    except: # pylint: disable=bare-except
-        mod = LambdaLift(mod)
-        mod = LiftBranchBody(mod)
+    mod = LambdaLift(mod)
+    mod = FlattenClosure(mod)
+    # Check that function body are not closures
+    assert len(mod.get_global_vars()) == 2
+    for gvar in mod.get_global_vars():
+        assert isinstance(mod[gvar].body, tvm.relay.Let)
+    mod = LiftBranchBody(mod)
+    # If else will be lifted
     assert len(mod.get_global_vars()) == 4
 
 
