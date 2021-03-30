@@ -55,13 +55,13 @@ def _make_argument(a):
 
 def _unwrap(a):
     if isinstance(a, IntValue):
-        return a.data
+        return a.value
 
     if isinstance(a, FloatValue):
-        return a.data
+        return a.value
 
     if isinstance(a, BoolValue):
-        return bool(a.data)
+        return bool(a.value)
 
     if isinstance(a, relay.Var):
         return NDArray(a)

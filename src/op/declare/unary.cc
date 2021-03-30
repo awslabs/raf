@@ -30,11 +30,11 @@ using tvm::Downcast;
     }                                                           \
   } while (0)
 
-#define MNM_UNARY_SCALAR(op, x)                \
-  MNM_SWITCH_SCALAR(v, x, {                    \
-    call->callee = ir::NullValue<OpValue>();   \
-    call->out = ScalarValue::make(op v->data); \
-    return;                                    \
+#define MNM_UNARY_SCALAR(op, x)                 \
+  MNM_SWITCH_SCALAR(v, x, {                     \
+    call->callee = ir::NullValue<OpValue>();    \
+    call->out = ScalarValue::make(op v->value); \
+    return;                                     \
   })
 
 #define MNM_UNARY_TENSOR(x)                     \
@@ -68,7 +68,7 @@ MNM_DECLARE_UNARY_OP("mnm.op.rsqrt", [](const CallValues& call) {
   CHECK(args != nullptr);
   MNM_SWITCH_SCALAR(v, args->x, {
     call->callee = ir::NullValue<OpValue>();
-    double a = v->data;
+    double a = v->value;
     double result = 1.0 / sqrt(a);
     call->out = ScalarValue::make(result);
     return;
@@ -127,7 +127,7 @@ MNM_DECLARE_UNARY_OP("mnm.op.trunc", [](const CallValues& call) {
   CHECK(args != nullptr);
   MNM_SWITCH_SCALAR(v, args->x, {
     call->callee = ir::NullValue<OpValue>();
-    double a = v->data;
+    double a = v->value;
     double result = trunc(a);
     call->out = ScalarValue::make(result);
     return;

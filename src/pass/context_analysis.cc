@@ -417,7 +417,7 @@ class ContextAnalyzer : public MixedModeVisitor {
   inline int64_t ToScalar(const ObjectRef& val) {
     const auto* int_val = val.as<IntValueObj>();
     CHECK(int_val != nullptr);
-    return int_val->data;
+    return int_val->value;
   }
 
   // Process device copy call node

@@ -52,7 +52,7 @@ Attrs RepeatSchema2Attrs(const RepeatArgs* args) {
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    attrs->axis = v->data;
+    attrs->axis = v->value;
   } else {
     attrs->axis = NullValue<Integer>();
   }
@@ -67,7 +67,7 @@ HashKey RepeatHasher(const std::vector<Type>& param_types, const Type& y_type,
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    key << v->data;
+    key << v->value;
   }
   return key;
 }
@@ -88,7 +88,7 @@ Attrs TakeSchema2Attrs(const TakeArgs* args) {
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    attrs->axis = v->data;
+    attrs->axis = v->value;
   } else {
     attrs->axis = NullValue<Integer>();
   }
@@ -101,7 +101,7 @@ HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, con
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    key << v->data;
+    key << v->value;
   }
   key << args->mode;
   return key;
@@ -123,7 +123,7 @@ Attrs TakeDxSchema2Attrs(const TakeDxArgs* args) {
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    attrs->axis = v->data;
+    attrs->axis = v->value;
   } else {
     attrs->axis = NullValue<Integer>();
   }
@@ -137,7 +137,7 @@ HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    key << v->data;
+    key << v->value;
   }
   key << args->mode;
   return key;
@@ -333,13 +333,13 @@ Attrs SplitSchema2Attrs(const SplitArgs* args) {
   value::Value indices_or_sections = args->indices_or_sections;
   // Scalar is sections, Tuple value is indices
   if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
-    int64_t sections = scalar->data;
+    int64_t sections = scalar->value;
     attrs->indices_or_sections = IntImm(ir::DataType::Int(32), sections);
   } else if (const auto* tup = indices_or_sections.as<TupleValueObj>()) {
     std::vector<int64_t> indices;
     for (auto field : tup->fields) {
       auto int_value = field.as<IntValueObj>();
-      indices.push_back(int_value->data);
+      indices.push_back(int_value->value);
     }
     attrs->indices_or_sections = mnm::common::shape_utils::StdVector2Array(indices);
   }

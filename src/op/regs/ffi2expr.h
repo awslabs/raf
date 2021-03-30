@@ -11,6 +11,7 @@
 #include "mnm/value.h"
 #include "mnm/registry.h"
 #include "./regs_utils.h"
+#include "tvm/runtime/c_runtime_api.h"
 
 namespace mnm {
 namespace op {
@@ -31,10 +32,10 @@ namespace ffi2expr {
 inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(IntValue, a.operator int64_t());
+    return MNM_CONST(ScalarValue, a.operator int64_t());
   }
   if (type_code == kDLFloat) {
-    return MNM_CONST(FloatValue, a.operator double());
+    return MNM_CONST(ScalarValue, a.operator double());
   }
   if (type_code == kTVMNullptr) {
     return MakeConstant(NullValue<Value>());
@@ -46,7 +47,7 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
         int64_t val = e->value;
-        fields.push_back(IntValue::make(val));
+        fields.push_back(IntValue::make(e->dtype, val));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
@@ -63,37 +64,7 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr OptionalArrayLike(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
-  if (type_code == kDLInt) {
-    return MNM_CONST(IntValue, a.operator int64_t());
-  }
-  if (type_code == kDLFloat) {
-    return MNM_CONST(FloatValue, a.operator double());
-  }
-  if (type_code == kTVMNullptr) {
-    return MakeConstant(NullValue<Value>());
-  }
-  const Object* _ptr = a.ptr<Object>();
-  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
-    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
-    ir::Array<Value> fields;
-    for (const ObjectRef& i : *n) {
-      if (const auto* e = i.as<IntImmNode>()) {
-        int64_t val = e->value;
-        fields.push_back(IntValue::make(val));
-        continue;
-      }
-      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
-                 << "because the " << ToOrdinal(fields.size()) << " member is of type \""
-                 << i->GetTypeKey() << '"';
-      throw;
-    }
-    return MNM_CONST(TupleValue, std::move(fields));
-  }
-
-  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
-             << "\" is not array-like";
-  throw;
+  return ArrayLike(a);
 }
 
 inline ir::Expr Tensor(const registry::TVMArgValue& a) {
@@ -107,21 +78,16 @@ inline ir::Expr Tensor(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr OptionalTensor(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
-  if (type_code == kTVMNullptr) {
-    return MakeConstant(Value());
-  } else if (type_code == kTVMNDArrayHandle) {
-    return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
+  if (a.type_code() == kTVMNullptr) {
+    return ir::MakeConstant(value::Value());
   }
-  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
-             << "\" is not a tensor";
-  throw;
+  return Tensor(a);
 }
 
 inline ir::Expr Int(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(IntValue, a.operator int64_t());
+    return MNM_CONST(ScalarValue, a.operator int64_t());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not an integer";
@@ -147,10 +113,10 @@ inline ir::Expr Bool(const registry::TVMArgValue& a) {
 inline ir::Expr Double(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(FloatValue, a.operator int64_t());
+    return MakeConstant(FloatValue::make(DataType::Float(64), a.operator int64_t()));
   }
   if (type_code == kDLFloat) {
-    return MNM_CONST(FloatValue, a.operator double());
+    return MakeConstant(FloatValue::make(DataType::Float(64), a.operator double()));
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not double";
@@ -175,7 +141,7 @@ inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
     Array<Value> ret;
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
-        ret.push_back(IntValue::make(e->value));
+        ret.push_back(IntValue::make(e->dtype, e->value));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
@@ -193,7 +159,7 @@ inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
 inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(TupleValue, tvm::Array<Value>({IntValue::make(a.operator int64_t())}));
+    return MNM_CONST(TupleValue, tvm::Array<Value>({ScalarValue::make(a.operator int64_t())}));
   }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
@@ -201,7 +167,7 @@ inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
     Array<Value> ret;
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
-        ret.push_back(IntValue::make(e->value));
+        ret.push_back(IntValue::make(e->dtype, e->value));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "
@@ -219,7 +185,7 @@ inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
 inline ir::Expr IntArray(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(TupleValue, tvm::Array<Value>({IntValue::make(a.operator int64_t())}));
+    return MNM_CONST(TupleValue, tvm::Array<Value>({ScalarValue::make(a.operator int64_t())}));
   }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
@@ -227,7 +193,7 @@ inline ir::Expr IntArray(const registry::TVMArgValue& a) {
     Array<Value> ret;
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
-        ret.push_back(IntValue::make(e->value));
+        ret.push_back(IntValue::make(e->dtype, e->value));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "

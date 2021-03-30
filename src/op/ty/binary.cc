@@ -51,6 +51,8 @@ Type BroadcastInfer(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
   TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+  CHECK_EQ(x1->dtype, x2->dtype) << "Data types mismatch (" << x1->dtype << " vs " << x2->dtype
+                                 << ")";
   Array<PrimExpr> oshape = BroadcastShape(x1, x2);
   return TensorType(oshape, x1->dtype);
 }
@@ -62,6 +64,7 @@ Type LogicalBroadcastInfer(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
   TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+  CHECK_EQ(x1->dtype, x2->dtype) << "Data types mismatch";
   Array<PrimExpr> oshape = BroadcastShape(x1, x2);
   return TensorType(oshape, DataType::Bool(x1->dtype.lanes()));
 }
@@ -92,7 +95,7 @@ Type AxisTypeInfer(const CallValues& value) {
   if (x1.as<TensorTypeNode>() && x2.as<TensorTypeNode>()) {
     CHECK_LE(x2->shape.size(), x1->shape.size());
     Array<tvm::PrimExpr> shape;
-    shape.push_back(tvm::PrimExpr((int32_t)x1->shape.size()));
+    shape.push_back(Integer(x1->shape.size()));
     return TensorType(shape, tvm::runtime::DataType::UInt(32));
   } else {
     return IncompleteType(tvm::kType);

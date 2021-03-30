@@ -6,32 +6,32 @@ from mnm._core.value import (BoolValue, FloatValue, IntValue, StringValue,
 
 def test_int_value():
     value = IntValue(1)
-    data = value.data
+    data = value.value
     assert isinstance(data, int)
     assert data == 1
 
 
 def test_float_value():
     value = FloatValue(3.1415926535897932384626)
-    data = value.data
+    data = value.value
     assert isinstance(data, float)
     assert data == 3.1415926535897932384626
 
 
 def test_bool_value():
     value = BoolValue(True)
-    data = value.data
+    data = value.value
     assert isinstance(data, int)
     assert data == 1
     value = BoolValue(False)
-    data = value.data
+    data = value.value
     assert isinstance(data, int)
     assert data == 0
 
 
 def test_string_value():
     value = StringValue("hello world")
-    data = value.data
+    data = value.value
     assert isinstance(data, str)
     assert data == "hello world"
 

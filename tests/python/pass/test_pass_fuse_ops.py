@@ -28,7 +28,7 @@ def test_fuse_simple():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
         log_op = mnm._ffi.op.GetOp("mnm.op.log")
-        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
+        default = mnm.ir.const(None)
 
         x = relay.var("p0", shape=shape)
         y = relay.var("p1", shape=(1,))
@@ -58,9 +58,9 @@ def test_conv2d():
     class Model(mnm.Model):
         def build(self):
             self.c = rand
-            self.conv1 = Conv2d(16, 16, kernel_size=(3, 3), padding=(1, 1), bias=False)
-            self.conv2 = Conv2d(16, 16, kernel_size=(1, 1), padding=(0, 0), bias=False)
-            self.conv3 = Conv2d(16, 16, kernel_size=(3, 3), padding=(1, 1), bias=False)
+            self.conv1 = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
+            self.conv2 = Conv2d(16, 16, kernel_size=(1, 1), padding=0, bias=False)
+            self.conv3 = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
 
         @mnm.model.trace
         def forward(self, x):
@@ -77,11 +77,12 @@ def test_conv2d():
             return z
 
     def expected():
-        konst0 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(0))
-        konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
-        konst_nchw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("NCHW"))
-        konst_oihw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("OIHW"))
-        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
+        v_zero = mnm.ir.const([0])
+        v_one = mnm.ir.const([1])
+        konst1 = mnm.ir.const(1)
+        konst_nchw = mnm.ir.const("NCHW")
+        konst_oihw = mnm.ir.const("OIHW")
+        default = mnm.ir.const(None)
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
 
@@ -89,8 +90,7 @@ def test_conv2d():
         x = relay.var("p0", shape=(1, 16, 64, 64))
         w = relay.var("p1", shape=(16, 16, 3, 3))
         p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
+        p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "int64")
         p6 = relay.var("p6", "int64")
@@ -107,8 +107,7 @@ def test_conv2d():
         x = relay.var("p0", shape=(1, 16, 64, 64))
         w = relay.var("p1", shape=(16, 16, 1, 1))
         p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
+        p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "int64")
         p6 = relay.var("p6", "int64")
@@ -130,11 +129,11 @@ def test_conv2d():
         a4 = relay.var("a4")
         a6 = relay.var("a6")
         a7 = relay.var("a7")
-        let3 = relay.Let(a7, relay.Call(f3, [a4, w2, konst1, konst0, konst1, konst1,
+        let3 = relay.Let(a7, relay.Call(f3, [a4, w2, v_one, v_zero, v_one, konst1,
                                              konst_nchw, konst_oihw, konst_nchw, a6]), a7)
-        let2 = relay.Let(a6, relay.Call(conv2d_op, [a4, w3, konst1, konst1, konst1, konst1,
+        let2 = relay.Let(a6, relay.Call(conv2d_op, [a4, w3, v_one, v_one, v_one, konst1,
                                                     konst_nchw, konst_oihw, konst_nchw]), let3)
-        let1 = relay.Let(a4, relay.Call(f1, [a1, w1, konst1, konst1, konst1, konst1,
+        let1 = relay.Let(a4, relay.Call(f1, [a1, w1, v_one, v_one, v_one, konst1,
                                              konst_nchw, konst_oihw, konst_nchw, c]), let2)
         let = relay.Let(a1, relay.Call(add_op, [x, c, default, default]), let1)
         return relay.Function([x, c, w1, w2, w3], let)
@@ -168,12 +167,12 @@ def test_concatenate():
         max_pool2d_op = mnm._ffi.op.GetOp("mnm.op.max_pool2d")
         concat_op = mnm._ffi.op.GetOp("mnm.op.concatenate")
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
-        konst3 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(3))
-        knchw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("NCHW"))
-        true = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(True))
-        false = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(False))
-        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
+        konst1 = mnm.ir.const(1)
+        konst3 = mnm.ir.const(3)
+        knchw = mnm.ir.const("NCHW")
+        true = mnm.ir.const(True)
+        false = mnm.ir.const(False)
+        default = mnm.ir.const(None)
 
         p0 = relay.var("p0", shape=shape)
         p1 = relay.var("p0", shape=shape)
@@ -212,24 +211,23 @@ def test_tuple_root_fuse():
 
         @mnm.model.trace
         def forward(self, x):
-            pooled = mnm.max_pool2d(x, kernel=(3, 3), stride=(1, 1), padding=1)
+            pooled = mnm.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
             return (mnm.add(pooled, self.c), x)
 
     def expected(shape):
         max_pool2d_op = mnm._ffi.op.GetOp("mnm.op.max_pool2d")
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
-        konst3 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(3))
-        knchw = mnm._ffi.ir._make.Constant(mnm._core.value.StringValue("NCHW"))
-        true = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(True))
-        false = mnm._ffi.ir._make.Constant(mnm._core.value.BoolValue(False))
-        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
+        v_three = mnm.ir.const([3, 3], dtype="int32")
+        v_one = mnm.ir.const([1])
+        knchw = mnm.ir.const("NCHW")
+        true = mnm.ir.const(True)
+        false = mnm.ir.const(False)
+        default = mnm.ir.const(None)
 
         p0 = relay.var("p0", shape=shape)
-        p1 = relay.var("p1", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
-        p2 = relay.var("p2", relay.TupleType((
-            relay.TensorType((), "int64"), relay.TensorType((), "int64"),)))
+        p1 = relay.var("p1", relay.TupleType(
+            (relay.TensorType((), "int32"), relay.TensorType((), "int32"))))
+        p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
         p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
         p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
         p5 = relay.var("p5", "bool")
@@ -248,7 +246,7 @@ def test_tuple_root_fuse():
         a3 = relay.var("a3")
         let3 = relay.Let(a3, relay.Tuple([a2, x]), a3)
         let2 = relay.Let(
-            a2, relay.Call(f, [x, konst3, konst1, konst1, konst1, false, true, knchw, c]), let3)
+            a2, relay.Call(f, [x, v_three, v_one, v_one, v_one, false, true, knchw, c]), let3)
         return relay.Function([x, c], let2)
 
     model = Model()

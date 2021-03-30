@@ -192,7 +192,7 @@ Type TakeInfer(const CallValues& value) {
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    int axis = NormalizeAxis(v->data, ndim);
+    int axis = NormalizeAxis(v->value, ndim);
     int i = 0;
     for (; i < axis; ++i) {
       shape_vec.push_back(x->shape[i]);
@@ -260,7 +260,7 @@ Type SplitInfer(const CallValues& value) {
 
   if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
     // Handling first type - integer scalar - sections
-    int64_t sections = scalar->data;
+    int64_t sections = scalar->value;
     PrimExpr able_divide = truncmod(x->shape[axis], Integer(sections));
     CHECK(TypeCheckCompare(able_divide, 0, std::equal_to<int>()))
         << "indices_or_sections need to be able to divide input.shape[axis]";
@@ -278,7 +278,7 @@ Type SplitInfer(const CallValues& value) {
     Array<PrimExpr> indices;
     for (auto field : tup->fields) {
       auto int_value = field.as<IntValueObj>();
-      indices.push_back(Integer(int_value->data));
+      indices.push_back(Integer(int_value->value));
     }
     indices.push_back(x->shape[axis]);
     PrimExpr begin(0);
@@ -428,7 +428,7 @@ Type RepeatInfer(const CallValues& value) {
   const auto* v = args->axis.as<IntValueObj>();
   int ndim = x->shape.size();
   Array<PrimExpr> shape(x->shape.begin(), x->shape.end());
-  int axis = NormalizeAxis(v->data, ndim);
+  int axis = NormalizeAxis(v->value, ndim);
   shape.Set(axis, x->shape[axis] * repeats);
   return TensorType(shape, x->dtype);
 }

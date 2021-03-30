@@ -132,7 +132,7 @@ MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
-    int axis = NormalizeAxis(v->data, x->ndim);
+    int axis = NormalizeAxis(v->value, x->ndim);
     shape.insert(shape.end(), x->shape, x->shape + axis);
     shape.insert(shape.end(), indices->shape, indices->shape + indices->ndim);
     shape.insert(shape.end(), x->shape + axis + 1, x->shape + x->ndim);
@@ -364,7 +364,7 @@ MNM_OP_DECLARE("mnm.op.repeat", [](const CallValues& call) {
   std::vector<int64_t> shape;
 
   shape.resize(x->ndim);
-  int axis = args->axis.as<IntValueObj>()->data;
+  int axis = args->axis.as<IntValueObj>()->value;
   CHECK(axis >= -ndim && axis < ndim)
       << "repeat only accepts `axis` in [-data.ndim, data.ndim - 1]"
       << ", but got axis = " << axis << ", and data.ndim = " << ndim;
@@ -575,7 +575,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
   // handled differently.
   if (const auto* scalar = indices_or_sections.as<IntValueObj>()) {
     // Handling first type - integer scalar - sections
-    int64_t sections = scalar->data;
+    int64_t sections = scalar->value;
     CHECK_EQ(x->shape[axis] % sections, 0)
         << "indices_or_sections need to be able to divide input.shape[axis]";
 
@@ -591,7 +591,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
     std::vector<int64_t> indices;
     for (auto field : tup->fields) {
       auto int_value = field.as<IntValueObj>();
-      indices.push_back(int_value->data);
+      indices.push_back(int_value->value);
     }
     indices.push_back(x->shape[axis]);
     int64_t begin = 0;

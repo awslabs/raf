@@ -14,8 +14,8 @@ MNM_OP_FROM_RELAY("device_copy", "mnm.op.device_copy",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<DeviceCopyAttrs>();
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->src_dev_type)));
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->dst_dev_type)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->src_dev_type)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->dst_dev_type)));
                     return mnm_args;
                   });
 

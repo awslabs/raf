@@ -93,7 +93,7 @@ Type Conv2DDxwInfer(const CallValues& value) {
   Array<PrimExpr> res;
   if (args->shape.defined()) {
     for (auto value : args->shape.value()) {
-      res.push_back(Integer(value->data));
+      res.push_back(Integer(value->value));
     }
     return TensorType(res, dy->dtype);
   } else {

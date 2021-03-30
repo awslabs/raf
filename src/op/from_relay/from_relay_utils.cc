@@ -49,7 +49,7 @@ std::vector<int64_t> ArrayToInt(const ArrayNode& arr) {
 TupleValue ArrayToIntTuple(const Array<IndexExpr>& arr) {
   Array<Value> ret;
   for (auto val : ArrayToInt(arr)) {
-    ret.push_back(IntValue::make(val));
+    ret.push_back(ScalarValue::make(val));
   }
   return TupleValue::make(std::move(ret));
 }
@@ -57,7 +57,7 @@ TupleValue ArrayToIntTuple(const Array<IndexExpr>& arr) {
 TupleValue ArrayToIntTuple(const Array<Integer>& arr) {
   Array<Value> ret;
   for (auto val : ArrayToInt(arr)) {
-    ret.push_back(IntValue::make(val));
+    ret.push_back(ScalarValue::make(val));
   }
   return TupleValue::make(std::move(ret));
 }
@@ -65,7 +65,7 @@ TupleValue ArrayToIntTuple(const Array<Integer>& arr) {
 TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr) {
   Array<Value> ret;
   for (auto val : arr) {
-    ret.push_back(IntValue::make(val));
+    ret.push_back(ScalarValue::make(val));
   }
   return TupleValue::make(std::move(ret));
 }
@@ -73,7 +73,7 @@ TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr) {
 TupleValue ArrayToIntTuple(const ArrayNode& arr) {
   Array<Value> ret;
   for (auto val : ArrayToInt(arr)) {
-    ret.push_back(IntValue::make(val));
+    ret.push_back(ScalarValue::make(val));
   }
   return TupleValue::make(std::move(ret));
 }

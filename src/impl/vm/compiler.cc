@@ -404,7 +404,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    CHECK(args[2]->IsInstance<ConstantNode>());
                    auto dtype_val = args[2].as<ConstantNode>()->value;
                    CHECK(dtype_val->IsInstance<StringValueObj>());
-                   std::string dtype_s = dtype_val.as<StringValueObj>()->data;
+                   std::string dtype_s = dtype_val.as<StringValueObj>()->value;
                    DataType dtype(String2DLDataType(dtype_s));
 
                    if (const_shape) {
@@ -433,25 +433,25 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    CHECK(args[1]->IsInstance<ConstantNode>());
                    auto align_val = args[1].as<ConstantNode>()->value;
                    CHECK(align_val->IsInstance<IntValueObj>());
-                   Index alignment = align_val.as<IntValueObj>()->data;
+                   Index alignment = align_val.as<IntValueObj>()->value;
 
                    // device type
                    CHECK(args[2]->IsInstance<ConstantNode>());
                    auto device_type_val = args[2].as<ConstantNode>()->value;
                    CHECK(device_type_val->IsInstance<IntValueObj>());
-                   Index device_type = device_type_val.as<IntValueObj>()->data;
+                   Index device_type = device_type_val.as<IntValueObj>()->value;
 
                    // device id
                    CHECK(args[3]->IsInstance<ConstantNode>());
                    auto device_id_val = args[3].as<ConstantNode>()->value;
                    CHECK(device_id_val->IsInstance<IntValueObj>());
-                   Index device_id = device_id_val.as<IntValueObj>()->data;
+                   Index device_id = device_id_val.as<IntValueObj>()->value;
 
                    // dtype
                    CHECK(args[4]->IsInstance<ConstantNode>());
                    auto dtype_val = args[4].as<ConstantNode>()->value;
                    CHECK(dtype_val->IsInstance<StringValueObj>());
-                   std::string dtype_s = dtype_val.as<StringValueObj>()->data;
+                   std::string dtype_s = dtype_val.as<StringValueObj>()->value;
                    DataType dtype(String2DLDataType(dtype_s));
 
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,

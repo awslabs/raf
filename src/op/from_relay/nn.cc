@@ -27,7 +27,7 @@ MNM_OP_FROM_RELAY("nn.conv2d", "mnm.op.conv2d", [&](const Attrs& attrs, const Ar
   padding.pop_back();
   mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
   mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->dilation)));
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->groups)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->groups)));
   mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
   mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->kernel_layout)));
   if (relay_attrs->out_layout != "") {
@@ -42,7 +42,7 @@ MNM_OP_FROM_RELAY("nn.conv2d", "mnm.op.conv2d", [&](const Attrs& attrs, const Ar
   MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
     Array<Expr> mnm_args = args;                                                                   \
     const auto* relay_attrs = attrs.as<SoftmaxAttrs>();                                            \
-    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));                           \
+    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));                        \
     return mnm_args;                                                                               \
   })
 
@@ -53,7 +53,7 @@ MNM_OP_FROM_RELAY("nn.bias_add", "mnm.op.bias_add",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<BiasAddAttrs>();
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
                     return mnm_args;
                   });
 
@@ -71,7 +71,7 @@ MNM_OP_FROM_RELAY("nn.max_pool2d", "mnm.op.max_pool2d",
                     padding.pop_back();
                     padding.pop_back();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
-                    mnm_args.push_back(MakeConstant(TupleValue::make({IntValue::make(1)})));
+                    mnm_args.push_back(MakeConstant(TupleValue::make({ScalarValue::make(1)})));
                     mnm_args.push_back(MakeConstant(BoolValue::make(relay_attrs->ceil_mode)));
                     mnm_args.push_back(MakeConstant(BoolValue::make(true)));
                     mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->layout)));
@@ -92,7 +92,7 @@ MNM_OP_FROM_RELAY("nn.avg_pool2d", "mnm.op.avg_pool2d",
                     padding.pop_back();
                     padding.pop_back();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
-                    mnm_args.push_back(MakeConstant(TupleValue::make({IntValue::make(1)})));
+                    mnm_args.push_back(MakeConstant(TupleValue::make({ScalarValue::make(1)})));
                     mnm_args.push_back(MakeConstant(BoolValue::make(relay_attrs->ceil_mode)));
                     mnm_args.push_back(MakeConstant(BoolValue::make(true)));
                     mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->layout)));
@@ -114,8 +114,8 @@ MNM_OP_FROM_RELAY("nn.layer_norm", "mnm.op.layer_norm",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<LayerNormAttrs>();
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
-                    mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->epsilon)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->epsilon)));
                     return mnm_args;
                   });
 
@@ -123,13 +123,13 @@ MNM_OP_FROM_RELAY("nn.batch_norm", "mnm.op.batch_norm_train",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args;
                     const auto* relay_attrs = attrs.as<BatchNormAttrs>();
-                    mnm_args.push_back(args[0]);                              // x
-                    mnm_args.push_back(args[3]);                              // running_mean
-                    mnm_args.push_back(args[4]);                              // running_var
-                    mnm_args.push_back(args[1]);                              // w
-                    mnm_args.push_back(args[2]);                              // b
-                    mnm_args.push_back(MakeConstant(FloatValue::make(0.1)));  // momentum
-                    mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->epsilon)));
+                    mnm_args.push_back(args[0]);                               // x
+                    mnm_args.push_back(args[3]);                               // running_mean
+                    mnm_args.push_back(args[4]);                               // running_var
+                    mnm_args.push_back(args[1]);                               // w
+                    mnm_args.push_back(args[2]);                               // b
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(0.1)));  // momentum
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->epsilon)));
                     return mnm_args;
                   });
 
@@ -153,7 +153,7 @@ MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Ex
     }
   }
   mnm_args.push_back(MakeConstant(ArrayToIntTuple(flat_pad_width)));
-  mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->pad_value)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->pad_value)));
   mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->pad_mode)));
   return mnm_args;
 });
@@ -163,7 +163,7 @@ MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Ex
 //                   [&](const Attrs& attrs, const Array<Expr>& args) {
 //                     Array<Expr> mnm_args = args;
 //                     const auto* relay_attrs = attrs.as<DropoutAttrs>();
-//                     mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->rate)));
+//                     mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->rate)));
 //                     return mnm_args;
 //                   });
 RELAY_REGISTER_OP("nn.dropout")
@@ -173,7 +173,7 @@ RELAY_REGISTER_OP("nn.dropout")
 
       Array<Expr> ret;
       ret.push_back(args[0]);
-      ret.push_back(MakeConstant(FloatValue::make(2)));
+      ret.push_back(MakeConstant(ScalarValue::make(2)));
       return Tuple(std::move(ret));
     });
 

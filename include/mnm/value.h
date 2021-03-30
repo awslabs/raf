@@ -52,6 +52,7 @@ class BoolValue;
 /* ScalarValue */
 class ScalarValueObj : public ValueObj {
  public:
+  ir::DataType dtype;
   static constexpr const uint32_t _type_index = tvm::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.value.ScalarValue";
   MNM_BASE_OBJECT(ScalarValueObj, ValueObj);
@@ -59,37 +60,45 @@ class ScalarValueObj : public ValueObj {
 
 class ScalarValue : public Value {
  public:
-  static IntValue make(int data);
-  static IntValue make(int64_t data);
-  static FloatValue make(double data);
-  static BoolValue make(bool data);
+  static IntValue make(int8_t value);
+  static IntValue make(int16_t value);
+  static IntValue make(int32_t value);
+  static IntValue make(int64_t value);
+  static IntValue make(uint8_t value);
+  static IntValue make(uint16_t value);
+  static IntValue make(uint32_t value);
+  static IntValue make(uint64_t value);
+  static FloatValue make(float value);
+  static FloatValue make(double value);
+  static BoolValue make(bool value);
   MNM_OBJECT_REF(ScalarValue, Value, ScalarValueObj);
 };
 
 /* IntValue */
 class IntValueObj : public ScalarValueObj {
  public:
-  int64_t data;
+  int64_t value;
   void VisitAttrs(tvm::AttrVisitor* v) {
-    v->Visit("data", &data);
+    v->Visit("dtype", &dtype);
+    v->Visit("value", &value);
   }
-  static constexpr const uint32_t _type_index = tvm::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "mnm.value.IntValue";
   MNM_FINAL_OBJECT(IntValueObj, ScalarValueObj);
 };
 
 class IntValue : public ScalarValue {
  public:
-  static IntValue make(int64_t data);
+  static IntValue make(ir::DataType dtype, int64_t value);
   MNM_OBJECT_REF(IntValue, ScalarValue, IntValueObj);
 };
 
 /* FloatValue */
 class FloatValueObj : public ScalarValueObj {
  public:
-  double data;
+  double value;
   void VisitAttrs(tvm::AttrVisitor* v) {
-    v->Visit("data", &data);
+    v->Visit("dtype", &dtype);
+    v->Visit("value", &value);
   }
   static constexpr const char* _type_key = "mnm.value.FloatValue";
   MNM_FINAL_OBJECT(FloatValueObj, ScalarValueObj);
@@ -97,16 +106,17 @@ class FloatValueObj : public ScalarValueObj {
 
 class FloatValue : public ScalarValue {
  public:
-  static FloatValue make(double data);
+  static FloatValue make(ir::DataType dtype, double value);
   MNM_OBJECT_REF(FloatValue, ScalarValue, FloatValueObj);
 };
 
 /* BoolValue */
 class BoolValueObj : public ScalarValueObj {
  public:
-  bool data;
+  bool value;
   void VisitAttrs(tvm::AttrVisitor* v) {
-    v->Visit("data", &data);
+    v->Visit("dtype", &dtype);
+    v->Visit("value", &value);
   }
   static constexpr const char* _type_key = "mnm.value.BoolValue";
   MNM_FINAL_OBJECT(BoolValueObj, ScalarValueObj);
@@ -267,9 +277,9 @@ class OpaqueValue : public Value {
 /* StringValue */
 class StringValueObj : public ValueObj {
  public:
-  std::string data;
+  std::string value;
   void VisitAttrs(tvm::AttrVisitor* v) {
-    v->Visit("data", &data);
+    v->Visit("value", &value);
   }
   static constexpr const char* _type_key = "mnm.value.StringValue";
   MNM_FINAL_OBJECT(StringValueObj, ValueObj);

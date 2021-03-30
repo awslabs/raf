@@ -92,7 +92,7 @@ inline int64_t VMContext::LoadScalarInt(Index r) const {
   int32_t result;
   const auto& obj = ReadRegister(r);
   auto int_value = Downcast<IntValue>(obj);
-  return int_value->data;
+  return int_value->value;
 }
 
 inline bool VMContext::IsConst(Index reg) const {
@@ -400,7 +400,7 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         goto main_loop;
       }
       case Opcode::LoadConsti: {
-        ctx.WriteRegister(instr.dst, IntValue::make(instr.load_consti.val));
+        ctx.WriteRegister(instr.dst, ScalarValue::make(instr.load_consti.val));
         ctx->pc++;
         goto main_loop;
       }

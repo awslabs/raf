@@ -25,22 +25,23 @@ using namespace mnm::value;
 
 inline Expr ExpandBiasToMatchAxis(Expr bias, int target_ndim, const Array<Integer>& axes) {
   static const Op& expand_dims = Op::Get("mnm.op.expand_dims");
-  for (size_t i = axes.size(); i != 0; --i) {
+  for (int64_t i = axes.size(); i != 0; --i) {
     if (i == axes.size()) {
       int64_t num_pad_axis = target_ndim - axes[i - 1]->value - 1;
       if (num_pad_axis > 0) {
-        bias = Call(
-            expand_dims,
-            {bias, MakeConstant(IntValue::make(i)), MakeConstant(IntValue::make(num_pad_axis))},
-            Attrs(), {});
+        bias = Call(expand_dims,
+                    {bias, MakeConstant(ScalarValue::make(i)),
+                     MakeConstant(ScalarValue::make(num_pad_axis))},
+                    Attrs(), {});
       }
     } else {
       int64_t diff = axes[i]->value - axes[i - 1]->value;
       CHECK_GE(diff, 0L);
       if (diff > 0) {
-        bias = Call(expand_dims,
-                    {bias, MakeConstant(IntValue::make(i)), MakeConstant(IntValue::make(diff))},
-                    Attrs(), {});
+        bias =
+            Call(expand_dims,
+                 {bias, MakeConstant(ScalarValue::make(i)), MakeConstant(ScalarValue::make(diff))},
+                 Attrs(), {});
       }
     }
   }
@@ -63,7 +64,7 @@ class BiasAddSimplifier : public ExprRewriter {
       Call call = Downcast<Call>(n->value);
       CHECK_EQ(call->args.size(), 3);
       const ConstantNode* axis_p = call->args[2].as<ConstantNode>();
-      int axis = Downcast<value::IntValue>(axis_p->value)->data;
+      int axis = Downcast<value::IntValue>(axis_p->value)->value;
       auto x = call->args[0];
       if (!x->checked_type_.defined()) {
         // skip rewrite when type does not exist

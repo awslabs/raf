@@ -16,15 +16,15 @@ MNM_OP_FROM_RELAY("adv_index", "mnm.op.adv_index",
 MNM_OP_FROM_RELAY("repeat", "mnm.op.repeat", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<RepeatAttrs>();
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->repeats)));
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->repeats)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
   return mnm_args;
 });
 
 MNM_OP_FROM_RELAY("take", "mnm.op.take", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<TakeAttrs>();
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
   mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->mode)));
   return mnm_args;
 });
@@ -33,15 +33,15 @@ MNM_OP_FROM_RELAY("sequence_mask", "mnm.op.sequence_mask",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<SequenceMaskAttrs>();
-                    mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->mask_value)));
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->mask_value)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
                     return mnm_args;
                   });
 
 MNM_OP_FROM_RELAY("reverse", "mnm.op.reverse", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<ReverseAttrs>();
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
   return mnm_args;
 });
 
@@ -49,8 +49,8 @@ MNM_OP_FROM_RELAY("reverse_sequence", "mnm.op.reverse_sequence",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<ReverseSequenceAttrs>();
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->seq_axis)));
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->batch_axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->seq_axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->batch_axis)));
                     return mnm_args;
                   });
 
@@ -83,13 +83,13 @@ MNM_OP_FROM_RELAY("split", "mnm.op.split", [&](const Attrs& attrs, const Array<E
   auto indices_or_sections = relay_attrs->indices_or_sections;
   if (const auto* scalar = indices_or_sections.as<IntImmNode>()) {
     auto val = scalar->value;
-    mnm_args.push_back(MakeConstant(IntValue::make(val)));
+    mnm_args.push_back(MakeConstant(ScalarValue::make(val)));
   } else if (const auto* arr = indices_or_sections.as<ArrayNode>()) {
     mnm_args.push_back(MakeConstant(ArrayToIntTuple(*arr)));
   } else {
     CHECK(false) << "Fail to convert split: Unknown indices_or_sections type";
   }
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
   return mnm_args;
 });
 
@@ -97,22 +97,22 @@ MNM_OP_FROM_RELAY("concatenate", "mnm.op.concatenate",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<ConcatenateAttrs>();
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
                     return mnm_args;
                   });
 
 MNM_OP_FROM_RELAY("stack", "mnm.op.stack", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<StackAttrs>();
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
   return mnm_args;
 });
 
 MNM_OP_FROM_RELAY("clip", "mnm.op.clip", [&](const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<ClipAttrs>();
-  mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->a_min)));
-  mnm_args.push_back(MakeConstant(FloatValue::make(relay_attrs->a_max)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->a_min)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->a_max)));
   return mnm_args;
 });
 
@@ -132,7 +132,7 @@ MNM_OP_FROM_RELAY("gather", "mnm.op.gather", [&](const Attrs& attrs, const Array
 
   // Relay args are (data, indices) and Meta args are (data, axis, indices).
   mnm_args.push_back(args[0]);
-  mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
   mnm_args.push_back(args[1]);
   return mnm_args;
 });
@@ -163,8 +163,8 @@ MNM_OP_FROM_RELAY("expand_dims", "mnm.op.expand_dims",
                   [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<ExpandDimsAttrs>();
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->axis)));
-                    mnm_args.push_back(MakeConstant(IntValue::make(relay_attrs->num_newaxis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->num_newaxis)));
                     return mnm_args;
                   });
 

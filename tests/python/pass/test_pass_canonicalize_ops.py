@@ -5,7 +5,7 @@ import tvm
 
 def test_canonicalize_ops_bias_add_ir():
     x, _ = randn((3, 2, 2))
-    bias = mnm.array([1, 2], dtype="int64")
+    bias = mnm.array([1, 2], dtype="float32")
     # pylint: disable=protected-access
     class ModelWithBiasAdd(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -18,7 +18,7 @@ def test_canonicalize_ops_bias_add_ir():
 
     def expected():
         x_var = tvm.relay.var('x', tvm.relay.TensorType(x.shape))
-        bias_var = tvm.relay.var('bias', tvm.relay.TensorType(bias.shape, dtype="int64"))
+        bias_var = tvm.relay.var('bias', tvm.relay.TensorType(bias.shape, dtype="float32"))
         expand_dims_op = mnm._ffi.op.GetOp('mnm.op.expand_dims')
         axis_var = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
         new_axis_var = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))

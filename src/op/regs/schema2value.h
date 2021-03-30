@@ -44,7 +44,7 @@ inline value::Value OptionalTensor(const ir::Optional<value::BaseTensorValue> a)
 
 inline value::Value Int(int64_t a) {
   MNM_PRELUDE();
-  return IntValue::make(a);
+  return IntValue::make(DataType::Int(64), a);
 }
 
 inline value::Value Bool(bool a) {
@@ -54,7 +54,7 @@ inline value::Value Bool(bool a) {
 
 inline value::Value Double(double a) {
   MNM_PRELUDE();
-  return FloatValue::make(a);
+  return FloatValue::make(DataType::Float(64), a);
 }
 
 inline value::Value String(const std::string& a) {
@@ -66,7 +66,7 @@ inline value::Value TupleInt(const std::vector<int64_t>& a) {
   MNM_PRELUDE();
   Array<Value> ret;
   for (const auto i : a) {
-    ret.push_back(IntValue::make(i));
+    ret.push_back(IntValue::make(DataType::Int(64), i));
   }
   return TupleValue::make(std::move(ret));
 }
@@ -79,7 +79,7 @@ inline value::Value IntArray(const ir::Optional<ir::Array<value::IntValue>> a) {
   MNM_PRELUDE();
   Array<Value> ret;
   for (const auto i : a.value()) {
-    ret.push_back(IntValue::make(i->data));
+    ret.push_back(IntValue::make(i->dtype, i->value));
   }
   return TupleValue::make(std::move(ret));
 }

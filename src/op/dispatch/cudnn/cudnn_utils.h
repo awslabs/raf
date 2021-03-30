@@ -244,11 +244,11 @@ inline std::vector<int64_t> NormalizeScalarToTuple(
   CHECK(n == 1 || n == numel) << "ValueError: we only accept a single integer or a tuple of "
                               << numel << " integers";
   if (n == 1) {
-    return std::vector<int64_t>(numel, value[0]->data);
+    return std::vector<int64_t>(numel, value[0]->value);
   } else {
     std::vector<int64_t> re;
     for (auto i : value) {
-      re.push_back(i->data);
+      re.push_back(i->value);
     }
     return re;
   }

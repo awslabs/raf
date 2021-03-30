@@ -55,8 +55,8 @@ Array<Expr> PoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   const auto* layout_const = layout.as<ConstantNode>();
   if (layout_const) {
     const auto* layout_str = layout_const->value.as<value::StringValueObj>();
-    CHECK(layout_str && layout_str->data == "NCHW")
-        << "PoolGrad support NCHW layout only. Layout = " << layout_str->data;
+    CHECK(layout_str && layout_str->value == "NCHW")
+        << "PoolGrad support NCHW layout only. Layout = " << layout_str->value;
   }
   return {Call(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
 }
@@ -80,8 +80,8 @@ Array<Expr> AdaptivePoolGrad(const Expr& orig_call, const Array<Expr> orig_args,
   const auto* layout_const = layout.as<ConstantNode>();
   if (layout_const) {
     const auto* layout_str = layout_const->value.as<value::StringValueObj>();
-    CHECK(layout_str && layout_str->data == "NCHW")
-        << "AdaptivePoolGrad support NCHW layout only. Layout = " << layout_str->data;
+    CHECK(layout_str && layout_str->value == "NCHW")
+        << "AdaptivePoolGrad support NCHW layout only. Layout = " << layout_str->value;
   }
   return {Call(op_dx, {x, y, dy, shape})};
 }
@@ -115,8 +115,8 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const
   const auto* layout_const = layout.as<ConstantNode>();
   if (layout_const) {
     const auto* layout_str = layout_const->value.as<value::StringValueObj>();
-    CHECK(layout_str && layout_str->data == "NCHW")
-        << "PoolGrad support NCHW layout only. Layout = " << layout_str->data;
+    CHECK(layout_str && layout_str->value == "NCHW")
+        << "PoolGrad support NCHW layout only. Layout = " << layout_str->value;
   }
   // dx: w, y, dy, shape(x), stride, padding, dilation, groups
   // dw: x, y, dy, shape(w), stride, padding, dilation, groups
@@ -298,7 +298,7 @@ Array<Expr> LogSoftmaxGrad(const Expr& orig_call, const Array<Expr> orig_args, c
   const Expr& x = call->args[0];
   const Expr& axis = call->args[1];
   Expr softmax = Call(op_softmax, {x, axis});
-  Expr keep_dims = MakeConstant(IntValue::make(1));
+  Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)1));
   Expr e_1 = Call(op_sum, {dy, axis, keep_dims});
   Expr e_2 = Call(op_multiply, {e_1, softmax});
   Expr e_3 = Call(op_subtract, {dy, e_2});

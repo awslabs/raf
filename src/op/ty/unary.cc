@@ -83,7 +83,7 @@ Type UnaryShapeInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
   TensorType x = Downcast<TensorType>(GetType(args->x));
   Array<tvm::PrimExpr> shape;
-  shape.push_back(tvm::PrimExpr((int32_t)x->shape.size()));
+  shape.push_back(ir::Integer(x->shape.size()));
   return TensorType(shape, tvm::runtime::DataType::UInt(32));
 }
 

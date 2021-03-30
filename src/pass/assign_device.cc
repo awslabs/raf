@@ -36,7 +36,7 @@ Expr AssignDeviceFullOp(const CallNode* node, const Array<Expr> args,
     CHECK(device_name_node);
     auto device_name_string_obj = device_name_node->value.as<StringValueObj>();
     CHECK(device_name_string_obj);
-    std::string device_name_str = device_name_string_obj->data;
+    std::string device_name_str = device_name_string_obj->value;
     call_device = Device(static_cast<TVMContext>((*str2ctx)(device_name_str)));
   }
 
@@ -104,7 +104,7 @@ Expr AssignDeviceOneHotOp(const CallNode* node, const Array<Expr> args,
         new_args.push_back(args[arg_idx]);
       } else if (arg_idx == 4) {
         // Make up the default argument value for axis.
-        new_args.push_back(MakeConstant(IntValue::make(-1)));
+        new_args.push_back(MakeConstant(ScalarValue::make(-1)));
       } else if (arg_idx == 5) {
         // Make up the default argument value for dtype.
         new_args.push_back(MakeConstant(StringValue::make("int")));

@@ -15,6 +15,7 @@
 #include "mnm/binding.h"
 #include "mnm/type.h"
 #include "../op/ty/utils.h"
+#include "tvm/node/structural_equal.h"
 
 namespace mnm {
 namespace pass {
@@ -167,9 +168,15 @@ class TypeInferencer : public ExprMutator {
     return ti->func(call_values);
   }
 
-  Type InferClosure(const Call& call, const FunctionNode* op) {
+  Type InferClosure(const Call& call, const FunctionNode* fn) {
     // TODO(@hzfan): perform template param deduction to eliminate type_params
-    FuncType fty = Downcast<FuncType>(op->checked_type());
+    FuncType fty = Downcast<FuncType>(fn->checked_type());
+    CHECK_EQ(call->args.size(), fty->arg_types.size());
+    for (size_t i = 0; i < call->args.size(); ++i) {
+      CHECK(StructuralEqual()(call->args[i]->checked_type(), fty->arg_types[i]))
+          << "Type of argument and function parameter mismatch: " << call->args[i]->checked_type()
+          << " vs " << fty->arg_types[i];
+    }
     return fty->ret_type;
   }
 
@@ -455,7 +462,7 @@ class ValueGetter : public ExprFunctor<Value(const Expr&)> {
     if (const ArrayNode* arr = node->value.as<ArrayNode>()) {
       Array<Value> fields;
       for (const auto& it : *arr) {
-        fields.push_back(IntValue::make((Downcast<IntImm>(it))->value));
+        fields.push_back(IntValue::make(DataType::Int(64), (Downcast<IntImm>(it))->value));
       }
       return TupleValue::make(fields);
     }

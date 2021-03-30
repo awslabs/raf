@@ -29,11 +29,11 @@ using namespace mnm::value;
     }                                                           \
   } while (0);
 
-#define MNM_BINARY_SCALAR(op, x1, x2)                                      \
-  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {                    \
-                      call->callee = ir::NullValue<OpValue>();             \
-                      call->out = ScalarValue::make(v1->data op v2->data); \
-                      return;                                              \
+#define MNM_BINARY_SCALAR(op, x1, x2)                                        \
+  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {                      \
+                      call->callee = ir::NullValue<OpValue>();               \
+                      call->out = ScalarValue::make(v1->value op v2->value); \
+                      return;                                                \
                     }));
 
 #define MNM_BINARY_TENSOR(x1, x2)                                             \
@@ -131,8 +131,8 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.power", [](const CallValues& call) {
   if (!args->out.defined() && !args->where.defined()) {
     MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
                         call->callee = ir::NullValue<OpValue>();
-                        double a1 = v1->data;
-                        double a2 = v2->data;
+                        double a1 = v1->value;
+                        double a2 = v2->value;
                         double result = std::pow(a1, a2);
                         call->out = ScalarValue::make(result);
                         return;
@@ -150,12 +150,12 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.divide", [](const CallValues& call) {
   const Value& x2 = args->x2;
   if (!args->out.defined() && !args->where.defined()) {
     MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (s2->data == 0) {
+                        if (s2->value == 0) {
                           LOG(FATAL) << "ZeroDivisionError: division by zero";
                           throw;
                         }
                         call->callee = ir::NullValue<OpValue>();
-                        call->out = ScalarValue::make(s1->data / s2->data);
+                        call->out = ScalarValue::make(s1->value / s2->value);
                         return;
                       }));
     MNM_BINARY_TENSOR(x1, x2);
@@ -172,19 +172,19 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.mod", [](const CallValues& call) {
   const Value& x2 = args->x2;
   if (!args->out.defined() && !args->where.defined()) {
     MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (s2->data == 0) {
+                        if (s2->value == 0) {
                           LOG(FATAL) << "ZeroDivisionError: division by zero";
                           throw;
                         }
                         call->callee = ir::NullValue<OpValue>();
                         if (s1->IsInstance<FloatValueObj>() || s2->IsInstance<FloatValueObj>()) {
-                          double a1 = s1->data;
-                          double a2 = s2->data;
+                          double a1 = s1->value;
+                          double a2 = s2->value;
                           double result = fmod(a1, a2);
                           call->out = ScalarValue::make(result);
                         } else {
-                          int64_t a1 = s1->data;
-                          int64_t a2 = s2->data;
+                          int64_t a1 = s1->value;
+                          int64_t a2 = s2->value;
                           int64_t result = a1 % a2;
                           call->out = ScalarValue::make(result);
                         }
@@ -232,8 +232,8 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.right_shift", [](const CallValues& call) {
                           throw;
                         }
                         call->callee = ir::NullValue<OpValue>();
-                        int64_t a1 = s1->data;
-                        int64_t a2 = s2->data;
+                        int64_t a1 = s1->value;
+                        int64_t a2 = s2->value;
                         int64_t result = a1 >> a2;
                         call->out = ScalarValue::make(result);
                         return;
@@ -300,7 +300,8 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.maximum", [](const CallValues& call) {
   if (!args->out.defined() && !args->where.defined()) {
     MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
                         call->callee = ir::NullValue<OpValue>();
-                        call->out = ScalarValue::make(v1->data > v2->data ? v1->data : v2->data);
+                        call->out =
+                            ScalarValue::make(v1->value > v2->value ? v1->value : v2->value);
                         return;
                       }));
     MNM_BINARY_TENSOR(x1, x2);
@@ -317,7 +318,8 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
   if (!args->out.defined() && !args->where.defined()) {
     MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
                         call->callee = ir::NullValue<OpValue>();
-                        call->out = ScalarValue::make(v1->data < v2->data ? v1->data : v2->data);
+                        call->out =
+                            ScalarValue::make(v1->value < v2->value ? v1->value : v2->value);
                         return;
                       }));
     MNM_BINARY_TENSOR(x1, x2);
@@ -379,15 +381,15 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.left_shift", [](const CallValues& call) {
   const Value& x2 = args->x2;
   if (!args->out.defined() && !args->where.defined()) {
     MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (s2->data < 0) {
+                        if (s2->value < 0) {
                           LOG(FATAL) << "ValueError: Negative shift count";
                           throw;
                         }
 
                         call->callee = ir::NullValue<OpValue>();
                         if (s1->IsInstance<IntValueObj>() && s2->IsInstance<IntValueObj>()) {
-                          int64_t a1 = s1->data;
-                          int64_t a2 = s2->data;
+                          int64_t a1 = s1->value;
+                          int64_t a2 = s2->value;
                           int64_t result = a1 << a2;
                           call->out = ScalarValue::make(result);
                         } else {

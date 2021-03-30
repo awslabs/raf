@@ -33,10 +33,10 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
     return bound->value;
   }
   if (type_code == kDLInt) {
-    return IntValue::make(a.operator int64_t());
+    return ScalarValue::make(a.operator int64_t());
   }
   if (type_code == kDLFloat) {
-    return FloatValue::make(a.operator double());
+    return ScalarValue::make(a.operator double());
   }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
@@ -44,8 +44,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
     ir::Array<Value> fields;
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
-        int64_t val = e->value;
-        fields.push_back(IntValue::make(val));
+        fields.push_back(IntValue::make(e->dtype, e->value));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
@@ -67,39 +66,7 @@ inline ir::Optional<value::Value> OptionalArrayLike(const registry::TVMArgValue&
   if (type_code == kTVMNullptr) {
     return tvm::NullOpt;
   }
-  if (type_code == kTVMObjectHandle && a.IsObjectRef<Var>()) {
-    using binding::NDArrayBindingObj;
-    auto* bound = binding::LookupBinding(a.AsObjectRef<Var>().operator->()).as<NDArrayBindingObj>();
-    *tape = bound->tape;
-    return bound->value;
-  }
-  if (type_code == kDLInt) {
-    return IntValue::make(a.operator int64_t());
-  }
-  if (type_code == kDLFloat) {
-    return FloatValue::make(a.operator double());
-  }
-  const Object* _ptr = a.ptr<Object>();
-  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
-    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
-    ir::Array<Value> fields;
-    for (const ObjectRef& i : *n) {
-      if (const auto* e = i.as<IntImmNode>()) {
-        int64_t val = e->value;
-        fields.push_back(IntValue::make(val));
-        continue;
-      }
-      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
-                 << "because the " << ToOrdinal(fields.size()) << " member is of type \""
-                 << i->GetTypeKey() << '"';
-      throw;
-    }
-    return value::TupleValue::make(std::move(fields));
-  }
-
-  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
-             << "\" is not array-like";
-  throw;
+  return ArrayLike(a, tape);
 }
 
 inline value::BaseTensorValue Tensor(const registry::TVMArgValue& a, binding::GradTape* tape) {
@@ -229,7 +196,8 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
 inline ir::Optional<ir::Array<value::IntValue>> IntArray(const registry::TVMArgValue& a) {
   MNM_PRELUDE();
   if (type_code == kDLInt) {
-    return ir::Array<value::IntValue>{value::IntValue::make(a.operator int64_t())};
+    return ir::Array<value::IntValue>{
+        value::IntValue::make(DataType::Int(64), a.operator int64_t())};
   }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
@@ -238,7 +206,7 @@ inline ir::Optional<ir::Array<value::IntValue>> IntArray(const registry::TVMArgV
     ret.reserve(n->size());
     for (const ObjectRef& i : *n) {
       if (const auto* e = i.as<IntImmNode>()) {
-        ret.push_back(value::IntValue::make(e->value));
+        ret.push_back(value::IntValue::make(e->dtype, e->value));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "

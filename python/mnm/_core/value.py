@@ -16,9 +16,9 @@ class Value(Object):
         if isinstance(value, Value):
             return make_const_expr(value)
         if isinstance(value, int):
-            return make_const_expr(IntValue(value))
+            return make_const_expr(IntValue(value, "int64"))
         if isinstance(value, float):
-            return make_const_expr(FloatValue(value))
+            return make_const_expr(FloatValue(value, "float64"))
         if isinstance(value, bool):
             return make_const_expr(BoolValue(value))
         raise NotImplementedError
@@ -97,16 +97,16 @@ class TensorTypeValue(BaseTensorValue):
 
 @register_node("mnm.value.IntValue")
 class IntValue(Value):
-    def __init__(self, data):
+    def __init__(self, data, dtype="int64"):
         assert isinstance(data, int)
-        self.__init_handle_by_constructor__(_make.IntValue, data)
+        self.__init_handle_by_constructor__(_make.IntValue, dtype, data)
 
 
 @register_node("mnm.value.FloatValue")
 class FloatValue(Value):
-    def __init__(self, data):
+    def __init__(self, data, dtype="float32"):
         assert isinstance(data, float)
-        self.__init_handle_by_constructor__(_make.FloatValue, data)
+        self.__init_handle_by_constructor__(_make.FloatValue, dtype, data)
 
 
 @register_node("mnm.value.BoolValue")

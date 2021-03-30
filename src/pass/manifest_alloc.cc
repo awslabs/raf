@@ -115,7 +115,7 @@ class ManifestAllocMutator : public ExprMutator {
     if (align < 64) {
       align = 64;
     }
-    return MakeConstant(IntValue::make(align));
+    return MakeConstant(ScalarValue::make(align));
   }
 
   Expr ComputeStorage(const TensorTypeNode* type) {
@@ -126,15 +126,15 @@ class ManifestAllocMutator : public ExprMutator {
       size *= dim_imm->value;
     }
     size *= (type->dtype.bits() * type->dtype.lanes() + 7) / 8;
-    return MakeConstant(IntValue::make(size));
+    return MakeConstant(ScalarValue::make(size));
   }
 
   Expr MakeAllocStorage(const Array<Expr>& args, int device_type, int device_id,
                         const tvm::runtime::DataType& dtype) {
     static const Op& op = Op::Get("mnm.op._alloc_storage");
     Array<Expr> new_args = args;
-    new_args.push_back(MakeConstant(IntValue::make(device_type)));
-    new_args.push_back(MakeConstant(IntValue::make(device_id)));
+    new_args.push_back(MakeConstant(ScalarValue::make(device_type)));
+    new_args.push_back(MakeConstant(ScalarValue::make(device_id)));
     new_args.push_back(MakeConstant(StringValue::make(DLDataType2String(dtype))));
     return Call(op, new_args);
   }

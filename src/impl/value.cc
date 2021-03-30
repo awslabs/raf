@@ -3,6 +3,7 @@
  * \file src/impl/value.cc
  * \brief MNM value underlying implementation
  */
+#include "tvm/runtime/data_type.h"
 #include "tvm/runtime/ndarray.h"
 #include <tvm/node/functor.h>
 #include <tvm/ir/module.h>
@@ -55,43 +56,74 @@ OpValue OpValue::make(Op op) {
   return OpValue(n);
 }
 
-IntValue ScalarValue::make(int data) {
-  return IntValue::make(data);
+IntValue ScalarValue::make(int8_t value) {
+  return IntValue::make(DataType::Int(8), value);
 }
 
-IntValue ScalarValue::make(int64_t data) {
-  return IntValue::make(data);
+IntValue ScalarValue::make(int16_t value) {
+  return IntValue::make(DataType::Int(16), value);
 }
 
-FloatValue ScalarValue::make(double data) {
-  return FloatValue::make(data);
+IntValue ScalarValue::make(int32_t value) {
+  return IntValue::make(DataType::Int(32), value);
 }
 
-BoolValue ScalarValue::make(bool data) {
-  return BoolValue::make(data);
+IntValue ScalarValue::make(int64_t value) {
+  return IntValue::make(DataType::Int(64), value);
 }
 
-IntValue IntValue::make(int64_t data) {
+IntValue ScalarValue::make(uint8_t value) {
+  return IntValue::make(DataType::UInt(8), value);
+}
+
+IntValue ScalarValue::make(uint16_t value) {
+  return IntValue::make(DataType::UInt(16), value);
+}
+
+IntValue ScalarValue::make(uint32_t value) {
+  return IntValue::make(DataType::UInt(32), value);
+}
+
+IntValue ScalarValue::make(uint64_t value) {
+  return IntValue::make(DataType::UInt(64), value);
+}
+
+FloatValue ScalarValue::make(float value) {
+  return FloatValue::make(DataType::Float(32), value);
+}
+
+FloatValue ScalarValue::make(double value) {
+  return FloatValue::make(DataType::Float(64), value);
+}
+
+BoolValue ScalarValue::make(bool value) {
+  return BoolValue::make(value);
+}
+
+IntValue IntValue::make(DataType dtype, int64_t value) {
   ObjectPtr<IntValueObj> n = make_object<IntValueObj>();
-  n->data = data;
+  n->dtype = dtype;
+  n->value = value;
   return IntValue(n);
 }
 
-FloatValue FloatValue::make(double data) {
+FloatValue FloatValue::make(DataType dtype, double value) {
   ObjectPtr<FloatValueObj> n = make_object<FloatValueObj>();
-  n->data = data;
+  n->dtype = dtype;
+  n->value = value;
   return FloatValue(n);
 }
 
-BoolValue BoolValue::make(bool data) {
+BoolValue BoolValue::make(bool value) {
   ObjectPtr<BoolValueObj> n = make_object<BoolValueObj>();
-  n->data = data;
+  n->dtype = DataType::Bool();
+  n->value = value;
   return BoolValue(n);
 }
 
-StringValue StringValue::make(const std::string& data) {
+StringValue StringValue::make(const std::string& value) {
   ObjectPtr<StringValueObj> n = make_object<StringValueObj>();
-  n->data = data;
+  n->value = value;
   return StringValue(n);
 }
 
@@ -143,7 +175,7 @@ TensorValue TensorValue::Assemble(const Device& dev, const DType& dtype,
                                   std::shared_ptr<memory_pool::Memory> mem) {
   std::vector<int64_t> shape;
   for (auto value : shape_array) {
-    shape.push_back(value->data);
+    shape.push_back(value->value);
   }
   return TensorValue::make(Tensor::make(dev, dtype, shape, strides, data), std::move(mem));
 }
@@ -196,7 +228,7 @@ template <>
 bool GetScalarValueData<bool>(const Value& value) {
   using namespace tvm::runtime;
   if (const auto* bvo = value.as<BoolValueObj>()) {
-    return bvo->data;
+    return bvo->value;
   } else if (const auto* tvo = value.as<TensorValueObj>()) {
     tensor::Tensor tensor = tvo->tensor;
     DLContext cpu_ctx;
@@ -214,7 +246,7 @@ template <>
 float GetScalarValueData<float>(const Value& value) {
   using namespace tvm::runtime;
   if (const auto* fvo = value.as<FloatValueObj>()) {
-    return fvo->data;
+    return fvo->value;
   } else if (const auto* tvo = value.as<TensorValueObj>()) {
     tensor::Tensor tensor = tvo->tensor;
     DLContext cpu_ctx;
@@ -268,25 +300,25 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<IntValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const IntValueObj*>(ref.get());
-      p->stream << "IntValue(" << node->data << ")";
+      p->stream << "IntValue(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<FloatValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const FloatValueObj*>(ref.get());
-      p->stream << "FloatValue(" << node->data << ")";
+      p->stream << "FloatValue(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<BoolValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const BoolValueObj*>(ref.get());
-      p->stream << "BoolValue(" << node->data << ")";
+      p->stream << "BoolValue(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<StringValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const StringValueObj*>(ref.get());
-      p->stream << "StringValue(" << node->data << ")";
+      p->stream << "StringValue(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)

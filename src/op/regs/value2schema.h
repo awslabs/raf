@@ -49,15 +49,7 @@ inline ir::Optional<value::Value> OptionalArrayLike(const value::Value& a) {
   if (!a.defined()) {
     return tvm::NullOpt;
   }
-  MNM_PRELUDE_ALLOW_NULL();
-  if (a->IsInstance<IntValueObj>() || a->IsInstance<FloatValueObj>() ||
-      a->IsInstance<BoolValueObj>() || a->IsInstance<BaseTensorValueObj>() ||
-      a->IsInstance<TupleValueObj>()) {
-    return a;
-  }
-  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
-             << "\" is not array-like";
-  throw;
+  return ArrayLike(a);
 }
 
 inline value::BaseTensorValue Tensor(const value::Value& a) {
@@ -74,19 +66,13 @@ inline ir::Optional<value::BaseTensorValue> OptionalTensor(const value::Value& a
   if (!a.defined()) {
     return tvm::NullOpt;
   }
-  MNM_PRELUDE_ALLOW_NULL();
-  if (const auto* v = a.as<BaseTensorValueObj>()) {
-    return GetRef<BaseTensorValue>(v);
-  }
-  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
-             << "\" is not a tensor";
-  throw;
+  return Tensor(a);
 }
 
 inline int64_t Int(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("an integer");
   if (const auto* v = a.as<IntValueObj>()) {
-    return v->data;
+    return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
              << "\" is not an integer";
@@ -95,7 +81,7 @@ inline int64_t Int(const value::Value& a) {
 inline bool Bool(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("boolean");
   if (const auto* v = a.as<BoolValueObj>()) {
-    return v->data;
+    return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
              << "\" is not an integer";
@@ -104,10 +90,10 @@ inline bool Bool(const value::Value& a) {
 inline double Double(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("double");
   if (const auto* v = a.as<FloatValueObj>()) {
-    return v->data;
+    return v->value;
   }
   if (const auto* v = a.as<IntValueObj>()) {
-    return v->data;
+    return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
              << "\" is double";
@@ -116,7 +102,7 @@ inline double Double(const value::Value& a) {
 inline std::string String(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("string");
   if (const auto* v = a.as<StringValueObj>()) {
-    return v->data;
+    return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
              << "\" is a string";
@@ -130,7 +116,7 @@ inline std::vector<int64_t> TupleInt(const value::Value& a) {
     ret.reserve(v->fields.size());
     for (const ObjectRef& i : v->fields) {
       if (const auto* e = i.as<IntValueObj>()) {
-        ret.push_back(e->data);
+        ret.push_back(e->value);
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
@@ -148,14 +134,14 @@ inline std::vector<int64_t> TupleInt(const value::Value& a) {
 inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("an integer or tuple of integers");
   if (const auto* v = a.as<IntValueObj>()) {
-    return {v->data};
+    return {v->value};
   }
   if (const auto* v = a.as<TupleValueObj>()) {
     std::vector<int64_t> ret;
     ret.reserve(v->fields.size());
     for (const ObjectRef& i : v->fields) {
       if (const auto* e = i.as<IntValueObj>()) {
-        ret.push_back(e->data);
+        ret.push_back(e->value);
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "
@@ -173,14 +159,14 @@ inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
 inline ir::Optional<Array<value::IntValue>> IntArray(const value::Value& a) {
   MNM_PRELUDE_DISALLOW_NULL("array of integers");
   if (const auto* v = a.as<IntValueObj>()) {
-    return Array<value::IntValue>{value::IntValue::make(v->data)};
+    return Array<value::IntValue>{value::IntValue::make(v->dtype, v->value)};
   }
   if (const auto* v = a.as<value::TupleValueObj>()) {
     Array<value::IntValue> ret;
     ret.reserve(v->fields.size());
     for (const tvm::runtime::ObjectRef& i : v->fields) {
       if (const auto* e = i.as<value::IntValueObj>()) {
-        ret.push_back(value::IntValue::make(e->data));
+        ret.push_back(value::IntValue::make(e->dtype, e->value));
         continue;
       }
       LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not an integer or "

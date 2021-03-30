@@ -279,7 +279,7 @@ struct DataParallel {
     if (!dctx->overlap_comm_forward) {
       static Op op_sync = Op::Get("mnm.op.stream_sync");
       auto args_x = bp_ell->vars[bp_ell->vars.size() - 2];
-      auto args_stream = MakeConstant(value::IntValue::make(StreamTagEnum::CudaCommunicate()));
+      auto args_stream = MakeConstant(value::ScalarValue::make(StreamTagEnum::CudaCommunicate()));
       bp_ell->vars.insert(--bp_ell->vars.end(), mnm::ir::MakeVar("null", {}));
       bp_ell->exprs.insert(--bp_ell->exprs.end(), Call(op_sync, {args_x, args_stream}));
     } else if (dctx->iteration > dctx->auto_dp_profiling_end_iter) {

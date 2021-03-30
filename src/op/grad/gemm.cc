@@ -69,7 +69,8 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Array<Expr> orig_args, 
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
-  const std::vector<Value> axes = {IntValue::make(0), IntValue::make(2), IntValue::make(1)};
+  const std::vector<Value> axes = {ScalarValue::make((int64_t)0), ScalarValue::make((int64_t)2),
+                                   ScalarValue::make((int64_t)1)};
   const Expr& axes_expr = MakeConstant(TupleValue::make(Array<Value>(axes)));
   auto dy_trans = Call(transpose, {dy, axes_expr});
   auto b_trans = Call(transpose, {b, axes_expr});
@@ -97,8 +98,8 @@ Array<Expr> DenseGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
-  const Expr& axes =
-      MakeConstant(TupleValue::make(Array<Value>{IntValue::make(1), IntValue::make(0)}));
+  const Expr& axes = MakeConstant(
+      TupleValue::make(Array<Value>{ScalarValue::make((int64_t)1), ScalarValue::make((int64_t)0)}));
   const Expr& at = Call(op_transpose, {a, axes});
   const Expr& bt = Call(op_transpose, {b, axes});
   const Expr& dyt = Call(op_transpose, {dy, axes});

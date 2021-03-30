@@ -71,7 +71,7 @@ class HashKey {
     byte_vector.push_back(13);
     auto value = v.value();
     for (int i = 0, n = value.size(); i < n; ++i) {
-      MNM_APPEND_BYTES(int64_t, 8, value[i]->data);
+      MNM_APPEND_BYTES(int64_t, 8, value[i]->value);
     }
     MNM_APPEND_BYTES(int64_t, 8, 0);
     return *this;

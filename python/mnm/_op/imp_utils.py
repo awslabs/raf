@@ -110,9 +110,9 @@ def to_string(a):
 
 def ret(a):
     if isinstance(a, (IntValue, FloatValue, StringValue)):
-        return a.data
+        return a.value
     if isinstance(a, BoolValue):
-        return bool(a.data)
+        return bool(a.value)
     if isinstance(a, relay.Var):
         return ndarray(a)
     if isinstance(a, tuple):

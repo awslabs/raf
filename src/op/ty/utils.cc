@@ -15,15 +15,15 @@ using namespace tvm;
 
 class ValueTyper : public ValueFunctor<Type(const Value&)> {
   Type VisitValue_(const IntValueObj* value) override {
-    return TensorType::Scalar(DataType::Int(64));
+    return TensorType::Scalar(value->dtype);
   }
 
   Type VisitValue_(const FloatValueObj* value) override {
-    return TensorType::Scalar(DataType::Float(64));
+    return TensorType::Scalar(value->dtype);
   }
 
   Type VisitValue_(const BoolValueObj* value) override {
-    return TensorType::Scalar(DataType::Bool());
+    return TensorType::Scalar(value->dtype);
   }
 
   Type VisitValue_(const StringValueObj* value) override {
