@@ -4,6 +4,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <tvm/relay/attrs/transform.h>
+#include <mnm/tvmjit/transform.h>
 #include <mnm/value.h>
 #include <array>
 #include "./tvmjit_utils.h"
@@ -725,23 +726,27 @@ MNM_TVMJIT(StridedSlice, "mnm.op.strided_slice", StridedSliceArgs, StridedSliceS
            StridedSliceSchemaArgNames, StridedSliceSchema2Attrs, StridedSliceHasher);
 
 std::vector<Value> StridedSliceDxSchema2Args(const StridedSliceDxArgs* args) {
-  return {args->x, args->dy};
+  return {args->dy};
 }
 
 std::vector<std::string> StridedSliceDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "dy"};
+  return {"dy"};
 }
 
 Attrs StridedSliceDxSchema2Attrs(const StridedSliceDxArgs* args) {
-  auto attrs = make_object<StridedSliceAttrs>();
+  auto attrs = make_object<StridedSliceDxAttrs>();
   CHECK_EQ(args->begin.size(), args->end.size());
   CHECK_EQ(args->begin.size(), args->strides.size());
-  std::vector<Integer> begin, end, strides;
+  std::vector<Integer> primal_shape, begin, end, strides;
   for (int i = 0; i < args->begin.size(); ++i) {
     begin.emplace_back(args->begin[i]);
     end.emplace_back(args->end[i]);
     strides.emplace_back(args->strides[i]);
   }
+  for (int i = 0; i < args->primal_shape.size(); ++i) {
+    primal_shape.emplace_back(args->primal_shape[i]);
+  }
+  attrs->primal_shape = Array<Integer>(primal_shape.begin(), primal_shape.end());
   attrs->begin = Array<Integer>(begin.begin(), begin.end());
   attrs->end = Array<Integer>(end.begin(), end.end());
   attrs->strides = Array<Integer>(strides.begin(), strides.end());
@@ -761,6 +766,8 @@ HashKey StridedSliceDxHasher(const std::vector<Type>& param_types, const Type& y
 
 MNM_TVMJIT(StridedSliceDx, "mnm.op.strided_slice_dx", StridedSliceDxArgs, StridedSliceDxSchema2Args,
            StridedSliceDxSchemaArgNames, StridedSliceDxSchema2Attrs, StridedSliceDxHasher);
+
+TVM_REGISTER_NODE_TYPE(StridedSliceDxAttrs);
 
 std::vector<Value> WhereSchema2Args(const WhereArgs* args) {
   return {args->condition, args->x, args->y};

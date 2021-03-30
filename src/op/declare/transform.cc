@@ -278,9 +278,8 @@ MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.strided_slice_dx", [](const CallValues& call) {
   const auto* args = call->args.as<StridedSliceDxArgs>();
   CHECK(args != nullptr);
-  DLTensor* data = args->x;
+  DLTensor* data = args->dy;
 
-  auto dshape = data->shape;
   int64_t num_axis = data->ndim;
 
   CHECK(!args->begin.empty()) << "strided_slice received invalid begin";
@@ -293,7 +292,7 @@ MNM_OP_DECLARE("mnm.op.strided_slice_dx", [](const CallValues& call) {
   std::vector<int64_t> stride_vec(num_axis, 1);
   if (IsCompact(*data)) {
     call->device = data->ctx;
-    std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
+    std::vector<int64_t> shape = args->primal_shape;
     call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
                                       /*dtype=*/data->dtype,
                                       /*shape=*/shape);

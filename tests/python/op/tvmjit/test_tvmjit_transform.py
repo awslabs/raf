@@ -697,7 +697,7 @@ def test_strided_slice(device, params):
     m_y = mnm.strided_slice(m_x, begin, end, strides)
     t_y = npx.strided_slice_python(n_x, begin, end, strides)
     check(m_y, t_y)
-    dx = mnm.strided_slice_dx(m_x, m_y, begin, end, strides)
+    dx = mnm.strided_slice_dx(m_y, shape, begin, end, strides)
     test_x = mnm.strided_slice(dx, begin, end, strides)
     check(test_x, m_y)
 

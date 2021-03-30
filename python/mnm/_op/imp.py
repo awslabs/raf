@@ -980,14 +980,14 @@ def strided_slice(x, begin, end, strides=None, slice_mode="end"):
     return imp_utils.ret(ffi.strided_slice(x, begin, end, strides, slice_mode))
 
 @set_module("mnm")
-def strided_slice_dx(x, dy, begin, end, strides=None, slice_mode="end"):
-    x = imp_utils.to_tensor(x)
+def strided_slice_dx(dy, primal_shape, begin, end, strides=None, slice_mode="end"):
     dy = imp_utils.to_tensor(dy)
+    primal_shape = imp_utils.to_int_tuple(primal_shape)
     begin = imp_utils.to_int_tuple(begin)
     end = imp_utils.to_int_tuple(end)
     strides = imp_utils.to_int_tuple(strides)
     slice_mode = imp_utils.to_string(slice_mode)
-    return imp_utils.ret(ffi.strided_slice_dx(x, dy, begin, end, strides, slice_mode))
+    return imp_utils.ret(ffi.strided_slice_dx(dy, primal_shape, begin, end, strides, slice_mode))
 
 @set_module("mnm")
 def subtract(x1, x2, out=None, where=None):

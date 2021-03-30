@@ -754,8 +754,8 @@ Attrs StridedSlice(const TVMArgs& values, GradTape* tapes) {
 
 Attrs StridedSliceDx(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::StridedSliceDxArgs, 6);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_TAPE(0, ffi2schema::Tensor, dy);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, primal_shape);
   MNM_POD(2, ffi2schema::IntOrTupleInt, begin);
   MNM_POD(3, ffi2schema::IntOrTupleInt, end);
   MNM_POD(4, ffi2schema::IntOrTupleInt, strides);
@@ -2226,8 +2226,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.strided_slice").set_body([](TVMArgs args, TVMRet
 MNM_REGISTER_GLOBAL("mnm.op.imp.strided_slice_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(strided_slice_dx, 6, ffi2schema::StridedSliceDx,
               schema::StridedSliceDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->primal_shape));
   MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->begin));
   MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->end));
   MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->strides));
@@ -2926,8 +2926,8 @@ Array<Expr> StridedSlice(const TVMArgs& values) {
 
 Array<Expr> StridedSliceDx(const TVMArgs& values) {
   MNM_PRELUDE(6);
-  MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(0, ffi2expr::Tensor, dy);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, primal_shape);
   MNM_ARG(2, ffi2expr::IntOrTupleInt, begin);
   MNM_ARG(3, ffi2expr::IntOrTupleInt, end);
   MNM_ARG(4, ffi2expr::IntOrTupleInt, strides);
@@ -3904,8 +3904,8 @@ Attrs StridedSlice(const Array<Value>& values) {
 template <const char* op_name>
 Attrs StridedSliceDx(const Array<Value>& values) {
   MNM_PRELUDE(4, 6, schema::StridedSliceDxArgs);
-  MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_REQUIRED(0, value2schema::Tensor, dy);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, primal_shape);
   MNM_REQUIRED(2, value2schema::IntOrTupleInt, begin);
   MNM_REQUIRED(3, value2schema::IntOrTupleInt, end);
   MNM_OPTIONAL(4, value2schema::IntOrTupleInt, strides);
@@ -5111,10 +5111,10 @@ int StridedSlice(const std::string& field) {
 
 template <const char* op_name>
 int StridedSliceDx(const std::string& field) {
-  if (field == "x") {
+  if (field == "dy") {
     return 0;
   }
-  if (field == "dy") {
+  if (field == "primal_shape") {
     return 1;
   }
   if (field == "begin") {

@@ -623,8 +623,19 @@ Type StridedSliceInfer(const CallValues& value) {
   return TensorType(oshape, data->dtype);
 }
 
+Type StridedSliceDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<StridedSliceDxArgs>();
+  CHECK(args != nullptr);
+  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  Array<tvm::PrimExpr> oshape;
+  for (auto dim : args->primal_shape) {
+    oshape.push_back(IntImm(DataType::Int(32), dim));
+  }
+  return TensorType(oshape, dy->dtype);
+}
+
 MNM_OP_TYPE("mnm.op.strided_slice", "StridedSlice", StridedSliceInfer);
-MNM_OP_TYPE("mnm.op.strided_slice_dx", "StridedSliceDx", GeneralDxInfer<StridedSliceDxArgs>);
+MNM_OP_TYPE("mnm.op.strided_slice_dx", "StridedSliceDx", StridedSliceDxInfer);
 
 Type SqueezeInfer(const CallValues& value) {
   const auto* args = value->args.as<SqueezeArgs>();

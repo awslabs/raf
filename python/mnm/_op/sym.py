@@ -847,14 +847,14 @@ def strided_slice(x, begin, end, strides=None, slice_mode="end"):
     slice_mode = sym_utils.to_string(slice_mode)
     return Symbol.from_expr(ffi.strided_slice(x, begin, end, strides, slice_mode))
 
-def strided_slice_dx(x, dy, begin, end, strides=None, slice_mode="end"):
-    x = sym_utils.to_tensor(x)
+def strided_slice_dx(dy, primal_shape, begin, end, strides=None, slice_mode="end"):
     dy = sym_utils.to_tensor(dy)
+    primal_shape = sym_utils.to_int_tuple(primal_shape)
     begin = sym_utils.to_int_tuple(begin)
     end = sym_utils.to_int_tuple(end)
     strides = sym_utils.to_int_tuple(strides)
     slice_mode = sym_utils.to_string(slice_mode)
-    return Symbol.from_expr(ffi.strided_slice_dx(x, dy, begin, end, strides, slice_mode))
+    return Symbol.from_expr(ffi.strided_slice_dx(dy, primal_shape, begin, end, strides, slice_mode))
 
 def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)

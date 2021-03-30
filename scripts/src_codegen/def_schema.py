@@ -405,8 +405,10 @@ SCHEMAS = {
             cxx_default="\"end\"", py_default="\"end\""),
     ],
     "transform.h::strided_slice_dx": [
-        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="primal_shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
         Arg(name="begin",
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),

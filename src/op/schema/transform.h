@@ -117,8 +117,8 @@ class StridedSliceArgs : public ir::AttrsNode<StridedSliceArgs> {
 
 class StridedSliceDxArgs : public ir::AttrsNode<StridedSliceDxArgs> {
  public:
-  value::BaseTensorValue x;
   value::BaseTensorValue dy;
+  std::vector<int64_t> primal_shape;
   std::vector<int64_t> begin;
   std::vector<int64_t> end;
   std::vector<int64_t> strides{};

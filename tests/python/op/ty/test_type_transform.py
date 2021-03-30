@@ -775,12 +775,21 @@ def test_strided_slice(dtype, params):
     m_x, n_x = randn(shape, dtype=dtype)
     n_y = npx.strided_slice_python(n_x, begin, end, strides)
 
-    m_func = model._internal(m_x).mod['main']
+    m_mod = model._internal(m_x).mod
+    m_mod = InferType(m_mod)
+    m_func = m_mod['main']
     m_func = run_infer_type(m_func)
     x_ty = TensorType(n_x.shape, dtype=dtype)
     y_ty = TensorType(n_y.shape, dtype=dtype)
     desired_type = FuncType([x_ty], y_ty)
     check_type(m_func, desired_type)
+
+    # check backward
+    m_mod = AutoDiff(m_mod, [])
+    m_mod = InferType(m_mod)
+    bwd_ty = FuncType([y_ty], x_ty)
+    expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
+    check_type(m_mod['main'], expected_type)
 
 
 if __name__ == "__main__":
