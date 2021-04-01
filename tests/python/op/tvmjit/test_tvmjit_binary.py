@@ -137,7 +137,5 @@ def test_int_ops_with_grad(ops, shape, dtype, device):
     m_y.backward(m_dy)
     check(m_x1.grad, 0.)
 
-
-
 if __name__ == "__main__":
     pytest.main([__file__])

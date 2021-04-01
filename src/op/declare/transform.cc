@@ -426,7 +426,6 @@ MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
   int axis1 = args->axis1;
   int axis2 = args->axis2;
   int ndim = x->ndim;
-
   CHECK(0 <= axis1 && axis1 <= ndim - 1)
       << "ValueError: invalid argument of operation swapaxis ,axis1 = " << axis1
       << " on ndim = " << ndim;

@@ -46,7 +46,7 @@ Attrs ReduceSchema2Attrs(const ReduceArgs* args) {
     attrs->axis.push_back(axis[i]);
   }
   attrs->keepdims = args->keepdims;
-  attrs->exclude = false;
+  attrs->exclude = args->exclude;
   return Attrs(attrs);
 }
 
@@ -57,6 +57,7 @@ HashKey ReduceHasher(const std::vector<Type>& param_types, const Type& ret_type,
     key << args->axis[i];
   }
   key << args->keepdims;
+  key << args->exclude;
   return key;
 }
 
@@ -101,7 +102,7 @@ Attrs ReduceDxSchema2Attrs(const ReduceDxArgs* args) {
     attrs->axis.push_back(axis[i]);
   }
   attrs->keepdims = args->keepdims;
-  attrs->exclude = false;
+  attrs->exclude = args->exclude;
   return Attrs(attrs);
 }
 
@@ -112,11 +113,9 @@ HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_typ
     key << args->axis[i];
   }
   key << args->keepdims;
+  key << args->exclude;
   return key;
 }
-
-MNM_TVMJIT(MeanDx, "mnm.op.mean_dx", ReduceDxArgs, ReduceDxSchema2Args, ReduceDxSchemaArgNames,
-           ReduceDxSchema2Attrs, ReduceDxHasher);  // NOLINT
 
 TVM_REGISTER_NODE_TYPE(SumAttrs);
 
@@ -136,6 +135,7 @@ Attrs SumSchema2Attrs(const SumArgs* args) {
   for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
     attrs->keepdims.push_back(args->keepdims[i]);
   }
+  attrs->exclude = args->exclude;
   return Attrs(attrs);
 }
 
@@ -145,11 +145,55 @@ HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, co
     key << args->axis[i];
     key << args->keepdims[i];
   }
+  key << args->exclude;
   return key;
 }
 
+std::vector<Value> SumDxSchema2Args(const SumDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> SumDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "y", "dy"};
+}
+
+Attrs SumDxSchema2Attrs(const SumDxArgs* args) {
+  auto attrs = make_object<SumAttrs>();
+  // expand the empty axis
+  DLTensor* x = args->x;
+  std::vector<int64_t> axis;
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    attrs->axis.push_back(args->axis[i]);
+  }
+  for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
+    attrs->keepdims.push_back(args->keepdims[i]);
+  }
+  attrs->exclude = args->exclude;
+  return Attrs(attrs);
+}
+
+HashKey SumDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                    const SumDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    key << args->axis[i];
+    key << args->keepdims[i];
+  }
+  key << args->exclude;
+  return key;
+}
+
+MNM_TVMJIT(ProdDx, "mnm.op.prod_dx", ReduceDxArgs, ReduceDxSchema2Args, ReduceDxSchemaArgNames,
+           ReduceDxSchema2Attrs, ReduceDxHasher);  // NOLINT
+
+MNM_TVMJIT(MeanDx, "mnm.op.mean_dx", ReduceDxArgs, ReduceDxSchema2Args, ReduceDxSchemaArgNames,
+           ReduceDxSchema2Attrs, ReduceDxHasher);  // NOLINT
+
 MNM_TVMJIT(Sum, "mnm.op.sum", SumArgs, SumSchema2Args, SumSchemaArgNames, SumSchema2Attrs,
            SumHasher);
+
+MNM_TVMJIT(SumDx, "mnm.op.sum_dx", SumDxArgs, SumDxSchema2Args, SumDxSchemaArgNames,
+           SumDxSchema2Attrs, SumDxHasher);
 
 }  // namespace tvmjit
 }  // namespace op

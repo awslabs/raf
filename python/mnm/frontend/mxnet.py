@@ -334,18 +334,14 @@ _convert_map = {
 def _from_mxnet_impl(symbol, is_train):
     """Convert mxnet symbol to compatible relay Function.
     Migrate from TVM.
-
     Reconstruct a relay Function by traversing the mxnet symbol.
-
     Parameters
     ----------
     symbol : mxnet.sym.Symbol
         Incompatible symbol from mxnet.
         The op_name and attrs inside are not always compatible.
-
     is_train : bool
         Whether in train mode.
-
     Returns:
     -------
     func : tvm.relay.Function

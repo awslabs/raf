@@ -1,9 +1,9 @@
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-function-docstring, too-many-locals
 """Reduction compute definition and schedules."""
+from mnm._tvmjit.nn import schedule_layer_norm
 from .._lib import register_compute
 from .._lib import tvm as _tvm
 from .._lib import _reg
-
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.sum")
@@ -11,6 +11,9 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,
     x = inputs[0]
     axes = list(_topi.utils.get_const_tuple(attrs.axis))
     keep = list(_topi.utils.get_const_tuple(attrs.keepdims))
+    exclude = attrs.exclude
+    if exclude:
+        axes = axis_exclude(axes, x.shape)
     if not keep:
         # TODO(@were): It seems that TVM create view may crash, I cannot directly return [x]
         return [_tvm.te.compute(x.shape, lambda *args: x(*args))] # pylint: disable=unnecessary-lambda
@@ -40,9 +43,7 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,
 
     return [_tvm.te.compute(shape, fcompute)]
 
-
 _reg.register_injective_schedule("mnm.op.sum")
-
 _reg.register_reduce_schedule("mnm.op.argmax")
 _reg.register_reduce_schedule("mnm.op.argmin")
 _reg.register_reduce_schedule("mnm.op.max")
@@ -50,7 +51,7 @@ _reg.register_reduce_schedule("mnm.op.min")
 _reg.register_reduce_schedule("mnm.op.all")
 _reg.register_reduce_schedule("mnm.op.any")
 _reg.register_reduce_schedule("mnm.op.mean")
-
+_reg.register_reduce_schedule("mnm.op.prod")
 
 def axis_reverse(input_axis):
     # get the reverse axis to change axis back
@@ -61,6 +62,17 @@ def axis_reverse(input_axis):
         reverse_axis[axis] = i
     return reverse_axis
 
+def axis_exclude(input_axis, shape):
+    # get the excluded axis which is not in the input axis
+    # e.g.: input_axis = [1, 3] with a total of 4 dimension
+    #       the reverse_axis = [0,2]
+    total_dim = len(shape)
+    exclude_axis = list()
+    for i in range(total_dim):
+        if i not in input_axis:
+            exclude_axis.append(i)
+    return exclude_axis
+
 
 def mul_shapes(shape_list, axis_list):
     # get the product of shapes in given axis
@@ -70,28 +82,116 @@ def mul_shapes(shape_list, axis_list):
     return out
 
 
+@register_compute("mnm.op.prod_dx")
+def prod_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument, too-many-locals
+    x = inputs[0]
+    dy = inputs[2]
+    axis = list(_topi.utils.get_const_tuple(attrs.axis))
+    exclude = attrs.exclude
+    if exclude:
+        axis = axis_exclude(axis, x.shape)
+    ndim = len(x.shape)
+    shape = x.shape
+    output_dim = []
+    reduce_dim = []
+    reduce_axis = []
+    for dim in range(ndim):
+        if dim not in axis:
+            output_dim.append(shape[dim])
+            reduce_dim.append(shape[dim])
+        else:
+            output_dim.append(1)
+            reduce_axis.append(_tvm.te.reduce_axis((0, shape[dim])))
+
+    product = _tvm.te.comm_reducer(lambda x, y: x*y, lambda t: _tvm.tir.const(1, dtype=t))
+    def fcompute(*args):
+        args = list(args)
+        for i, dim in enumerate(axis):
+            args.insert(dim, reduce_axis[i])
+        return product(x(*args), axis=reduce_axis)
+
+    prod_x = _tvm.te.compute(reduce_dim, fcompute, name="prod_x")
+    dy_reshape = _topi.reshape(dy, output_dim)
+    prod_x_reshape = _topi.reshape(prod_x, output_dim)
+    factor = _topi.divide(prod_x_reshape, x)
+    out = _topi.multiply(factor, dy_reshape)
+    return [out]
+
+_reg.register_schedule("mnm.op.prod_dx", schedule_layer_norm)
+
 @register_compute("mnm.op.mean_dx")
 def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
     x = inputs[0]
     dy = inputs[2]
-    axis = list(_topi.utils.get_const_tuple(attrs.axis))
+    axis = sorted(list(_topi.utils.get_const_tuple(attrs.axis)))
     keepdims = attrs.keepdims
-    shape_mul = mul_shapes(x.shape, axis)
+    exclude = attrs.exclude
+    shape = x.shape
+    ndim = len(shape)
+    expandshape = list()
+    if exclude:
+        axis = axis_exclude(axis, shape)
+    shape_mul = mul_shapes(shape, axis)
+    for dim in range(ndim):
+        if dim not in axis:
+            expandshape.append(shape[dim])
+        else:
+            expandshape.append(1)
     def _elem_div(*indices):
         return dy[indices] / shape_mul
     out = _tvm.te.compute(dy.shape, _elem_div)
-    # if keepdims = True, repeat the elements in those reduced axis
-    if keepdims:
-        for repeat_axis in axis:
-            out = _topi.repeat(out, int(x.shape[repeat_axis]), repeat_axis)
-    # if keepdims = False, using broadcast_to to expand the dimension
-    else:
-        left_axis = list(set(range(len(x.shape))) - set(axis))
-        expand_axis = axis + left_axis
-        reverse_axis = axis_reverse(expand_axis)
-        out = _topi.broadcast_to(out, _topi.transpose(x, axes=expand_axis).shape)
-        out = _topi.transpose(out, axes=reverse_axis)
-    return [out]
 
+    def fboardcast(*args):
+        args = list(args)
+        for dim in axis[::-1]:
+            del args[dim]
+        return out(*args)
+
+    def fboardcast_keepdim(*args):
+        args = list(args)
+        for dim in axis:
+            args[dim] = 0
+        return out(*args)
+
+    if keepdims:
+        out_boardcast = _tvm.te.compute(shape, fboardcast_keepdim)
+    else:
+        out_boardcast = _tvm.te.compute(shape, fboardcast)
+
+    return [out_boardcast]
 
 _reg.register_injective_schedule("mnm.op.mean_dx")
+
+
+@register_compute("mnm.op.sum_dx")
+def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,no-member,consider-using-enumerate
+    dy = inputs[2]
+    x = inputs[0]
+    axes = list(_topi.utils.get_const_tuple(attrs.axis))
+    exclude = attrs.exclude
+    keepdims = list(_topi.utils.get_const_tuple(attrs.keepdims))
+    if exclude:
+        axes = axis_exclude(axes, x.shape)
+    naxes = len(axes)
+    shape = x.shape
+    ndim = len(shape)
+    if len(keepdims) != naxes and len(keepdims) == 1:
+        keepdims = keepdims * naxes
+    if len(keepdims) == 0 and len(axes) == 0:
+        axes = list(range(ndim))
+        keepdims = [0] * ndim
+
+    def fboardcast(*args):
+        args = list(args)
+        for i, dim in enumerate(axes[::-1]):
+            if keepdims[naxes -1 -i]:
+                args[dim] = 0
+            else:
+                del args[dim]
+        return dy(*args)
+
+    out_boardcast = _tvm.te.compute(shape, fboardcast)
+    return [out_boardcast]
+
+
+_reg.register_injective_schedule("mnm.op.sum_dx")

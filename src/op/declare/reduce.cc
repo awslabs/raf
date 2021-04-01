@@ -32,6 +32,17 @@ void GenerateReduceShape(const ReduceArgs* args, const DLTensor* x, std::vector<
   }
   std::sort(axis.begin(), axis.end());
   axis.resize(std::unique(axis.begin(), axis.end()) - axis.begin());
+
+  bool exclude = args->exclude;
+  if (exclude) {
+    std::vector<int64_t> axis_exclude;
+    for (int64_t i = 0; i < ndim; i++) {
+      if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
+        axis_exclude.push_back(i);
+      }
+    }
+    axis = axis_exclude;
+  }
   bool keepdims = args->keepdims;
   if (keepdims) {
     for (int64_t i = 0; i < ndim; i++) {
@@ -89,6 +100,7 @@ MNM_DECLARE_REDUCE_OP("mnm.op.any", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.mean", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.prod", ReduceOutSame);
 MNM_DECLARE_REDUCE_DX_OP("mnm.op.mean_dx", ReduceDxOutSame);
+MNM_DECLARE_REDUCE_DX_OP("mnm.op.prod_dx", ReduceDxOutSame);
 
 }  // namespace declare
 }  // namespace op

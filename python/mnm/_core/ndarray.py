@@ -12,8 +12,8 @@ from mnm._lib import _register_func, relay, tvm_ndarray
 from mnm._lib import TensorContainer as _DLManagedTensor
 
 
-@set_module("mnm")  # pylint: disable=invalid-name,too-many-instance-attributes
-class ndarray:
+@set_module("mnm")
+class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
     def __init__(  # pylint: disable=too-many-arguments
             self,
             shape,

@@ -9,6 +9,8 @@
 #include "../schema/likes.h"
 #include "../schema/reduce.h"
 #include "./utils.h"
+#include <iostream>
+#include <algorithm>
 
 namespace mnm {
 namespace op {
@@ -17,6 +19,7 @@ namespace type {
 using namespace mnm::value;
 using schema::ReduceArgs;
 using schema::SumArgs;
+using schema::SumDxArgs;
 using tvm::relay::Type;
 using namespace tvm;
 using namespace tvm::relay;
@@ -28,9 +31,22 @@ Type SumInfer(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
   auto ndim = x->shape.size();
+  auto exclude = args->exclude;
+
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
   std::vector<int64_t> keep = args->keepdims;
+
+  if (exclude) {
+    std::vector<int64_t> axis_exclude;
+    for (int i = 0; i < ndim; i++) {
+      auto it = std::find(axis.begin(), axis.end(), i);
+      if (it == axis.end()) {
+        axis_exclude.push_back(i);
+      }
+    }
+    axis = axis_exclude;
+  }
   if (axis.empty() && !keep.empty()) {
     axis.resize(ndim);
     std::iota(axis.begin(), axis.end(), 0);
@@ -70,6 +86,13 @@ Type SumInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.sum", "Sum", SumInfer);
 
+Type SumDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<SumDxArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+MNM_OP_TYPE("mnm.op.sum_dx", "SumDx", SumDxInfer);
+
 Array<PrimExpr> GenerateReduceShape(const ReduceArgs* args, tvm::TensorType x) {
   Array<PrimExpr> shape;
   auto ndim = x->shape.size();
@@ -87,6 +110,16 @@ Array<PrimExpr> GenerateReduceShape(const ReduceArgs* args, tvm::TensorType x) {
   }
   std::sort(axis.begin(), axis.end());
   axis.resize(std::unique(axis.begin(), axis.end()) - axis.begin());
+  bool exclude = args->exclude;
+  if (exclude) {
+    std::vector<int64_t> axis_exclude;
+    for (int64_t i = 0; i < ndim; i++) {
+      if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
+        axis_exclude.push_back(i);
+      }
+    }
+    axis = axis_exclude;
+  }
   bool keepdims = args->keepdims;
   if (keepdims) {
     for (size_t i = 0; i < ndim; i++) {
@@ -130,6 +163,7 @@ MNM_OP_TYPE("mnm.op.all", "All", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.any", "Any", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod", "Prod", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
+MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", ReduceOutSameDType);
 
 }  // namespace type

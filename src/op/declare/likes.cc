@@ -7,7 +7,7 @@
 #include "mnm/tensor.h"
 #include "../schema/likes.h"
 #include <numeric>
-
+#include <algorithm>
 namespace mnm {
 namespace op {
 namespace declare {
@@ -20,9 +20,27 @@ void Sum(const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   auto ndim = x->ndim;
+  auto exclude = args->exclude;
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
   std::vector<int64_t> keep = args->keepdims;
+
+  if (exclude && (keep.size() != 1)) {
+    LOG(FATAL) << "invalid combination of argument in sum op";
+  }
+  if (exclude && axis.empty()) {
+    LOG(FATAL) << "invalid combination of argument in sum op";
+  }
+  if (exclude) {
+    std::vector<int64_t> axis_exclude;
+    for (int i = 0; i < ndim; i++) {
+      auto it = std::find(axis.begin(), axis.end(), i);
+      if (it == axis.end()) {
+        axis_exclude.push_back(i);
+      }
+    }
+    axis = axis_exclude;
+  }
   if (axis.empty() && !keep.empty()) {
     axis.resize(ndim);
     std::iota(axis.begin(), axis.end(), 0);
@@ -60,6 +78,18 @@ void Sum(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.sum", Sum).set_attr<TOpPattern>("TOpPattern", kCommReduce);
 
+void SumDx(const CallValues& call) {
+  // the shape of the output of reduce_dx op is same as input x
+  const auto* args = call->args.as<SumDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->device = x->ctx;
+  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+MNM_OP_DECLARE("mnm.op.sum_dx", SumDx).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -32,7 +32,19 @@ class SumArgs : public ir::AttrsNode<SumArgs> {
   value::BaseTensorValue x;
   std::vector<int64_t> axis{};
   std::vector<int64_t> keepdims{0};
+  bool exclude{false};
   MNM_OP_SCHEMA(SumArgs, "mnm.args.sum");
+};
+
+class SumDxArgs : public ir::AttrsNode<SumDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
+  std::vector<int64_t> axis{};
+  std::vector<int64_t> keepdims{0};
+  bool exclude{false};
+  MNM_OP_SCHEMA(SumDxArgs, "mnm.args.sum_dx");
 };
 }  // namespace schema
 }  // namespace op

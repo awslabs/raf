@@ -65,6 +65,7 @@ Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   return {f(x1), fs(x2)};
 }
 MNM_OP_GRAD("mnm.op.subtract", SubGrad);
+
 Array<Expr> RightshiftGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                            const Expr& dy) {
   // give zero gradient for any input gradient
@@ -80,7 +81,6 @@ Array<Expr> RightshiftGrad(const Expr& orig_call, const Array<Expr> orig_args, c
 
   return {f(x1), f(x2)};
 }
-
 MNM_OP_GRAD("mnm.op.right_shift", RightshiftGrad);
 
 Array<Expr> LeftShiftGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,

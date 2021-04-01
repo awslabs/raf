@@ -205,6 +205,8 @@ power = _APIS.get("mnm.op.sym.power", None)
 # Defined in ./src/op/regs/regs.cc
 prod = _APIS.get("mnm.op.sym.prod", None)
 # Defined in ./src/op/regs/regs.cc
+prod_dx = _APIS.get("mnm.op.sym.prod_dx", None)
+# Defined in ./src/op/regs/regs.cc
 relu = _APIS.get("mnm.op.sym.relu", None)
 # Defined in ./src/op/regs/regs.cc
 relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)
@@ -270,6 +272,8 @@ strided_slice_dx = _APIS.get("mnm.op.sym.strided_slice_dx", None)
 subtract = _APIS.get("mnm.op.sym.subtract", None)
 # Defined in ./src/op/regs/regs.cc
 sum = _APIS.get("mnm.op.sym.sum", None)
+# Defined in ./src/op/regs/regs.cc
+sum_dx = _APIS.get("mnm.op.sym.sum_dx", None)
 # Defined in ./src/op/regs/regs.cc
 swap_axis = _APIS.get("mnm.op.sym.swap_axis", None)
 # Defined in ./src/op/regs/regs.cc

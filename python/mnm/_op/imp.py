@@ -28,15 +28,16 @@ __all__ = [
     "min", "minimum", "mod", "multiply", "negative",
     "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
     "one_hot", "ones", "ones_like", "pad", "power",
-    "prod", "relu", "relu_dx", "repeat", "reshape",
-    "reverse", "reverse_sequence", "right_shift", "round", "rsqrt",
-    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
-    "softmax", "softmax_dx", "sort", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "strided_slice_dx", "subtract", "sum", "swap_axis",
-    "take", "take_dx", "tanh", "tanh_dx", "transpose",
-    "transpose_dx", "trunc", "where", "zeros", "zeros_like",
+    "prod", "prod_dx", "relu", "relu_dx", "repeat",
+    "reshape", "reverse", "reverse_sequence", "right_shift", "round",
+    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
+    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
+    "tanh_dx", "transpose", "transpose_dx", "trunc", "where",
+    "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -123,32 +124,36 @@ def adv_index(inputs):
     return imp_utils.ret(ffi.adv_index(inputs))
 
 @set_module("mnm")
-def all(x, axis=(), keepdims=False):
+def all(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.all(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.all(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def any(x, axis=(), keepdims=False):
+def any(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.any(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.any(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def argmax(x, axis=(), keepdims=False):
+def argmax(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.argmax(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.argmax(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def argmin(x, axis=(), keepdims=False):
+def argmin(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.argmin(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.argmin(x, axis, keepdims, exclude))
 
 @set_module("mnm")
 def argsort(data, axis=-1, is_ascend=True, dtype="int32"):
@@ -605,11 +610,12 @@ def matmul_tt(x1, x2):
     return imp_utils.ret(ffi.matmul_tt(x1, x2))
 
 @set_module("mnm")
-def max(x, axis=(), keepdims=False):
+def max(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.max(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.max(x, axis, keepdims, exclude))
 
 @set_module("mnm")
 def max_pool2d(x, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True, layout="NCHW"):
@@ -645,27 +651,30 @@ def maximum(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.maximum(x1, x2, out, where))
 
 @set_module("mnm")
-def mean(x, axis=(), keepdims=False):
+def mean(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.mean(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.mean(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def mean_dx(x, y, dy, axis=(), keepdims=False):
+def mean_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.mean_dx(x, y, dy, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.mean_dx(x, y, dy, axis, keepdims, exclude))
 
 @set_module("mnm")
-def min(x, axis=(), keepdims=False):
+def min(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.min(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.min(x, axis, keepdims, exclude))
 
 @set_module("mnm")
 def minimum(x1, x2, out=None, where=None):
@@ -780,11 +789,22 @@ def power(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.power(x1, x2, out, where))
 
 @set_module("mnm")
-def prod(x, axis=(), keepdims=False):
+def prod(x, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
-    return imp_utils.ret(ffi.prod(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.prod(x, axis, keepdims, exclude))
+
+@set_module("mnm")
+def prod_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    axis = imp_utils.to_int_tuple(axis)
+    keepdims = imp_utils.to_bool(keepdims)
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.prod_dx(x, y, dy, axis, keepdims, exclude))
 
 @set_module("mnm")
 def relu(x):
@@ -998,11 +1018,22 @@ def subtract(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.subtract(x1, x2, out, where))
 
 @set_module("mnm")
-def sum(x, axis=(), keepdims=0):
+def sum(x, axis=(), keepdims=0, exclude=False):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_int_tuple(keepdims)
-    return imp_utils.ret(ffi.sum(x, axis, keepdims))
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.sum(x, axis, keepdims, exclude))
+
+@set_module("mnm")
+def sum_dx(x, y, dy, axis=(), keepdims=0, exclude=False):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    axis = imp_utils.to_int_tuple(axis)
+    keepdims = imp_utils.to_int_tuple(keepdims)
+    exclude = imp_utils.to_bool(exclude)
+    return imp_utils.ret(ffi.sum_dx(x, y, dy, axis, keepdims, exclude))
 
 @set_module("mnm")
 def swap_axis(x, axis1, axis2):

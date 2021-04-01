@@ -394,6 +394,8 @@ def test_transpose(shape, dtype):
     m_mod = InferType(m_mod)
     check_type(m_mod['main'], expected_type)
 
+
+
 @pytest.mark.parametrize("shape", [
     (5, 2),
     (1, 2),

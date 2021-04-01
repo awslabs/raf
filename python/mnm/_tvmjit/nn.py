@@ -60,8 +60,6 @@ def strided_slice_dx_compute(attrs, inputs, output_type):
 
 _reg.register_injective_schedule("mnm.op.strided_slice_dx")
 
-_reg.register_injective_schedule("mnm.op.prod")
-
 _reg.register_strategy("mnm.op.dense", strategy.dense_strategy)
 
 _reg.register_strategy("mnm.op.batch_matmul", strategy.batch_matmul_strategy)

@@ -17,6 +17,7 @@ class ReduceArgs : public ir::AttrsNode<ReduceArgs> {
   value::BaseTensorValue x;
   std::vector<int64_t> axis{};
   bool keepdims{false};
+  bool exclude{false};
   MNM_OP_SCHEMA(ReduceArgs, "mnm.args.reduce");
 };
 
@@ -27,6 +28,7 @@ class ReduceDxArgs : public ir::AttrsNode<ReduceDxArgs> {
   value::BaseTensorValue dy;
   std::vector<int64_t> axis{};
   bool keepdims{false};
+  bool exclude{false};
   MNM_OP_SCHEMA(ReduceDxArgs, "mnm.args.reduce_dx");
 };
 }  // namespace schema

@@ -51,8 +51,9 @@ def test_vm_forward(device, fuse):
     m_in, t_in = resnet.get_input(batch_size=1, device=device)
     m_loss = run_vm_model(m_model, device, [*m_in], ir_optimizer)[0]
     t_loss = t_model(*t_in)
-    check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
+    check(m_loss, t_loss)
     resnet.check_params(m_model, t_model)
+
 
 
 @pytest.mark.parametrize("device", get_device_list())

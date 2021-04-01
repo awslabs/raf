@@ -15,6 +15,7 @@ from tvm.relay import TensorType, FuncType
     (sym.max, torch.max, True),
     (sym.min, torch.min, True),
     (sym.prod, torch.prod, True),
+    (sym.sum, torch.sum, True),
 ])
 @pytest.mark.parametrize("shape", [
     [3],

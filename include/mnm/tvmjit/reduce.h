@@ -14,9 +14,11 @@ namespace tvmjit {
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   tvm::Array<tvm::Integer> axis;
   tvm::Array<tvm::Integer> keepdims;
+  bool exclude;
   TVM_DECLARE_ATTRS(SumAttrs, "attrs.SumAttrs") {
     TVM_ATTR_FIELD(axis);
     TVM_ATTR_FIELD(keepdims);
+    TVM_ATTR_FIELD(exclude);
   }
 };
 
