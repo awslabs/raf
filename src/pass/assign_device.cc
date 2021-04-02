@@ -22,6 +22,16 @@ using namespace mnm::op;
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
+mnm::Device GetDeviceFromConstExpr(const Expr& expr) {
+  static auto* str2ctx = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  auto device_name_node = expr.as<ir::ConstantNode>();
+  CHECK(device_name_node);
+  auto device_name_string_obj = device_name_node->value.as<StringValueObj>();
+  CHECK(device_name_string_obj);
+  std::string device_name_str = device_name_string_obj->value;
+  return Device(static_cast<TVMContext>((*str2ctx)(device_name_str)));
+}
+
 Expr AssignDeviceFullOp(const CallNode* node, const Array<Expr> args,
                         std::string target_device_str) {
   Array<Expr> new_args;
@@ -32,12 +42,7 @@ Expr AssignDeviceFullOp(const CallNode* node, const Array<Expr> args,
   if (node->args.size() < 4) {
     call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
   } else {
-    auto device_name_node = (node->args[3]).as<ir::ConstantNode>();
-    CHECK(device_name_node);
-    auto device_name_string_obj = device_name_node->value.as<StringValueObj>();
-    CHECK(device_name_string_obj);
-    std::string device_name_str = device_name_string_obj->value;
-    call_device = Device(static_cast<TVMContext>((*str2ctx)(device_name_str)));
+    call_device = GetDeviceFromConstExpr(node->args[3]);
   }
 
   // Get the target device.
@@ -80,7 +85,7 @@ Expr AssignDeviceOneHotOp(const CallNode* node, const Array<Expr> args,
   if (node->args.size() < 7) {
     call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
   } else {
-    call_device = Device(static_cast<TVMContext>((*str2ctx)(node->args[6])));
+    call_device = GetDeviceFromConstExpr(node->args[6]);
   }
 
   // Get the target device.
@@ -126,7 +131,7 @@ Expr AssignDeviceInitOp(const CallNode* node, const Array<Expr> args,
   if (node->args.size() < 3) {
     call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
   } else {
-    call_device = Device(static_cast<TVMContext>((*str2ctx)(node->args[2])));
+    call_device = GetDeviceFromConstExpr(node->args[2]);
   }
 
   // Get the target device.

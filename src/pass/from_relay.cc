@@ -306,6 +306,7 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
     auto mod = Downcast<tvm::IRModule>(obj);
     mod = tvm::relay::transform::SimplifyExpr()(mod);
     mod = tvm::relay::transform::EliminateCommonSubexpr()(mod);
+    mod = tvm::relay::transform::FoldConstant()(mod);
     mod = tvm::relay::transform::CombineParallelBatchMatmul()(mod);
 
     // Partition Meta-specific Relay simplify patterns
@@ -335,6 +336,7 @@ tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
     auto mod = IRModule::FromExpr(expr);
     mod = tvm::relay::transform::SimplifyExpr()(mod);
     mod = tvm::relay::transform::EliminateCommonSubexpr()(mod);
+    mod = tvm::relay::transform::FoldConstant()(mod);
     mod = tvm::relay::transform::CombineParallelBatchMatmul()(mod);
     expr = mod->Lookup("main");
     auto func = PartitionPatterns(Downcast<Function>(expr));

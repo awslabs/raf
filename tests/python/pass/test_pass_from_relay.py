@@ -642,28 +642,26 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     check_from_relay(model, r_func, [m_x])
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[3, 2]])
 @pytest.mark.parametrize("val", [1])
 def test_full(shape, val):
     class Full(mnm.Model):
-        def build(self, val, shape):
-            self.val = val
+        def build(self, shape):
             self.shape = shape
 
         @mnm.model.trace
-        def forward(self):
-            return mnm.full(self.val, self.shape, "int64")
+        def forward(self, val):
+            return mnm.full(val, self.shape, "int64")
 
-    model = Full(val, shape)
+    model = Full(shape)
 
-    r_c = _relay.const(val)
-    r_func = _relay.Function(params=[], body=_relay.full(
+    # Use scalar variable to prevent it from being constant folded.
+    r_c = _relay.var("c", _relay.TensorType((), "int64"))
+    r_func = _relay.Function(params=[r_c], body=_relay.full(
         r_c, shape=shape, dtype="int64"))
 
-    # Test constant mirgration using CUDA.
-    check_from_relay(model, r_func, [],
-                     check_model_structure=False, device="cuda")
+    m_c = mnm.ndarray(np.array(val))
+    check_from_relay(model, r_func, [m_c], check_model_structure=False)
 
 
 @pytest.mark.parametrize("dtype", ["float32"])
