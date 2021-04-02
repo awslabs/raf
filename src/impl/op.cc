@@ -52,8 +52,6 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
 std::shared_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
   const Op& op = Downcast<OpValue>(call->callee)->op;
   TDispatchList* list = OpDispatch::Get(op, call->device.device_type);
-  std::cout << op->name << std::endl;
-  std::cout << list->size() << std::endl;
   for (const auto e : *list) {
     const auto& maker = e.maker;
     std::shared_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
