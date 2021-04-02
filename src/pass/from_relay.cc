@@ -77,6 +77,9 @@ struct SimplifyDense : RelaySimplifyPattern {
       op_name += (transposes[0]) ? 't' : 'n';
       op_name += (transposes[1]) ? 't' : 'n';
     }
+    if (op_name == "mnm.op.matmul_nt") {
+      op_name = "mnm.op.dense";
+    }
 
     const Op& op = Op::Get(op_name);
     return Call(op, args);

@@ -19,6 +19,12 @@ using namespace mnm::op;
 using namespace tvm::support;
 
 /*
+  Fusion level:
+  - 0: No fusion.
+  - 1: Only fuse elementwise, broadcast, and injective nodes.
+  - 2: TBA.
+  - 3: Fuse all fusable nodes.
+
   Note on Fusing algorithm:
 
   The main challenge of general fusor is to handle possible diamond shape branches,
@@ -693,6 +699,8 @@ class GraphPartitioner {
       auto* dom_node = post_dom_tree.nodes[nid];
       Group* group_node = groups_[nid];
       CHECK(group_node != nullptr);
+      // only take actions up to injecive nodes in level 1 fusion
+      if (opt_level_ == 1 && group_node->pattern > kInjective) continue;
       // no actions for opaque nodes
       if (group_node->pattern == kOpaque) continue;
       // no actions needed if the current node have no dominator

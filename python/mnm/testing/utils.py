@@ -37,12 +37,12 @@ def ir_simplify(mod):
 
 
 # TODO(@hzfan): remove this after we have PassContext
-def ir_fusion(mod):
+def ir_fusion(mod, fuse_opt_level=3):
     """fuse ops"""
     # pylint: disable=protected-access
     mod = ir_simplify(mod)
     mod = run_infer_type(mod)
-    mod = mnm._ffi.pass_.FuseOps(mod, 3)
+    mod = mnm._ffi.pass_.FuseOps(mod, fuse_opt_level)
     mod = run_infer_type(mod)
     return mod
 

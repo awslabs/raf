@@ -931,6 +931,8 @@ def test_dense_pattern(trans):
                 self.op_name += "t" if trans[0] else "n"
                 # dense is matmul_nt so the second input is already transposed
                 self.op_name += "n" if trans[1] else "t"
+                if self.op_name == "matmul_nt":
+                    self.op_name = "dense"
 
         @mnm.model.trace
         def forward(self, m_x, m_y):

@@ -316,6 +316,59 @@ def test_single_w_tuple():
     # will not form a function, so fusion should have no effect in this case.
     assert tvm.ir.structural_equal(after["main"], before["main"])
 
+def test_fuse_level_1():
+    """Fuse level 1 only fuses injective nodes."""
+    rand, _ = randn((1,), device="cpu")
+
+    class Model(mnm.Model):
+        def build(self):
+            self.c = rand
+            self.conv1 = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = self.conv1(x)
+            y1 = mnm.add(y, self.c)
+            y = mnm.add(y, y1)
+            return y
+
+    def expected():
+        v_one = mnm.ir.const([1])
+        konst1 = mnm.ir.const(1)
+        konst_nchw = mnm.ir.const("NCHW")
+        konst_oihw = mnm.ir.const("OIHW")
+        default = mnm.ir.const(None)
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
+        a4 = relay.var("a4")
+        a6 = relay.var("a6")
+
+        # segment
+        x = relay.var("p0", shape=(1, 16, 64, 64))
+        c = relay.var("c", shape=(1,))
+        y = relay.Call(add_op, [x, c, default, default])
+        y = relay.Call(add_op, [x, y, default, default])
+        f1 = relay.Function([x, c], y)
+        f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+
+        c = relay.var("c", shape=(1,))
+        let2 = relay.Let(a4, relay.Call(f1, [a6, c]), a4)
+
+        x = relay.var("p0", shape=(1, 16, 64, 64))
+        w = relay.var("p1", shape=(16, 16, 3, 3))
+        let1 = relay.Let(a6, relay.Call(conv2d_op, [x, w, v_one, v_one, v_one, konst1,
+                                                    konst_nchw, konst_oihw, konst_nchw]), let2)
+        return relay.Function([x, c, w], let1)
+
+    model = Model()
+    m_x, _ = randn((1, 16, 64, 64), device="cpu")
+    mod_before = model._internal(m_x).mod
+    mod_before = run_infer_type(mod_before)
+    mod_after = mnm._ffi.pass_.FuseOps(mod_before, 1)
+    mod_after = run_infer_type(mod_after)
+    func_expected = expected()
+    func_expected = run_infer_type(func_expected)
+    assert tvm.ir.structural_equal(mod_after["main"], func_expected)
 
 # TODO@(hzfan): fix issue #402
 @pytest.mark.xfail
