@@ -15,7 +15,7 @@ from .._lib import tvm
 def calc_dy(dy, record):
     """ relay function returns output + mutation. In backward, mutation needs empty gradient. """
     # pylint: disable=protected-access
-    mod = InferType(record.mod)
+    mod = InferType()(record.mod)
     ret_var = _get_func_output_var(mod["main"])
     dout = [get_symbol_handle(dy)]
     if isinstance(ret_var.checked_type, tvm.relay.TupleType):
@@ -64,9 +64,9 @@ def with_autodiff(model):
             record = self.model._internal(*args)
             dy = calc_dy(dy, record)
             mod = record.mod
-            mod = InferType(mod)
+            mod = InferType()(mod)
             mod = AutoDiff(mod, record.requires_grads)
-            mod = InferType(mod)
+            mod = InferType()(mod)
             mod = SimplifyExpr(mod)
             mod = DeadCodeElimination(mod)
             mod['main'] = InlineBackward(mod['main'])

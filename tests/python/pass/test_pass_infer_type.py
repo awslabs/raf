@@ -35,7 +35,7 @@ def test_mnm_module():
 
     tvm_mod = get_tvm_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
 
     t_1 = relay.TensorType((1, 100))
     t_2 = relay.TensorType((1, 100))
@@ -71,7 +71,7 @@ def test_mnm_recursive_function():
 
     tvm_mod = get_recursive_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
 
     t_0 = relay.scalar_type(dtype="int32")
     t_1 = relay.TensorType((1, 100))
@@ -104,7 +104,7 @@ def test_mnm_return_function():
 
     tvm_mod = get_tvm_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
 
     t_1 = relay.TensorType((1, 100))
     assert mod[main].ret_type == t_1
@@ -215,9 +215,9 @@ def test_gradient_closure():
         y_ty = relay.TensorType(shape_y)
         x = Symbol.make_var('a', x_ty)
         mod = model._internal(x).mod
-        mod = InferType(mod)
+        mod = InferType()(mod)
         mod = AutoDiff(mod, [True])
-        mod = InferType(mod)
+        mod = InferType()(mod)
         func = mod['main']
         bwd_ty = relay.FuncType([y_ty], x_ty)
         expected_ty = relay.FuncType([x_ty], relay.TupleType([y_ty, bwd_ty]))

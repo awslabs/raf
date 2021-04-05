@@ -670,7 +670,7 @@ void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Targe
 }
 
 IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targets) {
-  auto m = pass::InferType(mod);
+  auto m = pass::InferType()(mod);
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
   With<tvm::Target> tctx((*it).second);

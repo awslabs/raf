@@ -34,7 +34,7 @@ def check_from_relay(m_model, r_func, args, check_model_structure=True,
         assert _tvm.ir.structural_equal(
             m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
 
-    assert InferType(new_mod), "Type error of the model from Relay"
+    assert InferType()(new_mod), "Type error of the model from Relay"
 
     new_model = FrameworkModel(new_mod, new_mod, {}, {})
     if device == "cuda":

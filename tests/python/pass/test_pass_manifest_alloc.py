@@ -28,11 +28,11 @@ def test_memory_alloc(device, shape):
     m_x, _ = randn(shape, device=device)
     func = model_before._internal(m_x).mod['main']
     mod = IRModule.from_expr(func)
-    mod = mnm._ffi.pass_.InferType(mod)
+    mod = mnm._ffi.pass_.InferType()(mod)
     target_name = device if device != 'cpu' else 'llvm'
     with tvm.target.Target(target_name):
         mod = mnm._ffi.pass_.ManifestAlloc(mod)
-    mod = mnm._ffi.pass_.InferType(mod)
+    mod = mnm._ffi.pass_.InferType()(mod)
     text = mod['main'].astext()
     assert "alloc_storage" in text
     assert "alloc_tensor" in text

@@ -15,9 +15,9 @@ def test_basic():
 
     tvm_mod = get_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     mod = AutoDiff(mod, [])
-    mod = InferType(mod)
+    mod = InferType()(mod)
     mod = SimplifyExpr(mod)
 
 

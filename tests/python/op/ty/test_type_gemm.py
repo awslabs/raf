@@ -34,12 +34,12 @@ def test_dense(shape, dtype):
     record = model._internal(m_a, m_b)
     m_mod = record.mod
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # check backward
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
     check_type(m_mod['main'], desired_type)
@@ -76,12 +76,12 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
     # check forward
     record = model._internal(m_a, m_b)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # check backward
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
     check_type(m_mod['main'], desired_type)
@@ -114,12 +114,12 @@ def test_batch_matmul(shape, dtype):
     # check forward
     record = model._internal(m_a, m_b)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     desired_type = FuncType([a_ty, b_ty], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # check backward
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([a_ty, b_ty]))
     desired_type = FuncType([a_ty, b_ty], TupleType([fwd_ty, bwd_ty]))
     check_type(m_mod['main'], desired_type)

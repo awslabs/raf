@@ -20,9 +20,9 @@ from ..model.trace import _get_func_inputs
 def run_infer_type(expr):
     """Helper function to infer the type of the given expr """
     if isinstance(expr, IRModule):
-        return pass_.InferType(expr)
+        return pass_.InferType()(expr)
     mod = IRModule.from_expr(expr)
-    mod = pass_.InferType(mod)
+    mod = pass_.InferType()(mod)
     return mod["main"]
 
 

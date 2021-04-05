@@ -5,17 +5,23 @@
  */
 #pragma once
 
+#include "tvm/ir/transform.h"
 #include "tvm/relay/analysis.h"
 #include "tvm/relay/dataflow_matcher.h"
 #include "tvm/relay/transform.h"
 #include "mnm/ir.h"
 #include "mnm/ir_ext.h"
+#include "mnm/pass_manager.h"
 
 namespace mnm {
 namespace pass {
 using tvm::AsText;
 using tvm::relay::ExpandANormalForm;
 using tvm::relay::FreeVars;
+using tvm::transform::CreateModulePass;
+using tvm::transform::Pass;
+using tvm::transform::PassContext;
+using tvm::transform::PassInfo;
 /*!
  * \brief Automatic Differentiation.
  * \param mod Input module.
@@ -41,7 +47,11 @@ ir::Function GradInputSelect(ir::Function func);
  */
 ir::IRModule ManifestAlloc(ir::IRModule mod);
 ir::Expr CanonicalizeOps(ir::Expr expr);
-ir::IRModule InferType(ir::IRModule mod);
+/*!
+ * \brief Create a type inference pass.
+ * \return The created pass.
+ */
+Pass InferType();
 ir::Expr InferType(ir::Expr expr);
 /*!
  * \brief Fuse the operators in the expression.

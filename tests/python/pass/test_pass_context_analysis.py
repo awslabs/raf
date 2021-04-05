@@ -34,7 +34,7 @@ def test_basic(ctx, shape):
     # Create a Meta module and set the func as main
     mod = IRModule.from_expr(func)
     # Propagate types.
-    mod = InferType(mod)
+    mod = InferType()(mod)
 
     dev = tvm.gpu() if ctx == "cuda" else tvm.cpu()
     # Performance context analysis
@@ -59,7 +59,7 @@ def test_device_copy():
     mod = tvm.IRModule.from_expr(func)
     # Create a Meta module and set the func as main
     mod = FromRelay(mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     ca = ContextAnalysis(mod, tvm.cpu())
 
     cpu_dev = tvm.cpu().device_type
@@ -103,10 +103,10 @@ def test_memory_alloc(shape):
     m_x, _ = randn(shape, device=ctx)
     func = model_before._internal(m_x).mod['main']
     mod = IRModule.from_expr(func)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     with tvm.target.Target(ctx):
         mod = mnm._ffi.pass_.ManifestAlloc(mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     ca = ContextAnalysis(mod, tvm.cpu())
     # TODO(zhiics) Check device info of different nodes.
 

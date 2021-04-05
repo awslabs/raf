@@ -119,7 +119,7 @@ class FrameworkModel(BaseModel):
         """
         r = self._internal(*args, **kwargs)
         # (function, num_argument)
-        mod = InferType(r.mod)
+        mod = InferType()(r.mod)
         self.__recorded = (mod, len(args) + len(kwargs))
         ret_var = _get_func_output_var(mod['main'])
         ret = Symbol.from_expr(ret_var)

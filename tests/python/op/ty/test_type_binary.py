@@ -46,14 +46,14 @@ def test_binary(op, shape, dtype):
     m_b.requires_grad = True
     record = model._internal(m_a, m_b)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     desired_type = FuncType([t_a, t_b], t_c)
     check_type(m_mod['main'], desired_type)
     # check backward
     # TODO(yzhliu): some operators are missing gradient registries.
     if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract):
         bwd_mod = AutoDiff(m_mod, record.requires_grads)
-        bwd_mod = InferType(bwd_mod)
+        bwd_mod = InferType()(bwd_mod)
         bwd_func = bwd_mod['main']
         bwd_ty = FuncType([t_c], TupleType([t_a, t_b]))
         desired_type = FuncType([t_a, t_b], TupleType([t_c, bwd_ty]))

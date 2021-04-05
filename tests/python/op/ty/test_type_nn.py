@@ -45,7 +45,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
         return
     record = model._internal(m_x)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     t_y = torch_fwd(t_x, dim=axis)
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
@@ -54,7 +54,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     # backward
     _, t_dy = randn_torch(shape, dtype=dtype)
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     t_y.backward(t_dy)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
@@ -132,7 +132,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     m_y = model(m_x, m_scale, m_bias)
     record = model._internal(m_x, m_scale, m_bias)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     _, n_dy = randn(m_y.shape, dtype=dtype)
     mx_dy = mx.nd.array(n_dy)
     with mx.autograd.record():
@@ -147,7 +147,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     check_type(m_mod['main'], checked_type)
     # check backward
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     int_type = TensorType((), "int64")
     dx_ty = TensorType(mx_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], TupleType([dx_ty, int_type, int_type]))
@@ -258,7 +258,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     m_y = model(m_x)
     record = model._internal(m_x)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
@@ -268,7 +268,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     _, t_dy = randn_torch(m_y.shape, dtype=dtype)
     t_y.backward(t_dy)
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)

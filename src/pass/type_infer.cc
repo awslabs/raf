@@ -7,11 +7,10 @@
 #include <tvm/ir/module.h>
 #include <tvm/ir/type_functor.h>
 #include <tvm/tir/op.h>
-#include <tvm/relay/transform.h>
-#include <tvm/relay/analysis.h>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
+#include "mnm/pass_manager.h"
 #include "mnm/binding.h"
 #include "mnm/type.h"
 #include "../op/ty/utils.h"
@@ -27,8 +26,8 @@ using namespace mnm::value;
 using namespace mnm::type;
 using namespace tvm;
 using namespace tvm::relay;
+using namespace tvm::transform;
 using tvm::TypeFunctor;
-using tvm::relay::transform::Pass;
 
 Type Unify(const Type& src, const Type& dst);
 
@@ -505,27 +504,31 @@ void AddGlobalTypes(ir::IRModule mod) {
   }
 }
 
-ir::IRModule InferType(ir::IRModule mod) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  AddGlobalTypes(updated_mod);
-  auto ti = type_infer::TypeInferencer(updated_mod);
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto func = tvm::runtime::Downcast<ir::Function>(ti.VisitExpr(kv.second));
-      updated_mod->Add(kv.first, func, true);
-    }
-  }
-  return updated_mod;
-}
-
 ir::Expr InferType(ir::Expr func) {
   auto mod = ir::GlobalModule();
   return type_infer::TypeInferencer(mod).VisitExpr(func);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([](ir::IRModule mod) {
-  return InferType(mod);
-});
+Pass InferType() {
+  auto pass_info = PassInfo(0, "InferType", {});
+  return CreateModulePass(
+      [=](IRModule mod, const PassContext& pass_ctx) {
+        DLOG(INFO) << "pass::InferType";
+        ir::IRModule updated_mod = ir::IRModule(mod->functions);
+        AddGlobalTypes(updated_mod);
+        auto ti = type_infer::TypeInferencer(updated_mod);
+        for (auto kv : updated_mod->functions) {
+          if (kv.second.as<ir::FunctionNode>()) {
+            auto func = tvm::runtime::Downcast<ir::Function>(ti.VisitExpr(kv.second));
+            updated_mod->Add(kv.first, func, true);
+          }
+        }
+        return updated_mod;
+      },
+      0, "InferType", {});
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([]() { return InferType(); });
 
 }  // namespace pass
 }  // namespace mnm

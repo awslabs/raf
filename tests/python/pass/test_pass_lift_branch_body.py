@@ -23,9 +23,9 @@ def test_basic_if():
 
     tvm_mod = get_recursive_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     mod = LiftBranchBody(mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     assert len(mod.get_global_vars()) == 3
 
 
@@ -56,9 +56,9 @@ def test_mnm_recursive_function():
 
     tvm_mod = get_recursive_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     mod = LiftBranchBody(mod)
-    mod = InferType(mod)
+    mod = InferType()(mod)
 
     t_0 = relay.scalar_type(dtype="int32")
     t_1 = relay.TensorType((1, 100))

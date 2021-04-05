@@ -59,12 +59,12 @@ def test_nll_loss(shape, dtype):
     # forward
     record = model._internal(m_pred, m_true)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # backward
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
     check_type(m_mod['main'], desired_type)
@@ -99,12 +99,12 @@ def test_other_losses(loss_type, shape, dtype):
     # forward
     record = model._internal(m_pred, m_true)
     m_mod = record.mod
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # backward
     m_mod = AutoDiff(m_mod, record.requires_grads)
-    m_mod = InferType(m_mod)
+    m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
     check_type(m_mod['main'], desired_type)

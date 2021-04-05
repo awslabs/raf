@@ -36,7 +36,7 @@ def debug_dump(expr):
 
 def optimize(func):
     mod = IRModule.from_expr(func)
-    mod = InferType(mod)
+    mod = InferType()(mod)
     mod = MemShare(mod)
     return mod["main"]
 
