@@ -1,7 +1,8 @@
+# pylint: disable=invalid-name
 import numpy as np
 
 import mnm
-from mnm._core.value import FloatValue, IntValue, TensorValue, Value
+from mnm._core.value import FloatValue, IntValue, TensorValue, TupleValue, Value
 from mnm._ffi.ir.constant import ExtractValue
 
 
@@ -19,6 +20,17 @@ def test_constant_float():
     assert ExtractValue(const).value == 3.1415926535897932384626
 
 
+def test_constant_tuple():
+    const = mnm.ir.const((1.5, 4))
+    v = ExtractValue(const)
+    assert isinstance(v, TupleValue)
+    assert len(v) == 2
+    assert isinstance(v[0], FloatValue)
+    assert v[0].value == 1.5
+    assert isinstance(v[1], IntValue)
+    assert v[1].value == 4
+
+
 def test_constant_tensor():
     a = np.array([1, 2, 3])
     const = Value.as_const_expr(TensorValue.from_numpy(a))
@@ -32,8 +44,8 @@ def test_constant_tensor():
     assert a.strides == tuple(x * a.itemsize for x in b.strides)
     assert str(a.dtype) == str(b.dtype)
 
-
 if __name__ == "__main__":
     test_constant_int()
     test_constant_float()
+    test_constant_tuple()
     test_constant_tensor()

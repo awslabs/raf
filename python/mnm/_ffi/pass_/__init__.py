@@ -32,6 +32,7 @@ from ._internal import RenameVars
 from ._internal import SimplifyExpr
 from ._internal import Substitute
 from ._internal import ToANormalForm
+from ._internal import ToBasicBlockNormalForm
 from ._internal import ToGraphNormalForm
 from ._internal import is_constant
 from ._internal import validate_relay_param_name

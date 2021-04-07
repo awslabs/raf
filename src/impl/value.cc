@@ -210,6 +210,9 @@ ObjectRef DeTuple(Value value) {
   if (value->IsInstance<TensorValueObj>() || value->IsInstance<NoGradValueObj>()) {
     return std::move(value);
   }
+  if (value->IsInstance<ScalarValueObj>()) {
+    return std::move(value);
+  }
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
     for (Value sub_value : tuple->fields) {
@@ -300,36 +303,36 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<IntValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const IntValueObj*>(ref.get());
-      p->stream << "IntValue(" << node->value << ")";
+      p->stream << node->dtype << "(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<FloatValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const FloatValueObj*>(ref.get());
-      p->stream << "FloatValue(" << node->value << ")";
+      p->stream << node->dtype << "(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<BoolValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const BoolValueObj*>(ref.get());
-      p->stream << "BoolValue(" << node->value << ")";
+      p->stream << "bool(" << node->value << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<StringValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const StringValueObj*>(ref.get());
-      p->stream << "StringValue(" << node->value << ")";
+      p->stream << "str\"" << node->value << "\"";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<TensorValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const TensorValueObj*>(ref.get());
-      p->stream << "TensorValue(";
+      p->stream << "tensor(";
       for (int i = 0; i < node->tensor->ndim; ++i) {
         p->stream << node->tensor->shape[i];
-        if (i != node->tensor->ndim - 1) p->stream << ", ";
+        if (i != node->tensor->ndim - 1) p->stream << "x";
       }
-      p->stream << ")";
+      p->stream << ", " << tvm::runtime::DLDataType2String(node->tensor->dtype) << ")";
     });
 
 }  // namespace value

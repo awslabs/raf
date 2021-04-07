@@ -24,11 +24,11 @@ def test_simple():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
         log_op = mnm._ffi.op.GetOp("mnm.op.log")
-        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
+        null = mnm.ir.const(None)
 
         x = relay.var("x", shape=(10, 20))
         c = relay.var("c", shape=(1,))
-        y = relay.Call(add_op, [x, c, default, default])
+        y = relay.Call(add_op, [x, c, null, null])
         y = relay.Call(log_op, [relay.Call(relu_op, [y])])
         f = relay.Function([x, c], y)
         return f

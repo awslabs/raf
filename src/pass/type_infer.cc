@@ -195,8 +195,7 @@ class TypeInferencer : public ExprMutator {
         op->checked_type_ = GetValueType(Downcast<Value>(const_data));
       }
     } else {
-      // fake type info
-      op->checked_type_ = TensorType::Scalar(DataType::Int(64));
+      op->checked_type_ = VoidType();
     }
     return GetRef<Expr>(op);
   }

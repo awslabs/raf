@@ -64,6 +64,8 @@ SimplifyExpr = _APIS.get("mnm.pass_.SimplifyExpr", None)
 Substitute = _APIS.get("mnm.pass_.Substitute", None)
 # Defined in ./src/pass/to_a_normal_form.cc
 ToANormalForm = _APIS.get("mnm.pass_.ToANormalForm", None)
+# Defined in ./src/pass/to_basic_block_normal_form.cc
+ToBasicBlockNormalForm = _APIS.get("mnm.pass_.ToBasicBlockNormalForm", None)
 # Defined in ./src/pass/to_graph_normal_form.cc
 ToGraphNormalForm = _APIS.get("mnm.pass_.ToGraphNormalForm", None)
 # Defined in ./src/pass/fold_const.cc

@@ -98,29 +98,29 @@ class TensorTypeValue(BaseTensorValue):
 @register_node("mnm.value.IntValue")
 class IntValue(Value):
     def __init__(self, data, dtype="int64"):
-        assert isinstance(data, int)
         self.__init_handle_by_constructor__(_make.IntValue, dtype, data)
+        assert isinstance(data, int)
 
 
 @register_node("mnm.value.FloatValue")
 class FloatValue(Value):
     def __init__(self, data, dtype="float32"):
-        assert isinstance(data, float)
         self.__init_handle_by_constructor__(_make.FloatValue, dtype, data)
+        assert isinstance(data, float)
 
 
 @register_node("mnm.value.BoolValue")
 class BoolValue(Value):
     def __init__(self, data):
-        assert isinstance(data, bool)
         self.__init_handle_by_constructor__(_make.BoolValue, data)
+        assert isinstance(data, bool)
 
 
 @register_node("mnm.value.StringValue")
 class StringValue(Value):
     def __init__(self, data):
-        assert isinstance(data, str)
         self.__init_handle_by_constructor__(_make.StringValue, data)
+        assert isinstance(data, str)
 
 
 @register_node("mnm.value.TupleValue")

@@ -50,6 +50,9 @@ def extended_var(name_hint, type_annotation=None, shape=None, dtype="float32", m
 
     dtype: str, optional
         The data type of the tensor.
+
+    may_share: Var, optional
+        The variable that it may share the memory.
     """
     var = _relay.var(name_hint, type_annotation, shape, dtype)
     return ExtendedVar(_Var(var.name_hint, var.type_annotation, may_share))

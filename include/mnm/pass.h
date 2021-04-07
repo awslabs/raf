@@ -167,7 +167,7 @@ ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map);
  * \param expr The expression
  * \return Transformed expression
  */
-ir::Expr ToDataflowGraph(ir::Expr expr);
+ir::Expr ToGraphNormalForm(ir::Expr expr);
 
 /*!
  * \brief Replace init and constant ops with the assigned device.
@@ -202,7 +202,7 @@ ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level);
 ir::IRModule InlineLet(ir::IRModule mod);
 ir::IRModule DeadCodeElimination(ir::IRModule mod);
 ir::IRModule SimplifyExpr(ir::IRModule mod);
-ir::IRModule ToDataflowGraph(ir::IRModule mod);
+ir::IRModule ToGraphNormalForm(ir::IRModule mod);
 
 /*!
  * \brief Turn a dataflow graph into Administrative Normal Form, or A-Normal Form (ANF).
@@ -217,9 +217,25 @@ ir::IRModule ToDataflowGraph(ir::IRModule mod);
  * Values are ordered by post-DFS order in each scope.
  *
  * \param mod The input module.
- * \return Transformed moduel.
+ * \return Transformed module.
  */
 ir::IRModule ToANormalForm(ir::IRModule mod);
+
+/*!
+ * \brief Turn an expression to Basic Block Normal Form.
+ *
+ * We define a block as a group of expressions implied by the scope structure.
+ *
+ * Each graph node can only belong to a single block.
+ *
+ * For any value that is being used in multiple blocks, it has to be referred
+ * by a Var which is defined in a block, whose scope is the least common ancestor
+ * of blocks this value is used.
+ *
+ * \param mod The input module
+ * \return Transformed module.
+ */
+ir::IRModule ToBasicBlockNormalForm(ir::IRModule mod);
 
 }  // namespace pass
 }  // namespace mnm

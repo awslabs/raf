@@ -101,9 +101,9 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
         if (constant) {
           // \b to erase "-114514"
           if (constant->value.defined()) {
-            os << "\b\b\b\b\b\b\bmnm.Constant(" << constant->value << ")";
+            os << "\b\b\b\b\b\b\b" << constant->value;
           } else {
-            os << "\b\b\b\b\b\b\bmnm.Constant(nullptr)";
+            os << "\b\b\b\b\b\b\bnullptr";
           }
         }
         if ((expr.as<ConstantNode>() || expr.as<CallNode>()) &&
