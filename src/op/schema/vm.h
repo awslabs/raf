@@ -19,7 +19,7 @@ class AllocStorageArgs : public ir::AttrsNode<AllocStorageArgs> {
   int device_type;
   int device_id;
   std::string dtype{"float32"};
-  MNM_OP_SCHEMA(AllocStorageArgs, "mnm.args._alloc_storage");
+  MNM_OP_SCHEMA(AllocStorageArgs, "mnm.args.alloc_storage");
 };
 
 class AllocTensorArgs : public ir::AttrsNode<AllocTensorArgs> {
@@ -28,7 +28,7 @@ class AllocTensorArgs : public ir::AttrsNode<AllocTensorArgs> {
   value::Value shape;
   std::string dtype{"float32"};
   std::vector<int64_t> assert_shape{};
-  MNM_OP_SCHEMA(AllocTensorArgs, "mnm.args._alloc_tensor");
+  MNM_OP_SCHEMA(AllocTensorArgs, "mnm.args.alloc_tensor");
 };
 
 class InvokeOpArgs : public ir::AttrsNode<InvokeOpArgs> {
@@ -36,7 +36,7 @@ class InvokeOpArgs : public ir::AttrsNode<InvokeOpArgs> {
   value::Value func;
   value::Value inputs;
   value::Value outputs;
-  MNM_OP_SCHEMA(InvokeOpArgs, "mnm.args._invoke_op");
+  MNM_OP_SCHEMA(InvokeOpArgs, "mnm.args.invoke_op");
 };
 }  // namespace schema
 }  // namespace op

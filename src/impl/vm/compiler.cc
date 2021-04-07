@@ -383,12 +383,12 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     if (op.as<OpNode>()) {
       OpMatch<void> matcher;
       matcher
-          .Match("mnm.op._invoke_op",
+          .Match("mnm.op.vm.invoke_op",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 3);
                    EmitInvokeOp(args[0], args[1], args[2]);
                  })
-          .Match("mnm.op._alloc_tensor",
+          .Match("mnm.op.vm.alloc_tensor",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 4);
 
@@ -422,7 +422,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                      LOG(FATAL) << "Not suported";
                    }
                  })
-          .Match("mnm.op._alloc_storage",
+          .Match("mnm.op.vm.alloc_storage",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 5);
                    // Compute the size of the allocation.

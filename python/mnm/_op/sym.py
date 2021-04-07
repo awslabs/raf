@@ -7,52 +7,37 @@ from mnm._core.ndarray import Symbol
 from . import sym_utils
 
 __all__ = [
-    "_alloc_storage", "_alloc_tensor", "_allreduce", "_contrib_dropout", "_invoke_op",
-    "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx", "adaptive_max_pool2d", "adaptive_max_pool2d_dx",
-    "add", "adv_index", "all", "any", "argmax",
-    "argmin", "argsort", "atan", "avg_pool2d", "avg_pool2d_dx",
-    "batch_flatten", "batch_matmul", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
-    "bias_add", "broadcast_to", "broadcast_to_like", "cast", "cast_like",
-    "ceil", "clip", "clip_dx", "collapse_sum_like", "compiler_begin",
-    "compiler_end", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
-    "conv2d_dx", "copy", "cos", "cross_entropy", "cross_entropy_dpred",
-    "cross_entropy_dtrue", "dense", "device_copy", "divide", "equal",
-    "erf", "erf_dx", "exp", "expand_dims", "floor",
-    "full", "gather", "gather_dx", "gather_nd", "gather_nd_dx",
-    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
-    "layer_norm", "layer_norm_dx", "left_shift", "less", "less_equal",
-    "log", "log_softmax", "log_softmax_dx", "logical_and", "logical_not",
-    "matmul", "matmul_nt", "matmul_tn", "matmul_tt", "max",
-    "max_pool2d", "max_pool2d_dx", "maximum", "mean", "mean_dx",
-    "min", "minimum", "mod", "multiply", "negative",
-    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
-    "one_hot", "ones", "ones_like", "pad", "power",
-    "prod", "prod_dx", "relu", "relu_dx", "repeat",
-    "reshape", "reverse", "reverse_sequence", "right_shift", "round",
-    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
-    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
-    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
-    "tanh_dx", "transpose", "transpose_dx", "trunc", "where",
+    "_allreduce", "_contrib_dropout", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx",
+    "adaptive_max_pool2d", "adaptive_max_pool2d_dx", "add", "adv_index", "all",
+    "any", "argmax", "argmin", "argsort", "atan",
+    "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_matmul", "batch_norm_infer",
+    "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "broadcast_to", "broadcast_to_like",
+    "cast", "cast_like", "ceil", "clip", "clip_dx",
+    "collapse_sum_like", "compiler_begin", "compiler_end", "concatenate", "concatenate_dx",
+    "conv2d", "conv2d_dw", "conv2d_dx", "copy", "cos",
+    "cross_entropy", "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy",
+    "divide", "equal", "erf", "erf_dx", "exp",
+    "expand_dims", "floor", "full", "gather", "gather_dx",
+    "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
+    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "left_shift",
+    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
+    "logical_and", "logical_not", "matmul", "matmul_nt", "matmul_tn",
+    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
+    "mean", "mean_dx", "min", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "non_max_suppression", "not_equal", "one_hot", "ones", "ones_like",
+    "pad", "power", "prod", "prod_dx", "relu",
+    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
+    "right_shift", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
+    "subtract", "sum", "sum_dx", "swap_axis", "take",
+    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
+    "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where",
     "zeros", "zeros_like",
 ]
-
-def _alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
-    size = sym_utils.to_any(size)
-    alignment = sym_utils.to_any(alignment)
-    device_type = sym_utils.to_int(device_type)
-    device_id = sym_utils.to_int(device_id)
-    dtype = sym_utils.to_string(dtype)
-    return Symbol.from_expr(ffi._alloc_storage(size, alignment, device_type, device_id, dtype))
-
-def _alloc_tensor(storage, shape, dtype="float32", assert_shape=None):
-    storage = sym_utils.to_tensor(storage)
-    shape = sym_utils.to_any(shape)
-    dtype = sym_utils.to_string(dtype)
-    assert_shape = sym_utils.to_int_tuple(assert_shape)
-    return Symbol.from_expr(ffi._alloc_tensor(storage, shape, dtype, assert_shape))
 
 def _allreduce(x):
     x = sym_utils.to_tensor_tuple(x)
@@ -62,12 +47,6 @@ def _contrib_dropout(x, p=0.5):
     x = sym_utils.to_tensor(x)
     p = sym_utils.to_double(p)
     return Symbol.from_expr(ffi._contrib_dropout(x, p))
-
-def _invoke_op(func, inputs, outputs):
-    func = sym_utils.to_any(func)
-    inputs = sym_utils.to_any(inputs)
-    outputs = sym_utils.to_any(outputs)
-    return Symbol.from_expr(ffi._invoke_op(func, inputs, outputs))
 
 def abs(x):
     x = sym_utils.to_any(x)
@@ -944,6 +923,27 @@ def transpose_dx(dy, axes=None, primal_shape=None):
 def trunc(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.trunc(x))
+
+def vm_alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
+    size = sym_utils.to_any(size)
+    alignment = sym_utils.to_any(alignment)
+    device_type = sym_utils.to_int(device_type)
+    device_id = sym_utils.to_int(device_id)
+    dtype = sym_utils.to_string(dtype)
+    return Symbol.from_expr(ffi.vm.alloc_storage(size, alignment, device_type, device_id, dtype))
+
+def vm_alloc_tensor(storage, shape, dtype="float32", assert_shape=None):
+    storage = sym_utils.to_tensor(storage)
+    shape = sym_utils.to_any(shape)
+    dtype = sym_utils.to_string(dtype)
+    assert_shape = sym_utils.to_int_tuple(assert_shape)
+    return Symbol.from_expr(ffi.vm.alloc_tensor(storage, shape, dtype, assert_shape))
+
+def vm_invoke_op(func, inputs, outputs):
+    func = sym_utils.to_any(func)
+    inputs = sym_utils.to_any(inputs)
+    outputs = sym_utils.to_any(outputs)
+    return Symbol.from_expr(ffi.vm.invoke_op(func, inputs, outputs))
 
 def where(condition, x, y):
     condition = sym_utils.to_tensor(condition)

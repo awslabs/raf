@@ -34,7 +34,7 @@ class InplaceVisitor : public ExprFunctor<void(const Expr& n)> {
   }
 
   void operator()(const Function& func) {
-    const static Op op = Op::Get("mnm.op._alloc_storage");
+    const static Op op = Op::Get("mnm.op.vm.alloc_storage");
     std::unique_ptr<ExplicitLetList> ell_{ExplicitLetList::make(func->body)};
     const auto& vars = ell_->vars;
     const auto& exprs = ell_->exprs;

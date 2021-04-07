@@ -7,7 +7,7 @@ from .codegen_utils import NORM_MAP, snake_to_pascal, write_to_file
 # TODO(@junrushao1994): this is used to be compatible with legacy
 NORM_CONVERTER = {
     "ToAny": "ArrayLike",
-    "ToAnyOptional": "OptionalArrayLike", 
+    "ToAnyOptional": "OptionalArrayLike",
     "ToTensor": "Tensor",
     "ToOptionalTensor": "OptionalTensor",
     "ToInt": "Int",
@@ -171,9 +171,9 @@ def gen_include(filename):
 
 def gen_op_name(op):
     OP_NAME = """
-static const char {OP_NAME}[] = "mnm.op.{OP_NAME}";
+static const char {OP_VAR}[] = "mnm.op.{OP_NAME}";
 """.strip()
-    return OP_NAME.format(OP_NAME=op.name)
+    return OP_NAME.format(OP_VAR=op.name.replace(".", "_"), OP_NAME=op.name)
 
 
 def gen_schema_reg(_schema):
@@ -330,7 +330,7 @@ def gen_imperative_api(op):
     IMPERATIVE_API = """
 MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
 .set_body([](TVMArgs args, TVMRetValue* ret) {{
-  MNM_PRELUDE({OP_NAME}, {N_ARGS}, ffi2schema::{SCHEMA_NAME}, schema::{SCHEMA_NAME}Args);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE({OP_VAR}, {N_ARGS}, ffi2schema::{SCHEMA_NAME}, schema::{SCHEMA_NAME}Args);  // NOLINT(whitespace/line_length)
 {ARGS}
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -339,7 +339,6 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
     ARG = " " * 2 + """
   MNM_SET_ENV(vpack->x[{I}], schema2value::{NORM}(schema->{ARG_NAME}));
 """.strip()
-    op_name = op.name
     n_args = len(op.schema)
     schema_name = snake_to_pascal(op.schema_name)
     args = []
@@ -348,7 +347,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
         arg_name = entry.name
         args.append(ARG.format(I=i, NORM=norm, ARG_NAME=arg_name))
     args = "\n".join(map(add_no_lint, args))
-    return IMPERATIVE_API.format(OP_NAME=op_name,
+    return IMPERATIVE_API.format(OP_NAME=op.name,
+                                 OP_VAR=op.name.replace(".", "_"),
                                  SCHEMA_NAME=schema_name,
                                  N_ARGS=n_args,
                                  ARGS=args)
@@ -446,12 +446,11 @@ SYMBOLIC_API_EPILOG = """
 def gen_symbolic_api(op):
     SYMBOLIC_API = """
 MNM_REGISTER_GLOBAL("mnm.op.sym.{OP_NAME}")
-.set_body(MNM_SYMBOLIC_API({OP_NAME}, {N_ARGS}, {SCHEMA_NAME}));
+.set_body(MNM_SYMBOLIC_API({OP_VAR}, {N_ARGS}, {SCHEMA_NAME}));
 """.strip()
-    op_name = op.name
     n_args = len(op.schema)
     schema_name = snake_to_pascal(op.schema_name)
-    return SYMBOLIC_API.format(OP_NAME=op_name, N_ARGS=n_args, SCHEMA_NAME=schema_name)
+    return SYMBOLIC_API.format(OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), N_ARGS=n_args, SCHEMA_NAME=schema_name)
 
 
 # Part 3.1. Array<Value> to schema (for each schema)
@@ -605,12 +604,11 @@ F_MNM_SCHEMA_EPILOG = """
 
 def gen_f_mnm_schema(op):
     FMNMSchema = """
-MNM_BIND_SCHEMA("mnm.op.{OP_NAME}", names::{OP_NAME}, value2schema::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.{OP_NAME}", names::{OP_NAME}, schema_field_idx::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.{OP_NAME}", names::{OP_VAR}, value2schema::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.{OP_NAME}", names::{OP_VAR}, schema_field_idx::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
 """.strip()
-    op_name = op.name
     schema_name = snake_to_pascal(op.schema_name)
-    return FMNMSchema.format(OP_NAME=op_name, SCHEMA_NAME=schema_name)
+    return FMNMSchema.format(OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), SCHEMA_NAME=schema_name)
 
 
 def main(path="./src/op/regs/regs.cc"):

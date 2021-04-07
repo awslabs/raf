@@ -3,15 +3,9 @@
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
 # Defined in ./src/op/regs/regs.cc
-_alloc_storage = _APIS.get("mnm.op.imp._alloc_storage", None)
-# Defined in ./src/op/regs/regs.cc
-_alloc_tensor = _APIS.get("mnm.op.imp._alloc_tensor", None)
-# Defined in ./src/op/regs/regs.cc
 _allreduce = _APIS.get("mnm.op.imp._allreduce", None)
 # Defined in ./src/op/regs/regs.cc
 _contrib_dropout = _APIS.get("mnm.op.imp._contrib_dropout", None)
-# Defined in ./src/op/regs/regs.cc
-_invoke_op = _APIS.get("mnm.op.imp._invoke_op", None)
 # Defined in ./src/op/regs/regs.cc
 abs = _APIS.get("mnm.op.imp.abs", None)
 # Defined in ./src/op/regs/regs.cc

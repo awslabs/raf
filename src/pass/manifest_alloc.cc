@@ -91,7 +91,7 @@ class ManifestAllocMutator : public ExprMutator {
           outs.push_back(MakeStaticAllocation(&scope, out_types[i].as<TensorTypeNode>()));
         }
         auto invoke =
-            Call(Op::Get("mnm.op._invoke_op"),
+            Call(Op::Get("mnm.op.vm.invoke_op"),
                  Array<Expr>{scope.Push(node->op), Tuple(new_args), Tuple(Array<Expr>(outs))});
         scope.Push(invoke);
         return tvm::relay::ToTupleType(ret_type, outs);
@@ -131,7 +131,7 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr MakeAllocStorage(const Array<Expr>& args, int device_type, int device_id,
                         const tvm::runtime::DataType& dtype) {
-    static const Op& op = Op::Get("mnm.op._alloc_storage");
+    static const Op& op = Op::Get("mnm.op.vm.alloc_storage");
     Array<Expr> new_args = args;
     new_args.push_back(MakeConstant(ScalarValue::make(device_type)));
     new_args.push_back(MakeConstant(ScalarValue::make(device_id)));
@@ -141,7 +141,7 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr MakeAllocTensor(const Array<Expr>& args, const Expr& assert_shape,
                        const tvm::runtime::DataType& dtype) {
-    static const Op& op = Op::Get("mnm.op._alloc_tensor");
+    static const Op& op = Op::Get("mnm.op.vm.alloc_tensor");
     Array<Expr> new_args = args;
     new_args.push_back(MakeConstant(StringValue::make(DLDataType2String(dtype))));
     new_args.push_back(assert_shape);

@@ -28,7 +28,7 @@ Type AllocStorageInfer(const CallValues& value) {
   return TensorType::Scalar(dtype);
 }
 
-MNM_OP_TYPE("mnm.op._alloc_storage", "AllocStorage", AllocStorageInfer);
+MNM_OP_TYPE("mnm.op.vm.alloc_storage", "AllocStorage", AllocStorageInfer);
 
 Type AllocTensorInfer(const CallValues& value) {
   const auto* args = value->args.as<AllocTensorArgs>();
@@ -47,7 +47,7 @@ Type AllocTensorInfer(const CallValues& value) {
   return TensorType(out_shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op._alloc_tensor", "AllocTensor", AllocTensorInfer);
+MNM_OP_TYPE("mnm.op.vm.alloc_tensor", "AllocTensor", AllocTensorInfer);
 
 Type InvokeOpInfer(const CallValues& value) {
   // The return value of invoke op is implicitly written into the output tensor
@@ -55,7 +55,7 @@ Type InvokeOpInfer(const CallValues& value) {
   // return value is used.
   return TupleType::Empty();
 }
-MNM_OP_TYPE("mnm.op._invoke_op", "InvokeOp", InvokeOpInfer);
+MNM_OP_TYPE("mnm.op.vm.invoke_op", "InvokeOp", InvokeOpInfer);
 
 }  // namespace type
 }  // namespace op

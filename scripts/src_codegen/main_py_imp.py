@@ -25,7 +25,7 @@ __all__ = [
     ops = def_op.by_name()
     methods = "\n\n".join(gen_method(ops[name])
                         for name in sorted(ops.keys()))
-    op_names = "\n".join(map(lambda x: '    "' + '", "'.join(x) + '",',
+    op_names = "\n".join(map(lambda x: '    "' + '", "'.join([i.replace(".", "_") for i in x]) + '",',
                              split_chunks(sorted(ops.keys()), chunk_size=5)))
     return FILE.format(METHODS=methods, OP_NAMES=op_names)
 
@@ -33,15 +33,15 @@ __all__ = [
 def gen_method(op):
     METHOD = """
 @set_module("mnm")
-def {NAME}({PARAMS_W_DEFAULT}):
+def {FUNC_NAME}({PARAMS_W_DEFAULT}):
 {NORMS}
-    return imp_utils.ret(ffi.{NAME}({PARAMS_WO_DEFAULT}))
+    return imp_utils.ret(ffi.{OP_NAME}({PARAMS_WO_DEFAULT}))
 """.strip()
-    name = op.name
     norms = "\n".join(map(gen_norm, op.schema))
     param_w = gen_param_w_default(op.schema)
     param_wo = gen_param_wo_default(op.schema)
-    return METHOD.format(NAME=name,
+    return METHOD.format(FUNC_NAME=op.name.replace(".", "_"),
+                         OP_NAME=op.name,
                          NORMS=norms,
                          PARAMS_W_DEFAULT=param_w,
                          PARAMS_WO_DEFAULT=param_wo)
