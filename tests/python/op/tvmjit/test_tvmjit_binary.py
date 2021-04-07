@@ -137,5 +137,33 @@ def test_int_ops_with_grad(ops, shape, dtype, device):
     m_y.backward(m_dy)
     check(m_x1.grad, 0.)
 
+
+# pylint: disable=no-member
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=protected-access
+# pylint: disable=no-self-use
+# pylint: disable=too-many-locals
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("ops", [
+    (torch.ne, mnm._op.sym.not_equal),
+])
+@pytest.mark.parametrize("shape", [
+    [(), (1, 2)],
+    [(1, 2), (2, 1)],
+    [(3, 3), (1, 1)]
+])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_logic_ops(ops, shape, dtype, device):
+    t_op, m_op = ops
+    m_x1, t_x1 = randn_torch(shape[0], dtype=dtype, device=device)
+    m_x2, t_x2 = randn_torch(shape[1], dtype=dtype, device=device)
+    model = BinaryModel(m_op)
+    m_y = model(m_x1, m_x2)
+    v_y = run_vm_model(model, device, [m_x1, m_x2])
+    t_y = t_op(t_x1, t_x2)
+    check(m_y, t_y)
+    check(v_y, t_y)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -287,6 +287,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.not_equal", [](const CallValues& call) {
   const Value& x2 = args->x2;
   if (!args->out.defined() && !args->where.defined()) {
     MNM_BINARY_SCALAR(!=, x1, x2);
+    MNM_LOGICAL_BINARY_TENSOR(x1, x2);
   }
   LOG(FATAL) << "NotImplementedError";
   throw;
