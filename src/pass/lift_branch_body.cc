@@ -117,8 +117,12 @@ class BranchBodyLift : public MixedModeMutator {
 
 }  // namespace lift_branch_body
 
-ir::IRModule LiftBranchBody(ir::IRModule mod) {
-  return lift_branch_body::BranchBodyLift(mod).Lift();
+Pass LiftBranchBody() {
+  return CreateModulePass(
+      [=](IRModule mod, const PassContext& pass_ctx) {
+        return lift_branch_body::BranchBodyLift(mod).Lift();
+      },
+      0, "LiftBranchBody", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.LiftBranchBody").set_body_typed(LiftBranchBody);

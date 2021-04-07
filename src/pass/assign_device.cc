@@ -232,31 +232,16 @@ class DeviceAssigner : public ExprMutator {
 };
 }  // namespace assign_device
 
-ir::Expr AssignDevice(ir::Expr expr, std::string device) {
-  return assign_device::DeviceAssigner(device).Mutate(expr);
+Pass AssignDevice(std::string device) {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        auto assigner = assign_device::DeviceAssigner(device);
+        return Downcast<Function>(assigner.Mutate(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "AssignDevice", {});
 }
 
-// TODO - Cleanup when pass manager is introduced.
-ir::IRModule AssignDevice(ir::IRModule mod, std::string device) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  auto assigner = assign_device::DeviceAssigner(device);
-
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto func = tvm::runtime::Downcast<ir::Function>(assigner.Mutate(kv.second));
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
-}
-
-MNM_REGISTER_GLOBAL("mnm.pass_.AssignDevice")
-    .set_body_typed([](ir::IRModule mod, std::string device) { return AssignDevice(mod, device); });
+MNM_REGISTER_GLOBAL("mnm.pass_.AssignDevice").set_body_typed(AssignDevice);
 
 }  // namespace pass
 }  // namespace mnm

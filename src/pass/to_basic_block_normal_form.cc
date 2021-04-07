@@ -37,28 +37,16 @@ Expr ToBasicBlockNormalFormExpr(const Expr& expr) {
   return Fill::ToBasicBlockNormalForm(expr, dg, &scopes.first, &scopes.second);
 }
 
-IRModule ToBasicBlockNormalForm(IRModule m) {
-  tvm::Map<GlobalVar, BaseFunc> updates;
-  auto funcs = m->functions;
-  for (const auto& it : funcs) {
-    ICHECK_EQ(FreeVars(it.second).size(), 0);
-    if (const auto* n = it.second.as<FunctionNode>()) {
-      if (n->GetAttr<String>(tvm::relay::attr::kCompiler).defined()) continue;
-    }
-    Expr ret = TransformF([&](const Expr& e) { return ToBasicBlockNormalFormExpr(e); },
-                          Downcast<Function>(it.second));
-    ICHECK_EQ(FreeVars(ret).size(), 0)
-        << AsText(ret) << "should not has free vars: " << FreeVars(ret);
-    updates.Set(it.first, Downcast<Function>(ret));
-  }
-
-  for (auto pair : updates) {
-    m->Add(pair.first, pair.second, true);
-  }
-
-  DLOG(INFO) << "ToBBNF: transformed" << std::endl << m;
-
-  return m;
+Pass ToBasicBlockNormalForm() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        ICHECK_EQ(FreeVars(f).size(), 0);
+        Expr ret = TransformF([&](const Expr& e) { return ToBasicBlockNormalFormExpr(e); }, f);
+        ICHECK_EQ(FreeVars(ret).size(), 0)
+            << AsText(ret) << "should not has free vars: " << FreeVars(ret);
+        return Downcast<Function>(ret);
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "ToBasicBlockNormalForm", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.ToBasicBlockNormalForm").set_body_typed(ToBasicBlockNormalForm);

@@ -33,19 +33,21 @@ ir::IRModule AutoDiff(ir::IRModule mod, ir::Array<tvm::Bool> requires_grads = {}
 ir::Function AutoDataParallel(ir::Function func);
 ir::Expr FoldConstant(ir::Expr expr, ir::IRModule mod);
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
-ir::IRModule LambdaLift(ir::IRModule mod);
 /*!
- * \brief gradient operator input selection.
- * \param func The main Function.
- * \return Transformed Function.
+ * \brief A pass that lifts the lambda to the global scope.
+ * \return The created pass.
  */
-ir::Function GradInputSelect(ir::Function func);
+Pass LambdaLift();
 /*!
- * \brief Manifest memory allocation.
- * \param mod The IR module.
- * \return Transformed IR module.
+ * \brief A pass that is used for gradient operator input selection.
+ * \return The created pass.
  */
-ir::IRModule ManifestAlloc(ir::IRModule mod);
+Pass GradInputSelect();
+/*!
+ * \brief A pass that manifests memory allocation.
+ * \return The created pass.
+ */
+Pass ManifestAlloc();
 ir::Expr CanonicalizeOps(ir::Expr expr);
 /*!
  * \brief Create a type inference pass.
@@ -54,71 +56,51 @@ ir::Expr CanonicalizeOps(ir::Expr expr);
 Pass InferType();
 ir::Expr InferType(ir::Expr expr);
 /*!
- * \brief Fuse the operators in the expression.
- * \param expr Expression to be fused.
- * \param fuse_opt_level Optimization level. If it is 0, then no operators will be fused.
- * \return Transformed expression.
+ * \brief A pass that removes unnecessary memory allocation and perform inplace updates.
+ * \return The created pass.
  */
-ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level);
+Pass InplaceUpdate();
 
 /*!
- * \brief remove unnecessary memory allocation and perform inplace updates.
- * \param mod The IR module.
- * \return Transformed IR module.
- */
-ir::IRModule InplaceUpdate(ir::IRModule mod);
-
-/*!
- * \brief Wraps an expr with compiler_begin and compiler_end to indicate that
- * this expr should be handled by the external compiler.
- * \param expr Expression to be annotated.
+ * \brief Create a pass to wrap an expr with compiler_begin and compiler_end to indicate that this
+ * expr should be handled by the external compiler.
  * \param target he target backends for annotation.
- * \return Transformed Expression.
+ * \return The pass.
  */
-ir::Expr AnnotateTarget(ir::Expr expr, ir::Array<ir::String> target);
+Pass AnnotateTarget(ir::Array<ir::String> target);
 
 /*!
  * \brief After operators have been annotated with the targets that support
  * them, this pass creates regions of the operators for each target. It
  * is guaranteed that the regions will have a topological rodering so that
  * no data dependency issue exist.
- *
- * This pass only introduces annotations to indicate the regions.
- * partition_graph must subsequently be called to lift these regions out
- * as external functions.
- * \param expr Expression to be merged.
- * \return Transformed Expression.
+ * \return The created pass.
  */
-ir::Expr MergeCompilerRegions(ir::Expr expr);
+Pass MergeCompilerRegions();
 
 /*!
  * \brief Partition an input function into multiple functions according based
  * on the inserted annotation nodes (i.e. compiler_begin and compiler_end).
  * These nodes are used as boundaries to partition the Relay function into
  * multiple regions that can be offloaded to different accelerators/backends.
- *
- * Each of these paritioned functions, a.k.a regions, will be viewed as
- * external functions, and they will use the provided compiler for codegen.
- * \param expr Expression to be partition.
- * \return Parartioned Expression.
+ * \return The created pass.
  */
-ir::Expr PartitionGraph(ir::Expr expr);
+Pass PartitionGraph();
 
 /*!
- * \brief Cast input(s) of some operators in the expression.
- * \param expr Expression to be casted.
- * \return Transformed Expression.
+ * \brief A pass that casts input(s) of some operators in the expression.
+ * \return The created pass.
  */
-ir::Expr AutoCast(ir::Expr func);
+Pass AutoCast();
 
 /*!
- * \brief Inline the Let stmt that assigns a var to another and TupleGetItem that can be simplified.
- * \param expr Expression to be inlined.
- * \return Transformed Expression.
+ * \brief A pass that inlines the Let stmt that assigns a var to another and TupleGetItem that can
+ * be simplified.
+ * \return The created pass.
  */
-ir::Expr InlineLet(ir::Expr expr);
+Pass InlineLet();
 
-/*! \brief Remove expressions which does not effect the program result.
+/*! \brief A pass that removes expressions which does not effect the program result.
  *
  * It will remove let bindings which are not referenced.
  *
@@ -127,19 +109,15 @@ ir::Expr InlineLet(ir::Expr expr);
  *
  * As another example, `let a = 1 in a` will be optimized into 1.
  *
- * \param expr Expression to be transformed.
- *
- * \return Transformed Expression.
+ * \return The created pass.
  */
-ir::Expr DeadCodeElimination(const ir::Expr& expr);
+Pass DeadCodeElimination();
 
-/*! \brief Simplifies commonly seen patterns that can be removed at compile time.
- *
- * \param expr Expression to be transformed.
- *
- * \return Transformed Expression.
+/*!
+ * \brief A pass that simplifies commonly seen patterns that can be removed at compile time.
+ * \return The created pass.
  */
-ir::Expr SimplifyExpr(const ir::Expr& expr);
+Pass SimplifyExpr();
 
 /*! \brief Convert Relay IR to Meta IR.
  * \param obj tvm::IRModule or ir::Expr
@@ -148,11 +126,10 @@ ir::Expr SimplifyExpr(const ir::Expr& expr);
 tvm::ObjectRef FromRelay(tvm::ObjectRef obj);
 
 /*!
- * \brief inline backward function.
- * \param func The IR function.
- * \return inlined function.
+ * \brief A pass that inlines backward function.
+ * \return The created pass.
  */
-ir::Function InlineBackward(ir::Function func);
+Pass InlineBackward();
 
 /*!
  * \brief Substitute variables in expr
@@ -163,49 +140,47 @@ ir::Function InlineBackward(ir::Function func);
 ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map);
 
 /*!
- * \brief Convert A-normal form to dataflow graph.
- * \param expr The expression
- * \return Transformed expression
- */
-ir::Expr ToGraphNormalForm(ir::Expr expr);
-
-/*!
- * \brief Replace init and constant ops with the assigned device.
- * \param expr Expression to be mutated.
+ * \brief A pass that replaces init and constant ops with the assigned device.
  * \param device The target device.
- * \return Transformed expression.
+ * \return The created pass.
  */
-ir::Expr AssignDevice(ir::Expr expr, std::string device);
+Pass AssignDevice(std::string device);
 
 /*!
- * \brief Lifts if true and false branches to global functions.
- * \param mod The module to be mutated.
- * \return Transformed module.
+ * \brief A pass that lifts if true and false branches to global functions.
+ * \return The created pass.
  */
-ir::IRModule LiftBranchBody(ir::IRModule mod);
+Pass LiftBranchBody();
 
 /*!
- * \brief This is applied after Lambda lifting. Lambda lifting pass lifts the closures to global
- * scope, but the lifted global function still has the closure within. This makes AD harder. This
- * pass flattens the global functions that are marked Closure, and then changes the call sites
+ * \brief This pass is applied after Lambda lifting. Lambda lifting pass lifts the closures to
+ * global scope, but the lifted global function still has the closure within. This makes AD harder.
+ * This pass flattens the global functions that are marked Closure, and then changes the call sites
  * accordingly. This helps AD pass where it is difficult to handle closures.
- * \param mod The module to be mutated.
- * \return Transformed module.
+ * \return The created pass.
  */
-ir::IRModule FlattenClosure(ir::IRModule mod);
-
-// TODO - Cleanup after pass manager is introduced. These passes are Function passes.
-// Once pass manager is introduced, the pass manager can iterate over the functions.
-// For now, the overloaded functions are iterating over functions.
-ir::IRModule AssignDevice(ir::IRModule mod, std::string device);
-ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level);
-ir::IRModule InlineLet(ir::IRModule mod);
-ir::IRModule DeadCodeElimination(ir::IRModule mod);
-ir::IRModule SimplifyExpr(ir::IRModule mod);
-ir::IRModule ToGraphNormalForm(ir::IRModule mod);
-
+Pass FlattenClosure();
 /*!
- * \brief Turn a dataflow graph into Administrative Normal Form, or A-Normal Form (ANF).
+ * \brief Performs operator fusion.
+ * \param mod IRModule to be fused.
+ * \param fuse_opt_level The optimization level used to enable this pass.
+ * \return The transformed module.
+ *
+ */
+ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level);
+/*!
+ * \brief A pass that eliminates dead code.
+ * \return The created pass.
+ */
+Pass DeadCodeElimination();
+/*!
+ * \brief A pass that convert A-normal form to dataflow graph.
+ * \return The created pass.
+ */
+Pass ToGraphNormalForm();
+/*!
+ * \brief A pass that turns a dataflow graph into Administrative Normal Form, or A-Normal Form
+ * (ANF).
  *
  * It will turn an expression that is in a graph form (with sharing implicit),
  * to an expression with explicit sharing (A-Normal Form).
@@ -216,13 +191,16 @@ ir::IRModule ToGraphNormalForm(ir::IRModule mod);
  *
  * Values are ordered by post-DFS order in each scope.
  *
- * \param mod The input module.
- * \return Transformed module.
+ * \return The created pass.
  */
-ir::IRModule ToANormalForm(ir::IRModule mod);
+Pass ToANormalForm();
+
+TVM_DLL Pass CreateMNMFunctionPass(
+    const runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
+    int opt_level, String name, tvm::Array<String> required);
 
 /*!
- * \brief Turn an expression to Basic Block Normal Form.
+ * \brief A pass that turns an expression to Basic Block Normal Form.
  *
  * We define a block as a group of expressions implied by the scope structure.
  *
@@ -232,10 +210,9 @@ ir::IRModule ToANormalForm(ir::IRModule mod);
  * by a Var which is defined in a block, whose scope is the least common ancestor
  * of blocks this value is used.
  *
- * \param mod The input module
- * \return Transformed module.
+ * \return The created pass.
  */
-ir::IRModule ToBasicBlockNormalForm(ir::IRModule mod);
+Pass ToBasicBlockNormalForm();
 
 }  // namespace pass
 }  // namespace mnm

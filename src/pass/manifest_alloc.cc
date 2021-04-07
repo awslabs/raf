@@ -169,13 +169,12 @@ class ManifestAllocMutator : public ExprMutator {
 
 }  // namespace manifest_alloc
 
-ir::IRModule ManifestAlloc(ir::IRModule mod) {
-  tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
-  for (auto& kv : mod->functions) {
-    functions.Set(kv.first, tvm::Downcast<ir::Function>(
-                                manifest_alloc::ManifestAllocMutator().Mutate(kv.second)));
-  }
-  return ir::IRModule(functions);
+Pass ManifestAlloc() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<ir::Function>(manifest_alloc::ManifestAllocMutator().Mutate(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "ManifestAlloc", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.ManifestAlloc").set_body_typed(ManifestAlloc);

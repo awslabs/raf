@@ -87,9 +87,8 @@ def test_conv2d():
     mod_before = InferType()(mod_before)
     mod_before = AutoDiff(mod_before, record.requires_grads)
     mod_before = InferType()(mod_before)
-    func_before = mod_before['main']
-    func_after = GradientInputSelection(func_before)
-    func_after = run_infer_type(func_after)
+    mod = GradientInputSelection()(mod_before)
+    func_after = InferType()(mod)["main"]
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(func_after, func_expected)

@@ -3,6 +3,8 @@
  * \file auto_cast.cc
  * \brief AutoCast pass
  */
+#include <tvm/ir/transform.h>
+
 #include <stack>
 #include "mnm/op.h"
 #include "mnm/ir.h"
@@ -176,10 +178,13 @@ Expr InsertCast(const Expr& expr) {
 }
 }  // namespace auto_cast
 
-ir::Expr AutoCast(ir::Expr func) {
-  auto f = auto_cast::InsertCast(func);
-  f = InferType(f);
-  return f;
+Pass AutoCast() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(auto_cast::InsertCast(f));
+      };
+  auto insert_cast = CreateMNMFunctionPass(pass_func, 0, "AutoCastFunc", {});
+  return MNMSequential({insert_cast, InferType()}, "AutoCast");
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoCast").set_body_typed(AutoCast);

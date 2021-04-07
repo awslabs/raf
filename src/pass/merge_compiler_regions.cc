@@ -12,6 +12,7 @@
  */
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "./common.h"
 #include "../op/schema/annotation.h"
 
@@ -77,8 +78,12 @@ Expr MergeCompilerRegions(const Expr& expr) {
 
 }  // namespace merge_compiler_regions
 
-ir::Expr MergeCompilerRegions(ir::Expr expr) {
-  return merge_compiler_regions::MergeCompilerRegions(expr);
+Pass MergeCompilerRegions() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(merge_compiler_regions::MergeCompilerRegions(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "MergeCompilerRegions", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.MergeCompilerRegions").set_body_typed(MergeCompilerRegions);

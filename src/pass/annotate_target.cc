@@ -3,13 +3,21 @@
  * \file annotate_target.cc
  * \brief Annotate Target
  */
+#include <tvm/ir/transform.h>
+#include <tvm/relay/transform.h>
+
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "./common.h"
 #include "../op/schema/annotation.h"
 
 namespace mnm {
 namespace pass {
+
+using namespace tvm::transform;
+using namespace tvm::relay::transform;
+
 namespace annotate_target {
 
 using namespace mnm::ir;
@@ -171,8 +179,12 @@ Expr AnnotateTarget(const Expr& expr, const Array<String>& targets) {
 
 }  // namespace annotate_target
 
-ir::Expr AnnotateTarget(ir::Expr expr, ir::Array<ir::String> targets) {
-  return annotate_target::AnnotateTarget(expr, targets);
+Pass AnnotateTarget(Array<runtime::String> targets) {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(annotate_target::AnnotateTarget(f, targets));
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "AnnotateTargetFunc", {"mnm.pass_.InferType"});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AnnotateTarget").set_body_typed(AnnotateTarget);

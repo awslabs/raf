@@ -69,32 +69,15 @@ class LetInliner : public ExprMutator {
 
 }  // namespace inline_let
 
-ir::Expr InlineLet(ir::Expr expr) {
-  return inline_let::LetInliner().VisitExpr(expr);
+Pass InlineLet() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(inline_let::LetInliner().VisitExpr(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "InlineLet", {});
 }
 
-// TODO - Cleanup when pass manager is introduced.
-ir::IRModule InlineLet(ir::IRModule mod) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  auto inliner = inline_let::LetInliner();
-
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto func = tvm::runtime::Downcast<ir::Function>(inliner.Mutate(kv.second));
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
-}
-
-MNM_REGISTER_GLOBAL("mnm.pass_.InlineLet").set_body_typed([](ir::IRModule mod) {
-  return InlineLet(mod);
-});
+MNM_REGISTER_GLOBAL("mnm.pass_.InlineLet").set_body_typed(InlineLet);
 
 }  // namespace pass
 }  // namespace mnm

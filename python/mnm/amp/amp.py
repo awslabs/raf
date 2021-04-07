@@ -18,7 +18,7 @@ def autocast(model):
     assert model._Cacher__cache.keys() != 0, \
            "Please run model or run function `get_relay_func` once."
     mod = model._internal().mod
-    mod['main'] = AutoCast(mod['main'])
+    mod = AutoCast()(mod)
     return FrameworkModel(mod, mod, model.state(), dict())
 
 

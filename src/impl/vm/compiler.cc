@@ -674,8 +674,8 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
   With<tvm::Target> tctx((*it).second);
-  m = pass::ManifestAlloc(m);
-  return pass::InplaceUpdate(m);
+  m = pass::ManifestAlloc()(m);
+  return pass::InplaceUpdate()(m);
 }
 
 void VMCompiler::PopulateGlobalMap() {

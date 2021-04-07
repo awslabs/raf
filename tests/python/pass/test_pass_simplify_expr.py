@@ -18,7 +18,7 @@ def test_basic():
     mod = InferType()(mod)
     mod = AutoDiff(mod, [])
     mod = InferType()(mod)
-    mod = SimplifyExpr(mod)
+    mod = SimplifyExpr()(mod)
 
 
     # Ensure that there is only one sum operator

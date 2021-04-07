@@ -26,8 +26,8 @@ def test_closure():
     tvm_mod = get_mod()
     mod = FromRelay(tvm_mod)
     assert len(mod.get_global_vars()) == 1
-    mod = LambdaLift(mod)
-    mod = FlattenClosure(mod)
+    mod = LambdaLift()(mod)
+    mod = FlattenClosure()(mod)
     assert len(mod.get_global_vars()) == 2
     # Check that function body are not closures
     for gvar in mod.get_global_vars():
@@ -84,13 +84,13 @@ def test_while_loop():
     tvm_mod = get_recursive_mod()
     mod = FromRelay(tvm_mod)
     assert len(mod.get_global_vars()) == 1
-    mod = LambdaLift(mod)
-    mod = FlattenClosure(mod)
+    mod = LambdaLift()(mod)
+    mod = FlattenClosure()(mod)
     # Check that function body are not closures
     assert len(mod.get_global_vars()) == 2
     for gvar in mod.get_global_vars():
         assert isinstance(mod[gvar].body, tvm.relay.Let)
-    mod = LiftBranchBody(mod)
+    mod = LiftBranchBody()(mod)
     # If else will be lifted
     assert len(mod.get_global_vars()) == 4
 

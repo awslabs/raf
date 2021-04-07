@@ -6,6 +6,7 @@
 #include <sstream>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include <string>
 #include <vector>
 
@@ -59,9 +60,14 @@ class GradientOp : public ExprMutator {
 
 }  // namespace arg_select
 
-ir::Expr GradInputSelect(ir::Expr func) {
-  return arg_select::GradientOp().VisitExpr(func);
+Pass GradInputSelect() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(arg_select::GradientOp().VisitExpr(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "GradientInputSelection", {});
 }
+
 MNM_REGISTER_GLOBAL("mnm.pass_.GradientInputSelection").set_body_typed(GradInputSelect);
 
 }  // namespace pass

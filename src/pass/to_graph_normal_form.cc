@@ -90,33 +90,15 @@ class GNFConverter : public MixedModeMutator {
 };
 }  // namespace to_graph_normal_form
 
-ir::Expr ToGraphNormalForm(ir::Expr expr) {
-  return to_graph_normal_form::GNFConverter().Mutate(expr);
+Pass ToGraphNormalForm() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(to_graph_normal_form::GNFConverter().Mutate(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "ToGraphNormalForm", {});
 }
 
-// TODO - Cleanup when pass manager is introduced.
-ir::IRModule ToGraphNormalForm(ir::IRModule mod) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  auto converter = to_graph_normal_form::GNFConverter();
-
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto expr = converter.Mutate(kv.second);
-      auto func = tvm::runtime::Downcast<ir::Function>(expr);
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
-}
-
-MNM_REGISTER_GLOBAL("mnm.pass_.ToGraphNormalForm").set_body_typed([](ir::IRModule mod) {
-  return ToGraphNormalForm(mod);
-});
+MNM_REGISTER_GLOBAL("mnm.pass_.ToGraphNormalForm").set_body_typed(ToGraphNormalForm);
 
 }  // namespace pass
 }  // namespace mnm

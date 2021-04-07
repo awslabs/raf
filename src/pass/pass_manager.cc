@@ -86,8 +86,13 @@ const MNMSequentialNode* MNMSequential::operator->() const {
 }
 
 inline Pass GetPass(const String& pass_name) {
-  const runtime::PackedFunc* f = tvm::runtime::Registry::Get("mnm.pass_." + pass_name);
-  ICHECK(f != nullptr) << "Cannot use " << pass_name << "to create the pass";
+  const runtime::PackedFunc* f;
+  if (pass_name.operator std::string().find("mnm.pass_.") != std::string::npos) {
+    f = runtime::Registry::Get(pass_name);
+  } else {
+    f = runtime::Registry::Get("mnm.pass_." + pass_name);
+  }
+  ICHECK(f != nullptr) << "Cannot use " << pass_name << " to create the pass";
   return (*f)();
 }
 
@@ -109,6 +114,149 @@ IRModule MNMSequentialNode::operator()(IRModule mod, const PassContext& pass_ctx
 }
 
 MNM_REGISTER_OBJECT_REFLECT(MNMSequentialNode);
+
+class MNMFunctionPass;
+
+/*!
+ * \brief Function-level passes are used to implement various global
+ * optimizations for a given IRModule. It fetches one function at a time
+ * from the function list in the module for optimization.
+ *
+ * Note that the scope of passes at this level is a Meta function. Therefore,
+ * we cannot add or delete a function through these passes as they are not aware
+ * of the global information.
+ */
+class MNMFunctionPassNode : public PassNode {
+ public:
+  /* \brief The pass meta data.*/
+  PassInfo pass_info;
+
+  /*! \brief The packed pass function sketches the real optimization. For
+   * instance, we can implement a pass that works on a Meta function as a
+   * `pass_func` and let it run on a given module. The same `pass_func` will
+   * then be applied on each function in the module.
+   */
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func;
+
+  MNMFunctionPassNode() = default;
+
+  void VisitAttrs(tvm::AttrVisitor* v) {
+    v->Visit("pass_info", &pass_info);
+  }
+
+  /*!
+   * \brief Run a function pass on given pass context.
+   *
+   * \param mod The module that an optimization pass is applied on.
+   * \param mod The context that an optimization pass executes on.
+   *
+   * \return Return the updated module.
+   */
+  IRModule operator()(IRModule mod, const PassContext& pass_ctx) const final;
+
+  /*!
+   * \brief Get the pass information/meta data.
+   */
+  PassInfo Info() const override {
+    return pass_info;
+  }
+
+  static constexpr const char* _type_key = "mnm.pass_.MNMFunctionPass";
+  MNM_FINAL_OBJECT(MNMFunctionPassNode, PassNode);
+
+ private:
+  /*
+   * \brief Check if a function should be skipped for optimization.
+   *
+   * \param func The target function to be checked.
+   *
+   * \return Return true if the function will be skipped, otherwise false.
+   */
+  bool SkipFunction(const Function& func) const;
+};
+
+class MNMFunctionPass : public Pass {
+ public:
+  /*!
+   * \brief The constructor
+   * \param pass_func The packed function which implements a pass.
+   * \param pass_info The pass info.
+   */
+  MNMFunctionPass(runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
+                  PassInfo pass_info);
+
+  MNM_OBJECT_REF(MNMFunctionPass, Pass, MNMFunctionPassNode);
+};
+
+MNMFunctionPass::MNMFunctionPass(
+    runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
+    PassInfo pass_info) {
+  auto n = make_object<MNMFunctionPassNode>();
+  n->pass_func = std::move(pass_func);
+  n->pass_info = std::move(pass_info);
+  data_ = std::move(n);
+}
+
+// Perform Module -> Module optimizations at the Function level.
+IRModule MNMFunctionPassNode::operator()(IRModule mod, const PassContext& pass_ctx) const {
+  const PassInfo& pass_info = Info();
+
+  ICHECK(mod.defined());
+
+  DLOG(INFO) << "Executing function pass : " << pass_info->name
+             << " with opt level: " << pass_info->opt_level;
+
+  pass_ctx.Trace(mod, pass_info, true);
+
+  // Execute the pass function and return a new module.
+  IRModule updated_mod =
+      IRModule(mod->functions, mod->type_definitions, mod->Imports(), mod->source_map);
+
+  std::vector<std::pair<GlobalVar, Function>> updates;
+  for (const auto& it : updated_mod->functions) {
+    // only picks up relay::Function
+    if (auto* n = it.second.as<FunctionNode>()) {
+      Function func = GetRef<Function>(n);
+      auto updated_func = SkipFunction(func) ? func : pass_func(func, updated_mod, pass_ctx);
+      updates.push_back({it.first, updated_func});
+    }
+  }
+
+  for (const auto& pair : updates) {
+    updated_mod->Add(pair.first, pair.second, true);
+  }
+
+  pass_ctx.Trace(updated_mod, pass_info, false);
+
+  return updated_mod;
+}
+
+bool MNMFunctionPassNode::SkipFunction(const Function& func) const {
+  return (func->GetAttr<String>(tvm::relay::attr::kCompiler).defined()) ||
+         func->GetAttr<Integer>(tvm::relay::attr::kSkipOptimization, 0) != 0;
+}
+
+Pass CreateMNMFunctionPass(
+    const runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
+    int opt_level, String name, tvm::Array<String> required) {
+  PassInfo pass_info = PassInfo(opt_level, name, required);
+  return MNMFunctionPass(pass_func, pass_info);
+}
+
+TVM_REGISTER_NODE_TYPE(MNMFunctionPassNode);
+
+TVM_REGISTER_GLOBAL("mnm.pass_.MakeMNMFunctionPass")
+    .set_body_typed(
+        [](runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
+           PassInfo pass_info) { return MNMFunctionPass(pass_func, pass_info); });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<MNMFunctionPassNode>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const MNMFunctionPassNode*>(ref.get());
+      const PassInfo info = node->Info();
+      p->stream << "Run Function pass: " << info->name << " at the optimization level "
+                << info->opt_level;
+    });
 
 MNM_REGISTER_GLOBAL("mnm.pass_.MNMSequential").set_body([](TVMArgs args, TVMRetValue* ret) {
   tvm::Array<Pass> passes = args[0];

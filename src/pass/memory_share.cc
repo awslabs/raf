@@ -6,6 +6,7 @@
 #include <vector>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "./let_list.h"
 #include "./common.h"
@@ -742,18 +743,12 @@ Var LivenessAnalyzer::CreateTensorVar(const Type& type) {
 
 }  // namespace memory_share
 
-/*!
- * \brief remove invalid memory sharing in func.
- * \param func the function to be analyzed
- * \return the function with invalid memory sharing removed
- */
-ir::IRModule MemShare(ir::IRModule mod) {
-  tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
-  for (auto& kv : mod->functions) {
-    functions.Set(kv.first,
-                  memory_share::LivenessAnalyzer(Downcast<ir::Function>(kv.second)).Run());
-  }
-  return ir::IRModule(functions);
+Pass MemShare() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return memory_share::LivenessAnalyzer(f).Run();
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "MemShare", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.MemShare").set_body_typed(MemShare);

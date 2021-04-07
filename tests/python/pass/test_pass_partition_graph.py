@@ -2,14 +2,18 @@
 import pytest
 import numpy as np
 import mnm
-from mnm._ffi.pass_ import AnnotateTarget, MergeCompilerRegions, PartitionGraph
+from mnm.ir import MNMSequential
+from mnm._ffi.pass_ import AnnotateTarget, MergeCompilerRegions
+from mnm._ffi.pass_ import PartitionGraph, InferType
 from mnm._core.ir_ext import extended_var
 from mnm._lib import tvm
 from mnm._lib import relay as _relay
+from mnm._core.module import IRModule
 
 
 def test_diamond():
     # pylint: disable=no-self-use, redefined-builtin, too-many-locals, invalid-name, unused-variable
+    # pylint: disable=too-many-statements
     target = "test_diamond"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
@@ -63,7 +67,7 @@ def test_diamond():
         test_diamond_0_1 = extended_var("test_diamond_0_1")
         test_diamond_0_outs = extended_var("test_diamond_0_outs")
         test_diamond_0_ret = extended_var("test_diamond_0_ret")
-        const = _relay.Constant(tvm.nd.array(-114514))
+        const = mnm.ir.const(0)
         relu = _relay.op.get("mnm.op.relu")
         abs = _relay.op.get("mnm.op.abs")
         tanh = _relay.op.get("mnm.op.tanh")
@@ -91,16 +95,20 @@ def test_diamond():
         body = _relay.Let(a1, func1_tgi_0, body)
         body = _relay.Let(test_diamond_0_ret, func1_call, body)
         func = _relay.Function([x], body)
-        return func
+        return IRModule.from_expr(func)
 
     # annotate ir and merge compiler regions
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).mod['main']
-    func = AnnotateTarget(func, [target])
-    func = MergeCompilerRegions(func)
-    func = PartitionGraph(func)
-    expected_func = expected()
+    mod = model._internal(x).mod
+    seq = MNMSequential([AnnotateTarget([target]),
+                         MergeCompilerRegions(), PartitionGraph(), InferType()])
+    mod = seq(mod)
+    func = mod["main"]
+    expected_mod = expected()
+    expected_mod = InferType()(expected_mod)
+    expected_func = expected_mod["main"]
+
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)
 
@@ -183,7 +191,7 @@ def test_tuple():
         test_tuple2_0_2 = extended_var("test_tuple2_0_2")
         test_tuple2_0_outs = extended_var("test_tuple2_0_outs")
         test_tuple2_0_ret = extended_var("test_tuple2_0_ret")
-        const = _relay.Constant(tvm.nd.array(-114514))
+        const = mnm.ir.const(0)
         relu = _relay.op.get("mnm.op.relu")
         abs = _relay.op.get("mnm.op.abs")
         tanh = _relay.op.get("mnm.op.tanh")
@@ -232,16 +240,19 @@ def test_tuple():
         body = _relay.Let(a1, func1_tgi_0, body)
         body = _relay.Let(test_tuple1_0_ret, func1_call, body)
         func = _relay.Function([x], body)
-        return func
+        return IRModule.from_expr(func)
 
     # annotate ir and merge compiler regions
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).mod['main']
-    func = AnnotateTarget(func, [target1, target2])
-    func = MergeCompilerRegions(func)
-    func = PartitionGraph(func)
-    expected_func = expected()
+    mod = model._internal(x).mod
+    seq = MNMSequential([AnnotateTarget([target1, target2]),
+                         MergeCompilerRegions(), PartitionGraph(), InferType()])
+    mod = seq(mod)
+    func = mod["main"]
+    expected_mod = expected()
+    expected_mod = InferType()(expected_mod)
+    expected_func = expected_mod["main"]
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)
 

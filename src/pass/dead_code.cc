@@ -27,26 +27,16 @@ ir::Expr DeadCodeElimination(const ir::Expr& expr) {
   return tvm::relay::DeadCodeElimination(expr, false);
 }
 
-// TODO - Cleanup when pass manager is introduced.
-ir::IRModule DeadCodeElimination(const ir::IRModule mod) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto expr = tvm::relay::DeadCodeElimination(kv.second, false);
-      auto func = tvm::runtime::Downcast<ir::Function>(expr);
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
+Pass DeadCodeElimination() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(DeadCodeElimination(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "DeadCodeElimination", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.DeadCodeElimination").set_body_typed([](ir::IRModule mod) {
-  return DeadCodeElimination(mod);
+MNM_REGISTER_GLOBAL("mnm.pass_.DeadCodeElimination").set_body_typed([]() {
+  return DeadCodeElimination();
 });
 
 }  // namespace pass

@@ -64,12 +64,13 @@ def with_autodiff(model):
             record = self.model._internal(*args)
             dy = calc_dy(dy, record)
             mod = record.mod
+            # TODO(zhiics) Move to MNMSequential when AutoDiff is ported.
             mod = InferType()(mod)
             mod = AutoDiff(mod, record.requires_grads)
             mod = InferType()(mod)
-            mod = SimplifyExpr(mod)
-            mod = DeadCodeElimination(mod)
-            mod['main'] = InlineBackward(mod['main'])
+            mod = SimplifyExpr()(mod)
+            mod = DeadCodeElimination()(mod)
+            mod = InlineBackward()(mod)
             inputs = _get_func_inputs(record, args, {})
             inputs = inputs + [get_symbol_handle(dy)]
             out = inline(mod['main'], inputs)

@@ -213,8 +213,12 @@ class LambdaLifter : public ExprMutator {
 
 }  // namespace lambda_lift
 
-ir::IRModule LambdaLift(ir::IRModule mod) {
-  return lambda_lift::LambdaLifter(mod).Lift();
+Pass LambdaLift() {
+  return CreateModulePass(
+      [=](IRModule mod, const PassContext& pass_ctx) {
+        return lambda_lift::LambdaLifter(mod).Lift();
+      },
+      0, "LambdaLift", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.LambdaLift").set_body_typed(LambdaLift);

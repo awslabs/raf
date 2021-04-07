@@ -137,13 +137,12 @@ class InplaceRewriter : public ExprMutator {
 
 }  // namespace inplace_update
 
-ir::IRModule InplaceUpdate(ir::IRModule mod) {
-  tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
-  for (auto& kv : mod->functions) {
-    functions.Set(kv.first, tvm::Downcast<Function>(
-                                inplace_update::InplaceRewriter()(Downcast<Function>(kv.second))));
-  }
-  return ir::IRModule(functions);
+Pass InplaceUpdate() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(inplace_update::InplaceRewriter()(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InplaceUpdate").set_body_typed(InplaceUpdate);

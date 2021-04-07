@@ -24,8 +24,8 @@ def test_simple():
     m_x, _ = randn((10, 20), device="cpu")
     mod = model._internal(m_x).mod
     func_before = run_infer_type(mod)["main"]
-    mod = mnm._ffi.pass_.ToGraphNormalForm(mod)
-    mod = mnm._ffi.pass_.ToANormalForm(mod)
+    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = mnm._ffi.pass_.ToANormalForm()(mod)
     func_after = run_infer_type(mod)["main"]
     assert tvm.ir.structural_equal(func_after, func_before)
 
@@ -58,8 +58,8 @@ def test_conv2d():
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
     func_before = run_infer_type(mod)["main"]
-    mod = mnm._ffi.pass_.ToGraphNormalForm(mod)
-    mod = mnm._ffi.pass_.ToANormalForm(mod)
+    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = mnm._ffi.pass_.ToANormalForm()(mod)
     func_after = run_infer_type(mod)["main"]
     assert tvm.ir.structural_equal(func_after, func_before)
 
@@ -80,8 +80,8 @@ def test_tuple():
     m_y, _ = randn((10, 1))
     mod = model._internal(m_x, m_y).mod
     func_before = run_infer_type(mod)["main"]
-    mod = mnm._ffi.pass_.ToGraphNormalForm(mod)
-    mod = mnm._ffi.pass_.ToANormalForm(mod)
+    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = mnm._ffi.pass_.ToANormalForm()(mod)
     func_after = run_infer_type(mod)["main"]
     assert tvm.ir.structural_equal(func_after, func_before)
 
@@ -103,8 +103,8 @@ def test_diamond():
     m_y, _ = randn((10, 1))
     mod = model._internal(m_x, m_y).mod
     func_before = run_infer_type(mod)["main"]
-    mod = mnm._ffi.pass_.ToGraphNormalForm(mod)
-    mod = mnm._ffi.pass_.ToANormalForm(mod)
+    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = mnm._ffi.pass_.ToANormalForm()(mod)
     func_after = run_infer_type(mod)["main"]
     assert tvm.ir.structural_equal(func_after, func_before)
 

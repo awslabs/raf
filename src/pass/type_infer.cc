@@ -109,8 +109,6 @@ class TypeInferencer : public ExprMutator {
       }
     }
     if (const FunctionNode* fn = call->op.as<FunctionNode>()) {
-      CHECK(fn->HasNonzeroAttr(tvm::relay::attr::kPrimitive))
-          << "A primitive function is expected in " << call->op;
       CHECK_EQ(call->args.size(), fn->params.size());
       for (size_t n = call->args.size(), i = 0; i < n; ++i) {
         Expr arg = VisitExpr(call->args[i]);
@@ -509,7 +507,6 @@ ir::Expr InferType(ir::Expr func) {
 }
 
 Pass InferType() {
-  auto pass_info = PassInfo(0, "InferType", {});
   return CreateModulePass(
       [=](IRModule mod, const PassContext& pass_ctx) {
         DLOG(INFO) << "pass::InferType";

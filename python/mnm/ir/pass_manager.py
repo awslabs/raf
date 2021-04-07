@@ -6,6 +6,7 @@ from tvm.ir.transform import Pass
 from mnm._core.core_utils import register_node
 from mnm._ffi import pass_
 
+
 @register_node("mnm.pass_.MNMSequential")
 class MNMSequential(Pass):
     """A pass that works on a sequence of pass objects. Multiple passes can be
@@ -45,3 +46,9 @@ class MNMSequential(Pass):
         self.__init_handle_by_constructor__(
             pass_.MNMSequential, passes, opt_level, name, required
         )
+
+
+@register_node("mnm.pass_.MNMFunctionPass")
+class MNMFunctionPass(Pass):
+    """A pass that works on each tvm.relay.Function in a module.
+    """

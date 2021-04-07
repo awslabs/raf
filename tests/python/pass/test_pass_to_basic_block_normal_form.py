@@ -40,8 +40,8 @@ def test_no_bind_tuple():
     m_x, _ = randn((10, 20))
     m_y, _ = randn((10, 1))
     mod = model._internal(m_x, m_y).mod
-    mod_after = mnm._ffi.pass_.ToGraphNormalForm(mod)
-    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm(mod_after)
+    mod_after = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod_after)
     func_after = run_infer_type(mod_after)["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
@@ -75,7 +75,7 @@ def test_no_bind_diamond():
     m_x, _ = randn((10, 20))
     m_y, _ = randn((10, 1))
     mod = model._internal(m_x, m_y).mod
-    func_after = run_infer_type(mnm._ffi.pass_.ToGraphNormalForm(mod))["main"]
+    func_after = run_infer_type(mnm._ffi.pass_.ToGraphNormalForm()(mod))["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
     relay.analysis.check_basic_block_normal_form(func_after)
@@ -127,7 +127,7 @@ def test_if():
     func = if_expr(x)
     mod = mnm.ir.IRModule()
     mod["main"] = func
-    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm(mod)
+    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
     func_after = run_infer_type(mod_after)["main"]
     func_expected = run_infer_type(expected(x))
     assert tvm.ir.structural_equal(func_after, func_expected)
@@ -209,7 +209,7 @@ def test_top_level_nested_if():
     func = nested_if()
     mod = mnm.ir.IRModule()
     mod["main"] = func
-    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm(mod)
+    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
     func_after = run_infer_type(mod_after)["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
@@ -281,7 +281,7 @@ def test_nested_if():
     func = nested_if()
     mod = mnm.ir.IRModule()
     mod["main"] = func
-    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm(mod)
+    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
     func_after = run_infer_type(mod_after)["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)

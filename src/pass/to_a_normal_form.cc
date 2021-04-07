@@ -169,7 +169,7 @@ Expr ToANormalFormExpr(const Expr& expr) {
   return Fill::ToANormalForm(expr, dg, &scopes.first);
 }
 
-IRModule ToANormalForm(IRModule m) {
+IRModule ToANormalFormAux(IRModule m) {
   tvm::Map<GlobalVar, BaseFunc> updates;
   auto funcs = m->functions;
   for (const auto& it : funcs) {
@@ -191,6 +191,12 @@ IRModule ToANormalForm(IRModule m) {
   DLOG(INFO) << "ToANF: transformed" << std::endl << m;
 
   return m;
+}
+
+Pass ToANormalForm() {
+  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =
+      [=](IRModule m, PassContext pc) { return ToANormalFormAux(m); };
+  return CreateModulePass(pass_func, 1, "ToANormalForm", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.ToANormalForm").set_body_typed(ToANormalForm);

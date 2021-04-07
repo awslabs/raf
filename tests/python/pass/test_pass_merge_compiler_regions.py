@@ -87,10 +87,9 @@ def test_single_input_output_merge():
     # annotate ir and merge compiler regions
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).mod['main']
-    func = AnnotateTarget(func, [target])
-    func = MergeCompilerRegions(func)
-    print(func)
+    mod = model._internal(x).mod
+    mod = AnnotateTarget([target])(mod)
+    func = MergeCompilerRegions()(mod)['main']
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)
@@ -198,9 +197,9 @@ def test_diamond_merge():
     # annotate ir and merge compiler regions
     model = MergeableModel()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).mod['main']
-    func = AnnotateTarget(func, [target])
-    func = MergeCompilerRegions(func)
+    mod = model._internal(x).mod
+    mod = AnnotateTarget([target])(mod)
+    func = MergeCompilerRegions()(mod)['main']
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)
@@ -289,9 +288,9 @@ def test_tuple_merge():
     # annotate ir and merge compiler regions
     model = MergeableModel()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).mod['main']
-    func = AnnotateTarget(func, [target])
-    func = MergeCompilerRegions(func)
+    mod = model._internal(x).mod
+    mod = AnnotateTarget([target])(mod)
+    func = MergeCompilerRegions()(mod)['main']
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)

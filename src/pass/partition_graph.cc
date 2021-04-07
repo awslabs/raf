@@ -11,6 +11,7 @@
  */
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "./common.h"
 #include "../op/schema/annotation.h"
 #include <tvm/ir/function.h>
@@ -337,8 +338,12 @@ Expr PartitionGraph(const Expr& expr) {
 
 }  // namespace partition_graph
 
-ir::Expr PartitionGraph(ir::Expr expr) {
-  return partition_graph::PartitionGraph(expr);
+Pass PartitionGraph() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(partition_graph::PartitionGraph(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "PartitionGraph", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.PartitionGraph").set_body_typed(PartitionGraph);

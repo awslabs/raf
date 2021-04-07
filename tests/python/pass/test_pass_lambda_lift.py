@@ -34,7 +34,7 @@ def test_basic(device, shape):
     mod = AutoDiff(mod, record.requires_grads)
 
     # Call Lambda lift pass on the Meta module
-    lifted_mod = LambdaLift(mod)
+    lifted_mod = LambdaLift()(mod)
 
     assert len(lifted_mod.functions) == 2
 
@@ -89,11 +89,11 @@ def test_while_loop():
     mod = FromRelay(tvm_mod)
     assert len(mod.get_global_vars()) == 1
     try:
-        mod = LiftBranchBody(mod)
+        mod = LiftBranchBody()(mod)
         assert False, "LiftBranchBody pass should have failed"
     except: # pylint: disable=bare-except
-        mod = LambdaLift(mod)
-        mod = LiftBranchBody(mod)
+        mod = LambdaLift()(mod)
+        mod = LiftBranchBody()(mod)
     assert len(mod.get_global_vars()) == 4
 
 

@@ -91,31 +91,15 @@ class ExprSimplifier : public ExprMutator {
 };
 }  // namespace simplify_expr
 
-ir::Expr SimplifyExpr(const ir::Expr& expr) {
-  return simplify_expr::ExprSimplifier().Simplify(expr);
+Pass SimplifyExpr() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(simplify_expr::ExprSimplifier().Simplify(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "SimplifyExpr", {});
 }
 
-// TODO - Cleanup when pass manager is introduced.
-ir::IRModule SimplifyExpr(const ir::IRModule mod) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto expr = SimplifyExpr(kv.second);
-      auto func = tvm::runtime::Downcast<ir::Function>(expr);
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
-}
-
-MNM_REGISTER_GLOBAL("mnm.pass_.SimplifyExpr").set_body_typed([](ir::IRModule mod) {
-  return SimplifyExpr(mod);
-});
+MNM_REGISTER_GLOBAL("mnm.pass_.SimplifyExpr").set_body_typed(SimplifyExpr);
 
 }  // namespace pass
 }  // namespace mnm

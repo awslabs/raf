@@ -86,12 +86,11 @@ def test_multiple_ends():
     # annotate the ir with annotate_target pass
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x).mod['main']
-    func = AnnotateTarget(func, ["test"])
+    mod = model._internal(x).mod
+    mod = AnnotateTarget(["test"])(mod)
     expected_func = expected()
-    print(expected_func)
     # check the structure of the expected ir and generated ir
-    assert tvm.ir.structural_equal(func, expected_func)
+    assert tvm.ir.structural_equal(mod["main"], expected_func)
 
 
 def test_tuple():
@@ -173,11 +172,11 @@ def test_tuple():
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     y = mnm.array(np.random.randn(10, 10), dtype="float64")
-    func = model._internal(x, y).mod['main']
-    func = AnnotateTarget(func, [target])
+    mod = model._internal(x, y).mod
+    mod = AnnotateTarget([target])(mod)
     expected_func = expected()
     # check the structure of the expected ir and generated ir
-    assert tvm.ir.structural_equal(func, expected_func)
+    assert tvm.ir.structural_equal(mod["main"], expected_func)
 
 
 if __name__ == "__main__":

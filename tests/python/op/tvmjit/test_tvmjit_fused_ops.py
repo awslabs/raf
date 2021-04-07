@@ -7,9 +7,12 @@ from mnm.testing import get_device_list, run_infer_type, run_vm_model
 
 def ir_fuser(func):
     # pylint: disable=protected-access
-    func = run_infer_type(func)
-    func = mnm._ffi.pass_.FuseOps(func, 3)
-    func = run_infer_type(func)
+    mod = func
+    if not isinstance(func, mnm._core.module.IRModule):
+        mod = mnm._core.module.IRModule.from_expr(func)
+    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = mnm._ffi.pass_.FuseOps(mod, 3)
+    func = run_infer_type(mod)
     return func
 
 

@@ -1,10 +1,12 @@
 """testing utilities for models"""
 import mnm
+from mnm.ir import MNMSequential
 from mnm.testing import run_infer_type
 from mnm.model.trace import _get_func_inputs
 from mnm._core.executor import VMExecutor
 from mnm._core.profiler_vm import VMProfilerExecutor
 from mnm._core.core_utils import get_chained_attr
+from mnm._ffi import pass_
 
 
 def get_param(model, name):
@@ -30,10 +32,10 @@ def set_param(model, name, value):
 def ir_simplify(mod):
     # pylint: disable=protected-access
     """simplify mod by simplifying tuples and eliminating dead code"""
-    mod = run_infer_type(mod)
-    mod = run_infer_type(mnm._ffi.pass_.InlineLet(mod))
-    mod = run_infer_type(mnm._ffi.pass_.DeadCodeElimination(mod))
-    return mod
+    seq = MNMSequential([pass_.InferType(), pass_.InlineLet(),
+                         pass_.InferType(),
+                         pass_.DeadCodeElimination(), pass_.InferType()])
+    return seq(mod)
 
 
 # TODO(@hzfan): remove this after we have PassContext

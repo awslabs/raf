@@ -31,7 +31,7 @@ def test_memory_alloc(device, shape):
     mod = mnm._ffi.pass_.InferType()(mod)
     target_name = device if device != 'cpu' else 'llvm'
     with tvm.target.Target(target_name):
-        mod = mnm._ffi.pass_.ManifestAlloc(mod)
+        mod = mnm._ffi.pass_.ManifestAlloc()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
     text = mod['main'].astext()
     assert "alloc_storage" in text
