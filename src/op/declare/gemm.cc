@@ -74,7 +74,8 @@ MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
   CHECK(k1 == k2 || k1 == 1 || k2 == 1)
       << "Incompatible broadcast batch size " << k1 << " and " << k2;
   int64_t k = k1 > k2 ? k1 : k2;
-  CHECK(a->dtype.code == kDLFloat && (a->dtype.bits == 32 || a->dtype.bits == 64))
+  CHECK(a->dtype.code == kDLFloat &&
+        (a->dtype.bits == 16 || a->dtype.bits == 32 || a->dtype.bits == 64))
       << "Only float and double are supported!";
   call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype,
                                     /*shape=*/std::vector<int64_t>{k, n1, n2});

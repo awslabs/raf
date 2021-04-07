@@ -1,5 +1,5 @@
 """Execute the program."""
-# pylint: disable=no-else-return, unidiomatic-typecheck, undefined-variable, invalid-name, redefined-builtin, no-self-use
+# pylint: disable=no-else-return, unidiomatic-typecheck, undefined-variable, invalid-name, redefined-builtin, no-self-use,arguments-differ,too-many-function-args
 import os
 import numpy as np
 import tvm
