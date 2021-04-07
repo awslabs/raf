@@ -7,9 +7,12 @@
 #include "mnm/ir_ext.h"
 #include "mnm/registry.h"
 #include "mnm/pass.h"
+#include "mnm/value.h"
 
 namespace mnm {
 namespace ir {
+
+using namespace mnm::value;
 
 IRModule GlobalModule() {
   static IRModule inst = IRModule();
@@ -32,6 +35,10 @@ tvm::runtime::NDArray MakeFakeTensor() {
   auto array = tvm::runtime::NDArray::Empty({}, dtype, dev);
   array.CopyFrom(&tensor);
   return array;
+}
+
+bool ConstantNode::IsTensor() const {
+  return value.defined() && value.as<BaseTensorValueObj>();
 }
 
 ObjectPtr<ConstantNode> MakeConstantNode(ObjectRef node_ref) {

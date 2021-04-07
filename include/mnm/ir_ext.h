@@ -29,6 +29,12 @@ class ConstantNode : public RelayConstantNode {
  public:
   ObjectRef value{nullptr};
 
+  /*!
+   * \brief Check if the constant is tensor
+   * \return Whether the constant is tensor
+   */
+  bool IsTensor() const;
+
   bool SEqualReduce(const ConstantNode* other, tvm::SEqualReducer equal) const {
     return equal(value, other->value);
   }

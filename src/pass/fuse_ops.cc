@@ -205,15 +205,11 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     ExprVisitor::VisitExpr_(op);
   }
 
-  void VisitExpr_(const RelayConstantNode* op) {
+  void VisitExpr_(const RelayConstantNode* _op) {
+    const auto* op = static_cast<const ConstantNode*>(_op);
     this->AddNode(op);
     Node* node = graph_.node_map.at(op);
-    DataType dtype = DataType(op->data->dtype);
-    // This rule must be consistent with code generator.
-    bool is_simple_const =
-        (dtype == DataType::Int(32) || dtype == DataType::Int(64) || dtype == DataType::Float(32) ||
-         dtype == DataType::Float(64) || dtype == DataType::Bool());
-    if (op->is_scalar() && is_simple_const) {
+    if (!op->IsTensor()) {
       node->pattern = kElemWise;
     } else {
       // for now, mark non-scalar constant

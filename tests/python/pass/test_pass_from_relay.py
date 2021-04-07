@@ -1,6 +1,6 @@
 # pylint: disable=protected-access, too-many-locals, attribute-defined-outside-init, no-self-use
 # pylint: disable=too-many-arguments, missing-module-docstring, missing-function-docstring
-# pylint: disable=missing-class-docstring, too-many-lines
+# pylint: disable=missing-class-docstring, too-many-lines, invalid-name
 from operator import attrgetter
 
 import pytest
@@ -8,8 +8,10 @@ import numpy as np
 import mnm
 from mnm.frontend import FrameworkModel
 from mnm.testing import get_device_list, randint, randn, check, utils
+from mnm.model.trace import _get_func_inputs
 from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import IRModule
+from mnm._core.executor import VMExecutor
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
@@ -1001,6 +1003,29 @@ def test_adv_index(data_shape, index_shapes):
     r_func = _relay.Function(inputs, out)
 
     check_from_relay(model, r_func, [m_x, m_indices[0], m_indices[1]])
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_full_fusion(dtype):
+    r_c = _relay.const(2, dtype)
+    out = _relay.full(r_c, shape=(5, 5), dtype=dtype)
+    out = _relay.multiply(_relay.const(1.0, dtype), out)
+    r_func = _relay.Function(params=[], body=out)
+    r_mod = _tvm.IRModule()
+    r_mod["main"] = r_func
+    mod = mnm._ffi.pass_.FromRelay(r_mod)
+    m = FrameworkModel(mod, mod, {}, {})
+
+    record = m._internal()
+    mod = record.mod
+    mod = utils.ir_fusion(mod)
+    vm_inputs = _get_func_inputs(record, [], {}, get_handle=False)
+    vm = VMExecutor(mod, "llvm")
+    vm_exec = vm.make_executor()
+    out = vm_exec(*vm_inputs)
+    ref = np.ones((5, 5), dtype=dtype) * 2
+    assert out.dtype == dtype
+    check(ref, out)
 
 
 if __name__ == "__main__":
