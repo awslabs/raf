@@ -39,7 +39,7 @@ def ir_simplify(mod):
 
 
 # TODO(@hzfan): remove this after we have PassContext
-def ir_fusion(mod, fuse_opt_level=3):
+def ir_fusion(mod, fuse_opt_level=1):
     """fuse ops"""
     # pylint: disable=protected-access
     mod = ir_simplify(mod)

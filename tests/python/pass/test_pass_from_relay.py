@@ -110,9 +110,8 @@ def test_mnm_module():
 
     m_x, n_x = randn((1, 100))
 
-# Check that VM can execute multi-module functions
-    vm_executor, args = utils.get_vm_executor(
-        model, 'cpu', [m_x], utils.ir_fusion)
+    # Check that VM can execute multi-module functions
+    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], utils.ir_fusion)
     m_out = vm_executor(*args)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
@@ -933,8 +932,6 @@ def test_dense_pattern(trans):
                 self.op_name += "t" if trans[0] else "n"
                 # dense is matmul_nt so the second input is already transposed
                 self.op_name += "n" if trans[1] else "t"
-                if self.op_name == "matmul_nt":
-                    self.op_name = "dense"
 
         @mnm.model.trace
         def forward(self, m_x, m_y):
