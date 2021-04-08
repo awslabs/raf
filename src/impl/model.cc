@@ -48,29 +48,36 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
   // TODO - Revisit which passes require update due to presence of module
   Function func = Downcast<Function>(updated_mod->Lookup("main"));
   func = Downcast<Function>(BindParam(func, args));
+  auto gvar = updated_mod->GetGlobalVar("main");
+  updated_mod->Add(gvar, func);
+
   if (!requires_grad) {
     // TODO(haibin): add simplify inference pass - simplify the compute of
     // BN, LN, Dropout, GN, etc.
-    func = Downcast<Function>(CanonicalizeOps(func));
-    func = Downcast<Function>(FoldConstant(func, updated_mod));
+    mnm::pass::MNMSequential seq({CanonicalizeOps(), FoldConstant()});
+    updated_mod = seq(updated_mod);
+    func = Downcast<Function>(updated_mod->Lookup("main"));
     auto call_node = Call(func, args);
     return DeTuple(Interpret(call_node, updated_mod));
   }
+
+  // Glob the needed passes.
+  Array<tvm::transform::Pass> passes;
   // run canonicalize ops pass (it needs "inter type pass" to work properly.)
-  func = Downcast<Function>(CanonicalizeOps(func));
+  passes.push_back(CanonicalizeOps());
   // run auto diff pass
-  // TODO (janimesh) - Clean this up when pass manager is introduced
-  updated_mod->Add(updated_mod->GetGlobalVar("main"), func, true);
-  updated_mod = AutoDiff(updated_mod, requires_grads);
-  func = Downcast<Function>(updated_mod->Lookup("main"));
+  passes.push_back(AutoDiff(requires_grads));
 
   // run auto parallel
   if (distributed::DistContext::Global()->enable_data_parallel) {
-    func = AutoDataParallel(func);
+    passes.push_back(AutoDataParallel());
   }
 
   // run const folding pass
-  func = Downcast<Function>(FoldConstant(func, updated_mod));
+  passes.push_back(FoldConstant());
+  mnm::pass::MNMSequential seq(passes);
+  updated_mod = seq(updated_mod);
+  func = Downcast<Function>(updated_mod->Lookup("main"));
   TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args), updated_mod));
   CHECK_EQ(result->fields.size(), 2U);
   return DeStruct(/*value=*/result->fields[0],

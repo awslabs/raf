@@ -216,7 +216,7 @@ def test_gradient_closure():
         x = Symbol.make_var('a', x_ty)
         mod = model._internal(x).mod
         mod = InferType()(mod)
-        mod = AutoDiff(mod, [True])
+        mod = AutoDiff([True])(mod)
         mod = InferType()(mod)
         func = mod['main']
         bwd_ty = relay.FuncType([y_ty], x_ty)

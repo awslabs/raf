@@ -32,12 +32,11 @@ def test_canonicalize_ops_bias_add_ir():
         return tvm.relay.Function([x_var, bias_var], body)
 
     model_before = ModelWithBiasAdd(bias)
-    func_before = model_before._internal(x).mod['main']
     # infer type
-    func_infer_type = run_infer_type(func_before)
+    mod = mnm._ffi.pass_.InferType()(model_before._internal(x).mod)
     # canonicalize ops
-    func_canonicalized = mnm._ffi.pass_.CanonicalizeOps(func_infer_type)
-    func_canonicalized = run_infer_type(func_canonicalized)
+    mod = mnm._ffi.pass_.CanonicalizeOps()(mod)
+    func_canonicalized = mnm._ffi.pass_.InferType()(mod)["main"]
     # expected
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_canonicalized, func_expected)

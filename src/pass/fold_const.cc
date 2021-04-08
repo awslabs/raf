@@ -50,9 +50,6 @@ class ConstantChecker : private ExprVisitor {
 
 class ConstantFolder : public ExprMutator {
  public:
-  explicit ConstantFolder(IRModule module) : module_(module) {
-  }
-
   Expr VisitExpr_(const LetNode* op) final {
     Expr value = this->Mutate(op->value);
     if (value.as<ConstantNode>()) {
@@ -118,8 +115,6 @@ class ConstantFolder : public ExprMutator {
  private:
   // Internal constant checker
   ConstantChecker checker_;
-  // Module
-  IRModule module_;
 
   // Convert value to expression.
   Expr ObjectToExpr(const ObjectRef& value) {
@@ -200,12 +195,16 @@ bool IsConstant(const ir::Expr& e) {
   return fold_const::ConstantChecker().IsConstant(e);
 }
 
-ir::Expr FoldConstant(ir::Expr expr, ir::IRModule mod) {
-  return fold_const::ConstantFolder(mod).Mutate(expr);
-}
-
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args) {
   return fold_const::BindParamMutator(func, args).Mutate(func);
+}
+
+Pass FoldConstant() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(fold_const::ConstantFolder().Mutate(f));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "FoldConstant", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.is_constant").set_body_typed(IsConstant);

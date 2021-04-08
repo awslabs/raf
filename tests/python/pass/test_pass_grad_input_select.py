@@ -85,7 +85,7 @@ def test_conv2d():
     record = model._internal(m_x)
     mod_before = record.mod
     mod_before = InferType()(mod_before)
-    mod_before = AutoDiff(mod_before, record.requires_grads)
+    mod_before = AutoDiff(record.requires_grads)(mod_before)
     mod_before = InferType()(mod_before)
     mod = GradientInputSelection()(mod_before)
     func_after = InferType()(mod)["main"]

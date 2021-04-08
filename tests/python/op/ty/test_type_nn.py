@@ -53,7 +53,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     check_type(m_mod['main'], checked_type)
     # backward
     _, t_dy = randn_torch(shape, dtype=dtype)
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     t_y.backward(t_dy)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
@@ -146,7 +146,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     checked_type = FuncType([x_ty, scale_ty, bias_ty], y_ty)
     check_type(m_mod['main'], checked_type)
     # check backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     int_type = TensorType((), "int64")
     dx_ty = TensorType(mx_x.grad.shape, dtype=dtype)
@@ -267,7 +267,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     # backward
     _, t_dy = randn_torch(m_y.shape, dtype=dtype)
     t_y.backward(t_dy)
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     dy_ty = TensorType(t_dy.shape, dtype=dtype)
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)

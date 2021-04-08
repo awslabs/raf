@@ -89,14 +89,15 @@ class BiasAddSimplifier : public ExprRewriter {
   const Op& bias_add_op_;
 };
 
-Expr CanonicalizeOps(const Expr& e) {
-  auto rewriter = BiasAddSimplifier();
-  return PostOrderRewrite(e, &rewriter);
-}
 }  // namespace canonicalize_ops
 
-ir::Expr CanonicalizeOps(ir::Expr expr) {
-  return canonicalize_ops::CanonicalizeOps(expr);
+Pass CanonicalizeOps() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        auto rewriter = canonicalize_ops::BiasAddSimplifier();
+        return Downcast<Function>(PostOrderRewrite(f, &rewriter));
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "CanonicalizeOps", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.CanonicalizeOps").set_body_typed(CanonicalizeOps);

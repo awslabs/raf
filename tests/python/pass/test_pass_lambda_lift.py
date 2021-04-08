@@ -31,7 +31,7 @@ def test_basic(device, shape):
 
     # Run AutoDiff to get nested functions
     # The backward function will be lifted
-    mod = AutoDiff(mod, record.requires_grads)
+    mod = AutoDiff(record.requires_grads)(mod)
 
     # Call Lambda lift pass on the Meta module
     lifted_mod = LambdaLift()(mod)

@@ -7,6 +7,7 @@
 #include <sstream>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "mnm/dist_context.h"
 #include "mnm/profiler.h"
 #include "mnm/stream_pool.h"
@@ -341,8 +342,12 @@ struct DataParallel {
 
 }  // namespace data_parallel
 
-ir::Function AutoDataParallel(ir::Function func) {
-  return data_parallel::DataParallel(func.operator->()).Run();
+Pass AutoDataParallel() {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return data_parallel::DataParallel(f.operator->()).Run();
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "AutoDataParallel", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoDataParallel").set_body_typed(AutoDataParallel);

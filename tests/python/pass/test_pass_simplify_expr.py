@@ -2,6 +2,7 @@ import pytest
 import tvm
 from tvm import relay
 from mnm._ffi.pass_ import FromRelay, InferType, AutoDiff, SimplifyExpr
+from mnm.ir import MNMSequential
 
 def test_basic():
     # Get a Relay func
@@ -15,11 +16,9 @@ def test_basic():
 
     tvm_mod = get_mod()
     mod = FromRelay(tvm_mod)
-    mod = InferType()(mod)
-    mod = AutoDiff(mod, [])
-    mod = InferType()(mod)
-    mod = SimplifyExpr()(mod)
-
+    seq = MNMSequential([InferType(), AutoDiff([]), InferType(),
+                         SimplifyExpr()])
+    mod = seq(mod)
 
     # Ensure that there is only one sum operator
     sum_ops = list()

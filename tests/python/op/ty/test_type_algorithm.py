@@ -72,7 +72,7 @@ def test_sort(shape, axis, is_ascend, dtype):
     expected_type = FuncType([x_ty], y_ty)
     check_type(m_mod['main'], expected_type)
     # backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([y_ty], x_ty)
     desired_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))

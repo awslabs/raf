@@ -64,7 +64,7 @@ def test_unary(op, shape, dtype):
 
     # check backward
     if backward:
-        m_mod = AutoDiff(m_mod, record.requires_grads)
+        m_mod = AutoDiff(record.requires_grads)(m_mod)
         m_mod = InferType()(m_mod)
         bwd_ty = FuncType([fwd_ty], fwd_ty)
         desired_type = FuncType([fwd_ty], TupleType([fwd_ty, bwd_ty]))

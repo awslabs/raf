@@ -52,7 +52,7 @@ def test_binary(op, shape, dtype):
     # check backward
     # TODO(yzhliu): some operators are missing gradient registries.
     if op not in (sym.mod, sym.maximum, sym.minimum, sym.subtract):
-        bwd_mod = AutoDiff(m_mod, record.requires_grads)
+        bwd_mod = AutoDiff(record.requires_grads)(m_mod)
         bwd_mod = InferType()(bwd_mod)
         bwd_func = bwd_mod['main']
         bwd_ty = FuncType([t_c], TupleType([t_a, t_b]))

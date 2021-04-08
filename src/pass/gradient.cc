@@ -6,6 +6,7 @@
 #include <sstream>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/pass.h"
 #include "./let_list.h"
 #include "./common.h"
 
@@ -437,29 +438,16 @@ struct Gradient : public ExprVisitor {
 
 }  // namespace gradient
 
-ir::IRModule AutoDiff(ir::IRModule mod, ir::Array<tvm::Bool> requires_grads) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      Function func;
-      auto reverse_ad = gradient::Gradient(Downcast<ir::Function>(kv.second).get(), requires_grads);
-      func = tvm::runtime::Downcast<ir::Function>(reverse_ad.Run());
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
+Pass AutoDiff(ir::Array<tvm::Bool> requires_grads) {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        auto reverse_ad = gradient::Gradient(Downcast<Function>(f).get(), requires_grads);
+        return Downcast<ir::Function>(reverse_ad.Run());
+      };
+  return CreateMNMFunctionPass(pass_func, 0, "AutoDiff", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff")
-    .set_body_typed([](ir::IRModule mod, ir::Array<tvm::Bool> requires_grads) {
-      return AutoDiff(mod, requires_grads);
-    });
+MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);
 
 }  // namespace pass
 }  // namespace mnm

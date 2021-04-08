@@ -76,7 +76,8 @@ def test_fold_const_ir(device, shape):
     func_bound = mnm._ffi.pass_.BindParam(func_before, args)
 
     # fold constant
-    func_folded = mnm._ffi.pass_.FoldConstant(func_bound, mnm._ffi.ir.module.Global())
+    mod = mnm._core.module.IRModule.from_expr(func_bound)
+    func_folded = mnm._ffi.pass_.FoldConstant()(mod)["main"]
 
     func_expected = expected()
 

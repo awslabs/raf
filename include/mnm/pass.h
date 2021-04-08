@@ -23,15 +23,25 @@ using tvm::transform::Pass;
 using tvm::transform::PassContext;
 using tvm::transform::PassInfo;
 /*!
- * \brief Automatic Differentiation.
- * \param mod Input module.
+ * \brief A pass that does automatic differentiation.
  * \param requires_grads If input(s) of function requires gradient. It is in the same order as
  * func->param. If empty, input(s) with float datatype requires gradient.
- * \return Transformed Function.
+ * \return The created passed.
  */
-ir::IRModule AutoDiff(ir::IRModule mod, ir::Array<tvm::Bool> requires_grads = {});
-ir::Function AutoDataParallel(ir::Function func);
-ir::Expr FoldConstant(ir::Expr expr, ir::IRModule mod);
+Pass AutoDiff(ir::Array<tvm::Bool> requires_grads = {});
+/*!
+ * \brief A pass that performs data parallelism. It mainly modifies the backward
+ * closure by adding communication ops after the ops that generate local
+ * gradient and stream_sync ops before the end of backward closure to ensure
+ * communication is done.
+ * \return The created pass.
+ */
+Pass AutoDataParallel();
+/*!
+ * \brief The constant folding pass.
+ * \return The created pass.
+ */
+Pass FoldConstant();
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
 /*!
  * \brief A pass that lifts the lambda to the global scope.
@@ -48,7 +58,11 @@ Pass GradInputSelect();
  * \return The created pass.
  */
 Pass ManifestAlloc();
-ir::Expr CanonicalizeOps(ir::Expr expr);
+/*!
+ * \brief A pass that canonicalize operators.
+ * \return The created pass.
+ */
+Pass CanonicalizeOps();
 /*!
  * \brief Create a type inference pass.
  * \return The created pass.

@@ -192,9 +192,9 @@ def test_dp(config):
 
     record = m_model._internal(m_x, m_y)
     mod_before = record.mod
-    mod_before = mnm._ffi.pass_.AutoDiff(mod_before, record.requires_grads)
-    func_before = mod_before['main']
-    func_after = mnm._ffi.pass_.AutoDataParallel(func_before)
+    mod_before = mnm._ffi.pass_.AutoDiff(record.requires_grads)(mod_before)
+    mod_before = mnm._ffi.pass_.AutoDataParallel()(mod_before)
+    func_after = mod_before['main']
 
     func_expected = expected()
     print("Expected: ", func_expected())

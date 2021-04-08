@@ -45,7 +45,7 @@ def test_take(shape, axis, dtype):
     expected_type = FuncType([x_ty, indices_ty], y_ty)
     check_type(m_mod['main'], expected_type)
     # backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     dy_ty = TensorType(n_y.shape, dtype=dtype)
     dx_ty = TensorType(n_x.shape, dtype=dtype)
@@ -113,7 +113,7 @@ def test_reverse(shape, axis, dtype):
     expected_type = FuncType([x_ty], y_ty)
     check_type(m_mod['main'], expected_type)
     # backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     dy_ty, dx_ty = y_ty, x_ty
     bwd_ty = FuncType([dy_ty], dx_ty)
@@ -156,7 +156,7 @@ def test_reverse_sequence(inputs, axes, dtype):
     expected_type = FuncType([x_ty, seq_length_ty], y_ty)
     check_type(m_mod['main'], expected_type)
     # backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     dy_ty, dx_ty = y_ty, x_ty
     bwd_ty = FuncType([dy_ty], TupleType([dx_ty, TensorType([], dtype="int64")]))
@@ -390,7 +390,7 @@ def test_transpose(shape, dtype):
     dx_ty = TensorType(n_x_grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     check_type(m_mod['main'], expected_type)
 
@@ -444,7 +444,7 @@ def test_swap_axis(shape, dtype, axis):
         dx_ty = TensorType(n_x_grad.shape, dtype=dtype)
         bwd_ty = FuncType([dy_ty], dx_ty)
         expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-        m_func = AutoDiff(m_func, record.requires_grads)
+        m_func = AutoDiff(record.requires_grads)(m_func)
         m_func = run_infer_type(m_func)
         check_type(m_func['main'], expected_type)
 
@@ -475,7 +475,7 @@ def test_cast(shape, itype, otype):
     expected_type = FuncType([x_ty], y_ty)
     check_type(m_mod['main'], expected_type)
     # backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     dy_ty = TensorType(n_y.shape, dtype=otype)
     dx_ty = TensorType(n_x.shape, dtype=itype)
@@ -571,7 +571,7 @@ def test_concatenate(params, dtype):
     expected_type = FuncType(i_ty, y_ty)
     check_type(m_mod['main'], expected_type)
     # backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([y_ty], TupleType(i_ty) if len(i_ty) > 1 else i_ty[0])
     expected_type = FuncType(i_ty, TupleType([y_ty, bwd_ty]))
@@ -607,7 +607,7 @@ def test_clip(shape, a_min, a_max, dtype):
     expected_type = FuncType([x_ty], y_ty)
     check_type(m_mod['main'], expected_type)
     # check backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([y_ty], x_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
@@ -657,7 +657,7 @@ def test_reshape(params, reverse, dtype):
     check_type(m_mod['main'], expected_type)
     # check backward
     # TODO(@XIAO-XIA): uncomment after impl the type funcs of shape
-    # m_mod = AutoDiff(m_mod, record.requires_grads)
+    # m_mod = AutoDiff(record.requires_grads)(m_mod)
     # m_mod = InferType()(m_mod)
     # bwd_ty = FuncType([y_ty], x_ty)
     # expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
@@ -705,7 +705,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     # TODO(@XIAO-XIA): uncomment after impl the type funcs of shape and reshape
     # bwd_ty = FuncType([y_ty], x_ty)
     # expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    # m_mod = AutoDiff(m_mod, record.requires_grads)
+    # m_mod = AutoDiff(record.requires_grads)(m_mod)
     # m_mod = InferType()(m_mod)
     # check_type(m_mod['main], expected_type)
 
@@ -744,7 +744,7 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     desired_type = FuncType([ty_data, ty_indices], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # check backward
-    m_mod = AutoDiff(m_mod, record.requires_grads)
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_data, TensorType([], dtype=ty_indices.dtype)]))
     desired_type = FuncType([ty_data, ty_indices], TupleType([fwd_ty, bwd_ty]))
@@ -787,7 +787,7 @@ def test_strided_slice(dtype, params):
     check_type(m_func, desired_type)
 
     # check backward
-    m_mod = AutoDiff(m_mod, [])
+    m_mod = AutoDiff([])(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([y_ty], x_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))

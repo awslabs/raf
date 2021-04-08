@@ -56,7 +56,7 @@ def test_basic():
     m_y.requires_grad = True
     record = model._internal(m_x, m_y)
     mod = record.mod
-    mod = mnm._ffi.pass_.AutoDiff(mod, record.requires_grads)
+    mod = mnm._ffi.pass_.AutoDiff(record.requires_grads)(mod)
     inlined_func = mnm._ffi.pass_.InlineBackward()(mod)["main"]
     assert tvm.ir.structural_equal(inlined_func, expected(shape))
 

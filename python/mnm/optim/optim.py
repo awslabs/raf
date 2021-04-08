@@ -1,5 +1,6 @@
 """Traced Optimizers"""
 from mnm.frontend.model import _get_func_output_var
+from mnm.ir import MNMSequential
 from .._core.ndarray import Symbol, get_symbol_handle
 from .._core.value import NoGradValue, Value
 from .._core.ir_ext import ExtendedVar
@@ -64,13 +65,10 @@ def with_autodiff(model):
             record = self.model._internal(*args)
             dy = calc_dy(dy, record)
             mod = record.mod
-            # TODO(zhiics) Move to MNMSequential when AutoDiff is ported.
-            mod = InferType()(mod)
-            mod = AutoDiff(mod, record.requires_grads)
-            mod = InferType()(mod)
-            mod = SimplifyExpr()(mod)
-            mod = DeadCodeElimination()(mod)
-            mod = InlineBackward()(mod)
+            seq = MNMSequential([InferType(), AutoDiff(record.requires_grads),
+                                 InferType(), SimplifyExpr(),
+                                 DeadCodeElimination(), InlineBackward()])
+            mod = seq(mod)
             inputs = _get_func_inputs(record, args, {})
             inputs = inputs + [get_symbol_handle(dy)]
             out = inline(mod['main'], inputs)
