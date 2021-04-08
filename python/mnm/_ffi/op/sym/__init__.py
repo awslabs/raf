@@ -20,6 +20,9 @@ from ._internal import avg_pool2d
 from ._internal import avg_pool2d_dx
 from ._internal import batch_flatten
 from ._internal import batch_matmul
+from ._internal import batch_matmul_nt
+from ._internal import batch_matmul_tn
+from ._internal import batch_matmul_tt
 from ._internal import batch_norm_infer
 from ._internal import batch_norm_train
 from ._internal import batch_norm_train_dxwb

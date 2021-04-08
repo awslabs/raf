@@ -9,65 +9,52 @@ from mnm.model.trace import trace_mutate_attr
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("b", [1, 2, 4])
-@pytest.mark.parametrize("n", [1, 2, 4])
-@pytest.mark.parametrize("m", [1, 2, 4])
-@pytest.mark.parametrize("k", [1, 2, 4])
-def test_batch_matmul(b, n, m, k, device):
-    class BatchMatmul(mnm.Model):
-        def build(self):
-            pass
-        @mnm.model.trace
-        def forward(self, m_a, m_b):
-            return mnm.batch_matmul(m_a, m_b)
-    # check forward
-    model = BatchMatmul()
-    m_a, n_a = randn((b, m, k), device=device)
-    m_b, n_b = randn((b, n, k), device=device)
-    m_a.requires_grad = True
-    m_b.requires_grad = True
-    m_c = model(m_a, m_b)
-    v_c = run_vm_model(model, device, [m_a, m_b])
-    n_c = np.matmul(n_a, np.transpose(n_b, (0, 2, 1)))
-    check(m_c, n_c)
-    check(v_c, n_c)
-    # check backward
-    m_dy, n_dy = randn(m_c.shape, device=device)
-    m_c.backward(m_dy)
-    n_dyt = np.transpose(n_dy, (0, 2, 1))
-    check(m_a.grad, np.matmul(n_dy, n_b))
-    check(m_b.grad, np.matmul(n_dyt, n_a))
-
-
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("b", [2, 4])
 @pytest.mark.parametrize("n", [2, 4])
 @pytest.mark.parametrize("m", [2, 4])
 @pytest.mark.parametrize("k", [2, 4])
-def test_batch_matmul_broadcast(b, n, m, k, device):
-    class BatchMatmul(mnm.Model):
+@pytest.mark.parametrize("broadcast", ["none", "a", "b"])
+@pytest.mark.parametrize("transpose_a", [True, False])
+@pytest.mark.parametrize("transpose_b", [True, False])
+def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
+    # pylint: disable=too-many-arguments, invalid-name
+    class TestModel(mnm.Model):
         def build(self):
             pass
         @mnm.model.trace
         def forward(self, m_a, m_b):
-            return mnm.batch_matmul(m_a, m_b)
-    # check forward
-    model = BatchMatmul()
-    m_a, n_a = randn((b, m, k), device=device)
-    m_b, n_b = randn((1, n, k), device=device)
-    m_a.requires_grad = True
-    m_b.requires_grad = True
+            mnm_op = [[mnm.batch_matmul, mnm.batch_matmul_nt],
+                      [mnm.batch_matmul_tn, mnm.batch_matmul_tt]]
+            mnm_op = mnm_op[transpose_a][transpose_b]
+            return mnm_op(m_a, m_b)
+
+    b1 = b
+    b2 = b
+    if broadcast == "a":
+        b1 = 1
+    elif broadcast == "b":
+        b2 = 1
+    # forward
+    model = TestModel()
+    m_a, t_a = randn_torch((b1, n, k) if not transpose_a else (b1, k, n),
+                           device=device, dtype=dtype, requires_grad=True)
+    m_b, t_b = randn_torch((b2, k, m) if not transpose_b else (b2, m, k),
+                           device=device, dtype=dtype, requires_grad=True)
     m_c = model(m_a, m_b)
     v_c = run_vm_model(model, device, [m_a, m_b])
-    n_c = np.matmul(n_a, np.transpose(n_b, (0, 2, 1)))
-    check(m_c, n_c)
-    check(v_c, n_c)
-    # check backward
-    m_dy, n_dy = randn(m_c.shape, device=device)
-    m_c.backward(m_dy)
-    n_dyt = np.transpose(n_dy, (0, 2, 1))
-    check(m_a.grad, np.matmul(n_dy, n_b))
-    check(m_b.grad, np.sum(np.matmul(n_dyt, n_a), axis=0, keepdims=True))
+
+    t_at = torch.transpose(t_a, 1, 2) if transpose_a else t_a
+    t_bt = torch.transpose(t_b, 1, 2) if transpose_b else t_b
+    t_c = torch.matmul(t_at, t_bt) # pylint: disable=no-member
+    check(m_c, t_c, rtol=1e-4, atol=1e-4)
+    check(v_c, t_c, rtol=1e-4, atol=1e-4)
+    # backward
+    m_dc, t_dc = randn_torch(m_c.shape, device=device, dtype=dtype)
+    m_c.backward(m_dc)
+    t_c.backward(t_dc)
+    check(m_a.grad, t_a.grad, rtol=1e-4, atol=1e-4)
+    check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.parametrize("device", get_device_list())

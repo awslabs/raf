@@ -22,7 +22,6 @@ Array<Expr> MatmulGradImpl(const Expr& orig_call, const Array<Expr> orig_args, c
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
-  Call da, db;
   if (!transpose_a) {
     if (!transpose_b) {
       return {
@@ -31,8 +30,8 @@ Array<Expr> MatmulGradImpl(const Expr& orig_call, const Array<Expr> orig_args, c
       };
     } else {
       return {
-          da = Call(op_nn, {dy, b}),
-          db = Call(op_tn, {dy, a}),
+          Call(op_nn, {dy, b}),
+          Call(op_tn, {dy, a}),
       };
     }
   } else {
@@ -63,21 +62,17 @@ MNM_OP_GRAD("mnm.op.dense", MatmulGradNT);
 MNM_OP_GRAD("mnm.op.matmul_tn", MatmulGradTN);
 MNM_OP_GRAD("mnm.op.matmul_tt", MatmulGradTT);
 
-Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                            const Expr& dy) {
-  static auto batch_matmul = Op::Get("mnm.op.batch_matmul");
-  static auto transpose = Op::Get("mnm.op.transpose");
+template <bool transpose_a, bool transpose_b>
+Array<Expr> BatchMatmulGradImpl(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                                const Expr& dy) {
+  static auto op_nn = Op::Get("mnm.op.batch_matmul");
+  static auto op_nt = Op::Get("mnm.op.batch_matmul_nt");
+  static auto op_tn = Op::Get("mnm.op.batch_matmul_tn");
+  static auto op_tt = Op::Get("mnm.op.batch_matmul_tt");
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
-  const std::vector<Value> axes = {ScalarValue::make((int64_t)0), ScalarValue::make((int64_t)2),
-                                   ScalarValue::make((int64_t)1)};
-  const Expr& axes_expr = MakeConstant(TupleValue::make(Array<Value>(axes)));
-  auto dy_trans = Call(transpose, {dy, axes_expr});
-  auto b_trans = Call(transpose, {b, axes_expr});
-  auto a_trans = Call(transpose, {a, axes_expr});
-  auto da = Call(batch_matmul, {dy, b_trans});
-  auto db = Call(batch_matmul, {dy_trans, a_trans});
+
   auto f = [](const Expr& dx, const Expr& x) {
     static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
     static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
@@ -86,10 +81,45 @@ Array<Expr> BatchMatmulGrad(const Expr& orig_call, const Array<Expr> orig_args, 
     Call keep = Call(collapse_keep, {dx, x});
     return Call(sum, {dx, axes, keep});
   };
-  return {f(da, a), f(db, b)};
+
+  if (!transpose_a) {
+    if (!transpose_b) {
+      return {
+          f(Call(op_nt, {dy, b}), a),
+          f(Call(op_tn, {a, dy}), b),
+      };
+    } else {
+      return {
+          f(Call(op_nn, {dy, b}), a),
+          f(Call(op_tn, {dy, a}), b),
+      };
+    }
+  } else {
+    if (!transpose_b) {
+      return {
+          f(Call(op_nt, {b, dy}), a),
+          f(Call(op_nn, {a, dy}), b),
+      };
+    } else {
+      return {
+          f(Call(op_tt, {b, dy}), a),
+          f(Call(op_tt, {dy, a}), b),
+      };
+    }
+  }
+  LOG(FATAL) << "Unreachable code";
+  throw;
 }
 
-MNM_OP_GRAD("mnm.op.batch_matmul", BatchMatmulGrad);
+auto BatchMatmulGradNN = BatchMatmulGradImpl<false, false>;
+auto BatchMatmulGradNT = BatchMatmulGradImpl<false, true>;
+auto BatchMatmulGradTN = BatchMatmulGradImpl<true, false>;
+auto BatchMatmulGradTT = BatchMatmulGradImpl<true, true>;
+
+MNM_OP_GRAD("mnm.op.batch_matmul", BatchMatmulGradNN);
+MNM_OP_GRAD("mnm.op.batch_matmul_nt", BatchMatmulGradNT);
+MNM_OP_GRAD("mnm.op.batch_matmul_tn", BatchMatmulGradTN);
+MNM_OP_GRAD("mnm.op.batch_matmul_tt", BatchMatmulGradTT);
 
 }  // namespace grad
 }  // namespace op

@@ -41,6 +41,12 @@ batch_flatten = _APIS.get("mnm.op.imp.batch_flatten", None)
 # Defined in ./src/op/regs/regs.cc
 batch_matmul = _APIS.get("mnm.op.imp.batch_matmul", None)
 # Defined in ./src/op/regs/regs.cc
+batch_matmul_nt = _APIS.get("mnm.op.imp.batch_matmul_nt", None)
+# Defined in ./src/op/regs/regs.cc
+batch_matmul_tn = _APIS.get("mnm.op.imp.batch_matmul_tn", None)
+# Defined in ./src/op/regs/regs.cc
+batch_matmul_tt = _APIS.get("mnm.op.imp.batch_matmul_tt", None)
+# Defined in ./src/op/regs/regs.cc
 batch_norm_infer = _APIS.get("mnm.op.imp.batch_norm_infer", None)
 # Defined in ./src/op/regs/regs.cc
 batch_norm_train = _APIS.get("mnm.op.imp.batch_norm_train", None)

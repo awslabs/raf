@@ -97,7 +97,7 @@ OP_MAP = {
     "mnm.op.where": ["where", "", "kBroadcast"],
     "mnm.op.zeros": ["zeros", "relay.attrs.InitOpAttrs", "kElemWise"],
     "mnm.op.zeros_like": ["zeros_like", "", "kElemWise"],
-    "mnm.op.batch_matmul": ["nn.batch_matmul", "", "kOpaque"],
+    "mnm.op.batch_matmul_nt": ["nn.batch_matmul", "", "kOpaque"],
     "mnm.op.dense": ["nn.dense", "", "kOpaque"],
     "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
     "mnm.op.pad": ["nn.pad", "relay.attrs.PadAttrs", "kOpaque"],

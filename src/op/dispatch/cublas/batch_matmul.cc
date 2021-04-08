@@ -133,7 +133,7 @@ class BatchMatmulImpl : public mnm::op::OpEnv {
 
 using BatchMatmulNT = BatchMatmulImpl<false, true>;
 
-MNM_OP_DISPATCH("mnm.op.batch_matmul", BatchMatmulNT::make, DevType::kCUDA(),
+MNM_OP_DISPATCH("mnm.op.batch_matmul_nt", BatchMatmulNT::make, DevType::kCUDA(),
                 "cublas");  // default setting, transposeA = false, transposeB = true
 
 }  // namespace manual

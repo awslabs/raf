@@ -18,7 +18,7 @@ def test_batch_matmul(b, n, m, k, d_type, device, transpose_a=False, transpose_b
             pass
         @mnm.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = mnm.batch_matmul
+            mnm_op = mnm.batch_matmul_nt
             return mnm_op(m_a, m_b)
     # forward
     model = TestModel()
@@ -56,7 +56,7 @@ def test_batch_matmul_broadcast(b, n, m, k, broadcast_a, d_type, device, transpo
             pass
         @mnm.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = mnm.batch_matmul
+            mnm_op = mnm.batch_matmul_nt
             print("forward once")
             return mnm_op(m_a, m_b)
     # forward

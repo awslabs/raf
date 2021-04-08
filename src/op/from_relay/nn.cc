@@ -10,7 +10,7 @@ namespace mnm {
 namespace op {
 namespace from_relay {
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("nn.batch_matmul", "mnm.op.batch_matmul");
+MNM_GENERIC_ATTR_OP_FROM_RELAY("nn.batch_matmul", "mnm.op.batch_matmul_nt");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("nn.dense", "mnm.op.dense");
 
 MNM_OP_FROM_RELAY("nn.conv2d", "mnm.op.conv2d", [&](const Attrs& attrs, const Array<Expr>& args) {

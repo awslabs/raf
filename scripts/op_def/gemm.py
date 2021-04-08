@@ -16,3 +16,16 @@ class MatmulArgs:
         Op("matmul_tn"),
         Op("matmul_tt"),
     ]
+
+class BatchMatmulArgs:
+
+    @staticmethod
+    def f(x1: Tensor, x2: Tensor) -> Tensor:
+        pass
+
+    __ops__ = [
+        Op("batch_matmul"),
+        Op("batch_matmul_nt"),
+        Op("batch_matmul_tn"),
+        Op("batch_matmul_tt"),
+    ]

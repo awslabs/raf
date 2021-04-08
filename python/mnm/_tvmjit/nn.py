@@ -62,8 +62,6 @@ _reg.register_injective_schedule("mnm.op.strided_slice_dx")
 
 _reg.register_strategy("mnm.op.dense", strategy.dense_strategy)
 
-_reg.register_strategy("mnm.op.batch_matmul", strategy.batch_matmul_strategy)
-
 def compute_matmul_general(attr, inputs, output_type,
                            transpose_a=False, transpose_b=False):
     # pylint: disable=unused-argument
@@ -83,7 +81,6 @@ def compute_matmul(attr, inputs, output_type):
 def compute_matmul_tn(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=True, transpose_b=False)
 
-
 @register_compute("mnm.op.matmul_nt")
 def compute_matmul_nt(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=True)
@@ -96,6 +93,42 @@ _reg.register_injective_schedule("mnm.op.matmul")
 _reg.register_injective_schedule("mnm.op.matmul_tn")
 _reg.register_injective_schedule("mnm.op.matmul_nt")
 _reg.register_injective_schedule("mnm.op.matmul_tt")
+
+def compute_batch_matmul_general(attr, inputs, output_type,
+                                 transpose_a=False, transpose_b=False):
+    # pylint: disable=unused-argument
+    assert len(inputs) == 2, "Expected 2 inputs, but got {}".format(len(inputs))
+    data, weight = inputs[0], inputs[1]
+    assert len(data.shape) == 3 and len(weight.shape) == 3, \
+        "only support 3-dim batch matmul"
+
+    # Topi batch matmul currently support NT mode. So, add transposes when it is not NT
+    if transpose_a:
+        data = _topi.transpose(data, (0, 2, 1))
+    if not transpose_b:
+        weight = _topi.transpose(weight, (0, 2, 1))
+    return [_topi.nn.batch_matmul(data, weight)]
+
+@register_compute("mnm.op.batch_matmul")
+def compute_batch_matmul_nn(attr, inputs, output_type):
+    return compute_batch_matmul_general(attr, inputs, output_type,
+                                        transpose_a=False, transpose_b=False)
+
+@register_compute("mnm.op.batch_matmul_tn")
+def compute_batch_matmul_tn(attr, inputs, output_type):
+    return compute_batch_matmul_general(attr, inputs, output_type,
+                                        transpose_a=True, transpose_b=False)
+
+@register_compute("mnm.op.batch_matmul_tt")
+def compute_batch_matmul_tt(attr, inputs, output_type):
+    return compute_batch_matmul_general(attr, inputs, output_type,
+                                        transpose_a=True, transpose_b=True)
+
+_reg.register_injective_schedule("mnm.op.batch_matmul")
+_reg.register_injective_schedule("mnm.op.batch_matmul_tn")
+_reg.register_injective_schedule("mnm.op.batch_matmul_tt")
+
+_reg.register_strategy("mnm.op.batch_matmul_nt", strategy.batch_matmul_strategy)
 
 _reg.register_strategy("mnm.op.softmax", strategy.softmax_strategy)
 

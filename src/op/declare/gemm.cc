@@ -55,7 +55,8 @@ MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT).set_attr<TOpPattern>("TOpPattern", 
 MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
-MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
+template <bool transpose_a, bool transpose_b>
+void BatchMatmulDecl(const CallValues& call) {
   const auto* args = call->args.as<schema::BinaryArgs>();
   CHECK(args != nullptr);
   const DLTensor* a = args->x1;
@@ -64,26 +65,48 @@ MNM_OP_DECLARE("mnm.op.batch_matmul", [](const CallValues& call) {
   // b is of shape [k2, n2, m2]
   CHECK_EQ(a->ndim, 3);
   CHECK_EQ(b->ndim, 3);
+  int64_t batch_size = a->shape[0] > b->shape[0] ? a->shape[0] : b->shape[0];
   int64_t k1 = a->shape[0];
   int64_t n1 = a->shape[1];
   int64_t m1 = a->shape[2];
   int64_t k2 = b->shape[0];
   int64_t n2 = b->shape[1];
   int64_t m2 = b->shape[2];
-  CHECK_EQ(m1, m2);
+  if (transpose_a) {
+    std::swap(n1, m1);
+  }
+  if (transpose_b) {
+    std::swap(n2, m2);
+  }
+  CHECK_EQ(m1, n2);
   CHECK(k1 == k2 || k1 == 1 || k2 == 1)
       << "Incompatible broadcast batch size " << k1 << " and " << k2;
-  int64_t k = k1 > k2 ? k1 : k2;
+
   CHECK(a->dtype.code == kDLFloat &&
         (a->dtype.bits == 16 || a->dtype.bits == 32 || a->dtype.bits == 64))
       << "Only float and double are supported!";
+  int64_t k = k1 > k2 ? k1 : k2;
   call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype,
-                                    /*shape=*/std::vector<int64_t>{k, n1, n2});
+                                    /*shape=*/std::vector<int64_t>{k, n1, m2});
   call->device = a->ctx;
   if (!k1 || !k2 || !n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
   }
-}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+}
+
+auto BatchMatmulNN = BatchMatmulDecl<false, false>;
+auto BatchMatmulNT = BatchMatmulDecl<false, true>;
+auto BatchMatmulTN = BatchMatmulDecl<true, false>;
+auto BatchMatmulTT = BatchMatmulDecl<true, true>;
+
+MNM_OP_DECLARE("mnm.op.batch_matmul", BatchMatmulNN)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.batch_matmul_nt", BatchMatmulNT)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.batch_matmul_tn", BatchMatmulTN)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.batch_matmul_tt", BatchMatmulTT)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
 MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
   const auto* args = call->args.as<schema::BinaryArgs>();

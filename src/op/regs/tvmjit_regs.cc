@@ -51,7 +51,7 @@ MNM_TVM_OP("mnm.op.atan", "atan");
 MNM_TVM_OP("mnm.op.avg_pool2d", "nn.avg_pool2d");
 MNM_TVM_OP("mnm.op.avg_pool2d_dx", "nn.avg_pool2d_grad");
 MNM_TVM_OP("mnm.op.batch_flatten", "nn.batch_flatten");
-MNM_TVM_OP("mnm.op.batch_matmul", "nn.batch_matmul");
+MNM_TVM_OP("mnm.op.batch_matmul_nt", "nn.batch_matmul");
 MNM_TVM_OP("mnm.op.bias_add", "nn.bias_add");
 MNM_TVM_OP("mnm.op.broadcast_to", "broadcast_to");
 MNM_TVM_OP("mnm.op.broadcast_to_like", "broadcast_to_like");

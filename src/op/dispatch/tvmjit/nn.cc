@@ -25,8 +25,6 @@ Attrs BinarySchema2DenseAttrs(const BinaryArgs* args) {
   return Attrs(attrs);
 }
 
-MNM_TVMJIT(BatchMatmul, "mnm.op.batch_matmul", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
-           GenericAttrs, GenericHasher);
 MNM_TVMJIT(Matmul, "mnm.op.matmul", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            BinarySchema2DenseAttrs, GenericHasher);
 MNM_TVMJIT(MatmulTN, "mnm.op.matmul_tn", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
@@ -37,6 +35,14 @@ MNM_TVMJIT(MatmulTT, "mnm.op.matmul_tt", BinaryArgs, BinarySchema2Args, BinarySc
            BinarySchema2DenseAttrs, GenericHasher);
 MNM_TVMJIT(Dense, "mnm.op.dense", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(BatchMatmul, "mnm.op.batch_matmul", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(BatchMatmulNT, "mnm.op.batch_matmul_nt", BinaryArgs, BinarySchema2Args,
+           BinarySchemaArgNames, BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(BatchMatmulTN, "mnm.op.batch_matmul_tn", BinaryArgs, BinarySchema2Args,
+           BinarySchemaArgNames, BinarySchema2DenseAttrs, GenericHasher);
+MNM_TVMJIT(BatchMatmulTT, "mnm.op.batch_matmul_tt", BinaryArgs, BinarySchema2Args,
+           BinarySchemaArgNames, BinarySchema2DenseAttrs, GenericHasher);
 
 std::vector<Value> ConvSchema2Args(const ConvArgs* args) {
   return {args->x, args->w};
