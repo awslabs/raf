@@ -18,10 +18,17 @@ Expr Shape(const Expr& expr) {
 
 Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                         const Expr& dy) {
+  using namespace mnm::value;
   static auto reshape = Op::Get("mnm.op.reshape");
   static auto shape = Op::Get("mnm.op.shape");
+  static auto sum = Op::Get("mnm.op.sum");
   const CallNode* call = orig_call.as<CallNode>();
-  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
+  const Expr& x = call->args[0];
+  const Expr& bias = call->args[1];
+  const Expr& axis = call->args[2];
+  Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)0));
+  Expr exculde = MakeConstant(ScalarValue::make(true));
+  return {Call(reshape, {dy, Call(shape, {x})}), Call(sum, {dy, axis, keep_dims, exculde})};
 }
 
 MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
