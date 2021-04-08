@@ -35,9 +35,9 @@ __all__ = [
     "sort", "split", "sqrt", "sqrt_dx", "squeeze",
     "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
     "subtract", "sum", "sum_dx", "swap_axis", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
-    "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where",
-    "zeros", "zeros_like",
+    "take_dx", "tanh", "tanh_dx", "threefry_generate", "threefry_split",
+    "transpose", "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_invoke_op", "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -1047,6 +1047,17 @@ def tanh_dx(x, y, dy):
     y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     return imp_utils.ret(ffi.tanh_dx(x, y, dy))
+
+@set_module("mnm")
+def threefry_generate(key, shape):
+    key = imp_utils.to_tensor(key)
+    shape = imp_utils.to_int_tuple(shape)
+    return imp_utils.ret(ffi.threefry_generate(key, shape))
+
+@set_module("mnm")
+def threefry_split(key):
+    key = imp_utils.to_tensor(key)
+    return imp_utils.ret(ffi.threefry_split(key))
 
 @set_module("mnm")
 def transpose(x, axes=None):

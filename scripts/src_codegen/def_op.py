@@ -103,6 +103,8 @@ OPS = [
     Op(name="dense", schema_name="binary"),
     Op(name="repeat", schema_name="repeat"),
     Op(name="expand_dims", schema_name="expand_dims"),
+    Op(name="threefry_generate", schema_name="threefry_generate"),
+    Op(name="threefry_split", schema_name="threefry_split"),
     Op(name="strided_slice", schema_name="strided_slice"),
     Op(name="strided_slice_dx", schema_name="strided_slice_dx"),
     Op(name="sequence_mask", schema_name="sequence_mask"),

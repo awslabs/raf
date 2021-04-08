@@ -91,6 +91,8 @@ OP_MAP = {
     "mnm.op.topk": ["topk", "relay.attrs.TopkAttrs", "kOpaque"],
     "mnm.op.transpose": ["transpose", "relay.attrs.TransposeAttrs", "kInjective"],
     "mnm.op.trunc": ["trunc", "", "kElemWise"],
+    "mnm.op.threefry_generate": ["random.threefry_generate", "relay.attrs.ThreefryGenerateAttrs", "kOpaque"],
+    "mnm.op.threefry_split": ["random.threefry_split", "", "kOpaque"],
     "mnm.op.variance": ["variance", "relay.attrs.ReduceAttrs", "kCommReduce"],
     "mnm.op.where": ["where", "", "kBroadcast"],
     "mnm.op.zeros": ["zeros", "relay.attrs.InitOpAttrs", "kElemWise"],

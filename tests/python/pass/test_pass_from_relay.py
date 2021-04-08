@@ -1025,5 +1025,44 @@ def test_full_fusion(dtype):
     check(ref, out)
 
 
+@pytest.mark.parametrize("shape", [(100, ), (4, 4), (16, 3)])
+def test_threefry_generate(shape):
+    class ThreefryGenerate(mnm.Model):
+        def build(self, shape):
+            self.shape = shape
+
+        @mnm.model.trace
+        def forward(self, key):
+            return mnm.threefry_generate(key, self.shape)
+
+    m_key = mnm.array(_relay.random.threefry_key(0).data.asnumpy(), dtype="uint64")
+    model = ThreefryGenerate(shape)
+
+    r_key = _relay.var("key", shape=(10,), dtype="uint64")
+    r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_generate(
+        r_key, shape))
+
+    check_from_relay(model, r_func, [m_key])
+
+
+def test_threefry_split():
+    class ThreefrySplit(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, key):
+            return mnm.threefry_split(key)
+
+    m_key = mnm.array(_relay.random.threefry_key(0).data.asnumpy(), dtype="uint64")
+    model = ThreefrySplit()
+
+    r_key = _relay.var("key", shape=(10,), dtype="uint64")
+    r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_split(
+        r_key))
+
+    check_from_relay(model, r_func, [m_key])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

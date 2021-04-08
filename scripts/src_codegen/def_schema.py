@@ -446,6 +446,15 @@ SCHEMAS = {
         Arg(name="axis", cxx_type="int"),
         Arg(name="num_newaxis", cxx_type="int", cxx_default=1),
     ],
+    "random.h::threefry_generate": [
+        Arg(name="key", cxx_type="value::BaseTensorValue"),
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+    ],
+    "random.h::threefry_split": [
+        Arg(name="key", cxx_type="value::BaseTensorValue"),
+    ],
     "vision.h::get_valid_counts": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="score_threshold", cxx_type="value::BaseTensorValue"),

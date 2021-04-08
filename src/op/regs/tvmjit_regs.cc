@@ -133,6 +133,8 @@ MNM_TVM_OP("mnm.op.strided_slice", "strided_slice");
 MNM_TVM_OP("mnm.op.subtract", "subtract");
 MNM_TVM_OP("mnm.op.take", "take");
 MNM_TVM_OP("mnm.op.tanh", "tanh");
+MNM_TVM_OP("mnm.op.threefry_generate", "random.threefry_generate");
+MNM_TVM_OP("mnm.op.threefry_split", "random.threefry_split");
 MNM_TVM_OP("mnm.op.tile", "tile");
 MNM_TVM_OP("mnm.op.topk", "topk");
 MNM_TVM_OP("mnm.op.transpose", "transpose");

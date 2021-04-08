@@ -14,6 +14,7 @@
 #include "../../schema/memory.h"
 #include "../../schema/nn.h"
 #include "../../schema/optimizer.h"
+#include "../../schema/random.h"
 #include "../../schema/reduce.h"
 #include "../../schema/transform.h"
 #include "../../schema/ufunc.h"

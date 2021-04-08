@@ -67,6 +67,8 @@ def _run_trace_record(record, args, kwargs):
         result = [result]
     for obj, attr in reversed(record.mutations):
         object.__setattr__(obj, attr, result[-1])
+        if attr in record.named_params.keys():
+            record.named_params[attr] = result[-1]
         result.pop()
     return _unflatten_from_struct(result, record.o_struct)
 

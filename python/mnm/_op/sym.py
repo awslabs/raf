@@ -34,9 +34,9 @@ __all__ = [
     "sort", "split", "sqrt", "sqrt_dx", "squeeze",
     "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
     "subtract", "sum", "sum_dx", "swap_axis", "take",
-    "take_dx", "tanh", "tanh_dx", "transpose", "transpose_dx",
-    "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where",
-    "zeros", "zeros_like",
+    "take_dx", "tanh", "tanh_dx", "threefry_generate", "threefry_split",
+    "transpose", "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_invoke_op", "where", "zeros", "zeros_like",
 ]
 
 def _allreduce(x):
@@ -908,6 +908,15 @@ def tanh_dx(x, y, dy):
     y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.tanh_dx(x, y, dy))
+
+def threefry_generate(key, shape):
+    key = sym_utils.to_tensor(key)
+    shape = sym_utils.to_int_tuple(shape)
+    return Symbol.from_expr(ffi.threefry_generate(key, shape))
+
+def threefry_split(key):
+    key = sym_utils.to_tensor(key)
+    return Symbol.from_expr(ffi.threefry_split(key))
 
 def transpose(x, axes=None):
     x = sym_utils.to_tensor(x)
