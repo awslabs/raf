@@ -16,7 +16,7 @@ from .._ffi import ir
 from .._ffi import pass_
 from ..model.trace import _get_func_inputs
 
-
+# TODO: Remove this after all its use cases are migrated to pass manager with proper requirements
 def run_infer_type(expr):
     """Helper function to infer the type of the given expr """
     if isinstance(expr, IRModule):
@@ -158,12 +158,12 @@ def t2m_param(param, device="cuda"):
     return mnm.ndarray(param.detach().cpu().numpy(), device=device)  # pylint: disable=unexpected-keyword-arg
 
 
-def run_vm_model(model, device, args, optimize=None):
+def run_vm_model(model, device, args, pass_seq=None):
     """Helper function to execute model with VM"""
     record = model._internal(*args)
     mod = record.mod
-    if optimize:
-        mod = optimize(mod)
+    if pass_seq is not None:
+        mod = pass_seq(mod)
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
     executor = VMExecutor(mod, device)
     out = executor.make_executor()(*inputs)

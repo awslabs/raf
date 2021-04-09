@@ -18,7 +18,7 @@ from tvm.auto_scheduler.measure import MeasureErrorNo
 from tvm.auto_scheduler.measure_record import RecordReader
 
 
-def extract_tuning_tasks(mod, args, device, *, optimize=None):
+def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
     """Extract tuning tasks from the given function and the target.
 
     Parameters
@@ -32,8 +32,8 @@ def extract_tuning_tasks(mod, args, device, *, optimize=None):
     device: str
         The target device.
 
-    optimize: Optional[Callable[[relay.Function], relay.Function]]
-        An optimization function for Meta Relay functions.
+    pass_seq: Optional[MNMSequential]
+        A pass sequence to be applied.
 
     Returns
     -------
@@ -44,8 +44,8 @@ def extract_tuning_tasks(mod, args, device, *, optimize=None):
     if isinstance(mod, mnm.Model):
         record = mod._internal(*args)
         mod = record.mod
-        if optimize is not None:
-            mod = optimize(mod)
+        if pass_seq is not None:
+            mod = pass_seq(mod)
         args = _get_func_inputs(record, args, {}, get_handle=False)
 
     old_auto_scheduler_fallback_context = auto_scheduler.DispatchContext.current
@@ -125,7 +125,7 @@ def tune_tasks(tasks, weights, log_file, n_trials):
     del measure_device
     print("Done tuning. Records saved in %s" % log_file)
 
-def run_tuning(model, device, args, log_file, *, optimize=None,
+def run_tuning(model, device, args, log_file, *, pass_seq=None,
                n_trials=lambda l: 300 * min(l, 100), only_tune_new_tasks=False):
     """Tune the given tasks.
 
@@ -144,8 +144,8 @@ def run_tuning(model, device, args, log_file, *, optimize=None,
         The log file to dump the tuning records. If the file already contains tuning records,
         we use them to initialize the task scheduler and new records will be appended.
 
-    optimize: Optional[Callable[[relay.Function], relay.Function]]
-        An optimization function for Meta Relay functions.
+    pass_seq: Optional[MNMSequential]
+        A pass sequence to be applied.
 
     n_trials: Callable[[int], int] or int
         An integer of total number of measurement trials, or a function that determines
@@ -157,7 +157,7 @@ def run_tuning(model, device, args, log_file, *, optimize=None,
         log file.
     """
     print("Extracting tasks...")
-    tasks, weights = extract_tuning_tasks(model, args, device, optimize=optimize)
+    tasks, weights = extract_tuning_tasks(model, args, device, pass_seq=pass_seq)
     ori_task_num = len(tasks)
 
     if only_tune_new_tasks and os.path.exists(log_file):

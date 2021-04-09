@@ -1,5 +1,5 @@
 # pylint:disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
-# pylint:disable=not-callable,abstract-method,too-many-locals,invalid-name
+# pylint:disable=not-callable,abstract-method,too-many-locals,invalid-name,protected-access
 import pytest
 import torch
 import torch.nn as nn
@@ -9,7 +9,6 @@ import mnm
 from mnm._op import sym
 from mnm.frontend import from_pytorch
 from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model
-from mnm.testing.utils import ir_fusion
 
 class TorchLeNet(nn.Module):
     def __init__(self, input_shape=28, num_classes=10):
@@ -194,7 +193,8 @@ def test_conv_bn(shape_dict, mode, fuse):
 
         m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
         m_loss = run_vm_model(
-            m_trainer, device, [m_dy, m_x, m_ytrue], ir_fusion if fuse else None)[0][0]
+            m_trainer, device, [m_dy, m_x, m_ytrue],
+            mnm._ffi.pass_.FuseOps(1) if fuse else None)[0][0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()
@@ -227,7 +227,7 @@ def test_batch_norm_train(shape_dict):
 
     m_model.train_mode()
     t_model.train()
-    m_y = run_vm_model(m_model, device, [m_x], optimize=ir_fusion)[0]
+    m_y = run_vm_model(m_model, device, [m_x], mnm._ffi.pass_.FuseOps(1))[0]
     t_y = t_model(t_x)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_model.state()["model_running_mean"], t_model.running_mean)

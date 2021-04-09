@@ -178,10 +178,10 @@ Pass FlattenClosure();
  * \brief Performs operator fusion.
  * \param mod IRModule to be fused.
  * \param fuse_opt_level The optimization level used to enable this pass.
- * \return The transformed module.
+ * \return The created pass.
  *
  */
-ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level);
+Pass FuseOps(int fuse_opt_level);
 /*!
  * \brief A pass that eliminates dead code.
  * \return The created pass.

@@ -111,7 +111,7 @@ def test_mnm_module():
     m_x, n_x = randn((1, 100))
 
     # Check that VM can execute multi-module functions
-    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], utils.ir_fusion)
+    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], mnm._ffi.pass_.FuseOps(1))
     m_out = vm_executor(*args)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
@@ -1015,7 +1015,7 @@ def test_full_fusion(dtype):
 
     record = m._internal()
     mod = record.mod
-    mod = utils.ir_fusion(mod)
+    mod = mnm._ffi.pass_.FuseOps(1)(mod)
     vm_inputs = _get_func_inputs(record, [], {}, get_handle=False)
     vm = VMExecutor(mod, "llvm")
     vm_exec = vm.make_executor()

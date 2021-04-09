@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import mnm
-from mnm.testing import run_infer_type, run_vm_model, check
+from mnm.testing import run_vm_model, check
 from mnm._core.executor import VMExecutor
 from mnm.testing import get_arr_addr, get_device_list, randn
 
@@ -151,15 +151,9 @@ def test_memory(device, shape):
 ])
 def test_simple_fusion(device, shape):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
-    def ir_fusion(mod):
-        mod = run_infer_type(mod)
-        mod = mnm._ffi.pass_.FuseOps(mod, 3)
-        mod = run_infer_type(mod)
-        return mod
-
     def check_e2e(model, device, args):
         out_before = run_vm_model(model, device, args)
-        out_after = run_vm_model(model, device, args, ir_fusion)
+        out_after = run_vm_model(model, device, args, mnm._ffi.pass_.FuseOps(3))
         check(out_before, out_after)
 
     class Model(mnm.Model):
@@ -182,15 +176,10 @@ def test_simple_fusion(device, shape):
 def test_split_fusion(device):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     shape = [3, 3]
-    def ir_fusion(mod):
-        mod = run_infer_type(mod)
-        mod = mnm._ffi.pass_.FuseOps(mod, 3)
-        mod = run_infer_type(mod)
-        return mod
 
     def check_e2e(model, device, args):
         out_before = run_vm_model(model, device, args)
-        out_after = run_vm_model(model, device, args, ir_fusion)
+        out_after = run_vm_model(model, device, args, mnm._ffi.pass_.FuseOps(3))
         check(out_before, out_after)
 
     class Model(mnm.Model):

@@ -46,7 +46,7 @@ def test_fuse_simple():
     m_x, _ = randn((10, 20), device="cpu")
     mod_before = model._internal(m_x).mod
     mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(mod_before, 3)
+    mod_after = mnm._ffi.pass_.FuseOps(3)(mod_before)
     mod_after = run_infer_type(mod_after)
     func_expected = run_infer_type(expected((10, 20)))
     assert tvm.ir.structural_equal(mod_after['main'], func_expected)
@@ -142,7 +142,7 @@ def test_conv2d():
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod_before = model._internal(m_x).mod
     mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(mod_before, 3)
+    mod_after = mnm._ffi.pass_.FuseOps(3)(mod_before)
     mod_after = run_infer_type(mod_after)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
@@ -195,7 +195,7 @@ def test_concatenate():
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     before = model._internal(m_x).mod
     before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(before, 3)
+    after = mnm._ffi.pass_.FuseOps(3)(before)
     after = run_infer_type(after)
     func_expected = run_infer_type(expected((1, 16, 64, 64)))
     assert tvm.ir.structural_equal(after['main'], func_expected)
@@ -253,7 +253,7 @@ def test_tuple_root_fuse():
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     before = model._internal(m_x).mod
     before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(before, 3)
+    after = mnm._ffi.pass_.FuseOps(3)(before)
     after = run_infer_type(after)
     func_expected = expected((1, 16, 64, 64))
     func_expected = run_infer_type(func_expected)
@@ -276,7 +276,7 @@ def test_tuple_root_no_fuse():
     m_c, _ = randn((128,))
     before = model._internal(m_a, m_b, m_c).mod
     before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(before, 3)
+    after = mnm._ffi.pass_.FuseOps(3)(before)
     after = run_infer_type(after)
     # The group of tuple and concatenate won't be fused due to no call node,
     # so fusion pass has no effect in this case.
@@ -310,7 +310,7 @@ def test_single_w_tuple():
     m_b, _ = randn(stats_shape)
     before = model._internal(m_x, m_w, m_b, m_m, m_v).mod
     before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(before, 3)
+    after = mnm._ffi.pass_.FuseOps(3)(before)
     after = run_infer_type(after)
     # BatchNorm and ReLU cannot be fused together and each of them
     # will not form a function, so fusion should have no effect in this case.
@@ -364,7 +364,7 @@ def test_fuse_level_1():
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod_before = model._internal(m_x).mod
     mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(mod_before, 1)
+    mod_after = mnm._ffi.pass_.FuseOps(1)(mod_before)
     mod_after = run_infer_type(mod_after)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
@@ -445,7 +445,7 @@ def test_sgd():
     sgd.v = mnm.array(n_v, device=device)
     mod = sgd._internal(m_dy).mod
     mod = run_infer_type(mod)
-    mod = mnm._ffi.pass_.FuseOps(mod, 3)
+    mod = mnm._ffi.pass_.FuseOps(3)(mod)
     mod = run_infer_type(mod)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)

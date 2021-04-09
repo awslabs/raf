@@ -1027,32 +1027,19 @@ class FuseMutator : private ExprMutator {
 
 }  // namespace fuse_ops
 
-ir::Expr FuseOps(ir::Expr expr, int fuse_opt_level) {
-  return fuse_ops::FuseMutator().Transform(expr, fuse_opt_level);
+Pass FuseOps(int fuse_opt_level) {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        return Downcast<Function>(fuse_ops::FuseMutator().Transform(f, fuse_opt_level));
+      };
+
+  Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "FuseOpsHelper", {});
+  PassInfo pass_info(2, "FuseOps", {});
+  return MNMSequential({InlineLet(), DeadCodeElimination(), InferType(), func_pass}, pass_info);
 }
 
-// TODO - Cleanup when pass manager is introduced.
-ir::IRModule FuseOps(ir::IRModule mod, int fuse_opt_level) {
-  ir::IRModule updated_mod = ir::IRModule(mod->functions);
-  std::vector<std::pair<ir::GlobalVar, ir::Function>> updated_funcs;
-  auto inliner = fuse_ops::FuseMutator();
-
-  for (auto kv : updated_mod->functions) {
-    if (kv.second.as<ir::FunctionNode>()) {
-      auto expr = inliner.Transform(kv.second, fuse_opt_level);
-      auto func = tvm::runtime::Downcast<ir::Function>(expr);
-      updated_funcs.emplace_back(kv.first, func);
-    }
-  }
-
-  for (const auto& it : updated_funcs) {
-    updated_mod->Add(it.first, it.second, true);
-  }
-  return updated_mod;
-}
-
-MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed([](ir::IRModule mod, int fuse_opt_level) {
-  return FuseOps(mod, fuse_opt_level);
+MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed([](int fuse_opt_level) {
+  return FuseOps(fuse_opt_level);
 });
 
 }  // namespace pass

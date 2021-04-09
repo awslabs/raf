@@ -85,7 +85,7 @@ def test_inline():
     func_expected = run_infer_type(expected2())
     assert tvm.ir.structural_equal(mod['main'], func_expected)
 
-    mod = run_infer_type(mnm._ffi.pass_.FuseOps(mod, 3))
+    mod = mnm._ffi.pass_.FuseOps(3)(mod)
     func_expected = run_infer_type(expected3())
     assert tvm.ir.structural_equal(mod['main'], func_expected)
 

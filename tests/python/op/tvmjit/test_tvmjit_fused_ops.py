@@ -11,7 +11,7 @@ def ir_fuser(func):
     if not isinstance(func, mnm._core.module.IRModule):
         mod = mnm._core.module.IRModule.from_expr(func)
     mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.FuseOps(mod, 3)
+    mod = mnm._ffi.pass_.FuseOps(3)(mod)
     func = run_infer_type(mod)
     return func
 
