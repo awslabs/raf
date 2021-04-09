@@ -23,6 +23,30 @@ using tvm::relay::Type;
 using namespace tvm;
 using namespace relay;
 
+Type ArangeInfer(const CallValues& value) {
+  const auto* args = value->args.as<ArangeArgs>();
+  if (args->start->IsInstance<TensorValueObj>() && args->stop->IsInstance<TensorValueObj>() &&
+      args->step->IsInstance<TensorValueObj>()) {
+    TensorType x = Downcast<TensorType>(GetType(args->start));
+    int32_t size;
+    if (args->dtype == "float32") {
+      size = CalArangeOutputSize<float>(args);
+    } else if (args->dtype == "float64") {
+      size = CalArangeOutputSize<double>(args);
+    } else if (args->dtype == "int64") {
+      size = CalArangeOutputSize<int64_t>(args);
+    } else {
+      LOG(FATAL) << "Do not support type: " << args->dtype;
+    }
+    auto out_type = DataType(ir::String2DLDataType(args->dtype));
+    return TensorType({PrimExpr(size)}, out_type);
+  } else {
+    return IncompleteType(tvm::kType);
+  }
+}
+
+MNM_OP_TYPE("mnm.op.arange", "Arange", ArangeInfer);
+
 Type AdvIndexInfer(const CallValues& value) {
   const auto* args = value->args.as<AdvIndexArgs>();
   CHECK(args != nullptr);

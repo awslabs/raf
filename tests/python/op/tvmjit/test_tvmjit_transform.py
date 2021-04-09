@@ -729,6 +729,22 @@ def test_where(shape, device):
     check(m_res, t_res)
 
 
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("data", [
+    [1, 10, 2],
+    [1, 10, 1]
+])
+def test_arange(data, device, dtype):
+    start, stop, step = data
+    m_start = mnm.array(start, dtype=dtype, device=device)
+    m_stop = mnm.array(stop, dtype=dtype, device=device)
+    m_step = mnm.array(step, dtype=dtype, device=device)
+    x = mnm.arange(m_start, m_stop, m_step, dtype=dtype)
+    n_x = np.arange(start, stop, step).astype(dtype)
+    check(x, n_x)
+
+
 @pytest.mark.parametrize("data_shape, index_shapes", [
     ((10, 5), [(3, 4), (3, 1)]),
     ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])

@@ -10,6 +10,13 @@ namespace mnm {
 namespace op {
 namespace from_relay {
 
+MNM_OP_FROM_RELAY("arange", "mnm.op.arange", [&](const Attrs& attrs, const Array<Expr>& args) {
+  Array<Expr> mnm_args = args;
+  const auto* relay_attrs = attrs.as<ArangeAttrs>();
+  mnm_args.push_back(MakeConstant(StringValue::make(DLDataType2String(relay_attrs->dtype))));
+  return mnm_args;
+});
+
 MNM_OP_FROM_RELAY("adv_index", "mnm.op.adv_index",
                   [&](const Attrs& attrs, const Array<Expr>& args) { return args; });
 

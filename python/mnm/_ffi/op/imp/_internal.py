@@ -25,6 +25,8 @@ all = _APIS.get("mnm.op.imp.all", None)
 # Defined in ./src/op/regs/regs.cc
 any = _APIS.get("mnm.op.imp.any", None)
 # Defined in ./src/op/regs/regs.cc
+arange = _APIS.get("mnm.op.imp.arange", None)
+# Defined in ./src/op/regs/regs.cc
 argmax = _APIS.get("mnm.op.imp.argmax", None)
 # Defined in ./src/op/regs/regs.cc
 argmin = _APIS.get("mnm.op.imp.argmin", None)

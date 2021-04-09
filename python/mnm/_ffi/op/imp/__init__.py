@@ -12,6 +12,7 @@ from ._internal import add
 from ._internal import adv_index
 from ._internal import all
 from ._internal import any
+from ._internal import arange
 from ._internal import argmax
 from ._internal import argmin
 from ._internal import argsort

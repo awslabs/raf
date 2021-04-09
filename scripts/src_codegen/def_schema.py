@@ -324,6 +324,12 @@ SCHEMAS = {
         Arg(name="keepdims", cxx_type="bool", cxx_default=False),
         Arg(name="exclude", cxx_type="bool", cxx_default=False),
     ],
+    "transform.h::arange": [
+        Arg(name="start", cxx_type="value::BaseTensorValue"),
+        Arg(name="stop", cxx_type="value::BaseTensorValue"),
+        Arg(name="step", cxx_type="value::BaseTensorValue"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"", py_default="\"float32\""), 
+    ],
     "transform.h::adv_index": [
         Arg(name="inputs",
             cxx_type="std::vector<value::BaseTensorValue>",

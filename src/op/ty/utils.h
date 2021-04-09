@@ -10,6 +10,7 @@
 #include <tvm/ir/env_func.h>
 #include <tvm/tir/expr.h>
 #include "mnm/op.h"
+#include "../schema/transform.h"
 #include "../schema/ufunc.h"
 
 namespace mnm {
@@ -23,6 +24,40 @@ namespace type {
  * \return The type of value
  */
 tvm::Type GetType(value::Value value);
+
+/*! \brief Get the value in a DLTensor.
+ *
+ *  \param v BaseTensorValue which only contains one item
+ *
+ *  \return The value in Tensor
+ */
+template <typename T>
+T GetScalarValue(value::BaseTensorValue v) {
+  if (auto* tvo = v.as<value::TensorValueObj>()) {
+    DLContext cpu_ctx;
+    cpu_ctx.device_type = kDLCPU;
+    cpu_ctx.device_id = 0;
+    tensor::Tensor tensor = tvo->tensor;
+    CHECK(tensor->ndim == 0);
+    tvm::runtime::NDArray cpu_array = tensor.CopyTo(cpu_ctx);
+    return reinterpret_cast<T*>(cpu_array->data)[0];
+  }
+  LOG(FATAL) << "Cannot convert " << v->GetTypeKey() << " to scalar";
+}
+
+/*! \brief Calculate the output size of arange OP.
+ *
+ *  \param ArangeArgs, arange arguments
+ *
+ *  \return The size of output
+ */
+template <typename T>
+int32_t CalArangeOutputSize(const schema::ArangeArgs* args) {
+  T start_v = GetScalarValue<T>(args->start);
+  T stop_v = GetScalarValue<T>(args->stop);
+  T step_v = GetScalarValue<T>(args->step);
+  return (int32_t)ceil(((double)stop_v - start_v) / step_v);
+}
 
 /*! \brief Checks if the two PrimExpr matches the comparator.
  * If the result cannot be determined, it is considered true.

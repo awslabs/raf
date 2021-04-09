@@ -24,6 +24,39 @@ using namespace mnm::op::schema;
 using namespace tvm;
 using namespace ::tvm::relay;
 
+Attrs ArangeSchema2Attrs(const ArangeArgs* args) {
+  auto attrs = make_object<ArangeAttrs>();
+  attrs->start = MakeConstant(args->start);
+  attrs->stop = MakeConstant(args->stop);
+  attrs->step = MakeConstant(args->step);
+  attrs->dtype = runtime::DataType(String2DLDataType(args->dtype));
+  return Attrs(attrs);
+}
+
+std::vector<Value> ArangeSchema2Args(const ArangeArgs* args) {
+  std::vector<Value> out;
+  out.push_back(args->start);
+  out.push_back(args->stop);
+  out.push_back(args->step);
+  return out;
+}
+
+std::vector<std::string> ArangeSchemaArgNames(const op::CallValues& call) {
+  return {"start", "stop", "step"};
+}
+
+HashKey ArangeHasher(const std::vector<Type>& param_types, const Type& y_type,
+                     const ArangeArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->start;
+  key << args->stop;
+  key << args->step;
+  return key;
+}
+
+MNM_TVMJIT(Arange, "mnm.op.arange", ArangeArgs, ArangeSchema2Args, ArangeSchemaArgNames,
+           ArangeSchema2Attrs, ArangeHasher);
+
 std::vector<Value> AdvIndexSchema2Args(const AdvIndexArgs* args) {
   std::vector<Value> ret;
   for (auto v : args->inputs) {

@@ -6,7 +6,7 @@ import mnm
 import tvm.topi.testing as npx
 from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
-from tvm.relay import TensorType, FuncType, TupleType
+from tvm.relay import TensorType, FuncType, TupleType, IncompleteType
 
 
 # pylint: disable=too-many-locals, import-outside-toplevel, attribute-defined-outside-init
@@ -792,6 +792,31 @@ def test_strided_slice(dtype, params):
     bwd_ty = FuncType([y_ty], x_ty)
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
     check_type(m_mod['main'], expected_type)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("data", [
+    [1, 10, 2],
+    [1, 10, 1]
+])
+def test_arange(data, dtype):
+    class Arange(mnm.Model):
+        def build(self, dtype):
+            self.dtype = dtype
+
+        @mnm.model.trace
+        def forward(self, start, stop, step):
+            return mnm.arange(start, stop, step, self.dtype)
+    start, stop, step = data
+    m_start = mnm.array(start, dtype=dtype)
+    m_stop = mnm.array(stop, dtype=dtype)
+    m_step = mnm.array(step, dtype=dtype)
+    model = Arange(dtype)
+    m_mod = model._internal(m_start, m_stop, m_step).mod
+    m_mod = InferType()(m_mod)
+    # TODO(@zhen-jia) check the type when runtime infer type is able
+    ret_type = m_mod["main"].checked_type.ret_type
+    assert isinstance(ret_type, IncompleteType)
 
 
 if __name__ == "__main__":

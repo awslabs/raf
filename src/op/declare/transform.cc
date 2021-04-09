@@ -27,6 +27,24 @@ using namespace mnm::ir;
 using common::shape_utils::IsCompact;
 using tensor::Tensor;
 
+MNM_OP_DECLARE("mnm.op.arange", [](const CallValues& call) {
+  const auto* args = call->args.as<ArangeArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* start = args->start;
+  int32_t size;
+  if (args->dtype == "float32") {
+    size = type::CalArangeOutputSize<float>(args);
+  } else if (args->dtype == "float64") {
+    size = type::CalArangeOutputSize<double>(args);
+  } else if (args->dtype == "int64") {
+    size = type::CalArangeOutputSize<int64_t>(args);
+  } else {
+    LOG(FATAL) << "Do not support type: " << args->dtype;
+  }
+  call->out = TensorValue::Assemble(start->ctx, ir::String2DLDataType(args->dtype), {size});
+  call->device = start->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
 MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
   const auto* args = call->args.as<AdvIndexArgs>();
   CHECK(args != nullptr);

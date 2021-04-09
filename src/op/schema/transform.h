@@ -18,6 +18,15 @@ class AdvIndexArgs : public ir::AttrsNode<AdvIndexArgs> {
   MNM_OP_SCHEMA(AdvIndexArgs, "mnm.args.adv_index");
 };
 
+class ArangeArgs : public ir::AttrsNode<ArangeArgs> {
+ public:
+  value::BaseTensorValue start;
+  value::BaseTensorValue stop;
+  value::BaseTensorValue step;
+  std::string dtype{"float32"};
+  MNM_OP_SCHEMA(ArangeArgs, "mnm.args.arange");
+};
+
 class CastArgs : public ir::AttrsNode<CastArgs> {
  public:
   value::BaseTensorValue data;

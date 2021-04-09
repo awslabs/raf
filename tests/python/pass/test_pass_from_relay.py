@@ -49,7 +49,6 @@ def check_from_relay(m_model, r_func, args, check_model_structure=True,
         for ref_out, out in zip(ref_outs, outs):
             check(ref_out, out)
 
-
 def test_mnm_constant():
     data = mnm.array(1)
 
@@ -970,6 +969,29 @@ def test_sum(shape, axis, keep):
     r_func = _relay.Function(params=[r_x], body=_relay.sum(r_x, axis, keep))
 
     check_from_relay(model, r_func, [m_x])
+
+
+@pytest.mark.parametrize("data", [[1, 10, 2], [1, 10, 3]])
+def test_arange(data):
+    start, stop, step = data
+    class Arange(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, start, stop, step):
+            return mnm.arange(start, stop, step)
+    model = Arange()
+    dtype = "float32"
+    m_start = mnm.array(start, dtype=dtype)
+    m_stop = mnm.array(stop, dtype=dtype)
+    m_step = mnm.array(step, dtype=dtype)
+    r_start = _relay.var("start", shape=[], dtype=dtype)
+    r_stop = _relay.var("stop", shape=[], dtype=dtype)
+    r_step = _relay.var("step", shape=[], dtype=dtype)
+    x = _relay.arange(r_start, r_stop, r_step)
+    r_func = _relay.Function([r_start, r_stop, r_step], x)
+    check_from_relay(model, r_func, [m_start, m_stop, m_step])
 
 
 @pytest.mark.parametrize("data_shape, index_shapes", [

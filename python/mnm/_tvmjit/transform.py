@@ -47,7 +47,7 @@ _reg.register_broadcast_schedule("mnm.op.repeat")
 _reg.register_broadcast_schedule("mnm.op.expand_dims")
 _reg.register_injective_schedule("mnm.op.full")
 _reg.register_injective_schedule("mnm.op.batch_flatten")
-
+_reg.register_injective_schedule("mnm.op.arange")
 
 @register_compute("mnm.op.adv_index")
 def adv_index_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
