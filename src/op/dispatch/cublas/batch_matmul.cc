@@ -131,11 +131,19 @@ class BatchMatmulImpl : public mnm::op::OpEnv {
   }
 };
 
+using BatchMatmulNN = BatchMatmulImpl<false, false>;
 using BatchMatmulNT = BatchMatmulImpl<false, true>;
+using BatchMatmulTN = BatchMatmulImpl<true, false>;
+using BatchMatmulTT = BatchMatmulImpl<true, true>;
 
+MNM_OP_DISPATCH("mnm.op.batch_matmul", BatchMatmulNN::make, DevType::kCUDA(),
+                "cublas");  // default setting, transposeA = false, transposeB = true
 MNM_OP_DISPATCH("mnm.op.batch_matmul_nt", BatchMatmulNT::make, DevType::kCUDA(),
                 "cublas");  // default setting, transposeA = false, transposeB = true
-
+MNM_OP_DISPATCH("mnm.op.batch_matmul_tn", BatchMatmulTN::make, DevType::kCUDA(),
+                "cublas");  // default setting, transposeA = false, transposeB = true
+MNM_OP_DISPATCH("mnm.op.batch_matmul_tt", BatchMatmulTT::make, DevType::kCUDA(),
+                "cublas");  // default setting, transposeA = false, transposeB = true
 }  // namespace manual
 }  // namespace cublas
 }  // namespace op

@@ -19,6 +19,9 @@ from mnm.model.trace import trace_mutate_attr
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments, invalid-name
+    if device == "cuda":
+        pytest.skip("Skipping to avoid duplication as batch matmul is offloaded to CuBLAS.")
+
     class TestModel(mnm.Model):
         def build(self):
             pass
