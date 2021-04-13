@@ -47,14 +47,13 @@ void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_
   long long int strideA = n * k;
   long long int strideB = m * k;
   long long int strideC = m * n;
-  // check broadcast
-  if (a->shape[0] != b->shape[0]) {
-    if (a->shape[0] == 1)
-      strideA = 0;
-    else if (b->shape[0] == 1)
-      strideB = 0;
-  }
 
+  // Set the stride of the broadcast tensor to 0.
+  if (a->shape[0] == 1 && b->shape[0] > 1) {
+    strideA = 0;
+  } else if (a->shape[0] > 1 && b->shape[0] == 1) {
+    strideB = 0;
+  }
   if (c->dtype.code == kDLFloat) {
     switch (c->dtype.bits) {
       case 16:
@@ -81,16 +80,10 @@ void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_
             strideA, static_cast<const double*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
             static_cast<double*>(c->data), m, strideC, batch_count));
         return;
+      default:
+        CHECK(0) << "Unsupported type: float" << c->dtype.bits;
     }
   }
-
-  CUBLAS_CALL(cublasGemmBatchedEx(
-      handle, transb, transa, m, n, k, const_addr<1>(cudaDataType_t(DType(c->dtype))),
-      static_cast<const void* const*>(b->data), cudaDataType_t(DType(b->dtype)), ldb,
-      static_cast<const void* const*>(a->data), cudaDataType_t(DType(a->dtype)), lda,
-      const_addr<0>(cudaDataType_t(DType(c->dtype))), static_cast<void* const*>(c->data),
-      cudaDataType_t(DType(c->dtype)), m, batch_count, cudaDataType_t(DType(c->dtype)),
-      CUBLAS_GEMM_DEFAULT));
 }
 
 template <bool transpose_a, bool transpose_b>
