@@ -715,10 +715,25 @@ MNM_OP_TYPE("mnm.op.full", "Full", FullInfer);
 Type WhereInfer(const CallValues& value) {
   const auto* args = value->args.as<WhereArgs>();
   CHECK(args != nullptr);
-  return GetType(args->x);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  TensorType y = Downcast<TensorType>(GetType(args->y));
+  if (x->shape.size() >= y->shape.size()) {
+    return x;
+  } else {
+    return y;
+  }
 }
 
 MNM_OP_TYPE("mnm.op.where", "Where", WhereInfer);
+
+Type WhereDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<BinaryDxArgs>();
+  CHECK(args != nullptr);
+  Array<Type> res{GetType(args->x1), GetType(args->x2)};
+  return TupleType(res);
+}
+
+MNM_OP_TYPE("mnm.op.where_dx", "WhereDx", WhereDxInfer);
 
 }  // namespace type
 }  // namespace op

@@ -9,7 +9,7 @@ def gen_file():
     FILE = """
 # pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
-# pylint: disable=protected-access
+# pylint: disable=protected-access, too-many-lines
 \"\"\"Auto generated. Do not touch.\"\"\"
 import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol

@@ -709,7 +709,8 @@ def test_strided_slice(device, params):
     (4, 1, 1),
     (1, 2, 4, 1)
 ])
-def test_where(shape, device):
+@pytest.mark.parametrize("broadcast", [True, False])
+def test_where(shape, device, broadcast):
     # pylint: disable=no-self-use, not-callable
     class WhereModel(mnm.Model):
         def build(self):
@@ -722,11 +723,19 @@ def test_where(shape, device):
     m_model = WhereModel()
     m_condition, n_condition = randint(shape, low=0, high=1, device=device, dtype="bool")
     t_condition = torch.tensor(n_condition, device=device)
-    m_x, t_x = randn_torch(shape, device=device)
-    m_y, t_y = randn_torch(shape, device=device)
+    m_x, t_x = randn_torch(shape, device=device, requires_grad=True)
+    if broadcast:
+        m_y, t_y = randn_torch((), device=device, requires_grad=True)
+    else:
+        m_y, t_y = randn_torch(shape, device=device, requires_grad=True)
     m_res = m_model(m_condition, m_x, m_y)
     t_res = torch.where(t_condition, t_x, t_y)
     check(m_res, t_res)
+    m_dy, t_dy = randn_torch(m_res.shape, device=device)
+    m_res.backward(m_dy)
+    t_res.backward(t_dy)
+    check(m_x.grad, t_x.grad)
+    check(m_y.grad, t_y.grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())

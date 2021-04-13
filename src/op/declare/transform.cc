@@ -797,12 +797,35 @@ MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {
   const DLTensor* condition = args->condition;
   const DLTensor* x = args->x;
   const DLTensor* y = args->y;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  const DLTensor* s;
+  if (x->ndim >= y->ndim) {
+    s = x;
+  } else {
+    s = y;
+  }
+  std::vector<int64_t> shape(s->shape, s->shape + s->ndim);
   call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->device = x->ctx;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+
+MNM_OP_DECLARE("mnm.op.where_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x1 = args->x1;
+  const DLTensor* x2 = args->x2;
+  std::vector<int64_t> shape1(x1->shape, x1->shape + x1->ndim);
+  std::vector<int64_t> shape2(x2->shape, x2->shape + x2->ndim);
+  TensorValue dx1 = TensorValue::Assemble(/*ctx=*/x1->ctx,
+                                          /*dtype=*/x1->dtype,
+                                          /*shape=*/shape1);
+  TensorValue dx2 = TensorValue::Assemble(/*ctx=*/x2->ctx,
+                                          /*dtype=*/x2->dtype,
+                                          /*shape=*/shape2);
+  call->out = TupleValue::make(tvm::Array<Value>({dx1, dx2}));
+  call->device = x1->ctx;
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare
 }  // namespace op

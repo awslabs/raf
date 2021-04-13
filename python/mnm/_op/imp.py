@@ -38,7 +38,7 @@ __all__ = [
     "sum", "sum_dx", "swap_axis", "take", "take_dx",
     "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
     "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op",
-    "where", "zeros", "zeros_like",
+    "where", "where_dx", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -1134,6 +1134,14 @@ def where(condition, x, y):
     x = imp_utils.to_tensor(x)
     y = imp_utils.to_tensor(y)
     return imp_utils.ret(ffi.where(condition, x, y))
+
+@set_module("mnm")
+def where_dx(x1, x2, y, dy):
+    x1 = imp_utils.to_any(x1)
+    x2 = imp_utils.to_any(x2)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    return imp_utils.ret(ffi.where_dx(x1, x2, y, dy))
 
 @set_module("mnm")
 def zeros(shape, dtype="int32", device="cpu"):

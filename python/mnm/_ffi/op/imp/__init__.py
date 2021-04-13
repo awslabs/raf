@@ -149,6 +149,7 @@ from ._internal import transpose
 from ._internal import transpose_dx
 from ._internal import trunc
 from ._internal import where
+from ._internal import where_dx
 from ._internal import zeros
 from ._internal import zeros_like
 from . import vm

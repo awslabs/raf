@@ -247,6 +247,19 @@ Array<Expr> StridedSliceGrad(const Expr& orig_call, const Array<Expr> orig_args,
 
 MNM_OP_GRAD("mnm.op.strided_slice", StridedSliceGrad);
 
+Array<Expr> WhereGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                      const Expr& dy) {
+  static auto where_dx = Op::Get("mnm.op.where_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x1 = call->args[1];
+  const Expr& x2 = call->args[2];
+  const Expr& ret = Call(where_dx, {x1, x2, y, dy});
+  return {NullValue<Expr>(), TupleGetItem(ret, 0), TupleGetItem(ret, 1)};
+}
+
+MNM_OP_GRAD("mnm.op.where", WhereGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

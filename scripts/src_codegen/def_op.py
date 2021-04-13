@@ -144,6 +144,7 @@ OPS = [
     Op(name="compiler_end", schema_name="compiler"),
     Op(name="full", schema_name="full"),
     Op(name="where", schema_name="where"),
+    Op(name="where_dx", schema_name="binary_dx"),
     Op(name="logical_and", schema_name="binary_ufunc"),
     Op(name="device_copy", schema_name="device_copy"),
     Op(name="zeros", schema_name="init_op"),

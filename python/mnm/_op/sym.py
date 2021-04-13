@@ -1,6 +1,6 @@
 # pylint: disable=invalid-name,line-too-long,too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
-# pylint: disable=protected-access
+# pylint: disable=protected-access, too-many-lines
 """Auto generated. Do not touch."""
 import mnm._ffi.op.sym as ffi
 from mnm._core.ndarray import Symbol
@@ -37,7 +37,7 @@ __all__ = [
     "sum", "sum_dx", "swap_axis", "take", "take_dx",
     "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
     "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op",
-    "where", "zeros", "zeros_like",
+    "where", "where_dx", "zeros", "zeros_like",
 ]
 
 def _allreduce(x):
@@ -982,6 +982,13 @@ def where(condition, x, y):
     x = sym_utils.to_tensor(x)
     y = sym_utils.to_tensor(y)
     return Symbol.from_expr(ffi.where(condition, x, y))
+
+def where_dx(x1, x2, y, dy):
+    x1 = sym_utils.to_any(x1)
+    x2 = sym_utils.to_any(x2)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    return Symbol.from_expr(ffi.where_dx(x1, x2, y, dy))
 
 def zeros(shape, dtype="int32", device="cpu"):
     shape = sym_utils.to_int_tuple(shape)

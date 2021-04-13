@@ -299,6 +299,8 @@ trunc = _APIS.get("mnm.op.imp.trunc", None)
 # Defined in ./src/op/regs/regs.cc
 where = _APIS.get("mnm.op.imp.where", None)
 # Defined in ./src/op/regs/regs.cc
+where_dx = _APIS.get("mnm.op.imp.where_dx", None)
+# Defined in ./src/op/regs/regs.cc
 zeros = _APIS.get("mnm.op.imp.zeros", None)
 # Defined in ./src/op/regs/regs.cc
 zeros_like = _APIS.get("mnm.op.imp.zeros_like", None)
