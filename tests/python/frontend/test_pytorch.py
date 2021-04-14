@@ -234,5 +234,36 @@ def test_batch_norm_train(shape_dict):
     check(m_model.state()["model_running_var"], t_model.running_var)
 
 
+def test_params_order():
+    class TorchConv(nn.Module):
+        def __init__(self, p, shape):
+            super(TorchConv, self).__init__()
+            self.conv = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=3)
+            self.p = p
+            A = torch.randn(shape, requires_grad=True)
+            self.A = torch.nn.Parameter(A)
+
+        def forward(self, x):
+            b = self.p + self.A
+            x = x + b
+            x = self.conv(x)
+            return x
+
+    device = "cpu"
+    shape_dict = {"input0": ((32, 3, 28, 28), "float32")}
+    input_shape = list(shape_dict.values())[0][0]
+
+    t_model = TorchConv(1.0, input_shape)
+    m_model = from_pytorch(t_model, shape_dict)
+
+    t_model.to(device=device)
+    m_model.to(device=device)
+
+    m_x, _ = randn_torch(input_shape, device=device)
+    out = m_model.record(m_x)
+    re = sym.relu(out)
+    m_model = m_model + re
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

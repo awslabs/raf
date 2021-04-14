@@ -140,8 +140,14 @@ class FrameworkModel(BaseModel):
         other = ExtractBinding(other._Symbol__handle, [ret_var])
         new_body = ExprAppend(func.body, other)
         free_vars = relay.analysis.free_vars(new_body)
+        input_params = func.params[:num_orig_arg]
+        new_free_vars = input_params[:]
+        # Reorder the params so as to guarantee inputs to be at the begining of array
+        for var in free_vars:
+            if var not in input_params:
+                new_free_vars.append(var)
         # [arguments, parameters]
-        new_params = free_vars[0:num_orig_arg] + free_vars[len(func.params):] \
+        new_params = new_free_vars[0:num_orig_arg] + new_free_vars[len(func.params):] \
                      + func.params[num_orig_arg:]
         new_func = relay.Function(new_params, new_body)
         new_mod = IRModule.from_expr(new_func)
