@@ -1,4 +1,5 @@
 """The frontend that converts PyTorch models to Meta models via Relay."""
+# pylint: disable=too-many-locals
 from collections import OrderedDict
 import torch
 
@@ -52,14 +53,18 @@ def from_pytorch(model, shape_dict):
 
     model = TraceWrapper(model)
     model.eval()
+    device = "cpu"
 
-    if input_type == "float32":
-        input_data = torch.randn(input_shape)
+    if input_type.startswith("float"):
+        if input_type.startswith("float16"):
+            device = "cuda" # Some float16 ops are only available on GPU.
+        input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)
     else:
         assert input_type.startswith("int64"), "Unsupported input type %s" % input_type
         input_data = torch.randint(10000, input_shape)
 
     with torch.no_grad():
+        model.to(device=device)
         model(input_data)
         scripted_model = torch.jit.trace(model, input_data).eval()
         scripted_model.eval()
