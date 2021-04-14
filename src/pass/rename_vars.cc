@@ -18,29 +18,48 @@ struct RenameVarsMutator : public ExprMutator {
   explicit RenameVarsMutator(const Map<String, Var>& named_vars) {
     for (const auto& iter : named_vars) {
       const auto* var = iter.second.as<ExtendedVarNode>();
-      var_map.Set(iter.second,
-                  mnm::ir::MakeVar(iter.first, iter.second->type_annotation, var->may_share));
+      var_map_.Set(iter.second,
+                   mnm::ir::MakeVar(iter.first, iter.second->type_annotation, var->may_share));
     }
   }
 
   Expr VisitExpr_(const VarNode* node) final {
-    return var_map.at(GetRef<Var>(node));
+    return var_map_.at(GetRef<Var>(node));
   }
 
   Expr VisitExpr_(const LetNode* node) final {
-    const Var& var = node->var;
-    CHECK_EQ(var_map.count(var), 0) << "IR is malformed: cannot bind var twice";
-    const auto* vn = var.as<ExtendedVarNode>();
-    Var may_share = vn->may_share;
-    Var new_var =
-        mnm::ir::MakeVar("a" + std::to_string(++num_bound_var), var->type_annotation,
-                         may_share.defined() ? Downcast<Var>(var_map.at(may_share)) : may_share);
-    var_map.Set(var, new_var);
-    return mnm::ir::Let(new_var, Mutate(node->value), Mutate(node->body));
+    auto pre_visit = [this](const LetNode* node) {
+      const Var& var = node->var;
+      CHECK_EQ(var_map_.count(var), 0) << "IR is malformed: cannot bind var twice";
+      const auto* vn = var.as<ExtendedVarNode>();
+      Var may_share = vn->may_share;
+      Var new_var =
+          mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation,
+                           may_share.defined() ? Downcast<Var>(var_map_.at(may_share)) : may_share);
+      var_map_.Set(var, new_var);
+      this->Mutate(node->value);
+    };
+    auto post_visit = [this](const LetNode* node) {
+      Var var = Downcast<Var>(node->var);
+      Expr value = this->Mutate(node->value);
+      Expr body = this->Mutate(node->body);
+
+      auto expr = GetRef<Expr>(node);
+      if (var.same_as(node->var) && value.same_as(node->value) && body.same_as(node->body)) {
+        this->memo_[expr] = expr;
+      } else {
+        this->memo_[expr] = Let(Downcast<Var>(var_map_[var]), value, body);
+      }
+    };
+    ExpandANormalForm(node, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(node)];
   }
 
-  int num_bound_var = 0;
-  Map<Var, Expr> var_map;
+ private:
+  /*! \brief The counter of bound variables. */
+  int num_bound_var_ = 0;
+  /*! \brief Map from original var to the renamed var. */
+  Map<Var, Expr> var_map_;
 };
 
 Expr RenameVars(Expr expr, Map<String, Var> named_vars) {
