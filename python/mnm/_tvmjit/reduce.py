@@ -2,6 +2,7 @@
 """Reduction compute definition and schedules."""
 from mnm._tvmjit.nn import schedule_layer_norm
 from .._lib import register_compute
+from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
@@ -41,9 +42,43 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,
                 idx.append(scan.pop())
         return _tvm.te.sum(x(*idx), axis=red_axis)
 
-    return [_tvm.te.compute(shape, fcompute)]
+    return [_tvm.te.compute(shape=shape,
+                            fcompute=fcompute,
+                            tag="comm_reduce")]
 
-_reg.register_injective_schedule("mnm.op.sum")
+@generic_func
+def schedule_sum(attrs, outs, target):
+    # pylint: disable=unused-argument
+    with target:
+        return _topi.generic.schedule_injective(outs)
+
+@schedule_sum.register(["cuda", "gpu"])
+def schedule_sum_cuda(attrs, outs, target):
+    # pylint: disable=unused-argument
+    # pylint: disable=invalid-name
+    def get_num_elements(axes):
+        extents = [int(iv.dom.extent) for iv in axes]
+        n_elems = 1
+        for extent in extents:
+            n_elems *= extent
+        return n_elems
+
+    with target:
+        out = outs[0]
+        num_out_elements = get_num_elements(out.op.axis)
+        num_reduce_elements = get_num_elements(out.op.reduce_axis)
+
+        # We want to saturate the GPU cores by parallelization. There are 2 scenarios
+        # 1) Reduce dimension is small - In this case, each thread is responsible for reduction.
+        # The parallelization is across the output elements.
+        # 2) Reduce dimension is large - We want to parallelize the reduction to keep the GPU busy.
+        # Here we fall back to TVM schedule.
+        if num_out_elements > num_reduce_elements:
+            return _topi.cuda.schedule_injective(outs)
+
+        return _topi.cuda.schedule_reduce(outs)
+
+_reg.register_schedule("mnm.op.sum", schedule_sum)
 _reg.register_reduce_schedule("mnm.op.argmax")
 _reg.register_reduce_schedule("mnm.op.argmin")
 _reg.register_reduce_schedule("mnm.op.max")
