@@ -112,6 +112,19 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
          << "Total Packed Functions: " << total_packed_funcs << std::endl;
       *rv = os.str();
     });
+  } else if (name == "profile_memory") {
+    return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+      ICHECK_EQ(args.size(), 1U);
+      VMContext ctx = args[0];
+      profile_memory_ = true;
+      total_allocated_megabytes_ = 0;
+      Run(ctx);
+      profile_memory_ = false;
+      for (auto op_env_cache : op_env_cache_) {
+        op_env_cache->Clear();
+      }
+      *rv = total_allocated_megabytes_;
+    });
   } else if (name == "reset") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       op_durations_.clear();
@@ -120,15 +133,33 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       op_outputs_.clear();
       op_inputs_.clear();
       op_names_.clear();
+      total_allocated_megabytes_ = 0.0;
     });
   } else {
     return VirtualMachine::GetFunction(name, sptr_to_self);
   }
 }
 
+std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachineProfiler::PrepareOpEnv(
+    const VMContext& ctx, const Instruction& instr) {
+  if (profile_memory_) {
+    // Skip the compilation in memory profiling mode.
+    std::shared_ptr<OpEnv> op_env;
+    std::vector<Value> inputs;
+    Value output;
+    return std::make_tuple(op_env, std::move(inputs), std::move(output));
+  }
+  return VirtualMachine::PrepareOpEnv(ctx, instr);
+}
+
 void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                                           value::Value output) {
   using namespace device_api;
+  if (profile_memory_) {
+    // Skip execution in memory profiling mode.
+    return;
+  }
+
   for (const auto& device : devices_) {
     const std::shared_ptr<DeviceAPI> device_api = DeviceAPI::Get(device.device_type);
     device_api->WaitDevice(device);
@@ -172,6 +203,18 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
     op_outputs_.push_back(CopyTo(output, cpu));
     op_names_.push_back(op_env->env_name);
   }
+}
+
+std::shared_ptr<memory_pool::Memory> VirtualMachineProfiler::Alloc(const Device& dev,
+                                                                   int64_t nbytes,
+                                                                   int64_t alignment) {
+  int64_t alloc_nbytes = memory_pool::Memory::GetAllocBytes(dev, nbytes);
+  total_allocated_megabytes_ += alloc_nbytes / 1048576.0;
+  if (profile_memory_) {
+    // Allocate the minimum size to avoid out of memory during memory profiling.
+    return memory_pool::Memory::Alloc(dev, 1);
+  }
+  return VirtualMachine::Alloc(dev, nbytes, alignment);
 }
 
 tvm::runtime::Module CreateVirtualMachineProfiler(const Executable* exec, bool enable_cuda_graph,

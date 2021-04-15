@@ -27,6 +27,8 @@ class Memory {
   virtual ~Memory() = default;
 
  public:
+  static int64_t GetAllocBytes(const Device& dev, int64_t nbytes);
+
   static std::shared_ptr<Memory> Alloc(const Device& dev, int64_t nbytes,
                                        int64_t alignment = kDefaultMemoryAlignment);
   static std::vector<std::shared_ptr<Memory> > AllocBatch(
@@ -54,6 +56,13 @@ class Memory {
 class MemoryPool {
  public:
   virtual ~MemoryPool() = default;
+
+  /*!
+   * \brief Calculate the actual bytes to be allocated. This may be different as the requested
+   * size due to alignment or page unit.
+   * \param nbytes The requested bytes to be allocated.
+   */
+  virtual int64_t GetAllocBytes(int64_t nbytes) = 0;
 
   /*!
    * \brief Allocate a chunk of memory with given size and alignment.

@@ -3,6 +3,7 @@ The Relay Virtual Machine profiler.
 
 Provides extra APIs for profiling vm execution.
 """
+# pylint: disable=too-many-instance-attributes
 from .. import _ffi
 from . import executor
 
@@ -18,6 +19,7 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         self._prepare_context = self.module["prepare_context"]
         self._get_stat = self.module["get_stat"]
         self._get_interm_tensors = self.module["get_interm_tensors"]
+        self._profile_memory = self.module["profile_memory"]
         self._reset = self.module["reset"]
         self._run = self.module["run"]
         self._set_devices(device)
@@ -56,6 +58,32 @@ class VirtualMachineProfiler(executor.VirtualMachine):
     def reset(self):
         """Reset statistics"""
         self._reset()
+
+    def profile_memory(self, *args, func_name="main", **kwargs):
+        """Profile the total memory footprint in MBs. Note that we now
+        only profile memory allocated by AllocStorage bytecode instruction.
+        The memory allocated for op workspace is ignored for simplify.
+        Since workspace allocation is relatively rare, the impact on
+        the overall memory footprint is limited.
+
+        Parameters
+        ----------
+        args : list[mnm.ndarray] or list[np.ndarray]
+            The arguments to the function.
+
+        func_name : str
+            The name of function.
+
+        kwargs: dict of str to mnm.ndarray or np.ndarray
+            Named arguments to the function.
+
+        Returns
+        -------
+        result : float
+            The total memory footprint in MBs.
+        """
+        ctx = self.prepare_context(func_name, *args, **kwargs)
+        return self._profile_memory(ctx)
 
 
 class VMProfilerExecutor(executor.VMExecutor):
@@ -110,3 +138,28 @@ class VMProfilerExecutor(executor.VMExecutor):
             op names, op inputs, op outputs
         """
         return self.vm.get_interm_tensors()
+
+    def profile_memory(self, *args, func_name="main", **kwargs):
+        """Profile the total memory footprint in MBs. Note that we now
+        only profile memory allocated by AllocStorage bytecode instruction.
+        The memory allocated for op workspace is ignored for simplify.
+        Since workspace allocation is relatively rare, the impact on
+        the overall memory footprint is limited.
+
+        Parameters
+        ----------
+        args : list[mnm.ndarray] or list[np.ndarray]
+            The arguments to the function.
+
+        func_name : str
+            The name of function.
+
+        kwargs: dict of str to mnm.ndarray or np.ndarray
+            Named arguments to the function.
+
+        Returns
+        -------
+        result : float
+            The total memory footprint in MBs.
+        """
+        return self.vm.profile_memory(*args, func_name=func_name, **kwargs)

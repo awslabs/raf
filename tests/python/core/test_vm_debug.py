@@ -2,7 +2,7 @@ import pytest
 import mnm
 from mnm.testing import check
 from mnm._core.profiler_vm import VMProfilerExecutor
-from mnm.testing import get_device_list, randn
+from mnm.testing import get_device_list, randn, with_seed
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -10,6 +10,7 @@ from mnm.testing import get_device_list, randn
     [3, 3],
     [4, 4]
 ])
+@with_seed(0)
 def test_vm_debug(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
@@ -28,6 +29,15 @@ def test_vm_debug(device, shape):
     m_x, _ = randn(shape, device=device)
     mod = model._internal(m_x).mod
     executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
+
+    # Testing memory profiler
+    ret = executor.profile_memory(m_x)
+    check(ret, 8 / 1024) # One page size is 4KB and we have two tensors
+
+    # Reset the profiler and test whether the rest functions are working as expected
+    executor.reset()
+
+    # Testing whether we can get the correct intermediate tensor
     m_z = executor.make_executor()(m_x).asnumpy()
     ref_x = m_x.asnumpy()
     ref_y = ref_x + ref_x

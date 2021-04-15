@@ -60,6 +60,11 @@ class MemoryPoolManager {
   PerDeviceStore<MemoryPool, false> reg;
 };
 
+int64_t Memory::GetAllocBytes(const Device& dev, int64_t nbytes) {
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  return mgr->GetPool(dev, "")->GetAllocBytes(nbytes);
+}
+
 std::shared_ptr<Memory> Memory::Alloc(const Device& dev, int64_t nbytes, int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(dev, "")->Alloc(nbytes, alignment);

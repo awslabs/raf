@@ -40,6 +40,10 @@ class NoPool final : public MemoryPool {
     this->api = DeviceAPI::Get(dev.device_type);
   }
 
+  int64_t GetAllocBytes(int64_t nbytes) override {
+    return nbytes;
+  }
+
   std::shared_ptr<Memory> Alloc(int64_t nbytes, int64_t alignment) override {
     CHECK_GE(nbytes, 0);
     void* data = nullptr;

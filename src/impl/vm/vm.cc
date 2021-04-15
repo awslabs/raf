@@ -139,6 +139,11 @@ std::shared_ptr<OpEnvCache> VMFuncOpEnvCache::Get(Index pc) {
   return cache;
 }
 
+void VMFuncOpEnvCache::Clear() {
+  std::lock_guard<std::mutex> lock(mu_);
+  cache_map_.clear();
+}
+
 #ifdef MNM_USE_CUDA
 void MNMSetStream(Device dev, cudaStream_t stream) {
   tvm::runtime::DeviceAPI::Get(dev)->SetStream(dev, stream);
@@ -499,7 +504,7 @@ void VirtualMachine::RunLoop(VMContext ctx) {
                    << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
         auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-        auto buffer = memory_pool::Memory::Alloc(dev, size);
+        auto buffer = Alloc(dev, size);
         auto storage = StorageValue::make(buffer);
         ctx.WriteRegister(instr.dst, storage);
         ctx->pc++;
@@ -521,80 +526,11 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         }
       }
       case Opcode::InvokeJit: {
-        Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
-        HashKey key;
-        Array<Value> args;
-        Value output;
-        // extract the input args and prepare the hash key to query op env
-        for (Index i = 0; i < num_inputs; i++) {
-          Index reg_idx = instr.invoke_jit.args[i];
-          auto reg = ctx.ReadRegister(reg_idx);
-          args.push_back(reg);
-          if (!ctx.IsConst(reg_idx)) {
-            if (auto t = reg.as<TensorValueObj>()) {
-              key << GetRef<TensorValue>(t);
-            } else if (auto tup = reg.as<TupleValueObj>()) {
-              for (auto field : tup->fields) {
-                auto t = field.as<TensorValueObj>();
-                CHECK(t != nullptr);
-                key << GetRef<TensorValue>(t);
-              }
-            } else {
-              LOG(FATAL) << "Unsupported non-const register type: " << reg->GetTypeKey();
-            }
-          }
-        }
-        // extract the output
-        if (instr.invoke_jit.output_size == 1) {
-          output = ctx.ReadRegister(instr.invoke_jit.args[num_inputs]);
-        } else {
-          Array<Value> outs;
-          for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
-            outs.push_back(ctx.ReadRegister(instr.invoke_jit.args[i]));
-          }
-          output = TupleValue::make(outs);
-        }
-        // check the OpEnv cache
         std::shared_ptr<OpEnv> op_env;
-        auto op_env_cache = op_env_cache_[ctx->func_index]->Get(ctx->pc);
-        if (auto p = op_env_cache->Get(key.byte_vector)) {
-          // Cache hit. Reuse the OpEnv from the cache.
-          op_env = *p;
-        } else {
-          // Create a new OpEnv.
-          static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
-          auto call_values = CallValues::make();
-          Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
-          const auto* op = callee.as<OpValueObj>();
-          const auto* closure = callee.as<ClosureValueObj>();
-          call_values->callee = callee;
-          if (op) {
-            call_values->args = fschema[op->op](args);
-          } else {
-            call_values->args = MakeListArgs(args);
-          }
-          call_values->device = devices_[0];
-          call_values->out = output;
-          op_env = Dispatch(call_values);
-          CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
-                                   << " @ " << call_values->device.c_str()
-                                   << (op ? op->op->name : PrettyPrint(closure->func));
-          // TODO(vinx13): request stream
-          std::shared_ptr<Requests> requests = op_env->GetRequests();
-          for (size_t i = 0; i < requests->workspace.size(); i++) {
-            Requests::WorkspaceRequest& entry = requests->workspace[i];
-            auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
-            *entry.dest = buf->data;
-          }
-          // add to cache
-          op_env_cache->Set(key.byte_vector, op_env);
-        }
-
         std::vector<Value> inputs;
-        for (int i : op_env->arg_indices) {
-          CHECK_GE(i, 0) << "Invalid input index: " << i;
-          inputs.push_back(args[i]);
-        }
+        Value output;
+
+        std::tie(op_env, inputs, output) = PrepareOpEnv(ctx, instr);
         ExecuteOpEnv(op_env.get(), inputs, output);
         ctx->pc++;
         goto main_loop;
@@ -609,9 +545,96 @@ tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cu
   return tvm::runtime::Module(vm);
 }
 
+std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::PrepareOpEnv(
+    const VMContext& ctx, const Instruction& instr) {
+  Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
+  HashKey key;
+  Array<Value> args;
+  Value output;
+
+  // extract the input args and prepare the hash key to query op env
+  for (Index i = 0; i < num_inputs; i++) {
+    Index reg_idx = instr.invoke_jit.args[i];
+    auto reg = ctx.ReadRegister(reg_idx);
+    args.push_back(reg);
+    if (!ctx.IsConst(reg_idx)) {
+      if (auto t = reg.as<TensorValueObj>()) {
+        key << GetRef<TensorValue>(t);
+      } else if (auto tup = reg.as<TupleValueObj>()) {
+        for (auto field : tup->fields) {
+          auto t = field.as<TensorValueObj>();
+          CHECK(t != nullptr);
+          key << GetRef<TensorValue>(t);
+        }
+      } else {
+        LOG(FATAL) << "Unsupported non-const register type: " << reg->GetTypeKey();
+      }
+    }
+  }
+
+  // extract the output
+  if (instr.invoke_jit.output_size == 1) {
+    output = ctx.ReadRegister(instr.invoke_jit.args[num_inputs]);
+  } else {
+    Array<Value> outs;
+    for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
+      outs.push_back(ctx.ReadRegister(instr.invoke_jit.args[i]));
+    }
+    output = TupleValue::make(outs);
+  }
+
+  // check the OpEnv cache
+  std::shared_ptr<OpEnv> op_env;
+  auto op_env_cache = op_env_cache_[ctx->func_index]->Get(ctx->pc);
+  if (auto p = op_env_cache->Get(key.byte_vector)) {
+    // Cache hit. Reuse the OpEnv from the cache.
+    op_env = *p;
+  } else {
+    // Create a new OpEnv.
+    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+    auto call_values = CallValues::make();
+    Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
+    const auto* op = callee.as<OpValueObj>();
+    const auto* closure = callee.as<ClosureValueObj>();
+    call_values->callee = callee;
+    if (op) {
+      call_values->args = fschema[op->op](args);
+    } else {
+      call_values->args = MakeListArgs(args);
+    }
+    call_values->device = devices_[0];
+    call_values->out = output;
+    op_env = Dispatch(call_values);
+    CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
+                             << " @ " << call_values->device.c_str()
+                             << (op ? op->op->name : PrettyPrint(closure->func));
+    // TODO(vinx13): request stream
+    std::shared_ptr<Requests> requests = op_env->GetRequests();
+    for (size_t i = 0; i < requests->workspace.size(); i++) {
+      Requests::WorkspaceRequest& entry = requests->workspace[i];
+      auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
+      *entry.dest = buf->data;
+    }
+    // add to cache
+    op_env_cache->Set(key.byte_vector, op_env);
+  }
+
+  std::vector<Value> inputs;
+  for (int i : op_env->arg_indices) {
+    CHECK_GE(i, 0) << "Invalid input index: " << i;
+    inputs.push_back(args[i]);
+  }
+  return std::make_tuple(op_env, std::move(inputs), std::move(output));
+}
+
 void VirtualMachine::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                                   value::Value output) {
   op_env->Execute(inputs, output);
+}
+
+std::shared_ptr<memory_pool::Memory> VirtualMachine::Alloc(const Device& dev, int64_t nbytes,
+                                                           int64_t alignment) {
+  return memory_pool::Memory::Alloc(dev, nbytes);
 }
 
 MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

@@ -236,13 +236,15 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   Function func = Downcast<Function>(meta_to_tvm());
   // TODO(@hzfan): add cache for meta
   engine_clear(engine);
-  try {
-    env->f = jit(engine, c_cache_key(func, target));
-  } catch (const dmlc::Error& e) {
-    CHECK(IsAutoSchedulerTaskExtractionEnabled()) << "Failed to build a fused op:\n" << e.what();
+  env->env_name = TruncateName(GetUniqueName(meta_to_tvm.func_name));
+  if (!IsAutoSchedulerTaskExtractionEnabled()) {
+    try {
+      env->f = jit(engine, c_cache_key(func, target));
+    } catch (const dmlc::Error& e) {
+      LOG(FATAL) << "Failed to build a fused op " << env->env_name << ": " << e.what();
+    }
   }
   env->arg_indices = meta_to_tvm.arg_indices;
-  env->env_name = TruncateName(GetUniqueName(meta_to_tvm.func_name));
   Array<Value> args = GetListArgs(call->args);
   for (const int& i : env->arg_indices) {
     GetDLTensor(args[i], &env->inputs);

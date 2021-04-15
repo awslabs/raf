@@ -28,8 +28,14 @@ class VirtualMachineProfiler : public VirtualMachine {
   }
 
  protected:
+  std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> PrepareOpEnv(
+      const VMContext& ctx, const Instruction& instr);
+
   void ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                     value::Value output) final;
+
+  std::shared_ptr<memory_pool::Memory> Alloc(const Device& dev, int64_t nbytes,
+                                             int64_t alignment = kDefaultMemoryAlignment) final;
 
  private:
   /*! \brief the duration of op call */
@@ -46,6 +52,10 @@ class VirtualMachineProfiler : public VirtualMachine {
   Array<Array<Value>> op_inputs_;
   /*! \brief the outputs for op_envs_ */
   Array<Value> op_outputs_;
+  /*! \brief whether to run memory profiling mode */
+  bool profile_memory_;
+  /*! \brief total allocated memory in MBs. */
+  float total_allocated_megabytes_ = 0.0;
 };
 
 }  // namespace vm

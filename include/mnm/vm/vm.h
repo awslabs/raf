@@ -189,6 +189,11 @@ class VMFuncOpEnvCache {
    */
   std::shared_ptr<OpEnvCache> Get(Index pc);
 
+  /*!
+   * \brief Clear the OpEnv cache.
+   */
+  void Clear();
+
  private:
   /*! \brief Cache map from instruction index to OpEnv cache. */
   std::unordered_map<Index, std::shared_ptr<OpEnvCache>> cache_map_;
@@ -284,10 +289,18 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   /*! \brief Get device context for params. */
   Device GetParamsDevice() const;
 
+  /*! \brief Prepare an OpEnv with its inputs and output */
+  virtual std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> PrepareOpEnv(
+      const VMContext& ctx, const Instruction& instr);
+
   /*! \brief Execute OpEnv */
   virtual void ExecuteOpEnv(OpEnv*, const std::vector<value::Value>& inputs, value::Value output);
 
- private:
+  /*! \brief Allocate memory buffer for storage */
+  virtual std::shared_ptr<memory_pool::Memory> Alloc(const Device& dev, int64_t nbytes,
+                                                     int64_t alignment = kDefaultMemoryAlignment);
+
+ protected:
   /*!
    * \brief The constant pool for runtime. It caches the device dependent
    * object to avoid rellocation of constants during inference.

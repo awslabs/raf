@@ -65,11 +65,13 @@ class PageUnitPool final : public MemoryPool {
     this->api = DeviceAPI::Get(dev.device_type);
   }
 
-  std::shared_ptr<Memory> Alloc(int64_t nbytes, int64_t alignment) override {
+  int64_t GetAllocBytes(int64_t nbytes) override {
     // round the chunck size to mutlpile page size.
-    int64_t paged_size = !!(nbytes & ((1 << page_size_exp) - 1)) + (nbytes >> page_size_exp)
-                         << page_size_exp;
-    nbytes = paged_size;
+    return !!(nbytes & ((1 << page_size_exp) - 1)) + (nbytes >> page_size_exp) << page_size_exp;
+  }
+
+  std::shared_ptr<Memory> Alloc(int64_t nbytes, int64_t alignment) override {
+    nbytes = GetAllocBytes(nbytes);
     CHECK_GE(nbytes, 0);
 
     // Find whether there are available memory chuncks in the pool.

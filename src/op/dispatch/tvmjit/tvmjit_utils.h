@@ -159,10 +159,10 @@ using FMNMArgIndices =
           engine_clear(engine);                                                                 \
           return jit(engine, c_cache_key(f, target));                                           \
         });                                                                                     \
-    try {                                                                                       \
-      env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                              \
-    } catch (const dmlc::Error& e) {                                                            \
-      if (!IsAutoSchedulerTaskExtractionEnabled()) {                                            \
+    if (!IsAutoSchedulerTaskExtractionEnabled()) {                                              \
+      try {                                                                                     \
+        env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                            \
+      } catch (const dmlc::Error& e) {                                                          \
         /* Invalid implementation. Return nullptr to let dispatcher select the next one */      \
         DLOG(INFO) << "Failed to JIT " << env->env_name << ": " << e.what();                    \
         return nullptr;                                                                         \
