@@ -7,6 +7,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/utils/MNMCmakeUtils.cmake)
 mnm_option(MNM_USE_LLVM "MNM depends on LLVM to do code generation. Option: [ON/OFF/Path-to-llvm-config-executable]" ON)
 mnm_option(MNM_USE_CUDA "Build MNM with CUDA. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_CUDNN "Build MNM with cuDNN. Option: [ON/OFF/Path-to-cuDNN]" OFF)
+mnm_option(MNM_USE_CUTLASS "Build MNM with CUTLASS. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_MPI "Build MNM with MPI. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_NCCL "Build MNM with NCCL. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_CUBLAS "Build MNM with cuBLAS. Option: [ON/OFF]" OFF)
@@ -25,6 +26,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/modules/Git.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDA.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/CUBLAS.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/CUDNN.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/modules/CUTLASS.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/Sanitizer.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/TVM.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/modules/GTest.cmake)
@@ -38,6 +40,9 @@ set(MNM_INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/src
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dlpack/include/
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/tvm/3rdparty/dmlc-core/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/cutlass/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/cutlass/tools/library/include/
+  ${CMAKE_CURRENT_LIST_DIR}/3rdparty/cutlass/tools/util/include/
 )
 
 set(MNM_CXXFLAGS "")
@@ -52,6 +57,7 @@ set(MNM_BACKEND_INCLUDE_DIRS
 set(MNM_LINK_LIBS
   tvm
   Threads::Threads
+  ${MNM_CUTLASS_LIBRARY}
   ${CMAKE_DL_LIBS}
 )
 
@@ -117,6 +123,14 @@ else()
   )
 endif()
 
+if (${MNM_USE_CUTLASS} STREQUAL "OFF")
+  set(MNM_CUTLASS_SOURCE_FILES "")
+else()
+  file(GLOB_RECURSE MNM_CUTLASS_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cutlass/*.cc
+  )
+endif()
+
 if (${MNM_USE_NCCL} STREQUAL "OFF")
   set(MNM_DISTRIBUTED_SOURCE_FILES "")
 else ()
@@ -131,6 +145,7 @@ set(MNM_SOURCE_FILES
   ${MNM_CUDA_SOURCE_FILES}
   ${MNM_CUDNN_SOURCE_FILES}
   ${MNM_CUBLAS_SOURCE_FILES}
+  ${MNM_CUTLASS_SOURCE_FILES}
   ${MNM_DISTRIBUTED_SOURCE_FILES}
 )
 
