@@ -176,13 +176,28 @@ MNM_OP_FROM_RELAY("expand_dims", "mnm.op.expand_dims",
                   });
 
 MNM_OP_FROM_RELAY("full", "mnm.op.full", [&](const Attrs& attrs, const Array<Expr>& args) {
-  Array<Expr> mnm_args = args;
+  Array<Expr> mnm_args;
+  const auto* konst = args[0].as<RelayConstantNode>();
+  CHECK(konst) << "'fill_value' must be a const tensor.";
+  mnm_args.push_back(MakeConstant(RelayConstant2ScalarValue<double>(konst)));
+
   const auto* relay_attrs = attrs.as<InitOpAttrs>();
   mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
   mnm_args.push_back(
       MakeConstant(StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
   return mnm_args;
 });
+
+MNM_OP_FROM_RELAY("full_like", "mnm.op.full_like",
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
+                    Array<Expr> mnm_args;
+                    mnm_args.push_back(args[0]);
+
+                    const auto* konst = args[1].as<RelayConstantNode>();
+                    CHECK(konst) << "'fill_value' must be a const tensor.";
+                    mnm_args.push_back(MakeConstant(RelayConstant2ScalarValue<double>(konst)));
+                    return mnm_args;
+                  });
 
 MNM_OP_FROM_RELAY("strided_slice", "mnm.op.strided_slice",
                   [&](const Attrs& attrs, const Array<Expr>& args) {

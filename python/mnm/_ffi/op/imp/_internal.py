@@ -117,6 +117,8 @@ floor = _APIS.get("mnm.op.imp.floor", None)
 # Defined in ./src/op/regs/regs.cc
 full = _APIS.get("mnm.op.imp.full", None)
 # Defined in ./src/op/regs/regs.cc
+full_like = _APIS.get("mnm.op.imp.full_like", None)
+# Defined in ./src/op/regs/regs.cc
 gather = _APIS.get("mnm.op.imp.gather", None)
 # Defined in ./src/op/regs/regs.cc
 gather_dx = _APIS.get("mnm.op.imp.gather_dx", None)

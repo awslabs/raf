@@ -19,26 +19,26 @@ __all__ = [
     "conv2d_dw", "conv2d_dx", "copy", "cos", "cross_entropy",
     "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy", "divide",
     "equal", "erf", "erf_dx", "exp", "expand_dims",
-    "floor", "full", "gather", "gather_dx", "gather_nd",
-    "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
-    "greater_equal", "layer_norm", "layer_norm_dx", "left_shift", "less",
-    "less_equal", "log", "log_softmax", "log_softmax_dx", "logical_and",
-    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
-    "max", "max_pool2d", "max_pool2d_dx", "maximum", "mean",
-    "mean_dx", "min", "minimum", "mod", "multiply",
-    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression",
-    "not_equal", "one_hot", "ones", "ones_like", "pad",
-    "power", "prod", "prod_dx", "relu", "relu_dx",
-    "repeat", "reshape", "reverse", "reverse_sequence", "right_shift",
-    "round", "rsqrt", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op",
-    "where", "where_dx", "zeros", "zeros_like",
+    "floor", "full", "full_like", "gather", "gather_dx",
+    "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
+    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "left_shift",
+    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
+    "logical_and", "logical_not", "matmul", "matmul_nt", "matmul_tn",
+    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
+    "mean", "mean_dx", "min", "minimum", "mod",
+    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
+    "non_max_suppression", "not_equal", "one_hot", "ones", "ones_like",
+    "pad", "power", "prod", "prod_dx", "relu",
+    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
+    "right_shift", "round", "rsqrt", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
+    "subtract", "sum", "sum_dx", "swap_axis", "take",
+    "take_dx", "tanh", "tanh_dx", "threefry_generate", "threefry_split",
+    "transpose", "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_invoke_op", "where", "where_dx", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -445,11 +445,17 @@ def floor(x):
 
 @set_module("mnm")
 def full(fill_value, shape, dtype="int32", device="cpu"):
-    fill_value = imp_utils.to_tensor(fill_value)
+    fill_value = imp_utils.to_double(fill_value)
     shape = imp_utils.to_int_tuple(shape)
     dtype = imp_utils.to_string(dtype)
     device = imp_utils.to_string(device)
     return imp_utils.ret(ffi.full(fill_value, shape, dtype, device))
+
+@set_module("mnm")
+def full_like(data, fill_value):
+    data = imp_utils.to_tensor(data)
+    fill_value = imp_utils.to_double(fill_value)
+    return imp_utils.ret(ffi.full_like(data, fill_value))
 
 @set_module("mnm")
 def gather(data, axis, indices):

@@ -143,6 +143,7 @@ OPS = [
     Op(name="compiler_begin", schema_name="compiler"),
     Op(name="compiler_end", schema_name="compiler"),
     Op(name="full", schema_name="full"),
+    Op(name="full_like", schema_name="full_like"),
     Op(name="where", schema_name="where"),
     Op(name="where_dx", schema_name="binary_dx"),
     Op(name="logical_and", schema_name="binary_ufunc"),

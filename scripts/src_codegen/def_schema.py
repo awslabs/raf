@@ -329,7 +329,7 @@ SCHEMAS = {
         Arg(name="start", cxx_type="value::BaseTensorValue"),
         Arg(name="stop", cxx_type="value::BaseTensorValue"),
         Arg(name="step", cxx_type="value::BaseTensorValue"),
-        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"", py_default="\"float32\""), 
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"", py_default="\"float32\""),
     ],
     "transform.h::adv_index": [
         Arg(name="inputs",
@@ -545,12 +545,16 @@ SCHEMAS = {
         Arg(name="compiler", cxx_type="std::string"),
     ],
     "transform.h::full": [
-        Arg(name="fill_value", cxx_type="value::BaseTensorValue"),
+        Arg(name="fill_value", cxx_type="double"),
         Arg(name="shape",
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
         Arg(name="dtype", cxx_type="std::string", cxx_default="\"int\"", py_default="\"int32\""),
         Arg(name="device", cxx_type="std::string", cxx_default="\"cpu\"", py_default="\"cpu\"",),
+    ],
+    "transform.h::full_like": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="fill_value", cxx_type="double"),
     ],
     "transform.h::where": [
         Arg(name="condition", cxx_type="value::BaseTensorValue"),

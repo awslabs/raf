@@ -221,15 +221,9 @@ Array<Expr> GatherNdGrad(const Expr& orig_call, const Array<Expr> orig_args, con
 
 MNM_OP_GRAD("mnm.op.gather_nd", GatherNdGrad);
 
-Array<Expr> FullGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                     const Expr& dy) {
-  static auto op_dx = Op::Get("mnm.op.sum");
-  const CallNode* call = orig_call.as<CallNode>();
-  CHECK(call != nullptr);
-  return {Call(op_dx, {dy})};
-}
+MNM_OP_GRAD("mnm.op.full", NoGrads<0>);
 
-MNM_OP_GRAD("mnm.op.full", FullGrad);
+MNM_OP_GRAD("mnm.op.full_like", NoGrads<1>);
 
 Array<Expr> StridedSliceGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                              const Expr& dy) {

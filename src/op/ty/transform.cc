@@ -700,17 +700,24 @@ MNM_OP_TYPE("mnm.op.squeeze", "Squeeze", SqueezeInfer);
 Type FullInfer(const CallValues& value) {
   const auto* args = value->args.as<FullArgs>();
   CHECK(args != nullptr);
-  TensorType fill_value = Downcast<TensorType>(GetType(args->fill_value));
   Array<tvm::PrimExpr> shape;
   for (int i = 0; i < args->shape.size(); ++i) {
     CHECK_GE(args->shape[i], 1);
     shape.push_back((int32_t)args->shape[i]);
   }
 
-  return TensorType(shape, fill_value->dtype);
+  return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
 }
 
 MNM_OP_TYPE("mnm.op.full", "Full", FullInfer);
+
+Type FullLikeInfer(const CallValues& value) {
+  const auto* args = value->args.as<FullLikeArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->data);
+}
+
+MNM_OP_TYPE("mnm.op.full_like", "FullLike", FullLikeInfer);
 
 Type WhereInfer(const CallValues& value) {
   const auto* args = value->args.as<WhereArgs>();

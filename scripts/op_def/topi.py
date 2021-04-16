@@ -35,8 +35,6 @@ OP_MAP = {
     "mnm.op.floor": ["floor", "", "kElemWise"],
     "mnm.op.floor_divide": ["floor_divide", "", "kBroadcast"],
     "mnm.op.floor_mod": ["floor_mod", "", "kBroadcast"],
-    "mnm.op.full": ["full", "relay.attrs.InitOpAttrs", "kElemWise"],
-    "mnm.op.full_like": ["full_like", "", "kElemWise"],
     "mnm.op.gather": ["gather", "", "kInjective"],
     "mnm.op.gather_nd": ["gather_nd", "", "kInjective"],
     "mnm.op.greater": ["greater", "", "kBroadcast"],

@@ -646,22 +646,21 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
 @pytest.mark.parametrize("val", [1])
 def test_full(shape, val):
     class Full(mnm.Model):
-        def build(self, shape):
+        def build(self, shape, val):
             self.shape = shape
+            self.val = val
 
         @mnm.model.trace
-        def forward(self, val):
-            return mnm.full(val, self.shape, "int64")
+        def forward(self):
+            return mnm.full(self.val, self.shape, "int64")
 
-    model = Full(shape)
+    model = Full(shape, val)
 
-    # Use scalar variable to prevent it from being constant folded.
-    r_c = _relay.var("c", _relay.TensorType((), "int64"))
-    r_func = _relay.Function(params=[r_c], body=_relay.full(
-        r_c, shape=shape, dtype="int64"))
+    # Although it will be constant folded, check that the outputs are the same
+    r_func = _relay.Function(params=[],
+                             body=_relay.full(_relay.const(val), shape=shape, dtype="int64"))
 
-    m_c = mnm.ndarray(np.array(val))
-    check_from_relay(model, r_func, [m_c], check_model_structure=False)
+    check_from_relay(model, r_func, [], check_model_structure=False)
 
 
 @pytest.mark.parametrize("dtype", ["float32"])

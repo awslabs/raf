@@ -771,10 +771,8 @@ MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
   const auto* args = call->args.as<FullArgs>();
   CHECK(args != nullptr);
-  const DLTensor* fill_value = args->fill_value;
-  std::vector<int64_t> shape(args->shape.begin(), args->shape.end());
+  const std::vector<int64_t>& shape = args->shape;
   CHECK_GE(shape.size(), 1);
-  std::string dtype = args->dtype;
   for (int i = 0; i < shape.size(); ++i) {
     CHECK_GE(shape[i], 1);
   }
@@ -783,12 +781,22 @@ MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
   TVMContext tvm_ctx = (*f)(args->device);
   Device device(tvm_ctx);
 
-  if (tvm_ctx.device_type != fill_value->ctx.device_type) {
-    LOG(WARNING) << "\"full\" is offloaded to " << tvm_ctx.device_type << " but fill_value is on "
-                 << fill_value->ctx.device_type;
+  call->device = device;
+  call->out = TensorValue::Assemble(call->device, ir::String2DLDataType(args->dtype), shape);
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.full_like", [](const CallValues& call) {
+  const auto* args = call->args.as<FullLikeArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* data = args->data;
+  const std::vector<int64_t> shape = std::vector<int64_t>(data->shape, data->shape + data->ndim);
+  CHECK_GE(shape.size(), 1);
+  for (int i = 0; i < shape.size(); ++i) {
+    CHECK_GE(shape[i], 1);
   }
-  call->device = fill_value->ctx;
-  call->out = TensorValue::Assemble(call->device, fill_value->dtype, shape);
+
+  call->device = data->ctx;
+  call->out = TensorValue::Assemble(call->device, data->dtype, shape);
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {

@@ -687,16 +687,30 @@ HashKey ExpandDimsHasher(const std::vector<Type>& param_types, const Type& y_typ
 MNM_TVMJIT(ExpandDims, "mnm.op.expand_dims", ExpandDimsArgs, ExpandDimsSchema2Args,
            ExpandDimsSchemaArgNames, ExpandDimsSchema2Attrs, ExpandDimsHasher);
 
+/*! \brief Attributes that specify a tensor */
+struct FullAttrs : public tvm::AttrsNode<FullAttrs> {
+  Optional<Array<Integer>> shape;
+  DataType dtype;
+  double fill_value;
+
+  TVM_DECLARE_ATTRS(FullAttrs, "relay.attrs.FullAttrs") {
+    TVM_ATTR_FIELD(shape).describe("Target shape.");
+    TVM_ATTR_FIELD(dtype).describe("Target data type.").set_default(NullValue<DataType>());
+    TVM_ATTR_FIELD(fill_value).describe("Filled value.");
+  }
+};  // struct FullAttrs
+TVM_REGISTER_NODE_TYPE(FullAttrs);
+
 std::vector<Value> FullSchema2Args(const FullArgs* args) {
-  return {args->fill_value};
+  return {};
 }
 
 std::vector<std::string> FullSchemaArgNames(const op::CallValues& call) {
-  return {"fill_value"};
+  return {};
 }
 
 Attrs FullSchema2Attrs(const FullArgs* args) {
-  auto attrs = make_object<InitOpAttrs>();
+  auto attrs = make_object<FullAttrs>();
   std::vector<Integer> shape;
   shape.reserve(args->shape.size());
   for (size_t i = 0; i < args->shape.size(); ++i) {
@@ -705,6 +719,7 @@ Attrs FullSchema2Attrs(const FullArgs* args) {
 
   attrs->shape = Array<Integer>(shape.begin(), shape.end());
   attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
+  attrs->fill_value = args->fill_value;
   return Attrs(attrs);
 }
 
@@ -713,11 +728,36 @@ HashKey FullHasher(const std::vector<Type>& param_types, const Type& y_type, con
   key << args->shape;
   key << ir::String2DLDataType(args->dtype);
   key << args->device;
+  key << args->fill_value;
   return key;
 }
 
 MNM_TVMJIT(Full, "mnm.op.full", FullArgs, FullSchema2Args, FullSchemaArgNames, FullSchema2Attrs,
            FullHasher);
+
+std::vector<Value> FullLikeSchema2Args(const FullLikeArgs* args) {
+  return {args->data};
+}
+
+std::vector<std::string> FullLikeSchemaArgNames(const op::CallValues& call) {
+  return {"data"};
+}
+
+Attrs FullLikeSchema2Attrs(const FullLikeArgs* args) {
+  auto attrs = make_object<FullAttrs>();
+  attrs->fill_value = args->fill_value;
+  return Attrs(attrs);
+}
+
+HashKey FullLikeHasher(const std::vector<Type>& param_types, const Type& y_type,
+                       const FullLikeArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->fill_value;
+  return key;
+}
+
+MNM_TVMJIT(FullLike, "mnm.op.full_like", FullLikeArgs, FullLikeSchema2Args, FullLikeSchemaArgNames,
+           FullLikeSchema2Attrs, FullLikeHasher);
 
 std::vector<Value> StridedSliceSchema2Args(const StridedSliceArgs* args) {
   return {args->x};

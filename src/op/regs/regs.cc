@@ -98,6 +98,7 @@ static const char exp[] = "mnm.op.exp";
 static const char expand_dims[] = "mnm.op.expand_dims";
 static const char floor[] = "mnm.op.floor";
 static const char full[] = "mnm.op.full";
+static const char full_like[] = "mnm.op.full_like";
 static const char gather[] = "mnm.op.gather";
 static const char gather_dx[] = "mnm.op.gather_dx";
 static const char gather_nd[] = "mnm.op.gather_nd";
@@ -466,10 +467,17 @@ Attrs ExpandDims(const TVMArgs& values, GradTape* tapes) {
 
 Attrs Full(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::FullArgs, 4);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::Tensor, fill_value);
+  MNM_POD(0, ffi2schema::Double, fill_value);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
   MNM_POD(2, ffi2schema::String, dtype);
   MNM_POD(3, ffi2schema::String, device);
+  return Attrs(attrs);
+}
+
+Attrs FullLike(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::FullLikeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::Double, fill_value);
   return Attrs(attrs);
 }
 
@@ -1535,10 +1543,19 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.floor").set_body([](TVMArgs args, TVMRetValue* r
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.full").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(full, 4, ffi2schema::Full, schema::FullArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->fill_value));
+  MNM_SET_ENV(vpack->x[0], schema2value::Double(schema->fill_value));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
   MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dtype));
   MNM_SET_ENV(vpack->x[3], schema2value::String(schema->device));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.full_like").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(full_like, 2, ffi2schema::FullLike,
+              schema::FullLikeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->fill_value));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2776,10 +2793,17 @@ Array<Expr> ExpandDims(const TVMArgs& values) {
 
 Array<Expr> Full(const TVMArgs& values) {
   MNM_PRELUDE(4);
-  MNM_ARG(0, ffi2expr::Tensor, fill_value);
+  MNM_ARG(0, ffi2expr::Double, fill_value);
   MNM_ARG(1, ffi2expr::IntOrTupleInt, shape);
   MNM_ARG(2, ffi2expr::String, dtype);
   MNM_ARG(3, ffi2expr::String, device);
+  MNM_RET();
+}
+
+Array<Expr> FullLike(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Double, fill_value);
   MNM_RET();
 }
 
@@ -3334,6 +3358,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.expand_dims")
     .set_body(MNM_SYMBOLIC_API(expand_dims, 3, ExpandDims));
 MNM_REGISTER_GLOBAL("mnm.op.sym.floor").set_body(MNM_SYMBOLIC_API(floor, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.full").set_body(MNM_SYMBOLIC_API(full, 4, Full));
+MNM_REGISTER_GLOBAL("mnm.op.sym.full_like").set_body(MNM_SYMBOLIC_API(full_like, 2, FullLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather").set_body(MNM_SYMBOLIC_API(gather, 3, Gather));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather_dx").set_body(MNM_SYMBOLIC_API(gather_dx, 4, GatherDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather_nd").set_body(MNM_SYMBOLIC_API(gather_nd, 2, GatherNd));
@@ -3773,10 +3798,18 @@ Attrs ExpandDims(const Array<Value>& values) {
 template <const char* op_name>
 Attrs Full(const Array<Value>& values) {
   MNM_PRELUDE(2, 4, schema::FullArgs);
-  MNM_REQUIRED(0, value2schema::Tensor, fill_value);
+  MNM_REQUIRED(0, value2schema::Double, fill_value);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, shape);
   MNM_OPTIONAL(2, value2schema::String, dtype);
   MNM_OPTIONAL(3, value2schema::String, device);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs FullLike(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::FullLikeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::Double, fill_value);
   return Attrs(attrs);
 }
 
@@ -4766,6 +4799,18 @@ int Full(const std::string& field) {
   }
   if (field == "device") {
     return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int FullLike(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "fill_value") {
+    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -5893,6 +5938,10 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.floor", names::floor,
 MNM_BIND_SCHEMA("mnm.op.full", names::full, value2schema::Full);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.full", names::full,
                             schema_field_idx::Full);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.full_like", names::full_like,
+                value2schema::FullLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.full_like", names::full_like,
+                            schema_field_idx::FullLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.gather", names::gather,
                 value2schema::Gather);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gather", names::gather,
@@ -6312,6 +6361,7 @@ MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);
+MNM_REGISTER_OBJECT_REFLECT(FullLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherNdArgs);

@@ -50,6 +50,31 @@ TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr);
 TupleValue ArrayToIntTuple(const ArrayNode& arr);
 Var GetMayShare(const Expr& var);
 
+template <typename T>
+ScalarValue RelayConstant2ScalarValue(const RelayConstantNode* op) {
+  runtime::NDArray tensor = op->data;
+  DataType dtype = DataType(tensor->dtype);
+  void* raw_data = tensor->data;
+  ICHECK_EQ(tensor->ndim, 0);
+  ICHECK_EQ(dtype.lanes(), 1);
+
+  T data;
+  if (dtype == DataType::Int(32)) {
+    data = static_cast<const int32_t*>(raw_data)[0];
+  } else if (dtype == DataType::Int(64)) {
+    data = static_cast<const int64_t*>(raw_data)[0];
+  } else if (dtype == DataType::Float(32)) {
+    data = static_cast<const float*>(raw_data)[0];
+  } else if (dtype == DataType::Float(64)) {
+    data = static_cast<const double*>(raw_data)[0];
+  } else if (dtype == DataType::Bool()) {
+    data = static_cast<const uint8_t*>(raw_data)[0];
+  } else {
+    LOG(FATAL) << "not handled";
+  }
+  return ScalarValue::make(data);
+}
+
 }  // namespace from_relay
 }  // namespace op
 }  // namespace mnm

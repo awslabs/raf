@@ -68,11 +68,18 @@ class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
 
 class FullArgs : public ir::AttrsNode<FullArgs> {
  public:
-  value::BaseTensorValue fill_value;
+  double fill_value;
   std::vector<int64_t> shape;
   std::string dtype{"int"};
   std::string device{"cpu"};
   MNM_OP_SCHEMA(FullArgs, "mnm.args.full");
+};
+
+class FullLikeArgs : public ir::AttrsNode<FullLikeArgs> {
+ public:
+  value::BaseTensorValue data;
+  double fill_value;
+  MNM_OP_SCHEMA(FullLikeArgs, "mnm.args.full_like");
 };
 
 class GatherArgs : public ir::AttrsNode<GatherArgs> {

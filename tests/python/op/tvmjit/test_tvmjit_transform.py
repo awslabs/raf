@@ -648,37 +648,48 @@ def test_squeeze(shape, axis, device):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32", "float64", "int64"])
+@pytest.mark.parametrize("fill_value", [0, 2, 0.3])
 @pytest.mark.parametrize("shape", [(1, 3, 1), (2, 3, 4),
                                    (5, 5, 5, 5, 5, 5), (224, 224, 3),
                                    (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)])
-def test_full(shape, dtype, device):
+def test_full(shape, dtype, fill_value, device):
     # pylint: disable=attribute-defined-outside-init
     # pylint: disable=not-callable
     # pylint: disable=no-member
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
-    x = np.random.rand(1) * 100
-    m_x = mnm.array(x[0], dtype=dtype, device=device)
-    n_x = x[0].astype(dtype)
-    m_x.requires_grad = True
-    model = TestModel(mnm._op.sym.full, shape=shape)
+    model = TestModel(mnm._op.sym.full, shape=shape, dtype=dtype,
+                      fill_value=fill_value, device=device)
+    m_y = model()
+    # check forward
+    n_y = np.full(fill_value=fill_value, shape=shape).astype(dtype)
+    v_y = run_vm_model(model, device, [])
+    check(m_y, n_y)
+    check(v_y, n_y)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("dtype", ["float32", "float64", "int64"])
+@pytest.mark.parametrize("fill_value", [0, 2, 0.3])
+@pytest.mark.parametrize("shape", [(1, 3, 1), (2, 3, 4),
+                                   (5, 5, 5, 5, 5, 5), (224, 224, 3),
+                                   (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)])
+def test_full_like(shape, dtype, fill_value, device):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    # pylint: disable=no-self-use
+    model = TestModel(mnm._op.sym.full_like, fill_value=fill_value)
+    n_x = np.empty(shape, dtype=dtype)
+    m_x = mnm.array(n_x, device=device)
     m_y = model(m_x)
     # check forward
-    n_y = np.full(fill_value=n_x, shape=shape)
+    n_y = np.full(fill_value=fill_value, shape=shape).astype(dtype)
     v_y = run_vm_model(model, device, [m_x])
     check(m_y, n_y)
     check(v_y, n_y)
-    # check backward
-    mx_x = mx.nd.array(x)
-    mx_x.attach_grad()
-    m_dy, n_dy = randn(shape, device=device)
-    mx_dy = mx.nd.array(n_dy)
-    with mx.autograd.record():
-        mx_y = mx.nd.full(val=mx_x, shape=shape, dtype=dtype)
-        mx_y.backward(mx_dy)
-    m_y.backward(m_dy)
-    check(m_x.grad, mx_x.grad.asnumpy(), rtol=0.1, atol=0.1)
 
 
 @pytest.mark.parametrize("device", get_device_list())

@@ -26,6 +26,16 @@ def swap_axis_compute(attrs, inputs, output_type):  # pylint: disable=unused-arg
     out = _topi.transpose(x, axes=axes)
     return [out]
 
+@register_compute("mnm.op.full")
+def full_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    out = _topi.full(attrs.shape, attrs.dtype, attrs.fill_value)
+    return [out]
+
+@register_compute("mnm.op.full_like")
+def full_like_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    out = _topi.full_like(inputs[0], attrs.fill_value)
+    return [out]
+
 _reg.register_injective_schedule("mnm.op.transpose_dx")
 _reg.register_injective_schedule("mnm.op.transpose")
 _reg.register_injective_schedule("mnm.op.swap_axis")
@@ -46,6 +56,7 @@ _reg.register_broadcast_schedule("mnm.op.clip")
 _reg.register_broadcast_schedule("mnm.op.repeat")
 _reg.register_broadcast_schedule("mnm.op.expand_dims")
 _reg.register_injective_schedule("mnm.op.full")
+_reg.register_injective_schedule("mnm.op.full_like")
 _reg.register_injective_schedule("mnm.op.batch_flatten")
 _reg.register_injective_schedule("mnm.op.arange")
 

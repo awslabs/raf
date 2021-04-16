@@ -819,5 +819,48 @@ def test_arange(data, dtype):
     assert isinstance(ret_type, IncompleteType)
 
 
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32", "bool"])
+def test_full(shape, dtype):
+    # pylint: disable=invalid-name, attribute-defined-outside-init
+    class FullModel(mnm.Model):
+        def build(self, shape, dtype):
+            self.shape = shape
+            self.dtype = dtype
+
+        @mnm.model.trace
+        def forward(self):
+            return mnm.full(fill_value=0, shape=self.shape, dtype=self.dtype)
+
+    model = FullModel(shape, dtype)
+    m_func = model._internal().mod['main']
+    m_func = run_infer_type(m_func)
+    ty = TensorType(shape, dtype=dtype)
+    desired_type = FuncType([], ty)
+    check_type(m_func, desired_type)
+
+
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32", "bool"])
+def test_full_like(shape, dtype):
+    # pylint: disable=invalid-name, attribute-defined-outside-init
+    class FullLikeModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, data):
+            return mnm.full_like(data, fill_value=0)
+
+
+    m_x, _ = randn(shape, dtype=dtype)
+    model = FullLikeModel()
+    m_func = model._internal(m_x).mod['main']
+    m_func = run_infer_type(m_func)
+    ty = TensorType(shape, dtype=dtype)
+    desired_type = FuncType([ty], ty)
+    check_type(m_func, desired_type)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
