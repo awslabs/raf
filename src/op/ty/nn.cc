@@ -225,8 +225,16 @@ Type ContribDropoutInfer(const CallValues& value) {
   const auto* args = value->args.as<DropoutArgs>();
   Array<Type> res;
   TensorType x_ty = Downcast<TensorType>(GetType(args->x));
+  TensorType states_ty;
+  if (args->in_states.defined()) {
+    states_ty = Downcast<TensorType>(GetType(args->in_states.value()));
+  } else {
+    std::vector<PrimExpr> states_shape;
+    states_ty = TensorType(states_shape, DataType::UInt(8));
+  }
   res.push_back(x_ty);
   res.push_back(TensorType(x_ty->shape, DataType::Float(32)));
+  res.push_back(states_ty);
   return TupleType(res);
 }
 

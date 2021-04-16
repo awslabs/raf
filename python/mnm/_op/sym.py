@@ -44,10 +44,11 @@ def _allreduce(x):
     x = sym_utils.to_tensor_tuple(x)
     return Symbol.from_expr(ffi._allreduce(x))
 
-def _contrib_dropout(x, p=0.5):
+def _contrib_dropout(x, p=0.5, in_states=None):
     x = sym_utils.to_tensor(x)
     p = sym_utils.to_double(p)
-    return Symbol.from_expr(ffi._contrib_dropout(x, p))
+    in_states = sym_utils.to_tensor(in_states)
+    return Symbol.from_expr(ffi._contrib_dropout(x, p, in_states))
 
 def abs(x):
     x = sym_utils.to_any(x)

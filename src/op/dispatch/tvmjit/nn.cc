@@ -310,14 +310,26 @@ MNM_TVMJIT(BiasAdd, "mnm.op.bias_add", BiasAddArgs, BiasAddSchema2Args, BiasAddS
            BiasAddSchema2Attrs, BiasAddHasher);
 
 std::vector<Value> ContribDropoutSchema2Args(const DropoutArgs* args) {
-  return {args->x};
+  std::vector<Value> re;
+  re.push_back(args->x);
+  if (args->in_states.defined()) {
+    re.push_back(args->in_states.value());
+  }
+  return re;
 }
 
 std::vector<std::string> ContribDropoutSchemaArgNames(const op::CallValues& call) {
-  return {"x"};
+  const auto* args = call->args.as<DropoutArgs>();
+  std::vector<std::string> ret;
+  ret.push_back("x");
+  if (args->in_states.defined()) {
+    ret.push_back("in_states");
+  }
+  return ret;
 }
 
 Attrs ContribDropoutSchema2Attrs(const DropoutArgs* args) {
+  LOG(INFO) << "TVMJIT implementation of _contrib_dropout not support states return";
   auto attrs = make_object<tvm::relay::DropoutAttrs>();
   attrs->rate = args->p;
   return Attrs(attrs);

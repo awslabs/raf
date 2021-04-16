@@ -191,7 +191,8 @@ def compute_contrib_dropout(attr, inputs, output_type):
         mask[ix] <= _tvm.tir.const(p, "float32"),
         _tvm.tir.const(0, "float32"),
         _tvm.tir.const(1 / (1 - p), "float32")))
-    return [ret, mask]
+    states = _topi.full((), dtype="int8", fill_value=0.)
+    return [ret, mask, states]
 
 _reg.register_injective_schedule("mnm.op._contrib_dropout")
 

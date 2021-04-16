@@ -94,6 +94,7 @@ SCHEMAS = {
     "nn.h::dropout": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="p", cxx_type="double", cxx_default=0.5),
+        Arg(name="in_states", cxx_type=OptionalTensor, cxx_default="nullptr"),
     ],
     "nn.h::local_response_norm": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

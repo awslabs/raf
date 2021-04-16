@@ -47,10 +47,11 @@ def _allreduce(x):
     return imp_utils.ret(ffi._allreduce(x))
 
 @set_module("mnm")
-def _contrib_dropout(x, p=0.5):
+def _contrib_dropout(x, p=0.5, in_states=None):
     x = imp_utils.to_tensor(x)
     p = imp_utils.to_double(p)
-    return imp_utils.ret(ffi._contrib_dropout(x, p))
+    in_states = imp_utils.to_tensor(in_states)
+    return imp_utils.ret(ffi._contrib_dropout(x, p, in_states))
 
 @set_module("mnm")
 def abs(x):

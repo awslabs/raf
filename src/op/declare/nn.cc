@@ -280,18 +280,29 @@ void ContribDropout(const CallValues& call) {
   const DLTensor* x = args->x;
   const int64_t p = args->p;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  std::vector<int64_t> states_shape;
+  // The CUDNN compute requires in_states. While the TVMJIT compute don't support in_states for now.
+  if (args->in_states.defined()) {
+    const DLTensor* in_states = args->in_states.value();
+    for (size_t i = 0; i < in_states->ndim; i++) {
+      states_shape.push_back(tvm::Integer(in_states->shape[i]));
+    }
+  }
   TensorValue output = TensorValue::Assemble(/*ctx=*/x->ctx,
                                              /*dtype=*/x->dtype,
                                              /*shape=*/shape);
   TensorValue mask = TensorValue::Assemble(/*ctx=*/x->ctx,
                                            /*dtype=*/DType(DTypeCode::kFloat(), 32),
                                            /*shape=*/shape);
-  call->out = TupleValue::make(tvm::Array<Value>({output, mask}));
+  TensorValue out_states = TensorValue::Assemble(/*ctx=*/x->ctx,
+                                                 /*dtype=*/DType(DTypeCode::kInt(), 8),
+                                                 /*shape=*/states_shape);
+  call->out = TupleValue::make(tvm::Array<Value>({output, mask, out_states}));
   call->device = x->ctx;
 }
 
 MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropout)
-    .set_attr<TOpPattern>("TOpPattern", kElemWise);
+    .set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 void LayerNorm(const CallValues& call) {
   const auto* args = call->args.as<LayerNormArgs>();

@@ -449,9 +449,10 @@ Attrs DeviceCopy(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Dropout(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::DropoutArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::DropoutArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Double, p);
+  MNM_TAPE(2, ffi2schema::OptionalTensor, in_states);
   return Attrs(attrs);
 }
 
@@ -986,10 +987,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetVal
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._contrib_dropout").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(_contrib_dropout, 2, ffi2schema::Dropout,
+  MNM_PRELUDE(_contrib_dropout, 3, ffi2schema::Dropout,
               schema::DropoutArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->p));
+  MNM_SET_ENV(vpack->x[2], schema2value::OptionalTensor(schema->in_states));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2757,9 +2759,10 @@ Array<Expr> DeviceCopy(const TVMArgs& values) {
 }
 
 Array<Expr> Dropout(const TVMArgs& values) {
-  MNM_PRELUDE(2);
+  MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Double, p);
+  MNM_ARG(2, ffi2expr::OptionalTensor, in_states);
   MNM_RET();
 }
 
@@ -3253,7 +3256,7 @@ namespace symbolic {
 
 MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 1, Allreduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
-    .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 2, Dropout));
+    .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
     .set_body(MNM_SYMBOLIC_API(adaptive_avg_pool2d, 3, AdaptivePool));
@@ -3751,9 +3754,10 @@ Attrs DeviceCopy(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Dropout(const Array<Value>& values) {
-  MNM_PRELUDE(1, 2, schema::DropoutArgs);
+  MNM_PRELUDE(1, 3, schema::DropoutArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_OPTIONAL(1, value2schema::Double, p);
+  MNM_OPTIONAL(2, value2schema::OptionalTensor, in_states);
   return Attrs(attrs);
 }
 
@@ -4726,6 +4730,9 @@ int Dropout(const std::string& field) {
   }
   if (field == "p") {
     return 1;
+  }
+  if (field == "in_states") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
