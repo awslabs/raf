@@ -134,10 +134,10 @@ Pass DeadCodeElimination();
 Pass SimplifyExpr();
 
 /*! \brief Convert Relay IR to Meta IR.
- * \param obj tvm::IRModule or ir::Expr
- * \return ir::IRModule or ir::Expr
+ * \param disabled_pass A list of pass names to be disabled.
+ * \return The created pass.
  */
-tvm::ObjectRef FromRelay(tvm::ObjectRef obj);
+Pass FromRelay(ir::Array<tvm::String> disabled_pass = {});
 
 /*!
  * \brief A pass that inlines backward function.

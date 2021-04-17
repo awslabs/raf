@@ -22,7 +22,7 @@ def test_basic_if():
         return mod
 
     tvm_mod = get_recursive_mod()
-    mod = FromRelay(tvm_mod)
+    mod = FromRelay()(tvm_mod)
     mod = InferType()(mod)
     mod = LiftBranchBody()(mod)
     mod = InferType()(mod)
@@ -55,7 +55,7 @@ def test_mnm_recursive_function():
         return mod
 
     tvm_mod = get_recursive_mod()
-    mod = FromRelay(tvm_mod)
+    mod = FromRelay()(tvm_mod)
     mod = InferType()(mod)
     mod = LiftBranchBody()(mod)
     mod = InferType()(mod)

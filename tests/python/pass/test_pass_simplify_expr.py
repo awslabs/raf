@@ -15,7 +15,7 @@ def test_basic():
         return mod
 
     tvm_mod = get_mod()
-    mod = FromRelay(tvm_mod)
+    mod = FromRelay()(tvm_mod)
     seq = MNMSequential([InferType(), AutoDiff([]), InferType(),
                          SimplifyExpr()])
     mod = seq(mod)

@@ -144,7 +144,7 @@ def test_sequential_pass():
     log = relay.Function([z], relay.log(z))
 
     mod = tvm.IRModule({v_sub: sub, v_log: log})
-    tvm_mod = FromRelay(mod)
+    tvm_mod = FromRelay()(mod)
     passes = [pass_.InferType(), pass_.InferType()]
     sequential = MNMSequential(passes=passes, opt_level=1, name="seq")
     with PassContext():

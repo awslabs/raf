@@ -71,7 +71,7 @@ def from_pytorch(model, shape_dict):
 
     shape_list = [(input_name, input_shape)]
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
-    meta_mod = FromRelay(relay_mod)
+    meta_mod = FromRelay()(relay_mod)
     meta_params = OrderedDict()
     for var in relay_mod["main"].params:
         name = var.name_hint

@@ -4,6 +4,8 @@
  * \brief Build meta ir from Relay
  */
 #include <map>
+#include <tvm/relay/transform.h>
+#include <tvm/support/with.h>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
@@ -286,8 +288,6 @@ struct FromRelayMutator : public ExprMutator {
 };
 
 }  // namespace from_relay
-using namespace tvm;
-using namespace tvm::relay;
 
 Function PartitionPatterns(Function func) {
   Function ret = func;
@@ -301,63 +301,70 @@ Function PartitionPatterns(Function func) {
   return ret;
 }
 
-tvm::ObjectRef FromRelay(tvm::ObjectRef obj) {
-  if (obj->IsInstance<tvm::IRModuleNode>()) {
-    auto mod = Downcast<tvm::IRModule>(obj);
-    mod = tvm::relay::transform::SimplifyExpr()(mod);
-    mod = tvm::relay::transform::EliminateCommonSubexpr()(mod);
-    mod = tvm::relay::transform::FoldConstant()(mod);
-    mod = tvm::relay::transform::CombineParallelBatchMatmul()(mod);
-
-    // Partition Meta-specific Relay simplify patterns
-    for (auto& kv : mod->functions) {
-      auto func = PartitionPatterns(Downcast<Function>(kv.second));
-      mod->Update(kv.first, func);
-    }
-
-    auto relay_mod = tvm::relay::transform::ToANormalForm()(mod);
-    tvm::Map<ir::GlobalVar, ir::BaseFunc> functions;
-    std::stringstream unsupported_ops_ss;
-    for (auto& kv : relay_mod->functions) {
-      auto mutator = from_relay::FromRelayMutator();
-      auto expr = mutator.Mutate(kv.second);
-      functions.Set(kv.first, tvm::Downcast<ir::Function>(expr));
-      unsupported_ops_ss << mutator.ListUnsupportedOps();
-    }
-    if (unsupported_ops_ss.rdbuf()->in_avail() > 0) {
-      LOG(FATAL) << "One or more ops cannot be converted:\n" << unsupported_ops_ss.str();
-      throw;
-    }
-    return ir::IRModule(functions);
-  } else if (obj->IsInstance<ExprNode>()) {
-    auto expr = Downcast<Expr>(obj);
-
-    // Simplify expr and partition Meta-specific Relay simplify patterns
-    auto mod = IRModule::FromExpr(expr);
-    mod = tvm::relay::transform::SimplifyExpr()(mod);
-    mod = tvm::relay::transform::EliminateCommonSubexpr()(mod);
-    mod = tvm::relay::transform::FoldConstant()(mod);
-    mod = tvm::relay::transform::CombineParallelBatchMatmul()(mod);
-    expr = mod->Lookup("main");
-    auto func = PartitionPatterns(Downcast<Function>(expr));
-
-    auto anf_expr = tvm::relay::transform::ToANormalForm(func);
-    Let let = Downcast<Let>(anf_expr);
-    auto mutator = from_relay::FromRelayMutator();
-    auto ret = mutator.Mutate(let->value);
-    auto unsupported_ops_str = mutator.ListUnsupportedOps();
-    if (!unsupported_ops_str.empty()) {
-      LOG(FATAL) << "One or more ops cannot be converted:\n" << unsupported_ops_str;
-      throw;
-    }
-    return ret;
-  } else {
-    LOG(FATAL) << "Unknown object type: " << obj->GetTypeKey() << ". Expected IRModule or Expr";
-    throw;
-  }
+IRModule ApplyTransformSeq(const IRModule& mod) {
+  std::vector<tvm::relay::transform::Pass> passes = {
+      tvm::relay::transform::SimplifyExpr(), tvm::relay::transform::EliminateCommonSubexpr(),
+      tvm::relay::transform::FoldConstant(), tvm::relay::transform::CombineParallelBatchMatmul()};
+  auto seq = tvm::relay::transform::Sequential(passes);
+  return seq(mod);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FromRelay").set_body_typed(FromRelay);
+Pass FromRelay(Array<String> disabled_pass) {
+  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m,
+                                                                            PassContext pc) {
+    IRModule updated_mod = IRModule(m->functions, m->type_definitions, m->Imports(), m->source_map);
+
+    // Apply Relay optimization passes before conversion
+    auto pass_ctx = relay::transform::PassContext::Create();
+    pass_ctx->opt_level = 4;
+    pass_ctx->disabled_pass = disabled_pass;
+    {
+      tvm::With<relay::transform::PassContext> ctx_scope(pass_ctx);
+      updated_mod = ApplyTransformSeq(updated_mod);
+    }
+
+    // Convert each function
+    std::vector<std::pair<GlobalVar, Function>> updates;
+    for (const auto& it : updated_mod->functions) {
+      if (auto* n = it.second.as<FunctionNode>()) {
+        Function func = GetRef<Function>(n);
+
+        // Partition Meta-specific Relay simplify patterns
+        auto updated_func = PartitionPatterns(func);
+
+        // Transform to ANF and convert Relay ops to Meta ops
+        auto anf_expr = tvm::relay::transform::ToANormalForm(updated_func);
+        Let let = Downcast<Let>(anf_expr);
+        auto mutator = from_relay::FromRelayMutator();
+        updated_func = Downcast<Function>(mutator.Mutate(let->value));
+
+        // Check unsupported ops
+        auto unsupported_ops_str = mutator.ListUnsupportedOps();
+        if (!unsupported_ops_str.empty()) {
+          LOG(FATAL) << "One or more ops cannot be converted:\n" << unsupported_ops_str;
+          throw;
+        }
+        updates.push_back({it.first, updated_func});
+      }
+    }
+
+    for (const auto& pair : updates) {
+      updated_mod->Add(pair.first, pair.second, true);
+    }
+    return updated_mod;
+  };
+
+  return CreateModulePass(pass_func, 2, "FromRelay", {});
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.FromRelay").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+  Array<String> disabled_pass;
+  if (args.size() == 1) {
+    disabled_pass = args[0];
+  }
+  *rv = FromRelay(disabled_pass);
+});
+
 MNM_REGISTER_GLOBAL("mnm.pass_.validate_relay_param_name")
     .set_body_typed(from_relay::ValidateRelayParamName);
 }  // namespace pass

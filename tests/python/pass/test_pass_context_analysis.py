@@ -58,7 +58,7 @@ def test_device_copy():
     func = relay.Function([x, y], out)
     mod = tvm.IRModule.from_expr(func)
     # Create a Meta module and set the func as main
-    mod = FromRelay(mod)
+    mod = FromRelay()(mod)
     mod = InferType()(mod)
     ca = ContextAnalysis(mod, tvm.cpu())
 

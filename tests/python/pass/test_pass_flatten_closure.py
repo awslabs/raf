@@ -24,7 +24,7 @@ def test_closure():
         return mod
 
     tvm_mod = get_mod()
-    mod = FromRelay(tvm_mod)
+    mod = FromRelay()(tvm_mod)
     assert len(mod.get_global_vars()) == 1
     mod = LambdaLift()(mod)
     mod = FlattenClosure()(mod)
@@ -82,7 +82,7 @@ def test_while_loop():
         return mod
 
     tvm_mod = get_recursive_mod()
-    mod = FromRelay(tvm_mod)
+    mod = FromRelay()(tvm_mod)
     assert len(mod.get_global_vars()) == 1
     mod = LambdaLift()(mod)
     mod = FlattenClosure()(mod)
