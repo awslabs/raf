@@ -27,8 +27,8 @@ void Conv2D(const CallValues& call) {
   CHECK_EQ(x->ndim, 4);
   CHECK_EQ(w->ndim, 4);
   // TODO(@junrushao1994): deduce ctx here
-  std::vector<int64_t> stride = Pad<2>(args->stride);
-  std::vector<int64_t> dilation = Pad<2>(args->dilation);
+  std::vector<int64_t> stride = mnm::op::Pad<2>(args->stride);
+  std::vector<int64_t> dilation = mnm::op::Pad<2>(args->dilation);
 
   tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
   tvm::Array<tvm::PrimExpr> in_shape{
@@ -93,9 +93,9 @@ void Pool2D(const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   CHECK_EQ(x->ndim, 4);
-  std::vector<int64_t> kernel = Pad<2>(args->kernel);
-  std::vector<int64_t> stride = args->stride.empty() ? kernel : Pad<2>(args->stride);
-  std::vector<int64_t> dilation = Pad<2>(args->dilation);
+  std::vector<int64_t> kernel = mnm::op::Pad<2>(args->kernel);
+  std::vector<int64_t> stride = args->stride.empty() ? kernel : mnm::op::Pad<2>(args->stride);
+  std::vector<int64_t> dilation = mnm::op::Pad<2>(args->dilation);
   tvm::tir::BijectiveLayout layout_converter(args->layout, "NCHW");
   tvm::Array<tvm::PrimExpr> ishape{tvm::Integer(x->shape[0]), tvm::Integer(x->shape[1]),
                                    tvm::Integer(x->shape[2]), tvm::Integer(x->shape[3])};
