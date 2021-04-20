@@ -19,14 +19,14 @@ MNM_OP_DECLARE("mnm.op.device_copy", [](const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* data = args->data;
   std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
-  CHECK_EQ(static_cast<int>(data->ctx.device_type), args->src_dev_type);
+  CHECK_EQ(static_cast<int>(data->device.device_type), args->src_dev_type);
   DLContext out_ctx;
   out_ctx.device_type = static_cast<DLDeviceType>(args->dst_dev_type);
   out_ctx.device_id = 0;
-  call->out = TensorValue::Assemble(/*ctx=*/out_ctx,
+  call->out = TensorValue::Assemble(/*dev=*/out_ctx,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/shape);
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare

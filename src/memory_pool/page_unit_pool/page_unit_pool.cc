@@ -109,8 +109,8 @@ class PageUnitPool final : public MemoryPool {
   }
 
  public:
-  static void* make(DLContext ctx) {
-    return new PageUnitPool(ctx);
+  static void* make(const Device& dev) {
+    return new PageUnitPool(dev);
   }
 
  private:
@@ -123,7 +123,8 @@ class PageUnitPool final : public MemoryPool {
   std::unordered_map<int64_t, std::vector<std::shared_ptr<Memory>>> _pool;
 };
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.page_unit_pool").set_body_typed(PageUnitPool::make);
+MNM_REGISTER_GLOBAL("mnm.memory_pool._make.page_unit_pool")
+    .set_body_typed([](const tvm::Device& dev) { return PageUnitPool::make(Device(dev)); });
 
 }  // namespace page_unit_pool
 }  // namespace memory_pool

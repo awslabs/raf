@@ -169,7 +169,7 @@ TensorValue MakeZeros(Device to_dev, std::vector<int64_t>& shape) {
   DType dtype = DType(DTypeCode::kFloat(), 32, 1);
   DLTensor tensor;
   tensor.data = a.data();
-  tensor.ctx = Device(DevType::kCPU(), 0);
+  tensor.device = Device(DevType::kCPU(), 0);
   tensor.dtype = dtype;
   tensor.shape = shape.data();
   tensor.ndim = shape.size();
@@ -185,7 +185,7 @@ Expr MakeZeros(Value value) {
     return MakeConstant(ScalarValue::make(0.0));
   } else if (const auto* tensor = value.as<TensorValueObj>()) {
     const Tensor& a = tensor->tensor;
-    Device x_dev = a->ctx;
+    Device x_dev = a->device;
     std::vector<int64_t> shape(a->shape, a->shape + a->ndim);
     return MakeConstant(MakeZeros(x_dev, shape));
   } else if (const auto* tuple = value.as<TupleValueObj>()) {
@@ -266,7 +266,7 @@ TensorValue MakeOnes(Device to_dev) {
   DType dtype = DType(DTypeCode::kFloat(), 32, 1);
   DLTensor tensor;
   tensor.data = a;
-  tensor.ctx = Device(DevType::kCPU(), 0);
+  tensor.device = Device(DevType::kCPU(), 0);
   tensor.dtype = dtype;
   tensor.shape = b;
   tensor.ndim = 0;
@@ -278,7 +278,7 @@ TensorValue MakeOnes(Device to_dev) {
 }
 
 void Backward(Var var, Var dy_var) {
-  Device y_dev = Downcast<TensorValue>(LookupBoundValue(var))->tensor->ctx;
+  Device y_dev = Downcast<TensorValue>(LookupBoundValue(var))->tensor->device;
   Value dy = dy_var.defined() ? Downcast<NDArrayBinding>(LookupBinding(dy_var.operator->()))->value
                               : MakeOnes(y_dev);
   GradTape tape = Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->tape;

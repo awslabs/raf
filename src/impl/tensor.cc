@@ -86,7 +86,7 @@ class Tensor::Impl {
     container->shape_ = shape;
     container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
     container->dl_tensor.data = data;
-    container->dl_tensor.ctx = dev;
+    container->dl_tensor.device = dev;
     container->dl_tensor.ndim = shape.size();
     container->dl_tensor.dtype = dtype;
     container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
@@ -127,7 +127,7 @@ class Tensor::Impl {
     Tensor ret(ir::GetObjectPtr<ir::Object>(container));
     container->shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
     container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
-    container->dl_tensor.ctx = self->ctx;
+    container->dl_tensor.device = self->device;
     container->dl_tensor.ndim = container->shape_.size();
     container->dl_tensor.dtype = self->dtype;
     container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);

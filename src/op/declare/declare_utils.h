@@ -22,10 +22,10 @@ inline void DeclareGeneralDx(const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }
 
 }  // namespace declare

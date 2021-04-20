@@ -21,10 +21,10 @@ MNM_OP_DECLARE("mnm.op.compiler_begin", [](const CallValues& call) {
   DLTensor* x = args->x;
   std::string compiler = args->compiler;
 
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
@@ -33,10 +33,10 @@ MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
   DLTensor* x = args->x;
   std::string compiler = args->compiler;
 
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare

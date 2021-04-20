@@ -41,11 +41,11 @@ loss.backward()
 # Changing to no_pool strategy
 import mnm
 from mnm._ffi.memory_pool import InitPool, RemovePool
-from mnm._core.core_utils import str2ctx
+from mnm._core.core_utils import str2dev
 
 device = 'cuda'
 pool_name = 'no_pool'
-InitPool(str2ctx(device), pool_name)
+InitPool(str2dev(device), pool_name)
 
 data = ...
 label = ...
@@ -64,11 +64,11 @@ if you want to change back to default memorpy strategy (page_unit_pool), you can
 # Changing back to default strategy
 import mnm
 from mnm._ffi.memory_pool import InitPool, RemovePool
-from mnm._core.core_utils import str2ctx
+from mnm._core.core_utils import str2dev
 
 device = 'cuda'
 # Start with no_pool
-InitPool(str2ctx(device), 'no_pool')
+InitPool(str2dev(device), 'no_pool')
 
 data = ...
 label = ...
@@ -78,15 +78,15 @@ model.train_mode()
 for i in range(10):
     if i%2 == 0:
         # Use no_pool for the even iter
-        InitPool(str2ctx(device), 'no_pool')
+        InitPool(str2dev(device), 'no_pool')
     else:
         # Use page_unit_pool for the odd iter
-        InitPool(str2ctx(device), 'page_unit_pool')
+        InitPool(str2dev(device), 'page_unit_pool')
     loss = model(data, label)
     loss.backward()
 model.infer_mode()
 # Use the default pool strategy
-RemovePool(str2ctx(device))
+RemovePool(str2dev(device))
 model(m_x)
 ...
 

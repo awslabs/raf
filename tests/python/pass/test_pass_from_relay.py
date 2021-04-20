@@ -336,7 +336,7 @@ def test_broadcast_to(shape, dtype):
 
     check_from_relay(model, r_func, [m_x])
 
-
+@pytest.mark.xfail(reason="broadcast_to_like with static shape will be simplified to broadcast_to")
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 2, 4, 1]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to_like(shape, dtype):

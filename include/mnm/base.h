@@ -7,6 +7,7 @@
 #include <string>
 #include "dlpack/dlpack.h"
 #include "tvm/runtime/c_runtime_api.h"
+#include "tvm/runtime/ndarray.h"
 #include "./enum_base.h"
 
 namespace mnm {
@@ -55,11 +56,11 @@ class Device {
   Device() = default;
   Device(DevType device_type, int device_id) : device_type(device_type), device_id(device_id) {
   }
-  Device(TVMContext context)  // NOLINT(runtime/explicit)
-      : device_type(context.device_type), device_id(context.device_id) {
+  Device(tvm::Device dev)  // NOLINT(runtime/explicit)
+      : device_type(dev.device_type), device_id(dev.device_id) {
   }
-  operator TVMContext() const {
-    return TVMContext{DLDeviceType(device_type), device_id};
+  operator tvm::Device() const {
+    return tvm::Device{DLDeviceType(device_type), device_id};
   }
   const char* c_str() const {
     thread_local char buffer[128];

@@ -41,7 +41,7 @@ using tvm::Downcast;
   if (x->IsInstance<TensorValueObj>()) {        \
     const TensorValue& tv = MakeUnaryTensor(x); \
     call->out = tv;                             \
-    call->device = tv->tensor->ctx;             \
+    call->device = tv->tensor->device;          \
     return;                                     \
   }
 
@@ -51,7 +51,7 @@ using tvm::Downcast;
 TensorValue MakeUnaryTensor(DLTensor* x) {
   int ndim = x->ndim;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  return TensorValue::Assemble(x->ctx, x->dtype, shape);
+  return TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
@@ -91,10 +91,10 @@ void Unary(const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
   for (int i = 0, e = shape.size(); i < e; ++i) {
     if (shape[i] == 0) {
       call->callee = ir::NullValue<OpValue>();
@@ -149,10 +149,10 @@ void UnaryDx(const CallValues& call) {
     source = args->y.value();
   }
   std::vector<int64_t> shape(source->shape, source->shape + source->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/source->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/source->device,
                                     /*dtype=*/source->dtype,
                                     /*shape=*/shape);
-  call->device = source->ctx;
+  call->device = source->device;
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.relu_dx", UnaryDx);

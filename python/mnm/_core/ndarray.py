@@ -2,7 +2,7 @@
 """Multi-dimension array representation"""
 import ctypes
 
-from mnm._core.core_utils import ctx2str, set_module, str2ctx
+from mnm._core.core_utils import dev2str, set_module, str2dev
 from mnm._core.value import TensorValue
 from mnm._ffi.binding import (BindNDArray, BindSymbol, RebindNDArray, LookupBoundValue,
                               SetRequiresGrad, Backward, LookupGrad)
@@ -93,7 +93,7 @@ class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
         shape_handle = dltensor.shape
         strides_handle = dltensor.strides
         # Refresh cached values
-        self.device = ctx2str(dltensor.ctx)
+        self.device = dev2str(dltensor.device)
         self.dtype = dltensor.dtype
         self.ndim = ndim
         self.shape = tuple(shape_handle[i] for i in range(ndim))
@@ -331,7 +331,7 @@ def _np_to_tensor_value(npa, device=None):
         MarkNumpy(result._tensor, _manager_ctx(npa))  # pylint: disable=protected-access
         return result
 
-    return TensorValue.from_tvm(tvm_ndarray(npa, ctx=str2ctx(device)))
+    return TensorValue.from_tvm(tvm_ndarray(npa, device=str2dev(device)))
 
 
 @set_module("mnm")

@@ -71,7 +71,7 @@ class OptTester:
         self.mod = mod
 
     @staticmethod
-    def transform(node, ctx=None):
+    def transform(node, dev=None):
         """Perform optimization on node."""
         if isinstance(node, tvm.IRModule):
             # Add a function to the module and return an updated module.
@@ -97,8 +97,8 @@ def test_module_pass():
 
     opt_tester = OptTester(mod)
 
-    def direct_transform(expr, ctx):
-        return opt_tester.transform(expr, ctx)
+    def direct_transform(expr, dev):
+        return opt_tester.transform(expr, dev)
 
     mod_pass = module_pass(direct_transform, opt_level=3,
                            name="module_pass_test")
@@ -120,8 +120,8 @@ def test_function_pass():
     pass_name = "function_pass_test"
     opt_tester = OptTester(mod)
 
-    def direct_transform(expr, ctx):
-        return opt_tester.transform(expr, ctx)
+    def direct_transform(expr, dev):
+        return opt_tester.transform(expr, dev)
 
     func_pass = function_pass(direct_transform, opt_level=1, name=pass_name)
     assert isinstance(func_pass, FunctionPass)

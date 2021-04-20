@@ -7,7 +7,7 @@ from tvm._ffi.runtime_ctypes import TVMByteArray
 from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler.dispatcher import ApplyHistoryBest
 from . import ndarray as _nd
-from .core_utils import register_node, str2ctx
+from .core_utils import register_node, str2dev
 from .. import _ffi
 from .._core.value import Value, TupleValue
 
@@ -453,13 +453,13 @@ class VMCompiler:
         if isinstance(target, (str, tvm.target.Target)):
             target = "llvm" if target == "cpu" else target
             dev_type = tvm.tir.IntImm(
-                "int32", tvm.nd.context(str(target)).device_type)
+                "int32", tvm.nd.device(str(target)).device_type)
             tgts[dev_type] = tvm.target.Target(target)
         elif isinstance(target, dict):
             for dev, tgt in target.items():
                 tgt = "llvm" if tgt == "cpu" else tgt
                 dev_type = tvm.tir.IntImm(
-                    "int32", tvm.nd.context(dev).device_type)
+                    "int32", tvm.nd.device(dev).device_type)
                 tgts[dev_type] = tvm.target.Target(tgt)
         else:
             raise TypeError("target is expected to be str, tvm.target.Target, " +
@@ -526,7 +526,7 @@ class VMExecutor:
             enable_cuda_graph = False
         self.mod = mod
         self.target = device
-        self.device = str2ctx(device)
+        self.device = str2dev(device)
         self.executable = compile(mod, self.target)
         self.vm = VirtualMachine(self.executable, self.device, enable_cuda_graph=enable_cuda_graph)
         self.auto_scheduler_fallback_context = None
@@ -580,7 +580,7 @@ class VirtualMachine:
     exe : Executable
         The VM executable.
 
-    device : :py:class:`TVMContext`
+    device : :py:class:`Device`
         The runtime context to run the code on.
 
     enable_cuda_graph : bool

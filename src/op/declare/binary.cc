@@ -40,7 +40,7 @@ using namespace mnm::value;
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
     const TensorValue& tv = MakeBinaryTensor(x1, x2);                         \
     call->out = tv;                                                           \
-    call->device = tv->tensor->ctx;                                           \
+    call->device = tv->tensor->device;                                        \
     return;                                                                   \
   }
 
@@ -48,7 +48,7 @@ using namespace mnm::value;
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
     const TensorValue& tv = MakeBinaryTensor(x1, x2, true);                   \
     call->out = tv;                                                           \
-    call->device = tv->tensor->ctx;                                           \
+    call->device = tv->tensor->device;                                        \
     return;                                                                   \
   }
 
@@ -79,9 +79,9 @@ TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false
     dtype.code = DLDataTypeCode(1);
     dtype.bits = 1;
     dtype.lanes = 1;
-    return TensorValue::Assemble(x1->ctx, dtype, oshape);
+    return TensorValue::Assemble(x1->device, dtype, oshape);
   }
-  return TensorValue::Assemble(x1->ctx, x1->dtype, oshape);
+  return TensorValue::Assemble(x1->device, x1->dtype, oshape);
 }
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.add", [](const CallValues& call) {

@@ -26,7 +26,7 @@ tvm::runtime::NDArray MakeFakeTensor() {
   DType dtype = mnm::DType(mnm::DTypeCode::kInt(), 64, 1);
   DLTensor tensor;
   tensor.data = a;
-  tensor.ctx = dev;
+  tensor.device = dev;
   tensor.dtype = dtype;
   tensor.shape = b;
   tensor.ndim = 0;

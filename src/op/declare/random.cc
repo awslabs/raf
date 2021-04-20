@@ -22,14 +22,14 @@ MNM_OP_DECLARE("mnm.op.threefry_generate", [](const CallValues& call) {
   std::vector<int64_t> kshape(key->shape, key->shape + key->ndim);
   std::vector<int64_t> oshape(args->shape.begin(), args->shape.end());
 
-  TensorValue new_key = TensorValue::Assemble(/*ctx=*/key->ctx,
+  TensorValue new_key = TensorValue::Assemble(/*dev=*/key->device,
                                               /*dtype=*/DType(DTypeCode::kUInt(), 64),
                                               /*shape=*/kshape);
-  TensorValue random_array = TensorValue::Assemble(/*ctx=*/key->ctx,
+  TensorValue random_array = TensorValue::Assemble(/*dev=*/key->device,
                                                    /*dtype=*/DType(DTypeCode::kUInt(), 64),
                                                    /*shape=*/oshape);
   call->out = TupleValue::make({new_key, random_array});
-  call->device = key->ctx;
+  call->device = key->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.threefry_split", [](const CallValues& call) {
@@ -40,14 +40,14 @@ MNM_OP_DECLARE("mnm.op.threefry_split", [](const CallValues& call) {
       << "The type of key must be uint64";
   std::vector<int64_t> kshape(key->shape, key->shape + key->ndim);
 
-  TensorValue new_key = TensorValue::Assemble(/*ctx=*/key->ctx,
+  TensorValue new_key = TensorValue::Assemble(/*dev=*/key->device,
                                               /*dtype=*/key->dtype,
                                               /*shape=*/kshape);
-  TensorValue new_subkey = TensorValue::Assemble(/*ctx=*/key->ctx,
+  TensorValue new_subkey = TensorValue::Assemble(/*dev=*/key->device,
                                                  /*dtype=*/key->dtype,
                                                  /*shape=*/kshape);
   call->out = TupleValue::make({new_key, new_subkey});
-  call->device = key->ctx;
+  call->device = key->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare

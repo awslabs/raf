@@ -25,12 +25,12 @@ MNM_OP_DECLARE("mnm.op.get_valid_counts", [](const CallValues& call) {
   std::vector<int64_t> oshape(data->shape, data->shape + 1);
   std::vector<int64_t> data_shape(data->shape, data->shape + data->ndim);
   std::vector<int64_t> oshape_indices(data->shape, data->shape + 2);
-  ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), oshape));
-  ret.push_back(TensorValue::Assemble(data->ctx, data->dtype, data_shape));
-  ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), oshape_indices));
+  ret.push_back(TensorValue::Assemble(data->device, DType(DTypeCode::kInt(), 32), oshape));
+  ret.push_back(TensorValue::Assemble(data->device, data->dtype, data_shape));
+  ret.push_back(TensorValue::Assemble(data->device, DType(DTypeCode::kInt(), 32), oshape_indices));
 
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
@@ -45,16 +45,16 @@ MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
     std::vector<TensorValue> ret;
     std::vector<int64_t> oshape(data->shape, data->shape + 2);
     std::vector<int64_t> count_shape({*data->shape, 1});
-    ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), oshape));
-    ret.push_back(TensorValue::Assemble(data->ctx, DType(DTypeCode::kInt(), 32), count_shape));
+    ret.push_back(TensorValue::Assemble(data->device, DType(DTypeCode::kInt(), 32), oshape));
+    ret.push_back(TensorValue::Assemble(data->device, DType(DTypeCode::kInt(), 32), count_shape));
     call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
   } else {
     std::vector<int64_t> dshape(data->shape, data->shape + data->ndim);
-    call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+    call->out = TensorValue::Assemble(/*dev=*/data->device,
                                       /*dtype=*/data->dtype,
                                       /*shape=*/dshape);
   }
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare

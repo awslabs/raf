@@ -7,12 +7,12 @@ from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
 # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
 
 
-@pytest.mark.parametrize("ctx", mnm.testing.get_device_list())
+@pytest.mark.parametrize("dev", mnm.testing.get_device_list())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
 ])
-def test_basic(ctx, shape):
+def test_basic(dev, shape):
     # pylint: disable=protected-access
     # Create a symbolic model and run it
     class Add(mnm.Model):
@@ -26,8 +26,8 @@ def test_basic(ctx, shape):
 
     # Get a Relay func
     model = Add()
-    m_x, _ = randn(shape, device=ctx)
-    m_y, _ = randn(shape, device=ctx)
+    m_x, _ = randn(shape, device=dev)
+    m_y, _ = randn(shape, device=dev)
     _ = model(m_x, m_y)
     func = model._internal().mod['main']
 
@@ -36,14 +36,13 @@ def test_basic(ctx, shape):
     # Propagate types.
     mod = InferType()(mod)
 
-    dev = tvm.gpu() if ctx == "cuda" else tvm.cpu()
+    dev = tvm.gpu() if dev == "cuda" else tvm.cpu()
     # Performance context analysis
     ca = ContextAnalysis(mod, dev)
 
     # No device info is propagated. Everything is on the default device.
     dev_type = dev.device_type
-    for _, dev in ca.items():
-        assert dev[0].value == dev_type
+    assert all([d[0].value == dev_type for _, d in ca.items()])
 
 
 def test_device_copy():
@@ -84,7 +83,7 @@ def test_memory_alloc(shape):
     if not mnm.build.with_cuda():
         return
 
-    ctx = "cuda"
+    dev = "cuda"
     # pylint: disable=protected-access
 
     class Model(mnm.Model):
@@ -100,11 +99,11 @@ def test_memory_alloc(shape):
 
     model_before = Model()
     model_before.infer_mode()
-    m_x, _ = randn(shape, device=ctx)
+    m_x, _ = randn(shape, device=dev)
     func = model_before._internal(m_x).mod['main']
     mod = IRModule.from_expr(func)
     mod = InferType()(mod)
-    with tvm.target.Target(ctx):
+    with tvm.target.Target(dev):
         mod = mnm._ffi.pass_.ManifestAlloc(mod)
     mod = InferType()(mod)
     ca = ContextAnalysis(mod, tvm.cpu())

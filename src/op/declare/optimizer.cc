@@ -28,15 +28,15 @@ MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
     CHECK_EQ(v0->shape[i], dx->shape[i]);
   }
   auto v1 = TensorValue::Assemble(
-      /*ctx=*/dx->ctx,
+      /*dev=*/dx->device,
       /*dtype=*/dx->dtype,
       /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
   auto x1 = TensorValue::Assemble(
-      /*ctx=*/dx->ctx,
+      /*dev=*/dx->device,
       /*dtype=*/dx->dtype,
       /*shape=*/std::vector<int64_t>(dx->shape, dx->shape + dx->ndim));
   call->out = TupleValue::make(tvm::Array<Value>({v1, x1}));
-  call->device = dx->ctx;
+  call->device = dx->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare

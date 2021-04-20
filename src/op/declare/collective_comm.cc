@@ -23,11 +23,11 @@ void AllReduce(const CallValues& call) {
   ir::Array<Value> ret;
   auto& tv = args->x;
   const DLTensor* x = tv[0];
-  call->device = x->ctx;
+  call->device = x->device;
   for (int i = 0; i < tv.size(); ++i) {
     const DLTensor* x = tv[i];
     std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-    ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape));
   }

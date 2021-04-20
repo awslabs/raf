@@ -69,22 +69,23 @@ class DeviceDomain {
  public:
   // Construct an empty domain.
   DeviceDomain() {
-    ctx_.device_type = DevType::kUnknown();
-    ctx_.device_id = -1;
+    device_.device_type = DevType::kUnknown();
+    device_.device_id = -1;
   }
 
   // Construct a domain based on a given context.
-  explicit DeviceDomain(const Device& ctx) : ctx_(ctx) {
+  explicit DeviceDomain(const Device& dev) : device_(dev) {
   }
 
   // Check if the current domain is empty.
   bool IsEmptyDomain() const {
-    return ctx_.device_type == DevType::kUnknown() && ctx_.device_id == -1;
+    return device_.device_type == DevType::kUnknown() && device_.device_id == -1;
   }
 
   // Check if the current domain equals the other one.
   bool operator==(const DeviceDomain& other) const {
-    return ctx_.device_type == other.ctx_.device_type && ctx_.device_id == other.ctx_.device_id;
+    return device_.device_type == other.device_.device_type &&
+           device_.device_id == other.device_.device_id;
   }
 
   bool operator!=(const DeviceDomain& other) const {
@@ -98,8 +99,8 @@ class DeviceDomain {
       if (domain->IsEmptyDomain()) {
         return (size_t)(domain.get());
       } else {
-        size_t const h1(std::hash<int>()(static_cast<int>(domain->ctx_.device_type)));
-        size_t const h2(std::hash<int>()(domain->ctx_.device_id));
+        size_t const h1(std::hash<int>()(static_cast<int>(domain->device_.device_type)));
+        size_t const h2(std::hash<int>()(domain->device_.device_id));
         return h1 ^ (h2 << 1);
       }
     }
@@ -118,7 +119,7 @@ class DeviceDomain {
   };
 
   /* \brief The device to be assigned to the current domain. */
-  Device ctx_;
+  Device device_;
 
   friend DeviceDomainPtr Join(const DeviceDomainPtr& lhs, const DeviceDomainPtr& rhs);
   friend class ContextAnalyzer;
@@ -161,8 +162,8 @@ class ContextAnalyzer : public MixedModeVisitor {
   }
 
   // Create a domain with the given device context.
-  DeviceDomainPtr DeviceType(const Device& ctx) {
-    return std::make_shared<DeviceDomain>(DeviceDomain(ctx));
+  DeviceDomainPtr DeviceType(const Device& dev) {
+    return std::make_shared<DeviceDomain>(DeviceDomain(dev));
   }
 
   // Find the root of a device.
@@ -359,7 +360,7 @@ class ContextAnalyzer : public MixedModeVisitor {
       if (device->IsEmptyDomain()) {
         ret[it.first] = default_context_;
       } else {
-        ret[it.first] = device->ctx_;
+        ret[it.first] = device->device_;
       }
     }
 
@@ -464,11 +465,11 @@ class ContextAnalyzer : public MixedModeVisitor {
       Unify(DeviceFor(call->args[i]), DeviceType(cpu_ctx_));
       MixedModeVisitor::VisitExpr(call->args[i]);
     }
-    Device ctx;
+    Device dev;
     const auto* attrs = call->attrs.as<tvm::relay::AllocStorageAttrs>();
-    ctx.device_type = static_cast<DevType>(attrs->device_type);
-    ctx.device_id = attrs->device_id;
-    Unify(DeviceFor(GetRef<Call>(call)), DeviceType(ctx));
+    dev.device_type = static_cast<DevType>(attrs->device_type);
+    dev.device_id = attrs->device_id;
+    Unify(DeviceFor(GetRef<Call>(call)), DeviceType(dev));
   }
 
   void UnifyAllocTensorCall(const CallNode* call) {
@@ -642,8 +643,8 @@ PackedAnalysisResultMap ContextAnalysisPacked(const IRModule& mod,
   PackedAnalysisResultMap ret;
   auto res = ContextAnalysis(mod, default_context);
   for (const auto& it : res) {
-    Device ctx = it.second;
-    Integer dev_ty = static_cast<int>(ctx.operator TVMContext().device_type);
+    Device dev = it.second;
+    Integer dev_ty = static_cast<int>(dev.operator tvm::Device().device_type);
     Integer dev_id = it.second.device_id;
     ret.Set(it.first, {dev_ty, dev_id});
   }

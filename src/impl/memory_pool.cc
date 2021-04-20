@@ -96,26 +96,32 @@ MemoryPool* Memory::InitPool(const Device& dev, const std::string& name) {
  * \brief RemovePool Disable the current memory pool, the memory chuncks in this pool will not
  * be freed unitl there is nobody using to it.
  *
- * \param ctx The context that the pool belongs to.
+ * \param dev The device that the pool belongs to.
  */
-void RemovePool(DLContext ctx) {
-  Memory::RemovePool(ctx);
+void RemovePool(const Device& dev) {
+  Memory::RemovePool(dev);
 }
 
 /*!
  * \brief InitPool Enable a new memory pool using the given pool_name. The memories requested after
  * this will be managed by this pool.
  *
- * \param ctx The context that the pool belongs to.
+ * \param dev The device that the pool belongs to.
  * \param pool_name The name of the new pool.
  */
-void InitPool(DLContext ctx, std::string pool_name) {
-  Memory::RemovePool(ctx);  // Remove the current pool firstly.
-  Memory::InitPool(ctx, pool_name);
+void InitPool(const Device& dev, std::string pool_name) {
+  Memory::RemovePool(dev);  // Remove the current pool firstly.
+  Memory::InitPool(dev, pool_name);
 }
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool.InitPool").set_body_typed(InitPool);
-MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed(RemovePool);
+MNM_REGISTER_GLOBAL("mnm.memory_pool.InitPool")
+    .set_body_typed([](const tvm::Device& dev, const std::string pool_name) {
+      return InitPool(Device(dev), pool_name);
+    });
+
+MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed([](const tvm::Device& dev) {
+  return RemovePool(Device(dev));
+});
 
 }  // namespace memory_pool
 }  // namespace mnm

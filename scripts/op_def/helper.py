@@ -13,7 +13,7 @@ class TensorAttrsArgs:
     __ops__ = [
         Op("tensor.shape", namespace="__hidden__"),
         Op("tensor.dtype", namespace="__hidden__"),
-        Op("tensor.ctx", namespace="__hidden__"),
+        Op("tensor.device", namespace="__hidden__"),
         Op("tensor.ndim", namespace="__hidden__"),
     ]
 

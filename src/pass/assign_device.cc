@@ -23,13 +23,13 @@ using namespace mnm::op::schema;
 using namespace mnm::value;
 
 mnm::Device GetDeviceFromConstExpr(const Expr& expr) {
-  static auto* str2ctx = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   auto device_name_node = expr.as<ir::ConstantNode>();
   CHECK(device_name_node);
   auto device_name_string_obj = device_name_node->value.as<StringValueObj>();
   CHECK(device_name_string_obj);
   std::string device_name_str = device_name_string_obj->value;
-  return Device(static_cast<TVMContext>((*str2ctx)(device_name_str)));
+  return Device(static_cast<tvm::Device>((*str2dev)(device_name_str)));
 }
 
 Expr AssignDeviceFullOp(const CallNode* node, const Array<Expr> args,
@@ -37,16 +37,16 @@ Expr AssignDeviceFullOp(const CallNode* node, const Array<Expr> args,
   Array<Expr> new_args;
 
   // Get the device of the current node.
-  const auto* str2ctx = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   Device call_device;
   if (node->args.size() < 4) {
-    call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
+    call_device = Device(static_cast<tvm::Device>((*str2dev)("cpu")));
   } else {
     call_device = GetDeviceFromConstExpr(node->args[3]);
   }
 
   // Get the target device.
-  Device target_device = Device(static_cast<TVMContext>((*str2ctx)(target_device_str)));
+  Device target_device = Device(static_cast<tvm::Device>((*str2dev)(target_device_str)));
 
   // Current node is not on the desired device, adjust the device argument.
   if (target_device.device_type != call_device.device_type) {
@@ -80,16 +80,16 @@ Expr AssignDeviceOneHotOp(const CallNode* node, const Array<Expr> args,
   Array<Expr> new_args;
 
   // Get the device of the current node.
-  const auto* str2ctx = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   Device call_device;
   if (node->args.size() < 7) {
-    call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
+    call_device = Device(static_cast<tvm::Device>((*str2dev)("cpu")));
   } else {
     call_device = GetDeviceFromConstExpr(node->args[6]);
   }
 
   // Get the target device.
-  Device target_device = Device(static_cast<TVMContext>((*str2ctx)(target_device_str)));
+  Device target_device = Device(static_cast<tvm::Device>((*str2dev)(target_device_str)));
 
   // Current node is not on the desired device, adjust the device argument.
   if (target_device.device_type != call_device.device_type) {
@@ -126,16 +126,16 @@ Expr AssignDeviceInitOp(const CallNode* node, const Array<Expr> args,
   Array<Expr> new_args;
 
   // Get the device of the current node.
-  const auto* str2ctx = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
+  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   Device call_device;
   if (node->args.size() < 3) {
-    call_device = Device(static_cast<TVMContext>((*str2ctx)("cpu")));
+    call_device = Device(static_cast<tvm::Device>((*str2dev)("cpu")));
   } else {
     call_device = GetDeviceFromConstExpr(node->args[2]);
   }
 
   // Get the target device.
-  Device target_device = Device(static_cast<TVMContext>((*str2ctx)(target_device_str)));
+  Device target_device = Device(static_cast<tvm::Device>((*str2dev)(target_device_str)));
 
   // Current node is not on the desired device, adjust the device argument.
   if (target_device.device_type != call_device.device_type) {
@@ -182,12 +182,12 @@ class DeviceAssigner : public ExprMutator {
     if (value.as<TensorValueObj>()) {
       DLTensor* dlt = value;
 
-      const auto* str2ctx = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
-      TVMContext target_tvm_ctx = (*str2ctx)(device_str_);
+      const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+      tvm::Device target_tvm_ctx = (*str2dev)(device_str_);
       Device target_device = Device(target_tvm_ctx);
 
       // Do nothing if the constant is already on the target device.
-      if (target_tvm_ctx.device_type == dlt->ctx.device_type) {
+      if (target_tvm_ctx.device_type == dlt->device.device_type) {
         return GetRef<Expr>(node);
       }
 

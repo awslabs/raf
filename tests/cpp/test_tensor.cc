@@ -49,9 +49,9 @@ TEST(Tensor, make_no_strides_no_data) {
   ASSERT_EQ(tensor->ndim, ndim);
   // check data
   ASSERT_EQ(tensor->data, nullptr);
-  // check ctx
-  ASSERT_EQ(tensor->ctx.device_type, kDLCPU);
-  ASSERT_EQ(tensor->ctx.device_id, 0);
+  // check dev
+  ASSERT_EQ(tensor->device.device_type, kDLCPU);
+  ASSERT_EQ(tensor->device.device_id, 0);
   // check dtype
   ASSERT_EQ(tensor->dtype.code, kDLFloat);
   ASSERT_EQ(tensor->dtype.bits, 16);
@@ -79,9 +79,9 @@ TEST(Tensor, make_no_strides) {
   ASSERT_EQ(tensor->ndim, ndim);
   // check data
   ASSERT_EQ(tensor->data, data);
-  // check ctx
-  ASSERT_EQ(tensor->ctx.device_type, kDLCPU);
-  ASSERT_EQ(tensor->ctx.device_id, 0);
+  // check dev
+  ASSERT_EQ(tensor->device.device_type, kDLCPU);
+  ASSERT_EQ(tensor->device.device_id, 0);
   // check dtype
   ASSERT_EQ(tensor->dtype.code, kDLFloat);
   ASSERT_EQ(tensor->dtype.bits, 16);
@@ -109,9 +109,9 @@ TEST(Tensor, make_given_all_fields) {
   ASSERT_EQ(tensor->ndim, ndim);
   // check data
   ASSERT_EQ(tensor->data, data);
-  // check ctx
-  ASSERT_EQ(tensor->ctx.device_type, kDLCPU);
-  ASSERT_EQ(tensor->ctx.device_id, 0);
+  // check dev
+  ASSERT_EQ(tensor->device.device_type, kDLCPU);
+  ASSERT_EQ(tensor->device.device_id, 0);
   // check dtype
   ASSERT_EQ(tensor->dtype.code, kDLFloat);
   ASSERT_EQ(tensor->dtype.bits, 16);

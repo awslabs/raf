@@ -26,7 +26,7 @@ from tvm.runtime.object import Object
 from tvm.runtime.object_generic import ObjectGeneric as _NodeGeneric
 from tvm._ffi.runtime_ctypes import TVMArray as _DLTensor
 from tvm._ffi.runtime_ctypes import TVMByteArray as _ByteArray
-from tvm._ffi.runtime_ctypes import TVMContext as _DLContext
+from tvm._ffi.runtime_ctypes import Device as _DLDevice
 from tvm._ffi.runtime_ctypes import TVMArrayHandle as _DLArrayHandle
 from tvm.target import generic_func
 from tvm.tir import FloatImm, IntImm, StringImm

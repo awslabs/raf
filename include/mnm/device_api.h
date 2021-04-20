@@ -26,7 +26,7 @@ class DeviceAPI {
   virtual void FreeStream(const Device& dev, void* stream) = 0;
 
   // will call the device api of `next_ctx` to wait for `prev`
-  // therefore, we should the assumption that `after.ctx == device_api.ctx`
+  // therefore, we should the assumption that `after.device == device_api.device`
   virtual void SyncStream(const Device& prev_dev, void* prev, void* next) = 0;
 
   // Granularity of synchronization

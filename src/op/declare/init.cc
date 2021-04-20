@@ -19,10 +19,10 @@ MNM_OP_DECLARE("mnm.op.zeros", [](const CallValues& call) {
   CHECK(args != nullptr);
   std::string dtype = args->dtype;
   std::vector<int64_t> shape(args->shape);
-  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
-  TVMContext tvm_ctx = (*f)(args->device);
-  Device device(tvm_ctx);
-  call->out = TensorValue::Assemble(/*ctx=*/device,
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  tvm::Device tvm_dev = (*f)(args->device);
+  Device device(tvm_dev);
+  call->out = TensorValue::Assemble(/*dev=*/device,
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
   call->device = device;
@@ -33,10 +33,10 @@ MNM_OP_DECLARE("mnm.op.ones", [](const CallValues& call) {
   CHECK(args != nullptr);
   std::string dtype = args->dtype;
   std::vector<int64_t> shape(args->shape);
-  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
-  TVMContext tvm_ctx = (*f)(args->device);
-  Device device(tvm_ctx);
-  call->out = TensorValue::Assemble(/*ctx=*/device,
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  tvm::Device tvm_dev = (*f)(args->device);
+  Device device(tvm_dev);
+  call->out = TensorValue::Assemble(/*dev=*/device,
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
   call->device = device;
@@ -50,10 +50,10 @@ MNM_OP_DECLARE("mnm.op.one_hot", [](const CallValues& call) {
   std::vector<int64_t> shape(indices->shape, indices->shape + indices->ndim);
   CHECK_GE(args->depth, 0);
   shape.push_back(args->depth);
-  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
-  TVMContext tvm_ctx = (*f)(args->device);
-  Device device(tvm_ctx);
-  call->out = TensorValue::Assemble(/*ctx=*/device,
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  tvm::Device tvm_dev = (*f)(args->device);
+  Device device(tvm_dev);
+  call->out = TensorValue::Assemble(/*dev=*/device,
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
   call->device = device;

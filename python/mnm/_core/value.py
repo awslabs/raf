@@ -1,6 +1,6 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Runtime value instances."""
-from mnm._core.core_utils import ctx2str, register_node, str2ctx
+from mnm._core.core_utils import dev2str, register_node, str2dev
 from mnm._ffi import value as ffi
 from mnm._ffi.ir._make import Constant as make_const_expr
 from mnm._ffi.value import _make, ToTVM
@@ -43,7 +43,7 @@ class TensorValue(BaseTensorValue):
 
     @property
     def device(self):
-        return ctx2str(self.dltensor_handle.contents.ctx)
+        return dev2str(self.dltensor_handle.contents.device)
 
     @property
     def ndim(self):
@@ -74,7 +74,7 @@ class TensorValue(BaseTensorValue):
 
     @staticmethod
     def assemble(shape, dtype, device, strides=None, data=None):
-        return ffi.AssembleTensorValue(str2ctx(device), dtype, shape, strides,
+        return ffi.AssembleTensorValue(str2dev(device), dtype, shape, strides,
                                        data)
 
     @staticmethod

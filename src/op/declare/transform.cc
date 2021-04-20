@@ -41,8 +41,8 @@ MNM_OP_DECLARE("mnm.op.arange", [](const CallValues& call) {
   } else {
     LOG(FATAL) << "Do not support type: " << args->dtype;
   }
-  call->out = TensorValue::Assemble(start->ctx, ir::String2DLDataType(args->dtype), {size});
-  call->device = start->ctx;
+  call->out = TensorValue::Assemble(start->device, ir::String2DLDataType(args->dtype), {size});
+  call->device = start->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
@@ -69,8 +69,8 @@ MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
       }
     }
   }
-  call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
-  call->device = x->ctx;
+  call->out = TensorValue::Assemble(x->device, x->dtype, shape);
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
@@ -79,7 +79,7 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   const DLTensor* x = args->x;
   const int ndim = x->ndim;
   CHECK_GE(ndim, 2) << "ValueError: batch_flatten only works with ndim >= 2";
-  call->device = x->ctx;
+  call->device = x->device;
 
   if (IsCompact(*x)) {
     const int64_t* dshape = x->shape;
@@ -128,7 +128,7 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
     CHECK_EQ(x_size % size, 0);
     shape[tbd] = x_size / size;
   }
-  call->device = x->ctx;
+  call->device = x->device;
   call->callee = ir::NullValue<OpValue>();
   if (IsCompact(*x)) {
     int64_t origin = std::accumulate(x->shape, x->shape + x->ndim, 1LL, std::multiplies<int64_t>());
@@ -157,10 +157,10 @@ MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
   } else {
     shape.insert(shape.end(), indices->shape, indices->shape + indices->ndim);
   }
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.take_dx", [](const CallValues& call) {
@@ -169,10 +169,10 @@ MNM_OP_DECLARE("mnm.op.take_dx", [](const CallValues& call) {
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   ;
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
@@ -283,10 +283,10 @@ MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
   }
 
   if (IsCompact(*data)) {
-    call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+    call->out = TensorValue::Assemble(/*dev=*/data->device,
                                       /*dtype=*/data->dtype,
                                       /*shape=*/oshape);
-    call->device = data->ctx;
+    call->device = data->device;
     return;
   }
   LOG(FATAL) << "NotImplementedError: for now we only support strided_slice on contiguous tensor.";
@@ -309,9 +309,9 @@ MNM_OP_DECLARE("mnm.op.strided_slice_dx", [](const CallValues& call) {
   // stride will be set as 1 if slice mode is enabled
   std::vector<int64_t> stride_vec(num_axis, 1);
   if (IsCompact(*data)) {
-    call->device = data->ctx;
+    call->device = data->device;
     std::vector<int64_t> shape = args->primal_shape;
-    call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+    call->out = TensorValue::Assemble(/*dev=*/data->device,
                                       /*dtype=*/data->dtype,
                                       /*shape=*/shape);
     return;
@@ -326,10 +326,10 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues& call) {
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   // TODO(@hzfan): checks x.shape and sequence_length.shape
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.reverse", [](const CallValues& call) {
@@ -337,10 +337,10 @@ MNM_OP_DECLARE("mnm.op.reverse", [](const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.reverse_sequence", [](const CallValues& call) {
@@ -355,20 +355,20 @@ MNM_OP_DECLARE("mnm.op.reverse_sequence", [](const CallValues& call) {
   CHECK_EQ(s_ndim, 1);
   CHECK_EQ(sshape[0], ishape[batch_axis]);
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToArgs>();
   DLTensor* x = args->x;
   std::vector<int64_t> shape = args->shape;
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.repeat", [](const CallValues& call) {
@@ -396,10 +396,10 @@ MNM_OP_DECLARE("mnm.op.repeat", [](const CallValues& call) {
     }
   }
 
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
@@ -422,8 +422,8 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
       oshape[i] = ishape[ndim - i - 1];
     }
   }
-  call->out = TensorValue::Assemble(x->ctx, x->dtype, oshape);
-  call->device = x->ctx;
+  call->out = TensorValue::Assemble(x->device, x->dtype, oshape);
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
@@ -431,10 +431,10 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* dy = args->dy;
   std::vector<int64_t> shape = args->primal_shape;
-  call->out = TensorValue::Assemble(/*ctx=*/dy->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/dy->device,
                                     /*dtype=*/dy->dtype,
                                     /*shape=*/shape);
-  call->device = dy->ctx;
+  call->device = dy->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
@@ -456,8 +456,8 @@ MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
   int temp = shape[axis2];
   shape[axis2] = shape[axis1];
   shape[axis1] = temp;
-  call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
-  call->device = x->ctx;
+  call->out = TensorValue::Assemble(x->device, x->dtype, shape);
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
@@ -466,10 +466,10 @@ MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
   DLTensor* x = args->x;
   DLTensor* broadcast_type = args->broadcast_type;
   std::vector<int64_t> shape(broadcast_type->shape, broadcast_type->shape + broadcast_type->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/broadcast_type->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
@@ -503,10 +503,10 @@ MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
   for (int i = axis; i < y0->ndim; i++) {
     shape.emplace_back(y0->shape[i]);
   }
-  call->out = TensorValue::Assemble(/*ctx=*/y0->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/y0->device,
                                     /*dtype=*/y0->dtype,
                                     /*shape=*/shape);
-  call->device = y0->ctx;
+  call->device = y0->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 void StackDx(const CallValues& call) {
@@ -544,10 +544,10 @@ MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
   }
   std::vector<int64_t> shape(y0->shape, y0->shape + y0->ndim);
   shape[axis] = dimsize;
-  call->out = TensorValue::Assemble(/*ctx=*/y0->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/y0->device,
                                     /*dtype=*/y0->dtype,
                                     /*shape=*/shape);
-  call->device = y0->ctx;
+  call->device = y0->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 void ConcatenateDx(const CallValues& call) {
@@ -599,7 +599,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
     for (size_t i = 0; i < sections; ++i) {
       std::vector<int64_t> oshape(x->shape, x->shape + x->ndim);
       oshape[axis] = oshape[axis] / sections;
-      ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
+      ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
                                           /*dtype=*/x->dtype,
                                           /*shape=*/oshape));
     }
@@ -616,13 +616,13 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
       std::vector<int64_t> oshape(x->shape, x->shape + x->ndim);
       oshape[axis] = indices[i] - begin;
       begin = indices[i];
-      ret.push_back(TensorValue::Assemble(/*ctx=*/x->ctx,
+      ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
                                           /*dtype=*/x->dtype,
                                           /*shape=*/oshape));
     }
   }
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.clip", [](const CallValues& call) {
@@ -630,10 +630,10 @@ MNM_OP_DECLARE("mnm.op.clip", [](const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues& call) {
@@ -641,10 +641,10 @@ MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.cast", [](const CallValues& call) {
@@ -653,10 +653,10 @@ MNM_OP_DECLARE("mnm.op.cast", [](const CallValues& call) {
   DLTensor* data = args->data;
   std::string dtype = args->dtype;
   std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.cast_like", [](const CallValues& call) {
@@ -664,10 +664,10 @@ MNM_OP_DECLARE("mnm.op.cast_like", [](const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* dtype_like = args->dtype_like;
   std::vector<int64_t> shape(dtype_like->shape, dtype_like->shape + dtype_like->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/dtype_like->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/dtype_like->device,
                                     /*dtype=*/dtype_like->dtype,
                                     /*shape=*/shape);
-  call->device = dtype_like->ctx;
+  call->device = dtype_like->device;
 }).set_attr<TOpPattern>("TOpPattern", kElemWise);
 
 MNM_OP_DECLARE("mnm.op.gather", [](const CallValues& call) {
@@ -684,8 +684,8 @@ MNM_OP_DECLARE("mnm.op.gather", [](const CallValues& call) {
     oshape[i] = ishape[i];
   }
 
-  call->out = TensorValue::Assemble(data->ctx, data->dtype, oshape);
-  call->device = data->ctx;
+  call->out = TensorValue::Assemble(data->device, data->dtype, oshape);
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.gather_dx", [](const CallValues& call) {
@@ -693,10 +693,10 @@ MNM_OP_DECLARE("mnm.op.gather_dx", [](const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
   std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/shape);
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.gather_nd", [](const CallValues& call) {
@@ -719,8 +719,8 @@ MNM_OP_DECLARE("mnm.op.gather_nd", [](const CallValues& call) {
       oshape[i] = dshape[i + 1 - idim + ishape[0]];
     }
   }
-  call->out = TensorValue::Assemble(data->ctx, data->dtype, oshape);
-  call->device = data->ctx;
+  call->out = TensorValue::Assemble(data->device, data->dtype, oshape);
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.gather_nd_dx", [](const CallValues& call) {
@@ -728,10 +728,10 @@ MNM_OP_DECLARE("mnm.op.gather_nd_dx", [](const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
   std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/shape);
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
@@ -764,8 +764,8 @@ MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
       }
     }
   }
-  call->out = TensorValue::Assemble(x->ctx, x->dtype, oshape);
-  call->device = x->ctx;
+  call->out = TensorValue::Assemble(x->device, x->dtype, oshape);
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
@@ -777,9 +777,9 @@ MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
     CHECK_GE(shape[i], 1);
   }
 
-  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2ctx");
-  TVMContext tvm_ctx = (*f)(args->device);
-  Device device(tvm_ctx);
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  tvm::Device tvm_dev = (*f)(args->device);
+  Device device(tvm_dev);
 
   call->device = device;
   call->out = TensorValue::Assemble(call->device, ir::String2DLDataType(args->dtype), shape);
@@ -795,7 +795,7 @@ MNM_OP_DECLARE("mnm.op.full_like", [](const CallValues& call) {
     CHECK_GE(shape[i], 1);
   }
 
-  call->device = data->ctx;
+  call->device = data->device;
   call->out = TensorValue::Assemble(call->device, data->dtype, shape);
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
@@ -812,10 +812,10 @@ MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {
     s = y;
   }
   std::vector<int64_t> shape(s->shape, s->shape + s->ndim);
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
-  call->device = x->ctx;
+  call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
 MNM_OP_DECLARE("mnm.op.where_dx", [](const CallValues& call) {
@@ -825,14 +825,14 @@ MNM_OP_DECLARE("mnm.op.where_dx", [](const CallValues& call) {
   const DLTensor* x2 = args->x2;
   std::vector<int64_t> shape1(x1->shape, x1->shape + x1->ndim);
   std::vector<int64_t> shape2(x2->shape, x2->shape + x2->ndim);
-  TensorValue dx1 = TensorValue::Assemble(/*ctx=*/x1->ctx,
+  TensorValue dx1 = TensorValue::Assemble(/*dev=*/x1->device,
                                           /*dtype=*/x1->dtype,
                                           /*shape=*/shape1);
-  TensorValue dx2 = TensorValue::Assemble(/*ctx=*/x2->ctx,
+  TensorValue dx2 = TensorValue::Assemble(/*dev=*/x2->device,
                                           /*dtype=*/x2->dtype,
                                           /*shape=*/shape2);
   call->out = TupleValue::make(tvm::Array<Value>({dx1, dx2}));
-  call->device = x1->ctx;
+  call->device = x1->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 }  // namespace declare

@@ -5,7 +5,7 @@ import functools
 from collections import deque, OrderedDict
 
 from mnm._lib import tvm
-from mnm._lib import _DLContext
+from mnm._lib import _DLDevice
 from mnm._lib import _NodeBase as NodeBase  # pylint: disable=unused-import
 from mnm._lib import _register_object as _register_node
 
@@ -24,7 +24,7 @@ def set_module(module):
     return decorator
 
 
-def _get_ctx_map():
+def _get_device_map():
     dev_type_mask = {
         'llvm': 1,
         'stackvm': 1,
@@ -48,31 +48,31 @@ def _get_ctx_map():
     }
     _str2ctx = {}
     for device_type, idx in dev_type_mask.items():
-        _str2ctx[device_type] = _DLContext(device_type=idx, device_id=0)
+        _str2ctx[device_type] = _DLDevice(device_type=idx, device_id=0)
         for device_id in range(128):
             name = f"{device_type}({device_id})"
-            _str2ctx[name] = _DLContext(device_type=idx, device_id=device_id)
+            _str2ctx[name] = _DLDevice(device_type=idx, device_id=device_id)
     return _str2ctx
 
 
-_STR2CTX = _get_ctx_map()
+_STR2DEV = _get_device_map()
 
 
-def ctx2str(ctx: _DLContext) -> str:
+def dev2str(dev: _DLDevice) -> str:
     mask = [
         None, "cpu", "cuda", "cpu_pinned", "cl", "aocl", 'sdaccel', 'vulkan',
         'metal', 'vpi', 'rocm', 'opengl'
     ]
-    dev_type = int(ctx.device_type)
-    dev_id = int(ctx.device_id)
+    dev_type = int(dev.device_type)
+    dev_id = int(dev.device_id)
     if dev_id == 0 and dev_type in (1, 3):
         return mask[dev_type]
     return mask[dev_type] + "(" + str(dev_id) + ")"
 
 
-@tvm._ffi.register_func("mnm._core.core_utils.str2ctx") # pylint: disable=protected-access
-def str2ctx(name: str) -> _DLContext:
-    return _STR2CTX[name]
+@tvm._ffi.register_func("mnm._core.core_utils.str2dev") # pylint: disable=protected-access
+def str2dev(name: str) -> _DLDevice:
+    return _STR2DEV[name]
 
 
 def bfs(sources, on_pop, on_next, *, recursive=True):

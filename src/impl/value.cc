@@ -185,10 +185,10 @@ TensorValue TensorValue::CreateView(const std::vector<int64_t>& shape,
   return TensorValue::make((*this)->tensor.CreateView(shape, strides), (*this)->mem);
 }
 
-TensorValue AssembleTensorValue(DLContext ctx, DLDataType dtype, Array<Integer> shape,
+TensorValue AssembleTensorValue(const Device& dev, DLDataType dtype, Array<Integer> shape,
                                 Array<Integer> strides, void* data) {
   return TensorValue::make(
-      Tensor::make(ctx, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
+      Tensor::make(dev, dtype, MakeShape<int64_t>(shape), MakeShape<int64_t>(strides), data));
 }
 
 TensorValue FromTVM(tvm::runtime::NDArray array) {
@@ -263,7 +263,11 @@ float GetScalarValueData<float>(const Value& value) {
   LOG(FATAL) << "Cannot convert " << value->GetTypeKey() << " to scalar float.";
 }
 
-MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue").set_body_typed(AssembleTensorValue);
+MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue")
+    .set_body_typed([](const tvm::Device& dev, DLDataType dtype, Array<Integer> shape,
+                       Array<Integer> strides, void* data) {
+      return AssembleTensorValue(Device(dev), dtype, shape, strides, data);
+    });
 MNM_REGISTER_GLOBAL("mnm.value.DeTuple").set_body_typed(DeTuple);
 MNM_REGISTER_GLOBAL("mnm.value.FromTVM").set_body_typed(FromTVM);
 MNM_REGISTER_GLOBAL("mnm.value.ToTVM").set_body_typed(ToTVM);

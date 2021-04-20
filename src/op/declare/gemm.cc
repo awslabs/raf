@@ -37,9 +37,9 @@ void MatmulDecl(const CallValues& call) {
   }
   CHECK_EQ(m1, n2);
   CHECK(a->dtype.code == kDLFloat) << "Only float types are supported!";
-  call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype,
+  call->out = TensorValue::Assemble(/*dev=*/a->device, /*dtype=*/a->dtype,
                                     /*shape=*/std::vector<int64_t>{n1, m2});
-  call->device = a->ctx;
+  call->device = a->device;
   if (!n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
   }
@@ -86,9 +86,9 @@ void BatchMatmulDecl(const CallValues& call) {
         (a->dtype.bits == 16 || a->dtype.bits == 32 || a->dtype.bits == 64))
       << "Only float and double are supported!";
   int64_t k = k1 > k2 ? k1 : k2;
-  call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype,
+  call->out = TensorValue::Assemble(/*dev=*/a->device, /*dtype=*/a->dtype,
                                     /*shape=*/std::vector<int64_t>{k, n1, m2});
-  call->device = a->ctx;
+  call->device = a->device;
   if (!k1 || !k2 || !n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
   }
@@ -120,9 +120,9 @@ MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
   int64_t n2 = b->shape[0];
   int64_t m2 = b->shape[1];
   CHECK_EQ(m1, m2);
-  call->out = TensorValue::Assemble(/*ctx=*/a->ctx, /*dtype=*/a->dtype,
+  call->out = TensorValue::Assemble(/*dev=*/a->device, /*dtype=*/a->dtype,
                                     /*shape=*/std::vector<int64_t>{n1, n2});
-  call->device = a->ctx;
+  call->device = a->device;
   if (!n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
   }

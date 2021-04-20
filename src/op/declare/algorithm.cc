@@ -22,10 +22,10 @@ MNM_OP_DECLARE("mnm.op.argsort", [](const CallValues& call) {
   std::vector<int64_t> oshape(data->shape, data->shape + data->ndim);
   std::string dtype = args->dtype;
 
-  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/oshape);
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.sort", [](const CallValues& call) {
@@ -34,10 +34,10 @@ MNM_OP_DECLARE("mnm.op.sort", [](const CallValues& call) {
   DLTensor* data = args->data;
   std::vector<int64_t> oshape(data->shape, data->shape + data->ndim);
 
-  call->out = TensorValue::Assemble(/*ctx=*/data->ctx,
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/oshape);
-  call->device = data->ctx;
+  call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 }  // namespace declare

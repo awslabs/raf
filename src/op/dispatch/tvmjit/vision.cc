@@ -62,8 +62,6 @@ std::vector<std::string> NonMaxSuppressionSchemaArgNames(const op::CallValues& c
 
 Attrs NonMaxSuppressionSchema2Attrs(const NonMaxSuppressionArgs* args) {
   auto attrs = make_object<NonMaximumSuppressionAttrs>();
-  attrs->iou_threshold =
-      FloatImm(DataType::Float(32), GetScalarValueData<float>(args->iou_threshold));
   attrs->force_suppress = args->force_suppress;
   attrs->top_k = args->top_k;
   attrs->coord_start = args->coord_start;

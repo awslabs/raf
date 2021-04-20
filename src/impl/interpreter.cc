@@ -365,7 +365,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       DLTensor* dlt = out_tensors[i];
       TensorValue tv = out_tvs[i];
       if (dlt->data == nullptr) {
-        std::shared_ptr<Memory> memory = Memory::Alloc(dlt->ctx, BytesCompactTensor(*dlt));
+        std::shared_ptr<Memory> memory = Memory::Alloc(dlt->device, BytesCompactTensor(*dlt));
         dlt->data = memory->data;
         tv->mem = std::move(memory);
       }

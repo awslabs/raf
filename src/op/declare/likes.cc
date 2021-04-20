@@ -72,8 +72,8 @@ void Sum(const CallValues& call) {
       ++j;
     }
   }
-  call->device = x->ctx;
-  call->out = TensorValue::Assemble(x->ctx, x->dtype, shape);
+  call->device = x->device;
+  call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
 MNM_OP_DECLARE("mnm.op.sum", Sum).set_attr<TOpPattern>("TOpPattern", kCommReduce);
@@ -84,8 +84,8 @@ void SumDx(const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->device = x->ctx;
-  call->out = TensorValue::Assemble(/*ctx=*/x->ctx,
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
 }

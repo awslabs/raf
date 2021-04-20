@@ -64,15 +64,17 @@ class NoPool final : public MemoryPool {
   }
 
  public:
-  static void* make(DLContext ctx) {
-    return new NoPool(ctx);
+  static void* make(const Device& dev) {
+    return new NoPool(dev);
   }
 
   Device device;
   std::shared_ptr<DeviceAPI> api;
 };
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.no_pool").set_body_typed(NoPool::make);
+MNM_REGISTER_GLOBAL("mnm.memory_pool._make.no_pool").set_body_typed([](const tvm::Device& dev) {
+  return NoPool::make(Device(dev));
+});
 
 }  // namespace no_pool
 }  // namespace memory_pool
