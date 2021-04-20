@@ -13,10 +13,10 @@ function(mnm_customized_cutlass_kernels)
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/scripts/src_codegen/cutlass
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=$PYTHONPATH:${PROJECT_SOURCE_DIR}/3rdparty/cutlass/tools/library/scripts
       ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/src_codegen/cutlass/generator_ext.py
-      --operations all
+      --operations "conv2d,gemm"
       --curr-build-dir ${CUTLASS_BINARY_DIR}
       --generator-target library
-      --architectures ${CUTLASS_NVCC_ARCHS}
+      --architectures "${CUTLASS_NVCC_ARCHS}"
       --kernels ${CUTLASS_LIBRARY_KERNELS}
       --ignore-kernels ${CUTLASS_LIBRARY_IGNORE_KERNELS}
       --cuda-version ${CUTLASS_GENERATOR_CUDA_COMPILER_VERSION}
@@ -72,7 +72,11 @@ else()
   # The ignored ops are complex ops, sparse ops, and integer ops.
   set(CUTLASS_LIBRARY_IGNORE_KERNELS "complex,sp,i8816,i8832" CACHE STRING "Comma delimited list of kernel names to exclude from build.")
   set(CUTLASS_LIBRARY_KERNELS "invalid_kernel_name")
+  if (NOT "${MNM_USE_CUTLASS}" STREQUAL "ON")
+    set(CUTLASS_NVCC_ARCHS ${MNM_USE_CUTLASS} CACHE STRING "The SM architectures requested.")
+  endif()
   add_subdirectory(${PROJECT_SOURCE_DIR}/3rdparty/cutlass/)
+  message(STATUS "Set CUTLASS_NVCC_ARCHS=${CUTLASS_NVCC_ARCHS}")
   unset(CUTLASS_LIBRARY_KERNELS)
   mnm_customized_cutlass_kernels()
 

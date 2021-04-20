@@ -74,6 +74,7 @@ stage('Build') {
          echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
          echo "set(MNM_USE_MPI ON)" >> config.cmake
          echo "set(MNM_USE_NCCL ON)" >> config.cmake
+         echo "set(MNM_USE_CUTLASS 75)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_gpu, 'build')
