@@ -164,7 +164,7 @@ using FMNMArgIndices =
         env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                            \
       } catch (const dmlc::Error& e) {                                                          \
         /* Invalid implementation. Return nullptr to let dispatcher select the next one */      \
-        LOG(ERROR) << "Failed to JIT " << env->env_name << ": " << e.what();                    \
+        DLOG(ERROR) << "Failed to JIT " << env->env_name << ": " << e.what();                   \
         return nullptr;                                                                         \
       }                                                                                         \
     }                                                                                           \
