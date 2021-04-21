@@ -183,6 +183,42 @@ Array<Expr> TruncGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 }
 MNM_OP_GRAD("mnm.op.trunc", TruncGrad);
 
+Array<Expr> LogGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                    const Expr& dy) {
+  // give zero gradient for any gradient
+  static auto op_div = Op::Get("mnm.op.divide");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_ones = Op::Get("mnm.op.ones_like");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call ones = Call(op_ones, {x});
+  Call one_by_x = Call(op_div, {ones, x});
+  Call result = Call(op_multiply, {dy, one_by_x});
+  return {result};
+}
+MNM_OP_GRAD("mnm.op.log", LogGrad);
+
+Array<Expr> Log2Grad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                     const Expr& dy) {
+  // give zero gradient for any gradient
+  static auto op_div = Op::Get("mnm.op.divide");
+  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_ones = Op::Get("mnm.op.ones_like");
+  static auto op_add = Op::Get("mnm.op.add");
+  static auto op_log = Op::Get("mnm.op.log");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call ones = Call(op_ones, {x});
+  Call two = Call(op_add, {ones, ones});
+  Call log_two = Call(op_log, {two});
+  Call log_two_x = Call(op_multiply, {log_two, x});
+  Call dx = Call(op_div, {ones, log_two_x});
+  return {Call(op_multiply, {dy, dx})};
+}
+MNM_OP_GRAD("mnm.op.log2", Log2Grad);
+
 Array<Expr> CosGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
   static auto op_sin = Op::Get("mnm.op.sin");

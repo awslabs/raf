@@ -74,6 +74,7 @@ from ._internal import left_shift
 from ._internal import less
 from ._internal import less_equal
 from ._internal import log
+from ._internal import log2
 from ._internal import log_softmax
 from ._internal import log_softmax_dx
 from ._internal import logical_and
@@ -88,6 +89,7 @@ from ._internal import max_pool2d_dx
 from ._internal import maximum
 from ._internal import mean
 from ._internal import mean_dx
+from ._internal import mesh_grid
 from ._internal import min
 from ._internal import minimum
 from ._internal import mod
@@ -108,6 +110,7 @@ from ._internal import prod_dx
 from ._internal import relu
 from ._internal import relu_dx
 from ._internal import repeat
+from ._internal import repeat_dx
 from ._internal import reshape
 from ._internal import reverse
 from ._internal import reverse_sequence

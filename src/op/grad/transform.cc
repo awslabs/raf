@@ -36,6 +36,19 @@ Array<Expr> TransposeGrad(const Expr& orig_call, const Array<Expr> orig_args, co
 
 MNM_OP_GRAD("mnm.op.transpose", TransposeGrad);
 
+Array<Expr> RepeatGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                       const Expr& dy) {
+  static auto repeat_dx = Op::Get("mnm.op.repeat_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  const Expr& repeats = call->args[1];
+  const Expr& axes = call->args[2];
+  return {Call(repeat_dx, {x, dy, repeats, axes})};
+}
+
+MNM_OP_GRAD("mnm.op.repeat", RepeatGrad);
+
 Array<Expr> SwapAxisGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                          const Expr& dy) {
   static auto swap_axis = Op::Get("mnm.op.swap_axis");
@@ -47,6 +60,25 @@ Array<Expr> SwapAxisGrad(const Expr& orig_call, const Array<Expr> orig_args, con
 }
 
 MNM_OP_GRAD("mnm.op.swap_axis", SwapAxisGrad);
+
+Array<Expr> BroadcastToGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                            const Expr& dy) {
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  auto f = [&dy](const Expr& x) {
+    static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
+    static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
+    static auto sum = Op::Get("mnm.op.sum");
+    Call axes = Call(collapse_axis, {dy, x});
+    Call keep = Call(collapse_keep, {dy, x});
+    return Call(sum, {dy, axes, keep});
+  };
+
+  return {f(x)};
+}
+
+MNM_OP_GRAD("mnm.op.broadcast_to", BroadcastToGrad);
 
 Array<Expr> StackGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
@@ -104,6 +136,31 @@ Array<Expr> SplitGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 }
 
 MNM_OP_GRAD("mnm.op.split", SplitGrad);
+
+Array<Expr> MeshGridGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                         const Expr& dy) {
+  using namespace mnm::value;
+  const CallNode* call = orig_call.as<CallNode>();
+  static auto sum = Op::Get("mnm.op.sum");
+  CHECK(call != nullptr);
+  int num_inputs = 1;
+  if (auto tuple_node = orig_args[0].as<TupleNode>()) {
+    num_inputs = tuple_node->fields.size();
+  }
+  const Expr& x = call->args[0];
+  Expr exclude = MakeConstant(ScalarValue::make(true));
+  Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)0));
+  Array<Expr> tuple;
+  for (int i = 0; i < num_inputs; i++) {
+    auto split_dy = tvm::relay::TupleGetItem(dy, i);
+    Expr axis = MakeConstant(ScalarValue::make(i));
+    Expr ret_i = Call(sum, {split_dy, axis, keep_dims, exclude});
+    tuple.push_back(ret_i);
+  }
+  return {tvm::relay::Tuple(tuple)};
+}
+
+MNM_OP_GRAD("mnm.op.mesh_grid", MeshGridGrad);
 
 Array<Expr> ReverseGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                         const Expr& dy) {

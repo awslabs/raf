@@ -37,6 +37,8 @@ MNM_TVMJIT(Floor, "mnm.op.floor", UnaryArgs, UnarySchema2Args, UnarySchemaArgNam
            GenericHasher);
 MNM_TVMJIT(Log, "mnm.op.log", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
            GenericHasher);
+MNM_TVMJIT(Log2, "mnm.op.log2", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
 MNM_TVMJIT(Exp, "mnm.op.exp", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
            GenericHasher);
 MNM_TVMJIT(Cos, "mnm.op.cos", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,

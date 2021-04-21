@@ -116,6 +116,15 @@ Type TransposeDxInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.transpose_dx", "TransposeDx", TransposeDxInfer);
 
+Type RepeatDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<RepeatDxArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
+MNM_OP_TYPE("mnm.op.repeat_dx", "RepeatDx", RepeatDxInfer);
+
 Type SwapAxisInfer(const CallValues& value) {
   const auto* args = value->args.as<SwapAxisArgs>();
   TensorType x = Downcast<TensorType>(GetType(args->x));
@@ -317,6 +326,29 @@ Type SplitInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.split", "Split", SplitInfer);
+
+Type MeshGridInfer(const CallValues& value) {
+  const auto* args = value->args.as<MeshGridArgs>();
+  CHECK(args != nullptr);
+  CHECK(args->x.size() > 0);
+  Array<Type> x;
+  std::transform(args->x.begin(), args->x.end(), std::back_inserter(x), GetType);
+  TensorType y0 = Downcast<TensorType>(x[0]);
+  Array<Type> ret;
+  Array<PrimExpr> oshape;
+
+  for (auto& i : x) {
+    TensorType y = Downcast<TensorType>(i);
+    CHECK(y->shape.size() == 1);
+    oshape.push_back(y->shape[0]);
+  }
+  for (size_t i = 0; i < x.size(); ++i) {
+    ret.push_back(TensorType(oshape, y0->dtype));
+  }
+  return TupleType(ret);
+}
+
+MNM_OP_TYPE("mnm.op.mesh_grid", "MeshGrid", MeshGridInfer);
 
 Type ClipInfer(const CallValues& value) {
   const auto* args = value->args.as<ClipArgs>();

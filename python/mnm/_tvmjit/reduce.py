@@ -176,24 +176,24 @@ def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argume
         return dy[indices] / shape_mul
     out = _tvm.te.compute(dy.shape, _elem_div)
 
-    def fboardcast(*args):
+    def fbroadcast(*args):
         args = list(args)
         for dim in axis[::-1]:
             del args[dim]
         return out(*args)
 
-    def fboardcast_keepdim(*args):
+    def fbroadcast_keepdim(*args):
         args = list(args)
         for dim in axis:
             args[dim] = 0
         return out(*args)
 
     if keepdims:
-        out_boardcast = _tvm.te.compute(shape, fboardcast_keepdim)
+        out_broadcast = _tvm.te.compute(shape, fbroadcast_keepdim)
     else:
-        out_boardcast = _tvm.te.compute(shape, fboardcast)
+        out_broadcast = _tvm.te.compute(shape, fbroadcast)
 
-    return [out_boardcast]
+    return [out_broadcast]
 
 _reg.register_injective_schedule("mnm.op.mean_dx")
 
@@ -216,7 +216,7 @@ def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argume
         axes = list(range(ndim))
         keepdims = [0] * ndim
 
-    def fboardcast(*args):
+    def fbroadcast(*args):
         args = list(args)
         for i, dim in enumerate(axes[::-1]):
             if keepdims[naxes -1 -i]:
@@ -225,8 +225,8 @@ def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argume
                 del args[dim]
         return dy(*args)
 
-    out_boardcast = _tvm.te.compute(shape, fboardcast)
-    return [out_boardcast]
+    out_broadcast = _tvm.te.compute(shape, fbroadcast)
+    return [out_broadcast]
 
 
 _reg.register_injective_schedule("mnm.op.sum_dx")

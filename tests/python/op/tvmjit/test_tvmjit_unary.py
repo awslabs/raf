@@ -87,10 +87,40 @@ def test_unary_ops_with_grad(ops, shape, dtype, device):
     check(m_x.grad, t_x.grad)
 
 
+# pylint: disable=no-member
+# pylint: disable=protected-access
+# pylint: disable=no-self-use
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize(
+    "ops",
+    [
+        (torch.log2, mnm._op.sym.log2),
+        (torch.log, mnm._op.sym.log),
+    ])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_unary_ops_with_grad_pos(ops, shape, dtype, device):
+    t_op, m_op = ops
+    model = UnaryModel(m_op)
+    m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True, positive=True)
+    m_y = model(m_x)
+    v_y = run_vm_model(model, device, [m_x])
+    t_y = t_op(t_x)
+    # check forward
+    check(m_y, t_y)
+    check(v_y, t_y)
+    # check backward
+    m_dy, t_dy = randn_torch(shape, dtype=dtype, device=device, positive=True)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check(m_x.grad, t_x.grad)
+
+
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
     (np.log, mnm._op.sym.log),
     (np.sqrt, mnm._op.sym.sqrt),
+    (np.log2, mnm._op.sym.log2),
 ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

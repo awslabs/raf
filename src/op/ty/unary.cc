@@ -33,6 +33,7 @@ Type UnaryInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.log", "Identity", UnaryInfer);
+MNM_OP_TYPE("mnm.op.log2", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.cos", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sin", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sign", "Identity", UnaryInfer);

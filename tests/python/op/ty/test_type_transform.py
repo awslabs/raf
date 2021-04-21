@@ -181,13 +181,22 @@ def test_broadcast_to(shape, dtype):
             return mnm.broadcast_to(x, self._shape)
 
     model = BroadcastTo(shape[1])
-    m_x, _ = randn(shape[0], dtype=dtype)
-    m_func = model._internal(m_x).mod['main']
-    m_func = run_infer_type(m_func)
+    m_x = randn_torch(shape[0], requires_grad=True, dtype=dtype)[0]
+    record = model._internal(m_x)
+    m_mod = record.mod
+    m_mod = InferType()(m_mod)
     x_ty = TensorType(shape[0], dtype=dtype)
     y_ty = TensorType(shape[1], dtype=dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_func, expected_type)
+    check_type(m_mod['main'], expected_type)
+
+    #backward
+    m_mod = AutoDiff(record.requires_grads)(m_mod)
+    m_mod = run_infer_type(m_mod)
+    dy_ty, dx_ty = y_ty, x_ty
+    bwd_ty = FuncType([dy_ty], dx_ty)
+    expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("shape", [
@@ -240,8 +249,10 @@ def test_repeat(shape, repeats, axis, dtype):
 
     model = Repeat(repeats, axis)
     # forward
-    m_x, n_x = randn(shape, dtype=dtype)
-    m_func = model._internal(m_x).mod['main']
+    m_x, n_x = randn(shape, dtype=dtype, requires_grad=True)
+    record = model._internal(m_x)
+    m_mod = record.mod
+    m_func = m_mod['main']
     m_func = run_infer_type(m_func)
     n_y = np.repeat(n_x, repeats, axis)
     x_ty = TensorType(n_x.shape, dtype=dtype)
@@ -249,6 +260,14 @@ def test_repeat(shape, repeats, axis, dtype):
     expected_type = FuncType([x_ty], y_ty)
     check_type(m_func, expected_type)
 
+    #backward
+    m_func = InferType()(m_mod)
+    m_func = AutoDiff(record.requires_grads)(m_func)
+    m_func = run_infer_type(m_func)
+    dy_ty, dx_ty = y_ty, x_ty
+    bwd_ty = FuncType([dy_ty], dx_ty)
+    expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
+    check_type(m_func['main'], expected_type)
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("params", [
@@ -575,6 +594,67 @@ def test_concatenate(params, dtype):
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([y_ty], TupleType(i_ty) if len(i_ty) > 1 else i_ty[0])
     expected_type = FuncType(i_ty, TupleType([y_ty, bwd_ty]))
+    check_type(m_mod['main'], expected_type)
+
+
+
+# pylint: disable=no-self-use
+@pytest.mark.parametrize("shapes", [
+    [7, 2, 6, 3],
+    [1, 5, 2],
+    [6, 3],
+    [2, 3, 2, 9],
+])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_mesh_grid(shapes, dtype):
+    class MeshGrid2(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b):
+            return mnm.mesh_grid([a, b])
+
+    class MeshGrid3(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b, c):
+            return mnm.mesh_grid([a, b, c])
+
+    class MeshGrid4(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b, c, d):
+            return mnm.mesh_grid([a, b, c, d])
+    #one input is trivial case
+    meshgrid = [None, None, MeshGrid2, MeshGrid3, MeshGrid4]
+
+    # forward
+    m_i, t_i, i_ty = [], [], []
+    for shape in shapes:
+        m_x, t_x = randn_torch([shape], requires_grad=True, dtype=dtype)
+        m_x.requires_grad = True
+        x_ty = TensorType([shape], dtype=dtype)
+        m_i.append(m_x)
+        t_i.append(t_x)
+        i_ty.append(x_ty)
+
+    model = meshgrid[len(m_i)]() # pylint: disable=not-callable
+    record = model._internal(*m_i)
+    m_mod = record.mod
+    m_mod = InferType()(m_mod)
+    t_y = torch.meshgrid(t_i) # pylint: disable=no-member
+
+    y_ty = []
+    for t_i in t_y:
+        y_ty.append(TensorType(t_i.shape, dtype=dtype))
+
+
+    expected_type = FuncType(i_ty, TupleType(y_ty))
     check_type(m_mod['main'], expected_type)
 
 

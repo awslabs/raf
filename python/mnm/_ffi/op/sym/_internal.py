@@ -149,6 +149,8 @@ less_equal = _APIS.get("mnm.op.sym.less_equal", None)
 # Defined in ./src/op/regs/regs.cc
 log = _APIS.get("mnm.op.sym.log", None)
 # Defined in ./src/op/regs/regs.cc
+log2 = _APIS.get("mnm.op.sym.log2", None)
+# Defined in ./src/op/regs/regs.cc
 log_softmax = _APIS.get("mnm.op.sym.log_softmax", None)
 # Defined in ./src/op/regs/regs.cc
 log_softmax_dx = _APIS.get("mnm.op.sym.log_softmax_dx", None)
@@ -176,6 +178,8 @@ maximum = _APIS.get("mnm.op.sym.maximum", None)
 mean = _APIS.get("mnm.op.sym.mean", None)
 # Defined in ./src/op/regs/regs.cc
 mean_dx = _APIS.get("mnm.op.sym.mean_dx", None)
+# Defined in ./src/op/regs/regs.cc
+mesh_grid = _APIS.get("mnm.op.sym.mesh_grid", None)
 # Defined in ./src/op/regs/regs.cc
 min = _APIS.get("mnm.op.sym.min", None)
 # Defined in ./src/op/regs/regs.cc
@@ -216,6 +220,8 @@ relu = _APIS.get("mnm.op.sym.relu", None)
 relu_dx = _APIS.get("mnm.op.sym.relu_dx", None)
 # Defined in ./src/op/regs/regs.cc
 repeat = _APIS.get("mnm.op.sym.repeat", None)
+# Defined in ./src/op/regs/regs.cc
+repeat_dx = _APIS.get("mnm.op.sym.repeat_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.sym.reshape", None)
 # Defined in ./src/op/regs/regs.cc

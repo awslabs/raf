@@ -437,6 +437,18 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
   call->device = dy->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.repeat_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<RepeatDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* dy = args->dy;
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
   const auto* args = call->args.as<SwapAxisArgs>();
   CHECK(args != nullptr);
@@ -506,6 +518,29 @@ MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
   call->out = TensorValue::Assemble(/*dev=*/y0->device,
                                     /*dtype=*/y0->dtype,
                                     /*shape=*/shape);
+  call->device = y0->device;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.mesh_grid", [](const CallValues& call) {
+  const auto* args = call->args.as<MeshGridArgs>();
+  CHECK(args != nullptr);
+  const std::vector<BaseTensorValue>& x = args->x;
+  CHECK_GE(x.size(), 1U);
+  DLTensor* y0 = x[0];
+  std::vector<TensorValue> ret;
+  std::vector<int64_t> oshape;
+  for (auto i : x) {
+    DLTensor* y = i;
+    CHECK(y->ndim == 1);
+    oshape.push_back(y->shape[0]);
+  }
+
+  for (size_t i = 0; i < x.size(); ++i) {
+    ret.push_back(TensorValue::Assemble(/*dev=*/y0->device,
+                                        /*dtype=*/y0->dtype,
+                                        /*shape=*/oshape));
+  }
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
   call->device = y0->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 

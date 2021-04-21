@@ -336,6 +336,42 @@ HashKey TransposeDxHasher(const std::vector<Type>& param_types, const Type& y_ty
 MNM_TVMJIT(TransposeDx, "mnm.op.transpose_dx", TransposeDxArgs, TransposeDxSchema2Args,
            TransposeDxSchemaArgNames, TransposeDxSchema2Attrs, TransposeDxHasher);
 
+std::vector<Value> RepeatDxSchema2Args(const RepeatDxArgs* args) {
+  return {args->x, args->dy};
+}
+
+std::vector<std::string> RepeatDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "dy"};
+}
+
+Attrs RepeatDxSchema2Attrs(const RepeatDxArgs* args) {
+  auto attrs = make_object<RepeatAttrs>();
+  attrs->repeats = args->repeats;
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    attrs->axis = v->value;
+  } else {
+    attrs->axis = NullValue<Integer>();
+  }
+  return Attrs(attrs);
+}
+
+HashKey RepeatDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                       const RepeatDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->repeats;
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    key << v->value;
+  }
+  return key;
+}
+
+MNM_TVMJIT(RepeatDx, "mnm.op.repeat_dx", RepeatDxArgs, RepeatDxSchema2Args, RepeatDxSchemaArgNames,
+           RepeatDxSchema2Attrs, RepeatDxHasher);
+
 std::vector<Value> BroadcastToLikeSchema2Args(const BroadcastToLikeArgs* args) {
   return {args->x, args->broadcast_type};
 }
@@ -418,6 +454,21 @@ HashKey ConcatenateHasher(const std::vector<Type>& param_types, const Type& y_ty
 
 MNM_TVMJIT(Concatenate, "mnm.op.concatenate", ConcatenateArgs, ConcatenateSchema2Args,
            ConcatenateSchemaArgNames, ConcatenateSchema2Attrs, ConcatenateHasher);
+
+std::vector<Value> MeshGridSchema2Args(const MeshGridArgs* args) {
+  std::vector<Value> ret;
+  for (auto v : args->x) {
+    ret.push_back(v);
+  }
+  return ret;
+}
+
+std::vector<std::string> MeshGridSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+MNM_TVMJIT(MeshGrid, "mnm.op.mesh_grid", MeshGridArgs, MeshGridSchema2Args, MeshGridSchemaArgNames,
+           GenericAttrs, GenericHasher);
 
 std::vector<Value> StackSchema2Args(const StackArgs* args) {
   std::vector<Value> ret;

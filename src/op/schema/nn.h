@@ -145,6 +145,12 @@ class LocalResponseNormArgs : public ir::AttrsNode<LocalResponseNormArgs> {
   MNM_OP_SCHEMA(LocalResponseNormArgs, "mnm.args.local_response_norm");
 };
 
+class MeshGridArgs : public ir::AttrsNode<MeshGridArgs> {
+ public:
+  std::vector<value::BaseTensorValue> x;
+  MNM_OP_SCHEMA(MeshGridArgs, "mnm.args.mesh_grid");
+};
+
 class PadArgs : public ir::AttrsNode<PadArgs> {
  public:
   value::BaseTensorValue x;
@@ -187,6 +193,15 @@ class RepeatArgs : public ir::AttrsNode<RepeatArgs> {
   int repeats;
   value::Value axis{nullptr};
   MNM_OP_SCHEMA(RepeatArgs, "mnm.args.repeat");
+};
+
+class RepeatDxArgs : public ir::AttrsNode<RepeatDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue dy;
+  int repeats;
+  value::Value axis{nullptr};
+  MNM_OP_SCHEMA(RepeatDxArgs, "mnm.args.repeat_dx");
 };
 
 class ReverseSequenceArgs : public ir::AttrsNode<ReverseSequenceArgs> {

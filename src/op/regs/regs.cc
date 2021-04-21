@@ -114,6 +114,7 @@ static const char left_shift[] = "mnm.op.left_shift";
 static const char less[] = "mnm.op.less";
 static const char less_equal[] = "mnm.op.less_equal";
 static const char log[] = "mnm.op.log";
+static const char log2[] = "mnm.op.log2";
 static const char log_softmax[] = "mnm.op.log_softmax";
 static const char log_softmax_dx[] = "mnm.op.log_softmax_dx";
 static const char logical_and[] = "mnm.op.logical_and";
@@ -128,6 +129,7 @@ static const char max_pool2d_dx[] = "mnm.op.max_pool2d_dx";
 static const char maximum[] = "mnm.op.maximum";
 static const char mean[] = "mnm.op.mean";
 static const char mean_dx[] = "mnm.op.mean_dx";
+static const char mesh_grid[] = "mnm.op.mesh_grid";
 static const char min[] = "mnm.op.min";
 static const char minimum[] = "mnm.op.minimum";
 static const char mod[] = "mnm.op.mod";
@@ -148,6 +150,7 @@ static const char prod_dx[] = "mnm.op.prod_dx";
 static const char relu[] = "mnm.op.relu";
 static const char relu_dx[] = "mnm.op.relu_dx";
 static const char repeat[] = "mnm.op.repeat";
+static const char repeat_dx[] = "mnm.op.repeat_dx";
 static const char reshape[] = "mnm.op.reshape";
 static const char reverse[] = "mnm.op.reverse";
 static const char reverse_sequence[] = "mnm.op.reverse_sequence";
@@ -583,6 +586,12 @@ Attrs LossDtp(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs MeshGrid(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::MeshGridArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
 Attrs NonMaxSuppression(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::NonMaxSuppressionArgs, 12);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, data);
@@ -673,6 +682,15 @@ Attrs Repeat(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, repeats);
   MNM_TAPE(2, ffi2schema::ArrayLike, axis);
+  return Attrs(attrs);
+}
+
+Attrs RepeatDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::RepeatDxArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_POD(2, ffi2schema::Int, repeats);
+  MNM_TAPE(3, ffi2schema::ArrayLike, axis);
   return Attrs(attrs);
 }
 
@@ -1714,6 +1732,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.log").set_body([](TVMArgs args, TVMRetValue* ret
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.log2").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(log2, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.log_softmax").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(log_softmax, 2, ffi2schema::Softmax,
               schema::SoftmaxArgs);  // NOLINT(whitespace/line_length)
@@ -1858,6 +1883,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.mean_dx").set_body([](TVMArgs args, TVMRetValue*
   MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axis));
   MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->keepdims));
   MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->exclude));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.mesh_grid").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(mesh_grid, 1, ffi2schema::MeshGrid,
+              schema::MeshGridArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2067,6 +2100,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.repeat").set_body([](TVMArgs args, TVMRetValue* 
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->repeats));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.repeat_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(repeat_dx, 4, ffi2schema::RepeatDx,
+              schema::RepeatDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->repeats));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->axis));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2909,6 +2953,12 @@ Array<Expr> LossDtp(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> MeshGrid(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_RET();
+}
+
 Array<Expr> NonMaxSuppression(const TVMArgs& values) {
   MNM_PRELUDE(12);
   MNM_ARG(0, ffi2expr::Tensor, data);
@@ -2999,6 +3049,15 @@ Array<Expr> Repeat(const TVMArgs& values) {
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Int, repeats);
   MNM_ARG(2, ffi2expr::ArrayLike, axis);
+  MNM_RET();
+}
+
+Array<Expr> RepeatDx(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::Int, repeats);
+  MNM_ARG(3, ffi2expr::ArrayLike, axis);
   MNM_RET();
 }
 
@@ -3380,6 +3439,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.left_shift").set_body(MNM_SYMBOLIC_API(left_shif
 MNM_REGISTER_GLOBAL("mnm.op.sym.less").set_body(MNM_SYMBOLIC_API(less, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.less_equal").set_body(MNM_SYMBOLIC_API(less_equal, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log").set_body(MNM_SYMBOLIC_API(log, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.log2").set_body(MNM_SYMBOLIC_API(log2, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax").set_body(MNM_SYMBOLIC_API(log_softmax, 2, Softmax));
 MNM_REGISTER_GLOBAL("mnm.op.sym.log_softmax_dx")
     .set_body(MNM_SYMBOLIC_API(log_softmax_dx, 4, SoftmaxDx));
@@ -3397,6 +3457,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
 MNM_REGISTER_GLOBAL("mnm.op.sym.maximum").set_body(MNM_SYMBOLIC_API(maximum, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mean").set_body(MNM_SYMBOLIC_API(mean, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mean_dx").set_body(MNM_SYMBOLIC_API(mean_dx, 6, ReduceDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.mesh_grid").set_body(MNM_SYMBOLIC_API(mesh_grid, 1, MeshGrid));
 MNM_REGISTER_GLOBAL("mnm.op.sym.min").set_body(MNM_SYMBOLIC_API(min, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.minimum").set_body(MNM_SYMBOLIC_API(minimum, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mod").set_body(MNM_SYMBOLIC_API(mod, 4, BinaryUfunc));
@@ -3420,6 +3481,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.prod_dx").set_body(MNM_SYMBOLIC_API(prod_dx, 6, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu").set_body(MNM_SYMBOLIC_API(relu, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx").set_body(MNM_SYMBOLIC_API(relu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.repeat").set_body(MNM_SYMBOLIC_API(repeat, 3, Repeat));
+MNM_REGISTER_GLOBAL("mnm.op.sym.repeat_dx").set_body(MNM_SYMBOLIC_API(repeat_dx, 4, RepeatDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reshape").set_body(MNM_SYMBOLIC_API(reshape, 3, Reshape));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, Reverse));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
@@ -3928,6 +3990,13 @@ Attrs LossDtp(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs MeshGrid(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::MeshGridArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs NonMaxSuppression(const Array<Value>& values) {
   MNM_PRELUDE(5, 12, schema::NonMaxSuppressionArgs);
   MNM_REQUIRED(0, value2schema::Tensor, data);
@@ -4025,6 +4094,16 @@ Attrs Repeat(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Int, repeats);
   MNM_OPTIONAL(2, value2schema::ArrayLike, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs RepeatDx(const Array<Value>& values) {
+  MNM_PRELUDE(3, 4, schema::RepeatDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_REQUIRED(2, value2schema::Int, repeats);
+  MNM_OPTIONAL(3, value2schema::ArrayLike, axis);
   return Attrs(attrs);
 }
 
@@ -5015,6 +5094,15 @@ int LossDtp(const std::string& field) {
 }
 
 template <const char* op_name>
+int MeshGrid(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int NonMaxSuppression(const std::string& field) {
   if (field == "data") {
     return 0;
@@ -5216,6 +5304,24 @@ int Repeat(const std::string& field) {
   }
   if (field == "axis") {
     return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int RepeatDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "dy") {
+    return 1;
+  }
+  if (field == "repeats") {
+    return 2;
+  }
+  if (field == "axis") {
+    return 3;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -6000,6 +6106,9 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.less_equal", names::less_equal,
                             schema_field_idx::BinaryUfunc);      // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.log", names::log, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.log", names::log,
+                            schema_field_idx::Unary);              // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.log2", names::log2, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.log2", names::log2,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.log_softmax", names::log_softmax,
                 value2schema::Softmax);  // NOLINT(whitespace/line_length)
@@ -6055,7 +6164,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mean", names::mean,
 MNM_BIND_SCHEMA("mnm.op.mean_dx", names::mean_dx,
                 value2schema::ReduceDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mean_dx", names::mean_dx,
-                            schema_field_idx::ReduceDx);          // NOLINT(whitespace/line_length)
+                            schema_field_idx::ReduceDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.mesh_grid", names::mesh_grid,
+                value2schema::MeshGrid);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mesh_grid", names::mesh_grid,
+                            schema_field_idx::MeshGrid);          // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.min", names::min, value2schema::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.min", names::min,
                             schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
@@ -6133,6 +6246,10 @@ MNM_BIND_SCHEMA("mnm.op.repeat", names::repeat,
                 value2schema::Repeat);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.repeat", names::repeat,
                             schema_field_idx::Repeat);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.repeat_dx", names::repeat_dx,
+                value2schema::RepeatDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.repeat_dx", names::repeat_dx,
+                            schema_field_idx::RepeatDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reshape", names::reshape,
                 value2schema::Reshape);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reshape", names::reshape,
@@ -6374,6 +6491,7 @@ MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossDtpArgs);
+MNM_REGISTER_OBJECT_REFLECT(MeshGridArgs);
 MNM_REGISTER_OBJECT_REFLECT(NonMaxSuppressionArgs);
 MNM_REGISTER_OBJECT_REFLECT(OneHotArgs);
 MNM_REGISTER_OBJECT_REFLECT(PadArgs);
@@ -6382,6 +6500,7 @@ MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(RepeatArgs);
+MNM_REGISTER_OBJECT_REFLECT(RepeatDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseSequenceArgs);

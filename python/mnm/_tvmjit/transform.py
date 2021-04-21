@@ -1,5 +1,6 @@
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-function-docstring, line-too-long, undefined-loop-variable
 """Compute definition and schedules for data transform operators"""
+from mnm._tvmjit.nn import schedule_layer_norm
 from .._lib import register_compute
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
@@ -14,6 +15,22 @@ def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
         axes_inverse[i] = idx
     out = _topi.transpose(dy, axes=tuple(axes_inverse))
     return [out]
+
+
+@register_compute("mnm.op.repeat_dx")
+def repeat_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    x = inputs[0]
+    dy = inputs[1]
+    axis = int(attrs.axis)
+    shape = x.shape
+    split_list = _topi.split(dy, int(shape[axis]), axis)
+    result_list = list()
+    for item in split_list:
+        result_list.append(_topi.sum(item, axis, True))
+    out = _topi.concatenate(tuple(result_list), axis)
+    return [out]
+
+_reg.register_schedule("mnm.op.repeat_dx", schedule_layer_norm)
 
 @register_compute("mnm.op.swap_axis")
 def swap_axis_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
@@ -36,9 +53,23 @@ def full_like_compute(attrs, inputs, output_type):  # pylint: disable=unused-arg
     out = _topi.full_like(inputs[0], attrs.fill_value)
     return [out]
 
+@register_compute("mnm.op.mesh_grid")
+def mesh_grid_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
+    target_shape = []
+    for tensor in inputs:
+        target_shape.append(tensor.shape[0])
+    out = []
+    def fbroadcast(*args):
+        return tensor(args[i])
+
+    for i, tensor in enumerate(inputs):
+        out.append(_tvm.te.compute(target_shape, fbroadcast))
+    return out
+
 _reg.register_injective_schedule("mnm.op.transpose_dx")
 _reg.register_injective_schedule("mnm.op.transpose")
 _reg.register_injective_schedule("mnm.op.swap_axis")
+_reg.register_injective_schedule("mnm.op.mesh_grid")
 _reg.register_injective_schedule("mnm.op.split")
 _reg.register_injective_schedule("mnm.op.take")
 _reg.register_injective_schedule("mnm.op.sequence_mask")

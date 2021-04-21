@@ -21,23 +21,24 @@ __all__ = [
     "floor", "full", "full_like", "gather", "gather_dx",
     "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
     "greater", "greater_equal", "layer_norm", "layer_norm_dx", "left_shift",
-    "less", "less_equal", "log", "log_softmax", "log_softmax_dx",
-    "logical_and", "logical_not", "matmul", "matmul_nt", "matmul_tn",
-    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
-    "mean", "mean_dx", "min", "minimum", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "non_max_suppression", "not_equal", "one_hot", "ones", "ones_like",
-    "pad", "power", "prod", "prod_dx", "relu",
-    "relu_dx", "repeat", "reshape", "reverse", "reverse_sequence",
-    "right_shift", "round", "rsqrt", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx",
-    "subtract", "sum", "sum_dx", "swap_axis", "take",
-    "take_dx", "tanh", "tanh_dx", "threefry_generate", "threefry_split",
-    "transpose", "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_invoke_op", "where", "where_dx", "zeros", "zeros_like",
+    "less", "less_equal", "log", "log2", "log_softmax",
+    "log_softmax_dx", "logical_and", "logical_not", "matmul", "matmul_nt",
+    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
+    "maximum", "mean", "mean_dx", "mesh_grid", "min",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
+    "ones", "ones_like", "pad", "power", "prod",
+    "prod_dx", "relu", "relu_dx", "repeat", "repeat_dx",
+    "reshape", "reverse", "reverse_sequence", "right_shift", "round",
+    "rsqrt", "sequence_mask", "sgd", "shape", "sigmoid",
+    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
+    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stack_dx",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
+    "tanh_dx", "threefry_generate", "threefry_split", "transpose", "transpose_dx",
+    "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where",
+    "where_dx", "zeros", "zeros_like",
 ]
 
 def _allreduce(x):
@@ -494,6 +495,10 @@ def log(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.log(x))
 
+def log2(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.log2(x))
+
 def log_softmax(x, axis=-1):
     x = sym_utils.to_tensor(x)
     axis = sym_utils.to_int(axis)
@@ -589,6 +594,10 @@ def mean_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
     keepdims = sym_utils.to_bool(keepdims)
     exclude = sym_utils.to_bool(exclude)
     return Symbol.from_expr(ffi.mean_dx(x, y, dy, axis, keepdims, exclude))
+
+def mesh_grid(x):
+    x = sym_utils.to_tensor_tuple(x)
+    return Symbol.from_expr(ffi.mesh_grid(x))
 
 def min(x, axis=(), keepdims=False, exclude=False):
     x = sym_utils.to_tensor(x)
@@ -726,6 +735,13 @@ def repeat(x, repeats, axis=None):
     repeats = sym_utils.to_int(repeats)
     axis = sym_utils.to_any(axis)
     return Symbol.from_expr(ffi.repeat(x, repeats, axis))
+
+def repeat_dx(x, dy, repeats, axis=None):
+    x = sym_utils.to_tensor(x)
+    dy = sym_utils.to_tensor(dy)
+    repeats = sym_utils.to_int(repeats)
+    axis = sym_utils.to_any(axis)
+    return Symbol.from_expr(ffi.repeat_dx(x, dy, repeats, axis))
 
 def reshape(x, shape, reverse=False):
     x = sym_utils.to_tensor(x)

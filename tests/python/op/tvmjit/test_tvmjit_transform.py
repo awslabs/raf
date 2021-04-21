@@ -88,31 +88,49 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
 ])
 def test_broadcast_to(shape, device):
     model = TestModel(mnm._op.sym.broadcast_to, shape=shape[1])
-    m_x, n_x = randn(shape[0], device=device)
+    m_x, n_x = randn(shape[0], device=device, requires_grad=True)
     m_y = model(m_x)
     v_y = run_vm_model(model, device, [m_x])
     n_y = np.broadcast_to(n_x, shape[1])
     check(m_y, n_y)
     check(v_y, n_y)
 
+    #backward
+    #since mxnet broadcast_to  does not support the broadcast between unequal ndim
+    if len(shape[1]) == len(shape[0]):
+        m_dy, n_dy = randn(n_y.shape, device=device)
+        mx_x = mx.nd.array(n_x)
+        mx_dy = mx.nd.array(n_dy)
+        mx_x.attach_grad()
+        with mx.autograd.record():
+            mx_y = mx.nd.broadcast_to(mx_x, shape[1])
+        mx_y.backward(mx_dy)
+        m_y.backward(m_dy)
+        check(m_x.grad, mx_x.grad.asnumpy())
 
+#pylint: disable=unused-variable
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
-    (1, 4, 1),
-    (3, 4, 2, 2),
-    (4, 1, 1),
     (1, 2, 4, 1)
 ])
 def test_repeat(shape, device):
-    m_x, n_x = randn(shape, device=device)
     ndim = len(shape)
-    for axis in range(-ndim, ndim):
+    for axis in range(0, ndim):
+        m_x, t_x = randn_torch(shape, device=device, requires_grad=True)
         model = TestModel(mnm._op.sym.repeat, repeats=2, axis=axis)
+        #forward
         m_y = model(m_x)
         v_y = run_vm_model(model, device, [m_x])
-        n_y = np.repeat(n_x, 2, axis)
-        check(m_y, n_y)
-        check(v_y, n_y)
+        t_y = torch.repeat_interleave(t_x, 2, dim=axis)
+        check(m_y, t_y)
+        check(v_y, t_y)
+
+        #backward
+        y_shape = t_y.shape
+        m_dy, n_dy = randn_torch(y_shape, device=device, requires_grad=True)
+        m_y.backward(m_dy)
+        t_y.backward(n_dy)
+        check(m_x.grad, t_x.grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -364,6 +382,73 @@ def test_concatenate(params, device):
     t_y.backward(t_dy)
     for m_x, t_x in zip(m_i, t_i):
         check(m_x.grad, t_x.grad)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("shapes", [
+    [7, 2, 6, 3],
+    [1, 5, 2],
+    [6, 3],
+    [2, 3, 2, 9],
+])
+def test_mesh_grid(shapes, device):
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-locals
+    class MeshGrid2(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b):
+            return mnm.mesh_grid([a, b])
+
+    class MeshGrid3(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b, c):
+            return mnm.mesh_grid([a, b, c])
+
+    class MeshGrid4(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, a, b, c, d):
+            return mnm.mesh_grid([a, b, c, d])
+    #one input is trivial case
+    meshgrid = [None, None, MeshGrid2, MeshGrid3, MeshGrid4]
+    m_i, t_i = [], []
+    for shape in shapes:
+        m_x, t_x = randn_torch([shape], device=device, requires_grad=True)
+        m_i.append(m_x)
+        t_i.append(t_x)
+
+    model = meshgrid[len(m_i)]()
+    m_y = model(*m_i)
+    v_y = run_vm_model(model, device, m_i)
+    t_y = torch.meshgrid(t_i)
+
+    # check forward
+    assert len(m_y) == len(t_y)
+    for m, n in zip(m_y, t_y):
+        check(m, n)
+    assert len(v_y) == len(t_y)
+    for v, n in zip(v_y, t_y):
+        check(v, n)
+
+
+    # backward
+    m_dy, t_dy = randn_torch(m_y[0].shape, device=device)
+    print(t_dy.shape)
+    print(t_y[0].shape)
+    t_y[0].backward(t_dy)
+    m_y[0].backward(m_dy)
+    check(m_i[0].grad, t_i[0].grad)
+
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -747,7 +832,6 @@ def test_where(shape, device, broadcast):
     t_res.backward(t_dy)
     check(m_x.grad, t_x.grad)
     check(m_y.grad, t_y.grad)
-
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
