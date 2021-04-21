@@ -606,8 +606,8 @@ std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::Pr
     call_values->out = output;
     op_env = Dispatch(call_values);
     CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
-                             << " @ " << call_values->device.c_str()
-                             << (op ? op->op->name : PrettyPrint(closure->func));
+                             << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
+                             << call_values->device.c_str();
     // TODO(vinx13): request stream
     std::shared_ptr<Requests> requests = op_env->GetRequests();
     for (size_t i = 0; i < requests->workspace.size(); i++) {

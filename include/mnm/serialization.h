@@ -8,6 +8,7 @@
 #include <tvm/runtime/object.h>
 #include <string>
 #include "./ir.h"
+#include "./value.h"
 
 namespace mnm {
 namespace ir {
@@ -31,6 +32,19 @@ class ConstantNode : public ir::ConstantNode {
 std::string SaveJSON(const ir::IRModule& node);
 std::string SaveJSON(const ir::Expr& node);
 std::string SaveJSON(const ir::ObjectRef& node);
+
+/*!
+ * \brief Serialize value into byte stream.
+ * \param strm DMLC stream.
+ * \param value The value to be serialized.
+ */
+void SerializeValue(dmlc::Stream* strm, const value::Value& value);
+/*!
+ * \brief DeSerialize the value from the byte stream.
+ * \param strm DMLC stream.
+ * \return The value.
+ */
+value::Value DeserializeValue(dmlc::Stream* strm);
 
 }  // namespace serialization
 }  // namespace ir

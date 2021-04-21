@@ -22,6 +22,39 @@ class OpEnv;
 namespace mnm {
 namespace value {
 
+/* Value type */
+enum ValueType {
+  kNullptr = 0,
+  kIntValue = 1,
+  kFloatValue = 2,
+  kBoolValue = 3,
+  kStringValue = 4,
+  kTensorValue = 5,
+  kTensorTypeValue = 6,
+  kTupleValue = 7,
+  kClosureValue = 8,
+  kRefValue = 9,
+  kOpValue = 10,
+  kOpaqueValue = 11,
+  kNoGradValue = 12,
+  kVoidValue = 13,
+  kCallValue = 14,
+};
+
+/*!
+ * \brief Convert value type key to value type.
+ * \param type_key The type key.
+ * \return The corresponding value type.
+ */
+ValueType TypeKey2ValueType(const char* type_key);
+
+/*!
+ * \brief Get the name of the value type.
+ * \param type The value type.
+ * \return The name.
+ */
+std::string ValueType2String(ValueType type);
+
 /* Value */
 class ValueObj : public ir::Object {
  public:

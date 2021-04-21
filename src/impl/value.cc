@@ -3,8 +3,8 @@
  * \file src/impl/value.cc
  * \brief MNM value underlying implementation
  */
-#include "tvm/runtime/data_type.h"
-#include "tvm/runtime/ndarray.h"
+#include <tvm/runtime/data_type.h>
+#include <tvm/runtime/ndarray.h>
 #include <tvm/node/functor.h>
 #include <tvm/ir/module.h>
 #include "mnm/executor.h"
@@ -22,6 +22,88 @@ using common::shape_utils::MakeShape;
 using executor::Executor;
 using tensor::Tensor;
 using namespace mnm::ir;
+
+ValueType TypeKey2ValueType(const char* type_key) {
+  if (strcmp(type_key, "mnm.value.IntValue") == 0) {
+    return kIntValue;
+  }
+  if (strcmp(type_key, "mnm.value.FloatValue") == 0) {
+    return kFloatValue;
+  }
+  if (strcmp(type_key, "mnm.value.BoolValue") == 0) {
+    return kBoolValue;
+  }
+  if (strcmp(type_key, "mnm.value.StringValue") == 0) {
+    return kStringValue;
+  }
+  if (strcmp(type_key, "mnm.value.TensorValue") == 0) {
+    return kTensorValue;
+  }
+  if (strcmp(type_key, "mnm.value.TenorTypeValue") == 0) {
+    return kTensorTypeValue;
+  }
+  if (strcmp(type_key, "mnm.value.TupleValue") == 0) {
+    return kTupleValue;
+  }
+  if (strcmp(type_key, "mnm.value.ClosureValue") == 0) {
+    return kClosureValue;
+  }
+  if (strcmp(type_key, "mnm.value.RefValue") == 0) {
+    return kRefValue;
+  }
+  if (strcmp(type_key, "mnm.value.OpValue") == 0) {
+    return kOpValue;
+  }
+  if (strcmp(type_key, "mnm.value.OpaqueValue") == 0) {
+    return kOpaqueValue;
+  }
+  if (strcmp(type_key, "mnm.value.NoGradValue") == 0) {
+    return kNoGradValue;
+  }
+  if (strcmp(type_key, "mnm.value.VoidValue") == 0) {
+    return kVoidValue;
+  }
+  if (strcmp(type_key, "mnm.value.CallValue") == 0) {
+    return kCallValue;
+  }
+  LOG(FATAL) << "Unknown value type key: " << type_key;
+  return kNullptr;
+}
+
+std::string ValueType2String(ValueType type) {
+  switch (type) {
+    case kNullptr:
+      return "nullptr";
+    case kIntValue:
+      return "IntValue";
+    case kFloatValue:
+      return "FloatValue";
+    case kBoolValue:
+      return "BoolValue";
+    case kStringValue:
+      return "StringValue";
+    case kTensorValue:
+      return "TensorValue";
+    case kTensorTypeValue:
+      return "TensorTypeValue";
+    case kTupleValue:
+      return "TupleValue";
+    case kClosureValue:
+      return "CloureValue";
+    case kRefValue:
+      return "RefValue";
+    case kOpValue:
+      return "OpValue";
+    case kOpaqueValue:
+      return "OpaqueValue";
+    case kNoGradValue:
+      return "NoGradValue";
+    case kVoidValue:
+      return "VoidValue";
+    case kCallValue:
+      return "CallValue";
+  }
+}
 
 /*** Constructors ***/
 TensorValue TensorValue::make(tensor::Tensor tensor, std::shared_ptr<memory_pool::Memory> mem) {
@@ -337,6 +419,12 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
         if (i != node->tensor->ndim - 1) p->stream << "x";
       }
       p->stream << ", " << tvm::runtime::DLDataType2String(node->tensor->dtype) << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
+    .set_dispatch<OpValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      auto* node = static_cast<const OpValueObj*>(ref.get());
+      p->stream << node->op;
     });
 
 }  // namespace value

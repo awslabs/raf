@@ -15,6 +15,7 @@
 #include <sstream>
 #include <vector>
 
+#include "mnm/serialization.h"
 #include "mnm/vm/vm.h"
 #include "./serialize_util.h"
 
@@ -209,7 +210,10 @@ void Executable::SaveGlobalSection(dmlc::Stream* strm) {
 }
 
 void Executable::SaveConstantSection(dmlc::Stream* strm) {
-  // TODO(vinx13): save constant
+  strm->Write(static_cast<uint64_t>(constants.size()));
+  for (const auto& value : this->constants) {
+    serialization::SerializeValue(strm, value);
+  }
 }
 
 void Executable::SavePrimitiveOpNames(dmlc::Stream* strm) {
@@ -465,11 +469,11 @@ void Executable::LoadConstantSection(dmlc::Stream* strm) {
   uint64_t sz;
   // Load the number of constants.
   STREAM_CHECK(strm->Read(&sz, sizeof(sz)), "constant");
-
   size_t size = static_cast<size_t>(sz);
   // Load each of the constants.
   for (size_t i = 0; i < size; i++) {
-    // TODO(vinx13): load constants (Value in Meta)
+    Value value = serialization::DeserializeValue(strm);
+    constants.push_back(value);
   }
 }
 
