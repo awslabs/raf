@@ -94,7 +94,7 @@ def test_dense(n, m, k, device):
 # pylint: disable=no-member
 # pylint: disable=protected-access
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3],
     [3, 2],
@@ -141,7 +141,7 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
 # pylint: disable=no-member
 # pylint: disable=protected-access
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3, 2],
     [1, 3]
@@ -180,7 +180,7 @@ def test_log_softmax(device, dtype, shape):
 ])
 @pytest.mark.parametrize("axis", [0, 1, 2, -1])
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("learnable_affine_transform", [False, True])
 def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform):
     # pylint: disable=import-outside-toplevel
@@ -243,7 +243,7 @@ def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform)
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shapes", [
     ((4, 256, 32, 32), (64, 256, 1, 1)),
     ((8, 3, 32, 32), (16, 3, 3, 3)),
@@ -281,7 +281,7 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
 
 
 @pytest.mark.parametrize("device", ["cpu"])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
 @pytest.mark.parametrize("stride", [1, 2])
@@ -315,8 +315,8 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("xshape", [(3, 3, 32, 32), (8, 3, 32, 32)])
+@pytest.mark.parametrize("dtype", ["float32"])
+@pytest.mark.parametrize("xshape", [(3, 3, 4, 4), (8, 3, 32, 32)])
 def test_bias_add(xshape, dtype, device):
     class BiasAdd(mnm.Model):
         def build(self):
@@ -348,7 +348,7 @@ def test_bias_add(xshape, dtype, device):
 
 
 @pytest.mark.parametrize("device", ["cpu"])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("kernel", [1, 2, 3, 4])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
@@ -389,7 +389,7 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("out_shape", [(1, 1), (4, 4)])
 @pytest.mark.parametrize(
@@ -422,7 +422,7 @@ def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
 
 
 @pytest.mark.parametrize("device", ["cpu"])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("kernel", [1, 2, 3, 4])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
@@ -460,7 +460,7 @@ def test_pool2d_nhwc(device, dtype, data_shape, kernel, stride, padding, funcs):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("n", [1, 2, 4])
 @pytest.mark.parametrize("m", [1, 2, 4])
 @pytest.mark.parametrize("k", [1, 2, 4])
@@ -575,7 +575,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dimension", [
     ((2, 3), (1, 1, 1, 1)),
 ])

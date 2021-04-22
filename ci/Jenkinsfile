@@ -61,7 +61,7 @@ stage("Lint") {
 
 stage('Build') {
   parallel 'BUILD: GPU': {
-    node('linux-gpu-4x') {
+    node('linux-gpu') {
       init_git_unix()
       sh """
          mkdir -p build
@@ -103,7 +103,7 @@ stage('Build') {
 
 stage('Unit Test') {
   parallel 'python3: GPU': {
-    node('linux-gpu-4x') {
+    node('linux-gpu') {
       init_git_unix()
       unpack_lib('gpu', mnm_multilib)
       timeout(time: max_time, unit: 'MINUTES') {
@@ -118,6 +118,16 @@ stage('Unit Test') {
       unpack_lib('cpu', mnm_multilib)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_cpu} ./ci/task_python_unittest.sh"
+      }
+    }
+  },
+  'python3: multi-GPU': {
+    node('linux-gpu-4x') {
+      init_git_unix()
+      unpack_lib('gpu', mnm_multilib)
+      timeout(time: max_time, unit: 'MINUTES') {
+        sh "${docker_run} ${ci_gpu} nvidia-smi -L"
+        sh "${docker_run} ${ci_gpu} ./ci/task_python_distributed.sh"
       }
     }
   }
