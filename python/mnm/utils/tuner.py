@@ -1,8 +1,9 @@
 """
 The tuning utilities.
 """
-# pylint: disable=too-many-locals, too-many-arguments
+# pylint: disable=too-many-locals, too-many-arguments, protected-access
 # pylint: disable=missing-class-docstring, missing-function-docstring, no-self-use
+# pylint: disable=attribute-defined-outside-init
 import os
 from copy import copy
 
@@ -10,12 +11,11 @@ import tvm
 
 import mnm
 from mnm._core.executor import MetaFallbackContext, VMExecutor
+from mnm._core.ndarray import array
 from mnm.model.trace import _get_func_inputs
-from mnm.testing import randn
+from mnm.testing import randn, randint, randn_torch
 from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler import compute_dag
-from tvm.auto_scheduler.measure import MeasureErrorNo
-from tvm.auto_scheduler.measure_record import RecordReader
 
 
 def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
@@ -48,6 +48,8 @@ def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
             mod = pass_seq(mod)
         args = _get_func_inputs(record, args, {}, get_handle=False)
 
+    assert mod is not None
+
     old_auto_scheduler_fallback_context = auto_scheduler.DispatchContext.current
     auto_scheduler.DispatchContext.current = MetaFallbackContext(verbose=0)
     old_autotvm_silent = autotvm.GLOBAL_SCOPE.silent
@@ -73,7 +75,7 @@ def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
 
     tasks = []
     weights = []
-    for wkl_key, weight in env_tracing_task.wkl_key_to_weight.items():
+    for (func_name, wkl_key), weight in env_tracing_task.wkl_key_to_weight.items():
         tasks.append(
             auto_scheduler.SearchTask(
                 workload_key=wkl_key,
@@ -85,6 +87,7 @@ def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
                 layout_rewrite_option=compute_dag.LayoutRewriteOption.get_target_default(
                     tvm_target, True
                 ),
+                desc=func_name,
             )
         )
         weights.append(weight)
@@ -126,7 +129,8 @@ def tune_tasks(tasks, weights, log_file, n_trials):
     print("Done tuning. Records saved in %s" % log_file)
 
 def run_tuning(model, device, args, log_file, *, pass_seq=None,
-               n_trials=lambda l: 300 * min(l, 100), only_tune_new_tasks=False):
+               n_trials=lambda l: 300 * min(l, 100), only_tune_tasks_with_name=None,
+               only_extract_tasks=False):
     """Tune the given tasks.
 
     Parameters
@@ -152,43 +156,41 @@ def run_tuning(model, device, args, log_file, *, pass_seq=None,
         the total number of measurement trials by taking the task number.
         Default is at maximum 30k = 300 * min(100, task_num).
 
-    only_tune_new_tasks: bool
-        If True, then we only tune the tasks that have no valid records in the given
-        log file.
+    only_tune_tasks_with_name: Optional[List[str]]
+        When specify with a list of name tokens, only the tasks with the tokens in their names
+        will be tuned.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
     print("Extracting tasks...")
     tasks, weights = extract_tuning_tasks(model, args, device, pass_seq=pass_seq)
     ori_task_num = len(tasks)
 
-    if only_tune_new_tasks and os.path.exists(log_file):
-        print("Remove tasks that have valid records in %s" % log_file)
-        # Collect workload keys in the log file.
-        workload_keys = set()
-        tvm_target = tvm.target.Target(device)
-        for inp, res in RecordReader(log_file):
-            if res.error_no != MeasureErrorNo.NO_ERROR:
-                continue
-            if inp.task.target.kind.name != tvm_target.kind.name:
-                continue
-            workload_keys.add(inp.task.workload_key)
-
-        # Erase tasks that already have valid records in the log file.
+    if only_tune_tasks_with_name is not None:
+        only_tune_tasks_with_name = [token.strip() for token in only_tune_tasks_with_name]
+        print("Selecting tasks with specified names: %s" % ",".join(only_tune_tasks_with_name))
         keep_tasks = []
         keep_weights = []
         for task, weight in zip(tasks, weights):
-            if task.workload_key not in workload_keys:
+            if any([task.desc.find(token) != -1 for token in only_tune_tasks_with_name]):
                 keep_tasks.append(task)
                 keep_weights.append(weight)
         tasks, weights = keep_tasks, keep_weights
 
     for idx, (task, weight) in enumerate(zip(tasks, weights)):
         print("=== Task %d: %s (weight %d) ===" % (idx, task.workload_key, weight))
+        print("Function: %s" % task.desc)
         print(task.compute_dag)
+
+    if only_extract_tasks:
+        return
 
     print("Tuning %d out of %s tasks..." % (len(tasks), ori_task_num))
     tune_tasks(tasks, weights, log_file, n_trials)
 
-def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128, device="cuda"):
+def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128,
+            device="cuda", fusion=False):
     """A helper function to construct and tune tasks for an op.
 
     sch_file: str
@@ -208,6 +210,9 @@ def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128
 
     device: str
         The target device. Default cuda.
+
+    fusion: bool
+        Whether to apply fusion.
     """
     configs = []
     space_list = list(space_dict.items())
@@ -233,7 +238,8 @@ def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128
         m_model.infer_mode()
         m_model.to(device=device)
 
-        extract_tasks, _ = extract_tuning_tasks(m_model, args, device)
+        pass_seq = lambda mod: mnm._ffi.pass_.FuseOps(3)(mod) if fusion else mod
+        extract_tasks, _ = extract_tuning_tasks(m_model, args, device, pass_seq=pass_seq)
         assert len(extract_tasks) == 1
         tasks.append(extract_tasks[0])
 
@@ -307,9 +313,9 @@ def tune_layer_norm(sch_file, space_dict=None, device="cuda"):
 
     if space_dict is None:
         space_dict = {
-            "batch_sizes": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
-            "seq_lengths": [5, 32, 64, 128],
-            "hidden_sizes": [512, 768, 1024]
+            "batch_size": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
+            "seq_length": [5, 32, 64, 128],
+            "hidden_size": [512, 768, 1024]
         }
 
     tune_op(sch_file, LayerNormModel, gen_arg_func, space_dict, device=device)
@@ -345,12 +351,94 @@ def tune_layer_norm_dx(sch_file, space_dict=None, device="cuda"):
 
     if space_dict is None:
         space_dict = {
-            "batch_sizes": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
-            "seq_lengths": [5, 32, 64, 128],
-            "hidden_sizes": [512, 768, 1024]
+            "batch_size": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
+            "seq_length": [5, 32, 64, 128],
+            "hidden_size": [512, 768, 1024]
         }
 
     tune_op(sch_file, LayerNormDxModel, gen_arg_func, space_dict, device=device)
+
+def tune_take_dx(sch_file, space_dict=None, device="cuda"):
+    """Tune take_dx with various shapes in transformer-based models.
+
+    sch_file: str
+        The tuning log.
+
+    space_dict: Optional[Dict[str, List[Any]]]
+        The target space (configs) of this op. If not present, the default space will be used.
+
+    device: str
+        The target device. Default cuda.
+    """
+    class TakeDxModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, y, dy, indices):
+            return mnm.take_dx(x, y, dy, indices, axis=0, mode="clip")
+
+    def gen_arg_func(batch_size, seq_length, hidden_size, vocab_size):
+        x_shape = (vocab_size, hidden_size)
+        y_shape = (batch_size, seq_length, hidden_size)
+        i_shape = (batch_size, seq_length)
+        m_x, _ = randn(x_shape, device=device)
+        m_y, _ = randn(y_shape, device=device)
+        m_dy, _ = randn_torch(y_shape, std=0.0, mean=1.0, requires_grad=False, device=device)
+        m_indices, _ = randint(i_shape, low=0, high=y_shape[1], dtype="int32", device=device)
+        return [m_x, m_y, m_dy, m_indices]
+
+    if space_dict is None:
+        space_dict = {
+            "batch_size": [1, 4, 16, 32, 64],
+            "seq_length": [128],
+            "hidden_size": [768],
+            "vocab_size": [2, 512, 30522]
+        }
+
+    tune_op(sch_file, TakeDxModel, gen_arg_func, space_dict, device=device)
+
+def tune_fused_take_dx(sch_file, space_dict=None, device="cuda"):
+    """Tune fused take_dx with various shapes in transformer-based models.
+
+    sch_file: str
+        The tuning log.
+
+    space_dict: Optional[Dict[str, List[Any]]]
+        The target space (configs) of this op. If not present, the default space will be used.
+
+    device: str
+        The target device. Default cuda.
+    """
+    class TakeDxModel(mnm.Model):
+        def build(self):
+            self.m = array(0.1, dtype='float32')
+
+        @mnm.model.trace
+        def forward(self, x, y, dy, indices):
+            mul = mnm.multiply(self.m, x)
+            out = mnm.take_dx(x, y, dy, indices, axis=0, mode="clip")
+            return mnm.add(mul, out)
+
+    def gen_arg_func(batch_size, seq_length, hidden_size, vocab_size):
+        x_shape = (vocab_size, hidden_size)
+        y_shape = (batch_size, seq_length, hidden_size)
+        i_shape = (batch_size, seq_length)
+        m_x, _ = randn(x_shape, device=device)
+        m_y, _ = randn(y_shape, device=device)
+        m_dy, _ = randn_torch(y_shape, std=0.0, mean=1.0, requires_grad=False, device=device)
+        m_indices, _ = randint(i_shape, low=0, high=y_shape[1], dtype="int32", device=device)
+        return [m_x, m_y, m_dy, m_indices]
+
+    if space_dict is None:
+        space_dict = {
+            "batch_size": [1, 4, 16, 32, 64],
+            "seq_length": [128],
+            "hidden_size": [768],
+            "vocab_size": [2, 512, 30522]
+        }
+
+    tune_op(sch_file, TakeDxModel, gen_arg_func, space_dict, device=device, fusion=True)
 
 
 def tune_all_ops(sch_file, device="cuda"):
@@ -362,5 +450,11 @@ def tune_all_ops(sch_file, device="cuda"):
     device: str
         The target device. Default cuda.
     """
-    for tune_func in [tune_softmax_dx, tune_layer_norm, tune_layer_norm_dx]:
+    for tune_func in [
+            tune_fused_take_dx,
+            tune_take_dx,
+            tune_softmax_dx,
+            tune_layer_norm,
+            tune_layer_norm_dx
+    ]:
         tune_func(sch_file, device=device)
