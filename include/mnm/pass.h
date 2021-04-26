@@ -228,5 +228,11 @@ TVM_DLL Pass CreateMNMFunctionPass(
  */
 Pass ToBasicBlockNormalForm();
 
+/*!
+ * \brief Inline the primitive ops into the call position in the A-normal form.
+ * \return The created pass.
+ */
+Pass InlinePrimitives();
+
 }  // namespace pass
 }  // namespace mnm

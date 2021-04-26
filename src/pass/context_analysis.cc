@@ -308,7 +308,7 @@ class ContextAnalyzer : public MixedModeVisitor {
     auto func = GetRef<Function>(fn);
     // No need to step into fused primitive functions as they are handled as
     // a whole.
-    if (fn->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+    if (fn->HasNonzeroAttr(attr::kPrimitive)) {
       return;
     }
 
@@ -404,7 +404,7 @@ class ContextAnalyzer : public MixedModeVisitor {
 
   // Check if a function is a closure.
   bool IsClosure(const Function& func) {
-    return func->GetAttr<Integer>(tvm::relay::attr::kClosure, 0) != 0;
+    return func->GetAttr<Integer>(attr::kClosure, 0) != 0;
   }
 
   // Check if a function is a currying function.

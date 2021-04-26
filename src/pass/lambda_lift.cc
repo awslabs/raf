@@ -25,7 +25,7 @@ inline std::string GenerateName(const Function& func) {
 }
 
 Function MarkClosure(Function func) {
-  return WithAttr(std::move(func), tvm::relay::attr::kClosure, tvm::Integer(1));
+  return WithAttr(std::move(func), attr::kClosure, tvm::Integer(1));
 }
 
 Expr ANFNormalizer(const Let& let) {
@@ -75,7 +75,7 @@ class LambdaLifter : public ExprMutator {
   Expr VisitExpr_(const LetNode* let_node) final {
     bool is_lambda = false;
     if (auto func = let_node->value.as<FunctionNode>()) {
-      if (!func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+      if (!func->HasNonzeroAttr(attr::kPrimitive)) {
         is_lambda = true;
         letrec_.push_back(let_node->var);
       }
@@ -106,7 +106,7 @@ class LambdaLifter : public ExprMutator {
     auto func = GetRef<Function>(func_node);
 
     // We should not transform primitive functions.
-    if (func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+    if (func->HasNonzeroAttr(attr::kPrimitive)) {
       return std::move(func);
     }
 

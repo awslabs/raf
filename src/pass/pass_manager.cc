@@ -232,8 +232,8 @@ IRModule MNMFunctionPassNode::operator()(IRModule mod, const PassContext& pass_c
 }
 
 bool MNMFunctionPassNode::SkipFunction(const Function& func) const {
-  return (func->GetAttr<String>(tvm::relay::attr::kCompiler).defined()) ||
-         func->GetAttr<Integer>(tvm::relay::attr::kSkipOptimization, 0) != 0;
+  return (func->GetAttr<String>(attr::kCompiler).defined()) ||
+         func->GetAttr<Integer>(attr::kSkipOptimization, 0) != 0;
 }
 
 Pass CreateMNMFunctionPass(

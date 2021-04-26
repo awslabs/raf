@@ -26,7 +26,7 @@ class BranchBodyLift : public MixedModeMutator {
 
   Expr VisitExpr_(const LetNode* let_node) final {
     if (auto func = let_node->value.as<FunctionNode>()) {
-      if (!func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+      if (!func->HasNonzeroAttr(attr::kPrimitive)) {
         closure_vars_.insert(let_node->var.get());
       }
     }

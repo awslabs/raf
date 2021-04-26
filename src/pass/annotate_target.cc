@@ -74,7 +74,7 @@ class AnnotateTargetRewriter : public ExprRewriter {
       Function func = Downcast<Function>(pre->op);
       CHECK(func.defined());
 
-      CHECK(func->GetAttr<String>(tvm::relay::attr::kComposite))
+      CHECK(func->GetAttr<String>(attr::kComposite))
           << "NotImplementedError: Composite Function Not Supported in Meta";
     }
     supported_targets.push_back("default");  // Make default as the last option.

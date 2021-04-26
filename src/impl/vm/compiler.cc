@@ -513,7 +513,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
   }
 
   void VisitExpr_(const FunctionNode* func_node) {
-    if (func_node->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+    if (func_node->HasNonzeroAttr(attr::kPrimitive)) {
       VisitExpr(MakeConstant(ClosureValue::make({}, GetRef<Function>(func_node))));
     } else {
       LOG(FATAL) << "local functions should have been removed by lambda lifting:" << std::endl

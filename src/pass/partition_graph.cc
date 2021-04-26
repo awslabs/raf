@@ -145,7 +145,7 @@ class PartitionFunction : public Object {
     Expr body = ell_.AsExpr();
     auto func = Function(params_array, body, {}, {});
     func = WithAttr(std::move(func), tvm::attr::kGlobalSymbol, tvm::runtime::String(func_name_));
-    func = WithAttr(std::move(func), tvm::relay::attr::kCompiler, tvm::runtime::String(target_));
+    func = WithAttr(std::move(func), attr::kCompiler, tvm::runtime::String(target_));
 
     // Insert the CallNode fot the function and TupleGetItemNode to get the outputs from partition
     // functions.

@@ -74,7 +74,7 @@ class ManifestAllocMutator : public ExprMutator {
   Expr VisitExpr_(const CallNode* node) {
     const auto* op = node->op.as<OpNode>();
     const auto* func = node->op.as<FunctionNode>();
-    if (op || func && func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+    if (op || func && func->HasNonzeroAttr(attr::kPrimitive)) {
       auto& scope = scopes_.back();
       Array<Expr> new_args;
       for (auto& arg : node->args) {
@@ -102,7 +102,7 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const FunctionNode* node) {
-    if (node->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+    if (node->HasNonzeroAttr(attr::kPrimitive)) {
       return GetRef<Expr>(node);
     } else {
       return ExprMutator::VisitExpr_(node);

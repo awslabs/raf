@@ -20,6 +20,7 @@ from ._internal import GradientInputSelection
 from ._internal import InferType
 from ._internal import InlineBackward
 from ._internal import InlineLet
+from ._internal import InlinePrimitives
 from ._internal import InplaceUpdate
 from ._internal import LambdaLift
 from ._internal import LiftBranchBody

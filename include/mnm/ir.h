@@ -157,6 +157,17 @@ using tvm::relay::ExprVisitor;
 using tvm::relay::MixedModeMutator;
 using tvm::relay::MixedModeVisitor;
 
+namespace attr {
+// Relay attributes
+using tvm::relay::attr::kClosure;
+using tvm::relay::attr::kCompiler;
+using tvm::relay::attr::kComposite;
+using tvm::relay::attr::kInline;
+using tvm::relay::attr::kPartitionedFromPattern;
+using tvm::relay::attr::kPrimitive;
+using tvm::relay::attr::kSkipOptimization;
+}  // namespace attr
+
 }  // namespace ir
 }  // namespace mnm
 

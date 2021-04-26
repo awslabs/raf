@@ -40,6 +40,8 @@ InferType = _APIS.get("mnm.pass_.InferType", None)
 InlineBackward = _APIS.get("mnm.pass_.InlineBackward", None)
 # Defined in ./src/pass/inline_let.cc
 InlineLet = _APIS.get("mnm.pass_.InlineLet", None)
+# Defined in ./src/pass/inline_primitives.cc
+InlinePrimitives = _APIS.get("mnm.pass_.InlinePrimitives", None)
 # Defined in ./src/pass/inplace_update.cc
 InplaceUpdate = _APIS.get("mnm.pass_.InplaceUpdate", None)
 # Defined in ./src/pass/lambda_lift.cc
