@@ -90,9 +90,9 @@ class ManifestAllocMutator : public ExprMutator {
         for (size_t i = 0; i < out_types.size(); i++) {
           outs.push_back(MakeStaticAllocation(&scope, out_types[i].as<TensorTypeNode>()));
         }
-        auto invoke =
-            Call(Op::Get("mnm.op.vm.invoke_op"),
-                 Array<Expr>{scope.Push(node->op), Tuple(new_args), Tuple(Array<Expr>(outs))});
+        auto invoke = Call(Op::Get("mnm.op.vm.invoke_op"),
+                           Array<Expr>{scope.Push(node->op), scope.Push(Tuple(new_args)),
+                                       scope.Push(Tuple(Array<Expr>(outs)))});
         scope.Push(invoke);
         return tvm::relay::ToTupleType(ret_type, outs);
       }

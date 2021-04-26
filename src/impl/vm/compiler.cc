@@ -304,6 +304,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     while (body->IsInstance<LetNode>()) {
       Let let = Downcast<Let>(body);
       DLOG(INFO) << PrettyPrint(let->value);
+      expr_map_[let->var] = let->value;
       this->VisitExpr(let->value);
       var_register_map_.insert({let->var, this->last_register_});
       body = let->body;
@@ -545,11 +546,21 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     VisitExpr(op);
     std::vector<Index> argument_registers;
     auto op_reg = last_register_;
-    auto input_tuple = inputs.as<TupleNode>();
+
+    CHECK(inputs.as<VarNode>() && outputs.as<VarNode>())
+        << "internal error: invoke_op inputs/outputs must be binded";
+
+    auto input_var = Downcast<Var>(inputs);
+    CHECK_GT(expr_map_.count(input_var), 0)
+        << "internal error: cannot find the input value in the expression map";
+    auto input_tuple = expr_map_[input_var].as<TupleNode>();
     CHECK(input_tuple) << "internal error: invoke_op inputs must be a tuple,"
                        << "please file a bug in the memory manifestation pass";
 
-    auto output_tuple = outputs.as<TupleNode>();
+    auto output_var = Downcast<Var>(outputs);
+    CHECK_GT(expr_map_.count(output_var), 0)
+        << "internal error: cannot find the output value in the expression map";
+    auto output_tuple = expr_map_[output_var].as<TupleNode>();
     CHECK(output_tuple) << "internal error: invoke_op outputs must be a tuple,"
                         << "please file a bug in the memory manifestation pass";
     for (auto input : input_tuple->fields) {
