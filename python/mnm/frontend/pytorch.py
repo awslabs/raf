@@ -49,6 +49,8 @@ def from_pytorch(model, shape_dict):
             if isinstance(out, list):
                 ordered_outs = [out[0][key] for key in self.od_model_output_keys if key in out[0]]
                 return tuple(ordered_outs)
+            if isinstance(out, dict):
+                return out.to_tuple()
             return out
 
     model = TraceWrapper(model)
