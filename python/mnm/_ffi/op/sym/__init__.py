@@ -10,6 +10,7 @@ from ._internal import adaptive_max_pool2d
 from ._internal import adaptive_max_pool2d_dx
 from ._internal import add
 from ._internal import adv_index
+from ._internal import adv_index_dx
 from ._internal import all
 from ._internal import any
 from ._internal import arange

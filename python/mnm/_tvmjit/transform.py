@@ -102,6 +102,40 @@ def adv_index_compute(attrs, inputs, output_type):  # pylint: disable=unused-arg
 _reg.register_injective_schedule("mnm.op.adv_index")
 
 
+@register_compute("mnm.op.adv_index_dx")
+def adv_index_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    # pylint: disable=unused-argument
+    # pylint: disable=invalid-name
+    # pylint: disable=unused-variable
+    dy = inputs[0]
+    data = inputs[1]
+    indices = inputs[2:]
+    idim = len(indices)
+    bshape = list(indices[0].shape)
+    for ind in indices[1:]:
+        bshape = max(bshape, list(ind.shape))
+
+    for i, ind in enumerate(indices):
+        if list(ind.shape) != bshape:
+            indices[i] = _topi.broadcast_to(ind, bshape)
+    shape = bshape + data.shape[:]
+    b_len = len(bshape)
+
+    def index_dx(*idx):
+        expr = idx[b_len] == indices[0][idx[:b_len]]
+        for i in range(1, idim):
+            tmp = idx[b_len + i] == indices[i][idx[:b_len]]
+            expr = expr & tmp
+        return _tvm.tir.if_then_else(expr, dy[idx[:b_len] + idx[b_len + idim:]],
+                                     _tvm.tir.const(0, dy.dtype))
+
+    A = _tvm.te.compute(shape, index_dx)
+    B = _topi.sum(A, axis=tuple(range(b_len)))
+    return [B]
+
+_reg.register_injective_schedule("mnm.op.adv_index_dx")
+
+
 @register_compute("mnm.op.clip_dx")
 def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     x = inputs[0]

@@ -81,6 +81,15 @@ Type AdvIndexInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.adv_index", "AdvIndex", AdvIndexInfer);
 
+Type AdvIndexDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<AdvIndexDxArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->inputs[0]));
+  return TupleType({x});
+}
+
+MNM_OP_TYPE("mnm.op.adv_index_dx", "AdvIndexDx", AdvIndexDxInfer);
+
 Type TransposeInfer(const CallValues& value) {
   const auto* args = value->args.as<TransposeArgs>();
   const std::vector<int64_t>& axes = args->axes;

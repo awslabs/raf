@@ -72,6 +72,22 @@ std::vector<std::string> AdvIndexSchemaArgNames(const op::CallValues& call) {
 MNM_TVMJIT(AdvIndex, "mnm.op.adv_index", AdvIndexArgs, AdvIndexSchema2Args, AdvIndexSchemaArgNames,
            GenericAttrs, GenericHasher);
 
+std::vector<Value> AdvIndexDxSchema2Args(const AdvIndexDxArgs* args) {
+  std::vector<Value> ret;
+  ret.push_back(args->dy);
+  for (auto v : args->inputs) {
+    ret.push_back(v);
+  }
+  return ret;
+}
+
+std::vector<std::string> AdvIndexDxSchemaArgNames(const op::CallValues& call) {
+  return {"dy", "inputs"};
+}
+
+MNM_TVMJIT(AdvIndexDx, "mnm.op.adv_index_dx", AdvIndexDxArgs, AdvIndexDxSchema2Args,
+           AdvIndexDxSchemaArgNames, GenericAttrs, GenericHasher);
+
 std::vector<Value> RepeatSchema2Args(const RepeatArgs* args) {
   return {args->x};
 }

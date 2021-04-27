@@ -18,6 +18,13 @@ class AdvIndexArgs : public ir::AttrsNode<AdvIndexArgs> {
   MNM_OP_SCHEMA(AdvIndexArgs, "mnm.args.adv_index");
 };
 
+class AdvIndexDxArgs : public ir::AttrsNode<AdvIndexDxArgs> {
+ public:
+  value::BaseTensorValue dy;
+  std::vector<value::BaseTensorValue> inputs;
+  MNM_OP_SCHEMA(AdvIndexDxArgs, "mnm.args.adv_index_dx");
+};
+
 class ArangeArgs : public ir::AttrsNode<ArangeArgs> {
  public:
   value::BaseTensorValue start;

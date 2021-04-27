@@ -347,6 +347,12 @@ SCHEMAS = {
             cxx_type="std::vector<value::BaseTensorValue>",
             cxx_normalizer="TensorTuple"),
     ],
+    "transform.h::adv_index_dx": [
+          Arg(name="dy", cxx_type="value::BaseTensorValue"),
+          Arg(name="inputs",
+              cxx_type="std::vector<value::BaseTensorValue>",
+              cxx_normalizer="TensorTuple"),
+     ],
     "transform.h::transpose": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axes",

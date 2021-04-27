@@ -13,6 +13,28 @@ namespace grad {
 
 using namespace mnm::ir;
 
+Array<Expr> AdvIndexGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                         const Expr& dy) {
+  static auto adv_index_dx = Op::Get("mnm.op.adv_index_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  auto inputs = call->args[0];
+  const Expr& ret = Call(adv_index_dx, {dy, inputs});
+  Array<Expr> tuple;
+  tuple.push_back(TupleGetItem(ret, 0));
+
+  int num_inputs = 1;
+  if (auto tuple_node = orig_args[0].as<TupleNode>()) {
+    num_inputs = tuple_node->fields.size();
+  }
+  for (int i = 1; i < num_inputs; i++) {
+    tuple.push_back(NullValue<Expr>());
+  }
+  return {tvm::relay::Tuple(tuple)};
+}
+
+MNM_OP_GRAD("mnm.op.adv_index", AdvIndexGrad);
+
 Array<Expr> BatchFlattenGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                              const Expr& dy) {
   static auto reshape = Op::Get("mnm.op.reshape");

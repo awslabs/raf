@@ -862,19 +862,23 @@ def test_adv_index(data_shape, index_shapes):
         def forward(self, x, index0, index1):
             return mnm.adv_index([x, index0, index1])
 
-    m_x, np_x = randn(data_shape)
-    np_indices = []
+    m_x, t_x = randn_torch(data_shape, requires_grad=True)
+    t_indices = []
     m_indices = []
     model = Index()
     for i, index_shape in enumerate(index_shapes):
         limit = data_shape[i]
         index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
-        np_indices.append(index)
+        t_indices.append(torch.tensor(index)) # pylint: disable=not-callable
         m_indices.append(mnm.array(index))
 
-    np_out = np_x[tuple(np_indices)]
+    t_out = t_x[tuple(t_indices)]
     m_out = model(m_x, m_indices[0], m_indices[1])
-    check(m_out, np_out)
+    check(m_out, t_out)
+    m_dy, t_dy = randn_torch(m_out.shape)
+    m_out.backward(m_dy)
+    t_out.backward(t_dy)
+    check(m_x.grad, t_x.grad)
 
 
 if __name__ == "__main__":

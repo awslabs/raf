@@ -50,6 +50,23 @@ class ANFNormalizer : public ExprMutator {
     return Normalize(ret);
   }
 
+  Expr VisitExpr_(const TupleNode* node) final {
+    tvm::Array<Expr> fields;
+    bool all_fields_unchanged = true;
+    for (auto field : node->fields) {
+      if (field.defined()) {
+        auto new_field = this->Mutate(field);
+        fields.push_back(new_field);
+        all_fields_unchanged &= new_field.same_as(field);
+      }
+    }
+    if (all_fields_unchanged) {
+      return GetRef<Expr>(node);
+    } else {
+      return Tuple(fields, node->span);
+    }
+  }
+
  private:
   LetList* ll_;
   std::unordered_map<Expr, Var, ObjectPtrHash, ObjectPtrEqual> vmap_;
@@ -213,7 +230,25 @@ struct Gradient : public ExprVisitor {
     // ensure intermediate results are bound to a relay::var
     ANFNormalizer normalizer(ll);
     for (int i = 0, n = ret.size(); i < n; ++i) {
+      // If a tuple contains null, we use tule_index to
+      // store the non-null item index
       if (ret[i].defined() && !ret[i]->IsInstance<VarNode>()) {
+        if (ret[i]->IsInstance<TupleNode>()) {
+          auto tuple = ret[i].as<TupleNode>();
+          bool has_null = false;
+          std::vector<int> index;
+          for (int i = 0; i < tuple->fields.size(); ++i) {
+            if (tuple->fields[i].defined()) {
+              index.push_back(i);
+            } else {
+              has_null = true;
+            }
+          }
+          if (has_null) {
+            auto args = call->args;
+            tuple_index[args[i].as<VarNode>()] = index;
+          }
+        }
         ret.Set(i, normalizer(ret[i]));
       }
     }
@@ -233,8 +268,17 @@ struct Gradient : public ExprVisitor {
           WriteBackInputGrad(var, 0, igrad);
         } else {
           CHECK_NE(tuple_length[var], -1);
-          for (int i = 0; i < tuple_length[var]; ++i) {
-            WriteBackInputGrad(var, i, ll->Push(TupleGetItem(igrad, i)));
+          // If tuple_index contains var, the corresponding
+          // gradient tuple has null value so we only take the
+          // non-null item index and perform WriteBackInputGrad
+          if (tuple_index.count(var)) {
+            for (int i : tuple_index[var]) {
+              WriteBackInputGrad(var, i, ll->Push(TupleGetItem(igrad, i)));
+            }
+          } else {
+            for (int i = 0; i < tuple_length[var]; ++i) {
+              WriteBackInputGrad(var, i, ll->Push(TupleGetItem(igrad, i)));
+            }
           }
         }
       } else if (!vars[i]->IsInstance<RelayConstantNode>()) {
@@ -427,6 +471,7 @@ struct Gradient : public ExprVisitor {
   const FunctionNode* func;
   std::unique_ptr<ExplicitLetList> ell{nullptr};
   std::unordered_map<const VarNode*, int> tuple_length;
+  std::unordered_map<const VarNode*, std::vector<int>> tuple_index;
   std::unordered_map<const VarNode*, Array<Expr>> tuple_grads;
   std::unordered_map<const VarNode*, Expr> var_to_expr;
   std::unordered_map<const VarNode*, bool> requires_grads;

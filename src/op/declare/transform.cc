@@ -73,6 +73,16 @@ MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
   call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
+MNM_OP_DECLARE("mnm.op.adv_index_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<AdvIndexDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->inputs[0];
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  TensorValue dx = TensorValue::Assemble(x->device, x->dtype, shape);
+  call->out = TupleValue::make(tvm::Array<Value>({dx}));
+  call->device = x->device;
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
 MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
