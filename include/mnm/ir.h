@@ -16,6 +16,8 @@
 #include "tvm/relay/op.h"
 #include "tvm/relay/op_attr_types.h"
 #include "tvm/relay/type.h"
+#include "tvm/relay/dataflow_pattern.h"
+#include "tvm/relay/dataflow_matcher.h"
 #include "tvm/ir/op.h"
 
 namespace mnm {
@@ -148,6 +150,19 @@ using tvm::relay::TypeRelation;
 using tvm::relay::TypeRelationNode;
 
 using tvm::relay::TypeReporter;
+
+// Relay Patterns
+using tvm::relay::DFPattern;
+using tvm::relay::DFPatternCallback;
+using tvm::relay::IsConstant;
+using tvm::relay::IsExpr;
+using tvm::relay::IsOp;
+using tvm::relay::IsTuple;
+using tvm::relay::IsTupleGetItem;
+using tvm::relay::IsVar;
+using tvm::relay::IsWildcard;
+using tvm::relay::MatchPattern;
+using tvm::relay::RewritePatterns;
 
 // Relay Functors
 using tvm::relay::ExprFunctor;

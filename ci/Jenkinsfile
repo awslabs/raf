@@ -8,6 +8,9 @@ mnm_multilib = "build/config.cmake, " +
                "build/lib/libtvm.so, " +
                "build/lib/libmnm.so"
 
+mnm_multilib_cutlass = mnm_multilib + ", " +
+                       "build/lib/libcutlass.so"
+
 def init_git_unix() {
   checkout scm
   retry(5) {
@@ -78,7 +81,7 @@ stage('Build') {
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_gpu, 'build')
-      pack_lib('gpu', mnm_multilib)
+      pack_lib('gpu', mnm_multilib_cutlass)
     }
   },
   'BUILD: CPU': {
@@ -105,7 +108,7 @@ stage('Unit Test') {
   parallel 'python3: GPU': {
     node('linux-gpu') {
       init_git_unix()
-      unpack_lib('gpu', mnm_multilib)
+      unpack_lib('gpu', mnm_multilib_cutlass)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_gpu} nvidia-smi -L"
         sh "${docker_run} ${ci_gpu} ./ci/task_python_unittest.sh"
@@ -124,7 +127,7 @@ stage('Unit Test') {
   'python3: multi-GPU': {
     node('linux-gpu-4x') {
       init_git_unix()
-      unpack_lib('gpu', mnm_multilib)
+      unpack_lib('gpu', mnm_multilib_cutlass)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_gpu} nvidia-smi -L"
         sh "${docker_run} ${ci_gpu} ./ci/task_python_distributed.sh"

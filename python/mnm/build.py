@@ -21,3 +21,7 @@ def with_nccl():
 def with_distributed():
     """Whether Distributed training is enabled."""
     return with_mpi() and with_nccl()
+
+def with_cutlass():
+    """Whether CUTLASS is enabled."""
+    return build_info.use_cutlass() != "OFF"

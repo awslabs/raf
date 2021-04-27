@@ -9,6 +9,8 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
+#include "mnm/base.h"
+
 #define CUDA_CALL(func)                                           \
   do {                                                            \
     cudaError_t e = (func);                                       \
@@ -29,3 +31,46 @@ inline const void* const_typed_addr() {
   static const T a = static_cast<T>(value);
   return static_cast<const void*>(&a);
 }
+
+template <int value>
+inline const void* const_addr(cudaDataType_t dt) {
+  switch (dt) {
+    case CUDA_R_8I:
+      return const_typed_addr<int8_t, value>();
+    case CUDA_R_8U:
+      return const_typed_addr<uint8_t, value>();
+    case CUDA_R_16F:
+      return const_typed_addr<__half, value>();
+    case CUDA_R_32F:
+      return const_typed_addr<float, value>();
+    case CUDA_R_64F:
+      return const_typed_addr<double, value>();
+    default:
+      LOG(FATAL) << "Not supported data type!";
+      throw;
+  }
+  LOG(FATAL) << "ValueError: Unknown error!\n";
+  throw;
+}
+
+namespace mnm {
+
+template <>
+inline DType::operator cudaDataType_t() const {
+  switch (code) {
+    case kDLInt:
+      if (bits == 8) return CUDA_R_8I;
+      break;
+    case kDLUInt:
+      if (bits == 8) return CUDA_R_8U;
+      break;
+    case kDLFloat:
+      if (bits == 16) return CUDA_R_16F;
+      if (bits == 32) return CUDA_R_32F;
+      if (bits == 64) return CUDA_R_64F;
+  }
+  LOG(FATAL) << "NotImplementedError: " << c_str();
+  throw;
+}
+
+}  // namespace mnm

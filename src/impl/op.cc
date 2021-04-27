@@ -113,7 +113,7 @@ FusedOpDispatch::TDispatchList* FusedOpDispatch::Get(DevType device_type) {
 std::shared_ptr<OpEnv> FusedOpDispatch::Dispatch(const CallValues& call) {
   const auto& func = Downcast<ClosureValue>(call->callee)->func;
   for (const auto& e : *FusedOpDispatch::Get(call->device.device_type)) {
-    const auto& maker = e.second;
+    const auto& maker = e.maker;
     std::shared_ptr<OpEnv> func_env(static_cast<OpEnv*>(maker(call)));
     if (func_env) {
       return func_env;
@@ -123,15 +123,27 @@ std::shared_ptr<OpEnv> FusedOpDispatch::Dispatch(const CallValues& call) {
 }
 
 FusedOpDispatch& FusedOpDispatch::add_dispatch(DevType device_type, const std::string& backend_name,
-                                               const FMakeFuncEnv& func_env_maker) {
+                                               const FMakeFuncEnv& func_env_maker, int plevel) {
   std::shared_ptr<TDispatchList> list = dispatch.Get(device_type);
   {
     std::lock_guard<std::mutex> lock(dispatch.mutex_);
-    if (list->count(backend_name)) {
-      LOG(FATAL) << "InternalError: fused functions"
-                 << " already have an implementation on backend " << backend_name;
+    for (auto e : *list) {
+      if (e.backend == backend_name) {
+        LOG(FATAL) << "InternalError: fused functions "
+                   << "already have an implementation on backend " << backend_name;
+      }
     }
-    (*list)[backend_name] = func_env_maker;
+    FuncEnvMaker maker = FuncEnvMaker{plevel, backend_name, func_env_maker};
+    auto it = list->begin();
+    for (; it != list->end(); ++it) {
+      if (plevel >= it->plevel) {
+        list->insert(it, maker);
+        break;
+      }
+    }
+    if (it == list->end()) {
+      list->push_back(maker);
+    }
   }
   return *this;
 }

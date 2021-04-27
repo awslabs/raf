@@ -99,7 +99,13 @@ class OpDispatch {
  */
 class FusedOpDispatch {
   using FMakeFuncEnv = std::function<OpEnv*(const CallValues& call)>;
-  using TDispatchList = std::unordered_map<std::string, FMakeFuncEnv>;
+
+  struct FuncEnvMaker {
+    int plevel;
+    std::string backend;
+    FMakeFuncEnv maker;
+  };
+  using TDispatchList = std::list<FuncEnvMaker>;
 
  private:
   FusedOpDispatch() = default;
@@ -110,9 +116,10 @@ class FusedOpDispatch {
    * \param device_type the device type
    * \param backend_name the backend name
    * \param op_env_maker a function that converts a call value into the corresponding op env
+   * \param plevel the backend priority. Backends with higher priority is preferred in dispatch.
    */
   FusedOpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
-                                const FMakeFuncEnv& op_env_maker);
+                                const FMakeFuncEnv& op_env_maker, int plevel = 10);
 
  public:
   /*! \brief get the FusedOpDispatch instance */
@@ -209,9 +216,13 @@ ir::Array<value::Value> GetListArgs(const ir::Attrs& attrs);
 #define MNM_OP_DISPATCH(op_name, op_env_maker, device_type, backend_name) \
   MNM_OP_DISPATCH_PLEVEL(op_name, op_env_maker, device_type, backend_name, 10)
 
+#define MNM_FUNC_DISPATCH_PLEVEL(func_env_maker, device_type, backend_name, plevel)              \
+  DMLC_STR_CONCAT(_MNM_FUNC_DISPATCH_DEF, __COUNTER__) =                                         \
+      ::mnm::op::FusedOpDispatch::Get()->add_dispatch(device_type, backend_name, func_env_maker, \
+                                                      plevel)
+
 #define MNM_FUNC_DISPATCH(func_env_maker, device_type, backend_name) \
-  DMLC_STR_CONCAT(_MNM_FUNC_DISPATCH_DEF, __COUNTER__) =             \
-      ::mnm::op::FusedOpDispatch::Get()->add_dispatch(device_type, backend_name, func_env_maker)
+  MNM_FUNC_DISPATCH_PLEVEL(func_env_maker, device_type, backend_name, 10)
 
 #define MNM_OP_SCHEMA(class_name, type_key)          \
   static constexpr const char* _type_key = type_key; \
