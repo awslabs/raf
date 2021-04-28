@@ -72,8 +72,8 @@ class MemoryShareMutator : public ExprMutator {
     for (int i = 0; i < n; ++i) {
       const auto* var = static_cast<const ExtendedVarNode*>(vars[i].operator->());
       if (var->may_share.defined()) {
-        Var fout = analyzer_.GetTensorVar(vars[i]);
-        Var fin = analyzer_.GetTensorVar(var->may_share);
+        Var fout = *analyzer_.GetTensorVars(vars[i]).begin();
+        Var fin = *analyzer_.GetTensorVars(var->may_share).begin();
         CHECK(fout.defined());
         CHECK(fin.defined());
         fout = analyzer_.Find(fout);

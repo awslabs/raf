@@ -56,7 +56,8 @@ class LetList {
    * \return a Var that hold the inserted expr.
    */
   Var Push(Expr expr, Type ty) {
-    return Push(mnm::ir::MakeVar("x", ty), expr);
+    std::string fullname = "x_" + std::to_string(label_++);
+    return Push(mnm::ir::MakeVar(fullname, ty), expr);
   }
 
   /*!
@@ -120,6 +121,7 @@ class LetList {
 
  private:
   std::vector<std::pair<Var, Expr> > lets_;
+  int64_t label_ = 0;
   bool used_ = false;
 };
 

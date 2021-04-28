@@ -67,24 +67,36 @@ class LivenessAnalyzer {
   LivenessAnalyzer(const Function& func) : func_(func) {
   }
 
-  void Run();
+  MapVSet Run();
 
   bool IsSuccess() {
     return !failure_;
   }
 
-  MapVSet Results() {
-    return inv_live_;
+  /* \brief Get live in tensors of the given line (var). */
+  VSet GetLiveVars(const Var& x) {
+    if (live_.count(x) == 0) {
+      return VSet();
+    }
+    return live_.at(x);
   }
 
-  /*! \brief Get the dummy tensor variable created by CreateTensor.
-             Undefined if no 1:1 correspondence */
-  Var GetTensorVar(const Var& x) {
-    const VSet& vset = vset_.at(x);
-    if (vset.size() != 1) {
-      return Var();
+  /*! \brief Get the dummy tensor variables created by CreateTensor. */
+  Array<Var> GetTensorVars(const Var& x) {
+    if (vtuple_.count(x) > 0) {
+      // Return the dummy tensors in order when x is a tuple
+      return vtuple_[x];
     }
-    return *vset.begin();
+
+    Array<Var> ret;
+    if (vset_.count(x) == 0) {
+      return ret;
+    }
+    CHECK(vset_.find(x) != vset_.end());
+    for (auto var : vset_.at(x)) {
+      ret.push_back(var);
+    }
+    return ret;
   }
 
   /*! \brief Union-find Forest: Get root in Union-find Forest */
@@ -103,12 +115,16 @@ class LivenessAnalyzer {
     Var fx = Find(x);
     Var fy = Find(y);
     union_find_forest_[fx] = fy;
+    CHECK_GT(inv_live_.count(fx), 0);
+    CHECK_GT(inv_live_.count(fy), 0);
     inv_live_[fy].insert(inv_live_.at(fx).begin(), inv_live_.at(fx).end());
     return fy;
   }
 
   /*! \brief check if inv_live_[x] and inv_live_[y] intersects or not */
   bool Intersect(const Var& x, const Var& y) {
+    CHECK_GT(inv_live_.count(x), 0);
+    CHECK_GT(inv_live_.count(y), 0);
     const VSet& sx = inv_live_.at(x);
     const VSet& sy = inv_live_.at(y);
     for (const auto& v : sx) {
@@ -147,6 +163,16 @@ class LivenessAnalyzer {
       os << DebugDump_(vset, v);
     }
     return os.str();
+  }
+
+  /*! \brief Debug output: live_ */
+  std::string DebugDumpLiveIn() {
+    return DebugDump(live_);
+  }
+
+  /*! \brief Debug output: vset_ */
+  std::string DebugDumpDummyVars() {
+    return DebugDump(vset_);
   }
 
  private:
@@ -192,6 +218,15 @@ class LivenessAnalyzer {
 
   /*! \brief Remove vset_[v2] from vset_[v1] */
   Var Remove(Var v1, Var v2) {
+    bool v1_legel = (v1.defined() && vset_.find(v1) != vset_.end());
+    bool v2_legel = (v2.defined() && vset_.find(v2) != vset_.end());
+    if (v1_legel && !v2_legel) {
+      // v1 - v2 = v1 - null = v1
+      return v1;
+    } else if (!v1_legel) {
+      // null - v2 = null
+      return Var();
+    }
     const VSet& vset1 = vset_.at(v1);
     const VSet& vset2 = vset_.at(v2);
     Var rs = CreateTensorVar("rs");
@@ -201,6 +236,13 @@ class LivenessAnalyzer {
 
   /*! \brief Merge vset_[v1] and vset_[v2] */
   Var Merge(Var v1, Var v2) {
+    bool v1_legel = (v1.defined() && vset_.find(v1) != vset_.end());
+    bool v2_legel = (v2.defined() && vset_.find(v2) != vset_.end());
+    if (!v1_legel && !v2_legel) {
+      return Var();
+    } else if (!v1_legel || !v2_legel) {
+      return (v1_legel) ? v1 : v2;
+    }
     const VSet& vset1 = vset_.at(v1);
     const VSet& vset2 = vset_.at(v2);
     Var ms = CreateTensorVar("ms");
@@ -356,6 +398,7 @@ class LivenessAnalyzer::ForwardAnalyzer : public ExprVisitor {
       : body_(body), ell_(ExplicitLetList::make(body)), analyzer_(analyzer) {
   }
 
+  void VisitExpr_(const VarNode* node) override;
   void VisitExpr_(const FunctionNode* node) override;
   void VisitExpr_(const CallNode* node) override;
   void VisitExpr_(const TupleNode* node) override;
@@ -381,6 +424,7 @@ class LivenessAnalyzer::BackwardAnalyzer : public ExprVisitor {
       : body_(body), ell_(ExplicitLetList::make(body)), analyzer_(analyzer) {
   }
 
+  void VisitExpr_(const VarNode* node) override;
   void VisitExpr_(const FunctionNode* node) override;
   void VisitExpr_(const CallNode* node) override;
   void VisitExpr_(const TupleNode* node) override;
@@ -395,6 +439,7 @@ class LivenessAnalyzer::BackwardAnalyzer : public ExprVisitor {
              live(l + 1, x) && !define(l, x) => live(l, x) */
   Var MergeLive(const Var& cur, const Var& def = Var()) {
     Var next_line_var = analyzer_->CreateTensorVar("ml");
+    CHECK(analyzer_->live_.find(next_var_) != analyzer_->live_.end());
     analyzer_->vset_[next_line_var] = analyzer_->live_.at(next_var_);
     Var remain = next_line_var;
     if (def.defined()) {

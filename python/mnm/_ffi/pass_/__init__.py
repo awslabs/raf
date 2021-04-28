@@ -24,6 +24,7 @@ from ._internal import InlinePrimitives
 from ._internal import InplaceUpdate
 from ._internal import LambdaLift
 from ._internal import LiftBranchBody
+from ._internal import LivenessAnalysis
 from ._internal import MNMSequential
 from ._internal import ManifestAlloc
 from ._internal import MemShare

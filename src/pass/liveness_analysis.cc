@@ -14,35 +14,55 @@
 
 namespace mnm {
 namespace pass {
+
+using PackedLiveInMap = Map<Var, Array<Var>>;
+
 namespace liveness_analysis {
 
-void LivenessAnalyzer::Run() {
+MapVSet LivenessAnalyzer::Run() {
   Expr body;
   FormCheck(func_->body);
   if (failure_) {
-    return;
+    return live_;
   }
 
-  // TODO(@hzfan): support TupleType params
   for (const auto& var : func_->params) {
-    CHECK(var->checked_type().as<TensorTypeNode>());
-    Var tvar = CreateTensor("param");
-    Init(var, tvar);
+    auto var_type = var->checked_type();
+    if (var_type.as<TensorTypeNode>()) {
+      Var tvar = CreateTensor("param");
+      Init(var, tvar);
+    } else if (const auto& tuple_type = var_type.as<TupleTypeNode>()) {
+      Array<Var> fields;
+      for (const auto& field : tuple_type->fields) {
+        CHECK(field.as<TensorTypeNode>())
+            << "Expected a tensor in tuple parameter, but got " << field->GetTypeKey();
+        Var tvar = CreateTensor("param");
+        fields.push_back(tvar);
+      }
+      Init(var, Merge(fields));
+      vtuple_.Set(var, fields);
+    } else {
+      LOG(FATAL) << "NotImplementedError: Unsupported parameter type: " << var->GetTypeKey();
+    }
   }
+
   // forward analysis
   Forward(func_->body);
+
   // backward analysis
   Var dummy = CreateNull();
   live_[dummy] = {};
   Backward(func_->body, dummy);
+
   // init find
   for (const auto& kv : vset_) {
     const Var& var = kv.first;
-    const Var& tensor = GetTensorVar(var);
-    if (tensor.defined() && tensor == var) {
+    const auto& tensors = GetTensorVars(var);
+    if (tensors.size() == 1 && *tensors.begin() == var) {
       union_find_forest_[var] = var;
     }
   }
+
   // init inv
   for (const auto& kv : live_) {
     const Var& k = kv.first;
@@ -51,12 +71,13 @@ void LivenessAnalyzer::Run() {
       inv_live_[v].insert(k);
     }
   }
+
   // mandatory memory sharing
   CHECK_EQ(var_out_.size(), var_in_.size());
   int m = var_out_.size();
   for (int i = 0; i < m; ++i) {
-    Var fout = GetTensorVar(var_out_[i]);
-    Var fin = GetTensorVar(var_in_[i]);
+    Var fout = *GetTensorVars(var_out_[i]).begin();
+    Var fin = *GetTensorVars(var_in_[i]).begin();
     CHECK(fout.defined());
     CHECK(fin.defined());
     fout = Find(fout);
@@ -73,19 +94,20 @@ void LivenessAnalyzer::Run() {
       Unite(fin, fout);
     }
   }
-  return;
+
+  return live_;
 }
 
 void LivenessAnalyzer::FormChecker::VisitExpr_(const CallNode* node) {
   if (!node->op.as<OpNode>()) {
-    // assumes no closure invoke
+    // Do not support closure yet.
     analyzer_->failure_ = true;
   } else {
     const Array<Expr>& args = node->args;
     Array<Var> vargs;
     for (const auto& arg : node->args) {
       if (arg.as<VarNode>() == nullptr && arg.as<ConstantNode>() == nullptr) {
-        // assumes ANF
+        // Only support ANF with exceptions of Constant
         analyzer_->failure_ = true;
       }
     }
@@ -94,9 +116,15 @@ void LivenessAnalyzer::FormChecker::VisitExpr_(const CallNode* node) {
 
 void LivenessAnalyzer::FormChecker::VisitExpr_(const IfNode* node) {
   if (node->cond.as<VarNode>() == nullptr) {
-    // assumes ANF
+    // Only support ANF.
     analyzer_->failure_ = true;
   }
+}
+
+void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const VarNode* node) {
+  auto vars = analyzer_->GetTensorVars(GetRef<Var>(node));
+  CHECK_EQ(vars.size(), 1U);
+  analyzer_->Init(let_var_, vars[0]);
 }
 
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const FunctionNode* node) {
@@ -129,7 +157,11 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const CallNode* node) {
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const TupleNode* node) {
   Array<Var> fields;
   for (const auto& field : node->fields) {
-    Var var = Downcast<Var>(field);
+    Var var;
+    if (field.as<VarNode>()) {
+      // Ignore constant fields (e.g., NoGradValue)
+      var = Downcast<Var>(field);
+    }
     fields.push_back(var);
   }
   analyzer_->Init(let_var_, analyzer_->Merge(fields));
@@ -137,7 +169,9 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const TupleNode* node) {
 }
 
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const TupleGetItemNode* node) {
-  Var var = analyzer_->vtuple_.at(Downcast<Var>(node->tuple))[node->index];
+  auto tuple = Downcast<Var>(node->tuple);
+  CHECK(analyzer_->vtuple_.find(tuple) != analyzer_->vtuple_.end());
+  Var var = analyzer_->vtuple_.at(tuple)[node->index];
   analyzer_->Init(let_var_, var);
 }
 
@@ -156,6 +190,8 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const IfNode* node) {
 
 void LivenessAnalyzer::ForwardAnalyzer::Match(Var v1, Var v2) {
   if (analyzer_->vtuple_.count(v1) > 0) {
+    CHECK(analyzer_->vtuple_.find(v1) != analyzer_->vtuple_.end());
+    CHECK(analyzer_->vtuple_.find(v2) != analyzer_->vtuple_.end());
     Array<Var> v1t = analyzer_->vtuple_.at(v1);
     Array<Var> v2t = analyzer_->vtuple_.at(v2);
     Array<Var> fields;
@@ -174,12 +210,25 @@ Var LivenessAnalyzer::ForwardAnalyzer::Run() {
   const auto& exprs = ell_->exprs;
   CHECK_EQ(vars.size(), exprs.size());
   int n = exprs.size();
-  // forward analysis
+
+  // Forward analysis
   for (int i = 0; i < n; ++i) {
     let_var_ = vars[i];
+
+    // We need to handle OpNode here, because all OpNodes with the same op point to
+    // the same reference, so only the first OpNode will be visited.
+    if (exprs[i].as<OpNode>()) {
+      analyzer_->Init(let_var_, analyzer_->CreateNull("op"));
+    }
     ExprVisitor::VisitExpr(exprs[i]);
   }
   return ell_->ret;
+}
+
+void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const VarNode* node) {
+  auto vars = analyzer_->GetTensorVars(GetRef<Var>(node));
+  CHECK_EQ(vars.size(), 1U);
+  analyzer_->live_[let_var_] = analyzer_->vset_[MergeLive(vars[0])];
 }
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const FunctionNode* node) {
@@ -196,7 +245,7 @@ void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const CallNode* node) {
       if (arg.as<VarNode>()) {
         // use %arg
         vargs.push_back(Downcast<Var>(arg));
-      } else if (arg.as<ConstantNode>()) {
+      } else if (arg.as<ConstantNode>() || arg.as<OpNode>()) {
         // use nothing
       } else {
         LOG(FATAL) << "NotImplementedError: unsupported args: " << arg->GetTypeKey();
@@ -242,13 +291,25 @@ void LivenessAnalyzer::BackwardAnalyzer::Run(Var next_var) {
   const auto& exprs = ell_->exprs;
   CHECK_EQ(vars.size(), exprs.size());
   int n = exprs.size();
-  // backward analysis
+
+  // Backward analysis
   next_var_ = next_var;
   Var dummy = analyzer_->CreateNull();
   analyzer_->live_[dummy] = analyzer_->vset_[MergeLive(ell_->ret)];
   for (int i = n - 1; i >= 0; --i) {
     let_var_ = vars[i];
     next_var_ = i == n - 1 ? dummy : vars[i + 1];
+
+    // We need to handle OpNode here, because all OpNodes with the same op point to
+    // the same reference, so only the first OpNode will be visited.
+    if (exprs[i].as<OpNode>()) {
+      auto dummy_vars = analyzer_->GetTensorVars(next_var_);
+      Var d1 = analyzer_->Merge(dummy_vars);
+      Var d2 = MergeLive(d1, next_var_);
+      analyzer_->live_[let_var_] = analyzer_->vset_[d2];
+    } else {
+      CHECK_GT(analyzer_->live_.count(next_var_), 0);
+    }
     ExprVisitor::VisitExpr(exprs[i]);
   }
 }
@@ -270,5 +331,29 @@ Var LivenessAnalyzer::CreateTensorVar(const Type& type) {
 }
 
 }  // namespace liveness_analysis
+
+liveness_analysis::MapVSet LivenessAnalysis(const IRModule& mod) {
+  auto entry = mod->GetGlobalVar("main");
+  auto func = Downcast<Function>(mod->Lookup(entry));
+  auto la = liveness_analysis::LivenessAnalyzer(func);
+  return la.Run();
+}
+
+// Put the live in set to an Array as std::unordered_set is not in the object system.
+PackedLiveInMap LivenessAnalysisPacked(const IRModule& mod) {
+  PackedLiveInMap ret;
+  auto res = LivenessAnalysis(mod);
+  for (const auto& it : res) {
+    Array<Var> vars;
+    for (const auto& var : it.second) {
+      vars.push_back(var);
+    }
+    ret.Set(it.first, vars);
+  }
+  return ret;
+}
+
+MNM_REGISTER_GLOBAL("mnm.pass_.LivenessAnalysis").set_body_typed(LivenessAnalysisPacked);
+
 }  // namespace pass
 }  // namespace mnm

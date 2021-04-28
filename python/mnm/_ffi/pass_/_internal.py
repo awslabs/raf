@@ -48,6 +48,8 @@ InplaceUpdate = _APIS.get("mnm.pass_.InplaceUpdate", None)
 LambdaLift = _APIS.get("mnm.pass_.LambdaLift", None)
 # Defined in ./src/pass/lift_branch_body.cc
 LiftBranchBody = _APIS.get("mnm.pass_.LiftBranchBody", None)
+# Defined in ./src/pass/liveness_analysis.cc
+LivenessAnalysis = _APIS.get("mnm.pass_.LivenessAnalysis", None)
 # Defined in ./src/pass/pass_manager.cc
 MNMSequential = _APIS.get("mnm.pass_.MNMSequential", None)
 # Defined in ./src/pass/manifest_alloc.cc
