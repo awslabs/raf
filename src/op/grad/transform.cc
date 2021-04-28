@@ -265,6 +265,20 @@ Array<Expr> TakeGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
 
 MNM_OP_GRAD("mnm.op.take", TakeGrad);
 
+Array<Expr> ScatterGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                        const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.scatter_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_EQ(call->args.size(), 4);
+  const Expr& x = call->args[0];
+  const Expr& index = call->args[1];
+  const Expr& src = call->args[2];
+  const Expr& axis = call->args[3];
+  return {Call(op_dx, {x, y, dy, index, src, axis})};
+}
+
+MNM_OP_GRAD("mnm.op.scatter", ScatterGrad);
+
 Array<Expr> CastGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.cast_like");

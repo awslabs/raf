@@ -2,6 +2,7 @@
 """Compute definition and schedules for data transform operators"""
 from mnm._tvmjit.nn import schedule_layer_norm
 from .._lib import register_compute
+from .._lib import strategy
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
@@ -66,6 +67,25 @@ def mesh_grid_compute(attrs, inputs, output_type): # pylint: disable=unused-argu
         out.append(_tvm.te.compute(target_shape, fbroadcast))
     return out
 
+@register_compute("mnm.op.scatter_dx")
+def scatter_dx_like_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, line-too-long
+    x = inputs[0]
+    y = inputs[1]
+    dy = inputs[2]
+    index = inputs[3]
+    src = inputs[4]
+    for i in range(len(index.shape)):
+        #gradient only implement for index and src tensor shape are the same
+        assert index.shape[i] == src.shape[i]
+
+    def fcompute(*args):
+        return _tvm.tir.if_then_else(x[args] == y[args], dy[args], _tvm.tir.const(0, dy.dtype))
+    out = _tvm.te.compute(shape=x.shape, fcompute=fcompute)
+    return [out]
+
+
+_reg.register_strategy("mnm.op.scatter", strategy.scatter_strategy)
+_reg.register_injective_schedule("mnm.op.scatter_dx")
 _reg.register_injective_schedule("mnm.op.transpose_dx")
 _reg.register_injective_schedule("mnm.op.transpose")
 _reg.register_injective_schedule("mnm.op.swap_axis")

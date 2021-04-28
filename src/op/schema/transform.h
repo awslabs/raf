@@ -128,6 +128,26 @@ class ReverseArgs : public ir::AttrsNode<ReverseArgs> {
   MNM_OP_SCHEMA(ReverseArgs, "mnm.args.reverse");
 };
 
+class ScatterArgs : public ir::AttrsNode<ScatterArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue index;
+  value::BaseTensorValue src;
+  value::Value axis;
+  MNM_OP_SCHEMA(ScatterArgs, "mnm.args.scatter");
+};
+
+class ScatterDxArgs : public ir::AttrsNode<ScatterDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue y;
+  value::BaseTensorValue dy;
+  value::BaseTensorValue index;
+  value::BaseTensorValue src;
+  value::Value axis;
+  MNM_OP_SCHEMA(ScatterDxArgs, "mnm.args.scatter_dx");
+};
+
 class StridedSliceArgs : public ir::AttrsNode<StridedSliceArgs> {
  public:
   value::BaseTensorValue x;

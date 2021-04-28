@@ -158,6 +158,8 @@ static const char reverse_sequence[] = "mnm.op.reverse_sequence";
 static const char right_shift[] = "mnm.op.right_shift";
 static const char round[] = "mnm.op.round";
 static const char rsqrt[] = "mnm.op.rsqrt";
+static const char scatter[] = "mnm.op.scatter";
+static const char scatter_dx[] = "mnm.op.scatter_dx";
 static const char sequence_mask[] = "mnm.op.sequence_mask";
 static const char sgd[] = "mnm.op.sgd";
 static const char shape[] = "mnm.op.shape";
@@ -723,6 +725,26 @@ Attrs ReverseSequence(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, sequence_length);
   MNM_POD(2, ffi2schema::Int, seq_axis);
   MNM_POD(3, ffi2schema::Int, batch_axis);
+  return Attrs(attrs);
+}
+
+Attrs Scatter(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ScatterArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, index);
+  MNM_TAPE(2, ffi2schema::Tensor, src);
+  MNM_TAPE(3, ffi2schema::ArrayLike, axis);
+  return Attrs(attrs);
+}
+
+Attrs ScatterDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ScatterDxArgs, 6);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, y);
+  MNM_TAPE(2, ffi2schema::Tensor, dy);
+  MNM_TAPE(3, ffi2schema::Tensor, index);
+  MNM_TAPE(4, ffi2schema::Tensor, src);
+  MNM_TAPE(5, ffi2schema::ArrayLike, axis);
   return Attrs(attrs);
 }
 
@@ -2187,6 +2209,30 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.rsqrt").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.scatter").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(scatter, 4, ffi2schema::Scatter,
+              schema::ScatterArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->index));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->src));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.scatter_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(scatter_dx, 6, ffi2schema::ScatterDx,
+              schema::ScatterDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[3], schema2value::Tensor(schema->index));
+  MNM_SET_ENV(vpack->x[4], schema2value::Tensor(schema->src));
+  MNM_SET_ENV(vpack->x[5], schema2value::ArrayLike(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.sequence_mask").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(sequence_mask, 4, ffi2schema::SequenceMask,
               schema::SequenceMaskArgs);  // NOLINT(whitespace/line_length)
@@ -3109,6 +3155,26 @@ Array<Expr> ReverseSequence(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Scatter(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, index);
+  MNM_ARG(2, ffi2expr::Tensor, src);
+  MNM_ARG(3, ffi2expr::ArrayLike, axis);
+  MNM_RET();
+}
+
+Array<Expr> ScatterDx(const TVMArgs& values) {
+  MNM_PRELUDE(6);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, y);
+  MNM_ARG(2, ffi2expr::Tensor, dy);
+  MNM_ARG(3, ffi2expr::Tensor, index);
+  MNM_ARG(4, ffi2expr::Tensor, src);
+  MNM_ARG(5, ffi2expr::ArrayLike, axis);
+  MNM_RET();
+}
+
 Array<Expr> SequenceMask(const TVMArgs& values) {
   MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -3516,6 +3582,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.right_shift")
     .set_body(MNM_SYMBOLIC_API(right_shift, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.round").set_body(MNM_SYMBOLIC_API(round, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.rsqrt").set_body(MNM_SYMBOLIC_API(rsqrt, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.scatter").set_body(MNM_SYMBOLIC_API(scatter, 4, Scatter));
+MNM_REGISTER_GLOBAL("mnm.op.sym.scatter_dx").set_body(MNM_SYMBOLIC_API(scatter_dx, 6, ScatterDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sequence_mask")
     .set_body(MNM_SYMBOLIC_API(sequence_mask, 4, SequenceMask));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sgd").set_body(MNM_SYMBOLIC_API(sgd, 5, Sgd));
@@ -4165,6 +4233,28 @@ Attrs ReverseSequence(const Array<Value>& values) {
   MNM_REQUIRED(1, value2schema::Tensor, sequence_length);
   MNM_OPTIONAL(2, value2schema::Int, seq_axis);
   MNM_OPTIONAL(3, value2schema::Int, batch_axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Scatter(const Array<Value>& values) {
+  MNM_PRELUDE(4, 4, schema::ScatterArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, index);
+  MNM_REQUIRED(2, value2schema::Tensor, src);
+  MNM_REQUIRED(3, value2schema::ArrayLike, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs ScatterDx(const Array<Value>& values) {
+  MNM_PRELUDE(6, 6, schema::ScatterDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, y);
+  MNM_REQUIRED(2, value2schema::Tensor, dy);
+  MNM_REQUIRED(3, value2schema::Tensor, index);
+  MNM_REQUIRED(4, value2schema::Tensor, src);
+  MNM_REQUIRED(5, value2schema::ArrayLike, axis);
   return Attrs(attrs);
 }
 
@@ -5419,6 +5509,48 @@ int ReverseSequence(const std::string& field) {
 }
 
 template <const char* op_name>
+int Scatter(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "index") {
+    return 1;
+  }
+  if (field == "src") {
+    return 2;
+  }
+  if (field == "axis") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ScatterDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "index") {
+    return 3;
+  }
+  if (field == "src") {
+    return 4;
+  }
+  if (field == "axis") {
+    return 5;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int SequenceMask(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -6324,6 +6456,14 @@ MNM_BIND_SCHEMA("mnm.op.rsqrt", names::rsqrt,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.rsqrt", names::rsqrt,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.scatter", names::scatter,
+                value2schema::Scatter);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.scatter", names::scatter,
+                            schema_field_idx::Scatter);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.scatter_dx", names::scatter_dx,
+                value2schema::ScatterDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.scatter_dx", names::scatter_dx,
+                            schema_field_idx::ScatterDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sequence_mask", names::sequence_mask,
                 value2schema::SequenceMask);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sequence_mask", names::sequence_mask,
@@ -6555,6 +6695,8 @@ MNM_REGISTER_OBJECT_REFLECT(RepeatDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseSequenceArgs);
+MNM_REGISTER_OBJECT_REFLECT(ScatterArgs);
+MNM_REGISTER_OBJECT_REFLECT(ScatterDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);

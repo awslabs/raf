@@ -31,15 +31,16 @@ __all__ = [
     "one_hot", "ones", "ones_like", "pad", "power",
     "prod", "prod_dx", "relu", "relu_dx", "repeat",
     "repeat_dx", "reshape", "reverse", "reverse_sequence", "right_shift",
-    "round", "rsqrt", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op",
-    "where", "where_dx", "zeros", "zeros_like",
+    "round", "rsqrt", "scatter", "scatter_dx", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
+    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
+    "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
+    "threefry_split", "transpose", "transpose_dx", "trunc", "vm_alloc_storage",
+    "vm_alloc_tensor", "vm_invoke_op", "where", "where_dx", "zeros",
+    "zeros_like",
 ]
 
 @set_module("mnm")
@@ -898,6 +899,24 @@ def round(x):
 def rsqrt(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.rsqrt(x))
+
+@set_module("mnm")
+def scatter(x, index, src, axis):
+    x = imp_utils.to_tensor(x)
+    index = imp_utils.to_tensor(index)
+    src = imp_utils.to_tensor(src)
+    axis = imp_utils.to_any(axis)
+    return imp_utils.ret(ffi.scatter(x, index, src, axis))
+
+@set_module("mnm")
+def scatter_dx(x, y, dy, index, src, axis):
+    x = imp_utils.to_tensor(x)
+    y = imp_utils.to_tensor(y)
+    dy = imp_utils.to_tensor(dy)
+    index = imp_utils.to_tensor(index)
+    src = imp_utils.to_tensor(src)
+    axis = imp_utils.to_any(axis)
+    return imp_utils.ret(ffi.scatter_dx(x, y, dy, index, src, axis))
 
 @set_module("mnm")
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):

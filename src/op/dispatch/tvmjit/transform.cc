@@ -443,6 +443,74 @@ HashKey SplitHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Split, "mnm.op.split", SplitArgs, SplitSchema2Args, SplitSchemaArgNames,
            SplitSchema2Attrs, SplitHasher);
 
+std::vector<Value> ScatterSchema2Args(const ScatterArgs* args) {
+  return {args->x, args->index, args->src};
+}
+
+std::vector<std::string> ScatterSchemaArgNames(const op::CallValues& call) {
+  return {"x", "index", "src"};
+}
+
+Attrs ScatterSchema2Attrs(const ScatterArgs* args) {
+  auto attrs = make_object<ScatterAttrs>();
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    attrs->axis = v->value;
+  } else {
+    attrs->axis = NullValue<Integer>();
+  }
+  return Attrs(attrs);
+}
+
+HashKey ScatterHasher(const std::vector<Type>& param_types, const Type& y_type,
+                      const ScatterArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    key << v->value;
+  }
+  return key;
+}
+
+MNM_TVMJIT(Scatter, "mnm.op.scatter", ScatterArgs, ScatterSchema2Args, ScatterSchemaArgNames,
+           ScatterSchema2Attrs, ScatterHasher);
+
+std::vector<Value> ScatterDxSchema2Args(const ScatterDxArgs* args) {
+  return {args->x, args->y, args->dy, args->index, args->src};
+}
+
+std::vector<std::string> ScatterDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "y", "dy", "index", "src"};
+}
+
+Attrs ScatterDxSchema2Attrs(const ScatterDxArgs* args) {
+  auto attrs = make_object<ScatterAttrs>();
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    attrs->axis = v->value;
+  } else {
+    attrs->axis = NullValue<Integer>();
+  }
+  return Attrs(attrs);
+}
+
+HashKey ScatterDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                        const ScatterDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    key << v->value;
+  }
+  return key;
+}
+
+MNM_TVMJIT(ScatterDx, "mnm.op.scatter_dx", ScatterDxArgs, ScatterDxSchema2Args,
+           ScatterDxSchemaArgNames, ScatterDxSchema2Attrs, ScatterDxHasher);
+
 std::vector<Value> ConcatenateSchema2Args(const ConcatenateArgs* args) {
   std::vector<Value> ret;
   for (auto v : args->x) {

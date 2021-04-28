@@ -670,6 +670,47 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
   call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.scatter", [](const CallValues& call) {
+  const auto* args = call->args.as<ScatterArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* index = args->index;
+  DLTensor* src_tensor = args->src;
+  int64_t axis = (args->axis.as<IntValueObj>())->value;
+
+  CHECK_EQ(x->ndim, index->ndim);
+  std::vector<int64_t> x_shape(x->shape, x->shape + x->ndim);
+  std::vector<int64_t> index_shape(index->shape, index->shape + index->ndim);
+  for (int64_t i = 0; i < index->ndim; i++) {
+    if (i == axis) continue;
+    CHECK_LE(index_shape[i], x_shape[i])
+        << "The dimension " << i << "of index must be less than that of x";
+  }
+
+  std::vector<int64_t> src_shape(src_tensor->shape, src_tensor->shape + src_tensor->ndim);
+  CHECK_EQ(src_tensor->ndim, index->ndim);
+  for (int64_t i = 0; i < index->ndim; i++) {
+    CHECK_LE(index_shape[i], src_shape[i])
+        << "The dimension " << i << "of index must be less that that of src";
+  }
+
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/x_shape);
+  call->device = x->device;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.scatter_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<ScatterDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.clip", [](const CallValues& call) {
   const auto* args = call->args.as<ClipArgs>();
   CHECK(args != nullptr);

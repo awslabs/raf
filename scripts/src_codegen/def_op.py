@@ -126,6 +126,8 @@ OPS = [
     Op(name="stack_dx", schema_name="stack"),
     Op(name="split", schema_name="split"),
     Op(name="layer_norm", schema_name="layer_norm"),
+    Op(name="scatter", schema_name="scatter"),
+    Op(name="scatter_dx", schema_name="scatter_dx"),
     Op(name="layer_norm_dx", schema_name="layer_norm_dx"),
     Op(name="concatenate_dx", schema_name="concatenate"),
     Op(name="clip", schema_name="clip"),

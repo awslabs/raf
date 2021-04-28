@@ -237,6 +237,10 @@ round = _APIS.get("mnm.op.imp.round", None)
 # Defined in ./src/op/regs/regs.cc
 rsqrt = _APIS.get("mnm.op.imp.rsqrt", None)
 # Defined in ./src/op/regs/regs.cc
+scatter = _APIS.get("mnm.op.imp.scatter", None)
+# Defined in ./src/op/regs/regs.cc
+scatter_dx = _APIS.get("mnm.op.imp.scatter_dx", None)
+# Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.imp.sequence_mask", None)
 # Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.imp.sgd", None)

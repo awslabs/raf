@@ -168,6 +168,47 @@ def test_transpose(shape, device):
     check(m_x.grad, n_x_grad)
 
 
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("shape", [
+    [(3, 5), (2, 4), (2, 4)],
+    [(3, 5), (3, 5), (3, 5)],
+])  # pylint: disable-msg=too-many-locals, not-callable
+def test_scatter(shape, axis, device):
+    m_x, t_x = randn_torch(shape[0], device=device, requires_grad=True)
+    # dtype would be tested on ty, here using int64 since torch.scatter as require so
+    index_shape = list(shape[1])
+    del index_shape[axis]
+    dim_range = list(range(len(shape[1])))
+    del dim_range[axis]
+    random_index = np.random.choice(shape[0][axis], shape[1][axis], replace=False)
+    chose_index = np.broadcast_to(random_index, tuple(index_shape+[shape[1][axis]]))
+    chose_index = np.swapaxes(chose_index, axis, len(shape[1])-1)
+    t_idx = torch.tensor(chose_index, device=device)
+    m_idx = mnm.array(chose_index, device=device)
+
+    m_src, t_src = randn_torch(shape[2], device=device)
+    model = TestModel(mnm._op.sym.scatter, axis=axis)
+
+    m_y = model(m_x, m_idx, m_src)
+    v_y = run_vm_model(model, device, [m_x, m_idx, m_src])
+    t_y = torch.scatter(t_x, axis, t_idx, t_src)
+
+    # check forward
+    check(m_y, t_y)
+    check(v_y, t_y)
+
+    # check backward
+    y_shape = t_y.shape
+    m_dy, t_dy = randn_torch(y_shape, device=device)
+    t_y.backward(t_dy)
+    m_y.backward(m_dy)
+    check(m_x.grad, t_x.grad)
+
+
+
+
+
 @pytest.mark.parametrize("shape", [
     (5, 2),
     (1, 2),

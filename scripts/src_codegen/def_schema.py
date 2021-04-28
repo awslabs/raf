@@ -353,6 +353,20 @@ SCHEMAS = {
               cxx_type="std::vector<value::BaseTensorValue>",
               cxx_normalizer="TensorTuple"),
      ],
+    "transform.h::scatter": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="index", cxx_type="value::BaseTensorValue"),
+        Arg(name="src", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="value::Value"),
+    ],
+    "transform.h::scatter_dx": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="y", cxx_type="value::BaseTensorValue"),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="index", cxx_type="value::BaseTensorValue"),
+        Arg(name="src", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="value::Value"),
+    ],
     "transform.h::transpose": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axes",

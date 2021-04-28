@@ -30,15 +30,16 @@ __all__ = [
     "one_hot", "ones", "ones_like", "pad", "power",
     "prod", "prod_dx", "relu", "relu_dx", "repeat",
     "repeat_dx", "reshape", "reverse", "reverse_sequence", "right_shift",
-    "round", "rsqrt", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stack_dx", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op",
-    "where", "where_dx", "zeros", "zeros_like",
+    "round", "rsqrt", "scatter", "scatter_dx", "sequence_mask",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
+    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
+    "squeeze", "stack", "stack_dx", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
+    "threefry_split", "transpose", "transpose_dx", "trunc", "vm_alloc_storage",
+    "vm_alloc_tensor", "vm_invoke_op", "where", "where_dx", "zeros",
+    "zeros_like",
 ]
 
 def _allreduce(x):
@@ -780,6 +781,22 @@ def round(x):
 def rsqrt(x):
     x = sym_utils.to_any(x)
     return Symbol.from_expr(ffi.rsqrt(x))
+
+def scatter(x, index, src, axis):
+    x = sym_utils.to_tensor(x)
+    index = sym_utils.to_tensor(index)
+    src = sym_utils.to_tensor(src)
+    axis = sym_utils.to_any(axis)
+    return Symbol.from_expr(ffi.scatter(x, index, src, axis))
+
+def scatter_dx(x, y, dy, index, src, axis):
+    x = sym_utils.to_tensor(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    index = sym_utils.to_tensor(index)
+    src = sym_utils.to_tensor(src)
+    axis = sym_utils.to_any(axis)
+    return Symbol.from_expr(ffi.scatter_dx(x, y, dy, index, src, axis))
 
 def sequence_mask(x, sequence_length, mask_value=0.0, axis=0):
     x = sym_utils.to_tensor(x)

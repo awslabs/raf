@@ -118,6 +118,8 @@ from ._internal import reverse_sequence
 from ._internal import right_shift
 from ._internal import round
 from ._internal import rsqrt
+from ._internal import scatter
+from ._internal import scatter_dx
 from ._internal import sequence_mask
 from ._internal import sgd
 from ._internal import shape

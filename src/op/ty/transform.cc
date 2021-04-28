@@ -374,8 +374,25 @@ Type ClipDxInfer(const CallValues& value) {
   TensorType x = Downcast<TensorType>(GetType(args->x));
   return x;
 }
-
 MNM_OP_TYPE("mnm.op.clip_dx", "ClipDx", ClipDxInfer);
+
+Type ScatterInfer(const CallValues& value) {
+  const auto* args = value->args.as<ScatterArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
+MNM_OP_TYPE("mnm.op.scatter", "Scatter", ScatterInfer);
+
+Type ScatterDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<ScatterDxArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
+MNM_OP_TYPE("mnm.op.scatter_dx", "ScatterDx", ScatterDxInfer);
 
 Type CastInfer(const CallValues& value) {
   const auto* args = value->args.as<CastArgs>();

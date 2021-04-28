@@ -468,6 +468,59 @@ def test_swap_axis(shape, dtype, axis):
         check_type(m_func['main'], expected_type)
 
 
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype_int", [
+    ["int64", torch.int64], # only int64 is used since torch scatter only accrpt int64
+])
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("shape", [
+    [(3, 5), (2, 4), (2, 4)],
+    [(3, 5), (3, 5), (3, 5)],
+])  # pylint: disable-msg=too-many-locals, not-callable
+def test_scatter(shape, axis, dtype_int, dtype):
+
+    class Scatter(mnm.Model):
+        def build(self):
+            self.axis = axis
+
+        @mnm.model.trace
+        def forward(self, x, idx, src):
+            ret = mnm.scatter(x, self.axis, idx, src)
+            return ret
+
+    m_x, t_x = randn_torch(shape[0], requires_grad=True, dtype=dtype)
+    # dtype would be tested on ty, here using int64 since torch.scatter as require so
+    index_shape = list(shape[1])
+    del index_shape[axis]
+    dim_range = list(range(len(shape[1])))
+    del dim_range[axis]
+    random_index = np.random.choice(shape[0][axis], shape[1][axis], replace=False)
+    chose_index = np.broadcast_to(random_index, tuple(index_shape+[shape[1][axis]]))
+    chose_index = np.swapaxes(chose_index, axis, len(shape[1])-1)
+    t_idx = torch.tensor(chose_index, dtype=dtype_int[1])
+    m_idx = mnm.array(chose_index, dtype=dtype_int[0])
+    m_src, t_src = randn_torch(shape[2], dtype=dtype)
+    m_x.requires_grad = True
+    t_x.requires_grad = True
+
+    model = Scatter()
+    record = model._internal(m_x, m_idx, m_src)
+    m_mod = record.mod
+    m_func = InferType()(m_mod)
+
+    t_y = torch.scatter(t_x, axis, t_idx, t_src)
+    x_ty = TensorType(t_x.shape, dtype=dtype)
+    src_ty = TensorType(t_src.shape, dtype=dtype)
+    idx_ty = TensorType(t_idx.shape, dtype=dtype_int[0])
+    y_ty = TensorType(t_y.shape, dtype=dtype)
+    expected_type = FuncType([x_ty, idx_ty, src_ty], y_ty)
+
+    # forward
+    check_type(m_func['main'], expected_type)
+
+
+
+
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
 @pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "float64", "int32", "int64", "bool"])
