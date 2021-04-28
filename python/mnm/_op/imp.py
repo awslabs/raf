@@ -91,12 +91,10 @@ def adaptive_max_pool2d_dx(x, y, dy, shape):
     return imp_utils.ret(ffi.adaptive_max_pool2d_dx(x, y, dy, shape))
 
 @set_module("mnm")
-def add(x1, x2, out=None, where=None):
+def add(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.add(x1, x2, out, where))
+    return imp_utils.ret(ffi.add(x1, x2))
 
 @set_module("mnm")
 def adv_index(inputs):
@@ -407,20 +405,16 @@ def device_copy(data, src_dev_type=0, dst_dev_type=0):
     return imp_utils.ret(ffi.device_copy(data, src_dev_type, dst_dev_type))
 
 @set_module("mnm")
-def divide(x1, x2, out=None, where=None):
+def divide(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.divide(x1, x2, out, where))
+    return imp_utils.ret(ffi.divide(x1, x2))
 
 @set_module("mnm")
-def equal(x1, x2, out=None, where=None):
+def equal(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.equal(x1, x2, out, where))
+    return imp_utils.ret(ffi.equal(x1, x2))
 
 @set_module("mnm")
 def erf(x):
@@ -514,20 +508,16 @@ def get_valid_counts(data, score_threshold, id_index=0, score_index=1):
     return imp_utils.ret(ffi.get_valid_counts(data, score_threshold, id_index, score_index))
 
 @set_module("mnm")
-def greater(x1, x2, out=None, where=None):
+def greater(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.greater(x1, x2, out, where))
+    return imp_utils.ret(ffi.greater(x1, x2))
 
 @set_module("mnm")
-def greater_equal(x1, x2, out=None, where=None):
+def greater_equal(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.greater_equal(x1, x2, out, where))
+    return imp_utils.ret(ffi.greater_equal(x1, x2))
 
 @set_module("mnm")
 def layer_norm(x, scale=None, bias=None, axis=-1, eps=1e-05):
@@ -548,28 +538,22 @@ def layer_norm_dx(x, scale, dy, axis=-1, eps=1e-05):
     return imp_utils.ret(ffi.layer_norm_dx(x, scale, dy, axis, eps))
 
 @set_module("mnm")
-def left_shift(x1, x2, out=None, where=None):
+def left_shift(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.left_shift(x1, x2, out, where))
+    return imp_utils.ret(ffi.left_shift(x1, x2))
 
 @set_module("mnm")
-def less(x1, x2, out=None, where=None):
+def less(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.less(x1, x2, out, where))
+    return imp_utils.ret(ffi.less(x1, x2))
 
 @set_module("mnm")
-def less_equal(x1, x2, out=None, where=None):
+def less_equal(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.less_equal(x1, x2, out, where))
+    return imp_utils.ret(ffi.less_equal(x1, x2))
 
 @set_module("mnm")
 def log(x):
@@ -596,12 +580,10 @@ def log_softmax_dx(x, y, dy, axis=-1):
     return imp_utils.ret(ffi.log_softmax_dx(x, y, dy, axis))
 
 @set_module("mnm")
-def logical_and(x1, x2, out=None, where=None):
+def logical_and(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.logical_and(x1, x2, out, where))
+    return imp_utils.ret(ffi.logical_and(x1, x2))
 
 @set_module("mnm")
 def logical_not(x):
@@ -666,12 +648,10 @@ def max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
     return imp_utils.ret(ffi.max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad))
 
 @set_module("mnm")
-def maximum(x1, x2, out=None, where=None):
+def maximum(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.maximum(x1, x2, out, where))
+    return imp_utils.ret(ffi.maximum(x1, x2))
 
 @set_module("mnm")
 def mean(x, axis=(), keepdims=False, exclude=False):
@@ -705,28 +685,22 @@ def min(x, axis=(), keepdims=False, exclude=False):
     return imp_utils.ret(ffi.min(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def minimum(x1, x2, out=None, where=None):
+def minimum(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.minimum(x1, x2, out, where))
+    return imp_utils.ret(ffi.minimum(x1, x2))
 
 @set_module("mnm")
-def mod(x1, x2, out=None, where=None):
+def mod(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.mod(x1, x2, out, where))
+    return imp_utils.ret(ffi.mod(x1, x2))
 
 @set_module("mnm")
-def multiply(x1, x2, out=None, where=None):
+def multiply(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.multiply(x1, x2, out, where))
+    return imp_utils.ret(ffi.multiply(x1, x2))
 
 @set_module("mnm")
 def negative(x):
@@ -770,12 +744,10 @@ def non_max_suppression(data, valid_count, indices, max_output_size, iou_thresho
     return imp_utils.ret(ffi.non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold, force_suppress, top_k, coord_start, score_index, id_index, return_indices, invalid_to_bottom))
 
 @set_module("mnm")
-def not_equal(x1, x2, out=None, where=None):
+def not_equal(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.not_equal(x1, x2, out, where))
+    return imp_utils.ret(ffi.not_equal(x1, x2))
 
 @set_module("mnm")
 def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device="cpu"):
@@ -809,12 +781,10 @@ def pad(x, pad_width, pad_value=0.0, pad_mode="constant"):
     return imp_utils.ret(ffi.pad(x, pad_width, pad_value, pad_mode))
 
 @set_module("mnm")
-def power(x1, x2, out=None, where=None):
+def power(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.power(x1, x2, out, where))
+    return imp_utils.ret(ffi.power(x1, x2))
 
 @set_module("mnm")
 def prod(x, axis=(), keepdims=False, exclude=False):
@@ -883,12 +853,10 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     return imp_utils.ret(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
 @set_module("mnm")
-def right_shift(x1, x2, out=None, where=None):
+def right_shift(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.right_shift(x1, x2, out, where))
+    return imp_utils.ret(ffi.right_shift(x1, x2))
 
 @set_module("mnm")
 def round(x):
@@ -1064,12 +1032,10 @@ def strided_slice_dx(dy, primal_shape, begin, end, strides=None, slice_mode="end
     return imp_utils.ret(ffi.strided_slice_dx(dy, primal_shape, begin, end, strides, slice_mode))
 
 @set_module("mnm")
-def subtract(x1, x2, out=None, where=None):
+def subtract(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    out = imp_utils.to_any(out)
-    where = imp_utils.to_any(where)
-    return imp_utils.ret(ffi.subtract(x1, x2, out, where))
+    return imp_utils.ret(ffi.subtract(x1, x2))
 
 @set_module("mnm")
 def sum(x, axis=(), keepdims=0, exclude=False):

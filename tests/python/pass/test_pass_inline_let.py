@@ -25,8 +25,7 @@ def test_inline():
     transpose_op = mnm._ffi.op.GetOp("mnm.op.transpose")
     matmul_op = mnm._ffi.op.GetOp("mnm.op.matmul")
     subtract_op = mnm._ffi.op.GetOp("mnm.op.subtract")
-    default_int = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
-    default_vec = mnm._ffi.ir._make.Constant(mnm._core.value.TupleValue([]))
+    default_vec = mnm.ir.const([])
 
     def expected1():
         x = relay.var("x", shape=(10, 20))
@@ -36,7 +35,7 @@ def test_inline():
         a2 = relay.var("a2")
         a3 = relay.var("a3")
         a5 = relay.var("a5")
-        let5 = relay.Let(a5, relay.Call(subtract_op, [w, a2, default_int, default_int]), a5)
+        let5 = relay.Let(a5, relay.Call(subtract_op, [w, a2]), a5)
         let3 = relay.Let(a3, relay.Tuple([a2]), let5)
         let2 = relay.Let(a2, relay.Call(matmul_op, [a1, dy]), let3)
         let1 = relay.Let(a1, relay.Call(transpose_op, [x, default_vec]), let2)
@@ -49,7 +48,7 @@ def test_inline():
         a1 = relay.var("a1")
         a2 = relay.var("a2")
         a5 = relay.var("a5")
-        let5 = relay.Let(a5, relay.Call(subtract_op, [w, a2, default_int, default_int]), a5)
+        let5 = relay.Let(a5, relay.Call(subtract_op, [w, a2]), a5)
         let2 = relay.Let(a2, relay.Call(matmul_op, [a1, dy]), let5)
         let1 = relay.Let(a1, relay.Call(transpose_op, [x, default_vec]), let2)
         return relay.Function([x, dy, w], let1)
@@ -59,7 +58,7 @@ def test_inline():
         y = relay.var("p1", shape=(10, 15))
         z = relay.var("p2", shape=(20, 15))
         o = relay.Call(matmul_op, [x, y])
-        o = relay.Call(subtract_op, [z, o, default_int, default_int])
+        o = relay.Call(subtract_op, [z, o])
         f2 = relay.Function([x, y, z], o)
         f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 

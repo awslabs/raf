@@ -28,11 +28,10 @@ def test_fuse_simple():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
         log_op = mnm._ffi.op.GetOp("mnm.op.log")
-        default = mnm.ir.const(None)
 
         x = relay.var("p0", shape=shape)
         y = relay.var("p1", shape=(1,))
-        z = relay.Call(add_op, [x, y, default, default])
+        z = relay.Call(add_op, [x, y])
         z = relay.Call(log_op, [relay.Call(relu_op, [z])])
         f1 = relay.Function([x, y], z)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
@@ -82,7 +81,6 @@ def test_conv2d():
         konst1 = mnm.ir.const(1)
         konst_nchw = mnm.ir.const("NCHW")
         konst_oihw = mnm.ir.const("OIHW")
-        default = mnm.ir.const(None)
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
 
@@ -98,8 +96,8 @@ def test_conv2d():
         p8 = relay.var("p8", "int64")
         p9 = relay.var("p9", shape=(1,))
         y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
-        y1 = relay.Call(add_op, [y, p9, default, default])
-        y = relay.Call(add_op, [y, y1, default, default])
+        y1 = relay.Call(add_op, [y, p9])
+        y = relay.Call(add_op, [y, y1])
         f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p9], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
@@ -115,7 +113,7 @@ def test_conv2d():
         p8 = relay.var("p8", "int64")
         p91 = relay.var("p91", shape=(1, 16, 64, 64))
         y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
-        y = relay.Call(add_op, [y, p91, default, default])
+        y = relay.Call(add_op, [y, p91])
         f3 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p91], y)
         f3 = f3.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
@@ -135,7 +133,7 @@ def test_conv2d():
                                                     konst_nchw, konst_oihw, konst_nchw]), let3)
         let1 = relay.Let(a4, relay.Call(f1, [a1, w1, v_one, v_one, v_one, konst1,
                                              konst_nchw, konst_oihw, konst_nchw, c]), let2)
-        let = relay.Let(a1, relay.Call(add_op, [x, c, default, default]), let1)
+        let = relay.Let(a1, relay.Call(add_op, [x, c]), let1)
         return relay.Function([x, c, w1, w2, w3], let)
 
     model = Model()
@@ -172,13 +170,12 @@ def test_concatenate():
         knchw = mnm.ir.const("NCHW")
         true = mnm.ir.const(True)
         false = mnm.ir.const(False)
-        default = mnm.ir.const(None)
 
         p0 = relay.var("p0", shape=shape)
         p1 = relay.var("p0", shape=shape)
         p2 = relay.var("p2", shape=(1,))
         concat = relay.Call(concat_op, [relay.Tuple([p0, p1]), konst1])
-        out = relay.Call(add_op, [concat, p2, default, default])
+        out = relay.Call(add_op, [concat, p2])
         f2 = relay.Function([p0, p1, p2], out)
         f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
@@ -222,7 +219,6 @@ def test_tuple_root_fuse():
         knchw = mnm.ir.const("NCHW")
         true = mnm.ir.const(True)
         false = mnm.ir.const(False)
-        default = mnm.ir.const(None)
 
         p0 = relay.var("p0", shape=shape)
         p1 = relay.var("p1", relay.TupleType(
@@ -236,7 +232,7 @@ def test_tuple_root_fuse():
         c = relay.var("c", shape=(1,))
 
         pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6, p7])
-        out = relay.Call(add_op, [pooled, c, default, default])
+        out = relay.Call(add_op, [pooled, c])
         f = relay.Function([p0, p1, p2, p3, p4, p5, p6, p7, c], out)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
@@ -337,7 +333,6 @@ def test_fuse_level_1():
         konst1 = mnm.ir.const(1)
         konst_nchw = mnm.ir.const("NCHW")
         konst_oihw = mnm.ir.const("OIHW")
-        default = mnm.ir.const(None)
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
         a4 = relay.var("a4")
@@ -346,8 +341,8 @@ def test_fuse_level_1():
         # segment
         x = relay.var("p0", shape=(1, 16, 64, 64))
         c = relay.var("c", shape=(1,))
-        y = relay.Call(add_op, [x, c, default, default])
-        y = relay.Call(add_op, [x, y, default, default])
+        y = relay.Call(add_op, [x, c])
+        y = relay.Call(add_op, [x, y])
         f1 = relay.Function([x, c], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 

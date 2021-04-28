@@ -29,14 +29,6 @@ using namespace ::tvm::relay;
   RELAY_REGISTER_OP(RELAY_OP_NAME)                                 \
       .set_attr<op::FMNMMutationFromRelay>("FMNMMutationFromRelay", MNM_OP_MUTATION)
 
-#define MNM_BINARY_UFUNC_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                                 \
-  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
-    Array<Expr> mnm_args = args;                                                                   \
-    mnm_args.push_back(MakeConstant(NullValue<Value>()));                                          \
-    mnm_args.push_back(MakeConstant(NullValue<Value>()));                                          \
-    return mnm_args;                                                                               \
-  })
-
 #define MNM_GENERIC_ATTR_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME) \
   MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME,                    \
                     [&](const Attrs& attrs, const Array<Expr>& args) { return args; })

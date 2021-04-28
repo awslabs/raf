@@ -17,29 +17,29 @@ namespace tvmjit {
 using namespace mnm::ir;
 using namespace mnm::op::schema;
 
-MNM_TVMJIT(Add, "mnm.op.add", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Add, "mnm.op.add", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Divide, "mnm.op.divide", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Divide, "mnm.op.divide", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Power, "mnm.op.power", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(Greater, "mnm.op.greater", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Power, "mnm.op.power", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Greater, "mnm.op.greater", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(LogicalAnd, "mnm.op.logical_and", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(Right_shift, "mnm.op.right_shift", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(LogicalAnd, "mnm.op.logical_and", BinaryUfuncArgs, BinarySchema2Args,
-           BinarySchemaArgNames, GenericAttrs, GenericHasher);
-MNM_TVMJIT(Right_shift, "mnm.op.right_shift", BinaryUfuncArgs, BinarySchema2Args,
-           BinarySchemaArgNames, GenericAttrs, GenericHasher);
-MNM_TVMJIT(LeftShift, "mnm.op.left_shift", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(LeftShift, "mnm.op.left_shift", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
-MNM_TVMJIT(NotEqual, "mnm.op.not_equal", BinaryUfuncArgs, BinarySchema2Args, BinarySchemaArgNames,
+MNM_TVMJIT(NotEqual, "mnm.op.not_equal", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
 }  // namespace tvmjit
 }  // namespace op

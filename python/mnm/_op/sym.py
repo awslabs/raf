@@ -82,12 +82,10 @@ def adaptive_max_pool2d_dx(x, y, dy, shape):
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.adaptive_max_pool2d_dx(x, y, dy, shape))
 
-def add(x1, x2, out=None, where=None):
+def add(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.add(x1, x2, out, where))
+    return Symbol.from_expr(ffi.add(x1, x2))
 
 def adv_index(inputs):
     inputs = sym_utils.to_tensor_tuple(inputs)
@@ -355,19 +353,15 @@ def device_copy(data, src_dev_type=0, dst_dev_type=0):
     dst_dev_type = sym_utils.to_int(dst_dev_type)
     return Symbol.from_expr(ffi.device_copy(data, src_dev_type, dst_dev_type))
 
-def divide(x1, x2, out=None, where=None):
+def divide(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.divide(x1, x2, out, where))
+    return Symbol.from_expr(ffi.divide(x1, x2))
 
-def equal(x1, x2, out=None, where=None):
+def equal(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.equal(x1, x2, out, where))
+    return Symbol.from_expr(ffi.equal(x1, x2))
 
 def erf(x):
     x = sym_utils.to_any(x)
@@ -446,19 +440,15 @@ def get_valid_counts(data, score_threshold, id_index=0, score_index=1):
     score_index = sym_utils.to_int(score_index)
     return Symbol.from_expr(ffi.get_valid_counts(data, score_threshold, id_index, score_index))
 
-def greater(x1, x2, out=None, where=None):
+def greater(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.greater(x1, x2, out, where))
+    return Symbol.from_expr(ffi.greater(x1, x2))
 
-def greater_equal(x1, x2, out=None, where=None):
+def greater_equal(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.greater_equal(x1, x2, out, where))
+    return Symbol.from_expr(ffi.greater_equal(x1, x2))
 
 def layer_norm(x, scale=None, bias=None, axis=-1, eps=1e-05):
     x = sym_utils.to_tensor(x)
@@ -476,26 +466,20 @@ def layer_norm_dx(x, scale, dy, axis=-1, eps=1e-05):
     eps = sym_utils.to_double(eps)
     return Symbol.from_expr(ffi.layer_norm_dx(x, scale, dy, axis, eps))
 
-def left_shift(x1, x2, out=None, where=None):
+def left_shift(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.left_shift(x1, x2, out, where))
+    return Symbol.from_expr(ffi.left_shift(x1, x2))
 
-def less(x1, x2, out=None, where=None):
+def less(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.less(x1, x2, out, where))
+    return Symbol.from_expr(ffi.less(x1, x2))
 
-def less_equal(x1, x2, out=None, where=None):
+def less_equal(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.less_equal(x1, x2, out, where))
+    return Symbol.from_expr(ffi.less_equal(x1, x2))
 
 def log(x):
     x = sym_utils.to_any(x)
@@ -517,12 +501,10 @@ def log_softmax_dx(x, y, dy, axis=-1):
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.log_softmax_dx(x, y, dy, axis))
 
-def logical_and(x1, x2, out=None, where=None):
+def logical_and(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.logical_and(x1, x2, out, where))
+    return Symbol.from_expr(ffi.logical_and(x1, x2))
 
 def logical_not(x):
     x = sym_utils.to_any(x)
@@ -578,12 +560,10 @@ def max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, includ
     include_pad = sym_utils.to_bool(include_pad)
     return Symbol.from_expr(ffi.max_pool2d_dx(x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad))
 
-def maximum(x1, x2, out=None, where=None):
+def maximum(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.maximum(x1, x2, out, where))
+    return Symbol.from_expr(ffi.maximum(x1, x2))
 
 def mean(x, axis=(), keepdims=False, exclude=False):
     x = sym_utils.to_tensor(x)
@@ -612,26 +592,20 @@ def min(x, axis=(), keepdims=False, exclude=False):
     exclude = sym_utils.to_bool(exclude)
     return Symbol.from_expr(ffi.min(x, axis, keepdims, exclude))
 
-def minimum(x1, x2, out=None, where=None):
+def minimum(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.minimum(x1, x2, out, where))
+    return Symbol.from_expr(ffi.minimum(x1, x2))
 
-def mod(x1, x2, out=None, where=None):
+def mod(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.mod(x1, x2, out, where))
+    return Symbol.from_expr(ffi.mod(x1, x2))
 
-def multiply(x1, x2, out=None, where=None):
+def multiply(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.multiply(x1, x2, out, where))
+    return Symbol.from_expr(ffi.multiply(x1, x2))
 
 def negative(x):
     x = sym_utils.to_any(x)
@@ -669,12 +643,10 @@ def non_max_suppression(data, valid_count, indices, max_output_size, iou_thresho
     invalid_to_bottom = sym_utils.to_bool(invalid_to_bottom)
     return Symbol.from_expr(ffi.non_max_suppression(data, valid_count, indices, max_output_size, iou_threshold, force_suppress, top_k, coord_start, score_index, id_index, return_indices, invalid_to_bottom))
 
-def not_equal(x1, x2, out=None, where=None):
+def not_equal(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.not_equal(x1, x2, out, where))
+    return Symbol.from_expr(ffi.not_equal(x1, x2))
 
 def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device="cpu"):
     indices = sym_utils.to_tensor(indices)
@@ -703,12 +675,10 @@ def pad(x, pad_width, pad_value=0.0, pad_mode="constant"):
     pad_mode = sym_utils.to_string(pad_mode)
     return Symbol.from_expr(ffi.pad(x, pad_width, pad_value, pad_mode))
 
-def power(x1, x2, out=None, where=None):
+def power(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.power(x1, x2, out, where))
+    return Symbol.from_expr(ffi.power(x1, x2))
 
 def prod(x, axis=(), keepdims=False, exclude=False):
     x = sym_utils.to_tensor(x)
@@ -767,12 +737,10 @@ def reverse_sequence(x, sequence_length, seq_axis=1, batch_axis=0):
     batch_axis = sym_utils.to_int(batch_axis)
     return Symbol.from_expr(ffi.reverse_sequence(x, sequence_length, seq_axis, batch_axis))
 
-def right_shift(x1, x2, out=None, where=None):
+def right_shift(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.right_shift(x1, x2, out, where))
+    return Symbol.from_expr(ffi.right_shift(x1, x2))
 
 def round(x):
     x = sym_utils.to_any(x)
@@ -921,12 +889,10 @@ def strided_slice_dx(dy, primal_shape, begin, end, strides=None, slice_mode="end
     slice_mode = sym_utils.to_string(slice_mode)
     return Symbol.from_expr(ffi.strided_slice_dx(dy, primal_shape, begin, end, strides, slice_mode))
 
-def subtract(x1, x2, out=None, where=None):
+def subtract(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    out = sym_utils.to_any(out)
-    where = sym_utils.to_any(where)
-    return Symbol.from_expr(ffi.subtract(x1, x2, out, where))
+    return Symbol.from_expr(ffi.subtract(x1, x2))
 
 def sum(x, axis=(), keepdims=0, exclude=False):
     x = sym_utils.to_tensor(x)

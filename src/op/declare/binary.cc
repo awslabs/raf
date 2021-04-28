@@ -85,261 +85,195 @@ TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false
 }
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.add", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(+, x1, x2);
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(+, x1, x2);
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.subtract", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(-, x1, x2);
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(-, x1, x2);
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.multiply", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(*, x1, x2);
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(*, x1, x2);
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.power", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
-                        call->callee = ir::NullValue<OpValue>();
-                        double a1 = v1->value;
-                        double a2 = v2->value;
-                        double result = std::pow(a1, a2);
-                        call->out = ScalarValue::make(result);
-                        return;
-                      }));
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+                      call->callee = ir::NullValue<OpValue>();
+                      double a1 = v1->value;
+                      double a2 = v2->value;
+                      double result = std::pow(a1, a2);
+                      call->out = ScalarValue::make(result);
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.divide", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (s2->value == 0) {
-                          LOG(FATAL) << "ZeroDivisionError: division by zero";
-                          throw;
-                        }
-                        call->callee = ir::NullValue<OpValue>();
-                        call->out = ScalarValue::make(s1->value / s2->value);
-                        return;
-                      }));
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                      if (s2->value == 0) {
+                        LOG(FATAL) << "ZeroDivisionError: division by zero";
+                        throw;
+                      }
+                      call->callee = ir::NullValue<OpValue>();
+                      call->out = ScalarValue::make(s1->value / s2->value);
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.mod", [](const CallValues& call) {
   // TODO(@junrushao1994): python-style Euclidean division modulo
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (s2->value == 0) {
-                          LOG(FATAL) << "ZeroDivisionError: division by zero";
-                          throw;
-                        }
-                        call->callee = ir::NullValue<OpValue>();
-                        if (s1->IsInstance<FloatValueObj>() || s2->IsInstance<FloatValueObj>()) {
-                          double a1 = s1->value;
-                          double a2 = s2->value;
-                          double result = fmod(a1, a2);
-                          call->out = ScalarValue::make(result);
-                        } else {
-                          int64_t a1 = s1->value;
-                          int64_t a2 = s2->value;
-                          int64_t result = a1 % a2;
-                          call->out = ScalarValue::make(result);
-                        }
-                        return;
-                      }));
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                      if (s2->value == 0) {
+                        LOG(FATAL) << "ZeroDivisionError: division by zero";
+                        throw;
+                      }
+                      call->callee = ir::NullValue<OpValue>();
+                      if (s1->IsInstance<FloatValueObj>() || s2->IsInstance<FloatValueObj>()) {
+                        double a1 = s1->value;
+                        double a2 = s2->value;
+                        double result = fmod(a1, a2);
+                        call->out = ScalarValue::make(result);
+                      } else {
+                        int64_t a1 = s1->value;
+                        int64_t a2 = s2->value;
+                        int64_t result = a1 % a2;
+                        call->out = ScalarValue::make(result);
+                      }
+                      return;
+                    }));
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(<, x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(<, x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(>, x1, x2);
-    MNM_LOGICAL_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(>, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.right_shift", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (!s1->IsInstance<IntValueObj>() || !s2->IsInstance<IntValueObj>()) {
-                          LOG(FATAL) << "func 'right_shift' not supported for the input types";
-                          throw;
-                        }
-                        call->callee = ir::NullValue<OpValue>();
-                        int64_t a1 = s1->value;
-                        int64_t a2 = s2->value;
-                        int64_t result = a1 >> a2;
-                        call->out = ScalarValue::make(result);
-                        return;
-                      }));
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                      if (!s1->IsInstance<IntValueObj>() || !s2->IsInstance<IntValueObj>()) {
+                        LOG(FATAL) << "func 'right_shift' not supported for the input types";
+                        throw;
+                      }
+                      call->callee = ir::NullValue<OpValue>();
+                      int64_t a1 = s1->value;
+                      int64_t a2 = s2->value;
+                      int64_t result = a1 >> a2;
+                      call->out = ScalarValue::make(result);
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less_equal", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(<=, x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(<=, x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater_equal", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(>=, x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(>=, x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.equal", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(==, x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(==, x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.not_equal", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(!=, x1, x2);
-    MNM_LOGICAL_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(!=, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.maximum", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
-                        call->callee = ir::NullValue<OpValue>();
-                        call->out =
-                            ScalarValue::make(v1->value > v2->value ? v1->value : v2->value);
-                        return;
-                      }));
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+                      call->callee = ir::NullValue<OpValue>();
+                      call->out = ScalarValue::make(v1->value > v2->value ? v1->value : v2->value);
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
-                        call->callee = ir::NullValue<OpValue>();
-                        call->out =
-                            ScalarValue::make(v1->value < v2->value ? v1->value : v2->value);
-                        return;
-                      }));
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+                      call->callee = ir::NullValue<OpValue>();
+                      call->out = ScalarValue::make(v1->value < v2->value ? v1->value : v2->value);
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.logical_and", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_BINARY_SCALAR(&&, x1, x2);
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+  MNM_BINARY_SCALAR(&&, x1, x2);
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 void CollapseAxis(const CallValues& call) {
@@ -376,33 +310,29 @@ void CollapseAxis(const CallValues& call) {
 }
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.left_shift", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryUfuncArgs>();
+  const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  if (!args->out.defined() && !args->where.defined()) {
-    MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
-                        if (s2->value < 0) {
-                          LOG(FATAL) << "ValueError: Negative shift count";
-                          throw;
-                        }
+  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                      if (s2->value < 0) {
+                        LOG(FATAL) << "ValueError: Negative shift count";
+                        throw;
+                      }
 
-                        call->callee = ir::NullValue<OpValue>();
-                        if (s1->IsInstance<IntValueObj>() && s2->IsInstance<IntValueObj>()) {
-                          int64_t a1 = s1->value;
-                          int64_t a2 = s2->value;
-                          int64_t result = a1 << a2;
-                          call->out = ScalarValue::make(result);
-                        } else {
-                          LOG(FATAL) << "ValueError: Int value expected";
-                          throw;
-                        }
-                        return;
-                      }));
-    MNM_BINARY_TENSOR(x1, x2);
-  }
-  LOG(FATAL) << "NotImplementedError";
-  throw;
+                      call->callee = ir::NullValue<OpValue>();
+                      if (s1->IsInstance<IntValueObj>() && s2->IsInstance<IntValueObj>()) {
+                        int64_t a1 = s1->value;
+                        int64_t a2 = s2->value;
+                        int64_t result = a1 << a2;
+                        call->out = ScalarValue::make(result);
+                      } else {
+                        LOG(FATAL) << "ValueError: Int value expected";
+                        throw;
+                      }
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
 });
 
 // TODO(@icemelon9): Currently use opaque for shape related op.

@@ -21,7 +21,6 @@ def test_basic():
         sum_op = mnm._ffi.op.GetOp("mnm.op.sum")
         get_reduce_axis_op = mnm._ffi.op.GetOp("mnm.op.get_reduce_axis")
         get_kept_dims_op = mnm._ffi.op.GetOp("mnm.op.get_kept_dims")
-        default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
 
         x = relay.var("x", shape=shape)
         y = relay.var("y", shape=shape)
@@ -44,7 +43,7 @@ def test_basic():
         let4 = relay.Let(x3, relay.Call(sum_op, [dy, x1, x2]), let5)
         let3 = relay.Let(x2, relay.Call(get_kept_dims_op, [dy, x]), let4)
         let2 = relay.Let(x1, relay.Call(get_reduce_axis_op, [dy, x]), let3)
-        let1 = relay.Let(a1, relay.Call(add_op, [x, y, default, default]), let2)
+        let1 = relay.Let(a1, relay.Call(add_op, [x, y]), let2)
         return relay.Function([x, y, dy], let1)
 
     shape = (4, 5)

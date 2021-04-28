@@ -47,7 +47,7 @@ Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
 Type BroadcastInfer(const CallValues& value) {
   using namespace tvm;
   using namespace tvm::relay;
-  const auto* args = value->args.as<BinaryUfuncArgs>();
+  const auto* args = value->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
   TensorType x2 = Downcast<TensorType>(GetType(args->x2));
@@ -60,7 +60,7 @@ Type BroadcastInfer(const CallValues& value) {
 Type LogicalBroadcastInfer(const CallValues& value) {
   using namespace tvm;
   using namespace tvm::relay;
-  const auto* args = value->args.as<BinaryUfuncArgs>();
+  const auto* args = value->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
   TensorType x2 = Downcast<TensorType>(GetType(args->x2));

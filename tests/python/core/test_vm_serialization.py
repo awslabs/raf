@@ -65,10 +65,9 @@ def test_simple(fuse):
 def test_constant(fuse):
     shape = (3, 5)
     konst1 = mnm.ir.const(np.random.randn(1, 5).astype("float32"))
-    null = mnm.ir.const(None)
     x = mnm.ir.var("x", shape=shape)
-    y = relay.Call(mnm._ffi.op.GetOp("mnm.op.add"), [x, konst1, null, null])
-    y = relay.Call(mnm._ffi.op.GetOp("mnm.op.add"), [y, konst1, null, null])
+    y = relay.Call(mnm._ffi.op.GetOp("mnm.op.add"), [x, konst1])
+    y = relay.Call(mnm._ffi.op.GetOp("mnm.op.add"), [y, konst1])
     mod = mnm.ir.IRModule()
     mod["main"] = relay.Function([x], y)
     mod = mnm._ffi.pass_.ToANormalForm()(mod)

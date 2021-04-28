@@ -54,7 +54,7 @@ def test_diamond():
         # let %a1 = %test_diamond_0_ret.0;
         # let %a2 = %test_diamond_0_ret.1;
         # let %a3 = mnm.op.tanh(%a1);
-        # let %a4 = mnm.op.add(%a2, %a3, -114514, -114514);
+        # let %a4 = mnm.op.add(%a2, %a3);
         # %a4
         # }
         # define variables
@@ -67,7 +67,6 @@ def test_diamond():
         test_diamond_0_1 = extended_var("test_diamond_0_1")
         test_diamond_0_outs = extended_var("test_diamond_0_outs")
         test_diamond_0_ret = extended_var("test_diamond_0_ret")
-        const = mnm.ir.const(0)
         relu = _relay.op.get("mnm.op.relu")
         abs = _relay.op.get("mnm.op.abs")
         tanh = _relay.op.get("mnm.op.tanh")
@@ -88,7 +87,7 @@ def test_diamond():
         func1_tgi_1 = _relay.TupleGetItem(test_diamond_0_ret, 1)
         # make anf
         tanh_call = _relay.Call(tanh, [a1])
-        add_call = _relay.Call(add, [a2, a3, const, const])
+        add_call = _relay.Call(add, [a2, a3])
         body = _relay.Let(a4, add_call, a4)
         body = _relay.Let(a3, tanh_call, body)
         body = _relay.Let(a2, func1_tgi_1, body)

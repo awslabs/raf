@@ -36,7 +36,7 @@ struct BinaryOp {
   ir::DFPattern operator()(ir::DFPattern x1, ir::DFPattern x2) {
     using namespace mnm::ir;
     auto op = IsOp(Binary);
-    return op({x1, x2, IsConstant(), IsConstant()});
+    return op({x1, x2});
   }
 };
 
