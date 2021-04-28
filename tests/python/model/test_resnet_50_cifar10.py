@@ -50,7 +50,7 @@ def test_vm_forward(device, fuse_lv):
     m_in, t_in = resnet.get_input(batch_size=1, device=device)
     m_loss = run_vm_model(m_model, device, [*m_in], mnm._ffi.pass_.FuseOps(fuse_lv))[0]
     t_loss = t_model(*t_in)
-    check(m_loss, t_loss)
+    check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
     resnet.check_params(m_model, t_model)
 
 

@@ -50,6 +50,7 @@ def check_from_relay(m_model, r_func, args, check_model_structure=True,
         for ref_out, out in zip(ref_outs, outs):
             check(ref_out, out)
 
+
 def test_mnm_constant():
     data = mnm.array(1)
 
@@ -1084,6 +1085,26 @@ def test_threefry_split():
         r_key))
 
     check_from_relay(model, r_func, [m_key])
+
+
+@pytest.mark.parametrize("shape", [(4, 3, 4, 5)])
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("keep", [0, 1])
+def test_mean(shape, axis, keep):
+    class Mean(mnm.Model):
+        def build(self, axis, keep):
+            self.axis = axis
+            self.keep = keep
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.mean(x, self.axis, self.keep)
+    model = Mean(axis, keep)
+    m_x, _ = randn(shape)
+    r_x = _relay.var("x", shape=shape)
+    r_func = _relay.Function(params=[r_x], body=_relay.mean(r_x, axis, keep))
+
+    check_from_relay(model, r_func, [m_x])
 
 
 if __name__ == "__main__":
