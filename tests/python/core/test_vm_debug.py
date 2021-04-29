@@ -30,13 +30,6 @@ def test_vm_debug(device, shape):
     mod = model._internal(m_x).mod
     executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
 
-    # Testing memory profiler
-    ret = executor.profile_memory(m_x)
-    check(ret, 8 / 1024) # One page size is 4KB and we have two tensors
-
-    # Reset the profiler and test whether the rest functions are working as expected
-    executor.reset()
-
     # Testing whether we can get the correct intermediate tensor
     m_z = executor.make_executor()(m_x).asnumpy()
     ref_x = m_x.asnumpy()
@@ -50,6 +43,40 @@ def test_vm_debug(device, shape):
     check(ins[1][1], ref_y)
     check(outs[0], ref_y)
     check(outs[1], ref_z)
+
+@pytest.mark.parametrize("device", get_device_list())
+def test_vm_memory_profile(device):
+    # pylint: disable=protected-access
+    class Model(mnm.Model):
+        # pylint: disable=attribute-defined-outside-init,no-self-use
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w):
+            return mnm.conv2d(x, w, stride=1, padding=0, dilation=1, groups=1)
+
+    xshape = (32, 3, 224, 224)
+    wshape = (32, 3, 3, 3)
+    model = Model()
+    model.infer_mode()
+    m_x, _ = randn(xshape, device=device)
+    m_w, _ = randn(wshape, device=device)
+
+    mod = model._internal(m_x, m_w).mod
+    executor = VMProfilerExecutor(mod, device)
+    ret = executor.make_executor()(m_x, m_w, profile_memory=True)
+
+    # Output tensor size in MBs. Note that since it fits to the page size,
+    # we can allocate the exact size for it.
+    expected = (32 * 32 * 222 * 222) * 4 / 1048576.0
+    if device == "cuda":
+        # Conv2D CuDNN requests an additional workspace memory but its size depends on the
+        # CuDNN implementation. To avoid flaky test we simply check whether memory profiler
+        # catches the workspace request.
+        assert ret > expected
+    else:
+        check(ret, expected)
 
 
 if __name__ == "__main__":

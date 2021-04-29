@@ -612,7 +612,7 @@ std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::Pr
     std::shared_ptr<Requests> requests = op_env->GetRequests();
     for (size_t i = 0; i < requests->workspace.size(); i++) {
       Requests::WorkspaceRequest& entry = requests->workspace[i];
-      auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
+      auto buf = Alloc(entry.device, entry.nbytes);
       *entry.dest = buf->data;
     }
     // add to cache

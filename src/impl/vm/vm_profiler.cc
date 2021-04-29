@@ -112,18 +112,27 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
          << "Total Packed Functions: " << total_packed_funcs << std::endl;
       *rv = os.str();
     });
-  } else if (name == "profile_memory") {
+  } else if (name == "run") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
-      ICHECK_EQ(args.size(), 1U);
-      VMContext ctx = args[0];
-      profile_memory_ = true;
-      total_allocated_megabytes_ = 0;
-      Run(ctx);
       profile_memory_ = false;
-      for (auto op_env_cache : op_env_cache_) {
-        op_env_cache->Clear();
+      if (args.size() == 2) {
+        profile_memory_ = args[1];
+      } else {
+        ICHECK_EQ(args.size(), 1U);
       }
-      *rv = total_allocated_megabytes_;
+
+      VMContext ctx = args[0];
+      if (profile_memory_) {
+        total_allocated_megabytes_ = 0;
+        Run(ctx);
+        for (auto op_env_cache : op_env_cache_) {
+          op_env_cache->Clear();
+        }
+        *rv = total_allocated_megabytes_;
+      } else {
+        *rv = Run(ctx);
+      }
+      profile_memory_ = false;
     });
   } else if (name == "reset") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
@@ -138,18 +147,6 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
   } else {
     return VirtualMachine::GetFunction(name, sptr_to_self);
   }
-}
-
-std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachineProfiler::PrepareOpEnv(
-    const VMContext& ctx, const Instruction& instr) {
-  if (profile_memory_) {
-    // Skip the compilation in memory profiling mode.
-    std::shared_ptr<OpEnv> op_env;
-    std::vector<Value> inputs;
-    Value output;
-    return std::make_tuple(op_env, std::move(inputs), std::move(output));
-  }
-  return VirtualMachine::PrepareOpEnv(ctx, instr);
 }
 
 void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,

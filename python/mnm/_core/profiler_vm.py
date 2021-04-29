@@ -19,7 +19,6 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         self._prepare_context = self.module["prepare_context"]
         self._get_stat = self.module["get_stat"]
         self._get_interm_tensors = self.module["get_interm_tensors"]
-        self._profile_memory = self.module["profile_memory"]
         self._reset = self.module["reset"]
         self._run = self.module["run"]
         self._set_devices(device)
@@ -59,12 +58,8 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         """Reset statistics"""
         self._reset()
 
-    def profile_memory(self, *args, func_name="main", **kwargs):
-        """Profile the total memory footprint in MBs. Note that we now
-        only profile memory allocated by AllocStorage bytecode instruction.
-        The memory allocated for op workspace is ignored for simplify.
-        Since workspace allocation is relatively rare, the impact on
-        the overall memory footprint is limited.
+    def run(self, *args, func_name="main", profile_memory=False, **kwargs):
+        """Run the virtual machine.
 
         Parameters
         ----------
@@ -72,18 +67,24 @@ class VirtualMachineProfiler(executor.VirtualMachine):
             The arguments to the function.
 
         func_name : str
-            The name of function.
+            The name of function to run.
+
+        profile_memory: bool
+            If true, then profile memory footprint without actual execution.
+            The result value in this mode becomes a float that indicates
+            the total memory footprint in MBs.
 
         kwargs: dict of str to mnm.ndarray or np.ndarray
             Named arguments to the function.
 
         Returns
         -------
-        result : float
-            The total memory footprint in MBs.
+        result : Union[Object, float]
+            The output tensors, or memory footprint in MBs in memory profiling mode.
         """
+        # pylint: disable=arguments-differ
         ctx = self.prepare_context(func_name, *args, **kwargs)
-        return self._profile_memory(ctx)
+        return self._run(ctx, profile_memory)
 
 
 class VMProfilerExecutor(executor.VMExecutor):
@@ -138,28 +139,3 @@ class VMProfilerExecutor(executor.VMExecutor):
             op names, op inputs, op outputs
         """
         return self.vm.get_interm_tensors()
-
-    def profile_memory(self, *args, func_name="main", **kwargs):
-        """Profile the total memory footprint in MBs. Note that we now
-        only profile memory allocated by AllocStorage bytecode instruction.
-        The memory allocated for op workspace is ignored for simplify.
-        Since workspace allocation is relatively rare, the impact on
-        the overall memory footprint is limited.
-
-        Parameters
-        ----------
-        args : list[mnm.ndarray] or list[np.ndarray]
-            The arguments to the function.
-
-        func_name : str
-            The name of function.
-
-        kwargs: dict of str to mnm.ndarray or np.ndarray
-            Named arguments to the function.
-
-        Returns
-        -------
-        result : float
-            The total memory footprint in MBs.
-        """
-        return self.vm.profile_memory(*args, func_name=func_name, **kwargs)
