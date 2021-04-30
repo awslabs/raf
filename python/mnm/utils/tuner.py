@@ -189,8 +189,8 @@ def run_tuning(model, device, args, log_file, *, pass_seq=None,
     print("Tuning %d out of %s tasks..." % (len(tasks), ori_task_num))
     tune_tasks(tasks, weights, log_file, n_trials)
 
-def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128,
-            device="cuda", fusion=False):
+def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials=None,
+            device="cuda", fusion=False, only_extract_tasks=False):
     """A helper function to construct and tune tasks for an op.
 
     sch_file: str
@@ -205,14 +205,17 @@ def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128
     space_dict: Dict[str, List[Any]]
         A map from the arguments of gen_arg_func to possible values.
 
-    n_trials_per_task: int
-        Trials for each generated task. Default 128.
+    n_trials: Optional[int]
+        Tuning trials. If None, we use #task * 1.2 * 64 trials.
 
     device: str
         The target device. Default cuda.
 
     fusion: bool
         Whether to apply fusion.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
     configs = []
     space_list = list(space_dict.items())
@@ -231,23 +234,30 @@ def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials_per_task=128
     build_space_dfs(0, {})
     args = [gen_arg_func(**config) for config in configs]
 
-    print("Constructing %d tuning tasks..." % len(args))
+    print("Constructing %d tuning tasks for %s ..." % (len(args), model_cls.__name__))
     tasks = []
-    for args in args:
-        m_model = model_cls()
+    for model_args, input_args in args:
+        m_model = model_cls(*model_args)
         m_model.infer_mode()
         m_model.to(device=device)
 
         pass_seq = lambda mod: mnm._ffi.pass_.FuseOps(3)(mod) if fusion else mod
-        extract_tasks, _ = extract_tuning_tasks(m_model, args, device, pass_seq=pass_seq)
+        extract_tasks, _ = extract_tuning_tasks(m_model, input_args, device, pass_seq=pass_seq)
         assert len(extract_tasks) == 1
         tasks.append(extract_tasks[0])
 
-    tune_tasks(tasks, [1 for _ in range(len(tasks))], sch_file,
-               n_trials=n_trials_per_task * len(tasks))
+    for idx, task in enumerate(tasks):
+        print("=== Task %d: %s ===" % (idx, task.workload_key))
+        print("Function: %s" % task.desc)
+
+    if only_extract_tasks:
+        return
+
+    n_trials = n_trials if n_trials is not None else int(len(tasks) * 1.2 * 64)
+    tune_tasks(tasks, [1 for _ in range(len(tasks))], sch_file, n_trials=n_trials)
 
 
-def tune_softmax_dx(sch_file, space_dict=None, device="cuda"):
+def tune_softmax_dx(sch_file, space_dict=None, device="cuda", only_extract_tasks=False):
     """Tune softmax_dx with various shapes.
 
     sch_file: str
@@ -258,6 +268,9 @@ def tune_softmax_dx(sch_file, space_dict=None, device="cuda"):
 
     device: str
         The target device. Default cuda.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
     class SoftmaxDxModel(mnm.Model):
         def build(self):
@@ -272,18 +285,19 @@ def tune_softmax_dx(sch_file, space_dict=None, device="cuda"):
         m_x, _ = randn(shape, device=device)
         m_y, _ = randn(shape, device=device)
         m_dy, _ = randn(shape, device=device)
-        return [m_x, m_y, m_dy]
+        return [], [m_x, m_y, m_dy]
 
     if space_dict is None:
         space_dict = {
-            "batch_size": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
+            "batch_size": [1, 4, 8, 16, 32, 64],
             "seq_length": [5, 32, 64, 128]
         }
 
-    tune_op(sch_file, SoftmaxDxModel, gen_arg_func, space_dict, device=device)
+    tune_op(sch_file, SoftmaxDxModel, gen_arg_func, space_dict, device=device,
+            only_extract_tasks=only_extract_tasks)
 
 
-def tune_layer_norm(sch_file, space_dict=None, device="cuda"):
+def tune_layer_norm(sch_file, space_dict=None, device="cuda", only_extract_tasks=False):
     """Tune layer_norm with various shapes.
 
     sch_file: str
@@ -294,34 +308,39 @@ def tune_layer_norm(sch_file, space_dict=None, device="cuda"):
 
     device: str
         The target device. Default cuda.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
 
     class LayerNormModel(mnm.Model):
-        def build(self):
-            pass
+        def build(self, eps):
+            self.eps = eps
 
         @mnm.model.trace
         def forward(self, x, scale, bias):
-            return mnm.layer_norm(x, scale, bias, eps=1e-12)
+            return mnm.layer_norm(x, scale, bias, eps=self.eps)
 
-    def gen_arg_func(batch_size, seq_length, hidden_size):
+    def gen_arg_func(batch_size, seq_length, hidden_size, eps):
         shape = [batch_size, seq_length, hidden_size]
         m_x, _ = randn(shape, device=device)
         m_scale, _ = randn((shape[2],), device=device)
         m_bias, _ = randn((shape[2],), device=device)
-        return [m_x, m_scale, m_bias]
+        return [eps], [m_x, m_scale, m_bias]
 
     if space_dict is None:
         space_dict = {
-            "batch_size": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
-            "seq_length": [5, 32, 64, 128],
-            "hidden_size": [512, 768, 1024]
+            "batch_size": [1, 4, 8, 16, 32, 64],
+            "seq_length": [128],
+            "hidden_size": [768],
+            "eps": [1e-5, 1e-12]
         }
 
-    tune_op(sch_file, LayerNormModel, gen_arg_func, space_dict, device=device)
+    tune_op(sch_file, LayerNormModel, gen_arg_func, space_dict, device=device,
+            only_extract_tasks=only_extract_tasks)
 
 
-def tune_layer_norm_dx(sch_file, space_dict=None, device="cuda"):
+def tune_layer_norm_dx(sch_file, space_dict=None, device="cuda", only_extract_tasks=False):
     """Tune layer_norm_dx with various shapes.
 
     sch_file: str
@@ -332,33 +351,38 @@ def tune_layer_norm_dx(sch_file, space_dict=None, device="cuda"):
 
     device: str
         The target device. Default cuda.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
 
     class LayerNormDxModel(mnm.Model):
-        def build(self):
-            pass
+        def build(self, eps):
+            self.eps = eps
 
         @mnm.model.trace
         def forward(self, x, scale, dy):
-            return mnm.layer_norm_dx(x, scale, dy, eps=1e-12)
+            return mnm.layer_norm_dx(x, scale, dy, eps=self.eps)
 
-    def gen_arg_func(batch_size, seq_length, hidden_size):
+    def gen_arg_func(batch_size, seq_length, hidden_size, eps):
         shape = [batch_size, seq_length, hidden_size]
         m_x, _ = randn(shape, device=device)
         m_scale, _ = randn((shape[2],), device=device)
         m_dy, _ = randn(shape, device=device)
-        return [m_x, m_scale, m_dy]
+        return [eps], [m_x, m_scale, m_dy]
 
     if space_dict is None:
         space_dict = {
-            "batch_size": [1, 2, 3, 4, 5, 7, 11, 13, 16, 17, 19, 23, 29, 31, 32],
-            "seq_length": [5, 32, 64, 128],
-            "hidden_size": [512, 768, 1024]
+            "batch_size": [1, 4, 8, 16, 32, 64],
+            "seq_length": [128],
+            "hidden_size": [768],
+            "eps": [1e-5, 1e-12]
         }
 
-    tune_op(sch_file, LayerNormDxModel, gen_arg_func, space_dict, device=device)
+    tune_op(sch_file, LayerNormDxModel, gen_arg_func, space_dict, device=device,
+            only_extract_tasks=only_extract_tasks)
 
-def tune_take_dx(sch_file, space_dict=None, device="cuda"):
+def tune_take_dx(sch_file, space_dict=None, device="cuda", only_extract_tasks=False):
     """Tune take_dx with various shapes in transformer-based models.
 
     sch_file: str
@@ -369,6 +393,9 @@ def tune_take_dx(sch_file, space_dict=None, device="cuda"):
 
     device: str
         The target device. Default cuda.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
     class TakeDxModel(mnm.Model):
         def build(self):
@@ -386,19 +413,20 @@ def tune_take_dx(sch_file, space_dict=None, device="cuda"):
         m_y, _ = randn(y_shape, device=device)
         m_dy, _ = randn_torch(y_shape, std=0.0, mean=1.0, requires_grad=False, device=device)
         m_indices, _ = randint(i_shape, low=0, high=y_shape[1], dtype="int32", device=device)
-        return [m_x, m_y, m_dy, m_indices]
+        return [], [m_x, m_y, m_dy, m_indices]
 
     if space_dict is None:
         space_dict = {
-            "batch_size": [1, 4, 16, 32, 64],
+            "batch_size": [1, 4, 8, 16, 32, 64],
             "seq_length": [128],
             "hidden_size": [768],
-            "vocab_size": [2, 512, 30522]
+            "vocab_size": [2, 512, 1024, 30522, 50257]
         }
 
-    tune_op(sch_file, TakeDxModel, gen_arg_func, space_dict, device=device)
+    tune_op(sch_file, TakeDxModel, gen_arg_func, space_dict, device=device,
+            only_extract_tasks=only_extract_tasks)
 
-def tune_fused_take_dx(sch_file, space_dict=None, device="cuda"):
+def tune_fused_take_dx(sch_file, space_dict=None, device="cuda", only_extract_tasks=False):
     """Tune fused take_dx with various shapes in transformer-based models.
 
     sch_file: str
@@ -409,6 +437,9 @@ def tune_fused_take_dx(sch_file, space_dict=None, device="cuda"):
 
     device: str
         The target device. Default cuda.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
     class TakeDxModel(mnm.Model):
         def build(self):
@@ -428,20 +459,21 @@ def tune_fused_take_dx(sch_file, space_dict=None, device="cuda"):
         m_y, _ = randn(y_shape, device=device)
         m_dy, _ = randn_torch(y_shape, std=0.0, mean=1.0, requires_grad=False, device=device)
         m_indices, _ = randint(i_shape, low=0, high=y_shape[1], dtype="int32", device=device)
-        return [m_x, m_y, m_dy, m_indices]
+        return [], [m_x, m_y, m_dy, m_indices]
 
     if space_dict is None:
         space_dict = {
-            "batch_size": [1, 4, 16, 32, 64],
+            "batch_size": [1, 4, 8, 16, 32, 64],
             "seq_length": [128],
             "hidden_size": [768],
-            "vocab_size": [2, 512, 30522]
+            "vocab_size": [2, 512, 1024, 30522, 50257]
         }
 
-    tune_op(sch_file, TakeDxModel, gen_arg_func, space_dict, device=device, fusion=True)
+    tune_op(sch_file, TakeDxModel, gen_arg_func, space_dict, device=device, fusion=True,
+            only_extract_tasks=only_extract_tasks)
 
 
-def tune_all_ops(sch_file, device="cuda"):
+def tune_all_ops(sch_file, device="cuda", only_extract_tasks=False):
     """Tune all listed ops.
 
     sch_file: str
@@ -449,6 +481,9 @@ def tune_all_ops(sch_file, device="cuda"):
 
     device: str
         The target device. Default cuda.
+
+    only_extract_tasks: bool
+        Whether to extract and print tasks only without actual tuning them.
     """
     for tune_func in [
             tune_fused_take_dx,
@@ -457,4 +492,4 @@ def tune_all_ops(sch_file, device="cuda"):
             tune_layer_norm,
             tune_layer_norm_dx
     ]:
-        tune_func(sch_file, device=device)
+        tune_func(sch_file, device=device, only_extract_tasks=only_extract_tasks)
