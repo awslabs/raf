@@ -5,6 +5,7 @@
  */
 #include "mnm/op.h"
 #include "mnm/tensor.h"
+#include "mnm/communicator.h"
 #include "../schema/communication.h"
 #include "../schema/ufunc.h"
 #include "./declare_utils.h"
@@ -15,6 +16,7 @@ namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
+using namespace mnm::distributed::communicator;
 using tensor::Tensor;
 
 void AllReduce(const CallValues& call) {
@@ -40,6 +42,21 @@ void AllReduce(const CallValues& call) {
 }
 
 MNM_OP_DECLARE("mnm.op._allreduce", AllReduce);
+
+void AllGather(const CallValues& call) {
+  const auto* args = call->args.as<AllgatherArgs>();
+  CHECK(args != nullptr);
+  ir::Array<Value> ret;
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  shape[args->axis] *= CommunicatorManager::Get()->GetCommunicator()->GetSize();
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+MNM_OP_DECLARE("mnm.op._allgather", AllGather);
 
 }  // namespace declare
 }  // namespace op

@@ -12,6 +12,13 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class AllgatherArgs : public ir::AttrsNode<AllgatherArgs> {
+ public:
+  value::BaseTensorValue x;
+  int axis;
+  MNM_OP_SCHEMA(AllgatherArgs, "mnm.args._allgather");
+};
+
 class AllreduceArgs : public ir::AttrsNode<AllreduceArgs> {
  public:
   std::vector<value::BaseTensorValue> x;

@@ -41,6 +41,7 @@ namespace mnm {
 namespace op {
 namespace regs {
 namespace names {
+static const char _allgather[] = "mnm.op._allgather";
 static const char _allreduce[] = "mnm.op._allreduce";
 static const char _contrib_dropout[] = "mnm.op._contrib_dropout";
 static const char abs[] = "mnm.op.abs";
@@ -232,6 +233,13 @@ namespace ffi2schema {
   CHECK_EQ(size, n) << "TypeError: Mismatched number of arguments for operator \"{op}\": " \
                     << "Expected " << n << ", but get " << size;                           \
   auto attrs = make_object<obj>();
+
+Attrs Allgather(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::AllgatherArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
 
 Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::AllreduceArgs, 1);  // NOLINT(whitespace/line_length)
@@ -1033,6 +1041,15 @@ namespace imperative {
       std::move(value),                                                                         \
       ClosureValue::make(/*env=*/std::move(env), /*func=*/Function({vpack->dy}, body, {}, {})), \
       {prev_tapes.begin(), prev_tapes.begin() + n_tapes});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._allgather").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_allgather, 2, ffi2schema::Allgather,
+              schema::AllgatherArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(_allreduce, 1, ffi2schema::Allreduce,
@@ -2620,6 +2637,13 @@ namespace ffi2expr {
 
 #define MNM_RET() return Array<Expr>(result);
 
+Array<Expr> Allgather(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_RET();
+}
+
 Array<Expr> Allreduce(const TVMArgs& values) {
   MNM_PRELUDE(1);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
@@ -3387,6 +3411,7 @@ namespace symbolic {
     }                                                            \
   }
 
+MNM_REGISTER_GLOBAL("mnm.op.sym._allgather").set_body(MNM_SYMBOLIC_API(_allgather, 2, Allgather));
 MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 1, Allreduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
@@ -3642,6 +3667,14 @@ namespace value2schema {
       }                                 \
     }                                   \
   }
+
+template <const char* op_name>
+Attrs Allgather(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::AllgatherArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Int, axis);
+  return Attrs(attrs);
+}
 
 template <const char* op_name>
 Attrs Allreduce(const Array<Value>& values) {
@@ -4484,6 +4517,18 @@ namespace mnm {
 namespace op {
 namespace regs {
 namespace schema_field_idx {
+
+template <const char* op_name>
+int Allgather(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
 
 template <const char* op_name>
 int Allreduce(const std::string& field) {
@@ -5963,6 +6008,10 @@ namespace f_mnm_schema {
 #define MNM_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \
   MNM_OP_REGISTER(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
 
+MNM_BIND_SCHEMA("mnm.op._allgather", names::_allgather,
+                value2schema::Allgather);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allgather", names::_allgather,
+                            schema_field_idx::Allgather);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op._allreduce", names::_allreduce,
                 value2schema::Allreduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allreduce", names::_allreduce,
@@ -6595,6 +6644,7 @@ namespace op {
 namespace schema {
 namespace {
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
+MNM_REGISTER_OBJECT_REFLECT(AllgatherArgs);
 MNM_REGISTER_OBJECT_REFLECT(AllreduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolDxArgs);

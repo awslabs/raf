@@ -3,6 +3,8 @@
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
 # Defined in ./src/op/regs/regs.cc
+_allgather = _APIS.get("mnm.op.imp._allgather", None)
+# Defined in ./src/op/regs/regs.cc
 _allreduce = _APIS.get("mnm.op.imp._allreduce", None)
 # Defined in ./src/op/regs/regs.cc
 _contrib_dropout = _APIS.get("mnm.op.imp._contrib_dropout", None)

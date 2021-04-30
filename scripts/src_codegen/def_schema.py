@@ -540,6 +540,10 @@ SCHEMAS = {
             cxx_type="std::vector<value::BaseTensorValue>",
             cxx_normalizer="TensorTuple"),
     ],
+    "communication.h::_allgather": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int"),
+    ],
     "transform.h::gather": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int"),

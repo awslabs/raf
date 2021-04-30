@@ -97,6 +97,42 @@ class NCCLAllReduce : public mnm::op::OpEnv {
 };
 MNM_OP_DISPATCH("mnm.op._allreduce", NCCLAllReduce::make, DevType::kCUDA(), "nccl_communication");
 
+class NCCLAllGather : public mnm::op::OpEnv {
+  void* stream;
+  void* communicator;
+  explicit NCCLAllGather(const CallValues& cv) {
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+  }
+
+ public:
+  ~NCCLAllGather() {
+  }
+
+  void Execute(const CallValues& cv) {
+    auto args = cv->args.as<mnm::op::schema::AllgatherArgs>();
+    Execute({args->x}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    DLTensor* x = inputs[0];
+    DLTensor* out = output;
+    int64_t size = 1;
+    for (int i = 0; i < x->ndim; ++i) {
+      size *= x->shape[i];
+    }
+    NCCL_CALL(ncclAllGather(x->data, out->data, size, ncclFloat, (ncclComm_t)nccl_comm,
+                            (cudaStream_t)stream));
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLAllGather(cv);
+  }
+};
+
+MNM_OP_DISPATCH("mnm.op._allgather", NCCLAllGather::make, DevType::kCUDA(), "nccl_communication");
+
 }  // namespace nccl
 }  // namespace communication
 }  // namespace op

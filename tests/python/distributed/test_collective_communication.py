@@ -90,8 +90,74 @@ def test_allreduce_with_tensor_list():
         check(y, target_y)
 
 
+@pytest.mark.skip()
+def test_allgather(axis):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):  # pylint: disable=no-self-use,invalid-name
+            x = mnm.allgather(x, axis=axis)
+            return x
+
+    model = TestModel()
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    x = mnm.array(x, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", x)
+    model.to(device=device)
+    y = model(x)
+    if rank == 0:
+        target_y = np.concatenate([x.asnumpy(), x.asnumpy() * 2], axis=axis)
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+        check(y, target_y)
+
+
+@pytest.mark.skip()
+def test_allgather_with_tensor_list(axis):
+    print("Testing allgather with a list of tensors as input.")
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @ mnm.model.trace
+        def forward(self, x1, x2):  # pylint: disable=no-self-use
+            x = mnm.allgather([x1, x2], axis=axis)  # pylint: disable=invalid-name
+            return mnm.concatenate(x)
+
+    model = TestModel()
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    x1 = mnm.array(x1, device=device)
+    x2 = mnm.array(x2, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", [x1, x2])
+    model.to(device=device)
+    y = model(x1, x2)
+    if rank == 0:
+        x1 = x1.asnumpy()
+        x2 = x2.asnumpy()
+        target_y1 = np.concatenate([x1, x1 * 2], axis=axis)
+        target_y2 = np.concatenate([x2, x2 * 2], axis=axis)
+        target_y = np.concatenate([target_y1, target_y2])
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+        check(y, target_y)
+
+
 if __name__ == "__main__":
     if mnm.build.with_distributed():
         test_allreduce_with_tensor()
         test_allreduce_with_tensor_list()
+        test_allgather(axis=0)
+        test_allgather(axis=1)
+        test_allgather_with_tensor_list(axis=0)
+        test_allgather_with_tensor_list(axis=1)
         dist.RemoveCommunicator()
