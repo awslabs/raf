@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name,protected-access
+#pylint: disable=invalid-name,protected-access,import-error,wrong-import-order
 """Utilities for testing and benchmarks"""
 import logging
 import functools

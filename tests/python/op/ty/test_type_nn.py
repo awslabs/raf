@@ -231,14 +231,17 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
 @pytest.mark.parametrize("kernel", [1, 2, 3, 4])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
 @pytest.mark.parametrize("padding", [0, 1])
+@pytest.mark.parametrize("ceil", [True, False])
 @pytest.mark.parametrize(
     "funcs",
     [
         [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
         [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
     ])
-def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
-
+def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
+    if ((data_shape[2] + 2 * padding - kernel) % stride != 0 and ceil):
+        pytest.skip("""pytorch have different implementation to tvm on one side padding when the
+                    stride can not fully divide the after padding shape on ceilling mode""")
     mnm_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
@@ -248,7 +251,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
             pass
         @mnm.model.trace
         def forward(self, x):
-            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding)
+            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, ceil_mode=ceil)
 
     model = Pool2D()
     # forward
@@ -259,7 +262,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs):
     record = model._internal(m_x)
     m_mod = record.mod
     m_mod = InferType()(m_mod)
-    t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding)
+    t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding, ceil_mode=ceil)
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
     checked_type = FuncType([x_ty], y_ty)

@@ -42,7 +42,7 @@ def _mx_conv(inputs, attrs, is_train):
         res = op.conv2d(inputs[0], inputs[1], **new_attrs)
         if use_bias:
             assert len(inputs) == 3
-            res = op.add(res, inputs[2])
+            res = op.bias_add(res, inputs[2])
         return [res]
     kernel_size = attrs.get_int_tuple("kernel")
     if len(kernel_size) == 2:
@@ -102,6 +102,9 @@ def _mx_pooling(inputs, attrs, is_train):
         new_attrs["ceil_mode"] = (attrs.get_str("pooling_convention", "valid") == "full")
         if is_avg:
             new_attrs["include_pad"] = attrs.get_bool("count_include_pad", True)
+
+        if (new_attrs["kernel"] == 1) or (new_attrs["kernel"] == (1, 1)):
+            return [inputs[0]]
         return [new_op(inputs[0], **new_attrs)]
 
     if pool_type == "max":
@@ -138,6 +141,42 @@ def _mx_reshape(inputs, attrs, is_train):
     _saved_reshape_inputs[out] = inputs[0]
     return [out]
 
+def _mx_expand_dims(inputs, attrs, is_train):
+    axis = attrs.get_int("axis")
+    out = op.expand_dims(inputs[0], axis=axis)
+    return [out]
+
+def _mx_sum(inputs, attrs, is_train):
+    axis_list = attrs.get_int_tuple("axis")
+    out = op.sum(inputs[0], axis=axis_list)
+    return [out]
+
+def _mx_swap_axis(inputs, attrs, is_train):
+    dim1 = attrs.get_int("dim1")
+    dim2 = attrs.get_int("dim2")
+    out = op.swap_axis(inputs[0], axis1=dim2, axis2=dim1)
+    return [out]
+
+def _mx_multiply(inputs, attrs, is_train):
+    return [op.multiply(inputs[0], inputs[1])]
+
+
+def _mx_softmax(inputs, attrs, is_train):
+    axis = attrs.get_int("axis")
+    out = op.softmax(inputs[0], axis=axis)
+    return [out]
+
+def _mx_adaptive_avg_pooling(inputs, attrs, is_train):
+    output_size = attrs.get_int_tuple("output_size")
+    if output_size == (1,):
+        output_size = (1, 1)
+
+    out = op.adaptive_avg_pool2d(inputs[0], shape=output_size)
+    return [out]
+
+def _mx_flatten(inputs, attrs, is_train):
+    out = op.batch_flatten(inputs[0])
+    return [out]
 
 def _mx_rnn_param_concat(inputs, attrs, _):
     # We don't need to concatenate RNN params because we will unravel the RNN op
@@ -328,6 +367,13 @@ _convert_map = {
     "RNN": _mx_rnn_layer,
     'elemwise_add': _mx_add,
     "_rnn_param_concat": _mx_rnn_param_concat,
+    'expand_dims':_mx_expand_dims,
+    "sum" : _mx_sum,
+    'SwapAxis': _mx_swap_axis,
+    "broadcast_mul" : _mx_multiply,
+    "softmax" : _mx_softmax,
+    "_contrib_AdaptiveAvgPooling2D" : _mx_adaptive_avg_pooling,
+    "Flatten" : _mx_flatten,
 }
 
 

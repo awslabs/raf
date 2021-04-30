@@ -119,8 +119,12 @@ void Pool2D(const CallValues& call) {
     h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
     w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
   } else {
-    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
-    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
+    h_out = std::ceil((h_in + pad_h - dilate_h * (kernel_h - 1) - 1) /
+                      static_cast<double_t>(stride_h)) +
+            1;
+    w_out = std::ceil((w_in + pad_w - dilate_w * (kernel_w - 1) - 1) /
+                      static_cast<double_t>(stride_w)) +
+            1;
   }
   tvm::Array<tvm::PrimExpr> oshape{tvm::Integer(n_in), tvm::Integer(c_in), tvm::Integer(h_out),
                                    tvm::Integer(w_out)};

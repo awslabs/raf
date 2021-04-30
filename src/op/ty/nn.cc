@@ -20,6 +20,7 @@ namespace type {
 
 using tvm::Array;
 using tvm::Downcast;
+using tvm::FloatImm;
 using tvm::Integer;
 using tvm::PrimExpr;
 using tvm::relay::TensorType;
@@ -105,6 +106,7 @@ MNM_OP_TYPE("mnm.op.conv2d_dw", "Conv2dDxw", Conv2DDxwInfer);
 MNM_OP_TYPE("mnm.op.conv2d_dx", "Conv2dDxw", Conv2DDxwInfer);
 
 Type Pool2DInfer(const CallValues& value) {
+  using namespace tvm::tir;
   const auto* args = value->args.as<PoolArgs>();
   TensorType x = Downcast<TensorType>(GetType(args->x));
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
@@ -129,12 +131,14 @@ Type Pool2DInfer(const CallValues& value) {
   PrimExpr dilate_w = Integer(dilation[1]);
   PrimExpr h_out, w_out;
   CHECK(dilation[0] == 1 && dilation[1] == 1) << "Pooling does not support dilation!";
+  PrimExpr h_temp = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1);
+  PrimExpr w_temp = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1);
   if (!args->ceil_mode) {
-    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
-    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;
+    h_out = h_temp / stride_h + 1;
+    w_out = w_temp / stride_w + 1;
   } else {
-    h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) + stride_h - 1) / stride_h + 1;
-    w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) + stride_w - 1) / stride_w + 1;
+    h_out = h_temp / stride_h + if_then_else(indexmod(h_temp, stride_h) == 0, 1, 2);
+    w_out = w_temp / stride_w + if_then_else(indexmod(w_temp, stride_w) == 0, 1, 2);
   }
   Array<PrimExpr> oshape{n_in, c_in, h_out, w_out};
   return TensorType(layout_converter.BackwardShape(oshape), x->dtype);
