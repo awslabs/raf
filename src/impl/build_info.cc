@@ -40,9 +40,24 @@ std::string UseCUTLASS() {
   return MNM_USE_CUTLASS;
 }
 
+std::string CudaVersion() {
+  return MNM_CUDA_VERSION;
+}
+
+std::string CudnnVersion() {
+  return MNM_CUDNN_VERSION;
+}
+
+std::string CmakeBuildType() {
+  return MNM_CMAKE_BUILD_TYPE;
+}
+
 MNM_REGISTER_GLOBAL("mnm.build_info.git_version").set_body_typed(GitVersion);
+MNM_REGISTER_GLOBAL("mnm.build_info.cuda_version").set_body_typed(CudaVersion);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_cuda").set_body_typed(UseCUDA);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_cudnn").set_body_typed(UseCuDNN);
+MNM_REGISTER_GLOBAL("mnm.build_info.cudnn_version").set_body_typed(CudnnVersion);
+MNM_REGISTER_GLOBAL("mnm.build_info.cmake_build_type").set_body_typed(CmakeBuildType);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_llvm").set_body_typed(UseLLVM);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_mpi").set_body_typed(UseMPI);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_nccl").set_body_typed(UseNCCL);
