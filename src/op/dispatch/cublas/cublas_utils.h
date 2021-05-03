@@ -5,6 +5,7 @@
  */
 #pragma once
 #include <cublas_v2.h>
+#include <tvm/relay/transform.h>
 #include "mnm/base.h"
 #include "mnm/enum_base.h"
 #include "mnm/ir.h"
@@ -44,6 +45,17 @@ inline const char* cublasGetErrorString(cublasStatus_t status) {
   }
   LOG(FATAL) << "ValueError: Unknown error!\n";
   throw;
+}
+
+inline void CUBLASTryEnableTensorCore(cublasHandle_t hdl) {
+#if CUDA_VERSION >= 11000
+  bool allow_tf32 = tvm::relay::transform::PassContext::Current()
+                        ->GetConfig<tvm::Bool>("mnm.cublas.allow_tf32", tvm::Bool(true))
+                        .value();
+  if (allow_tf32) {
+    CUBLAS_CALL(cublasSetMathMode(hdl, CUBLAS_TF32_TENSOR_OP_MATH));
+  }
+#endif
 }
 
 class CUBlasThreadEntry {

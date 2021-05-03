@@ -16,11 +16,14 @@ using CUBlasThreadStore = dmlc::ThreadLocalStore<CUBlasThreadEntry>;
 
 CUBlasThreadEntry::CUBlasThreadEntry() {
   CUBLAS_CALL(cublasCreate(&handle));
+  CUBLASTryEnableTensorCore(handle);
 }
 
 CUBlasThreadEntry* CUBlasThreadEntry::ThreadLocal() {
   return CUBlasThreadStore::Get();
 }
+
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.cublas.allow_tf32", tvm::Bool);
 
 }  // namespace cublas
 }  // namespace op
