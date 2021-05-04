@@ -137,8 +137,7 @@ class TypeInferencer : public ExprMutator {
       const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
       CHECK(fty_node);
       for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
-        Type arg_type = fty_node->arg_types[i];
-        CHECK(tvm::StructuralEqual()(arg_type, ret->args[0]->checked_type()));
+        ret->args[i]->checked_type_ = Unify(fty_node->arg_types[i], ret->args[i]->checked_type());
       }
       ret->checked_type_ = fty_node->ret_type;
     } else {
