@@ -186,6 +186,7 @@ Array<Expr> BinaryNoGrad(const Expr& orig_call, const Array<Expr> orig_args, con
 }
 
 MNM_OP_GRAD("mnm.op.not_equal", BinaryNoGrad);
+MNM_OP_GRAD("mnm.op.equal", BinaryNoGrad);
 
 }  // namespace grad
 }  // namespace op
