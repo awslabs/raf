@@ -11,7 +11,6 @@ from tvm.relay import TensorType, FuncType
 @pytest.mark.parametrize("op", [
     (sym.argmax, torch.argmax, False),
     (sym.argmin, torch.argmin, False),
-    (sym.mean, torch.mean, True),
     (sym.max, torch.max, True),
     (sym.min, torch.min, True),
     (sym.prod, torch.prod, True),
@@ -59,6 +58,57 @@ def test_reduce(op, shape, keepdims, dtype):
         y_ty = TensorType(ty_shape, dtype="int32")
     else:
         y_ty = TensorType(ty_shape, dtype=dtype)
+    desired_type = FuncType([x_ty], y_ty)
+
+    check_type(m_func, desired_type)
+
+
+# pylint: disable=no-member, no-self-use, protected-access, too-many-locals
+@pytest.mark.parametrize("op", [
+    (sym.mean, torch.mean),
+])
+@pytest.mark.parametrize("shape", [
+    [3],
+    [3, 2],
+    [3, 2, 5],
+    [3, 2, 5, 8],
+    [3, 2, 5, 8, 4],
+    [3, 2, 5, 8, 4, 7],
+])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("keepdims", [True, False])
+def test_reduce_with_backward(op, shape, keepdims, dtype):
+    mnm_fwd, torch_fwd = op
+
+    axis = int(np.random.randint(-len(shape), len(shape), ()))
+
+    class Reduce(mnm.Model):
+        def build(self):
+            pass
+        # pylint: disable=no-self-use
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm_fwd(x, axis=axis, keepdims=keepdims)
+
+    model = Reduce()
+
+    #forward
+    m_x, t_x = randn_torch(shape, dtype=dtype)
+
+    m_record = model._internal(m_x)
+    m_func = m_record.mod['main']
+    m_func = run_infer_type(m_func)
+
+    # backward
+    m_record.mod['main'] = m_func
+    m_mod = mnm._ffi.pass_.AutoDiff([])(m_record.mod)
+    run_infer_type(m_mod)
+
+    t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)
+    x_ty = TensorType(t_x.shape, dtype=dtype)
+
+    ty_shape = t_y.shape
+    y_ty = TensorType(ty_shape, dtype=dtype)
     desired_type = FuncType([x_ty], y_ty)
 
     check_type(m_func, desired_type)

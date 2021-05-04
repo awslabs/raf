@@ -18,6 +18,7 @@ namespace type {
 
 using namespace mnm::value;
 using schema::ReduceArgs;
+using schema::ReduceDxArgs;
 using schema::SumArgs;
 using schema::SumDxArgs;
 using tvm::relay::Type;
@@ -155,6 +156,13 @@ Type ReduceOutSameDType(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
+Type ReduceDxDType(const CallValues& value) {
+  const auto* args = value->args.as<ReduceDxArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
 MNM_OP_TYPE("mnm.op.argmax", "Argmax", ReduceOutIntDType);
 MNM_OP_TYPE("mnm.op.argmin", "Argmin", ReduceOutIntDType);
 MNM_OP_TYPE("mnm.op.max", "Max", ReduceOutSameDType);
@@ -163,8 +171,8 @@ MNM_OP_TYPE("mnm.op.all", "All", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.any", "Any", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod", "Prod", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", ReduceOutSameDType);
+MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ReduceDxDType);
+MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", ReduceDxDType);
 
 }  // namespace type
 }  // namespace op
