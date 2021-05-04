@@ -50,3 +50,14 @@ def erf_dx_compute(attrs, inputs, output_type):
 _reg.register_broadcast_schedule("mnm.op.erf_dx")
 _reg.register_injective_schedule("mnm.op.zeros_like")
 _reg.register_injective_schedule("mnm.op.ones_like")
+
+@register_compute("mnm.op.sqrt_dx")
+def sqrt_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=unused-variable
+    x, y, dy = inputs
+    return [_tvm.te.compute(x.shape,
+                            lambda *idx: dy[idx] / (y[idx] + y[idx]),
+                            tag=_tvm.topi.tag.ELEMWISE)]
+
+_reg.register_injective_schedule("mnm.op.sqrt_dx")

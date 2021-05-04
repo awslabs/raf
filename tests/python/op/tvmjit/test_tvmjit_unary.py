@@ -96,6 +96,7 @@ def test_unary_ops_with_grad(ops, shape, dtype, device):
     [
         (torch.log2, mnm._op.sym.log2),
         (torch.log, mnm._op.sym.log),
+        (torch.sqrt, mnm._op.sym.sqrt),
     ])
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

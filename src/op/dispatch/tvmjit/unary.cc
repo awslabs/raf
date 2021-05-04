@@ -129,6 +129,8 @@ MNM_TVMJIT_PLEVEL(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxSchema2Args, Una
                   UnaryDxSchema2Attrs, GenericHasher, 20);
 MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
            UnaryDxSchema2Attrs, GenericHasher);
+MNM_TVMJIT(SqrtDx, "mnm.op.sqrt_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
+           UnaryDxSchema2Attrs, GenericHasher);
 MNM_TVMJIT(TanhDx, "mnm.op.tanh_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
            UnaryDxSchema2Attrs, GenericHasher);
 }  // namespace tvmjit
