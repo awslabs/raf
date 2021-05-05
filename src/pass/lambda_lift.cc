@@ -32,13 +32,15 @@ Expr ANFNormalizer(const Let& let) {
   const LetNode* let_node = let.get();
 
   // Simplifies
-  // let %a3 = @lifted_name4372026607701689919(%y);
+  // let %a2 = %a3 = @lifted_name4372026607701689919(%y);
   // %a3
-  // to simply @lifted_name4372026607701689919(%y);
-  if (tvm::StructuralEqual()(let_node->var, let_node->body)) {
-    if (auto call = let_node->value.as<CallNode>()) {
-      if (call->op.as<GlobalVarNode>()) {
-        return let_node->value;
+  // to simply let %a2 = @lifted_name4372026607701689919(%y);
+  if (auto nested_let_node = let_node->value.as<LetNode>()) {
+    if (tvm::StructuralEqual()(nested_let_node->var, nested_let_node->body)) {
+      if (auto call = nested_let_node->value.as<CallNode>()) {
+        if (call->op.as<GlobalVarNode>()) {
+          return Let(let_node->var, nested_let_node->value, let_node->body);
+        }
       }
     }
   }
