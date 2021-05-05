@@ -63,7 +63,7 @@ def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
         executor = VMExecutor(mod, device)
         with tvm.transform.PassContext(
                 config={"relay.backend.use_auto_scheduler": True,
-                        "mnm.tvmjit.extract_task": True},
+                        "mnm.tvmjit.allow_jit_failure": True},
                 disabled_pass={"AutoSchedulerLayoutRewrite"},
         ):
             executor.vm.run(*args)

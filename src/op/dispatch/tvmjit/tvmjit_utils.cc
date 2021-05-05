@@ -144,14 +144,14 @@ void TVMOpEnv::Execute(const std::vector<Value>& inputs, Value output) {
 
   // Skip the execution if we are in the task extraction mode since
   // we do not care about the correctness.
-  if (IsAutoSchedulerTaskExtractionEnabled()) {
+  if (AllowJitFailure()) {
     return;
   }
 
   f.CallPacked(targs, &rv);
 }
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.tvmjit.extract_task", tvm::Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.tvmjit.allow_jit_failure", tvm::Bool);
 
 }  // namespace tvmjit
 }  // namespace op

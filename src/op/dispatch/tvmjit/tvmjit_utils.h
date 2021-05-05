@@ -73,9 +73,9 @@ HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& 
 /*!
  * \brief Return whether the auto scheduler task extraction mode is enabled in the pass context.
  */
-inline bool IsAutoSchedulerTaskExtractionEnabled() {
+inline bool AllowJitFailure() {
   return tvm::relay::transform::PassContext::Current()
-      ->GetConfig<tvm::Bool>("mnm.tvmjit.extract_task", tvm::Bool(false))
+      ->GetConfig<tvm::Bool>("mnm.tvmjit.allow_jit_failure", tvm::Bool(false))
       .value();
 }
 
@@ -163,7 +163,7 @@ using FMNMArgIndices =
       env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                              \
     } catch (const dmlc::Error& e) {                                                            \
       /* Invalid implementation. Return nullptr to let dispatcher select the next one */        \
-      if (!IsAutoSchedulerTaskExtractionEnabled()) {                                            \
+      if (!AllowJitFailure()) {                                                                 \
         DLOG(ERROR) << "Failed to JIT " << env->env_name << ": " << e.what();                   \
         return nullptr;                                                                         \
       }                                                                                         \

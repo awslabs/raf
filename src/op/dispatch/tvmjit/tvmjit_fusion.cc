@@ -240,7 +240,7 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   try {
     env->f = jit(engine, c_cache_key(func, target));
   } catch (const dmlc::Error& e) {
-    if (!IsAutoSchedulerTaskExtractionEnabled()) {
+    if (!AllowJitFailure()) {
       LOG(FATAL) << "Failed to build a fused op " << env->env_name << ": " << e.what();
     }
   }

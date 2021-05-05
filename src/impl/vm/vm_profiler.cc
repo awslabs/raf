@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "tvm/relay/transform.h"
 #include "mnm/device_api.h"
 
 namespace mnm {
@@ -52,6 +53,7 @@ std::string GetShapeStr(const Value& value) {
 PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
                                                const ObjectPtr<Object>& sptr_to_self) {
   using namespace device_api;
+  using PassContext = tvm::relay::transform::PassContext;
   if (name == "get_interm_tensors") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       CHECK(cache_interm_tensors_)
@@ -123,11 +125,13 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
 
       VMContext ctx = args[0];
       if (profile_memory_) {
+        PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(true));
         total_allocated_megabytes_ = 0;
         Run(ctx);
         for (auto op_env_cache : op_env_cache_) {
           op_env_cache->Clear();
         }
+        PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(false));
         *rv = total_allocated_megabytes_;
       } else {
         *rv = Run(ctx);
