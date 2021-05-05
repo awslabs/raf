@@ -90,7 +90,7 @@ class ClosureFlattener : public MixedModeMutator {
     CHECK(closure_node);
     auto new_body = closure_node->body;
     auto all_vars = Concat(closure_node->params, func->params);
-    return Function(all_vars, new_body, {}, {});
+    return Function(all_vars, new_body, closure_node->ret_type, {});
   }
 
   IRModule Flatten() {
