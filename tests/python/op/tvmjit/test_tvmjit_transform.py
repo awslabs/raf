@@ -543,8 +543,6 @@ def test_stack(params, device):
         m_x.requires_grad = True
         m_i.append(m_x)
         n_i.append(n_x)
-    output_shape = list(shapes[0])
-    output_shape.insert(axis, len(shapes))
     model = stack[len(m_i)](axis=axis)
     # check forward
     m_y = model(*m_i)
@@ -554,9 +552,11 @@ def test_stack(params, device):
     check(v_y, n_y)
 
     # check backward
+    output_shape = list(shapes[0])
+    axis = axis + len(shapes) + 1 if axis < 0 else axis
+    output_shape.insert(axis, len(shapes))
     m_dy, n_dy = randn(output_shape, dtype='float32', device=device)
     m_y.backward(m_dy)
-    axis = axis + len(shapes) if axis < 0 else axis
     n_dy_split = np.split(n_dy, indices_or_sections=len(shapes), axis=axis)
     n_dy_slices = list()
     for n_dy_slice in n_dy_split:

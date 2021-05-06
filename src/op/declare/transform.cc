@@ -554,21 +554,6 @@ MNM_OP_DECLARE("mnm.op.mesh_grid", [](const CallValues& call) {
   call->device = y0->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-void StackDx(const CallValues& call) {
-  const auto* args = call->args.as<StackArgs>();
-  CHECK(args != nullptr);
-  const std::vector<BaseTensorValue>& x = args->x;
-  CHECK_GE(x.size(), 1U);
-  DLTensor* y0 = x[0];
-  int axis = NormalizeAxis(args->axis, y0->ndim);
-  call->callee = ir::NullValue<OpValue>();
-  ScalarValue sections_v = ScalarValue::make((int)x.size());
-  ScalarValue axis_v = ScalarValue::make(axis);
-  call->out = TupleValue::make({sections_v, axis_v});
-}
-
-MNM_OP_DECLARE("mnm.op.stack_dx", StackDx).set_attr<TOpPattern>("TOpPattern", kInjective);
-
 MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);

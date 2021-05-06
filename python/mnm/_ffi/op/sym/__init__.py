@@ -139,7 +139,6 @@ from ._internal import sqrt
 from ._internal import sqrt_dx
 from ._internal import squeeze
 from ._internal import stack
-from ._internal import stack_dx
 from ._internal import stream_sync
 from ._internal import strided_slice
 from ._internal import strided_slice_dx

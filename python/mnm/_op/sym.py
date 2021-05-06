@@ -34,12 +34,12 @@ __all__ = [
     "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
     "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
     "softmax", "softmax_dx", "sort", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stack_dx", "stream_sync",
-    "strided_slice", "strided_slice_dx", "subtract", "sum", "sum_dx",
-    "swap_axis", "take", "take_dx", "tanh", "tanh_dx",
-    "threefry_generate", "threefry_split", "transpose", "transpose_dx", "trunc",
-    "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where", "where_dx",
-    "zeros", "zeros_like",
+    "sqrt_dx", "squeeze", "stack", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
+    "threefry_split", "transpose", "transpose_dx", "trunc", "vm_alloc_storage",
+    "vm_alloc_tensor", "vm_invoke_op", "where", "where_dx", "zeros",
+    "zeros_like",
 ]
 
 def _allgather(x, axis):
@@ -866,11 +866,6 @@ def stack(x, axis=0):
     x = sym_utils.to_tensor_tuple(x)
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.stack(x, axis))
-
-def stack_dx(x, axis=0):
-    x = sym_utils.to_tensor_tuple(x)
-    axis = sym_utils.to_int(axis)
-    return Symbol.from_expr(ffi.stack_dx(x, axis))
 
 def stream_sync(x, stream_tag=0):
     x = sym_utils.to_tensor(x)

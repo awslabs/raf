@@ -105,7 +105,6 @@ MNM_OP_GRAD("mnm.op.broadcast_to", BroadcastToGrad);
 Array<Expr> StackGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.split");
-  static auto op_sections = Op::Get("mnm.op.stack_dx");
   static auto op_squeeze = Op::Get("mnm.op.squeeze");
   const CallNode* call = orig_call.as<CallNode>();
 
@@ -116,10 +115,8 @@ Array<Expr> StackGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 
   CHECK_GE(call->args.size(), 2);
   const Expr& x = call->args[0];
-
-  Expr sections_axis = Call(op_sections, {x, call->args[1]});
-  Expr sections = tvm::relay::TupleGetItem(sections_axis, 0);
-  Expr axis = tvm::relay::TupleGetItem(sections_axis, 1);
+  const Expr& axis = call->args[1];
+  Expr sections = MakeConstant(mnm::value::ScalarValue::make(num_inputs));
   Expr split = Call(op_dx, {dy, sections, axis});
 
   Array<Expr> tuple;

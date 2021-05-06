@@ -179,7 +179,6 @@ static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
 static const char squeeze[] = "mnm.op.squeeze";
 static const char stack[] = "mnm.op.stack";
-static const char stack_dx[] = "mnm.op.stack_dx";
 static const char stream_sync[] = "mnm.op.stream_sync";
 static const char strided_slice[] = "mnm.op.strided_slice";
 static const char strided_slice_dx[] = "mnm.op.strided_slice_dx";
@@ -2371,14 +2370,6 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.stack").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
-MNM_REGISTER_GLOBAL("mnm.op.imp.stack_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(stack_dx, 2, ffi2schema::Stack, schema::StackArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
-  MNM_SET_ENV(vpack->y, value);
-  *ret = MNM_RET();
-});
-
 MNM_REGISTER_GLOBAL("mnm.op.imp.stream_sync").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(stream_sync, 2, ffi2schema::StreamControl,
               schema::StreamControlArgs);  // NOLINT(whitespace/line_length)
@@ -3589,7 +3580,6 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt").set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary)
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx").set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.squeeze").set_body(MNM_SYMBOLIC_API(squeeze, 2, Squeeze));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stack").set_body(MNM_SYMBOLIC_API(stack, 2, Stack));
-MNM_REGISTER_GLOBAL("mnm.op.sym.stack_dx").set_body(MNM_SYMBOLIC_API(stack_dx, 2, Stack));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync")
     .set_body(MNM_SYMBOLIC_API(stream_sync, 2, StreamControl));
 MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
@@ -6535,10 +6525,6 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.squeeze", names::squeeze,
 MNM_BIND_SCHEMA("mnm.op.stack", names::stack,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stack", names::stack,
-                            schema_field_idx::Stack);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.stack_dx", names::stack_dx,
-                value2schema::Stack);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stack_dx", names::stack_dx,
                             schema_field_idx::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
                 value2schema::StreamControl);  // NOLINT(whitespace/line_length)

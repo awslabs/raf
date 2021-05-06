@@ -279,8 +279,6 @@ squeeze = _APIS.get("mnm.op.imp.squeeze", None)
 # Defined in ./src/op/regs/regs.cc
 stack = _APIS.get("mnm.op.imp.stack", None)
 # Defined in ./src/op/regs/regs.cc
-stack_dx = _APIS.get("mnm.op.imp.stack_dx", None)
-# Defined in ./src/op/regs/regs.cc
 stream_sync = _APIS.get("mnm.op.imp.stream_sync", None)
 # Defined in ./src/op/regs/regs.cc
 strided_slice = _APIS.get("mnm.op.imp.strided_slice", None)
