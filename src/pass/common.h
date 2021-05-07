@@ -203,6 +203,13 @@ static inline Function CreateGlobalFunc(const Array<Var>& free_vars, const Expr&
   }
   // The old vars might be used in the body, Substitute them with the new vars
   auto new_body = VarSubstitutor(mapping).Substitute(body);
+
+  // Check that the body is just a var node. If it is, wrap it in a Let node to keep valid ANF form.
+  if (auto body_var = new_body.as<VarNode>()) {
+    auto new_var = Var(body_var->name_hint(), body_var->type_annotation, {});
+    new_body = Let(new_var, new_body, new_var);
+  }
+
   return Function(new_free_vars, new_body, type_annotation, {});
 }
 };  // namespace pass

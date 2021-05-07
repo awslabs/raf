@@ -60,6 +60,11 @@ def test_mnm_recursive_function():
     mod = LiftBranchBody()(mod)
     mod = InferType()(mod)
 
+    # Check that the true branch is a Let expression
+    for gvar in mod.get_global_vars():
+        if 'true' in gvar.name_hint:
+            assert isinstance(mod[gvar].body, relay.Let)
+
     t_0 = relay.scalar_type(dtype="int32")
     t_1 = relay.TensorType((1, 100))
     t_2 = relay.TensorType((1, 100))
