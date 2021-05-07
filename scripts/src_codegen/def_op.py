@@ -134,6 +134,7 @@ OPS = [
     Op(name="get_valid_counts", schema_name="get_valid_counts"),
     Op(name="bias_add", schema_name="bias_add"),
     Op(name="_contrib_dropout", schema_name="dropout"),
+    Op(name="_contrib_dropout_dx", schema_name="dropout_dx"),
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
     Op(name="_allreduce", schema_name="_allreduce"),
     Op(name="_allgather", schema_name="_allgather"),

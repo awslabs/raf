@@ -33,6 +33,8 @@ using tvm::String;
 
 // Scalars
 using tvm::Bool;
+using tvm::FloatImm;
+using tvm::FloatImmNode;
 using tvm::Integer;
 using tvm::IntImm;
 using tvm::IntImmNode;

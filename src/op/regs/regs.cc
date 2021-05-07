@@ -44,6 +44,7 @@ namespace names {
 static const char _allgather[] = "mnm.op._allgather";
 static const char _allreduce[] = "mnm.op._allreduce";
 static const char _contrib_dropout[] = "mnm.op._contrib_dropout";
+static const char _contrib_dropout_dx[] = "mnm.op._contrib_dropout_dx";
 static const char abs[] = "mnm.op.abs";
 static const char adaptive_avg_pool2d[] = "mnm.op.adaptive_avg_pool2d";
 static const char adaptive_avg_pool2d_dx[] = "mnm.op.adaptive_avg_pool2d_dx";
@@ -474,6 +475,14 @@ Attrs Dropout(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Double, p);
   MNM_TAPE(2, ffi2schema::OptionalTensor, in_states);
+  return Attrs(attrs);
+}
+
+Attrs DropoutDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::DropoutDxArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, dy);
+  MNM_TAPE(1, ffi2schema::Tensor, reserve_space);
+  MNM_POD(2, ffi2schema::Double, p);
   return Attrs(attrs);
 }
 
@@ -1064,6 +1073,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._contrib_dropout").set_body([](TVMArgs args, TVM
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->p));
   MNM_SET_ENV(vpack->x[2], schema2value::OptionalTensor(schema->in_states));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._contrib_dropout_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_contrib_dropout_dx, 3, ffi2schema::DropoutDx,
+              schema::DropoutDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->reserve_space));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->p));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2877,6 +2896,14 @@ Array<Expr> Dropout(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> DropoutDx(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::Tensor, dy);
+  MNM_ARG(1, ffi2expr::Tensor, reserve_space);
+  MNM_ARG(2, ffi2expr::Double, p);
+  MNM_RET();
+}
+
 Array<Expr> ExpandDims(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -3411,6 +3438,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym._allgather").set_body(MNM_SYMBOLIC_API(_allgathe
 MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 1, Allreduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
+MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout_dx")
+    .set_body(MNM_SYMBOLIC_API(_contrib_dropout_dx, 3, DropoutDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
     .set_body(MNM_SYMBOLIC_API(adaptive_avg_pool2d, 3, AdaptivePool));
@@ -3933,6 +3962,15 @@ Attrs Dropout(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_OPTIONAL(1, value2schema::Double, p);
   MNM_OPTIONAL(2, value2schema::OptionalTensor, in_states);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs DropoutDx(const Array<Value>& values) {
+  MNM_PRELUDE(2, 3, schema::DropoutDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, dy);
+  MNM_REQUIRED(1, value2schema::Tensor, reserve_space);
+  MNM_OPTIONAL(2, value2schema::Double, p);
   return Attrs(attrs);
 }
 
@@ -4985,6 +5023,21 @@ int Dropout(const std::string& field) {
 }
 
 template <const char* op_name>
+int DropoutDx(const std::string& field) {
+  if (field == "dy") {
+    return 0;
+  }
+  if (field == "reserve_space") {
+    return 1;
+  }
+  if (field == "p") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int ExpandDims(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -6014,7 +6067,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allreduce", names::_allreduce,
 MNM_BIND_SCHEMA("mnm.op._contrib_dropout", names::_contrib_dropout,
                 value2schema::Dropout);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._contrib_dropout", names::_contrib_dropout,
-                            schema_field_idx::Dropout);          // NOLINT(whitespace/line_length)
+                            schema_field_idx::Dropout);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._contrib_dropout_dx", names::_contrib_dropout_dx,
+                value2schema::DropoutDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._contrib_dropout_dx", names::_contrib_dropout_dx,
+                            schema_field_idx::DropoutDx);        // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.abs", names::abs,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
@@ -6665,6 +6722,7 @@ MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
+MNM_REGISTER_OBJECT_REFLECT(DropoutDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullLikeArgs);

@@ -227,19 +227,20 @@ MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
 
 Type ContribDropoutInfer(const CallValues& value) {
   const auto* args = value->args.as<DropoutArgs>();
-  Array<Type> res;
   TensorType x_ty = Downcast<TensorType>(GetType(args->x));
   TensorType states_ty;
+  Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
+      "mnm.op.cudnn.manual.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
+  Array<PrimExpr> reserve_space_shape = {reserve_space_size_in_bytes};
+  TensorType reserve_space(reserve_space_shape, DataType::UInt(8));
   if (args->in_states.defined()) {
     states_ty = Downcast<TensorType>(GetType(args->in_states.value()));
   } else {
     std::vector<PrimExpr> states_shape;
     states_ty = TensorType(states_shape, DataType::UInt(8));
   }
-  res.push_back(x_ty);
-  res.push_back(TensorType(x_ty->shape, DataType::Float(32)));
-  res.push_back(states_ty);
-  return TupleType(res);
+  return TupleType(
+      Array<Type>{x_ty, TensorType(x_ty->shape, DataType::Float(32)), states_ty, reserve_space});
 }
 
 MNM_OP_TYPE("mnm.op._contrib_dropout", "ContribDropout", ContribDropoutInfer);

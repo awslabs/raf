@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,redefined-builtin
+# pylint: disable=invalid-name,redefined-builtin,line-too-long
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
@@ -8,6 +8,8 @@ _allgather = _APIS.get("mnm.op.sym._allgather", None)
 _allreduce = _APIS.get("mnm.op.sym._allreduce", None)
 # Defined in ./src/op/regs/regs.cc
 _contrib_dropout = _APIS.get("mnm.op.sym._contrib_dropout", None)
+# Defined in ./src/op/regs/regs.cc
+_contrib_dropout_dx = _APIS.get("mnm.op.sym._contrib_dropout_dx", None)
 # Defined in ./src/op/regs/regs.cc
 abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc

@@ -267,6 +267,17 @@ inline void SetStream(cudaStream_t stream) {
   cudnnSetStream(CUDNNThreadEntry::ThreadLocal()->handle, stream);
 }
 
+inline size_t ComputeStorageInBytes(const ir::TensorType& type) {
+  size_t size = 1;
+  for (auto dim : type->shape) {
+    const auto* dim_imm = dim.as<ir::IntImmNode>();
+    CHECK(dim_imm);
+    size *= dim_imm->value;
+  }
+  size *= (type->dtype.bits() * type->dtype.lanes() + 7) / 8;
+  return size;
+}
+
 }  // namespace cudnn
 }  // namespace op
 }  // namespace mnm
