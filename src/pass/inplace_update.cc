@@ -82,7 +82,6 @@ class InplaceUpdateMutator : public MixedModeMutator {
         // If the inplace arg is true, the output tensor will share memory with the 1st input tensor
         CHECK_GT(pre->args.size(), 2);
         if (auto var = pre->args[2].as<ExtendedVarNode>()) {
-          LOG(INFO) << GetRef<Var>(var);
           ShareMap share{{0, GetRef<Var>(var)}};
           expr_share_map_.emplace(post, share);
         }
