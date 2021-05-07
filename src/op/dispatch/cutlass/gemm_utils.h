@@ -11,10 +11,29 @@ namespace mnm {
 namespace op {
 namespace cutlass {
 
+/*! \brief Tunable configurations for cutlass gemm */
+struct GemmTunableConfig : public TunableConfig {
+  GemmTunableConfig(std::string kernel_name, SplitKMode split_k_mode, int split_k_slices)
+      : TunableConfig(kernel_name), split_k_mode(split_k_mode), split_k_slices(split_k_slices) {
+  }
+
+  GemmTunableConfig() : split_k_mode(SplitKMode::kSerial), split_k_slices(1) {
+  }
+
+  /*! \brief split axis k serially or parallelly */
+  SplitKMode split_k_mode;
+  /*! \brief the number of slices to be split into */
+  int split_k_slices;
+};
+
 class CutlassGemmOpEnv : public CutlassOpEnv {
  public:
   explicit CutlassGemmOpEnv(const CallValues& call) : CutlassOpEnv(call) {
   }
+
+  std::vector<std::unique_ptr<TunableConfig>> ListTunableConfigs() override;
+
+  void SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) override;
 
   /*!
    * \brief Initialize a gemm operator
@@ -62,6 +81,12 @@ class CutlassGemmOpEnv : public CutlassOpEnv {
  protected:
   /*! \brief Gemm operator arguments */
   GemmUniversalArguments arguments_;
+  /*! \brief Gemm functional key */
+  std::unique_ptr<GemmFunctionalKeyExt> functional_key_;
+  /*! \brief Gemm functional key */
+  std::unique_ptr<GemmPreferenceKey> preference_key_;
+  /*! \brief Tunable configuration for cutlass gemm */
+  GemmTunableConfig tunable_;
 };
 
 /*!

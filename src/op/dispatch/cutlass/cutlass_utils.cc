@@ -27,7 +27,12 @@ int CutlassOpEnv::compute_capability() const {
 }
 
 void CutlassOpEnv::Execute(const CallValues& call) {
-  LOG(FATAL) << "Not Implemented Error";
+  Array<Value> args = GetListArgs(call->args);
+  std::vector<Value> inputs;
+  for (const auto& i : arg_indices) {
+    inputs.push_back(args[i]);
+  }
+  return Execute(inputs, call->out);
 }
 
 void CutlassOpEnv::RequestWorkspace(void** dest, const Device& device, int64_t nbytes) {
@@ -65,6 +70,22 @@ std::vector<int> GetArgIndices(const op::CallValues& call, const Array<Var>& par
     }
   }
   return arg_indices;
+}
+
+DType GetAccumulationDType(DType dtype) {
+  if (dtype.lanes != 1) {
+    return DType();
+  }
+  if (dtype.code == DTypeCode::kFloat()) {
+    switch (dtype.bits) {
+      case 16:
+        return DType(dtype.code, 32);
+      case 32:
+      case 64:
+        return dtype;
+    }
+  }
+  return DType();
 }
 
 }  // namespace cutlass

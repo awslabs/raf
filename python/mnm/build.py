@@ -1,4 +1,3 @@
-# pylint: line-too-long
 """Program build utilities."""
 from ._ffi import build_info
 

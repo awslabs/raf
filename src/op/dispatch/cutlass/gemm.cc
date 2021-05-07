@@ -118,20 +118,16 @@ bool CutlassMatmulOpEnv::IsValid() {
   return a_.defined() && b_.defined() && (!with_bias_ || bias_.defined());
 }
 
-OpEnv* CutlassMatmulOpEnv::make(const CallValues& cv) {
-  std::unique_ptr<CutlassMatmulOpEnv> op_env(std::make_unique<CutlassMatmulOpEnv>(cv));
-  if (!op_env->Pattern(cv) || !op_env->IsValid()) {
-    return nullptr;
-  }
-  DLTensor* a = GetValue<TensorValue>(cv, op_env->a_);
-  DLTensor* b = GetValue<TensorValue>(cv, op_env->b_);
+void CutlassMatmulOpEnv::Init(const CallValues& cv) {
+  DLTensor* a = GetValue<TensorValue>(cv, a_);
+  DLTensor* b = GetValue<TensorValue>(cv, b_);
   DLTensor* c = cv->out;
-  DLTensor* bias = op_env->with_bias_ ? GetValue<TensorValue>(cv, op_env->bias_) : c;
-  bool batched = op_env->batched_;
+  DLTensor* bias = with_bias_ ? GetValue<TensorValue>(cv, bias_) : c;
+  bool batched = batched_;
   int batch = batched ? std::max(a->shape[0], b->shape[0]) : -1;
   int m = c->shape[batched + 1];
   int n = c->shape[batched + 0];
-  int k = op_env->transpose_b_ ? b->shape[batched + 1] : b->shape[batched + 0];
+  int k = transpose_b_ ? b->shape[batched + 1] : b->shape[batched + 0];
 
   int lda = a->shape[batched + 1];
   int ldb = b->shape[batched + 1];
@@ -146,21 +142,28 @@ OpEnv* CutlassMatmulOpEnv::make(const CallValues& cv) {
   const float* ptrbias = static_cast<float*>(bias->data);
   float* ptrc = static_cast<float*>(c->data);
 
-  const auto layouta = op_env->transpose_a_ ? LayoutTypeID::kRowMajor : LayoutTypeID::kColumnMajor;
-  const auto layoutb = op_env->transpose_b_ ? LayoutTypeID::kRowMajor : LayoutTypeID::kColumnMajor;
+  const auto layouta = transpose_a_ ? LayoutTypeID::kRowMajor : LayoutTypeID::kColumnMajor;
+  const auto layoutb = transpose_b_ ? LayoutTypeID::kRowMajor : LayoutTypeID::kColumnMajor;
 
-  op_env->InitGemmOperation(
-      batched ? GemmUniversalMode::kBatched : GemmUniversalMode::kGemm, m, n, k,
-      GetNumericTypeID(c->dtype), GetNumericTypeID(c->dtype),
-      const_addr<1>(cudaDataType_t(DType(c->dtype))), GetNumericTypeID(b->dtype), layoutb, ptrb,
-      ldb, GetNumericTypeID(a->dtype), layouta, ptra, lda,
-      op_env->with_bias_ ? const_addr<1>(cudaDataType_t(DType(c->dtype)))
-                         : const_addr<0>(cudaDataType_t(DType(c->dtype))),
-      GetNumericTypeID(c->dtype), ptrbias, ldbias, ptrc, ldc, batched ? batch : 1, batch_stride_b,
-      batch_stride_a, batch_stride_bias, batch_stride_c, op_env->epilogue_op_);
-  op_env->arg_indices = GetArgIndices(
-      cv, op_env->with_bias_ ? std::vector<Var>({op_env->a_, op_env->b_, op_env->bias_})
-                             : std::vector<Var>({op_env->a_, op_env->b_}));
+  InitGemmOperation(batched ? GemmUniversalMode::kBatched : GemmUniversalMode::kGemm, m, n, k,
+                    GetNumericTypeID(c->dtype), GetNumericTypeID(c->dtype),
+                    const_addr<1>(cudaDataType_t(DType(c->dtype))), GetNumericTypeID(b->dtype),
+                    layoutb, ptrb, ldb, GetNumericTypeID(a->dtype), layouta, ptra, lda,
+                    with_bias_ ? const_addr<1>(cudaDataType_t(DType(c->dtype)))
+                               : const_addr<0>(cudaDataType_t(DType(c->dtype))),
+                    GetNumericTypeID(c->dtype), ptrbias, ldbias, ptrc, ldc,
+                    batched ? batch : tunable_.split_k_slices, batch_stride_b, batch_stride_a,
+                    batch_stride_bias, batch_stride_c, epilogue_op_, tunable_.kernel_name);
+  arg_indices = GetArgIndices(
+      cv, with_bias_ ? std::vector<Var>({a_, b_, bias_}) : std::vector<Var>({a_, b_}));
+}
+
+OpEnv* CutlassMatmulOpEnv::make(const CallValues& cv) {
+  std::unique_ptr<CutlassMatmulOpEnv> op_env(std::make_unique<CutlassMatmulOpEnv>(cv));
+  if (!op_env->Pattern(cv) || !op_env->IsValid()) {
+    return nullptr;
+  }
+  op_env->Init(cv);
   return op_env.release();
 }
 

@@ -27,17 +27,30 @@ using namespace ::cutlass;
 using namespace ::cutlass::library;
 using namespace mnm::ir;
 
+struct TunableConfig;
+
 class CutlassOpEnv : public mnm::op::OpEnv {
  public:
   explicit CutlassOpEnv(const CallValues& call);
 
-  void Execute(const CallValues& call);
+  void Execute(const CallValues& call) override;
+
+  virtual void Execute(const std::vector<value::Value>& inputs, value::Value output) = 0;
 
   /*! \brief Returns compute capability of the selected device. */
   int compute_capability() const;
 
   /*! \brief Request workspace. The workspace is allocated immediately. */
   void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
+
+  /*! \brief Set tunable configuration */
+  virtual void SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) = 0;
+
+  /*! \brief List all possible configs */
+  virtual std::vector<std::unique_ptr<TunableConfig>> ListTunableConfigs() = 0;
+
+  /*! \brief Initialize with default configuration */
+  virtual void Init(const CallValues& call) = 0;
 
  protected:
   /*! \brief Host workspace */
@@ -74,9 +87,22 @@ class CutlassOpEnv : public mnm::op::OpEnv {
   std::shared_ptr<memory_pool::Memory> workspace_mem_{nullptr};
 };
 
+/*! \brief Tunable configuration for cutlass kernels */
+struct TunableConfig {
+  TunableConfig(std::string kernel_name) : kernel_name(kernel_name) {
+  }
+  TunableConfig() : kernel_name("") {
+  }
+
+  /*! \brief cutlass kernel name */
+  std::string kernel_name;
+};
+
 NumericTypeID GetNumericTypeID(DType dtype);
 
 std::vector<int> GetArgIndices(const op::CallValues& call, const Array<Var>& params);
+
+DType GetAccumulationDType(DType dtype);
 
 template <typename T>
 T GetPattern(const ir::Map<ir::DFPattern, ir::Array<ir::Expr>>& vmap, ir::DFPattern x) {

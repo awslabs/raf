@@ -18,10 +18,11 @@ void CutlassGemmOpEnv::InitGemmOperation(
     int ldd, int batch_count, int64_t batch_stride_A, int64_t batch_stride_B,
     int64_t batch_stride_C, int64_t batch_stride_D, EpilogueKind epilogue_math_op,
     const std::string& preferred_name) {
-  GemmFunctionalKeyExt key(provider_, GemmKind::kUniversal, element_compute, element_scalar,
-                           element_A, layout_A, ComplexTransform::kNone, element_B, layout_B,
-                           ComplexTransform::kNone, element_C, epilogue_math_op);
-  auto operators_it = SingletonExt::get().operation_table.gemm_operations.find(key);
+  functional_key_ = std::make_unique<GemmFunctionalKeyExt>(
+      provider_, GemmKind::kUniversal, element_compute, element_scalar, element_A, layout_A,
+      ComplexTransform::kNone, element_B, layout_B, ComplexTransform::kNone, element_C,
+      epilogue_math_op);
+  auto operators_it = SingletonExt::get().operation_table.gemm_operations.find(*functional_key_);
   CHECK(operators_it != SingletonExt::get().operation_table.gemm_operations.end());
   CHECK(!operators_it->second.empty());
 
@@ -36,8 +37,8 @@ void CutlassGemmOpEnv::InitGemmOperation(
                                          ptr_D_check, ldd, 0, kMaximumAlignmentSize);
 
   // Find the best kernel in descending order of preference.
-  GemmPreferenceKey preference_key(compute_capability(), alignment);
-  Operation const* operation = find_gemm_operation(operators_it, preference_key, preferred_name);
+  preference_key_ = std::make_unique<GemmPreferenceKey>(compute_capability(), alignment);
+  Operation const* operation = find_gemm_operation(operators_it, *preference_key_, preferred_name);
   CHECK(operation);
   operation_ = operation;
 
@@ -67,6 +68,49 @@ void CutlassGemmOpEnv::InitGemmOperation(
                                       batch_stride_B,
                                       batch_stride_C,
                                       batch_stride_D};
+}
+
+std::vector<std::unique_ptr<TunableConfig>> CutlassGemmOpEnv::ListTunableConfigs() {
+  // Tunable configuration: split_k_slices
+  // Split axis k into 1 slice (no slicing) or 4 slices
+  const static std::vector<int> split_k_slices = {1, 4};
+
+  // Tunable configuration: split_k_mode
+  // Whether to compute different slices serially or parallelly
+  const static std::vector<SplitKMode> split_k_mode = {SplitKMode::kSerial};
+
+  // Tunable configuration: kernel_name
+  std::vector<std::string> kernel_names;
+  auto operators_it = SingletonExt::get().operation_table.gemm_operations.find(*functional_key_);
+  CHECK(operators_it != SingletonExt::get().operation_table.gemm_operations.end());
+  auto cc_it = operators_it->second.upper_bound(*preference_key_);
+  while (cc_it != operators_it->second.begin()) {
+    --cc_it;
+    for (auto const* op : cc_it->second) {
+      GemmDescription const& desc = static_cast<GemmDescription const&>(op->description());
+      int min_cc = desc.tile_description.minimum_compute_capability;
+      int max_cc = desc.tile_description.maximum_compute_capability;
+      int op_alignment = maximum_alignment_requirement(desc);
+      if ((min_cc <= preference_key_->compute_capability) &&
+          (preference_key_->compute_capability <= max_cc) &&
+          (op_alignment <= preference_key_->alignment)) {
+        kernel_names.push_back(desc.name);
+      }
+    }
+  }
+  std::vector<std::unique_ptr<TunableConfig>> rets;
+  for (const auto& name : kernel_names) {
+    for (const auto& i_split_k_slices : split_k_slices) {
+      for (const auto& i_split_k_mode : split_k_mode) {
+        rets.push_back(std::make_unique<GemmTunableConfig>(name, i_split_k_mode, i_split_k_slices));
+      }
+    }
+  }
+  return rets;
+}
+
+void CutlassGemmOpEnv::SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) {
+  tunable_ = *static_cast<GemmTunableConfig*>(tunable.get());
 }
 
 int gemm_problem_alignment(int M, int N, int K, NumericTypeID element_A, void const* ptr_A, int lda,

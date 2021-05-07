@@ -34,11 +34,13 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
 
   bool Pattern(const CallValues& cv);
 
-  static OpEnv* make(const CallValues& cv);
+  void Init(const CallValues& cv) override;
 
   void Execute(const std::vector<Value>& inputs, Value output);
 
   bool IsValid();
+
+  static OpEnv* make(const CallValues& cv);
 
  private:
   /*! \brief matmul operand a */
