@@ -151,7 +151,7 @@ struct FromRelayMutator : public ExprMutator {
     const VarNode* var_node;
     while ((var_node = curr_op.as<VarNode>())) {
       auto var = GetRef<Var>(var_node);
-      auto it = var_value_map_.find(GetRef<Var>(var_node));
+      auto it = var_value_map_.find(var);
       if (it != var_value_map_.end()) {
         curr_op = it->second;
       } else {

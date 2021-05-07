@@ -1,138 +1,249 @@
 /*!
- * Copyright (c) 2020 by Contributors
+ * Copyright (c) 2021 by Contributors
  * \file inplace_update.cc
- * \brief inplace array updates
+ * \brief Annotate the may_share field in the ExtendedVar to share the memory between inputs and
+ * outputs and check the validity of memory sharing.
  */
-#include <vector>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
+#include "tvm/ir/type_functor.h"
 #include "./let_list.h"
 #include "./common.h"
+#include "./liveness_analysis.h"
 
 namespace mnm {
 namespace pass {
 namespace inplace_update {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-
-class InplaceVisitor : public ExprFunctor<void(const Expr& n)> {
+/*!
+ * \brief InplaceUpdateMutator marks may_share in the variable for ops that have attr
+ * TMNMInplaceUpdate so that inputs and outputs may share the memory and perform inplace update.
+ * When binary op `add` and `subtract` has inplace arg set to be true, this pass will also mark the
+ * output tensor to share the memory with the 1st input tensor.
+ *
+ * For example, this pass transforms the op batch_norm_train as follows.
+ *   let %x1 = batch_norm_train(%x, %mean, %variance, %weight, %bias, float64(0.1), float64(0.001));
+ *   let %x2 = %x1.0;
+ *   let %x3 = %x1.1;
+ *   let %x4 = %x1.2;
+ *   let %x5 = (%x2, %x3, %x4);
+ *   %x5
+ *
+ * The transformed IR will become:
+ *   let %x1 = batch_norm_train(%x, %mean, %variance, %weight, %bias, float64(0.1), float64(0.001));
+ *   let %x2 = %x1.0;
+ *   let %x3(share: %mean) = %x1.1;
+ *   let %x4(share: %variance) = %x1.2;
+ *   let %x5 = (%x2, %x3, %x4);
+ *   %x5
+ *
+ * Another example for inplace update for the subtract op.
+ *   let %x1 = substract(%model.x, %gradient, true);
+ *   %x1
+ *
+ *   let %x1(share: %model.x) = substract(%model.x, %gradient, true);
+ *   %x1
+ */
+class InplaceUpdateMutator : public MixedModeMutator {
  public:
-  void VisitExprDefault_(const Object* op) override {
+  // Map from output index to shared var
+  using ShareMap = std::unordered_map<int, Var>;
+
+  Expr VisitExpr_(const VarNode* node) final {
+    auto var = GetRef<Var>(node);
+    auto it = var_update_map_.find(var);
+    if (it != var_update_map_.end()) {
+      return it->second;
+    }
+    return var;
   }
 
-  void VisitExpr_(const TupleGetItemNode* node) override {
-    Expr e = binding_[simplify_[Downcast<Var>(node->tuple)]];
-    if (const auto* tn = e.as<TupleNode>()) {
-      simplify_.Set(let_var_, Downcast<Var>(tn->fields[node->index]));
-    }
-  }
-
-  void VisitExpr_(const VarNode* node) override {
-    simplify_.Set(let_var_, GetRef<Var>(node));
-  }
-
-  void operator()(const Function& func) {
-    const static Op op = Op::Get("mnm.op.vm.alloc_storage");
-    std::unique_ptr<ExplicitLetList> ell_{ExplicitLetList::make(func->body)};
-    const auto& vars = ell_->vars;
-    const auto& exprs = ell_->exprs;
-    CHECK_EQ(vars.size(), exprs.size());
-    int n = exprs.size();
-    for (const auto& var : func->params) {
-      simplify_.Set(var, var);
-      binding_.Set(var, var);
-    }
-    for (int i = 0; i < n; ++i) {
-      let_var_ = vars[i];
-      simplify_.Set(let_var_, let_var_);
-      binding_.Set(let_var_, exprs[i]);
-      VisitExpr(exprs[i]);
-    }
-    for (int i = 0; i < n; ++i) {
-      const auto* var = static_cast<const ExtendedVarNode*>(vars[i].as<VarNode>());
-      if (var->may_share.defined()) {
-        Expr e = binding_[simplify_[vars[i]]];
-        if (const auto* cn = e.as<CallNode>()) {
-          vmap.Set(simplify_[vars[i]], var->may_share);
-          auto arg = Downcast<Var>(cn->args[0]);
-          auto alloc_storage = Downcast<Call>(binding_[simplify_[arg]]);
-          CHECK_EQ(alloc_storage->op, op);
-          vmap.Set(arg, Var());
+  Expr Rewrite_(const CallNode* pre, const Expr& post) final {
+    static auto tinplace = Op::GetAttrMap<op::TMNMInplaceUpdate>("TMNMInplaceUpdate");
+    static auto add_op = op::GetOp("mnm.op.add");
+    static auto subtract_op = op::GetOp("mnm.op.subtract");
+    auto call = Downcast<Call>(post);
+    if (call->op.as<OpNode>()) {
+      auto op = Downcast<Op>(call->op);
+      if (tinplace.count(op)) {
+        ShareMap share;
+        for (auto it : tinplace[op]) {
+          auto arg = Downcast<Var>(call->args[it.first]);
+          auto var = arg.as<ExtendedVarNode>();
+          if (var && var->may_share.defined()) {
+            arg = var->may_share;
+          }
+          share.emplace(it.second, arg);
+        }
+        expr_share_map_.emplace(post, share);
+      } else if (op == add_op || op == subtract_op) {
+        // Currently only support add and subtract in the binary ops for inplace update.
+        // If the inplace arg is true, the output tensor will share memory with the 1st input tensor
+        CHECK_GT(pre->args.size(), 2);
+        if (auto var = pre->args[2].as<ExtendedVarNode>()) {
+          LOG(INFO) << GetRef<Var>(var);
+          ShareMap share{{0, GetRef<Var>(var)}};
+          expr_share_map_.emplace(post, share);
         }
       }
     }
+    return post;
   }
 
-  /*! \brief the variables to be replaced */
-  Map<Var, Var> vmap;
+  Expr Rewrite_(const TupleGetItemNode* pre, const Expr& post) final {
+    auto tup_get = Downcast<TupleGetItem>(post);
+    auto tup = tup_get->tuple;
+    if (expr_share_map_.count(tup)) {
+      auto tup_share = expr_share_map_[tup];
+      if (tup_share.count(tup_get->index)) {
+        ShareMap share;
+        share.emplace(0, tup_share[tup_get->index]);
+        expr_share_map_.emplace(post, share);
+      }
+    }
+    return post;
+  }
 
- private:
-  /*! \brief a variable that is set for each let expr */
-  Var let_var_;
-  /*! \brief the let binding for each variable */
-  Map<Var, Expr> binding_;
-  /*! \brief simplify TupleGetItem((a_0, a_1, .., a_n), i) to a_i */
-  Map<Var, Var> simplify_;
-};
-
-class InplaceRewriter : public ExprMutator {
- public:
-  Expr VisitExpr_(const LetNode* node) override {
-    // record the origin implementation here:
-    // if (visitor_.vmap.count(node->var) > 0) {
-    //   return VisitExpr(node->body);
-    // }
-    // return ExprMutator::VisitExpr_(node);
-    auto pre_visit = [this](const LetNode* op) {
-      if (visitor_.vmap.count(op->var) == 0) {
-        this->VisitExpr(op->var);
-        this->VisitExpr(op->value);
+  Expr VisitExpr_(const LetNode* node) final {
+    auto pre_visit = [this](const LetNode* node) {
+      Expr value = this->Mutate(node->value);
+      Var var = node->var;
+      if (expr_share_map_.count(value)) {
+        auto share = expr_share_map_[value];
+        if (node->value->checked_type().as<TensorTypeNode>()) {
+          CHECK(share.count(0));
+          Var new_var = MakeVar(var->name_hint(), var->type_annotation, share[0]);
+          var_update_map_.emplace(var, new_var);
+        } else {
+          // Tuple output, propagate the share map to the binding var
+          expr_share_map_[var] = share;
+        }
       }
     };
-    auto post_visit = [this](const LetNode* op) {
-      auto expr = GetRef<Expr>(op);
-      Expr body = this->VisitExpr(op->body);
-      if (visitor_.vmap.count(op->var) > 0) {
-        this->memo_[expr] = body;
+    auto post_visit = [this](const LetNode* node) {
+      Var var = Downcast<Var>(this->Mutate(node->var));
+      Expr value = this->Mutate(node->value);
+      Expr body = this->Mutate(node->body);
+      auto expr = GetRef<Expr>(node);
+      if (var.same_as(node->var) && value.same_as(node->value) && body.same_as(node->body)) {
+        this->memo_[expr] = expr;
       } else {
-        Var var = Downcast<Var>(this->VisitExpr(op->var));
-        Expr value = this->VisitExpr(op->value);
-        if (var.same_as(op->var) && value.same_as(op->value) && body.same_as(op->body)) {
-          this->memo_[expr] = expr;
-        } else {
-          this->memo_[expr] = Let(var, value, body);
-        }
+        this->memo_[expr] = Let(var, value, body);
       }
     };
     ExpandANormalForm(node, pre_visit, post_visit);
     return memo_[GetRef<Expr>(node)];
   }
 
-  Expr VisitExpr_(const VarNode* node) override {
-    auto k = GetRef<Var>(node);
-    if (visitor_.vmap.count(k) > 0) {
-      Var v = visitor_.vmap[k];
-      if (v.defined()) {
-        return v;
-      } else {
-        LOG(FATAL) << "variable " << k
-                   << "represents alloc_storage, which should not be used outside alloc_tensor";
-      }
-    }
-    return k;
+ private:
+  /*! \brief Map from expr to the share information of its output. */
+  std::unordered_map<Expr, ShareMap, ObjectPtrHash, ObjectPtrEqual> expr_share_map_;
+  /*! \brief Map from original var to updated var with share annotation. */
+  std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> var_update_map_;
+};
+
+/*
+ * The major challenge is as follows:
+ * 1. Two kinds of memory sharing are present in our scenario: 1) mandatory
+ *    memory sharing determined by VM / interpreter, like %a = (%x0, %x1, %x2).
+ *    where %a shares memory with %x0, %x1, %x2. It exists before the introduction
+ *    of effect ir. 2) memory sharing newly introduced by effect ir, like
+ *    %b = mnm.add(%a, 1). This pass is to tell whether there is a chance
+ *    to make %b and %a in the above example share memory.
+ *    Typical liveness analysis does not handle mandatory memory sharing as is
+ *    denoted by 1).
+ * 2. The memory sharing relation (denoted by ~) is not transitive:
+ *    Say %a = (%x0, %x1, %x2), %a ~ %x0, %a ~ %x1, %a ~ %x2. But chances
+ *    are that %x0 !~ %x1, %x0 !~ %x2, %x1 !~ %x2
+ *
+ * Note that for plain liveness analysis [1], neither of 1. and
+ * 2. holds. So we transform the IR so that plain liveness analysis can
+ * be applied. See LivenessAnalysis for more details.
+ *
+ * Our algorithm works as follows:
+ * 1. run liveness analysis and obtain 1) the set of tensor var contained by each original var,
+ *    and 2) the set of live tensor vars at each line.
+ * 2. inplace write from ty to tx is invalid if and only if there exists a line l, such
+ *    that the following two holds simultaneously:
+ *    - live(l, x)
+ *    - live(l, y)
+ *    That is, the inplace write is valid iff the intersection of live(*, x) and live(*, y)
+ *    is empty.
+ */
+
+class InplaceUpdateValidator : public ExprMutator {
+ public:
+  InplaceUpdateValidator(const Expr& body, liveness_analysis::LivenessAnalyzer& analyzer,
+                         bool enforce_inplace_update)
+      : body_(body),
+        ell_(ExplicitLetList::make(body)),
+        analyzer_(analyzer),
+        enforce_inplace_update_(enforce_inplace_update) {
   }
 
-  Expr operator()(const Function& func) {
-    visitor_(func);
-    Expr body = VisitExpr(func->body);
-    return Function(func->params, body, func->ret_type, func->type_params, func->attrs);
+  Expr VisitExpr_(const LetNode* node) override {
+    Var var_ = node->var;
+    const auto* var = static_cast<const ExtendedVarNode*>(var_.operator->());
+    var->may_share = Var();
+    Expr value = VisitExpr(node->value);
+    Expr body = VisitExpr(node->body);
+    return Let(var_, value, body);
+  }
+
+  Expr Run() {
+    if (!analyzer_.IsSuccess()) {
+      return VisitExpr(body_);
+    }
+    auto& vars = ell_->vars;
+    auto& exprs = ell_->exprs;
+    CHECK_EQ(vars.size(), exprs.size());
+    int n = exprs.size();
+    // memory sharing introduced by users
+    for (int i = 0; i < n; ++i) {
+      const auto* var = static_cast<const ExtendedVarNode*>(vars[i].operator->());
+      if (var->may_share.defined()) {
+        Var fout = *analyzer_.GetTensorVars(vars[i]).begin();
+        Var fin = *analyzer_.GetTensorVars(var->may_share).begin();
+        CHECK(fout.defined());
+        CHECK(fin.defined());
+        fout = analyzer_.Find(fout);
+        fin = analyzer_.Find(fin);
+        if (fout != fin && analyzer_.Intersect(fout, fin)) {
+          if (enforce_inplace_update_) {
+            LOG(FATAL) << "inplace update failed.";
+          } else {
+            // invalidate the inplace update
+            var->may_share = Var();
+          }
+        } else {
+          // the inplace update is valid
+          analyzer_.Unite(fin, fout);
+        }
+      }
+      if (const auto* node = exprs[i].as<IfNode>()) {
+        // handle if branches recursively
+        Expr true_branch =
+            InplaceUpdateValidator(node->true_branch, analyzer_, enforce_inplace_update_).Run();
+        Expr false_branch =
+            InplaceUpdateValidator(node->false_branch, analyzer_, enforce_inplace_update_).Run();
+        exprs[i] = If(node->cond, true_branch, false_branch);
+      } else if (const auto* node = exprs[i].as<FunctionNode>()) {
+        exprs[i] = VisitExpr(exprs[i]);
+      }
+    }
+    return ell_->AsExpr();
   }
 
  private:
-  /*! \brief the visitor */
-  InplaceVisitor visitor_;
+  /*! \brief the expression to be analyzed */
+  const Expr& body_;
+  /*! \brief the explicit let list of func_ */
+  std::unique_ptr<ExplicitLetList> ell_{nullptr};
+  /*! \brief the analyzer it belongs to */
+  liveness_analysis::LivenessAnalyzer& analyzer_;
+  /*! \brief Whether to enforce the inplace update */
+  bool enforce_inplace_update_;
 };
 
 }  // namespace inplace_update
@@ -140,12 +251,26 @@ class InplaceRewriter : public ExprMutator {
 Pass InplaceUpdate() {
   runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(inplace_update::InplaceRewriter()(f));
+        auto body = inplace_update::InplaceUpdateMutator().Mutate(f->body);
+        return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
       };
   return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {});
 }
 
+Pass ValidateInplaceUpdate(bool enforce_inplace_update) {
+  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) {
+        auto analyzer = liveness_analysis::LivenessAnalyzer(f);
+        analyzer.Run();
+        auto body =
+            inplace_update::InplaceUpdateValidator(f->body, analyzer, enforce_inplace_update).Run();
+        return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
+      };
+  return CreateMNMFunctionPass(pass_func, 1, "ValidateInplaceUpdate", {});
+}
+
 MNM_REGISTER_GLOBAL("mnm.pass_.InplaceUpdate").set_body_typed(InplaceUpdate);
+MNM_REGISTER_GLOBAL("mnm.pass_.ValidateInplaceUpdate").set_body_typed(ValidateInplaceUpdate);
 
 }  // namespace pass
 }  // namespace mnm

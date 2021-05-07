@@ -97,10 +97,12 @@ def adaptive_max_pool2d_dx(x, y, dy, shape):
     return imp_utils.ret(ffi.adaptive_max_pool2d_dx(x, y, dy, shape))
 
 @set_module("mnm")
-def add(x1, x2):
+def add(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    return imp_utils.ret(ffi.add(x1, x2))
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.add(x1, x2, out, where))
 
 @set_module("mnm")
 def adv_index(inputs):
@@ -1032,10 +1034,12 @@ def strided_slice_dx(dy, primal_shape, begin, end, strides=None, slice_mode="end
     return imp_utils.ret(ffi.strided_slice_dx(dy, primal_shape, begin, end, strides, slice_mode))
 
 @set_module("mnm")
-def subtract(x1, x2):
+def subtract(x1, x2, out=None, where=None):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
-    return imp_utils.ret(ffi.subtract(x1, x2))
+    out = imp_utils.to_any(out)
+    where = imp_utils.to_any(where)
+    return imp_utils.ret(ffi.subtract(x1, x2, out, where))
 
 @set_module("mnm")
 def sum(x, axis=(), keepdims=0, exclude=False):

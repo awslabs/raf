@@ -222,6 +222,8 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     CHECK(graph_.node_map.count(call));
     Node* node = graph_.node_map.at(call);
     static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
+    static auto add_op = op::GetOp("mnm.op.add");
+    static auto subtract_op = op::GetOp("mnm.op.subtract");
     // Now we set the pattern of this call.
     //
     // If we see a call mentioning an operator we should mark it with its
@@ -236,6 +238,19 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
       auto op = GetRef<Op>(opnode);
       // TODO(@icemelon9): Check if the op has data dependant shape inference
       op_pattern = static_cast<OpPatternKind>(fpattern[op]);
+      if (op == add_op || op == subtract_op) {
+        // TODO(@icemelon9): Currently use opaque pattern for add/subtract with inplace update.
+        // Need to find better to expose the inplace update information in a fused op.
+        CHECK_GT(call->args.size(), 2);
+        auto out = call->args[2];
+        if (out.defined()) {
+          auto konst = out.as<ConstantNode>();
+          auto var = out.as<ExtendedVarNode>();
+          if ((konst && konst->value.defined()) || var) {
+            op_pattern = kOpaque;
+          }
+        }
+      }
     } else {
       this->Update(call->op, node, kOpaque);
     }

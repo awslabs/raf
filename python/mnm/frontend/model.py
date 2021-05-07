@@ -5,6 +5,7 @@ from tvm import relay
 from mnm._ffi.model import RunModel
 from mnm.model.model import BaseModel
 from mnm.model.trace import _unwrap, _TraceRecord
+from mnm._core.ir_ext import extended_var
 from mnm._core.ndarray import ndarray, Symbol
 from mnm._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend, InferType
 from mnm._core.module import IRModule
@@ -64,7 +65,7 @@ def annotate_main_func_params(func, args):
         if isinstance(arg, Symbol):
             return arg._Symbol__handle.type_annotation
         raise TypeError("Not supported: ", type(arg))
-    params = [relay.Var(param.name_hint, get_type(arg)) for param, arg in zip(func.params, args)]
+    params = [extended_var(param.name_hint, get_type(arg)) for param, arg in zip(func.params, args)]
     vmap = dict(zip(func.params, params))
     body = Substitute(func.body, vmap)
     return relay.Function(params, body)

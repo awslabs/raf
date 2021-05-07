@@ -87,10 +87,12 @@ def adaptive_max_pool2d_dx(x, y, dy, shape):
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.adaptive_max_pool2d_dx(x, y, dy, shape))
 
-def add(x1, x2):
+def add(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    return Symbol.from_expr(ffi.add(x1, x2))
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.add(x1, x2, out, where))
 
 def adv_index(inputs):
     inputs = sym_utils.to_tensor_tuple(inputs)
@@ -889,10 +891,12 @@ def strided_slice_dx(dy, primal_shape, begin, end, strides=None, slice_mode="end
     slice_mode = sym_utils.to_string(slice_mode)
     return Symbol.from_expr(ffi.strided_slice_dx(dy, primal_shape, begin, end, strides, slice_mode))
 
-def subtract(x1, x2):
+def subtract(x1, x2, out=None, where=None):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
-    return Symbol.from_expr(ffi.subtract(x1, x2))
+    out = sym_utils.to_any(out)
+    where = sym_utils.to_any(where)
+    return Symbol.from_expr(ffi.subtract(x1, x2, out, where))
 
 def sum(x, axis=(), keepdims=0, exclude=False):
     x = sym_utils.to_tensor(x)

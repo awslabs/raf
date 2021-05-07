@@ -11,6 +11,7 @@ mul_op = mnm._ffi.op.GetOp("mnm.op.multiply")
 relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
 equal_op = mnm._ffi.op.GetOp("mnm.op.equal")
 split_op = mnm._ffi.op.GetOp("mnm.op.split")
+null = mnm.ir.const(None)
 
 
 def test_no_bind_tuple():
@@ -29,7 +30,7 @@ def test_no_bind_tuple():
         two = mnm.ir.const(2)
         x = relay.var("x", shape=(10, 20))
         y = relay.var("y", shape=(10, 1))
-        z = relay.Call(add_op, [x, y])
+        z = relay.Call(add_op, [x, y, null, null])
         z = relay.Call(split_op, [z, two, zero])
         z = relay.TupleGetItem(z, 0)
         f = relay.Function([x, y], z)
@@ -63,9 +64,9 @@ def test_no_bind_diamond():
         x = relay.var("x", shape=(10, 20))
         y = relay.var("y", shape=(10, 1))
         c = relay.var("c", shape=(1,))
-        z1 = relay.Call(add_op, [x, y])
+        z1 = relay.Call(add_op, [x, y, null, null])
         z2 = relay.Call(mul_op, [x, c])
-        z = relay.Call(add_op, [z1, z2])
+        z = relay.Call(add_op, [z1, z2, null, null])
         z = relay.Call(relu_op, [z])
         f = relay.Function([x, y, c], z)
         return f
@@ -94,7 +95,7 @@ def test_if():
         """
         one = mnm.ir.const(1, dtype="int32")
         two = mnm.ir.const(2, dtype="int32")
-        v1 = relay.Call(add_op, [x, one])
+        v1 = relay.Call(add_op, [x, one, null, null])
         v2 = relay.Call(equal_op, [x, two])
         true_branch = relay.Call(mul_op, [v1, two])
         false_branch = relay.Call(mul_op, [v1, one])
@@ -119,7 +120,7 @@ def test_if():
         true_branch = relay.Call(mul_op, [v1, two])
         false_branch = relay.Call(mul_op, [v1, one])
         body = relay.If(v2, true_branch, false_branch)
-        body = relay.Let(v1, relay.Call(add_op, [x, one]), body)
+        body = relay.Let(v1, relay.Call(add_op, [x, one, null, null]), body)
         return relay.Function([x], body)
 
     x = mnm.ir.var("x", shape=(), dtype="int32")
@@ -163,10 +164,10 @@ def test_top_level_nested_if():
         x = mnm.ir.var("x", shape=(), dtype="bool")
         y = mnm.ir.var("y", shape=(), dtype="float32")
         z = mnm.ir.var("z", shape=(), dtype="float32")
-        y2 = relay.Call(add_op, [y, y])
-        z2 = relay.Call(add_op, [z, z])
-        true_branch = relay.If(cond_t, relay.Call(add_op, [z2, y2]),
-                               relay.Call(add_op, [three, y2]))
+        y2 = relay.Call(add_op, [y, y, null, null])
+        z2 = relay.Call(add_op, [z, z, null, null])
+        true_branch = relay.If(cond_t, relay.Call(add_op, [z2, y2, null, null]),
+                               relay.Call(add_op, [three, y2, null, null]))
         false_branch = relay.If(cond_f, z2, one)
         body = relay.If(x, true_branch, false_branch)
         return relay.Function([x, y, z], body)
@@ -197,12 +198,12 @@ def test_top_level_nested_if():
         z = mnm.ir.var("z", shape=(), dtype="float32")
         y2 = relay.var("y2")
         z2 = relay.var("z2")
-        true_branch = relay.If(cond_t, relay.Call(add_op, (z2, y2)),
-                               relay.Call(add_op, (three, y2)))
-        true_branch = relay.Let(y2, relay.Call(add_op, (y, y)), true_branch)
+        true_branch = relay.If(cond_t, relay.Call(add_op, (z2, y2, null, null)),
+                               relay.Call(add_op, (three, y2, null, null)))
+        true_branch = relay.Let(y2, relay.Call(add_op, (y, y, null, null)), true_branch)
         false_branch = relay.If(cond_f, z2, one)
         body = relay.If(x, true_branch, false_branch)
-        body = relay.Let(z2, relay.Call(add_op, (z, z)), body)
+        body = relay.Let(z2, relay.Call(add_op, (z, z, null, null)), body)
         return relay.Function([x, y, z], body)
 
     func = nested_if()
@@ -243,8 +244,8 @@ def test_nested_if():
         """
         x = mnm.ir.var("x", shape=(), dtype="bool")
         y = mnm.ir.var("y", shape=(), dtype="float32")
-        y2 = relay.Call(add_op, [y, y])
-        true_branch = relay.If(cond_t, y2, relay.Call(add_op, [three, y2]))
+        y2 = relay.Call(add_op, [y, y, null, null])
+        true_branch = relay.If(cond_t, y2, relay.Call(add_op, [three, y2, null, null]))
         false_branch = relay.If(cond_f, two, one)
         body = relay.If(x, true_branch, false_branch)
         return relay.Function([x, y], body)
@@ -271,8 +272,8 @@ def test_nested_if():
         x = mnm.ir.var("x", shape=(), dtype="bool")
         y = mnm.ir.var("y", shape=(), dtype="float32")
         y2 = relay.var("y2")
-        true_branch = relay.If(cond_t, y2, relay.Call(add_op, (three, y2)))
-        true_branch = relay.Let(y2, relay.Call(add_op, (y, y)), true_branch)
+        true_branch = relay.If(cond_t, y2, relay.Call(add_op, (three, y2, null, null)))
+        true_branch = relay.Let(y2, relay.Call(add_op, (y, y, null, null)), true_branch)
         false_branch = relay.If(cond_f, two, one)
         body = relay.If(x, true_branch, false_branch)
         return relay.Function([x, y], body)

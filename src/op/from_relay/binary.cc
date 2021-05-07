@@ -3,14 +3,25 @@
  * \file ./src/op/from_relay/binary.cc
  * \brief Operators bridged from Relay.
  */
+#include "mnm/ir.h"
 #include "./from_relay_utils.h"
 
 namespace mnm {
 namespace op {
 namespace from_relay {
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("add", "mnm.op.add");
-MNM_GENERIC_ATTR_OP_FROM_RELAY("subtract", "mnm.op.subtract");
+using namespace mnm::ir;
+
+#define MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                            \
+  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
+    Array<Expr> mnm_args = args;                                                                   \
+    mnm_args.push_back(MakeConstant(NullValue<Value>()));                                          \
+    mnm_args.push_back(MakeConstant(NullValue<Value>()));                                          \
+    return mnm_args;                                                                               \
+  })
+
+MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY("add", "mnm.op.add");
+MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY("subtract", "mnm.op.subtract");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("divide", "mnm.op.divide");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("multiply", "mnm.op.multiply");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("power", "mnm.op.power");

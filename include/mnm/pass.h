@@ -69,11 +69,6 @@ Pass CanonicalizeOps();
  */
 Pass InferType();
 ir::Expr InferType(ir::Expr expr);
-/*!
- * \brief A pass that removes unnecessary memory allocation and perform inplace updates.
- * \return The created pass.
- */
-Pass InplaceUpdate();
 
 /*!
  * \brief Create a pass to wrap an expr with compiler_begin and compiler_end to indicate that this
@@ -233,6 +228,21 @@ Pass ToBasicBlockNormalForm();
  * \return The created pass.
  */
 Pass InlinePrimitives();
+
+/*!
+ * \brief This pass marks the may_share in the variables for ops that have attr TMNMInplaceUpdate
+ * indicating the inputs and outputs to share the memory.
+ * \return The created pass.
+ */
+Pass InplaceUpdate();
+
+/*!
+ * TODO(@hzfan): Update the doc for enforce_memory_share
+ * \brief This pass validates and corrects the memory share annotated by the user.
+ * \param enforce_inplace_update TBD.
+ * \return The created pass.
+ */
+Pass ValidateInplaceUpdate(bool enforce_inplace_update);
 
 }  // namespace pass
 }  // namespace mnm

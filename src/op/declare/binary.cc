@@ -7,8 +7,8 @@
 #include "mnm/op.h"
 #include "mnm/tensor.h"
 #include "../schema/ufunc.h"
-#include "./declare_utils.h"
 #include "../ty/utils.h"
+#include "./declare_utils.h"
 #include <cmath>
 
 namespace mnm {
@@ -42,6 +42,14 @@ using namespace mnm::value;
     call->out = tv;                                                           \
     call->device = tv->tensor->device;                                        \
     return;                                                                   \
+  }
+
+#define MNM_BINARY_INPLACE_TENSOR(x1, x2, out)                                                   \
+  if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>() && (out).defined()) { \
+    TensorValue tv_out = ir::Downcast<TensorValue>(out);                                         \
+    call->out = tv_out;                                                                          \
+    call->device = tv_out->tensor->device;                                                       \
+    return;                                                                                      \
   }
 
 #define MNM_LOGICAL_BINARY_TENSOR(x1, x2)                                     \
@@ -85,21 +93,33 @@ TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false
 }
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.add", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryArgs>();
+  const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(+, x1, x2);
-  MNM_BINARY_TENSOR(x1, x2);
+  const Value& out = args->out;
+  if (!args->where.defined()) {
+    MNM_BINARY_SCALAR(+, x1, x2);
+    MNM_BINARY_TENSOR(x1, x2);
+    MNM_BINARY_INPLACE_TENSOR(x1, x2, out);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.subtract", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryArgs>();
+  const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(-, x1, x2);
-  MNM_BINARY_TENSOR(x1, x2);
+  const Value& out = args->out;
+  if (!args->where.defined()) {
+    MNM_BINARY_SCALAR(-, x1, x2);
+    MNM_BINARY_TENSOR(x1, x2);
+    MNM_BINARY_INPLACE_TENSOR(x1, x2, out);
+  }
+  LOG(FATAL) << "NotImplementedError";
+  throw;
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.multiply", [](const CallValues& call) {

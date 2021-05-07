@@ -41,8 +41,8 @@ def test_multiple_ends():
         # let %a3 = mnm.op.compiler_end(%5, meta[mnm.args.compiler][5]);
         # %6 = mnm.op.compiler_begin(%a2, meta[mnm.args.compiler][6]);
         # %7 = mnm.op.compiler_begin(%a3, meta[mnm.args.compiler][7]);
-        # %8 = mnm.op.compiler_begin(-114514, meta[mnm.args.compiler][8]);
-        # %9 = mnm.op.compiler_begin(-114514, meta[mnm.args.compiler][9]);
+        # %8 = mnm.op.compiler_begin(nullptr, meta[mnm.args.compiler][8]);
+        # %9 = mnm.op.compiler_begin(nullptr, meta[mnm.args.compiler][9]);
         # %10 = mnm.op.add(%6, %7, %8, %9);
         # let %a4 = mnm.op.compiler_end(%10, meta[mnm.args.compiler][10]);
         # %a4
@@ -53,6 +53,7 @@ def test_multiple_ends():
         a2 = extended_var("a2")
         a3 = extended_var("a3")
         a4 = extended_var("a4")
+        null = mnm.ir.const(None)
         relu = _relay.op.get("mnm.op.relu")
         abs = _relay.op.get("mnm.op.abs")
         add = _relay.op.get("mnm.op.add")
@@ -70,7 +71,9 @@ def test_multiple_ends():
         abs_call2 = _relay.Call(end, [abs_call2], tvm.ir.make_node("mnm.args.compiler"))
         let_call2 = _relay.Call(begin, [a2], tvm.ir.make_node("mnm.args.compiler"))
         let_call3 = _relay.Call(begin, [a3], tvm.ir.make_node("mnm.args.compiler"))
-        add_call = _relay.Call(add, [let_call2, let_call3])
+        const_call1 = _relay.Call(begin, [null], tvm.ir.make_node("mnm.args.compiler"))
+        const_call2 = _relay.Call(begin, [null], tvm.ir.make_node("mnm.args.compiler"))
+        add_call = _relay.Call(add, [let_call2, let_call3, const_call1, const_call2])
         add_call = _relay.Call(end, [add_call], tvm.ir.make_node("mnm.args.compiler"))
         # make anf
         body = _relay.Let(a4, add_call, a4)

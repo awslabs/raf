@@ -28,7 +28,7 @@ namespace gradient {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using mnm::value::NoGradValue;
+using namespace mnm::value;
 
 class ANFNormalizer : public ExprMutator {
  public:
@@ -324,7 +324,7 @@ struct Gradient : public ExprVisitor {
     if (t1 && t2) {
       return Tuple(AddTensors(t1->fields, t2->fields));
     }
-    return ll->Push(Call(op, {x1, x2}));
+    return ll->Push(Call(op, {x1, x2, MakeNull(), MakeNull()}));
   }
 
   // Initialize, running and finalize

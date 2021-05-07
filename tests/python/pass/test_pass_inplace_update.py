@@ -1,34 +1,135 @@
-import pprint
-import numpy as np
+# pylint: disable=protected-access
 import pytest
+import numpy as np
 import mnm
-from mnm.model.trace import trace_mutate_attr
-from mnm.testing import get_device_list, check, compile_vm_model, run_vm_model
+from mnm._ffi import pass_
 from mnm._core.ir_ext import ExtendedVar
-from mnm._lib import tvm as _tvm
-from mnm._lib import relay as _relay
+from mnm.model.nn import BatchNorm
+from mnm.model.trace import trace_mutate_attr
+from mnm.testing import get_device_list, compile_vm_model, run_vm_model, check
+from tvm import relay
 
 
-def explicit_let_list(body):
-    if isinstance(body, _tvm.relay.Var):
-        return ([], [], body)
-    assert isinstance(body, _tvm.relay.Let)
-    variables, exprs, ret = explicit_let_list(body.body)
-    if isinstance(body.value, _relay.If):
-        tvs, tes, _ = explicit_let_list(body.value.true_branch)
-        fvs, fes, _ = explicit_let_list(body.value.false_branch)
+def extract_vars(body):
+    if isinstance(body, relay.Var):
+        return []
+    assert isinstance(body, relay.Let)
+    variables = extract_vars(body.body)
+    if isinstance(body.value, relay.If):
+        tvs = extract_vars(body.value.true_branch)
+        fvs = extract_vars(body.value.false_branch)
         variables = tvs + fvs + variables
-        exprs = tes + fes + variables
     variables = [body.var] + variables
-    exprs = [body.value] + exprs
-    return variables, exprs, ret
+    return variables
 
 
-def debug_dump(expr):
-    print(expr)
-    variables, _, _ = explicit_let_list(expr.body)
-    may_share = {v: ExtendedVar(v).may_share for v in variables}
-    pprint.pprint(may_share)
+def optimize(mod):
+    mod = pass_.ToGraphNormalForm()(mod)
+    mod = pass_.ToBasicBlockNormalForm()(mod)
+    mod = pass_.ToANormalForm()(mod)
+    mod = pass_.InferType()(mod)
+    mod = pass_.InplaceUpdate()(mod)
+    return mod
+
+
+def lower(model, *data):
+    mod = model._internal(*data).mod
+    return optimize(mod)
+
+
+def checkir(variables, alias):
+    for var in alias:
+        assert var in variables
+    for var in variables:
+        assert isinstance(var, relay.Var)
+        var = ExtendedVar(var)
+        may_share = var.may_share
+        if var not in alias:
+            assert may_share is None
+        else:
+            assert may_share == alias[var]
+
+
+def test_bn():
+    shape = (2, 3, 4, 5)
+    dtype = 'float32'
+    data = mnm.array(np.ones(shape), dtype=dtype)
+
+    class Test1(mnm.Model):
+        # pylint: disable=attribute-defined-outside-init
+        def build(self, num_features, eps=1e-5, momentum=0.1, affine=True):
+            self.batch_norm = BatchNorm(num_features, eps, momentum, affine)
+
+        @mnm.model.trace
+        def forward(self, x):
+            x = self.batch_norm(x)
+            x = mnm.relu(x)
+            return x
+
+    # pylint: disable=line-too-long
+    # fn (%x: Tensor[(2, 3, 4, 5), float32], %batch_norm.b: Tensor[(3), float32], %batch_norm.running_mean: Tensor[(3), float32], %batch_norm.running_var: Tensor[(3), float32], %batch_norm.w: Tensor[(3), float32]) -> (Tensor[(2, 3, 4, 5), float32], Tensor[(3), float32], Tensor[(3), float32]) {
+    #   let %a1 = mnm.op.batch_norm_train(%x, %batch_norm.running_mean, %batch_norm.running_var, %batch_norm.w, %batch_norm.b, -114514 /* ty=int64 */, -114514 /* ty=int64 */) /* ty=(Tensor[(2, 3, 4, 5), float32], Tensor[(3), float32], Tensor[(3), float32]) */;
+    #   let %a2 = %a1.0;
+    #   let %a3 = mnm.op.relu(%a2) /* ty=Tensor[(2, 3, 4, 5), float32] */;
+    #   let %a4 = %a1.1;
+    #   let %a5 = %a1.2;
+    #   let %a6 = (%a3, %a4, %a5);
+    #   %a6
+    # }
+    # pylint: enable=line-too-long
+    model = Test1(num_features=3)
+    func = lower(model, data)["main"]
+    variables = extract_vars(func.body)
+    running_mean = func.params[2]
+    running_var = func.params[3]
+    alias = {
+        variables[3]: running_mean,
+        variables[4]: running_var,
+    }
+    checkir(variables, alias)
+
+    class Test2(mnm.Model):
+        # pylint: disable=attribute-defined-outside-init
+        def build(self, num_features, eps=1e-5, momentum=0.1, affine=True):
+            self.batch_norm = BatchNorm(num_features, eps, momentum, affine)
+
+        @mnm.model.trace
+        def forward(self, x):
+            x = self.batch_norm(x)
+            x = mnm.relu(x)
+            # typically batch_norm is not used in this way:
+            # two batch_norm generally correspond to two BatchNorm models.
+            # for test only here.
+            x = self.batch_norm(x)
+            return x
+
+    # pylint: disable=line-too-long
+    # fn (%x: Tensor[(2, 3, 4, 5), float32], %batch_norm.b: Tensor[(3), float32], %batch_norm.running_mean: Tensor[(3), float32], %batch_norm.running_var: Tensor[(3), float32], %batch_norm.w: Tensor[(3), float32]) -> (Tensor[(2, 3, 4, 5), float32], Tensor[(3), float32], Tensor[(3), float32]) {
+    #   let %a1 = mnm.op.batch_norm_train(%x, %batch_norm.running_mean, %batch_norm.running_var, %batch_norm.w, %batch_norm.b, -114514 /* ty=int64 */, -114514 /* ty=int64 */) /* ty=(Tensor[(2, 3, 4, 5), float32], Tensor[(3), float32], Tensor[(3), float32]) */;
+    #   let %a2 = %a1.0;
+    #   let %a3 = mnm.op.relu(%a2) /* ty=Tensor[(2, 3, 4, 5), float32] */;
+    #   let %a4 = %a1.1;
+    #   let %a5 = %a1.2;
+    #   let %a6 = mnm.op.batch_norm_train(%a3, %a4, %a5, %batch_norm.w, %batch_norm.b, -114514 /* ty=int64 */, -114514 /* ty=int64 */) /* ty=(Tensor[(2, 3, 4, 5), float32], Tensor[(3), float32], Tensor[(3), float32]) */;
+    #   let %a7 = %a6.0;
+    #   let %a8 = %a6.1;
+    #   let %a9 = %a6.2;
+    #   let %a10 = (%a7, %a8, %a9);
+    #   %a10
+    # }
+    # pylint: enable=line-too-long
+    model = Test2(num_features=3)
+    func = lower(model, data)["main"]
+    variables = extract_vars(func.body)
+    running_mean = func.params[2]
+    running_var = func.params[3]
+    alias = {
+        variables[3]: running_mean,
+        variables[4]: running_var,
+        variables[7]: running_mean,
+        variables[8]: running_var,
+    }
+    checkir(variables, alias)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -66,7 +167,7 @@ def test_grad(device):
             # grad of model, which will be replaced by AutoDiff
             dx = mnm.relu_dx(self.model.x, out, dy)
             # update params
-            new_x = mnm.subtract(self.model.x, dx)
+            new_x = mnm.subtract(self.model.x, dx, out=self.model.x)
             trace_mutate_attr(self.model, "x", new_x)
             return out
 

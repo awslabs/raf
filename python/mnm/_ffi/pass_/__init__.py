@@ -27,7 +27,6 @@ from ._internal import LiftBranchBody
 from ._internal import LivenessAnalysis
 from ._internal import MNMSequential
 from ._internal import ManifestAlloc
-from ._internal import MemShare
 from ._internal import MergeCompilerRegions
 from ._internal import PartitionGraph
 from ._internal import RenameVars
@@ -36,5 +35,6 @@ from ._internal import Substitute
 from ._internal import ToANormalForm
 from ._internal import ToBasicBlockNormalForm
 from ._internal import ToGraphNormalForm
+from ._internal import ValidateInplaceUpdate
 from ._internal import is_constant
 from ._internal import validate_relay_param_name

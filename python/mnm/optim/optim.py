@@ -8,7 +8,6 @@ from ..model.trace import _get_func_inputs
 from ..model import Model, trace
 from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType
 from .._ffi.pass_ import SimplifyExpr, DeadCodeElimination
-from .._ffi.ir.variable import SetMayShare
 from .._ffi.binding import BindSymbol
 from .._lib import tvm
 
@@ -40,7 +39,6 @@ def inline(func, inputs):
             if may_share is not None:
                 assert may_share in vmap
                 may_share = vmap[may_share]
-                SetMayShare(var, may_share)
             return evaluate(body.body)
         raise NotImplementedError("Not supported type: ", type(body))
     return Symbol.from_expr(evaluate(func.body))

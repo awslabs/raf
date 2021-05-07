@@ -50,7 +50,7 @@ inline Expr ExpandBiasToMatchAxis(Expr bias, int target_ndim, const Array<Intege
 
 inline Expr Add(Expr lhs, Expr rhs) {
   static const Op& op = Op::Get("mnm.op.add");
-  return Call(op, {lhs, rhs}, Attrs(), {});
+  return Call(op, {lhs, rhs, MakeNull(), MakeNull()}, Attrs(), {});
 }
 
 class BiasAddSimplifier : public ExprRewriter {

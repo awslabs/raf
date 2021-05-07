@@ -9,7 +9,6 @@ from mnm._core.global_scope import SCOPE
 from mnm._core.module import IRModule
 from mnm._core.ndarray import Symbol, ndarray
 from mnm._ffi.pass_ import ExtractBinding, RenameVars
-from mnm._ffi.ir.variable import SetMayShare
 from mnm._ffi.model import RunModel
 from mnm._lib import relay, Array
 
@@ -38,7 +37,6 @@ def trace_mutate_attr(obj, attr_name, symbol):
     source = arr._ndarray__handle
     assert isinstance(var, relay.Var)
     assert isinstance(source, relay.Var)
-    SetMayShare(var, source)
     last.mutate[(obj, attr_name)] = (arr, symbol)
     object.__setattr__(obj, attr_name, symbol)
 

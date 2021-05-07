@@ -1120,9 +1120,12 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.adaptive_max_pool2d_dx")
     });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.add").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(add, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(add, 4, ffi2schema::BinaryUfunc,
+              schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2405,10 +2408,12 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.strided_slice_dx").set_body([](TVMArgs args, TVM
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.subtract").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(subtract, 2, ffi2schema::Binary,
-              schema::BinaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(subtract, 4, ffi2schema::BinaryUfunc,
+              schema::BinaryUfuncArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->out));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->where));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3415,7 +3420,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_max_pool2d")
     .set_body(MNM_SYMBOLIC_API(adaptive_max_pool2d, 3, AdaptivePool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_max_pool2d_dx")
     .set_body(MNM_SYMBOLIC_API(adaptive_max_pool2d_dx, 4, AdaptivePoolDx));
-MNM_REGISTER_GLOBAL("mnm.op.sym.add").set_body(MNM_SYMBOLIC_API(add, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.add").set_body(MNM_SYMBOLIC_API(add, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adv_index").set_body(MNM_SYMBOLIC_API(adv_index, 1, AdvIndex));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adv_index_dx")
     .set_body(MNM_SYMBOLIC_API(adv_index_dx, 2, AdvIndexDx));
@@ -3586,7 +3591,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
     .set_body(MNM_SYMBOLIC_API(strided_slice, 5, StridedSlice));
 MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice_dx")
     .set_body(MNM_SYMBOLIC_API(strided_slice_dx, 6, StridedSliceDx));
-MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 4, Sum));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum_dx").set_body(MNM_SYMBOLIC_API(sum_dx, 6, SumDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.swap_axis").set_body(MNM_SYMBOLIC_API(swap_axis, 3, SwapAxis));
@@ -6028,10 +6033,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.adaptive_max_pool2d", names::adaptive_max_po
 MNM_BIND_SCHEMA("mnm.op.adaptive_max_pool2d_dx", names::adaptive_max_pool2d_dx,
                 value2schema::AdaptivePoolDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.adaptive_max_pool2d_dx", names::adaptive_max_pool2d_dx,
-                            schema_field_idx::AdaptivePoolDx);    // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.add", names::add, value2schema::Binary);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::AdaptivePoolDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.add", names::add,
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.add", names::add,
-                            schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.adv_index", names::adv_index,
                 value2schema::AdvIndex);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.adv_index", names::adv_index,
@@ -6539,9 +6545,9 @@ MNM_BIND_SCHEMA("mnm.op.strided_slice_dx", names::strided_slice_dx,
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.strided_slice_dx", names::strided_slice_dx,
                             schema_field_idx::StridedSliceDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.subtract", names::subtract,
-                value2schema::Binary);  // NOLINT(whitespace/line_length)
+                value2schema::BinaryUfunc);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.subtract", names::subtract,
-                            schema_field_idx::Binary);         // NOLINT(whitespace/line_length)
+                            schema_field_idx::BinaryUfunc);    // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.sum", names::sum, value2schema::Sum);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.sum", names::sum,
                             schema_field_idx::Sum);  // NOLINT(whitespace/line_length)

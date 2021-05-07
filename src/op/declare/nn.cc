@@ -188,19 +188,22 @@ void Softmax(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
 MNM_OP_DECLARE("mnm.op.log_softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
-MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
-  const auto* args = call->args.as<BatchNormArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x = args->x;
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  TensorValue y = TensorValue::Assemble(/*dev=*/x->device,
-                                        /*dtype=*/x->dtype,
-                                        /*shape=*/shape);
-  TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
-  TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
-  call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
-  call->device = x->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.batch_norm_train",
+               [](const CallValues& call) {
+                 const auto* args = call->args.as<BatchNormArgs>();
+                 CHECK(args != nullptr);
+                 const DLTensor* x = args->x;
+                 std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+                 TensorValue y = TensorValue::Assemble(/*dev=*/x->device,
+                                                       /*dtype=*/x->dtype,
+                                                       /*shape=*/shape);
+                 TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
+                 TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
+                 call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
+                 call->device = x->device;
+               })
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{1, 1}, {2, 2}});
 
 MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
   // FIXME(@were): please fix this: bn-infer should only output y

@@ -58,7 +58,6 @@ def test_single_input_output_merge():
         a2 = extended_var("a2")
         a3 = extended_var("a3")
         a4 = extended_var("a4")
-        const = _relay.Constant(tvm.nd.array(-114514))
         relu = _relay.op.get("mnm.op.relu")
         abs = _relay.op.get("mnm.op.abs")
         copy = _relay.op.get("mnm.op.copy")
@@ -153,10 +152,9 @@ def test_diamond_merge():
         # let %a3 = mnm.op.compiler_end(%3, meta[mnm.args.compiler][3]);
         # %4 = mnm.op.compiler_begin(%a2, meta[mnm.args.compiler][4]);
         # %5 = mnm.op.compiler_begin(%a3, meta[mnm.args.compiler][5]);
-        # %6 = mnm.op.compiler_begin(-114514, meta[mnm.args.compiler][6]);
-        # %7 = mnm.op.compiler_begin(-114514, meta[mnm.args.compiler][7]);
-        # %8 = mnm.op.add(%4, %5, %6, %7);
-        # let %a4 = mnm.op.compiler_end(%8, meta[mnm.args.compiler][8]);
+        # %6 = mnm.op.compiler_begin(bool(0), meta[mnm.args.compiler][6]);
+        # %7 = mnm.op.add(%4, %5, %6);
+        # let %a4 = mnm.op.compiler_end(%7, meta[mnm.args.compiler][7]);
         # %a4
         # }
         # define variables
@@ -165,6 +163,7 @@ def test_diamond_merge():
         a2 = extended_var("a2")
         a3 = extended_var("a3")
         a4 = extended_var("a4")
+        null = mnm.ir.const(None)
         relu = _relay.op.get("mnm.op.relu")
         abs = _relay.op.get("mnm.op.abs")
         tanh = _relay.op.get("mnm.op.tanh")
@@ -181,7 +180,9 @@ def test_diamond_merge():
         tanh_call = _relay.Call(end, [tanh_call], tvm.ir.make_node("mnm.args.compiler"))
         add_call1 = _relay.Call(begin, [a2], tvm.ir.make_node("mnm.args.compiler"))
         add_call2 = _relay.Call(begin, [a3], tvm.ir.make_node("mnm.args.compiler"))
-        add_call = _relay.Call(add, [add_call1, add_call2])
+        const_call1 = _relay.Call(begin, [null], tvm.ir.make_node("mnm.args.compiler"))
+        const_call2 = _relay.Call(begin, [null], tvm.ir.make_node("mnm.args.compiler"))
+        add_call = _relay.Call(add, [add_call1, add_call2, const_call1, const_call2])
         add_call = _relay.Call(end, [add_call], tvm.ir.make_node("mnm.args.compiler"))
         # make anf
         body = _relay.Let(a4, add_call, a4)

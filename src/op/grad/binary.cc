@@ -127,7 +127,6 @@ Array<Expr> PowGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   static auto op_power = Op::Get("mnm.op.power");
   static auto op_multiply = Op::Get("mnm.op.multiply");
   static auto op_log = Op::Get("mnm.op.log");
-  static auto op_subtract = Op::Get("mnm.op.subtract");
   static auto op_divide = Op::Get("mnm.op.divide");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 2);

@@ -54,6 +54,10 @@ RelayConstant MakeConstant(ObjectRef node_ref) {
   return RelayConstant(n);
 }
 
+RelayConstant MakeNull() {
+  return MakeConstant(NullValue<Value>());
+}
+
 ObjectRef ConstantExtractValue(RelayConstant _node) {
   const ConstantNode* node = static_cast<const ConstantNode*>(_node.get());
   return node->value;
@@ -69,18 +73,6 @@ Var MakeVar_(Id vid, Type type_annotation, Var may_share = Var()) {
 
 Var MakeVar(const std::string& name_hint, Type type_annotation, Var may_share) {
   return MakeVar_(Id(name_hint), type_annotation, may_share);
-}
-
-/*!
- * \brief Set may_share field of an extended variable
- * \param var the variable
- * \param may_share the may_share field
- * \return the variable with may_share set
- */
-Var SetMayShare(Var var, Var may_share) {
-  const auto* vn = var.as<ExtendedVarNode>();
-  vn->may_share = may_share;
-  return GetRef<Var>(vn);
 }
 
 /*!
@@ -111,6 +103,10 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
           tvm::relay::RelayTextPrinter printer(false, nullptr, nullptr);
           os << " /* ty=" << printer.Print(Downcast<Expr>(expr)->checked_type()).str() << " */";
         }
+        const auto* extended_var = expr.as<ExtendedVarNode>();
+        if (extended_var && extended_var->may_share.defined()) {
+          os << "(share: %" << extended_var->may_share->name_hint() << ")";
+        }
         return String(os.str());
       });
   return tvm::AsText(value, false, annotate);
@@ -123,7 +119,6 @@ String AsText(const ObjectRef& node) {
 MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
 MNM_REGISTER_GLOBAL("mnm.ir._make.Var").set_body_typed(MakeVar);
 MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
-MNM_REGISTER_GLOBAL("mnm.ir.variable.SetMayShare").set_body_typed(SetMayShare);
 MNM_REGISTER_GLOBAL("mnm.ir.variable.GetMayShare").set_body_typed(GetMayShare);
 MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(GlobalModule);
 

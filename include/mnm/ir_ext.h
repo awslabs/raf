@@ -46,6 +46,7 @@ class ConstantNode : public RelayConstantNode {
 
 ObjectPtr<ConstantNode> MakeConstantNode(ObjectRef node_ref);
 RelayConstant MakeConstant(ObjectRef node_ref);
+RelayConstant MakeNull();
 ObjectRef ConstantExtractValue(RelayConstant _node);
 
 }  // namespace ir

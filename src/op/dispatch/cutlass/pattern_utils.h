@@ -40,8 +40,17 @@ struct BinaryOp {
   }
 };
 
-using Add = BinaryOp<add>;
-using Subtract = BinaryOp<subtract>;
+template <const char* Binary>
+struct BinaryUfuncOp {
+  ir::DFPattern operator()(ir::DFPattern x1, ir::DFPattern x2) {
+    using namespace mnm::ir;
+    auto op = IsOp(Binary);
+    return op({x1, x2, IsWildcard(), IsWildcard()});
+  }
+};
+
+using Add = BinaryUfuncOp<add>;
+using Subtract = BinaryUfuncOp<subtract>;
 using Multiply = BinaryOp<multiply>;
 using Divide = BinaryOp<divide>;
 

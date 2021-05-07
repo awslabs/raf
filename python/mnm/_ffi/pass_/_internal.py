@@ -54,8 +54,6 @@ LivenessAnalysis = _APIS.get("mnm.pass_.LivenessAnalysis", None)
 MNMSequential = _APIS.get("mnm.pass_.MNMSequential", None)
 # Defined in ./src/pass/manifest_alloc.cc
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
-# Defined in ./src/pass/memory_share.cc
-MemShare = _APIS.get("mnm.pass_.MemShare", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 # Defined in ./src/pass/partition_graph.cc
@@ -72,6 +70,8 @@ ToANormalForm = _APIS.get("mnm.pass_.ToANormalForm", None)
 ToBasicBlockNormalForm = _APIS.get("mnm.pass_.ToBasicBlockNormalForm", None)
 # Defined in ./src/pass/to_graph_normal_form.cc
 ToGraphNormalForm = _APIS.get("mnm.pass_.ToGraphNormalForm", None)
+# Defined in ./src/pass/inplace_update.cc
+ValidateInplaceUpdate = _APIS.get("mnm.pass_.ValidateInplaceUpdate", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
 # Defined in ./src/pass/from_relay.cc

@@ -24,10 +24,11 @@ def test_simple():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
         log_op = mnm._ffi.op.GetOp("mnm.op.log")
+        null = mnm.ir.const(None)
 
         x = relay.var("x", shape=(10, 20))
         c = relay.var("c", shape=(1,))
-        y = relay.Call(add_op, [x, c])
+        y = relay.Call(add_op, [x, c, null, null])
         y = relay.Call(log_op, [relay.Call(relu_op, [y])])
         f = relay.Function([x, c], y)
         return f
@@ -54,12 +55,13 @@ def test_tuple():
     def expected():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         split_op = mnm._ffi.op.GetOp("mnm.op.split")
-        zero = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(0))
-        two = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(2))
+        zero = mnm.ir.const(0)
+        two = mnm.ir.const(2)
+        null = mnm.ir.const(None)
 
         x = relay.var("x", shape=(10, 20))
         y = relay.var("y", shape=(10, 1))
-        z = relay.Call(add_op, [x, y])
+        z = relay.Call(add_op, [x, y, null, null])
         z = relay.Call(split_op, [z, two, zero])
         z = relay.TupleGetItem(z, 0)
         f = relay.Function([x, y], z)
@@ -90,13 +92,14 @@ def test_diamond():
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         mul_op = mnm._ffi.op.GetOp("mnm.op.multiply")
         relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
+        null = mnm.ir.const(None)
 
         x = relay.var("x", shape=(10, 20))
         y = relay.var("y", shape=(10, 1))
         c = relay.var("c", shape=(1,))
-        z1 = relay.Call(add_op, [x, y])
+        z1 = relay.Call(add_op, [x, y, null, null])
         z2 = relay.Call(mul_op, [x, c])
-        z = relay.Call(add_op, [z1, z2])
+        z = relay.Call(add_op, [z1, z2, null, null])
         z = relay.Call(relu_op, [z])
         f = relay.Function([x, y, c], z)
         return f

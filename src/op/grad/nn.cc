@@ -10,6 +10,7 @@ namespace op {
 namespace grad {
 
 using namespace mnm::ir;
+using namespace mnm::value;
 
 Expr Shape(const Expr& expr) {
   static auto op_shape = Op::Get("mnm.op.shape");
@@ -27,8 +28,8 @@ Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, cons
   const Expr& bias = call->args[1];
   const Expr& axis = call->args[2];
   Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)0));
-  Expr exculde = MakeConstant(ScalarValue::make(true));
-  return {Call(reshape, {dy, Call(shape, {x})}), Call(sum, {dy, axis, keep_dims, exculde})};
+  Expr exclude = MakeConstant(ScalarValue::make(true));
+  return {Call(reshape, {dy, Call(shape, {x})}), Call(sum, {dy, axis, keep_dims, exclude})};
 }
 
 MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
@@ -158,7 +159,7 @@ Array<Expr> RsqrtGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
   Call one = Call(op_divide, {x, x});
-  Call two = Call(op_add, {one, one});
+  Call two = Call(op_add, {one, one, MakeNull(), MakeNull()});
   Call half = Call(op_divide, {one, two});
   Call neg_half = Call(op_negative, {half});
   Call x_pow_2 = Call(op_multiply, {x, x});
@@ -211,7 +212,7 @@ Array<Expr> Log2Grad(const Expr& orig_call, const Array<Expr> orig_args, const V
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
   Call ones = Call(op_ones, {x});
-  Call two = Call(op_add, {ones, ones});
+  Call two = Call(op_add, {ones, ones, MakeNull(), MakeNull()});
   Call log_two = Call(op_log, {two});
   Call log_two_x = Call(op_multiply, {log_two, x});
   Call dx = Call(op_div, {ones, log_two_x});
@@ -267,7 +268,7 @@ Array<Expr> AtanGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   const Expr& x = call->args[0];
   Call one = Call(op_divide, {x, x});
   Call x_square = Call(op_multiply, {x, x});
-  Call denominator = Call(op_add, {x_square, one});
+  Call denominator = Call(op_add, {x_square, one, MakeNull(), MakeNull()});
   Call dx = Call(op_divide, {one, denominator});
   return {Call(op_multiply, {dy, dx})};
 }
@@ -344,7 +345,7 @@ Array<Expr> LogSoftmaxGrad(const Expr& orig_call, const Array<Expr> orig_args, c
   Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)1));
   Expr e_1 = Call(op_sum, {dy, axis, keep_dims});
   Expr e_2 = Call(op_multiply, {e_1, softmax});
-  Expr e_3 = Call(op_subtract, {dy, e_2});
+  Expr e_3 = Call(op_subtract, {dy, e_2, MakeNull(), MakeNull()});
   return {e_3};
 }
 

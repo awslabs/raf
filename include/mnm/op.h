@@ -27,6 +27,9 @@ class Requests;
 namespace mnm {
 namespace op {
 
+/*! \brief Get the op given the op name. */
+ir::Op GetOp(const std::string& op_name);
+
 class CallValuesNode : public ir::Object {
  public:
   mutable value::Value callee;
@@ -149,6 +152,9 @@ using tvm::relay::kTuple;
 using tvm::relay::OpPatternKind;
 using tvm::relay::TOpPattern;
 using tvm::runtime::Array;
+
+/*! \brief Map from input index to output index that the output share the memory with input. */
+using TMNMInplaceUpdate = ir::Map<ir::Integer, ir::Integer>;
 
 using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 

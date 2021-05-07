@@ -57,6 +57,19 @@ Type BroadcastInfer(const CallValues& value) {
   return TensorType(oshape, x1->dtype);
 }
 
+Type BroadcastUfuncInfer(const CallValues& value) {
+  using namespace tvm;
+  using namespace tvm::relay;
+  const auto* args = value->args.as<BinaryUfuncArgs>();
+  CHECK(args != nullptr);
+  TensorType x1 = Downcast<TensorType>(GetType(args->x1));
+  TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+  CHECK_EQ(x1->dtype, x2->dtype) << "Data types mismatch (" << x1->dtype << " vs " << x2->dtype
+                                 << ")";
+  Array<PrimExpr> oshape = BroadcastShape(x1, x2);
+  return TensorType(oshape, x1->dtype);
+}
+
 Type LogicalBroadcastInfer(const CallValues& value) {
   using namespace tvm;
   using namespace tvm::relay;
@@ -69,8 +82,8 @@ Type LogicalBroadcastInfer(const CallValues& value) {
   return TensorType(oshape, DataType::Bool(x1->dtype.lanes()));
 }
 
-MNM_OP_TYPE("mnm.op.add", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.subtract", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.add", "BroadcastUfunc", BroadcastUfuncInfer);
+MNM_OP_TYPE("mnm.op.subtract", "BroadcastUfunc", BroadcastUfuncInfer);
 MNM_OP_TYPE("mnm.op.multiply", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.divide", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.mod", "Broadcast", BroadcastInfer);
