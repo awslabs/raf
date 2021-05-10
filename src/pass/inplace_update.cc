@@ -47,8 +47,10 @@ namespace inplace_update {
  */
 class InplaceUpdateMutator : public MixedModeMutator {
  public:
-  // Map from output index to shared var
-  using ShareMap = std::unordered_map<int, Var>;
+  // Mapping from the output index in the expression to a variable to share memory with
+  using ExprShareMap = std::unordered_map<int, Var>;
+  // Mapping from the output index to the input index to share memory in fused op functions
+  using FusedOpShareMap = std::unordered_map<int, int>;
 
   Expr VisitExpr_(const VarNode* node) final {
     auto var = GetRef<Var>(node);
@@ -59,16 +61,52 @@ class InplaceUpdateMutator : public MixedModeMutator {
     return var;
   }
 
+  Expr VisitExpr_(const FunctionNode* func) final {
+    if (!func->HasNonzeroAttr(attr::kPrimitive)) {
+      return ExprMutator::VisitExpr_(func);
+    }
+    Array<Var> params;
+    for (auto param : func->params) {
+      params.push_back(Downcast<Var>(Mutate(param)));
+    }
+    auto body = Mutate(func->body);
+    auto new_func =
+        Function(params, body, func->ret_type, func->type_params, func->attrs, func->span);
+    auto find = expr_share_map_.find(body);
+    if (find != expr_share_map_.end()) {
+      auto& expr_map = find->second;
+      FusedOpShareMap fuse_map;
+      // replace the memory sharing var to the param index in the fused function
+      for (auto it : expr_map) {
+        int out_idx = it.first;
+        Var param = it.second;
+        int input_idx = -1;
+        for (size_t i = 0; i < params.size(); ++i) {
+          if (params[i].same_as(param)) {
+            input_idx = i;
+            break;
+          }
+        }
+        CHECK_GE(input_idx, 0) << "Cannot find the variable " << param
+                               << " in the function parameters";
+        fuse_map.emplace(out_idx, input_idx);
+      }
+      fused_op_share_map_.emplace(new_func, fuse_map);
+    }
+    return new_func;
+  }
+
   Expr Rewrite_(const CallNode* pre, const Expr& post) final {
-    static auto tinplace = Op::GetAttrMap<op::TMNMInplaceUpdate>("TMNMInplaceUpdate");
+    static auto finplace = Op::GetAttrMap<op::TMNMInplaceUpdate>("TMNMInplaceUpdate");
     static auto add_op = op::GetOp("mnm.op.add");
     static auto subtract_op = op::GetOp("mnm.op.subtract");
     auto call = Downcast<Call>(post);
-    if (call->op.as<OpNode>()) {
-      auto op = Downcast<Op>(call->op);
-      if (tinplace.count(op)) {
-        ShareMap share;
-        for (auto it : tinplace[op]) {
+    auto op = Mutate(call->op);
+    if (op.as<OpNode>()) {
+      auto opn = Downcast<Op>(op);
+      if (finplace.count(opn)) {
+        ExprShareMap share;
+        for (auto it : finplace[opn]) {
           auto arg = Downcast<Var>(call->args[it.first]);
           auto var = arg.as<ExtendedVarNode>();
           if (var && var->may_share.defined()) {
@@ -77,14 +115,24 @@ class InplaceUpdateMutator : public MixedModeMutator {
           share.emplace(it.second, arg);
         }
         expr_share_map_.emplace(post, share);
-      } else if (op == add_op || op == subtract_op) {
+      } else if (opn == add_op || opn == subtract_op) {
         // Currently only support add and subtract in the binary ops for inplace update.
         // If the inplace arg is true, the output tensor will share memory with the 1st input tensor
         CHECK_GT(pre->args.size(), 2);
         if (auto var = pre->args[2].as<ExtendedVarNode>()) {
-          ShareMap share{{0, GetRef<Var>(var)}};
+          ExprShareMap share{{0, GetRef<Var>(var)}};
           expr_share_map_.emplace(post, share);
         }
+      }
+    } else if (op.as<FunctionNode>()) {
+      auto it = fused_op_share_map_.find(op);
+      if (it != fused_op_share_map_.end()) {
+        auto& fuse_map = it->second;
+        ExprShareMap expr_map;
+        for (auto it : fuse_map) {
+          expr_map.emplace(it.first, Downcast<Var>(call->args[it.second]));
+        }
+        expr_share_map_.emplace(post, expr_map);
       }
     }
     return post;
@@ -96,7 +144,7 @@ class InplaceUpdateMutator : public MixedModeMutator {
     if (expr_share_map_.count(tup)) {
       auto tup_share = expr_share_map_[tup];
       if (tup_share.count(tup_get->index)) {
-        ShareMap share;
+        ExprShareMap share;
         share.emplace(0, tup_share[tup_get->index]);
         expr_share_map_.emplace(post, share);
       }
@@ -136,9 +184,11 @@ class InplaceUpdateMutator : public MixedModeMutator {
   }
 
  private:
-  /*! \brief Map from expr to the share information of its output. */
-  std::unordered_map<Expr, ShareMap, ObjectPtrHash, ObjectPtrEqual> expr_share_map_;
-  /*! \brief Map from original var to updated var with share annotation. */
+  /*! \brief Mapping from expr to the share information of its output. */
+  std::unordered_map<Expr, ExprShareMap, ObjectPtrHash, ObjectPtrEqual> expr_share_map_;
+  /*! \brief Mapping from fused function to its share information. */
+  std::unordered_map<Expr, FusedOpShareMap, ObjectPtrHash, ObjectPtrEqual> fused_op_share_map_;
+  /*! \brief Mapping from original var to updated var with share annotation. */
   std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> var_update_map_;
 };
 

@@ -140,8 +140,6 @@ class FusedOpDispatch {
 /*! \brief dispatch (fused or un-fused) ops to backend implementation */
 std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
 
-using tvm::Attrs;
-using tvm::relay::Expr;
 using tvm::relay::kBroadcast;
 using tvm::relay::kCommReduce;
 using tvm::relay::kElemWise;
@@ -160,10 +158,10 @@ using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 
-using FMNMCastRule = registry::TypedPackedFunc<Array<ir::Integer>(const Array<Expr>&)>;
+using FMNMCastRule = registry::TypedPackedFunc<Array<ir::Integer>(const Array<ir::Expr>&)>;
 
 using FMNMAnnotateTarget =
-    registry::TypedPackedFunc<bool(const Attrs& attrs, const Array<Expr>& args)>;
+    registry::TypedPackedFunc<bool(const ir::Attrs& attrs, const Array<ir::Expr>& args)>;
 
 using FMNMSchemaFieldIndex = registry::TypedPackedFunc<int(const std::string&)>;
 
@@ -191,9 +189,10 @@ using FFusedPrimalGradient = registry::TypedPackedFunc<
         // in_grad: old igrads
         const ir::Array<ir::Expr>& in_grad)>;
 
-using FMNMFromRelay = registry::TypedPackedFunc<Expr(const Attrs& attrs, const Array<Expr>& args)>;
+using FMNMFromRelay =
+    registry::TypedPackedFunc<ir::Expr(const ir::Attrs& attrs, const Array<ir::Expr>& args)>;
 using FMNMMutationFromRelay =
-    registry::TypedPackedFunc<Array<Array<Expr>>(const ir::Var& var, const ir::Call& call)>;
+    registry::TypedPackedFunc<Array<Array<ir::Expr>>(const ir::Var& var, const ir::Call& call)>;
 
 void RunDeclare(const CallValues& call);
 ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);

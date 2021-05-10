@@ -452,5 +452,54 @@ def test_sgd():
     assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
+def test_fuse_inplace():
+    konst, _ = randn((1,), device="cpu")
+
+    class Model(mnm.Model):
+        def build(self, shape):
+            self.c = konst
+            self.shape = shape
+
+        @mnm.model.trace
+        def forward(self, x, y):
+            y = mnm.add(y, self.c)
+            new_x = mnm.add(x, y, out=x)
+            z = mnm.relu(new_x)
+            return z
+
+    def expected(shape):
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
+        null = mnm.ir.const(None)
+
+        p0 = mnm.ir.var("p0", shape=shape)
+        p1 = mnm.ir.var("p1", shape=(1,))
+        p2 = mnm.ir.var("p2", shape=shape)
+        y = relay.Call(add_op, [p0, p1, null, null])
+        y = relay.Call(add_op, [p2, y, p2, null])
+        f = relay.Function([p0, p1, p2], y)
+        f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+
+        x = mnm.ir.var("x", shape=shape)
+        y = mnm.ir.var("y", shape=shape)
+        c = mnm.ir.var("c", shape=(1,))
+        a2 = mnm.ir.var("a2")
+        a3 = mnm.ir.var("a3")
+        let3 = relay.Let(a3, relay.Call(relu_op, [a2]), a3)
+        let2 = relay.Let(a2, relay.Call(f, [y, c, x]), let3)
+        return relay.Function([x, y, c], let2)
+
+    shape = (10, 20)
+    model = Model(shape)
+    m_x, _ = randn(shape, device="cpu")
+    m_y, _ = randn(shape, device="cpu")
+    mod_before = model._internal(m_x, m_y).mod
+    mod_before = run_infer_type(mod_before)
+    mod_after = mnm._ffi.pass_.FuseOps(3)(mod_before)
+    mod_after = run_infer_type(mod_after)
+    func_expected = run_infer_type(expected((10, 20)))
+    assert tvm.ir.structural_equal(mod_after['main'], func_expected)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

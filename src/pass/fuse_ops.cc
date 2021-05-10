@@ -98,6 +98,8 @@ class IndexedForwardGraph {
     OpPatternKind pattern{kOpaque};
     /*! \brief The outputs of the node. */
     LinkedList<Edge> outputs;
+    /*! \brief Whether any outputs have inplace update. */
+    bool inplace_update{false};
 
     std::string DebugDump() {
       std::ostringstream os;
@@ -106,7 +108,7 @@ class IndexedForwardGraph {
       for (auto* link = outputs.head; link != nullptr; link = link->next) {
         os << link->value.node->index << "(" << link->value.pattern << "), ";
       }
-      os << "], extern_ref=" << extern_ref;
+      os << "], extern_ref=" << extern_ref << ", inplace_update=" << inplace_update;
       return os.str();
     }
   };
@@ -116,7 +118,7 @@ class IndexedForwardGraph {
   std::vector<Node*> post_dfs_order;
 
   /*! \brief Dump the graph into string. */
-  void DebugDump() {
+  void DebugDump() const {
     std::ostringstream os;
     for (size_t i = 0; i < post_dfs_order.size(); ++i) {
       Node* node = post_dfs_order[i];
@@ -222,6 +224,7 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     CHECK(graph_.node_map.count(call));
     Node* node = graph_.node_map.at(call);
     static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
+    static auto finplace = Op::GetAttrMap<TOpPattern>("TMNMInplaceUpdate");
     static auto add_op = op::GetOp("mnm.op.add");
     static auto subtract_op = op::GetOp("mnm.op.subtract");
     // Now we set the pattern of this call.
@@ -238,17 +241,13 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
       auto op = GetRef<Op>(opnode);
       // TODO(@icemelon9): Check if the op has data dependant shape inference
       op_pattern = static_cast<OpPatternKind>(fpattern[op]);
-      if (op == add_op || op == subtract_op) {
-        // TODO(@icemelon9): Currently use opaque pattern for add/subtract with inplace update.
-        // Need to find better to expose the inplace update information in a fused op.
+      if (finplace.count(op)) {
+        node->inplace_update = true;
+      } else if (op == add_op || op == subtract_op) {
         CHECK_GT(call->args.size(), 2);
         auto out = call->args[2];
-        if (out.defined()) {
-          auto konst = out.as<ConstantNode>();
-          auto var = out.as<ExtendedVarNode>();
-          if ((konst && konst->value.defined()) || var) {
-            op_pattern = kOpaque;
-          }
+        if (out.defined() && out.as<ExtendedVarNode>()) {
+          node->inplace_update = true;
         }
       }
     } else {
@@ -714,6 +713,8 @@ class GraphPartitioner {
       if (opt_level_ == 1 && group_node->pattern > kInjective) continue;
       // no actions for opaque nodes
       if (group_node->pattern == kOpaque) continue;
+      // no nodes fuse into inplace update nodes
+      if (graph_node->inplace_update) continue;
       // no actions needed if the current node have no dominator
       if (dom_node->parent == nullptr) continue;
       CHECK(!graph_node->extern_ref);
