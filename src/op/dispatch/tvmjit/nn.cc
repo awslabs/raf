@@ -4,6 +4,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <tvm/relay/attrs/nn.h>
+#include <tvm/topi/nn.h>
 #include <array>
 #include "mnm/op_utils.h"
 #include "./tvmjit_utils.h"
@@ -68,7 +69,7 @@ Attrs ConvSchema2Attrs(const ConvArgs* args) {
   }
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();
-  attrs->kernel_size = NullValue<Array<tvm::relay::IndexExpr> >();
+  attrs->kernel_size = NullValue<Array<tvm::relay::IndexExpr>>();
   attrs->data_layout = args->layout;
   attrs->kernel_layout = args->kernel_layout;
   attrs->out_layout = args->out_layout;
@@ -132,7 +133,7 @@ struct Conv2dDxwAttrs : public tvm::AttrsNode<Conv2dDxwAttrs> {
         .set_default(NullValue<IndexExpr>());
     TVM_ATTR_FIELD(kernel_size)
         .describe("Specifies the dimensions of the convolution window.")
-        .set_default(NullValue<Array<IndexExpr> >());
+        .set_default(NullValue<Array<IndexExpr>>());
     TVM_ATTR_FIELD(data_layout)
         .set_default("NCHW")
         .describe(
@@ -356,11 +357,16 @@ std::vector<std::string> PoolSchemaArgNames(const op::CallValues& call) {
 
 Attrs MaxPoolSchema2Attrs(const PoolArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> dilation =
+      args->dilation.size() > 1 ? args->dilation : Pad<2>(args->dilation);
   std::vector<int64_t> padding = args->padding.size() > 1 ? args->padding : Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   auto attrs = make_object<tvm::relay::MaxPool2DAttrs>();
   for (int i = 0; i < stride.size(); ++i) {
     attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < dilation.size(); ++i) {
+    attrs->dilation.push_back(IntImm(tvm::runtime::DataType::Int(64), dilation[i]));
   }
   for (int i = 0; i < padding.size(); ++i) {
     attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
@@ -376,11 +382,16 @@ Attrs MaxPoolSchema2Attrs(const PoolArgs* args) {
 
 Attrs AvgPoolSchema2Attrs(const PoolArgs* args) {
   std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> dilation =
+      args->dilation.size() > 1 ? args->dilation : Pad<2>(args->dilation);
   std::vector<int64_t> padding = args->padding.size() > 1 ? args->padding : Pad<2>(args->padding);
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
   auto attrs = make_object<tvm::relay::AvgPool2DAttrs>();
   for (int i = 0; i < stride.size(); ++i) {
     attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < dilation.size(); ++i) {
+    attrs->dilation.push_back(IntImm(tvm::runtime::DataType::Int(64), dilation[i]));
   }
   for (int i = 0; i < padding.size(); ++i) {
     attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
@@ -397,6 +408,7 @@ Attrs AvgPoolSchema2Attrs(const PoolArgs* args) {
 HashKey PoolHasher(const std::vector<Type>& param_types, const Type& y_type, const PoolArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->stride;
+  key << args->dilation;
   key << args->padding;
   key << args->kernel;
   key << args->ceil_mode;
@@ -723,6 +735,28 @@ MNM_TVMJIT(BatchNormTrainDxwb, "mnm.op.batch_norm_train_dxwb", BatchNormTrainDxw
            BatchNormTrainDxwbSchema2Args, BatchNormTrainDxwbSchemaArgNames,
            BatchNormTrainDxwbSchema2Attrs, BatchNormTrainDxwbHasher);
 
+struct PadAttrs : public tvm::AttrsNode<PadAttrs> {
+  double pad_value;
+  Array<Array<Integer>> pad_width;
+  std::string pad_mode;
+
+  TVM_DECLARE_ATTRS(PadAttrs, "mnm.attrs.PadAttrs") {
+    TVM_ATTR_FIELD(pad_value).set_default(0.0).describe(
+        "The value used for padding when mode is 'constant'.");
+    TVM_ATTR_FIELD(pad_width).describe(
+        "Number of values padded to the edges of each axis, "
+        "in the format of ((before_1, after_1), ..., (before_N, after_N))");
+    TVM_ATTR_FIELD(pad_mode)
+        .set_default("constant")
+        .describe(
+            "Padding type to use. \"constant\" pads with constant_value, "
+            "\"edge\" pads using the edge values of the input array, "
+            "\"reflect\" pads by reflecting values with respect to the edges.");
+  }
+};  // struct PadAttrs
+
+TVM_REGISTER_NODE_TYPE(PadAttrs);
+
 std::vector<Value> PadSchema2Args(const PadArgs* args) {
   return {args->x};
 }
@@ -733,8 +767,8 @@ std::vector<std::string> PadSchemaArgNames(const op::CallValues& call) {
 
 Attrs PadSchema2Attrs(const PadArgs* args) {
   // attrs will be later passed to compute & schedule functions
-  auto attrs = make_object<tvm::relay::PadAttrs>();
-  Array<Array<Integer> > pad_width;
+  auto attrs = make_object<PadAttrs>();
+  Array<Array<Integer>> pad_width;
   for (int i = 0; i < args->pad_width.size(); i += 2) {
     Array<Integer> width{Integer(args->pad_width[i]), Integer(args->pad_width[i + 1])};
     pad_width.push_back(width);
@@ -755,6 +789,27 @@ HashKey PadHasher(const std::vector<Type>& param_types, const Type& y_type, cons
 
 MNM_TVMJIT(Pad, "mnm.op.pad", PadArgs, PadSchema2Args, PadSchemaArgNames, PadSchema2Attrs,
            PadHasher);
+
+Array<tvm::te::Tensor> PadCompute(const Attrs& attrs, const Array<tvm::te::Tensor>& inputs,
+                                  const Type& out_type) {
+  const auto* param = attrs.as<PadAttrs>();
+  ICHECK(param != nullptr);
+  auto pad_width = param->pad_width;
+  ICHECK(pad_width.size() == inputs[0].ndim() && pad_width[0].size() == 2) << "Illegal pad_width";
+  Array<IndexExpr> pad_before;
+  for (size_t i = 0; i < pad_width.size(); ++i) {
+    pad_before.push_back(pad_width[i][0]);
+  }
+  Array<IndexExpr> pad_after;
+  for (size_t i = 0; i < pad_width.size(); ++i) {
+    pad_after.push_back(pad_width[i][1]);
+  }
+  return Array<tvm::te::Tensor>{tvm::topi::pad(
+      inputs[0], pad_before, pad_after, tvm::tir::make_const(inputs[0]->dtype, param->pad_value),
+      "T_pad", tvm::topi::kElementWise, param->pad_mode)};
+}
+
+MNM_OP_REGISTER("mnm.op.pad").set_attr<tvm::relay::FTVMCompute>("FTVMCompute", PadCompute);
 
 }  // namespace tvmjit
 }  // namespace op

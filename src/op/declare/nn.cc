@@ -117,7 +117,6 @@ void Pool2D(const CallValues& call) {
   int64_t dilate_h = dilation[0];
   int64_t dilate_w = dilation[1];
   int64_t h_out, w_out;
-  CHECK(dilate_h == 1 && dilate_w == 1) << "Pooling does not support dilation!";
   if (!args->ceil_mode) {
     h_out = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1) / stride_h + 1;
     w_out = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1) / stride_w + 1;

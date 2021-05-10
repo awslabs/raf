@@ -130,7 +130,6 @@ Type Pool2DInfer(const CallValues& value) {
   PrimExpr dilate_h = Integer(dilation[0]);
   PrimExpr dilate_w = Integer(dilation[1]);
   PrimExpr h_out, w_out;
-  CHECK(dilation[0] == 1 && dilation[1] == 1) << "Pooling does not support dilation!";
   PrimExpr h_temp = (h_in + pad_h - dilate_h * (kernel_h - 1) - 1);
   PrimExpr w_temp = (w_in + pad_w - dilate_w * (kernel_w - 1) - 1);
   if (!args->ceil_mode) {

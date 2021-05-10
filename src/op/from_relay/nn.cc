@@ -71,7 +71,7 @@ MNM_OP_FROM_RELAY("nn.max_pool2d", "mnm.op.max_pool2d",
                     padding.pop_back();
                     padding.pop_back();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
-                    mnm_args.push_back(MakeConstant(TupleValue::make({ScalarValue::make(1)})));
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->dilation)));
                     mnm_args.push_back(MakeConstant(BoolValue::make(relay_attrs->ceil_mode)));
                     mnm_args.push_back(MakeConstant(BoolValue::make(true)));
                     mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->layout)));
@@ -92,7 +92,7 @@ MNM_OP_FROM_RELAY("nn.avg_pool2d", "mnm.op.avg_pool2d",
                     padding.pop_back();
                     padding.pop_back();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
-                    mnm_args.push_back(MakeConstant(TupleValue::make({ScalarValue::make(1)})));
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->dilation)));
                     mnm_args.push_back(MakeConstant(BoolValue::make(relay_attrs->ceil_mode)));
                     mnm_args.push_back(MakeConstant(BoolValue::make(true)));
                     mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->layout)));
@@ -144,7 +144,8 @@ Array<Array<Expr>> BatchNormMutationFromRelay(const Var& var, const Call& call) 
 MNM_OP_MUTATION_FROM_RELAY("nn.batch_norm", BatchNormMutationFromRelay);
 
 MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Expr>& args) {
-  Array<Expr> mnm_args = args;
+  Array<Expr> mnm_args;
+  mnm_args.push_back(args[0]);
   const auto* relay_attrs = attrs.as<PadAttrs>();
   Array<Integer> flat_pad_width;
   for (int i = 0; i < relay_attrs->pad_width.size(); ++i) {
@@ -153,7 +154,9 @@ MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Ex
     }
   }
   mnm_args.push_back(MakeConstant(ArrayToIntTuple(flat_pad_width)));
-  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->pad_value)));
+  const auto* konst = args[1].as<RelayConstantNode>();
+  CHECK(konst) << "'pad_value' must be a const tensor.";
+  mnm_args.push_back(MakeConstant(RelayConstant2ScalarValue<double>(konst)));
   mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->pad_mode)));
   return mnm_args;
 });

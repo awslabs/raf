@@ -100,7 +100,6 @@ OP_MAP = {
     "mnm.op.batch_matmul_nt": ["nn.batch_matmul", "", "kOpaque"],
     "mnm.op.dense": ["nn.dense", "", "kOpaque"],
     "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
-    "mnm.op.pad": ["nn.pad", "relay.attrs.PadAttrs", "kOpaque"],
     "mnm.op.relu": ["nn.relu", "", "kInjective"],
     "mnm.op.avg_pool2d": ["nn.avg_pool2d", "", "kOpaque"],
     "mnm.op.avg_pool2d_dx": ["nn.avg_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],

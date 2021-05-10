@@ -134,6 +134,7 @@ std::vector<std::string> TakeSchemaArgNames(const op::CallValues& call) {
 
 Attrs TakeSchema2Attrs(const TakeArgs* args) {
   auto attrs = make_object<TakeAttrs>();
+  attrs->batch_dims = 0;
   if (args->axis.defined()) {
     const auto* v = args->axis.as<IntValueObj>();
     CHECK(v != nullptr);
