@@ -13,6 +13,7 @@
 #include "mnm/pass_manager.h"
 #include "mnm/binding.h"
 #include "mnm/type.h"
+#include "./common.h"
 #include "../op/ty/utils.h"
 #include "tvm/node/structural_equal.h"
 
@@ -86,11 +87,28 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* call) override {
+    static const Op& invoke_op = Op::Get("mnm.op.vm.invoke_op");
+    const OpNode* opn = call->op.as<OpNode>();
+
+    if (opn && GetRef<Op>(opn) == invoke_op) {
+      // Since invoke_op use the second argument (input tuple) to invoke
+      // the first argument (op or closure), we need to update the var map
+      // of input tuple (args) to the closure. Just like %closure(%input_var).
+      auto fn_var = call->args[0].as<VarNode>();
+      CHECK(call->args[1].as<VarNode>())
+          << "The 2nd argument of invoke_op must be tuple, but got " << call->args[1]->GetTypeKey();
+      auto input_var = call->args[1].as<VarNode>();
+      CHECK(var_value_map_.count(input_var) != 0)
+          << "The 2nd argument of invoke_op hasn't be visited";
+      const auto input_tuple = Downcast<Tuple>(var_value_map_[input_var]);
+      VisitPrimitiveClosureFromCallerArgs(fn_var, input_tuple->fields);
+    }
+
     Array<Expr> args;
     for (const auto& arg : call->args) {
       args.push_back(VisitExpr(arg));
     }
-    const OpNode* opn = call->op.as<OpNode>();
+
     static const auto declare_op = Op::GetAttrMap<op::FMNMDeclare>("FMNMDeclare");
     // We do constant-folding for shape-related operators by invoking their declare function,
     // because they produce shape information which is required by type inference.
@@ -108,18 +126,11 @@ class TypeInferencer : public ExprMutator {
         return VisitExpr(re);
       }
     }
+
     if (const FunctionNode* fn = call->op.as<FunctionNode>()) {
-      CHECK_EQ(call->args.size(), fn->params.size());
-      for (size_t n = call->args.size(), i = 0; i < n; ++i) {
-        Expr arg = VisitExpr(call->args[i]);
-        const auto* v = arg.as<VarNode>();
-        if (v && var_value_map_.count(v)) {
-          var_value_map_[fn->params[i].get()] = var_value_map_[v];
-        } else {
-          var_value_map_[fn->params[i].get()] = arg;
-        }
-      }
+      UpdateFuncParamVarMap(fn, call->args);
     }
+
     Expr op = VisitExpr(call->op);
     Call ret = Call(op, args, call->attrs, call->type_args);
     if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {
@@ -134,6 +145,7 @@ class TypeInferencer : public ExprMutator {
       // here is valid if it points to a function. Check that the type is a FuncType
       // and the args of the Call match the type of the FuncType. If yes, return the
       // FuncType's ret_type.
+      VisitPrimitiveClosureFromCallerArgs(var_node, call->args);
       const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
       CHECK(fty_node);
       for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
@@ -176,6 +188,37 @@ class TypeInferencer : public ExprMutator {
     return fty->ret_type;
   }
 
+  void UpdateFuncParamVarMap(const FunctionNode* fn, const Array<Expr>& args) {
+    // Map the function parameters in var_value_map_ to the caller arguments in order to
+    // infer type of function body. As a result, this has to be done before visiting the
+    // function body.
+    CHECK_EQ(args.size(), fn->params.size());
+    for (size_t n = args.size(), i = 0; i < n; ++i) {
+      Expr arg = VisitExpr(args[i]);
+      const auto* v = arg.as<VarNode>();
+      if (v && var_value_map_.count(v)) {
+        var_value_map_[fn->params[i].get()] = var_value_map_[v];
+      } else {
+        var_value_map_[fn->params[i].get()] = arg;
+      }
+    }
+  }
+
+  void VisitPrimitiveClosureFromCallerArgs(const VarNode* fn_var, const Array<Expr>& args) {
+    // The visit of binded closure has been deferred until visiting its callers.
+    // When visiting callers, we use their arguments to update the closure parameters in
+    // var_value_map_ and then visit the closure body.
+    auto fn_expr = var_value_map_[fn_var];
+    const FunctionNode* fn = fn_expr.as<FunctionNode>();
+    if (!fn || !fn->HasNonzeroAttr(attr::kPrimitive)) {
+      return;
+    }
+    UpdateFuncParamVarMap(fn, args);
+    auto new_fn = VisitExpr(GetRef<Function>(fn));
+    fn_var->checked_type_ = new_fn->checked_type();
+    var_value_map_[fn_var] = new_fn;
+  }
+
   Expr VisitExpr_(const RelayConstantNode* op) override {
     const ConstantNode* node = static_cast<const ConstantNode*>(op);
     auto const_data = node->value;
@@ -209,18 +252,33 @@ class TypeInferencer : public ExprMutator {
   Expr VisitExpr_(const LetNode* op) override {
     Expr ovalue = op->value;
     Var var = op->var;
-    Expr value = VisitExpr(ovalue);
+    Expr value = ovalue;
+
+    // Do not infer binded primitive functions here. Since we may need the caller arguments
+    // to infer types of function body, we defer type inference of primitive function to its caller.
+    auto fn_node = value.as<FunctionNode>();
+    bool infer_body = !fn_node || !fn_node->HasNonzeroAttr(attr::kPrimitive);
+    if (infer_body) {
+      value = VisitExpr(ovalue);
+    }
+
     if (value.as<ConstantNode>()) {
       memo_[var] = value;
       return VisitExpr(op->body);
     }
+
     const VarNode* v = value.as<VarNode>();
     if (v && var_value_map_.count(v)) {
       var_value_map_[op->var.get()] = var_value_map_[v];
     } else {
       var_value_map_[op->var.get()] = value;
     }
-    var->checked_type_ = value->checked_type();
+
+    // If the binded primitive function has not been inferred, then it does not have the type yet.
+    if (infer_body) {
+      var->checked_type_ = value->checked_type();
+    }
+
     Expr body = VisitExpr(op->body);
     Let let(var, value, body);
     let->checked_type_ = body->checked_type();
@@ -271,9 +329,9 @@ class TypeInferencer : public ExprMutator {
 
  private:
   IRModule mod_;
-  // The var_value_map_ is used to track Let binding Expr
-  // E.g. Let %a = %b; Let %c = some_op(%a)
-  // The var_value_map_ will feed %b to some_op
+  /*! \brief The var_value_map_ is used to track Let binding Expr.
+   * E.g. Let %a = %b; Let %c = some_op(%a). The var_value_map_ will map %b to some_op.
+   */
   std::unordered_map<const VarNode*, Expr> var_value_map_;
 };
 

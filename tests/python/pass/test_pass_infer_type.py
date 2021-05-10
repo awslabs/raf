@@ -309,6 +309,60 @@ def test_constant_tensor_tuple():
     check(m_c1, ToTVM(ExtractValue(func.body)[0]).asnumpy())
     check(m_c2, ToTVM(ExtractValue(func.body)[1]).asnumpy())
 
+def test_closure_with_const_args1():
+    # pylint: disable=attribute-defined-outside-init
+    rand, _ = randn((1,), device="cpu")
+
+    class Model(mnm.Model):
+        def build(self):
+            self.c = rand
+
+        @mnm.model.trace
+        def forward(self, x):
+            pooled = mnm.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
+            return (mnm.add(pooled, self.c), x)
+
+    model = Model()
+    m_x, _ = randn((1, 16, 64, 64), device="cpu")
+    mod = model._internal(m_x).mod
+    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = mnm._ffi.pass_.FuseOps(3)(mod)
+    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = mnm._ffi.pass_.ManifestAlloc()(mod)
+    # pylint: disable=line-too-long
+    #   let %x_2 = fn (%p0: Tensor[(1, 16, 64, 64), float32], %p1: (int32, int32), %p2: (int64,),
+    #                  %p3: (int64,), %p4: (int64,), %p5: bool, %p6: bool, %p7: int64,
+    #                  %p8: Tensor[(1), float32], Primitive=1) -> Tensor[(1, 16, 64, 64), float32] {
+    #     %0 = mnm.op.max_pool2d(%p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7) /* ty=Tensor[(1, 16, 64, 64), float32] */;
+    #     mnm.op.add(%0, %p8, nullptr /* ty=() */, nullptr /* ty=() */) /* ty=Tensor[(1, 16, 64, 64), float32] */
+    #   };
+    #   let %x_3 = (%x, TupleValue([int32(3), int32(3)]) /* ty=(int32, int32) */, TupleValue([int64(1)]) /* ty=(int64,) */, TupleValue([int64(1)]) /* ty=(int64,) */, TupleValue([int64(1)]) /* ty=(int64,) */, bool(0) /* ty=bool */, bool(1) /* ty=bool */, str"NCHW" /* ty=int64 */, %c);
+    #   let %x_4 = (%x_1,);
+    #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
+    # }
+    # pylint: enable=line-too-long
+    mod = mnm._ffi.pass_.InferType()(mod)
+
+def test_closure_with_const_args2():
+    # pylint: disable=no-self-use
+    # Test ANF before ManifestAlloc.
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.relu(x + x)
+
+    model = Model()
+    m_x, _ = randn((3, 4))
+    mod = model._internal(m_x).mod
+    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+    mod = mnm._ffi.pass_.FuseOps(3)(mod)
+    mod = mnm._ffi.pass_.ToANormalForm()(mod)
+    mod = mnm._ffi.pass_.InferType()(mod)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
