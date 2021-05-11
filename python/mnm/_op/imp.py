@@ -17,30 +17,30 @@ __all__ = [
     "broadcast_to", "broadcast_to_like", "cast", "cast_like", "ceil",
     "clip", "clip_dx", "collapse_sum_like", "compiler_begin", "compiler_end",
     "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
-    "copy", "cos", "cross_entropy", "cross_entropy_dpred", "cross_entropy_dtrue",
-    "dense", "device_copy", "divide", "equal", "erf",
-    "erf_dx", "exp", "expand_dims", "floor", "full",
-    "full_like", "gather", "gather_dx", "gather_nd", "gather_nd_dx",
-    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
-    "layer_norm", "layer_norm_dx", "left_shift", "less", "less_equal",
-    "log", "log2", "log_softmax", "log_softmax_dx", "logical_and",
-    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
-    "max", "max_pool2d", "max_pool2d_dx", "maximum", "mean",
-    "mean_dx", "mesh_grid", "min", "minimum", "mod",
-    "multiply", "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue",
-    "non_max_suppression", "not_equal", "one_hot", "ones", "ones_like",
-    "pad", "power", "prod", "prod_dx", "relu",
-    "relu_dx", "repeat", "repeat_dx", "reshape", "reverse",
-    "reverse_sequence", "right_shift", "round", "rsqrt", "scatter",
-    "scatter_dx", "sequence_mask", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stream_sync",
-    "strided_slice", "strided_slice_dx", "subtract", "sum", "sum_dx",
-    "swap_axis", "take", "take_dx", "tanh", "tanh_dx",
-    "threefry_generate", "threefry_split", "transpose", "transpose_dx", "trunc",
-    "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where", "where_dx",
-    "zeros", "zeros_like",
+    "conv2d_transpose", "copy", "cos", "cross_entropy", "cross_entropy_dpred",
+    "cross_entropy_dtrue", "dense", "device_copy", "divide", "equal",
+    "erf", "erf_dx", "exp", "expand_dims", "floor",
+    "full", "full_like", "gather", "gather_dx", "gather_nd",
+    "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
+    "greater_equal", "layer_norm", "layer_norm_dx", "left_shift", "less",
+    "less_equal", "log", "log2", "log_softmax", "log_softmax_dx",
+    "logical_and", "logical_not", "matmul", "matmul_nt", "matmul_tn",
+    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
+    "mean", "mean_dx", "mesh_grid", "min", "minimum",
+    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
+    "ones_like", "pad", "power", "prod", "prod_dx",
+    "relu", "relu_dx", "repeat", "repeat_dx", "reshape",
+    "reverse", "reverse_sequence", "right_shift", "round", "rsqrt",
+    "scatter", "scatter_dx", "sequence_mask", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
+    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
+    "tanh_dx", "threefry_generate", "threefry_split", "transpose", "transpose_dx",
+    "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where",
+    "where_dx", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -377,6 +377,20 @@ def conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups):
     dilation = imp_utils.to_int_tuple(dilation)
     groups = imp_utils.to_int(groups)
     return imp_utils.ret(ffi.conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups))
+
+@set_module("mnm")
+def conv2d_transpose(x, w, stride=1, padding=0, output_padding=0, dilation=1, groups=1, layout="NCHW", kernel_layout="OIHW", out_layout="NCHW"):
+    x = imp_utils.to_tensor(x)
+    w = imp_utils.to_tensor(w)
+    stride = imp_utils.to_int_tuple(stride)
+    padding = imp_utils.to_int_tuple(padding)
+    output_padding = imp_utils.to_int_tuple(output_padding)
+    dilation = imp_utils.to_int_tuple(dilation)
+    groups = imp_utils.to_int(groups)
+    layout = imp_utils.to_string(layout)
+    kernel_layout = imp_utils.to_string(kernel_layout)
+    out_layout = imp_utils.to_string(out_layout)
+    return imp_utils.ret(ffi.conv2d_transpose(x, w, stride, padding, output_padding, dilation, groups, layout, kernel_layout, out_layout))
 
 @set_module("mnm")
 def copy(x):

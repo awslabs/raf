@@ -107,6 +107,21 @@ class ConvDxwArgs : public ir::AttrsNode<ConvDxwArgs> {
   MNM_OP_SCHEMA(ConvDxwArgs, "mnm.args.conv_dxw");
 };
 
+class ConvTransArgs : public ir::AttrsNode<ConvTransArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue w;
+  std::vector<int64_t> stride{1};
+  std::vector<int64_t> padding{0};
+  std::vector<int64_t> output_padding{0};
+  std::vector<int64_t> dilation{1};
+  int64_t groups{1};
+  std::string layout{"NCHW"};
+  std::string kernel_layout{"OIHW"};
+  std::string out_layout{"NCHW"};
+  MNM_OP_SCHEMA(ConvTransArgs, "mnm.args.conv_trans");
+};
+
 class DropoutArgs : public ir::AttrsNode<DropoutArgs> {
  public:
   value::BaseTensorValue x;

@@ -87,6 +87,69 @@ Type Conv2DInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.conv2d", "Conv2d", Conv2DInfer);
 
+Type Conv2DTransInfer(const CallValues& value) {
+  const auto* args = value->args.as<ConvTransArgs>();
+  CHECK(args != nullptr);
+
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  TensorType w = Downcast<TensorType>(GetType(args->w));
+  CHECK_EQ(x->shape.size(), 4) << x->shape;
+  CHECK_EQ(w->shape.size(), 4) << w->shape;
+
+  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> dilation = Pad<2>(args->dilation);
+
+  tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> in_shape = x->shape;
+  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "OIHW");
+  tvm::Array<tvm::PrimExpr> w_shape = w->shape;
+
+  in_shape = data_layout_converter.ForwardShape(in_shape);
+  w_shape = w_layout_converter.ForwardShape(w_shape);
+
+  PrimExpr n_in = in_shape[0];
+  PrimExpr c_in = in_shape[1];
+  PrimExpr h_in = in_shape[2];
+  PrimExpr w_in = in_shape[3];
+  PrimExpr out = w_shape[1];
+  PrimExpr in = w_shape[0];
+  PrimExpr kernel_h = w_shape[2];
+  PrimExpr kernel_w = w_shape[3];
+  PrimExpr stride_h = Integer(stride[0]);
+  PrimExpr stride_w = Integer(stride[1]);
+
+  int64_t pad_h_int;
+  int64_t pad_w_int;
+  GetPadHW(args->padding, &pad_h_int, &pad_w_int);
+  PrimExpr pad_h = Integer(pad_h_int);
+  PrimExpr pad_w = Integer(pad_w_int);
+
+  PrimExpr dilate_h = Integer(dilation[0]);
+  PrimExpr dilate_w = Integer(dilation[1]);
+
+  int64_t output_padding_h_int;
+  int64_t output_padding_w_int;
+  GetOutputPadHW(args->output_padding, &output_padding_h_int, &output_padding_w_int);
+
+  PrimExpr output_padding_h = Integer(output_padding_h_int);
+  PrimExpr output_padding_w = Integer(output_padding_w_int);
+
+  PrimExpr h_out = (h_in - 1) * stride_h - pad_h + dilate_h * (kernel_h - 1) + output_padding_h + 1;
+  PrimExpr w_out = (w_in - 1) * stride_w - pad_w + dilate_w * (kernel_w - 1) + output_padding_w + 1;
+
+  PrimExpr groups = Integer(args->groups);
+  CHECK(TypeCheckCompare(c_in / groups, in, std::equal_to<int>()))
+      << "in nn.cc Unmatched input channel " << c_in << " and weight channel size" << in
+      << " with group size " << groups;
+
+  tvm::tir::BijectiveLayout out_layout_converter(args->out_layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> oshape{n_in, out, h_out, w_out};
+  oshape = out_layout_converter.BackwardShape(oshape);
+  return TensorType(oshape, x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.conv2d_transpose", "Conv2dTans", Conv2DTransInfer);
+
 Type Conv2DDxwInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvDxwArgs>();
   CHECK(args != nullptr);

@@ -140,6 +140,39 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const
 
 MNM_OP_GRAD("mnm.op.conv2d", Conv2dGrad);
 
+Array<Expr> Conv2dTransGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                            const Expr& dy) {
+  // schema for conv2d_transpose is:
+  //    x, w, stride, padding, output_padding, dilation, groups
+  // schema for conv2d_trans_grad is:
+  //    x_or_w, y, dy, shape, stride, padding, output_padding dilation, groups
+  static auto op_dx = Op::Get("mnm.op.conv2d_dx");
+  static auto op_dw = Op::Get("mnm.op.conv2d_dw");
+  const CallNode* call = orig_call.as<CallNode>();
+  // TODO(@junrushao1994): this piece of code is particularly suitable for auto-gen
+  CHECK_GE(call->args.size(), 6);
+  const Expr& x = call->args[0];
+  const Expr& w = call->args[1];
+  const Expr& stride = call->args[2];
+  const Expr& padding = call->args[3];
+  const Expr& output_padding = call->args[4];
+  const Expr& dilation = call->args[5];
+  const Expr& groups = call->args[6];
+  const Expr& layout = orig_args[7];
+  const auto* layout_const = layout.as<ConstantNode>();
+  if (layout_const) {
+    const auto* layout_str = layout_const->value.as<value::StringValueObj>();
+    CHECK(layout_str && layout_str->value == "NCHW")
+        << "PoolGrad support NCHW layout only. Layout = " << layout_str->value;
+  }
+  // dx: w, y, dy, shape(x), stride, padding, dilation, groups
+  // dw: x, y, dy, shape(w), stride, padding, dilation, groups
+  return {Call(op_dx, {w, y, dy, Shape(x), stride, padding, output_padding, dilation, groups}),
+          Call(op_dw, {x, y, dy, Shape(w), stride, padding, output_padding, dilation, groups})};
+}
+
+MNM_OP_GRAD("mnm.op.conv2d_transpose", Conv2dTransGrad);
+
 template <const char* GradOp>
 Array<Expr> UnaryGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {

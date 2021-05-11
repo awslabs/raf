@@ -340,6 +340,8 @@ _reg.register_schedule("mnm.op.layer_norm_dx", schedule_layer_norm)
 
 _reg.register_strategy("mnm.op.conv2d", strategy.conv2d_strategy)
 
+_reg.register_strategy("mnm.op.conv2d_transpose", strategy.conv2d_transpose_strategy)
+
 def _get_pad_tuple(padding, kernel):
     """Common code to get the pad option
 

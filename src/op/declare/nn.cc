@@ -90,6 +90,86 @@ void Conv2D(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.conv2d", Conv2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
+void Conv2dTrans(const CallValues& call) {
+  // N.B.: NCHW + OIHW
+  const auto* args = call->args.as<ConvTransArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  const DLTensor* w = args->w;
+  CHECK_EQ(x->ndim, 4);
+  CHECK_EQ(w->ndim, 4);
+  std::vector<int64_t> stride = mnm::op::Pad<2>(args->stride);
+  std::vector<int64_t> dilation = mnm::op::Pad<2>(args->dilation);
+
+  tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> in_shape{
+      tvm::Integer(x->shape[0]),
+      tvm::Integer(x->shape[1]),
+      tvm::Integer(x->shape[2]),
+      tvm::Integer(x->shape[3]),
+  };
+  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "OIHW");
+  tvm::Array<tvm::PrimExpr> w_shape{
+      tvm::Integer(w->shape[0]),
+      tvm::Integer(w->shape[1]),
+      tvm::Integer(w->shape[2]),
+      tvm::Integer(w->shape[3]),
+  };
+
+  in_shape = data_layout_converter.ForwardShape(in_shape);
+  w_shape = w_layout_converter.ForwardShape(w_shape);
+
+  int64_t n_in = in_shape[0].as<tvm::IntImmNode>()->value;
+  int64_t c_in = in_shape[1].as<tvm::IntImmNode>()->value;
+  int64_t h_in = in_shape[2].as<tvm::IntImmNode>()->value;
+  int64_t w_in = in_shape[3].as<tvm::IntImmNode>()->value;
+  int64_t out = w_shape[1].as<tvm::IntImmNode>()->value;
+  int64_t in = w_shape[0].as<tvm::IntImmNode>()->value;
+  int64_t kernel_h = w_shape[2].as<tvm::IntImmNode>()->value;
+  int64_t kernel_w = w_shape[3].as<tvm::IntImmNode>()->value;
+  int64_t stride_h = stride[0];
+  int64_t stride_w = stride[1];
+  int64_t pad_h;
+  int64_t pad_w;
+  GetPadHW(args->padding, &pad_h, &pad_w);
+
+  int64_t output_padding_h;
+  int64_t output_padding_w;
+
+  GetOutputPadHW(args->output_padding, &output_padding_h, &output_padding_w);
+
+  int64_t dilate_h = dilation[0];
+  int64_t dilate_w = dilation[1];
+  CHECK(dilate_h == 1 && dilate_w == 1)
+      << "Only supports dilation (1,1) but got  (" << dilate_h << "," << dilate_w << ")";
+  CHECK((output_padding_h < stride_h && output_padding_w < stride_w) ||
+        (output_padding_h < dilate_h && output_padding_w < dilate_w))
+      << "Output padding must be smaller than either stride or dilation";
+
+  int64_t h_out = (h_in - 1) * stride_h - pad_h + dilate_h * (kernel_h - 1) + output_padding_h + 1;
+  int64_t w_out = (w_in - 1) * stride_w - pad_w + dilate_w * (kernel_w - 1) + output_padding_w + 1;
+
+  int64_t groups = args->groups;
+  CHECK_EQ(c_in / groups, in) << "Unmatched input channel " << c_in << " and weight channel size "
+                              << in << " with group size " << groups;
+
+  tvm::tir::BijectiveLayout out_layout_converter(args->out_layout, "NCHW");
+  tvm::Array<tvm::PrimExpr> oshape{tvm::Integer(n_in), tvm::Integer(out), tvm::Integer(h_out),
+                                   tvm::Integer(w_out)};
+  oshape = out_layout_converter.BackwardShape(oshape);
+
+  call->out = TensorValue::Assemble(
+      /*dev=*/x->device,
+      /*dtype=*/x->dtype,
+      /*shape=*/
+      {oshape[0].as<tvm::IntImmNode>()->value, oshape[1].as<tvm::IntImmNode>()->value,
+       oshape[2].as<tvm::IntImmNode>()->value, oshape[3].as<tvm::IntImmNode>()->value});
+  call->device = x->device;
+}
+
+MNM_OP_DECLARE("mnm.op.conv2d_transpose", Conv2dTrans)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+
 void Pool2D(const CallValues& call) {
   // NCHW
   const auto* args = call->args.as<PoolArgs>();

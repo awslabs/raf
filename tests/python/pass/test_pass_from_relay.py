@@ -741,6 +741,43 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
 
     check_from_relay(model, r_func, [m_x, m_w])
 
+
+
+@pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
+@pytest.mark.parametrize("wshape", [(3, 16, 3, 3)])
+@pytest.mark.parametrize("stride_output_padding", [
+    (1, 0),
+    (2, 1),
+    (2, 0),
+    (3, 2)
+    ])
+@pytest.mark.parametrize("dilation", [(1, 1)])
+@pytest.mark.parametrize("padding", [0, 1])
+def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, padding):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x, w):
+            return mnm.conv2d_transpose(x, w, stride=stride, padding=padding,
+                                        output_padding=output_padding,
+                                        dilation=dilation,
+                                        groups=1)
+    model = TestModel()
+    stride, output_padding = stride_output_padding
+    stride = (stride, stride)
+    output_padding = (output_padding, output_padding)
+    m_x, _ = randn(xshape)
+    m_w, _ = randn(wshape)
+    # relay ir
+    r_x = _relay.var("x", shape=xshape)
+    r_w = _relay.var("w", shape=wshape)
+    r_c = _relay.nn.conv2d_transpose(r_x, r_w, strides=stride, dilation=dilation,
+                                     padding=padding,
+                                     output_padding=output_padding)
+    r_func = _relay.Function(params=[r_x, r_w], body=r_c)
+    check_from_relay(model, r_func, [m_x, m_w])
+
 # FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
 @pytest.mark.xfail
 @pytest.mark.parametrize("device", get_device_list())

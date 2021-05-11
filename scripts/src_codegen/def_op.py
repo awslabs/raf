@@ -7,6 +7,7 @@ OPS = [
     Op(name="adv_index_dx", schema_name="adv_index_dx"),
     Op(name="atan", schema_name="unary"),
     Op(name="conv2d", schema_name="conv"),
+    Op(name="conv2d_transpose", schema_name="conv_trans"),
     Op(name="max_pool2d", schema_name="pool"),
     Op(name="avg_pool2d", schema_name="pool"),
     Op(name="adaptive_max_pool2d", schema_name="adaptive_pool"),

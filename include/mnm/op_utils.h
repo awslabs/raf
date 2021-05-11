@@ -187,6 +187,21 @@ static void GetPadHW(const std::vector<int64_t>& padding, int64_t* pad_h, int64_
   }
 }
 
+static void GetOutputPadHW(const std::vector<int64_t>& padding, int64_t* pad_h, int64_t* pad_w) {
+  if (padding.size() == 1) {
+    *pad_h = padding[0];
+    *pad_w = padding[0];
+  } else if (padding.size() == 2) {
+    *pad_h = padding[0];
+    *pad_w = padding[1];
+  } else if (padding.size() == 4) {
+    *pad_h = (padding[0] + padding[2]) / 2;
+    *pad_w = (padding[1] + padding[3]) / 2;
+  } else {
+    LOG(FATAL) << " Padding size should be 1, 2 or 4, but got " << padding.size();
+    throw;
+  }
+}
 inline void GetAdaptivePoolKernel(int64_t ind, int64_t outd, int64_t* kernel_size, int64_t* stride,
                                   int64_t* padding) {
   CHECK_EQ(ind % outd, 0) << "Not supported: input dimension = " << ind

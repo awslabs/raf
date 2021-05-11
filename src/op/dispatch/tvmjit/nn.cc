@@ -90,6 +90,57 @@ HashKey Conv2dHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Conv2d, "mnm.op.conv2d", ConvArgs, ConvSchema2Args, ConvSchemaArgNames, ConvSchema2Attrs,
            Conv2dHasher);
 
+std::vector<Value> ConvTransSchema2Args(const ConvTransArgs* args) {
+  return {args->x, args->w};
+}
+
+std::vector<std::string> ConvTransSchemaArgNames(const op::CallValues& call) {
+  return {"x", "w"};
+}
+
+Attrs ConvTransSchema2Attrs(const ConvTransArgs* args) {
+  std::vector<int64_t> stride = Pad<2>(args->stride);
+  std::vector<int64_t> padding = args->padding.size() > 1 ? args->padding : Pad<2>(args->padding);
+  std::vector<int64_t> output_padding =
+      args->output_padding.size() > 1 ? args->output_padding : Pad<2>(args->output_padding);
+  std::vector<int64_t> dilation = Pad<2>(args->dilation);
+  auto attrs = make_object<tvm::relay::Conv2DTransposeAttrs>();
+  for (int i = 0; i < stride.size(); ++i) {
+    attrs->strides.push_back(IntImm(tvm::runtime::DataType::Int(64), stride[i]));
+  }
+  for (int i = 0; i < padding.size(); ++i) {
+    attrs->padding.push_back(IntImm(tvm::runtime::DataType::Int(64), padding[i]));
+  }
+  for (int i = 0; i < output_padding.size(); ++i) {
+    attrs->output_padding.push_back(IntImm(tvm::runtime::DataType::Int(64), output_padding[i]));
+  }
+  for (int i = 0; i < dilation.size(); ++i) {
+    attrs->dilation.push_back(IntImm(tvm::runtime::DataType::Int(64), dilation[i]));
+  }
+  attrs->groups = args->groups;
+  attrs->channels = NullValue<tvm::relay::IndexExpr>();
+  attrs->kernel_size = NullValue<Array<tvm::relay::IndexExpr> >();
+  attrs->data_layout = args->layout;
+  attrs->kernel_layout = args->kernel_layout;
+  attrs->out_layout = args->out_layout;
+  return Attrs(attrs);
+}
+
+HashKey Conv2dTransHasher(const std::vector<Type>& param_types, const Type& y_type,
+                          const ConvTransArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->stride;
+  key << args->padding;
+  key << args->output_padding;
+
+  key << args->dilation;
+  key << args->groups;
+  return key;
+}
+
+MNM_TVMJIT(Conv2dTrans, "mnm.op.conv2d_transpose", ConvTransArgs, ConvTransSchema2Args,
+           ConvTransSchemaArgNames, ConvTransSchema2Attrs, Conv2dTransHasher);
+
 using tvm::relay::IndexExpr;
 /*! \brief Attributes used in layer_norm operator */
 

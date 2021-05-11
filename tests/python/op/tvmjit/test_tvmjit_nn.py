@@ -279,6 +279,45 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
     check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
     check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("dtype", ["float32"])
+@pytest.mark.parametrize("shapes", [
+    ((4, 256, 32, 32), (256, 64, 1, 1)),
+    ((8, 3, 32, 32), (3, 16, 3, 3)),
+])
+@pytest.mark.parametrize("stride_output_padding", [
+    (1, 0),
+    (2, 1),
+    (2, 0),
+    (3, 2)
+])
+@pytest.mark.parametrize("dilation", [1])
+@pytest.mark.parametrize("padding", [0, 1, 2])
+def test_conv2d_trans(device, dtype, shapes, stride_output_padding, dilation, padding):
+    # pylint: disable=too-many-arguments
+    # N.B.: NCHW + OIHW
+    # forward
+    class Conv2DTrans(mnm.Model):
+        def build(self):
+            pass
+        @mnm.model.trace
+        def forward(self, x, w):
+            return mnm.conv2d_transpose(x, w, stride=stride, padding=padding, output_padding=output_padding, dilation=dilation, groups=1) # pylint: disable=line-too-long
+    model = Conv2DTrans()
+    # forward
+    stride, output_padding = stride_output_padding
+    xshape, wshape = shapes
+    m_x, t_x = randn_torch(xshape, std=0.001, device=device, dtype=dtype, requires_grad=False)
+    m_w, t_w = randn_torch(wshape, std=0.01, device=device, dtype=dtype, requires_grad=False)
+
+    t_y = F.conv_transpose2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding,
+                             output_padding=output_padding)
+    m_y = model(m_x, m_w)
+    v_y = run_vm_model(model, device, [m_x, m_w])
+
+    check(m_y, t_y, rtol=1e-4, atol=1e-4)
+    check(v_y, t_y, rtol=1e-4, atol=1e-4)
+
 
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32"])

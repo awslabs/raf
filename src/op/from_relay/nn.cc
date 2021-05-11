@@ -38,6 +38,33 @@ MNM_OP_FROM_RELAY("nn.conv2d", "mnm.op.conv2d", [&](const Attrs& attrs, const Ar
   return mnm_args;
 });
 
+MNM_OP_FROM_RELAY("nn.conv2d_transpose", "mnm.op.conv2d_transpose",
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
+                    Array<Expr> mnm_args = args;
+                    const auto* relay_attrs = attrs.as<Conv2DTransposeAttrs>();
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->strides)));
+
+                    // Relay enforces 4-way padding to support asymmetric padding,
+                    // but Meta currently only supports symmetric padding.
+                    auto padding = ArrayToInt(relay_attrs->padding);
+                    CHECK(padding[0] == padding[2] && padding[1] == padding[3])
+                        << "Asymmetric padding for Conv2D is not supported yet";
+                    padding.pop_back();
+                    padding.pop_back();
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->output_padding)));
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->dilation)));
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->groups)));
+                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
+                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->kernel_layout)));
+                    if (relay_attrs->out_layout != "") {
+                      mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->out_layout)));
+                    } else {
+                      mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
+                    }
+                    return mnm_args;
+                  });
+
 #define MNM_SOFTMAX_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                                      \
   MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
     Array<Expr> mnm_args = args;                                                                   \

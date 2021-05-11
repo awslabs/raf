@@ -46,6 +46,7 @@ from ._internal import concatenate_dx
 from ._internal import conv2d
 from ._internal import conv2d_dw
 from ._internal import conv2d_dx
+from ._internal import conv2d_transpose
 from ._internal import copy
 from ._internal import cos
 from ._internal import cross_entropy
