@@ -240,56 +240,61 @@ def test_after_manifest_alloc():
     mod = InferType()(mod)
     mod = ManifestAlloc()(mod)
     # pylint: disable=line-too-long
-    # def @main(%param_0: Tensor[(5, 5), float32],
-    #           %param_1: Tensor[(5, 5), float32],
-    #           %param_2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x_0 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, [5, 5], str"float32", [5, 5]);
-    #   let %x_2 = mnm.op.add;
-    #   let %x_3 = (%param_0, %param_0, nullptr /* ty=() */, nullptr /* ty=() */);
-    #   let %x_4 = (%x_1,);
-    #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
-    #   let %a1 = %x_1;
-    #   let %x_6 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_7 = mnm.op.vm.alloc_tensor(%x_6, [5, 5], str"float32", [5, 5]);
-    #   let %x_8 = mnm.op.add;
-    #   let %x_9 = (%a1, %param_1, nullptr /* ty=() */, nullptr /* ty=() */);
-    #   let %x_10 = (%x_7,);
-    #   let %x_11 = mnm.op.vm.invoke_op(%x_8, %x_9, %x_10);
-    #   let %a2 = %x_7;
-    #   let %x_12 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_13 = mnm.op.vm.alloc_tensor(%x_12, [5, 5], str"float32", [5, 5]);
-    #   let %x_14 = mnm.op.add;
-    #   let %x_15 = (%a2, %param_2, nullptr /* ty=() */, nullptr /* ty=() */);
-    #   let %x_16 = (%x_13,);
-    #   let %x_17 = mnm.op.vm.invoke_op(%x_14, %x_15, %x_16);
-    #   let %a3 = %x_13;
+    # def @main(%param_0: Tensor[(5, 5), float32], %param_1: Tensor[(5, 5), float32], %param_2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
+    #   let %x_0 = nullptr /* ty=() */;
+    #   let %x_1 = nullptr /* ty=() */;
+    #   let %x_2 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_3 = mnm.op.vm.alloc_tensor(%x_2, [5, 5], str"float32", [5, 5]);
+    #   let %x_4 = mnm.op.add;
+    #   let %x_5 = (%param_0, %param_0, %x_0, %x_1);
+    #   let %x_6 = (%x_3,);
+    #   let %x_7 = mnm.op.vm.invoke_op(%x_4, %x_5, %x_6);
+    #   let %a1 = %x_3;
+    #   let %x_8 = nullptr /* ty=() */;
+    #   let %x_9 = nullptr /* ty=() */;
+    #   let %x_10 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_11 = mnm.op.vm.alloc_tensor(%x_10, [5, 5], str"float32", [5, 5]);
+    #   let %x_12 = mnm.op.add;
+    #   let %x_13 = (%a1, %param_1, %x_8, %x_9);
+    #   let %x_14 = (%x_11,);
+    #   let %x_15 = mnm.op.vm.invoke_op(%x_12, %x_13, %x_14);
+    #   let %a2 = %x_11;
+    #   let %x_16 = nullptr /* ty=() */;
+    #   let %x_17 = nullptr /* ty=() */;
+    #   let %x_18 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_19 = mnm.op.vm.alloc_tensor(%x_18, [5, 5], str"float32", [5, 5]);
+    #   let %x_20 = mnm.op.add;
+    #   let %x_21 = (%a2, %param_2, %x_16, %x_17);
+    #   let %x_22 = (%x_19,);
+    #   let %x_23 = mnm.op.vm.invoke_op(%x_20, %x_21, %x_22);
+    #   let %a3 = %x_19;
     #   %a3
     # }
     # pylint: enable=line-too-long
 
     expected = {
-        "x_0": {"param_0", "param_1", "param_2"},
-        "x_1": {"param_0", "param_1", "t_0", "param_2"},
-        "x_2": {"param_0", "param_1", "t_1", "param_2"},
-        "x_3": {"param_0", "param_1", "t_1", "param_2"},
-        "x_4": {"param_0", "param_1", "t_1", "param_2"},
-        "x_5": {"param_0", "param_1", "t_1", "param_2"},
-        "a1": {"param_1", "t_1", "param_2"},
-        "x_6": {"param_1", "t_1", "param_2"},
-        "x_7": {"t_2", "param_1", "t_1", "param_2"},
-        "x_8": {"t_3", "param_1", "t_1", "param_2"},
-        "x_9": {"t_3", "param_1", "t_1", "param_2"},
-        "x_10": {"t_3", "param_1", "t_1", "param_2"},
-        "x_11": {"t_3", "param_1", "t_1", "param_2"},
-        "a2": {"t_3", "param_2"},
-        "x_12": {"t_3", "param_2"},
-        "x_13": {"t_3", "t_4", "param_2"},
-        "x_14": {"t_3", "t_5", "param_2"},
-        "x_15": {"t_3", "t_5", "param_2"},
-        "x_16": {"t_3", "t_5", "param_2"},
-        "a3": {"t_5"},
-        "n_4": {"t_5"},
+        "x_2": {'param_0', 'param_1', 'param_2'},
+        "x_3": {'param_0', 'param_1', 'param_2', 't_0'},
+        "x_4": {'param_0', 'param_1', 't_1', 'param_2'},
+        "x_5": {'param_0', 'param_1', 't_1', 'param_2'},
+        "x_6": {'param_0', 'param_1', 't_1', 'param_2'},
+        "x_7": {'param_0', 'param_1', 't_1', 'param_2'},
+        "a1": {'param_1', 't_1', 'param_2'},
+        "x_10": {'param_1', 't_1', 'param_2'},
+        "x_11": {'param_1', 't_1', 'param_2', 't_2'},
+        "x_12": {'param_1', 't_1', 'param_2', 't_3'},
+        "x_13": {'param_1', 't_1', 'param_2', 't_3'},
+        "x_14": {'param_1', 't_1', 'param_2', 't_3'},
+        "x_15": {'param_1', 't_1', 'param_2', 't_3'},
+        "a2": {'t_3', 'param_2'},
+        "x_18": {'t_3', 'param_2'},
+        "x_19": {'t_3', 'param_2', 't_4'},
+        "x_20": {'param_2', 't_5', 't_3'},
+        "x_21": {'param_2', 't_5', 't_3'},
+        "x_22": {'param_2', 't_5', 't_3'},
+        "x_23": {'param_2', 't_5', 't_3'},
+        "a3": {'t_5'},
+        "n_4": {'t_5'},
     }
 
     verify_live_in_set(mod, expected)

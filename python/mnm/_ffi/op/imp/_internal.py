@@ -39,6 +39,8 @@ argmin = _APIS.get("mnm.op.imp.argmin", None)
 # Defined in ./src/op/regs/regs.cc
 argsort = _APIS.get("mnm.op.imp.argsort", None)
 # Defined in ./src/op/regs/regs.cc
+argwhere = _APIS.get("mnm.op.imp.argwhere", None)
+# Defined in ./src/op/regs/regs.cc
 atan = _APIS.get("mnm.op.imp.atan", None)
 # Defined in ./src/op/regs/regs.cc
 avg_pool2d = _APIS.get("mnm.op.imp.avg_pool2d", None)

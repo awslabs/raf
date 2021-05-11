@@ -73,4 +73,4 @@ OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
 
 #define MNM_OP_TYPE(op_name, fn_name, body)                 \
   RELAY_REGISTER_OP(op_name).set_attr<::mnm::type::OpType>( \
-      "OpType", ::mnm::type::MakeOpType(op_name, fn_name, body));
+      "OpType", ::mnm::type::MakeOpType(op_name, fn_name, body))

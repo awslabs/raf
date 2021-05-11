@@ -58,12 +58,14 @@ enum class Opcode {
   AllocClosure = 24U,
   // TODO(@icemelon9): Current don't support ADT object
   // AllocADT = 25U,
+  SetShape = 26U,
 
   // Invoke instructions
   InvokeFunc = 30U,
   InvokeClosure = 31U,
   InvokePacked = 32U,
   InvokeJit = 33U,
+  InferType = 34U,
 };
 
 /*! \brief A single virtual machine instruction.
@@ -170,6 +172,12 @@ struct Instruction {
       /*! \brief The fields in the tuple. */
       RegName* fields;
     } alloc_tuple;
+    struct /* SetShape Operands */ {
+      /*! \brief The register containing the data. */
+      RegName data;
+      /*! \brief The register containing the shape. */
+      RegName shape;
+    } set_shape;
 
     struct /* InvokeFunc Operands */ {
       /*! \brief The function to call. */
@@ -207,6 +215,14 @@ struct Instruction {
       /*! \brief The arguments to pass to the packed function. */
       RegName* args;
     } invoke_jit;
+    struct /* InferType Operands */ {
+      /*! \brief The register containing the OpValue to invoke OpType. */
+      RegName op_reg;
+      /*! \brief The number of arguments to the origin call */
+      Index num_args;
+      /*! \brief The registers containing the arguments. */
+      RegName* args;
+    } infer_type;
   };
 
   /*!
@@ -269,6 +285,14 @@ struct Instruction {
    */
   static Instruction AllocClosure(Index func_index, const std::vector<RegName>& free_vars,
                                   RegName dst);
+  /*!
+   * \brief Construct an set shape instruction.
+   * \param data The register containing the data.
+   * \param shape The register containing the raw shape.
+   * \param dst The destination register.
+   * \return The set shape instruction.
+   */
+  static Instruction SetShape(RegName data, RegName shape, RegName dst);
   /*!
    * \brief Construct a get field instruction.
    * \param object_reg The register containing the object to project from.
@@ -342,7 +366,7 @@ struct Instruction {
                                   DevType device_type, Index device_id, RegName dst);
 
   /*!
-   * \brief Construct a invoke JIT operator instruction.
+   * \brief Construct an invoke JIT operator instruction.
    * \param op_reg The register containing the OpValue to invoke.
    * \param arity The arity of the function.
    * \param output_size The number of outputs of the packed function.
@@ -351,6 +375,15 @@ struct Instruction {
    */
   static Instruction InvokeJit(RegName op_reg, Index arity, Index output_size,
                                const std::vector<RegName>& args);
+
+  /*!
+   * \brief Construct an InferType instruction.
+   * \param op_reg The register containing the OpValue to invoke OpType.
+   * \param args The registers containing the arguments.
+   * \param dst The destination register.
+   * \return The invoke OpType instruction.
+   */
+  static Instruction InferType(RegName op_reg, const std::vector<RegName>& args, RegName dst);
 
   Instruction();
   Instruction(const Instruction& instr);

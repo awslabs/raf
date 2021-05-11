@@ -363,5 +363,13 @@ bool GetScalarValueData<bool>(const Value& value);
 template <>
 float GetScalarValueData<float>(const Value& value);
 
+/*!
+ * \brief Copy a value to specified device.
+ * \param src Value to be copyed.
+ * \param dev The pecified device.
+ * \return The copyed value.
+ */
+Value CopyTo(Value src, const Device& dev);
+
 }  // namespace value
 }  // namespace mnm

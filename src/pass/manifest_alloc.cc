@@ -12,16 +12,8 @@
 #include "mnm/value.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
+#include "../common/shape_utils.h"
 #include "tvm/relay/attrs/memory.h"
-
-namespace tvm {
-namespace relay {
-
-extern bool IsDynamic(const Type& ty);
-extern Expr ToTupleType(const Type& ty, const std::vector<Expr>& exprs);
-
-}  // namespace relay
-}  // namespace tvm
 
 namespace mnm {
 namespace pass {
@@ -29,6 +21,7 @@ namespace manifest_alloc {
 
 using namespace mnm::ir;
 using namespace mnm::value;
+using common::shape_utils::BytesCompactTensor;
 
 class InplaceVisitor : public MixedModeVisitor {
  public:
@@ -88,8 +81,18 @@ class ManifestAllocMutator : public ExprMutator {
     return Tuple(new_fields);
   }
 
-  Expr VisitExpr_(const ConstantNode* node) {
-    return scopes_.back().Push(GetRef<Expr>(node));
+  Expr VisitExpr_(const RelayConstantNode* node) {
+    auto var = scopes_.back().Push(GetRef<Expr>(node));
+    /*
+     * After constant folding, sometimes the IR return a single ConstantNode.
+     * In this case, get the body from LetList and return, otherwise there will be free vars.
+     */
+    if (scopes_.size() == 1) {
+      auto ret = scopes_.back().Get(var);
+      scopes_.pop_back();
+      return ret;
+    }
+    return var;
   }
 
   Expr VisitExpr_(const LetNode* node) {
@@ -112,19 +115,28 @@ class ManifestAllocMutator : public ExprMutator {
     const auto* op = node->op.as<OpNode>();
     const auto* func = node->op.as<FunctionNode>();
     if (op || func && func->HasNonzeroAttr(attr::kPrimitive)) {
+      Call call = GetRef<Call>(node);
+      // change the op which uses upper-bound memory to its upper-bound dialect op
+      bool use_upper_bound = false;
+      static auto upper_bound_map = Op::GetAttrMap<Op>("TMNMUpperBoundOp");
+      if (op && upper_bound_map.count(GetRef<Op>(op))) {
+        call = Call(upper_bound_map[GetRef<Op>(op)], node->args);
+        call = Downcast<Call>(InferType(call));
+        op = call->op.as<OpNode>();
+        use_upper_bound = true;
+      }
       auto& scope = scopes_.back();
       Var bind_var = let_binding_[GetRef<Call>(node)];
       Array<Expr> new_args;
-      for (auto& arg : node->args) {
+      for (auto& arg : call->args) {
         new_args.push_back(VisitExpr(arg));
       }
-      auto ret_type = node->checked_type();
+      auto ret_type = call->checked_type();
       auto out_types = tvm::relay::FlattenTupleType(ret_type);
+      std::vector<Expr> outs;
       if (tvm::relay::IsDynamic(ret_type)) {
-        LOG(FATAL) << "Dynamic type not supported.";
-        return Expr();
+        outs = DynamicInvoke(&scope, bind_var, call->op, new_args, out_types);
       } else {
-        std::vector<Expr> outs;
         auto it = inplace_.var_share_map.find(bind_var);
         if (it != inplace_.var_share_map.end()) {
           // some outputs have inplace update
@@ -144,11 +156,15 @@ class ManifestAllocMutator : public ExprMutator {
           }
         }
         auto invoke = Call(Op::Get("mnm.op.vm.invoke_op"),
-                           Array<Expr>{scope.Push(node->op), scope.Push(Tuple(new_args)),
+                           Array<Expr>{scope.Push(call->op), scope.Push(Tuple(new_args)),
                                        scope.Push(Tuple(Array<Expr>(outs)))});
         scope.Push(invoke);
-        return tvm::relay::ToTupleType(ret_type, outs);
       }
+      // if op uses upper bound shape, reshapes its results
+      if (op && use_upper_bound) {
+        return Call(Op::Get("mnm.op.vm.set_shape"), outs);
+      }
+      return tvm::relay::ToTupleType(ret_type, outs);
     } else {
       return ExprMutator::VisitExpr_(node);
     }
@@ -176,17 +192,6 @@ class ManifestAllocMutator : public ExprMutator {
     return MakeConstant(ScalarValue::make(align));
   }
 
-  Expr ComputeStorage(const TensorTypeNode* type) {
-    int64_t size = 1;
-    for (auto dim : type->shape) {
-      auto dim_imm = dim.as<IntImmNode>();
-      CHECK(dim_imm);
-      size *= dim_imm->value;
-    }
-    size *= (type->dtype.bits() * type->dtype.lanes() + 7) / 8;
-    return MakeConstant(ScalarValue::make(size));
-  }
-
   Expr MakeAllocStorage(const Array<Expr>& args, int device_type, int device_id,
                         const tvm::runtime::DataType& dtype) {
     static const Op& op = Op::Get("mnm.op.vm.alloc_storage");
@@ -208,9 +213,8 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type) {
     Expr shape = MakeConstant(type->shape);
-    Expr size = ComputeStorage(type);
+    Expr size = MakeConstant(ScalarValue::make(BytesCompactTensor(type)));
     Expr alignment = ComputeAlignment(type->dtype);
-    auto alloc_storage_attrs = make_object<tvm::relay::AllocStorageAttrs>();
     auto dtype = type->dtype;
     auto target = tvm::Target::Current();
     auto device_type = target.defined() ? target->kind->device_type : kDLCPU;
@@ -219,6 +223,57 @@ class ManifestAllocMutator : public ExprMutator {
                                                 static_cast<int>(device_type), device_id, dtype));
     auto tensor = scope->Push(MakeAllocTensor(Array<Expr>{storage, shape}, shape, dtype));
     return tensor;
+  }
+
+  Expr MakeDynamicAllocation(LetList* scope, const TensorTypeNode* type,
+                             const Expr& out_type_expr) {
+    Expr shape = scope->Push(TupleGetItem(out_type_expr, 0));
+    Expr size = scope->Push(TupleGetItem(out_type_expr, 1));
+    Expr alignment = ComputeAlignment(type->dtype);
+    auto dtype = type->dtype;
+    auto target = tvm::Target::Current();
+    auto device_type = target.defined() ? target->kind->device_type : kDLCPU;
+    int device_id = 0;
+    auto storage = scope->Push(MakeAllocStorage(Array<Expr>{size, alignment},
+                                                static_cast<int>(device_type), device_id, dtype));
+    auto tensor = scope->Push(MakeAllocTensor(Array<Expr>{storage, shape}, shape, dtype));
+    return tensor;
+  }
+
+  std::vector<Expr> DynamicInvoke(LetList* scope, const Var& bind_var, const Expr& op,
+                                  const Array<Expr>& new_args,
+                                  const std::vector<TensorType>& out_types) {
+    auto ins = scope->Push(Tuple(new_args));
+    auto op_var = scope->Push(op);
+    auto infer_type = Call(Op::Get("mnm.op.vm.infer_type"), Array<Expr>{op_var, ins});
+    auto out_type_exprs = scope->Push(infer_type);
+    std::vector<Expr> outs;
+    auto it = inplace_.var_share_map.find(bind_var);
+    if (it != inplace_.var_share_map.end()) {
+      // some outputs have inplace update
+      auto share = it->second;
+      CHECK_EQ(share.size(), out_types.size());
+      for (size_t i = 0; i < out_types.size(); ++i) {
+        // check if the output shares the memory with input
+        if (share[i].defined()) {
+          outs.push_back(share[i]);
+        } else {
+          Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i));
+          outs.push_back(
+              MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr));
+        }
+      }
+    } else {
+      for (size_t i = 0; i < out_types.size(); i++) {
+        Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i));
+        outs.push_back(
+            MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr));
+      }
+    }
+    auto invoke_op = Call(Op::Get("mnm.op.vm.invoke_op"),
+                          Array<Expr>{op_var, ins, scope->Push(Tuple(Array<Expr>(outs)))});
+    scope->Push(invoke_op);
+    return outs;
   }
 
   /*! \brief The scope stack of the let list. */

@@ -59,6 +59,7 @@ static const char arange[] = "mnm.op.arange";
 static const char argmax[] = "mnm.op.argmax";
 static const char argmin[] = "mnm.op.argmin";
 static const char argsort[] = "mnm.op.argsort";
+static const char argwhere[] = "mnm.op.argwhere";
 static const char atan[] = "mnm.op.atan";
 static const char avg_pool2d[] = "mnm.op.avg_pool2d";
 static const char avg_pool2d_dx[] = "mnm.op.avg_pool2d_dx";
@@ -197,9 +198,12 @@ static const char threefry_split[] = "mnm.op.threefry_split";
 static const char transpose[] = "mnm.op.transpose";
 static const char transpose_dx[] = "mnm.op.transpose_dx";
 static const char trunc[] = "mnm.op.trunc";
+static const char upper_bound_argwhere[] = "mnm.op.upper_bound.argwhere";
 static const char vm_alloc_storage[] = "mnm.op.vm.alloc_storage";
 static const char vm_alloc_tensor[] = "mnm.op.vm.alloc_tensor";
+static const char vm_infer_type[] = "mnm.op.vm.infer_type";
 static const char vm_invoke_op[] = "mnm.op.vm.invoke_op";
+static const char vm_set_shape[] = "mnm.op.vm.set_shape";
 static const char where[] = "mnm.op.where";
 static const char where_dx[] = "mnm.op.where_dx";
 static const char zeros[] = "mnm.op.zeros";
@@ -312,6 +316,12 @@ Attrs Argsort(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(1, ffi2schema::Int, axis);
   MNM_POD(2, ffi2schema::Bool, is_ascend);
   MNM_POD(3, ffi2schema::String, dtype);
+  return Attrs(attrs);
+}
+
+Attrs Argwhere(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ArgwhereArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, condition);
   return Attrs(attrs);
 }
 
@@ -567,6 +577,13 @@ Attrs GetValidCounts(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs InferType(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::InferTypeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::ArrayLike, func);
+  MNM_TAPE(1, ffi2schema::ArrayLike, inputs);
+  return Attrs(attrs);
+}
+
 Attrs InitOp(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::InitOpArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::IntOrTupleInt, shape);
@@ -786,6 +803,13 @@ Attrs SequenceMask(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, sequence_length);
   MNM_POD(2, ffi2schema::Double, mask_value);
   MNM_POD(3, ffi2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+Attrs SetShape(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::SetShapeArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_TAPE(1, ffi2schema::ArrayLike, shape);
   return Attrs(attrs);
 }
 
@@ -1239,6 +1263,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.argsort").set_body([](TVMArgs args, TVMRetValue*
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
   MNM_SET_ENV(vpack->x[2], schema2value::Bool(schema->is_ascend));
   MNM_SET_ENV(vpack->x[3], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.argwhere").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(argwhere, 1, ffi2schema::Argwhere,
+              schema::ArgwhereArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->condition));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2585,6 +2617,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.trunc").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.upper_bound.argwhere").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(upper_bound_argwhere, 1, ffi2schema::Argwhere,
+              schema::ArgwhereArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->condition));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.vm.alloc_storage").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(vm_alloc_storage, 5, ffi2schema::AllocStorage,
               schema::AllocStorageArgs);  // NOLINT(whitespace/line_length)
@@ -2608,12 +2648,30 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.vm.alloc_tensor").set_body([](TVMArgs args, TVMR
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.vm.infer_type").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(vm_infer_type, 2, ffi2schema::InferType,
+              schema::InferTypeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->func));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->inputs));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.vm.invoke_op").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(vm_invoke_op, 3, ffi2schema::InvokeOp,
               schema::InvokeOpArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->func));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->inputs));
   MNM_SET_ENV(vpack->x[2], schema2value::ArrayLike(schema->outputs));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.vm.set_shape").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(vm_set_shape, 2, ffi2schema::SetShape,
+              schema::SetShapeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->shape));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2762,6 +2820,12 @@ Array<Expr> Argsort(const TVMArgs& values) {
   MNM_ARG(1, ffi2expr::Int, axis);
   MNM_ARG(2, ffi2expr::Bool, is_ascend);
   MNM_ARG(3, ffi2expr::String, dtype);
+  MNM_RET();
+}
+
+Array<Expr> Argwhere(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::Tensor, condition);
   MNM_RET();
 }
 
@@ -3017,6 +3081,13 @@ Array<Expr> GetValidCounts(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> InferType(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::ArrayLike, func);
+  MNM_ARG(1, ffi2expr::ArrayLike, inputs);
+  MNM_RET();
+}
+
 Array<Expr> InitOp(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::IntOrTupleInt, shape);
@@ -3236,6 +3307,13 @@ Array<Expr> SequenceMask(const TVMArgs& values) {
   MNM_ARG(1, ffi2expr::Tensor, sequence_length);
   MNM_ARG(2, ffi2expr::Double, mask_value);
   MNM_ARG(3, ffi2expr::Int, axis);
+  MNM_RET();
+}
+
+Array<Expr> SetShape(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::ArrayLike, shape);
   MNM_RET();
 }
 
@@ -3507,6 +3585,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.arange").set_body(MNM_SYMBOLIC_API(arange, 4, Ar
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmax").set_body(MNM_SYMBOLIC_API(argmax, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmin").set_body(MNM_SYMBOLIC_API(argmin, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argsort").set_body(MNM_SYMBOLIC_API(argsort, 4, Argsort));
+MNM_REGISTER_GLOBAL("mnm.op.sym.argwhere").set_body(MNM_SYMBOLIC_API(argwhere, 1, Argwhere));
 MNM_REGISTER_GLOBAL("mnm.op.sym.atan").set_body(MNM_SYMBOLIC_API(atan, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d").set_body(MNM_SYMBOLIC_API(avg_pool2d, 8, Pool));
 MNM_REGISTER_GLOBAL("mnm.op.sym.avg_pool2d_dx")
@@ -3686,12 +3765,18 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose,
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
     .set_body(MNM_SYMBOLIC_API(transpose_dx, 3, TransposeDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.trunc").set_body(MNM_SYMBOLIC_API(trunc, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.upper_bound.argwhere")
+    .set_body(MNM_SYMBOLIC_API(upper_bound_argwhere, 1, Argwhere));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.alloc_storage")
     .set_body(MNM_SYMBOLIC_API(vm_alloc_storage, 5, AllocStorage));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.alloc_tensor")
     .set_body(MNM_SYMBOLIC_API(vm_alloc_tensor, 4, AllocTensor));
+MNM_REGISTER_GLOBAL("mnm.op.sym.vm.infer_type")
+    .set_body(MNM_SYMBOLIC_API(vm_infer_type, 2, InferType));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.invoke_op")
     .set_body(MNM_SYMBOLIC_API(vm_invoke_op, 3, InvokeOp));
+MNM_REGISTER_GLOBAL("mnm.op.sym.vm.set_shape")
+    .set_body(MNM_SYMBOLIC_API(vm_set_shape, 2, SetShape));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where_dx").set_body(MNM_SYMBOLIC_API(where_dx, 4, BinaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros").set_body(MNM_SYMBOLIC_API(zeros, 3, InitOp));
@@ -3829,6 +3914,13 @@ Attrs Argsort(const Array<Value>& values) {
   MNM_OPTIONAL(1, value2schema::Int, axis);
   MNM_OPTIONAL(2, value2schema::Bool, is_ascend);
   MNM_OPTIONAL(3, value2schema::String, dtype);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Argwhere(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::ArgwhereArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, condition);
   return Attrs(attrs);
 }
 
@@ -4114,6 +4206,14 @@ Attrs GetValidCounts(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs InferType(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::InferTypeArgs);
+  MNM_REQUIRED(0, value2schema::ArrayLike, func);
+  MNM_REQUIRED(1, value2schema::ArrayLike, inputs);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs InitOp(const Array<Value>& values) {
   MNM_PRELUDE(1, 3, schema::InitOpArgs);
   MNM_REQUIRED(0, value2schema::IntOrTupleInt, shape);
@@ -4355,6 +4455,14 @@ Attrs SequenceMask(const Array<Value>& values) {
   MNM_REQUIRED(1, value2schema::Tensor, sequence_length);
   MNM_OPTIONAL(2, value2schema::Double, mask_value);
   MNM_OPTIONAL(3, value2schema::Int, axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs SetShape(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::SetShapeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::ArrayLike, shape);
   return Attrs(attrs);
 }
 
@@ -4762,6 +4870,15 @@ int Argsort(const std::string& field) {
   }
   if (field == "dtype") {
     return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Argwhere(const std::string& field) {
+  if (field == "condition") {
+    return 0;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -5263,6 +5380,18 @@ int GetValidCounts(const std::string& field) {
 }
 
 template <const char* op_name>
+int InferType(const std::string& field) {
+  if (field == "func") {
+    return 0;
+  }
+  if (field == "inputs") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int InitOp(const std::string& field) {
   if (field == "shape") {
     return 0;
@@ -5716,6 +5845,18 @@ int SequenceMask(const std::string& field) {
   }
   if (field == "axis") {
     return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int SetShape(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "shape") {
+    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -6226,7 +6367,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.argmin", names::argmin,
 MNM_BIND_SCHEMA("mnm.op.argsort", names::argsort,
                 value2schema::Argsort);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.argsort", names::argsort,
-                            schema_field_idx::Argsort);            // NOLINT(whitespace/line_length)
+                            schema_field_idx::Argsort);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.argwhere", names::argwhere,
+                value2schema::Argwhere);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.argwhere", names::argwhere,
+                            schema_field_idx::Argwhere);           // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.atan", names::atan, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.atan", names::atan,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
@@ -6756,6 +6901,10 @@ MNM_BIND_SCHEMA("mnm.op.trunc", names::trunc,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.trunc", names::trunc,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.upper_bound.argwhere", names::upper_bound_argwhere,
+                value2schema::Argwhere);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.upper_bound.argwhere", names::upper_bound_argwhere,
+                            schema_field_idx::Argwhere);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.vm.alloc_storage", names::vm_alloc_storage,
                 value2schema::AllocStorage);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.alloc_storage", names::vm_alloc_storage,
@@ -6764,10 +6913,18 @@ MNM_BIND_SCHEMA("mnm.op.vm.alloc_tensor", names::vm_alloc_tensor,
                 value2schema::AllocTensor);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.alloc_tensor", names::vm_alloc_tensor,
                             schema_field_idx::AllocTensor);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.vm.infer_type", names::vm_infer_type,
+                value2schema::InferType);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.infer_type", names::vm_infer_type,
+                            schema_field_idx::InferType);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.vm.invoke_op", names::vm_invoke_op,
                 value2schema::InvokeOp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.invoke_op", names::vm_invoke_op,
                             schema_field_idx::InvokeOp);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.vm.set_shape", names::vm_set_shape,
+                value2schema::SetShape);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.set_shape", names::vm_set_shape,
+                            schema_field_idx::SetShape);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.where", names::where,
                 value2schema::Where);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.where", names::where,
@@ -6809,6 +6966,7 @@ MNM_REGISTER_OBJECT_REFLECT(AllocStorageArgs);
 MNM_REGISTER_OBJECT_REFLECT(AllocTensorArgs);
 MNM_REGISTER_OBJECT_REFLECT(ArangeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ArgsortArgs);
+MNM_REGISTER_OBJECT_REFLECT(ArgwhereArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(BatchNormTrainDxwbArgs);
 MNM_REGISTER_OBJECT_REFLECT(BiasAddArgs);
@@ -6838,6 +6996,7 @@ MNM_REGISTER_OBJECT_REFLECT(GatherDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherNdArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherNdDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(GetValidCountsArgs);
+MNM_REGISTER_OBJECT_REFLECT(InferTypeArgs);
 MNM_REGISTER_OBJECT_REFLECT(InitOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(InvokeOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormArgs);
@@ -6861,6 +7020,7 @@ MNM_REGISTER_OBJECT_REFLECT(ReverseSequenceArgs);
 MNM_REGISTER_OBJECT_REFLECT(ScatterArgs);
 MNM_REGISTER_OBJECT_REFLECT(ScatterDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);
+MNM_REGISTER_OBJECT_REFLECT(SetShapeArgs);
 MNM_REGISTER_OBJECT_REFLECT(SgdArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SoftmaxDxArgs);

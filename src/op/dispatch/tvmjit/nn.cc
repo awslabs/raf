@@ -119,7 +119,7 @@ Attrs ConvTransSchema2Attrs(const ConvTransArgs* args) {
   }
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();
-  attrs->kernel_size = NullValue<Array<tvm::relay::IndexExpr> >();
+  attrs->kernel_size = NullValue<Array<tvm::relay::IndexExpr>>();
   attrs->data_layout = args->layout;
   attrs->kernel_layout = args->kernel_layout;
   attrs->out_layout = args->out_layout;

@@ -46,7 +46,6 @@ MNM_TVM_OP("mnm.op.arange", "arange");
 MNM_TVM_OP("mnm.op.argmax", "argmax");
 MNM_TVM_OP("mnm.op.argmin", "argmin");
 MNM_TVM_OP("mnm.op.argsort", "argsort");
-MNM_TVM_OP("mnm.op.argwhere", "argwhere");
 MNM_TVM_OP("mnm.op.atan", "atan");
 MNM_TVM_OP("mnm.op.avg_pool2d", "nn.avg_pool2d");
 MNM_TVM_OP("mnm.op.avg_pool2d_dx", "nn.avg_pool2d_grad");

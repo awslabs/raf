@@ -5,6 +5,7 @@ from .._lib import register_compute
 from .._lib import strategy
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
+
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.transpose_dx")

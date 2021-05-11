@@ -19,6 +19,7 @@ from ._internal import arange
 from ._internal import argmax
 from ._internal import argmin
 from ._internal import argsort
+from ._internal import argwhere
 from ._internal import atan
 from ._internal import avg_pool2d
 from ._internal import avg_pool2d_dx
@@ -161,4 +162,5 @@ from ._internal import where
 from ._internal import where_dx
 from ._internal import zeros
 from ._internal import zeros_like
+from . import upper_bound
 from . import vm

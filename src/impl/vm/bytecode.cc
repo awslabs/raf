@@ -66,6 +66,10 @@ Instruction::Instruction(const Instruction& instr) {
       this->alloc_closure.free_vars =
           Duplicate<RegName>(instr.alloc_closure.free_vars, instr.alloc_closure.num_free_vars);
       return;
+    case Opcode::SetShape:
+      this->set_shape.data = instr.set_shape.data;
+      this->set_shape.shape = instr.set_shape.shape;
+      return;
     case Opcode::InvokePacked:
       this->invoke_packed.packed_index = instr.invoke_packed.packed_index;
       this->invoke_packed.arity = instr.invoke_packed.arity;
@@ -104,11 +108,15 @@ Instruction::Instruction(const Instruction& instr) {
       this->alloc_storage = instr.alloc_storage;
       return;
     case Opcode::InvokeJit:
-      this->op = instr.op;
       this->invoke_jit.op_reg = instr.invoke_jit.op_reg;
       this->invoke_jit.arity = instr.invoke_jit.arity;
       this->invoke_jit.output_size = instr.invoke_jit.output_size;
       this->invoke_jit.args = Duplicate<RegName>(instr.invoke_jit.args, instr.invoke_jit.arity);
+      return;
+    case Opcode::InferType:
+      this->infer_type.op_reg = instr.infer_type.op_reg;
+      this->infer_type.num_args = instr.infer_type.num_args;
+      this->infer_type.args = Duplicate<RegName>(instr.infer_type.args, instr.infer_type.num_args);
       return;
     default:
       std::ostringstream out;
@@ -165,6 +173,10 @@ Instruction& Instruction::operator=(const Instruction& instr) {
       this->alloc_closure.free_vars =
           Duplicate<RegName>(instr.alloc_closure.free_vars, instr.alloc_closure.num_free_vars);
       return *this;
+    case Opcode::SetShape:
+      this->set_shape.data = instr.set_shape.data;
+      this->set_shape.shape = instr.set_shape.shape;
+      return *this;
     case Opcode::InvokePacked:
       this->invoke_packed.packed_index = instr.invoke_packed.packed_index;
       this->invoke_packed.arity = instr.invoke_packed.arity;
@@ -186,6 +198,19 @@ Instruction& Instruction::operator=(const Instruction& instr) {
       FreeIf(this->invoke_func.args);
       this->invoke_func.args =
           Duplicate<RegName>(instr.invoke_func.args, instr.invoke_func.num_args);
+      return *this;
+    case Opcode::InvokeJit:
+      this->invoke_jit.op_reg = instr.invoke_jit.op_reg;
+      this->invoke_jit.arity = instr.invoke_jit.arity;
+      this->invoke_jit.output_size = instr.invoke_jit.output_size;
+      FreeIf(this->invoke_jit.args);
+      this->invoke_jit.args = Duplicate<RegName>(instr.invoke_jit.args, instr.invoke_jit.arity);
+      return *this;
+    case Opcode::InferType:
+      this->infer_type.op_reg = instr.infer_type.op_reg;
+      this->infer_type.num_args = instr.infer_type.num_args;
+      FreeIf(this->infer_type.args);
+      this->infer_type.args = Duplicate<RegName>(instr.infer_type.args, instr.infer_type.num_args);
       return *this;
     case Opcode::If:
       this->if_op = instr.if_op;
@@ -220,6 +245,7 @@ Instruction::~Instruction() {
     case Opcode::Goto:
     case Opcode::LoadConsti:
     case Opcode::AllocStorage:
+    case Opcode::SetShape:
     case Opcode::Fatal:
       return;
     case Opcode::AllocTensor:
@@ -242,6 +268,9 @@ Instruction::~Instruction() {
       return;
     case Opcode::InvokeJit:
       delete[] this->invoke_jit.args;
+      return;
+    case Opcode::InferType:
+      delete[] this->infer_type.args;
       return;
     default:
       std::ostringstream out;
@@ -344,6 +373,15 @@ Instruction Instruction::AllocClosure(Index func_index, const std::vector<RegNam
   return instr;
 }
 
+Instruction Instruction::SetShape(RegName data, RegName shape, RegName dst) {
+  Instruction instr;
+  instr.op = Opcode::SetShape;
+  instr.dst = dst;
+  instr.set_shape.data = data;
+  instr.set_shape.shape = shape;
+  return instr;
+}
+
 Instruction Instruction::GetField(RegName object, Index field_index, RegName dst) {
   Instruction instr;
   instr.op = Opcode::GetField;
@@ -436,6 +474,19 @@ Instruction Instruction::InvokeJit(RegName op_reg, Index arity, Index output_siz
   return instr;
 }
 
+Instruction Instruction::InferType(RegName op_reg, const std::vector<RegName>& args, RegName dst) {
+  Instruction instr;
+  instr.op = Opcode::InferType;
+  instr.dst = dst;
+  instr.infer_type.op_reg = op_reg;
+  instr.infer_type.num_args = args.size();
+  instr.infer_type.args = new RegName[args.size()];
+  for (Index i = 0; i < args.size(); ++i) {
+    instr.infer_type.args[i] = args[i];
+  }
+  return instr;
+}
+
 void DLDatatypePrint(std::ostream& os, const DLDataType& dtype) {
   switch (dtype.code) {
     case kDLInt:
@@ -517,6 +568,11 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
          << ")";
       break;
     }
+    case Opcode::SetShape: {
+      os << "set_shape $" << instr.dst << " $" << instr.set_shape.data << " $"
+         << instr.set_shape.shape;
+      break;
+    }
     case Opcode::If: {
       os << "if "
          << "$" << instr.if_op.test << " $" << instr.if_op.target << " " << instr.if_op.true_offset
@@ -563,6 +619,11 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
          << StrJoin<RegName>(instr.invoke_jit.args, 0, num_inputs, ", $") << ", out: $"
          << StrJoin<RegName>(instr.invoke_jit.args, num_inputs, instr.invoke_jit.output_size, ", $")
          << ")";
+      break;
+    }
+    case Opcode::InferType: {
+      os << "infer_type $" << instr.dst << " $" << instr.infer_type.op_reg << "($"
+         << StrJoin<RegName>(instr.infer_type.args, 0, instr.infer_type.num_args, ",$") << ")";
       break;
     }
     default:

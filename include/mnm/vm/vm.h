@@ -300,6 +300,9 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   virtual std::shared_ptr<memory_pool::Memory> Alloc(const Device& dev, int64_t nbytes,
                                                      int64_t alignment = kDefaultMemoryAlignment);
 
+  /*! \brief Run InferType Instruction */
+  virtual void RunInferType(VMContext& ctx, const Instruction& instr);
+
  protected:
   /*!
    * \brief The constant pool for runtime. It caches the device dependent

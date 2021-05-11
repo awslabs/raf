@@ -15,7 +15,6 @@ OP_MAP = {
     "mnm.op.argmax": ["argmax", "relay.attrs.ReduceAttrs", "kCommReduce"],
     "mnm.op.argmin": ["argmin", "relay.attrs.ReduceAttrs", "kCommReduce"],
     "mnm.op.argsort": ["argsort", "relay.attrs.ArgsortAttrs", "kOpaque"],
-    "mnm.op.argwhere": ["argwhere", "relay.attrs.ArgWhereAttrs", "kOpaque"],
     "mnm.op.atan": ["atan", "", "kElemWise"],
     "mnm.op.broadcast_to": ["broadcast_to", "", "kBroadcast"],
     "mnm.op.broadcast_to_like": ["broadcast_to_like", "", "kBroadcast"],

@@ -179,13 +179,8 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
 
 MNM_OP_GRAD("mnm.op.divide", DivGrad);
 
-Array<Expr> BinaryNoGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                         const Expr& dy) {
-  return {NullValue<Expr>(), NullValue<Expr>()};
-}
-
-MNM_OP_GRAD("mnm.op.not_equal", BinaryNoGrad);
-MNM_OP_GRAD("mnm.op.equal", BinaryNoGrad);
+MNM_OP_GRAD("mnm.op.not_equal", NoGrads<2>);
+MNM_OP_GRAD("mnm.op.equal", NoGrads<2>);
 
 }  // namespace grad
 }  // namespace op

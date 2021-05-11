@@ -1,4 +1,4 @@
-# pylint: disable=protected-access
+# pylint: disable=protected-access, too-many-lines
 import numpy as np
 import pytest
 import torch
@@ -6,7 +6,7 @@ import mnm
 import tvm.topi.testing as npx
 from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
-from tvm.relay import TensorType, FuncType, TupleType, IncompleteType
+from tvm.relay import TensorType, FuncType, TupleType, IncompleteType, Any
 
 
 # pylint: disable=too-many-locals, import-outside-toplevel, attribute-defined-outside-init
@@ -993,6 +993,30 @@ def test_full_like(shape, dtype):
     ty = TensorType(shape, dtype=dtype)
     desired_type = FuncType([ty], ty)
     check_type(m_func, desired_type)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [[2,], [4, 5], [10, 10, 10], [6, 8, 9, 10]])
+def test_argwhere(shape, dtype):
+    class Argwhere(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.argwhere(x)
+
+    m_x, _ = randn(shape, dtype=dtype)
+    m_x.requires_grad = True
+    model = Argwhere()
+    # forward
+    record = model._internal(m_x)
+    m_mod = record.mod
+    m_mod = InferType()(m_mod)
+    x_ty = TensorType(shape, dtype=dtype)
+    y_ty = TensorType([Any(), len(shape)], dtype="int32")
+    expected_type = FuncType([x_ty], y_ty)
+    check_type(m_mod['main'], expected_type)
 
 
 if __name__ == "__main__":

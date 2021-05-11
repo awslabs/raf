@@ -153,10 +153,10 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     if (call_values->callee->IsInstance<ClosureValueObj>()) {
       call_values->args = MakeListArgs(args);
       return InvokeClosure(call_values);
-    } else if (const auto* op = call_values->callee.as<OpValueObj>()) {
-      call_values->args = fschema[op->op](args);
+    } else if (const auto* opv = call_values->callee.as<OpValueObj>()) {
+      call_values->args = fschema[opv->op](args);
       Value output_value;
-      WITH_BASE_PROFILER(call_values->device, op->op->name, "SchedulingCommunication", {},
+      WITH_BASE_PROFILER(call_values->device, opv->op->name, "SchedulingCommunication", {},
                          { output_value = InvokePrimitive(call_values); });
       return output_value;
     }
@@ -222,6 +222,12 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
  public:
   Value InvokePrimitive(const CallValues& call) {
     const Op& op = Downcast<OpValue>(call->callee)->op;
+    bool use_upper_bound = false;
+    static auto upper_bound_map = Op::GetAttrMap<Op>("TMNMUpperBoundOp");
+    if (upper_bound_map.count(op)) {
+      call->callee = OpValue::make(upper_bound_map[op]);
+      use_upper_bound = true;
+    }
     RunDeclare(call);
     if (!call->callee.defined()) {
       return call->out;
@@ -229,7 +235,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     AllocOutputBuffer(call->out);
     std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
     if (op_env != nullptr) {
-      InvokePrimitiveOpEnv(std::move(op_env), call);
+      InvokePrimitiveOpEnv(std::move(op_env), call, use_upper_bound);
     } else {
       LOG(FATAL) << "ValueError: Cannot dispatch " << op->name << "@" << call->device.c_str();
       throw;
@@ -237,7 +243,8 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     return call->out;
   }
 
-  void InvokePrimitiveOpEnv(std::shared_ptr<OpEnv> op_env, const CallValues& call) {
+  void InvokePrimitiveOpEnv(std::shared_ptr<OpEnv> op_env, const CallValues& call,
+                            bool use_upper_bound) {
     const Op& op = Downcast<OpValue>(call->callee)->op;
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
@@ -291,6 +298,16 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     // note: The next op holds a reference to this op. It will make sure that the memories requested
     // by this op will not be freed after the return of this op.
     call->out->op_env = std::move(op_env);
+
+    if (use_upper_bound) {
+      auto tup = Downcast<TupleValue>(call->out);
+      auto data = Downcast<TensorValue>(tup->fields[0]);
+      auto shape_data = Downcast<TensorValue>(tup->fields[1]);
+      shape_data = Downcast<TensorValue>(CopyTo(shape_data, Device(DevType::kCPU(), 0)));
+      auto shape = common::shape_utils::GetShapeVecFromData(shape_data);
+      auto new_out = data.CreateView(shape);
+      call->out = new_out;
+    }
   }
 
  public:

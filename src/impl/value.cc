@@ -345,6 +345,28 @@ float GetScalarValueData<float>(const Value& value) {
   LOG(FATAL) << "Cannot convert " << value->GetTypeKey() << " to scalar float.";
 }
 
+Value CopyTo(Value src, const Device& dev) {
+  if (!src.defined()) {
+    return src;
+  }
+  if (src.as<TensorValueObj>()) {
+    auto tensor = Downcast<TensorValue>(src)->tensor;
+    if (tensor->device.device_type != dev.device_type) {
+      return TensorValue::make(tensor::Tensor(tensor.CopyTo(dev)));
+    }
+    return src;
+  }
+  if (src.as<TupleValueObj>()) {
+    std::vector<Value> ret;
+    TupleValue tup = Downcast<TupleValue>(src);
+    for (size_t i = 0; i < tup->fields.size(); ++i) {
+      ret.push_back(CopyTo(tup->fields[i], dev));
+    }
+    return TupleValue::make(ret);
+  }
+  return src;
+}
+
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue")
     .set_body_typed([](const tvm::Device& dev, DLDataType dtype, Array<Integer> shape,
                        Array<Integer> strides, void* data) {

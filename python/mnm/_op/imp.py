@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,line-too-long
+# pylint: disable=invalid-name,line-too-long,too-many-lines
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=protected-access, too-many-lines
@@ -11,36 +11,37 @@ __all__ = [
     "_allgather", "_allreduce", "_contrib_dropout", "_contrib_dropout_dx", "abs",
     "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx", "adaptive_max_pool2d", "adaptive_max_pool2d_dx", "add",
     "adv_index", "adv_index_dx", "all", "any", "arange",
-    "argmax", "argmin", "argsort", "atan", "avg_pool2d",
-    "avg_pool2d_dx", "batch_flatten", "batch_matmul", "batch_matmul_nt", "batch_matmul_tn",
-    "batch_matmul_tt", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add",
-    "broadcast_to", "broadcast_to_like", "cast", "cast_like", "ceil",
-    "clip", "clip_dx", "collapse_sum_like", "compiler_begin", "compiler_end",
-    "concatenate", "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx",
-    "conv2d_transpose", "copy", "cos", "cross_entropy", "cross_entropy_dpred",
-    "cross_entropy_dtrue", "dense", "device_copy", "divide", "equal",
-    "erf", "erf_dx", "exp", "expand_dims", "floor",
-    "full", "full_like", "gather", "gather_dx", "gather_nd",
-    "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
-    "greater_equal", "layer_norm", "layer_norm_dx", "left_shift", "less",
-    "less_equal", "log", "log2", "log_softmax", "log_softmax_dx",
-    "logical_and", "logical_not", "matmul", "matmul_nt", "matmul_tn",
-    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
-    "mean", "mean_dx", "mesh_grid", "min", "minimum",
-    "mod", "multiply", "negative", "nll_loss", "nll_loss_dpred",
-    "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
-    "ones_like", "pad", "power", "prod", "prod_dx",
-    "relu", "relu_dx", "repeat", "repeat_dx", "reshape",
-    "reverse", "reverse_sequence", "right_shift", "round", "rsqrt",
-    "scatter", "scatter_dx", "sequence_mask", "sgd", "shape",
-    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
-    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
-    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
-    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
-    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
-    "tanh_dx", "threefry_generate", "threefry_split", "transpose", "transpose_dx",
-    "trunc", "vm_alloc_storage", "vm_alloc_tensor", "vm_invoke_op", "where",
-    "where_dx", "zeros", "zeros_like",
+    "argmax", "argmin", "argsort", "argwhere", "atan",
+    "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_matmul", "batch_matmul_nt",
+    "batch_matmul_tn", "batch_matmul_tt", "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb",
+    "bias_add", "broadcast_to", "broadcast_to_like", "cast", "cast_like",
+    "ceil", "clip", "clip_dx", "collapse_sum_like", "compiler_begin",
+    "compiler_end", "concatenate", "concatenate_dx", "conv2d", "conv2d_dw",
+    "conv2d_dx", "conv2d_transpose", "copy", "cos", "cross_entropy",
+    "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy", "divide",
+    "equal", "erf", "erf_dx", "exp", "expand_dims",
+    "floor", "full", "full_like", "gather", "gather_dx",
+    "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts",
+    "greater", "greater_equal", "layer_norm", "layer_norm_dx", "left_shift",
+    "less", "less_equal", "log", "log2", "log_softmax",
+    "log_softmax_dx", "logical_and", "logical_not", "matmul", "matmul_nt",
+    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
+    "maximum", "mean", "mean_dx", "mesh_grid", "min",
+    "minimum", "mod", "multiply", "negative", "nll_loss",
+    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
+    "ones", "ones_like", "pad", "power", "prod",
+    "prod_dx", "relu", "relu_dx", "repeat", "repeat_dx",
+    "reshape", "reverse", "reverse_sequence", "right_shift", "round",
+    "rsqrt", "scatter", "scatter_dx", "sequence_mask", "sgd",
+    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
+    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
+    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
+    "stack", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
+    "sum", "sum_dx", "swap_axis", "take", "take_dx",
+    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
+    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where", "where_dx",
+    "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -169,6 +170,11 @@ def argsort(data, axis=-1, is_ascend=True, dtype="int32"):
     is_ascend = imp_utils.to_bool(is_ascend)
     dtype = imp_utils.to_string(dtype)
     return imp_utils.ret(ffi.argsort(data, axis, is_ascend, dtype))
+
+@set_module("mnm")
+def argwhere(condition):
+    condition = imp_utils.to_tensor(condition)
+    return imp_utils.ret(ffi.argwhere(condition))
 
 @set_module("mnm")
 def atan(x):
@@ -1147,6 +1153,11 @@ def trunc(x):
     return imp_utils.ret(ffi.trunc(x))
 
 @set_module("mnm")
+def upper_bound_argwhere(condition):
+    condition = imp_utils.to_tensor(condition)
+    return imp_utils.ret(ffi.upper_bound.argwhere(condition))
+
+@set_module("mnm")
 def vm_alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
     size = imp_utils.to_any(size)
     alignment = imp_utils.to_any(alignment)
@@ -1164,11 +1175,23 @@ def vm_alloc_tensor(storage, shape, dtype="float32", assert_shape=None):
     return imp_utils.ret(ffi.vm.alloc_tensor(storage, shape, dtype, assert_shape))
 
 @set_module("mnm")
+def vm_infer_type(func, inputs):
+    func = imp_utils.to_any(func)
+    inputs = imp_utils.to_any(inputs)
+    return imp_utils.ret(ffi.vm.infer_type(func, inputs))
+
+@set_module("mnm")
 def vm_invoke_op(func, inputs, outputs):
     func = imp_utils.to_any(func)
     inputs = imp_utils.to_any(inputs)
     outputs = imp_utils.to_any(outputs)
     return imp_utils.ret(ffi.vm.invoke_op(func, inputs, outputs))
+
+@set_module("mnm")
+def vm_set_shape(data, shape):
+    data = imp_utils.to_tensor(data)
+    shape = imp_utils.to_any(shape)
+    return imp_utils.ret(ffi.vm.set_shape(data, shape))
 
 @set_module("mnm")
 def where(condition, x, y):

@@ -251,6 +251,8 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       case Opcode::AllocStorage:
       case Opcode::Move:
       case Opcode::InvokeClosure:
+      case Opcode::InferType:
+      case Opcode::SetShape:
         last_register_ = instr.dst;
         break;
       case Opcode::InvokePacked:
@@ -389,6 +391,11 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    CHECK_EQ(args.size(), 3);
                    EmitInvokeOp(args[0], args[1], args[2]);
                  })
+          .Match("mnm.op.vm.infer_type",
+                 [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                   CHECK_EQ(args.size(), 2);
+                   EmitInferType(args[0], args[1], NewRegister());
+                 })
           .Match("mnm.op.vm.alloc_tensor",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 4);
@@ -420,7 +427,9 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                      Emit(Instruction::AllocTensor(storage_register, 0, raw_shape, dtype,
                                                    NewRegister()));
                    } else {
-                     LOG(FATAL) << "Not suported";
+                     this->VisitExpr(args[1]);
+                     Emit(Instruction::AllocTensorReg(storage_register, 0, last_register_, dtype,
+                                                      NewRegister()));
                    }
                  })
           .Match("mnm.op.vm.alloc_storage",
@@ -457,6 +466,16 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
 
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
                                                   device_id, NewRegister()));
+                 })
+          .Match("mnm.op.vm.set_shape",
+                 [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                   CHECK_EQ(args.size(), 2);
+                   // The arguments will be passed dynamically.
+                   this->VisitExpr(args[0]);
+                   auto data_reg = last_register_;
+                   this->VisitExpr(args[1]);
+                   auto shape_reg = last_register_;
+                   Emit(Instruction::SetShape(data_reg, shape_reg, NewRegister()));
                  })
           .Match("memory.kill",
                  [](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
@@ -570,10 +589,8 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
             << "internal error: all variables should be in the register mapping";
         argument_registers.push_back(reg->second);
       } else {
-        // FIXME: use ANF so that we don't need such special cases
-        CHECK(input.as<ConstantNode>());
-        VisitExpr(input);
-        argument_registers.push_back(last_register_);
+        LOG(FATAL) << "internal error: each element in inputs of invoke_op must be a var,"
+                   << "please file a bug in the memory manifestation pass";
       }
     }
 
@@ -595,6 +612,33 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     }
     Emit(Instruction::InvokeJit(op_reg, argument_registers.size(), output_tuple->fields.size(),
                                 argument_registers));
+  }
+
+  void EmitInferType(const Expr& op, const Expr& inputs, RegName dst) {
+    VisitExpr(op);
+    std::vector<Index> argument_registers;
+    auto op_reg = last_register_;
+
+    auto input_var = Downcast<Var>(inputs);
+    CHECK_GT(expr_map_.count(input_var), 0)
+        << "internal error: cannot find the input value in the expression map";
+    auto input_tuple = expr_map_[input_var].as<TupleNode>();
+    CHECK(input_tuple) << "internal error: infer_type inputs must be a tuple,"
+                       << "please file a bug in the memory manifestation pass";
+
+    for (auto input : input_tuple->fields) {
+      if (input.as<VarNode>()) {
+        auto reg = var_register_map_.find(Downcast<Var>(input));
+        CHECK(reg != var_register_map_.end())
+            << "internal error: all variables should be in the register mapping";
+        argument_registers.push_back(reg->second);
+      } else {
+        LOG(FATAL) << "internal error: each element in inputs of infer_type must be a var,"
+                   << "please file a bug in the memory manifestation pass";
+      }
+    }
+
+    Emit(Instruction::InferType(op_reg, argument_registers, dst));
   }
 
  protected:

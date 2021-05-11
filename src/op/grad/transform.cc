@@ -344,6 +344,8 @@ Array<Expr> WhereGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 
 MNM_OP_GRAD("mnm.op.where", WhereGrad);
 
+MNM_OP_GRAD("mnm.op.argwhere", NoGrads<1>);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

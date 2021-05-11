@@ -33,6 +33,7 @@ from tvm.tir import FloatImm, IntImm, StringImm
 from tvm.ir.container import Array
 from tvm.ir import IRModule
 from tvm.runtime.ndarray import array as tvm_ndarray
+from tvm.relay import op as _op
 from tvm.relay.op import OpPattern, register_compute, register_pattern, strategy
 from tvm.relay.op.op import register_injective_schedule, register_broadcast_schedule, \
     register_reduce_schedule

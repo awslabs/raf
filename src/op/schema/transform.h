@@ -34,6 +34,12 @@ class ArangeArgs : public ir::AttrsNode<ArangeArgs> {
   MNM_OP_SCHEMA(ArangeArgs, "mnm.args.arange");
 };
 
+class ArgwhereArgs : public ir::AttrsNode<ArgwhereArgs> {
+ public:
+  value::BaseTensorValue condition;
+  MNM_OP_SCHEMA(ArgwhereArgs, "mnm.args.argwhere");
+};
+
 class CastArgs : public ir::AttrsNode<CastArgs> {
  public:
   value::BaseTensorValue data;

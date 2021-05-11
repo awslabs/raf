@@ -1000,8 +1000,8 @@ HashKey WhereHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVMJIT(Where, "mnm.op.where", WhereArgs, WhereSchema2Args, WhereSchemaArgNames,
-           WhereSchema2Attrs, WhereHasher);
+MNM_TVMJIT(Where, "mnm.op.where", WhereArgs, WhereSchema2Args, WhereSchemaArgNames, GenericAttrs,
+           GenericHasher);
 
 std::vector<Value> WhereDxSchema2Args(const BinaryDxArgs* args) {
   return {args->x1, args->x2, args->y, args->dy};
@@ -1059,6 +1059,17 @@ HashKey SwapAxisHasher(const std::vector<Type>& param_types, const Type& y_type,
 
 MNM_TVMJIT(SwapAxis, "mnm.op.swap_axis", SwapAxisArgs, SwapAxisSchema2Args, SwapAxisSchemaArgNames,
            SwapAxisSchema2Attrs, SwapAxisHasher);
+
+std::vector<Value> ArgwhereSchema2Args(const ArgwhereArgs* args) {
+  return {args->condition};
+}
+
+std::vector<std::string> ArgwhereSchemaArgNames(const op::CallValues& call) {
+  return {"condition"};
+}
+
+MNM_TVMJIT(Argwhere, "mnm.op.upper_bound.argwhere", ArgwhereArgs, ArgwhereSchema2Args,
+           ArgwhereSchemaArgNames, GenericAttrs, GenericHasher);
 
 }  // namespace tvmjit
 }  // namespace op

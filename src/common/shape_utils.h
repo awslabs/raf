@@ -16,6 +16,30 @@ inline std::vector<T> GetShape(const DLTensor& dlt) {
   return std::vector<T>(dlt.shape, dlt.shape + dlt.ndim);
 }
 
+inline std::vector<int64_t> GetShapeVecFromData(const DLTensor* shape) {
+  std::vector<int64_t> raw_shape;
+  ICHECK_EQ(shape->device.device_type, kDLCPU);
+  ICHECK_EQ(shape->ndim, 1u);
+  ICHECK_EQ(shape->dtype.code, 0U) << "The dtype of constant shape must be int32 or int64, but got "
+                                   << tvm::runtime::DLDataType2String(shape->dtype);
+  ICHECK(shape->dtype.bits == 64 || shape->dtype.bits == 32)
+      << "The dtype of constant shape must be int32 or int64, but got"
+      << tvm::runtime::DLDataType2String(shape->dtype);
+
+  if (shape->dtype.bits == 32) {
+    const int32_t* int_ptr = reinterpret_cast<int32_t*>(shape->data);
+    for (auto i = 0; i < shape->shape[0]; i++) {
+      raw_shape.push_back(int_ptr[i]);
+    }
+  } else if (shape->dtype.bits == 64) {
+    const int64_t* int_ptr = reinterpret_cast<int64_t*>(shape->data);
+    for (auto i = 0; i < shape->shape[0]; i++) {
+      raw_shape.push_back(int_ptr[i]);
+    }
+  }
+  return raw_shape;
+}
+
 template <typename T>
 inline std::vector<T> MakeShape(const ir::Array<ir::Integer>& shape) {
   int ndim = shape.size();
@@ -103,6 +127,17 @@ inline int64_t BytesCompactTensor(const DLTensor& dlt) {
     nbytes *= dlt.shape[i];
   }
   return nbytes;
+}
+
+inline int64_t BytesCompactTensor(const ir::TensorTypeNode* type) {
+  int64_t size = 1;
+  for (auto dim : type->shape) {
+    auto dim_imm = dim.as<ir::IntImmNode>();
+    CHECK(dim_imm);
+    size *= dim_imm->value;
+  }
+  size *= (type->dtype.bits() * type->dtype.lanes() + 7) / 8;
+  return size;
 }
 
 inline int64_t GetNumel(const DLTensor& dlt) {

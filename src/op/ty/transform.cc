@@ -10,6 +10,7 @@
 #include "../schema/likes.h"
 #include "../schema/transform.h"
 #include "../declare/declare_utils.h"
+#include "../../common/shape_utils.h"
 #include "./utils.h"
 
 namespace mnm {
@@ -449,7 +450,7 @@ Type SequenceMaskInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.sequence_mask", "SequenceMask", SequenceMaskInfer)
+MNM_OP_TYPE("mnm.op.sequence_mask", "SequenceMask", SequenceMaskInfer);
 
 Type ReverseInfer(const CallValues& value) {
   const auto* args = value->args.as<ReverseArgs>();
@@ -799,6 +800,36 @@ Type WhereDxInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.where_dx", "WhereDx", WhereDxInfer);
+
+Type ArgwhereInfer(const CallValues& value) {
+  const auto* args = value->args.as<ArgwhereArgs>();
+  CHECK(args != nullptr);
+  auto cond = args->condition;
+  TensorType ty = Downcast<TensorType>(GetType(cond));
+  Array<tvm::PrimExpr> shape;
+  shape.push_back(Any());
+  shape.push_back(int32_t(ty->shape.size()));
+  return TensorType(shape, DataType::Int(32));
+}
+
+MNM_OP_TYPE("mnm.op.argwhere", "Argwhere", ArgwhereInfer);
+
+Type UpperBoundArgwhereInfer(const CallValues& value) {
+  const auto* args = value->args.as<ArgwhereArgs>();
+  CHECK(args != nullptr);
+  auto cond = args->condition;
+  TensorType ty = Downcast<TensorType>(GetType(cond));
+  int32_t ndim = ty->shape.size();
+  PrimExpr size = 1;
+  for (size_t i = 0; i < ndim; ++i) {
+    size *= ty->shape[i];
+  }
+  TensorType data_type = TensorType({size, ndim}, DataType::Int(32));
+  TensorType shape_type = TensorType({2}, DataType::Int(64));
+  return TupleType({data_type, shape_type});
+}
+
+MNM_OP_TYPE("mnm.op.upper_bound.argwhere", "UpperBoundArgwhere", UpperBoundArgwhereInfer);
 
 }  // namespace type
 }  // namespace op

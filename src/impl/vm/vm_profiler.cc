@@ -21,8 +21,6 @@ namespace mnm {
 namespace executor {
 namespace vm {
 
-Value CopyTo(Value src, const Device& dev);
-
 std::string GetShapeStr(const Value& value) {
   std::stringstream ss;
   ss << "(";

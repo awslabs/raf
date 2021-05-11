@@ -341,6 +341,13 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
                     instr.alloc_closure.free_vars + instr.alloc_closure.num_free_vars);
       break;
     }
+    case Opcode::SetShape: {
+      // Number of fields = 3
+      fields.push_back(instr.set_shape.data);
+      fields.push_back(instr.set_shape.shape);
+      fields.push_back(instr.dst);
+      break;
+    }
     case Opcode::If: {
       // Number of fields = 4
       fields.assign({instr.if_op.test, instr.if_op.target, instr.if_op.true_offset,
@@ -394,6 +401,15 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       // Save the args.
       fields.insert(fields.end(), instr.invoke_jit.args,
                     instr.invoke_jit.args + instr.invoke_jit.arity);
+      break;
+    }
+    case Opcode::InferType: {
+      // Number of fields = 3 + instr.num_args
+      fields.assign({instr.infer_type.op_reg, instr.infer_type.num_args, instr.dst});
+
+      // Save the args.
+      fields.insert(fields.end(), instr.infer_type.args,
+                    instr.infer_type.args + instr.infer_type.num_args);
       break;
     }
     default:
@@ -570,7 +586,7 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
 
       Index num_fields = instr.fields[0];
       RegName dst = instr.fields[1];
-      std::vector<Index> fields = ExtractFields(instr.fields, 2, num_fields);
+      std::vector<RegName> fields = ExtractFields(instr.fields, 2, num_fields);
 
       return Instruction::AllocTuple(fields, dst);
     }
@@ -582,7 +598,7 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       Index func_index = instr.fields[0];
       Index num_free_vars = instr.fields[1];
       RegName dst = instr.fields[2];
-      std::vector<Index> free_vars = ExtractFields(instr.fields, 3, num_free_vars);
+      std::vector<RegName> free_vars = ExtractFields(instr.fields, 3, num_free_vars);
 
       return Instruction::AllocClosure(func_index, free_vars, dst);
     }
@@ -603,6 +619,14 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       return Instruction::AllocStorage(allocation_size, alignment, dtype, device_type, device_id,
                                        dst);
     }
+    case Opcode::SetShape: {
+      DCHECK_GE(instr.fields.size(), 3U);
+      RegName data = instr.fields[0];
+      RegName shape = instr.fields[1];
+      RegName dst = instr.fields[2];
+
+      return Instruction::SetShape(data, shape, dst);
+    }
     case Opcode::If: {
       // Number of fields = 4
       DCHECK_EQ(instr.fields.size(), 4U);
@@ -621,7 +645,7 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       Index func_index = instr.fields[0];
       Index num_args = instr.fields[1];
       RegName dst = instr.fields[2];
-      std::vector<Index> args = ExtractFields(instr.fields, 3, num_args);
+      std::vector<RegName> args = ExtractFields(instr.fields, 3, num_args);
 
       return Instruction::InvokeFunc(func_index, args, dst);
     }
@@ -630,10 +654,10 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       DCHECK_GE(instr.fields.size(), 3U);
       DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
 
-      Index closure = instr.fields[0];
+      RegName closure = instr.fields[0];
       Index num_closure_args = instr.fields[1];
       RegName dst = instr.fields[2];
-      std::vector<Index> args = ExtractFields(instr.fields, 3, num_closure_args);
+      std::vector<RegName> args = ExtractFields(instr.fields, 3, num_closure_args);
 
       return Instruction::InvokeClosure(closure, args, dst);
     }
@@ -662,11 +686,22 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       DCHECK_GE(instr.fields.size(), 3U);
       DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
 
-      Index op_reg = instr.fields[0];
+      RegName op_reg = instr.fields[0];
       Index arity = instr.fields[1];
       Index output_size = instr.fields[2];
       std::vector<RegName> args = ExtractFields(instr.fields, 3, arity);
       return Instruction::InvokeJit(op_reg, arity, output_size, args);
+    }
+    case Opcode::InferType: {
+      // Number of fields = 3 + instr.num_args
+      DCHECK_GE(instr.fields.size(), 3U);
+      DCHECK_EQ(instr.fields.size(), 3U + static_cast<size_t>(instr.fields[1]));
+
+      RegName op_reg = instr.fields[0];
+      Index num_args = instr.fields[1];
+      RegName dst = instr.fields[2];
+      std::vector<RegName> args = ExtractFields(instr.fields, 3, num_args);
+      return Instruction::InferType(op_reg, args, dst);
     }
     default:
       LOG(FATAL) << "Invalid opcode" << instr.opcode;

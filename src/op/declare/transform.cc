@@ -906,6 +906,30 @@ MNM_OP_DECLARE("mnm.op.where_dx", [](const CallValues& call) {
   call->device = x1->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
+MNM_OP_DECLARE("mnm.op.upper_bound.argwhere", [](const CallValues& call) {
+  // alloc tensor for possible maximum data size and actual shape
+  const auto* args = call->args.as<ArgwhereArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* condition = args->condition;
+  auto ndim = condition->ndim;
+  int64_t size = 1;
+  for (size_t i = 0; i < ndim; ++i) {
+    size *= condition->shape[i];
+  }
+  auto result_tensor = TensorValue::Assemble(/*dev=*/condition->device,
+                                             /*dtype=*/DLDataType(DataType::Int(32)),
+                                             /*shape=*/{size, ndim});
+  auto shape_tensor = TensorValue::Assemble(/*dev=*/condition->device,
+                                            /*dtype=*/DLDataType(DataType::Int(64)),
+                                            /*shape=*/{2});
+  call->out = TupleValue::make({result_tensor, shape_tensor});
+  call->device = condition->device;
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
+MNM_OP_REGISTER("mnm.op.argwhere")
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<Op>("TMNMUpperBoundOp", Op::Get("mnm.op.upper_bound.argwhere"));
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -164,7 +164,11 @@ OPS = [
     Op(name="vm.alloc_storage", schema_name="alloc_storage"),
     Op(name="vm.alloc_tensor", schema_name="alloc_tensor"),
     Op(name="vm.invoke_op", schema_name="invoke_op"),
+    Op(name="vm.infer_type", schema_name="infer_type"),
+    Op(name="vm.set_shape", schema_name="set_shape"),
     Op(name="left_shift", schema_name="binary"),
+    Op(name="argwhere", schema_name="argwhere"),
+    Op(name="upper_bound.argwhere", schema_name="argwhere"),
 ]
 
 def by_name():

@@ -922,5 +922,31 @@ def test_adv_index(data_shape, index_shapes):
     check(m_x.grad, t_x.grad)
 
 
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("shape", [
+    (2, 2),
+    (3, 4, 2, 2),
+    (4,),
+    (1, 2, 4, 1, 6)
+])
+def test_argwhere(shape, device):
+    # pylint: disable=no-self-use, not-callable
+    class ArgWhereModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.argwhere(x)
+
+    m_model = ArgWhereModel()
+    m_x, t_x = randn_torch(shape, device=device)
+    m_res = m_model(m_x)
+    v_res = run_vm_model(m_model, device, [m_x])
+    t_res = torch.stack(torch.where(t_x)).t()
+    check(m_res, t_res)
+    check(v_res, t_res)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -5,6 +5,7 @@
  */
 #include <tvm/relay/type.h>
 #include "mnm/type.h"
+#include "mnm/value.h"
 #include "mnm/ir_ext.h"
 #include "../schema/vm.h"
 #include "./utils.h"
@@ -14,6 +15,8 @@ namespace op {
 namespace type {
 
 using namespace schema;
+using namespace mnm::value;
+using namespace mnm::type;
 using namespace tvm;
 using namespace tvm::relay;
 using tvm::relay::Type;
@@ -55,7 +58,46 @@ Type InvokeOpInfer(const CallValues& value) {
   // return value is used.
   return TupleType::Empty();
 }
+
 MNM_OP_TYPE("mnm.op.vm.invoke_op", "InvokeOp", InvokeOpInfer);
+
+Type InferTypeInfer(const CallValues& value) {
+  static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+  const auto* args = value->args.as<InferTypeArgs>();
+  CHECK(args != nullptr);
+  Type ret_type;
+  if (const auto* func = args->func.as<FunctionNode>()) {
+    FuncType fty = Downcast<FuncType>(func->checked_type());
+    ret_type = fty->ret_type;
+  } else {
+    OpValue opv = Downcast<OpValue>(args->func);
+    auto inputs = Downcast<TupleValue>(args->inputs)->fields;
+    auto call_values = CallValues::make(opv, fschema[opv->op](inputs));
+    auto fty = Downcast<FuncType>(opv->op->checked_type());
+    TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
+    ret_type = ti->func(call_values);
+  }
+  // use fake type for mnm values
+  Array<Type> ret_tup;
+  static auto fake_type = TensorType::Scalar(DataType::Int(64));
+  if (ret_type->IsInstance<TensorTypeNode>()) {
+    ret_tup.push_back(TupleType({fake_type, fake_type}));
+  } else if (const auto* tup = ret_type.as<TupleTypeNode>()) {
+    for (size_t i = 0; i < tup->fields.size(); ++i) {
+      ret_tup.push_back(TupleType({fake_type, fake_type}));
+    }
+  }
+  return TupleType(ret_tup);
+}
+
+MNM_OP_TYPE("mnm.op.vm.infer_type", "InferType", InferTypeInfer);
+
+Type SetShapeInfer(const CallValues& value) {
+  // just return a fake type
+  return TensorType::Scalar(DataType::Int(64));
+}
+
+MNM_OP_TYPE("mnm.op.vm.set_shape", "SetShape", SetShapeInfer);
 
 }  // namespace type
 }  // namespace op

@@ -22,11 +22,16 @@
 #include "mnm/ir.h"
 #include "mnm/op.h"
 #include "mnm/value.h"
+#include "mnm/type.h"
+#include "mnm/pass.h"
 #include "mnm/vm/bytecode.h"
 #include "mnm/vm/vm.h"
 #include "mnm/device_api.h"
 #include "mnm/profiler.h"
 #include "../../requests.h"
+#include "../../op/from_relay/from_relay_utils.h"
+#include "../../op/ty/utils.h"
+#include "../../common/shape_utils.h"
 
 #include "mnm/device_api.h"
 #include "mnm/registry.h"
@@ -44,31 +49,10 @@ namespace vm {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op;
+using namespace mnm::type;
 using namespace mnm::registry;
 using namespace mnm::requests;
 using namespace mnm::device_api;
-
-inline Value CopyTo(Value src, const Device& dev) {
-  if (!src.defined()) {
-    return src;
-  }
-  if (src.as<TensorValueObj>()) {
-    auto tensor = Downcast<TensorValue>(src)->tensor;
-    if (tensor->device.device_type != dev.device_type) {
-      return TensorValue::make(tensor::Tensor(tensor.CopyTo(dev)));
-    }
-    return src;
-  }
-  if (src.as<TupleValueObj>()) {
-    std::vector<Value> ret;
-    TupleValue tup = Downcast<TupleValue>(src);
-    for (size_t i = 0; i < tup->fields.size(); ++i) {
-      ret.push_back(CopyTo(tup->fields[i], dev));
-    }
-    return TupleValue::make(ret);
-  }
-  return src;
-}
 
 MNM_REGISTER_OBJECT_REFLECT(VMContextObj);
 
@@ -474,7 +458,20 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         goto main_loop;
       }
       case Opcode::AllocTensorReg: {
-        LOG(FATAL) << "Not supported";
+        Value value = ctx.ReadRegister(instr.alloc_tensor_reg.shape_register);
+        const auto* tuple = value.as<TupleValueObj>();
+        auto shape = std::vector<int64_t>(tuple->fields.size());
+        for (size_t i = 0; i < tuple->fields.size(); ++i) {
+          shape[i] = Downcast<IntValue>(tuple->fields[i])->value;
+        }
+
+        auto storage_obj = ctx.ReadRegister(instr.alloc_tensor_reg.storage);
+        auto storage = Downcast<StorageValue>(storage_obj);
+        auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor_reg.dtype,
+                                            shape, {}, storage->buffer->data, storage->buffer);
+        ctx.WriteRegister(instr.dst, tensor);
+        ctx->pc++;
+        goto main_loop;
       }
       case Opcode::AllocTuple: {
         Array<Value> fields;
@@ -510,6 +507,16 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         ctx->pc++;
         goto main_loop;
       }
+      case Opcode::SetShape: {
+        auto data = Downcast<TensorValue>(ctx.ReadRegister(instr.set_shape.data));
+        // TODO(@hgt312): allow int tuple as shape
+        auto raw_shape = ctx.ReadRegister(instr.set_shape.shape);
+        raw_shape = CopyTo(raw_shape, Device(DevType::kCPU(), 0));
+        auto shape = common::shape_utils::GetShapeVecFromData(raw_shape);
+        ctx.WriteRegister(instr.dst, data.CreateView(shape));
+        ctx->pc++;
+        goto main_loop;
+      }
       case Opcode::Ret: {
         // If we have hit the point from which we started
         // running, we should return to the caller breaking
@@ -532,6 +539,11 @@ void VirtualMachine::RunLoop(VMContext ctx) {
 
         std::tie(op_env, inputs, output) = PrepareOpEnv(ctx, instr);
         ExecuteOpEnv(op_env.get(), inputs, output);
+        ctx->pc++;
+        goto main_loop;
+      }
+      case Opcode::InferType: {
+        RunInferType(ctx, instr);
         ctx->pc++;
         goto main_loop;
       }
@@ -630,6 +642,52 @@ std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::Pr
 void VirtualMachine::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                                   value::Value output) {
   op_env->Execute(inputs, output);
+}
+
+void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
+  Array<Value> args;
+  for (Index i = 0; i < instr.infer_type.num_args; i++) {
+    args.push_back(ctx.ReadRegister(instr.infer_type.args[i]));
+  }
+  // infer type
+  static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+  Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
+  Type ret_type;
+  if (const auto* opv = callee.as<OpValueObj>()) {
+    auto call_values = CallValues::make(callee, fschema[opv->op](args));
+    auto fty = Downcast<FuncType>(opv->op->checked_type());
+    TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
+    ret_type = ti->func(call_values);
+  } else {
+    auto func = callee.as<ClosureValueObj>()->func;
+    CHECK_EQ(func->params.size(), args.size());
+    for (size_t i = 0; i < args.size(); ++i) {
+      func->params[i]->checked_type_ = op::type::GetType(args[i]);
+    }
+    Function new_func = Downcast<Function>(pass::InferType(func));
+    ctx.WriteRegister(instr.invoke_jit.op_reg, ClosureValue::make({}, new_func));
+    FuncType fty = Downcast<FuncType>(new_func->checked_type());
+    ret_type = fty->ret_type;
+  }
+  // get result
+  Array<Value> ret_tup;
+  auto push_ret_tuple = [&ret_tup](const TensorTypeNode* ty) {
+    auto shape = from_relay::ArrayToIntTuple(ty->shape);
+    // compute storage size
+    int64_t size = common::shape_utils::BytesCompactTensor(ty);
+    ret_tup.push_back(TupleValue::make({shape, ScalarValue::make(size)}));
+  };
+  if (const auto* ty = ret_type.as<TensorTypeNode>()) {
+    push_ret_tuple(ty);
+  } else if (const auto* tup = ret_type.as<TupleTypeNode>()) {
+    for (size_t i = 0; i < tup->fields.size(); i++) {
+      auto ty = tup->fields[i].as<TensorTypeNode>();
+      push_ret_tuple(ty);
+    }
+  } else {
+    LOG(FATAL) << "Unknown type " << ret_type->_type_key;
+  }
+  ctx.WriteRegister(instr.dst, TupleValue::make(ret_tup));
 }
 
 std::shared_ptr<memory_pool::Memory> VirtualMachine::Alloc(const Device& dev, int64_t nbytes,

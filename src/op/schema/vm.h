@@ -31,12 +31,26 @@ class AllocTensorArgs : public ir::AttrsNode<AllocTensorArgs> {
   MNM_OP_SCHEMA(AllocTensorArgs, "mnm.args.alloc_tensor");
 };
 
+class InferTypeArgs : public ir::AttrsNode<InferTypeArgs> {
+ public:
+  value::Value func;
+  value::Value inputs;
+  MNM_OP_SCHEMA(InferTypeArgs, "mnm.args.infer_type");
+};
+
 class InvokeOpArgs : public ir::AttrsNode<InvokeOpArgs> {
  public:
   value::Value func;
   value::Value inputs;
   value::Value outputs;
   MNM_OP_SCHEMA(InvokeOpArgs, "mnm.args.invoke_op");
+};
+
+class SetShapeArgs : public ir::AttrsNode<SetShapeArgs> {
+ public:
+  value::BaseTensorValue data;
+  value::Value shape;
+  MNM_OP_SCHEMA(SetShapeArgs, "mnm.args.set_shape");
 };
 }  // namespace schema
 }  // namespace op

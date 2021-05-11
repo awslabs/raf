@@ -57,10 +57,12 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const VarNode* op) override {
-    if (op->type_annotation.defined()) {
-      op->checked_type_ = op->type_annotation;
-    } else if (!op->checked_type_.defined()) {
-      op->checked_type_ = IncompleteType(kType);
+    if (!op->checked_type_.defined()) {
+      if (op->type_annotation.defined()) {
+        op->checked_type_ = op->type_annotation;
+      } else {
+        op->checked_type_ = IncompleteType(kType);
+      }
     }
     return GetRef<Var>(op);
   }
@@ -368,24 +370,15 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
       return Any();
     }
 
-    auto left_index0 = lhs.as<tvm::tir::VarNode>();
-    auto right_index0 = rhs.as<tvm::IntImmNode>();
-    if (left_index0 && right_index0) {
+    auto left_index = lhs.as<tvm::IntImmNode>();
+    auto right_index = rhs.as<tvm::IntImmNode>();
+    if (!left_index && right_index) {
       return rhs;
-    }
-
-    auto left_index1 = lhs.as<tvm::IntImmNode>();
-    auto right_index1 = rhs.as<tvm::tir::VarNode>();
-    if (left_index1 && right_index1) {
+    } else if (left_index && !right_index) {
+      return lhs;
+    } else if (left_index && right_index && left_index->value == right_index->value) {
       return lhs;
     }
-
-    auto left_index2 = lhs.as<tvm::IntImmNode>();
-    auto right_index2 = rhs.as<tvm::IntImmNode>();
-    if (left_index2 && right_index2 && left_index2->value == right_index2->value) {
-      return lhs;
-    }
-
     return tvm::PrimExpr();
   }
 
@@ -520,6 +513,14 @@ class ValueGetter : public ExprFunctor<Value(const Expr&)> {
       return TupleValue::make(fields);
     }
     return node->value.defined() ? Downcast<Value>(node->value) : NullValue<Value>();
+  }
+
+  Value VisitExpr_(const OpNode* op) {
+    return OpValue::make(GetRef<Op>(op));
+  }
+
+  Value VisitExpr_(const FunctionNode* op) {
+    return ClosureValue::make({}, GetRef<Function>(op));
   }
 
   Value VisitExprDefault_(const Object* op) {

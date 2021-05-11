@@ -674,6 +674,17 @@ SCHEMAS = {
         Arg(name="inputs", cxx_type="value::Value"),
         Arg(name="outputs", cxx_type="value::Value"),
     ],
+    "vm.h::infer_type": [
+        Arg(name="func", cxx_type="value::Value"),
+        Arg(name="inputs", cxx_type="value::Value"),
+    ],
+    "vm.h::set_shape": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="shape", cxx_type="value::Value"),
+    ],
+    "transform.h::argwhere": [
+        Arg(name="condition", cxx_type="value::BaseTensorValue"),
+    ],
 }
 
 

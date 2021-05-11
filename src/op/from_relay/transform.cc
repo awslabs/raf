@@ -212,6 +212,8 @@ MNM_OP_FROM_RELAY("strided_slice", "mnm.op.strided_slice",
 
 MNM_GENERIC_ATTR_OP_FROM_RELAY("where", "mnm.op.where");
 
+MNM_GENERIC_ATTR_OP_FROM_RELAY("argwhere", "mnm.op.argwhere");
+
 }  // namespace from_relay
 }  // namespace op
 }  // namespace mnm

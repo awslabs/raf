@@ -1145,5 +1145,23 @@ def test_mean(shape, axis, keep):
     check_from_relay(model, r_func, [m_x])
 
 
+@pytest.mark.parametrize("shape", [(4, 4, 2), (3, 4, 2, 2)])
+def test_argwhere(shape):
+    class ArgWhere(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.argwhere(x)
+
+    model = ArgWhere()
+    m_x, _ = randn(shape)
+
+    r_x = _relay.var("x", shape=shape)
+    r_func = _relay.Function(params=[r_x], body=_relay.argwhere(r_x))
+    check_from_relay(model, r_func, [m_x])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -20,6 +20,14 @@
 #include "tvm/relay/dataflow_matcher.h"
 #include "tvm/ir/op.h"
 
+namespace tvm {
+namespace relay {
+
+extern bool IsDynamic(const Type& ty);
+extern Expr ToTupleType(const Type& ty, const std::vector<Expr>& exprs);
+
+}  // namespace relay
+}  // namespace tvm
 namespace mnm {
 namespace ir {
 
