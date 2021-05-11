@@ -99,6 +99,7 @@ from ._internal import min
 from ._internal import minimum
 from ._internal import mod
 from ._internal import multiply
+from ._internal import ndarray_size
 from ._internal import negative
 from ._internal import nll_loss
 from ._internal import nll_loss_dpred
@@ -117,6 +118,7 @@ from ._internal import relu_dx
 from ._internal import repeat
 from ._internal import repeat_dx
 from ._internal import reshape
+from ._internal import resize
 from ._internal import reverse
 from ._internal import reverse_sequence
 from ._internal import right_shift

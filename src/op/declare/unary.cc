@@ -181,6 +181,24 @@ void Shape(const CallValues& call) {
 // TODO(@icemelon9): Currently use opaque for shape related op.
 MNM_OP_DECLARE("mnm.op.shape", Shape).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
+MNM_DECLARE_UNARY_OP("mnm.op.ndarray_size", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+
+  DLTensor* x = args->x;
+  CHECK(x != nullptr);
+
+  int64_t result = 1;
+  int ndim = x->ndim;
+  for (int i = 0; i < ndim; i++) {
+    result *= x->shape[i];
+  }
+
+  result = ndim > 0 ? result : 0;
+  call->out = ScalarValue::make(result);
+  call->callee = ir::NullValue<OpValue>();
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

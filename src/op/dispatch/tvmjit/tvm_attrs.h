@@ -6,6 +6,7 @@
 #pragma once
 #include "tvm/ir/attrs.h"
 #include "tvm/relay/attrs/nn.h"
+#include "tvm/relay/attrs/image.h"
 #include "tvm/relay/attrs/reduce.h"
 #include "tvm/relay/attrs/device_copy.h"
 #include "../../schema/ufunc.h"

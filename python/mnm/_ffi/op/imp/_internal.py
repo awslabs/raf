@@ -199,6 +199,8 @@ mod = _APIS.get("mnm.op.imp.mod", None)
 # Defined in ./src/op/regs/regs.cc
 multiply = _APIS.get("mnm.op.imp.multiply", None)
 # Defined in ./src/op/regs/regs.cc
+ndarray_size = _APIS.get("mnm.op.imp.ndarray_size", None)
+# Defined in ./src/op/regs/regs.cc
 negative = _APIS.get("mnm.op.imp.negative", None)
 # Defined in ./src/op/regs/regs.cc
 nll_loss = _APIS.get("mnm.op.imp.nll_loss", None)
@@ -234,6 +236,8 @@ repeat = _APIS.get("mnm.op.imp.repeat", None)
 repeat_dx = _APIS.get("mnm.op.imp.repeat_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.imp.reshape", None)
+# Defined in ./src/op/regs/regs.cc
+resize = _APIS.get("mnm.op.imp.resize", None)
 # Defined in ./src/op/regs/regs.cc
 reverse = _APIS.get("mnm.op.imp.reverse", None)
 # Defined in ./src/op/regs/regs.cc

@@ -4,6 +4,7 @@
  * \brief Typing of transform operators
  */
 #include <tvm/relay/type.h>
+#include <tvm/runtime/data_type.h>
 #include "mnm/type.h"
 #include "../schema/ufunc.h"
 #include "../schema/nn.h"
@@ -800,6 +801,37 @@ Type WhereDxInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.where_dx", "WhereDx", WhereDxInfer);
+
+Type ResizeInfer(const CallValues& value) {
+  const auto* args = value->args.as<ResizeArgs>();
+  CHECK(args != nullptr);
+
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  std::vector<int64_t> size(args->size);
+  Array<PrimExpr> shape(x->shape);
+
+  CHECK(size.size() > 0);
+  if (size.size() == 1) size.push_back(size[0]);
+
+  // setup the output tensor shape
+  if (args->layout == "NCHW") {
+    shape.Set(2, Integer(size[0]));
+    shape.Set(3, Integer(size[1]));
+  } else if (args->layout == "NHWC") {
+    shape.Set(1, Integer(size[0]));
+    shape.Set(2, Integer(size[1]));
+  } else {
+    LOG(FATAL) << "NotImplementedError: we only support NCHW and NHWC layout.";
+    throw;
+  }
+
+  DataType out_dtype(runtime::String2DLDataType(args->out_dtype));
+  if (args->out_dtype.size() == 0) out_dtype = x->dtype;
+
+  return TensorType(shape, out_dtype);
+}
+
+MNM_OP_TYPE("mnm.op.resize", "Resize", ResizeInfer);
 
 Type ArgwhereInfer(const CallValues& value) {
   const auto* args = value->args.as<ArgwhereArgs>();

@@ -797,6 +797,53 @@ HashKey ReshapeHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Reshape, "mnm.op.reshape", ReshapeArgs, ReshapeSchema2Args, ReshapeSchemaArgNames,
            ReshapeSchema2Attrs, ReshapeHasher);
 
+std::vector<Value> ResizeSchema2Args(const ResizeArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ResizeSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs ResizeSchema2Attrs(const ResizeArgs* args) {
+  auto attrs = make_object<ResizeAttrs>();
+  attrs->layout = args->layout;
+  attrs->method = args->method;
+  attrs->coordinate_transformation_mode = args->coordinate_transformation_mode;
+  attrs->rounding_method = args->rounding_method;
+  attrs->bicubic_alpha = args->bicubic_alpha;
+  attrs->bicubic_exclude = args->bicubic_exclude;
+
+  DataType out_dtype(String2DLDataType(args->out_dtype));
+  attrs->out_dtype = out_dtype;
+
+  std::vector<int64_t> size(args->size);
+  CHECK(size.size() > 0);
+  if (size.size() == 1) size.push_back(size[0]);
+
+  for (auto dim : size) {
+    attrs->size.push_back(IndexExpr((int32_t)dim));
+  }
+  return Attrs(attrs);
+}
+
+HashKey ResizeHasher(const std::vector<Type>& param_types, const Type& y_type,
+                     const ResizeArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->size;
+  key << args->layout;
+  key << args->method;
+  key << args->coordinate_transformation_mode;
+  key << args->rounding_method;
+  key << args->bicubic_alpha;
+  key << args->bicubic_exclude;
+  key << args->out_dtype;
+  return key;
+}
+
+MNM_TVMJIT(Resize, "mnm.op.resize", ResizeArgs, ResizeSchema2Args, ResizeSchemaArgNames,
+           ResizeSchema2Attrs, ResizeHasher);
+
 std::vector<Value> ExpandDimsSchema2Args(const ExpandDimsArgs* args) {
   return {args->x};
 }

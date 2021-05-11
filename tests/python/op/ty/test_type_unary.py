@@ -30,6 +30,7 @@ from tvm.relay import TensorType, FuncType, TupleType
     (sym.zeros_like, False),
     (sym.ones_like, False),
     (sym.trunc, False),
+    (sym.ndarray_size, False),
 ])
 @pytest.mark.parametrize("shape", [
     (),

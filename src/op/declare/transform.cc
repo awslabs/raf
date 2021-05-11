@@ -151,6 +151,46 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   throw;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE("mnm.op.resize", [](const CallValues& call) {
+  const auto* args = call->args.as<ResizeArgs>();
+  CHECK(args != nullptr);
+
+  DLTensor* x = args->x;
+  std::vector<int64_t> size(args->size);
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+
+  /**
+   *  the input data is restriceted to 4D tensor per its definition in TVM.
+   *  -- (batch_size, channels, in_height, in_width) for NCHW
+   *  -- (batch_size, in_height, in_width, channels) for NHWC
+   */
+  CHECK_EQ(x->ndim, 4);
+
+  CHECK(size.size() > 0);
+
+  // make sure the size has two elements, size[0] for height, and size[1] for width
+  if (size.size() == 1) size.push_back(size[0]);
+
+  // setup the output tensor shape
+  if (args->layout == "NCHW") {
+    shape[2] = size[0];
+    shape[3] = size[1];
+  } else if (args->layout == "NHWC") {
+    shape[1] = size[0];
+    shape[2] = size[1];
+  } else {
+    LOG(FATAL) << "NotImplementedError: we only support NCHW and NHWC layout.";
+    throw;
+  }
+
+  DLDataType dtype = args->out_dtype.size() > 0 ? String2DLDataType(args->out_dtype) : x->dtype;
+
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+}).set_attr<TOpPattern>("TOpPattern", kInjective);
+
 MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);

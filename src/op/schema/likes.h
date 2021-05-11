@@ -27,6 +27,20 @@ class ReshapeArgs : public ir::AttrsNode<ReshapeArgs> {
   MNM_OP_SCHEMA(ReshapeArgs, "mnm.args.reshape");
 };
 
+class ResizeArgs : public ir::AttrsNode<ResizeArgs> {
+ public:
+  value::BaseTensorValue x;
+  std::vector<int64_t> size;
+  std::string layout{"NCHW"};
+  std::string method{"bilinear"};
+  std::string coordinate_transformation_mode{"half_pixel"};
+  std::string rounding_method{};
+  float bicubic_alpha{-0.5};
+  int bicubic_exclude{0};
+  std::string out_dtype{};
+  MNM_OP_SCHEMA(ResizeArgs, "mnm.args.resize");
+};
+
 class SumArgs : public ir::AttrsNode<SumArgs> {
  public:
   value::BaseTensorValue x;

@@ -112,6 +112,33 @@ _reg.register_injective_schedule("mnm.op.full_like")
 _reg.register_injective_schedule("mnm.op.batch_flatten")
 _reg.register_injective_schedule("mnm.op.arange")
 
+@register_compute("mnm.op.resize")
+def compute_resize(attrs, inputs, out_type): # pylint: disable=unused-argument
+    """ compute definition for resize op """
+    size = attrs.size
+    layout = attrs.layout
+    method = attrs.method
+    coord_trans = attrs.coordinate_transformation_mode
+    rounding_method = attrs.rounding_method
+    bicubic_alpha = attrs.bicubic_alpha
+    bicubic_exclude = attrs.bicubic_exclude
+    out_dtype = attrs.out_dtype
+    return [
+        _topi.image.resize(
+            inputs[0],
+            size,
+            layout,
+            method,
+            coord_trans,
+            rounding_method,
+            bicubic_alpha,
+            bicubic_exclude,
+            out_dtype
+        )
+    ]
+
+_reg.register_injective_schedule("mnm.op.resize")
+
 @register_compute("mnm.op.adv_index")
 def adv_index_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     data = inputs[0]

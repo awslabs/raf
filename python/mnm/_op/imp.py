@@ -27,21 +27,21 @@ __all__ = [
     "log_softmax_dx", "logical_and", "logical_not", "matmul", "matmul_nt",
     "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
     "maximum", "mean", "mean_dx", "mesh_grid", "min",
-    "minimum", "mod", "multiply", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
-    "ones", "ones_like", "pad", "power", "prod",
-    "prod_dx", "relu", "relu_dx", "repeat", "repeat_dx",
-    "reshape", "reverse", "reverse_sequence", "right_shift", "round",
-    "rsqrt", "scatter", "scatter_dx", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where", "where_dx",
-    "zeros", "zeros_like",
+    "minimum", "mod", "multiply", "ndarray_size", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
+    "one_hot", "ones", "ones_like", "pad", "power",
+    "prod", "prod_dx", "relu", "relu_dx", "repeat",
+    "repeat_dx", "reshape", "resize", "reverse", "reverse_sequence",
+    "right_shift", "round", "rsqrt", "scatter", "scatter_dx",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
+    "softmax", "softmax_dx", "sort", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
+    "threefry_split", "transpose", "transpose_dx", "trunc", "upper_bound_argwhere",
+    "vm_alloc_storage", "vm_alloc_tensor", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
+    "where", "where_dx", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -738,6 +738,11 @@ def multiply(x1, x2):
     return imp_utils.ret(ffi.multiply(x1, x2))
 
 @set_module("mnm")
+def ndarray_size(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.ndarray_size(x))
+
+@set_module("mnm")
 def negative(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.negative(x))
@@ -872,6 +877,19 @@ def reshape(x, shape, reverse=False):
     shape = imp_utils.to_int_tuple(shape)
     reverse = imp_utils.to_bool(reverse)
     return imp_utils.ret(ffi.reshape(x, shape, reverse))
+
+@set_module("mnm")
+def resize(x, size, layout="NCHW", method="bilinear", coordinate_transformation_mode="half_pixel", rounding_method="", bicubic_alpha=-0.5, bicubic_exclude=0, out_dtype=""):
+    x = imp_utils.to_tensor(x)
+    size = imp_utils.to_int_tuple(size)
+    layout = imp_utils.to_string(layout)
+    method = imp_utils.to_string(method)
+    coordinate_transformation_mode = imp_utils.to_string(coordinate_transformation_mode)
+    rounding_method = imp_utils.to_string(rounding_method)
+    bicubic_alpha = imp_utils.to_double(bicubic_alpha)
+    bicubic_exclude = imp_utils.to_int(bicubic_exclude)
+    out_dtype = imp_utils.to_string(out_dtype)
+    return imp_utils.ret(ffi.resize(x, size, layout, method, coordinate_transformation_mode, rounding_method, bicubic_alpha, bicubic_exclude, out_dtype))
 
 @set_module("mnm")
 def reverse(x, axis=0):

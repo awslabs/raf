@@ -88,6 +88,8 @@ OPS = [
     Op(name="cross_entropy_dpred", schema_name="loss"),
     Op(name="cross_entropy_dtrue", schema_name="loss"),
     Op(name="reshape", schema_name="reshape"),
+    Op(name="resize", schema_name="resize"),
+    Op(name="ndarray_size", schema_name="unary"),
     Op(name="transpose", schema_name="transpose"),
     Op(name="transpose_dx", schema_name="transpose_dx"),
     Op(name="collapse_sum_like", schema_name="collapse_like"),
