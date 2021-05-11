@@ -10,7 +10,7 @@ import manifest_ext
 from library_ext import *
 
 
-def GenerateSM50_Simt_Relu(manifest, args):
+def GenerateSM50_Simt_Epilogue(manifest, args):
     """Extention to meta/3rdparty/cutlass/tools/library/scripts/generator.py::GenerateSM50_Simt"""
     layouts = [
         (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.ColumnMajor),
@@ -58,6 +58,8 @@ def GenerateSM50_Simt_Relu(manifest, args):
 
         CreateGemmOperator(manifest, layouts, tile_descriptions, \
             data_type, alignment_constraints, epilogue_functor=EpilogueFunctorExt.LinearCombinationRelu)
+        CreateGemmOperator(manifest, layouts, tile_descriptions, \
+            data_type, alignment_constraints, epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
 
         if math_inst.element_a == DataType.f32:
             conv_layout = (LayoutType.TensorNHWC, LayoutType.TensorNHWC, LayoutType.TensorNHWC)
@@ -66,10 +68,84 @@ def GenerateSM50_Simt_Relu(manifest, args):
 
 
 def GenerateSM50(manifest, args):
-    GenerateSM50_Simt_Relu(manifest, args)
+    GenerateSM50_Simt_Epilogue(manifest, args)
 
 
-def GenerateSM80_Simt_f32_Relu(manifest, args):
+def GenerateSM70_TensorOp_884_Epilogue(manifest, args):
+
+  if not generator.CudaToolkitVersionSatisfies(args.cuda_version, 10, 1):
+    return
+
+  layouts = [
+    (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.ColumnMajor),
+    (LayoutType.ColumnMajor, LayoutType.RowMajor, LayoutType.ColumnMajor),
+    (LayoutType.RowMajor, LayoutType.ColumnMajor, LayoutType.ColumnMajor),
+    (LayoutType.RowMajor, LayoutType.RowMajor, LayoutType.ColumnMajor),
+  ]
+
+  math_instructions = [
+    MathInstruction(                                  \
+      [8, 8, 4],                                      \
+      DataType.f16, DataType.f16, DataType.f32,       \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add),
+    MathInstruction(                                  \
+      [8, 8, 4],                                      \
+      DataType.f16, DataType.f16, DataType.f16,       \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add),
+  ]
+
+  min_cc = 70
+  max_cc = 75
+
+  alignment_constraints = [8, 4, 2, 1]
+
+  for math_inst in math_instructions:
+    tile_descriptions = [
+      TileDescription([256, 128, 32], 2, [4, 2, 1], math_inst, min_cc, max_cc),
+      TileDescription([128, 256, 32], 2, [2, 4, 1], math_inst, min_cc, max_cc),
+      TileDescription([128, 128, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+      TileDescription([ 64, 128, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+      TileDescription([128,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+      TileDescription([ 64,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+    ]
+
+    data_type = [
+      math_inst.element_a,
+      math_inst.element_b,
+      math_inst.element_accumulator,
+      math_inst.element_accumulator,
+    ]
+
+    CreateGemmOperator(manifest, layouts, tile_descriptions,
+      data_type, alignment_constraints, epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
+
+    conv_layout = (LayoutType.TensorNHWC, LayoutType.TensorNHWC, LayoutType.TensorNHWC)
+    # CreateConv2dOperator(manifest, conv_layout, tile_descriptions, data_type, 8)
+
+    # Avoid emitting two kernels if the accumulator type does not differ from the input type (e.g. F16 accumulation)
+    if math_inst.element_a != math_inst.element_accumulator:
+
+      data_type_mixed = [
+        math_inst.element_a,
+        math_inst.element_b,
+        math_inst.element_a,
+        math_inst.element_accumulator,
+      ]
+
+      CreateGemmOperator(manifest, layouts, tile_descriptions,
+        data_type_mixed, alignment_constraints,
+        epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
+    
+    #   CreateConv2dOperator(manifest, conv_layout, tile_descriptions, data_type_mixed, 8)
+
+
+def GenerateSM70(manifest, args):
+    GenerateSM70_TensorOp_884_Epilogue(manifest, args)
+
+
+def GenerateSM80_Simt_f32_Epilogue(manifest, args):
     """Extention to meta/3rdparty/cutlass/tools/library/scripts/generator.py::GenerateSM80_Simt"""
     layouts = [
         (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.ColumnMajor),
@@ -117,6 +193,8 @@ def GenerateSM80_Simt_f32_Relu(manifest, args):
 
         CreateGemmOperator(manifest, layouts, tile_descriptions, \
             data_type, alignment_constraints, epilogue_functor=EpilogueFunctorExt.LinearCombinationRelu)
+        CreateGemmOperator(manifest, layouts, tile_descriptions, \
+            data_type, alignment_constraints, epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
 
         conv_layout = (LayoutType.TensorNHWC, LayoutType.TensorNHWC, LayoutType.TensorNHWC)
         CreateConv2dOperator(manifest, conv_layout, tile_descriptions, data_type, 1,
@@ -124,7 +202,7 @@ def GenerateSM80_Simt_f32_Relu(manifest, args):
 
 
 def GenerateSM80(manifest, args):
-    GenerateSM80_Simt_f32_Relu(manifest, args)
+    GenerateSM80_Simt_f32_Epilogue(manifest, args)
 
 
 if __name__ == "__main__":
@@ -151,6 +229,7 @@ if __name__ == "__main__":
     generator.GenerateSM75(manifest, args)
     generator.GenerateSM80(manifest, args)
     GenerateSM50(manifest, args)
+    GenerateSM70(manifest, args)
     GenerateSM80(manifest, args)
     print(manifest.operation_count)
 

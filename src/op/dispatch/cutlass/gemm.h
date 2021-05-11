@@ -58,7 +58,7 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
   /*! \brief batch matmul or not */
   bool batched_;
   /*! \brief epilogue operator like relu, gelu, etc. */
-  EpilogueKind epilogue_op_;
+  EpilogueKindExt epilogue_op_;
 };
 
 }  // namespace cutlass

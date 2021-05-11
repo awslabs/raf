@@ -16,7 +16,7 @@ void CutlassGemmOpEnv::InitGemmOperation(
     void const* ptr_A, int lda, NumericTypeID element_B, LayoutTypeID layout_B, void const* ptr_B,
     int ldb, void const* beta, NumericTypeID element_C, void const* ptr_C, int ldc, void* ptr_D,
     int ldd, int batch_count, int64_t batch_stride_A, int64_t batch_stride_B,
-    int64_t batch_stride_C, int64_t batch_stride_D, EpilogueKind epilogue_math_op,
+    int64_t batch_stride_C, int64_t batch_stride_D, EpilogueKindExt epilogue_math_op,
     const std::string& preferred_name) {
   functional_key_ = std::make_unique<GemmFunctionalKeyExt>(
       provider_, GemmKind::kUniversal, element_compute, element_scalar, element_A, layout_A,

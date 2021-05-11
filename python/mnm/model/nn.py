@@ -1,10 +1,10 @@
-# pylint: disable=missing-class-docstring,missing-function-docstring
+# pylint: disable=missing-class-docstring,missing-function-docstring,attribute-defined-outside-init
 """Neural network specific Model blocks."""
 import math
 
 import numpy as np
 
-from mnm._core.ndarray import ndarray
+from mnm._core.ndarray import ndarray, array
 from mnm._core.core_utils import get_chained_attr
 from mnm._op import sym
 from mnm.random import uniform
@@ -15,8 +15,6 @@ from .trace import trace, trace_mutate_attr  # pylint: disable=unused-import
 
 
 class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
-
-    # pylint: disable=attribute-defined-outside-init
     def build(  # pylint: disable=too-many-arguments
             self,
             in_channels,
@@ -46,8 +44,6 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
             self.b = uniform(-bound, bound, self.b_shape, name="b",
                              device=get_chained_attr(self, ["b", "device"], default="cpu"))
 
-    # pylint: enable=attribute-defined-outside-init
-
     @trace
     def forward(self, x):
         x = sym.conv2d(x,
@@ -62,8 +58,6 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
 
 
 class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
-
-    # pylint: disable=attribute-defined-outside-init
     def build(self, num_features, eps=1e-5, momentum=0.1, affine=True):
         self.num_features = num_features
         self.eps = eps
@@ -88,8 +82,6 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
                              name="w", device=get_chained_attr(self, ["w", "device"], "cpu"))
             self.b = ndarray(np.zeros(n_f, dtype="float32"),
                              name="b", device=get_chained_attr(self, ["b", "device"], "cpu"))
-
-    # pylint: enable=attribute-defined-outside-init
 
     @trace
     def forward(self, x):
@@ -117,8 +109,6 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
 
 
 class Linear(Model):
-
-    # pylint: disable=attribute-defined-outside-init
     def build(self, in_features, out_features, bias=True):
         self.in_features = in_features
         self.out_features = out_features
@@ -135,11 +125,32 @@ class Linear(Model):
             self.b = uniform(-bound, bound, [self.out_features], name="b",
                              device=get_chained_attr(self, ["b", "device"], "cpu"))
 
-    # pylint: enable=attribute-defined-outside-init
-
     @trace
     def forward(self, x):
         out = sym.dense(x, self.w)
         if self.bias:
             out = sym.add(out, self.b)
         return out
+
+
+class GELU(Model):
+    def build(self):
+        self.reset()
+
+    def reset(self):
+        self._inv_sqrt_2 = array(1 / math.sqrt(2),
+                                 name="inv_sqrt_2", dtype="float32",
+                                 device=get_chained_attr(self, ["_inv_sqrt_2", "device"], "cpu"))
+        self._inv_2 = array(1 / 2,
+                            name="_inv_2", dtype="float32",
+                            device=get_chained_attr(self, ["_inv_2", "device"], "cpu"))
+
+    @trace
+    def forward(self, x):
+        return sym.multiply(
+            x,
+            sym.add(
+                self._inv_2,
+                sym.multiply(sym.erf(sym.multiply(x, self._inv_sqrt_2)), self._inv_2),
+            )
+        )

@@ -9,13 +9,15 @@
 #include "cutlass/epilogue/thread/linear_combination_relu.h"
 #include "cutlass/epilogue/thread/linear_combination_gelu.h"
 
+#include "./library_ext.h"
+
 namespace cutlass {
 namespace library {
 
 /*! \brief Epilogue kind corresponding to epilogue operator classes */
 template <typename T>
 struct EpilogueOpMap {
-  static EpilogueKind const kId = EpilogueKind::kUnknown;
+  static EpilogueKindExt const kId = EpilogueKindExt::kUnknown;
 };
 
 template <typename ElementOutput_, int Count, typename ElementAccumulator_,
@@ -23,7 +25,7 @@ template <typename ElementOutput_, int Count, typename ElementAccumulator_,
           FloatRoundStyle Round>
 struct EpilogueOpMap<cutlass::epilogue::thread::LinearCombination<
     ElementOutput_, Count, ElementAccumulator_, ElementCompute_, Scale, Round>> {
-  static EpilogueKind const kId = EpilogueKind::kLinearCombination;
+  static EpilogueKindExt const kId = EpilogueKindExt::kLinearCombination;
 };
 
 template <typename ElementOutput_, int Count, typename ElementAccumulator_,
@@ -31,7 +33,14 @@ template <typename ElementOutput_, int Count, typename ElementAccumulator_,
           FloatRoundStyle Round>
 struct EpilogueOpMap<cutlass::epilogue::thread::LinearCombinationRelu<
     ElementOutput_, Count, ElementAccumulator_, ElementCompute_, Scale, Round>> {
-  static EpilogueKind const kId = EpilogueKind::kLinearCombinationRelu;
+  static EpilogueKindExt const kId = EpilogueKindExt::kLinearCombinationRelu;
+};
+
+template <typename ElementOutput_, int Count, typename ElementAccumulator_,
+          typename ElementCompute_, FloatRoundStyle Round>
+struct EpilogueOpMap<cutlass::epilogue::thread::LinearCombinationGELU<
+    ElementOutput_, Count, ElementAccumulator_, ElementCompute_, Round>> {
+  static EpilogueKindExt const kId = EpilogueKindExt::kLinearCombinationGELU;
 };
 
 }  // namespace library

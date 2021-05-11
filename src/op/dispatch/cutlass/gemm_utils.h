@@ -75,7 +75,7 @@ class CutlassGemmOpEnv : public CutlassOpEnv {
                          int batch_count = 1, int64_t batch_stride_A = 0,
                          int64_t batch_stride_B = 0, int64_t batch_stride_C = 0,
                          int64_t batch_stride_D = 0,
-                         EpilogueKind epilogue_math_op = EpilogueKind::kLinearCombination,
+                         EpilogueKindExt epilogue_math_op = EpilogueKindExt::kLinearCombination,
                          const std::string& preferred_name = "");
 
  protected:

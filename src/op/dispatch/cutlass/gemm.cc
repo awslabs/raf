@@ -43,12 +43,12 @@ std::tuple<bool, bool> GetTranspose(const Op& op) {
   return {transpose_a, transpose_b};
 }
 
-EpilogueKind GetEpilogueKind(const Op& op) {
+EpilogueKindExt GetEpilogueKind(const Op& op) {
   if (!op.defined()) {
-    return EpilogueKind::kLinearCombination;
+    return EpilogueKindExt::kLinearCombination;
   }
-  const static std::unordered_map<Op, EpilogueKind, ObjectPtrHash, ObjectPtrEqual> epilogue_map = {
-      {Op::Get("mnm.op.relu"), EpilogueKind::kLinearCombinationRelu}};
+  const static std::unordered_map<Op, EpilogueKindExt, ObjectPtrHash, ObjectPtrEqual> epilogue_map =
+      {{Op::Get("mnm.op.relu"), EpilogueKindExt::kLinearCombinationRelu}};
   return epilogue_map.at(op);
 }
 
@@ -66,6 +66,14 @@ DFPattern IsOps(std::vector<std::string> ops) {
     op = op || IsOp(name);
   }
   return op;
+}
+
+// Generates gelu(pat).
+DFPattern GELU(DFPattern pat) {
+  auto erf = IsOp("mnm.op.erf");
+  auto inv_sqrt_2 = IsVar("");
+  auto inv_2 = IsVar("");
+  return Multiply()(pat, Add()(inv_2, Multiply()(erf({Multiply()(pat, inv_sqrt_2)}), inv_2)));
 }
 
 bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
@@ -88,6 +96,9 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   pat = pat || with_bias;
   DFPattern with_epilogue = epilogue({pat});
   pat = pat || with_epilogue;
+  // TODO(@hzfan): after we have mnm.op.gelu, add it to epilogue_ops
+  DFPattern with_epilogue_gelu = GELU(pat);
+  pat = pat || with_epilogue_gelu;
 
   if (!MatchPattern(pat, expr)) {
     return false;
@@ -102,6 +113,10 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
         b_ = GetPattern<Var>(node_map, x2);
         with_bias_ = GetPattern<Var>(node_map, bias).defined();
         epilogue_op_ = GetEpilogueKind(GetPattern<Op>(node_map, epilogue));
+        // TODO(@hzfan): remove this if after we have mnm.op.gelu
+        if (GetPattern<Expr>(node_map, with_epilogue_gelu).defined()) {
+          epilogue_op_ = EpilogueKindExt::kLinearCombinationGELU;
+        }
         batched_ = IsBatch(matmul_op);
         std::tie(transpose_a_, transpose_b_) = GetTranspose(matmul_op);
         if (with_bias_) {

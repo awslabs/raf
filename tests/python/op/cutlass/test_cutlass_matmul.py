@@ -6,22 +6,28 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.testing import randn_torch, run_vm_model, check
-from mnm.model import Linear
+from mnm.model.nn import Linear, GELU
 
 @pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize("m", [1, 15])
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
-def test_matmul_add_relu(m, n, k):
+@pytest.mark.parametrize("epilogue", [
+    [mnm._op.sym.relu, torch.nn.functional.relu],
+    [GELU(), torch.nn.GELU()]
+])
+def test_matmul_add_epilogue(m, n, k, epilogue):
+    m_epilogue, t_epilogue = epilogue
+
     class TestModel(mnm.Model):
         def build(self):
-            pass
+            self.epilogue = m_epilogue
 
         @mnm.model.trace
         def forward(self, x, w, bias):  # pylint: disable=no-self-use
             x = mnm.matmul(x, w)
             x = mnm.add(x, bias)
-            x = mnm.relu(x)
+            x = self.epilogue(x)
             return x
 
     device = "cuda"
@@ -31,7 +37,7 @@ def test_matmul_add_relu(m, n, k):
     model = TestModel()
     model.to(device=device)
     m_y = run_vm_model(model, device, [m_x, m_w, m_bias], mnm._ffi.pass_.FuseOps(3))
-    t_y = torch.nn.functional.relu(torch.matmul(t_x, t_w) + t_bias)
+    t_y = t_epilogue(torch.matmul(t_x, t_w) + t_bias)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
@@ -75,15 +81,22 @@ def test_dense_add_relu(batch_size, in_features, out_features):
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
-def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype):
+@pytest.mark.parametrize("epilogue", [
+    [None, None],
+    [GELU(), torch.nn.GELU()]
+])
+def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue):
+    m_epilogue, t_epilogue = epilogue
+
     class TestModel(mnm.Model):
         def build(self):
-            pass
+            self.epilogue = m_epilogue
 
         @mnm.model.trace
         def forward(self, x, w, bias):  # pylint: disable=no-self-use
             x = mnm.batch_matmul_nt(x, w)
             x = mnm.add(x, bias)
+            x = self.epilogue(x) if self.epilogue else x
             return x
 
     device = "cuda"
@@ -92,9 +105,10 @@ def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype):
     m_w, t_w = randn_torch([batch_size2, n, k], device=device, dtype=dtype)
     m_b, t_b = randn_torch([batch_size, m, n], device=device, dtype=dtype)
     model = TestModel()
-    model.to(device=device)
+    model.to(device=device, dtype=dtype)
     m_y = run_vm_model(model, device, [m_x, m_w, m_b], mnm._ffi.pass_.FuseOps(3))
     t_y = torch.matmul(t_x, t_w.permute(0, 2, 1)) + t_b
+    t_y = t_epilogue(t_y) if t_epilogue else t_y
     atol = rtol = 1e-4 if dtype == "float32" else 1e-1
     check(m_y, t_y, rtol=rtol, atol=atol)
 

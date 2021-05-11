@@ -8,13 +8,15 @@
 #include "cutlass/library/library.h"
 #include "cutlass/library/operation_table.h"
 
+#include "./library_ext.h"
+
 namespace cutlass {
 namespace library {
 
 /*! \brief Extentions for GemmFunctionalKey, with epilogue information */
 struct GemmFunctionalKeyExt : public GemmFunctionalKey {
   /*! \brief Epilogue operator */
-  EpilogueKind epilogue_math_op;
+  EpilogueKindExt epilogue_math_op;
 
   GemmFunctionalKeyExt(Provider provider, GemmKind gemm_kind = GemmKind::kGemm,
                        NumericTypeID element_compute = NumericTypeID::kF32,
@@ -26,7 +28,7 @@ struct GemmFunctionalKeyExt : public GemmFunctionalKey {
                        LayoutTypeID layout_B = LayoutTypeID::kColumnMajor,
                        ComplexTransform transform_B = ComplexTransform::kNone,
                        NumericTypeID element_C = NumericTypeID::kF16,
-                       EpilogueKind epilogue_math_op = EpilogueKind::kLinearCombination)
+                       EpilogueKindExt epilogue_math_op = EpilogueKindExt::kLinearCombination)
       : GemmFunctionalKey(provider, gemm_kind, element_compute, element_scalar, element_A, layout_A,
                           transform_A, element_B, layout_B, transform_B, element_C),
         epilogue_math_op(epilogue_math_op) {
@@ -57,7 +59,7 @@ using GemmOperationFunctionalMapExt =
 /*! \brief Extentions for ConvFunctionalKey, with epilogue information */
 struct ConvFunctionalKeyExt : public ConvFunctionalKey {
   /*! \brief Epilogue operator */
-  EpilogueKind epilogue_math_op;
+  EpilogueKindExt epilogue_math_op;
 
   ConvFunctionalKeyExt(library::Provider provider = library::Provider::kInvalid,
                        library::ConvKind conv_kind = library::ConvKind::kFprop,
@@ -69,7 +71,7 @@ struct ConvFunctionalKeyExt : public ConvFunctionalKey {
                        library::LayoutTypeID layout_C = library::LayoutTypeID::kTensorNHWC,
                        library::NumericTypeID element_accumulator = library::NumericTypeID::kF32,
                        library::NumericTypeID element_compute = library::NumericTypeID::kF32,
-                       EpilogueKind epilogue_math_op = EpilogueKind::kLinearCombination)
+                       EpilogueKindExt epilogue_math_op = EpilogueKindExt::kLinearCombination)
       : ConvFunctionalKey(provider, conv_kind, element_A, layout_A, element_B, layout_B, element_C,
                           layout_C, element_accumulator, element_compute),
         epilogue_math_op(epilogue_math_op) {

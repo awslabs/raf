@@ -10,24 +10,37 @@
 namespace cutlass {
 namespace library {
 
+enum class EpilogueKindExt {
+  kLinearCombinationGelu,
+  kUnknown,
+  kConversion,
+  kLinearCombination,
+  kLinearCombinationClamp,
+  kLinearCombinationPlanarComplex,
+  kLinearCombinationRelu,
+  kLinearCombinationSigmoid,
+  kLinearCombinationGELU,
+  kInvalid
+};
+
 /*! \brief Extention for ConvDescription, with epilogue operators information */
 struct ConvDescriptionExt : public ConvDescription {
-  ConvDescriptionExt(const ConvDescription& op, const EpilogueKind& epilogue_math_op)
+  ConvDescriptionExt(const ConvDescription& op, const EpilogueKindExt& epilogue_math_op)
       : ConvDescription(op), epilogue_math_op(epilogue_math_op) {
   }
 
   /*! \brief Epilogue operator information */
-  EpilogueKind epilogue_math_op;
+  EpilogueKindExt epilogue_math_op;
 };
 
 /*! \brief Extention for GemmDescription, with epilogue operators information */
 struct GemmDescriptionExt : public GemmDescription {
-  GemmDescriptionExt(const GemmDescription& op, const EpilogueKind& epilogue_math_op)
+  GemmDescriptionExt(const GemmDescription& op, const EpilogueKindExt& epilogue_math_op)
       : GemmDescription(op), epilogue_math_op(epilogue_math_op) {
   }
 
   /*! \brief Epilogue operator information */
-  EpilogueKind epilogue_math_op;
+  EpilogueKindExt epilogue_math_op;
 };
 
 }  // namespace library
