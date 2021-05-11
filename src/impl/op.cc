@@ -19,20 +19,10 @@ DMLC_REGISTRY_ENABLE(::mnm::op::OpDispatch);
 namespace mnm {
 namespace op {
 
+using namespace mnm::ir;
+using namespace mnm::value;
 using executor::Executor;
-using ir::Array;
-using ir::Attrs;
-using ir::Downcast;
-using ir::Function;
-using ir::make_object;
-using ir::ObjectPtr;
-using ir::Op;
 using requests::Requests;
-using value::ClosureValue;
-using value::ClosureValueObj;
-using value::OpValue;
-using value::OpValueObj;
-using value::Value;
 
 CallValues CallValues::make(value::Value callee, ir::Attrs args) {
   ObjectPtr<CallValuesNode> n = make_object<CallValuesNode>();
@@ -49,10 +39,32 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
   return list.get();
 }
 
+template <typename TList>
+TList get_preferred_backends(TList* default_list) {
+  const static auto* f = registry::Registry::Get("backend.preferred_backends");
+  CHECK(f);
+  ObjectRef preferred_backends_obj = (*f)();
+  TList ret;
+  if (preferred_backends_obj.defined()) {
+    Array<String> preferred_backends = Downcast<Array<String>>(preferred_backends_obj);
+    for (const auto& backend : preferred_backends) {
+      for (const auto e : *default_list) {
+        if (e.backend == backend) {
+          ret.push_back(e);
+        }
+      }
+    }
+  } else {
+    ret = *default_list;
+  }
+  return ret;
+}
+
 std::shared_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
   const Op& op = Downcast<OpValue>(call->callee)->op;
-  TDispatchList* list = OpDispatch::Get(op, call->device.device_type);
-  for (const auto e : *list) {
+  TDispatchList* default_list = OpDispatch::Get(op, call->device.device_type);
+  TDispatchList list = get_preferred_backends<TDispatchList>(default_list);
+  for (const auto e : list) {
     const auto& maker = e.maker;
     std::shared_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
     if (op_env) {
@@ -111,8 +123,9 @@ FusedOpDispatch::TDispatchList* FusedOpDispatch::Get(DevType device_type) {
 }
 
 std::shared_ptr<OpEnv> FusedOpDispatch::Dispatch(const CallValues& call) {
-  const auto& func = Downcast<ClosureValue>(call->callee)->func;
-  for (const auto& e : *FusedOpDispatch::Get(call->device.device_type)) {
+  TDispatchList* default_list = FusedOpDispatch::Get(call->device.device_type);
+  TDispatchList list = get_preferred_backends<TDispatchList>(default_list);
+  for (const auto& e : list) {
     const auto& maker = e.maker;
     std::shared_ptr<OpEnv> func_env(static_cast<OpEnv*>(maker(call)));
     if (func_env) {

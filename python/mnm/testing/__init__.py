@@ -12,6 +12,7 @@ import tvm
 
 from .._core.module import IRModule
 from .._core.executor import VMExecutor, VMCompiler
+from .._core.backend import Backend
 from .._ffi import ir
 from .._ffi import pass_
 from ..model.trace import _get_func_inputs
@@ -257,3 +258,20 @@ def with_seed(seed=None):
                 np.random.set_state(post_test_state)
         return test_new
     return test_helper
+
+
+def with_backend(backend):
+    """
+    A decorator to specify available backends
+
+    Parameters
+    ----------
+    backend : Union[str, List[str]]
+    """
+    def decorator(wrapped):
+        @functools.wraps(wrapped)
+        def wrapper(*args, **kwargs):
+            with Backend([backend] if isinstance(backend, str) else backend):
+                return wrapped(*args, **kwargs)
+        return wrapper
+    return decorator

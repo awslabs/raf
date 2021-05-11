@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import randn_torch, run_vm_model, check
+from mnm.testing import randn_torch, run_vm_model, check, with_backend
 from mnm.model.nn import Linear, GELU
 
 @pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
@@ -16,6 +16,7 @@ from mnm.model.nn import Linear, GELU
     [mnm._op.sym.relu, torch.nn.functional.relu],
     [GELU(), torch.nn.GELU()]
 ])
+@with_backend("cutlass")
 def test_matmul_add_epilogue(m, n, k, epilogue):
     m_epilogue, t_epilogue = epilogue
 
@@ -45,6 +46,7 @@ def test_matmul_add_epilogue(m, n, k, epilogue):
 @pytest.mark.parametrize("batch_size", [1, 15])
 @pytest.mark.parametrize("in_features", [16, 32])
 @pytest.mark.parametrize("out_features", [16, 32])
+@with_backend("cutlass")
 def test_dense_add_relu(batch_size, in_features, out_features):
     class TestModel(mnm.Model):
         def build(self, in_features, out_features):
@@ -85,6 +87,7 @@ def test_dense_add_relu(batch_size, in_features, out_features):
     [None, None],
     [GELU(), torch.nn.GELU()]
 ])
+@with_backend("cutlass")
 def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue):
     m_epilogue, t_epilogue = epilogue
 

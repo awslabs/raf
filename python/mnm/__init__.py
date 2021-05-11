@@ -13,6 +13,7 @@ from . import model
 from . import _tvmjit
 from . import optim
 from . import utils
+from . import _core
 from .model.model import Model
 from .hybrid import hybrid
 from .distributed import *
