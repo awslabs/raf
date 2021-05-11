@@ -126,5 +126,40 @@ def test_nested_tuple():
     assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
+def test_tuple_sequence():
+    shape = (10, 20)
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, y):
+            a = Symbol.make_tuple([x,])
+            a = Symbol.make_tuple([a[0],])
+            a = mnm.add(a[0], y)
+            return a
+
+    def expected():
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        null = mnm.ir.const(None)
+        x = relay.var("x", shape=shape)
+        y = relay.var("y", shape=shape)
+        a1 = relay.var("a1")
+        a2 = relay.var("a2")
+        a3 = relay.var("a3")
+        let3 = relay.Let(a3, relay.Call(add_op, [x, y, null, null]), a3)
+        let2 = relay.Let(a2, relay.Tuple([x,]), let3)
+        let1 = relay.Let(a1, relay.Tuple([x,]), let2)
+        return relay.Function([x, y], let1)
+
+    m_x, _ = randn(shape, device="cpu")
+    m_y, _ = randn(shape, device="cpu")
+    model = Model()
+    mod = model._internal(m_x, m_y).mod
+    mod = run_infer_type(mod)
+    mod = run_infer_type(mnm._ffi.pass_.InlineLet()(mod))
+    func_expected = run_infer_type(expected())
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
+
 if __name__ == "__main__":
     pytest.main([__file__])

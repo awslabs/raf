@@ -25,21 +25,34 @@ class LetInliner : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* let) {
-    if (let->value->IsInstance<TupleNode>()) {
-      tuple_map_.emplace(let->var, Downcast<Tuple>(let->value));
-    }
-    auto new_value = VisitExpr(let->value);
-    bool alias = false;
-    if (new_value->IsInstance<VarNode>()) {
-      auto alias_var = Downcast<Var>(new_value);
-      alias_map_.emplace(let->var.get(), alias_var);
-      alias = true;
-    }
-    auto new_body = VisitExpr(let->body);
-    if (alias) {
-      return new_body;
-    }
-    return Let(let->var, new_value, new_body);
+    auto pre_visit = [this](const LetNode* let) {
+      if (let->value->IsInstance<TupleNode>()) {
+        tuple_map_.emplace(let->var, Downcast<Tuple>(let->value));
+      }
+
+      auto new_value = VisitExpr(let->value);
+      if (new_value->IsInstance<VarNode>()) {
+        auto alias_var = Downcast<Var>(new_value);
+        alias_map_.emplace(let->var, alias_var);
+      }
+    };
+    auto post_visit = [this](const LetNode* let) {
+      Var var = Downcast<Var>(this->VisitExpr(let->var));
+      Expr value = this->VisitExpr(let->value);
+      Expr body = this->VisitExpr(let->body);
+      auto expr = GetRef<Expr>(let);
+      if (value->IsInstance<VarNode>()) {
+        // If the new value is a var, then this let statement becomes "let var1 = var2",
+        // which can be eliminated.
+        this->memo_[expr] = body;
+      } else if (var.same_as(let->var) && value.same_as(let->value) && body.same_as(let->body)) {
+        this->memo_[expr] = expr;
+      } else {
+        this->memo_[expr] = Let(var, value, body);
+      }
+    };
+    ExpandANormalForm(let, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(let)];
   }
 
   Expr VisitExpr_(const TupleGetItemNode* node) {
@@ -53,18 +66,20 @@ class LetInliner : public ExprMutator {
   }
 
   Expr VisitExpr_(const VarNode* var) {
-    auto it = alias_map_.find(var);
-    if (it != alias_map_.end()) {
-      return it->second;
+    Var ret = GetRef<Var>(var);
+    auto it = alias_map_.find(ret);
+    while (it != alias_map_.end()) {
+      ret = it->second;
+      it = alias_map_.find(ret);
     }
-    return GetRef<Var>(var);
+    return ret;
   }
 
  private:
   /*! \brief Mapping of a var to a tuple. */
   std::unordered_map<Expr, Tuple, ObjectPtrHash, ObjectPtrEqual> tuple_map_;
   /*! \brief Mapping from a var to another var. */
-  std::unordered_map<const VarNode*, Var> alias_map_;
+  std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> alias_map_;
 };
 
 }  // namespace inline_let
