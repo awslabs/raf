@@ -1,8 +1,12 @@
 # pylint: disable=attribute-defined-outside-init,no-self-use
 import numpy as np
+import torch
+import torchvision
 import pytest
 import mnm
 from mnm.testing import get_device_list, randn, check, run_vm_model
+
+import tvm.topi.testing
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -124,6 +128,79 @@ def test_nms(device):
                dshape, np_indices_result, force_suppress=True)
     verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold, np_result,
                dshape, np_indices_result)
+
+
+@pytest.mark.parametrize("config", [((1, 4, 16, 16), (32, 5), (7, 7), 1.0, -1),
+                                    ((4, 4, 16, 16), (32, 5), (7, 7), 0.5, 2)])
+@pytest.mark.parametrize("mode", ["avg", "max"])
+@pytest.mark.parametrize("layout", ["NCHW", "NHWC"])
+@pytest.mark.parametrize("device", get_device_list())
+def test_roi_align(config, mode, layout, device):
+    # pylint: disable=too-many-locals, not-callable
+    class TestModel(mnm.Model):
+        def build(self, pooled_size, spatial_scale, sample_ratio, layout, mode):  # pylint: disable=too-many-arguments
+            self.pooled_size = pooled_size
+            self.spatial_scale = spatial_scale
+            self.sample_ratio = sample_ratio
+            self.layout = layout
+            self.mode = mode
+
+        @mnm.model.trace
+        def forward(self, data, rois):
+            return mnm.roi_align(data, rois, self.pooled_size, self.spatial_scale,
+                                 self.sample_ratio, self.layout, self.mode)
+
+    def verify_roi_align(
+            data_shape,
+            rois_shape,
+            pooled_size,
+            spatial_scale,
+            sample_ratio,
+            mode,
+            layout
+    ):  # pylint: disable=too-many-arguments
+        if layout == "NCHW":
+            _, _, in_size, _ = data_shape
+            ref_func = tvm.topi.testing.roi_align_nchw_python
+        else:
+            _, in_size, _, _ = data_shape
+            ref_func = tvm.topi.testing.roi_align_nhwc_python
+        np_data = np.random.uniform(size=data_shape).astype("float32")
+        np_rois = np.random.uniform(size=rois_shape).astype("float32") * in_size
+        np_rois[:, 0] = np.random.randint(low=0, high=data_shape[0], size=rois_shape[0])
+        np_res = ref_func(
+            np_data,
+            np_rois,
+            pooled_size=pooled_size,
+            spatial_scale=spatial_scale,
+            sample_ratio=sample_ratio,
+            mode=mode,
+        )
+
+        # forward
+        m_data = mnm.array(np_data, device=device)
+        m_rois = mnm.array(np_rois, device=device)
+        m_data.requires_grad = True
+
+        model = TestModel(pooled_size, spatial_scale, sample_ratio, layout, mode)
+        m_out = model(m_data, m_rois)
+        v_out = run_vm_model(model, device, [m_data, m_rois])
+        check(m_out, np_res, rtol=1e-5, atol=1e-05)
+        check(v_out, np_res, rtol=1e-5, atol=1e-05)
+
+        # backward
+        np_dy = np.ones(m_out.shape, dtype="float32")
+        m_out.backward(mnm.array(np_dy, device=device))
+        if layout == "NCHW" and mode == "avg":
+            t_data = torch.tensor(np_data)
+            t_rois = torch.tensor(np_rois)
+            t_data.requires_grad = True
+            t_y = torchvision.ops.roi_align(
+                t_data, t_rois, pooled_size, spatial_scale, sample_ratio)
+            t_y.backward(torch.tensor(np_dy))
+            check(m_data.grad, t_data.grad)
+
+    verify_roi_align(*config, mode, layout)
 
 
 if __name__ == "__main__":

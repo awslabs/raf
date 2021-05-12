@@ -270,7 +270,7 @@ def schedule_layer_norm_cuda(attrs, outs, target):
         num_thread = 64
         def bind_axes(s, out):
             if (isinstance(out.op, _tvm.te.ComputeOp)
-                    and isinstance(*out.op.body, _tvm.tir.expr.Reduce)
+                    and isinstance(out.op.body[0], _tvm.tir.expr.Reduce)
                     and len(s[out].iter_var_attrs) == 0 and out.op not in scheduled_ops):
                 scheduled_ops.append(out.op)
                 fused = s[out].fuse(*s[out].op.axis)

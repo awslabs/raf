@@ -1163,5 +1163,33 @@ def test_argwhere(shape):
     check_from_relay(model, r_func, [m_x])
 
 
+def test_roi_align():
+    class RoiAlign(mnm.Model):
+        def build(self, pooled_size, spatial_scale, sample_ratio, layout, mode):
+            self.pooled_size = pooled_size
+            self.spatial_scale = spatial_scale
+            self.sample_ratio = sample_ratio
+            self.layout = layout
+            self.mode = mode
+
+        @mnm.model.trace
+        def forward(self, data, rois):
+            return mnm.roi_align(data, rois, self.pooled_size, self.spatial_scale,
+                                 self.sample_ratio, self.layout, self.mode)
+
+    np_data = np.random.uniform(size=(1, 4, 16, 16)).astype("float32")
+    np_rois = np.random.uniform(size=(32, 5)).astype("float32")
+    m_data = mnm.array(np_data)
+    m_rois = mnm.array(np_rois)
+    model = RoiAlign((7, 7), 1.0, -1, "NCHW", "avg")
+
+    r_data = _relay.var("data", shape=(1, 4, 16, 16), dtype="float32")
+    r_rois = _relay.var("rois", shape=(32, 5), dtype="float32")
+    r_func = _relay.Function(params=[r_data, r_rois], body=_relay.vision.roi_align(
+        r_data, r_rois, (7, 7), 1.0, -1, "NCHW", "avg"))
+
+    check_from_relay(model, r_func, [m_data, m_rois])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

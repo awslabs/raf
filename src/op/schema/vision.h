@@ -37,6 +37,31 @@ class NonMaxSuppressionArgs : public ir::AttrsNode<NonMaxSuppressionArgs> {
   bool invalid_to_bottom{false};
   MNM_OP_SCHEMA(NonMaxSuppressionArgs, "mnm.args.non_max_suppression");
 };
+
+class RoiAlignArgs : public ir::AttrsNode<RoiAlignArgs> {
+ public:
+  value::BaseTensorValue data;
+  value::BaseTensorValue rois;
+  std::vector<int64_t> pooled_size;
+  double spatial_scale;
+  int64_t sample_ratio{-1};
+  std::string layout{"NCHW"};
+  std::string mode{"avg"};
+  MNM_OP_SCHEMA(RoiAlignArgs, "mnm.args.roi_align");
+};
+
+class RoiAlignDxArgs : public ir::AttrsNode<RoiAlignDxArgs> {
+ public:
+  value::BaseTensorValue data;
+  value::BaseTensorValue rois;
+  value::BaseTensorValue dy;
+  std::vector<int64_t> pooled_size;
+  double spatial_scale;
+  int64_t sample_ratio{-1};
+  std::string layout{"NCHW"};
+  std::string mode{"avg"};
+  MNM_OP_SCHEMA(RoiAlignDxArgs, "mnm.args.roi_align_dx");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

@@ -90,6 +90,76 @@ MNM_TVMJIT(NonMaxSuppression, "mnm.op.non_max_suppression", NonMaxSuppressionArg
            NonMaxSuppressionSchema2Args, NonMaxSuppressionSchemaArgNames,
            NonMaxSuppressionSchema2Attrs, NonMaxSuppressionHasher);
 
+std::vector<Value> RoiAlignSchema2Args(const RoiAlignArgs* args) {
+  return {args->data, args->rois};
+}
+
+std::vector<std::string> RoiAlignSchemaArgNames(const op::CallValues& call) {
+  return {"data", "rois"};
+}
+
+Attrs RoiAlignSchema2Attrs(const RoiAlignArgs* args) {
+  auto attrs = make_object<ROIAlignAttrs>();
+  std::vector<int64_t> pooled_size = args->pooled_size;
+  for (int i = 0; i < pooled_size.size(); ++i) {
+    attrs->pooled_size.push_back(IntImm(tvm::runtime::DataType::Int(64), pooled_size[i]));
+  }
+  attrs->spatial_scale = args->spatial_scale;
+  attrs->sample_ratio = args->sample_ratio;
+  attrs->layout = args->layout;
+  attrs->mode = args->mode;
+  return Attrs(attrs);
+}
+
+HashKey RoiAlignHasher(const std::vector<Type>& param_types, const Type& y_type,
+                       const RoiAlignArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->pooled_size;
+  key << args->spatial_scale;
+  key << args->sample_ratio;
+  key << args->layout;
+  key << args->mode;
+  return key;
+}
+
+MNM_TVMJIT(RoiAlign, "mnm.op.roi_align", RoiAlignArgs, RoiAlignSchema2Args, RoiAlignSchemaArgNames,
+           RoiAlignSchema2Attrs, RoiAlignHasher);
+
+std::vector<Value> RoiAlignDxSchema2Args(const RoiAlignDxArgs* args) {
+  return {args->data, args->rois, args->dy};
+}
+
+std::vector<std::string> RoiAlignDxSchemaArgNames(const op::CallValues& call) {
+  return {"data", "rois", "dy"};
+}
+
+Attrs RoiAlignDxSchema2Attrs(const RoiAlignDxArgs* args) {
+  auto attrs = make_object<ROIAlignAttrs>();
+  std::vector<int64_t> pooled_size = args->pooled_size;
+  for (int i = 0; i < pooled_size.size(); ++i) {
+    attrs->pooled_size.push_back(IntImm(tvm::runtime::DataType::Int(64), pooled_size[i]));
+  }
+  attrs->spatial_scale = args->spatial_scale;
+  attrs->sample_ratio = args->sample_ratio;
+  attrs->layout = args->layout;
+  attrs->mode = args->mode;
+  return Attrs(attrs);
+}
+
+HashKey RoiAlignDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                         const RoiAlignDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->pooled_size;
+  key << args->spatial_scale;
+  key << args->sample_ratio;
+  key << args->layout;
+  key << args->mode;
+  return key;
+}
+
+MNM_TVMJIT(RoiAlignDx, "mnm.op.roi_align_dx", RoiAlignDxArgs, RoiAlignDxSchema2Args,
+           RoiAlignDxSchemaArgNames, RoiAlignDxSchema2Attrs, RoiAlignDxHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

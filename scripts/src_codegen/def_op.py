@@ -170,6 +170,8 @@ OPS = [
     Op(name="left_shift", schema_name="binary"),
     Op(name="argwhere", schema_name="argwhere"),
     Op(name="upper_bound.argwhere", schema_name="argwhere"),
+    Op(name="roi_align", schema_name="roi_align"),
+    Op(name="roi_align_dx", schema_name="roi_align_dx"),
 ]
 
 def by_name():

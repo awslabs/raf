@@ -114,6 +114,7 @@ MNM_TVM_OP("mnm.op.reshape", "reshape");
 MNM_TVM_OP("mnm.op.reverse", "reverse");
 MNM_TVM_OP("mnm.op.reverse_sequence", "reverse_sequence");
 MNM_TVM_OP("mnm.op.right_shift", "right_shift");
+MNM_TVM_OP("mnm.op.roi_align", "vision.roi_align");
 MNM_TVM_OP("mnm.op.round", "round");
 MNM_TVM_OP("mnm.op.rsqrt", "rsqrt");
 MNM_TVM_OP("mnm.op.scatter", "scatter");

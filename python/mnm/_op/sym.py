@@ -32,16 +32,16 @@ __all__ = [
     "one_hot", "ones", "ones_like", "pad", "power",
     "prod", "prod_dx", "relu", "relu_dx", "repeat",
     "repeat_dx", "reshape", "resize", "reverse", "reverse_sequence",
-    "right_shift", "round", "rsqrt", "scatter", "scatter_dx",
-    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
-    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
-    "softmax", "softmax_dx", "sort", "split", "sqrt",
-    "sqrt_dx", "squeeze", "stack", "stream_sync", "strided_slice",
-    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
-    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
-    "threefry_split", "transpose", "transpose_dx", "trunc", "upper_bound_argwhere",
-    "vm_alloc_storage", "vm_alloc_tensor", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
-    "where", "zeros", "zeros_like",
+    "right_shift", "roi_align", "roi_align_dx", "round", "rsqrt",
+    "scatter", "scatter_dx", "sequence_mask", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
+    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
+    "tanh_dx", "threefry_generate", "threefry_split", "transpose", "transpose_dx",
+    "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_infer_type",
+    "vm_invoke_op", "vm_set_shape", "where", "zeros", "zeros_like",
 ]
 
 def _allgather(x, axis):
@@ -789,6 +789,27 @@ def right_shift(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
     return Symbol.from_expr(ffi.right_shift(x1, x2))
+
+def roi_align(data, rois, pooled_size, spatial_scale, sample_ratio=-1, layout="NCHW", mode="avg"):
+    data = sym_utils.to_tensor(data)
+    rois = sym_utils.to_tensor(rois)
+    pooled_size = sym_utils.to_int_tuple(pooled_size)
+    spatial_scale = sym_utils.to_double(spatial_scale)
+    sample_ratio = sym_utils.to_int(sample_ratio)
+    layout = sym_utils.to_string(layout)
+    mode = sym_utils.to_string(mode)
+    return Symbol.from_expr(ffi.roi_align(data, rois, pooled_size, spatial_scale, sample_ratio, layout, mode))
+
+def roi_align_dx(data, rois, dy, pooled_size, spatial_scale, sample_ratio=-1, layout="NCHW", mode="avg"):
+    data = sym_utils.to_tensor(data)
+    rois = sym_utils.to_tensor(rois)
+    dy = sym_utils.to_tensor(dy)
+    pooled_size = sym_utils.to_int_tuple(pooled_size)
+    spatial_scale = sym_utils.to_double(spatial_scale)
+    sample_ratio = sym_utils.to_int(sample_ratio)
+    layout = sym_utils.to_string(layout)
+    mode = sym_utils.to_string(mode)
+    return Symbol.from_expr(ffi.roi_align_dx(data, rois, dy, pooled_size, spatial_scale, sample_ratio, layout, mode))
 
 def round(x):
     x = sym_utils.to_any(x)

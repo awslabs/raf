@@ -122,6 +122,8 @@ from ._internal import resize
 from ._internal import reverse
 from ._internal import reverse_sequence
 from ._internal import right_shift
+from ._internal import roi_align
+from ._internal import roi_align_dx
 from ._internal import round
 from ._internal import rsqrt
 from ._internal import scatter

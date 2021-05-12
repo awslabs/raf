@@ -245,6 +245,10 @@ reverse_sequence = _APIS.get("mnm.op.imp.reverse_sequence", None)
 # Defined in ./src/op/regs/regs.cc
 right_shift = _APIS.get("mnm.op.imp.right_shift", None)
 # Defined in ./src/op/regs/regs.cc
+roi_align = _APIS.get("mnm.op.imp.roi_align", None)
+# Defined in ./src/op/regs/regs.cc
+roi_align_dx = _APIS.get("mnm.op.imp.roi_align_dx", None)
+# Defined in ./src/op/regs/regs.cc
 round = _APIS.get("mnm.op.imp.round", None)
 # Defined in ./src/op/regs/regs.cc
 rsqrt = _APIS.get("mnm.op.imp.rsqrt", None)

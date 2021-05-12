@@ -57,6 +57,40 @@ MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
   call->device = data->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
+MNM_OP_DECLARE(
+    "mnm.op.roi_align", ([](const CallValues& call) {
+      const auto* args = call->args.as<RoiAlignArgs>();
+      CHECK(args != nullptr);
+      DLTensor* data = args->data;
+      DLTensor* rois = args->rois;
+      CHECK_EQ(data->ndim, 4) << "Input data should be 4-D.";
+      CHECK_EQ(rois->ndim, 2) << "Input rois should be 2-D.";
+      // assign output type
+      std::vector<int64_t> oshape;
+      if (args->layout == "NCHW") {
+        oshape = {rois->shape[0], data->shape[1], args->pooled_size[0], args->pooled_size[1]};
+      } else {
+        ICHECK_EQ(args->layout, "NHWC") << "Unexpected ROI Align layout";
+        oshape = {rois->shape[0], args->pooled_size[0], args->pooled_size[1], data->shape[3]};
+      }
+      call->device = data->device;
+      call->out = TensorValue::Assemble(/*dev=*/data->device,
+                                        /*dtype=*/data->dtype,
+                                        /*shape=*/oshape);
+    }))
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+
+MNM_OP_DECLARE("mnm.op.roi_align_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<RoiAlignDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* data = args->data;
+  std::vector<int64_t> dshape(data->shape, data->shape + data->ndim);
+  call->device = data->device;
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
+                                    /*dtype=*/data->dtype,
+                                    /*shape=*/dshape);
+}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -162,6 +162,8 @@ static const char resize[] = "mnm.op.resize";
 static const char reverse[] = "mnm.op.reverse";
 static const char reverse_sequence[] = "mnm.op.reverse_sequence";
 static const char right_shift[] = "mnm.op.right_shift";
+static const char roi_align[] = "mnm.op.roi_align";
+static const char roi_align_dx[] = "mnm.op.roi_align_dx";
 static const char round[] = "mnm.op.round";
 static const char rsqrt[] = "mnm.op.rsqrt";
 static const char scatter[] = "mnm.op.scatter";
@@ -789,6 +791,31 @@ Attrs ReverseSequence(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::Tensor, sequence_length);
   MNM_POD(2, ffi2schema::Int, seq_axis);
   MNM_POD(3, ffi2schema::Int, batch_axis);
+  return Attrs(attrs);
+}
+
+Attrs RoiAlign(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::RoiAlignArgs, 7);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_TAPE(1, ffi2schema::Tensor, rois);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, pooled_size);
+  MNM_POD(3, ffi2schema::Double, spatial_scale);
+  MNM_POD(4, ffi2schema::Int, sample_ratio);
+  MNM_POD(5, ffi2schema::String, layout);
+  MNM_POD(6, ffi2schema::String, mode);
+  return Attrs(attrs);
+}
+
+Attrs RoiAlignDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::RoiAlignDxArgs, 8);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_TAPE(1, ffi2schema::Tensor, rois);
+  MNM_TAPE(2, ffi2schema::Tensor, dy);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, pooled_size);
+  MNM_POD(4, ffi2schema::Double, spatial_scale);
+  MNM_POD(5, ffi2schema::Int, sample_ratio);
+  MNM_POD(6, ffi2schema::String, layout);
+  MNM_POD(7, ffi2schema::String, mode);
   return Attrs(attrs);
 }
 
@@ -2298,6 +2325,35 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.right_shift").set_body([](TVMArgs args, TVMRetVa
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.roi_align").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(roi_align, 7, ffi2schema::RoiAlign,
+              schema::RoiAlignArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->rois));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->pooled_size));
+  MNM_SET_ENV(vpack->x[3], schema2value::Double(schema->spatial_scale));
+  MNM_SET_ENV(vpack->x[4], schema2value::Int(schema->sample_ratio));
+  MNM_SET_ENV(vpack->x[5], schema2value::String(schema->layout));
+  MNM_SET_ENV(vpack->x[6], schema2value::String(schema->mode));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.roi_align_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(roi_align_dx, 8, ffi2schema::RoiAlignDx,
+              schema::RoiAlignDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->rois));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->pooled_size));
+  MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->spatial_scale));
+  MNM_SET_ENV(vpack->x[5], schema2value::Int(schema->sample_ratio));
+  MNM_SET_ENV(vpack->x[6], schema2value::String(schema->layout));
+  MNM_SET_ENV(vpack->x[7], schema2value::String(schema->mode));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.round").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(round, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
@@ -3322,6 +3378,31 @@ Array<Expr> ReverseSequence(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> RoiAlign(const TVMArgs& values) {
+  MNM_PRELUDE(7);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Tensor, rois);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, pooled_size);
+  MNM_ARG(3, ffi2expr::Double, spatial_scale);
+  MNM_ARG(4, ffi2expr::Int, sample_ratio);
+  MNM_ARG(5, ffi2expr::String, layout);
+  MNM_ARG(6, ffi2expr::String, mode);
+  MNM_RET();
+}
+
+Array<Expr> RoiAlignDx(const TVMArgs& values) {
+  MNM_PRELUDE(8);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Tensor, rois);
+  MNM_ARG(2, ffi2expr::Tensor, dy);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, pooled_size);
+  MNM_ARG(4, ffi2expr::Double, spatial_scale);
+  MNM_ARG(5, ffi2expr::Int, sample_ratio);
+  MNM_ARG(6, ffi2expr::String, layout);
+  MNM_ARG(7, ffi2expr::String, mode);
+  MNM_RET();
+}
+
 Array<Expr> Scatter(const TVMArgs& values) {
   MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -3760,6 +3841,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
     .set_body(MNM_SYMBOLIC_API(reverse_sequence, 4, ReverseSequence));
 MNM_REGISTER_GLOBAL("mnm.op.sym.right_shift").set_body(MNM_SYMBOLIC_API(right_shift, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.roi_align").set_body(MNM_SYMBOLIC_API(roi_align, 7, RoiAlign));
+MNM_REGISTER_GLOBAL("mnm.op.sym.roi_align_dx")
+    .set_body(MNM_SYMBOLIC_API(roi_align_dx, 8, RoiAlignDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.round").set_body(MNM_SYMBOLIC_API(round, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.rsqrt").set_body(MNM_SYMBOLIC_API(rsqrt, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.scatter").set_body(MNM_SYMBOLIC_API(scatter, 4, Scatter));
@@ -4480,6 +4564,33 @@ Attrs ReverseSequence(const Array<Value>& values) {
   MNM_REQUIRED(1, value2schema::Tensor, sequence_length);
   MNM_OPTIONAL(2, value2schema::Int, seq_axis);
   MNM_OPTIONAL(3, value2schema::Int, batch_axis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs RoiAlign(const Array<Value>& values) {
+  MNM_PRELUDE(4, 7, schema::RoiAlignArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::Tensor, rois);
+  MNM_REQUIRED(2, value2schema::IntOrTupleInt, pooled_size);
+  MNM_REQUIRED(3, value2schema::Double, spatial_scale);
+  MNM_OPTIONAL(4, value2schema::Int, sample_ratio);
+  MNM_OPTIONAL(5, value2schema::String, layout);
+  MNM_OPTIONAL(6, value2schema::String, mode);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs RoiAlignDx(const Array<Value>& values) {
+  MNM_PRELUDE(5, 8, schema::RoiAlignDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::Tensor, rois);
+  MNM_REQUIRED(2, value2schema::Tensor, dy);
+  MNM_REQUIRED(3, value2schema::IntOrTupleInt, pooled_size);
+  MNM_REQUIRED(4, value2schema::Double, spatial_scale);
+  MNM_OPTIONAL(5, value2schema::Int, sample_ratio);
+  MNM_OPTIONAL(6, value2schema::String, layout);
+  MNM_OPTIONAL(7, value2schema::String, mode);
   return Attrs(attrs);
 }
 
@@ -5881,6 +5992,63 @@ int ReverseSequence(const std::string& field) {
 }
 
 template <const char* op_name>
+int RoiAlign(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "rois") {
+    return 1;
+  }
+  if (field == "pooled_size") {
+    return 2;
+  }
+  if (field == "spatial_scale") {
+    return 3;
+  }
+  if (field == "sample_ratio") {
+    return 4;
+  }
+  if (field == "layout") {
+    return 5;
+  }
+  if (field == "mode") {
+    return 6;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int RoiAlignDx(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "rois") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "pooled_size") {
+    return 3;
+  }
+  if (field == "spatial_scale") {
+    return 4;
+  }
+  if (field == "sample_ratio") {
+    return 5;
+  }
+  if (field == "layout") {
+    return 6;
+  }
+  if (field == "mode") {
+    return 7;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Scatter(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -6855,6 +7023,14 @@ MNM_BIND_SCHEMA("mnm.op.right_shift", names::right_shift,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.right_shift", names::right_shift,
                             schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.roi_align", names::roi_align,
+                value2schema::RoiAlign);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.roi_align", names::roi_align,
+                            schema_field_idx::RoiAlign);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.roi_align_dx", names::roi_align_dx,
+                value2schema::RoiAlignDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.roi_align_dx", names::roi_align_dx,
+                            schema_field_idx::RoiAlignDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.round", names::round,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.round", names::round,
@@ -7112,6 +7288,8 @@ MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ResizeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseSequenceArgs);
+MNM_REGISTER_OBJECT_REFLECT(RoiAlignArgs);
+MNM_REGISTER_OBJECT_REFLECT(RoiAlignDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ScatterArgs);
 MNM_REGISTER_OBJECT_REFLECT(ScatterDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SequenceMaskArgs);

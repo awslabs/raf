@@ -58,6 +58,40 @@ Type NonMaxSuppressionInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.non_max_suppression", "NonMaxSuppression", NonMaxSuppressionInfer);
 
+Type RoiAlignInfer(const CallValues& value) {
+  const auto* args = value->args.as<RoiAlignArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  TensorType rois = Downcast<TensorType>(GetType(args->rois));
+  CHECK_EQ(data->shape.size(), 4) << "Input data should be 4-D.";
+  CHECK_EQ(rois->shape.size(), 2) << "Input rois should be 2-D.";
+  // assign output type
+  std::vector<PrimExpr> oshape;
+  if (args->layout == "NCHW") {
+    oshape.push_back(rois->shape[0]);
+    oshape.push_back(data->shape[1]);
+    oshape.push_back(int32_t(args->pooled_size[0]));
+    oshape.push_back(int32_t(args->pooled_size[1]));
+  } else {
+    ICHECK_EQ(args->layout, "NHWC") << "Unexpected ROI Align layout " << args->layout;
+    oshape.push_back(rois->shape[0]);
+    oshape.push_back(int32_t(args->pooled_size[0]));
+    oshape.push_back(int32_t(args->pooled_size[1]));
+    oshape.push_back(data->shape[3]);
+  }
+  return TensorType(oshape, data->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.roi_align", "RoiAlign", RoiAlignInfer);
+
+Type RoiAlignDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<RoiAlignDxArgs>();
+  CHECK(args != nullptr);
+  return Downcast<TensorType>(GetType(args->data));
+}
+
+MNM_OP_TYPE("mnm.op.roi_align_dx", "RoiAlignDx", RoiAlignDxInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

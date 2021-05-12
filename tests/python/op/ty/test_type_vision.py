@@ -105,5 +105,43 @@ def test_non_max_suppression(return_indices, dtype):
             return_data_ty)
     check_type(m_func, expected_type)
 
+
+@pytest.mark.parametrize("config", [((1, 4, 16, 16), (32, 5), (7, 7), 1.0, -1),
+                                    ((4, 4, 16, 16), (32, 5), (7, 7), 0.5, 2)])
+@pytest.mark.parametrize("mode", ["avg", "max"])
+@pytest.mark.parametrize("layout", ["NCHW", "NHWC"])
+def test_roi_align(config, mode, layout):
+    class RoiAlign(mnm.Model):
+        def build(self, pooled_size, spatial_scale, sample_ratio, layout, mode):
+            self.pooled_size = pooled_size
+            self.spatial_scale = spatial_scale
+            self.sample_ratio = sample_ratio
+            self.layout = layout
+            self.mode = mode
+
+        @mnm.model.trace
+        def forward(self, data, rois):
+            return mnm.roi_align(data, rois, self.pooled_size, self.spatial_scale,
+                                 self.sample_ratio, self.layout, self.mode)
+
+    data_shape, rois_shape, pooled_size, spatial_scale, sample_ratio = config
+    np_data = np.random.uniform(size=data_shape).astype("float32")
+    np_rois = np.random.uniform(size=rois_shape).astype("float32")
+    m_data = mnm.array(np_data)
+    m_rois = mnm.array(np_rois)
+    model = RoiAlign(pooled_size, spatial_scale, sample_ratio, layout, mode)
+
+    m_func = model._internal(m_data, m_rois).mod['main']
+    m_func = run_infer_type(m_func)
+    data_ty = TensorType(data_shape, dtype="float32")
+    rois_ty = TensorType(rois_shape, dtype="float32")
+    if layout == "NCHW":
+        out_tensor_ty = TensorType((rois_shape[0], data_shape[1], *pooled_size), "float32")
+    else:
+        out_tensor_ty = TensorType((rois_shape[0], *pooled_size, data_shape[3]), "float32")
+    expected_type = FuncType([data_ty, rois_ty], out_tensor_ty)
+    check_type(m_func, expected_type)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

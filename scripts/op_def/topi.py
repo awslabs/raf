@@ -114,6 +114,7 @@ OP_MAP = {
     "mnm.op.compiler_end": ["annotation.compiler_end", "relay.attrs.CompilerAttrs", "kOpaque"],
     "mnm.op.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
     "mnm.op.device_copy": ["device_copy", "relay.attrs.DeviceCopyAttrs", "kOpaque"],
+    "mnm.op.roi_align": ["vision.roi_align", "relay.attrs.ROIAlignAttrs", "kOutEWiseFusable"],
 }
 
 # pylint: enable=line-too-long
