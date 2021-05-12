@@ -782,6 +782,7 @@ MNM_OP_TYPE("mnm.op.full_like", "FullLike", FullLikeInfer);
 Type WhereInfer(const CallValues& value) {
   const auto* args = value->args.as<WhereArgs>();
   CHECK(args != nullptr);
+
   TensorType x = Downcast<TensorType>(GetType(args->x));
   TensorType y = Downcast<TensorType>(GetType(args->y));
   if (x->shape.size() >= y->shape.size()) {
@@ -792,15 +793,6 @@ Type WhereInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.where", "Where", WhereInfer);
-
-Type WhereDxInfer(const CallValues& value) {
-  const auto* args = value->args.as<BinaryDxArgs>();
-  CHECK(args != nullptr);
-  Array<Type> res{GetType(args->x1), GetType(args->x2)};
-  return TupleType(res);
-}
-
-MNM_OP_TYPE("mnm.op.where_dx", "WhereDx", WhereDxInfer);
 
 Type ResizeInfer(const CallValues& value) {
   const auto* args = value->args.as<ResizeArgs>();

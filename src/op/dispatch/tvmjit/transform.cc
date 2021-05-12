@@ -1050,27 +1050,6 @@ HashKey WhereHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Where, "mnm.op.where", WhereArgs, WhereSchema2Args, WhereSchemaArgNames, GenericAttrs,
            GenericHasher);
 
-std::vector<Value> WhereDxSchema2Args(const BinaryDxArgs* args) {
-  return {args->x1, args->x2, args->y, args->dy};
-}
-
-std::vector<std::string> WhereDxSchemaArgNames(const op::CallValues& call) {
-  return {"x1", "x2", "y", "dy"};
-}
-
-HashKey WhereDxHasher(const std::vector<Type>& param_types, const Type& y_type,
-                      const BinaryDxArgs* args) {
-  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->x1;
-  key << args->x2;
-  key << args->y;
-  key << args->dy;
-  return key;
-}
-
-MNM_TVMJIT(WhereDx, "mnm.op.where_dx", BinaryDxArgs, WhereDxSchema2Args, WhereDxSchemaArgNames,
-           GenericAttrs, WhereDxHasher);
-
 struct SwapAxisAttrs : public tvm::AttrsNode<SwapAxisAttrs> {
   int axis1;
   int axis2;

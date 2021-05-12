@@ -255,29 +255,3 @@ _reg.register_injective_schedule("mnm.op.gather")
 _reg.register_injective_schedule("mnm.op.gather_dx")
 _reg.register_injective_schedule("mnm.op.gather_nd")
 _reg.register_injective_schedule("mnm.op.gather_nd_dx")
-
-@register_compute("mnm.op.where_dx")
-def where_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
-    x1, x2, y, dy = inputs
-    def _where_x(x):
-        def _f(*idx):
-            return _tvm.tir.if_then_else(y[idx] == x[idx], dy[idx], _tvm.tir.const(0, dy.dtype))
-        return _f
-
-    assert x1.shape[:] == x2.shape[:] or len(x1.shape) == 0 or len(x2.shape) == 0
-    if x1.shape[:] == x2.shape[:]:
-        dx1 = _tvm.te.compute(x1.shape, _where_x(x1))
-        dx2 = _tvm.te.compute(x1.shape, _where_x(x2))
-    elif len(x2.shape) == 0:
-        x2 = _topi.broadcast_to(x2, x1.shape)
-        dx1 = _tvm.te.compute(x1.shape, _where_x(x1))
-        dx2 = _tvm.te.compute(x2.shape, _where_x(x2))
-        dx2 = _topi.sum(dx2, axis=tuple(range(len(x2.shape))))
-    else:
-        x1 = _topi.broadcast_to(x1, x2.shape)
-        dx1 = _tvm.te.compute(x1.shape, _where_x(x1))
-        dx1 = _topi.sum(dx1, axis=tuple(range(len(x1.shape))))
-        dx2 = _tvm.te.compute(x2.shape, _where_x(x2))
-    return [dx1, dx2]
-
-_reg.register_broadcast_schedule("mnm.op.where_dx")

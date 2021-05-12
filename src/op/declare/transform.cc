@@ -929,23 +929,6 @@ MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {
   call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kBroadcast);
 
-MNM_OP_DECLARE("mnm.op.where_dx", [](const CallValues& call) {
-  const auto* args = call->args.as<BinaryDxArgs>();
-  CHECK(args != nullptr);
-  const DLTensor* x1 = args->x1;
-  const DLTensor* x2 = args->x2;
-  std::vector<int64_t> shape1(x1->shape, x1->shape + x1->ndim);
-  std::vector<int64_t> shape2(x2->shape, x2->shape + x2->ndim);
-  TensorValue dx1 = TensorValue::Assemble(/*dev=*/x1->device,
-                                          /*dtype=*/x1->dtype,
-                                          /*shape=*/shape1);
-  TensorValue dx2 = TensorValue::Assemble(/*dev=*/x2->device,
-                                          /*dtype=*/x2->dtype,
-                                          /*shape=*/shape2);
-  call->out = TupleValue::make(tvm::Array<Value>({dx1, dx2}));
-  call->device = x1->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
-
 MNM_OP_DECLARE("mnm.op.upper_bound.argwhere", [](const CallValues& call) {
   // alloc tensor for possible maximum data size and actual shape
   const auto* args = call->args.as<ArgwhereArgs>();

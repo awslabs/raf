@@ -333,13 +333,26 @@ MNM_OP_GRAD("mnm.op.strided_slice", StridedSliceGrad);
 
 Array<Expr> WhereGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
-  static auto where_dx = Op::Get("mnm.op.where_dx");
+  static auto where = Op::Get("mnm.op.where");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
+  const Expr& cond = call->args[0];
   const Expr& x1 = call->args[1];
   const Expr& x2 = call->args[2];
-  const Expr& ret = Call(where_dx, {x1, x2, y, dy});
-  return {NullValue<Expr>(), TupleGetItem(ret, 0), TupleGetItem(ret, 1)};
+  static auto zeros_like = Op::Get("mnm.op.zeros_like");
+  auto zero = Call(zeros_like, {dy});
+
+  const Expr& dx1 = Call(where, {cond, dy, zero});
+  const Expr& dx2 = Call(where, {cond, zero, dy});
+  auto f = [](const Expr& dx, const Expr& x) {
+    static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
+    static auto collapse_keep = Op::Get("mnm.op.get_kept_dims");
+    static auto sum = Op::Get("mnm.op.sum");
+    Call axes = Call(collapse_axis, {dx, x});
+    Call keep = Call(collapse_keep, {dx, x});
+    return Call(sum, {dx, axes, keep});
+  };
+  return {NullValue<Expr>(), f(dx1, x1), f(dx2, x2)};
 }
 
 MNM_OP_GRAD("mnm.op.where", WhereGrad);

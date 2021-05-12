@@ -207,7 +207,6 @@ static const char vm_infer_type[] = "mnm.op.vm.infer_type";
 static const char vm_invoke_op[] = "mnm.op.vm.invoke_op";
 static const char vm_set_shape[] = "mnm.op.vm.set_shape";
 static const char where[] = "mnm.op.where";
-static const char where_dx[] = "mnm.op.where_dx";
 static const char zeros[] = "mnm.op.zeros";
 static const char zeros_like[] = "mnm.op.zeros_like";
 }  // namespace names
@@ -2724,17 +2723,6 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.where").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
-MNM_REGISTER_GLOBAL("mnm.op.imp.where_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(where_dx, 4, ffi2schema::BinaryDx,
-              schema::BinaryDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
-  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->y));
-  MNM_SET_ENV(vpack->x[3], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->y, value);
-  *ret = MNM_RET();
-});
-
 MNM_REGISTER_GLOBAL("mnm.op.imp.zeros").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(zeros, 3, ffi2schema::InitOp, schema::InitOpArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::IntOrTupleInt(schema->shape));
@@ -3833,7 +3821,6 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.vm.invoke_op")
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.set_shape")
     .set_body(MNM_SYMBOLIC_API(vm_set_shape, 2, SetShape));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
-MNM_REGISTER_GLOBAL("mnm.op.sym.where_dx").set_body(MNM_SYMBOLIC_API(where_dx, 4, BinaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros").set_body(MNM_SYMBOLIC_API(zeros, 3, InitOp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros_like").set_body(MNM_SYMBOLIC_API(zeros_like, 1, Unary));
 
@@ -7040,10 +7027,6 @@ MNM_BIND_SCHEMA("mnm.op.where", names::where,
                 value2schema::Where);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.where", names::where,
                             schema_field_idx::Where);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.where_dx", names::where_dx,
-                value2schema::BinaryDx);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.where_dx", names::where_dx,
-                            schema_field_idx::BinaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.zeros", names::zeros,
                 value2schema::InitOp);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.zeros", names::zeros,
