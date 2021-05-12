@@ -61,7 +61,8 @@ def test_dynamic_model():
     mod = mnm._ffi.pass_.InferType()(mod)
     mod = mnm._ffi.pass_.FuseOps(3)(mod)
     comp = mnm._core.executor.VMCompiler()
-    opt_mod, _ = comp.optimize(mod, target="llvm", params={})
+    with tvm.transform.PassContext(opt_level=1):
+        opt_mod, _ = comp.optimize(mod, target="llvm", params={})
     text = opt_mod['main'].astext(False)
     assert '\n'.join(text.splitlines()[:-4]) == """#[version = "0.0.5"]
 fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {

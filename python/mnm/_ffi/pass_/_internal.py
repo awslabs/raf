@@ -54,6 +54,8 @@ LivenessAnalysis = _APIS.get("mnm.pass_.LivenessAnalysis", None)
 MNMSequential = _APIS.get("mnm.pass_.MNMSequential", None)
 # Defined in ./src/pass/manifest_alloc.cc
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
+# Defined in ./src/pass/memory_plan.cc
+MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 # Defined in ./src/pass/partition_graph.cc

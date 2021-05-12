@@ -352,6 +352,7 @@ class LivenessAnalyzer::FormChecker : public ExprVisitor {
 
   void VisitExpr_(const CallNode* node);
   void VisitExpr_(const IfNode* node) override;
+  void VisitExpr_(const FunctionNode* node) override;
   void Run() {
     VisitExpr(body_);
   }

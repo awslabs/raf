@@ -99,18 +99,23 @@ MapVSet LivenessAnalyzer::Run() {
 }
 
 void LivenessAnalyzer::FormChecker::VisitExpr_(const CallNode* node) {
-  if (!node->op.as<OpNode>()) {
-    // Do not support closure yet.
-    analyzer_->failure_ = true;
-  } else {
-    const Array<Expr>& args = node->args;
-    Array<Var> vargs;
-    for (const auto& arg : node->args) {
-      if (arg.as<VarNode>() == nullptr && arg.as<ConstantNode>() == nullptr) {
-        // Only support ANF with exceptions of Constant
-        analyzer_->failure_ = true;
-      }
+  const Array<Expr>& args = node->args;
+  Array<Var> vargs;
+  for (const auto& arg : node->args) {
+    if (arg.as<VarNode>() == nullptr && arg.as<ConstantNode>() == nullptr) {
+      // Only support ANF with exceptions of Constant
+      analyzer_->failure_ = true;
     }
+  }
+}
+
+void LivenessAnalyzer::FormChecker::VisitExpr_(const FunctionNode* node) {
+  // TODO(hzfan, comaniac): Support liveness analysis in closures.
+  // We do not support liveness analysis in closures for now, so we treat closures
+  // as ops and will not analyze tensor liveness inside closure body.
+  VisitSpan(node->span);
+  for (auto param : node->params) {
+    ExprVisitor::VisitExpr(param);
   }
 }
 
@@ -146,12 +151,8 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const FunctionNode* node) {
 }
 
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const CallNode* node) {
-  if (node->op.as<OpNode>()) {
-    Var dummy = analyzer_->CreateTensorVar(node->checked_type());
-    analyzer_->Init(let_var_, dummy);
-  } else {
-    LOG(FATAL) << "NotImplementedError: Calling unsupported type: " << node->op->GetTypeKey();
-  }
+  Var dummy = analyzer_->CreateTensorVar(node->checked_type());
+  analyzer_->Init(let_var_, dummy);
 }
 
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const TupleNode* node) {
@@ -215,10 +216,12 @@ Var LivenessAnalyzer::ForwardAnalyzer::Run() {
   for (int i = 0; i < n; ++i) {
     let_var_ = vars[i];
 
-    // We need to handle OpNode here, because all OpNodes with the same op point to
-    // the same reference, so only the first OpNode will be visited.
+    // We need to handle OpNode and ConstantNode here, because all these nodes with
+    // the same value may point to the same reference, so only the first one will be visited.
     if (exprs[i].as<OpNode>()) {
       analyzer_->Init(let_var_, analyzer_->CreateNull("op"));
+    } else if (exprs[i].as<ConstantNode>()) {
+      analyzer_->Init(let_var_, analyzer_->CreateNull("const"));
     }
     ExprVisitor::VisitExpr(exprs[i]);
   }
@@ -238,25 +241,21 @@ void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const FunctionNode* node) {
 }
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const CallNode* node) {
-  if (node->op.as<OpNode>()) {
-    const Array<Expr>& args = node->args;
-    Array<Var> vargs;
-    for (const auto& arg : node->args) {
-      if (arg.as<VarNode>()) {
-        // use %arg
-        vargs.push_back(Downcast<Var>(arg));
-      } else if (arg.as<ConstantNode>() || arg.as<OpNode>()) {
-        // use nothing
-      } else {
-        LOG(FATAL) << "NotImplementedError: unsupported args: " << arg->GetTypeKey();
-      }
+  const Array<Expr>& args = node->args;
+  Array<Var> vargs;
+  for (const auto& arg : node->args) {
+    if (arg.as<VarNode>()) {
+      // use %arg
+      vargs.push_back(Downcast<Var>(arg));
+    } else if (arg.as<ConstantNode>() || arg.as<OpNode>()) {
+      // use nothing
+    } else {
+      LOG(FATAL) << "NotImplementedError: unsupported args: " << arg->GetTypeKey();
     }
-    Var d1 = analyzer_->Merge(vargs);
-    Var d2 = MergeLive(d1, let_var_);
-    analyzer_->live_[let_var_] = analyzer_->vset_[d2];
-  } else {
-    LOG(FATAL) << "NotImplementedError: Calling unsupported type: " << node->op->GetTypeKey();
   }
+  Var d1 = analyzer_->Merge(vargs);
+  Var d2 = MergeLive(d1, let_var_);
+  analyzer_->live_[let_var_] = analyzer_->vset_[d2];
 }
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const TupleNode* node) {
@@ -300,9 +299,9 @@ void LivenessAnalyzer::BackwardAnalyzer::Run(Var next_var) {
     let_var_ = vars[i];
     next_var_ = i == n - 1 ? dummy : vars[i + 1];
 
-    // We need to handle OpNode here, because all OpNodes with the same op point to
-    // the same reference, so only the first OpNode will be visited.
-    if (exprs[i].as<OpNode>()) {
+    // We need to handle OpNode and ConstantNode here, because all these nodes with
+    // the same value may point to the same reference, so only the first one will be visited.
+    if (exprs[i].as<OpNode>() || exprs[i].as<ConstantNode>()) {
       auto dummy_vars = analyzer_->GetTensorVars(next_var_);
       Var d1 = analyzer_->Merge(dummy_vars);
       Var d2 = MergeLive(d1, next_var_);

@@ -22,6 +22,7 @@ using tvm::transform::CreateModulePass;
 using tvm::transform::Pass;
 using tvm::transform::PassContext;
 using tvm::transform::PassInfo;
+
 /*!
  * \brief A pass that does automatic differentiation.
  * \param requires_grads If input(s) of function requires gradient. It is in the same order as
@@ -29,6 +30,7 @@ using tvm::transform::PassInfo;
  * \return The created passed.
  */
 Pass AutoDiff(ir::Array<tvm::Bool> requires_grads = {});
+
 /*!
  * \brief A pass that performs data parallelism. It mainly modifies the backward
  * closure by adding communication ops after the ops that generate local
@@ -37,32 +39,44 @@ Pass AutoDiff(ir::Array<tvm::Bool> requires_grads = {});
  * \return The created pass.
  */
 Pass AutoDataParallel();
+
 /*!
  * \brief The constant folding pass.
  * \return The created pass.
  */
 Pass FoldConstant();
 ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
+
 /*!
  * \brief A pass that lifts the lambda to the global scope.
  * \return The created pass.
  */
 Pass LambdaLift();
+
 /*!
  * \brief A pass that is used for gradient operator input selection.
  * \return The created pass.
  */
 Pass GradInputSelect();
+
 /*!
  * \brief A pass that manifests memory allocation.
  * \return The created pass.
  */
 Pass ManifestAlloc();
+
+/*!
+ * \brief A pass that optimizes memory footprint.
+ * \return The created pass.
+ */
+Pass MemoryPlan();
+
 /*!
  * \brief A pass that canonicalize operators.
  * \return The created pass.
  */
 Pass CanonicalizeOps();
+
 /*!
  * \brief Create a type inference pass.
  * \return The created pass.

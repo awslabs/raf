@@ -3,7 +3,7 @@
 import pytest
 import mnm
 from mnm._lib import tvm, relay
-from mnm._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc
+from mnm._ffi.pass_ import FuseOps, InferType, LivenessAnalysis, ManifestAlloc
 from mnm.testing import randn
 
 def verify_live_in_set(mod, expected):
@@ -148,6 +148,39 @@ def test_tuple_input():
     mod = model._internal(*args).mod
     verify_live_in_set(mod, expected)
 
+def test_unused_tuple():
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, tup):
+            x = tup[0] # a1
+            t_0 = mnm.add(x, x) # a2
+            t_1 = mnm.concatenate(tup) # a3
+            return (t_0, t_1) # n_1
+
+    model = Model()
+    model.infer_mode()
+
+    device = "cpu"
+    shape = (5, 5)
+    m_a, _ = randn(shape, device=device)
+    m_b, _ = randn(shape, device=device)
+    args = [(m_a, m_b)]
+
+    # There won't be a tgi_1 because it is never be used.
+    expected = {
+        "n_0": {},
+        "a1": {"param_0", "param_1"},
+        "a2": {"param_0", "param_1"},
+        "a3": {"param_0", "param_1", "t_0"},
+        "n_1": {"t_0", "t_1"},
+    }
+
+    mod = model._internal(*args).mod
+    verify_live_in_set(mod, expected)
+
 
 def test_manifest_alloc_compatible():
     def test_func():
@@ -197,7 +230,7 @@ def test_manifest_alloc_compatible():
 
         return relay.Function([x, y], let0)
 
-    # Note that a3 will not be visited.
+    # Note that a3 will be inlined after InferType.
     expected = {
         "n_1": {},
         "a0": {"param_0", "param_1"},
@@ -240,7 +273,9 @@ def test_after_manifest_alloc():
     mod = InferType()(mod)
     mod = ManifestAlloc()(mod)
     # pylint: disable=line-too-long
-    # def @main(%param_0: Tensor[(5, 5), float32], %param_1: Tensor[(5, 5), float32], %param_2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
+    # def @main(%param_0: Tensor[(5, 5), float32],
+    #           %param_1: Tensor[(5, 5), float32],
+    #           %param_2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
     #   let %x_0 = nullptr /* ty=() */;
     #   let %x_1 = nullptr /* ty=() */;
     #   let %x_2 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
@@ -297,6 +332,95 @@ def test_after_manifest_alloc():
         "n_4": {'t_5'},
     }
 
+    verify_live_in_set(mod, expected)
+
+
+def test_fuse_closure():
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, p0, p1, p2):
+            t_0 = mnm.matmul(p0, p1)
+            t_1 = mnm.add(t_0, p2)
+            t_2 = mnm.relu(t_1)
+            return t_2
+
+    model = Model()
+    model.infer_mode()
+
+    device = "cpu"
+    shape = (5, 5)
+    m_p0, _ = randn(shape, device=device)
+    m_p1, _ = randn(shape, device=device)
+    m_p2, _ = randn(shape, device=device)
+    args = [m_p0, m_p1, m_p2]
+
+    mod = model._internal(*args).mod
+    mod = FuseOps(1)(mod)
+    # fn (%p0: Tensor[(5, 5), float32],
+    #     %p1: Tensor[(5, 5), float32],
+    #     %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
+    #   let %a1 = mnm.op.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
+    #   %1 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32],
+    #            Primitive=1) -> Tensor[(5, 5), float32] {
+    #     %0 = mnm.op.add(%p01, %p11);
+    #     mnm.op.relu(%0)
+    #   };
+    #   let %a3 = %1(%a1, %p2);
+    #   %a3
+    # }
+    expected = {
+        "n_0": {},
+        "a1": {"param_0", "param_1", "param_2"},
+        "a3": {"param_2", "t_0"},
+        "n_1": {"t_1"},
+    }
+    verify_live_in_set(mod, expected)
+    mod = InferType()(mod)
+    mod = ManifestAlloc()(mod)
+    # fn (%p0: Tensor[(5, 5), float32],
+    #     %p1: Tensor[(5, 5), float32],
+    #     %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
+    #   let %x_0 = mnm.op.vm.alloc_storage(-114514, -114514, -114514, -114514, -114514);
+    #   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, -114514, -114514, -114514);
+    #   let %x_2 = mnm.op.matmul;
+    #   let %x_3 = (%p0, %p1);
+    #   let %x_4 = (%x_1,);
+    #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
+    #   let %a1 = %x_1;
+    #   let %x_6 = mnm.op.vm.alloc_storage(-114514, -114514, -114514, -114514, -114514);
+    #   let %x_7 = mnm.op.vm.alloc_tensor(%x_6, -114514, -114514, -114514);
+    #   let %x_8 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32],
+    #                  Primitive=1) -> Tensor[(5, 5), float32] {
+    #     %0 = mnm.op.add(%p01, %p11) /* ty=Tensor[(5, 5), float32] */;
+    #     mnm.op.relu(%0) /* ty=Tensor[(5, 5), float32] */
+    #   };
+    #   let %x_9 = (%a1, %p2);
+    #   let %x_10 = (%x_7,);
+    #   let %x_11 = mnm.op.vm.invoke_op(%x_8, %x_9, %x_10);
+    #   let %a3 = %x_7;
+    #   %a3
+    # }
+    expected = {
+        "n_3": {},
+        "x_0": {"param_0", "param_1", "param_2"},
+        "x_1": {"param_0", "param_1", "param_2", "t_0"},
+        "x_2": {"param_0", "param_1", "param_2", "t_1"},
+        "x_3": {"param_0", "param_1", "param_2", "t_1"},
+        "x_4": {"param_0", "param_1", "param_2", "t_1"},
+        "x_5": {"param_0", "param_1", "param_2", "t_1"},
+        "a1": {"param_2", "t_1"},
+        "x_6": {"param_2", "t_1"},
+        "x_7": {"param_2", "t_1", "t_2"},
+        "x_8": {"param_2", "t_1", "t_3"},
+        "x_9": {"param_2", "t_1", "t_3"},
+        "x_10": {"param_2", "t_1", "t_3"},
+        "x_11": {"param_2", "t_1", "t_3"},
+        "a3": {"t_3"},
+        "n_4": {"t_3"},
+    }
     verify_live_in_set(mod, expected)
 
 

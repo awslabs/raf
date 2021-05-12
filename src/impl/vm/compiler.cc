@@ -31,6 +31,7 @@ namespace vm {
 
 using namespace mnm::ir;
 using namespace mnm::op;
+using namespace mnm::pass;
 using namespace mnm::value;
 using namespace mnm::type;
 using namespace tvm;
@@ -589,8 +590,11 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
             << "internal error: all variables should be in the register mapping";
         argument_registers.push_back(reg->second);
       } else {
-        LOG(FATAL) << "internal error: each element in inputs of invoke_op must be a var,"
-                   << "please file a bug in the memory manifestation pass";
+        // We have to cover this special case because we may run InferType, which does
+        // constant folding, after ManifestAlloc, so the IR may not be a strict ANF.
+        CHECK(input.as<ConstantNode>());
+        VisitExpr(input);
+        argument_registers.push_back(last_register_);
       }
     }
 
@@ -633,8 +637,11 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
             << "internal error: all variables should be in the register mapping";
         argument_registers.push_back(reg->second);
       } else {
-        LOG(FATAL) << "internal error: each element in inputs of infer_type must be a var,"
-                   << "please file a bug in the memory manifestation pass";
+        // We have to cover this special case because we may run InferType, which does
+        // constant folding, after ManifestAlloc, so the IR may not be a strict ANF.
+        CHECK(input.as<ConstantNode>());
+        VisitExpr(input);
+        argument_registers.push_back(last_register_);
       }
     }
 
@@ -725,18 +732,24 @@ void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Targe
 }
 
 IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targets) {
-  auto m = pass::InferType()(mod);
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
   With<tvm::Target> tctx((*it).second);
-  m = pass::InplaceUpdate()(m);
-  m = pass::InferType()(m);
+  Array<Pass> pass_seqs;
+  pass_seqs.push_back(pass::InferType());
+  pass_seqs.push_back(pass::InplaceUpdate());
+  pass_seqs.push_back(pass::InferType());
   // TODO(@hzfan): Currently disable the ValidateInplaceUpdate pass because it removes the may_share
   // attr in some cases without any error messages.
-  // m = pass::ValidateInplaceUpdate(true)(m);
-  // m = pass::InferType()(m);
-  m = pass::ManifestAlloc()(m);
-  return m;
+  // pass_seqs.push_back(pass::ValidateInplaceUpdate(true));
+  // pass_seqs.push_back(pass::InferType());
+  pass_seqs.push_back(pass::ManifestAlloc());
+  pass_seqs.push_back(pass::MemoryPlan());
+
+  Sequential seq(pass_seqs);
+  transform::PassContext pass_ctx = PassContext::Current();
+  tvm::With<PassContext> ctx(pass_ctx);
+  return seq(mod);
 }
 
 void VMCompiler::PopulateGlobalMap() {
