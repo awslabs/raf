@@ -179,8 +179,22 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
 
 MNM_OP_GRAD("mnm.op.divide", DivGrad);
 
-MNM_OP_GRAD("mnm.op.not_equal", NoGrads<2>);
-MNM_OP_GRAD("mnm.op.equal", NoGrads<2>);
+Array<Expr> BinaryZeroGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                           const Expr& dy) {
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& x1 = call->args[0];
+  const Expr& x2 = call->args[1];
+  auto MakeZero = [](const Expr expr) {
+    static auto zeros_like = Op::Get("mnm.op.zeros_like");
+    auto zero_grad = Call(zeros_like, {expr});
+    return zero_grad;
+  };
+  return {MakeZero(x1), MakeZero(x2)};
+}
+
+MNM_OP_GRAD("mnm.op.not_equal", BinaryZeroGrad);
+MNM_OP_GRAD("mnm.op.equal", BinaryZeroGrad);
 
 }  // namespace grad
 }  // namespace op
