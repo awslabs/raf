@@ -65,6 +65,8 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
   Array<tvm::transform::Pass> passes;
   // run canonicalize ops pass (it needs "inter type pass" to work properly.)
   passes.push_back(CanonicalizeOps());
+  // run const folding pass to avoid AD on constant ops
+  passes.push_back(FoldConstant());
   // run auto diff pass
   passes.push_back(AutoDiff(requires_grads));
 
