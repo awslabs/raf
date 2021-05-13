@@ -73,7 +73,7 @@ void CutlassGemmOpEnv::InitGemmOperation(
 std::vector<std::unique_ptr<TunableConfig>> CutlassGemmOpEnv::ListTunableConfigs() {
   // Tunable configuration: split_k_slices
   // Split axis k into 1 slice (no slicing) or 4 slices
-  const static std::vector<int> split_k_slices = {1, 4};
+  const static std::vector<int> split_k_slices = {1, 2, 4, 8};
 
   // Tunable configuration: split_k_mode
   // Whether to compute different slices serially or parallelly

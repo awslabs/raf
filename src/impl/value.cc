@@ -338,7 +338,8 @@ float GetScalarValueData<float>(const Value& value) {
     cpu_ctx.device_type = kDLCPU;
     cpu_ctx.device_id = 0;
     NDArray cpu_array = tensor.CopyTo(cpu_ctx);
-    CHECK_EQ(DataType(cpu_array->dtype), DataType::Float(32));
+    CHECK(DataType(cpu_array->dtype) == DataType::Float(32) ||
+          DataType(cpu_array->dtype) == DataType::Float(16));
     CHECK_EQ(cpu_array->ndim, 0);
     return reinterpret_cast<float*>(cpu_array->data)[0];
   }

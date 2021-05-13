@@ -90,9 +90,11 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   auto konst2 = IsConstant();
   auto x1 = IsVar("");
   auto x2 = IsVar("");
+  auto beta = IsVar("");
   auto bias = IsVar("");
   DFPattern pat = matmul({x1, x2});
-  DFPattern with_bias = Add()(pat, bias);
+  DFPattern scaled_bias = bias || Multiply()(beta, bias);
+  DFPattern with_bias = Add()(pat, scaled_bias);
   pat = pat || with_bias;
   DFPattern with_epilogue = epilogue({pat});
   pat = pat || with_epilogue;
@@ -111,7 +113,7 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
         Op matmul_op = GetPattern<Op>(node_map, matmul);
         a_ = GetPattern<Var>(node_map, x1);
         b_ = GetPattern<Var>(node_map, x2);
-        with_bias_ = GetPattern<Var>(node_map, bias).defined();
+        with_bias_ = GetPattern<Expr>(node_map, scaled_bias).defined();
         epilogue_op_ = GetEpilogueKind(GetPattern<Op>(node_map, epilogue));
         // TODO(@hzfan): remove this if after we have mnm.op.gelu
         if (GetPattern<Expr>(node_map, with_epilogue_gelu).defined()) {
@@ -120,6 +122,7 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
         batched_ = IsBatch(matmul_op);
         std::tie(transpose_a_, transpose_b_) = GetTranspose(matmul_op);
         if (with_bias_) {
+          beta_ = GetPattern<Var>(node_map, beta);
           bias_ = GetPattern<Var>(node_map, bias);
         }
         return post;
@@ -129,8 +132,13 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   return true;
 }
 
-bool CutlassMatmulOpEnv::IsValid() {
-  return a_.defined() && b_.defined() && (!with_bias_ || bias_.defined());
+bool CutlassMatmulOpEnv::IsValid(const CallValues& cv) {
+  bool flag = a_.defined() && b_.defined() && (!with_bias_ || bias_.defined());
+  if (beta_.defined()) {
+    DLTensor* x = GetValue<TensorValue>(cv, beta_);
+    flag = flag && ((x->ndim == 0) || (x->ndim == 1 && x->shape[0] == 1));
+  }
+  return flag;
 }
 
 void CutlassMatmulOpEnv::Init(const CallValues& cv) {
@@ -143,6 +151,7 @@ void CutlassMatmulOpEnv::Init(const CallValues& cv) {
   int m = c->shape[batched + 1];
   int n = c->shape[batched + 0];
   int k = transpose_b_ ? b->shape[batched + 1] : b->shape[batched + 0];
+  CHECK(DType(c->dtype) == DType(bias->dtype));
 
   int lda = a->shape[batched + 1];
   int ldb = b->shape[batched + 1];
@@ -160,14 +169,22 @@ void CutlassMatmulOpEnv::Init(const CallValues& cv) {
   const auto layouta = transpose_a_ ? LayoutTypeID::kRowMajor : LayoutTypeID::kColumnMajor;
   const auto layoutb = transpose_b_ ? LayoutTypeID::kRowMajor : LayoutTypeID::kColumnMajor;
 
+  DType accumulation_dtype = GetAccumulationDType(DType(c->dtype));
+  DType scalar_dtype = accumulation_dtype;
+  const void* alpha = const_addr<1>(cudaDataType_t(scalar_dtype));
+  const void* beta = with_bias_ ? const_addr<1>(cudaDataType_t(scalar_dtype))
+                                : const_addr<0>(cudaDataType_t(scalar_dtype));
+  if (beta_.defined()) {
+    beta_ptr_ = shared_addr(cudaDataType_t(scalar_dtype),
+                            GetScalarValueData<float>(GetValue<TensorValue>(cv, beta_)));
+    beta = beta_ptr_.get();
+  }
+
   InitGemmOperation(batched ? GemmUniversalMode::kBatched : GemmUniversalMode::kGemm, m, n, k,
-                    GetNumericTypeID(c->dtype), GetNumericTypeID(c->dtype),
-                    const_addr<1>(cudaDataType_t(DType(c->dtype))), GetNumericTypeID(b->dtype),
-                    layoutb, ptrb, ldb, GetNumericTypeID(a->dtype), layouta, ptra, lda,
-                    with_bias_ ? const_addr<1>(cudaDataType_t(DType(c->dtype)))
-                               : const_addr<0>(cudaDataType_t(DType(c->dtype))),
-                    GetNumericTypeID(c->dtype), ptrbias, ldbias, ptrc, ldc,
-                    batched ? batch : tunable_.split_k_slices, batch_stride_b, batch_stride_a,
+                    GetNumericTypeID(accumulation_dtype), GetNumericTypeID(scalar_dtype), alpha,
+                    GetNumericTypeID(b->dtype), layoutb, ptrb, ldb, GetNumericTypeID(a->dtype),
+                    layouta, ptra, lda, beta, GetNumericTypeID(c->dtype), ptrbias, ldbias, ptrc,
+                    ldc, batched ? batch : tunable_.split_k_slices, batch_stride_b, batch_stride_a,
                     batch_stride_bias, batch_stride_c, epilogue_op_, tunable_.kernel_name);
   arg_indices = GetArgIndices(
       cv, with_bias_ ? std::vector<Var>({a_, b_, bias_}) : std::vector<Var>({a_, b_}));
@@ -175,7 +192,7 @@ void CutlassMatmulOpEnv::Init(const CallValues& cv) {
 
 OpEnv* CutlassMatmulOpEnv::make(const CallValues& cv) {
   std::unique_ptr<CutlassMatmulOpEnv> op_env(std::make_unique<CutlassMatmulOpEnv>(cv));
-  if (!op_env->Pattern(cv) || !op_env->IsValid()) {
+  if (!op_env->Pattern(cv) || !op_env->IsValid(cv)) {
     return nullptr;
   }
   op_env->Init(cv);

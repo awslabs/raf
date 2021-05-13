@@ -40,6 +40,22 @@ void CutlassOpEnv::RequestWorkspace(void** dest, const Device& device, int64_t n
   *dest = workspace_mem_->data;
 }
 
+std::ostream& operator<<(std::ostream& stream, const std::unique_ptr<TunableConfig>& config) {
+  config->AsText(stream);
+  return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const SplitKMode& mode) {
+  if (mode == SplitKMode::kSerial) {
+    stream << "kSerial";
+  } else if (mode == SplitKMode::kParallel) {
+    stream << "kParallel";
+  } else {
+    LOG(FATAL) << "Unknown SplitKMode";
+  }
+  return stream;
+}
+
 NumericTypeID GetNumericTypeID(DType dtype) {
   if (dtype.lanes != 1) {
     return NumericTypeID::kUnknown;

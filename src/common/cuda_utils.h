@@ -53,6 +53,31 @@ inline const void* const_addr(cudaDataType_t dt) {
   throw;
 }
 
+template <typename T>
+inline std::shared_ptr<void> shared_typed_addr(float value) {
+  return std::make_shared<T>(value);
+}
+
+inline std::shared_ptr<void> shared_addr(cudaDataType_t dt, float value) {
+  switch (dt) {
+    case CUDA_R_8I:
+      return shared_typed_addr<int8_t>(value);
+    case CUDA_R_8U:
+      return shared_typed_addr<uint8_t>(value);
+    case CUDA_R_16F:
+      return shared_typed_addr<__half>(value);
+    case CUDA_R_32F:
+      return shared_typed_addr<float>(value);
+    case CUDA_R_64F:
+      return shared_typed_addr<double>(value);
+    default:
+      LOG(FATAL) << "Not supported data type!";
+      throw;
+  }
+  LOG(FATAL) << "ValueError: Unknown error!\n";
+  throw;
+}
+
 namespace mnm {
 
 template <>

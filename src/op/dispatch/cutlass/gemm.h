@@ -38,7 +38,7 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
 
   void Execute(const std::vector<Value>& inputs, Value output);
 
-  bool IsValid();
+  bool IsValid(const CallValues& cv);
 
   static OpEnv* make(const CallValues& cv);
 
@@ -47,6 +47,8 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
   Var a_;
   /*! \brief matmul operand b */
   Var b_;
+  /*! \brief bias scaling factor */
+  Var beta_;
   /*! \brief bias added to matmul result */
   Var bias_;
   /*! \brief whether to transpose a */
@@ -57,6 +59,8 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
   bool with_bias_;
   /*! \brief batch matmul or not */
   bool batched_;
+  /*! \brief pointer to beta, the bias scaling factor */
+  std::shared_ptr<void> beta_ptr_;
   /*! \brief epilogue operator like relu, gelu, etc. */
   EpilogueKindExt epilogue_op_;
 };

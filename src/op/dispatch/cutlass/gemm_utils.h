@@ -20,6 +20,14 @@ struct GemmTunableConfig : public TunableConfig {
   GemmTunableConfig() : split_k_mode(SplitKMode::kSerial), split_k_slices(1) {
   }
 
+  virtual void AsText(std::ostream& os) const override {
+    os << "{" << std::endl;
+    os << "  kernel_name: " << kernel_name << std::endl;
+    os << "  split_k_mode: " << split_k_mode << std::endl;
+    os << "  split_k_slices: " << split_k_slices << std::endl;
+    os << "}" << std::endl;
+  }
+
   /*! \brief split axis k serially or parallelly */
   SplitKMode split_k_mode;
   /*! \brief the number of slices to be split into */

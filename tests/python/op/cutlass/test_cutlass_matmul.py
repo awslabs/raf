@@ -13,22 +13,27 @@ from mnm.model.nn import Linear, GELU
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
 @pytest.mark.parametrize("epilogue", [
+    [None, None],
     [mnm._op.sym.relu, torch.nn.functional.relu],
     [GELU(), torch.nn.GELU()]
 ])
+@pytest.mark.parametrize("beta", [None, 0.5, 2.0])
 @with_backend("cutlass")
-def test_matmul_add_epilogue(m, n, k, epilogue):
+def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     m_epilogue, t_epilogue = epilogue
 
     class TestModel(mnm.Model):
         def build(self):
             self.epilogue = m_epilogue
+            if beta:
+                self.beta = mnm.array(beta, dtype="float32")
 
         @mnm.model.trace
         def forward(self, x, w, bias):  # pylint: disable=no-self-use
             x = mnm.matmul(x, w)
-            x = mnm.add(x, bias)
-            x = self.epilogue(x)
+            scaled_bias = mnm.multiply(self.beta, bias) if beta else bias
+            x = mnm.add(x, scaled_bias)
+            x = self.epilogue(x) if self.epilogue else x
             return x
 
     device = "cuda"
@@ -38,7 +43,9 @@ def test_matmul_add_epilogue(m, n, k, epilogue):
     model = TestModel()
     model.to(device=device)
     m_y = run_vm_model(model, device, [m_x, m_w, m_bias], mnm._ffi.pass_.FuseOps(3))
-    t_y = t_epilogue(torch.matmul(t_x, t_w) + t_bias)
+    t_scaled_bias = t_bias * beta if beta else t_bias
+    t_y = torch.matmul(t_x, t_w) + t_scaled_bias
+    t_y = t_epilogue(t_y) if t_epilogue else t_y
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 

@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <iostream>
+
 #include "cutlass/library/library.h"
 #include "cutlass/library/handle.h"
 #include "cutlass_ext/library/operation_table_ext.h"
@@ -93,10 +95,18 @@ struct TunableConfig {
   }
   TunableConfig() : kernel_name("") {
   }
-
+  virtual void AsText(std::ostream& os) const {
+    os << "{" << std::endl;
+    os << "  kernel_name: " << kernel_name << std::endl;
+    os << "}" << std::endl;
+  }
   /*! \brief cutlass kernel name */
   std::string kernel_name;
 };
+
+std::ostream& operator<<(std::ostream& stream, const std::unique_ptr<TunableConfig>& config);
+
+std::ostream& operator<<(std::ostream& stream, const SplitKMode& mode);
 
 NumericTypeID GetNumericTypeID(DType dtype);
 

@@ -68,7 +68,7 @@ else()
   set(CUTLASS_ENABLE_EXAMPLES OFF CACHE BOOL "Enable CUTLASS Examples")
   set(CUTLASS_ENABLE_LIBRARY ON CACHE BOOL "Enable CUTLASS Library")
   set(CUTLASS_ENABLE_PROFILER OFF CACHE BOOL "Enable CUTLASS Profiler")
-  set(CUTLASS_LIBRARY_KERNELS "sgemm,tensorop_h884gemm,s*fprop,h*fprop" CACHE STRING "Comma delimited list of kernel name filters. If unspecified, only the largest tile size is enabled. If 'all' is specified, all kernels are enabled.")
+  set(CUTLASS_LIBRARY_KERNELS "sgemm,s884gemm,h884gemm,s*fprop,h*fprop" CACHE STRING "Comma delimited list of kernel name filters. If unspecified, only the largest tile size is enabled. If 'all' is specified, all kernels are enabled.")
   # The ignored ops are complex ops, sparse ops, and integer ops.
   set(CUTLASS_LIBRARY_IGNORE_KERNELS "complex,sp,i8816,i8832" CACHE STRING "Comma delimited list of kernel names to exclude from build.")
   set(CUTLASS_LIBRARY_KERNELS "invalid_kernel_name")
