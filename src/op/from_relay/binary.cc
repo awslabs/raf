@@ -13,12 +13,13 @@ namespace from_relay {
 using namespace mnm::ir;
 
 #define MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                            \
-  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
-    Array<Expr> mnm_args = args;                                                                   \
-    mnm_args.push_back(MakeConstant(NullValue<Value>()));                                          \
-    mnm_args.push_back(MakeConstant(NullValue<Value>()));                                          \
-    return mnm_args;                                                                               \
-  })
+  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME,                                                    \
+                    [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) { \
+                      Array<Expr> mnm_args = args;                                                 \
+                      mnm_args.push_back(MakeConstant(NullValue<Value>()));                        \
+                      mnm_args.push_back(MakeConstant(NullValue<Value>()));                        \
+                      return mnm_args;                                                             \
+                    })
 
 MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY("add", "mnm.op.add");
 MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY("subtract", "mnm.op.subtract");

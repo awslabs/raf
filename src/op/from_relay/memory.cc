@@ -11,7 +11,7 @@ namespace op {
 namespace from_relay {
 
 MNM_OP_FROM_RELAY("device_copy", "mnm.op.device_copy",
-                  [&](const Attrs& attrs, const Array<Expr>& args) {
+                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<DeviceCopyAttrs>();
                     mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->src_dev_type)));
