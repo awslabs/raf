@@ -85,7 +85,7 @@ Var GetMayShare(Var var) {
   return vn->may_share;
 }
 
-MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
+MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value, bool show_meta_data) {
   auto annotate =
       tvm::runtime::TypedPackedFunc<String(ObjectRef)>([](const ObjectRef& expr) -> String {
         std::ostringstream os;
@@ -100,7 +100,8 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
         }
         if ((expr.as<ConstantNode>() || expr.as<CallNode>()) &&
             Downcast<Expr>(expr)->checked_type_.defined()) {
-          tvm::relay::RelayTextPrinter printer(false, nullptr, nullptr);
+          auto meta = tvm::TextMetaDataContext();
+          tvm::relay::RelayTextPrinter printer(false, &meta, nullptr);
           os << " /* ty=" << printer.Print(Downcast<Expr>(expr)->checked_type()).str() << " */";
         }
         const auto* extended_var = expr.as<ExtendedVarNode>();
@@ -109,11 +110,11 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value) {
         }
         return String(os.str());
       });
-  return tvm::AsText(value, false, annotate);
+  return tvm::AsText(value, show_meta_data, annotate);
 });
 
-String AsText(const ObjectRef& node) {
-  return registry::GetPackedFunc("mnm.ir.AsText")(node);
+String AsText(const ObjectRef& node, bool show_meta_data) {
+  return registry::GetPackedFunc("mnm.ir.AsText")(node, show_meta_data);
 }
 
 MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);

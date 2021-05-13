@@ -538,7 +538,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       VisitExpr(MakeConstant(ClosureValue::make({}, GetRef<Function>(func_node))));
     } else {
       LOG(FATAL) << "local functions should have been removed by lambda lifting:" << std::endl
-                 << "Program: " << AsText(GetRef<Function>(func_node), false) << std::endl
+                 << "Program: " << tvm::AsText(GetRef<Function>(func_node), false) << std::endl
                  << "AST: " << GetRef<Function>(func_node);
     }
   }
