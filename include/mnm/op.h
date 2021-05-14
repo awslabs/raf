@@ -150,6 +150,9 @@ using tvm::relay::kTuple;
 using tvm::relay::OpPatternKind;
 using tvm::relay::TOpPattern;
 using tvm::runtime::Array;
+using tvm::runtime::Map;
+using tvm::runtime::ObjectPtrEqual;
+using tvm::runtime::ObjectPtrHash;
 
 /*! \brief Map from input index to output index that the output share the memory with input. */
 using TMNMInplaceUpdate = ir::Map<ir::Integer, ir::Integer>;
@@ -189,8 +192,8 @@ using FFusedPrimalGradient = registry::TypedPackedFunc<
         // in_grad: old igrads
         const ir::Array<ir::Expr>& in_grad)>;
 
-using FMNMFromRelay =
-    registry::TypedPackedFunc<ir::Expr(const ir::Attrs& attrs, const Array<ir::Expr>& args)>;
+using FMNMFromRelay = registry::TypedPackedFunc<ir::Expr(
+    const ir::Attrs& attrs, const Array<ir::Expr>& args, const Map<ir::Var, ir::Expr>& val_map)>;
 using FMNMMutationFromRelay =
     registry::TypedPackedFunc<Array<Array<ir::Expr>>(const ir::Var& var, const ir::Call& call)>;
 

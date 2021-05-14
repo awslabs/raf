@@ -77,7 +77,7 @@ set_property(
   MNM_USE_LLVM="${MNM_USE_LLVM}"
   MNM_USE_CUDNN="${MNM_USE_CUDNN}"
   MNM_CUDNN_VERSION="${MNM_CUDNN_VERSION}"
-  MNM_CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" 
+  MNM_CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
   MNM_USE_MPI="${MNM_USE_MPI}"
   MNM_USE_NCCL="${MNM_USE_NCCL}"
   MNM_USE_CUTLASS="${MNM_USE_CUTLASS}"
@@ -156,6 +156,7 @@ set(MNM_SOURCE_FILES
 add_library(mnm ${MNM_SOURCE_FILES})
 target_include_directories(mnm PRIVATE ${MNM_INCLUDE_DIRS})
 target_include_directories(mnm SYSTEM PRIVATE ${MNM_BACKEND_INCLUDE_DIRS})
+target_include_directories(mnm SYSTEM PRIVATE "3rdparty/tvm/3rdparty/compiler-rt")
 target_compile_options(mnm PRIVATE ${MNM_CXX_FLAGS})
 target_link_libraries(mnm PRIVATE ${MNM_LINK_LIBS} ${MNM_BACKEND_LINK_LIBS})
 target_compile_features(mnm PRIVATE cxx_std_14)
