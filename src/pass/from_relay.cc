@@ -120,7 +120,7 @@ struct FromRelayMutator : public ExprMutator {
       Var new_var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
       var_map_.Set(var, new_var);
       curr_let_var_ = new_var;
-      var_value_map_.Set(var, this->Mutate(op->value));
+      var_value_map_.insert({var, this->Mutate(op->value)});
     };
     auto post_visit = [this](const LetNode* op) {
       Expr value = this->Mutate(op->value);
@@ -153,7 +153,7 @@ struct FromRelayMutator : public ExprMutator {
       auto var = GetRef<Var>(var_node);
       auto it = var_value_map_.find(var);
       if (it != var_value_map_.end()) {
-        curr_op = (*it).second;
+        curr_op = it->second;
       } else {
         is_composite_op = false;
         break;
@@ -193,7 +193,7 @@ struct FromRelayMutator : public ExprMutator {
     Call res;
     if (fmap.count(op)) {
       try {
-        auto new_expr = fmap[op](node->attrs, node->args, var_value_map_);
+        auto new_expr = fmap[op](node->attrs, node->args);
         if (new_expr.as<CallNode>()) {
           Call new_call = Downcast<Call>(new_expr);
           tvm::Array<Expr> call_args;
@@ -278,7 +278,7 @@ struct FromRelayMutator : public ExprMutator {
   /*! \brief Map from var in Relay graph to the converted Meta graph. */
   Map<Var, Var> var_map_;
   /*! \brief Map from var in Relay graph to the converted Meta graph value. */
-  Map<Var, Expr> var_value_map_;
+  std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> var_value_map_;
   /*! \brief Map from unsupported op name to the appearance. */
   std::unordered_map<String, int> unsupported_ops_;
   /*! \brief Map from function parameters to their updated values */
@@ -350,10 +350,6 @@ Pass FromRelay(Array<String> disabled_pass) {
 
     for (const auto& pair : updates) {
       updated_mod->Add(pair.first, pair.second, true);
-    }
-    {
-      tvm::With<relay::transform::PassContext> ctx_scope(pass_ctx);
-      updated_mod = DeadCodeElimination()(updated_mod);
     }
     return updated_mod;
   };

@@ -13,34 +13,33 @@ namespace from_relay {
 MNM_GENERIC_ATTR_OP_FROM_RELAY("nn.batch_matmul", "mnm.op.batch_matmul_nt");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("nn.dense", "mnm.op.dense");
 
-MNM_OP_FROM_RELAY("nn.conv2d", "mnm.op.conv2d",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
-                    const auto* relay_attrs = attrs.as<Conv2DAttrs>();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->strides)));
+MNM_OP_FROM_RELAY("nn.conv2d", "mnm.op.conv2d", [&](const Attrs& attrs, const Array<Expr>& args) {
+  Array<Expr> mnm_args = args;
+  const auto* relay_attrs = attrs.as<Conv2DAttrs>();
+  mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->strides)));
 
-                    // Relay enforces 4-way padding to support asymmetric padding,
-                    // but Meta currently only supports symmetric padding.
-                    auto padding = ArrayToInt(relay_attrs->padding);
-                    CHECK(padding[0] == padding[2] && padding[1] == padding[3])
-                        << "Asymmetric padding for Conv2D is not supported yet";
-                    padding.pop_back();
-                    padding.pop_back();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->dilation)));
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->groups)));
-                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
-                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->kernel_layout)));
-                    if (relay_attrs->out_layout != "") {
-                      mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->out_layout)));
-                    } else {
-                      mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
-                    }
-                    return mnm_args;
-                  });
+  // Relay enforces 4-way padding to support asymmetric padding,
+  // but Meta currently only supports symmetric padding.
+  auto padding = ArrayToInt(relay_attrs->padding);
+  CHECK(padding[0] == padding[2] && padding[1] == padding[3])
+      << "Asymmetric padding for Conv2D is not supported yet";
+  padding.pop_back();
+  padding.pop_back();
+  mnm_args.push_back(MakeConstant(ArrayToIntTuple(padding)));
+  mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->dilation)));
+  mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->groups)));
+  mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
+  mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->kernel_layout)));
+  if (relay_attrs->out_layout != "") {
+    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->out_layout)));
+  } else {
+    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->data_layout)));
+  }
+  return mnm_args;
+});
 
 MNM_OP_FROM_RELAY("nn.conv2d_transpose", "mnm.op.conv2d_transpose",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<Conv2DTransposeAttrs>();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->strides)));
@@ -67,19 +66,18 @@ MNM_OP_FROM_RELAY("nn.conv2d_transpose", "mnm.op.conv2d_transpose",
                   });
 
 #define MNM_SOFTMAX_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                                      \
-  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME,                                                    \
-                    [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) { \
-                      Array<Expr> mnm_args = args;                                                 \
-                      const auto* relay_attrs = attrs.as<SoftmaxAttrs>();                          \
-                      mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));      \
-                      return mnm_args;                                                             \
-                    })
+  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, [&](const Attrs& attrs, const Array<Expr>& args) { \
+    Array<Expr> mnm_args = args;                                                                   \
+    const auto* relay_attrs = attrs.as<SoftmaxAttrs>();                                            \
+    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));                        \
+    return mnm_args;                                                                               \
+  })
 
 MNM_SOFTMAX_OP_FROM_RELAY("nn.softmax", "mnm.op.softmax");
 MNM_SOFTMAX_OP_FROM_RELAY("nn.log_softmax", "mnm.op.log_softmax");
 
 MNM_OP_FROM_RELAY("nn.bias_add", "mnm.op.bias_add",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<BiasAddAttrs>();
                     mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
@@ -87,7 +85,7 @@ MNM_OP_FROM_RELAY("nn.bias_add", "mnm.op.bias_add",
                   });
 
 MNM_OP_FROM_RELAY("nn.max_pool2d", "mnm.op.max_pool2d",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<MaxPool2DAttrs>();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->pool_size)));
@@ -108,7 +106,7 @@ MNM_OP_FROM_RELAY("nn.max_pool2d", "mnm.op.max_pool2d",
                   });
 
 MNM_OP_FROM_RELAY("nn.avg_pool2d", "mnm.op.avg_pool2d",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<AvgPool2DAttrs>();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->pool_size)));
@@ -128,8 +126,7 @@ MNM_OP_FROM_RELAY("nn.avg_pool2d", "mnm.op.avg_pool2d",
                     return mnm_args;
                   });
 
-Array<Expr> AdaptivePoolFromRelay(const Attrs& attrs, const Array<Expr>& args,
-                                  const VarValueMap& val_map) {
+Array<Expr> AdaptivePoolFromRelay(const Attrs& attrs, const Array<Expr>& args) {
   Array<Expr> mnm_args = args;
   const auto* relay_attrs = attrs.as<AdaptivePool2DAttrs>();
   mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->output_size)));
@@ -141,7 +138,7 @@ MNM_OP_FROM_RELAY("nn.adaptive_max_pool2d", "mnm.op.adaptive_max_pool2d", Adapti
 MNM_OP_FROM_RELAY("nn.adaptive_avg_pool2d", "mnm.op.adaptive_avg_pool2d", AdaptivePoolFromRelay);
 
 MNM_OP_FROM_RELAY("nn.layer_norm", "mnm.op.layer_norm",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<LayerNormAttrs>();
                     mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
@@ -150,7 +147,7 @@ MNM_OP_FROM_RELAY("nn.layer_norm", "mnm.op.layer_norm",
                   });
 
 MNM_OP_FROM_RELAY("nn.batch_norm", "mnm.op.batch_norm_train",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args;
                     const auto* relay_attrs = attrs.as<BatchNormAttrs>();
                     mnm_args.push_back(args[0]);                               // x
@@ -173,36 +170,34 @@ Array<Array<Expr>> BatchNormMutationFromRelay(const Var& var, const Call& call) 
 
 MNM_OP_MUTATION_FROM_RELAY("nn.batch_norm", BatchNormMutationFromRelay);
 
-MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args;
-                    mnm_args.push_back(args[0]);
-                    const auto* relay_attrs = attrs.as<PadAttrs>();
-                    Array<Integer> flat_pad_width;
-                    for (int i = 0; i < relay_attrs->pad_width.size(); ++i) {
-                      for (int j = 0; j < relay_attrs->pad_width[i].size(); ++j) {
-                        flat_pad_width.push_back(relay_attrs->pad_width[i][j]);
-                      }
-                    }
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(flat_pad_width)));
-                    const auto* konst = GetKonstFromValueMap(args[1], val_map);
-                    CHECK(konst) << "'pad_value' must be a const tensor.";
-                    mnm_args.push_back(MakeConstant(Constant2ScalarValue<double>(konst)));
-                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->pad_mode)));
-                    return mnm_args;
-                  });
+MNM_OP_FROM_RELAY("nn.pad", "mnm.op.pad", [&](const Attrs& attrs, const Array<Expr>& args) {
+  Array<Expr> mnm_args;
+  mnm_args.push_back(args[0]);
+  const auto* relay_attrs = attrs.as<PadAttrs>();
+  Array<Integer> flat_pad_width;
+  for (int i = 0; i < relay_attrs->pad_width.size(); ++i) {
+    for (int j = 0; j < relay_attrs->pad_width[i].size(); ++j) {
+      flat_pad_width.push_back(relay_attrs->pad_width[i][j]);
+    }
+  }
+  mnm_args.push_back(MakeConstant(ArrayToIntTuple(flat_pad_width)));
+  const auto* konst = args[1].as<RelayConstantNode>();
+  CHECK(konst) << "'pad_value' must be a const tensor.";
+  mnm_args.push_back(MakeConstant(RelayConstant2ScalarValue<double>(konst)));
+  mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->pad_mode)));
+  return mnm_args;
+});
 
 // FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
 // MNM_OP_FROM_RELAY("nn.dropout", "mnm.op._contrib_dropout",
-//                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+//                   [&](const Attrs& attrs, const Array<Expr>& args) {
 //                     Array<Expr> mnm_args = args;
 //                     const auto* relay_attrs = attrs.as<DropoutAttrs>();
 //                     mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->rate)));
 //                     return mnm_args;
 //                   });
 RELAY_REGISTER_OP("nn.dropout")
-    .set_attr<op::FMNMFromRelay>("FMNMFromRelay", [](const Attrs& attrs, const Array<Expr>& args,
-                                                     const VarValueMap& val_map) {
+    .set_attr<op::FMNMFromRelay>("FMNMFromRelay", [](const Attrs& attrs, const Array<Expr>& args) {
       LOG(WARNING) << "nn.dropout is unavailable in Meta, ignored";
       const auto* relay_attrs = attrs.as<DropoutAttrs>();
 

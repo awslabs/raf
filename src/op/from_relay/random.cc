@@ -11,7 +11,7 @@ namespace op {
 namespace from_relay {
 
 MNM_OP_FROM_RELAY("random.threefry_generate", "mnm.op.threefry_generate",
-                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                  [&](const Attrs& attrs, const Array<Expr>& args) {
                     Array<Expr> mnm_args = args;
                     const auto* relay_attrs = attrs.as<ThreefryGenerateAttrs>();
                     mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->out_shape)));

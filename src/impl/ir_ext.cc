@@ -85,7 +85,13 @@ Var GetMayShare(Var var) {
   return vn->may_share;
 }
 
-MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value, bool show_meta_data) {
+MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+  ObjectRef value = args[0];
+  bool show_meta_data = false;
+  if (args.size() == 2) {
+    show_meta_data = args[1];
+  }
+
   auto annotate =
       tvm::runtime::TypedPackedFunc<String(ObjectRef)>([](const ObjectRef& expr) -> String {
         std::ostringstream os;
@@ -110,7 +116,7 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body_typed([](ObjectRef value, bool sho
         }
         return String(os.str());
       });
-  return tvm::AsText(value, show_meta_data, annotate);
+  *rv = tvm::AsText(value, show_meta_data, annotate);
 });
 
 String AsText(const ObjectRef& node, bool show_meta_data) {

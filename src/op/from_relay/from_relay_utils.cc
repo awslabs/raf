@@ -88,15 +88,6 @@ Var GetMayShare(const Expr& var) {
   return GetRef<Var>(vn);
 }
 
-const ConstantNode* GetKonstFromValueMap(const Expr& expr, const VarValueMap& val_map) {
-  ICHECK(expr->IsInstance<VarNode>()) << "Assume ANF!";
-  auto var = Downcast<Var>(expr);
-  ICHECK_EQ(val_map.count(var), 1) << "Cannot find the value of constant var " << var->name_hint()
-                                   << " in value map. Maybe the IR is not in ANF?";
-  const auto* konst = val_map[var].as<ConstantNode>();
-  return konst;
-}
-
 }  // namespace from_relay
 }  // namespace op
 }  // namespace mnm

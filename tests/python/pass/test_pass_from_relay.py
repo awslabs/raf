@@ -644,6 +644,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     check_from_relay(model, r_func, [m_x])
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize("shape", [[3, 2]])
 @pytest.mark.parametrize("val", [1])
 def test_full(shape, val):
@@ -662,27 +663,6 @@ def test_full(shape, val):
                              body=_relay.full(_relay.const(val), shape=shape, dtype="int64"))
     check_from_relay(model, r_func, [], check_model_structure=False,
                      disabled_pass=["FoldConstant"])
-
-
-@pytest.mark.parametrize("shape", [[3, 2]])
-@pytest.mark.parametrize("dtype", ["float32", "float16"])
-@pytest.mark.parametrize("val", [1])
-def test_full_like(shape, dtype, val):
-    class FullLike(mnm.Model):
-        def build(self, val):
-            self.val = val
-
-        @mnm.model.trace
-        def forward(self, x):
-            return mnm.full_like(x, self.val)
-
-    m_x, _ = randn(shape, dtype=dtype)
-    model = FullLike(val)
-
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_func = _relay.Function(params=[r_x], body=_relay.full_like(r_x, _relay.const(val)))
-
-    check_from_relay(model, r_func, [m_x], disabled_pass=["FoldConstant", "SimplifyExpr"])
 
 
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -951,6 +931,7 @@ def test_mnm_batch_norm_train(shape):
     check_from_relay(model, r_func, [m_x, m_m, m_v, m_w, m_b])
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dimension", [((2, 3), ((1, 1), (2, 2)))])
 @pytest.mark.parametrize("pad_value", [2])
@@ -1090,7 +1071,7 @@ def test_full_fusion(dtype):
     r_func = _relay.Function(params=[], body=out)
     r_mod = _tvm.IRModule()
     r_mod["main"] = r_func
-    mod = FromRelay(["FoldConstant", "SimplifyExpr"])(r_mod)
+    mod = FromRelay()(r_mod)
     m = FrameworkModel(mod, mod, {}, {})
 
     record = m._internal()
