@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import mnm
 from mnm._core.executor import VMExecutor, Executable, VirtualMachine
-from mnm.testing import check, randn, run_infer_type
+from mnm.testing import check, randn
 import tvm
 from tvm import relay
 
@@ -50,10 +50,9 @@ def test_simple(fuse):
     model.infer_mode()
     m_x, _ = randn(shape, device=device)
     mod = model._internal(m_x).mod
-    if fuse:
-        mod = run_infer_type(mod)
-        mod = mnm._ffi.pass_.FuseOps(3)(mod)
-    executor = VMExecutor(mod, device)
+    opt_level = 3 if fuse else 1
+    with mnm.ir.PassContext(opt_level=opt_level):
+        executor = VMExecutor(mod, device)
     ref_z = executor.make_executor()(m_x).asnumpy()
 
     loaded_exe = serialize_and_load(executor.executable)
@@ -73,10 +72,9 @@ def test_constant(fuse):
     mod["main"] = relay.Function([x], y)
     mod = mnm._ffi.pass_.ToANormalForm()(mod)
 
-    if fuse:
-        mod = run_infer_type(mod)
-        mod = mnm._ffi.pass_.FuseOps(3)(mod)
-    executor = VMExecutor(mod, "cpu")
+    opt_level = 3 if fuse else 1
+    with mnm.ir.PassContext(opt_level=opt_level):
+        executor = VMExecutor(mod, "cpu")
     m_x, _ = randn(shape)
     ref_y = executor.make_executor()(m_x)
 
@@ -99,10 +97,9 @@ def test_tuple(fuse):
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
-    if fuse:
-        mod = run_infer_type(mod)
-        mod = mnm._ffi.pass_.FuseOps(3)(mod)
-    executor = VMExecutor(mod, "cpu")
+    opt_level = 3 if fuse else 1
+    with mnm.ir.PassContext(opt_level=opt_level):
+        executor = VMExecutor(mod, "cpu")
     ref_out = executor.make_executor()(m_x, rand)
 
     loaded_exe = serialize_and_load(executor.executable)

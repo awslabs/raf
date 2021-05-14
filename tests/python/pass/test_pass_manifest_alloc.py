@@ -58,12 +58,16 @@ def test_dynamic_model():
     model = Model()
     m_x, _ = randn((2, 2))
     mod = model._internal(m_x).mod
-    mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.FuseOps(3)(mod)
-    comp = mnm._core.executor.VMCompiler()
-    with tvm.transform.PassContext(opt_level=1):
-        opt_mod, _ = comp.optimize(mod, target="llvm", params={})
-    text = opt_mod['main'].astext(False)
+    with tvm.transform.PassContext(config={"mnm.fuse_level": 1}):
+        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = mnm._ffi.pass_.InferType()(mod)
+        mod = mnm._ffi.pass_.FuseOps()(mod)
+        mod = mnm._ffi.pass_.ToANormalForm()(mod)
+        mod = mnm._ffi.pass_.InlinePrimitives()(mod)
+        mod = mnm._ffi.pass_.InferType()(mod)
+        mod = mnm._ffi.pass_.ManifestAlloc()(mod)
+    text = mod["main"].astext(False)
     assert '\n'.join(text.splitlines()[:-4]) == """#[version = "0.0.5"]
 fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_0 = mnm.op.vm.alloc_storage(-114514, -114514, -114514, -114514, -114514);
@@ -74,8 +78,8 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_5 = (%x,);
   let %x_6 = (%x_1, %x_3);
   let %x_7 = mnm.op.vm.invoke_op(%x_4, %x_5, %x_6);
-  let %a1 = mnm.op.vm.set_shape(%x_1, %x_3);
-  let %x_8 = (%a1,);
+  let %x1 = mnm.op.vm.set_shape(%x_1, %x_3);
+  let %x_8 = (%x1,);
   let %x_9 = mnm.op.upper_bound.argwhere;
   let %x_10 = mnm.op.vm.infer_type(%x_9, %x_8);
   let %x_11 = %x_10.0;
@@ -90,8 +94,8 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_20 = mnm.op.vm.alloc_tensor(%x_19, %x_17, -114514, %x_17);
   let %x_21 = (%x_15, %x_20);
   let %x_22 = mnm.op.vm.invoke_op(%x_9, %x_8, %x_21);
-  let %a2 = mnm.op.vm.set_shape(%x_15, %x_20);
-  let %x_23 = (%a2,);
+  let %x2 = mnm.op.vm.set_shape(%x_15, %x_20);
+  let %x_23 = (%x2,);
   let %x_24 = fn (%p0: Tensor[(?, 2), int32], Primitive=1) -> Tensor[(meta[tir.Div][0], 2), int32] {
     %0 = mnm.op.split(%p0, -114514 /* ty=int64 */, -114514 /* ty=int64 */) /* ty=(Tensor[(meta[tir.Div][0], 2), int32], Tensor[(meta[tir.Div][1], 2), int32]) */;
     %1 = %0.0;
@@ -107,8 +111,8 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_30 = mnm.op.vm.alloc_tensor(%x_29, %x_27, -114514, %x_27);
   let %x_31 = (%x_30,);
   let %x_32 = mnm.op.vm.invoke_op(%x_24, %x_23, %x_31);
-  let %a7 = %x_30;
-  %a7
+  let %x3 = %x_30;
+  %x3
 }"""
 
 

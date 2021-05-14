@@ -28,7 +28,9 @@ def test_vm_debug(device, shape):
     model.infer_mode()
     m_x, _ = randn(shape, device=device)
     mod = model._internal(m_x).mod
-    executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
+    # disable fusion
+    with mnm.ir.PassContext(opt_level=1):
+        executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
 
     # Testing whether we can get the correct intermediate tensor
     m_z = executor.make_executor()(m_x).asnumpy()

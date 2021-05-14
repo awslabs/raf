@@ -326,7 +326,7 @@ def test_closure_with_const_args1():
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
     mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.FuseOps(3)(mod)
+    mod = mnm._ffi.pass_.FuseOps()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
     mod = mnm._ffi.pass_.ManifestAlloc()(mod)
     # pylint: disable=line-too-long
@@ -359,7 +359,7 @@ def test_closure_with_const_args2():
     mod = model._internal(m_x).mod
     mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
     mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-    mod = mnm._ffi.pass_.FuseOps(3)(mod)
+    mod = mnm._ffi.pass_.FuseOps()(mod)
     mod = mnm._ffi.pass_.ToANormalForm()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
 

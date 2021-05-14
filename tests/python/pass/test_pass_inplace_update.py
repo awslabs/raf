@@ -195,25 +195,22 @@ def test_grad(device):
     # # reg file size = 14
     # # instruction count = 16
     # opcode, fields # inst(text):
-    #  0: 3 0 2   # load_const $2 Const[0]
-    #  1: 20 2 64 2 64 1 1 0 3   # alloc_storage $3 $2 64 float64
-    #  2: 21 3 0 2 64 1 3 4 2 3 4   # alloc_tensor $4 $3 $0 [2, 3, 4] float64
-    #  3: 3 1 5   # load_const $5 Const[1]
-    #  4: 33 5 2 1 1 4   # invoke_jit $5 (in: $1, out: $4)
-    #  5: 3 2 6   # load_const $6 Const[2]
-    #  6: 20 6 64 2 64 1 1 0 7   # alloc_storage $7 $6 64 float64
-    #  7: 21 7 0 2 64 1 3 8 2 3 4   # alloc_tensor $8 $7 $0 [2, 3, 4] float64
-    #  8: 3 3 9   # load_const $9 Const[3]
-    #  9: 33 9 4 1 1 4 0 8   # invoke_jit $9 (in: $1, $4, $0, out: $8)
-    # 10: 3 4 10   # load_const $10 Const[4]
-    # 11: 3 5 11   # load_const $11 Const[5]
-    # 12: 3 6 12   # load_const $12 Const[6]
-    # 13: 33 10 5 1 1 8 11 12 1   # invoke_jit $10 (in: $1, $8, $11, $12, out: $1)
-    # 14: 23 2 13 4 1   # alloc_tuple $13 [$4,$1]
-    # 15: 1 13   # ret $13
+    # 0: 3 0 2   # load_const $2 Const[0]
+    # 1: 20 2 64 2 64 1 1 0 3   # alloc_storage $3 $2 64 float64
+    # 2: 21 3 0 2 64 1 3 4 2 3 4   # alloc_tensor $4 $3 $0 [2, 3, 4] float64
+    # 3: 3 1 5   # load_const $5 Const[1]
+    # 4: 23 1 6 1   # alloc_tuple $6 [$1]
+    # 5: 23 1 7 4   # alloc_tuple $7 [$4]
+    # 6: 33 5 2 1 1 4   # invoke_jit $5 (in: $1, out: $4)
+    # 7: 3 2 8   # load_const $8 Const[2]
+    # 8: 23 3 9 1 4 0   # alloc_tuple $9 [$1,$4,$0]
+    # 9: 23 1 10 1   # alloc_tuple $10 [$1]
+    # 10: 33 8 4 1 1 4 0 1   # invoke_jit $8 (in: $1, $4, $0, out: $1)
+    # 11: 23 2 11 4 1   # alloc_tuple $11 [$4,$1]
+    # 12: 1 11   # ret $11
     model.x.update(param)
     bytecode = compile_vm_model(sgd, device, [dy, model.x])
-    assert bytecode.count("alloc_tensor") == 2
+    assert bytecode.count("alloc_tensor") == 1
 
 
 if __name__ == "__main__":

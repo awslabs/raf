@@ -32,6 +32,7 @@ from tvm.target import generic_func
 from tvm.tir import FloatImm, IntImm, StringImm
 from tvm.ir.container import Array
 from tvm.ir import IRModule
+from tvm.ir.transform import PassContext
 from tvm.runtime.ndarray import array as tvm_ndarray
 from tvm.relay import op as _op
 from tvm.relay.op import OpPattern, register_compute, register_pattern, strategy

@@ -5,8 +5,8 @@ import torch.nn as nn
 
 import mnm
 from mnm.model import BatchNorm, Conv2d, Linear, Sequential
-from mnm.testing import check, randn_torch, t2m_param, one_hot_torch
-from mnm.testing.utils import get_param, set_param
+from .common import check, randn_torch, t2m_param, one_hot_torch
+from .utils import get_param, set_param
 
 def _param_map(m_model, t_model):
     """maps from m_model param name to t_model param value, without params for shortcut"""

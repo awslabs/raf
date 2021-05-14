@@ -31,7 +31,6 @@ namespace vm {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using namespace mnm::pass;
 using namespace mnm::value;
 using namespace mnm::type;
 using namespace tvm;
@@ -735,20 +734,34 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
   With<tvm::Target> tctx((*it).second);
-  Array<Pass> pass_seqs;
+  Array<pass::Pass> pass_seqs;
+
+  // optimization passes that work on ANF
+  pass_seqs.push_back(pass::InlineLet());
+  pass_seqs.push_back(pass::DeadCodeElimination());
+
+  // optimization passes that work on BBNF
+  pass_seqs.push_back(pass::ToGraphNormalForm());
+  pass_seqs.push_back(pass::ToBasicBlockNormalForm());
+  pass_seqs.push_back(pass::InferType());
+  pass_seqs.push_back(pass::FuseOps());
+
+  // optimization passes that work on ANF
+  pass_seqs.push_back(pass::ToANormalForm());
+  pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
-  pass_seqs.push_back(pass::InferType());
   // TODO(@hzfan): Currently disable the ValidateInplaceUpdate pass because it removes the may_share
   // attr in some cases without any error messages.
   // pass_seqs.push_back(pass::ValidateInplaceUpdate(true));
   // pass_seqs.push_back(pass::InferType());
+  pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::ManifestAlloc());
   pass_seqs.push_back(pass::MemoryPlan());
 
-  Sequential seq(pass_seqs);
-  transform::PassContext pass_ctx = PassContext::Current();
-  tvm::With<PassContext> ctx(pass_ctx);
+  pass::MNMSequential seq(pass_seqs);
+  transform::PassContext pass_ctx = pass::PassContext::Current();
+  tvm::With<pass::PassContext> ctx(pass_ctx);
   return seq(mod);
 }
 

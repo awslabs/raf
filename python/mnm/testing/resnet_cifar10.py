@@ -5,7 +5,8 @@ import torch.nn as nn
 
 import mnm
 from mnm.model import Conv2d, Linear, Sequential
-from mnm.testing import randn_torch, one_hot_torch, resnet
+from . import resnet
+from .common import randn_torch, one_hot_torch
 
 
 def param_map(m_model, t_model):

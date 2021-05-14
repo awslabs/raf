@@ -94,7 +94,11 @@ class CallValuesGetter : public ExprMutator {
     auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema")[op];
     Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
     std::vector<Value> fake_args;
-    readable_name_stream << "_" << op->name;
+    std::string op_name = op->name;
+    if (!op_name.compare(0, 7, "mnm.op.")) {
+      op_name = op_name.substr(7);
+    }
+    readable_name_stream << "_" << op_name;
     for (size_t i = 0; i < node->args.size(); ++i) {
       Expr new_arg = VisitExpr(node->args[i]);
       if (const auto* cn = new_arg.as<ConstantNode>()) {

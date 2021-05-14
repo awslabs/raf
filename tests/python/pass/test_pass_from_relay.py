@@ -8,10 +8,8 @@ import numpy as np
 import mnm
 from mnm.frontend import FrameworkModel
 from mnm.testing import get_device_list, randint, randn, check, utils
-from mnm.model.trace import _get_func_inputs
 from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import IRModule
-from mnm._core.executor import VMExecutor
 from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
@@ -112,7 +110,7 @@ def test_mnm_module():
     m_x, n_x = randn((1, 100))
 
     # Check that VM can execute multi-module functions
-    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], mnm._ffi.pass_.FuseOps(1))
+    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], fuse_level=1)
     m_out = vm_executor(*args)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
@@ -1072,14 +1070,9 @@ def test_full_fusion(dtype):
     r_mod = _tvm.IRModule()
     r_mod["main"] = r_func
     mod = FromRelay()(r_mod)
-    m = FrameworkModel(mod, mod, {}, {})
+    model = FrameworkModel(mod, mod, {}, {})
 
-    record = m._internal()
-    mod = record.mod
-    mod = mnm._ffi.pass_.FuseOps(1)(mod)
-    vm_inputs = _get_func_inputs(record, [], {}, get_handle=False)
-    vm = VMExecutor(mod, "llvm")
-    vm_exec = vm.make_executor()
+    vm_exec, vm_inputs = utils.get_vm_executor(model, 'cpu', [], fuse_level=1)
     out = vm_exec(*vm_inputs)
     ref = np.ones((5, 5), dtype=dtype) * 2
     assert out.dtype == dtype

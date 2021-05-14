@@ -10,6 +10,14 @@ import tvm
 from tvm import relay
 
 
+def fuse_module(mod, fuse_level=3):
+    with mnm.ir.PassContext(config={"mnm.fuse_level": fuse_level}):
+        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = mnm._ffi.pass_.FuseOps()(mod)
+    return mod
+
+
 def test_fuse_simple():
     konst, _ = randn((1,), device="cpu")
 
@@ -36,20 +44,17 @@ def test_fuse_simple():
         z = relay.Call(log_op, [relay.Call(relu_op, [z])])
         f1 = relay.Function([x, y], z)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-        x = mnm.ir.var("x", shape=shape)
-        y = mnm.ir.var("c", shape=(1,))
-        z = mnm.ir.var("a3")
-        ret = relay.Let(z, relay.Call(f1, [x, y]), z)
+        x = relay.var("x", shape=shape)
+        y = relay.var("c", shape=(1,))
+        ret = relay.Call(f1, [x, y])
         return relay.Function([x, y], ret)
 
     model = Model()
     m_x, _ = randn((10, 20), device="cpu")
-    mod_before = model._internal(m_x).mod
-    mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(3)(mod_before)
-    mod_after = run_infer_type(mod_after)
+    mod = model._internal(m_x).mod
+    mod = fuse_module(mod)
     func_expected = run_infer_type(expected((10, 20)))
-    assert tvm.ir.structural_equal(mod_after['main'], func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
 def test_conv2d():
@@ -125,28 +130,22 @@ def test_conv2d():
         w1 = relay.var("conv1.w", shape=(16, 16, 3, 3))
         w2 = relay.var("conv2.w", shape=(16, 16, 1, 1))
         w3 = relay.var("conv3.w", shape=(16, 16, 3, 3))
-        a1 = relay.var("a1")
-        a4 = relay.var("a4")
-        a6 = relay.var("a6")
-        a7 = relay.var("a7")
-        let3 = relay.Let(a7, relay.Call(f3, [a4, w2, v_one, v_zero, v_one, konst1,
-                                             konst_nchw, konst_oihw, konst_nchw, a6]), a7)
-        let2 = relay.Let(a6, relay.Call(conv2d_op, [a4, w3, v_one, v_one, v_one, konst1,
-                                                    konst_nchw, konst_oihw, konst_nchw]), let3)
-        let1 = relay.Let(a4, relay.Call(f1, [a1, w1, v_one, v_one, v_one, konst1,
-                                             konst_nchw, konst_oihw, konst_nchw, c]), let2)
-        let = relay.Let(a1, relay.Call(add_op, [x, c, null, null]), let1)
-        return relay.Function([x, c, w1, w2, w3], let)
+        y1 = relay.Call(add_op, [x, c, null, null])
+        y2 = relay.Call(f1, [y1, w1, v_one, v_one, v_one, konst1, konst_nchw,
+                             konst_oihw, konst_nchw, c])
+        y3 = relay.Call(conv2d_op, [y2, w3, v_one, v_one, v_one, konst1,
+                                    konst_nchw, konst_oihw, konst_nchw])
+        ret = relay.Call(f3, [y2, w2, v_one, v_zero, v_one, konst1,
+                              konst_nchw, konst_oihw, konst_nchw, y3])
+        return relay.Function([x, c, w1, w2, w3], ret)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
-    mod_before = model._internal(m_x).mod
-    mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(3)(mod_before)
-    mod_after = run_infer_type(mod_after)
+    mod = model._internal(m_x).mod
+    mod = fuse_module(mod)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
-    assert tvm.ir.structural_equal(mod_after['main'], func_expected)
+    assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
 def test_concatenate():
@@ -184,19 +183,15 @@ def test_concatenate():
 
         x = relay.var("x", shape=shape)
         c = relay.var("c", shape=(1,))
-        a1 = relay.var("a1")
-        a4 = relay.var("a4")
-        let2 = relay.Let(a4, relay.Call(f2, [a1, x, c]), a4)
-        let1 = relay.Let(a1, relay.Call(max_pool2d_op, [x, konst3, konst1, konst1, konst1,
-                                                        false, true, knchw]), let2)
-        return relay.Function([x, c], let1)
+        y1 = relay.Call(max_pool2d_op, [x, konst3, konst1, konst1, konst1,
+                                        false, true, knchw])
+        y2 = relay.Call(f2, [y1, x, c])
+        return relay.Function([x, c], y2)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     before = model._internal(m_x).mod
-    before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(3)(before)
-    after = run_infer_type(after)
+    after = fuse_module(before)
     func_expected = run_infer_type(expected((1, 16, 64, 64)))
     assert tvm.ir.structural_equal(after['main'], func_expected)
 
@@ -242,22 +237,18 @@ def test_tuple_root_fuse():
 
         x = relay.var("x", shape=shape)
         c = relay.var("c", shape=(1,))
-        a2 = relay.var("a2")
-        a3 = relay.var("a3")
-        let3 = relay.Let(a3, relay.Tuple([a2, x]), a3)
-        let2 = relay.Let(
-            a2, relay.Call(f, [x, v_three, v_one, v_one, v_one, false, true, knchw, c]), let3)
-        return relay.Function([x, c], let2)
+        y = relay.Call(f, [x, v_three, v_one, v_one, v_one, false, true, knchw, c])
+        y = relay.Tuple([y, x])
+        return relay.Function([x, c], y)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     before = model._internal(m_x).mod
-    before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(3)(before)
-    after = run_infer_type(after)
+    after = fuse_module(before)
     func_expected = expected((1, 16, 64, 64))
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(after['main'], func_expected)
+
 
 def test_tuple_root_no_fuse():
     """Test no fusion case where Tuple node is the root in its group."""
@@ -275,12 +266,13 @@ def test_tuple_root_no_fuse():
     m_b, _ = randn((128,))
     m_c, _ = randn((128,))
     before = model._internal(m_a, m_b, m_c).mod
-    before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(3)(before)
-    after = run_infer_type(after)
+    after = fuse_module(before)
+    # need to convert before into graph normal form
+    before = run_infer_type(mnm._ffi.pass_.ToGraphNormalForm()(before))
     # The group of tuple and concatenate won't be fused due to no call node,
     # so fusion pass has no effect in this case.
     assert tvm.ir.structural_equal(after["main"], before["main"])
+
 
 def test_single_w_tuple():
     """Call nodes that cannot be fused should not be in a function."""
@@ -309,12 +301,13 @@ def test_single_w_tuple():
     m_w, _ = randn(stats_shape)
     m_b, _ = randn(stats_shape)
     before = model._internal(m_x, m_w, m_b, m_m, m_v).mod
-    before = run_infer_type(before)
-    after = mnm._ffi.pass_.FuseOps(3)(before)
-    after = run_infer_type(after)
+    after = fuse_module(before)
+    # need to convert before into graph normal form
+    before = run_infer_type(mnm._ffi.pass_.ToGraphNormalForm()(before))
     # BatchNorm and ReLU cannot be fused together and each of them
     # will not form a function, so fusion should have no effect in this case.
     assert tvm.ir.structural_equal(after["main"], before["main"])
+
 
 def test_fuse_level_1():
     """Fuse level 1 only fuses injective nodes."""
@@ -340,35 +333,33 @@ def test_fuse_level_1():
         konst_oihw = mnm.ir.const("OIHW")
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
-        a4 = relay.var("a4")
-        a6 = relay.var("a6")
 
         # segment
         x = relay.var("p0", shape=(1, 16, 64, 64))
-        c = relay.var("c", shape=(1,))
-        y = relay.Call(add_op, [x, c, null, null])
-        y = relay.Call(add_op, [x, y, null, null])
-        f1 = relay.Function([x, c], y)
+        w = relay.var("p1", shape=(16, 16, 3, 3))
+        conv_out = relay.Call(conv2d_op, [x, w, v_one, v_one, v_one, konst1,
+                                          konst_nchw, konst_oihw, konst_nchw])
+
+        p0 = relay.var("p0", shape=(1, 16, 64, 64))
+        p1 = relay.var("p1", shape=(1,))
+        y = relay.Call(add_op, [p0, p1, null, null])
+        y = relay.Call(add_op, [p0, y, null, null])
+        f1 = relay.Function([p0, p1], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         c = relay.var("c", shape=(1,))
-        let2 = relay.Let(a4, relay.Call(f1, [a6, c]), a4)
+        out = relay.Call(f1, [conv_out, c])
 
-        x = relay.var("p0", shape=(1, 16, 64, 64))
-        w = relay.var("p1", shape=(16, 16, 3, 3))
-        let1 = relay.Let(a6, relay.Call(conv2d_op, [x, w, v_one, v_one, v_one, konst1,
-                                                    konst_nchw, konst_oihw, konst_nchw]), let2)
-        return relay.Function([x, c, w], let1)
+        return relay.Function([x, c, w], out)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
-    mod_before = model._internal(m_x).mod
-    mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(1)(mod_before)
-    mod_after = run_infer_type(mod_after)
+    mod = model._internal(m_x).mod
+    mod = fuse_module(mod, fuse_level=1)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
-    assert tvm.ir.structural_equal(mod_after["main"], func_expected)
+    assert tvm.ir.structural_equal(mod["main"], func_expected)
+
 
 # TODO@(hzfan): fix issue #402
 @pytest.mark.xfail
@@ -432,9 +423,8 @@ def test_sgd():
         x = relay.var("model.x", shape=shape)
         dy = relay.var("dy", shape=shape)
         v = relay.var("v", shape=shape)
-        a6 = relay.var("a6")
-        let = relay.Let(a6, relay.Call(f, [x, dy, v]), a6)
-        return relay.Function([dy, v, x], let)
+        y = relay.Call(f, [x, dy, v])
+        return relay.Function([dy, v, x], y)
 
     m_param, _ = randn(shape, device=device)
     n_v = np.zeros(shape, dtype=dtype)
@@ -444,9 +434,7 @@ def test_sgd():
     model.x = m_param
     sgd.v = mnm.array(n_v, device=device)
     mod = sgd._internal(m_dy).mod
-    mod = run_infer_type(mod)
-    mod = mnm._ffi.pass_.FuseOps(3)(mod)
-    mod = run_infer_type(mod)
+    mod = fuse_module(mod)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(mod['main'], func_expected)
@@ -473,30 +461,26 @@ def test_fuse_inplace():
         null = mnm.ir.const(None)
 
         p0 = mnm.ir.var("p0", shape=shape)
-        p1 = mnm.ir.var("p1", shape=(1,))
-        p2 = mnm.ir.var("p2", shape=shape)
-        y = relay.Call(add_op, [p0, p1, null, null])
-        y = relay.Call(add_op, [p2, y, p2, null])
+        p1 = mnm.ir.var("p1", shape=shape)
+        p2 = mnm.ir.var("p2", shape=(1,))
+        y = relay.Call(add_op, [p1, p2, null, null])
+        y = relay.Call(add_op, [p0, y, p0, null])
         f = relay.Function([p0, p1, p2], y)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
         x = mnm.ir.var("x", shape=shape)
         y = mnm.ir.var("y", shape=shape)
         c = mnm.ir.var("c", shape=(1,))
-        a2 = mnm.ir.var("a2")
-        a3 = mnm.ir.var("a3")
-        let3 = relay.Let(a3, relay.Call(relu_op, [a2]), a3)
-        let2 = relay.Let(a2, relay.Call(f, [y, c, x]), let3)
-        return relay.Function([x, y, c], let2)
+        out = relay.Call(f, [x, y, c])
+        out = relay.Call(relu_op, [out])
+        return relay.Function([x, y, c], out)
 
     shape = (10, 20)
     model = Model(shape)
     m_x, _ = randn(shape, device="cpu")
     m_y, _ = randn(shape, device="cpu")
     mod_before = model._internal(m_x, m_y).mod
-    mod_before = run_infer_type(mod_before)
-    mod_after = mnm._ffi.pass_.FuseOps(3)(mod_before)
-    mod_after = run_infer_type(mod_after)
+    mod_after = fuse_module(mod_before)
     func_expected = run_infer_type(expected((10, 20)))
     assert tvm.ir.structural_equal(mod_after['main'], func_expected)
 

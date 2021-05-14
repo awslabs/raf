@@ -1,12 +1,12 @@
-"""testing utilities for models"""
-# pylint: disable=unused-import
+"""Testing utilities for models and executor."""
+# pylint: disable=invalid-name,protected-access
 import mnm
-from mnm.ir import MNMSequential
 from mnm.model.trace import _get_func_inputs
-from mnm._core.executor import VMExecutor
+from mnm._core.executor import VMExecutor, VMCompiler
 from mnm._core.profiler_vm import VMProfilerExecutor
 from mnm._core.core_utils import get_chained_attr
-from mnm._ffi import pass_
+from .._core.module import IRModule
+from .._ffi import pass_
 
 
 def get_param(model, name):
@@ -28,25 +28,56 @@ def set_param(model, name, value):
     setattr(ins, name[-1], value)
 
 
-def get_vm_executor(model, device, args, pass_seq=None, sch_file=None):
+# TODO: Remove this after all its use cases are migrated to pass manager with proper requirements
+def run_infer_type(expr):
+    """Helper function to infer the type of the given expr """
+    if isinstance(expr, IRModule):
+        return pass_.InferType()(expr)
+    mod = IRModule.from_expr(expr)
+    mod = pass_.InferType()(mod)
+    return mod["main"]
+
+
+def get_vm_executor(model, device, args, fuse_level=3, sch_file=None):
     """get vm executor"""
     # pylint: disable=protected-access
     record = model._internal(*args)
     mod = record.mod
-    if pass_seq is not None:
-        mod = pass_seq(mod)
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    executor = VMExecutor(mod, device)
+    with mnm.ir.PassContext(config={"mnm.fuse_level": fuse_level}):
+        executor = VMExecutor(mod, device)
     return executor.make_executor(sch_file=sch_file), inputs
 
 
-def get_vm_profiler(model, device, args, pass_seq=None):
+def get_vm_profiler(model, device, args, fuse_level=3):
     """get vm profiler"""
     # pylint: disable=invalid-name, protected-access
     record = model._internal(*args)
     mod = record.mod
-    if pass_seq is not None:
-        mod = pass_seq(mod)
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    executor = VMProfilerExecutor(mod, device)
+    with mnm.ir.PassContext(config={"mnm.fuse_level": fuse_level}):
+        executor = VMProfilerExecutor(mod, device)
     return executor, inputs
+
+
+def run_vm_model(model, device, args, fuse_level=3):
+    """Helper function to execute model with VM"""
+    vm, inputs = get_vm_executor(model, device, args, fuse_level)
+    out = vm(*inputs)
+    return out
+
+
+def compile_vm_model(model, device, args):
+    """Helper function to compile model into VM bytecode"""
+    mod = model._internal(*args).mod
+    executor = VMExecutor(mod, device)
+    return executor.executable.bytecode
+
+
+def lower_vm_model(model, target_name, args):
+    """Helper function to lower model into optimized relay"""
+    mod = model._internal(*args).mod
+    compiler = VMCompiler()
+    mod, _ = compiler.optimize(mod, target_name)
+    # TODO (janimesh) - Revisit where the output is used
+    return mod['main']

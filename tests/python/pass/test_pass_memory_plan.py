@@ -9,13 +9,9 @@ from mnm.testing.utils import get_vm_executor
 
 
 def optimize(mod, device, fusion=False):
-    mod = mnm._ffi.pass_.InferType()(mod)
-    if fusion:
-        mod = mnm._ffi.pass_.FuseOps(1)(mod)
-        mod = mnm._ffi.pass_.InferType()(mod)
-
+    fuse_level = 1 if fusion else 0
     target_name = device if device != "cpu" else "llvm"
-    with tvm.transform.PassContext(opt_level=3):
+    with tvm.transform.PassContext(opt_level=3, config={"mnm.fuse_level": fuse_level}):
         opt_mod, _ = mnm._core.executor.VMCompiler().optimize(mod, target=target_name, params={})
     return opt_mod
 
@@ -46,8 +42,7 @@ def verify_correctness(model, device, args, fusion=False):
     ref_outs = model(*args)
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
 
-    pass_seq = None if not fusion else mnm._ffi.pass_.FuseOps(1)
-    vm_executor, vm_inputs = get_vm_executor(model, device, args, pass_seq=pass_seq)
+    vm_executor, vm_inputs = get_vm_executor(model, device, args, fuse_level=3 if fusion else 0)
     outs = vm_executor(*vm_inputs)
 
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)

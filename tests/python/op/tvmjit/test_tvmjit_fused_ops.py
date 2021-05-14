@@ -2,18 +2,7 @@ import numpy as np
 import pytest
 
 import mnm
-from mnm.testing import get_device_list, run_infer_type, run_vm_model
-
-
-def ir_fuser(func):
-    # pylint: disable=protected-access
-    mod = func
-    if not isinstance(func, mnm._core.module.IRModule):
-        mod = mnm._core.module.IRModule.from_expr(func)
-    mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.FuseOps(3)(mod)
-    func = run_infer_type(mod)
-    return func
+from mnm.testing import get_device_list, run_vm_model
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -41,7 +30,7 @@ def test_avg_pool2d_dx_fuse_relu_dx(device):
                        dilation=1, ceil_mode=False, include_pad=True)
     dy = mnm.array(np.random.randn(*y.shape), dtype="float64", device=device)
     model = AvgPoolDxReLUDx(y, dy, relu_x, relu_dy)
-    run_vm_model(model, device, [x], ir_fuser)
+    run_vm_model(model, device, [x])
 
 
 if __name__ == "__main__":

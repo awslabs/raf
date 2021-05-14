@@ -1,9 +1,8 @@
 import pytest
 import numpy as np
 import mnm
-from mnm.testing import run_vm_model, check
 from mnm._core.executor import VMExecutor
-from mnm.testing import get_arr_addr, get_device_list, randn
+from mnm.testing import check, run_vm_model, get_arr_addr, get_device_list, randn
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -153,7 +152,7 @@ def test_simple_fusion(device, shape):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     def check_e2e(model, device, args):
         out_before = run_vm_model(model, device, args)
-        out_after = run_vm_model(model, device, args, mnm._ffi.pass_.FuseOps(3))
+        out_after = run_vm_model(model, device, args)
         check(out_before, out_after)
 
     class Model(mnm.Model):
@@ -179,7 +178,7 @@ def test_split_fusion(device):
 
     def check_e2e(model, device, args):
         out_before = run_vm_model(model, device, args)
-        out_after = run_vm_model(model, device, args, mnm._ffi.pass_.FuseOps(3))
+        out_after = run_vm_model(model, device, args)
         check(out_before, out_after)
 
     class Model(mnm.Model):

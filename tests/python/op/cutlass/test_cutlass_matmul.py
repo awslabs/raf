@@ -42,7 +42,7 @@ def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     m_bias, t_bias = randn_torch([n,], requires_grad=True, device=device)
     model = TestModel()
     model.to(device=device)
-    m_y = run_vm_model(model, device, [m_x, m_w, m_bias], mnm._ffi.pass_.FuseOps(3))
+    m_y = run_vm_model(model, device, [m_x, m_w, m_bias])
     t_scaled_bias = t_bias * beta if beta else t_bias
     t_y = torch.matmul(t_x, t_w) + t_scaled_bias
     t_y = t_epilogue(t_y) if t_epilogue else t_y
@@ -78,7 +78,7 @@ def test_dense_add_relu(batch_size, in_features, out_features):
     model.linear.b = m_b
     model.to(device=device)
     t_model.to(device=device)
-    m_y = run_vm_model(model, device, [m_x], mnm._ffi.pass_.FuseOps(3))
+    m_y = run_vm_model(model, device, [m_x])
     t_y = F.relu(t_model(t_x))
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
@@ -116,7 +116,7 @@ def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue)
     m_b, t_b = randn_torch([batch_size, m, n], device=device, dtype=dtype)
     model = TestModel()
     model.to(device=device, dtype=dtype)
-    m_y = run_vm_model(model, device, [m_x, m_w, m_b], mnm._ffi.pass_.FuseOps(3))
+    m_y = run_vm_model(model, device, [m_x, m_w, m_b])
     t_y = torch.matmul(t_x, t_w.permute(0, 2, 1)) + t_b
     t_y = t_epilogue(t_y) if t_epilogue else t_y
     atol = rtol = 1e-4 if dtype == "float32" else 1e-1

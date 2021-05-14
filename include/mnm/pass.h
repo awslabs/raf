@@ -24,6 +24,14 @@ using tvm::transform::PassContext;
 using tvm::transform::PassInfo;
 
 /*!
+ * \brief A special trace pass that prints the header and IR to LOG(INFO).
+ * \param header The header to be attached to the output.
+ * \param show_meta_data Whether should we show meta data.
+ * \return The pass.
+ */
+Pass PrintIR(const std::string& header = "", bool show_meta_data = false);
+
+/*!
  * \brief A pass that does automatic differentiation.
  * \param requires_grads If input(s) of function requires gradient. It is in the same order as
  * func->param. If empty, input(s) with float datatype requires gradient.
@@ -185,12 +193,9 @@ Pass LiftBranchBody();
 Pass FlattenClosure();
 /*!
  * \brief Performs operator fusion.
- * \param mod IRModule to be fused.
- * \param fuse_opt_level The optimization level used to enable this pass.
  * \return The created pass.
- *
  */
-Pass FuseOps(int fuse_opt_level);
+Pass FuseOps();
 /*!
  * \brief A pass that eliminates dead code.
  * \return The created pass.

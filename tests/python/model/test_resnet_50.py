@@ -29,7 +29,7 @@ def test_vm_forward(device, fuse_lv):
     m_model.to(device=device)
     t_model.to(device)
     m_in, t_in = resnet.get_input(batch_size=1, device=device)
-    m_loss = run_vm_model(m_model, device, [*m_in], mnm._ffi.pass_.FuseOps(fuse_lv))[0]
+    m_loss = run_vm_model(m_model, device, [*m_in], fuse_level=fuse_lv)[0]
     t_loss = t_model(*t_in)
     check(m_loss, t_loss, atol=1e-3, rtol=1e-3)
     resnet.check_params(m_model, t_model, atol=1e-3, rtol=1e-3)
@@ -46,7 +46,7 @@ def test_vm_backward(device, fuse_lv):
     t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
     m_dy, t_dy = randn_torch((), device=device, requires_grad=False)
     m_in, t_in = resnet.get_input(batch_size=1, device=device)
-    m_loss = run_vm_model(m_optimizer, device, [m_dy, *m_in], mnm._ffi.pass_.FuseOps(fuse_lv))[0][0]
+    m_loss = run_vm_model(m_optimizer, device, [m_dy, *m_in], fuse_level=fuse_lv)[0][0]
     t_optimizer.zero_grad()
     t_loss = t_model(*t_in)
     t_loss.backward(t_dy)
