@@ -161,7 +161,8 @@ using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 
-using FMNMCastRule = registry::TypedPackedFunc<Array<ir::Integer>(const Array<ir::Expr>&)>;
+using FMNMCastRule =
+    registry::TypedPackedFunc<Array<ir::Type>(const Array<ir::Expr>&, const ir::Type&)>;
 
 using FMNMAnnotateTarget =
     registry::TypedPackedFunc<bool(const ir::Attrs& attrs, const Array<ir::Expr>& args)>;

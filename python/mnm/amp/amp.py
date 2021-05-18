@@ -1,11 +1,11 @@
 """Functions for enabling AMP (automatic mixed precision)."""
 # pylint: disable=protected-access
-from mnm._ffi.pass_ import AutoCast
+from mnm._ffi.pass_ import AutoCast, InferType
 from mnm._lib import relay
 from mnm.frontend.model import FrameworkModel
 
 
-def autocast(model):
+def autocast(model, args=None):
     """Convert a model running in single precison to half precision.
 
     Should run the origin model or run function `get_relay_func` once before.
@@ -14,16 +14,21 @@ def autocast(model):
     ----------
     model : mnm.model.Model
         Origin model running in single precison mode.
+
+    args: Optional[List[mnm.ndarray]]
+        The input data of the model.
     """
     assert model._Cacher__cache.keys() != 0, \
            "Please run model or run function `get_relay_func` once."
-    mod = model._internal().mod
+    args = args if args is not None else []
+    mod = model._internal(*args).mod
     mod = AutoCast()(mod)
+    mod = InferType()(mod)
     return FrameworkModel(mod, mod, model.state(), dict())
 
 
-class CustomCastRule:
-    """ Temporarily changes the cast rule(s) of operator(s). """
+class CustomTypeHint:
+    """ Temporarily changes the cast type hint(s) of operator(s). """
 
     def __init__(self, op_map):
         """Saves the required info for RAII pattern usage.
@@ -31,7 +36,7 @@ class CustomCastRule:
         Parameters
         ----------
         op_map : Dict[str, Function]
-            The map from op names to cast rule functions.
+            The map from op names to cast type hint functions.
 
         Examples
         --------
@@ -40,7 +45,7 @@ class CustomCastRule:
         # Temporarily update FMNMCastRule to a user-defined packed function.
         # After the test is finished, the attr value will be set back to the original value.
 
-        with CustomCastRule({"mnm.op.add": custom_add_rule}):
+        with CustomCastRule({"mnm.op.add": custom_add_type_hint}):
             model = mnm.amp.autocast(model)
 
         """
