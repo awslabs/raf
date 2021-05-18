@@ -16,6 +16,7 @@ using namespace mnm::ir;
 Array<Expr> AdvIndexGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                          const Expr& dy) {
   static auto adv_index_dx = Op::Get("mnm.op.adv_index_dx");
+  static auto zeros_like = Op::Get("mnm.op.zeros_like");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   auto inputs = call->args[0];
@@ -26,9 +27,10 @@ Array<Expr> AdvIndexGrad(const Expr& orig_call, const Array<Expr> orig_args, con
   int num_inputs = 1;
   if (auto tuple_node = orig_args[0].as<TupleNode>()) {
     num_inputs = tuple_node->fields.size();
-  }
-  for (int i = 1; i < num_inputs; i++) {
-    tuple.push_back(NullValue<Expr>());
+    for (int i = 1; i < num_inputs; i++) {
+      auto zero_grad = Call(zeros_like, {tuple_node->fields[i]});
+      tuple.push_back(zero_grad);
+    }
   }
   return {tvm::relay::Tuple(tuple)};
 }
