@@ -67,7 +67,8 @@ def test_vm_memory_profile(device):
 
     mod = model._internal(m_x, m_w).mod
     executor = VMProfilerExecutor(mod, device)
-    ret = executor.make_executor()(m_x, m_w, profile_memory=True)
+    ret_map = executor.make_executor()(m_x, m_w, profile_memory=True)
+    ret = sum([v.value for _, v in ret_map.items()])
 
     # Output tensor size in MBs. Note that since it fits to the page size,
     # we can allocate the exact size for it.

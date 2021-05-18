@@ -501,7 +501,7 @@ void VirtualMachine::RunLoop(VMContext ctx) {
                    << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
         auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-        auto buffer = Alloc(dev, size);
+        auto buffer = AllocTensor(dev, size);
         auto storage = StorageValue::make(buffer);
         ctx.WriteRegister(instr.dst, storage);
         ctx->pc++;
@@ -624,7 +624,7 @@ std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::Pr
     std::shared_ptr<Requests> requests = op_env->GetRequests();
     for (size_t i = 0; i < requests->workspace.size(); i++) {
       Requests::WorkspaceRequest& entry = requests->workspace[i];
-      auto buf = Alloc(entry.device, entry.nbytes);
+      auto buf = AllocWorkspace(entry.device, entry.nbytes);
       *entry.dest = buf->data;
     }
     // add to cache
@@ -690,8 +690,14 @@ void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
   ctx.WriteRegister(instr.dst, TupleValue::make(ret_tup));
 }
 
-std::shared_ptr<memory_pool::Memory> VirtualMachine::Alloc(const Device& dev, int64_t nbytes,
-                                                           int64_t alignment) {
+std::shared_ptr<memory_pool::Memory> VirtualMachine::AllocTensor(const Device& dev, int64_t nbytes,
+                                                                 int64_t alignment) {
+  return memory_pool::Memory::Alloc(dev, nbytes);
+}
+
+std::shared_ptr<memory_pool::Memory> VirtualMachine::AllocWorkspace(const Device& dev,
+                                                                    int64_t nbytes,
+                                                                    int64_t alignment) {
   return memory_pool::Memory::Alloc(dev, nbytes);
 }
 

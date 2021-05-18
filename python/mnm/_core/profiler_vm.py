@@ -79,8 +79,8 @@ class VirtualMachineProfiler(executor.VirtualMachine):
 
         Returns
         -------
-        result : Union[Object, float]
-            The output tensors, or memory footprint in MBs in memory profiling mode.
+        result : Union[Object, Dict[str, FloatImm]]
+            The output tensors, or memory footprint map in MBs in memory profiling mode.
         """
         # pylint: disable=arguments-differ
         ctx = self.prepare_context(func_name, *args, **kwargs)

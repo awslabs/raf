@@ -124,13 +124,17 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       VMContext ctx = args[0];
       if (profile_memory_) {
         PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(true));
-        total_allocated_megabytes_ = 0;
+        allocated_memory_mbs_.clear();
         Run(ctx);
         for (auto op_env_cache : op_env_cache_) {
           op_env_cache->Clear();
         }
         PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(false));
-        *rv = total_allocated_megabytes_;
+        Map<String, ObjectRef> ret;
+        for (auto kv : allocated_memory_mbs_) {
+          ret.Set(kv.first, FloatImm(DataType::Float(32), kv.second));
+        }
+        *rv = ret;
       } else {
         *rv = Run(ctx);
       }
@@ -144,7 +148,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       op_outputs_.clear();
       op_inputs_.clear();
       op_names_.clear();
-      total_allocated_megabytes_ = 0.0;
+      allocated_memory_mbs_.clear();
     });
   } else {
     return VirtualMachine::GetFunction(name, sptr_to_self);
@@ -204,16 +208,29 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
   }
 }
 
-std::shared_ptr<memory_pool::Memory> VirtualMachineProfiler::Alloc(const Device& dev,
-                                                                   int64_t nbytes,
-                                                                   int64_t alignment) {
-  int64_t alloc_nbytes = memory_pool::Memory::GetAllocBytes(dev, nbytes);
-  total_allocated_megabytes_ += alloc_nbytes / 1048576.0;
+std::shared_ptr<memory_pool::Memory> VirtualMachineProfiler::AllocCommon(const Device& dev,
+                                                                         int64_t nbytes,
+                                                                         int64_t alignment,
+                                                                         std::string memory_type) {
+  auto alloc_nbytes = memory_pool::Memory::GetAllocBytes(dev, nbytes) / 1048576.0;
+  allocated_memory_mbs_[memory_type] += alloc_nbytes;
   if (profile_memory_) {
     // Allocate the minimum size to avoid out of memory during memory profiling.
     return memory_pool::Memory::Alloc(dev, 1);
   }
-  return VirtualMachine::Alloc(dev, nbytes, alignment);
+  return VirtualMachine::AllocTensor(dev, nbytes, alignment);
+}
+
+std::shared_ptr<memory_pool::Memory> VirtualMachineProfiler::AllocTensor(const Device& dev,
+                                                                         int64_t nbytes,
+                                                                         int64_t alignment) {
+  return AllocCommon(dev, nbytes, alignment, "Tensor");
+}
+
+std::shared_ptr<memory_pool::Memory> VirtualMachineProfiler::AllocWorkspace(const Device& dev,
+                                                                            int64_t nbytes,
+                                                                            int64_t alignment) {
+  return AllocCommon(dev, nbytes, alignment, "Workspace");
 }
 
 tvm::runtime::Module CreateVirtualMachineProfiler(const Executable* exec, bool enable_cuda_graph,
