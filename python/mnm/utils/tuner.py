@@ -10,7 +10,8 @@ from copy import copy
 import tvm
 
 import mnm
-from mnm._core.executor import MetaFallbackContext, VMExecutor
+from mnm._core.profiler_vm import VMProfilerExecutor
+from mnm._core.executor import MetaFallbackContext
 from mnm._core.ndarray import array
 from mnm.model.trace import _get_func_inputs
 from mnm.testing import randn, randint, randn_torch
@@ -18,7 +19,7 @@ from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler import compute_dag
 
 
-def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
+def extract_tuning_tasks(mod, args, device, *, fuse_level=0, pass_seq=None):
     """Extract tuning tasks from the given function and the target.
 
     Parameters
@@ -31,6 +32,9 @@ def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
 
     device: str
         The target device.
+
+    fuse_level: int
+        The fusion level. Default 0.
 
     pass_seq: Optional[MNMSequential]
         A pass sequence to be applied.
@@ -60,13 +64,15 @@ def extract_tuning_tasks(mod, args, device, *, pass_seq=None):
     )
     with env_tracing_task:
         # TODO(comaniac): Whether to make a new thread?
-        executor = VMExecutor(mod, device)
-        with tvm.transform.PassContext(
+        executor = VMProfilerExecutor(mod, device)
+        with mnm.ir.PassContext(
+                opt_level=3,
                 config={"relay.backend.use_auto_scheduler": True,
-                        "mnm.tvmjit.allow_jit_failure": True},
+                        "mnm.tvmjit.allow_jit_failure": True,
+                        "mnm.fuse_level": fuse_level},
                 disabled_pass={"AutoSchedulerLayoutRewrite"},
         ):
-            executor.vm.run(*args)
+            executor.vm.run(*args, profile_memory=True)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
     auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context
@@ -128,7 +134,7 @@ def tune_tasks(tasks, weights, log_file, n_trials):
     del measure_device
     print("Done tuning. Records saved in %s" % log_file)
 
-def run_tuning(model, device, args, log_file, *, pass_seq=None,
+def run_tuning(model, device, args, log_file, *, fuse_level=0, pass_seq=None,
                n_trials=lambda l: 300 * min(l, 100), only_tune_tasks_with_name=None,
                only_extract_tasks=False):
     """Tune the given tasks.
@@ -148,6 +154,9 @@ def run_tuning(model, device, args, log_file, *, pass_seq=None,
         The log file to dump the tuning records. If the file already contains tuning records,
         we use them to initialize the task scheduler and new records will be appended.
 
+    fuse_level: int
+        The fusion level. Default 0.
+
     pass_seq: Optional[MNMSequential]
         A pass sequence to be applied.
 
@@ -164,7 +173,8 @@ def run_tuning(model, device, args, log_file, *, pass_seq=None,
         Whether to extract and print tasks only without actual tuning them.
     """
     print("Extracting tasks...")
-    tasks, weights = extract_tuning_tasks(model, args, device, pass_seq=pass_seq)
+    tasks, weights = extract_tuning_tasks(model, args, device, fuse_level=fuse_level,
+                                          pass_seq=pass_seq)
     ori_task_num = len(tasks)
 
     if only_tune_tasks_with_name is not None:
@@ -241,8 +251,9 @@ def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials=None,
         m_model.infer_mode()
         m_model.to(device=device)
 
-        pass_seq = lambda mod: mnm._ffi.pass_.FuseOps(3)(mod) if fusion else mod
-        extract_tasks, _ = extract_tuning_tasks(m_model, input_args, device, pass_seq=pass_seq)
+        fuse_level = 3 if fusion else 0
+        extract_tasks, _ = extract_tuning_tasks(m_model, input_args, device, fuse_level=fuse_level,
+                                                pass_seq=None)
         assert len(extract_tasks) == 1
         tasks.append(extract_tasks[0])
 
