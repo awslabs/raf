@@ -59,7 +59,7 @@ Expr Fill::Atomic(const Expr& e, const Var& v) {
 // Bind expression `now` to var `v` if the original expression is in the include set, or if
 // v is already defined (e.g. coming from a Let expression). Otherwise return `now` directly.
 Expr Fill::Compound(const Expr& orig, const Expr& now, const Var& v) {
-  Var var = v.defined() ? v : MakeVar("x", Type());
+  Var var = v.defined() ? v : MakeVar("x" + std::to_string(++num_created_var_), Type());
   bool not_included = include_set_ && include_set_->find(orig) == include_set_->end();
   if (!v.defined() && not_included) {
     return now;

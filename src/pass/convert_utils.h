@@ -66,6 +66,9 @@ class Fill : ExprFunctor<Expr(const Expr&, const Var&)> {
   Expr VisitExpr_(const VarNode* vn, const Var& v) final;
   Expr VisitExpr_(const GlobalVarNode* gvn, const Var& v) final;
   Expr VisitExpr_(const OpNode* op, const Var& v) final;
+
+  /*! \brief The number of created vars used to generate unique name hints. */
+  size_t num_created_var_ = 0;
 };
 
 }  // namespace pass

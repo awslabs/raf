@@ -23,11 +23,12 @@ def verify_live_in_set(mod, expected):
                     missed[key].append(var)
 
     if missed or not expected:
+        print("IR:\n%s" % mnm.ir.AsText(mod))
         print("Live in sets:")
         for key, var_list in ret.items():
             print("%s: %s" % (key, ",".join(var_list)))
 
-        print("Missed items")
+        print("\nMissed items")
         for key, var_list in missed.items():
             if not var_list:
                 print("Missed key %s" % key)
@@ -335,8 +336,6 @@ def test_after_manifest_alloc():
     verify_live_in_set(mod, expected)
 
 
-# TODO(@comanic): Fix the test due to the name of let vars being the same after ANF pass
-@pytest.mark.skip
 def test_fuse_closure():
     class Model(mnm.Model):
         def build(self):
@@ -369,47 +368,47 @@ def test_fuse_closure():
     # fn (%p0: Tensor[(5, 5), float32],
     #     %p1: Tensor[(5, 5), float32],
     #     %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %a1 = mnm.op.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x1 = mnm.op.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
     #   %1 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32],
     #            Primitive=1) -> Tensor[(5, 5), float32] {
     #     %0 = mnm.op.add(%p01, %p11);
     #     mnm.op.relu(%0)
     #   };
-    #   let %a3 = %1(%a1, %p2);
-    #   %a3
+    #   let %x3 = %1(%x1, %p2);
+    #   %x3
     # }
     expected = {
         "n_0": {},
-        "a1": {"param_0", "param_1", "param_2"},
-        "a3": {"param_2", "t_0"},
+        "x1": {"param_0", "param_1", "param_2"},
+        "x3": {"param_2", "t_0"},
         "n_1": {"t_1"},
     }
     verify_live_in_set(mod, expected)
     mod = InferType()(mod)
     mod = ManifestAlloc()(mod)
 
-    # fn (%p0: Tensor[(5, 5), float32],
-    #     %p1: Tensor[(5, 5), float32],
-    #     %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x_0 = mnm.op.vm.alloc_storage(-114514, -114514, -114514, -114514, -114514);
-    #   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, -114514, -114514, -114514);
+    # def @main(%p0: Tensor[(5, 5), float32],
+    #           %p1: Tensor[(5, 5), float32],
+    #           %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
+    #   let %x_0 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, [5, 5], str"float32",[5, 5]);
     #   let %x_2 = mnm.op.matmul;
     #   let %x_3 = (%p0, %p1);
     #   let %x_4 = (%x_1,);
     #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
-    #   let %a1 = %x_1;
-    #   let %x_6 = mnm.op.vm.alloc_storage(-114514, -114514, -114514, -114514, -114514);
-    #   let %x_7 = mnm.op.vm.alloc_tensor(%x_6, -114514, -114514, -114514);
-    #   let %x_8 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32],
-    #                  Primitive=1) -> Tensor[(5, 5), float32] {
-    #     %0 = mnm.op.add(%p01, %p11) /* ty=Tensor[(5, 5), float32] */;
-    #     mnm.op.relu(%0) /* ty=Tensor[(5, 5), float32] */
+    #   let %x1 = %x_1;
+    #   let %x_6 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_7 = mnm.op.vm.alloc_tensor(%x_6, [5, 5], str"float32",[5, 5]);
+    #   let %x_8 = fn (%p01: Tensor[(5, 5), float32],
+    #                  %p11: Tensor[(5, 5), float32], Primitive=1) -> Tensor[(5, 5), float32] {
+    #     %0 = mnm.op.add(%p01, %p11, nullptr /* ty=() */, nullptr /* ty=() */);
+    #     mnm.op.relu(%0)
     #   };
-    #   let %x_9 = (%a1, %p2);
+    #   let %x_9 = (%x1, %p2);
     #   let %x_10 = (%x_7,);
     #   let %x_11 = mnm.op.vm.invoke_op(%x_8, %x_9, %x_10);
-    #   let %a3 = %x_7;
-    #   %a3
+    #   let %x3 = %x_7;
+    #   %x3
     # }
     expected = {
         "n_3": {},
@@ -419,14 +418,14 @@ def test_fuse_closure():
         "x_3": {"param_0", "param_1", "param_2", "t_1"},
         "x_4": {"param_0", "param_1", "param_2", "t_1"},
         "x_5": {"param_0", "param_1", "param_2", "t_1"},
-        "a1": {"param_2", "t_1"},
+        "x1": {"param_2", "t_1"},
         "x_6": {"param_2", "t_1"},
         "x_7": {"param_2", "t_1", "t_2"},
         "x_8": {"param_2", "t_1", "t_3"},
         "x_9": {"param_2", "t_1", "t_3"},
         "x_10": {"param_2", "t_1", "t_3"},
         "x_11": {"param_2", "t_1", "t_3"},
-        "a3": {"t_3"},
+        "x3": {"t_3"},
         "n_4": {"t_3"},
     }
     verify_live_in_set(mod, expected)

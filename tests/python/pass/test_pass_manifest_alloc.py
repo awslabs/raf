@@ -111,8 +111,8 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_30 = mnm.op.vm.alloc_tensor(%x_29, %x_27, -114514, %x_27);
   let %x_31 = (%x_30,);
   let %x_32 = mnm.op.vm.invoke_op(%x_24, %x_23, %x_31);
-  let %x3 = %x_30;
-  %x3
+  let %x4 = %x_30;
+  %x4
 }"""
 
 
