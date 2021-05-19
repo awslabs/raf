@@ -634,6 +634,11 @@ SCHEMAS = {
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int"),
     ],
+    "communication.h::_reduce_scatter": [
+        Arg(name="x",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple"),
+    ],
     "transform.h::gather": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int"),

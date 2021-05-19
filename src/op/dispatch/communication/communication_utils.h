@@ -30,3 +30,25 @@
       LOG(FATAL) << "Failed: NCCL error " << __FILE__ << ":" << __LINE__ << ncclGetErrorString(e); \
     }                                                                                              \
   } while (0)
+
+namespace mnm {
+
+template <>
+inline DType::operator ncclDataType_t() const {
+  switch (code) {
+    case kDLInt:
+      if (bits == 8) return ncclInt8;
+      break;
+    case kDLUInt:
+      if (bits == 8) return ncclUint8;
+      break;
+    case kDLFloat:
+      if (bits == 16) return ncclFloat16;
+      if (bits == 32) return ncclFloat32;
+      if (bits == 64) return ncclFloat64;
+  }
+  LOG(FATAL) << "NotImplementedError: " << c_str();
+  throw;
+}
+
+}  // namespace mnm

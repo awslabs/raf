@@ -141,6 +141,7 @@ OPS = [
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
     Op(name="_allreduce", schema_name="_allreduce"),
     Op(name="_allgather", schema_name="_allgather"),
+    Op(name="_reduce_scatter", schema_name="_reduce_scatter"),
     Op(name="stream_sync", schema_name="stream_control"),
     Op(name="cast", schema_name="cast"),
     Op(name="cast_like", schema_name="cast_like"),

@@ -25,6 +25,12 @@ class AllreduceArgs : public ir::AttrsNode<AllreduceArgs> {
   MNM_OP_SCHEMA(AllreduceArgs, "mnm.args._allreduce");
 };
 
+class ReduceScatterArgs : public ir::AttrsNode<ReduceScatterArgs> {
+ public:
+  std::vector<value::BaseTensorValue> x;
+  MNM_OP_SCHEMA(ReduceScatterArgs, "mnm.args._reduce_scatter");
+};
+
 class StreamControlArgs : public ir::AttrsNode<StreamControlArgs> {
  public:
   value::BaseTensorValue x;

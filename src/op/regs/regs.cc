@@ -45,6 +45,7 @@ static const char _allgather[] = "mnm.op._allgather";
 static const char _allreduce[] = "mnm.op._allreduce";
 static const char _contrib_dropout[] = "mnm.op._contrib_dropout";
 static const char _contrib_dropout_dx[] = "mnm.op._contrib_dropout_dx";
+static const char _reduce_scatter[] = "mnm.op._reduce_scatter";
 static const char abs[] = "mnm.op.abs";
 static const char adaptive_avg_pool2d[] = "mnm.op.adaptive_avg_pool2d";
 static const char adaptive_avg_pool2d_dx[] = "mnm.op.adaptive_avg_pool2d_dx";
@@ -251,6 +252,12 @@ Attrs Allgather(const TVMArgs& values, GradTape* tapes) {
 
 Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::AllreduceArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+Attrs ReduceScatter(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ReduceScatterArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
   return Attrs(attrs);
 }
@@ -1165,6 +1172,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._contrib_dropout_dx").set_body([](TVMArgs args, 
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->reserve_space));
   MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->p));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._reduce_scatter").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_reduce_scatter, 1, ffi2schema::ReduceScatter,
+              schema::ReduceScatterArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2839,6 +2854,12 @@ Array<Expr> Allreduce(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> ReduceScatter(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_RET();
+}
+
 Array<Expr> AdaptivePool(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -3688,6 +3709,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout_dx")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout_dx, 3, DropoutDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym._reduce_scatter")
+    .set_body(MNM_SYMBOLIC_API(_reduce_scatter, 1, ReduceScatter));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
     .set_body(MNM_SYMBOLIC_API(adaptive_avg_pool2d, 3, AdaptivePool));
@@ -3964,6 +3987,13 @@ Attrs Allgather(const Array<Value>& values) {
 template <const char* op_name>
 Attrs Allreduce(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::AllreduceArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs ReduceScatter(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::ReduceScatterArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
   return Attrs(attrs);
 }
@@ -4907,6 +4937,15 @@ int Allgather(const std::string& field) {
 
 template <const char* op_name>
 int Allreduce(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ReduceScatter(const std::string& field) {
   if (field == "x") {
     return 0;
   }
@@ -6572,7 +6611,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._contrib_dropout", names::_contrib_dropout,
 MNM_BIND_SCHEMA("mnm.op._contrib_dropout_dx", names::_contrib_dropout_dx,
                 value2schema::DropoutDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._contrib_dropout_dx", names::_contrib_dropout_dx,
-                            schema_field_idx::DropoutDx);        // NOLINT(whitespace/line_length)
+                            schema_field_idx::DropoutDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._reduce_scatter", names::_reduce_scatter,
+                value2schema::ReduceScatter);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._reduce_scatter", names::_reduce_scatter,
+                            schema_field_idx::ReduceScatter);    // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.abs", names::abs, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.abs", names::abs,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
@@ -7228,6 +7271,7 @@ namespace {
 MNM_REGISTER_OBJECT_REFLECT(ListArgs);
 MNM_REGISTER_OBJECT_REFLECT(AllgatherArgs);
 MNM_REGISTER_OBJECT_REFLECT(AllreduceArgs);
+MNM_REGISTER_OBJECT_REFLECT(ReduceScatterArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdaptivePoolDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(AdvIndexArgs);

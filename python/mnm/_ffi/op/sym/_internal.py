@@ -11,6 +11,8 @@ _contrib_dropout = _APIS.get("mnm.op.sym._contrib_dropout", None)
 # Defined in ./src/op/regs/regs.cc
 _contrib_dropout_dx = _APIS.get("mnm.op.sym._contrib_dropout_dx", None)
 # Defined in ./src/op/regs/regs.cc
+_reduce_scatter = _APIS.get("mnm.op.sym._reduce_scatter", None)
+# Defined in ./src/op/regs/regs.cc
 abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc
 adaptive_avg_pool2d = _APIS.get("mnm.op.sym.adaptive_avg_pool2d", None)

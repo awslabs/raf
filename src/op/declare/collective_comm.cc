@@ -58,6 +58,25 @@ void AllGather(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op._allgather", AllGather);
 
+void ReduceScatter(const CallValues& call) {
+  const auto* args = call->args.as<ReduceScatterArgs>();
+  CHECK(args != nullptr);
+  std::vector<BaseTensorValue> tvs = args->x;
+  CHECK_GE(tvs.size(), 1U);
+  const DLTensor* x = tvs[0];
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  for (const auto& tv : tvs) {
+    const DLTensor* x = tv;
+    CHECK(shape == std::vector<int64_t>(x->shape, x->shape + x->ndim));
+  }
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

@@ -9,6 +9,7 @@ import numpy as np
 
 import mnm
 from mnm import distributed as dist
+from mnm._core.ndarray import Symbol
 
 
 def check(m_x, n_x, rtol=1e-5, atol=1e-5):
@@ -152,8 +153,38 @@ def test_allgather_with_tensor_list(axis):
         check(y, target_y)
 
 
+@pytest.mark.skip()
+def test_reduce_scatter():
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, y):  # pylint: disable=no-self-use,invalid-name
+            z = Symbol.make_tuple([x, y])
+            out = mnm.reduce_scatter(z)
+            return out
+
+    model = TestModel()
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    n_ones = np.ones(shape=(4, 4), dtype="float32")
+    n_x = n_ones * (rank+1)
+    n_y = -n_ones * (rank+1)
+    m_x, m_y = mnm.array(n_x, device=device), mnm.array(n_y, device=device)
+    model.to(device=device)
+    m_out = model(m_x, m_y)
+    if rank == 0:
+        n_out = n_ones * 3
+        check(m_out, n_out)
+    elif rank == 1:
+        n_out = -n_ones * 3
+        check(m_out, n_out)
+
+
 if __name__ == "__main__":
     if mnm.build.with_distributed():
+        test_reduce_scatter()
         test_allreduce_with_tensor()
         test_allreduce_with_tensor_list()
         test_allgather(axis=0)

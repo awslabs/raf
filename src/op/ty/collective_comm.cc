@@ -37,6 +37,19 @@ Type StreamInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.stream_sync", "StreamSync", StreamInfer);
 
+Type ReduceScatterInfer(const CallValues& value) {
+  const auto* args = value->args.as<ReduceScatterArgs>();
+  CHECK(args != nullptr);
+  CHECK_GE(args->x.size(), 1U);
+  const auto& ty = GetType(args->x[0]);
+  for (const auto& x : args->x) {
+    CHECK(GetType(x) == ty);
+  }
+  return ty;
+}
+
+MNM_OP_TYPE("mnm.op._reduce_scatter", "ReduceScatter", ReduceScatterInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

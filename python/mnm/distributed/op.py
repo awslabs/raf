@@ -59,3 +59,21 @@ def allgather(x, axis):
     if not is_list:
         x = x[0]
     return x
+
+
+def reduce_scatter(x):
+    """Performs reduction then scatter
+
+    Parameters
+    ----------
+    x : List[Tensor]
+        A list of tensors of equal shape
+        replica i receives reduction of x[i] over all replicas
+
+    Returns
+    -------
+    ret: Tensor
+        reduction result of x[rank] over all replicas,
+        where rank represents rank number of the current process
+    """
+    return sym._reduce_scatter(x)
