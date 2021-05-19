@@ -63,8 +63,6 @@ def extract_tuning_tasks(mod, args, device, *, fuse_level=0, pass_seq=None):
         auto_scheduler.relay_integration.TracingMode.EXTRACT_COMPLEX_TASK_ONLY
     )
     with env_tracing_task:
-        # TODO(comaniac): Whether to make a new thread?
-        executor = VMProfilerExecutor(mod, device)
         with mnm.ir.PassContext(
                 opt_level=3,
                 config={"relay.backend.use_auto_scheduler": True,
@@ -72,6 +70,7 @@ def extract_tuning_tasks(mod, args, device, *, fuse_level=0, pass_seq=None):
                         "mnm.fuse_level": fuse_level},
                 disabled_pass={"AutoSchedulerLayoutRewrite"},
         ):
+            executor = VMProfilerExecutor(mod, device)
             executor.vm.run(*args, profile_memory=True)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
