@@ -9,6 +9,7 @@
 #include <cutlass/library/handle.h>
 #include <cutlass/library/singleton.h>
 #include <cutlass/library/operation_table.h>
+#include <cutlass_ext/library/library_ext.h>
 
 #include "mnm/ir.h"
 #include "mnm/value.h"
@@ -53,6 +54,10 @@ using Add = BinaryUfuncOp<add>;
 using Subtract = BinaryUfuncOp<subtract>;
 using Multiply = BinaryOp<multiply>;
 using Divide = BinaryOp<divide>;
+
+ir::DFPattern IsOps(std::vector<std::string> ops);
+
+EpilogueKindExt GetEpilogueKind(const ir::Op& op);
 
 }  // namespace cutlass
 }  // namespace op

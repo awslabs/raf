@@ -43,29 +43,11 @@ std::tuple<bool, bool> GetTranspose(const Op& op) {
   return {transpose_a, transpose_b};
 }
 
-EpilogueKindExt GetEpilogueKind(const Op& op) {
-  if (!op.defined()) {
-    return EpilogueKindExt::kLinearCombination;
-  }
-  const static std::unordered_map<Op, EpilogueKindExt, ObjectPtrHash, ObjectPtrEqual> epilogue_map =
-      {{Op::Get("mnm.op.relu"), EpilogueKindExt::kLinearCombinationRelu}};
-  return epilogue_map.at(op);
-}
-
 bool IsBatch(const Op& op) {
   const static std::vector<Op> batched_ops = {
       Op::Get("mnm.op.batch_matmul"), Op::Get("mnm.op.batch_matmul_nt"),
       Op::Get("mnm.op.batch_matmul_tn"), Op::Get("mnm.op.batch_matmul_tt")};
   return std::find(batched_ops.begin(), batched_ops.end(), op) != batched_ops.end();
-}
-
-DFPattern IsOps(std::vector<std::string> ops) {
-  CHECK_GE(ops.size(), 1U);
-  auto op = IsOp(ops[0]);
-  for (const auto& name : ops) {
-    op = op || IsOp(name);
-  }
-  return op;
 }
 
 // Generates gelu(pat).

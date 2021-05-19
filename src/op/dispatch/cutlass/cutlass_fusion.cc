@@ -15,6 +15,7 @@
 #include "tvm/relay/dataflow_pattern.h"
 #include "./timer.h"
 #include "./gemm.h"
+#include "./conv.h"
 
 namespace mnm {
 namespace op {
@@ -62,7 +63,8 @@ OpEnv* Tune(const op::CallValues& call, OpEnv* op_env) {
  */
 OpEnv* FusedFuncBuild(const op::CallValues& call) {
   Function func = Downcast<ClosureValue>(call->callee)->func;
-  std::vector<std::function<OpEnv*(const CallValues& call)>> makers = {CutlassMatmulOpEnv::make};
+  std::vector<std::function<OpEnv*(const CallValues& call)>> makers = {CutlassMatmulOpEnv::make,
+                                                                       CutlassConv2dOpEnv::make};
   OpEnv* env = nullptr;
   for (const auto& maker : makers) {
     env = maker(call);
