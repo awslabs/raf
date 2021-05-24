@@ -21,28 +21,28 @@ __all__ = [
     "cross_entropy", "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy",
     "divide", "equal", "erf", "erf_dx", "exp",
     "expand_dims", "floor", "full", "full_like", "gather",
-    "gather_dx", "gather_nd", "gather_nd_dx", "get_kept_dims", "get_reduce_axis",
-    "get_valid_counts", "greater", "greater_equal", "layer_norm", "layer_norm_dx",
-    "left_shift", "less", "less_equal", "log", "log2",
-    "log_softmax", "log_softmax_dx", "logical_and", "logical_not", "matmul",
-    "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
-    "max_pool2d_dx", "maximum", "mean", "mean_dx", "mesh_grid",
-    "min", "minimum", "mod", "multiply", "ndarray_size",
-    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression",
-    "not_equal", "one_hot", "ones", "ones_like", "pad",
-    "power", "prod", "prod_dx", "relu", "relu_dx",
-    "repeat", "repeat_dx", "reshape", "resize", "reverse",
-    "reverse_sequence", "right_shift", "roi_align", "roi_align_dx", "round",
-    "rsqrt", "scatter", "scatter_dx", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where", "zeros",
-    "zeros_like",
+    "gather_dx", "gather_nd", "gather_nd_dx", "gelu", "gelu_dx",
+    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
+    "layer_norm", "layer_norm_dx", "left_shift", "less", "less_equal",
+    "log", "log2", "log_softmax", "log_softmax_dx", "logical_and",
+    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
+    "max", "max_pool2d", "max_pool2d_dx", "maximum", "mean",
+    "mean_dx", "mesh_grid", "min", "minimum", "mod",
+    "multiply", "ndarray_size", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
+    "ones_like", "pad", "power", "prod", "prod_dx",
+    "relu", "relu_dx", "repeat", "repeat_dx", "reshape",
+    "resize", "reverse", "reverse_sequence", "right_shift", "roi_align",
+    "roi_align_dx", "round", "rsqrt", "scatter", "scatter_dx",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
+    "softmax", "softmax_dx", "sort", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
+    "threefry_split", "transpose", "transpose_dx", "trunc", "upper_bound_argwhere",
+    "vm_alloc_storage", "vm_alloc_tensor", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
+    "where", "zeros", "zeros_like",
 ]
 
 def _allgather(x, axis):
@@ -459,6 +459,16 @@ def gather_nd_dx(data, indices, dy):
     indices = sym_utils.to_tensor(indices)
     dy = sym_utils.to_tensor(dy)
     return Symbol.from_expr(ffi.gather_nd_dx(data, indices, dy))
+
+def gelu(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.gelu(x))
+
+def gelu_dx(x, y, dy):
+    x = sym_utils.to_any(x)
+    y = sym_utils.to_tensor(y)
+    dy = sym_utils.to_tensor(dy)
+    return Symbol.from_expr(ffi.gelu_dx(x, y, dy))
 
 def get_kept_dims(x1, x2):
     x1 = sym_utils.to_any(x1)

@@ -60,6 +60,7 @@ def test_unary_ops(ops, shape, dtype, device):
     [
         (torch.erf, mnm._op.sym.erf),
         (torch.nn.ReLU(), mnm._op.sym.relu),
+        (torch.nn.GELU(), mnm._op.sym.gelu),
         (torch.rsqrt, mnm._op.sym.rsqrt),
         (torch.cos, mnm._op.sym.cos),
         (torch.sin, mnm._op.sym.sin),

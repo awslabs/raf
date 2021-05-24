@@ -104,6 +104,7 @@ void Unary(const CallValues& call) {
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.relu", Unary);
+MNM_DECLARE_UNARY_OP("mnm.op.gelu", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.tanh", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.sigmoid", Unary);
 MNM_DECLARE_UNARY_OP("mnm.op.copy", Unary);
@@ -157,6 +158,7 @@ void UnaryDx(const CallValues& call) {
 }
 
 MNM_DECLARE_UNARY_OP("mnm.op.relu_dx", UnaryDx);
+MNM_DECLARE_UNARY_OP("mnm.op.gelu_dx", UnaryDx);
 MNM_DECLARE_UNARY_OP("mnm.op.tanh_dx", UnaryDx);
 // TODO(@yzhliu, @icemelon9): We don't have tvm impl for sigmoid_dx. So currently don't fuse it.
 MNM_OP_DECLARE("mnm.op.sigmoid_dx", UnaryDx).set_attr<TOpPattern>("TOpPattern", kOpaque);

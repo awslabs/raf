@@ -109,6 +109,8 @@ static const char gather[] = "mnm.op.gather";
 static const char gather_dx[] = "mnm.op.gather_dx";
 static const char gather_nd[] = "mnm.op.gather_nd";
 static const char gather_nd_dx[] = "mnm.op.gather_nd_dx";
+static const char gelu[] = "mnm.op.gelu";
+static const char gelu_dx[] = "mnm.op.gelu_dx";
 static const char get_kept_dims[] = "mnm.op.get_kept_dims";
 static const char get_reduce_axis[] = "mnm.op.get_reduce_axis";
 static const char get_valid_counts[] = "mnm.op.get_valid_counts";
@@ -1802,6 +1804,23 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.gather_nd_dx").set_body([](TVMArgs args, TVMRetV
               schema::GatherNdDxArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->indices));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.gelu").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(gelu, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.gelu_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(gelu_dx, 3, ffi2schema::UnaryDx,
+              schema::UnaryDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::OptionalArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -3799,6 +3818,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.gather_dx").set_body(MNM_SYMBOLIC_API(gather_dx,
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather_nd").set_body(MNM_SYMBOLIC_API(gather_nd, 2, GatherNd));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather_nd_dx")
     .set_body(MNM_SYMBOLIC_API(gather_nd_dx, 3, GatherNdDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.gelu").set_body(MNM_SYMBOLIC_API(gelu, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.gelu_dx").set_body(MNM_SYMBOLIC_API(gelu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.get_kept_dims")
     .set_body(MNM_SYMBOLIC_API(get_kept_dims, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.get_reduce_axis")
@@ -6856,7 +6877,14 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gather_nd", names::gather_nd,
 MNM_BIND_SCHEMA("mnm.op.gather_nd_dx", names::gather_nd_dx,
                 value2schema::GatherNdDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gather_nd_dx", names::gather_nd_dx,
-                            schema_field_idx::GatherNdDx);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::GatherNdDx);         // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.gelu", names::gelu, value2schema::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gelu", names::gelu,
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.gelu_dx", names::gelu_dx,
+                value2schema::UnaryDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gelu_dx", names::gelu_dx,
+                            schema_field_idx::UnaryDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.get_kept_dims", names::get_kept_dims,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.get_kept_dims", names::get_kept_dims,

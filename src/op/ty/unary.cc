@@ -39,6 +39,7 @@ MNM_OP_TYPE("mnm.op.sin", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sign", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.round", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.relu", "Identity", UnaryInfer);
+MNM_OP_TYPE("mnm.op.gelu", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.tanh", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.sigmoid", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.copy", "Identity", UnaryInfer);
@@ -66,6 +67,7 @@ Type UnaryDxInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.relu_dx", "IdentityDx", UnaryDxInfer);
+MNM_OP_TYPE("mnm.op.gelu_dx", "IdentityDx", UnaryDxInfer);
 MNM_OP_TYPE("mnm.op.tanh_dx", "IdentityDx", UnaryDxInfer);
 MNM_OP_TYPE("mnm.op.sigmoid_dx", "IdentityDx", UnaryDxInfer);
 MNM_OP_TYPE("mnm.op.erf_dx", "IdentityDx", UnaryDxInfer);

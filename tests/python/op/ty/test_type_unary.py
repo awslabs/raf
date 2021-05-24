@@ -9,6 +9,7 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 @pytest.mark.parametrize("op", [
     (sym.relu, True),
+    (sym.gelu, True),
     (sym.log, True),
     (sym.log2, True),
     (sym.cos, True),

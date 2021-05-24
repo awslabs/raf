@@ -317,6 +317,10 @@ const char RELU_DX[] = "mnm.op.relu_dx";
 auto ReluGrad = UnaryGrad<RELU_DX>;
 MNM_OP_GRAD("mnm.op.relu", ReluGrad);
 
+const char GELU_DX[] = "mnm.op.gelu_dx";
+auto GeluGrad = UnaryGrad<GELU_DX>;
+MNM_OP_GRAD("mnm.op.gelu", GeluGrad);
+
 const char TANH_DX[] = "mnm.op.tanh_dx";
 auto TanhGrad = UnaryGrad<TANH_DX>;
 MNM_OP_GRAD("mnm.op.tanh", TanhGrad);

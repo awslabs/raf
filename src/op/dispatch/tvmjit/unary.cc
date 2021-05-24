@@ -51,6 +51,8 @@ MNM_TVMJIT(Round, "mnm.op.round", UnaryArgs, UnarySchema2Args, UnarySchemaArgNam
            GenericHasher);
 MNM_TVMJIT(Relu, "mnm.op.relu", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
            GenericHasher);
+MNM_TVMJIT(Gelu, "mnm.op.gelu", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
+           GenericHasher);
 MNM_TVMJIT(Erf, "mnm.op.erf", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
            GenericHasher);
 MNM_TVMJIT(Sqrt, "mnm.op.sqrt", UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs,
@@ -127,6 +129,8 @@ Attrs UnaryDxSchema2Attrs(const UnaryDxArgs* args) {
 
 MNM_TVMJIT_PLEVEL(ReluDx, "mnm.op.relu_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
                   UnaryDxSchema2Attrs, GenericHasher, 20);
+MNM_TVMJIT(GeluDx, "mnm.op.gelu_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
+           UnaryDxSchema2Attrs, GenericHasher);
 MNM_TVMJIT(ErfDx, "mnm.op.erf_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
            UnaryDxSchema2Attrs, GenericHasher);
 MNM_TVMJIT(SqrtDx, "mnm.op.sqrt_dx", UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,

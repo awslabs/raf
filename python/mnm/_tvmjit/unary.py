@@ -61,3 +61,36 @@ def sqrt_dx_compute(attrs, inputs, output_type):
                             tag=_tvm.topi.tag.ELEMWISE)]
 
 _reg.register_injective_schedule("mnm.op.sqrt_dx")
+
+@register_compute("mnm.op.gelu")
+def gelu_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=unused-variable
+    data = inputs[0]
+    # gelu is data  * normcdf(data)
+    const_point_5 = _tvm.tir.const(0.5, dtype=data.dtype)
+    const_1 = _tvm.tir.const(1, dtype=data.dtype)
+    const_sqrt_2 = _tvm.tir.const(math.sqrt(2), dtype=data.dtype)
+    return [data * (const_point_5 * (const_1 + _tvm.topi.erf(data / const_sqrt_2)))]
+
+_reg.register_injective_schedule("mnm.op.gelu")
+
+@register_compute("mnm.op.gelu_dx")
+def gelu_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=unused-variable
+    x, y, dy = inputs
+    const_point_5 = _tvm.tir.const(0.5, dtype=x.dtype)
+    const_minus_point_5 = _tvm.tir.const(-0.5, dtype=x.dtype)
+    const_1 = _tvm.tir.const(1, dtype=x.dtype)
+    const_sqrt_2 = _tvm.tir.const(math.sqrt(2), dtype=x.dtype)
+    const_sqrt_pi = _tvm.tir.const(math.sqrt(math.pi), dtype=x.dtype)
+    # cdf = 0.5 * (1 + erf(x/sqrt(2)))
+    cdf = const_point_5 * (const_1 + _tvm.topi.erf(x / const_sqrt_2))
+    # beta = 1 / sqrt(2*pi)
+    const_beta = const_1 / (const_sqrt_2 * const_sqrt_pi)
+    # pdf = beta * e^(-0.5x^2)
+    pdf = const_beta * _tvm.topi.exp(x * x * const_minus_point_5)
+    return [dy * (cdf + x * pdf)]
+
+_reg.register_injective_schedule("mnm.op.gelu_dx")

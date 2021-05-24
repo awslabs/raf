@@ -69,6 +69,8 @@ from ._internal import gather
 from ._internal import gather_dx
 from ._internal import gather_nd
 from ._internal import gather_nd_dx
+from ._internal import gelu
+from ._internal import gelu_dx
 from ._internal import get_kept_dims
 from ._internal import get_reduce_axis
 from ._internal import get_valid_counts
