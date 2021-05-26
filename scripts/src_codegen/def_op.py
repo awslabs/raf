@@ -20,6 +20,8 @@ OPS = [
     Op(name="batch_norm_train_dxwb", schema_name="batch_norm_train_dxwb"),
     Op(name="conv2d_dx", schema_name="conv_dxw"),
     Op(name="conv2d_dw", schema_name="conv_dxw"),
+    Op(name="conv2d_transpose_dx", schema_name="conv_transpose_dxw"),
+    Op(name="conv2d_transpose_dw", schema_name="conv_transpose_dxw"),
     Op(name="max_pool2d_dx", schema_name="pool_dx"),
     Op(name="avg_pool2d_dx", schema_name="pool_dx"),
     Op(name="adaptive_max_pool2d_dx", schema_name="adaptive_pool_dx"),

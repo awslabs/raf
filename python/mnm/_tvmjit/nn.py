@@ -253,13 +253,13 @@ def compute_layer_norm(attr, inputs, output_type):
     return [out]
 
 @generic_func
-def schedule_layer_norm(attrs, outs, target):
+def schedule_generic(attrs, outs, target):
     # pylint: disable=unused-argument
     with target:
         return _topi.generic.schedule_injective(outs)
 
-@schedule_layer_norm.register(["cuda", "gpu"])
-def schedule_layer_norm_cuda(attrs, outs, target):
+@schedule_generic.register(["cuda", "gpu"])
+def schedule_generic_cuda(attrs, outs, target):
     # pylint: disable=unused-argument
     # pylint: disable=invalid-name
     with target:
@@ -282,7 +282,7 @@ def schedule_layer_norm_cuda(attrs, outs, target):
         bind_axes(s, out)
         return s
 
-_reg.register_schedule("mnm.op.layer_norm", schedule_layer_norm)
+_reg.register_schedule("mnm.op.layer_norm", schedule_generic)
 
 @register_compute("mnm.op.layer_norm_dx")
 def compute_layer_norm_dx(attr, inputs, output_type):
@@ -336,7 +336,7 @@ def compute_layer_norm_dx(attr, inputs, output_type):
         return [dx, dw, db]
     return [dx]
 
-_reg.register_schedule("mnm.op.layer_norm_dx", schedule_layer_norm)
+_reg.register_schedule("mnm.op.layer_norm_dx", schedule_generic)
 
 _reg.register_strategy("mnm.op.conv2d", strategy.conv2d_strategy)
 
@@ -401,20 +401,17 @@ def declaration_conv2d_transpose_impl(data, kernel, strides, padding, out_dtype,
 
     # convolution stage
     out_c = _topi.nn.simplify(out_c)
-
     out_h = _topi.nn.simplify(in_h - filter_h + 1 + output_padding[0])
     out_w = _topi.nn.simplify(in_w - filter_w + 1 + output_padding[1])
     dc = _tvm.te.reduce_axis((0, in_c), name='dc')
     dh = _tvm.te.reduce_axis((0, filter_h), name='dh')
     dw = _tvm.te.reduce_axis((0, filter_w), name='dw')
-
     Output = _tvm.te.compute(
         (batch, out_c, out_h, out_w),
         lambda b, c, h, w: _tvm.tir.sum(
             data_pad[b, dc, h+dh, w+dw].astype(out_dtype) *
             kernel_transform[c, dc, dh, dw].astype(out_dtype),
             axis=[dc, dh, dw]), tag="conv2d_transpose_nchw")
-
     return Output
 
 @register_compute("mnm.op.conv2d_dx")
@@ -429,8 +426,8 @@ def compute_conv2d_dx(attr, inputs, output_type):
                                          _topi.utils.get_const_tuple(attr.dilation), \
                                          attr.data_layout
     assert layout == "NCHW"
-    assert dilation == (1, 1), "not support dilate now"
-    assert attr.groups == 1, "only support groups == 1 for now"
+    assert dilation == (1, 1), "dilation is not supported yet"
+    assert attr.groups == 1, "only support groups = 1"
     use_output = attr.use_output
     if use_output:
         W, dy = inputs[0], inputs[2]
@@ -441,8 +438,8 @@ def compute_conv2d_dx(attr, inputs, output_type):
     grads = _tvm.te.gradient(R, [X], head=dy)
     return grads
 
+_reg.register_schedule("mnm.op.conv2d_dx", schedule_generic)
 
-_reg.register_schedule("mnm.op.conv2d_dx", schedule_layer_norm)
 
 @register_compute("mnm.op.conv2d_dw")
 def compute_conv2d_dw(attr, inputs, output_type):
@@ -455,9 +452,9 @@ def compute_conv2d_dw(attr, inputs, output_type):
                                          _topi.utils.get_const_tuple(attr.padding), \
                                          _topi.utils.get_const_tuple(attr.dilation), \
                                          attr.data_layout
-    assert layout == "NCHW"
-    assert dilation == (1, 1), "not support dilate now"
-    assert attr.groups == 1, "only support groups == 1 for now"
+    assert layout == "NCHW", "only support NCHW layout"
+    assert dilation == (1, 1), "dilation is not supported yet"
+    assert attr.groups == 1, "only support groups = 1"
 
     use_output = attr.use_output
     if use_output:
@@ -471,7 +468,72 @@ def compute_conv2d_dw(attr, inputs, output_type):
     return grads
 
 
-_reg.register_schedule("mnm.op.conv2d_dw", schedule_layer_norm)
+_reg.register_schedule("mnm.op.conv2d_dw", schedule_generic)
+
+
+@register_compute("mnm.op.conv2d_transpose_dx")
+def compute_conv2d_transpose_dx(attr, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=unused-variable
+    # pylint: disable=too-many-locals
+    # pylint: disable=invalid-name
+    # pylint: disable=unbalanced-tuple-unpacking
+    strides, padding, output_padding, dilation, layout =                            \
+                                         _topi.utils.get_const_tuple(attr.strides), \
+                                         _topi.utils.get_const_tuple(attr.padding), \
+                                         _topi.utils.get_const_tuple(attr.output_padding), \
+                                         _topi.utils.get_const_tuple(attr.dilation), \
+                                         attr.data_layout
+    assert layout == "NCHW", "only support NCHW layout"
+    assert dilation == (1, 1), "dilation is not supported yet"
+    assert attr.groups == 1, "only support groups = 1"
+    use_output = attr.use_output
+    if use_output:
+        W, dy = inputs[0], inputs[2]
+    else:
+        W, dy = inputs[0], inputs[1]
+    assert (W.shape[3] > 1 and W.shape[2] > 1), "not support kernel size 1 for now. \
+                                                See apache/tvm#8087"
+    X = _tvm.te.placeholder(shape=attr.kernel_size, dtype=dy.dtype)
+    R = _topi.x86.conv2d_transpose_nchw(X, W, strides, padding, dy.dtype, output_padding)
+    grads = _tvm.te.gradient(R, [X], head=dy)
+    return grads
+
+
+_reg.register_schedule("mnm.op.conv2d_transpose_dx", schedule_generic)
+
+@register_compute("mnm.op.conv2d_transpose_dw")
+def compute_conv2d_transpose_dw(attr, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=unused-variable
+    # pylint: disable=too-many-locals
+    # pylint: disable=invalid-name
+    # pylint: disable=unbalanced-tuple-unpacking
+    strides, padding, output_padding, dilation, layout =                            \
+                                         _topi.utils.get_const_tuple(attr.strides), \
+                                         _topi.utils.get_const_tuple(attr.padding), \
+                                         _topi.utils.get_const_tuple(attr.output_padding), \
+                                         _topi.utils.get_const_tuple(attr.dilation), \
+                                         attr.data_layout
+    assert layout == "NCHW", "only support NCHW layout"
+    assert dilation == (1, 1), "dilation is not supported yet"
+    assert attr.groups == 1, "only support groups = 1"
+
+    use_output = attr.use_output
+    if use_output:
+        X, dy = inputs[0], inputs[2]
+    else:
+        X, dy = inputs[0], inputs[1]
+
+    W = _tvm.te.placeholder(shape=attr.kernel_size, dtype=X.dtype)
+    R = _topi.x86.conv2d_transpose_nchw(X, W, strides, padding, dy.dtype, output_padding)
+
+    grads = _tvm.te.gradient(R, [W], head=dy)
+    return grads
+
+_reg.register_schedule("mnm.op.conv2d_transpose_dw", schedule_generic)
+
+
 
 def average(data, axis):
     shape = _topi.utils.get_const_tuple(data.shape)

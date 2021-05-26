@@ -99,6 +99,10 @@ conv2d_dx = _APIS.get("mnm.op.imp.conv2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
 conv2d_transpose = _APIS.get("mnm.op.imp.conv2d_transpose", None)
 # Defined in ./src/op/regs/regs.cc
+conv2d_transpose_dw = _APIS.get("mnm.op.imp.conv2d_transpose_dw", None)
+# Defined in ./src/op/regs/regs.cc
+conv2d_transpose_dx = _APIS.get("mnm.op.imp.conv2d_transpose_dx", None)
+# Defined in ./src/op/regs/regs.cc
 copy = _APIS.get("mnm.op.imp.copy", None)
 # Defined in ./src/op/regs/regs.cc
 cos = _APIS.get("mnm.op.imp.cos", None)

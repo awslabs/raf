@@ -89,6 +89,8 @@ static const char conv2d[] = "mnm.op.conv2d";
 static const char conv2d_dw[] = "mnm.op.conv2d_dw";
 static const char conv2d_dx[] = "mnm.op.conv2d_dx";
 static const char conv2d_transpose[] = "mnm.op.conv2d_transpose";
+static const char conv2d_transpose_dw[] = "mnm.op.conv2d_transpose_dw";
+static const char conv2d_transpose_dx[] = "mnm.op.conv2d_transpose_dx";
 static const char copy[] = "mnm.op.copy";
 static const char cos[] = "mnm.op.cos";
 static const char cross_entropy[] = "mnm.op.cross_entropy";
@@ -497,6 +499,20 @@ Attrs ConvTrans(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(7, ffi2schema::String, layout);
   MNM_POD(8, ffi2schema::String, kernel_layout);
   MNM_POD(9, ffi2schema::String, out_layout);
+  return Attrs(attrs);
+}
+
+Attrs ConvTransposeDxw(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ConvTransposeDxwArgs, 9);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x_or_w);
+  MNM_TAPE(1, ffi2schema::OptionalTensor, y);
+  MNM_TAPE(2, ffi2schema::Tensor, dy);
+  MNM_POD(3, ffi2schema::IntArray, shape);
+  MNM_POD(4, ffi2schema::IntOrTupleInt, stride);
+  MNM_POD(5, ffi2schema::IntOrTupleInt, padding);
+  MNM_POD(6, ffi2schema::IntOrTupleInt, output_padding);
+  MNM_POD(7, ffi2schema::IntOrTupleInt, dilation);
+  MNM_POD(8, ffi2schema::Int, groups);
   return Attrs(attrs);
 }
 
@@ -1631,6 +1647,38 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_transpose").set_body([](TVMArgs args, TVM
   MNM_SET_ENV(vpack->x[7], schema2value::String(schema->layout));
   MNM_SET_ENV(vpack->x[8], schema2value::String(schema->kernel_layout));
   MNM_SET_ENV(vpack->x[9], schema2value::String(schema->out_layout));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_transpose_dw").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(conv2d_transpose_dw, 9, ffi2schema::ConvTransposeDxw,
+              schema::ConvTransposeDxwArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x_or_w));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntArray(schema->shape));
+  MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->stride));
+  MNM_SET_ENV(vpack->x[5], schema2value::IntOrTupleInt(schema->padding));
+  MNM_SET_ENV(vpack->x[6], schema2value::IntOrTupleInt(schema->output_padding));
+  MNM_SET_ENV(vpack->x[7], schema2value::IntOrTupleInt(schema->dilation));
+  MNM_SET_ENV(vpack->x[8], schema2value::Int(schema->groups));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.conv2d_transpose_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(conv2d_transpose_dx, 9, ffi2schema::ConvTransposeDxw,
+              schema::ConvTransposeDxwArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x_or_w));
+  MNM_SET_ENV(vpack->x[1], schema2value::OptionalTensor(schema->y));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntArray(schema->shape));
+  MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->stride));
+  MNM_SET_ENV(vpack->x[5], schema2value::IntOrTupleInt(schema->padding));
+  MNM_SET_ENV(vpack->x[6], schema2value::IntOrTupleInt(schema->output_padding));
+  MNM_SET_ENV(vpack->x[7], schema2value::IntOrTupleInt(schema->dilation));
+  MNM_SET_ENV(vpack->x[8], schema2value::Int(schema->groups));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3115,6 +3163,20 @@ Array<Expr> ConvTrans(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> ConvTransposeDxw(const TVMArgs& values) {
+  MNM_PRELUDE(9);
+  MNM_ARG(0, ffi2expr::Tensor, x_or_w);
+  MNM_ARG(1, ffi2expr::OptionalTensor, y);
+  MNM_ARG(2, ffi2expr::Tensor, dy);
+  MNM_ARG(3, ffi2expr::IntArray, shape);
+  MNM_ARG(4, ffi2expr::IntOrTupleInt, stride);
+  MNM_ARG(5, ffi2expr::IntOrTupleInt, padding);
+  MNM_ARG(6, ffi2expr::IntOrTupleInt, output_padding);
+  MNM_ARG(7, ffi2expr::IntOrTupleInt, dilation);
+  MNM_ARG(8, ffi2expr::Int, groups);
+  MNM_RET();
+}
+
 Array<Expr> DeviceCopy(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, data);
@@ -3793,6 +3855,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dw").set_body(MNM_SYMBOLIC_API(conv2d_dw,
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_dx").set_body(MNM_SYMBOLIC_API(conv2d_dx, 8, ConvDxw));
 MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_transpose")
     .set_body(MNM_SYMBOLIC_API(conv2d_transpose, 10, ConvTrans));
+MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_transpose_dw")
+    .set_body(MNM_SYMBOLIC_API(conv2d_transpose_dw, 9, ConvTransposeDxw));
+MNM_REGISTER_GLOBAL("mnm.op.sym.conv2d_transpose_dx")
+    .set_body(MNM_SYMBOLIC_API(conv2d_transpose_dx, 9, ConvTransposeDxw));
 MNM_REGISTER_GLOBAL("mnm.op.sym.copy").set_body(MNM_SYMBOLIC_API(copy, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.cos").set_body(MNM_SYMBOLIC_API(cos, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy").set_body(MNM_SYMBOLIC_API(cross_entropy, 2, Loss));
@@ -4279,6 +4345,21 @@ Attrs ConvTrans(const Array<Value>& values) {
   MNM_OPTIONAL(7, value2schema::String, layout);
   MNM_OPTIONAL(8, value2schema::String, kernel_layout);
   MNM_OPTIONAL(9, value2schema::String, out_layout);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs ConvTransposeDxw(const Array<Value>& values) {
+  MNM_PRELUDE(9, 9, schema::ConvTransposeDxwArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x_or_w);
+  MNM_REQUIRED(1, value2schema::OptionalTensor, y);
+  MNM_REQUIRED(2, value2schema::Tensor, dy);
+  MNM_REQUIRED(3, value2schema::IntArray, shape);
+  MNM_REQUIRED(4, value2schema::IntOrTupleInt, stride);
+  MNM_REQUIRED(5, value2schema::IntOrTupleInt, padding);
+  MNM_REQUIRED(6, value2schema::IntOrTupleInt, output_padding);
+  MNM_REQUIRED(7, value2schema::IntOrTupleInt, dilation);
+  MNM_REQUIRED(8, value2schema::Int, groups);
   return Attrs(attrs);
 }
 
@@ -5434,6 +5515,39 @@ int ConvTrans(const std::string& field) {
   }
   if (field == "out_layout") {
     return 9;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ConvTransposeDxw(const std::string& field) {
+  if (field == "x_or_w") {
+    return 0;
+  }
+  if (field == "y") {
+    return 1;
+  }
+  if (field == "dy") {
+    return 2;
+  }
+  if (field == "shape") {
+    return 3;
+  }
+  if (field == "stride") {
+    return 4;
+  }
+  if (field == "padding") {
+    return 5;
+  }
+  if (field == "output_padding") {
+    return 6;
+  }
+  if (field == "dilation") {
+    return 7;
+  }
+  if (field == "groups") {
+    return 8;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -6802,7 +6916,15 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d_dx", names::conv2d_dx,
 MNM_BIND_SCHEMA("mnm.op.conv2d_transpose", names::conv2d_transpose,
                 value2schema::ConvTrans);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d_transpose", names::conv2d_transpose,
-                            schema_field_idx::ConvTrans);          // NOLINT(whitespace/line_length)
+                            schema_field_idx::ConvTrans);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.conv2d_transpose_dw", names::conv2d_transpose_dw,
+                value2schema::ConvTransposeDxw);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d_transpose_dw", names::conv2d_transpose_dw,
+                            schema_field_idx::ConvTransposeDxw);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.conv2d_transpose_dx", names::conv2d_transpose_dx,
+                value2schema::ConvTransposeDxw);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.conv2d_transpose_dx", names::conv2d_transpose_dx,
+                            schema_field_idx::ConvTransposeDxw);   // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.copy", names::copy, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.copy", names::copy,
                             schema_field_idx::Unary);            // NOLINT(whitespace/line_length)
@@ -7327,6 +7449,7 @@ MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvTransArgs);
+MNM_REGISTER_OBJECT_REFLECT(ConvTransposeDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutDxArgs);

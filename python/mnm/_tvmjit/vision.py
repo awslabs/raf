@@ -1,6 +1,6 @@
 # pylint: disable=missing-function-docstring
 """Compute definition and schedules for vision functions."""
-from .nn import schedule_layer_norm
+from .nn import schedule_generic
 from .._lib import _reg
 from .._lib import strategy, register_compute
 from .._lib import tvm as _tvm
@@ -31,4 +31,4 @@ def roi_align_dx_compute(attrs, inputs, output_type):
     grads = _tvm.te.gradient(R, [data], head=dy)
     return grads
 
-_reg.register_schedule("mnm.op.roi_align_dx", schedule_layer_norm)
+_reg.register_schedule("mnm.op.roi_align_dx", schedule_generic)

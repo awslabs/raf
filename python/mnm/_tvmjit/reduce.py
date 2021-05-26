@@ -1,6 +1,6 @@
 # pylint: disable=missing-function-docstring, too-many-locals
 """Reduction compute definition and schedules."""
-from mnm._tvmjit.nn import schedule_layer_norm
+from mnm._tvmjit.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
@@ -152,7 +152,7 @@ def prod_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argume
     out = _topi.multiply(factor, dy_reshape)
     return [out]
 
-_reg.register_schedule("mnm.op.prod_dx", schedule_layer_norm)
+_reg.register_schedule("mnm.op.prod_dx", schedule_generic)
 
 @register_compute("mnm.op.mean_dx")
 def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument

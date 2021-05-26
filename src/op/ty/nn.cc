@@ -168,6 +168,24 @@ Type Conv2DDxwInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.conv2d_dw", "Conv2dDxw", Conv2DDxwInfer);
 MNM_OP_TYPE("mnm.op.conv2d_dx", "Conv2dDxw", Conv2DDxwInfer);
 
+Type Conv2DTransposeDxwInfer(const CallValues& value) {
+  const auto* args = value->args.as<ConvTransposeDxwArgs>();
+  CHECK(args != nullptr);
+  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  Array<PrimExpr> res;
+  if (args->shape.defined()) {
+    for (auto value : args->shape.value()) {
+      res.push_back(Integer(value->value));
+    }
+    return TensorType(res, dy->dtype);
+  } else {
+    return IncompleteType(tvm::kType);
+  }
+}
+
+MNM_OP_TYPE("mnm.op.conv2d_transpose_dw", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
+MNM_OP_TYPE("mnm.op.conv2d_transpose_dx", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
+
 Type Pool2DInfer(const CallValues& value) {
   using namespace tvm::tir;
   const auto* args = value->args.as<PoolArgs>();

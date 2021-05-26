@@ -1,6 +1,6 @@
 # pylint: disable=missing-function-docstring, line-too-long, undefined-loop-variable
 """Compute definition and schedules for data transform operators"""
-from mnm._tvmjit.nn import schedule_layer_norm
+from mnm._tvmjit.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import strategy
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
@@ -32,7 +32,7 @@ def repeat_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-arg
     out = _topi.concatenate(tuple(result_list), axis)
     return [out]
 
-_reg.register_schedule("mnm.op.repeat_dx", schedule_layer_norm)
+_reg.register_schedule("mnm.op.repeat_dx", schedule_generic)
 
 @register_compute("mnm.op.swap_axis")
 def swap_axis_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument

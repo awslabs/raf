@@ -314,6 +314,22 @@ void Conv2dDxw(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 
+void Conv2dTransposeDxw(const CallValues& call) {
+  const auto* args = call->args.as<ConvTransposeDxwArgs>();
+  CHECK(args != nullptr);
+  CHECK(args->shape.defined());
+  const DLTensor* x_or_w = args->x_or_w;
+  call->out = TensorValue::Assemble(/*dev=*/x_or_w->device,
+                                    /*dtype=*/x_or_w->dtype,
+                                    /*shape=*/args->shape.value());
+  call->device = x_or_w->device;
+}
+
+MNM_OP_DECLARE("mnm.op.conv2d_transpose_dx", Conv2dTransposeDxw)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.conv2d_transpose_dw", Conv2dTransposeDxw)
+    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+
 MNM_OP_DECLARE("mnm.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>)
     .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
 MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>)

@@ -122,6 +122,20 @@ class ConvTransArgs : public ir::AttrsNode<ConvTransArgs> {
   MNM_OP_SCHEMA(ConvTransArgs, "mnm.args.conv_trans");
 };
 
+class ConvTransposeDxwArgs : public ir::AttrsNode<ConvTransposeDxwArgs> {
+ public:
+  value::BaseTensorValue x_or_w;
+  ir::Optional<value::BaseTensorValue> y;
+  value::BaseTensorValue dy;
+  ir::Optional<ir::Array<value::IntValue>> shape;
+  std::vector<int64_t> stride;
+  std::vector<int64_t> padding;
+  std::vector<int64_t> output_padding;
+  std::vector<int64_t> dilation;
+  int64_t groups;
+  MNM_OP_SCHEMA(ConvTransposeDxwArgs, "mnm.args.conv_transpose_dxw");
+};
+
 class DropoutArgs : public ir::AttrsNode<DropoutArgs> {
  public:
   value::BaseTensorValue x;
