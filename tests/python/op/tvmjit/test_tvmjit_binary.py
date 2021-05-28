@@ -22,6 +22,7 @@ class BinaryModel(mnm.Model):
     (np.maximum, mnm._op.sym.maximum),
     (np.greater, mnm._op.sym.greater),
     (np.minimum, mnm._op.sym.minimum),
+    (np.floor_divide, mnm._op.sym.floor_divide),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],

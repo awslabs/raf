@@ -12,6 +12,7 @@ from tvm.relay import TensorType, FuncType, TupleType
     sym.subtract,
     sym.multiply,
     sym.divide,
+    sym.floor_divide,
     sym.mod,
     sym.maximum,
     sym.minimum,

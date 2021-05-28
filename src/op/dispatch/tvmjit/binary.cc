@@ -23,6 +23,8 @@ MNM_TVMJIT(Subtract, "mnm.op.subtract", BinaryUfuncArgs, BinarySchema2Args, Bina
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(Divide, "mnm.op.divide", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
+MNM_TVMJIT(FloorDivide, "mnm.op.floor_divide", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
 MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(Power, "mnm.op.power", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, GenericAttrs,

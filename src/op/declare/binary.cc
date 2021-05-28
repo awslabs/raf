@@ -164,6 +164,23 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.divide", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
+MNM_REGISTER_BINARY_BCAST_OP("mnm.op.floor_divide", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryArgs>();
+  CHECK(args != nullptr);
+  const Value& x1 = args->x1;
+  const Value& x2 = args->x2;
+  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+                      if (s2->value == 0) {
+                        LOG(FATAL) << "ZeroDivisionError: division by zero";
+                        throw;
+                      }
+                      call->callee = ir::NullValue<OpValue>();
+                      call->out = ScalarValue::make(floor(s1->value / s2->value));
+                      return;
+                    }));
+  MNM_BINARY_TENSOR(x1, x2);
+});
+
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.mod", [](const CallValues& call) {
   // TODO(@junrushao1994): python-style Euclidean division modulo
   const auto* args = call->args.as<BinaryArgs>();

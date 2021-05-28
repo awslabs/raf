@@ -24,6 +24,7 @@ using namespace mnm::ir;
 MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY("add", "mnm.op.add");
 MNM_BINARY_UFUNC_ATTR_OP_FROM_RELAY("subtract", "mnm.op.subtract");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("divide", "mnm.op.divide");
+MNM_GENERIC_ATTR_OP_FROM_RELAY("floor_divide", "mnm.op.floor_divide");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("multiply", "mnm.op.multiply");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("power", "mnm.op.power");
 MNM_GENERIC_ATTR_OP_FROM_RELAY("mod", "mnm.op.mod");

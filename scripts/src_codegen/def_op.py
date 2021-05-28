@@ -61,6 +61,7 @@ OPS = [
     Op(name="subtract", schema_name="binary_ufunc"),
     Op(name="multiply", schema_name="binary"),
     Op(name="divide", schema_name="binary"),
+    Op(name="floor_divide", schema_name="binary"),
     Op(name="power", schema_name="binary"),
     Op(name="mod", schema_name="binary"),
     Op(name="less", schema_name="binary"),

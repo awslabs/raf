@@ -146,7 +146,7 @@ def test_mnm_unary_op(op_name, shape):
 
 
 @pytest.mark.parametrize("op_name", [
-    "add", "subtract", "divide", "multiply", "power",
+    "add", "subtract", "divide", "multiply", "power", "floor_divide",
     "greater", "maximum", "minimum"
 ])
 @pytest.mark.parametrize("shape", [(2, 2)])

@@ -131,6 +131,8 @@ expand_dims = _APIS.get("mnm.op.imp.expand_dims", None)
 # Defined in ./src/op/regs/regs.cc
 floor = _APIS.get("mnm.op.imp.floor", None)
 # Defined in ./src/op/regs/regs.cc
+floor_divide = _APIS.get("mnm.op.imp.floor_divide", None)
+# Defined in ./src/op/regs/regs.cc
 full = _APIS.get("mnm.op.imp.full", None)
 # Defined in ./src/op/regs/regs.cc
 full_like = _APIS.get("mnm.op.imp.full_like", None)

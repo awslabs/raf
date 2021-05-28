@@ -86,6 +86,7 @@ MNM_OP_TYPE("mnm.op.add", "BroadcastUfunc", BroadcastUfuncInfer);
 MNM_OP_TYPE("mnm.op.subtract", "BroadcastUfunc", BroadcastUfuncInfer);
 MNM_OP_TYPE("mnm.op.multiply", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.divide", "Broadcast", BroadcastInfer);
+MNM_OP_TYPE("mnm.op.floor_divide", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.mod", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.maximum", "Broadcast", BroadcastInfer);
 MNM_OP_TYPE("mnm.op.minimum", "Broadcast", BroadcastInfer);

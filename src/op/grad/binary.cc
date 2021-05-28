@@ -179,6 +179,23 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
 
 MNM_OP_GRAD("mnm.op.divide", DivGrad);
 
+Array<Expr> FloorDivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                         const Expr& dy) {
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 2);
+  const Expr& x1 = call->args[0];
+  const Expr& x2 = call->args[1];
+  auto f = [&dy](const Expr& x) {
+    static auto op_zeros_like = Op::Get("mnm.op.zeros_like");
+    Call zero = Call(op_zeros_like, {x});
+    return zero;
+  };
+
+  return {f(x1), f(x2)};
+}
+
+MNM_OP_GRAD("mnm.op.floor_divide", FloorDivGrad);
+
 Array<Expr> BinaryZeroGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                            const Expr& dy) {
   const CallNode* call = orig_call.as<CallNode>();

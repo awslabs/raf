@@ -105,6 +105,7 @@ static const char erf_dx[] = "mnm.op.erf_dx";
 static const char exp[] = "mnm.op.exp";
 static const char expand_dims[] = "mnm.op.expand_dims";
 static const char floor[] = "mnm.op.floor";
+static const char floor_divide[] = "mnm.op.floor_divide";
 static const char full[] = "mnm.op.full";
 static const char full_like[] = "mnm.op.full_like";
 static const char gather[] = "mnm.op.gather";
@@ -1795,6 +1796,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.expand_dims").set_body([](TVMArgs args, TVMRetVa
 MNM_REGISTER_GLOBAL("mnm.op.imp.floor").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(floor, 1, ffi2schema::Unary, schema::UnaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.floor_divide").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(floor_divide, 2, ffi2schema::Binary,
+              schema::BinaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
+  MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3877,6 +3887,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.exp").set_body(MNM_SYMBOLIC_API(exp, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.expand_dims")
     .set_body(MNM_SYMBOLIC_API(expand_dims, 3, ExpandDims));
 MNM_REGISTER_GLOBAL("mnm.op.sym.floor").set_body(MNM_SYMBOLIC_API(floor, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.floor_divide").set_body(MNM_SYMBOLIC_API(floor_divide, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.full").set_body(MNM_SYMBOLIC_API(full, 4, Full));
 MNM_REGISTER_GLOBAL("mnm.op.sym.full_like").set_body(MNM_SYMBOLIC_API(full_like, 2, FullLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather").set_body(MNM_SYMBOLIC_API(gather, 3, Gather));
@@ -6976,7 +6987,11 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.expand_dims", names::expand_dims,
 MNM_BIND_SCHEMA("mnm.op.floor", names::floor,
                 value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.floor", names::floor,
-                            schema_field_idx::Unary);             // NOLINT(whitespace/line_length)
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.floor_divide", names::floor_divide,
+                value2schema::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.floor_divide", names::floor_divide,
+                            schema_field_idx::Binary);            // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.full", names::full, value2schema::Full);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.full", names::full,
                             schema_field_idx::Full);  // NOLINT(whitespace/line_length)
