@@ -202,11 +202,17 @@ class TensorGroups {
  * 3. Mutate alloc_storage to allocate sufficient memory, which is required by
  *    the largest tensor in the group.
  * 4. Remove alloc_storages that do not be used by any group.
+ * 5. Insert free(%x) to free tensor/storage %x at the end of its life-cycle.
  */
-class MemoryPlanner : public MixedModeMutator {
+class MemoryPlanner : public ExprMutator {
  public:
-  MemoryPlanner(const Function& func, liveness_analysis::LivenessAnalyzer* analyzer)
-      : func_(func), analyzer_(analyzer), tensor_groups_(Group()) {
+  MemoryPlanner(const Function& func, liveness_analysis::LivenessAnalyzer* analyzer,
+                bool inert_free, bool reuse_storage)
+      : func_(func),
+        analyzer_(analyzer),
+        tensor_groups_(Group(reuse_storage)),
+        insert_free_(inert_free),
+        scopes_{LetList()} {
   }
 
   Expr Run() {
@@ -216,7 +222,7 @@ class MemoryPlanner : public MixedModeMutator {
     // Keep storage var that is being used by one or more tensors.
     for (const auto& group : tensor_groups_.groups) {
       if (group.members.size() > 0) {
-        keep_storages_.insert(group.storage);
+        live_storages_.insert(group.storage);
       }
     }
 
@@ -224,59 +230,93 @@ class MemoryPlanner : public MixedModeMutator {
     return this->Mutate(func_);
   }
 
-  Expr VisitExpr_(const LetNode* node) final {
-    auto pre_visit = [this](const LetNode* node) {
+  Expr VisitExpr_(const LetNode* node) {
+    static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
+    scopes_.emplace_back();
+    auto& scope = scopes_.back();
+    Expr body;
+    do {
       curr_let_ = node->var;
-      this->Mutate(node->var);
-      this->Mutate(node->value);
-    };
 
-    auto post_visit = [this](const LetNode* node) {
-      static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
-      Var var = Downcast<Var>(this->Mutate(node->var));
-      Expr value = this->Mutate(node->value);
-      Expr body = this->Mutate(node->body);
-      auto expr = GetRef<Expr>(node);
+      if (insert_free_) {
+        // Free allocated tensors that will not be used anymore.
+        auto live_in_vars = analyzer_->GetLiveVars(curr_let_);
+        auto it = live_tensors_.begin();
+        while (it != live_tensors_.end()) {
+          const Var target_var = tensor_groups_.GetTensorVar(*it);
+          if (live_in_vars.find(target_var) == live_in_vars.end()) {
+            // Insert free_tnesor for the tensor if its liveness is ended
+            // at the statement we are going to visit.
+            scope.Push(MakeFreeMemory(*it));
+
+            // Remove the freed tensor from the tensor group.
+            auto group_id = tensor_groups_.FindGroupIdByMember(*it);
+            tensor_groups_.RemoveFromGroup(group_id, *it);
+
+            it = live_tensors_.erase(it);
+          } else {
+            it++;
+          }
+        }
+
+        // Free allocated storages that will not be used anymore.
+        for (const auto& group : tensor_groups_.groups) {
+          // This group has no member but its storage is live, meaning that
+          // all its member tensors are already freed, the storage can also be freed.
+          if (group.members.size() == 0 &&
+              live_storages_.find(group.storage) != live_storages_.end()) {
+            scope.Push(MakeFreeMemory(group.storage));
+            live_storages_.erase(group.storage);
+          }
+        }
+      }
+
+      auto value = VisitExpr(node->value);
 
       // Determine whether the alloc_storage is unused and should be dismissed.
       bool dismiss_storage = false;
       if (const auto& node = value.as<CallNode>()) {
         const auto* op_node = node->op.as<OpNode>();
         if (op_node && GetRef<Op>(op_node) == alloc_storage_op &&
-            keep_storages_.find(var) == keep_storages_.end()) {
+            live_storages_.find(curr_let_) == live_storages_.end()) {
           dismiss_storage = true;
         }
       }
-
-      if (var.same_as(node->var) && value.same_as(node->value) && body.same_as(node->body)) {
-        this->memo_[expr] = expr;
-      } else if (dismiss_storage) {
-        // Dismiss the expression.
-        this->memo_[expr] = body;
-      } else {
-        this->memo_[expr] = Let(var, value, body);
+      if (!dismiss_storage) {
+        expr_map_.emplace(node->var, value);
+        scope.Push(node->var, value);
       }
-    };
-    ExpandANormalForm(node, pre_visit, post_visit);
-    return memo_[GetRef<Expr>(node)];
+
+      body = node->body;
+      node = body.as<LetNode>();
+    } while (node);
+    auto new_body = VisitExpr(body);
+    auto ret = scopes_.back().Get(new_body);
+    scopes_.pop_back();
+    return ret;
   }
 
-  Expr Rewrite_(const CallNode* pre, const Expr& post) final {
+  Expr VisitExpr_(const CallNode* node) final {
     static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
     static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
-    const auto* op_node = pre->op.as<OpNode>();
+    const auto* op_node = node->op.as<OpNode>();
 
-    auto call = Downcast<Call>(post);
+    auto call = GetRef<Call>(node);
     if (op_node && GetRef<Op>(op_node) == alloc_storage_op) {
       // Mutate the size of alloc_storage indicated by the tensor group.
+
       auto group_id = tensor_groups_.FindGroupIdByStorageVar(curr_let_);
       if (group_id != -1 && tensor_groups_.groups[group_id].size > 0) {
-        Array<Expr> new_args = call->args;
+        Array<Expr> new_args;
+        for (auto& arg : call->args) {
+          new_args.push_back(VisitExpr(arg));
+        }
         new_args.Set(0, MakeConstant(ScalarValue::make(tensor_groups_.groups[group_id].size)));
         return Call(alloc_storage_op, new_args);
       }
     } else if (op_node && GetRef<Op>(op_node) == alloc_tensor_op) {
       // Reassign alloc_tensor to the alloc_storage indicated by the tensor group.
+      live_tensors_.insert(curr_let_);
 
       // Find the tensor group of this alloc_tensor.
       auto group_id = tensor_groups_.FindGroupIdByMember(curr_let_);
@@ -289,32 +329,46 @@ class MemoryPlanner : public MixedModeMutator {
         DLOG(INFO) << "Assign " << curr_let_->name_hint() << " to "
                    << tensor_groups_.groups[group_id].storage->name_hint() << " from "
                    << storage_var->name_hint();
-        Array<Expr> new_args = call->args;
+        Array<Expr> new_args;
+        for (auto& arg : call->args) {
+          new_args.push_back(VisitExpr(arg));
+        }
         new_args.Set(0, tensor_groups_.groups[group_id].storage);
         return Call(alloc_tensor_op, new_args);
       }
     }
-    return post;
+    return ExprMutator::VisitExpr_(node);
   }
 
  private:
   class TensorGrouper;
 
-  TensorGroups Group();
+  TensorGroups Group(bool reuse_storage);
+
+  inline Expr MakeFreeMemory(const Var& memory_var) {
+    static const Op& op = Op::Get("mnm.op.vm.free");
+    return Call(op, {memory_var});
+  }
 
  private:
+  /*! \brief The scope stack of the let list. */
+  std::vector<LetList> scopes_;
   /*! \brief The functio to be optimized. */
   const Function& func_;
   /*! \brief The current processing let var. */
   Var curr_let_;
-  /*! \brief The let list. */
-  std::unique_ptr<ExplicitLetList> ell_{nullptr};
+  /*! \brief A map from let varr to its expression. */
+  std::unordered_map<Var, Expr, ObjectHash, ObjectEqual> expr_map_;
   /*! \brief The liveness analyzer, including liveness analysis results. */
   liveness_analysis::LivenessAnalyzer* analyzer_;
   /*! \brief A list of storage allocation groups. */
   TensorGroups tensor_groups_;
-  /*! \brief A set of storage vars that will be preserved. */
-  VSet keep_storages_;
+  /*! \brief Live storage vars. */
+  VSet live_storages_;
+  /*! \brief Current live tensor vars. */
+  VSet live_tensors_;
+  /*! \brief Whether to insert free memory. */
+  bool insert_free_;
 };
 
 /*! \brief A visitor to group tensors generated by alloc_tensor according to
@@ -326,8 +380,11 @@ class MemoryPlanner : public MixedModeMutator {
  */
 class MemoryPlanner::TensorGrouper : public ExprVisitor {
  public:
-  TensorGrouper(const Expr& body, liveness_analysis::LivenessAnalyzer* analyzer)
-      : analyzer_(analyzer), tensor_groups_(analyzer), ell_(ExplicitLetList::make(body)) {
+  TensorGrouper(const Expr& body, liveness_analysis::LivenessAnalyzer* analyzer, bool reuse_storage)
+      : analyzer_(analyzer),
+        tensor_groups_(analyzer),
+        reuse_storage_(reuse_storage),
+        ell_(ExplicitLetList::make(body)) {
     CHECK(analyzer_->IsSuccess());
   }
 
@@ -346,7 +403,6 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
       ExprVisitor::VisitExpr(exprs[i]);
     }
 
-    // TODO(comaniac): Add an iteratiive optimization algorithm.
     return tensor_groups_;
   }
 
@@ -370,24 +426,24 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
 
       int cand_group_id = -1;
 
-      // Alignment
+      // Alignment.
       CHECK(storage_node->args[1].as<ConstantNode>())
           << "The alignment of alloc_storage is not a constant";
       auto align_val = storage_node->args[1].as<ConstantNode>()->value;
       CHECK(align_val->IsInstance<IntValueObj>());
       int64_t alignment = align_val.as<IntValueObj>()->value;
 
-      // Use tensor size and alignment to determine whether it can join an existing tensor gruop.
+      // Storage size.
       int64_t storage_nbytes = -1;
       if (storage_node->args[0].as<ConstantNode>()) {
-        // Storage size
         auto size_val = storage_node->args[0].as<ConstantNode>()->value;
         CHECK(size_val->IsInstance<IntValueObj>());
         storage_nbytes = size_val.as<IntValueObj>()->value;
+      }
 
-        // Find tensor group candidates to join.
-        auto candidates = tensor_groups_.FindValidGroups(curr_let_, alignment);
-
+      // Use tensor size and alignment to determine whether it can join an existing tensor gruop.
+      auto candidates = tensor_groups_.FindValidGroups(curr_let_, alignment);
+      if (reuse_storage_ && storage_nbytes > 0) {
         // Select the one with the closest storage size.
         auto curr_dis = INT64_MAX;
         for (auto group_id : candidates) {
@@ -424,24 +480,33 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
   liveness_analysis::LivenessAnalyzer* analyzer_;
   /*! \brief A list of storage allocation groups. */
   TensorGroups tensor_groups_;
+  /*! \brief Whether to reuse the storage for multiple tensors. */
+  bool reuse_storage_;
 };
 
-TensorGroups MemoryPlanner::Group() {
-  return TensorGrouper(func_, analyzer_).Run();
+TensorGroups MemoryPlanner::Group(bool reuse_storage) {
+  return TensorGrouper(func_, analyzer_, reuse_storage).Run();
 }
 
 }  // namespace memory_plan
 
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.memory_plan.insert_free", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.memory_plan.reuse_storage", Bool);
+
 Pass MemoryPlan() {
+  PassContext pass_ctx = PassContext::Current();
+  Bool inert_free = pass_ctx->GetConfig("mnm.memory_plan.insert_free", Bool(true)).value();
+  Bool reuse_storage = pass_ctx->GetConfig("mnm.memory_plan.reuse_storage", Bool(false)).value();
   runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {
         auto analyzer = liveness_analysis::LivenessAnalyzer(f);
         analyzer.Run();
         if (!analyzer.IsSuccess()) {
-          LOG(WARNING) << "Memory planning is disabled because Liveness analysis was failed";
+          LOG(WARNING) << "Memory planning is disabled because liveness analysis was failed";
           return f;
         }
-        return Downcast<ir::Function>(memory_plan::MemoryPlanner(f, &analyzer).Run());
+        return Downcast<ir::Function>(
+            memory_plan::MemoryPlanner(f, &analyzer, inert_free, reuse_storage).Run());
       };
   auto func_pass = CreateMNMFunctionPass(pass_func, 3, "MemoryPlan", {});
   PassInfo pass_info(3, "MemoryPlan", {});

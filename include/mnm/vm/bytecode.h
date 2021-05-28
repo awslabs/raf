@@ -59,6 +59,7 @@ enum class Opcode {
   // TODO(@icemelon9): Current don't support ADT object
   // AllocADT = 25U,
   SetShape = 26U,
+  Free = 27U,
 
   // Invoke instructions
   InvokeFunc = 30U,
@@ -148,6 +149,10 @@ struct Instruction {
       /*! \brief The datatype of tensor to be allocated. */
       DLDataType dtype;
     } alloc_tensor;
+    struct /* Free Operands */ {
+      /*! \brief The memory to be freed. It can be a tensor or a storage. */
+      RegName memory;
+    } free;
     struct /* AllocTensorReg Operands */ {
       /*! \brief The storage to allocate from. */
       RegName storage;
@@ -359,11 +364,20 @@ struct Instruction {
    * \param size The size of the allocation.
    * \param alignment The allocation's alignment.
    * \param dtype_hint The data type hint for the allocator.
+   * \param device_type The device type.
+   * \param device_id The device ID.
    * \param dst The destination to place the storage.
    * \return The alloc storage instruction.
    */
   static Instruction AllocStorage(RegName size, RegName alignment, DLDataType dtype_hint,
                                   DevType device_type, Index device_id, RegName dst);
+
+  /*!
+   * \brief Free a tensor or a storage.
+   * \param memory The memory to be freed.
+   * \return The free instruction.
+   */
+  static Instruction Free(RegName memory);
 
   /*!
    * \brief Construct an invoke JIT operator instruction.

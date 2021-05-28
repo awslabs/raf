@@ -211,6 +211,7 @@ static const char trunc[] = "mnm.op.trunc";
 static const char upper_bound_argwhere[] = "mnm.op.upper_bound.argwhere";
 static const char vm_alloc_storage[] = "mnm.op.vm.alloc_storage";
 static const char vm_alloc_tensor[] = "mnm.op.vm.alloc_tensor";
+static const char vm_free[] = "mnm.op.vm.free";
 static const char vm_infer_type[] = "mnm.op.vm.infer_type";
 static const char vm_invoke_op[] = "mnm.op.vm.invoke_op";
 static const char vm_set_shape[] = "mnm.op.vm.set_shape";
@@ -546,6 +547,12 @@ Attrs ExpandDims(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, axis);
   MNM_POD(2, ffi2schema::Int, num_newaxis);
+  return Attrs(attrs);
+}
+
+Attrs Free(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::FreeArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, memory);
   return Attrs(attrs);
 }
 
@@ -2834,6 +2841,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.vm.alloc_tensor").set_body([](TVMArgs args, TVMR
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.vm.free").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(vm_free, 1, ffi2schema::Free, schema::FreeArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->memory));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.vm.infer_type").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(vm_infer_type, 2, ffi2schema::InferType,
               schema::InferTypeArgs);  // NOLINT(whitespace/line_length)
@@ -3216,6 +3230,12 @@ Array<Expr> ExpandDims(const TVMArgs& values) {
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Int, axis);
   MNM_ARG(2, ffi2expr::Int, num_newaxis);
+  MNM_RET();
+}
+
+Array<Expr> Free(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::Tensor, memory);
   MNM_RET();
 }
 
@@ -4019,6 +4039,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.vm.alloc_storage")
     .set_body(MNM_SYMBOLIC_API(vm_alloc_storage, 5, AllocStorage));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.alloc_tensor")
     .set_body(MNM_SYMBOLIC_API(vm_alloc_tensor, 4, AllocTensor));
+MNM_REGISTER_GLOBAL("mnm.op.sym.vm.free").set_body(MNM_SYMBOLIC_API(vm_free, 1, Free));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.infer_type")
     .set_body(MNM_SYMBOLIC_API(vm_infer_type, 2, InferType));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.invoke_op")
@@ -4407,6 +4428,13 @@ Attrs ExpandDims(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Int, axis);
   MNM_OPTIONAL(2, value2schema::Int, num_newaxis);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Free(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::FreeArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, memory);
   return Attrs(attrs);
 }
 
@@ -5619,6 +5647,15 @@ int ExpandDims(const std::string& field) {
   }
   if (field == "num_newaxis") {
     return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Free(const std::string& field) {
+  if (field == "memory") {
+    return 0;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7395,6 +7432,10 @@ MNM_BIND_SCHEMA("mnm.op.vm.alloc_tensor", names::vm_alloc_tensor,
                 value2schema::AllocTensor);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.alloc_tensor", names::vm_alloc_tensor,
                             schema_field_idx::AllocTensor);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.vm.free", names::vm_free,
+                value2schema::Free);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.free", names::vm_free,
+                            schema_field_idx::Free);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.vm.infer_type", names::vm_infer_type,
                 value2schema::InferType);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.vm.infer_type", names::vm_infer_type,
@@ -7469,6 +7510,7 @@ MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
+MNM_REGISTER_OBJECT_REFLECT(FreeArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherArgs);

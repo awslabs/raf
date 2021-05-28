@@ -170,6 +170,7 @@ OPS = [
     Op(name="one_hot", schema_name="one_hot"),
     Op(name="vm.alloc_storage", schema_name="alloc_storage"),
     Op(name="vm.alloc_tensor", schema_name="alloc_tensor"),
+    Op(name="vm.free", schema_name="free"),
     Op(name="vm.invoke_op", schema_name="invoke_op"),
     Op(name="vm.infer_type", schema_name="infer_type"),
     Op(name="vm.set_shape", schema_name="set_shape"),

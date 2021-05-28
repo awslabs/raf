@@ -31,6 +31,12 @@ class AllocTensorArgs : public ir::AttrsNode<AllocTensorArgs> {
   MNM_OP_SCHEMA(AllocTensorArgs, "mnm.args.alloc_tensor");
 };
 
+class FreeArgs : public ir::AttrsNode<FreeArgs> {
+ public:
+  value::BaseTensorValue memory;
+  MNM_OP_SCHEMA(FreeArgs, "mnm.args.free");
+};
+
 class InferTypeArgs : public ir::AttrsNode<InferTypeArgs> {
  public:
   value::Value func;

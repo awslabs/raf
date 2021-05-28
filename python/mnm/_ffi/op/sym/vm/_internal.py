@@ -7,6 +7,8 @@ alloc_storage = _APIS.get("mnm.op.sym.vm.alloc_storage", None)
 # Defined in ./src/op/regs/regs.cc
 alloc_tensor = _APIS.get("mnm.op.sym.vm.alloc_tensor", None)
 # Defined in ./src/op/regs/regs.cc
+free = _APIS.get("mnm.op.sym.vm.free", None)
+# Defined in ./src/op/regs/regs.cc
 infer_type = _APIS.get("mnm.op.sym.vm.infer_type", None)
 # Defined in ./src/op/regs/regs.cc
 invoke_op = _APIS.get("mnm.op.sym.vm.invoke_op", None)

@@ -257,6 +257,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
         break;
       case Opcode::InvokePacked:
       case Opcode::InvokeJit:
+      case Opcode::Free:
       case Opcode::If:
       case Opcode::Ret:
       case Opcode::Goto:
@@ -467,6 +468,14 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
                                                   device_id, NewRegister()));
                  })
+          .Match("mnm.op.vm.free",
+                 [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                   CHECK_EQ(args.size(), 1);
+
+                   this->VisitExpr(args[0]);
+                   auto memory_register = last_register_;
+                   Emit(Instruction::Free(memory_register));
+                 })
           .Match("mnm.op.vm.set_shape",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 2);
@@ -476,10 +485,6 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    this->VisitExpr(args[1]);
                    auto shape_reg = last_register_;
                    Emit(Instruction::SetShape(data_reg, shape_reg, NewRegister()));
-                 })
-          .Match("memory.kill",
-                 [](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   LOG(FATAL) << "memory.kill is not yet supported";
                  });
       matcher(GetRef<Call>(call_node));
       return;

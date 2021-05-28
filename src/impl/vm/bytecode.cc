@@ -107,6 +107,9 @@ Instruction::Instruction(const Instruction& instr) {
     case Opcode::AllocStorage:
       this->alloc_storage = instr.alloc_storage;
       return;
+    case Opcode::Free:
+      this->free = instr.free;
+      return;
     case Opcode::InvokeJit:
       this->invoke_jit.op_reg = instr.invoke_jit.op_reg;
       this->invoke_jit.arity = instr.invoke_jit.arity;
@@ -227,6 +230,9 @@ Instruction& Instruction::operator=(const Instruction& instr) {
     case Opcode::AllocStorage:
       this->alloc_storage = instr.alloc_storage;
       return *this;
+    case Opcode::Free:
+      this->free = instr.free;
+      return *this;
     default:
       std::ostringstream out;
       out << "Invalid instruction " << static_cast<int>(instr.op);
@@ -245,6 +251,7 @@ Instruction::~Instruction() {
     case Opcode::Goto:
     case Opcode::LoadConsti:
     case Opcode::AllocStorage:
+    case Opcode::Free:
     case Opcode::SetShape:
     case Opcode::Fatal:
       return;
@@ -344,6 +351,13 @@ Instruction Instruction::AllocStorage(RegName size, Index alignment, DLDataType 
   instr.alloc_storage.dtype_hint = dtype_hint;
   instr.alloc_storage.device_type = device_type;
   instr.alloc_storage.device_id = device_id;
+  return instr;
+}
+
+Instruction Instruction::Free(RegName memory) {
+  Instruction instr;
+  instr.op = Opcode::Free;
+  instr.free.memory = memory;
   return instr;
 }
 
@@ -611,6 +625,10 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       os << "alloc_storage $" << instr.dst << " $" << instr.alloc_storage.allocation_size << " "
          << instr.alloc_storage.alignment << " "
          << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
+      break;
+    }
+    case Opcode::Free: {
+      os << "free $" << instr.free.memory;
       break;
     }
     case Opcode::InvokeJit: {

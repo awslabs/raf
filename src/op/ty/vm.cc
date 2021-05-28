@@ -52,14 +52,15 @@ Type AllocTensorInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.vm.alloc_tensor", "AllocTensor", AllocTensorInfer);
 
-Type InvokeOpInfer(const CallValues& value) {
-  // The return value of invoke op is implicitly written into the output tensor
+Type EmptyTypeInfer(const CallValues& value) {
+  // The return value of certain ops are implicitly written into the output tensor
   // passed as an arguement. Here we only return an empty type since no real
   // return value is used.
   return TupleType::Empty();
 }
 
-MNM_OP_TYPE("mnm.op.vm.invoke_op", "InvokeOp", InvokeOpInfer);
+MNM_OP_TYPE("mnm.op.vm.free", "Free", EmptyTypeInfer);
+MNM_OP_TYPE("mnm.op.vm.invoke_op", "InvokeOp", EmptyTypeInfer);
 
 Type InferTypeInfer(const CallValues& value) {
   static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");

@@ -501,9 +501,24 @@ void VirtualMachine::RunLoop(VMContext ctx) {
                    << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
         auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-        auto buffer = AllocTensor(dev, size);
+        auto buffer = memory_pool::Memory::Alloc(dev, size, alignment);
         auto storage = StorageValue::make(buffer);
         ctx.WriteRegister(instr.dst, storage);
+        ctx->pc++;
+        goto main_loop;
+      }
+      case Opcode::Free: {
+        RegName reg = instr.free.memory;
+        auto reg_val = ctx.ReadRegister(reg);
+        if (reg_val->IsInstance<StorageValueObj>()) {
+          auto storage_val = Downcast<StorageValue>(reg_val);
+          storage_val->buffer.reset();
+        } else {
+          CHECK(reg_val->IsInstance<TensorValueObj>())
+              << "Expected StorageValue or TensorValue, but got " << reg_val->GetTypeKey();
+          auto tensor_val = Downcast<TensorValue>(reg_val);
+          tensor_val->mem.reset();
+        }
         ctx->pc++;
         goto main_loop;
       }
@@ -539,6 +554,16 @@ void VirtualMachine::RunLoop(VMContext ctx) {
 
         std::tie(op_env, inputs, output) = PrepareOpEnv(ctx, instr);
         ExecuteOpEnv(op_env.get(), inputs, output);
+
+        // Release workspace memory.
+        std::shared_ptr<Requests> requests = op_env->GetRequests();
+        for (size_t i = 0; i < requests->workspace.size(); ++i) {
+          Requests::WorkspaceRequest& entry = requests->workspace[i];
+          if (entry.nbytes > 0 && entry.memory != nullptr) {
+            *entry.dest = nullptr;
+            entry.memory.reset();
+          }
+        }
         ctx->pc++;
         goto main_loop;
       }
@@ -624,7 +649,8 @@ std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::Pr
     std::shared_ptr<Requests> requests = op_env->GetRequests();
     for (size_t i = 0; i < requests->workspace.size(); i++) {
       Requests::WorkspaceRequest& entry = requests->workspace[i];
-      auto buf = AllocWorkspace(entry.device, entry.nbytes);
+      auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
+      entry.memory = buf;
       *entry.dest = buf->data;
     }
     // add to cache
@@ -688,17 +714,6 @@ void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
     LOG(FATAL) << "Unknown type " << ret_type->_type_key;
   }
   ctx.WriteRegister(instr.dst, TupleValue::make(ret_tup));
-}
-
-std::shared_ptr<memory_pool::Memory> VirtualMachine::AllocTensor(const Device& dev, int64_t nbytes,
-                                                                 int64_t alignment) {
-  return memory_pool::Memory::Alloc(dev, nbytes);
-}
-
-std::shared_ptr<memory_pool::Memory> VirtualMachine::AllocWorkspace(const Device& dev,
-                                                                    int64_t nbytes,
-                                                                    int64_t alignment) {
-  return memory_pool::Memory::Alloc(dev, nbytes);
 }
 
 MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

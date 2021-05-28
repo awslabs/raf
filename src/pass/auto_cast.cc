@@ -355,7 +355,6 @@ Pass AutoCast() {
   runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {
         auto ret = auto_cast::AutoCastMutator(amp_dtype, out_dtype).Mutate(f);
-        LOG(INFO) << mnm::ir::AsText(ret);
         return Downcast<Function>(ret);
       };
   auto insert_cast = CreateMNMFunctionPass(pass_func, 0, "AutoCastFunc", {});

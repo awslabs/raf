@@ -323,6 +323,10 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       fields.push_back(instr.dst);
       break;
     }
+    case Opcode::Free: {
+      fields.push_back(instr.free.memory);
+      break;
+    }
     case Opcode::AllocTuple: {
       // Number of fields = 2 + instr.num_fields
       fields.assign({instr.alloc_tuple.num_fields, instr.dst});
@@ -618,6 +622,11 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
 
       return Instruction::AllocStorage(allocation_size, alignment, dtype, device_type, device_id,
                                        dst);
+    }
+    case Opcode::Free: {
+      DCHECK_EQ(instr.fields.size(), 1U);
+      RegName memory_reg = instr.fields[0];
+      return Instruction::Free(memory_reg);
     }
     case Opcode::SetShape: {
       DCHECK_GE(instr.fields.size(), 3U);

@@ -46,7 +46,6 @@ class MemoryPoolManager {
       }
     }
     // otherwise this is not nullptr
-    CHECK_EQ(name, "");
     return result.get();
   }
 
@@ -75,6 +74,11 @@ std::vector<std::shared_ptr<Memory> > Memory::AllocBatch(const Device& dev,
                                                          int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(dev, "")->AllocBatch(nbytes, alignment);
+}
+
+std::pair<float, float> Memory::GetPoolSize(const Device& dev, const std::string& name) {
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  return mgr->GetPool(dev, name)->GetPoolSize();
 }
 
 void Memory::RemovePool(const Device& dev) {

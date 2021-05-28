@@ -1,5 +1,6 @@
 import pytest
 import mnm
+import tvm
 from mnm.testing import check
 from mnm._core.profiler_vm import VMProfilerExecutor
 from mnm.testing import get_device_list, randn, with_seed
@@ -56,30 +57,37 @@ def test_vm_memory_profile(device):
 
         @mnm.model.trace
         def forward(self, x, w):
-            return mnm.conv2d(x, w, stride=1, padding=0, dilation=1, groups=1)
+            y = mnm.conv2d(x, w, stride=1, padding=1, dilation=1, groups=1)
+            y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
+            y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
+            return y
+
 
     xshape = (32, 3, 224, 224)
-    wshape = (32, 3, 3, 3)
+    wshape = (3, 3, 3, 3)
     model = Model()
     model.infer_mode()
     m_x, _ = randn(xshape, device=device)
     m_w, _ = randn(wshape, device=device)
 
     mod = model._internal(m_x, m_w).mod
-    executor = VMProfilerExecutor(mod, device)
-    ret_map = executor.make_executor()(m_x, m_w, profile_memory=True)
-    ret = sum([v.value for _, v in ret_map.items()])
+    with tvm.transform.PassContext(opt_level=3):
+        # Enable memory planning to check if memory profiler reflects buffer sharing.
+        executor = VMProfilerExecutor(mod, device)
+        ret_map = executor.make_executor()(m_x, m_w, profile_memory=True)
 
-    # Output tensor size in MBs. Note that since it fits to the page size,
-    # we can allocate the exact size for it.
-    expected = (32 * 32 * 222 * 222) * 4 / 1048576.0
+    # The buffer size in MBs for an output tensor of the conv2d in the model.
+    # Note that since it fits to the page size, we can allocate the exact size for it.
+    buffer_size = (32 * 3 * 224 * 224) * 4 / 1048576
+
+    peak_memory = sum([v[0].value for k, v in ret_map.items() if k.find(device) != -1])
+
+    # Peak memory should have 2 tensors, but CuDNN Conv2D has workspace memory that
+    # depends on the Conv2D algorithm selected by CuDNN.
     if device == "cuda":
-        # Conv2D CuDNN requests an additional workspace memory but its size depends on the
-        # CuDNN implementation. To avoid flaky test we simply check whether memory profiler
-        # catches the workspace request.
-        assert ret > expected
+        assert peak_memory >= 2 * buffer_size, "%.2f vs. %.2f" % (peak_memory, 2 * buffer_size)
     else:
-        check(ret, expected)
+        check(peak_memory, 2 * buffer_size, rtol=1e-1, atol=1e-1)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,8 @@ class Memory {
       const Device& dev, const std::vector<int64_t>& nbytes,
       int64_t alignment = kDefaultMemoryAlignment);
 
+  static std::pair<float, float> GetPoolSize(const Device& dev, const std::string& name);
+
   // means "no longer considered as allocator when asking for new memory."
   static void RemovePool(const Device& dev);
 
@@ -85,6 +87,13 @@ class MemoryPool {
    */
   virtual std::vector<std::shared_ptr<Memory> > AllocBatch(
       const std::vector<int64_t>& nbytes, int64_t alignment = kDefaultMemoryAlignment) = 0;
+
+  /*!
+   * \brief Get the current pool size in MBs.
+   *
+   * \return A pair of the total size of (used chunks, pool).
+   */
+  virtual std::pair<float, float> GetPoolSize() = 0;
 };
 
 }  // namespace memory_pool

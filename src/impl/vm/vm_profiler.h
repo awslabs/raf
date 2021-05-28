@@ -31,21 +31,12 @@ class VirtualMachineProfiler : public VirtualMachine {
   void ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
                     value::Value output) final;
 
-  std::shared_ptr<memory_pool::Memory> AllocCommon(const Device& dev, int64_t nbytes,
-                                                   int64_t alignment, std::string memory_type);
-
-  std::shared_ptr<memory_pool::Memory> AllocTensor(
-      const Device& dev, int64_t nbytes, int64_t alignment = kDefaultMemoryAlignment) final;
-
-  std::shared_ptr<memory_pool::Memory> AllocWorkspace(
-      const Device& dev, int64_t nbytes, int64_t alignment = kDefaultMemoryAlignment) final;
-
  private:
   /*! \brief the duration of op call */
   std::unordered_map<OpEnv*, std::vector<double>> op_durations_;
   /*! \brief the input and output shape string of op call */
   std::unordered_map<OpEnv*, std::string> op_shapes_;
-  /*! \brief the number of times of op call*/
+  /*! \brief the number of times of op call */
   std::unordered_map<OpEnv*, int> op_invokes_;
   /*! \brief whether to cache intermediate tensors */
   bool cache_interm_tensors_;
@@ -57,8 +48,12 @@ class VirtualMachineProfiler : public VirtualMachine {
   Array<Value> op_outputs_;
   /*! \brief whether to run memory profiling mode */
   bool profile_memory_ = false;
-  /*! \brief map from memory type to total allocated size in MBs. */
-  std::unordered_map<std::string, float> allocated_memory_mbs_;
+  /*! \brief Memory pool name */
+  std::string memory_pool_name_ = "";
+  /*! \brief The peak of used memory and total allocated memory of each device memory pool */
+  std::vector<std::pair<float, float>> peak_memory_mbs_;
+  /*! \brief the memory trace that maps the executed op to peak memory of each device */
+  std::vector<std::pair<OpEnv*, std::vector<std::pair<float, float>>>> memory_trace_;
 };
 
 }  // namespace vm

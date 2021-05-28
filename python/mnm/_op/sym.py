@@ -42,8 +42,8 @@ __all__ = [
     "sum", "sum_dx", "swap_axis", "take", "take_dx",
     "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
     "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where", "zeros",
-    "zeros_like",
+    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where",
+    "zeros", "zeros_like",
 ]
 
 def _allgather(x, axis):
@@ -1095,6 +1095,10 @@ def vm_alloc_tensor(storage, shape, dtype="float32", assert_shape=None):
     dtype = sym_utils.to_string(dtype)
     assert_shape = sym_utils.to_int_tuple(assert_shape)
     return Symbol.from_expr(ffi.vm.alloc_tensor(storage, shape, dtype, assert_shape))
+
+def vm_free(memory):
+    memory = sym_utils.to_tensor(memory)
+    return Symbol.from_expr(ffi.vm.free(memory))
 
 def vm_infer_type(func, inputs):
     func = sym_utils.to_any(func)

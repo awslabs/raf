@@ -1,5 +1,5 @@
 """Testing utilities for models and executor."""
-# pylint: disable=invalid-name,protected-access
+# pylint: disable=invalid-name,protected-access,too-many-arguments
 import mnm
 from mnm.model.trace import _get_func_inputs
 from mnm._core.executor import VMExecutor, VMCompiler
@@ -38,13 +38,13 @@ def run_infer_type(expr):
     return mod["main"]
 
 
-def get_vm_executor(model, device, args, fuse_level=3, sch_file=None):
+def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, sch_file=None):
     """get vm executor"""
     # pylint: disable=protected-access
     record = model._internal(*args)
     mod = record.mod
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    with mnm.ir.PassContext(config={"mnm.fuse_level": fuse_level}):
+    with mnm.ir.PassContext(opt_level=opt_level, config={"mnm.fuse_level": fuse_level}):
         executor = VMExecutor(mod, device)
     return executor.make_executor(sch_file=sch_file), inputs
 
@@ -60,9 +60,9 @@ def get_vm_profiler(model, device, args, fuse_level=3):
     return executor, inputs
 
 
-def run_vm_model(model, device, args, fuse_level=3):
+def run_vm_model(model, device, args, opt_level=2, fuse_level=3):
     """Helper function to execute model with VM"""
-    vm, inputs = get_vm_executor(model, device, args, fuse_level)
+    vm, inputs = get_vm_executor(model, device, args, opt_level, fuse_level)
     out = vm(*inputs)
     return out
 

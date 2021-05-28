@@ -750,6 +750,9 @@ SCHEMAS = {
             cxx_normalizer="IntTuple",
             cxx_default="{}", py_default="None"),
     ],
+    "vm.h::free": [
+        Arg(name="memory", cxx_type="value::BaseTensorValue"),
+    ],
     "vm.h::invoke_op": [
         Arg(name="func", cxx_type="value::Value"),
         Arg(name="inputs", cxx_type="value::Value"),

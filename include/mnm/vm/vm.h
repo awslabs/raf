@@ -296,14 +296,6 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   /*! \brief Execute OpEnv */
   virtual void ExecuteOpEnv(OpEnv*, const std::vector<value::Value>& inputs, value::Value output);
 
-  /*! \brief Allocate memory buffer for tensor storage */
-  virtual std::shared_ptr<memory_pool::Memory> AllocTensor(
-      const Device& dev, int64_t nbytes, int64_t alignment = kDefaultMemoryAlignment);
-
-  /*! \brief Allocate memory buffer for kernel workspace */
-  virtual std::shared_ptr<memory_pool::Memory> AllocWorkspace(
-      const Device& dev, int64_t nbytes, int64_t alignment = kDefaultMemoryAlignment);
-
   /*! \brief Run InferType Instruction */
   virtual void RunInferType(VMContext& ctx, const Instruction& instr);
 

@@ -63,6 +63,10 @@ class NoPool final : public MemoryPool {
     return ret;
   }
 
+  std::pair<float, float> GetPoolSize() override {
+    return std::make_pair(0, 0);
+  }
+
  public:
   static void* make(const Device& dev) {
     return new NoPool(dev);
