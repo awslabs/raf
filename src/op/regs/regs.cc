@@ -205,6 +205,7 @@ static const char tanh[] = "mnm.op.tanh";
 static const char tanh_dx[] = "mnm.op.tanh_dx";
 static const char threefry_generate[] = "mnm.op.threefry_generate";
 static const char threefry_split[] = "mnm.op.threefry_split";
+static const char topk[] = "mnm.op.topk";
 static const char transpose[] = "mnm.op.transpose";
 static const char transpose_dx[] = "mnm.op.transpose_dx";
 static const char trunc[] = "mnm.op.trunc";
@@ -1058,6 +1059,17 @@ Attrs ThreefryGenerate(const TVMArgs& values, GradTape* tapes) {
 Attrs ThreefrySplit(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::ThreefrySplitArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, key);
+  return Attrs(attrs);
+}
+
+Attrs Topk(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::TopkArgs, 6);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::Int, k);
+  MNM_POD(2, ffi2schema::Int, axis);
+  MNM_POD(3, ffi2schema::String, ret_type);
+  MNM_POD(4, ffi2schema::Bool, is_ascend);
+  MNM_POD(5, ffi2schema::String, dtype);
   return Attrs(attrs);
 }
 
@@ -2784,6 +2796,18 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.threefry_split").set_body([](TVMArgs args, TVMRe
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.topk").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(topk, 6, ffi2schema::Topk, schema::TopkArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->k));
+  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[3], schema2value::String(schema->ret_type));
+  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->is_ascend));
+  MNM_SET_ENV(vpack->x[5], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.transpose").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(transpose, 2, ffi2schema::Transpose,
               schema::TransposeArgs);  // NOLINT(whitespace/line_length)
@@ -3744,6 +3768,17 @@ Array<Expr> ThreefrySplit(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Topk(const TVMArgs& values) {
+  MNM_PRELUDE(6);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::Int, k);
+  MNM_ARG(2, ffi2expr::Int, axis);
+  MNM_ARG(3, ffi2expr::String, ret_type);
+  MNM_ARG(4, ffi2expr::Bool, is_ascend);
+  MNM_ARG(5, ffi2expr::String, dtype);
+  MNM_RET();
+}
+
 Array<Expr> Transpose(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4029,6 +4064,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.threefry_generate")
     .set_body(MNM_SYMBOLIC_API(threefry_generate, 2, ThreefryGenerate));
 MNM_REGISTER_GLOBAL("mnm.op.sym.threefry_split")
     .set_body(MNM_SYMBOLIC_API(threefry_split, 1, ThreefrySplit));
+MNM_REGISTER_GLOBAL("mnm.op.sym.topk").set_body(MNM_SYMBOLIC_API(topk, 6, Topk));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
     .set_body(MNM_SYMBOLIC_API(transpose_dx, 3, TransposeDx));
@@ -4995,6 +5031,18 @@ template <const char* op_name>
 Attrs ThreefrySplit(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::ThreefrySplitArgs);
   MNM_REQUIRED(0, value2schema::Tensor, key);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Topk(const Array<Value>& values) {
+  MNM_PRELUDE(1, 6, schema::TopkArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_OPTIONAL(1, value2schema::Int, k);
+  MNM_OPTIONAL(2, value2schema::Int, axis);
+  MNM_OPTIONAL(3, value2schema::String, ret_type);
+  MNM_OPTIONAL(4, value2schema::Bool, is_ascend);
+  MNM_OPTIONAL(5, value2schema::String, dtype);
   return Attrs(attrs);
 }
 
@@ -6682,6 +6730,30 @@ int ThreefrySplit(const std::string& field) {
 }
 
 template <const char* op_name>
+int Topk(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "k") {
+    return 1;
+  }
+  if (field == "axis") {
+    return 2;
+  }
+  if (field == "ret_type") {
+    return 3;
+  }
+  if (field == "is_ascend") {
+    return 4;
+  }
+  if (field == "dtype") {
+    return 5;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Transpose(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -7407,7 +7479,10 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.threefry_generate", names::threefry_generate
 MNM_BIND_SCHEMA("mnm.op.threefry_split", names::threefry_split,
                 value2schema::ThreefrySplit);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.threefry_split", names::threefry_split,
-                            schema_field_idx::ThreefrySplit);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::ThreefrySplit);     // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.topk", names::topk, value2schema::Topk);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.topk", names::topk,
+                            schema_field_idx::Topk);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.transpose", names::transpose,
                 value2schema::Transpose);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.transpose", names::transpose,
@@ -7566,6 +7641,7 @@ MNM_REGISTER_OBJECT_REFLECT(TernaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryUfuncArgs);
 MNM_REGISTER_OBJECT_REFLECT(ThreefryGenerateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ThreefrySplitArgs);
+MNM_REGISTER_OBJECT_REFLECT(TopkArgs);
 MNM_REGISTER_OBJECT_REFLECT(TransposeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TransposeDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(UnaryArgs);

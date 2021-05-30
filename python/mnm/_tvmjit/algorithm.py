@@ -6,3 +6,4 @@ from .._lib import strategy
 
 _reg.register_strategy("mnm.op.argsort", strategy.argsort_strategy)
 _reg.register_strategy("mnm.op.sort", strategy.sort_strategy)
+_reg.register_strategy("mnm.op.topk", strategy.topk_strategy)

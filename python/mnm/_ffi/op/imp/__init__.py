@@ -165,6 +165,7 @@ from ._internal import tanh
 from ._internal import tanh_dx
 from ._internal import threefry_generate
 from ._internal import threefry_split
+from ._internal import topk
 from ._internal import transpose
 from ._internal import transpose_dx
 from ._internal import trunc

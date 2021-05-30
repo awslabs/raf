@@ -163,6 +163,7 @@ OPS = [
     Op(name="where", schema_name="where"),
     Op(name="logical_and", schema_name="binary"),
     Op(name="device_copy", schema_name="device_copy"),
+    Op(name="topk", schema_name="topk"),
     Op(name="zeros", schema_name="init_op"),
     Op(name="zeros_like", schema_name="unary"),
     Op(name="ones", schema_name="init_op"),

@@ -716,6 +716,14 @@ SCHEMAS = {
         Arg(name="src_dev_type", cxx_type="int", cxx_default=0),
         Arg(name="dst_dev_type", cxx_type="int", cxx_default=0),
     ],
+    "algorithm.h::topk": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="k", cxx_type="int", cxx_default=1),
+        Arg(name="axis", cxx_type="int", cxx_default=-1),
+        Arg(name="ret_type", cxx_type="std::string", cxx_default="\"both\"", py_default="\"both\""),
+        Arg(name="is_ascend", cxx_type="bool", cxx_default=False),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"int64_t\"", py_default="\"int64\""),
+    ],
     "init.h::init_op": [
         Arg(name="shape",
             cxx_type="std::vector<int64_t>",

@@ -37,6 +37,39 @@ Type SortInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.sort", "Sort", SortInfer);
 
+Type TopkInfer(const CallValues& value) {
+  const auto* args = value->args.as<TopkArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  int k = args->k;
+  int axis = args->axis;
+  if (axis < 0) {
+    axis += (int)(data->shape).size();
+  }
+  std::string ret_type = args->ret_type;
+  DataType dtype_a = data->dtype;
+  DataType dtype_b = DataType(ir::String2DLDataType(args->dtype));
+  Array<tvm::PrimExpr> oshape;
+  for (int i = 0; i < (int)(data->shape).size(); i++) {
+    if (axis == i) {
+      oshape.push_back(k);
+    } else {
+      oshape.push_back(data->shape[i]);
+    }
+  }
+  if (ret_type == "both") {
+    Array<Type> fields;
+    fields.push_back(TensorType(oshape, dtype_a));
+    fields.push_back(TensorType(oshape, dtype_b));
+    return TupleType(fields);
+  } else if (ret_type == "values") {
+    return TensorType(oshape, dtype_a);
+  }
+  return TensorType(oshape, dtype_b);
+}
+
+MNM_OP_TYPE("mnm.op.topk", "TopK", TopkInfer);
+
 }  // namespace type
 }  // namespace op
 }  // namespace mnm

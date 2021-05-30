@@ -40,10 +40,10 @@ __all__ = [
     "sort", "split", "sqrt", "sqrt_dx", "squeeze",
     "stack", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
     "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where",
-    "zeros", "zeros_like",
+    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "topk",
+    "transpose", "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage",
+    "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
+    "where", "zeros", "zeros_like",
 ]
 
 def _allgather(x, axis):
@@ -1061,6 +1061,15 @@ def threefry_generate(key, shape):
 def threefry_split(key):
     key = sym_utils.to_tensor(key)
     return Symbol.from_expr(ffi.threefry_split(key))
+
+def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
+    data = sym_utils.to_tensor(data)
+    k = sym_utils.to_int(k)
+    axis = sym_utils.to_int(axis)
+    ret_type = sym_utils.to_string(ret_type)
+    is_ascend = sym_utils.to_bool(is_ascend)
+    dtype = sym_utils.to_string(dtype)
+    return Symbol.from_expr(ffi.topk(data, k, axis, ret_type, is_ascend, dtype))
 
 def transpose(x, axes=None):
     x = sym_utils.to_tensor(x)

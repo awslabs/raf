@@ -40,10 +40,10 @@ __all__ = [
     "sort", "split", "sqrt", "sqrt_dx", "squeeze",
     "stack", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
     "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "transpose",
-    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where",
-    "zeros", "zeros_like",
+    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "topk",
+    "transpose", "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage",
+    "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
+    "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -1225,6 +1225,16 @@ def threefry_generate(key, shape):
 def threefry_split(key):
     key = imp_utils.to_tensor(key)
     return imp_utils.ret(ffi.threefry_split(key))
+
+@set_module("mnm")
+def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
+    data = imp_utils.to_tensor(data)
+    k = imp_utils.to_int(k)
+    axis = imp_utils.to_int(axis)
+    ret_type = imp_utils.to_string(ret_type)
+    is_ascend = imp_utils.to_bool(is_ascend)
+    dtype = imp_utils.to_string(dtype)
+    return imp_utils.ret(ffi.topk(data, k, axis, ret_type, is_ascend, dtype))
 
 @set_module("mnm")
 def transpose(x, axes=None):

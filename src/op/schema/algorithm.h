@@ -28,6 +28,17 @@ class SortArgs : public ir::AttrsNode<SortArgs> {
   bool is_ascend{true};
   MNM_OP_SCHEMA(SortArgs, "mnm.args.sort");
 };
+
+class TopkArgs : public ir::AttrsNode<TopkArgs> {
+ public:
+  value::BaseTensorValue data;
+  int k{1};
+  int axis{-1};
+  std::string ret_type{"both"};
+  bool is_ascend{false};
+  std::string dtype{"int64_t"};
+  MNM_OP_SCHEMA(TopkArgs, "mnm.args.topk");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm
