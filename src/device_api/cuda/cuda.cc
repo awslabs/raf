@@ -27,12 +27,22 @@ class CUDADeviceAPI final : public DeviceAPI {
     void* ptr = nullptr;
     // TODO(@junrushao1994): make sure it is correct
     CHECK_EQ(512 % alignment, 0);
+#if CUDA_VERSION >= 11020
+    // TODO(@comaniac): Specify stream ID when multi-stream is enabled.
+    CUDA_CALL(cudaMallocAsync(&ptr, nbytes, 0));
+#else
     CUDA_CALL(cudaMalloc(&ptr, nbytes));
+#endif
     return ptr;
   }
 
   void FreeMemory(void* ptr) override {
+#if CUDA_VERSION >= 11020
+    // TODO(@comaniac): Specify stream ID when multi-stream is enabled.
+    CUDA_CALL(cudaFreeAsync(ptr, 0));
+#else
     CUDA_CALL(cudaFree(ptr));
+#endif
   }
 
   void* CreateStream(const Device& dev) override {
