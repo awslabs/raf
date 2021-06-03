@@ -48,24 +48,29 @@ class GradientOp : public ExprMutator {
         }
         auto calln = Call(node->op, args);
         return Call(node->op, args);
-      } else {
-        return ExprMutator::VisitExpr_(node);
       }
-    } else {
-      LOG(FATAL) << "NotImplementedError: Calling unsupported type: " << callee->GetTypeKey();
-      throw;
     }
+    return ExprMutator::VisitExpr_(node);
   }
 };
 
 }  // namespace arg_select
 
 Pass GradInputSelect() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(arg_select::GradientOp().VisitExpr(f));
-      };
-  return CreateMNMFunctionPass(pass_func, 1, "GradientInputSelection", {});
+  return CreateModulePass(
+      [=](IRModule mod, const PassContext& pass_ctx) {
+        DLOG(INFO) << "pass::GradInputSelect";
+        ir::IRModule updated_mod = ir::IRModule(mod->functions);
+        for (auto kv : updated_mod->functions) {
+          if (kv.second.as<ir::FunctionNode>()) {
+            auto func =
+                tvm::runtime::Downcast<ir::Function>(arg_select::GradientOp().VisitExpr(kv.second));
+            updated_mod->Add(kv.first, func, true);
+          }
+        }
+        return updated_mod;
+      },
+      0, "GradientInputSelection", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.GradientInputSelection").set_body_typed(GradInputSelect);

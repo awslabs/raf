@@ -5,6 +5,7 @@ from mnm._ffi.pass_ import AutoDiff, GradientInputSelection, InferType
 from mnm._lib import tvm
 from mnm._lib import relay
 from mnm.testing import randn, run_infer_type
+from mnm._core.module import IRModule
 
 def test_conv2d():
 
@@ -92,6 +93,29 @@ def test_conv2d():
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(func_after, func_expected)
+
+
+def test_multi_func():
+    def multi_func_mod():
+        f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
+        a1 = relay.var("a1")  # pylint: disable=invalid-name
+        x = relay.var("x", shape=(1, 100))
+        tanh_op = mnm._ffi.op.GetOp("mnm.op.tanh")
+        let = relay.Let(a1, relay.Call(tanh_op, [x]), a1)
+        f1_out = relay.Function([x], let)
+        mod = IRModule({f1: f1_out})
+
+        a1 = relay.var("a1")  # pylint: disable=invalid-name
+        y = relay.var("y", shape=(1, 100))
+        let = relay.Let(a1, relay.Call(f1, [y]), a1)
+        main_out = relay.Function([y], let)
+        mod[relay.GlobalVar("main")] = main_out
+        return mod
+
+    mod = multi_func_mod()
+    opt_mod = GradientInputSelection()(mod)
+    assert tvm.ir.structural_equal(mod["f1"], opt_mod["f1"])
+    assert tvm.ir.structural_equal(mod["main"], opt_mod["main"])
 
 
 if __name__ == "__main__":
