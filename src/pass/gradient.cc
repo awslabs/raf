@@ -72,10 +72,11 @@ class ANFNormalizer : public ExprMutator {
   std::unordered_map<Expr, Var, ObjectPtrHash, ObjectPtrEqual> vmap_;
 };
 
-struct Gradient : public ExprVisitor {
+struct ReverseAD : public ExprVisitor {
  public:
   // Closures are not supported
   MNM_NODE_NOT_SUPPORT(FunctionNode);
+  MNM_NODE_NOT_SUPPORT(LetNode);
   // The algorithm shouldn't generate or deal with references
   MNM_NODE_NOT_SUPPORT(RefCreateNode);
   MNM_NODE_NOT_SUPPORT(RefReadNode);
@@ -85,54 +86,62 @@ struct Gradient : public ExprVisitor {
   MNM_NODE_NOT_SUPPORT(tvm::relay::MatchNode);
   // TODO(@junrushao1994): implement them
   // TODO(@junrushao1994): nested tuples are still problematic
-  MNM_NODE_NOT_IMPL(OpNode);         // replace OpNode with its corresponding GlobalVar's adjoint
-  MNM_NODE_NOT_IMPL(IfNode);         // normalize the program with tail call
-  MNM_NODE_NOT_IMPL(VarNode);        // propagate copy/constant
-  MNM_NODE_NOT_IMPL(GlobalVarNode);  // replace GlobalVar with adjoint
+  MNM_NODE_NOT_IMPL(OpNode);  // replace OpNode with its corresponding GlobalVar's adjoint
 
  public:
-  explicit Gradient(const FunctionNode* func_, const ir::Array<tvm::Bool>& requires_grads_)
-      : func(func_), ell(ExplicitLetList::make(func_->body)) {
-    // If size of requires_grads_ is 0, check the inputs' datatype.
-    if (requires_grads_.size() == 0) {
-      for (const Var& param : func->params) {
-        const VarNode* var = param.operator->();
-        const auto tensor_type = Downcast<TensorType>(var->type_annotation);
-        requires_grads[var] = tensor_type->dtype.is_float();
-      }
-    } else {
-      CHECK_EQ(func->params.size(), requires_grads_.size());
-      for (int i = 0; i < func->params.size(); ++i) {
-        const VarNode* var = func->params[i].operator->();
-        requires_grads[var] = requires_grads_[i];
-      }
-    }
-    InitTuple();
+  explicit ReverseAD(std::unordered_map<const VarNode*, bool>& requires_grads_main_map)
+      : requires_grads_main_map_(requires_grads_main_map) {
   }
 
- public:
+ public:  // visitor functions
+  /* These visitor functions compute the gradient for the ExprNode. For each node, the basic steps
+   * are
+   * 1) GetOgrads - Get the ograds - these are set by the reverse AD of operators that exist after
+   * the current op.
+   * 2) GetIgrads - Get the igrads placeholders. We will write the computed grads into these
+   * locations.
+   * 3) UpdateIgrads - Using the ograds, and depending on the node find the new igrads. This changes
+   * from node to node, e.g. for CallNode with op of OpNode type, we use registered functions, but
+   * for Tuple, we pass on the ograds to igrads as it is.
+   * 4) WriteBack - Write the newly computed igrads into igrad placeholders.
+   */
+
+  /*!
+   * \brief Handling the gradient for the variable node. For var node, we can pass the ograd to
+   * igrads directly
+   */
+  void VisitExpr_(const VarNode* node) final {
+    Var var = GetRef<Var>(node);
+    var_to_primal_expr_[node] = var;
+    const Array<Expr>& ograds = GetOutputGrads();
+    WriteBackInputGrads({GetRef<Expr>(node)}, ograds);
+  }
+
+  /*!
+   * \brief Handling the gradient for the relay constant node.
+   * Constant nodes do not need any grad. Here, we are just saving the primal_expr for later use.
+   */
   void VisitExpr_(const RelayConstantNode* node) final {
-    // Do nothing
+    var_to_primal_expr_[let_var_.get()] = GetRef<Expr>(node);
   }
 
+  /*!
+   * \brief Handling the gradient for the Tuple node.
+   * Gradient is a passthrough. We can pass on the ograds directly to igrads.
+   */
   void VisitExpr_(const TupleNode* node) final {
-    // expr:
-    //    let var = tuple(*node->fields);
-    // situation:
-    //    grad(var) is known
-    // return:
-    //    update `grad(node->fields[i])` with `+= grad(var)[i]`
+    var_to_primal_expr_[let_var_.get()] = GetRef<Expr>(node);
     const Array<Expr>& ograds = GetOutputGrads();
     WriteBackInputGrads(node->fields, ograds);
   }
 
+  /*!
+   * \brief Handling the gradient for the Tuple Get Item node.
+   * Gradient is a passthrough. We can pass on the ograds directly to igrads.
+   * We have to ensure that the right tuple item is set.
+   */
   void VisitExpr_(const TupleGetItemNode* node) final {
-    // expr:
-    //    let var = tuple[index]
-    // situation:
-    //    grad(var) are known
-    // return:
-    //    update `grad(tuple[index])` with `+= grad(var)`
+    var_to_primal_expr_[let_var_.get()] = GetRef<Expr>(node);
     const VarNode* tuple = node->tuple.as<VarNode>();
     const Array<Expr>& ograds = GetOutputGrads();
     Array<Expr> tuple_igrads = tuple_grads[tuple];
@@ -142,13 +151,133 @@ struct Gradient : public ExprVisitor {
     tuple_grads[tuple] = tuple_igrads;
   }
 
+  /*!
+   * \brief Handling the gradient for the if node.
+   * An example of gradient for if node is as follows
+   * Original
+   *    let %a3 = if (%a2) {
+   *      @true_branch_0(%x)
+   *    } else {
+   *      @false_branch_0(%x)
+   *    };
+   *    %a3
+   *
+   * After AD
+   *   let %0 = if (%a2) {
+   *     @true_branch_0_grad(%x) // The function returns (primal, adjoint)
+   *   } else {
+   *     @false_branch_0_grad(%x) // The function returns (primal, adjoint)
+   *   };
+   *   let %a3 = %0.0; // Primal Function
+   *   let %a3_closure = %0.1 // Gradient closure
+   *
+   * The If node has true and false branches which have already been lifted into global functions
+   * ealier using LiftBranchBody pass as shown above. We use the gradient functions of the branches
+   * to construct the gradient function for if node
+   *  1) Get the primal and closure for both branches.
+   *  2) Set up the primal input by taking the 0th tuple item
+   *  3) Set up the gradient by taking the 1st tuple item
+   *
+   */
+  void VisitExpr_(const IfNode* node) final {
+    auto get_ad_branch = [&](const Expr& branch) {
+      auto branch_call = branch.as<CallNode>();
+      CHECK(branch_call) << "If branches should be lifted to global functions. "
+                         << "LiftBranchBody pass is not applied.";
+      auto branch_gvar_node = branch_call->op.as<GlobalVarNode>();
+      CHECK(branch_gvar_node) << "If branches should be lifted to global functions. "
+                              << "LiftBranchBody pass is not applied.";
+
+      auto branch_gvar = GetRef<GlobalVar>(branch_gvar_node);
+      auto new_branch_call = Call(branch_gvar, branch_call->args);
+      return new_branch_call;
+    };
+
+    // 1) Get the primal + gradient functions for both branches
+    ExprVisitor::VisitExpr(node->cond);
+    auto true_ad_branch = get_ad_branch(node->true_branch);
+    auto false_ad_branch = get_ad_branch(node->false_branch);
+
+    // 2) Set up the primal input by extracting the primal functions
+    If primal_adjoint_if(node->cond, true_ad_branch, false_ad_branch);
+    var_to_primal_expr_[let_var_.get()] = TupleGetItem(primal_adjoint_if, 0);
+    var_to_primal_expr_[let_var_.get()]->checked_type_ = node->checked_type();
+
+    // 3) Set up the gradient
+    const Array<Expr>& ograds = GetOutputGrads();
+    auto if_node_args = node->true_branch.as<CallNode>()->args;
+    // Lambda branch body ensures that both branches have same args
+    const Array<Expr>& igrads = GetInputGrads(if_node_args);
+
+    Expr adjoint_func = adjoint_ll_->Push(TupleGetItem(primal_adjoint_if, 1));
+    Expr _ograds =
+        tuple_length.count(let_var_.get()) ? adjoint_ll_->Push(Tuple(ograds)) : ograds[0];
+
+    // Calculating new_grad is easy as we just have to call the adjoint function on ograds.
+    Expr new_igrad = adjoint_ll_->Push(Call(adjoint_func, {_ograds}));
+    Array<Expr> new_igrads;
+    if (igrads.size() == 1) {
+      new_igrads.push_back(new_igrad);
+    } else {
+      for (int i = 0; i < igrads.size(); i++) {
+        new_igrads.push_back(TupleGetItem(new_igrad, i));
+      }
+    }
+    WriteBackInputGrads(if_node_args, new_igrads);
+  }
+
+  /*!
+   * \brief Handling the gradient for the Call node.
+   * For the call node, there are 2 scenarios
+   * 1) Call op is an OpNode - In this case we use the registered op gradient functions.
+   * 2) Call op is globalVar node - in this case we handle GlobalVar similar to IfNode handling
+   * above
+   */
   void VisitExpr_(const CallNode* node) final {
     const Expr& callee = node->op;
     if (callee->IsInstance<OpNode>()) {
+      // Call node Op is of OpNode Type
       const Op& op = Downcast<Op>(node->op);
       const Array<Expr>& ograds = GetOutputGrads();
       const Array<Expr>& igrads = GetInputGrads(node->args);
       const Array<Expr>& new_igrads = UpdateInputGrads(op, GetRef<Expr>(node), ograds, igrads);
+      WriteBackInputGrads(node->args, new_igrads);
+      var_to_primal_expr_[let_var_.get()] = GetRef<Expr>(node);
+    } else if (callee->IsInstance<GlobalVarNode>()) {
+      // Call node op is global Var node
+      // Original
+      // %1 = @func(%a)
+      //
+      // After AD
+      // %1 = @func(%a)
+      // %primal = %1.0
+      // %gradient = %1.1
+      const GlobalVarNode* gvn = callee.as<GlobalVarNode>();
+      GlobalVar gv = GetRef<GlobalVar>(gvn);
+
+      // Get the primal value from the differentiated funtion and extracting 0th index
+      // Get the adjoing closure func by extracting the first index
+      auto primal_adjoint_fn = Call(GetRef<GlobalVar>(gvn), node->args);
+      var_to_primal_expr_[let_var_.get()] = TupleGetItem(primal_adjoint_fn, 0);
+      var_to_primal_expr_[let_var_.get()]->checked_type_ = node->checked_type();
+      Expr adjoint_func = adjoint_ll_->Push(TupleGetItem(primal_adjoint_fn, 1));
+
+      // Now extract ograds, igrads placeholder, update igrads using the adjoint func to get
+      // new_igrads, and finally writeback the new_igrads to the placeholder
+      const Array<Expr>& ograds = GetOutputGrads();
+      Expr _ograds =
+          tuple_length.count(let_var_.get()) ? adjoint_ll_->Push(Tuple(ograds)) : ograds[0];
+      // new_igrads are just the application of extracted closure call on ograds.
+      const Array<Expr>& igrads = GetInputGrads(node->args);
+      Expr new_igrad = adjoint_ll_->Push(Call(adjoint_func, {_ograds}));
+      Array<Expr> new_igrads;
+      if (igrads.size() == 1) {
+        new_igrads.push_back(new_igrad);
+      } else {
+        for (int i = 0; i < igrads.size(); i++) {
+          new_igrads.push_back(TupleGetItem(new_igrad, i));
+        }
+      }
       WriteBackInputGrads(node->args, new_igrads);
     } else {
       LOG(FATAL) << "NotImplementedError: Calling unsupported type: " << callee->GetTypeKey();
@@ -157,13 +286,28 @@ struct Gradient : public ExprVisitor {
   }
 
  public:
-  // Helper functions for the workflow:
-  //    get igrads => update igrads => write back igrads
+  /* For each node, the basic steps are
+   * 1) GetOgrads - Get the ograds - these are set by the reverse AD of operators that exist after
+   * the current op.
+   * 2) GetIgrads - Get the igrads placeholders. We will write the computed grads into these
+   * locations.
+   * 3) UpdateIgrads - Using the ograds, and depending on the node find the new igrads. This changes
+   * from node to node, e.g. for CallNode with op of OpNode type, we use registered functions, but
+   * for Tuple, we pass on the ograds to igrads as it is.
+   * 4) WriteBack - Write the newly computed igrads into igrad placeholders.
+   */
+  /*!
+   * \brief Find the ograds. These have been set by the reverse AD of the operators that come after
+   * the current op. Please take a look at the top of this class for high-level description.
+   */
   Array<Expr> GetOutputGrads() {
-    const VarNode* var = let_var.operator->();
-    return tuple_grads[var];
+    const VarNode* var = let_var_.operator->();
+    return InitUndefinedGrads(tuple_grads[var]);
   }
 
+  /*!
+   * \brief Find the input grads.
+   */
   Array<Expr> GetInputGrads(const Array<Expr>& vars) {
     Array<Expr> ret;
     for (const auto& expr : vars) {
@@ -178,14 +322,6 @@ struct Gradient : public ExprVisitor {
     }
     return ret;
   }
-  bool IsDefined(const Array<Expr>& exprs) {
-    for (const auto& e : exprs) {
-      if (!e.defined()) {
-        return false;
-      }
-    }
-    return true;
-  }
 
   Array<Expr> UpdateInputGrads(const Op& op,      // the operator called
                                const Expr& orig,  // relay.Call that contains this expression
@@ -195,30 +331,28 @@ struct Gradient : public ExprVisitor {
     // returns: new_igrads = igrads + grad-of-call-op<ograd>
     static const auto fpg = Op::GetAttrMap<FPrimalGradient>("FPrimalGradient");
     static const auto ffpg = Op::GetAttrMap<FFusedPrimalGradient>("FFusedPrimalGradient");
-    const VarNode* var = let_var.operator->();
+    const VarNode* var = let_var_.operator->();
     const Expr& _ograds = tuple_length.count(var) ? Tuple(ograds) : ograds[0];
-    if (!IsDefined(ograds)) {
-      return {NullValue<Var>()};
-    }
+    CHECK(IsDefined(ograds)) << "Output grads are undefined for " << AsText(ograds, false);
     Array<Expr> ret;
     auto call = Downcast<Call>(orig);
     if (ffpg.count(op)) {
-      ret = ffpg[op](orig, let_var, _ograds, igrads);
+      ret = ffpg[op](orig, let_var_, _ograds, igrads);
     } else if (fpg.count(op)) {
       Array<Expr> orig_args;
       for (auto arg : call->args) {
         if (auto in_var = arg.as<VarNode>()) {
-          orig_args.push_back(var_to_expr[in_var]);
+          orig_args.push_back(var_to_primal_expr_[in_var]);
         } else {
           CHECK(arg.as<ConstantNode>() != nullptr);
           orig_args.push_back(arg);
         }
       }
-      ret = fpg[op](orig, orig_args, let_var, _ograds);
+      ret = fpg[op](orig, orig_args, let_var_, _ograds);
       // if not 'requires_grad', set return to null
       for (int i = 0, n = ret.size(); i < n; ++i) {
         if (auto in_var = call->args[i].as<VarNode>()) {
-          if (requires_grads[in_var] == false) {
+          if (requires_grads_map_[in_var] == false) {
             ret.Set(i, NullValue<Var>());
           }
         }
@@ -227,28 +361,11 @@ struct Gradient : public ExprVisitor {
       LOG(FATAL) << "Gradient is not registered for operator " << op->name;
       throw;
     }
+
     // ensure intermediate results are bound to a relay::var
-    ANFNormalizer normalizer(ll);
+    ANFNormalizer normalizer(adjoint_ll_);
     for (int i = 0, n = ret.size(); i < n; ++i) {
-      // If a tuple contains null, we use tule_index to
-      // store the non-null item index
       if (ret[i].defined() && !ret[i]->IsInstance<VarNode>()) {
-        if (ret[i]->IsInstance<TupleNode>()) {
-          auto tuple = ret[i].as<TupleNode>();
-          bool has_null = false;
-          std::vector<int> index;
-          for (int i = 0; i < tuple->fields.size(); ++i) {
-            if (tuple->fields[i].defined()) {
-              index.push_back(i);
-            } else {
-              has_null = true;
-            }
-          }
-          if (has_null) {
-            auto args = call->args;
-            tuple_index[args[i].as<VarNode>()] = index;
-          }
-        }
         ret.Set(i, normalizer(ret[i]));
       }
     }
@@ -268,17 +385,8 @@ struct Gradient : public ExprVisitor {
           WriteBackInputGrad(var, 0, igrad);
         } else {
           CHECK_NE(tuple_length[var], -1);
-          // If tuple_index contains var, the corresponding
-          // gradient tuple has null value so we only take the
-          // non-null item index and perform WriteBackInputGrad
-          if (tuple_index.count(var)) {
-            for (int i : tuple_index[var]) {
-              WriteBackInputGrad(var, i, ll->Push(TupleGetItem(igrad, i)));
-            }
-          } else {
-            for (int i = 0; i < tuple_length[var]; ++i) {
-              WriteBackInputGrad(var, i, ll->Push(TupleGetItem(igrad, i)));
-            }
+          for (int i = 0; i < tuple_length[var]; ++i) {
+            WriteBackInputGrad(var, i, adjoint_ll_->Push(TupleGetItem(igrad, i)));
           }
         }
       } else if (!vars[i]->IsInstance<RelayConstantNode>()) {
@@ -293,7 +401,65 @@ struct Gradient : public ExprVisitor {
     tuple_grads[var].Set(idx, grad);
   }
 
- public:
+  bool IsDefined(const Array<Expr>& exprs) {
+    for (const auto& e : exprs) {
+      if (!e.defined()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Expr MakeZero(Expr expr) {
+    static auto zeros_like = Op::Get("mnm.op.zeros_like");
+    auto zero_grad = Call(zeros_like, {expr});
+    return zero_grad;
+  }
+
+  /*!
+   * \brief It is possible that some of the outputs of a CallNode are not used by the subsequent
+   * operators. For example, we can split an operator and may use only one split tensor later on. In
+   * this case, the ograd for the other tensor will not be set to a valid value from AutoDiff
+   * because in the reverse mode there are no operators to set the ograd for the unused op.
+   * Another common example is a while loop in Relay where we will pass on the counter and some
+   * other float tensors that are involved only in condition evaluation. These sometimes become
+   * output of the function, but they are never used by the subsequent graph.
+   *
+   * In such scenarios we have to define the ograd to have a valid ograd. There are 2 cases
+   * 1) If tuple item, find the corresponding primal expr and tuple item and pass it through
+   * zeros_like
+   * 2) It is tensor type, pass it through zeros_like
+   */
+  Array<Expr> InitUndefinedGrads(const Array<Expr>& ograds) {
+    if (IsDefined(ograds)) {
+      return ograds;
+    }
+    Array<Expr> defined_ograds;
+    for (int index = 0; index < ograds.size(); index++) {
+      auto ograd = ograds[index];
+      if (ograd.defined()) {
+        defined_ograds.push_back(ograd);
+      } else {
+        auto primal_expr = var_to_primal_expr_[let_var_.get()];
+        if (primal_expr->checked_type_.defined()) {
+          auto primal_expr_type = primal_expr->checked_type();
+          Expr defined_ograd;
+          if (primal_expr.as<TupleNode>() || primal_expr_type.as<TupleTypeNode>()) {
+            defined_ograd = MakeZero(TupleGetItem(let_var_, index));
+          } else {
+            defined_ograd = MakeZero(let_var_);
+          }
+          defined_ograds.push_back(defined_ograd);
+        } else {
+          Expr defined_ograd = MakeZero(let_var_);
+          defined_ograds.push_back(defined_ograd);
+        }
+      }
+    }
+    return defined_ograds;
+  }
+
+ private:
   // helper functions for adding tensors
   Array<Expr> AddTensors(const Array<Expr>& x1s, const Array<Expr>& x2s) {
     int n1 = x1s.size();
@@ -314,85 +480,59 @@ struct Gradient : public ExprVisitor {
       return NullValue<Var>();
     }
     if (!x1.defined()) {
-      return x2->IsInstance<VarNode>() ? x2 : ll->Push(x2);
+      return x2->IsInstance<VarNode>() ? x2 : adjoint_ll_->Push(x2);
     }
     if (!x2.defined()) {
-      return x1->IsInstance<VarNode>() ? x1 : ll->Push(x1);
+      return x1->IsInstance<VarNode>() ? x1 : adjoint_ll_->Push(x1);
     }
     const auto* t1 = x1.as<TupleNode>();
     const auto* t2 = x2.as<TupleNode>();
     if (t1 && t2) {
       return Tuple(AddTensors(t1->fields, t2->fields));
     }
-    return ll->Push(Call(op, {x1, x2, MakeNull(), MakeNull()}));
+    return adjoint_ll_->Push(Call(op, {x1, x2, MakeNull(), MakeNull()}));
   }
 
-  // Initialize, running and finalize
-  void InitTuple() {
-    // grads for tuples
-    const auto& vars = ell->vars;
-    const auto& exprs = ell->exprs;
-    CHECK_EQ(vars.size(), exprs.size());
-    for (const auto& var : vars) {
-      requires_grads[var.operator->()] = true;
+ private:
+  // Helper functions to assist in the creation of input and ret of the backward closure.
+  /*!
+   * \brief Make the "dy" variable which is the input variable of the grad closure.
+   * The closure looks like this. We are creating the dy input variable.
+   *   fn (dy) {
+   *      let xxx = ...;
+   *      ret_grads
+   *   }
+   */
+  Var MakeOutputGrad() {
+    Type ty = current_func_node_->checked_type_;
+    Type annotation;
+    if (ty.defined()) {
+      const auto* fty = ty.as<FuncTypeNode>();
+      CHECK(fty != nullptr);
+      annotation = fty->ret_type;
+    } else {
+      LOG(WARNING) << "InferType is not run before AutoDiff pass";
     }
-    int n = exprs.size();
-    for (int i = 0; i < n; ++i) {
-      var_to_expr[vars[i].operator->()] = exprs[i];
-    }
-    for (int i = 0; i < n; ++i) {
-      // a must-be tuple
-      if (const auto* tuple = exprs[i].as<TupleNode>()) {
-        const VarNode* var = vars[i].operator->();
-        tuple_length[var] = tuple->fields.size();
-        tuple_grads[var] = std::vector<Expr>(tuple->fields.size(), NullValue<Var>());
-      } else if (const auto* tuple_get_item = exprs[i].as<TupleGetItemNode>()) {
-        // This is a tuple, which however is not constructed inside this function
-        // (i.e. input arguments or outputs of an operator/function)
-        // Therefore, its length is unknown
-        const VarNode* var = tuple_get_item->tuple.as<VarNode>();
-        int size = tuple_get_item->index + 1;
-        if (tuple_length.count(var) == 0) {
-          tuple_length[var] = -1;
-          tuple_grads[var] = std::vector<Expr>(size, NullValue<Var>());
-        } else {
-          // FIXME(comaniac): the ignored nn.dropout becomes a tuple-2 which has
-          // tuple_length = 2 here.
-          // CHECK_EQ(tuple_length[var], -1);
-          int old_size = tuple_grads[var].size();
-          if (size > old_size) {
-            tuple_grads[var] = std::vector<Expr>(size, NullValue<Var>());
-          }
-        }
-      }
-    }
-    // grads for non-tuples
-    for (int i = 0; i < n; ++i) {
-      const VarNode* var = vars[i].operator->();
-      if (!tuple_grads.count(var)) {
-        tuple_grads[var] = {NullValue<Var>()};
-      }
-    }
-    // grad for input arguments
-    for (const Var& param : func->params) {
-      const VarNode* var = param.operator->();
-      if (!tuple_grads.count(var)) {
-        tuple_grads[var] = {NullValue<Var>()};
-      }
-    }
+    return mnm::ir::MakeVar("dy", annotation);
   }
 
-  // The closure looks like:
-  //   fn (dy) {
-  //      let xxx = ...;
-  //      ret_grads
-  //   }
+  /*!
+   * \brief Set the tuple_grad for the return variable of primal function to dy.
+   * This initializes the backward gradient and we can start the gradient process.
+   * The closure looks like this. We are connecting the primal_ret var with dy here.
+   *   %primal_ret = ...
+   *   %closure = fn (dy) {
+   *      let xxx = ...;
+   *      ret_grads
+   *   }
+   *   return (%primal_ret, %closure)
+   */
   void MakeClosureInputGrads(const Var& dy) {
-    const VarNode* ret = ell->ret.operator->();
+    const VarNode* ret = primal_ell_->ret.operator->();
     if (tuple_length.count(ret)) {
       int n = tuple_grads[ret].size();
       for (int i = 0; i < n; ++i) {
-        tuple_grads[ret].Set(i, ll->Push(TupleGetItem(dy, i)));
+        tuple_grads[ret].Set(i, adjoint_ll_->Push(TupleGetItem(dy, i)));
       }
     } else {
       CHECK_EQ(tuple_grads[ret].size(), 1);
@@ -400,8 +540,20 @@ struct Gradient : public ExprVisitor {
     }
   }
 
-  Var MakeClosureRet() {
-    const Array<Var>& targets = func->params;
+  /*!
+   * \brief The closure looks like this.
+   *   %primal_ret = ...
+   *   %closure = fn (dy) {
+   *      let xxx = ...;
+   *      ret_grads
+   *   }
+   *   return (%primal_ret, %closure)
+   * In this function we are working on ret_grads. The gradients for all the expressions has already
+   * finished. The relevant expressions have already populated the tuple_grads data structure
+   * accordingly.
+   */
+  Expr MakeClosureRet() {
+    const Array<Var>& targets = current_func_node_->params;
     Array<Expr> grads;
     for (const Var& var : targets) {
       const VarNode* var_node = var.operator->();
@@ -409,87 +561,321 @@ struct Gradient : public ExprVisitor {
       if (tuple_length.count(var_node)) {
         for (Expr& expr : var_grads) {
           if (!expr.defined()) {
+            // TODO (janimesh) - When is this if condition is satisfied? Should this be ZeroGrad or
+            // NoGrad?
             expr = MakeConstant(NoGradValue::make());
           }
         }
-        grads.push_back(ll->Push(Tuple(var_grads)));
+        grads.push_back(adjoint_ll_->Push(Tuple(var_grads)));
       } else {
         CHECK_EQ(var_grads.size(), 1);
         if (var_grads[0].defined()) {
           grads.push_back(var_grads[0]);
-        } else {
+        } else if (!requires_grads_map_[var.get()]) {
+          // No grad required.
           grads.push_back(MakeConstant(NoGradValue::make()));
+        } else {
+          // This means that we need the gradient but nobody use this variable. This can happen in
+          // Normalizing the if conditions. To handle such scenario, we can use actualy zero values.
+          grads.push_back(adjoint_ll_->Push(MakeZero(var)));
         }
       }
     }
     if (targets.size() == 1) {
-      return Downcast<Var>(grads[0]);
+      if (requires_grads_map_[targets[0].get()]) {
+        return Downcast<Var>(grads[0]);
+      } else {
+        return MakeConstant(NoGradValue::make());
+      }
     }
-    return ll->Push(Tuple(grads));
+    return adjoint_ll_->Push(Tuple(grads));
   }
 
-  Var MakeOutputGrad() {
-    Type ty = func->checked_type_;
-    Type annotation;
-    if (ty.defined()) {
-      const auto* fty = ty.as<FuncTypeNode>();
-      CHECK(fty != nullptr);
-      annotation = fty->ret_type;
-    }
-    return mnm::ir::MakeVar("dy", annotation);
-  }
+ private:
+  // Key functions that manange adjoint computation and bundling
+  /*!
+   * \brief This functions walks the graph in the reverse manner and computes the gradients.
+   *             Primal                                      Adjoint
+   *               x                                            dx --> igrad
+   *               |                                            |
+   *            operator                                  operator_grad
+   *               |                                            |
+   *               y                                            dy --> ograd
+   *
+   * As shown in the above example, while calculating the gradients, we have ograd as an input
+   * and then find the igrad using the opertor_grad transformation. The AD works in reverse manner
+   *
+   * Primal  =            input -> x --> y --> output
+   * Adjoint =            doutput --> dy --> dx ---> dinput
+   *
+   * By moving node-by-node, each node takes the ograd and finds the igrads. The next node in the
+   * reverse order looks at the ograd (which is an igrad already set by the earlier operator in
+   * adjoint computation).
+   */
+  Expr GetAdjoint(const Var& dy) {
+    Expr adjoint_body = LetList::With([&](LetList* ll) {
+      this->adjoint_ll_ = ll;
+      // Set the igrad of last primal expression to dy. After this, we can now
+      // call the gradient for the expressions in reverse order. It works like follows
+      // igrad for expr[i] --> grad for expr[i] --> ograd for expr[i]
+      // igrad for expr[i - 1] = ograd_for_expr[i]
+      // igrad for expr[i - 1] --> grad for expr[i] --> ograd for expr[i - 1]
+      // The next line basically sets igrad for last expr (expr[n-1]) = dy
+      MakeClosureInputGrads(dy);
 
-  Function Run() {
-    Var dy = MakeOutputGrad();
-    Expr body = LetList::With([&](LetList* ll) {
-      this->ll = ll;
-      const auto& vars = ell->vars;
-      const auto& exprs = ell->exprs;
+      const auto& vars = primal_ell_->vars;
+      const auto& exprs = primal_ell_->exprs;
       CHECK_EQ(vars.size(), exprs.size());
       int n = exprs.size();
-      MakeClosureInputGrads(dy);
+
+      // Walk through each expresion and set the tuple_grads accordingly.
       for (int i = n - 1; i >= 0; --i) {
-        let_var = vars[i];
+        let_var_ = vars[i];
         ExprVisitor::VisitExpr(exprs[i]);
       }
       return MakeClosureRet();
     });
-    Var closure = mnm::ir::MakeVar("closure", {});
+    return adjoint_body;
+  }
+
+  /*!
+   * \brief This method bundles up the primal and adjoint computation together.
+   */
+  Function BundlePrimalAndAdjoint(const Var& dy, const Expr& adjoint_body) {
+    // Create a new let list that captures both primal and adjoint closure.
+    std::unique_ptr<ExplicitLetList> primal_adjoint_ell_{nullptr};
+
+    // Add all the primal exprs in the let list
+    primal_adjoint_ell_ = std::make_unique<ExplicitLetList>();
+    for (int i = 0; i < primal_ell_->vars.size(); i++) {
+      const Var& var = primal_ell_->vars[i];
+      primal_adjoint_ell_->vars.push_back(var);
+      CHECK(var_to_primal_expr_.count(var.get()) != 0);
+      primal_adjoint_ell_->exprs.push_back(var_to_primal_expr_.at(var.get()));
+    }
+
+    // Now lets add the final reverse AD adjoint_closure into the primal_adjoint_ell_
+    // let adjoint_closure = fn(dy) {};
+    Var adjoint_closure = mnm::ir::MakeVar("adjoint_closure", {});
+    primal_adjoint_ell_->vars.push_back(adjoint_closure);
+    primal_adjoint_ell_->exprs.push_back(Function({dy}, adjoint_body, {}, {}));
+
+    // Now lets add the return value which is a tuple of primal and adjoint closure
+    // let ret = tuple(y, adjoint_closure)
     Var ret = mnm::ir::MakeVar("ret", {});
-    // let closure = fn(dy) {};
-    ell->vars.push_back(closure);
-    ell->exprs.push_back(Function({dy}, body, {}, {}));
-    // let ret = tuple(y, closure)
-    ell->vars.push_back(ret);
-    ell->exprs.push_back(Tuple({ell->ret, closure}));
-    ell->ret = ret;
-    return Function(func->params, ell->AsExpr(), {}, {});
+    primal_adjoint_ell_->vars.push_back(ret);
+    primal_adjoint_ell_->exprs.push_back(Tuple({primal_ell_->ret, adjoint_closure}));
+
+    // Set the return value of ell
+    primal_adjoint_ell_->ret = ret;
+
+    // Setup the types correctly to make InferType job easier
+    Type primal_type = current_func_node_->ret_type;
+    Type closure_args_type = primal_type;
+    Array<Type> params_type;
+    for (auto var : current_func_node_->params) {
+      if (requires_grads_map_[var.get()]) {
+        params_type.push_back(var->type_annotation);
+      } else {
+        // This is to help inferType when NoGradValue is set
+        params_type.push_back(TensorType::Scalar(DataType::Int(64)));
+      }
+    }
+    Type closure_ret_type = params_type.size() == 1 ? params_type[0] : TupleType(params_type);
+    auto closure_type = FuncType({closure_args_type}, closure_ret_type, {}, {});
+    auto func_ret_type = TupleType({primal_type, closure_type});
+    return Function(current_func_node_->params, primal_adjoint_ell_->AsExpr(), func_ret_type, {});
+  }
+
+ private:  // Init functions
+  void Init() {
+    InitRequiresGrad();
+    InitTuple();
+  }
+  /*!
+   * \brief This function initializes the grad for func params and intermediate lets vars.
+   * The tuple_grads basically point to the ograd object for a let var. Later on while computing the
+   * grad for each expr, we write the grad funtion in these tuple_grads.
+   */
+  void InitTuple() {
+    // grads for tuples
+    const auto& vars = primal_ell_->vars;
+    const auto& exprs = primal_ell_->exprs;
+    CHECK_EQ(vars.size(), exprs.size());
+    int n = exprs.size();
+    for (const auto& var : vars) {
+      requires_grads_map_[var.get()] = true;
+    }
+
+    // Save the var to expr mapping to use later
+    for (int i = 0; i < n; ++i) {
+      var_to_primal_expr_[vars[i].get()] = exprs[i];
+    }
+
+    // Initialize the grad entries for tuple first
+    for (int i = 0; i < n; ++i) {
+      if (const auto* tuple = exprs[i].as<TupleNode>()) {
+        const VarNode* var_node = vars[i].get();
+        tuple_length[var_node] = tuple->fields.size();
+        tuple_grads[var_node] = std::vector<Expr>(tuple->fields.size(), NullValue<Var>());
+      } else if (const auto* tuple_get_item = exprs[i].as<TupleGetItemNode>()) {
+        // This is a tuple, which however is not constructed inside this function
+        // (i.e. input arguments or outputs of an operator/function)
+        // Therefore, its length is unknown
+        const VarNode* var_node = tuple_get_item->tuple.as<VarNode>();
+        const Expr& tuple_expr = var_to_primal_expr_[var_node];
+        int size;
+        if (tuple_expr->checked_type_.defined()) {
+          const TupleType& tuple_type = Downcast<TupleType>(tuple_expr->checked_type());
+          size = tuple_type->fields.size();
+        } else {
+          size = tuple_get_item->index + 1;
+        }
+        if (tuple_length.count(var_node) == 0) {
+          tuple_length[var_node] = -1;
+          tuple_grads[var_node] = std::vector<Expr>(size, NullValue<Var>());
+        } else {
+          // FIXME(comaniac): the ignored nn.dropout becomes a tuple-2 which has
+          // tuple_length = 2 here.
+          // CHECK_EQ(tuple_length[var], -1);
+          int old_size = tuple_grads[var_node].size();
+          if (size > old_size) {
+            tuple_grads[var_node] = std::vector<Expr>(size, NullValue<Var>());
+          }
+        }
+      }
+    }
+
+    // Revisit the let variables and init the ones that are not tuples
+    for (const Var& var : vars) {
+      const VarNode* var_node = var.operator->();
+      if (!tuple_grads.count(var_node)) {
+        tuple_grads[var_node] = {NullValue<Var>()};
+      }
+    }
+
+    // Finally init the grads for func params
+    for (const Var& param : current_func_node_->params) {
+      const VarNode* var_node = param.operator->();
+      if (!tuple_grads.count(var_node)) {
+        tuple_grads[var_node] = {NullValue<Var>()};
+      }
+    }
+  }
+
+  /*!
+   * \brief Find out which func params require input grads. Here, we use the main function
+   * requires grads as the final qualifier. If it is not main, the assumption is that we need
+   * gradients for all float variables.
+   */
+  void InitRequiresGrad() {
+    for (const Var& var : current_func_node_->params) {
+      const VarNode* var_node = var.get();
+      requires_grads_map_[var_node] = true;
+      if (requires_grads_main_map_.count(var_node)) {
+        requires_grads_map_[var_node] = requires_grads_main_map_[var_node];
+      }
+    }
   }
 
  public:
-  // initialized in constructor
-  const FunctionNode* func;
-  std::unique_ptr<ExplicitLetList> ell{nullptr};
+  Function Run(ir::Function func) {
+    current_func_node_ = func.get();
+    primal_ell_ = ExplicitLetList::make(func->body);
+    Init();
+    Var dy = MakeOutputGrad();
+    Expr adjoint_body = GetAdjoint(dy);
+    return BundlePrimalAndAdjoint(dy, adjoint_body);
+  }
+
+ public:
+  // The map telling which func params of the main function require grads.
+  std::unordered_map<const VarNode*, bool>& requires_grads_main_map_;
+
+ private:
+  /*!
+   * \brief Each instance of the class works on a function node. The instance keeps tracks of many
+   * members of the function like current let_var we are working on, the primal and gradient
+   * expression for each let var-expr binding. The following members track this type of information.
+   */
+
+  /*! \brief A global function we are working on in this instance of the class. */
+  const FunctionNode* current_func_node_;
+  /*! \brief The Let variable that is tracking the var-expr binding we are working on.*/
+  Var let_var_;
+  /*! \brief The explicit let list for primal computation. */
+  std::unique_ptr<ExplicitLetList> primal_ell_{nullptr};
+  /*! \brief The let list for the adjoint computation. */
+  LetList* adjoint_ll_ = nullptr;
+  /*! \brief A map saving let var to its grad expr mapping. */
+  std::unordered_map<const VarNode*, Expr> var_to_primal_expr_;
+  /*! \brief A map telling which func params need grad. */
+  std::unordered_map<const VarNode*, bool> requires_grads_map_;
+  /*! \brief A map saving the lenghth of grads. */
   std::unordered_map<const VarNode*, int> tuple_length;
-  std::unordered_map<const VarNode*, std::vector<int>> tuple_index;
+  /*! \brief A map that tracks the computed grads in reverse AD. */
   std::unordered_map<const VarNode*, Array<Expr>> tuple_grads;
-  std::unordered_map<const VarNode*, Expr> var_to_expr;
-  std::unordered_map<const VarNode*, bool> requires_grads;
-  // initialized in Run
-  LetList* ll = nullptr;
-  // a variable that is set for each let expr
-  Var let_var;
 };
 
 }  // namespace gradient
 
+// Parse the requires_grad and create a map from VarNode to boolean flag.
+std::unordered_map<const VarNode*, bool> ParseRequireGradsMain(
+    IRModule mod, ir::Array<tvm::Bool> requires_grads) {
+  std::unordered_map<const VarNode*, bool> requires_grads_main_map;
+  auto func = Downcast<Function>(mod->Lookup("main"));
+  if (requires_grads.size() == 0) {
+    for (const Var& param : func->params) {
+      requires_grads_main_map[param.get()] = true;
+    }
+  } else {
+    CHECK_EQ(func->params.size(), requires_grads.size());
+    for (int i = 0; i < func->params.size(); ++i) {
+      const VarNode* var = func->params[i].operator->();
+      requires_grads_main_map[var] = requires_grads[i];
+    }
+  }
+  return requires_grads_main_map;
+}
+
 Pass AutoDiff(ir::Array<tvm::Bool> requires_grads) {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto reverse_ad = gradient::Gradient(Downcast<Function>(f).get(), requires_grads);
-        return Downcast<ir::Function>(reverse_ad.Run());
-      };
-  return CreateMNMFunctionPass(pass_func, 0, "AutoDiff", {});
+  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m,
+                                                                            PassContext pc) {
+    // Copy the module to avoid any in-place module update
+    ir::IRModule mod = ir::IRModule(m->functions);
+
+    // Collect the global function to their gradient map. We will walk through the mod functions
+    // and collect the gradient for each global function and store in this map. After all the global
+    // vars are visited, we would update the global functions using map.
+    std::unordered_map<const GlobalVarNode*, Function> gvar_to_grad_func;
+
+    // Parse the requires_grad array to a map for the main function.
+    auto requires_grads_main_map = ParseRequireGradsMain(mod, requires_grads);
+
+    auto grad_computer = gradient::ReverseAD(requires_grads_main_map);
+
+    // Traverse through the functions and call Gradient on everyone
+    for (auto gvar_func_pair : mod->functions) {
+      const GlobalVarNode* gvn = gvar_func_pair.first.get();
+      if (gvar_func_pair.second.as<ir::FunctionNode>()) {
+        const Function& func = Downcast<Function>(gvar_func_pair.second);
+        // Perform AD on the function
+        auto grad_func = grad_computer.Run(func);
+
+        // Add the grad function to the our map
+        gvar_to_grad_func.emplace(gvn, grad_func);
+      }
+    }
+
+    // Now create the new module with updated grad functions
+    for (const auto& it : gvar_to_grad_func) {
+      auto gv = GetRef<GlobalVar>(it.first);
+      auto func = it.second;
+      mod->Add(gv, func, true);
+    }
+    return mod;
+  };
+  return CreateModulePass(pass_func, 1, "AutoDiff", {});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);

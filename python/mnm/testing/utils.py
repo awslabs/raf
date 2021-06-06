@@ -38,12 +38,14 @@ def run_infer_type(expr):
     return mod["main"]
 
 
-def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, sch_file=None):
+def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, sch_file=None, pass_seq=None):
     """get vm executor"""
     # pylint: disable=protected-access
     record = model._internal(*args)
     mod = record.mod
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
+    if pass_seq is not None:
+        mod = pass_seq(mod)
     with mnm.ir.PassContext(opt_level=opt_level, config={"mnm.fuse_level": fuse_level}):
         executor = VMExecutor(mod, device)
     return executor.make_executor(sch_file=sch_file), inputs
