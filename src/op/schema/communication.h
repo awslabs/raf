@@ -30,13 +30,6 @@ class ReduceScatterArgs : public ir::AttrsNode<ReduceScatterArgs> {
   std::vector<value::BaseTensorValue> x;
   MNM_OP_SCHEMA(ReduceScatterArgs, "mnm.args._reduce_scatter");
 };
-
-class StreamControlArgs : public ir::AttrsNode<StreamControlArgs> {
- public:
-  value::BaseTensorValue x;
-  int64_t stream_tag{0};
-  MNM_OP_SCHEMA(StreamControlArgs, "mnm.args.stream_control");
-};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

@@ -1,6 +1,6 @@
 /*!
- * Copyright (c) 2020 by Contributors
- * \file src/op/dispatch/communication/nccl.cc
+ * Copyright (c) 2021 by Contributors
+ * \file src/op/dispatch/cuda/nccl.cc
  * \brief Communication operators implmentated by NCCL
  */
 #include <vector>

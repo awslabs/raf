@@ -16,6 +16,7 @@
 #include "../../schema/optimizer.h"
 #include "../../schema/random.h"
 #include "../../schema/reduce.h"
+#include "../../schema/stream.h"
 #include "../../schema/transform.h"
 #include "../../schema/ufunc.h"
 #include "../../schema/vision.h"

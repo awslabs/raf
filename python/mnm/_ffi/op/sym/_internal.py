@@ -305,7 +305,13 @@ squeeze = _APIS.get("mnm.op.sym.squeeze", None)
 # Defined in ./src/op/regs/regs.cc
 stack = _APIS.get("mnm.op.sym.stack", None)
 # Defined in ./src/op/regs/regs.cc
+stream_end = _APIS.get("mnm.op.sym.stream_end", None)
+# Defined in ./src/op/regs/regs.cc
+stream_start = _APIS.get("mnm.op.sym.stream_start", None)
+# Defined in ./src/op/regs/regs.cc
 stream_sync = _APIS.get("mnm.op.sym.stream_sync", None)
+# Defined in ./src/op/regs/regs.cc
+stream_wait = _APIS.get("mnm.op.sym.stream_wait", None)
 # Defined in ./src/op/regs/regs.cc
 strided_slice = _APIS.get("mnm.op.sym.strided_slice", None)
 # Defined in ./src/op/regs/regs.cc

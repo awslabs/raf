@@ -1,6 +1,6 @@
 /*!
- * Copyright (c) 2019 by Contributors
- * \file src/op/dispatch/communication/communication_utils.h
+ * Copyright (c) 2021 by Contributors
+ * \file src/op/dispatch/cuda/communication_utils.h
  * \brief Helper functions for communicaton operators
  */
 #pragma once

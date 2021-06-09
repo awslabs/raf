@@ -638,10 +638,10 @@ SCHEMAS = {
         Arg(name="learning_rate", cxx_type="double"),
         Arg(name="mu", cxx_type="double"),
     ],
-    "communication.h::stream_control": [
+    "stream.h::stream": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="stream_tag",
-            cxx_type="int64_t",
+            cxx_type="int",
             cxx_default=0),
     ],
     "communication.h::_allreduce": [

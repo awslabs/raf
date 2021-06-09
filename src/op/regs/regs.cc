@@ -23,6 +23,7 @@
 #include "../schema/optimizer.h"
 #include "../schema/random.h"
 #include "../schema/reduce.h"
+#include "../schema/stream.h"
 #include "../schema/transform.h"
 #include "../schema/ufunc.h"
 #include "../schema/vision.h"
@@ -192,7 +193,10 @@ static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
 static const char squeeze[] = "mnm.op.squeeze";
 static const char stack[] = "mnm.op.stack";
+static const char stream_end[] = "mnm.op.stream_end";
+static const char stream_start[] = "mnm.op.stream_start";
 static const char stream_sync[] = "mnm.op.stream_sync";
+static const char stream_wait[] = "mnm.op.stream_wait";
 static const char strided_slice[] = "mnm.op.strided_slice";
 static const char strided_slice_dx[] = "mnm.op.strided_slice_dx";
 static const char subtract[] = "mnm.op.subtract";
@@ -945,8 +949,8 @@ Attrs Stack(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
-Attrs StreamControl(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::StreamControlArgs, 2);  // NOLINT(whitespace/line_length)
+Attrs Stream(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::StreamArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, stream_tag);
   return Attrs(attrs);
@@ -2662,9 +2666,36 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.stack").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.stream_end").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(stream_end, 2, ffi2schema::Stream,
+              schema::StreamArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_tag));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.stream_start").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(stream_start, 2, ffi2schema::Stream,
+              schema::StreamArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_tag));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.stream_sync").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(stream_sync, 2, ffi2schema::StreamControl,
-              schema::StreamControlArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(stream_sync, 2, ffi2schema::Stream,
+              schema::StreamArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_tag));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.stream_wait").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(stream_wait, 2, ffi2schema::Stream,
+              schema::StreamArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_tag));
   MNM_SET_ENV(vpack->y, value);
@@ -3651,7 +3682,7 @@ Array<Expr> Stack(const TVMArgs& values) {
   MNM_RET();
 }
 
-Array<Expr> StreamControl(const TVMArgs& values) {
+Array<Expr> Stream(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Int, stream_tag);
@@ -4046,8 +4077,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt").set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary)
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx").set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.squeeze").set_body(MNM_SYMBOLIC_API(squeeze, 2, Squeeze));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stack").set_body(MNM_SYMBOLIC_API(stack, 2, Stack));
-MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync")
-    .set_body(MNM_SYMBOLIC_API(stream_sync, 2, StreamControl));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stream_end").set_body(MNM_SYMBOLIC_API(stream_end, 2, Stream));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stream_start").set_body(MNM_SYMBOLIC_API(stream_start, 2, Stream));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync").set_body(MNM_SYMBOLIC_API(stream_sync, 2, Stream));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stream_wait").set_body(MNM_SYMBOLIC_API(stream_wait, 2, Stream));
 MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
     .set_body(MNM_SYMBOLIC_API(strided_slice, 5, StridedSlice));
 MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice_dx")
@@ -4905,8 +4938,8 @@ Attrs Stack(const Array<Value>& values) {
 }
 
 template <const char* op_name>
-Attrs StreamControl(const Array<Value>& values) {
-  MNM_PRELUDE(1, 2, schema::StreamControlArgs);
+Attrs Stream(const Array<Value>& values) {
+  MNM_PRELUDE(1, 2, schema::StreamArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_OPTIONAL(1, value2schema::Int, stream_tag);
   return Attrs(attrs);
@@ -6496,7 +6529,7 @@ int Stack(const std::string& field) {
 }
 
 template <const char* op_name>
-int StreamControl(const std::string& field) {
+int Stream(const std::string& field) {
   if (field == "x") {
     return 0;
   }
@@ -7431,10 +7464,22 @@ MNM_BIND_SCHEMA("mnm.op.stack", names::stack,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stack", names::stack,
                             schema_field_idx::Stack);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.stream_end", names::stream_end,
+                value2schema::Stream);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_end", names::stream_end,
+                            schema_field_idx::Stream);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.stream_start", names::stream_start,
+                value2schema::Stream);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_start", names::stream_start,
+                            schema_field_idx::Stream);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
-                value2schema::StreamControl);  // NOLINT(whitespace/line_length)
+                value2schema::Stream);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_sync", names::stream_sync,
-                            schema_field_idx::StreamControl);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::Stream);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.stream_wait", names::stream_wait,
+                value2schema::Stream);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_wait", names::stream_wait,
+                            schema_field_idx::Stream);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.strided_slice", names::strided_slice,
                 value2schema::StridedSlice);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.strided_slice", names::strided_slice,
@@ -7628,7 +7673,7 @@ MNM_REGISTER_OBJECT_REFLECT(SortArgs);
 MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
 MNM_REGISTER_OBJECT_REFLECT(SqueezeArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);
-MNM_REGISTER_OBJECT_REFLECT(StreamControlArgs);
+MNM_REGISTER_OBJECT_REFLECT(StreamArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);

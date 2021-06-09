@@ -140,7 +140,7 @@ if (${MNM_USE_NCCL} STREQUAL "OFF")
 else ()
   file(GLOB_RECURSE MNM_DISTRIBUTED_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/*.cc
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/communication/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/*.cc
   )
 endif()
 

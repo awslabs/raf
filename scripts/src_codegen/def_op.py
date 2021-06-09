@@ -147,7 +147,7 @@ OPS = [
     Op(name="_allreduce", schema_name="_allreduce"),
     Op(name="_allgather", schema_name="_allgather"),
     Op(name="_reduce_scatter", schema_name="_reduce_scatter"),
-    Op(name="stream_sync", schema_name="stream_control"),
+    Op(name="stream_sync", schema_name="stream"),
     Op(name="cast", schema_name="cast"),
     Op(name="cast_like", schema_name="cast_like"),
     Op(name="gather", schema_name="gather"),
@@ -180,6 +180,9 @@ OPS = [
     Op(name="upper_bound.argwhere", schema_name="argwhere"),
     Op(name="roi_align", schema_name="roi_align"),
     Op(name="roi_align_dx", schema_name="roi_align_dx"),
+    Op(name="stream_start", schema_name="stream"),
+    Op(name="stream_end", schema_name="stream"),
+    Op(name="stream_wait", schema_name="stream"),
 ]
 
 def by_name():

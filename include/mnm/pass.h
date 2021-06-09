@@ -101,6 +101,12 @@ ir::Expr InferType(ir::Expr expr);
 Pass AnnotateTarget(ir::Array<ir::String> target);
 
 /*!
+ * \brief Analyze the compuation graph and annotate operators with stream_start,
+ * stream_end, and stream_wait, to enable multi-stream execution in CUDA.
+ * \return The pass.
+ */
+Pass AnnotateStream();
+/*!
  * \brief After operators have been annotated with the targets that support
  * them, this pass creates regions of the operators for each target. It
  * is guaranteed that the regions will have a topological rodering so that

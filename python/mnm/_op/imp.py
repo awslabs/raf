@@ -38,12 +38,13 @@ __all__ = [
     "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
     "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
     "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
-    "sum", "sum_dx", "swap_axis", "take", "take_dx",
-    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "topk",
-    "transpose", "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage",
-    "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
-    "where", "zeros", "zeros_like",
+    "stack", "stream_end", "stream_start", "stream_sync", "stream_wait",
+    "strided_slice", "strided_slice_dx", "subtract", "sum", "sum_dx",
+    "swap_axis", "take", "take_dx", "tanh", "tanh_dx",
+    "threefry_generate", "threefry_split", "topk", "transpose", "transpose_dx",
+    "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free",
+    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where", "zeros",
+    "zeros_like",
 ]
 
 @set_module("mnm")
@@ -1128,10 +1129,28 @@ def stack(x, axis=0):
     return imp_utils.ret(ffi.stack(x, axis))
 
 @set_module("mnm")
+def stream_end(x, stream_tag=0):
+    x = imp_utils.to_tensor(x)
+    stream_tag = imp_utils.to_int(stream_tag)
+    return imp_utils.ret(ffi.stream_end(x, stream_tag))
+
+@set_module("mnm")
+def stream_start(x, stream_tag=0):
+    x = imp_utils.to_tensor(x)
+    stream_tag = imp_utils.to_int(stream_tag)
+    return imp_utils.ret(ffi.stream_start(x, stream_tag))
+
+@set_module("mnm")
 def stream_sync(x, stream_tag=0):
     x = imp_utils.to_tensor(x)
     stream_tag = imp_utils.to_int(stream_tag)
     return imp_utils.ret(ffi.stream_sync(x, stream_tag))
+
+@set_module("mnm")
+def stream_wait(x, stream_tag=0):
+    x = imp_utils.to_tensor(x)
+    stream_tag = imp_utils.to_int(stream_tag)
+    return imp_utils.ret(ffi.stream_wait(x, stream_tag))
 
 @set_module("mnm")
 def strided_slice(x, begin, end, strides=None, slice_mode="end"):
