@@ -115,23 +115,16 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
     });
   } else if (name == "get_memory_trace") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
-      ICHECK_EQ(args.size(), 1U);
-
       std::ostringstream os;
 
       // Display the memory trace of used memory instead of the total allocated memory.
-      bool show_used = args[0];
-      if (show_used) {
-        os << "Numbers are the memory being used in MBs.";
-      } else {
-        os << "Numbers are the total allocated memory in MBs.";
-      }
-      os << std::endl;
+      os << "Numbers are the in MBs." << std::endl;
       os << std::setw(6) << std::left << "#Trace\t" << std::setw(80) << std::left << "#OpName";
 
       for (const auto& device : devices_) {
         auto device_str = "#" + std::string(device.c_str());
-        os << "\t" << std::setw(10) << std::left << device_str;
+        os << "\t" << std::setw(15) << std::left << device_str + "_used";
+        os << "\t" << std::setw(15) << std::left << device_str + "_alloc";
       }
       os << std::endl;
 
@@ -139,7 +132,8 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
         std::string name = memory_trace_[i].first->env_name;
         os << std::setw(6) << std::left << i << "\t" << std::setw(80) << std::left << name;
         for (auto trace : memory_trace_[i].second) {
-          os << "\t" << std::setw(10) << std::left << ((show_used) ? trace.first : trace.second);
+          os << "\t" << std::setw(15) << std::left << trace.first;
+          os << "\t" << std::setw(15) << std::left << trace.second;
         }
         os << std::endl;
       }
@@ -148,6 +142,9 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
   } else if (name == "run") {
     return PackedFunc([sptr_to_self, this](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
       memory_trace_.clear();
+      num_gcs_.clear();
+      num_gcs_.resize(devices_.size());
+      std::fill(num_gcs_.begin(), num_gcs_.end(), 0);
       peak_memory_mbs_.clear();
       peak_memory_mbs_.resize(devices_.size());
       std::fill(peak_memory_mbs_.begin(), peak_memory_mbs_.end(), std::make_pair(0, 0));
@@ -160,9 +157,8 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
 
       VMContext ctx = args[0];
       if (profile_memory_) {
-        // Use virtual memory pool to profile the model that will run out of memory.
-        memory_pool_name_ = "virtual_page_unit_pool";
         for (auto device : devices_) {
+          memory_pool::Memory::RemovePool(device);
           memory_pool::Memory::InitPool(device, memory_pool_name_);
         }
 
@@ -172,12 +168,13 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
         Map<String, ObjectRef> ret;
         for (size_t i = 0; i < devices_.size(); ++i) {
           const auto& device = devices_[i];
-          ret.Set(device.c_str(),
+          std::string device_str = std::string(device.c_str());
+          ret.Set(device_str,
                   Array<FloatImm>({FloatImm(DataType::Float(32), peak_memory_mbs_[i].first),
                                    FloatImm(DataType::Float(32), peak_memory_mbs_[i].second)}));
+          ret.Set("GC_" + device_str, IntImm(DataType::Int(32), num_gcs_[i]));
           memory_pool::Memory::RemovePool(device);
         }
-        memory_pool_name_ = "";
         *rv = ret;
       } else {
         *rv = Run(ctx);
@@ -217,6 +214,10 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
     std::tie(curr_used, curr_total) = curr_mem;
     float peak_used = 0, peak_total = 0;
     std::tie(peak_used, peak_total) = peak_memory_mbs_[i];
+    if (!memory_trace_.empty() && curr_total < memory_trace_.back().second[i].second) {
+      // GC was triggered if the current allocated memory is smaller than executing the previous op.
+      num_gcs_[i]++;
+    }
     peak_memory_mbs_[i] = std::make_pair((peak_used < curr_used) ? curr_used : peak_used,
                                          (peak_total < curr_total) ? curr_total : peak_total);
   }

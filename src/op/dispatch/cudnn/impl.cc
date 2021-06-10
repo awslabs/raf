@@ -23,7 +23,9 @@
 #include "../../schema/vm.h"
 #include "./cudnn_utils.h"
 #include "mnm/ir.h"
+#include "mnm/memory_pool.h"
 #include "mnm/op_utils.h"
+#include <queue>
 
 namespace mnm {
 namespace op {
@@ -32,6 +34,7 @@ namespace generated {
 
 using namespace mnm::value;
 using namespace mnm::ir;
+using namespace mnm::memory_pool;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using common::shape_utils::PadDims;
@@ -41,17 +44,50 @@ using dmlc::BeginPtr;
 static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
 
 MetaCache<cudnnConvolutionBwdDataAlgoPerf_t> CacheForcudnnConvolutionBwdDataAlgoPerf_t;
-cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tWrapper(
-    const std::vector<uint8_t>& key, const cudnnFilterDescriptor_t wDesc,
-    const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
-    const cudnnTensorDescriptor_t dxDesc) {
+cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tExWrapper(
+    const std::vector<uint8_t>& key, const cudnnFilterDescriptor_t wDesc, const void* w,
+    const cudnnTensorDescriptor_t dyDesc, const void* dy,
+    const cudnnConvolutionDescriptor_t convDesc, const cudnnTensorDescriptor_t dxDesc, void* dx) {
   if (auto* val = CacheForcudnnConvolutionBwdDataAlgoPerf_t.Get(key)) {
     return *val;
   }
+  static const cudnnConvolutionBwdDataAlgo_t algos[] = {
+      CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, CUDNN_CONVOLUTION_BWD_DATA_ALGO_1,
+      CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD, CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED};
+  static constexpr int n_algos = 4;
+  static Device dev(DevType::kCUDA(), 0);
+  std::priority_queue<size_t> max_ws_sizes;
+  for (int i = 0; i < n_algos; ++i) {
+    size_t ws_size = 0;
+    try {
+      CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(
+          CUDNNThreadEntry::ThreadLocal()->handle, wDesc, dyDesc, convDesc, dxDesc, algos[i],
+          &ws_size));
+    } catch (const dmlc::Error& e) {
+      continue;
+    }
+    max_ws_sizes.push(ws_size);
+  }
   int cnt;
+  size_t max_ws_size;
   cudnnConvolutionBwdDataAlgoPerf_t res;
-  CUDNN_CALL(cudnnFindConvolutionBackwardDataAlgorithm(
-      CUDNNThreadEntry::ThreadLocal()->handle, wDesc, dyDesc, convDesc, dxDesc, 1, &cnt, &res));
+  std::shared_ptr<Memory> memory;
+  while (!max_ws_sizes.empty()) {
+    try {
+      max_ws_size = max_ws_sizes.top();
+      max_ws_sizes.pop();
+      memory = Memory::Alloc(dev, max_ws_size);
+      break;
+    } catch (const dmlc::Error& e) {
+      continue;
+    }
+  }
+  CHECK(memory != nullptr);
+  void* workspace_temp = memory->data;
+  CUDNN_CALL(cudnnFindConvolutionBackwardDataAlgorithmEx(
+      CUDNNThreadEntry::ThreadLocal()->handle, wDesc, w, dyDesc, dy, convDesc, dxDesc, dx, 1, &cnt,
+      &res, workspace_temp, max_ws_size));
+  memory.reset();
   if (res.status != CUDNN_STATUS_SUCCESS) {
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
@@ -61,17 +97,50 @@ cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tWrapper(
 }
 
 MetaCache<cudnnConvolutionBwdFilterAlgoPerf_t> CacheForcudnnConvolutionBwdFilterAlgoPerf_t;
-cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tWrapper(
-    const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
-    const cudnnTensorDescriptor_t dyDesc, const cudnnConvolutionDescriptor_t convDesc,
-    const cudnnFilterDescriptor_t dwDesc) {
+cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tExWrapper(
+    const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc, const void* x,
+    const cudnnTensorDescriptor_t dyDesc, const void* dy,
+    const cudnnConvolutionDescriptor_t convDesc, const cudnnFilterDescriptor_t dwDesc, void* dw) {
   if (auto* val = CacheForcudnnConvolutionBwdFilterAlgoPerf_t.Get(key)) {
     return *val;
   }
+  static const cudnnConvolutionBwdFilterAlgo_t algos[] = {
+      CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1,
+      CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED};
+  static constexpr int n_algos = 4;
+  static Device dev(DevType::kCUDA(), 0);
+  std::priority_queue<size_t> max_ws_sizes;
+  for (int i = 0; i < n_algos; ++i) {
+    size_t ws_size = 0;
+    try {
+      CUDNN_CALL(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+          CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algos[i],
+          &ws_size));
+    } catch (const dmlc::Error& e) {
+      continue;
+    }
+    max_ws_sizes.push(ws_size);
+  }
   int cnt;
+  size_t max_ws_size;
   cudnnConvolutionBwdFilterAlgoPerf_t res;
-  CUDNN_CALL(cudnnFindConvolutionBackwardFilterAlgorithm(
-      CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, 1, &cnt, &res));
+  std::shared_ptr<Memory> memory;
+  while (!max_ws_sizes.empty()) {
+    try {
+      max_ws_size = max_ws_sizes.top();
+      max_ws_sizes.pop();
+      memory = Memory::Alloc(dev, max_ws_size);
+      break;
+    } catch (const dmlc::Error& e) {
+      continue;
+    }
+  }
+  CHECK(memory != nullptr);
+  void* workspace_temp = memory->data;
+  CUDNN_CALL(cudnnFindConvolutionBackwardFilterAlgorithmEx(
+      CUDNNThreadEntry::ThreadLocal()->handle, xDesc, x, dyDesc, dy, convDesc, dwDesc, dw, 1, &cnt,
+      &res, workspace_temp, max_ws_size));
+  memory.reset();
   if (res.status != CUDNN_STATUS_SUCCESS) {
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
@@ -81,17 +150,54 @@ cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tWrapp
 }
 
 MetaCache<cudnnConvolutionFwdAlgoPerf_t> CacheForcudnnConvolutionFwdAlgoPerf_t;
-cudnnConvolutionFwdAlgoPerf_t FindcudnnConvolutionFwdAlgoPerf_tWrapper(
-    const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc,
-    const cudnnFilterDescriptor_t wDesc, const cudnnConvolutionDescriptor_t convDesc,
-    const cudnnTensorDescriptor_t yDesc) {
+cudnnConvolutionFwdAlgoPerf_t FindcudnnConvolutionFwdAlgoPerf_tExWrapper(
+    const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc, const void* x,
+    const cudnnFilterDescriptor_t wDesc, const void* w, const cudnnConvolutionDescriptor_t convDesc,
+    const cudnnTensorDescriptor_t yDesc, void* y) {
   if (auto* val = CacheForcudnnConvolutionFwdAlgoPerf_t.Get(key)) {
     return *val;
   }
+  static const cudnnConvolutionFwdAlgo_t algos[] = {
+      CUDNN_CONVOLUTION_FWD_ALGO_GEMM,
+      CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
+      CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM,
+      CUDNN_CONVOLUTION_FWD_ALGO_DIRECT,
+      CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD,
+      CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED};
+  static constexpr int n_algos = 6;
+  static Device dev(DevType::kCUDA(), 0);
+  std::priority_queue<size_t> max_ws_sizes;
+  for (int i = 0; i < n_algos; ++i) {
+    size_t ws_size = 0;
+    try {
+      CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
+                                                         xDesc, wDesc, convDesc, yDesc, algos[i],
+                                                         &ws_size));
+    } catch (const dmlc::Error& e) {
+      continue;
+    }
+    max_ws_sizes.push(ws_size);
+  }
   int cnt;
+  size_t max_ws_size;
   cudnnConvolutionFwdAlgoPerf_t res;
-  CUDNN_CALL(cudnnFindConvolutionForwardAlgorithm(CUDNNThreadEntry::ThreadLocal()->handle, xDesc,
-                                                  wDesc, convDesc, yDesc, 1, &cnt, &res));
+  std::shared_ptr<Memory> memory;
+  while (!max_ws_sizes.empty()) {
+    try {
+      max_ws_size = max_ws_sizes.top();
+      max_ws_sizes.pop();
+      memory = Memory::Alloc(dev, max_ws_size);
+      break;
+    } catch (const dmlc::Error& e) {
+      continue;
+    }
+  }
+  CHECK(memory != nullptr);
+  void* workspace_temp = memory->data;
+  CUDNN_CALL(cudnnFindConvolutionForwardAlgorithmEx(CUDNNThreadEntry::ThreadLocal()->handle, xDesc,
+                                                    x, wDesc, w, convDesc, yDesc, y, 1, &cnt, &res,
+                                                    workspace_temp, max_ws_size));
+  memory.reset();
   if (res.status != CUDNN_STATUS_SUCCESS) {
     LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
     throw;
@@ -549,7 +655,8 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << xDesc_tt
                 << yDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionFwdAlgoPerf_tWrapper(algo_key, xDesc, wDesc, convDesc, yDesc);
+    algo = FindcudnnConvolutionFwdAlgoPerf_tExWrapper(algo_key, xDesc, x->data, wDesc, w->data,
+                                                      convDesc, yDesc, out->data);
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                        xDesc, wDesc, convDesc, yDesc, algo.algo,
                                                        &workSpaceSizeInBytes));
@@ -641,8 +748,8 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     algo_hasher << args->stride << args->padding << args->dilation << xDesc_tt << dyDesc_tt
                 << dwDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo =
-        FindcudnnConvolutionBwdFilterAlgoPerf_tWrapper(algo_key, xDesc, dyDesc, convDesc, dwDesc);
+    algo = FindcudnnConvolutionBwdFilterAlgoPerf_tExWrapper(algo_key, xDesc, x_or_w->data, dyDesc,
+                                                            dy->data, convDesc, dwDesc, out->data);
     CUDNN_CALL(cudnnGetConvolutionBackwardFilterWorkspaceSize(
         CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algo.algo,
         &workSpaceSizeInBytes));
@@ -735,7 +842,8 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << dyDesc_tt
                 << dxDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionBwdDataAlgoPerf_tWrapper(algo_key, wDesc, dyDesc, convDesc, dxDesc);
+    algo = FindcudnnConvolutionBwdDataAlgoPerf_tExWrapper(algo_key, wDesc, x_or_w->data, dyDesc,
+                                                          dy->data, convDesc, dxDesc, out->data);
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                             wDesc, dyDesc, convDesc, dxDesc,
                                                             algo.algo, &workSpaceSizeInBytes));

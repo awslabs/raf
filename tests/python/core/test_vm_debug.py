@@ -7,10 +7,7 @@ from mnm.testing import get_device_list, randn, with_seed
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 @with_seed(0)
 def test_vm_debug(device, shape):
     # pylint: disable=protected-access
@@ -47,6 +44,7 @@ def test_vm_debug(device, shape):
     check(outs[0], ref_y)
     check(outs[1], ref_z)
 
+
 @pytest.mark.parametrize("device", get_device_list())
 def test_vm_memory_profile(device):
     # pylint: disable=protected-access
@@ -61,7 +59,6 @@ def test_vm_memory_profile(device):
             y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
             y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
             return y
-
 
     xshape = (32, 3, 224, 224)
     wshape = (3, 3, 3, 3)
@@ -80,7 +77,9 @@ def test_vm_memory_profile(device):
     # Note that since it fits to the page size, we can allocate the exact size for it.
     buffer_size = (32 * 3 * 224 * 224) * 4 / 1048576
 
-    peak_memory = sum([v[0].value for k, v in ret_map.items() if k.find(device) != -1])
+    peak_memory = sum(
+        [v[0].value for k, v in ret_map.items() if k.find(device) != -1 and not k.startswith("GC")]
+    )
 
     # Peak memory should have 2 tensors, but CuDNN Conv2D has workspace memory that
     # depends on the Conv2D algorithm selected by CuDNN.

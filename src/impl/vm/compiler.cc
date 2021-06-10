@@ -742,6 +742,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   Array<pass::Pass> pass_seqs;
 
   // optimization passes that work on ANF
+  pass_seqs.push_back(pass::GradInputSelect());
   pass_seqs.push_back(pass::InlineLet());
   pass_seqs.push_back(pass::DeadCodeElimination());
 

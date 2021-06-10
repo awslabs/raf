@@ -47,10 +47,11 @@ TList get_preferred_backends(TList* default_list) {
   TList ret;
   if (preferred_backends_obj.defined()) {
     Array<String> preferred_backends = Downcast<Array<String>>(preferred_backends_obj);
-    for (const auto& backend : preferred_backends) {
-      for (const auto e : *default_list) {
+    for (const auto e : *default_list) {
+      for (const auto& backend : preferred_backends) {
         if (e.backend == backend) {
           ret.push_back(e);
+          break;
         }
       }
     }

@@ -71,17 +71,21 @@ class PageUnitPool : public MemoryPool {
   }
 
   virtual inline void* AllocDeviceMemory(int64_t nbytes, int64_t alignment) {
-    return api->AllocMemory(nbytes, alignment);
+    try {
+      return api->AllocMemory(nbytes, alignment);
+    } catch (const dmlc::Error& e) {
+      return nullptr;
+    }
   }
 
   inline float BytesToMegaBytes(float nbytes) {
     return nbytes / 1048576.0;
   }
 
-  float FreeUnusedChunks() {
+  int64_t FreeUnusedChunks() {
     // Remove the memory from the pool and return the freed memory in bytes.
     // Since this is the last share_ptr, the removed memory will be deconstructed and freed.
-    float total_free = 0.0;
+    int64_t total_free = 0;
 
     std::vector<int64_t> page_nbytes;
     for (auto kv : _pool) {
@@ -89,23 +93,9 @@ class PageUnitPool : public MemoryPool {
     }
 
     for (auto nbytes : page_nbytes) {
-      std::list<int64_t> unused_idxs;
-      for (int i = 0; i < _pool[nbytes].size(); ++i) {
-        if (_pool[nbytes][i].use_count() == 1) {
-          unused_idxs.push_back(i);
-        }
-      }
-      total_free += nbytes * unused_idxs.size();
-
-      auto it = _pool[nbytes].begin();
-      for (int i = 0; !unused_idxs.empty() && it != _pool[nbytes].end(); ++i) {
-        if (i == unused_idxs.front()) {
-          it = _pool[nbytes].erase(it);
-          unused_idxs.pop_front();
-        } else {
-          ++it;
-        }
-      }
+      auto nchunk = _pool[nbytes].size();
+      _pool[nbytes].remove_if([](std::shared_ptr<Memory>& mem) { return mem.use_count() == 1; });
+      total_free += nbytes * (nchunk - _pool[nbytes].size());
     }
     return total_free;
   }
@@ -117,31 +107,34 @@ class PageUnitPool : public MemoryPool {
     // Find whether there are available memory chuncks in the pool.
     // If so, return the available memory chunck.
     if (_pool.find(nbytes) == _pool.end()) {
-      _pool.insert({nbytes, std::vector<std::shared_ptr<Memory>>()});
+      _pool.insert({nbytes, std::list<std::shared_ptr<Memory>>()});
     }
-    for (int i = 0; i < _pool[nbytes].size(); i++) {
-      if (_pool[nbytes][i].use_count() == 1) {
-        int64_t address = (int64_t)_pool[nbytes][i]->data;
-        if (address % alignment == 0) return _pool[nbytes][i];
+    for (const auto& it : _pool[nbytes]) {
+      if (it.use_count() == 1) {
+        int64_t address = (int64_t)it->data;
+        if (address % alignment == 0) return it;
       }
     }
 
     // If not, allocate a new memory chunck from device.
     void* data = nullptr;
     if (nbytes > 0) {
-      try {
-        data = AllocDeviceMemory(nbytes, alignment);
-      } catch (const dmlc::Error& e) {
+      data = AllocDeviceMemory(nbytes, alignment);
+      size_t free_nbytes = SIZE_MAX;
+      while (data == nullptr && free_nbytes > 0) {
         // Out of memory, free unused chunks on other pages and re-allocate them here.
-        auto free_nbytes = FreeUnusedChunks();
-        DLOG(WARNING) << "Out-of-memory. Re-organized memory pool and got "
-                      << BytesToMegaBytes(free_nbytes) << " MBs";
-
-        // If the freed memory is insufficient, then we can do nothing in memory pool.
-        CHECK_LE(nbytes, free_nbytes)
-            << "Out-of-memory. Can allocate " << BytesToMegaBytes(free_nbytes)
-            << " MBs but require " << BytesToMegaBytes(nbytes) << " MBs";
+        free_nbytes = FreeUnusedChunks();
+        DLOG(WARNING) << "Failed to allocate " << BytesToMegaBytes(nbytes)
+                      << " MBs). Ran GC and got " << BytesToMegaBytes(free_nbytes) << " more MBs";
         data = AllocDeviceMemory(nbytes, alignment);
+      }
+      if (data == nullptr) {
+        // If the freed memory is insufficient, then we can do nothing in memory pool.
+        size_t used, allocated;
+        std::tie(used, allocated) = GetPoolSize();
+        LOG(FATAL) << "Out-Of-Memory. Tried to allocate " << BytesToMegaBytes(nbytes)
+                   << " MBs; Already allocated " << allocated << " MBs and used " << used << " MBs";
+        throw;
       }
       std::shared_ptr<Memory> new_mem = std::make_shared<NonOwnedMemory>(data, device, api);
       _pool[nbytes].push_back(new_mem);
@@ -175,8 +168,8 @@ class PageUnitPool : public MemoryPool {
     // Then directly access each page to get the precise use_count.
     for (auto nbytes : page_nbytes) {
       size_t used_chunks = 0;
-      for (int i = 0; i < _pool[nbytes].size(); i++) {
-        used_chunks += (_pool[nbytes][i].use_count() > 1) ? 1 : 0;
+      for (const auto& it : _pool[nbytes]) {
+        used_chunks += (it.use_count() > 1) ? 1 : 0;
       }
       used_total += BytesToMegaBytes(nbytes * used_chunks);
       pool_total += BytesToMegaBytes(nbytes * _pool[nbytes].size());
@@ -196,38 +189,11 @@ class PageUnitPool : public MemoryPool {
   /*! \brief The pointer to the DeviceAPI which determines the context of memory. */
   std::shared_ptr<DeviceAPI> api;
   /*! \brief The pool that hold the references to NonOwnedMemory. */
-  std::unordered_map<int64_t, std::vector<std::shared_ptr<Memory>>> _pool;
-};
-
-/*!
- * \brief A virtual page unit memory pool. This pool has the same behavior as PageUnitPool.
- * However, although the reported pool size is the same as PageUnitPool, it doesn't really
- * allocate any device memory but only creates placeholder pages. Thus, this pool cannot
- * be used for real execution but should only be used for memory profiling.
- *
- * \sa VirtualPageUnitPool
- */
-class VirtualPageUnitPool final : public PageUnitPool {
- public:
-  explicit VirtualPageUnitPool(Device dev) : PageUnitPool(dev) {
-  }
-
-  inline void* AllocDeviceMemory(int64_t nbytes, int64_t alignment) override {
-    // Skip the device memory allocation.
-    return nullptr;
-  }
-
- public:
-  static void* make(const Device& dev) {
-    return new VirtualPageUnitPool(dev);
-  }
+  std::unordered_map<int64_t, std::list<std::shared_ptr<Memory>>> _pool;
 };
 
 MNM_REGISTER_GLOBAL("mnm.memory_pool._make.page_unit_pool")
     .set_body_typed([](const tvm::Device& dev) { return PageUnitPool::make(Device(dev)); });
-
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.virtual_page_unit_pool")
-    .set_body_typed([](const tvm::Device& dev) { return VirtualPageUnitPool::make(Device(dev)); });
 
 }  // namespace page_unit_pool
 }  // namespace memory_pool

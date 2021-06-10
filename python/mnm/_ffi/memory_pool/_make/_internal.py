@@ -6,5 +6,3 @@ from mnm._lib import _APIS
 no_pool = _APIS.get("mnm.memory_pool._make.no_pool", None)
 # Defined in ./src/memory_pool/page_unit_pool/page_unit_pool.cc
 page_unit_pool = _APIS.get("mnm.memory_pool._make.page_unit_pool", None)
-# Defined in ./src/memory_pool/page_unit_pool/page_unit_pool.cc
-virtual_page_unit_pool = _APIS.get("mnm.memory_pool._make.virtual_page_unit_pool", None)

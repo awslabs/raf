@@ -43,21 +43,15 @@ class VirtualMachineProfiler(executor.VirtualMachine):
         """
         return self._get_stat(sort_by_time, show_shape)
 
-    def get_memory_trace(self, show_used=True):
+    def get_memory_trace(self):
         """Get the memory trace of the execution.
-
-        Parameters
-        ----------
-        show_used: bool
-            Show the total used memory in MBs. If False, then it shows the total allocated
-            memory.
 
         Returns
         -------
         ret: str
             The memory trace that shows the instant memory footprint over op execution.
         """
-        return self._get_memory_trace(show_used)
+        return self._get_memory_trace()
 
     def get_interm_tensors(self):
         """Get the intermediate results
@@ -147,21 +141,15 @@ class VMProfilerExecutor(executor.VMExecutor):
         """
         return self.vm.get_stat(sort_by_time, show_shape)
 
-    def get_memory_trace(self, show_used=True):
+    def get_memory_trace(self):
         """Get the memory trace of the execution.
-
-        Parameters
-        ----------
-        show_used: bool
-            Show the total used memory in MBs. If False, then it shows the total allocated
-            memory.
 
         Returns
         -------
         ret: str
             The memory trace that shows the change of peak memory over op execution.
         """
-        return self.vm.get_memory_trace(show_used)
+        return self.vm.get_memory_trace()
 
     def get_interm_tensors(self):
         """Get the intermediate results

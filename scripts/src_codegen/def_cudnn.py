@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from collections import OrderedDict
-import os
+from copy import deepcopy
 import itertools
 
 from . import codegen_utils
@@ -248,9 +247,10 @@ MetaCache<{PERF_T}> {CACHE};
                 assert False, f'{name} is missing!'
         finder_params = ', '.join(params)
 
-        if self.perf_ty not in status.wrappers.keys():
+        wrapper_key = f'Find{self.perf_ty}Wrapper'
+        if wrapper_key not in status.wrappers.keys():
             status.add_wrapper(
-                    self.perf_ty,
+                    wrapper_key,
                     fmt.format(PERF_T=self.perf_ty,
                                ARGS=decl_args,
                                FINDER=call_cudnn_api(self.api, finder_params),
@@ -260,6 +260,149 @@ MetaCache<{PERF_T}> {CACHE};
         res += [f'{self.name}_hasher << ' + ' << '.join(self.keys) + ';']
         res += [f'const auto &{self.name}_key = {self.name}_hasher.byte_vector;']
         res += [f'{self.name} = Find{self.perf_ty}Wrapper({self.name}_key, {site_params});']
+        status.add_attr(self.perf_ty, self.name)
+        return res
+
+
+class CUDNNAlgorithmEx(object):
+
+    def __init__(self, algo_ty, name, api, algos, args, keys):
+        self.algo_ty = algo_ty
+        self.perf_ty = '{}Perf_t'.format(algo_ty[:algo_ty.find('_')])
+        self.name = name
+        self.api = f'Find{api}AlgorithmEx'
+        self.get_ws_size_api = f'Get{api}WorkspaceSize'
+        self.algos = algos
+        self.args = args
+        self.keys = keys
+
+    def normalize(self, status):
+        fmt = """
+MetaCache<{PERF_T}> {CACHE};
+{PERF_T} Find{PERF_T}ExWrapper(const std::vector<uint8_t> &key, {ARGS}) {{
+  if (auto *val = {CACHE}.Get(key)) {{
+    return *val;
+  }}
+  static const {ALGO_T} algos[] = {{{ALGOS}}};
+  static constexpr int n_algos = {N_ALGOS};
+  static Device dev(DevType::kCUDA(), 0);
+  std::priority_queue<size_t> max_ws_sizes;
+  for (int i = 0; i < n_algos; ++i) {{
+    size_t ws_size = 0;
+    try {{
+        {WS_SIZE_GETTER}
+    }} catch (const dmlc::Error& e) {{
+        continue;
+    }}
+    max_ws_sizes.push(ws_size);
+  }}
+  int cnt;
+  size_t max_ws_size;
+  {PERF_T} res;
+  std::shared_ptr<Memory> memory;
+  while(!max_ws_sizes.empty()) {{
+    try {{
+      max_ws_size = max_ws_sizes.top();
+      max_ws_sizes.pop();
+      memory = Memory::Alloc(dev, max_ws_size);
+      break;
+    }} catch (const dmlc::Error& e) {{
+      continue;
+    }}
+  }}
+  CHECK(memory != nullptr);
+  void* workspace_temp = memory->data;
+  {FINDER}
+  memory.reset();
+  if (res.status != CUDNN_STATUS_SUCCESS) {{
+    LOG(FATAL) << "ValueError: Cannot find a proper algorithm " << cudnnGetErrorString(res.status);
+    throw;
+  }}
+  {CACHE}.Set(key, res);
+  return res;
+}}
+""".strip()
+
+        def hack_bwd_filter_api(arg):
+            # We have to hack the API name because cudnnGetConvolutionBackwardFilterWorkspaceSize
+            # has inconsistent API arg name as cudnnFindConvolutionBackwardFilterAlgorithmEx
+            new_arg = arg
+            if arg.name == 'y' and self.api.find('BackwardFilter') != -1:
+                new_arg = deepcopy(arg)
+                new_arg.name = 'dy'
+            if arg.name == 'gradDesc':
+                new_arg = deepcopy(arg)
+                new_arg.name = 'dwDesc'
+            return new_arg
+
+        api_args = status.cudnn_apis[f'cudnn{self.api}']
+
+        # The wrapper function declaration arguments.
+        decl_args = []
+        for arg in api_args[1:]:
+            new_arg = hack_bwd_filter_api(arg)
+            if new_arg.name in self.args.keys():
+                continue
+            else:
+                decl_args.append(str(new_arg))
+        decl_args = ', '.join(decl_args)
+
+        # The wrapper function caller parameters. Since CuDNN *Ex functions use
+        # caller provided buffers to search algorithm, we use symbols (i.e., dltensor->data)
+        # to match the type.
+        site_params = []
+        for arg in api_args[1:]:
+            name = hack_bwd_filter_api(arg).name
+            if name in self.args.keys():
+                continue
+            if name in status.symbols:
+                site_params.append(status.symbols[name])
+            else:
+                site_params.append(name)
+        site_params = ', '.join(site_params)
+
+        # Since we already use symbols in the wrapper function caller,
+        # we can simply use the API arguments to call the CuDNN find function.
+        params = ['CUDNNThreadEntry::ThreadLocal()->handle']
+        for arg in api_args[1:]:
+            name = hack_bwd_filter_api(arg).name
+            if name in self.args:
+                params.append(str(self.args[name]))
+            elif name in status.symbols or name in status.attrs:
+                params.append(name)
+            else:
+                assert False, f'{name} is missing!'
+        finder_params = ', '.join(params)
+
+        ws_size_getter_api_args = status.cudnn_apis[f'cudnn{self.get_ws_size_api}']
+        ws_size_getter_params = ['CUDNNThreadEntry::ThreadLocal()->handle']
+        for arg in ws_size_getter_api_args[1:-2]:
+            name = hack_bwd_filter_api(arg).name
+            if name in self.args:
+                ws_size_getter_params.append(str(self.args[name]))
+            else:
+                ws_size_getter_params.append(name)
+        ws_size_getter_params += ['algos[i]', '&ws_size']
+        ws_size_getter_params = ', '.join(ws_size_getter_params)
+
+        wrapper_key = f'Find{self.perf_ty}ExWrapper'
+        if wrapper_key not in status.wrappers.keys():
+            status.add_wrapper(
+                    wrapper_key,
+                    fmt.format(PERF_T=self.perf_ty,
+                               ALGO_T=self.algo_ty,
+                               ALGOS=','.join(self.algos),
+                               N_ALGOS=len(self.algos),
+                               ARGS=decl_args,
+                               WS_SIZE_GETTER=call_cudnn_api(
+                                   self.get_ws_size_api, ws_size_getter_params),
+                               FINDER=call_cudnn_api(self.api, finder_params),
+                               CACHE=f'CacheFor{self.perf_ty}'))
+
+        res = [f'HashKey {self.name}_hasher;']
+        res += [f'{self.name}_hasher << ' + ' << '.join(self.keys) + ';']
+        res += [f'const auto &{self.name}_key = {self.name}_hasher.byte_vector;']
+        res += [f'{self.name} = Find{self.perf_ty}ExWrapper({self.name}_key, {site_params});']
         status.add_attr(self.perf_ty, self.name)
         return res
 
@@ -294,6 +437,7 @@ class AssignStatement(object):
         if not self.ty and not self.name:
             return [self.value + ';']
         return [f'{self.ty} {self.name} = {self.value};']
+
 
 class CUDNNDispatch(object):
     fmt = """
@@ -550,22 +694,32 @@ def dispatch_conv(op, dims):
         'Convolution', setter='cudnnSetConvolutionNdDescriptor')
     pre_mathtype = AssignStatement('', '', 'if (ir::DataType(w->dtype).is_float16()) {cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);}', False)
     group = AssignStatement('', '', 'cudnnSetConvolutionGroupCount(convDesc, args->groups)', False)
-    algo = CUDNNAlgorithm(name='algo',
-                          perf_ty='cudnnConvolutionFwdAlgoPerf_t',
-                          api='FindConvolutionForwardAlgorithm',
-                          args={
-                               'requestedAlgoCount': 1,
-                               'returnedAlgoCount': '&cnt',
-                               'perfResults': '&res'
-                          },
-                          keys=[
-                            'args->stride',
-                            'args->padding',
-                            'args->dilation',
-                            'wDesc_tt',
-                            'xDesc_tt',
-                            'yDesc_tt',
-                          ])
+    algo = CUDNNAlgorithmEx(name='algo',
+                            algo_ty='cudnnConvolutionFwdAlgo_t',
+                            api='ConvolutionForward',
+                            algos=[
+                              'CUDNN_CONVOLUTION_FWD_ALGO_GEMM',
+                              'CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM',
+                              'CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM',
+                              'CUDNN_CONVOLUTION_FWD_ALGO_DIRECT',
+                              'CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD',
+                              'CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED'
+                            ],
+                            args={
+                                 'requestedAlgoCount': 1,
+                                 'returnedAlgoCount': '&cnt',
+                                 'perfResults': '&res',
+                                 'workSpace': 'workspace_temp',
+                                 'workSpaceSizeInBytes': 'max_ws_size'
+                            },
+                            keys=[
+                              'args->stride',
+                              'args->padding',
+                              'args->dilation',
+                              'wDesc_tt',
+                              'xDesc_tt',
+                              'yDesc_tt',
+                            ])
     ws = CUDNNWorkSpace('workSpaceSizeInBytes', 'workSpace', 'GetConvolutionForwardWorkspaceSize',
             ['xDesc', 'wDesc', 'convDesc', 'yDesc', 'algo.algo', '&workSpaceSizeInBytes'])
     post_mathtype = AssignStatement('', '', 'cudnnSetConvolutionMathType(convDesc, algo.mathType)', False)
@@ -584,10 +738,22 @@ def dispatch_conv_dxw(op, xorw, dims):
         x = CUDNNTensor('xDesc', 'x', 'args->x_or_w')
         w = CUDNNOutputFilter(f'dwDesc', f'dw', 'cv->out')
         x_or_w, diff = x, w
+        algos = [
+            'CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0',
+            'CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1',
+            'CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3',
+            'CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED'
+        ]
     else:
         x = CUDNNOutputTensor(f'dxDesc', f'dx', 'cv->out')
         w = CUDNNFilter('wDesc', 'w', 'args->x_or_w')
         x_or_w, diff = w, x
+        algos = [
+            'CUDNN_CONVOLUTION_BWD_DATA_ALGO_0',
+            'CUDNN_CONVOLUTION_BWD_DATA_ALGO_1',
+            'CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD',
+            'CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED'
+        ]
 
     dy = CUDNNTensor('dyDesc', 'dy', 'args->dy')
 
@@ -600,22 +766,25 @@ def dispatch_conv_dxw(op, xorw, dims):
         setter='cudnnSetConvolutionNdDescriptor')
     pre_mathtype = AssignStatement('', '', 'if (ir::DataType(x_or_w->dtype).is_float16()) {cudnnSetConvolutionMathType(convDesc, CUDNN_TENSOR_OP_MATH);}', False)
     group = AssignStatement('', '', 'cudnnSetConvolutionGroupCount(convDesc, args->groups)', False)
-    algo = CUDNNAlgorithm(name='algo',
-                          perf_ty=f'cudnnConvolutionBwd{xorw}AlgoPerf_t',
-                          api=f'FindConvolutionBackward{xorw}Algorithm',
-                          args={
-                               'requestedAlgoCount': 1,
-                               'returnedAlgoCount': '&cnt',
-                               'perfResults': '&res'
-                          },
-                          keys=[
-                            'args->stride',
-                            'args->padding',
-                            'args->dilation',
-                            f'{x_or_w.name}_tt',
-                            'dyDesc_tt',
-                            f'{diff.name}_tt',
-                          ])
+    algo = CUDNNAlgorithmEx(name='algo',
+                            algo_ty=f'cudnnConvolutionBwd{xorw}Algo_t',
+                            api=f'ConvolutionBackward{xorw}',
+                            algos=algos,
+                            args={
+                                 'requestedAlgoCount': 1,
+                                 'returnedAlgoCount': '&cnt',
+                                 'perfResults': '&res',
+                                 'workSpace': 'workspace_temp',
+                                 'workSpaceSizeInBytes': 'max_ws_size'
+                            },
+                            keys=[
+                              'args->stride',
+                              'args->padding',
+                              'args->dilation',
+                              f'{x_or_w.name}_tt',
+                              'dyDesc_tt',
+                              f'{diff.name}_tt',
+                            ])
     ws = CUDNNWorkSpace('workSpaceSizeInBytes', 'workSpace', f'GetConvolutionBackward{xorw}WorkspaceSize',
             [f'{x_or_w.name}', 'dyDesc', 'convDesc', f'{diff.name}', 'algo.algo', '&workSpaceSizeInBytes'])
     post_mathtype = AssignStatement('', '', 'cudnnSetConvolutionMathType(convDesc, algo.mathType)', False)

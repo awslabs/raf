@@ -50,6 +50,8 @@ class VirtualMachineProfiler : public VirtualMachine {
   bool profile_memory_ = false;
   /*! \brief Memory pool name */
   std::string memory_pool_name_ = "";
+  /*! \brief The number of performed garbage collections for each device memory pool. */
+  std::vector<size_t> num_gcs_;
   /*! \brief The peak of used memory and total allocated memory of each device memory pool */
   std::vector<std::pair<float, float>> peak_memory_mbs_;
   /*! \brief the memory trace that maps the executed op to peak memory of each device */

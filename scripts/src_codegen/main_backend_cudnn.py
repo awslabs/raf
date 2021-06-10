@@ -136,6 +136,7 @@ namespace generated {{
 
 using namespace mnm::value;
 using namespace mnm::ir;
+using namespace mnm::memory_pool;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 using common::shape_utils::PadDims;
@@ -152,7 +153,9 @@ static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSc
 }}  // namespace op
 }}  // namespace mnm
 """.strip()
-    headers = ['#include "mnm/ir.h"', '#include "mnm/op_utils.h"', '#include "./cudnn_utils.h"']
+    headers = ['#include <queue>']
+    headers += ['#include "mnm/ir.h"', '#include "mnm/op_utils.h"', '#include "./cudnn_utils.h"',
+                '#include "mnm/memory_pool.h"']
     headers += [f'#include "../../schema/{i}"'
                for i in os.listdir('src/op/schema/') if i.endswith('.h')]
     headers = '\n'.join(sorted(headers))
