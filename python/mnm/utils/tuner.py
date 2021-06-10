@@ -19,13 +19,13 @@ from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler import compute_dag
 
 
-def extract_tuning_tasks(mod, args, device, *, fuse_level=0, pass_seq=None):
+def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_seq=None):
     """Extract tuning tasks from the given function and the target.
 
     Parameters
     ----------
-    mod: mnm.Model or IRModule
-        The module to be extracted.
+    mod_or_executor: Union[mnm.Model, IRModule, VMProfilerExecutor]
+        The module or the compiled VMProfilerExecutor to be extracted.
 
     args: List[mnm.ndarray]
         A list of input arguments.
@@ -45,14 +45,22 @@ def extract_tuning_tasks(mod, args, device, *, fuse_level=0, pass_seq=None):
         A tuple of tasks and weights (appearance in the model).
     """
     # pylint: disable=protected-access
-    if isinstance(mod, mnm.Model):
-        record = mod._internal(*args)
+    if isinstance(mod_or_executor, mnm.Model):
+        record = mod_or_executor._internal(*args)
         mod = record.mod
         if pass_seq is not None:
             mod = pass_seq(mod)
         args = _get_func_inputs(record, args, {}, get_handle=False)
+    else:
+        mod = mod_or_executor
 
-    assert mod is not None
+    if not isinstance(mod_or_executor, VMProfilerExecutor):
+        assert mod is not None
+        with mnm.ir.PassContext(opt_level=3, config={"mnm.fuse_level": fuse_level},
+                                disabled_pass={"AutoSchedulerLayoutRewrite"}):
+            executor = VMProfilerExecutor(mod, device)
+    else:
+        executor = mod_or_executor
 
     old_auto_scheduler_fallback_context = auto_scheduler.DispatchContext.current
     auto_scheduler.DispatchContext.current = MetaFallbackContext(verbose=0)
@@ -63,14 +71,9 @@ def extract_tuning_tasks(mod, args, device, *, fuse_level=0, pass_seq=None):
         auto_scheduler.relay_integration.TracingMode.EXTRACT_COMPLEX_TASK_ONLY
     )
     with env_tracing_task:
-        with mnm.ir.PassContext(
-                opt_level=3,
-                config={"relay.backend.use_auto_scheduler": True,
-                        "mnm.tvmjit.allow_jit_failure": True,
-                        "mnm.fuse_level": fuse_level},
-                disabled_pass={"AutoSchedulerLayoutRewrite"},
-        ):
-            executor = VMProfilerExecutor(mod, device)
+        with mnm.ir.PassContext(config={"relay.backend.use_auto_scheduler": True,
+                                        "mnm.tvmjit.allow_jit_failure": True},
+                                disabled_pass={"AutoSchedulerLayoutRewrite"}):
             executor.vm.run(*args, profile_memory=True)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
@@ -133,15 +136,15 @@ def tune_tasks(tasks, weights, log_file, n_trials):
     del measure_device
     print("Done tuning. Records saved in %s" % log_file)
 
-def run_tuning(model, device, args, log_file, *, fuse_level=0, pass_seq=None,
+def run_tuning(model_or_executor, device, args, log_file, *, fuse_level=0, pass_seq=None,
                n_trials=lambda l: 300 * min(l, 100), only_tune_tasks_with_name=None,
                only_extract_tasks=False):
     """Tune the given tasks.
 
     Parameters
     ----------
-    model: mnm.BaseModel
-        The model to be tuned.
+    model_or_executor: Union[mnm.BaseModel, VMProfilerExecutor]
+        The model to be tuned, or the compiled VMProfilerExecutor.
 
     device: str
         The target device.
@@ -172,7 +175,7 @@ def run_tuning(model, device, args, log_file, *, fuse_level=0, pass_seq=None,
         Whether to extract and print tasks only without actual tuning them.
     """
     print("Extracting tasks...")
-    tasks, weights = extract_tuning_tasks(model, args, device, fuse_level=fuse_level,
+    tasks, weights = extract_tuning_tasks(model_or_executor, args, device, fuse_level=fuse_level,
                                           pass_seq=pass_seq)
     ori_task_num = len(tasks)
 
