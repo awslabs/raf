@@ -119,11 +119,13 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                     dxi = dxs[i] if len(inputs) > 1 else dxs
                     if param in self.params and has_grad(dxi):
                         name, x, v = self.params[param]
-                        new_v = add(multiply(self.momentum, v), dxi, out=v)
-                        new_x = subtract(x, multiply(self.learning_rate, new_v), out=x)
-                        param_model = get_chained_attr(self.model, name.split('.')[:-1])
-                        trace_mutate_attr(param_model, name.split('.')[-1], new_x)
-                        trace_mutate_attr(self, f'{name}.v', new_v)
+                        # TODO(@anijain2305): Improve the gradient pass for better has_grad results.
+                        if "float" in x.dtype:
+                            new_v = add(multiply(self.momentum, v), dxi, out=v)
+                            new_x = subtract(x, multiply(self.learning_rate, new_v), out=x)
+                            param_model = get_chained_attr(self.model, name.split('.')[:-1])
+                            trace_mutate_attr(param_model, name.split('.')[-1], new_x)
+                            trace_mutate_attr(self, f'{name}.v', new_v)
                 return y
         return SGDWrapper(model)
     return decorator
