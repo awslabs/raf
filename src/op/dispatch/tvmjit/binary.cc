@@ -29,8 +29,6 @@ MNM_TVMJIT(Multiply, "mnm.op.multiply", BinaryArgs, BinarySchema2Args, BinarySch
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(Power, "mnm.op.power", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, GenericAttrs,
            GenericHasher);
-MNM_TVMJIT(Greater, "mnm.op.greater", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
-           GenericAttrs, GenericHasher);
 MNM_TVMJIT(Maximum, "mnm.op.maximum", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(Minimum, "mnm.op.minimum", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
@@ -41,8 +39,19 @@ MNM_TVMJIT(Right_shift, "mnm.op.right_shift", BinaryArgs, BinarySchema2Args, Bin
            GenericAttrs, GenericHasher);
 MNM_TVMJIT(LeftShift, "mnm.op.left_shift", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
+MNM_TVMJIT(Equal, "mnm.op.equal", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, GenericAttrs,
+           GenericHasher);
 MNM_TVMJIT(NotEqual, "mnm.op.not_equal", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
            GenericAttrs, GenericHasher);
+MNM_TVMJIT(Less, "mnm.op.less", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, GenericAttrs,
+           GenericHasher);
+MNM_TVMJIT(LessEqual, "mnm.op.less_equal", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(Greater, "mnm.op.greater", BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+           GenericAttrs, GenericHasher);
+MNM_TVMJIT(GreaterEqual, "mnm.op.greater_equal", BinaryArgs, BinarySchema2Args,
+           BinarySchemaArgNames, GenericAttrs, GenericHasher);
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

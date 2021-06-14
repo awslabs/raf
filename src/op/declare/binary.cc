@@ -214,6 +214,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less", [](const CallValues& call) {
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   MNM_BINARY_SCALAR(<, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
@@ -222,6 +223,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   MNM_BINARY_SCALAR(>, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
@@ -251,6 +253,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less_equal", [](const CallValues& call) {
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   MNM_BINARY_SCALAR(<=, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater_equal", [](const CallValues& call) {
@@ -259,6 +262,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater_equal", [](const CallValues& call) 
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   MNM_BINARY_SCALAR(>=, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.equal", [](const CallValues& call) {
@@ -267,6 +271,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.equal", [](const CallValues& call) {
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   MNM_BINARY_SCALAR(==, x1, x2);
+  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
 MNM_REGISTER_BINARY_BCAST_OP("mnm.op.not_equal", [](const CallValues& call) {

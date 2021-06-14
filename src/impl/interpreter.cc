@@ -232,6 +232,8 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     if (!call->callee.defined()) {
       return call->out;
     }
+    ICHECK(call->out.defined()) << "ValueError: Tensor compute of " << op->name
+                                << " is not implemented.";
     AllocOutputBuffer(call->out);
     std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
     if (op_env != nullptr) {

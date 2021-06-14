@@ -212,6 +212,10 @@ Array<Expr> BinaryZeroGrad(const Expr& orig_call, const Array<Expr> orig_args, c
 
 MNM_OP_GRAD("mnm.op.not_equal", BinaryZeroGrad);
 MNM_OP_GRAD("mnm.op.equal", BinaryZeroGrad);
+MNM_OP_GRAD("mnm.op.less", BinaryZeroGrad);
+MNM_OP_GRAD("mnm.op.less_equal", BinaryZeroGrad);
+MNM_OP_GRAD("mnm.op.greater", BinaryZeroGrad);
+MNM_OP_GRAD("mnm.op.greater_equal", BinaryZeroGrad);
 
 }  // namespace grad
 }  // namespace op

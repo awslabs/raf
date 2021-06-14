@@ -146,7 +146,12 @@ def test_int_ops_with_grad(ops, shape, dtype, device):
 # pylint: disable=too-many-locals
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
+    (torch.eq, mnm._op.sym.equal),
     (torch.ne, mnm._op.sym.not_equal),
+    (torch.lt, mnm._op.sym.less),
+    (torch.le, mnm._op.sym.less_equal),
+    (torch.gt, mnm._op.sym.greater),
+    (torch.ge, mnm._op.sym.greater_equal),
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
