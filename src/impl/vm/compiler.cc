@@ -399,7 +399,18 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                  })
           .Match("mnm.op.vm.alloc_tensor",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 4);
+                   bool own = true;
+                   if (args.size() == 5) {
+                     // The last "own" argument is usually specified by the MemoryPlan pass
+                     // to indicate that this tensor is not the final output so it should not
+                     // own the memory pointer.
+                     CHECK(args[4].as<ConstantNode>());
+                     auto own_val = args[4].as<ConstantNode>()->value;
+                     CHECK(own_val->IsInstance<BoolValueObj>());
+                     own = own_val.as<BoolValueObj>()->value;
+                   } else {
+                     CHECK_EQ(args.size(), 4);
+                   }
 
                    // The storage will be passed dynamically.
                    this->VisitExpr(args[0]);
@@ -426,11 +437,11 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                      }
                      // Add context field.
                      Emit(Instruction::AllocTensor(storage_register, 0, raw_shape, dtype,
-                                                   NewRegister()));
+                                                   NewRegister(), own));
                    } else {
                      this->VisitExpr(args[1]);
                      Emit(Instruction::AllocTensorReg(storage_register, 0, last_register_, dtype,
-                                                      NewRegister()));
+                                                      NewRegister(), own));
                    }
                  })
           .Match("mnm.op.vm.alloc_storage",
@@ -479,9 +490,9 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
           .Match("mnm.op.vm.set_shape",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 2);
-                   // The arguments will be passed dynamically.
                    this->VisitExpr(args[0]);
                    auto data_reg = last_register_;
+                   // The shape argument may be a constant or a tensor
                    this->VisitExpr(args[1]);
                    auto shape_reg = last_register_;
                    Emit(Instruction::SetShape(data_reg, shape_reg, NewRegister()));
@@ -766,7 +777,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   pass_seqs.push_back(pass::MemoryPlan());
 
   pass::MNMSequential seq(pass_seqs);
-  transform::PassContext pass_ctx = pass::PassContext::Current();
+  relay::transform::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
   return seq(mod);
 }

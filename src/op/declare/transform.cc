@@ -875,8 +875,14 @@ MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
       }
     }
   }
-  call->out = TensorValue::Assemble(x->device, x->dtype, oshape);
+
   call->device = x->device;
+  if (IsCompact(*x)) {
+    call->callee = ir::NullValue<OpValue>();
+    call->out = Downcast<TensorValue>(args->x).CreateView(oshape);
+    return;
+  }
+  call->out = TensorValue::Assemble(x->device, x->dtype, oshape);
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {

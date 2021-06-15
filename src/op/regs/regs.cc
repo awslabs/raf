@@ -314,11 +314,12 @@ Attrs AllocStorage(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs AllocTensor(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::AllocTensorArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::AllocTensorArgs, 5);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, storage);
   MNM_TAPE(1, ffi2schema::ArrayLike, shape);
   MNM_POD(2, ffi2schema::String, dtype);
   MNM_POD(3, ffi2schema::IntOrTupleInt, assert_shape);
+  MNM_POD(4, ffi2schema::Bool, own);
   return Attrs(attrs);
 }
 
@@ -2886,12 +2887,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.vm.alloc_storage").set_body([](TVMArgs args, TVM
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.vm.alloc_tensor").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(vm_alloc_tensor, 4, ffi2schema::AllocTensor,
+  MNM_PRELUDE(vm_alloc_tensor, 5, ffi2schema::AllocTensor,
               schema::AllocTensorArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->storage));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->shape));
   MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dtype));
   MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->assert_shape));
+  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->own));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3047,11 +3049,12 @@ Array<Expr> AllocStorage(const TVMArgs& values) {
 }
 
 Array<Expr> AllocTensor(const TVMArgs& values) {
-  MNM_PRELUDE(4);
+  MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, storage);
   MNM_ARG(1, ffi2expr::ArrayLike, shape);
   MNM_ARG(2, ffi2expr::String, dtype);
   MNM_ARG(3, ffi2expr::IntOrTupleInt, assert_shape);
+  MNM_ARG(4, ffi2expr::Bool, own);
   MNM_RET();
 }
 
@@ -4107,7 +4110,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.upper_bound.argwhere")
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.alloc_storage")
     .set_body(MNM_SYMBOLIC_API(vm_alloc_storage, 5, AllocStorage));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.alloc_tensor")
-    .set_body(MNM_SYMBOLIC_API(vm_alloc_tensor, 4, AllocTensor));
+    .set_body(MNM_SYMBOLIC_API(vm_alloc_tensor, 5, AllocTensor));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.free").set_body(MNM_SYMBOLIC_API(vm_free, 1, Free));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.infer_type")
     .set_body(MNM_SYMBOLIC_API(vm_infer_type, 2, InferType));
@@ -4233,11 +4236,12 @@ Attrs AllocStorage(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs AllocTensor(const Array<Value>& values) {
-  MNM_PRELUDE(2, 4, schema::AllocTensorArgs);
+  MNM_PRELUDE(2, 5, schema::AllocTensorArgs);
   MNM_REQUIRED(0, value2schema::Tensor, storage);
   MNM_REQUIRED(1, value2schema::ArrayLike, shape);
   MNM_OPTIONAL(2, value2schema::String, dtype);
   MNM_OPTIONAL(3, value2schema::IntOrTupleInt, assert_shape);
+  MNM_OPTIONAL(4, value2schema::Bool, own);
   return Attrs(attrs);
 }
 
@@ -5263,6 +5267,9 @@ int AllocTensor(const std::string& field) {
   }
   if (field == "assert_shape") {
     return 3;
+  }
+  if (field == "own") {
+    return 4;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

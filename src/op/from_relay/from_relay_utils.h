@@ -41,15 +41,6 @@ using VarValueMap = Map<Var, Expr>;
                       return args;                                                                 \
                     })
 
-std::vector<int64_t> ArrayToInt(const Array<IndexExpr>& arr);
-std::vector<int64_t> ArrayToInt(const Array<Integer>& arr);
-std::vector<int64_t> ArrayToInt(const ArrayNode& arr);
-TupleValue ArrayToIntTuple(const Array<IndexExpr>& arr);
-TupleValue ArrayToIntTuple(const Array<Integer>& arr);
-TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr);
-TupleValue ArrayToIntTuple(const ArrayNode& arr);
-Var GetMayShare(const Expr& var);
-
 template <typename T>
 ScalarValue Constant2ScalarValue(const ConstantNode* op) {
   Tensor tensor = Downcast<TensorValue>(op->value)->tensor;

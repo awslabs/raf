@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import mnm
 from mnm._core.executor import VMExecutor
-from mnm.testing import check, run_vm_model, get_arr_addr, get_device_list, randn
+from mnm.testing import check, compile_vm_model, run_vm_model, get_arr_addr, get_device_list, randn
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -195,6 +195,36 @@ def test_split_fusion(device):
     model = Model()
     m_x, _ = randn(shape, device=device)
     check_e2e(model, device, [m_x])
+
+def test_reshape():
+    # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
+    shape = [3, 4, 5]
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.reshape(x, (12, 5))
+            y = mnm.expand_dims(y, axis=1)
+            y = mnm.relu(y)
+            y = y + y
+            y = mnm.reshape(y, (3, 4, 5))
+            return y
+
+    model = Model()
+    device = "cpu"
+    m_x, _ = randn(shape, device=device)
+    with mnm.ir.PassContext(config={"mnm.fuse_level": 0}):
+        # Disable fusion pass to prevent them from being fused.
+        bytecode = compile_vm_model(model, device, [m_x])
+    assert bytecode.count("set_shape") == 3
+
+    # Enable memory plan and disable fusion.
+    out = run_vm_model(model, device, [m_x], opt_level=3, fuse_level=0)
+    ref_out = model(m_x)
+    check(out, ref_out)
 
 
 if __name__ == "__main__":

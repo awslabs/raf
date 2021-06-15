@@ -4,6 +4,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <tvm/relay/attrs/transform.h>
+#include <mnm/op_utils.h>
 #include <mnm/tvmjit/transform.h>
 #include <mnm/value.h>
 #include <array>

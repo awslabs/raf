@@ -94,7 +94,20 @@ Type InferTypeInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.vm.infer_type", "InferType", InferTypeInfer);
 
 Type SetShapeInfer(const CallValues& value) {
-  // just return a fake type
+  const auto* args = value->args.as<SetShapeArgs>();
+  CHECK(args != nullptr);
+
+  if (const auto tuple = args->shape.as<TupleValueObj>()) {
+    // Return the true type if shape is a constant tuple
+    Array<PrimExpr> shape;
+    for (size_t i = 0; i < tuple->fields.size(); ++i) {
+      shape.push_back(tvm::Integer(Downcast<IntValue>(tuple->fields[i])->value));
+    }
+    TensorType data_type = Downcast<TensorType>(GetType(args->data));
+    return TensorType(shape, data_type->dtype);
+  }
+
+  // Otherwise just return a fake type
   return TensorType::Scalar(DataType::Int(64));
 }
 

@@ -28,6 +28,7 @@ class AllocTensorArgs : public ir::AttrsNode<AllocTensorArgs> {
   value::Value shape;
   std::string dtype{"float32"};
   std::vector<int64_t> assert_shape{};
+  bool own{true};
   MNM_OP_SCHEMA(AllocTensorArgs, "mnm.args.alloc_tensor");
 };
 

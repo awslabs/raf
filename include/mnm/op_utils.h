@@ -16,6 +16,11 @@
 namespace mnm {
 namespace op {
 
+using namespace mnm::ir;
+using namespace mnm::value;
+using namespace tvm;
+using namespace ::tvm::relay;
+
 #define MNM_APPEND_BYTES(type, nbytes, value)                               \
   {                                                                         \
     constexpr int NUM_BYTES = nbytes;                                       \
@@ -209,6 +214,36 @@ inline void GetAdaptivePoolKernel(int64_t ind, int64_t outd, int64_t* kernel_siz
   *stride = ind / outd;
   *kernel_size = ind - (outd - 1) * *stride;
   *padding = 0;
+}
+
+template <class T>
+inline std::vector<int64_t> ArrayToInt(const T& arr) {
+  std::vector<int64_t> ret;
+  for (const ObjectRef i : arr) {
+    auto node = i.as<IntImmNode>();
+    CHECK(node != nullptr) << "Array elemment " << i << " is not IntImmNode";
+    int64_t val = node->value;
+    ret.push_back(val);
+  }
+  return std::move(ret);
+}
+
+template <class T>
+inline TupleValue ArrayToIntTuple(const T& arr) {
+  Array<Value> ret;
+  for (int64_t val : ArrayToInt(arr)) {
+    ret.push_back(ScalarValue::make(val));
+  }
+  return TupleValue::make(std::move(ret));
+}
+
+template <>
+inline TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr) {
+  Array<Value> ret;
+  for (auto val : arr) {
+    ret.push_back(ScalarValue::make(val));
+  }
+  return TupleValue::make(std::move(ret));
 }
 
 }  // namespace op

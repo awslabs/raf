@@ -71,6 +71,21 @@ class ExtendedVarNode : public VarNode {
  */
 Var MakeVar(const std::string& name_hint, Type type_annotation, Var may_share = {});
 
+/*!
+ * \brief Extract the may_share field of an extended variable
+ * \param var the variable
+ * \return the may_share field of this variable
+ */
+Var GetMayShare(Expr var);
+
+/*!
+ * \brief Try to get the root may_share field of an extended variable. If the variable
+ * does not have may_share, then returns itself.
+ * \param var the variable
+ * \return the may_share field of this variable, or the variable itself otherwise.
+ */
+Var TryGetMayShare(Expr var);
+
 String AsText(const ObjectRef& node, bool show_meta_data = false);
 
 }  // namespace ir

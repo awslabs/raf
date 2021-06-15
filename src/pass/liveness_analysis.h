@@ -73,12 +73,17 @@ class LivenessAnalyzer {
     return !failure_;
   }
 
-  /* \brief Get live in tensors of the given line (var). */
+  /*! \brief Get live in tensors of the given line (var). */
   VSet GetLiveVars(const Var& x) {
     if (live_.count(x) == 0) {
       return VSet();
     }
     return live_.at(x);
+  }
+
+  /*! \brief Get the dummy tensor variables of the final outputs. */
+  VSet GetOutputTensorVars() {
+    return GetLiveVars(dummy_output_);
   }
 
   /*! \brief Get the dummy tensor variables created by CreateTensor. */
@@ -334,6 +339,8 @@ class LivenessAnalyzer {
   Map<Var, Array<Var>> vtuple_;
   /*! \brief the live-in variables at a specific line */
   MapVSet live_;
+  /*! \brief The dummy value of the final output */
+  Var dummy_output_;
   /*! \brief count the occurences of a var name, to avoid name collision */
   std::unordered_map<std::string, int> label_;
   /*! \brief mandatory memory sharing between a pair of vars */
@@ -341,7 +348,7 @@ class LivenessAnalyzer {
   /*! \brief vars that share memory with one another are merged in the union find forest */
   std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> union_find_forest_;
   /*! \brief the lines where a variable is live.
-             Initially it's the inversion of live_: inv_live_[x] = {y | x \in live_[y]}*/
+             Initially it's the inversion of live_: inv_live_[x] = {y | x \in live_[y]} */
   MapVSet inv_live_;
 };
 

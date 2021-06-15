@@ -57,10 +57,9 @@ class TensorGroups {
  public:
   /*! \brief A list of storage allocation groups. */
   std::vector<TensorGroup> groups;
-  /*! \brief Map from let var to the candidate group IDs. */
-  StdMap<std::vector<int>> map_let_to_valid_group_ids;
 
   TensorGroups(liveness_analysis::LivenessAnalyzer* analyzer) : analyzer_(analyzer) {
+    dummy_out_vars_ = analyzer_->GetOutputTensorVars();
   }
 
   /*! \brief Get the dummy output tensor in liveness analyzer. */
@@ -68,6 +67,12 @@ class TensorGroups {
     auto target_vars = analyzer_->GetTensorVars(let_var);
     CHECK_EQ(target_vars.size(), 1U);
     return target_vars[0];
+  }
+
+  /*! \brief Check whether the tensor is a final output. */
+  bool IsOutputTensor(const Var& tensor_var) {
+    auto target_var = GetTensorVar(tensor_var);
+    return dummy_out_vars_.find(target_var) != dummy_out_vars_.end();
   }
 
   /*! \brief Find the group ID that the target var belongs to, or -1 if not found. */
@@ -93,12 +98,6 @@ class TensorGroups {
 
   /*! \brief Find valid tensor groups of the given tensor and its alignment. */
   std::vector<int> FindValidGroups(const Var& let_var, const int64_t alignment) {
-    // If the let var has been processed before, simply return the cached results
-    // because the available groups will not change at all.
-    if (map_let_to_valid_group_ids.count(let_var) > 0) {
-      return map_let_to_valid_group_ids[let_var];
-    }
-
     // Live in vars.
     auto live_in_vars = analyzer_->GetLiveVars(let_var);
 
@@ -121,22 +120,14 @@ class TensorGroups {
         candidates.push_back(i);
       }
     }
-
-    map_let_to_valid_group_ids[let_var] = candidates;
     return candidates;
   }
 
   /*! \brief Join the given tensor group. */
-  void JoinGroup(size_t group_id, const Var& let_var, int64_t size) {
+  void JoinGroup(size_t group_id, const Var& let_var, int64_t size = 0) {
     const Var target_var = GetTensorVar(let_var);
     groups[group_id].members[target_var] = std::make_pair(let_var, size);
     groups[group_id].size = (groups[group_id].size > size) ? groups[group_id].size : size;
-    CHECK(map_let_to_valid_group_ids.count(let_var) > 0);
-    auto it = std::find(map_let_to_valid_group_ids[let_var].begin(),
-                        map_let_to_valid_group_ids[let_var].end(), group_id);
-    if (it == map_let_to_valid_group_ids[let_var].end()) {
-      map_let_to_valid_group_ids[let_var].push_back(group_id);
-    }
   }
 
   /*! \brief Create a new group and return its ID. */
@@ -193,6 +184,8 @@ class TensorGroups {
  private:
   /*! \brief The liveness analyzer, including liveness analysis results. */
   liveness_analysis::LivenessAnalyzer* analyzer_;
+  /*! \brief Dummy vars that output tensors map to. */
+  VSet dummy_out_vars_;
 };
 
 /*! \brief A mutator to perform the following tasks:
@@ -219,10 +212,10 @@ class MemoryPlanner : public ExprMutator {
     DLOG(INFO) << "Tensor groups:";
     DLOG(INFO) << tensor_groups_.DebugDumpGroups();
 
-    // Keep storage var that is being used by one or more tensors.
+    // List storage vars that will be used by one or more tensors.
     for (const auto& group : tensor_groups_.groups) {
       if (group.members.size() > 0) {
-        live_storages_.insert(group.storage);
+        used_storages_.insert(group.storage);
       }
     }
 
@@ -245,40 +238,36 @@ class MemoryPlanner : public ExprMutator {
         while (it != live_tensors_.end()) {
           const Var target_var = tensor_groups_.GetTensorVar(*it);
           if (live_in_vars.find(target_var) == live_in_vars.end()) {
-            // Insert free_tnesor for the tensor if its liveness is ended
-            // at the statement we are going to visit.
-            scope.Push(MakeFreeMemory(*it));
-
-            // Remove the freed tensor from the tensor group.
             auto group_id = tensor_groups_.FindGroupIdByMember(*it);
-            tensor_groups_.RemoveFromGroup(group_id, *it);
+            // If a tensor does not belong to any group, meaning that we its storage is not
+            // allocated by us (i.e., parameters), so simply remove it from the live set.
+            if (group_id != -1) {
+              // Remove the freed tensor from the tensor group when its life is eneded.
+              // Note that we do not need to insert vm.free for tensors as only the storage
+              // should hold the memory pointer.
+              tensor_groups_.RemoveFromGroup(group_id, *it);
 
+              // Free allocated storages that will not be used anymore.
+              auto group = tensor_groups_.groups[group_id];
+              if (group.members.size() == 0) {
+                scope.Push(MakeFreeMemory(group.storage));
+              }
+            }
             it = live_tensors_.erase(it);
           } else {
             it++;
-          }
-        }
-
-        // Free allocated storages that will not be used anymore.
-        for (const auto& group : tensor_groups_.groups) {
-          // This group has no member but its storage is live, meaning that
-          // all its member tensors are already freed, the storage can also be freed.
-          if (group.members.size() == 0 &&
-              live_storages_.find(group.storage) != live_storages_.end()) {
-            scope.Push(MakeFreeMemory(group.storage));
-            live_storages_.erase(group.storage);
           }
         }
       }
 
       auto value = VisitExpr(node->value);
 
-      // Determine whether the alloc_storage is unused and should be dismissed.
+      // Determine whether the alloc_storage is never used and should be dismissed.
       bool dismiss_storage = false;
       if (const auto& node = value.as<CallNode>()) {
         const auto* op_node = node->op.as<OpNode>();
         if (op_node && GetRef<Op>(op_node) == alloc_storage_op &&
-            live_storages_.find(curr_let_) == live_storages_.end()) {
+            used_storages_.find(curr_let_) == used_storages_.end()) {
           dismiss_storage = true;
         }
       }
@@ -299,6 +288,7 @@ class MemoryPlanner : public ExprMutator {
   Expr VisitExpr_(const CallNode* node) final {
     static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
     static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
+    static const Op& reshape_tensor_op = Op::Get("mnm.op.vm.set_shape");
     const auto* op_node = node->op.as<OpNode>();
 
     auto call = GetRef<Call>(node);
@@ -318,24 +308,37 @@ class MemoryPlanner : public ExprMutator {
       // Reassign alloc_tensor to the alloc_storage indicated by the tensor group.
       live_tensors_.insert(curr_let_);
 
-      // Find the tensor group of this alloc_tensor.
-      auto group_id = tensor_groups_.FindGroupIdByMember(curr_let_);
+      Array<Expr> new_args;
+      for (auto& arg : call->args) {
+        new_args.push_back(VisitExpr(arg));
+      }
 
-      // Check whether this tensor needs to be re-assigned to another storage.
-      CHECK(group_id != -1) << "Internal error: output tensor of " << curr_let_->name_hint()
-                            << " does not belong to any tensor group";
+      // Find the tensor group of this alloc_tensor and check whether this tensor needs
+      // to be re-assigned to another storage.
+      auto group_id = tensor_groups_.FindGroupIdByMember(curr_let_);
+      CHECK_NE(group_id, -1) << "Internal error: output tensor of " << curr_let_->name_hint()
+                             << " does not belong to any tensor group";
       auto storage_var = Downcast<Var>(call->args[0]);
       if (tensor_groups_.groups[group_id].storage != storage_var) {
         DLOG(INFO) << "Assign " << curr_let_->name_hint() << " to "
                    << tensor_groups_.groups[group_id].storage->name_hint() << " from "
                    << storage_var->name_hint();
-        Array<Expr> new_args;
-        for (auto& arg : call->args) {
-          new_args.push_back(VisitExpr(arg));
-        }
         new_args.Set(0, tensor_groups_.groups[group_id].storage);
-        return Call(alloc_tensor_op, new_args);
       }
+
+      // Override the own memory flag argument.
+      auto own = MakeConstant(ScalarValue::make(tensor_groups_.IsOutputTensor(curr_let_)));
+      if (call->args.size() == 4) {
+        new_args.push_back(own);
+      } else {
+        new_args.Set(4, own);
+      }
+
+      return Call(alloc_tensor_op, new_args);
+    } else if (op_node && GetRef<Op>(op_node) == reshape_tensor_op) {
+      // Other ops that will also create a new tensor/view. We do not need to mutate them,
+      // but have to trace their life-cycle to know the right place of inserting free storage.
+      live_tensors_.insert(curr_let_);
     }
     return ExprMutator::VisitExpr_(node);
   }
@@ -363,8 +366,8 @@ class MemoryPlanner : public ExprMutator {
   liveness_analysis::LivenessAnalyzer* analyzer_;
   /*! \brief A list of storage allocation groups. */
   TensorGroups tensor_groups_;
-  /*! \brief Live storage vars. */
-  VSet live_storages_;
+  /*! \brief Used storage vars. */
+  VSet used_storages_;
   /*! \brief Current live tensor vars. */
   VSet live_tensors_;
   /*! \brief Whether to insert free memory. */
@@ -409,9 +412,9 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
   void VisitExpr_(const CallNode* node) override {
     static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
     static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
+    static const Op& reshape_tensor_op = Op::Get("mnm.op.vm.set_shape");
     const auto* op_node = node->op.as<OpNode>();
 
-    // Only interest in alloc_tensor
     if (GetRef<Op>(op_node) == alloc_tensor_op) {
       for (auto& arg : node->args) {
         VisitExpr(arg);
@@ -441,11 +444,13 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
         storage_nbytes = size_val.as<IntValueObj>()->value;
       }
 
-      // Use tensor size and alignment to determine whether it can join an existing tensor gruop.
-      auto candidates = tensor_groups_.FindValidGroups(curr_let_, alignment);
-      if (reuse_storage_ && storage_nbytes > 0) {
-        // Select the one with the closest storage size.
+      // Check which existing group cane be joined if
+      // 1. this tensor is not a final output, and
+      // 2. storages are allowed to be shared by multiple tensors (configured by users)
+      if (!tensor_groups_.IsOutputTensor(curr_let_) && reuse_storage_ && storage_nbytes > 0) {
+        // Heuristic and could be improved later: Select the group with the closest storage size.
         auto curr_dis = INT64_MAX;
+        auto candidates = tensor_groups_.FindValidGroups(curr_let_, alignment);
         for (auto group_id : candidates) {
           auto new_dis = abs(storage_nbytes - tensor_groups_.groups[group_id].size);
           if (new_dis <= curr_dis) {
@@ -460,11 +465,26 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
         cand_group_id = tensor_groups_.CreateGroup(storage_var, alignment);
         DLOG(INFO) << "Create a new group " << cand_group_id << " for " << storage_var->name_hint();
       }
-      CHECK(cand_group_id != -1);
+      CHECK_NE(cand_group_id, -1);
 
       // Allocate this tensor to an existing group and update the storage size if needed.
       DLOG(INFO) << curr_let_->name_hint() << " joins group " << cand_group_id;
       tensor_groups_.JoinGroup(cand_group_id, curr_let_, storage_nbytes);
+    } else if (GetRef<Op>(op_node) == reshape_tensor_op) {
+      // set_shape creates a new tensor view so it has to be considered as a new tensor too.
+      for (auto& arg : node->args) {
+        VisitExpr(arg);
+      }
+      auto tensor_var = Downcast<Var>(node->args[0]);
+      auto group_id = tensor_groups_.FindGroupIdByMember(tensor_var);
+
+      // If its original tensor is not in a tensor group, it means the tensor is a parameter,
+      // which is not allocated by us so we do not need to track it.
+      if (group_id != -1) {
+        // Put this tensor to the samee group as its original tensor.
+        DLOG(INFO) << curr_let_->name_hint() << " joins group " << group_id;
+        tensor_groups_.JoinGroup(group_id, curr_let_);
+      }
     } else {
       ExprVisitor::VisitExpr_(node);
     }

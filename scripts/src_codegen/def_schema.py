@@ -757,6 +757,7 @@ SCHEMAS = {
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple",
             cxx_default="{}", py_default="None"),
+        Arg(name="own", cxx_type="bool", cxx_default=True),
     ],
     "vm.h::free": [
         Arg(name="memory", cxx_type="value::BaseTensorValue"),

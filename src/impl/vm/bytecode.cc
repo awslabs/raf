@@ -51,6 +51,7 @@ Instruction::Instruction(const Instruction& instr) {
       this->alloc_tensor.shape =
           Duplicate<int64_t>(instr.alloc_tensor.shape, instr.alloc_tensor.ndim);
       this->alloc_tensor.dtype = instr.alloc_tensor.dtype;
+      this->alloc_tensor.own = instr.alloc_tensor.own;
       return;
     case Opcode::AllocTensorReg:
       this->alloc_tensor_reg = instr.alloc_tensor_reg;
@@ -157,11 +158,13 @@ Instruction& Instruction::operator=(const Instruction& instr) {
       this->alloc_tensor.shape =
           Duplicate<int64_t>(instr.alloc_tensor.shape, instr.alloc_tensor.ndim);
       this->alloc_tensor.dtype = instr.alloc_tensor.dtype;
+      this->alloc_tensor.own = instr.alloc_tensor.own;
       return *this;
     case Opcode::AllocTensorReg:
       this->alloc_tensor_reg.storage = instr.alloc_tensor_reg.storage;
       this->alloc_tensor_reg.shape_register = instr.alloc_tensor_reg.shape_register;
       this->alloc_tensor_reg.dtype = instr.alloc_tensor_reg.dtype;
+      this->alloc_tensor_reg.own = instr.alloc_tensor_reg.own;
       return *this;
     case Opcode::AllocTuple:
       this->alloc_tuple.num_fields = instr.alloc_tuple.num_fields;
@@ -313,8 +316,8 @@ Instruction Instruction::InvokePacked(Index packed_index, Index arity, Index out
 }
 
 Instruction Instruction::AllocTensor(RegName storage, Index offset,
-                                     const std::vector<int64_t>& shape, DLDataType dtype,
-                                     Index dst) {
+                                     const std::vector<int64_t>& shape, DLDataType dtype, Index dst,
+                                     bool own) {
   Instruction instr;
   instr.op = Opcode::AllocTensor;
   instr.dst = dst;
@@ -326,11 +329,12 @@ Instruction Instruction::AllocTensor(RegName storage, Index offset,
     instr.alloc_tensor.shape[i] = shape[i];
   }
   instr.alloc_tensor.dtype = dtype;
+  instr.alloc_tensor.own = own;
   return instr;
 }
 
 Instruction Instruction::AllocTensorReg(RegName storage, Index offset, RegName shape_register,
-                                        DLDataType dtype, Index dst) {
+                                        DLDataType dtype, Index dst, bool own) {
   Instruction instr;
   instr.op = Opcode::AllocTensorReg;
   instr.dst = dst;
@@ -338,6 +342,7 @@ Instruction Instruction::AllocTensorReg(RegName storage, Index offset, RegName s
   instr.alloc_tensor_reg.offset = offset;
   instr.alloc_tensor_reg.shape_register = shape_register;
   instr.alloc_tensor_reg.dtype = dtype;
+  instr.alloc_tensor_reg.own = own;
   return instr;
 }
 
@@ -561,12 +566,18 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
          << instr.alloc_tensor.offset << " ["
          << StrJoin<int64_t>(instr.alloc_tensor.shape, 0, instr.alloc_tensor.ndim) << "] ";
       DLDatatypePrint(os, instr.alloc_tensor.dtype);
+      if (instr.alloc_tensor.own) {
+        os << "(own)";
+      }
       break;
     }
     case Opcode::AllocTensorReg: {
       os << "alloc_tensor_reg $" << instr.dst << " $" << instr.alloc_tensor_reg.storage << " $"
          << instr.alloc_tensor_reg.offset << " $" << instr.alloc_tensor_reg.shape_register << " ";
       DLDatatypePrint(os, instr.alloc_tensor_reg.dtype);
+      if (instr.alloc_tensor_reg.own) {
+        os << "(own)";
+      }
       break;
     }
     case Opcode::AllocTuple: {

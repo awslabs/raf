@@ -1114,12 +1114,13 @@ def vm_alloc_storage(size, alignment, device_type, device_id, dtype="float32"):
     dtype = sym_utils.to_string(dtype)
     return Symbol.from_expr(ffi.vm.alloc_storage(size, alignment, device_type, device_id, dtype))
 
-def vm_alloc_tensor(storage, shape, dtype="float32", assert_shape=None):
+def vm_alloc_tensor(storage, shape, dtype="float32", assert_shape=None, own=True):
     storage = sym_utils.to_tensor(storage)
     shape = sym_utils.to_any(shape)
     dtype = sym_utils.to_string(dtype)
     assert_shape = sym_utils.to_int_tuple(assert_shape)
-    return Symbol.from_expr(ffi.vm.alloc_tensor(storage, shape, dtype, assert_shape))
+    own = sym_utils.to_bool(own)
+    return Symbol.from_expr(ffi.vm.alloc_tensor(storage, shape, dtype, assert_shape, own))
 
 def vm_free(memory):
     memory = sym_utils.to_tensor(memory)

@@ -21,6 +21,7 @@
 #include "mnm/memory_pool.h"
 #include "mnm/ir.h"
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/value.h"
 #include "mnm/type.h"
 #include "mnm/pass.h"
@@ -29,7 +30,6 @@
 #include "mnm/device_api.h"
 #include "mnm/profiler.h"
 #include "../../requests.h"
-#include "../../op/from_relay/from_relay_utils.h"
 #include "../../op/ty/utils.h"
 #include "../../common/shape_utils.h"
 
@@ -451,8 +451,12 @@ void VirtualMachine::RunLoop(VMContext ctx) {
 
         auto storage_obj = ctx.ReadRegister(instr.alloc_tensor.storage);
         auto storage = Downcast<StorageValue>(storage_obj);
+        std::shared_ptr<memory_pool::Memory> mem = nullptr;
+        if (instr.alloc_tensor.own) {
+          mem = storage->buffer;
+        }
         auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor.dtype,
-                                            shape, {}, storage->buffer->data, storage->buffer);
+                                            shape, {}, storage->buffer->data, mem);
         ctx.WriteRegister(instr.dst, tensor);
         ctx->pc++;
         goto main_loop;
@@ -467,8 +471,12 @@ void VirtualMachine::RunLoop(VMContext ctx) {
 
         auto storage_obj = ctx.ReadRegister(instr.alloc_tensor_reg.storage);
         auto storage = Downcast<StorageValue>(storage_obj);
+        std::shared_ptr<memory_pool::Memory> mem = nullptr;
+        if (instr.alloc_tensor_reg.own) {
+          mem = storage->buffer;
+        }
         auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor_reg.dtype,
-                                            shape, {}, storage->buffer->data, storage->buffer);
+                                            shape, {}, storage->buffer->data, mem);
         ctx.WriteRegister(instr.dst, tensor);
         ctx->pc++;
         goto main_loop;
@@ -524,10 +532,16 @@ void VirtualMachine::RunLoop(VMContext ctx) {
       }
       case Opcode::SetShape: {
         auto data = Downcast<TensorValue>(ctx.ReadRegister(instr.set_shape.data));
-        // TODO(@hgt312): allow int tuple as shape
         auto raw_shape = ctx.ReadRegister(instr.set_shape.shape);
-        raw_shape = CopyTo(raw_shape, Device(DevType::kCPU(), 0));
-        auto shape = common::shape_utils::GetShapeVecFromData(raw_shape);
+        std::vector<int64_t> shape;
+        if (const auto tuple = raw_shape.as<TupleValueObj>()) {
+          for (size_t i = 0; i < tuple->fields.size(); ++i) {
+            shape.push_back(Downcast<IntValue>(tuple->fields[i])->value);
+          }
+        } else {
+          raw_shape = CopyTo(raw_shape, Device(DevType::kCPU(), 0));
+          shape = common::shape_utils::GetShapeVecFromData(raw_shape);
+        }
         ctx.WriteRegister(instr.dst, data.CreateView(shape));
         ctx->pc++;
         goto main_loop;
@@ -698,7 +712,7 @@ void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
   // get result
   Array<Value> ret_tup;
   auto push_ret_tuple = [&ret_tup](const TensorTypeNode* ty) {
-    auto shape = from_relay::ArrayToIntTuple(ty->shape);
+    auto shape = ArrayToIntTuple(ty->shape);
     // compute storage size
     int64_t size = common::shape_utils::BytesCompactTensor(ty);
     ret_tup.push_back(TupleValue::make({shape, ScalarValue::make(size)}));

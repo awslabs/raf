@@ -293,11 +293,11 @@ void LivenessAnalyzer::BackwardAnalyzer::Run(Var next_var) {
 
   // Backward analysis
   next_var_ = next_var;
-  Var dummy = analyzer_->CreateNull();
-  analyzer_->live_[dummy] = analyzer_->vset_[MergeLive(ell_->ret)];
+  analyzer_->dummy_output_ = analyzer_->CreateNull();
+  analyzer_->live_[analyzer_->dummy_output_] = analyzer_->vset_[MergeLive(ell_->ret)];
   for (int i = n - 1; i >= 0; --i) {
     let_var_ = vars[i];
-    next_var_ = i == n - 1 ? dummy : vars[i + 1];
+    next_var_ = i == n - 1 ? analyzer_->dummy_output_ : vars[i + 1];
 
     // We need to handle OpNode and ConstantNode here, because all these nodes with
     // the same value may point to the same reference, so only the first one will be visited.

@@ -75,14 +75,20 @@ Var MakeVar(const std::string& name_hint, Type type_annotation, Var may_share) {
   return MakeVar_(Id(name_hint), type_annotation, may_share);
 }
 
-/*!
- * \brief Extract the may_share field of an extended variable
- * \param var the variable
- * \return the may_share field of this variable
- */
-Var GetMayShare(Var var) {
+Var GetMayShare(Expr var) {
   const auto* vn = var.as<ExtendedVarNode>();
+  CHECK(vn);
   return vn->may_share;
+}
+
+Var TryGetMayShare(Expr var) {
+  const auto* vn = var.as<ExtendedVarNode>();
+  CHECK(vn);
+  while (vn->may_share.defined()) {
+    vn = vn->may_share.as<ExtendedVarNode>();
+    CHECK(vn);
+  }
+  return GetRef<Var>(vn);
 }
 
 MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

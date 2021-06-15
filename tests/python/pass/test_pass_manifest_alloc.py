@@ -115,6 +115,36 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   %x4
 }"""
 
+def test_reshape():
+    # pylint: disable=protected-access, no-self-use
+    shape = [3, 4, 5]
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.reshape(x, (12, 5))
+            y = mnm.expand_dims(y, axis=0)
+            y = mnm.squeeze(y)
+            y = mnm.relu(y)
+            y = mnm.reshape(y, (3, 4, 5))
+            return y
+
+    model = Model()
+    m_x, _ = randn(shape, device="cpu")
+    func = model._internal(m_x).mod['main']
+    mod = IRModule.from_expr(func)
+    mod = mnm._ffi.pass_.InferType()(mod)
+    with tvm.target.Target("llvm"):
+        mod = mnm._ffi.pass_.ManifestAlloc()(mod)
+    text = mod['main'].astext()
+    assert text.count("vm.set_shape") == 4
+    assert "reshape" not in text
+    assert "expand_dims" not in text
+    assert "squeeze" not in text
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

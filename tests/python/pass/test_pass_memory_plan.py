@@ -33,11 +33,12 @@ def get_vm_executor(model, device, args, reuse_storage, fusion, profile=False):
     return vm_executor, vm_inputs
 
 
-def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expected_free_memory,
-                     expected_size):
+def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expected_out_tensor,
+                     expected_free_memory, expected_size):
     # A helper function to verify alloc_storage and alloc_tensor numbers and total sizes
     alloc_storage = 0
     alloc_tensor = 0
+    out_tensor = 0
     free_memory = 0
     total_size = 0
     for line in AsText(func).split("\n"):
@@ -45,13 +46,16 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
             alloc_storage += 1
             total_size += int(line[line.find("int64(") + 6 : line.find(")")])
         elif line.find("mnm.op.vm.alloc_tensor") != -1:
+            if line.find("bool(1)") != -1:
+                out_tensor += 1
             alloc_tensor += 1
         elif line.find("mnm.op.vm.free") != -1:
             free_memory += 1
 
     assert (
-        alloc_storage == expected_alloc_storage and alloc_tensor == expected_alloc_tensor
-    ), "#alloc_storage %d, #alloc_tensor %d" % (alloc_storage, alloc_tensor)
+        alloc_storage == expected_alloc_storage and alloc_tensor == expected_alloc_tensor and
+        out_tensor == expected_out_tensor
+    ), "#storage %d, #tensor %d, #out %d" % (alloc_storage, alloc_tensor, out_tensor)
     assert free_memory == expected_free_memory, "#free %d" % free_memory
     assert total_size == expected_size, "Total size %d, but expected %d" % (
         total_size,
@@ -87,7 +91,7 @@ def test_memory_plan_basic(device, fusion):
             t1 = mnm.add(t0, b)
             t2 = mnm.add(t1, c)
             t3 = mnm.add(t2, t0)  # t1 and t3 share buffer
-            t4 = mnm.add(t3, d)  # t4 and t0 share buffer
+            t4 = mnm.add(t3, d)  # t4 is the final output so cannot share with t0
             return t4
 
     shape = (5, 5)
@@ -103,9 +107,9 @@ def test_memory_plan_basic(device, fusion):
 
     mod1 = optimize(mod, device, reuse_storage=True, fusion=fusion)
     if not fusion:
-        verify_alloc_num(mod1["main"], 3, 5, 6, 300)
+        verify_alloc_num(mod1["main"], 4, 5, 1, 3, 400)
     else:
-        verify_alloc_num(mod1["main"], 1, 1, 0, 100)
+        verify_alloc_num(mod1["main"], 1, 1, 1, 0, 100)
 
     verify_correctness(model_before, device, args, reuse_storage=False, fusion=fusion)
     verify_correctness(model_before, device, args, reuse_storage=True, fusion=fusion)
@@ -126,7 +130,7 @@ def test_memory_plan_multi_outs(device, fusion):
             t2 = res[1]
             t3 = res[2]
             t4 = mnm.relu(t1)  # t0 and t4 can share buffer
-            t5 = mnm.relu(t4)  # t1 and t5 can share buffer
+            t5 = mnm.relu(t4)  # t1 is the final output so cannot share with t5
             return t5
 
     model_before = Model()
@@ -143,11 +147,11 @@ def test_memory_plan_multi_outs(device, fusion):
     mod = model_before._internal(*args).mod
     mod = optimize(mod, device, reuse_storage=True, fusion=fusion)
     if not fusion:
-        verify_alloc_num(mod["main"], 4, 6, 8, 19267608)
+        verify_alloc_num(mod["main"], 5, 6, 1, 4, 28901400)
     else:
         # The memory footprint is the same as no-fused one because FuseOps
         # just fuses two relu ops.
-        verify_alloc_num(mod["main"], 4, 5, 7, 19267608)
+        verify_alloc_num(mod["main"], 5, 5, 1, 4, 28901400)
 
     verify_correctness(model_before, device, args, reuse_storage=False, fusion=fusion)
     verify_correctness(model_before, device, args, reuse_storage=True, fusion=fusion)
@@ -167,7 +171,7 @@ def test_memory_plan_group_selection(device, fusion):
             t2 = mnm.add(t0, t1)  # new buffer size 200
             t3 = mnm.repeat(t2, 2, axis=0)  # can share with t0, t1. select t1, size 400
             t4 = mnm.sum(t3, axis=0)  # can share with t0, t2. select t0, size 20
-            t5 = mnm.add(t3, t4)  # can share with t2. select t2, size 400
+            t5 = mnm.add(t3, t4)  # final output cannot share with t2. new buffer size 400
             return t5
 
     model_before = Model()
@@ -179,9 +183,36 @@ def test_memory_plan_group_selection(device, fusion):
     mod = model_before._internal(*args).mod
     mod = optimize(mod, device, reuse_storage=True, fusion=fusion)
     if not fusion:
-        verify_alloc_num(mod["main"], 3, 6, 7, 820)
+        verify_alloc_num(mod["main"], 4, 6, 1, 3, 1020)
     else:
-        verify_alloc_num(mod["main"], 3, 3, 4, 820)
+        verify_alloc_num(mod["main"], 3, 3, 1, 2, 820)
 
     verify_correctness(model_before, device, args, reuse_storage=False, fusion=fusion)
     verify_correctness(model_before, device, args, reuse_storage=True, fusion=fusion)
+
+
+def test_set_shape():
+    shape = [3, 4, 5]
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.relu(x)
+            y = mnm.reshape(y, (12, 5))
+            y = mnm.relu(y)
+            return y
+
+    model = Model()
+    m_x, _ = randn(shape, device="cpu")
+    args = [m_x]
+    mod = model._internal(*args).mod
+    mod = optimize(mod, "cpu", reuse_storage=False, fusion=False)
+    verify_alloc_num(mod["main"], 2, 2, 1, 1, 480)
+    verify_correctness(model, "cpu", args, reuse_storage=False, fusion=False)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -3,6 +3,7 @@
  * \file ./src/op/from_relay/random.cc
  * \brief Operators bridged from Relay.
  */
+#include "mnm/op_utils.h"
 #include "tvm/relay/attrs/random.h"
 #include "./from_relay_utils.h"
 

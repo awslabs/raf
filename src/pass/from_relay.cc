@@ -7,10 +7,10 @@
 #include <tvm/relay/transform.h>
 #include <tvm/support/with.h>
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
-#include "../op/from_relay/from_relay_utils.h"
 
 namespace mnm {
 namespace pass {
@@ -61,7 +61,7 @@ struct SimplifyDense : RelaySimplifyPattern {
       if (trans_call && Downcast<Op>(trans_call->op) == op_transpose) {
         auto attrs = GetRef<Call>(trans_call)->attrs.as<TransposeAttrs>();
         if (attrs->axes.defined()) {
-          auto axes = mnm::op::from_relay::ArrayToInt(attrs->axes);
+          auto axes = mnm::op::ArrayToInt(attrs->axes);
           for (size_t j = 0; j < 2; ++j) {  // Support negative axis
             axes[j] += (axes[j] < 0) ? 2 : 0;
           }

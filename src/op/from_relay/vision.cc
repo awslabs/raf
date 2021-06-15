@@ -3,6 +3,7 @@
  * \file ./src/op/from_relay/vision.cc
  * \brief Operators bridged from Relay.
  */
+#include "mnm/op_utils.h"
 #include "tvm/relay/attrs/vision.h"
 #include "./from_relay_utils.h"
 

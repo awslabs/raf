@@ -148,6 +148,8 @@ struct Instruction {
       int64_t* shape;
       /*! \brief The datatype of tensor to be allocated. */
       DLDataType dtype;
+      /*! \brief Whether the tensor should own the storage memory. */
+      bool own;
     } alloc_tensor;
     struct /* Free Operands */ {
       /*! \brief The memory to be freed. It can be a tensor or a storage. */
@@ -162,6 +164,8 @@ struct Instruction {
       RegName shape_register;
       /*! \brief The datatype of tensor to be allocated. */
       DLDataType dtype;
+      /*! \brief Whether the tensor should own the storage memory. */
+      bool own;
     } alloc_tensor_reg;
     struct /* AllocClosure Operands */ {
       /*! \brief The index into the function table. */
@@ -258,10 +262,11 @@ struct Instruction {
    * \param shape The shape of the tensor.
    * \param dtype The dtype of the tensor.
    * \param dst The destination register.
+   * \param own Whether to own the storage memory.
    * \return The allocate tensor instruction.
    */
   static Instruction AllocTensor(RegName storage, Index offset, const std::vector<int64_t>& shape,
-                                 DLDataType dtype, RegName dst);
+                                 DLDataType dtype, RegName dst, bool own = true);
   /*!
    * \brief Construct an allocate tensor instruction with register.
    * \param storage The storage to allocate out of.
@@ -269,10 +274,11 @@ struct Instruction {
    * \param shape_register The register containing the shape.
    * \param dtype The dtype of the tensor.
    * \param dst The destination register.
+   * \param own Whether to own the storage memory.
    * \return The allocate tensor instruction.
    */
   static Instruction AllocTensorReg(RegName storage, Index offset, RegName shape_register,
-                                    DLDataType dtype, RegName dst);
+                                    DLDataType dtype, RegName dst, bool own = true);
   /*!
    * \brief Construct an allocate tuple instruction.
    * \param num_fields The number of fields for the datatype.

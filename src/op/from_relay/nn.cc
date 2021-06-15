@@ -3,6 +3,7 @@
  * \file ./src/op/from_relay/nn.cc
  * \brief Operators bridged from Relay.
  */
+#include "mnm/op_utils.h"
 #include "tvm/relay/attrs/nn.h"
 #include "./from_relay_utils.h"
 
@@ -165,8 +166,8 @@ MNM_OP_FROM_RELAY("nn.batch_norm", "mnm.op.batch_norm_train",
 
 Array<Array<Expr>> BatchNormMutationFromRelay(const Var& var, const Call& call) {
   Array<Array<Expr>> res = {
-      {GetMayShare(call->args[1]), TupleGetItem(var, 1)},  // running_mean
-      {GetMayShare(call->args[2]), TupleGetItem(var, 2)}   // running_var
+      {TryGetMayShare(call->args[1]), TupleGetItem(var, 1)},  // running_mean
+      {TryGetMayShare(call->args[2]), TupleGetItem(var, 2)}   // running_var
   };
   return res;
 }
