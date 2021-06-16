@@ -12,6 +12,25 @@ sudo snap install cmake --classic # hmm, cmake is required to run cmake
                                   # the cmake version installed by apt is too old
 ```
 
+Note that if you are using Ubuntu 20.10 or below, the ccache version via apt is 3.7-.
+Since ccache 4.0- does not support nvcc (CUDA compiler) well, it will result in
+cache miss for CUDA source files (e.g., CUTLASS). It means you may need to rebuild
+ALL CUTLASS source files everytime. To resolve this issue, you can manually build
+and install ccache 4.0+. Here are the steps of building ccache 4.0:
+
+```bash
+wget https://github.com/ccache/ccache/releases/download/v4.0/ccache-4.0.tar.gz
+tar -xzf ccache-4.0.tar.gz
+cd ccache-4.0
+mkdir build; cd build
+cmake -DZSTD_FROM_INTERNET=ON -DCMAKE_BUILD_TYPE=Release ..
+make
+sudo make install
+```
+
+It is recommended to build ccache 4.0 on Ubuntu 18, because later versions
+require later glibc and other system libraries.
+
 </details>
 
 **(Optional) LLVM.** LLVM is required to enable operators written in TVM.
