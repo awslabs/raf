@@ -3,15 +3,9 @@
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
 # Defined in ./src/op/regs/regs.cc
-_allgather = _APIS.get("mnm.op.sym._allgather", None)
-# Defined in ./src/op/regs/regs.cc
-_allreduce = _APIS.get("mnm.op.sym._allreduce", None)
-# Defined in ./src/op/regs/regs.cc
 _contrib_dropout = _APIS.get("mnm.op.sym._contrib_dropout", None)
 # Defined in ./src/op/regs/regs.cc
 _contrib_dropout_dx = _APIS.get("mnm.op.sym._contrib_dropout_dx", None)
-# Defined in ./src/op/regs/regs.cc
-_reduce_scatter = _APIS.get("mnm.op.sym._reduce_scatter", None)
 # Defined in ./src/op/regs/regs.cc
 abs = _APIS.get("mnm.op.sym.abs", None)
 # Defined in ./src/op/regs/regs.cc

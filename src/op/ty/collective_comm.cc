@@ -27,7 +27,7 @@ Type AllReduceInfer(const CallValues& value) {
   return TupleType(x);
 }
 
-MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", AllReduceInfer);
+MNM_OP_TYPE("mnm.op.comm.allreduce", "AllReduce", AllReduceInfer);
 
 Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();
@@ -40,7 +40,29 @@ Type ReduceScatterInfer(const CallValues& value) {
   return ty;
 }
 
-MNM_OP_TYPE("mnm.op._reduce_scatter", "ReduceScatter", ReduceScatterInfer);
+MNM_OP_TYPE("mnm.op.comm.reduce_scatter", "ReduceScatter", ReduceScatterInfer);
+
+Type SendInfer(const CallValues& value) {
+  const auto* args = value->args.as<SendArgs>();
+  CHECK(args != nullptr);
+  const auto& ty = Downcast<TensorType>(GetType(args->x));
+  return TensorType({}, ty->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.comm.send", "Send", SendInfer);
+
+Type RecvInfer(const CallValues& value) {
+  const auto* args = value->args.as<RecvArgs>();
+  CHECK(args != nullptr);
+  std::string dtype = args->dtype;
+  Array<PrimExpr> shape;
+  for (const auto& s : args->shape) {
+    shape.push_back(Integer(s));
+  }
+  return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
+}
+
+MNM_OP_TYPE("mnm.op.comm.recv", "Recv", RecvInfer);
 
 }  // namespace type
 }  // namespace op

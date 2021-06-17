@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use,invalid-name
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
@@ -40,7 +41,7 @@ def test_allreduce_with_tensor():
             pass
 
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use,invalid-name
+        def forward(self, x):
             x = mnm.allreduce(x)
             return x
 
@@ -69,8 +70,8 @@ def test_allreduce_with_tensor_list():
             pass
 
         @ mnm.model.trace
-        def forward(self, x1, x2):  # pylint: disable=no-self-use
-            x = mnm.allreduce([x1, x2])  # pylint: disable=invalid-name
+        def forward(self, x1, x2):
+            x = mnm.allreduce([x1, x2])
             return mnm.concatenate(x)
 
     model = TestModel()
@@ -98,7 +99,7 @@ def test_allgather(axis):
             pass
 
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use,invalid-name
+        def forward(self, x):
             x = mnm.allgather(x, axis=axis)
             return x
 
@@ -127,8 +128,8 @@ def test_allgather_with_tensor_list(axis):
             pass
 
         @ mnm.model.trace
-        def forward(self, x1, x2):  # pylint: disable=no-self-use
-            x = mnm.allgather([x1, x2], axis=axis)  # pylint: disable=invalid-name
+        def forward(self, x1, x2):
+            x = mnm.allgather([x1, x2], axis=axis)
             return mnm.concatenate(x)
 
     model = TestModel()
@@ -160,7 +161,7 @@ def test_reduce_scatter():
             pass
 
         @mnm.model.trace
-        def forward(self, x, y):  # pylint: disable=no-self-use,invalid-name
+        def forward(self, x, y):
             z = Symbol.make_tuple([x, y])
             out = mnm.reduce_scatter(z)
             return out
@@ -182,6 +183,45 @@ def test_reduce_scatter():
         check(m_out, n_out)
 
 
+@pytest.mark.skip()
+def test_send_recv():
+    shape = [2, 2]
+    dtype = "float32"
+
+    class TestModel_0(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            t1 = mnm.send(x, peer=1)
+            # TODO(@hzfan): How to handle send, which has no return value, but side effect
+            return t1
+
+    class TestModel_1(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.recv(peer=0, shape=shape, dtype=dtype)
+            out = mnm.add(x, y)
+            # TODO(@hzfan): How to handle send, which has no return value, but side effect
+            return out
+
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    model = TestModel_0() if rank == 0 else TestModel_1()
+    n_ones = np.ones(shape=shape, dtype=dtype)
+    n_x = n_ones * (rank+1)
+    m_x = mnm.array(n_x, device=device)
+    model.to(device=device)
+    m_out = model(m_x)
+    if rank == 1:
+        n_out = n_ones * 3
+        check(m_out, n_out)
+
+
 if __name__ == "__main__":
     if mnm.build.with_distributed():
         test_reduce_scatter()
@@ -191,4 +231,5 @@ if __name__ == "__main__":
         test_allgather(axis=1)
         test_allgather_with_tensor_list(axis=0)
         test_allgather_with_tensor_list(axis=1)
+        test_send_recv()
         dist.RemoveCommunicator()

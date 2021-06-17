@@ -16,19 +16,34 @@ class AllgatherArgs : public ir::AttrsNode<AllgatherArgs> {
  public:
   value::BaseTensorValue x;
   int axis;
-  MNM_OP_SCHEMA(AllgatherArgs, "mnm.args._allgather");
+  MNM_OP_SCHEMA(AllgatherArgs, "mnm.args.allgather");
 };
 
 class AllreduceArgs : public ir::AttrsNode<AllreduceArgs> {
  public:
   std::vector<value::BaseTensorValue> x;
-  MNM_OP_SCHEMA(AllreduceArgs, "mnm.args._allreduce");
+  MNM_OP_SCHEMA(AllreduceArgs, "mnm.args.allreduce");
+};
+
+class RecvArgs : public ir::AttrsNode<RecvArgs> {
+ public:
+  int peer;
+  std::vector<int64_t> shape;
+  std::string dtype{"float32"};
+  MNM_OP_SCHEMA(RecvArgs, "mnm.args.recv");
 };
 
 class ReduceScatterArgs : public ir::AttrsNode<ReduceScatterArgs> {
  public:
   std::vector<value::BaseTensorValue> x;
-  MNM_OP_SCHEMA(ReduceScatterArgs, "mnm.args._reduce_scatter");
+  MNM_OP_SCHEMA(ReduceScatterArgs, "mnm.args.reduce_scatter");
+};
+
+class SendArgs : public ir::AttrsNode<SendArgs> {
+ public:
+  value::BaseTensorValue x;
+  int peer;
+  MNM_OP_SCHEMA(SendArgs, "mnm.args.send");
 };
 }  // namespace schema
 }  // namespace op

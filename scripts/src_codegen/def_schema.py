@@ -644,19 +644,31 @@ SCHEMAS = {
             cxx_type="int",
             cxx_default=0),
     ],
-    "communication.h::_allreduce": [
+    "communication.h::allreduce": [
         Arg(name="x",
             cxx_type="std::vector<value::BaseTensorValue>",
             cxx_normalizer="TensorTuple"),
     ],
-    "communication.h::_allgather": [
+    "communication.h::allgather": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int"),
     ],
-    "communication.h::_reduce_scatter": [
+    "communication.h::reduce_scatter": [
         Arg(name="x",
             cxx_type="std::vector<value::BaseTensorValue>",
             cxx_normalizer="TensorTuple"),
+    ],
+    "communication.h::send": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="peer", cxx_type="int"),
+    ],
+    "communication.h::recv": [
+        Arg(name="peer", cxx_type="int"),
+        Arg(name="shape",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"",
+            py_default="\"float32\""),
     ],
     "transform.h::gather": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),

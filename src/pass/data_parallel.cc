@@ -59,7 +59,7 @@ struct DataParallel {
         let %closure = fn (%dy) {
             let %x1 = mnm.op.nll_loss_dtrue(%y_true, %a4);
             %0 = (%x1,);
-            let %g = mnm.op._allreduce(%0);
+            let %g = mnm.op.comm.allreduce(%0);
             let %x2 = mnm.op.nll_loss_dpred(%y_true, %a4);
             %1 = mnm.op.get_reduce_axis(%x2, %a3);
             %2 = mnm.op.get_kept_dims(%x2, %a3);
@@ -68,21 +68,21 @@ struct DataParallel {
             %4 = mnm.op.get_kept_dims(%x2, %linear1.b);
             let %x4 = mnm.op.sum(%x2, %3, %4);
             %5 = (%x4,);
-            let %g1 = mnm.op._allreduce(%5);
+            let %g1 = mnm.op.comm.allreduce(%5);
             let %x5 = mnm.op.matmul(%x3, %linear1.w);
             let %x6 = mnm.op.matmul_tn(%x3, %a2);
             %6 = (%x6,);
-            let %g2 = mnm.op._allreduce(%6);
+            let %g2 = mnm.op.comm.allreduce(%6);
             %7 = mnm.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
             let %x7 = %7.0;
             %8 = (%x7,);
-            let %g3 = mnm.op._allreduce(%8);
+            let %g3 = mnm.op.comm.allreduce(%8);
             let %x8 = %7.1;
             %9 = (%x8,);
-            let %g4 = mnm.op._allreduce(%9);
+            let %g4 = mnm.op.comm.allreduce(%9);
             let %x9 = %7.2;
             %10 = (%x9,);
-            let %g5 = mnm.op._allreduce(%10);
+            let %g5 = mnm.op.comm.allreduce(%10);
             let %null = mnm.op.stream_sync(%g5, -114514);
             let %x10 = (%g3, %g, %g5, -114514, -114514, %g4, %g1, %g2);
             %x10
@@ -94,7 +94,7 @@ struct DataParallel {
         let %closure = fn (%dy) {
             let %x1 = mnm.op.nll_loss_dtrue(%y_true, %a4);
             %0 = (%x1,);
-            let %g = mnm.op._allreduce(%0);
+            let %g = mnm.op.comm.allreduce(%0);
             let %x2 = mnm.op.nll_loss_dpred(%y_true, %a4);
             %1 = mnm.op.get_reduce_axis(%x2, %a3);
             %2 = mnm.op.get_kept_dims(%x2, %a3);
@@ -103,7 +103,7 @@ struct DataParallel {
             %4 = mnm.op.get_kept_dims(%x2, %linear1.b);
             let %x4 = mnm.op.sum(%x2, %3, %4);
             %5 = (%x4,);
-            let %g1 = mnm.op._allreduce(%5);
+            let %g1 = mnm.op.comm.allreduce(%5);
             let %x5 = mnm.op.matmul(%x3, %linear1.w);
             let %x6 = mnm.op.matmul_tn(%x3, %a2);
             %7 = mnm.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
@@ -111,13 +111,13 @@ struct DataParallel {
             let %x8 = %7.1;
             let %x9 = %7.2;
             %8 = (%x9,);
-            let %g3 = mnm.op._allreduce(%8);
+            let %g3 = mnm.op.comm.allreduce(%8);
             %9 = (%x8,);
-            let %g4 = mnm.op._allreduce(%9);
+            let %g4 = mnm.op.comm.allreduce(%9);
             %10 = (%x7,);
-            let %g5 = mnm.op._allreduce(%10);
+            let %g5 = mnm.op.comm.allreduce(%10);
             %11 = (%x6,);
-            let %g2 = mnm.op._allreduce(%11);
+            let %g2 = mnm.op.comm.allreduce(%11);
             let %null = mnm.op.stream_sync(%g5, -114514);
             let %x10 = (%g3, %g, %g5, -114514, -114514, %g4, %g1, %g2);
             %x10
@@ -248,7 +248,7 @@ struct DataParallel {
       if (gradset.find(bp_ell->vars[i].operator->()) != gradset.end()) {
         // If the current expr is an op-expr which generate local gradient,
         // we should add a allreduce op after it.
-        static Op op_allreduce = Op::Get("mnm.op._allreduce");
+        static Op op_allreduce = Op::Get("mnm.op.comm.allreduce");
         // Here we name the var as 'g'(global gradient), to help us identify it easier.
         bp_ell->vars[p2] = mnm::ir::MakeVar("g", {});
         bp_ell->exprs[p2] = Call(op_allreduce, {Tuple({bp_ell->vars[i]})});
@@ -337,7 +337,7 @@ struct DataParallel {
   // initialized in Run
   std::unique_ptr<ExplicitLetList> bp_ell{nullptr};
   // The comminication operators whose profiling will be collected for scheduling.
-  const std::set<std::string> scheduled_communication_ops = {"mnm.op._allreduce"};
+  const std::set<std::string> scheduled_communication_ops = {"mnm.op.comm.allreduce"};
 };
 
 }  // namespace data_parallel

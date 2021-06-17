@@ -99,7 +99,8 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     return new NCCLAllReduce(cv);
   }
 };
-MNM_OP_DISPATCH("mnm.op._allreduce", NCCLAllReduce::make, DevType::kCUDA(), "nccl_communication");
+MNM_OP_DISPATCH("mnm.op.comm.allreduce", NCCLAllReduce::make, DevType::kCUDA(),
+                "nccl_communication");
 
 class NCCLAllGather : public mnm::op::OpEnv {
   void* stream;
@@ -135,7 +136,8 @@ class NCCLAllGather : public mnm::op::OpEnv {
   }
 };
 
-MNM_OP_DISPATCH("mnm.op._allgather", NCCLAllGather::make, DevType::kCUDA(), "nccl_communication");
+MNM_OP_DISPATCH("mnm.op.comm.allgather", NCCLAllGather::make, DevType::kCUDA(),
+                "nccl_communication");
 
 class NCCLReduceScatter : public mnm::op::OpEnv {
   void* stream;
@@ -183,8 +185,84 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   }
 };
 
-MNM_OP_DISPATCH("mnm.op._reduce_scatter", NCCLReduceScatter::make, DevType::kCUDA(),
+MNM_OP_DISPATCH("mnm.op.comm.reduce_scatter", NCCLReduceScatter::make, DevType::kCUDA(),
                 "nccl_communication");
+
+class NCCLSend : public mnm::op::OpEnv {
+  void* stream;
+  void* communicator;
+  int peer;
+
+  explicit NCCLSend(const CallValues& cv) {
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+    const auto* args = cv->args.as<mnm::op::schema::SendArgs>();
+    CHECK(args);
+    peer = args->peer;
+  }
+
+ public:
+  ~NCCLSend() {
+  }
+
+  void Execute(const CallValues& cv) {
+    const auto* args = cv->args.as<mnm::op::schema::SendArgs>();
+    CHECK(args);
+    Execute({args->x}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    const DLTensor* x = inputs[0];
+    NCCL_CALL(ncclSend(x->data, BytesCompactTensor(*x) / (x->dtype.bits / 8), DType(x->dtype), peer,
+                       (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLSend(cv);
+  }
+};
+
+MNM_OP_DISPATCH("mnm.op.comm.send", NCCLSend::make, DevType::kCUDA(), "nccl_communication");
+
+class NCCLRecv : public mnm::op::OpEnv {
+  void* stream;
+  void* communicator;
+  int peer;
+  std::vector<int64_t> shape;
+  DType dtype;
+
+  explicit NCCLRecv(const CallValues& cv) {
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+    const auto* args = cv->args.as<mnm::op::schema::RecvArgs>();
+    CHECK(args);
+    peer = args->peer;
+    shape = args->shape;
+    dtype = ir::String2DLDataType(args->dtype);
+  }
+
+ public:
+  ~NCCLRecv() {
+  }
+
+  void Execute(const CallValues& cv) {
+    Execute({}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    DLTensor* out = output;
+    NCCL_CALL(ncclRecv(out->data, BytesCompactTensor(*out) / (out->dtype.bits / 8),
+                       DType(out->dtype), peer, (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLRecv(cv);
+  }
+};
+
+MNM_OP_DISPATCH("mnm.op.comm.recv", NCCLRecv::make, DevType::kCUDA(), "nccl_communication");
 
 }  // namespace nccl
 }  // namespace communication

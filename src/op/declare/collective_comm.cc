@@ -41,7 +41,7 @@ void AllReduce(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._allreduce", AllReduce);
+MNM_OP_DECLARE("mnm.op.comm.allreduce", AllReduce);
 
 void AllGather(const CallValues& call) {
   const auto* args = call->args.as<AllgatherArgs>();
@@ -56,7 +56,7 @@ void AllGather(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op._allgather", AllGather);
+MNM_OP_DECLARE("mnm.op.comm.allgather", AllGather);
 
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
@@ -75,7 +75,31 @@ void ReduceScatter(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter);
+MNM_OP_DECLARE("mnm.op.comm.reduce_scatter", ReduceScatter);
+
+void Send(const CallValues& call) {
+  const auto* args = call->args.as<SendArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/std::vector<int64_t>{});
+}
+
+MNM_OP_DECLARE("mnm.op.comm.send", Send);
+
+void Recv(const CallValues& call) {
+  const auto* args = call->args.as<RecvArgs>();
+  CHECK(args != nullptr);
+  Device dev(DevType::kCUDA(), CommunicatorManager::Get()->GetCommunicator()->GetRank());
+  call->device = dev;
+  call->out = TensorValue::Assemble(/*ctx=*/dev,
+                                    /*dtype=*/ir::String2DLDataType(args->dtype),
+                                    /*shape=*/args->shape);
+}
+
+MNM_OP_DECLARE("mnm.op.comm.recv", Recv);
 
 }  // namespace declare
 }  // namespace op

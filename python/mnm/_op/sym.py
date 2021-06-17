@@ -8,53 +8,44 @@ from mnm._core.ndarray import Symbol
 from . import sym_utils
 
 __all__ = [
-    "_allgather", "_allreduce", "_contrib_dropout", "_contrib_dropout_dx", "_reduce_scatter",
-    "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx", "adaptive_max_pool2d", "adaptive_max_pool2d_dx",
-    "add", "adv_index", "adv_index_dx", "all", "any",
-    "arange", "argmax", "argmin", "argsort", "argwhere",
-    "atan", "avg_pool2d", "avg_pool2d_dx", "batch_flatten", "batch_matmul",
-    "batch_matmul_nt", "batch_matmul_tn", "batch_matmul_tt", "batch_norm_infer", "batch_norm_train",
-    "batch_norm_train_dxwb", "bias_add", "broadcast_to", "broadcast_to_like", "cast",
-    "cast_like", "ceil", "clip", "clip_dx", "collapse_sum_like",
-    "compiler_begin", "compiler_end", "concatenate", "concatenate_dx", "conv2d",
-    "conv2d_dw", "conv2d_dx", "conv2d_transpose", "conv2d_transpose_dw", "conv2d_transpose_dx",
-    "copy", "cos", "cross_entropy", "cross_entropy_dpred", "cross_entropy_dtrue",
-    "dense", "device_copy", "divide", "equal", "erf",
-    "erf_dx", "exp", "expand_dims", "floor", "floor_divide",
-    "full", "full_like", "gather", "gather_dx", "gather_nd",
-    "gather_nd_dx", "gelu", "gelu_dx", "get_kept_dims", "get_reduce_axis",
-    "get_valid_counts", "greater", "greater_equal", "layer_norm", "layer_norm_dx",
-    "left_shift", "less", "less_equal", "log", "log2",
-    "log_softmax", "log_softmax_dx", "logical_and", "logical_not", "matmul",
-    "matmul_nt", "matmul_tn", "matmul_tt", "max", "max_pool2d",
-    "max_pool2d_dx", "maximum", "mean", "mean_dx", "mesh_grid",
-    "min", "minimum", "mod", "multiply", "ndarray_size",
-    "negative", "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression",
-    "not_equal", "one_hot", "ones", "ones_like", "pad",
-    "power", "prod", "prod_dx", "relu", "relu_dx",
-    "repeat", "repeat_dx", "reshape", "resize", "reverse",
-    "reverse_sequence", "right_shift", "roi_align", "roi_align_dx", "round",
-    "rsqrt", "scatter", "scatter_dx", "sequence_mask", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stream_end", "stream_start", "stream_sync", "stream_wait",
-    "strided_slice", "strided_slice_dx", "subtract", "sum", "sum_dx",
-    "swap_axis", "take", "take_dx", "tanh", "tanh_dx",
-    "threefry_generate", "threefry_split", "topk", "transpose", "transpose_dx",
-    "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free",
-    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where", "zeros",
-    "zeros_like",
+    "_contrib_dropout", "_contrib_dropout_dx", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx",
+    "adaptive_max_pool2d", "adaptive_max_pool2d_dx", "add", "adv_index", "adv_index_dx",
+    "all", "any", "arange", "argmax", "argmin",
+    "argsort", "argwhere", "atan", "avg_pool2d", "avg_pool2d_dx",
+    "batch_flatten", "batch_matmul", "batch_matmul_nt", "batch_matmul_tn", "batch_matmul_tt",
+    "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "broadcast_to",
+    "broadcast_to_like", "cast", "cast_like", "ceil", "clip",
+    "clip_dx", "collapse_sum_like", "comm_allgather", "comm_allreduce", "comm_recv",
+    "comm_reduce_scatter", "comm_send", "compiler_begin", "compiler_end", "concatenate",
+    "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx", "conv2d_transpose",
+    "conv2d_transpose_dw", "conv2d_transpose_dx", "copy", "cos", "cross_entropy",
+    "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy", "divide",
+    "equal", "erf", "erf_dx", "exp", "expand_dims",
+    "floor", "floor_divide", "full", "full_like", "gather",
+    "gather_dx", "gather_nd", "gather_nd_dx", "gelu", "gelu_dx",
+    "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater", "greater_equal",
+    "layer_norm", "layer_norm_dx", "left_shift", "less", "less_equal",
+    "log", "log2", "log_softmax", "log_softmax_dx", "logical_and",
+    "logical_not", "matmul", "matmul_nt", "matmul_tn", "matmul_tt",
+    "max", "max_pool2d", "max_pool2d_dx", "maximum", "mean",
+    "mean_dx", "mesh_grid", "min", "minimum", "mod",
+    "multiply", "ndarray_size", "negative", "nll_loss", "nll_loss_dpred",
+    "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
+    "ones_like", "pad", "power", "prod", "prod_dx",
+    "relu", "relu_dx", "repeat", "repeat_dx", "reshape",
+    "resize", "reverse", "reverse_sequence", "right_shift", "roi_align",
+    "roi_align_dx", "round", "rsqrt", "scatter", "scatter_dx",
+    "sequence_mask", "sgd", "shape", "sigmoid", "sigmoid_dx",
+    "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue",
+    "softmax", "softmax_dx", "sort", "split", "sqrt",
+    "sqrt_dx", "squeeze", "stack", "stream_end", "stream_start",
+    "stream_sync", "stream_wait", "strided_slice", "strided_slice_dx", "subtract",
+    "sum", "sum_dx", "swap_axis", "take", "take_dx",
+    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "topk",
+    "transpose", "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage",
+    "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
+    "where", "zeros", "zeros_like",
 ]
-
-def _allgather(x, axis):
-    x = sym_utils.to_tensor(x)
-    axis = sym_utils.to_int(axis)
-    return Symbol.from_expr(ffi._allgather(x, axis))
-
-def _allreduce(x):
-    x = sym_utils.to_tensor_tuple(x)
-    return Symbol.from_expr(ffi._allreduce(x))
 
 def _contrib_dropout(x, p=0.5, in_states=None):
     x = sym_utils.to_tensor(x)
@@ -67,10 +58,6 @@ def _contrib_dropout_dx(dy, reserve_space, p=0.5):
     reserve_space = sym_utils.to_tensor(reserve_space)
     p = sym_utils.to_double(p)
     return Symbol.from_expr(ffi._contrib_dropout_dx(dy, reserve_space, p))
-
-def _reduce_scatter(x):
-    x = sym_utils.to_tensor_tuple(x)
-    return Symbol.from_expr(ffi._reduce_scatter(x))
 
 def abs(x):
     x = sym_utils.to_any(x)
@@ -290,6 +277,30 @@ def collapse_sum_like(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.collapse_sum_like(x, shape))
+
+def comm_allgather(x, axis):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi.comm.allgather(x, axis))
+
+def comm_allreduce(x):
+    x = sym_utils.to_tensor_tuple(x)
+    return Symbol.from_expr(ffi.comm.allreduce(x))
+
+def comm_recv(peer, shape, dtype="float32"):
+    peer = sym_utils.to_int(peer)
+    shape = sym_utils.to_int_tuple(shape)
+    dtype = sym_utils.to_string(dtype)
+    return Symbol.from_expr(ffi.comm.recv(peer, shape, dtype))
+
+def comm_reduce_scatter(x):
+    x = sym_utils.to_tensor_tuple(x)
+    return Symbol.from_expr(ffi.comm.reduce_scatter(x))
+
+def comm_send(x, peer):
+    x = sym_utils.to_tensor(x)
+    peer = sym_utils.to_int(peer)
+    return Symbol.from_expr(ffi.comm.send(x, peer))
 
 def compiler_begin(x, compiler):
     x = sym_utils.to_tensor(x)
