@@ -6,6 +6,7 @@
 #include <sstream>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/op_utils.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
 #include "./common.h"
@@ -410,10 +411,64 @@ struct ReverseAD : public ExprVisitor {
     return true;
   }
 
-  Expr MakeZero(Expr expr) {
+  /*!
+   * \brief Make zero tensors for undefined gradients of the expression binded by
+   * the given var node. To make the IR more optimization friendly, this function
+   * tries to use zeros instead of zeros_like to create zero tensors, when the target
+   * type is available.
+   */
+  Expr MakeZero(const Var var) {
+    if (var_to_primal_expr_.count(var.get()) > 0) {
+      auto expr = var_to_primal_expr_[var.get()];
+      if (expr->checked_type_.defined()) {
+        auto expr_type = expr->checked_type();
+
+        if (auto tgi = expr.as<TupleGetItemNode>()) {
+          auto tuple_var = Downcast<Var>(tgi->tuple);
+          auto target_expr = var_to_primal_expr_[tuple_var.get()];
+          if (auto tuple_node = target_expr.as<TupleNode>()) {
+            // The target is a tuple node, keep tracing to the root tensor
+            CHECK(tuple_node->fields[tgi->index]->IsInstance<VarNode>());
+            return MakeZero(Downcast<Var>(tuple_node->fields[tgi->index]));
+          } else {
+            // The target is not a tuple node (e.g., a call node returns a tuple)
+            if (target_expr->checked_type_.defined()) {
+              // Pass its type to create zeros op
+              auto target_type = target_expr->checked_type();
+              auto tuple_type_node = target_type.as<TupleTypeNode>();
+              CHECK(tuple_type_node != nullptr);
+              expr_type = tuple_type_node->fields[tgi->index];
+            } else {
+              // Lack of type information, pass an undefined type to create zeros_like
+              expr_type = Type();
+            }
+          }
+        } else if (auto tuple = expr.as<TupleNode>()) {
+          // Make zeros op for each tuple element. Note that we do not make a single
+          // zeros_like op because it is hard to be optimized later.
+          Array<Expr> zeros;
+          for (size_t i = 0; i < tuple->fields.size(); ++i) {
+            zeros.push_back(MakeZero(Downcast<Var>(tuple->fields[i])));
+          }
+          return adjoint_ll_->Push(Tuple(zeros));
+        }
+
+        if (auto ttype = expr_type.as<TensorTypeNode>()) {
+          static auto zeros = Op::Get("mnm.op.zeros");
+          return adjoint_ll_->Push(
+              Call(zeros, {MakeConstant(ArrayToIntTuple(ttype->shape)),
+                           MakeConstant(StringValue::make(DLDataType2String(ttype->dtype)))}));
+        } else {
+          LOG(FATAL) << "Unsupported expression or type for making zeros: "
+                     << mnm::ir::AsText(expr);
+          throw;
+        }
+      }
+    }
+
+    // Otherwise use zeros_like op.
     static auto zeros_like = Op::Get("mnm.op.zeros_like");
-    auto zero_grad = Call(zeros_like, {expr});
-    return zero_grad;
+    return adjoint_ll_->Push(Call(zeros_like, {var}));
   }
 
   /*!
@@ -440,19 +495,33 @@ struct ReverseAD : public ExprVisitor {
       if (ograd.defined()) {
         defined_ograds.push_back(ograd);
       } else {
+        // Output gradient is undefined. Generate a zero tensor as the placeholder
+        Var target_var = let_var_;
+
         auto primal_expr = var_to_primal_expr_[let_var_.get()];
         if (primal_expr->checked_type_.defined()) {
           auto primal_expr_type = primal_expr->checked_type();
-          Expr defined_ograd;
           if (primal_expr.as<TupleNode>() || primal_expr_type.as<TupleTypeNode>()) {
-            defined_ograd = MakeZero(TupleGetItem(let_var_, index));
-          } else {
-            defined_ograd = MakeZero(let_var_);
+            // If primal expr is a tuple, find the corresponding primal expr and
+            // create a tuple get item node.
+            auto tuple_node = primal_expr.as<TupleNode>();
+            if (tuple_node && tuple_node->fields[index].as<ConstantNode>()) {
+              target_var = Var();  // Skip constants
+            } else {
+              auto tgi = TupleGetItem(let_var_, index);
+              tgi->checked_type_ = primal_expr_type.as<TupleTypeNode>()->fields[index];
+              target_var = adjoint_ll_->Push(tgi);
+              var_to_primal_expr_[target_var.get()] = tgi;
+            }
           }
-          defined_ograds.push_back(defined_ograd);
+        }
+
+        if (target_var.defined() && !primal_expr.as<ConstantNode>()) {
+          defined_ograds.push_back(MakeZero(target_var));
         } else {
-          Expr defined_ograd = MakeZero(let_var_);
-          defined_ograds.push_back(defined_ograd);
+          // Still put an undefined ograd as the placeholder of constants to make sure the
+          // length of defined_ograds is same as ograds.
+          defined_ograds.push_back(ograd);
         }
       }
     }

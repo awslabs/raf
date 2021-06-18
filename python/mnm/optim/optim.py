@@ -6,7 +6,7 @@ from .._core.value import NoGradValue, Value
 from .._core.ir_ext import ExtendedVar
 from ..model.trace import _get_func_inputs
 from ..model import Model, trace
-from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType
+from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType, FoldConstant
 from .._ffi.pass_ import SimplifyExpr, DeadCodeElimination
 from .._ffi.binding import BindSymbol
 from .._lib import tvm
@@ -64,7 +64,7 @@ def with_autodiff(model):
             dy = calc_dy(dy, record)
             mod = record.mod
             seq = MNMSequential([InferType(), AutoDiff(record.requires_grads),
-                                 InferType(), SimplifyExpr(),
+                                 InferType(), SimplifyExpr(), FoldConstant(),
                                  DeadCodeElimination(), InlineBackward()])
             mod = seq(mod)
             inputs = _get_func_inputs(record, args, {})
