@@ -11,6 +11,7 @@
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
+#include "../3rdparty/tvm/src/relay/transforms/pattern_utils.h"
 
 namespace mnm {
 namespace pass {
@@ -85,8 +86,49 @@ struct SimplifyDense : RelaySimplifyPattern {
   }
 };
 
+struct SimplifyGelu : RelaySimplifyPattern {
+ public:
+  SimplifyGelu() {
+    DFPattern x_float64 = IsWildcard().HasDtype(DataType::Float(64));
+    DFPattern x_float32 = IsWildcard().HasDtype(DataType::Float(32));
+
+    DFPattern gelu_float64 = IsWildcard();
+    DFPattern gelu_float32 = IsWildcard();
+
+    DFPattern const_1_2_float64 = IsExpr(MakeConstantScalar(DataType::Float(64), 0.5));
+    DFPattern const_1_2_float32 = IsExpr(MakeConstantScalar(DataType::Float(32), 0.5));
+    DFPattern const_1_sqrt2_float64 = IsExpr(MakeConstantScalar(DataType::Float(64), 1 / sqrt(2)));
+    DFPattern const_1_sqrt2_float32 = IsExpr(MakeConstantScalar(DataType::Float(32), 1 / sqrt(2)));
+
+    // Match Patterns
+    gelu_float64 = IsOp("multiply")(
+        {x_float64, IsOp("add")({const_1_2_float64,
+                                 IsOp("multiply")({const_1_2_float64,
+                                                   IsOp("erf")({IsOp("multiply")(
+                                                       {const_1_sqrt2_float64, x_float64})})})})});
+
+    gelu_float32 = IsOp("multiply")(
+        {x_float32, IsOp("add")({const_1_2_float32,
+                                 IsOp("multiply")({const_1_2_float32,
+                                                   IsOp("erf")({IsOp("multiply")(
+                                                       {const_1_sqrt2_float32, x_float32})})})})});
+
+    // Match Patterns
+    this->pattern = gelu_float64 || gelu_float32;
+
+    // Checker always returns true
+    this->check = PackedFunc([](TVMArgs args, TVMRetValue* rv) { *rv = true; });
+  }
+
+  Call converter(Function func, Array<Expr> args) {
+    static const Op& op = Op::Get("mnm.op.gelu");
+    return Call(op, args);
+  }
+};
+
 static const std::unordered_map<String, std::shared_ptr<RelaySimplifyPattern>> composite_patterns{
-    {String("dense"), std::shared_ptr<RelaySimplifyPattern>(new SimplifyDense)}};
+    {String("dense"), std::shared_ptr<RelaySimplifyPattern>(new SimplifyDense)},
+    {String("gelu"), std::shared_ptr<RelaySimplifyPattern>(new SimplifyGelu)}};
 
 // We set the parameters to be Meta model attributes, so their names
 // have to be valid variable names in Python.

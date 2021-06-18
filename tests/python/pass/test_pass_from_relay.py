@@ -1007,6 +1007,39 @@ def test_dense_pattern(trans):
 
     check_from_relay(model, r_func, [m_x, m_y])
 
+@pytest.mark.parametrize("shape", [(), (1, ), (2, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float64", "float32"])
+def test_gelu_pattern(shape, dtype):
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, bias):  # pylint: disable=no-self-use
+            x = mnm.add(x, bias)
+            return attrgetter("gelu")(mnm)(x)
+
+    model = TestModel()
+    m_x, _ = randn(shape, dtype=dtype)
+    m_y, _ = randn(shape, dtype=dtype)
+
+    r_x = _relay.var("x", shape=shape, dtype=dtype)
+    bias = _relay.var("bias", shape=shape, dtype=dtype)
+
+    const_1_2 = _relay.const(0.5, dtype)
+    const_1_sqrt_2 = _relay.const(1/2**0.5, dtype)
+
+    a0 = _relay.add(r_x, bias)
+    a1 = _relay.multiply(a0, const_1_sqrt_2)
+    a2 = _relay.erf(a1)
+    a3 = _relay.multiply(a2, const_1_2)
+    a4 = _relay.add(const_1_2, a3)
+    r_out = _relay.multiply(a0, a4)
+    r_func = _relay.Function(params=[r_x, bias], body=r_out)
+
+    check_from_relay(model, r_func, [m_x, m_y])
+
 @pytest.mark.parametrize("shape", [(4, 3, 4, 5)])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("keep", [0, 1])
