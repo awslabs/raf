@@ -662,14 +662,20 @@ def test_expand_dims(device, shape, axis, num_newaxis):
 @pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "float64", "int32", "int64", "bool"])
 def test_cast(shape, device, itype, otype):
-    # TODO(hgt312): some problems when working with float16
-    if device == "cuda" and "float16" in [itype, otype]:
-        return
+    # TODO(hgt312): The TVM JIT cast kernel in LLVM crashed for float16. See:
+    # https://discuss.tvm.apache.org/t/cast-from-float64-to-float16-cause-segmentation-fault
     if (itype, otype, device) == ("float64", "float16", "cpu"):
+        return
+
+    # CUDA rounds up when casting to int, which does not match Numpy's behavior (round down).
+    # See: https://github.com/apache/tvm/issues/3879
+    if (device == "cuda" and "float16" in [itype, otype] and
+            (itype.startswith("int") or otype.startswith("int"))):
         return
 
     m_x, n_x = randn(shape, device=device, dtype=itype)
     m_x.requires_grad = True
+
     # forward
     model = TestModel(mnm._op.sym.cast, dtype=otype)
     m_y = model(m_x)
@@ -677,6 +683,7 @@ def test_cast(shape, device, itype, otype):
     n_y = n_x.astype(otype)
     check(m_y, n_y)
     check(v_y, n_y)
+
     # backward
     if (itype, otype, device) == ("float16", "float64", "cpu"):
         return

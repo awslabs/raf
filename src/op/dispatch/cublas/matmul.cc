@@ -35,15 +35,15 @@ void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTe
 
   if (c->dtype.code == kDLFloat) {
     switch (c->dtype.bits) {
-      case 16:
-        CUBLAS_CALL(
-            cublasHgemm(handle, transb, transa, m, n, k,
-                        static_cast<const __half*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
-                        static_cast<__half*>(b->data), ldb, static_cast<__half*>(a->data), lda,
-                        static_cast<const __half*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
-                        static_cast<__half*>(c->data), m));
+      case 16: {
+        CUBLAS_CALL(cublasGemmEx(handle, transb, transa, m, n, k, const_addr<1>(CUDA_R_32F),
+                                 b->data, cudaDataType_t(DType(b->dtype)), ldb, a->data,
+                                 cudaDataType_t(DType(a->dtype)), lda, const_addr<0>(CUDA_R_32F),
+                                 c->data, cudaDataType_t(DType(c->dtype)), m, CUDA_R_32F,
+                                 CUBLAS_GEMM_DFALT_TENSOR_OP));
         return;
-      case 32:
+      }
+      case 32: {
         CUBLAS_CALL(
             cublasSgemm(handle, transb, transa, m, n, k,
                         static_cast<const float*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
@@ -51,7 +51,8 @@ void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTe
                         static_cast<const float*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
                         static_cast<float*>(c->data), m));
         return;
-      case 64:
+      }
+      case 64: {
         CUBLAS_CALL(
             cublasDgemm(handle, transb, transa, m, n, k,
                         static_cast<const double*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
@@ -59,6 +60,7 @@ void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTe
                         static_cast<const double*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
                         static_cast<double*>(c->data), m));
         return;
+      }
     }
   }
   CUBLAS_CALL(cublasGemmEx(

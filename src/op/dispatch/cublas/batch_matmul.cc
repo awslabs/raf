@@ -54,17 +54,18 @@ void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_
   } else if (a->shape[0] > 1 && b->shape[0] == 1) {
     strideB = 0;
   }
+
   if (c->dtype.code == kDLFloat) {
     switch (c->dtype.bits) {
-      case 16:
-        CUBLAS_CALL(cublasHgemmStridedBatched(
-            handle, transb, transa, m, n, k,
-            static_cast<const __half*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<__half*>(b->data), ldb, strideB, static_cast<__half*>(a->data), lda,
-            strideA, static_cast<const __half*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
-            static_cast<__half*>(c->data), m, strideC, batch_count));
+      case 16: {
+        CUBLAS_CALL(cublasGemmStridedBatchedEx(
+            handle, transb, transa, m, n, k, const_addr<1>(CUDA_R_32F), b->data,
+            cudaDataType_t(DType(b->dtype)), ldb, strideB, a->data, cudaDataType_t(DType(a->dtype)),
+            lda, strideA, const_addr<0>(CUDA_R_32F), c->data, cudaDataType_t(DType(c->dtype)), m,
+            strideC, batch_count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP));
         return;
-      case 32:
+      }
+      case 32: {
         CUBLAS_CALL(cublasSgemmStridedBatched(
             handle, transb, transa, m, n, k,
             static_cast<const float*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
@@ -72,7 +73,8 @@ void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_
             static_cast<const float*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
             static_cast<float*>(c->data), m, strideC, batch_count));
         return;
-      case 64:
+      }
+      case 64: {
         CUBLAS_CALL(cublasDgemmStridedBatched(
             handle, transb, transa, m, n, k,
             static_cast<const double*>(const_addr<1>(cudaDataType_t(DType(c->dtype)))),
@@ -80,10 +82,11 @@ void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_
             strideA, static_cast<const double*>(const_addr<0>(cudaDataType_t(DType(c->dtype)))),
             static_cast<double*>(c->data), m, strideC, batch_count));
         return;
-      default:
-        CHECK(0) << "Unsupported type: float" << c->dtype.bits;
+      }
     }
   }
+  LOG(FATAL) << "Unsupported output dtype: " << DType(c->dtype).c_str();
+  throw;
 }
 
 template <bool transpose_a, bool transpose_b>

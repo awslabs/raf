@@ -247,44 +247,6 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("n", [1, 2, 4])
-@pytest.mark.parametrize("m", [1, 2, 4])
-@pytest.mark.parametrize("k", [1, 2, 4])
-@pytest.mark.parametrize("transpose_a", [True, False])
-@pytest.mark.parametrize("transpose_b", [True, False])
-@pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
-    class TestModel(mnm.Model):
-        def build(self):
-            pass
-        @mnm.model.trace
-        def forward(self, m_a, m_b):
-            mnm_op = [[mnm.matmul, mnm.matmul_nt],
-                      [mnm.matmul_tn, mnm.matmul_tt]]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
-    # forward
-    model = TestModel()
-    m_a, t_a = randn_torch((n, k) if not transpose_a else (k, n),
-                           dtype=dtype, device="cuda", requires_grad=True)
-    m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k),
-                           dtype=dtype, device="cuda", requires_grad=True)
-    m_c = model(m_a, m_b)
-    v_c = run_vm_model(model, "cuda", [m_a, m_b])
-    t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b)
-    rtol = 1e-4 if dtype == "float32" else 2e-3
-    atol = 1e-4 if dtype == "float32" else 2e-3
-    check(m_c, t_c, rtol=rtol, atol=atol)
-    check(v_c, t_c, rtol=rtol, atol=atol)
-    # backward
-    m_dc, t_dc = randn_torch(m_c.shape, dtype=dtype, device="cuda")
-    m_c.backward(m_dc)
-    t_c.backward(t_dc)
-    check(m_a.grad, t_a.grad, rtol=rtol, atol=atol)
-    check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)
-
-
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("dropout", [0.4, 0.6])
 def test_mnm_dropout(dropout):
     def check_dropout(x, y, dx=None, dy=None):
