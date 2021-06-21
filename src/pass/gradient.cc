@@ -418,7 +418,7 @@ struct ReverseAD : public ExprVisitor {
    * type is available.
    */
   Expr MakeZero(const Var var) {
-    if (var_to_primal_expr_.count(var.get()) > 0) {
+    if (var_to_primal_expr_.count(var.get()) > 0 && var_to_primal_expr_[var.get()].defined()) {
       auto expr = var_to_primal_expr_[var.get()];
       if (expr->checked_type_.defined()) {
         auto expr_type = expr->checked_type();
