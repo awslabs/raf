@@ -114,27 +114,22 @@ def randn_mxnet(shape, *, device="cpu", dtype="float32", requires_grad=False, me
     return m_x, mx_x
 
 
-def one_hot_torch(batch_size, num_classes, device="cpu", dtype="float32"):
+def one_hot_torch(batch_size, num_classes, device="cpu"):
     """Helper function to generate one hot tensors in mnm and torch"""
     targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
-    m_x[range(batch_size), targets] = 1
-    m_x = mnm.array(m_x, device=device)
+    m_x = mnm.array(targets, device=device)
     t_x = torch.tensor(targets, requires_grad=False, device=device)  # pylint: disable=not-callable
-    assert list(m_x.shape) == [batch_size, num_classes]
+    assert list(m_x.shape) == [batch_size]
     assert list(t_x.shape) == [batch_size]
     return m_x, t_x
 
 
-def one_hot_mxnet(batch_size, num_classes, device="cpu", dtype="float32"):
-    """Helper function to generate one hot tensors in mnm and torch"""
+def one_hot_mxnet(batch_size, num_classes, device="cpu"):
+    """Helper function to generate one hot tensors in mnm and mxnet"""
     targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = np.zeros([batch_size, num_classes], dtype=dtype)
-    m_x[range(batch_size), targets] = 1
-    mnm_x = mnm.array(m_x, device=device)
-
+    mnm_x = mnm.array(targets, device=device)
     mx_x = mx.nd.array(targets, ctx=mx.cpu())  # pylint: disable=not-callable
-    assert list(mnm_x.shape) == [batch_size, num_classes]
+    assert list(mnm_x.shape) == [batch_size]
     assert list(mx_x.shape) == [batch_size]
     return mnm_x, mx_x
 

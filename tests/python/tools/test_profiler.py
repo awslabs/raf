@@ -72,9 +72,9 @@ def test_profiler_without_cuda(i):
     device = "cpu({})".format(i)
     features = 4
     x = np.arange(features*batch_size).reshape(batch_size, features)
-    y = np.arange(features*batch_size).reshape(batch_size, features)
+    y = np.random.randint(0, features, size=batch_size)
     m_x = mnm.array(x, dtype="float32", device=device, name='cck-m_x')
-    m_y = mnm.array(y, dtype='float32', device=device, name='cck-m_y')
+    m_y = mnm.array(y, device=device, name='cck-m_y')
     model = TestNet((0, 1))
     print("### Switch to training mode")
     model.train_mode()

@@ -54,13 +54,11 @@ MNM_OP_DECLARE("mnm.op.nll_loss", [](const CallValues& call) {
   const DLTensor* pred = args->y_pred;
   const DLTensor* true_ = args->y_true;
   CHECK_EQ(pred->ndim, 2);
-  CHECK_EQ(true_->ndim, 2);
   CHECK_EQ(pred->shape[0], true_->shape[0]);
-  CHECK_EQ(pred->shape[1], true_->shape[1]);
-  call->out = TensorValue::Assemble(/*dev=*/true_->device,
-                                    /*dtype=*/true_->dtype,
+  call->out = TensorValue::Assemble(/*dev=*/pred->device,
+                                    /*dtype=*/pred->dtype,
                                     /*shape=*/{1});
-  call->device = true_->device;
+  call->device = pred->device;
 }).set_attr<TOpPattern>("TOpPattern", kCommReduce);
 
 MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues& call) {
@@ -69,9 +67,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues& call) {
   const DLTensor* pred = args->y_pred;
   const DLTensor* true_ = args->y_true;
   CHECK_EQ(pred->ndim, 2);
-  CHECK_EQ(true_->ndim, 2);
   CHECK_EQ(pred->shape[0], true_->shape[0]);
-  CHECK_EQ(pred->shape[1], true_->shape[1]);
   call->out = TensorValue::Assemble(pred->device, pred->dtype,
                                     std::vector<int64_t>{pred->shape[0], pred->shape[1]});
   call->device = pred->device;

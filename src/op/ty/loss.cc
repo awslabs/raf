@@ -22,9 +22,7 @@ Type NLLLossInfer(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType pred = Downcast<TensorType>(GetType(args->y_pred));
   TensorType true_ = Downcast<TensorType>(GetType(args->y_true));
-  CHECK(pred->shape.size() == 2 && true_->shape.size() == 2);
   CHECK(TypeCheckCompare(pred->shape[0], true_->shape[0], std::equal_to<int>()));
-  CHECK(TypeCheckCompare(pred->shape[1], true_->shape[1], std::equal_to<int>()));
   Array<tvm::PrimExpr> oshape = {1};
   return TensorType(oshape, pred->dtype);
 }
@@ -34,9 +32,7 @@ Type NLLLossBack(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType pred = Downcast<TensorType>(GetType(args->y_pred));
   TensorType true_ = Downcast<TensorType>(GetType(args->y_true));
-  CHECK(pred->shape.size() == 2 && true_->shape.size() == 2);
   CHECK(TypeCheckCompare(pred->shape[0], true_->shape[0], std::equal_to<int>()));
-  CHECK(TypeCheckCompare(pred->shape[1], true_->shape[1], std::equal_to<int>()));
   /* pred and true_ share the same shape here */
   Array<tvm::PrimExpr> oshape = {pred->shape[0], pred->shape[1]};
   return TensorType(oshape, pred->dtype);

@@ -26,16 +26,12 @@ MNM_OP_GRAD("mnm.op.smooth_l1_loss", SmoothL1LossGrad);
 
 Array<Expr> NllLossGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
                         const Expr& ograds) {
-  static auto dtrue = Op::Get("mnm.op.nll_loss_dtrue");
   static auto dpred = Op::Get("mnm.op.nll_loss_dpred");
-  // TODO(@were): I am not sure how is the dy here.
-  // CHECK_EQ(ograds.size(), 1);
-  // const Expr& dy = ograds[0];
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 2);
   const Expr& true_ = call->args[0];
   const Expr& pred = call->args[1];
-  return {Call(dtrue, {ograds, true_, pred}), Call(dpred, {ograds, true_, pred})};
+  return {NullValue<Expr>(), Call(dpred, {ograds, true_, pred})};
 }
 
 MNM_OP_GRAD("mnm.op.nll_loss", NllLossGrad);

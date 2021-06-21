@@ -63,15 +63,12 @@ _reg.register_broadcast_schedule("mnm.op.smooth_l1_loss_dtrue")
 @register_compute("mnm.op.nll_loss")
 def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs
-    n, c = pred.shape
-    redn = _tvm.te.reduce_axis((0, n), name='rn')
-    redc = _tvm.te.reduce_axis((0, c), name='rc')
+    n, _ = pred.shape
+    def fcompute(i):  # pylint: disable=unused-argument
+        return -pred[i, true[i]] / n
 
-    def fcompute(x):  # pylint: disable=unused-argument
-        return _tvm.te.sum(-pred[redn, redc] * true[redn, redc] / n,
-                           axis=[redc, redn])
-
-    loss = _tvm.te.compute((1, ), fcompute)
+    loss = _tvm.te.compute((n, ), fcompute)
+    loss = _topi.sum(loss, axis=[0], keepdims=True)
     return [loss]
 
 
@@ -80,9 +77,11 @@ _reg.register_injective_schedule("mnm.op.nll_loss")
 
 @register_compute("mnm.op.nll_loss_dpred")
 def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    dy, true, _ = inputs
-    n, c = true.shape
-    return [_tvm.te.compute((n, c), lambda x, y: -true[x, y] / n) * dy]
+    dy, true, pred = inputs
+    n, c = pred.shape
+    dpred = _tvm.te.compute((n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], \
+                             -dy/n, _tvm.tir.const(0)))
+    return [dpred]
 
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dpred")
@@ -96,7 +95,6 @@ def nllloss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-
 
 
 _reg.register_broadcast_schedule("mnm.op.nll_loss_dtrue")
-
 
 @register_compute("mnm.op.cross_entropy")
 def cross_entropy_compute(attr, inputs, output_type):  # pylint: disable=unused-argument

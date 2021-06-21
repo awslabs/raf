@@ -51,23 +51,25 @@ def test_nll_loss(shape, dtype):
     model = TestModel()
     n, c = shape
     m_pred, _ = randn((n, c), dtype=dtype)
-    m_true, _ = one_hot_torch(n, c, dtype=dtype)
+    m_true, _ = one_hot_torch(n, c)
     m_pred.requires_grad = True
     m_true.requires_grad = True
     ty_pred = TensorType((n, c), dtype=dtype)
+    ty_true = TensorType((n, ), dtype="int64")
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
-    record = model._internal(m_pred, m_true)
+    record = model._internal(m_true, m_pred)
     m_mod = record.mod
     m_mod = InferType()(m_mod)
-    desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
+    desired_type = FuncType([ty_true, ty_pred], fwd_ty)
     check_type(m_mod['main'], desired_type)
     # backward
     m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
-    bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
-    desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
+    bwd_ty = FuncType([fwd_ty], TupleType([ty_true, ty_pred]))
+    desired_type = FuncType([ty_true, ty_pred], TupleType([fwd_ty, bwd_ty]))
     check_type(m_mod['main'], desired_type)
+
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("shape", [

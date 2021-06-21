@@ -11,9 +11,9 @@ from mnm.testing import run_vm_model, check, randn_torch, get_device_list, with_
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_build():
     x = np.random.randn(1, 3, 32, 32)
-    y = np.random.randn(1, 10)
+    y = np.random.randn(1,)
     m_x = mnm.array(x, dtype="float32", device="cuda")
-    m_y = mnm.array(y, dtype='float32', device='cuda')
+    m_y = mnm.array(y, dtype='int64', device='cuda')
     model = resnet.MNMResNet50([3, 4, 6, 3])
     model.to(device='cuda')
     print("### Switch to training mode")
