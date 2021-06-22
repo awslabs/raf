@@ -113,23 +113,23 @@ def test_dp(config):
 
         op_nll_loss_dpred = mnm._ffi.op.GetOp('mnm.op.nll_loss_dpred')
         expr_x1 = tvm.relay.Call(op_nll_loss_dpred, [dy, y_true, var_a1])
-        var_x1 = tvm.relay.var('x0')
+        var_x0 = tvm.relay.var('x0')
 
         op_matmul_nt = mnm._ffi.op.GetOp('mnm.op.matmul_nt')
-        expr_x2 = tvm.relay.Call(op_matmul_nt, [var_x1, c])
-        var_x2 = tvm.relay.var('x1')
+        expr_x2 = tvm.relay.Call(op_matmul_nt, [var_x0, c])
+        var_x1 = tvm.relay.var('x1')
 
-        expr_t = tvm.relay.Tuple([var_x2])
+        expr_t = tvm.relay.Tuple([var_x1])
 
         op__allreduce = mnm._ffi.op.GetOp('mnm.op.comm.allreduce')
         expr_g = tvm.relay.Call(op__allreduce, [expr_t])
         var_g = tvm.relay.var('g')
 
         op_matmul_tn = mnm._ffi.op.GetOp('mnm.op.matmul_tn')
-        expr_x3 = tvm.relay.Call(op_matmul_tn, [x, var_x1])
-        var_x3 = tvm.relay.var('x2')
+        expr_x3 = tvm.relay.Call(op_matmul_tn, [x, var_x0])
+        var_x2 = tvm.relay.var('x2')
 
-        expr_t1 = tvm.relay.Tuple([var_x3])
+        expr_t1 = tvm.relay.Tuple([var_x2])
 
         op__allreduce = mnm._ffi.op.GetOp('mnm.op.comm.allreduce')
         expr_g1 = tvm.relay.Call(op__allreduce, [expr_t1])
@@ -137,7 +137,8 @@ def test_dp(config):
 
         zeros_like = mnm._ffi.op.GetOp('mnm.op.zeros_like')
         expr_x4 = tvm.relay.Call(zeros_like, [y_true])
-        var_x4 = tvm.relay.var('x3')
+        var_x3 = tvm.relay.var('x3')
+        var_x4 = tvm.relay.var('x4')
 
         expr_t2 = tvm.relay.Tuple([var_x4])
 
@@ -152,7 +153,7 @@ def test_dp(config):
         var_null = tvm.relay.var('null')
 
         expr_x5 = tvm.relay.Tuple([var_g, var_g2, var_g1])
-        var_x5 = tvm.relay.var('x4')
+        var_x5 = tvm.relay.var('x5')
 
         # Forward IR components
         expr_ret = tvm.relay.Tuple([var_a2, var_closure])
@@ -162,12 +163,13 @@ def test_dp(config):
         let9 = tvm.relay.Let(var_x5, expr_x5, var_x5)
         let8 = tvm.relay.Let(var_null, expr_null, let9)
         let7 = tvm.relay.Let(var_g2, expr_g2, let8)
-        let6 = tvm.relay.Let(var_x4, expr_x4, let7)
+        let_t = tvm.relay.Let(var_x4, var_x3, let7)
+        let6 = tvm.relay.Let(var_x3, expr_x4, let_t)
         let5 = tvm.relay.Let(var_g1, expr_g1, let6)
-        let4 = tvm.relay.Let(var_x3, expr_x3, let5)
+        let4 = tvm.relay.Let(var_x2, expr_x3, let5)
         let3 = tvm.relay.Let(var_g, expr_g, let4)
-        let2 = tvm.relay.Let(var_x2, expr_x2, let3)
-        let1 = tvm.relay.Let(var_x1, expr_x1, let2)
+        let2 = tvm.relay.Let(var_x1, expr_x2, let3)
+        let1 = tvm.relay.Let(var_x0, expr_x1, let2)
         closure_func = tvm.relay.Function([dy], let1)
 
         # Construct Forward IR
@@ -194,8 +196,8 @@ def test_dp(config):
     mod_before = mnm._ffi.pass_.AutoDataParallel()(mod_before)
     func_after = mod_before['main']
     func_expected = expected()
-
     text = func_after.astext()
+
     assert "mnm.op.comm.allreduce" in text
     assert "mnm.op.stream_sync" in text
     assert tvm.ir.structural_equal(func_after, func_expected)

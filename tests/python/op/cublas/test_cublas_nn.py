@@ -2,7 +2,7 @@
 import pytest
 import torch
 import mnm
-from mnm.testing import check, randn_torch, run_vm_model
+from mnm.testing import check, randn_torch, run_vm_model, with_seed
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("n", [1, 2, 4])
@@ -51,6 +51,7 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
 @pytest.mark.parametrize("broadcast", ["none", "a", "b"])
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
+@with_seed(0)
 def test_batch_matmul(dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments, invalid-name
     device = "cuda"
@@ -83,8 +84,8 @@ def test_batch_matmul(dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     t_at = torch.transpose(t_a, 1, 2) if transpose_a else t_a
     t_bt = torch.transpose(t_b, 1, 2) if transpose_b else t_b
     t_c = torch.matmul(t_at, t_bt) # pylint: disable=no-member
-    check(m_c, t_c)
-    check(v_c, t_c)
+    check(m_c, t_c, rtol=1e-4, atol=1e-4)
+    check(v_c, t_c, rtol=1e-4, atol=1e-4)
 
     # backward
     m_dc, t_dc = randn_torch(m_c.shape, device=device, dtype=dtype)
