@@ -1038,7 +1038,7 @@ def test_gelu_pattern(shape, dtype):
     check_from_relay(model, r_func, [m_x, m_y])
 
 @pytest.mark.parametrize("shape", [(4, 3, 4, 5)])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("keep", [0, 1])
 def test_sum(shape, axis, keep):
     class Sum(mnm.Model):
