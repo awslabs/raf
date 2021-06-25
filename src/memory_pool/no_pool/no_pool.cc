@@ -64,7 +64,8 @@ class NoPool final : public MemoryPool {
   }
 
   std::pair<float, float> GetPoolSize() override {
-    return std::make_pair(0, 0);
+    auto ret = api->GetPoolSize();
+    return {BytesToMegaBytes(ret.first), BytesToMegaBytes(ret.second)};
   }
 
  public:

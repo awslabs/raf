@@ -44,16 +44,16 @@ TEST(PageUnitPool, CPU) {
       ASSERT_EQ(address % align, 0);
     }
   }
-  auto pool_size = Memory::GetPoolSize(dev, "page_unit_pool");
+  auto pool_size = Memory::GetPoolSize(dev);
   ASSERT_EQ(pool_size.first, 0);  // No chunk is used.
 
   std::shared_ptr<Memory> result = Memory::Alloc(dev, 4096, 64);
-  pool_size = Memory::GetPoolSize(dev, "page_unit_pool");
+  pool_size = Memory::GetPoolSize(dev);
   auto used_size = pool_size.first * 1048576.0;
   auto abs_diff = (used_size > 4096) ? used_size - 4096 : 4096 - used_size;
   ASSERT_LE(abs_diff, 1);
   result.reset();
-  pool_size = Memory::GetPoolSize(dev, "page_unit_pool");
+  pool_size = Memory::GetPoolSize(dev);
   ASSERT_EQ(pool_size.first, 0);
   Memory::RemovePool(dev);
 }

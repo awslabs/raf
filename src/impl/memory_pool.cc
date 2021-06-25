@@ -8,6 +8,12 @@
 #include "mnm/memory_pool.h"
 #include "mnm/registry.h"
 
+#ifdef MNM_USE_CUDA
+#include <cuda.h>
+#else
+#define CUDA_VERSION 0
+#endif
+
 namespace mnm {
 namespace memory_pool {
 
@@ -16,7 +22,11 @@ using registry::PerDeviceStore;
 
 static std::unordered_map<int, std::string> default_strategies = {
     {DevType(DevType::kCPU()), "page_unit_pool"},
-    {DevType(DevType::kCUDA()), "page_unit_pool"},
+#if CUDA_VERSION >= 11030
+    {DevType(DevType::kCUDA()), "no_pool"}
+#else
+    {DevType(DevType::kCUDA()), "page_unit_pool"}
+#endif
 };
 
 class MemoryPoolManager {
@@ -33,13 +43,11 @@ class MemoryPoolManager {
       std::lock_guard<std::mutex> lock(reg.mutex_);
       if (result == nullptr) {
         // ok, it is truly a nullptr
+        pool_name = name;
         if (name == "") {
-          const std::string& default_name = default_strategies[dev.device_type];
-          snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s",
-                   default_name.c_str());
-        } else {
-          snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", name.c_str());
+          pool_name = default_strategies[dev.device_type];
         }
+        snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", pool_name.c_str());
         void* ret = GetPackedFunc(maker_name)(dev.operator DLContext());
         result.reset(static_cast<MemoryPool*>(ret));
         return result.get();
@@ -57,6 +65,7 @@ class MemoryPoolManager {
 
  public:
   PerDeviceStore<MemoryPool, false> reg;
+  std::string pool_name = "";
 };
 
 int64_t Memory::GetAllocBytes(const Device& dev, int64_t nbytes) {
@@ -76,14 +85,21 @@ std::vector<std::shared_ptr<Memory> > Memory::AllocBatch(const Device& dev,
   return mgr->GetPool(dev, "")->AllocBatch(nbytes, alignment);
 }
 
-std::pair<float, float> Memory::GetPoolSize(const Device& dev, const std::string& name) {
+std::pair<float, float> Memory::GetPoolSize(const Device& dev) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  return mgr->GetPool(dev, name)->GetPoolSize();
+  return mgr->GetPool(dev, "")->GetPoolSize();
 }
 
 void Memory::RemovePool(const Device& dev) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
   mgr->Remove(dev);
+}
+
+MemoryPool* Memory::ResetPool(const Device& dev) {
+  MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  std::string pool_name = mgr->pool_name;
+  mgr->Remove(dev);
+  return mgr->GetPool(dev, pool_name);
 }
 
 MemoryPool* Memory::GetPool(const Device& dev) {
@@ -107,6 +123,15 @@ void RemovePool(const Device& dev) {
 }
 
 /*!
+ * \brief ResetPool Enable a new memory pool with the same type as the current pool.
+ *
+ * \param dev The device that the pool belongs to.
+ */
+void ResetPool(const Device& dev) {
+  Memory::ResetPool(dev);
+}
+
+/*!
  * \brief InitPool Enable a new memory pool using the given pool_name. The memories requested after
  * this will be managed by this pool.
  *
@@ -125,6 +150,10 @@ MNM_REGISTER_GLOBAL("mnm.memory_pool.InitPool")
 
 MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed([](const tvm::Device& dev) {
   return RemovePool(Device(dev));
+});
+
+MNM_REGISTER_GLOBAL("mnm.memory_pool.ResetPool").set_body_typed([](const tvm::Device& dev) {
+  return ResetPool(Device(dev));
 });
 
 }  // namespace memory_pool

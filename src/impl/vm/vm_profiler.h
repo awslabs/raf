@@ -48,8 +48,6 @@ class VirtualMachineProfiler : public VirtualMachine {
   Array<Value> op_outputs_;
   /*! \brief whether to run memory profiling mode */
   bool profile_memory_ = false;
-  /*! \brief Memory pool name */
-  std::string memory_pool_name_ = "";
   /*! \brief The number of performed garbage collections for each device memory pool. */
   std::vector<size_t> num_gcs_;
   /*! \brief The peak of used memory and total allocated memory of each device memory pool */

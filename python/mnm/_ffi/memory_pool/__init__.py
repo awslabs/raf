@@ -3,4 +3,5 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from ._internal import InitPool
 from ._internal import RemovePool
+from ._internal import ResetPool
 from . import _make

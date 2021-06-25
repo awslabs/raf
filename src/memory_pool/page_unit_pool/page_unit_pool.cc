@@ -4,6 +4,7 @@
  * \brief A memory pool that use page as memory unit
  */
 #include <atomic>
+#include <tvm/relay/transform.h>
 #include "mnm/device_api.h"
 #include "mnm/memory_pool.h"
 #include "mnm/registry.h"
@@ -60,9 +61,10 @@ class NonOwnedMemory final : public Memory {
  */
 class PageUnitPool : public MemoryPool {
  public:
-  explicit PageUnitPool(Device dev) {
+  explicit PageUnitPool(Device dev, int64_t pool_limit = 0) {
     this->device = dev;
     this->api = DeviceAPI::Get(dev.device_type);
+    this->max_pool_size = pool_limit;
   }
 
   int64_t GetAllocBytes(int64_t nbytes) override {
@@ -78,14 +80,11 @@ class PageUnitPool : public MemoryPool {
     }
   }
 
-  inline float BytesToMegaBytes(float nbytes) {
-    return nbytes / 1048576.0;
-  }
-
   int64_t FreeUnusedChunks() {
     // Remove the memory from the pool and return the freed memory in bytes.
     // Since this is the last share_ptr, the removed memory will be deconstructed and freed.
     int64_t total_free = 0;
+    curr_pool_size = 0;
 
     std::vector<int64_t> page_nbytes;
     for (auto kv : _pool) {
@@ -96,6 +95,7 @@ class PageUnitPool : public MemoryPool {
       auto nchunk = _pool[nbytes].size();
       _pool[nbytes].remove_if([](std::shared_ptr<Memory>& mem) { return mem.use_count() == 1; });
       total_free += nbytes * (nchunk - _pool[nbytes].size());
+      curr_pool_size += nbytes * _pool[nbytes].size();
     }
     return total_free;
   }
@@ -120,12 +120,18 @@ class PageUnitPool : public MemoryPool {
     void* data = nullptr;
     if (nbytes > 0) {
       data = AllocDeviceMemory(nbytes, alignment);
+
+      // Out of memory or exceed the user-specified limitation, free unused chunks on other pages.
       size_t free_nbytes = SIZE_MAX;
-      while (data == nullptr && free_nbytes > 0) {
-        // Out of memory, free unused chunks on other pages and re-allocate them here.
+      if ((max_pool_size > 0 && curr_pool_size >= max_pool_size) ||
+          (data == nullptr && free_nbytes > 0)) {
         free_nbytes = FreeUnusedChunks();
         DLOG(WARNING) << "Failed to allocate " << BytesToMegaBytes(nbytes)
                       << " MBs). Ran GC and got " << BytesToMegaBytes(free_nbytes) << " more MBs";
+      }
+
+      // Re-allocate the desired chunk if needed.
+      if (data == nullptr && free_nbytes > 0) {
         data = AllocDeviceMemory(nbytes, alignment);
       }
       if (data == nullptr) {
@@ -136,6 +142,7 @@ class PageUnitPool : public MemoryPool {
                    << " MBs; Already allocated " << allocated << " MBs and used " << used << " MBs";
         throw;
       }
+      curr_pool_size += nbytes;
       std::shared_ptr<Memory> new_mem = std::make_shared<NonOwnedMemory>(data, device, api);
       _pool[nbytes].push_back(new_mem);
       return new_mem;
@@ -155,37 +162,49 @@ class PageUnitPool : public MemoryPool {
   }
 
   std::pair<float, float> GetPoolSize() override {
-    float used_total = 0;
-    float pool_total = 0;
+    // First query the device API and use its numbers if available.
+    auto ret = api->GetPoolSize();
+    float used_total = BytesToMegaBytes(ret.first);
+    float pool_total = BytesToMegaBytes(ret.second);
 
-    // First get all chunk sizes. Note that we do not count the number of used chunks
-    // with use_count > 1 here becuase the kv itself also holds a share_ptr.
-    std::vector<int64_t> page_nbytes;
-    for (auto kv : _pool) {
-      page_nbytes.push_back(kv.first);
-    }
-
-    // Then directly access each page to get the precise use_count.
-    for (auto nbytes : page_nbytes) {
-      size_t used_chunks = 0;
-      for (const auto& it : _pool[nbytes]) {
-        used_chunks += (it.use_count() > 1) ? 1 : 0;
+    if (used_total == 0 && pool_total == 0) {
+      // First get all chunk sizes. Note that we do not count the number of used chunks
+      // with use_count > 1 here becuase the kv itself also holds a share_ptr.
+      std::vector<int64_t> page_nbytes;
+      for (auto kv : _pool) {
+        page_nbytes.push_back(kv.first);
       }
-      used_total += BytesToMegaBytes(nbytes * used_chunks);
-      pool_total += BytesToMegaBytes(nbytes * _pool[nbytes].size());
+
+      // Then directly access each page to get the precise use_count.
+      for (auto nbytes : page_nbytes) {
+        size_t used_chunks = 0;
+        for (const auto& it : _pool[nbytes]) {
+          used_chunks += (it.use_count() > 1) ? 1 : 0;
+        }
+        used_total += BytesToMegaBytes(nbytes * used_chunks);
+        pool_total += BytesToMegaBytes(nbytes * _pool[nbytes].size());
+      }
     }
     return std::make_pair(used_total, pool_total);
   }
 
  public:
   static void* make(const Device& dev) {
-    return new PageUnitPool(dev);
+    int64_t max_pool_limit = 0;
+    if (const char* val = getenv("MNM_MEMORY_POOL_SIZE_LIMIT")) {
+      max_pool_limit = atol(val);
+    }
+    return new PageUnitPool(dev, max_pool_limit);
   }
 
  protected:
   Device device;
   /*! \brief The size of each memory page (exponent). */
   static const int64_t page_size_exp = 12;
+  /*! \brief The current pool size in bytes. */
+  int64_t curr_pool_size = 0;
+  /*! \brief The maximum allowed size (bytes) in the pool. 0 means no limit. */
+  int64_t max_pool_size = 0;
   /*! \brief The pointer to the DeviceAPI which determines the context of memory. */
   std::shared_ptr<DeviceAPI> api;
   /*! \brief The pool that hold the references to NonOwnedMemory. */

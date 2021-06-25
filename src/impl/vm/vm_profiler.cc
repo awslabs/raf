@@ -158,8 +158,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       VMContext ctx = args[0];
       if (profile_memory_) {
         for (auto device : devices_) {
-          memory_pool::Memory::RemovePool(device);
-          memory_pool::Memory::InitPool(device, memory_pool_name_);
+          memory_pool::Memory::ResetPool(device);
         }
 
         PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(true));
@@ -173,7 +172,6 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
                   Array<FloatImm>({FloatImm(DataType::Float(32), peak_memory_mbs_[i].first),
                                    FloatImm(DataType::Float(32), peak_memory_mbs_[i].second)}));
           ret.Set("GC_" + device_str, IntImm(DataType::Int(32), num_gcs_[i]));
-          memory_pool::Memory::RemovePool(device);
         }
         *rv = ret;
       } else {
@@ -207,7 +205,7 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
   std::vector<std::pair<float, float>> curr_mems;
   for (size_t i = 0; i < devices_.size(); ++i) {
     const auto& device = devices_[i];
-    auto curr_mem = memory_pool::Memory::GetPoolSize(device, memory_pool_name_);
+    auto curr_mem = memory_pool::Memory::GetPoolSize(device);
     curr_mems.push_back(curr_mem);
 
     float curr_used = 0, curr_total = 0;

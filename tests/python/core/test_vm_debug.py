@@ -2,7 +2,9 @@ import pytest
 import mnm
 import tvm
 from mnm.testing import check
+from mnm._core.core_utils import str2dev
 from mnm._core.profiler_vm import VMProfilerExecutor
+from mnm._ffi.memory_pool import InitPool
 from mnm.testing import get_device_list, randn, with_seed
 
 
@@ -46,7 +48,8 @@ def test_vm_debug(device, shape):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-def test_vm_memory_profile(device):
+@pytest.mark.parametrize("pool_name", ["no_pool", "page_unit_pool"])
+def test_vm_memory_profile(device, pool_name):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init,no-self-use
@@ -59,6 +62,8 @@ def test_vm_memory_profile(device):
             y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
             y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
             return y
+
+    InitPool(str2dev(device), pool_name)
 
     xshape = (32, 3, 224, 224)
     wshape = (3, 3, 3, 3)
@@ -81,12 +86,20 @@ def test_vm_memory_profile(device):
         [v[0].value for k, v in ret_map.items() if k.find(device) != -1 and not k.startswith("GC")]
     )
 
-    # Peak memory should have 2 tensors, but CuDNN Conv2D has workspace memory that
-    # depends on the Conv2D algorithm selected by CuDNN.
     if device == "cuda":
-        assert peak_memory >= 2 * buffer_size, "%.2f vs. %.2f" % (peak_memory, 2 * buffer_size)
+        if pool_name == "page_unit_pool" or float(mnm.build.with_cuda()) >= 11.3:
+            # Peak memory should have 2 tensors, but CuDNN Conv2D has workspace memory that
+            # depends on the Conv2D algorithm selected by CuDNN.
+            assert peak_memory >= 2 * buffer_size, "%.2f vs. %.2f" % (peak_memory, 2 * buffer_size)
+        else:
+            # CUDA 11.2- does not have CUDA memory pool, so the profiling results are always 0
+            # with no_pool.
+            assert peak_memory == 0
     else:
-        check(peak_memory, 2 * buffer_size, rtol=1e-1, atol=1e-1)
+        if pool_name == "page_unit_pool":
+            check(peak_memory, 2 * buffer_size, rtol=1e-1, atol=1e-1)
+        else:
+            assert peak_memory == 0
 
 
 if __name__ == "__main__":

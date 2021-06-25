@@ -35,10 +35,12 @@ class Memory {
       const Device& dev, const std::vector<int64_t>& nbytes,
       int64_t alignment = kDefaultMemoryAlignment);
 
-  static std::pair<float, float> GetPoolSize(const Device& dev, const std::string& name);
+  static std::pair<float, float> GetPoolSize(const Device& dev);
 
   // means "no longer considered as allocator when asking for new memory."
   static void RemovePool(const Device& dev);
+
+  static MemoryPool* ResetPool(const Device& dev);
 
   static MemoryPool* GetPool(const Device& dev);
 
@@ -65,6 +67,17 @@ class MemoryPool {
    * \param nbytes The requested bytes to be allocated.
    */
   virtual int64_t GetAllocBytes(int64_t nbytes) = 0;
+
+  /*!
+   * \brief A helper function to change bytes to mega-bytes.
+   *
+   * \param nbytes The number in bytes.
+   *
+   * \return The number in MBs.
+   */
+  inline float BytesToMegaBytes(float nbytes) {
+    return nbytes / 1048576.0;
+  }
 
   /*!
    * \brief Allocate a chunk of memory with given size and alignment.

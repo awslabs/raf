@@ -20,6 +20,12 @@ class DeviceAPI {
 
   virtual void FreeMemory(void* ptr) = 0;
 
+  // If the device API itself has a memory pool, this API is used to query
+  // the current pool status (used memory, allocated memory) in bytes.
+  virtual std::pair<int64_t, int64_t> GetPoolSize() {
+    return std::make_pair(0, 0);
+  };
+
   // Stream
   virtual void* CreateStream(const Device& dev) = 0;
 

@@ -25,7 +25,7 @@ std::string UseCuDNN() {
 }
 
 std::string UseLLVM() {
-  return MNM_USE_CUDNN;
+  return MNM_USE_LLVM;
 }
 
 std::string UseMPI() {

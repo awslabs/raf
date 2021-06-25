@@ -6,3 +6,5 @@ from mnm._lib import _APIS
 InitPool = _APIS.get("mnm.memory_pool.InitPool", None)
 # Defined in ./src/impl/memory_pool.cc
 RemovePool = _APIS.get("mnm.memory_pool.RemovePool", None)
+# Defined in ./src/impl/memory_pool.cc
+ResetPool = _APIS.get("mnm.memory_pool.ResetPool", None)
