@@ -53,13 +53,129 @@ inline DType::operator cudnnDataType_t() const {
 namespace op {
 namespace cudnn {
 
+inline std::string cudnnDataTypeToString(cudnnDataType_t dtype) {
+  switch (dtype) {
+    case CUDNN_DATA_FLOAT:
+      return "CUDNN_DATA_FLOAT";
+    case CUDNN_DATA_DOUBLE:
+      return "CUDNN_DATA_DOUBLE";
+    case CUDNN_DATA_HALF:
+      return "CUDNN_DATA_HALF";
+    case CUDNN_DATA_INT8:
+      return "CUDNN_DATA_INT8";
+    case CUDNN_DATA_INT32:
+      return "CUDNN_DATA_INT32";
+    case CUDNN_DATA_INT8x4:
+      return "CUDNN_DATA_INT8x4";
+#if CUDNN_VERSION >= 7100
+    case CUDNN_DATA_UINT8:
+      return "CUDNN_DATA_UINT8";
+    case CUDNN_DATA_UINT8x4:
+      return "CUDNN_DATA_UINT8x4";
+#endif
+    default:
+      std::ostringstream oss;
+      oss << "Unknown data type " << static_cast<int>(dtype);
+      return oss.str();
+  }
+}
+
+inline std::string cudnnMathTypeToString(cudnnMathType_t type) {
+  switch (type) {
+    case CUDNN_DEFAULT_MATH:
+      return "CUDNN_DEFAULT_MATH";
+    case CUDNN_TENSOR_OP_MATH:
+      return "CUDNN_TENSOR_OP_MATH";
+    case CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION:
+      return "CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION";
+#if CUDNN_VERSION >= 8000
+    case CUDNN_FMA_MATH:
+      return "CUDNN_FMA_MATH";
+#endif
+    default:
+      std::ostringstream oss;
+      oss << "Unknown math type " << static_cast<int>(type);
+      return oss.str();
+  }
+}
+
+inline std::string conv2dFwdAlgoToString(const cudnnConvolutionFwdAlgo_t algo) {
+  switch (algo) {
+    case CUDNN_CONVOLUTION_FWD_ALGO_GEMM:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_GEMM";
+    case CUDNN_CONVOLUTION_FWD_ALGO_FFT:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_FFT";
+    case CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING";
+    case CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM";
+    case CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM";
+    case CUDNN_CONVOLUTION_FWD_ALGO_DIRECT:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_DIRECT";
+    case CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD";
+    case CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED:
+      return "CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED";
+    default:
+      std::ostringstream oss;
+      oss << "Unknown cudnn convolution forward algorithm " << static_cast<int>(algo);
+      return oss.str();
+  }
+}
+
+inline std::string conv2dBwdDataAlgoToString(const cudnnConvolutionBwdDataAlgo_t algo) {
+  switch (algo) {
+    case CUDNN_CONVOLUTION_BWD_DATA_ALGO_0:
+      return "CUDNN_CONVOLUTION_BWD_DATA_ALGO_0";
+    case CUDNN_CONVOLUTION_BWD_DATA_ALGO_1:
+      return "CUDNN_CONVOLUTION_BWD_DATA_ALGO_1";
+    case CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT:
+      return "CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT";
+    case CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING:
+      return "CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING";
+    case CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD:
+      return "CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD";
+    case CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED:
+      return "CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED";
+    default:
+      std::ostringstream oss;
+      oss << "Unknown cudnn convolution backward data algorithm " << static_cast<int>(algo);
+      return oss.str();
+  }
+}
+
+inline std::string conv2dBwdFilterAlgoToString(const cudnnConvolutionBwdFilterAlgo_t algo) {
+  switch (algo) {
+    case CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0:
+      return "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0";
+    case CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1:
+      return "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1";
+    case CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT:
+      return "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT";
+    case CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3:
+      return "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3";
+    case CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED:
+      return "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED";
+    case CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING:
+      return "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING";
+    default:
+      std::ostringstream oss;
+      oss << "Unknown cudnn convolution backward filter algorithm " << static_cast<int>(algo);
+      return oss.str();
+  }
+}
+
 class CUDNNThreadEntry {
  public:
   CUDNNThreadEntry();
   static CUDNNThreadEntry* ThreadLocal();
 
  public:
-  cudnnHandle_t handle{nullptr};
+  /*! \brief cudnn handle. */
+  cudnnHandle_t handle = nullptr;
+  /*! \brief Whether to benchmark the performance when choosing CUDNN algorithms. */
+  bool benchmark = true;
 };
 
 #if CUDNN_VERSION >= 7100

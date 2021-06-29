@@ -385,7 +385,7 @@ void ContribDropout(const CallValues& call) {
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   std::vector<int64_t> states_shape;
   Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
-      "mnm.op.cudnn.manual.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
+      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
   std::vector<int64_t> reserve_space_shape;
   // The CUDNN compute requires in_states. While the TVMJIT compute don't support in_states for now.
   if (args->in_states.defined()) {

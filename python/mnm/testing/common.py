@@ -8,7 +8,7 @@ import numpy as np
 import mxnet as mx
 import torch
 import mnm
-from .._core.backend import Backend
+from .._core.backends import Backend
 
 def check_type(expr, typ):
     """Helper function to check expr.checked_type == typ"""

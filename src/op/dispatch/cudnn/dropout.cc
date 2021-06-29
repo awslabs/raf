@@ -1,7 +1,7 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2021 by Contributors
  * \file src/op/dispatch/cudnn/dropout.cc
- * \brief Manually-written cuDNN binding for dropout
+ * \brief cuDNN dropout operators.
  */
 #include "mnm/ir.h"
 #include "mnm/registry.h"
@@ -15,29 +15,28 @@
 namespace mnm {
 namespace op {
 namespace cudnn {
-namespace manual {
 
 using namespace mnm::ir;
 using namespace mnm::memory_pool;
 using namespace mnm::value;
 
-Integer GetDropoutStateSizeInBytes() {
+int64_t GetDropoutStateSizeInBytes() {
   size_t stateSizeInBytes;
   CUDNN_CALL(cudnnDropoutGetStatesSize(CUDNNThreadEntry::ThreadLocal()->handle, &stateSizeInBytes));
-  return tvm::Integer(stateSizeInBytes);
+  return stateSizeInBytes;
 }
 
-Integer GetDropoutReserveSpaceSizeInBytes(TensorType x) {
+int64_t GetDropoutReserveSpaceSizeInBytes(TensorType x) {
   size_t reserveSpaceSizeInBytes;
   cudnnTensorDescriptor_t xdesc = NormalizeTensorType(x);
   CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(xdesc, &reserveSpaceSizeInBytes));
-  return Integer(reserveSpaceSizeInBytes);
+  CUDNN_CALL(cudnnDestroyTensorDescriptor(xdesc));
+  return reserveSpaceSizeInBytes;
 }
 
-TensorValue GetDropoutState(FloatImm dropout, Integer seed) {
+TensorValue GetDropoutState(double dropout, int64_t seed) {
   Device device(DevType::kCUDA(), 0);
-  size_t stateSizeInBytes;
-  CUDNN_CALL(cudnnDropoutGetStatesSize(CUDNNThreadEntry::ThreadLocal()->handle, &stateSizeInBytes));
+  size_t stateSizeInBytes = GetDropoutStateSizeInBytes();
   cudnnDropoutDescriptor_t dropoutDesc;
   CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
   std::shared_ptr<Memory> memory = memory_pool::Memory::Alloc(device, stateSizeInBytes);
@@ -46,14 +45,16 @@ TensorValue GetDropoutState(FloatImm dropout, Integer seed) {
                             {static_cast<int64_t>(stateSizeInBytes)}, {}, memory->data, memory);
   DLTensor* dlt = state;
   CUDNN_CALL(cudnnSetDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
-                                       dropout->value, dlt->data, stateSizeInBytes, seed->value));
+                                       dropout, dlt->data, stateSizeInBytes,
+                                       static_cast<uint64_t>(seed)));
+  CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropoutDesc));
   return state;
 }
 
-MNM_REGISTER_GLOBAL("mnm.op.cudnn.manual.GetDropoutStateSizeInBytes")
+MNM_REGISTER_GLOBAL("mnm.backend.cudnn.GetDropoutStateSizeInBytes")
     .set_body_typed(GetDropoutStateSizeInBytes);
-MNM_REGISTER_GLOBAL("mnm.op.cudnn.manual.GetDropoutState").set_body_typed(GetDropoutState);
-MNM_REGISTER_GLOBAL("mnm.op.cudnn.manual.GetDropoutReserveSpaceSizeInBytes")
+MNM_REGISTER_GLOBAL("mnm.backend.cudnn.GetDropoutState").set_body_typed(GetDropoutState);
+MNM_REGISTER_GLOBAL("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")
     .set_body_typed(GetDropoutReserveSpaceSizeInBytes);
 
 static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
@@ -95,6 +96,7 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(ydesc));
     CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropoutDesc));
   }
+
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::DropoutArgs>();
     CHECK(args != nullptr);
@@ -107,6 +109,7 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
                                    x->data, ydesc, out->data, reserve_space->data,
                                    reserveSpaceSizeInBytes));
   }
+
   void Execute(const std::vector<Value>& inputs, Value output) {
     CHECK_EQ(inputs.size(), 2);
     TupleValue tv = Downcast<TupleValue>(output);
@@ -118,13 +121,14 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
                                    x->data, ydesc, out->data, reserve_space->data,
                                    reserveSpaceSizeInBytes));
   }
+
   static OpEnv* make(const CallValues& cv) {
     return new DropoutImplementedByCUDNNDropoutForward(cv);
   }
 };
 
 MNM_OP_DISPATCH("mnm.op._contrib_dropout", DropoutImplementedByCUDNNDropoutForward::make,
-                DevType::kCUDA(), "generated_cudnn");
+                DevType::kCUDA(), "cudnn");
 
 class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
   cudnnDropoutDescriptor_t dropoutDesc;
@@ -190,9 +194,8 @@ class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
 };
 
 MNM_OP_DISPATCH("mnm.op._contrib_dropout_dx", DropoutImplementedByCUDNNDropoutBackward::make,
-                DevType::kCUDA(), "generated_cudnn");
+                DevType::kCUDA(), "cudnn");
 
-}  // namespace manual
 }  // namespace cudnn
 }  // namespace op
 }  // namespace mnm

@@ -210,7 +210,7 @@ class TorchResNet50(nn.Module):
             layers.append(TorchBottleneck(self.inplanes, planes, stride=1))
         return nn.Sequential(*layers)
 
-    def forward(self, x, y_true):  # pylint: disable=arguments-differ
+    def forward_infer(self, x):  # pylint: disable=arguments-differ
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
         x = self.conv1(x)
         x = self.bn1(x)
@@ -223,7 +223,12 @@ class TorchResNet50(nn.Module):
         x = F.avg_pool2d(x, 7)
         x = torch.flatten(x, 1)  # pylint: disable=no-member
         x = self.fc1(x)
-        y_pred = F.log_softmax(x, dim=-1)
+        return x
+
+    def forward(self, x, y_true):
+        import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+        y = self.forward_infer(x)
+        y_pred = F.log_softmax(y, dim=-1)
         loss = F.nll_loss(y_pred, y_true)
         return loss
 
@@ -334,18 +339,24 @@ class MNMResNet50(mnm.Model):
         return loss
 
 
-def get_model(num_blocks):
+def get_model(num_blocks, train=True):
     """get resnet model"""
     m_model = MNMResNet50(num_blocks)
     t_model = TorchResNet50(num_blocks)
     init(m_model, t_model)
-    m_model.train_mode()
-    t_model.train()
+    if train:
+        m_model.train_mode()
+        t_model.train()
+    else:
+        m_model.infer_mode()
+        t_model.eval()
     return m_model, t_model
 
 
-def get_input(batch_size=1, device="cuda"):
+def get_input(batch_size=1, device="cuda", train=True):
     """get resnet input"""
     m_x, t_x = randn_torch([batch_size, 3, 224, 224], device=device, requires_grad=True)
+    if not train:
+        return [(m_x,), (t_x,)]
     m_y, t_y = one_hot_torch(batch_size, num_classes=1000, device=device)
     return [(m_x, m_y), (t_x, t_y)]

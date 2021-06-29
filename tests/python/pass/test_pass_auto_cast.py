@@ -3,7 +3,7 @@ import pytest
 import mnm
 from tvm.ir import PrimType
 from mnm.ir import AsText
-from mnm.testing import randn, check, get_device_list
+from mnm.testing import randn, check
 
 
 def verify_correctness(model, device, args):
@@ -34,8 +34,9 @@ def verify_cast_num(model, args, expected):
     assert cast_cnt == expected, "Unexpected #cast: %d vs. %d\n%s" % (cast_cnt, expected, text)
 
 
-@pytest.mark.parametrize("device", get_device_list())
-def test_basic(device):
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+def test_basic():
+    device = "cuda"
     xshape = (1, 3, 224, 224)
     wshape = (32, 3, 3, 3)
 
@@ -57,15 +58,15 @@ def test_basic(device):
     args = [m_x, m_w, m_b]
 
     # cast x, w, b to fp16; cast x2 back to fp32.
-    verify_cast_num(model, args, 4)
+    verify_cast_num(model, args, 3)
     verify_correctness(model, device, args)
 
     def disable_bias_add(args, ret_type):
         return [PrimType("float32"), PrimType("float32"), PrimType(None), PrimType("float32")]
 
     with mnm.amp.CustomTypeHint({"mnm.op.bias_add": disable_bias_add}):
-        # cast x, w to fp16; cast x1 back to fp32.
-        verify_cast_num(model, args, 3)
+        # cast x, w to fp16; cast a1 back to fp32; cast a2 to fp16
+        verify_cast_num(model, args, 4)
         verify_correctness(model, device, args)
 
 
@@ -98,3 +99,7 @@ def test_tuple_n_output_dtype(out_dtype):
         # If output dtype if fp16, then cast the rest 3 outputs to fp16: Total 5 casts.
         verify_cast_num(model, args, 3 if out_dtype == "float32" else 5)
         verify_correctness(model, device, args)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import torch
 import torch.nn as nn
@@ -5,7 +6,7 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear
-from mnm.testing import check, one_hot_torch, randn_torch, t2m_param
+from mnm.testing import check, one_hot_torch, randn_torch, t2m_param, run_vm_model
 
 class TorchLeNet(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
@@ -128,6 +129,35 @@ def test_lenet(config):
     t_model.eval()
     m_model(m_x)
     t_model(t_x, t_y)
+
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.parametrize("config", [
+    (32, 100),
+    (28, 10),
+])
+def test_lenet_amp(config):
+    t_model = TorchLeNet(*config)
+    t_model.to(device='cuda')
+    m_model = MNMLeNet(*config)
+    m_model.to(device='cuda')
+    m_model.conv1.w = t2m_param(t_model.conv1.weight)
+    m_model.conv2.w = t2m_param(t_model.conv2.weight)
+    m_model.linear1.w = t2m_param(t_model.linear1.weight)
+    m_model.linear1.b = t2m_param(t_model.linear1.bias)
+    m_model.linear2.w = t2m_param(t_model.linear2.weight)
+    m_model.linear2.b = t2m_param(t_model.linear2.bias)
+    m_model.linear3.w = t2m_param(t_model.linear3.weight)
+    m_model.linear3.b = t2m_param(t_model.linear3.bias)
+    m_x, t_x = randn_torch([1, 3, config[0], config[0]], requires_grad=False, device="cuda")
+
+    m_model.infer_mode()
+    t_model.eval()
+    with torch.cuda.amp.autocast():
+        t_y = t_model.forward_infer(t_x)
+    m_y = run_vm_model(m_model, "cuda", [m_x], fuse_level=1, pass_seq=mnm._ffi.pass_.AutoCast())
+    check(m_y, t_y, rtol=1e-3, atol=1e-3)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

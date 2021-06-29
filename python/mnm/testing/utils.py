@@ -44,9 +44,13 @@ def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, sch_file=Non
     record = model._internal(*args)
     mod = record.mod
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    if pass_seq is not None:
-        mod = pass_seq(mod)
-    with mnm.ir.PassContext(opt_level=opt_level, config={"mnm.fuse_level": fuse_level}):
+    config = {
+        "mnm.fuse_level": fuse_level,
+    }
+    with mnm.ir.PassContext(opt_level=opt_level, config=config):
+        mod = mnm._ffi.pass_.InferType()(mod)
+        if pass_seq is not None:
+            mod = pass_seq(mod)
         executor = VMExecutor(mod, device)
     return executor.make_executor(sch_file=sch_file), inputs
 
@@ -62,9 +66,9 @@ def get_vm_profiler(model, device, args, fuse_level=3):
     return executor, inputs
 
 
-def run_vm_model(model, device, args, opt_level=2, fuse_level=3):
+def run_vm_model(model, device, args, opt_level=2, fuse_level=3, pass_seq=None):
     """Helper function to execute model with VM"""
-    vm, inputs = get_vm_executor(model, device, args, opt_level, fuse_level)
+    vm, inputs = get_vm_executor(model, device, args, opt_level, fuse_level, pass_seq=pass_seq)
     out = vm(*inputs)
     return out
 

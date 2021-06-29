@@ -310,7 +310,7 @@ Type ContribDropoutInfer(const CallValues& value) {
   TensorType x_ty = Downcast<TensorType>(GetType(args->x));
   TensorType states_ty;
   Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
-      "mnm.op.cudnn.manual.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
+      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
   Array<PrimExpr> reserve_space_shape = {reserve_space_size_in_bytes};
   TensorType reserve_space(reserve_space_shape, DataType::UInt(8));
   if (args->in_states.defined()) {

@@ -5,7 +5,6 @@ import pytest
 import torch
 import torch.nn.functional as F
 import numpy as np
-import tvm
 
 import mnm
 from mnm.testing import randint, randn_torch, run_vm_model, check, asnumpy
@@ -264,8 +263,8 @@ def test_mnm_dropout(dropout):
     class TestModel(mnm.Model):
         def build(self):
             self.dropout = dropout
-            self.dropout_state = ndarray.from_tensor_value(mnm._ffi.op.cudnn.manual.GetDropoutState(
-                tvm.tir.FloatImm("float32", dropout), random.getrandbits(31))).to(device="cuda")
+            self.dropout_state = ndarray.from_tensor_value(mnm._ffi.backend.cudnn.GetDropoutState(
+                dropout, random.getrandbits(63))).to(device="cuda")
 
         @mnm.model.trace
         def forward(self, x):

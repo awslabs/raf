@@ -1,6 +1,7 @@
 """Auto generated. Do not touch."""
 # pylint: disable=redefined-builtin,line-too-long
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+from __future__ import absolute_import
 from ._internal import _contrib_dropout
 from ._internal import _contrib_dropout_dx
 from ._internal import abs

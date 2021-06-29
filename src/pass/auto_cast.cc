@@ -350,7 +350,7 @@ TVM_REGISTER_PASS_CONFIG_OPTION("mnm.amp.out_dtype", String);
 Pass AutoCast() {
   PassContext pass_ctx = PassContext::Current();
   String amp_dtype = pass_ctx->GetConfig("mnm.amp.dtype", String("float16")).value();
-  String out_dtype = pass_ctx->GetConfig("mnm.amp.out_dtype", String("float32")).value();
+  String out_dtype = pass_ctx->GetConfig("mnm.amp.out_dtype", String("float16")).value();
   DLOG(INFO) << "AMP dtype: " << amp_dtype << ", output dtype: " << out_dtype;
   runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {

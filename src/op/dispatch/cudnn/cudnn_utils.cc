@@ -20,6 +20,17 @@ CUDNNThreadEntry* CUDNNThreadEntry::ThreadLocal() {
   return CUDNNThreadStore::Get();
 }
 
+bool CudnnConfigGetBenchmark() {
+  return CUDNNThreadEntry::ThreadLocal()->benchmark;
+}
+
+void CudnnConfigSetBenchmark(bool benchmark) {
+  CUDNNThreadEntry::ThreadLocal()->benchmark = benchmark;
+}
+
+MNM_REGISTER_GLOBAL("mnm.backend.cudnn.ConfigGetBenchmark").set_body_typed(CudnnConfigGetBenchmark);
+MNM_REGISTER_GLOBAL("mnm.backend.cudnn.ConfigSetBenchmark").set_body_typed(CudnnConfigSetBenchmark);
+
 }  // namespace cudnn
 }  // namespace op
 }  // namespace mnm

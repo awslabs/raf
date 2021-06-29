@@ -41,7 +41,7 @@ OpDispatch::TDispatchList* OpDispatch::Get(const Op& op, DevType device_type) {
 
 template <typename TList>
 TList get_preferred_backends(TList* default_list) {
-  const static auto* f = registry::Registry::Get("backend.preferred_backends");
+  const static auto* f = registry::Registry::Get("mnm.backend.preferred_backends");
   CHECK(f);
   ObjectRef preferred_backends_obj = (*f)();
   TList ret;
@@ -69,6 +69,7 @@ std::shared_ptr<OpEnv> OpDispatch::Dispatch(const CallValues& call) {
     const auto& maker = e.maker;
     std::shared_ptr<OpEnv> op_env(static_cast<OpEnv*>(maker(call)));
     if (op_env) {
+      DLOG(INFO) << "use " << e.backend << " for op " << op->name;
       return op_env;
     }
   }
