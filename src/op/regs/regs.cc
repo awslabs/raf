@@ -102,6 +102,8 @@ static const char cross_entropy_dtrue[] = "mnm.op.cross_entropy_dtrue";
 static const char dense[] = "mnm.op.dense";
 static const char device_copy[] = "mnm.op.device_copy";
 static const char divide[] = "mnm.op.divide";
+static const char embedding[] = "mnm.op.embedding";
+static const char embedding_dx[] = "mnm.op.embedding_dx";
 static const char equal[] = "mnm.op.equal";
 static const char erf[] = "mnm.op.erf";
 static const char erf_dx[] = "mnm.op.erf_dx";
@@ -542,6 +544,21 @@ Attrs DropoutDx(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::Tensor, dy);
   MNM_TAPE(1, ffi2schema::Tensor, reserve_space);
   MNM_POD(2, ffi2schema::Double, p);
+  return Attrs(attrs);
+}
+
+Attrs Embedding(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::EmbeddingArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, indices);
+  return Attrs(attrs);
+}
+
+Attrs EmbeddingDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::EmbeddingDxArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::ArrayLike, num_weight);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_TAPE(2, ffi2schema::Tensor, indices);
   return Attrs(attrs);
 }
 
@@ -1807,6 +1824,25 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.divide").set_body([](TVMArgs args, TVMRetValue* 
   MNM_PRELUDE(divide, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.embedding").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(embedding, 2, ffi2schema::Embedding,
+              schema::EmbeddingArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->indices));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.embedding_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(embedding_dx, 3, ffi2schema::EmbeddingDx,
+              schema::EmbeddingDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->num_weight));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->indices));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3314,6 +3350,21 @@ Array<Expr> DropoutDx(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Embedding(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, indices);
+  MNM_RET();
+}
+
+Array<Expr> EmbeddingDx(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::ArrayLike, num_weight);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::Tensor, indices);
+  MNM_RET();
+}
+
 Array<Expr> ExpandDims(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4025,6 +4076,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.dense").set_body(MNM_SYMBOLIC_API(dense, 2, Bina
 MNM_REGISTER_GLOBAL("mnm.op.sym.device_copy")
     .set_body(MNM_SYMBOLIC_API(device_copy, 3, DeviceCopy));
 MNM_REGISTER_GLOBAL("mnm.op.sym.divide").set_body(MNM_SYMBOLIC_API(divide, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.embedding").set_body(MNM_SYMBOLIC_API(embedding, 2, Embedding));
+MNM_REGISTER_GLOBAL("mnm.op.sym.embedding_dx")
+    .set_body(MNM_SYMBOLIC_API(embedding_dx, 3, EmbeddingDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.equal").set_body(MNM_SYMBOLIC_API(equal, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.erf").set_body(MNM_SYMBOLIC_API(erf, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.erf_dx").set_body(MNM_SYMBOLIC_API(erf_dx, 3, UnaryDx));
@@ -4542,6 +4596,23 @@ Attrs DropoutDx(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, dy);
   MNM_REQUIRED(1, value2schema::Tensor, reserve_space);
   MNM_OPTIONAL(2, value2schema::Double, p);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Embedding(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::EmbeddingArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, indices);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs EmbeddingDx(const Array<Value>& values) {
+  MNM_PRELUDE(3, 3, schema::EmbeddingDxArgs);
+  MNM_REQUIRED(0, value2schema::ArrayLike, num_weight);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_REQUIRED(2, value2schema::Tensor, indices);
   return Attrs(attrs);
 }
 
@@ -5787,6 +5858,33 @@ int DropoutDx(const std::string& field) {
     return 1;
   }
   if (field == "p") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Embedding(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "indices") {
+    return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int EmbeddingDx(const std::string& field) {
+  if (field == "num_weight") {
+    return 0;
+  }
+  if (field == "dy") {
+    return 1;
+  }
+  if (field == "indices") {
     return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
@@ -7227,6 +7325,14 @@ MNM_BIND_SCHEMA("mnm.op.divide", names::divide,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.divide", names::divide,
                             schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.embedding", names::embedding,
+                value2schema::Embedding);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.embedding", names::embedding,
+                            schema_field_idx::Embedding);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.embedding_dx", names::embedding_dx,
+                value2schema::EmbeddingDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.embedding_dx", names::embedding_dx,
+                            schema_field_idx::EmbeddingDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.equal", names::equal,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.equal", names::equal,
@@ -7747,6 +7853,8 @@ MNM_REGISTER_OBJECT_REFLECT(ConvTransposeDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(EmbeddingArgs);
+MNM_REGISTER_OBJECT_REFLECT(EmbeddingDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(FreeArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);

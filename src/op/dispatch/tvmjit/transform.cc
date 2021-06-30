@@ -125,7 +125,8 @@ HashKey RepeatHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVMJIT(Repeat, "mnm.op.repeat", RepeatArgs, RepeatSchema2Args, RepeatSchemaArgNames,
            RepeatSchema2Attrs, RepeatHasher);
 
-std::vector<Value> TakeSchema2Args(const TakeArgs* args) {
+template <typename T>
+std::vector<Value> TakeSchema2Args(const T* args) {
   return {args->x, args->indices};
 }
 
@@ -158,8 +159,11 @@ HashKey TakeHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVMJIT(Take, "mnm.op.take", TakeArgs, TakeSchema2Args, TakeSchemaArgNames, TakeSchema2Attrs,
-           TakeHasher);
+MNM_TVMJIT(Take, "mnm.op.take", TakeArgs, TakeSchema2Args<TakeArgs>, TakeSchemaArgNames,
+           TakeSchema2Attrs, TakeHasher);
+
+MNM_TVMJIT(Embedding, "mnm.op.embedding", EmbeddingArgs, TakeSchema2Args<EmbeddingArgs>,
+           TakeSchemaArgNames, GenericAttrs, GenericHasher);
 
 std::vector<Value> TakeDxSchema2Args(const TakeDxArgs* args) {
   return {args->x, args->y, args->dy, args->indices};
@@ -196,6 +200,34 @@ HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
 
 MNM_TVMJIT(TakeDx, "mnm.op.take_dx", TakeDxArgs, TakeDxSchema2Args, TakeDxSchemaArgNames,
            TakeDxSchema2Attrs, TakeDxHasher);
+
+std::vector<Value> EmbeddingDxSchema2Args(const EmbeddingDxArgs* args) {
+  return {args->dy, args->indices};
+}
+
+std::vector<std::string> EmbeddingDxSchemaArgNames(const op::CallValues& call) {
+  return {"dy", "indices"};
+}
+
+TVM_REGISTER_NODE_TYPE(DimAttrs);
+
+Attrs EmbeddingDxSchema2Attrs(const EmbeddingDxArgs* args) {
+  auto attrs = make_object<DimAttrs>();
+  attrs->dim = args->num_weight.as<IntValueObj>()->value;
+  return Attrs(attrs);
+}
+
+HashKey EmbeddingDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                          const EmbeddingDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  const auto* v = args->num_weight.as<IntValueObj>();
+  CHECK(v != nullptr);
+  key << v->value;
+  return key;
+}
+
+MNM_TVMJIT(EmbeddingDx, "mnm.op.embedding_dx", EmbeddingDxArgs, EmbeddingDxSchema2Args,
+           EmbeddingDxSchemaArgNames, EmbeddingDxSchema2Attrs, EmbeddingDxHasher);
 
 std::vector<Value> SequenceMaskSchema2Args(const SequenceMaskArgs* args) {
   return {args->x, args->sequence_length};

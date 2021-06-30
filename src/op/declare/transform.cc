@@ -194,7 +194,7 @@ MNM_OP_DECLARE("mnm.op.resize", [](const CallValues& call) {
   call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
 
-MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
+void TakeFunc(const CallValues& call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -214,19 +214,49 @@ MNM_OP_DECLARE("mnm.op.take", [](const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->device = x->device;
-}).set_attr<TOpPattern>("TOpPattern", kInjective);
+}
+
+MNM_OP_DECLARE("mnm.op.take", TakeFunc).set_attr<TOpPattern>("TOpPattern", kInjective);
 
 MNM_OP_DECLARE("mnm.op.take_dx", [](const CallValues& call) {
   const auto* args = call->args.as<TakeDxArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  ;
   call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->device = x->device;
 }).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+void EmbeddingFunc(const CallValues& call) {
+  const auto* args = call->args.as<EmbeddingArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* indices = args->indices;
+  std::vector<int64_t> shape;
+  shape.insert(shape.end(), indices->shape, indices->shape + indices->ndim);
+  shape.insert(shape.end(), x->shape + 1, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+}
+
+MNM_OP_DECLARE("mnm.op.embedding", EmbeddingFunc).set_attr<TOpPattern>("TOpPattern", kInjective);
+
+MNM_OP_DECLARE("mnm.op.embedding_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<EmbeddingDxArgs>();
+  CHECK(args != nullptr);
+  std::vector<int64_t> shape;
+  DLTensor* dy = args->dy;
+  shape.push_back(args->num_weight.as<IntValueObj>()->value);
+  shape.push_back(dy->shape[dy->ndim - 1]);
+  call->out = TensorValue::Assemble(/*dev=*/dy->device,
+                                    /*dtype=*/dy->dtype,
+                                    /*shape=*/shape);
+  call->device = dy->device;
+}).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   const auto* args = call->args.as<ExpandDimsArgs>();

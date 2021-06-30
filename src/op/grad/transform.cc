@@ -264,6 +264,20 @@ Array<Expr> TakeGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
 
 MNM_OP_GRAD("mnm.op.take", TakeGrad);
 
+Array<Expr> EmbeddingGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                          const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.embedding_dx");
+  static auto shape = Op::Get("mnm.op.shape");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_EQ(call->args.size(), 2);
+  const Expr& x = call->args[0];
+  const Expr& indices = call->args[1];
+  const Expr& x_shape = Call(shape, {x});
+  return {Call(op_dx, {TupleGetItem(x_shape, 0), dy, indices})};
+}
+
+MNM_OP_GRAD("mnm.op.embedding", EmbeddingGrad);
+
 Array<Expr> ScatterGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                         const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.scatter_dx");

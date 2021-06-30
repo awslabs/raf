@@ -17,6 +17,18 @@ mnm_find_config()
 
 if (NOT ${MNM_USE_CUDA} STREQUAL "OFF")
   enable_language(CUDA)
+  if((NOT DEFINED ${CMAKE_CUDA_ARCHITECTURES}) AND (NOT DEFINED ENV{CUDAARCHS}))
+	set(CMAKE_CUDA_ARCHITECTURES 70 75)
+  endif()
+    file(GLOB_RECURSE MNM_CUDA_C_FILES
+	  ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/kernels/*.cc
+	)
+    file(GLOB_RECURSE MNM_CUDA_KERNEL_FILES
+	  ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/kernels/*.cu
+	)
+else()
+  set(MNM_CUDA_KERNEL_FILES "")
+  set(MNM_CUDA_C_FILES "")
 endif()
 
 ################# Modules and Third-Party Targets #################
@@ -147,6 +159,8 @@ endif()
 set(MNM_SOURCE_FILES
   ${MNM_CXX_SOURCE_FILES}
   ${MNM_CUDA_SOURCE_FILES}
+  ${MNM_CUDA_KERNEL_FILES}
+  ${MNM_CUDA_C_FILES}
   ${MNM_CUDNN_SOURCE_FILES}
   ${MNM_CUBLAS_SOURCE_FILES}
   ${MNM_CUTLASS_SOURCE_FILES}

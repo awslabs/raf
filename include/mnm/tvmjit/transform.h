@@ -41,6 +41,15 @@ struct StridedSliceDxAttrs : public tvm::AttrsNode<StridedSliceDxAttrs> {
             "all remaining elements in that dimension are included in the slice");
   }
 };
+
+struct DimAttrs : public tvm::AttrsNode<DimAttrs> {
+  Integer dim;
+
+  TVM_DECLARE_ATTRS(DimAttrs, "relay.attrs.DimAttrs") {
+    TVM_ATTR_FIELD(dim).set_default(NullValue<Integer>()).describe("The dimension size.");
+  }
+};
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

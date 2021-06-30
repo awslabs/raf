@@ -57,6 +57,8 @@ from ._internal import cross_entropy_dtrue
 from ._internal import dense
 from ._internal import device_copy
 from ._internal import divide
+from ._internal import embedding
+from ._internal import embedding_dx
 from ._internal import equal
 from ._internal import erf
 from ._internal import erf_dx

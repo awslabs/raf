@@ -152,6 +152,21 @@ class DropoutDxArgs : public ir::AttrsNode<DropoutDxArgs> {
   MNM_OP_SCHEMA(DropoutDxArgs, "mnm.args.dropout_dx");
 };
 
+class EmbeddingArgs : public ir::AttrsNode<EmbeddingArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue indices;
+  MNM_OP_SCHEMA(EmbeddingArgs, "mnm.args.embedding");
+};
+
+class EmbeddingDxArgs : public ir::AttrsNode<EmbeddingDxArgs> {
+ public:
+  value::Value num_weight;
+  value::BaseTensorValue dy;
+  value::BaseTensorValue indices;
+  MNM_OP_SCHEMA(EmbeddingDxArgs, "mnm.args.embedding_dx");
+};
+
 class LayerNormArgs : public ir::AttrsNode<LayerNormArgs> {
  public:
   value::BaseTensorValue x;

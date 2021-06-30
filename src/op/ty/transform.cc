@@ -258,6 +258,25 @@ Type TakeInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.take", "Take", TakeInfer);
 
+Type EmbeddingInfer(const CallValues& value) {
+  const auto* args = value->args.as<EmbeddingArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  TensorType indices = Downcast<TensorType>(GetType(args->indices));
+  int ndim = x->shape.size();
+  std::vector<PrimExpr> shape_vec;
+  for (auto& s : indices->shape) {
+    shape_vec.push_back(s);
+  }
+  for (int i = 1; i < ndim; ++i) {
+    shape_vec.push_back(x->shape[i]);
+  }
+  Array<PrimExpr> shape(shape_vec.begin(), shape_vec.end());
+  return TensorType(shape, x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.embedding", "Embedding", EmbeddingInfer);
+
 Type TakeDxInfer(const CallValues& value) {
   const auto* args = value->args.as<TakeDxArgs>();
   CHECK(args != nullptr);
@@ -266,6 +285,22 @@ Type TakeDxInfer(const CallValues& value) {
 }
 
 MNM_OP_TYPE("mnm.op.take_dx", "TakeDx", TakeDxInfer);
+
+Type EmbeddingDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<EmbeddingDxArgs>();
+  CHECK(args != nullptr);
+  if (args->dy->IsInstance<TensorValueObj>()) {
+    TensorType dy = Downcast<TensorType>(GetType(args->dy));
+    std::vector<PrimExpr> shape;
+    shape.push_back(Integer(args->num_weight.as<IntValueObj>()->value));
+    shape.push_back(dy->shape[dy->shape.size() - 1]);
+    return TensorType(shape, dy->dtype);
+  } else {
+    return IncompleteType(tvm::kType);
+  }
+}
+
+MNM_OP_TYPE("mnm.op.embedding_dx", "EmbeddingDx", EmbeddingDxInfer);
 
 Type ConcatenateInfer(const CallValues& value) {
   const auto* args = value->args.as<ConcatenateArgs>();

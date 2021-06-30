@@ -108,6 +108,7 @@ def test_broadcast_to(shape, device):
         m_y.backward(m_dy)
         check(m_x.grad, mx_x.grad.asnumpy())
 
+
 #pylint: disable=unused-variable
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
@@ -204,9 +205,6 @@ def test_scatter(shape, axis, device):
     t_y.backward(t_dy)
     m_y.backward(m_dy)
     check(m_x.grad, t_x.grad)
-
-
-
 
 
 @pytest.mark.parametrize("shape", [
@@ -953,6 +951,33 @@ def test_argwhere(shape, device):
     t_res = torch.stack(torch.where(t_x)).t()
     check(m_res, t_res)
     check(v_res, t_res)
+
+
+#pylint: disable=too-many-locals
+#pylint: disable=attribute-defined-outside-init
+#pylint: disable=no-member
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("num_weight", [10])
+@pytest.mark.parametrize("hiddend_state", [20])
+@pytest.mark.parametrize("seq_length", [32])
+def test_embedding(device, num_weight, hiddend_state, seq_length):
+    model = TestModel(mnm._op.sym.embedding)
+    ind, ind_n = randint((seq_length,), low=0, high=num_weight, device=device)
+    m_x, n_x = randn((num_weight, hiddend_state), device=device)
+    m_x.requires_grad = True
+    m_y = model(m_x, ind)
+
+    m_dy, n_dy = randn(m_y.shape, device=device)
+    mx_x = mx.nd.array(n_x)
+    mx_dy = mx.nd.array(n_dy)
+    mx_x.attach_grad()
+    mx_indices = mx.nd.array(ind_n)
+    with mx.autograd.record():
+        mx_y = mx.nd.take(mx_x, indices=mx_indices, axis=0, mode="clip")
+    check(m_y, mx_y)
+    mx_y.backward(mx_dy)
+    m_y.backward(m_dy)
+    check(m_x.grad, mx_x.grad.asnumpy())
 
 
 if __name__ == "__main__":

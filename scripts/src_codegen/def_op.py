@@ -115,6 +115,8 @@ OPS = [
     Op(name="swap_axis", schema_name="swap_axis"),
     Op(name="take", schema_name="take"),
     Op(name="take_dx", schema_name="take_dx"),
+    Op(name="embedding", schema_name="embedding"), 
+    Op(name="embedding_dx", schema_name="embedding_dx"),
     Op(name="dense", schema_name="binary"),
     Op(name="repeat", schema_name="repeat"),
     Op(name="repeat_dx", schema_name="repeat_dx"),

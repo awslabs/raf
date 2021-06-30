@@ -218,6 +218,15 @@ SCHEMAS = {
         Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
         Arg(name="mode", cxx_type="std::string", cxx_default="\"clip\"", py_default="\"clip\""),
     ],
+    "nn.h::embedding": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="indices", cxx_type="value::BaseTensorValue"),
+    ],
+    "nn.h::embedding_dx": [
+        Arg(name="num_weight", cxx_type="value::Value"),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="indices", cxx_type="value::BaseTensorValue"),
+    ],
     "nn.h::repeat": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="repeats", cxx_type="int"),

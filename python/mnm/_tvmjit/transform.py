@@ -8,6 +8,14 @@ from .._lib import _reg
 
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
+@register_compute("mnm.op.embedding")
+def embedding_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+    x, indices = inputs
+    return [_topi.take(x, indices, axis=0)]
+
+_reg.register_injective_schedule("mnm.op.embedding")
+
+
 @register_compute("mnm.op.transpose_dx")
 def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     dy = inputs[0]
@@ -255,3 +263,24 @@ _reg.register_injective_schedule("mnm.op.gather")
 _reg.register_injective_schedule("mnm.op.gather_dx")
 _reg.register_injective_schedule("mnm.op.gather_nd")
 _reg.register_injective_schedule("mnm.op.gather_nd_dx")
+
+@register_compute("mnm.op.embedding_dx")
+def embedding_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=unused-argument
+    # pylint: disable=invalid-name
+    # pylint: disable=unused-variable
+    dy, indices = inputs
+    num_weight = int(attrs.dim)
+    idim = len(indices.shape)
+    shape = dy.shape[:idim] + [num_weight,] + dy.shape[idim:]
+    A = _tvm.te.compute(
+        shape,
+        lambda *idx: _tvm.tir.if_then_else(
+            idx[idim] == indices[idx[:idim]],
+            dy[idx[:idim] + idx[idim + 1:]],
+            _tvm.tir.const(0, dy.dtype)
+        ))
+    B = _topi.sum(A, axis=tuple(range(idim))) if idim > 0 else A
+    return [B]
+
+_reg.register_injective_schedule("mnm.op.embedding_dx")

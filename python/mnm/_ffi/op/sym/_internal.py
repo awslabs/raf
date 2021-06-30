@@ -113,6 +113,10 @@ device_copy = _APIS.get("mnm.op.sym.device_copy", None)
 # Defined in ./src/op/regs/regs.cc
 divide = _APIS.get("mnm.op.sym.divide", None)
 # Defined in ./src/op/regs/regs.cc
+embedding = _APIS.get("mnm.op.sym.embedding", None)
+# Defined in ./src/op/regs/regs.cc
+embedding_dx = _APIS.get("mnm.op.sym.embedding_dx", None)
+# Defined in ./src/op/regs/regs.cc
 equal = _APIS.get("mnm.op.sym.equal", None)
 # Defined in ./src/op/regs/regs.cc
 erf = _APIS.get("mnm.op.sym.erf", None)
