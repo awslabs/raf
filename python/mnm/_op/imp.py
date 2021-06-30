@@ -132,12 +132,13 @@ def any(x, axis=(), keepdims=False, exclude=False):
     return imp_utils.ret(ffi.any(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def arange(start, stop, step, dtype="float32"):
+def arange(start, stop, step, dtype="float32", device="cpu"):
     start = imp_utils.to_tensor(start)
     stop = imp_utils.to_tensor(stop)
     step = imp_utils.to_tensor(step)
     dtype = imp_utils.to_string(dtype)
-    return imp_utils.ret(ffi.arange(start, stop, step, dtype))
+    device = imp_utils.to_string(device)
+    return imp_utils.ret(ffi.arange(start, stop, step, dtype, device))
 
 @set_module("mnm")
 def argmax(x, axis=(), keepdims=False, exclude=False):

@@ -320,11 +320,12 @@ Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Arange(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::ArangeArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::ArangeArgs, 5);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, start);
   MNM_TAPE(1, ffi2schema::Tensor, stop);
   MNM_TAPE(2, ffi2schema::Tensor, step);
   MNM_POD(3, ffi2schema::String, dtype);
+  MNM_POD(4, ffi2schema::String, device);
   return Attrs(attrs);
 }
 
@@ -1319,11 +1320,12 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.any").set_body([](TVMArgs args, TVMRetValue* ret
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.arange").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(arange, 4, ffi2schema::Arange, schema::ArangeArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(arange, 5, ffi2schema::Arange, schema::ArangeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->start));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->stop));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->step));
   MNM_SET_ENV(vpack->x[3], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[4], schema2value::String(schema->device));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3087,11 +3089,12 @@ Array<Expr> Allreduce(const TVMArgs& values) {
 }
 
 Array<Expr> Arange(const TVMArgs& values) {
-  MNM_PRELUDE(4);
+  MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, start);
   MNM_ARG(1, ffi2expr::Tensor, stop);
   MNM_ARG(2, ffi2expr::Tensor, step);
   MNM_ARG(3, ffi2expr::String, dtype);
+  MNM_ARG(4, ffi2expr::String, device);
   MNM_RET();
 }
 
@@ -3951,7 +3954,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.adv_index_dx")
     .set_body(MNM_SYMBOLIC_API(adv_index_dx, 2, AdvIndexDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.all").set_body(MNM_SYMBOLIC_API(all, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.any").set_body(MNM_SYMBOLIC_API(any, 4, Reduce));
-MNM_REGISTER_GLOBAL("mnm.op.sym.arange").set_body(MNM_SYMBOLIC_API(arange, 4, Arange));
+MNM_REGISTER_GLOBAL("mnm.op.sym.arange").set_body(MNM_SYMBOLIC_API(arange, 5, Arange));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmax").set_body(MNM_SYMBOLIC_API(argmax, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argmin").set_body(MNM_SYMBOLIC_API(argmin, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.argsort").set_body(MNM_SYMBOLIC_API(argsort, 4, Argsort));
@@ -4293,11 +4296,12 @@ Attrs Allreduce(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Arange(const Array<Value>& values) {
-  MNM_PRELUDE(3, 4, schema::ArangeArgs);
+  MNM_PRELUDE(3, 5, schema::ArangeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, start);
   MNM_REQUIRED(1, value2schema::Tensor, stop);
   MNM_REQUIRED(2, value2schema::Tensor, step);
   MNM_OPTIONAL(3, value2schema::String, dtype);
+  MNM_OPTIONAL(4, value2schema::String, device);
   return Attrs(attrs);
 }
 
@@ -5349,6 +5353,9 @@ int Arange(const std::string& field) {
   }
   if (field == "dtype") {
     return 3;
+  }
+  if (field == "device") {
+    return 4;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

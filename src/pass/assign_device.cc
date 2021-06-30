@@ -155,6 +155,49 @@ Expr AssignDeviceInitOp(const CallNode* node, const Array<Expr> args,
         new_args.push_back(args[arg_idx]);
       } else if (arg_idx == 1) {
         // Make up the default argument value for dtype.
+        new_args.push_back(MakeConstant(StringValue::make("float")));
+      }
+    }
+  } else {
+    new_args = args;
+  }
+  return Call(node->op, new_args);
+}
+
+Expr AssignDeviceArangeOp(const CallNode* node, const Array<Expr> args,
+                          std::string target_device_str) {
+  Array<Expr> new_args;
+
+  // Get the device of the current node.
+  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  Device call_device;
+  if (node->args.size() < 5) {
+    call_device = Device(static_cast<tvm::Device>((*str2dev)("cpu")));
+  } else {
+    call_device = GetDeviceFromConstExpr(node->args[2]);
+  }
+
+  // Get the target device.
+  Device target_device = Device(static_cast<tvm::Device>((*str2dev)(target_device_str)));
+
+  // Current node is not on the desired device, adjust the device argument.
+  if (target_device.device_type != call_device.device_type) {
+    size_t arg_idx = 0;
+    // Do nothing with required arguments.
+    for (; arg_idx < 3; ++arg_idx) {
+      new_args.push_back(args[arg_idx]);
+    }
+
+    // Process optional arguments.
+    for (; arg_idx < 5; ++arg_idx) {
+      if (arg_idx == 4) {
+        // Set/Override the target device.
+        new_args.push_back(MakeConstant(StringValue::make(target_device_str)));
+      } else if (arg_idx < node->args.size()) {
+        // Optional argument is specified.
+        new_args.push_back(args[arg_idx]);
+      } else if (arg_idx == 3) {
+        // Make up the default argument value for dtype.
         new_args.push_back(MakeConstant(StringValue::make("int")));
       }
     }
@@ -167,9 +210,11 @@ Expr AssignDeviceInitOp(const CallNode* node, const Array<Expr> args,
 typedef Expr (*AssignDeviceOpFuncType)(const CallNode* node, const Array<Expr> args,
                                        std::string target_device);
 std::unordered_map<String, AssignDeviceOpFuncType> fmap = {
-    {"mnm.op.full", &AssignDeviceFullOp},      {"mnm.op.one_hot", &AssignDeviceOneHotOp},
-    {"mnm.op.zeros", &AssignDeviceInitOp},     {"mnm.op.ones", &AssignDeviceInitOp},
-    {"mnm.op.ones_like", &AssignDeviceInitOp}, {"mnm.op.zeros_like", &AssignDeviceInitOp}};
+    {"mnm.op.full", &AssignDeviceFullOp},
+    {"mnm.op.one_hot", &AssignDeviceOneHotOp},
+    {"mnm.op.zeros", &AssignDeviceInitOp},
+    {"mnm.op.ones", &AssignDeviceInitOp},
+    {"mnm.op.arange", &AssignDeviceArangeOp}};
 
 class DeviceAssigner : public ExprMutator {
  public:

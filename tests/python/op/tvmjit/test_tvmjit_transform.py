@@ -892,7 +892,7 @@ def test_arange(data, device, dtype):
     m_start = mnm.array(start, dtype=dtype, device=device)
     m_stop = mnm.array(stop, dtype=dtype, device=device)
     m_step = mnm.array(step, dtype=dtype, device=device)
-    x = mnm.arange(m_start, m_stop, m_step, dtype=dtype)
+    x = mnm.arange(m_start, m_stop, m_step, dtype=dtype, device=device)
     n_x = np.arange(start, stop, step).astype(dtype)
     check(x, n_x)
 

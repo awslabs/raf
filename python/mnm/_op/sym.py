@@ -119,12 +119,13 @@ def any(x, axis=(), keepdims=False, exclude=False):
     exclude = sym_utils.to_bool(exclude)
     return Symbol.from_expr(ffi.any(x, axis, keepdims, exclude))
 
-def arange(start, stop, step, dtype="float32"):
+def arange(start, stop, step, dtype="float32", device="cpu"):
     start = sym_utils.to_tensor(start)
     stop = sym_utils.to_tensor(stop)
     step = sym_utils.to_tensor(step)
     dtype = sym_utils.to_string(dtype)
-    return Symbol.from_expr(ffi.arange(start, stop, step, dtype))
+    device = sym_utils.to_string(device)
+    return Symbol.from_expr(ffi.arange(start, stop, step, dtype, device))
 
 def argmax(x, axis=(), keepdims=False, exclude=False):
     x = sym_utils.to_tensor(x)

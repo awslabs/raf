@@ -31,6 +31,7 @@ class ArangeArgs : public ir::AttrsNode<ArangeArgs> {
   value::BaseTensorValue stop;
   value::BaseTensorValue step;
   std::string dtype{"float32"};
+  std::string device{"cpu"};
   MNM_OP_SCHEMA(ArangeArgs, "mnm.args.arange");
 };
 

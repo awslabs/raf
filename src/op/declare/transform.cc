@@ -41,8 +41,11 @@ MNM_OP_DECLARE("mnm.op.arange", [](const CallValues& call) {
   } else {
     LOG(FATAL) << "Do not support type: " << args->dtype;
   }
-  call->out = TensorValue::Assemble(start->device, ir::String2DLDataType(args->dtype), {size});
-  call->device = start->device;
+  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  tvm::Device tvm_dev = (*f)(args->device);
+  Device device(tvm_dev);
+  call->out = TensorValue::Assemble(device, ir::String2DLDataType(args->dtype), {size});
+  call->device = device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {

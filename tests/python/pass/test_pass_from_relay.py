@@ -1077,7 +1077,7 @@ def test_arange(data):
     r_step = _relay.var("step", shape=[], dtype=dtype)
     x = _relay.arange(r_start, r_stop, r_step)
     r_func = _relay.Function([r_start, r_stop, r_step], x)
-    check_from_relay(model, r_func, [m_start, m_stop, m_step])
+    check_from_relay(model, r_func, [m_start, m_stop, m_step], check_model_structure=False)
 
 
 @pytest.mark.parametrize("data_shape, index_shapes", [
