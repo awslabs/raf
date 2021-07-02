@@ -556,7 +556,7 @@ Attrs Embedding(const TVMArgs& values, GradTape* tapes) {
 
 Attrs EmbeddingDx(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::EmbeddingDxArgs, 3);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::ArrayLike, num_weight);
+  MNM_POD(0, ffi2schema::IntOrTupleInt, num_weight);
   MNM_TAPE(1, ffi2schema::Tensor, dy);
   MNM_TAPE(2, ffi2schema::Tensor, indices);
   return Attrs(attrs);
@@ -1840,7 +1840,7 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.embedding").set_body([](TVMArgs args, TVMRetValu
 MNM_REGISTER_GLOBAL("mnm.op.imp.embedding_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(embedding_dx, 3, ffi2schema::EmbeddingDx,
               schema::EmbeddingDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->num_weight));
+  MNM_SET_ENV(vpack->x[0], schema2value::IntOrTupleInt(schema->num_weight));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
   MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->indices));
   MNM_SET_ENV(vpack->y, value);
@@ -3359,7 +3359,7 @@ Array<Expr> Embedding(const TVMArgs& values) {
 
 Array<Expr> EmbeddingDx(const TVMArgs& values) {
   MNM_PRELUDE(3);
-  MNM_ARG(0, ffi2expr::ArrayLike, num_weight);
+  MNM_ARG(0, ffi2expr::IntOrTupleInt, num_weight);
   MNM_ARG(1, ffi2expr::Tensor, dy);
   MNM_ARG(2, ffi2expr::Tensor, indices);
   MNM_RET();
@@ -4610,7 +4610,7 @@ Attrs Embedding(const Array<Value>& values) {
 template <const char* op_name>
 Attrs EmbeddingDx(const Array<Value>& values) {
   MNM_PRELUDE(3, 3, schema::EmbeddingDxArgs);
-  MNM_REQUIRED(0, value2schema::ArrayLike, num_weight);
+  MNM_REQUIRED(0, value2schema::IntOrTupleInt, num_weight);
   MNM_REQUIRED(1, value2schema::Tensor, dy);
   MNM_REQUIRED(2, value2schema::Tensor, indices);
   return Attrs(attrs);

@@ -248,13 +248,10 @@ MNM_OP_DECLARE("mnm.op.embedding", EmbeddingFunc).set_attr<TOpPattern>("TOpPatte
 MNM_OP_DECLARE("mnm.op.embedding_dx", [](const CallValues& call) {
   const auto* args = call->args.as<EmbeddingDxArgs>();
   CHECK(args != nullptr);
-  std::vector<int64_t> shape;
   DLTensor* dy = args->dy;
-  shape.push_back(args->num_weight.as<IntValueObj>()->value);
-  shape.push_back(dy->shape[dy->ndim - 1]);
   call->out = TensorValue::Assemble(/*dev=*/dy->device,
                                     /*dtype=*/dy->dtype,
-                                    /*shape=*/shape);
+                                    /*shape=*/args->num_weight);
   call->device = dy->device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 

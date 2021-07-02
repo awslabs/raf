@@ -4,6 +4,7 @@
  * \brief embedding_dx cuda backend
  */
 #include "../../../schema/nn.h"
+#include "../../tvmjit/tvmjit_utils.h"
 #include "./kernel_util.cuh"
 
 namespace mnm {
@@ -20,10 +21,11 @@ class EmbeddingDxImpl : public mnm::op::OpEnv {
         fschema_index[op]("dy"),
         fschema_index[op]("indices"),
     };
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.embedding_dx"));
   }
+
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<op::schema::EmbeddingDxArgs>();
-    std::string op_name = tvm::runtime::Downcast<value::OpValue>(cv->callee)->op->name;
     Execute(std::vector<value::Value>{args->dy, args->indices}, cv->out);
   }
 
@@ -32,6 +34,7 @@ class EmbeddingDxImpl : public mnm::op::OpEnv {
     DLTensor* indices = ir::Downcast<TensorValue>(inputs[1]);
     DLTensor* out = ir::Downcast<TensorValue>(output);
     int stride = dy->shape[dy->ndim - 1];
+    int range = out->shape[0];
     int n = 1;
     for (int i = 0; i < indices->ndim; ++i) {
       n *= indices->shape[i];
@@ -43,12 +46,12 @@ class EmbeddingDxImpl : public mnm::op::OpEnv {
       case 32:
         embedding_dense_backward_cuda<float, float>(
             static_cast<const float*>(dy->data), static_cast<float*>(out->data),
-            static_cast<const int64_t*>(indices->data), n, stride);
+            static_cast<const int64_t*>(indices->data), n, range, stride);
         return;
       case 16:
         embedding_dense_backward_cuda<__half, __half>(
             static_cast<const __half*>(dy->data), static_cast<__half*>(out->data),
-            static_cast<const int64_t*>(indices->data), n, stride);
+            static_cast<const int64_t*>(indices->data), n, range, stride);
         return;
     }
   }

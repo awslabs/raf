@@ -289,15 +289,12 @@ MNM_OP_TYPE("mnm.op.take_dx", "TakeDx", TakeDxInfer);
 Type EmbeddingDxInfer(const CallValues& value) {
   const auto* args = value->args.as<EmbeddingDxArgs>();
   CHECK(args != nullptr);
-  if (args->dy->IsInstance<TensorValueObj>()) {
-    TensorType dy = Downcast<TensorType>(GetType(args->dy));
-    std::vector<PrimExpr> shape;
-    shape.push_back(Integer(args->num_weight.as<IntValueObj>()->value));
-    shape.push_back(dy->shape[dy->shape.size() - 1]);
-    return TensorType(shape, dy->dtype);
-  } else {
-    return IncompleteType(tvm::kType);
+  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  std::vector<PrimExpr> shape;
+  for (auto val : args->num_weight) {
+    shape.push_back(Integer(val));
   }
+  return TensorType(shape, dy->dtype);
 }
 
 MNM_OP_TYPE("mnm.op.embedding_dx", "EmbeddingDx", EmbeddingDxInfer);

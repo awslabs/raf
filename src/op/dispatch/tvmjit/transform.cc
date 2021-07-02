@@ -213,16 +213,18 @@ TVM_REGISTER_NODE_TYPE(DimAttrs);
 
 Attrs EmbeddingDxSchema2Attrs(const EmbeddingDxArgs* args) {
   auto attrs = make_object<DimAttrs>();
-  attrs->dim = args->num_weight.as<IntValueObj>()->value;
+  for (auto v : args->num_weight) {
+    attrs->dims.push_back(Integer(v));
+  }
   return Attrs(attrs);
 }
 
 HashKey EmbeddingDxHasher(const std::vector<Type>& param_types, const Type& y_type,
                           const EmbeddingDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  const auto* v = args->num_weight.as<IntValueObj>();
-  CHECK(v != nullptr);
-  key << v->value;
+  for (auto v : args->num_weight) {
+    key << v;
+  }
   return key;
 }
 

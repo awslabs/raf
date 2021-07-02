@@ -439,7 +439,7 @@ def embedding(x, indices):
     return Symbol.from_expr(ffi.embedding(x, indices))
 
 def embedding_dx(num_weight, dy, indices):
-    num_weight = sym_utils.to_any(num_weight)
+    num_weight = sym_utils.to_int_tuple(num_weight)
     dy = sym_utils.to_tensor(dy)
     indices = sym_utils.to_tensor(indices)
     return Symbol.from_expr(ffi.embedding_dx(num_weight, dy, indices))

@@ -501,7 +501,7 @@ def embedding(x, indices):
 
 @set_module("mnm")
 def embedding_dx(num_weight, dy, indices):
-    num_weight = imp_utils.to_any(num_weight)
+    num_weight = imp_utils.to_int_tuple(num_weight)
     dy = imp_utils.to_tensor(dy)
     indices = imp_utils.to_tensor(indices)
     return imp_utils.ret(ffi.embedding_dx(num_weight, dy, indices))

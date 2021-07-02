@@ -22,7 +22,7 @@ using namespace mnm::value;
 using namespace tvm;
 using namespace ::tvm::relay;
 
-struct RelaySimplifyPattern {
+struct RelayPattern {
  public:
   /*! \brief The converter to convert the matched Relay composite function to a Meta call.
    *  \param func The composite function to be converted.
@@ -36,9 +36,9 @@ struct RelaySimplifyPattern {
   PackedFunc check;
 };
 
-struct SimplifyDense : RelaySimplifyPattern {
+struct ConvertDense : RelayPattern {
  public:
-  SimplifyDense() {
+  ConvertDense() {
     // The dense pattern that matches transposes of its inputs.
     DFPattern in_1 = IsWildcard();
     DFPattern in_2 = IsWildcard();
@@ -86,9 +86,9 @@ struct SimplifyDense : RelaySimplifyPattern {
   }
 };
 
-struct SimplifyGelu : RelaySimplifyPattern {
+struct CompositeGelu : RelayPattern {
  public:
-  SimplifyGelu() {
+  CompositeGelu() {
     // Match Patterns
     DFPattern x_float64 = IsWildcard().HasDtype(DataType::Float(64));
     auto gelu_float64 = IsOp("multiply")({IsFloatExpr(64, 1 / sqrt(2)), x_float64});
@@ -126,9 +126,52 @@ struct SimplifyGelu : RelaySimplifyPattern {
   }
 };
 
-static const std::unordered_map<String, std::shared_ptr<RelaySimplifyPattern>> composite_patterns{
-    {String("dense"), std::shared_ptr<RelaySimplifyPattern>(new SimplifyDense)},
-    {String("gelu"), std::shared_ptr<RelaySimplifyPattern>(new SimplifyGelu)}};
+struct ConvertEmbedding : RelayPattern {
+ public:
+  ConvertEmbedding() {
+    // First match all take ops with the second input casted.
+    this->pattern = IsOp("take")({IsWildcard(), IsOp("cast")({IsWildcard()})});
+
+    // Then check if it is from an embedding op.
+    // TODO(comaniac): We do not have a better way to differentiate embedding ops from
+    // Relay take ops. For example, in Relay PyTorch frontend, both embedding and size ops
+    // may have mode=clip and axis=0. It means we may mis-convert a size op to an embedding op.
+    // A long-term solution is introducing embedding op in Relay, or use our own PyTorch frontend
+    // instead of relying on Relay frontned.
+    this->check = PackedFunc([](TVMArgs args, TVMRetValue* rv) {
+      CHECK_EQ(args.size(), 1U);
+      Call take_call = args[0];
+
+      *rv = false;
+
+      // Check if the second argument is casted from int32. This is the pattern
+      // specified in the Relay PyTorch frontend.
+      Call cast_call = Downcast<Call>(take_call->args[1]);
+      auto dtype = cast_call->checked_type().as<TensorTypeNode>()->dtype;
+      if (dtype.code() != kDLInt || dtype.bits() != 32) {
+        return;
+      }
+
+      // Check take op attributes.
+      const auto* relay_attrs = take_call->attrs.as<TakeAttrs>();
+      *rv = relay_attrs->mode == "clip" &&
+            (!relay_attrs->axis.defined() || relay_attrs->axis->value == 0);
+    });
+  }
+
+  Call converter(Function func, Array<Expr> args) {
+    LOG(WARNING) << "Converted a relay.take(data, indices, axis=0, mode=clip) to mnm.embedding, "
+                 << "which requires all values in indices within the range; otherwise it will "
+                 << "encounter memory error on GPUs";
+    static const Op& op = Op::Get("mnm.op.embedding");
+    return Call(op, args);
+  }
+};
+
+static const std::unordered_map<String, std::shared_ptr<RelayPattern>> composite_patterns{
+    {String("dense"), std::shared_ptr<RelayPattern>(new ConvertDense)},
+    {String("gelu"), std::shared_ptr<RelayPattern>(new CompositeGelu)},
+    {String("embedding"), std::shared_ptr<RelayPattern>(new ConvertEmbedding)}};
 
 // We set the parameters to be Meta model attributes, so their names
 // have to be valid variable names in Python.

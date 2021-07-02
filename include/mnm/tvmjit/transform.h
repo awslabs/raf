@@ -43,10 +43,10 @@ struct StridedSliceDxAttrs : public tvm::AttrsNode<StridedSliceDxAttrs> {
 };
 
 struct DimAttrs : public tvm::AttrsNode<DimAttrs> {
-  Integer dim;
+  Array<Integer> dims;
 
   TVM_DECLARE_ATTRS(DimAttrs, "relay.attrs.DimAttrs") {
-    TVM_ATTR_FIELD(dim).set_default(NullValue<Integer>()).describe("The dimension size.");
+    TVM_ATTR_FIELD(dims).set_default(Array<Integer>()).describe("The dimension sizes.");
   }
 };
 

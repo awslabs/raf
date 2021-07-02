@@ -4,19 +4,20 @@
  * \brief embedding backward cuda kernel
  */
 
-// TODO(@zhen-jia): The code is mostly migrate from pytorch, we should consider the 
+// TODO(@zhen-jia): The code is mostly migrate from pytorch, we should consider the
 //                  copyright when opensource
+#include <stdio.h>
 #include "./kernel_util.cuh"
 namespace mnm {
 namespace op {
-namespace cuda{
+namespace cuda {
 
 template void embedding_dense_backward_cuda<float, float>(const float*, float*, const int64_t*, int,
-                                                          int);
+                                                          int, int);
 template void embedding_dense_backward_cuda<__half, __half>(const __half*, __half*, const int64_t*,
-                                                            int, int);
-template void embedding_dense_backward_cuda<__half2, __half2>(const __half2*, __half2*, const int64_t*,
-                                                            int, int);
+                                                            int, int, int);
+template void embedding_dense_backward_cuda<__half2, __half2>(const __half2*, __half2*,
+                                                              const int64_t*, int, int, int);
 
 __device__ __forceinline__ unsigned int WARP_BALLOT(int predicate, unsigned int mask = 0xffffffff) {
   return __ballot_sync(mask, predicate);
@@ -38,20 +39,26 @@ __device__ __forceinline__ __half2 add(__half2 a, __half2 b) {
   return __hadd2(a, b);
 }
 
-
 static const int WARP_SIZE = 32;
 static const int BLOCKDIMY = 32;
 
+/*! \brief The kernel to perform embedding backward.
+ * \param indices The input IDs.
+ * \param grad The gradient from forward output (dy).
+ * \param output The computed gradient by this kernel (dx).
+ * \param n The size of indices.
+ * \param range The maximum allowed value in indices.
+ * \param stride The stride. It is usually the size of hidden stauts.
+ */
 template <typename scalar_t, typename accscalar_t>
 __global__ void embedding_backward_feature_kernel(const int64_t* indices,
                                                   const scalar_t* __restrict__ grad,
                                                   accscalar_t* __restrict__ output, int n,
-                                                  int stride) {
+                                                  int range, int stride) {
   extern __shared__ char buf[];
   accscalar_t* smem = (accscalar_t*)buf;
   accscalar_t* my_s = smem + WARP_SIZE * threadIdx.y;
   int* indices_batch = (int*)(buf + sizeof(accscalar_t) * WARP_SIZE * blockDim.y);
-
 
   const int f = threadIdx.x + blockIdx.x * blockDim.x;  // feature_dim
 
@@ -59,7 +66,12 @@ __global__ void embedding_backward_feature_kernel(const int64_t* indices,
     // Entire block cooperates to load a batch of 1024 indices to process
     int tid = threadIdx.x + threadIdx.y * blockDim.x;
     if (batch_start + tid < n) {
-      indices_batch[tid] = (int)indices[batch_start + tid];
+      int value = (int)indices[batch_start + tid];
+      if (value >= range) {
+        printf("indices[%d] = %d is out of range (%d)\n", batch_start + tid, value, range);
+        asm("trap;");
+      }
+      indices_batch[tid] = value;
     }
 
     int batch_end =
@@ -76,8 +88,8 @@ __global__ void embedding_backward_feature_kernel(const int64_t* indices,
           (batch_end - chunk_start) < blockDim.y ? (batch_end - chunk_start) : blockDim.y;
 
       int src_row = chunk_start + threadIdx.y;
-      int dst_row =
-          indices_batch[src_row - batch_start];  // This warp's target row in grad_weight
+      int dst_row = indices_batch[src_row - batch_start];  // This warp's target row in grad_weight
+
       // All warps load their smem segments with incoming grad data
       if (src_row < n && f < stride) {
         my_s[threadIdx.x] = static_cast<accscalar_t>(grad[src_row * stride + f]);
@@ -101,12 +113,11 @@ __global__ void embedding_backward_feature_kernel(const int64_t* indices,
         if (threadIdx.y == first_remaining_peer)  // Nominate lowest-indexed warp as the leader
         {
           matchmask ^= (1 << first_remaining_peer);
-          while(matchmask)
-          {
-           first_remaining_peer = __ffs(matchmask) - 1;
-           my_s[threadIdx.x] =
-               add(my_s[threadIdx.x], smem[threadIdx.x + WARP_SIZE * first_remaining_peer]);
-           matchmask ^= (1 << first_remaining_peer);
+          while (matchmask) {
+            first_remaining_peer = __ffs(matchmask) - 1;
+            my_s[threadIdx.x] =
+                add(my_s[threadIdx.x], smem[threadIdx.x + WARP_SIZE * first_remaining_peer]);
+            matchmask ^= (1 << first_remaining_peer);
           }
           if (f < stride) {
             output[dst_row * stride + f] =
@@ -120,15 +131,14 @@ __global__ void embedding_backward_feature_kernel(const int64_t* indices,
 
 template <typename scalar_t, typename accscalar_t>
 void embedding_dense_backward_cuda(const scalar_t* grad, accscalar_t* output,
-                                   const int64_t* indices, int num, int stride) {
-
+                                   const int64_t* indices, int num, int range, int stride) {
   dim3 grid(CeilDiv(stride, (int64_t)WARP_SIZE));
   dim3 block(WARP_SIZE, BLOCKDIMY);
 
   embedding_backward_feature_kernel<scalar_t, accscalar_t>
       <<<grid, block,
          sizeof(accscalar_t) * WARP_SIZE * BLOCKDIMY + sizeof(int) * WARP_SIZE * BLOCKDIMY>>>(
-          indices, grad, output, num, stride);
+          indices, grad, output, num, range, stride);
 }
 
 }  // namespace cuda

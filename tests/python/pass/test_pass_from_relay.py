@@ -7,7 +7,8 @@ import pytest
 import numpy as np
 import mnm
 from mnm.frontend import FrameworkModel
-from mnm.testing import get_device_list, randint, randn, check, utils
+from mnm.ir import AsText
+from mnm.testing import get_device_list, randint, randn, check, utils, randn_torch
 from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import IRModule
 from mnm._lib import tvm as _tvm
@@ -33,7 +34,7 @@ def check_from_relay(m_model, r_func, args, check_model_structure=True,
 
     if check_model_structure:
         assert _tvm.ir.structural_equal(
-            m_func, new_func), "%s\nvs\n%s\n" % (str(m_func), str(new_func))
+            m_func, new_func), "%s\nvs\n%s\n" % (AsText(m_func), AsText(new_func))
 
     assert InferType()(new_mod), "Type error of the model from Relay"
 
@@ -1036,6 +1037,35 @@ def test_gelu_pattern(shape, dtype):
     r_func = _relay.Function(params=[r_x, bias], body=r_out)
 
     check_from_relay(model, r_func, [m_x, m_y])
+
+def test_embedding_pattern():
+    data_shape = (32, 128)
+    indices_shape = (512, 768)
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, data, indices, indices2):
+            x = mnm.embedding(data, indices)
+            return mnm.take(x, indices2, axis=1, mode="wrap")
+
+    model = TestModel()
+    m_x, _ = randn_torch(data_shape)
+    m_i, _ = randint(indices_shape, high=10000)
+    m_i2 = mnm.array(0, dtype="int64")
+
+    r_x = _relay.var("x", shape=data_shape, dtype="float32")
+    r_i = _relay.var("i", shape=indices_shape, dtype="int64")
+    r_i2 = _relay.var("i2", shape=(), dtype="int64")
+    out = _relay.cast(r_i, "int32")
+    out = _relay.take(r_x, out) # Should be converted to embedding along with the cast.
+    out = _relay.take(out, r_i2, axis=1, mode="wrap") # Should be just take.
+    r_func = _relay.Function(params=[r_x, r_i, r_i2], body=out)
+
+    check_from_relay(model, r_func, [m_x, m_i, m_i2])
+
 
 @pytest.mark.parametrize("shape", [(4, 3, 4, 5)])
 @pytest.mark.parametrize("axis", [0, 1, None])

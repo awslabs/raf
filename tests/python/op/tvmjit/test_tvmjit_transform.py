@@ -962,7 +962,7 @@ def test_argwhere(shape, device):
 @pytest.mark.parametrize("seq_length", [32])
 def test_embedding(device, num_weight, hiddend_state, seq_length):
     model = TestModel(mnm._op.sym.embedding)
-    ind, ind_n = randint((seq_length,), low=0, high=num_weight, device=device)
+    ind, ind_n = randint((seq_length,), low=0, high=num_weight, device=device, dtype="int64")
     m_x, n_x = randn((num_weight, hiddend_state), device=device)
     m_x.requires_grad = True
     m_y = model(m_x, ind)

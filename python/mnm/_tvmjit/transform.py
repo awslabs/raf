@@ -270,7 +270,7 @@ def embedding_dx_compute(attrs, inputs, output_type):
     # pylint: disable=invalid-name
     # pylint: disable=unused-variable
     dy, indices = inputs
-    num_weight = int(attrs.dim)
+    num_weight = int(attrs.dims[0])
     idim = len(indices.shape)
     shape = dy.shape[:idim] + [num_weight,] + dy.shape[idim:]
     A = _tvm.te.compute(
