@@ -33,7 +33,7 @@ def get_node_info():
 
 
 @pytest.mark.skip()
-def test_allreduce_with_tensor():
+def test_allreduce_with_tensor(computation):
     print("Testing allreduce with a single tensor as input.")
 
     class TestModel(mnm.Model):
@@ -42,7 +42,7 @@ def test_allreduce_with_tensor():
 
         @mnm.model.trace
         def forward(self, x):
-            x = mnm.allreduce(x)
+            x = mnm.allreduce(x, computation=computation)
             return x
 
     model = TestModel()
@@ -55,14 +55,24 @@ def test_allreduce_with_tensor():
     model.to(device=device)
     y = model(x)
     if rank == 0:
-        target_y = x.asnumpy() * (1+2)
+        target_y = 0
+        if computation == "sum":
+            target_y = x.asnumpy() * (1 + 2)
+        elif computation == "prod":
+            target_y = x.asnumpy() * (1 * 2)
+        elif computation == "min":
+            target_y = x.asnumpy() * min(1, 2)
+        elif computation == "max":
+            target_y = x.asnumpy() * max(1, 2)
+        else:
+            print("Invalid computation")
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
 
 
 @pytest.mark.skip()
-def test_allreduce_with_tensor_list():
+def test_allreduce_with_tensor_list(computation):
     print("Testing allreduce with a list of tensors as input.")
 
     class TestModel(mnm.Model):
@@ -71,7 +81,7 @@ def test_allreduce_with_tensor_list():
 
         @ mnm.model.trace
         def forward(self, x1, x2):
-            x = mnm.allreduce([x1, x2])
+            x = mnm.allreduce([x1, x2], computation=computation)
             return mnm.concatenate(x)
 
     model = TestModel()
@@ -86,7 +96,19 @@ def test_allreduce_with_tensor_list():
     model.to(device=device)
     y = model(x1, x2)
     if rank == 0:
-        target_y = mnm.concatenate([x1, x2]).asnumpy() * (1+2)
+        target_y = 0
+        x1 = x1.asnumpy()
+        x2 = x2.asnumpy()
+        if computation == "sum":
+            target_y = np.concatenate([x1 * (1+2), x2  * (-1) * ((-1)+(-2))])
+        elif computation == "prod":
+            target_y = np.concatenate([x1 * (1*2), x2  * (-1) * ((-1)*(-2))])
+        elif computation == "min":
+            target_y = np.concatenate([x1 * min(1, 2), x2  * (-1) * min(-1, -2)])
+        elif computation == "max":
+            target_y = np.concatenate([x1 * max(1, 2), x2  * (-1) * max(-1, -2)])
+        else:
+            print("Invalid computation")
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
@@ -225,8 +247,14 @@ def test_send_recv():
 if __name__ == "__main__":
     if mnm.build.with_distributed():
         test_reduce_scatter()
-        test_allreduce_with_tensor()
-        test_allreduce_with_tensor_list()
+        test_allreduce_with_tensor(computation="sum")
+        test_allreduce_with_tensor(computation="prod")
+        test_allreduce_with_tensor(computation="min")
+        test_allreduce_with_tensor(computation="max")
+        test_allreduce_with_tensor_list(computation="sum")
+        test_allreduce_with_tensor_list(computation="prod")
+        test_allreduce_with_tensor_list(computation="min")
+        test_allreduce_with_tensor_list(computation="max")
         test_allgather(axis=0)
         test_allgather(axis=1)
         test_allgather_with_tensor_list(axis=0)

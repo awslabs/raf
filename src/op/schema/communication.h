@@ -22,6 +22,7 @@ class AllgatherArgs : public ir::AttrsNode<AllgatherArgs> {
 class AllreduceArgs : public ir::AttrsNode<AllreduceArgs> {
  public:
   std::vector<value::BaseTensorValue> x;
+  std::string computation{"sum"};
   MNM_OP_SCHEMA(AllreduceArgs, "mnm.args.allreduce");
 };
 

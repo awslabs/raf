@@ -29,7 +29,7 @@ def get_node_info():
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
 @pytest.mark.skip()
-def test_allreduce_with_tensor():
+def test_allreduce_with_tensor(computation):
     print("Testing allreduce with a single tensor as input.")
 
     class TestModel(mnm.Model):
@@ -37,7 +37,7 @@ def test_allreduce_with_tensor():
             pass
         @mnm.model.trace
         def forward(self, x):  # pylint: disable=no-self-use,invalid-name
-            x = mnm.allreduce(x)
+            x = mnm.allreduce(x, computation=computation)
             return x
 
     shape = (4, 4)
@@ -57,7 +57,7 @@ def test_allreduce_with_tensor():
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
 @pytest.mark.skip()
-def test_allreduce_with_tensor_list():
+def test_allreduce_with_tensor_list(computation):
     print("Testing allreduce with a list of tensors as input.")
 
     class TestModel(mnm.Model):
@@ -65,7 +65,7 @@ def test_allreduce_with_tensor_list():
             pass
         @mnm.model.trace
         def forward(self, x1, x2):  # pylint: disable=no-self-use
-            x = mnm.allreduce([x1, x2])  # pylint: disable=invalid-name
+            x = mnm.allreduce([x1, x2], computation=computation)  # pylint: disable=invalid-name
             return x
 
     shape1 = (4, 4)
@@ -89,6 +89,12 @@ def test_allreduce_with_tensor_list():
 
 if __name__ == "__main__":
     if mnm.build.with_distributed():
-        test_allreduce_with_tensor()
-        test_allreduce_with_tensor_list()
+        test_allreduce_with_tensor(computation="sum")
+        test_allreduce_with_tensor(computation="prod")
+        test_allreduce_with_tensor(computation="min")
+        test_allreduce_with_tensor(computation="max")
+        test_allreduce_with_tensor_list(computation="sum")
+        test_allreduce_with_tensor_list(computation="prod")
+        test_allreduce_with_tensor_list(computation="min")
+        test_allreduce_with_tensor_list(computation="max")
         dist.RemoveCommunicator()

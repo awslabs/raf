@@ -316,8 +316,9 @@ Attrs AllocTensor(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::AllreduceArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::AllreduceArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
+  MNM_POD(1, ffi2schema::String, computation);
   return Attrs(attrs);
 }
 
@@ -1599,9 +1600,10 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.comm.allgather").set_body([](TVMArgs args, TVMRe
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.comm.allreduce").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(comm_allreduce, 1, ffi2schema::Allreduce,
+  MNM_PRELUDE(comm_allreduce, 2, ffi2schema::Allreduce,
               schema::AllreduceArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->computation));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3119,8 +3121,9 @@ Array<Expr> AllocTensor(const TVMArgs& values) {
 }
 
 Array<Expr> Allreduce(const TVMArgs& values) {
-  MNM_PRELUDE(1);
+  MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_ARG(1, ffi2expr::String, computation);
   MNM_RET();
 }
 
@@ -4043,7 +4046,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
 MNM_REGISTER_GLOBAL("mnm.op.sym.comm.allgather")
     .set_body(MNM_SYMBOLIC_API(comm_allgather, 2, Allgather));
 MNM_REGISTER_GLOBAL("mnm.op.sym.comm.allreduce")
-    .set_body(MNM_SYMBOLIC_API(comm_allreduce, 1, Allreduce));
+    .set_body(MNM_SYMBOLIC_API(comm_allreduce, 2, Allreduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.comm.recv").set_body(MNM_SYMBOLIC_API(comm_recv, 3, Recv));
 MNM_REGISTER_GLOBAL("mnm.op.sym.comm.reduce_scatter")
     .set_body(MNM_SYMBOLIC_API(comm_reduce_scatter, 1, ReduceScatter));
@@ -4343,8 +4346,9 @@ Attrs AllocTensor(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Allreduce(const Array<Value>& values) {
-  MNM_PRELUDE(1, 1, schema::AllreduceArgs);
+  MNM_PRELUDE(1, 2, schema::AllreduceArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  MNM_OPTIONAL(1, value2schema::String, computation);
   return Attrs(attrs);
 }
 
@@ -5406,6 +5410,9 @@ template <const char* op_name>
 int Allreduce(const std::string& field) {
   if (field == "x") {
     return 0;
+  }
+  if (field == "computation") {
+    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

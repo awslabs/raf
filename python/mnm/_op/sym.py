@@ -284,9 +284,10 @@ def comm_allgather(x, axis):
     axis = sym_utils.to_int(axis)
     return Symbol.from_expr(ffi.comm.allgather(x, axis))
 
-def comm_allreduce(x):
+def comm_allreduce(x, computation="sum"):
     x = sym_utils.to_tensor_tuple(x)
-    return Symbol.from_expr(ffi.comm.allreduce(x))
+    computation = sym_utils.to_string(computation)
+    return Symbol.from_expr(ffi.comm.allreduce(x, computation))
 
 def comm_recv(peer, shape, dtype="float32"):
     peer = sym_utils.to_int(peer)

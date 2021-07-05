@@ -660,6 +660,10 @@ SCHEMAS = {
         Arg(name="x",
             cxx_type="std::vector<value::BaseTensorValue>",
             cxx_normalizer="TensorTuple"),
+        Arg(name="computation",
+            cxx_type="std::string",
+            cxx_default="\"sum\"",
+            py_default="\"sum\""),
     ],
     "communication.h::allgather": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

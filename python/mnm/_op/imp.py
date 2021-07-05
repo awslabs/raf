@@ -323,9 +323,10 @@ def comm_allgather(x, axis):
     return imp_utils.ret(ffi.comm.allgather(x, axis))
 
 @set_module("mnm")
-def comm_allreduce(x):
+def comm_allreduce(x, computation="sum"):
     x = imp_utils.to_tensor_tuple(x)
-    return imp_utils.ret(ffi.comm.allreduce(x))
+    computation = imp_utils.to_string(computation)
+    return imp_utils.ret(ffi.comm.allreduce(x, computation))
 
 @set_module("mnm")
 def comm_recv(peer, shape, dtype="float32"):

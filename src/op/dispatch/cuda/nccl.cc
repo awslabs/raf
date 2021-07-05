@@ -27,12 +27,14 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   size_t total_size = 0;
   std::vector<size_t> tuple_sizes;
   DType dtype;
+  std::string computation;
 
   explicit NCCLAllReduce(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
     auto& tv = args->x;
+    computation = args->computation;
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
       size_t size = BytesCompactTensor(*x);
@@ -63,8 +65,22 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       DLTensor* x = tv[0];
       DLTensor* out = cv->out;
       dtype_size = sizeof(x->dtype);
-      NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclSum,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      if (computation.compare("sum") == 0) {
+        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclSum,
+                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      } else if (computation.compare("prod") == 0) {
+        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclProd,
+                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      } else if (computation.compare("min") == 0) {
+        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclMin,
+                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      } else if (computation.compare("max") == 0) {
+        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclMax,
+                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      } else {
+        LOG(FATAL) << "Invalid computation " << computation;
+      }
+
       return;
     }
     size_t offset = 0;
@@ -78,8 +94,21 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     }
 
     // Allreduce
-    NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, dtype, ncclSum,
-                            (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    if (computation.compare("sum") == 0) {
+      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclSum,
+                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    } else if (computation.compare("prod") == 0) {
+      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclProd,
+                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    } else if (computation.compare("min") == 0) {
+      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclMin,
+                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    } else if (computation.compare("max") == 0) {
+      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclMax,
+                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    } else {
+      LOG(FATAL) << "Invalid computation " << computation;
+    }
     // UnFuse Tensor
     value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(cv->out);
     auto& of = out->fields;
