@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 
 import mnm
-from mnm.testing import randint, randn_torch, run_vm_model, check, asnumpy
+from mnm.testing import randint, randn_torch, run_vm_model, check, asnumpy, with_seed
 from mnm._core.ndarray import ndarray
 
 
@@ -174,9 +174,11 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
-def test_mnm_batch_norm_infer(shape, momentum, eps):
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+@with_seed(0)
+def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
     stats_shape = [shape[1]]
-    m_x, t_x = randn_torch(shape, device="cuda")
+    m_x, t_x = randn_torch(shape, dtype=dtype, device="cuda")
     m_m, t_m = randn_torch(stats_shape, device="cuda")
     m_v, t_v = randn_torch(stats_shape, device="cuda", positive=True)
     m_w, t_w = randn_torch(stats_shape, device="cuda")
@@ -203,6 +205,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps):
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
+@with_seed(0)
 def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, dtype=dtype, device="cuda", requires_grad=True)
@@ -231,15 +234,16 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     m_mean = mnm.array(np_mean, device="cuda")
     m_var = mnm.array(np_var, device="cuda")
     v_y = run_vm_model(model, "cuda", [m_x, m_mean, m_var, m_w, m_b])
-    check(v_y, t_y, rtol=1e-4, atol=1e-4)
-    check(m_mean, t_mean, rtol=1e-4, atol=1e-4)
-    check(m_var, t_var, rtol=1e-4, atol=1e-4)
+    check(v_y, t_y, rtol=1e-5, atol=1e-5)
+    check(m_mean, t_mean, rtol=1e-5, atol=1e-5)
+    check(m_var, t_var, rtol=1e-5, atol=1e-5)
+
     # backward
     m_dy, t_dy = randn_torch(shape, dtype=dtype, device="cuda")
     m_y.backward(m_dy)
     t_y.backward(t_dy)
-    rtol = 1e-4 if dtype == "float32" else 1e-3
-    atol = 1e-4 if dtype == "float32" else 1e-3
+    rtol = 1e-5 if dtype == "float32" else 1e-3
+    atol = 1e-5 if dtype == "float32" else 1e-3
     check(m_x.grad, t_x.grad, rtol=rtol, atol=atol)
     check(m_w.grad, t_w.grad, rtol=rtol, atol=atol)
     check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)

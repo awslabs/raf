@@ -161,8 +161,15 @@ using FMNMDeclare = registry::TypedPackedFunc<void(const CallValues& call)>;
 
 using FMNMSchema = registry::TypedPackedFunc<ir::Attrs(const ir::Array<value::Value>&)>;
 
-using FMNMCastRule =
-    registry::TypedPackedFunc<Array<ir::Type>(const Array<ir::Expr>&, const ir::Type&)>;
+/*!
+ * \brief Generate the cast rule of an op given the current input expressions.
+ * \param args An array of input expressions.
+ * \param ret_type Return type of the current op.
+ * \param amp_dtype The desired AMP dtype.
+ * \return An array of type hints. The size is #arguments + 1 (output).
+ */
+using FMNMCastRule = registry::TypedPackedFunc<Array<ir::Type>(
+    const Array<ir::Expr>&, const ir::Type&, const std::string&)>;
 
 using FMNMAnnotateTarget =
     registry::TypedPackedFunc<bool(const ir::Attrs& attrs, const Array<ir::Expr>& args)>;

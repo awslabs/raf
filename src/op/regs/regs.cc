@@ -557,9 +557,9 @@ Attrs Embedding(const TVMArgs& values, GradTape* tapes) {
 
 Attrs EmbeddingDx(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::EmbeddingDxArgs, 3);  // NOLINT(whitespace/line_length)
-  MNM_POD(0, ffi2schema::IntOrTupleInt, num_weight);
-  MNM_TAPE(1, ffi2schema::Tensor, dy);
-  MNM_TAPE(2, ffi2schema::Tensor, indices);
+  MNM_TAPE(0, ffi2schema::Tensor, dy);
+  MNM_TAPE(1, ffi2schema::Tensor, indices);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, num_weight);
   return Attrs(attrs);
 }
 
@@ -1842,9 +1842,9 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.embedding").set_body([](TVMArgs args, TVMRetValu
 MNM_REGISTER_GLOBAL("mnm.op.imp.embedding_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(embedding_dx, 3, ffi2schema::EmbeddingDx,
               schema::EmbeddingDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::IntOrTupleInt(schema->num_weight));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->indices));
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->indices));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->num_weight));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3362,9 +3362,9 @@ Array<Expr> Embedding(const TVMArgs& values) {
 
 Array<Expr> EmbeddingDx(const TVMArgs& values) {
   MNM_PRELUDE(3);
-  MNM_ARG(0, ffi2expr::IntOrTupleInt, num_weight);
-  MNM_ARG(1, ffi2expr::Tensor, dy);
-  MNM_ARG(2, ffi2expr::Tensor, indices);
+  MNM_ARG(0, ffi2expr::Tensor, dy);
+  MNM_ARG(1, ffi2expr::Tensor, indices);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, num_weight);
   MNM_RET();
 }
 
@@ -4614,9 +4614,9 @@ Attrs Embedding(const Array<Value>& values) {
 template <const char* op_name>
 Attrs EmbeddingDx(const Array<Value>& values) {
   MNM_PRELUDE(3, 3, schema::EmbeddingDxArgs);
-  MNM_REQUIRED(0, value2schema::IntOrTupleInt, num_weight);
-  MNM_REQUIRED(1, value2schema::Tensor, dy);
-  MNM_REQUIRED(2, value2schema::Tensor, indices);
+  MNM_REQUIRED(0, value2schema::Tensor, dy);
+  MNM_REQUIRED(1, value2schema::Tensor, indices);
+  MNM_REQUIRED(2, value2schema::IntOrTupleInt, num_weight);
   return Attrs(attrs);
 }
 
@@ -5885,13 +5885,13 @@ int Embedding(const std::string& field) {
 
 template <const char* op_name>
 int EmbeddingDx(const std::string& field) {
-  if (field == "num_weight") {
+  if (field == "dy") {
     return 0;
   }
-  if (field == "dy") {
+  if (field == "indices") {
     return 1;
   }
-  if (field == "indices") {
+  if (field == "num_weight") {
     return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;

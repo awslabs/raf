@@ -161,9 +161,9 @@ class EmbeddingArgs : public ir::AttrsNode<EmbeddingArgs> {
 
 class EmbeddingDxArgs : public ir::AttrsNode<EmbeddingDxArgs> {
  public:
-  std::vector<int64_t> num_weight;
   value::BaseTensorValue dy;
   value::BaseTensorValue indices;
+  std::vector<int64_t> num_weight;
   MNM_OP_SCHEMA(EmbeddingDxArgs, "mnm.args.embedding_dx");
 };
 

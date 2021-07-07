@@ -1,4 +1,5 @@
 # pylint: disable=protected-access,attribute-defined-outside-init
+# pylint: disable=no-member, no-self-use, too-many-locals, too-many-arguments
 import numpy as np
 import pytest
 import torch
@@ -14,11 +15,28 @@ class BinaryModel(mnm.Model):
     def forward(self, x1, x2):
         return self.op(x1, x2)
 
+def verify_op(m_op, m_args, device, ref_fwd_out, m_dy=None, ref_grads=None):
+    """A helper function to verify an op."""
+
+    model = BinaryModel(m_op)
+
+    # Check forward and VM
+    m_y = model(*m_args)
+    v_y = run_vm_model(model, device, m_args)
+    check(m_y, ref_fwd_out)
+    check(v_y, ref_fwd_out)
+
+    if m_dy is None or ref_grads is None:
+        return
+
+    # Check backward if dy is provided
+    m_y.backward(m_dy)
+    for m_arg, ref_grad in zip(m_args, ref_grads):
+        check(m_arg.grad, ref_grad)
+
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
-    (np.add, mnm._op.sym.add),
-    (np.subtract, mnm._op.sym.subtract),
     (np.maximum, mnm._op.sym.maximum),
     (np.greater, mnm._op.sym.greater),
     (np.minimum, mnm._op.sym.minimum),
@@ -26,27 +44,22 @@ class BinaryModel(mnm.Model):
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
-    [(1, 2), (2, 1)],
     [(3, 3), (1, 1)]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_binary_ops(ops, shape, dtype, device):
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+def test_binary_ops_without_grad(ops, shape, dtype, device):
+    # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
+    if dtype == "float16" and device == "cpu":
+        return
+
     n_op, m_op = ops
-    model = BinaryModel(m_op)
     m_x1, n_x1 = randn(shape[0], dtype=dtype, device=device)
     m_x2, n_x2 = randn(shape[1], dtype=dtype, device=device)
-    m_y = model(m_x1, m_x2)
-    v_y = run_vm_model(model, device, [m_x1, m_x2])
     n_y = n_op(n_x1, n_x2)
-    check(m_y, n_y)
-    check(v_y, n_y)
+
+    verify_op(m_op, [m_x1, m_x2], device, n_y)
 
 
-# pylint: disable=no-member
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=protected-access
-# pylint: disable=no-self-use
-# pylint: disable=too-many-locals
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
     (torch.mul, mnm._op.sym.multiply),
@@ -57,7 +70,6 @@ def test_binary_ops(ops, shape, dtype, device):
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
-    [(1, 2), (2, 1)],
     [(3, 3), (1, 1)]
 ])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -65,19 +77,11 @@ def test_binary_ops_with_grad(ops, shape, dtype, device):
     t_op, m_op = ops
     m_x1, t_x1 = randn_torch(shape[0], dtype=dtype, device=device, requires_grad=True)
     m_x2, t_x2 = randn_torch(shape[1], dtype=dtype, device=device, requires_grad=True)
-    model = BinaryModel(m_op)
-    # check forward
-    m_y = model(m_x1, m_x2)
-    v_y = run_vm_model(model, device, [m_x1, m_x2])
     t_y = t_op(t_x1, t_x2)
-    check(m_y, t_y)
-    check(v_y, t_y)
-    # check backward
-    m_dy, t_dy = randn_torch(m_y.shape, dtype=dtype, device=device)
-    m_y.backward(m_dy)
+    m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype, device=device)
     t_y.backward(t_dy)
-    check(m_x1.grad, t_x1.grad)
-    check(m_x2.grad, t_x2.grad)
+
+    verify_op(m_op, [m_x1, m_x2], device, t_y, m_dy, [t_x1.grad, t_x2.grad])
 
 
 #logical_and only allows bool input s
@@ -93,21 +97,13 @@ def test_binary_ops_with_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize("dtype", ["bool"])
 def test_binary_bool_ops(ops, shape, dtype, device):
     n_op, m_op = ops
-    model = BinaryModel(m_op)
     m_x1, n_x1 = randn(shape[0], dtype=dtype, device=device)
     m_x2, n_x2 = randn(shape[1], dtype=dtype, device=device)
-    m_y = model(m_x1, m_x2)
-    v_y = run_vm_model(model, device, [m_x1, m_x2])
     n_y = n_op(n_x1, n_x2)
-    check(m_y, n_y)
-    check(v_y, n_y)
+
+    verify_op(m_op, [m_x1, m_x2], device, n_y)
 
 
-# pylint: disable=no-member
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=protected-access
-# pylint: disable=no-self-use
-#pylint: disable=too-many-locals
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
     (np.right_shift, mnm._op.sym.right_shift),
@@ -115,35 +111,19 @@ def test_binary_bool_ops(ops, shape, dtype, device):
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
-    [(1, 2), (2, 1)],
     [(3, 3), (1, 1)]
 ])
 @pytest.mark.parametrize("dtype", ["uint16", "uint8", "uint32"])
-def test_int_ops_with_grad(ops, shape, dtype, device):
+def test_shift_ops_with_grad(ops, shape, dtype, device):
     n_op, m_op = ops
-    model = BinaryModel(m_op)
-    m_x1, n_x1 = randn(shape[0], dtype=dtype, device=device)
-    m_x2, n_x2 = randn(shape[1], dtype=dtype, device=device)
-    m_x1.requires_grad = True
-    m_x2.requires_grad = True
-
-    # check forward
-    m_y = model(m_x1, m_x2)
-    v_y = run_vm_model(model, device, [m_x1, m_x2])
+    m_x1, n_x1 = randn(shape[0], dtype=dtype, device=device, requires_grad=True)
+    m_x2, n_x2 = randn(shape[1], dtype=dtype, device=device, requires_grad=True)
     n_y = n_op(n_x1, n_x2)
-    check(m_y, n_y)
-    check(v_y, n_y)
-    # check backward
-    m_dy = randn(m_y.shape, dtype=dtype, device=device)[0]
-    m_y.backward(m_dy)
-    check(m_x1.grad, 0.)
+    m_dy = randn(n_y.shape, dtype=dtype, device=device)[0]
+
+    verify_op(m_op, [m_x1, m_x2], device, n_y, m_dy, [0.])
 
 
-# pylint: disable=no-member
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=protected-access
-# pylint: disable=no-self-use
-# pylint: disable=too-many-locals
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("ops", [
     (torch.eq, mnm._op.sym.equal),
@@ -155,20 +135,20 @@ def test_int_ops_with_grad(ops, shape, dtype, device):
 ])
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
-    [(1, 2), (2, 1)],
     [(3, 3), (1, 1)]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
 def test_logic_ops(ops, shape, dtype, device):
+    # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
+    if dtype == "float16" and device == "cpu":
+        return
+
     t_op, m_op = ops
     m_x1, t_x1 = randn_torch(shape[0], dtype=dtype, device=device)
     m_x2, t_x2 = randn_torch(shape[1], dtype=dtype, device=device)
-    model = BinaryModel(m_op)
-    m_y = model(m_x1, m_x2)
-    v_y = run_vm_model(model, device, [m_x1, m_x2])
     t_y = t_op(t_x1, t_x2)
-    check(m_y, t_y)
-    check(v_y, t_y)
+
+    verify_op(m_op, [m_x1, m_x2], device, t_y)
 
 
 if __name__ == "__main__":

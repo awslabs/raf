@@ -223,11 +223,11 @@ SCHEMAS = {
         Arg(name="indices", cxx_type="value::BaseTensorValue"),
     ],
     "nn.h::embedding_dx": [
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="indices", cxx_type="value::BaseTensorValue"),
         Arg(name="num_weight",
             cxx_type="std::vector<int64_t>",
             cxx_normalizer="IntTuple"),
-        Arg(name="dy", cxx_type="value::BaseTensorValue"),
-        Arg(name="indices", cxx_type="value::BaseTensorValue"),
     ],
     "nn.h::repeat": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

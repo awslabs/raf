@@ -18,8 +18,6 @@ def autocast(model, args=None):
     args: Optional[List[mnm.ndarray]]
         The input data of the model.
     """
-    assert model._Cacher__cache.keys() != 0, \
-           "Please run model or run function `get_relay_func` once."
     args = args if args is not None else []
     mod = model._internal(*args).mod
     mod = AutoCast()(mod)

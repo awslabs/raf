@@ -273,7 +273,7 @@ Array<Expr> EmbeddingGrad(const Expr& orig_call, const Array<Expr> orig_args, co
   const Expr& x = call->args[0];
   const Expr& indices = call->args[1];
   const Expr& x_shape = Call(shape, {x});
-  return {Call(op_dx, {x_shape, dy, indices})};
+  return {Call(op_dx, {dy, indices, x_shape})};
 }
 
 MNM_OP_GRAD("mnm.op.embedding", EmbeddingGrad);

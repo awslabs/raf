@@ -196,8 +196,8 @@ _reg.register_injective_schedule("mnm.op.adv_index_dx")
 def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     x = inputs[0]
     grad = inputs[1]
-    a_min = attrs.a_min
-    a_max = attrs.a_max
+    a_min = _tvm.tir.const(attrs.a_min, x.dtype)
+    a_max = _tvm.tir.const(attrs.a_max, x.dtype)
 
     def _select(*indices):
         return _tvm.tir.if_then_else(_tvm.tir.any(x[indices] <= a_min,

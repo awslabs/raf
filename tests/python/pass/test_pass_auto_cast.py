@@ -1,25 +1,27 @@
 # pylint: disable=protected-access, no-self-use, unused-argument
+# pylint: disable=too-many-locals, too-many-arguments
 import pytest
+import torch
+
 import mnm
 from tvm.ir import PrimType
 from mnm.ir import AsText
-from mnm.testing import randn, check
+from mnm.testing import randn, randn_torch, run_vm_model, check
 
-
-def verify_correctness(model, device, args):
+def verify_correctness(model, device, args, ref_outs=None, tol=1e-5):
     # A helper function to verify the correctness
     args = [arg.to(device=device) for arg in args]
     model.to(device=device)
-    ref_outs = model(*args)
+    ref_outs = model(*args) if ref_outs is None else ref_outs
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
 
     amp_model = mnm.amp.autocast(model, args)
-    outs = amp_model(*args)
+    outs = run_vm_model(amp_model, device, args)
 
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
     assert len(ref_outs) == len(outs)
     for ref_out, out in zip(ref_outs, outs):
-        check(ref_out, out, rtol=0.1, atol=0.1)
+        check(ref_out, out, rtol=tol, atol=tol)
 
 
 def verify_cast_num(model, args, expected):
@@ -57,49 +59,132 @@ def test_basic():
     m_b, _ = randn((wshape[0],), requires_grad=True)
     args = [m_x, m_w, m_b]
 
-    # cast x, w, b to fp16; cast x2 back to fp32.
+    # cast x, w, b to fp16.
     verify_cast_num(model, args, 3)
-    verify_correctness(model, device, args)
+    verify_correctness(model, device, args, tol=1e-1)
 
-    def disable_bias_add(args, ret_type):
+    def never_cast_bias_add(args, ret_type, amp_dtype):
         return [PrimType("float32"), PrimType("float32"), PrimType(None), PrimType("float32")]
 
-    with mnm.amp.CustomTypeHint({"mnm.op.bias_add": disable_bias_add}):
-        # cast x, w to fp16; cast a1 back to fp32; cast a2 to fp16
-        verify_cast_num(model, args, 4)
-        verify_correctness(model, device, args)
+    with mnm.amp.CustomTypeHint({"mnm.op.bias_add": never_cast_bias_add}):
+        # cast x, w to fp16; cast x1 back to fp32.
+        verify_cast_num(model, args, 3)
+        verify_correctness(model, device, args, tol=1e-1)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("out_dtype", ["float16", "float32"])
 def test_tuple_n_output_dtype(out_dtype):
-    shape = (5, 4, 6, 9)
-    device = "cuda"
+    xshape = (1, 3, 224, 224)
+    wshape = (32, 3, 3, 3)
 
     class Model(mnm.Model):
         def build(self):
             pass
 
         @mnm.model.trace
-        def forward(self, dy, x, w, b):
-            y = mnm.batch_norm_train_dxwb(dy, x, w, b, 1e-5)
-            z = mnm.add(dy, x)
-            return (y[0], z, y[1], y[2])
+        def forward(self, x, w):
+            y = mnm.conv2d(x, w)
+            z = mnm.relu(y)
+            return (y, z)
 
     model = Model()
-    m_dy, _ = randn(shape, dtype="float32")
-    m_x, _ = randn(shape, dtype="float32")
-    m_w, _ = randn((shape[1],), dtype="float32")
-    m_b, _ = randn((shape[1],), dtype="float32")
-    args = [m_dy, m_x, m_w, m_b]
+    m_x, _ = randn(xshape, requires_grad=False)
+    m_w, _ = randn(wshape, requires_grad=True)
+    args = [m_x, m_w]
 
     with mnm.ir.PassContext(config={"mnm.amp.out_dtype": out_dtype}):
-        # cast dy, x to fp16 = 2 casts.
-        # If output dtype is fp32, then only cast y[0] to fp32: Total 3 casts.
-        # If output dtype if fp16, then cast the rest 3 outputs to fp16: Total 5 casts.
-        verify_cast_num(model, args, 3 if out_dtype == "float32" else 5)
-        verify_correctness(model, device, args)
+        # Cast 2 inputs for both cases.
+        # If output dtype is fp32, then cast 2 outputs back to fp32: Total 4 casts.
+        # If output dtype if fp16, then do nothing: Total 2 casts.
+        verify_cast_num(model, args, 4 if out_dtype == "float32" else 2)
 
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+def test_batch_norm_infer():
+    shape = (8, 8, 8, 8)
+    momentum = 0.1
+    eps = 1e-3
+    device = "cuda"
+
+    stats_shape = [shape[1]]
+    m_x, t_x = randn_torch(shape, device=device)
+    m_m, t_m = randn_torch(stats_shape, device=device)
+    m_v, t_v = randn_torch(stats_shape, device=device, positive=True)
+    m_w, t_w = randn_torch(stats_shape, device=device)
+    m_b, t_b = randn_torch(stats_shape, device=device)
+    args = [m_x, m_m, m_v, m_w, m_b]
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, m_x, m_m, m_v, m_w, m_b):
+            return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+
+    t_x_fp16 = t_x.to(torch.float16)
+    t_y = torch.nn.functional.batch_norm(t_x_fp16, t_m, t_v, t_w, t_b, False, momentum, eps)
+
+    model = TestModel()
+    with mnm.ir.PassContext(config={"mnm.amp.out_dtype": "float16"}):
+        amp_model = mnm.amp.autocast(model, args)
+        verify_correctness(amp_model, device, args, ref_outs=t_y)
+
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+def test_batch_norm_train():
+    shape = (8, 8, 8, 8)
+    momentum = 0.1
+    eps = 1e-3
+    device = "cuda"
+
+    stats_shape = [shape[1]]
+    m_x, t_x = randn_torch(shape, device=device, requires_grad=True)
+    m_mean, t_mean = randn_torch(stats_shape, device=device)
+    m_var, t_var = randn_torch(stats_shape, device=device, positive=True)
+    m_w, t_w = randn_torch(stats_shape, device=device, requires_grad=True)
+    m_b, t_b = randn_torch(stats_shape, device=device, requires_grad=True)
+    args = [m_x, m_mean, m_var, m_w, m_b]
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, m_x, m_m, m_v, m_w, m_b):
+            result = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            return result[0]
+
+    t_x_fp16 = t_x.to(torch.float16)
+    t_y = torch.nn.functional.batch_norm(t_x_fp16, t_mean, t_var, t_w, t_b, True, momentum, eps)
+
+    model = TestModel()
+    with mnm.ir.PassContext(config={"mnm.amp.out_dtype": "float16"}):
+        amp_model = mnm.amp.autocast(model, args)
+        verify_correctness(amp_model, device, args, ref_outs=t_y)
+
+
+def test_binary_ufunc():
+    device = "cpu"
+    shape = (10, 10)
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, m_x, m_w, m_y):
+            out = mnm.matmul(m_x, m_w)
+            new_out = mnm.add(out, m_y, out=out)
+            return new_out
+
+    model = TestModel()
+    m_x, _ = randn(shape, requires_grad=False)
+    m_w, _ = randn(shape, requires_grad=False)
+    m_y, _ = randn(shape, requires_grad=False)
+    args = [m_x, m_w, m_y]
+    verify_cast_num(model, args, 3)
+    verify_correctness(model, device, args, tol=1e-2)
 
 if __name__ == "__main__":
     pytest.main([__file__])

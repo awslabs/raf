@@ -26,100 +26,33 @@ using namespace mnm::value;
 using TypeHint = Type;
 using TypeHints = Array<TypeHint>;
 
-/*! \brief Try to cast TypeHint to PrimType. */
-inline PrimType TryToPrimType(TypeHint type) {
+/*! \brief Cast TypeHint to PrimType. */
+inline PrimType AsPrimType(TypeHint type, std::string msg = "") {
   auto prim_type = type.as<PrimTypeNode>();
-  CHECK(prim_type != nullptr) << "Expected PrimType as the type hint, but got "
+  msg += (msg == "") ? "" : " ";
+  CHECK(prim_type != nullptr) << msg << "Expected PrimType as the type hint, but got "
                               << type->GetTypeKey();
   return GetRef<PrimType>(prim_type);
 }
 
-/*! \brief Try to cast TypeHint to TupleType. */
-inline TupleType TryToTupleType(TypeHint type) {
+/*! \brief Cast TypeHint to TupleType. */
+inline TupleType AsTupleType(TypeHint type, std::string msg = "") {
   auto tuple_type = type.as<TupleTypeNode>();
-  CHECK(tuple_type != nullptr) << "Expected TupleType as the type hint, but got "
+  msg += (msg == "") ? "" : " ";
+  CHECK(tuple_type != nullptr) << msg << "Expected TupleType as the type hint, but got "
                                << type->GetTypeKey();
   return GetRef<TupleType>(tuple_type);
 }
 
-/*! \brief Whether the given type hint means skip. */
-inline bool SkipTypeHint(TypeHint type) {
+/*! \brief Whether the given type hint means don't touch. */
+inline bool IsDontTouchTypeHint(TypeHint type) {
   auto prim_type = type.as<PrimTypeNode>();
   return (prim_type && GetRef<PrimType>(prim_type)->dtype.is_void());
 }
 
-/*! \brief Replace TypeVar("amp") in the type hints with the target_dtype. */
-TypeHints ReplaceTypeVarWithAMPType(const TypeHints& type_hints, const DataType target_dtype) {
-  TypeHints new_type_hints;
-  for (auto type_hint : type_hints) {
-    if (auto tuple_type = type_hint.as<TupleTypeNode>()) {
-      TypeHints field_type_hints;
-      for (auto field_type_hint : tuple_type->fields) {
-        field_type_hints.push_back(ReplaceTypeVarWithAMPType({field_type_hint}, target_dtype)[0]);
-      }
-      new_type_hints.push_back(TupleType(field_type_hints));
-    } else {
-      const auto* type_var = type_hint.as<TypeVarNode>();
-      if (type_var) {
-        // Replace TypeVar("amp") with the target dtype.
-        CHECK_EQ(type_var->name_hint, "amp");
-        new_type_hints.push_back(PrimType(target_dtype));
-      } else {
-        // Otherwise follow the given type hint.
-        CHECK(type_hint->IsInstance<PrimTypeNode>())
-            << "Expected prim type hint, but got " << type_hint->GetTypeKey();
-        new_type_hints.push_back(type_hint);
-      }
-    }
-  }
-  return new_type_hints;
-}
-
-/*! \brief A helper function that generates the type hint from the given type.
- * The tensor is hinted to be TypeVar("amp") so that it will be replaced with
- * the user-specified AMP dtype later.
- */
-TypeHint GetDefaultTypeHintHelper(const Type& type) {
-  if (auto tuple_type = type.as<TupleTypeNode>()) {
-    TypeHints field_types;
-    for (auto field_type : tuple_type->fields) {
-      field_types.push_back(GetDefaultTypeHintHelper(field_type));
-    }
-    return TupleType(field_types);
-  }
-  CHECK(type->IsInstance<TensorTypeNode>())
-      << "Expected tensor type node, but got " << type->GetTypeKey();
-  return TypeVar("amp", TypeKind::kType);
-}
-
-/*! \brief Generate default type hints for an expression given the arguments and return type.
- */
-TypeHints GenTypeHints(const Array<Expr>& args, const Type& ret_type, const DataType target_dtype,
-                       const Expr op_node = Expr()) {
-  TypeHints type_hints;
-
-  // Use the custom casting type hint if available.
-  static auto frule = Op::GetAttrMap<op::FMNMCastRule>("FMNMCastRule");
-  if (op_node.defined() && op_node.as<OpNode>() != nullptr) {
-    const Op op = Downcast<Op>(op_node);
-    if (frule.count(op)) {
-      type_hints = frule[op](args, ret_type);
-    }
-  }
-
-  // When no custom type hints, default all tensor argument type hints to be in the AMP dtype.
-  if (type_hints.size() == 0) {
-    for (auto arg : args) {
-      if (arg->IsInstance<ConstantNode>()) {
-        type_hints.push_back(PrimType(DataType::Void()));
-      } else {
-        type_hints.push_back(GetDefaultTypeHintHelper(arg->checked_type()));
-      }
-    }
-    type_hints.push_back(GetDefaultTypeHintHelper(ret_type));  // Return type.
-  }
-
-  return ReplaceTypeVarWithAMPType(type_hints, target_dtype);
+/*! \brief Generate a type hint that means don't touch. */
+inline TypeHint GetDontTouchTypeHint() {
+  return PrimType(DataType::Void());
 }
 
 /*! \brief Generate a cast call that casts the given expr to the target dtype. */
@@ -138,24 +71,33 @@ inline Expr GenCastCall(Expr expr, DataType dtype) {
   return cast_call;
 }
 
-/*! \brief Given a type and update its dtype based on the given type hint. */
-Type UpdateDTypeByHint(const Type ori_type, const TypeHint& target_type) {
-  if (ori_type->IsInstance<TensorTypeNode>()) {
-    auto old_type = Downcast<TensorType>(ori_type);
-    return TensorType(old_type->shape, TryToPrimType(target_type)->dtype);
+/*! \brief Update ori_type's dtype based on the given type hint.
+ * This is used to avoid the overhead of running InferType after mutating every single node.
+ * However, if the type hint does not match the actual op output type, it will result in
+ * type error of the output IR after this pass. In the future, we should let InferType
+ * provide a lightweight utility to only infer the expression type in a limited depth.
+ */
+Type UpdateDTypeByHint(const Type ori_type, const TypeHint target_type, std::string msg_str) {
+  if (IsDontTouchTypeHint(target_type)) {
+    return ori_type;
   } else if (ori_type->IsInstance<TupleTypeNode>()) {
     auto old_tuple_type = Downcast<TupleType>(ori_type);
-    auto target_tuple_type_fields = TryToTupleType(target_type)->fields;
+    auto target_tuple_type_fields = AsTupleType(target_type, msg_str)->fields;
     CHECK_EQ(target_tuple_type_fields.size(), old_tuple_type->fields.size());
 
     Array<Type> new_field_types;
     for (size_t i = 0; i < old_tuple_type->fields.size(); ++i) {
       auto field_type = old_tuple_type->fields[i];
-      new_field_types.push_back(UpdateDTypeByHint(field_type, target_tuple_type_fields[i]));
+      new_field_types.push_back(
+          UpdateDTypeByHint(field_type, target_tuple_type_fields[i], msg_str));
     }
     return TupleType(new_field_types);
   }
-  LOG(FATAL) << "Unsupported type: " << ori_type->GetTypeKey();
+
+  CHECK(ori_type->IsInstance<TensorTypeNode>())
+      << "Expected tensor type node, but got " << ori_type->GetTypeKey();
+  auto old_type = Downcast<TensorType>(ori_type);
+  return TensorType(old_type->shape, AsPrimType(target_type, msg_str)->dtype);
 }
 
 class AutoCastMutator : public ExprMutator {
@@ -163,6 +105,22 @@ class AutoCastMutator : public ExprMutator {
   AutoCastMutator(const String amp_dtype, const String out_dtype) : scopes_{LetList()} {
     amp_dtype_ = DataType(ir::String2DLDataType(amp_dtype));
     out_dtype_ = DataType(ir::String2DLDataType(out_dtype));
+  }
+
+  /*!
+   * \brief Concat missing rule ops and their appearance to a string.
+   * \return A string of missing rule ops, or empty if none.
+   */
+  std::string ListMissRuleOps() {
+    if (miss_rule_ops_.empty()) {
+      return "";
+    }
+
+    std::stringstream ss;
+    for (auto pair : miss_rule_ops_) {
+      ss << pair.first << " (appear " << pair.second << " times)\n";
+    }
+    return ss.str();
   }
 
   Expr VisitExpr_(const LetNode* node) {
@@ -173,6 +131,7 @@ class AutoCastMutator : public ExprMutator {
       auto new_value = VisitExpr(node->value);
       node->var->checked_type_ = new_value->checked_type();
       scope.Push(node->var, new_value);
+      let_vars_to_orig_type_.emplace(node->var, node->value->checked_type());
       let_vars_.emplace(node->var, new_value);
       body = node->body;
       node = body.as<LetNode>();
@@ -180,7 +139,7 @@ class AutoCastMutator : public ExprMutator {
     auto new_body = VisitExpr(body);
 
     // Cast output tensors if needed.
-    TypeHint ret_type_hint = GenTypeHints({new_body}, new_body->checked_type(), out_dtype_)[0];
+    TypeHint ret_type_hint = GenOutputTypeHint(new_body->checked_type());
     new_body = CastExpr(new_body, ret_type_hint);
     auto ret = scopes_.back().Get(new_body);
     ret->checked_type_ = new_body->checked_type();
@@ -189,7 +148,6 @@ class AutoCastMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) {
-    const auto* old_type = node->checked_type().as<TensorTypeNode>();
     TypeHints type_hints = GenTypeHints(node->args, node->checked_type(), amp_dtype_, node->op);
 
     Array<Expr> call_args;
@@ -197,16 +155,16 @@ class AutoCastMutator : public ExprMutator {
     CHECK_EQ(type_hints.size(), node->args.size() + 1)
         << "Type hint number and argument size of " << op->name << " are mismatching";
     for (size_t i = 0; i < node->args.size(); ++i) {
-      auto arg = VisitExpr(node->args[i]);
-      if (SkipTypeHint(type_hints[i])) {
-        call_args.push_back(arg);
-      } else {
-        call_args.push_back(CastExpr(arg, type_hints[i]));
-      }
+      UpdateCurrExprStr(op->name, i);
+      call_args.push_back(CastExpr(VisitExpr(node->args[i]), type_hints[i]));
     }
 
-    auto new_call = Call(node->op, call_args, node->attrs, node->type_args);
-    new_call->checked_type_ = UpdateDTypeByHint(node->checked_type(), type_hints.back());
+    auto new_call = Call(op, call_args, node->attrs, node->type_args);
+    UpdateCurrExprStr(op->name, -1);
+    new_call->checked_type_ =
+        UpdateDTypeByHint(node->checked_type(), type_hints.back(), curr_call_n_arg_str_);
+
+    UpdateCurrExprStr("", 0);
     return new_call;
   }
 
@@ -259,77 +217,186 @@ class AutoCastMutator : public ExprMutator {
   }
 
  private:
+  /*! \brief A helper function to generate a string of current processing node and argument
+   * to form a better error message. arg_idx=-1 means the return type.
+   */
+  inline void UpdateCurrExprStr(std::string name, int arg_idx) {
+    curr_call_n_arg_str_ = "";
+    if (name == "") {
+      return;
+    }
+
+    curr_call_n_arg_str_ = name;
+    if (arg_idx == -1) {
+      curr_call_n_arg_str_ += ".ret";
+    } else {
+      curr_call_n_arg_str_ += ".arg" + std::to_string(arg_idx);
+    }
+  }
+
+  /*! \brief Generate the type hints for the output expression.
+   * We cast the output tensors with AMP dtype to the user-specified output dtype.
+   * Note that we do not touch output tensors with other dtypes, because they may not be the
+   * data output (e.g., mean and variant of batch_norm), but this approach cannot catch the
+   * case that the last op is a never-cast op (e.g., erf). In this case, the output tensor
+   * remains float32 even user specified float16.
+   */
+  TypeHint GenOutputTypeHint(const Type type) {
+    if (auto tuple_type = type.as<TupleTypeNode>()) {
+      TypeHints field_types;
+      for (auto field_type : tuple_type->fields) {
+        field_types.push_back(GenOutputTypeHint(field_type));
+      }
+      return TupleType(field_types);
+    }
+
+    auto ttype = type.as<TensorTypeNode>();
+    CHECK(ttype) << "Expected tensor type node, but got " << type->GetTypeKey()
+                 << " when processsing return type";
+    if (ttype->dtype != amp_dtype_) {
+      // If it is not the AMP dtype, it means this tensor should not be touched by AutoCast.
+      return GetDontTouchTypeHint();
+    }
+    return PrimType(out_dtype_);
+  }
+
+  /*! \brief Ideally, the default type hint should cast input tensors in float while
+   * leaving attributes untouched. However, we cannot differentiate inputs and attributes
+   * as both of them are arguments. Thus, default type hint is only used to make sure
+   * this pass can run through the whole graph without crashing, so that we can throw out
+   * as error with all missing ops.
+   */
+  TypeHints GetDefaultTypeHint(const Array<Expr>& args, const Type& ret_type,
+                               const DataType target_dtype) {
+    TypeHints type_hints;
+    for (size_t i = 0; i < args.size() + 1; ++i) {
+      type_hints.push_back(GetDontTouchTypeHint());
+    }
+    return type_hints;
+  }
+
+  /*! \brief Generate the type hints of an op by looking at its type hint rules. */
+  TypeHints GenTypeHints(const Array<Expr>& args, const Type& ret_type, const DataType target_dtype,
+                         const Expr op_node) {
+    static auto frule = Op::GetAttrMap<op::FMNMCastRule>("FMNMCastRule");
+    CHECK(op_node.as<OpNode>() != nullptr)
+        << "AutoCast does not support closure yet: " << mnm::ir::AsText(op_node);
+    const Op op = Downcast<Op>(op_node);
+
+    if (frule.count(op)) {
+      return frule[op](args, ret_type, DLDataType2String(target_dtype.operator DLDataType()));
+    } else {
+      miss_rule_ops_[op]++;
+    }
+    return GetDefaultTypeHint(args, ret_type, target_dtype);
+  }
+
+  /*! \brief Get the expression of the given let binding var. If the given expr is not a VarNode,
+   * then simply return itself.
+   */
+  inline Expr GetBindExpr(const Expr expr) {
+    if (expr->IsInstance<VarNode>()) {
+      return let_vars_[Downcast<Var>(expr)];
+    }
+    return expr;
+  }
+
   /*! \brief Generate a tuple of casted tensors. */
-  Expr CastTuple(const Expr arg, const TupleType& tuple_type_hint) {
+  Expr CastTuple(const Expr arg, const TypeHint type_hint) {
     auto& scope = scopes_.back();
 
+    auto expr = GetBindExpr(arg);
+    if (expr->IsInstance<ConstantNode>()) {
+      CHECK(IsDontTouchTypeHint(type_hint))
+          << curr_call_n_arg_str_ << " has an illegal type hint: " << type_hint->GetTypeKey()
+          << ". Cannot cast constant tuple";
+      return expr;
+    }
+
     // Find the root tuple.
-    auto expr = let_vars_[Downcast<Var>(arg)];
     while (!expr->IsInstance<TupleNode>()) {
       // If the expr is in tuple type but not a tuple node, then it means the expr
       // is a TupleGetItem that points to another tuple node, so we need to
       // trace back to find the root tuple node to obtain its real type.
-      CHECK(expr->IsInstance<TupleGetItemNode>());
+      CHECK(expr->IsInstance<TupleGetItemNode>())
+          << "Expected TupleGetItem, but got " << expr->GetTypeKey();
       auto tgi = Downcast<TupleGetItem>(expr);
-      expr = let_vars_[Downcast<Var>(tgi->tuple)];
+      expr = GetBindExpr(tgi->tuple);
       expr = Downcast<Tuple>(expr)->fields[tgi->index];
-      expr = let_vars_[Downcast<Var>(expr)];
+      expr = GetBindExpr(expr);
     }
     auto tuple = Downcast<Tuple>(expr);
-    CHECK_EQ(tuple->fields.size(), tuple_type_hint->fields.size());
+    auto tuple_type_hint = AsTupleType(type_hint, curr_call_n_arg_str_);
+    CHECK_EQ(tuple->fields.size(), tuple_type_hint->fields.size())
+        << curr_call_n_arg_str_ << " has an illegal tuple type hint: Expected "
+        << tuple->fields.size() << " fields for the following expression, but got "
+        << tuple_type_hint->fields.size() << mnm::ir::AsText(tuple);
 
     Array<Expr> fields;
     for (size_t i = 0; i < tuple->fields.size(); ++i) {
       auto field = tuple->fields[i];
-      if (field->IsInstance<ConstantNode>()) {
-        fields.push_back(field);
+      auto field_type = field->checked_type();
+      Expr new_expr;
+      if (field_type->IsInstance<TensorTypeNode>()) {
+        new_expr = CastExpr(field, tuple_type_hint->fields[i]);
+      } else if (field_type->IsInstance<TupleTypeNode>()) {
+        new_expr = CastTuple(field, tuple_type_hint->fields[i]);
       } else {
-        auto field_type = field->checked_type();
-        Expr new_expr;
-        if (field_type->IsInstance<TensorTypeNode>()) {
-          new_expr = CastExpr(field, tuple_type_hint->fields[i]);
-        } else if (field_type->IsInstance<TupleTypeNode>()) {
-          auto tuple_type = TryToTupleType(tuple_type_hint->fields[i]);
-          new_expr = CastTuple(field, tuple_type);
-        } else {
-          LOG(FATAL) << "Unsupported field type: " << field_type->GetTypeKey();
-        }
-        auto new_var = scope.Push(new_expr);
-        new_var->checked_type_ = new_expr->checked_type_;
-        fields.push_back(new_var);
+        LOG(FATAL) << "Unsupported field type: " << field_type->GetTypeKey();
       }
+      auto new_var = scope.Push(new_expr);
+      new_var->checked_type_ = new_expr->checked_type_;
+      fields.push_back(new_var);
     }
     auto new_tuple = Tuple(fields);
-    new_tuple->checked_type_ = UpdateDTypeByHint(tuple->checked_type(), tuple_type_hint);
+    new_tuple->checked_type_ =
+        UpdateDTypeByHint(tuple->checked_type(), tuple_type_hint, curr_call_n_arg_str_);
     return new_tuple;
   }
 
-  /*! \brief Cast the expr to the given dtype. */
+  /*! \brief Cast the expr based on the given type hint. */
   Expr CastExpr(const Expr expr, const TypeHint& type_hint) {
     auto& scope = scopes_.back();
-    CHECK(expr->checked_type_.defined())
-        << "The type of " << mnm::ir::AsText(expr) << " is missing";
+    CHECK(expr->checked_type_.defined()) << "Missing type:\n" << mnm::ir::AsText(expr);
 
     auto expr_type = expr->checked_type();
-    if (expr_type->IsInstance<TensorTypeNode>()) {
-      auto prim_type = TryToPrimType(type_hint);
-      auto ttype = Downcast<TensorType>(expr_type);
-      if (ttype->dtype == prim_type->dtype) {
-        return expr;
-      } else {
-        auto cast_call = GenCastCall(expr, prim_type->dtype);
+    if (expr_type->IsInstance<TupleTypeNode>()) {
+      auto cast_call = CastTuple(expr, type_hint);
+      if (expr != cast_call) {
         auto new_var = scope.Push(cast_call);
         new_var->checked_type_ = cast_call->checked_type_;
         return new_var;
       }
-    } else if (expr_type->IsInstance<TupleTypeNode>()) {
-      auto tuple_type = TryToTupleType(type_hint);
-      auto cast_call = CastTuple(expr, tuple_type);
+      return expr;
+    }
+
+    CHECK(expr_type->IsInstance<TensorTypeNode>())
+        << "Expected tensor type node, but got " << expr_type->GetTypeKey();
+    auto ttype = Downcast<TensorType>(expr_type);
+    auto target_dtype = AsPrimType(type_hint, curr_call_n_arg_str_)->dtype;
+    if (IsDontTouchTypeHint(type_hint)) {
+      // Set the target dtype to be the original dtype.
+      Type orig_type;
+      auto var = expr.as<VarNode>();
+      if (var && let_vars_to_orig_type_.count(GetRef<Var>(var)) > 0) {
+        // Find the original type of this let binding var.
+        orig_type = let_vars_to_orig_type_[GetRef<Var>(var)];
+      } else {
+        // If expr is a constant or an input tensor, then it is in its original type.
+        orig_type = expr->checked_type();
+      }
+      CHECK(orig_type->IsInstance<TensorTypeNode>())
+          << "Expected tensor type but got " << orig_type->GetTypeKey();
+      target_dtype = Downcast<TensorType>(orig_type)->dtype;
+    }
+
+    if (ttype->dtype == target_dtype) {
+      return expr;
+    } else {
+      auto cast_call = GenCastCall(expr, target_dtype);
       auto new_var = scope.Push(cast_call);
       new_var->checked_type_ = cast_call->checked_type_;
       return new_var;
-    } else {
-      LOG(FATAL) << "Unsupported type: " << expr_type->GetTypeKey();
     }
   }
 
@@ -339,8 +406,14 @@ class AutoCastMutator : public ExprMutator {
   DataType amp_dtype_;
   /*! \brief The output dtype of the generated AMP model. */
   DataType out_dtype_;
+  /*! \brief The current processing call node op name and argument index (for debugging purpose). */
+  std::string curr_call_n_arg_str_ = "";
   /*! \brief The mapping from let bound var to its expr. */
   std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> let_vars_;
+  /*! \brief The mapping from let bound var to its original type. */
+  std::unordered_map<Var, Type, ObjectPtrHash, ObjectPtrEqual> let_vars_to_orig_type_;
+  /*! \brief Map from ops that the miss casting rule to appearance. */
+  std::unordered_map<Op, int, ObjectPtrHash, ObjectPtrEqual> miss_rule_ops_;
 };
 }  // namespace auto_cast
 
@@ -354,11 +427,17 @@ Pass AutoCast() {
   DLOG(INFO) << "AMP dtype: " << amp_dtype << ", output dtype: " << out_dtype;
   runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {
-        auto ret = auto_cast::AutoCastMutator(amp_dtype, out_dtype).Mutate(f);
+        auto mutator = auto_cast::AutoCastMutator(amp_dtype, out_dtype);
+        auto ret = mutator.Mutate(f);
+        std::string miss_rule_op_str = mutator.ListMissRuleOps();
+        if (!miss_rule_op_str.empty()) {
+          LOG(FATAL) << "One or more ops missed the casting rule:\n" << miss_rule_op_str;
+          throw;
+        }
         return Downcast<Function>(ret);
       };
   auto insert_cast = CreateMNMFunctionPass(pass_func, 0, "AutoCastFunc", {});
-  return MNMSequential({InferType(), insert_cast}, "AutoCast");
+  return MNMSequential({InferType(), insert_cast, InferType()}, "AutoCast");
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoCast").set_body_typed(AutoCast);

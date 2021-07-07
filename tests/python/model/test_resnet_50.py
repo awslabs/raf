@@ -57,27 +57,5 @@ def test_vm_backward(fuse_lv):
     resnet.check_params(m_model, t_model, atol=1e-2, rtol=1e-2)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("fuse_lv", [0, 1])
-def test_infer_amp(fuse_lv):
-    # TODO(@icemelon9): merge this function with test_vm_forward, currently because nll_loss runs
-    # into error under amp mode
-    device = "cuda"
-    layers = [3, 4, 6, 3]
-    m_model, t_model = resnet.get_model(layers, train=False)
-    m_model.to(device=device)
-    t_model.to(device)
-    m_in, t_in = resnet.get_input(batch_size=1, device=device, train=False)
-
-    torch.backends.cudnn.benchmark = False
-    mnm._core.backends.cudnn.benchmark = False
-    with torch.cuda.amp.autocast():
-        t_out = t_model.forward_infer(*t_in)
-    m_out = run_vm_model(m_model, device, m_in, fuse_level=fuse_lv,
-                         pass_seq=mnm._ffi.pass_.AutoCast())
-    check(m_out, t_out, atol=1e-3, rtol=1e-3)
-    resnet.check_params(m_model, t_model, atol=1e-3, rtol=1e-3)
-
-
 if __name__ == "__main__":
     pytest.main([__file__])
