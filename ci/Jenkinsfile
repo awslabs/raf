@@ -77,8 +77,9 @@ stage('Build') {
          echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
          echo "set(MNM_USE_MPI ON)" >> config.cmake
          echo "set(MNM_USE_NCCL ON)" >> config.cmake
-         echo "set(MNM_USE_CUTLASS 75)" >> config.cmake
+         echo "set(MNM_USE_CUTLASS ON)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
+         echo "set(CMAKE_CUDA_ARCHITECTURES 75)" >> config.cmake
          """
       make(ci_gpu, 'build')
       pack_lib('gpu', mnm_multilib_cutlass)
