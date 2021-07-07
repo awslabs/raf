@@ -91,6 +91,17 @@ void ReduceDxOutSame(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
+void MeanDxDecl(const CallValues& call) {
+  const auto* args = call->args.as<MeanDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* dy = args->dy;
+  std::vector<int64_t> shape = args->x_shape;
+  call->device = dy->device;
+  call->out = TensorValue::Assemble(/*dev=*/dy->device,
+                                    /*dtype=*/dy->dtype,
+                                    /*shape=*/shape);
+}
+
 MNM_DECLARE_REDUCE_OP("mnm.op.argmax", ReduceOutInt);
 MNM_DECLARE_REDUCE_OP("mnm.op.argmin", ReduceOutInt);
 MNM_DECLARE_REDUCE_OP("mnm.op.max", ReduceOutSame);
@@ -99,7 +110,7 @@ MNM_DECLARE_REDUCE_OP("mnm.op.all", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.any", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.mean", ReduceOutSame);
 MNM_DECLARE_REDUCE_OP("mnm.op.prod", ReduceOutSame);
-MNM_DECLARE_REDUCE_DX_OP("mnm.op.mean_dx", ReduceDxOutSame);
+MNM_DECLARE_REDUCE_DX_OP("mnm.op.mean_dx", MeanDxDecl);
 MNM_DECLARE_REDUCE_DX_OP("mnm.op.prod_dx", ReduceDxOutSame);
 
 }  // namespace declare

@@ -702,6 +702,16 @@ Attrs LossDtp(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs MeanDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::MeanDxArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, dy);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, x_shape);
+  MNM_POD(3, ffi2schema::Bool, keepdims);
+  MNM_POD(4, ffi2schema::Bool, exclude);
+  return Attrs(attrs);
+}
+
 Attrs MeshGrid(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::MeshGridArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
@@ -2225,14 +2235,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.mean").set_body([](TVMArgs args, TVMRetValue* re
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.mean_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(mean_dx, 6, ffi2schema::ReduceDx,
-              schema::ReduceDxArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axis));
-  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->keepdims));
-  MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->exclude));
+  MNM_PRELUDE(mean_dx, 5, ffi2schema::MeanDx,
+              schema::MeanDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->x_shape));
+  MNM_SET_ENV(vpack->x[3], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->exclude));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3507,6 +3516,16 @@ Array<Expr> LossDtp(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> MeanDx(const TVMArgs& values) {
+  MNM_PRELUDE(5);
+  MNM_ARG(0, ffi2expr::Tensor, dy);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, axis);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, x_shape);
+  MNM_ARG(3, ffi2expr::Bool, keepdims);
+  MNM_ARG(4, ffi2expr::Bool, exclude);
+  MNM_RET();
+}
+
 Array<Expr> MeshGrid(const TVMArgs& values) {
   MNM_PRELUDE(1);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
@@ -4131,7 +4150,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.max_pool2d_dx")
     .set_body(MNM_SYMBOLIC_API(max_pool2d_dx, 9, PoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.maximum").set_body(MNM_SYMBOLIC_API(maximum, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mean").set_body(MNM_SYMBOLIC_API(mean, 4, Reduce));
-MNM_REGISTER_GLOBAL("mnm.op.sym.mean_dx").set_body(MNM_SYMBOLIC_API(mean_dx, 6, ReduceDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.mean_dx").set_body(MNM_SYMBOLIC_API(mean_dx, 5, MeanDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.mesh_grid").set_body(MNM_SYMBOLIC_API(mesh_grid, 1, MeshGrid));
 MNM_REGISTER_GLOBAL("mnm.op.sym.min").set_body(MNM_SYMBOLIC_API(min, 4, Reduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym.minimum").set_body(MNM_SYMBOLIC_API(minimum, 2, Binary));
@@ -4773,6 +4792,17 @@ Attrs LossDtp(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::Tensor, dy);
   MNM_REQUIRED(1, value2schema::Tensor, y_true);
   MNM_REQUIRED(2, value2schema::Tensor, y_pred);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs MeanDx(const Array<Value>& values) {
+  MNM_PRELUDE(1, 5, schema::MeanDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, dy);
+  MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axis);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, x_shape);
+  MNM_OPTIONAL(3, value2schema::Bool, keepdims);
+  MNM_OPTIONAL(4, value2schema::Bool, exclude);
   return Attrs(attrs);
 }
 
@@ -6163,6 +6193,27 @@ int LossDtp(const std::string& field) {
 }
 
 template <const char* op_name>
+int MeanDx(const std::string& field) {
+  if (field == "dy") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "x_shape") {
+    return 2;
+  }
+  if (field == "keepdims") {
+    return 3;
+  }
+  if (field == "exclude") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int MeshGrid(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -7494,9 +7545,9 @@ MNM_BIND_SCHEMA("mnm.op.mean", names::mean,
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mean", names::mean,
                             schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mean_dx", names::mean_dx,
-                value2schema::ReduceDx);  // NOLINT(whitespace/line_length)
+                value2schema::MeanDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mean_dx", names::mean_dx,
-                            schema_field_idx::ReduceDx);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::MeanDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.mesh_grid", names::mesh_grid,
                 value2schema::MeshGrid);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.mesh_grid", names::mesh_grid,
@@ -7879,6 +7930,7 @@ MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossArgs);
 MNM_REGISTER_OBJECT_REFLECT(LossDtpArgs);
+MNM_REGISTER_OBJECT_REFLECT(MeanDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(MeshGridArgs);
 MNM_REGISTER_OBJECT_REFLECT(NonMaxSuppressionArgs);
 MNM_REGISTER_OBJECT_REFLECT(OneHotArgs);

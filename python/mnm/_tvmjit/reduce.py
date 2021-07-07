@@ -156,12 +156,11 @@ _reg.register_schedule("mnm.op.prod_dx", schedule_generic)
 
 @register_compute("mnm.op.mean_dx")
 def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
-    x = inputs[0]
-    dy = inputs[2]
+    dy = inputs[0]
     axis = sorted(list(_topi.utils.get_const_tuple(attrs.axis)))
     keepdims = attrs.keepdims
     exclude = attrs.exclude
-    shape = x.shape
+    shape = list(_topi.utils.get_const_tuple(attrs.shape))
     ndim = len(shape)
     expandshape = list()
     if exclude:

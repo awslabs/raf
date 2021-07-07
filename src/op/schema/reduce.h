@@ -12,6 +12,16 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class MeanDxArgs : public ir::AttrsNode<MeanDxArgs> {
+ public:
+  value::BaseTensorValue dy;
+  std::vector<int64_t> axis{};
+  std::vector<int64_t> x_shape{};
+  bool keepdims{false};
+  bool exclude{false};
+  MNM_OP_SCHEMA(MeanDxArgs, "mnm.args.mean_dx");
+};
+
 class ReduceArgs : public ir::AttrsNode<ReduceArgs> {
  public:
   value::BaseTensorValue x;

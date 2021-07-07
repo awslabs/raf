@@ -22,6 +22,23 @@ struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   }
 };
 
+struct MeanDxAttrs : public tvm::AttrsNode<MeanDxAttrs> {
+  tvm::Array<tvm::Integer> axis;
+  tvm::Array<tvm::Integer> shape;
+  bool keepdims;
+  bool exclude;
+
+  TVM_DECLARE_ATTRS(MeanDxAttrs, "attrs.MeanDxAttrs") {
+    TVM_ATTR_FIELD(axis);
+    TVM_ATTR_FIELD(shape);
+    TVM_ATTR_FIELD(keepdims).set_default(false).describe(
+        "If this is set to `True`, the reduced axes are left "
+        "in the result as dimension with size one.");
+    TVM_ATTR_FIELD(exclude).set_default(false).describe(
+        "Whether to perform reduction on axis that are NOT in axis instead.");
+  }
+};
+
 }  // namespace tvmjit
 }  // namespace op
 }  // namespace mnm

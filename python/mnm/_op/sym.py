@@ -674,14 +674,13 @@ def mean(x, axis=(), keepdims=False, exclude=False):
     exclude = sym_utils.to_bool(exclude)
     return Symbol.from_expr(ffi.mean(x, axis, keepdims, exclude))
 
-def mean_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
-    x = sym_utils.to_tensor(x)
-    y = sym_utils.to_tensor(y)
+def mean_dx(dy, axis=(), x_shape=None, keepdims=False, exclude=False):
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int_tuple(axis)
+    x_shape = sym_utils.to_int_tuple(x_shape)
     keepdims = sym_utils.to_bool(keepdims)
     exclude = sym_utils.to_bool(exclude)
-    return Symbol.from_expr(ffi.mean_dx(x, y, dy, axis, keepdims, exclude))
+    return Symbol.from_expr(ffi.mean_dx(dy, axis, x_shape, keepdims, exclude))
 
 def mesh_grid(x):
     x = sym_utils.to_tensor_tuple(x)

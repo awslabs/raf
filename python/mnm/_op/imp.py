@@ -777,14 +777,13 @@ def mean(x, axis=(), keepdims=False, exclude=False):
     return imp_utils.ret(ffi.mean(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def mean_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
-    x = imp_utils.to_tensor(x)
-    y = imp_utils.to_tensor(y)
+def mean_dx(dy, axis=(), x_shape=None, keepdims=False, exclude=False):
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int_tuple(axis)
+    x_shape = imp_utils.to_int_tuple(x_shape)
     keepdims = imp_utils.to_bool(keepdims)
     exclude = imp_utils.to_bool(exclude)
-    return imp_utils.ret(ffi.mean_dx(x, y, dy, axis, keepdims, exclude))
+    return imp_utils.ret(ffi.mean_dx(dy, axis, x_shape, keepdims, exclude))
 
 @set_module("mnm")
 def mesh_grid(x):

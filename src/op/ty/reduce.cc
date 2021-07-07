@@ -163,6 +163,17 @@ Type ReduceDxDType(const CallValues& value) {
   return x;
 }
 
+Type MeanDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<schema::MeanDxArgs>();
+  CHECK(args != nullptr);
+  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  Array<tvm::PrimExpr> oshape;
+  for (int s : args->x_shape) {
+    oshape.push_back(PrimExpr(s));
+  }
+  return TensorType(oshape, dy->dtype);
+}
+
 MNM_OP_TYPE("mnm.op.argmax", "Argmax", ReduceOutIntDType);
 MNM_OP_TYPE("mnm.op.argmin", "Argmin", ReduceOutIntDType);
 MNM_OP_TYPE("mnm.op.max", "Max", ReduceOutSameDType);
@@ -172,7 +183,7 @@ MNM_OP_TYPE("mnm.op.any", "Any", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod", "Prod", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ReduceDxDType);
-MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", ReduceDxDType);
+MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", MeanDxInfer);
 
 }  // namespace type
 }  // namespace op
