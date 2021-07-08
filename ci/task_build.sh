@@ -7,10 +7,6 @@ source ./ci/env.sh
 BUILD_DIR=$1
 MAKE_FLAGS=$2
 
-pip3 install cmake
-pip3 install dataclasses
-pip3 install pycparser
-
 # check src_gen
 git checkout --recurse-submodules .
 ./scripts/src_codegen/run_all.sh
@@ -22,4 +18,4 @@ fi
 
 # build
 mkdir -p $BUILD_DIR
-cd $BUILD_DIR && $HOME/.local/bin/cmake .. && make $MAKE_FLAGS && make mnm-cpptest $MAKE_FLAGS && cd ..
+cd $BUILD_DIR && cmake .. && make $MAKE_FLAGS && make mnm-cpptest $MAKE_FLAGS && cd ..

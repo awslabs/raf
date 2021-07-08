@@ -1,5 +1,5 @@
-ci_cpu = "yyuezhi/mnm:ci_cpu-v0.11"
-ci_gpu = "yyuezhi/mnm:ci_gpu-v0.12"
+ci_cpu = "metaprojdev/meta:ci_cpu-v0.12"
+ci_gpu = "metaprojdev/meta:ci_gpu-v0.13"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
