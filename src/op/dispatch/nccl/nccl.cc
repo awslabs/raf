@@ -4,12 +4,12 @@
  * \brief Communication operators implmentated by NCCL
  */
 #include <vector>
+#include <chrono>
+#include <thread>
 #include "mnm/op_utils.h"
 #include "mnm/dist_context.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
-#include <chrono>
-#include <thread>
 
 namespace mnm {
 namespace op {

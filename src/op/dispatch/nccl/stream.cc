@@ -12,6 +12,7 @@ namespace mnm {
 namespace op {
 namespace communication {
 namespace nccl {
+
 class CudaStreamSync : public mnm::op::OpEnv {
   void* stream;
   explicit CudaStreamSync(const CallValues& cv) {
@@ -34,6 +35,7 @@ class CudaStreamSync : public mnm::op::OpEnv {
     return new CudaStreamSync(cv);
   }
 };
+
 MNM_OP_DISPATCH("mnm.op.stream_sync", CudaStreamSync::make, DevType::kCUDA(), "nccl_communication");
 
 }  // namespace nccl

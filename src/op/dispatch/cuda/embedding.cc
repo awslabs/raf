@@ -3,14 +3,16 @@
  * \file src/op/dispatch/cuda/kernels/transform.cc
  * \brief embedding_dx cuda backend
  */
-#include "../../../schema/nn.h"
-#include "../../tvmjit/tvmjit_utils.h"
-#include "./kernel_util.cuh"
+#include "../../schema/nn.h"
+#include "../tvmjit/tvmjit_utils.h"
+#include "./kernels/kernel_util.cuh"
 
 namespace mnm {
 namespace op {
 namespace cuda {
+
 using namespace mnm::value;
+
 class EmbeddingDxImpl : public mnm::op::OpEnv {
  public:
   explicit EmbeddingDxImpl(const CallValues& cv) {

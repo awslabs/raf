@@ -8,29 +8,13 @@ mnm_option(MNM_USE_LLVM "MNM depends on LLVM to do code generation. Option: [ON/
 mnm_option(MNM_USE_CUDA "Build MNM with CUDA. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_CUDNN "Build MNM with cuDNN. Option: [ON/OFF/Path-to-cuDNN]" OFF)
 mnm_option(MNM_USE_CUTLASS "Build MNM with CUTLASS. Option: [ON/OFF/NVCC-Arch]" OFF)
+mnm_option(MNM_CUDA_ARCH "Specify the CUDA architecture" 70)
 mnm_option(MNM_USE_MPI "Build MNM with MPI. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_NCCL "Build MNM with NCCL. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_CUBLAS "Build MNM with cuBLAS. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_GTEST "Build cpptests for MNM. Option: [ON/OFF]" OFF)
 mnm_option(MNM_USE_SANITIZER "Build MNM with sanitizer. Option: [OFF/ASAN/MSAN/TSAN/UBSAN]" OFF)
 mnm_find_config()
-
-if (NOT ${MNM_USE_CUDA} STREQUAL "OFF")
-  enable_language(CUDA)
-  if((NOT DEFINED CMAKE_CUDA_ARCHITECTURES) AND (NOT DEFINED ENV{CUDAARCHS}))
-	set(CMAKE_CUDA_ARCHITECTURES 70 75)
-  endif()
-  
-  file(GLOB_RECURSE MNM_CUDA_C_FILES
-	${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/kernels/*.cc
-  )
-  file(GLOB_RECURSE MNM_CUDA_KERNEL_FILES
-	${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/kernels/*.cu
-  )
-else()
-  set(MNM_CUDA_KERNEL_FILES "")
-  set(MNM_CUDA_C_FILES "")
-endif()
 
 ################# Modules and Third-Party Targets #################
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules;${CMAKE_MODULE_PATH}")
@@ -58,7 +42,13 @@ set(MNM_INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/3rdparty/cutlass/tools/util/include/
 )
 
-set(MNM_CXXFLAGS "")
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+  message(STATUS "Build in Debug mode")
+else()
+  message(STATUS "Build in Release mode")
+endif()
+set(MNM_CXX_FLAGS -fPIC)
+set(MNM_CUDA_FLAGS -Xcompiler=-Wall -Xcompiler=-fPIC)
 
 set(MNM_BACKEND_INCLUDE_DIRS
   ${MNM_CUDA_INCLUDE}
@@ -115,13 +105,26 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
 
 if (${MNM_USE_CUDA} STREQUAL "OFF")
   set(MNM_CUDA_SOURCE_FILES "")
+  set(MNM_CUDA_KERNEL_FILES "")
+  set(MNM_CUDA_FLAGS "")
 else ()
+  message(STATUS "Build with CUDA enabled")
+  message(STATUS "Build for CUDA architecture: ${MNM_CUDA_ARCH}")
+  enable_language(CUDA)
+  set(CMAKE_CUDA_ARCHITECTURES ${MNM_CUDA_ARCH})
+  set(MNM_CXX_FLAGS ${MNM_CXX_FLAGS} -DMNM_USE_CUDA)
+  set(MNM_CUDA_FLAGS ${MNM_CUDA_FLAGS}
+      -gencode=arch=compute_${MNM_CUDA_ARCH},code=sm_${MNM_CUDA_ARCH})
+
   file(GLOB_RECURSE MNM_CUDA_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cc
-    ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cu
     ${CMAKE_CURRENT_LIST_DIR}/src/profiler/cuda/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/*.cc
   )
-  set(MNM_CXX_FLAGS ${MNM_CXX_FALGS} -DMNM_USE_CUDA)
+
+  file(GLOB_RECURSE MNM_CUDA_KERNEL_FILES
+	${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/kernels/*.cu
+  )
 endif()
 
 if (${MNM_USE_CUDNN} STREQUAL "OFF")
@@ -153,25 +156,41 @@ if (${MNM_USE_NCCL} STREQUAL "OFF")
 else ()
   file(GLOB_RECURSE MNM_DISTRIBUTED_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/*.cc
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/nccl/*.cc
   )
 endif()
 
 set(MNM_SOURCE_FILES
   ${MNM_CXX_SOURCE_FILES}
   ${MNM_CUDA_SOURCE_FILES}
-  ${MNM_CUDA_KERNEL_FILES}
-  ${MNM_CUDA_C_FILES}
   ${MNM_CUDNN_SOURCE_FILES}
   ${MNM_CUBLAS_SOURCE_FILES}
   ${MNM_CUTLASS_SOURCE_FILES}
   ${MNM_DISTRIBUTED_SOURCE_FILES}
 )
 
-add_library(mnm ${MNM_SOURCE_FILES})
-target_include_directories(mnm PRIVATE ${MNM_INCLUDE_DIRS})
-target_include_directories(mnm SYSTEM PRIVATE ${MNM_BACKEND_INCLUDE_DIRS})
-target_include_directories(mnm SYSTEM PRIVATE "3rdparty/tvm/3rdparty/compiler-rt")
+add_library(mnm_objs OBJECT ${MNM_SOURCE_FILES})
+target_include_directories(mnm_objs PRIVATE ${MNM_INCLUDE_DIRS})
+target_include_directories(mnm_objs SYSTEM PRIVATE ${MNM_BACKEND_INCLUDE_DIRS})
+target_include_directories(mnm_objs SYSTEM PRIVATE "3rdparty/tvm/3rdparty/compiler-rt")
+target_compile_options(mnm_objs PRIVATE ${MNM_CXX_FLAGS})
+target_compile_features(mnm_objs PRIVATE cxx_std_14)
+target_compile_definitions(mnm_objs PRIVATE DMLC_USE_LOGGING_LIBRARY=<tvm/runtime/logging.h>)
+
+if (${MNM_USE_CUDA} STREQUAL "ON")
+  add_library(mnm_cuda_objs OBJECT ${MNM_CUDA_KERNEL_FILES})
+  target_include_directories(mnm_cuda_objs PRIVATE ${MNM_INCLUDE_DIRS})
+  target_include_directories(mnm_cuda_objs SYSTEM PRIVATE ${MNM_BACKEND_INCLUDE_DIRS})
+  target_include_directories(mnm_cuda_objs SYSTEM PRIVATE "3rdparty/tvm/3rdparty/compiler-rt")
+  target_compile_options(mnm_cuda_objs PRIVATE ${MNM_CUDA_FLAGS})
+  target_compile_features(mnm_cuda_objs PRIVATE cxx_std_14)
+  target_compile_definitions(mnm_cuda_objs PRIVATE DMLC_USE_LOGGING_LIBRARY=<tvm/runtime/logging.h>)
+
+  add_library(mnm $<TARGET_OBJECTS:mnm_objs> $<TARGET_OBJECTS:mnm_cuda_objs>)
+else()
+  add_library(mnm $<TARGET_OBJECTS:mnm_objs>)
+endif()
+
 target_compile_options(mnm PRIVATE ${MNM_CXX_FLAGS})
 target_link_libraries(mnm PRIVATE ${MNM_LINK_LIBS} ${MNM_BACKEND_LINK_LIBS})
 target_compile_features(mnm PRIVATE cxx_std_14)

@@ -23,8 +23,8 @@ set(MNM_USE_GTEST ON)
 # MNM_USE_CUDA. Option: [ON/OFF]
 set(MNM_USE_CUDA OFF)
 
-# CUDA architecture for cmake, 70(V100), 75(T4), 80(A100)
-set(CMAKE_CUDA_ARCHITECTURES 70)
+# CUDA architecture. Option: 70(V100), 75(T4), 80(A100)
+set(MNM_CUDA_ARCH 70)
 
 # MNM_USE_CUBLAS. Option: [ON/OFF]
 set(MNM_USE_CUBLAS OFF)
@@ -41,5 +41,5 @@ set(MNM_USE_MPI OFF)
 # MNM_USE_NCCL. Option: [ON/OFF]
 set(MNM_USE_NCCL OFF)
 
-# MNM_USE_CUTLASS. Option: [ON/OFF]. 
+# MNM_USE_CUTLASS. Option: [ON/OFF].
 set(MNM_USE_CUTLASS OFF)
