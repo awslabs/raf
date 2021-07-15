@@ -16,7 +16,6 @@ namespace from_relay {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::tensor;
-using namespace tvm;
 using namespace ::tvm::relay;
 
 using VarValueMap = Map<Var, Expr>;

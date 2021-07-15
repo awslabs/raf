@@ -60,9 +60,6 @@ using namespace mnm::value;
     return;                                                                   \
   }
 
-#define MNM_REGISTER_BINARY_BCAST_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kBroadcast)
-
 TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false) {
   int ndim_1 = x1->ndim;
   int ndim_2 = x2->ndim;
@@ -92,7 +89,7 @@ TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false
   return TensorValue::Assemble(x1->device, x1->dtype, oshape);
 }
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.add", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.add", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -107,7 +104,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.add", [](const CallValues& call) {
   throw;
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.subtract", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.subtract", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -122,7 +119,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.subtract", [](const CallValues& call) {
   throw;
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.multiply", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.multiply", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -131,7 +128,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.multiply", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.power", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.power", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -147,7 +144,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.power", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.divide", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.divide", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -164,7 +161,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.divide", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.floor_divide", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.floor_divide", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -181,7 +178,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.floor_divide", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.mod", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.mod", [](const CallValues& call) {
   // TODO(@junrushao1994): python-style Euclidean division modulo
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
@@ -208,7 +205,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.mod", [](const CallValues& call) {
                     }));
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.less", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -217,7 +214,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less", [](const CallValues& call) {
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.greater", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -227,7 +224,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater", [](const CallValues& call) {
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.right_shift", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.right_shift", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -247,7 +244,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.right_shift", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less_equal", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.less_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -256,7 +253,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.less_equal", [](const CallValues& call) {
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater_equal", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.greater_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -265,7 +262,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.greater_equal", [](const CallValues& call) 
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.equal", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -274,7 +271,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.equal", [](const CallValues& call) {
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.not_equal", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.not_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -283,7 +280,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.not_equal", [](const CallValues& call) {
   MNM_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.maximum", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.maximum", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -296,7 +293,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.maximum", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.minimum", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -309,7 +306,7 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.minimum", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.logical_and", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.logical_and", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -322,8 +319,8 @@ void CollapseAxis(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
 
-  auto x1_type = op::type::GetType(args->x1);
-  auto x2_type = op::type::GetType(args->x2);
+  auto x1_type = op::GetType(args->x1);
+  auto x2_type = op::GetType(args->x2);
 
   auto* t1_type = x1_type.as<ir::TensorTypeNode>();
   auto* t2_type = x2_type.as<ir::TensorTypeNode>();
@@ -351,7 +348,7 @@ void CollapseAxis(const CallValues& call) {
   }
 }
 
-MNM_REGISTER_BINARY_BCAST_OP("mnm.op.left_shift", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.left_shift", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
@@ -377,14 +374,13 @@ MNM_REGISTER_BINARY_BCAST_OP("mnm.op.left_shift", [](const CallValues& call) {
   MNM_BINARY_TENSOR(x1, x2);
 });
 
-// TODO(@icemelon9): Currently use opaque for shape related op.
-MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis);
 
 void CollapseKeep(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  auto x1_type = op::type::GetType(args->x1);
-  auto x2_type = op::type::GetType(args->x2);
+  auto x1_type = op::GetType(args->x1);
+  auto x2_type = op::GetType(args->x2);
 
   auto* t1_type = x1_type.as<ir::TensorTypeNode>();
   auto* t2_type = x2_type.as<ir::TensorTypeNode>();
@@ -412,8 +408,7 @@ void CollapseKeep(const CallValues& call) {
   }
 }
 
-// TODO(@icemelon9): Currently use opaque for shape related op.
-MNM_OP_DECLARE("mnm.op.get_kept_dims", CollapseKeep).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.get_kept_dims", CollapseKeep);
 
 }  // namespace declare
 }  // namespace op

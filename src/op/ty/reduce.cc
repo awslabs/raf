@@ -14,20 +14,15 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using schema::ReduceArgs;
 using schema::ReduceDxArgs;
 using schema::SumArgs;
 using schema::SumDxArgs;
-using tvm::relay::Type;
-using namespace tvm;
-using namespace tvm::relay;
 
 Type SumInfer(const CallValues& value) {
-  using namespace tvm;
-  using namespace tvm::relay;
   const auto* args = value->args.as<SumArgs>();
   CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
@@ -185,6 +180,5 @@ MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ReduceDxDType);
 MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", MeanDxInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

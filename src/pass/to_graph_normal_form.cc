@@ -91,10 +91,10 @@ class GNFConverter : public MixedModeMutator {
 }  // namespace to_graph_normal_form
 
 Pass ToGraphNormalForm() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(to_graph_normal_form::GNFConverter().Mutate(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(to_graph_normal_form::GNFConverter().Mutate(f));
+  };
   return CreateMNMFunctionPass(pass_func, 1, "ToGraphNormalForm", {});
 }
 

@@ -10,10 +10,8 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
-using namespace tvm;
-using namespace tvm::relay;
+using namespace mnm::ir;
 using schema::LossArgs;
 using schema::LossDtpArgs;
 
@@ -72,6 +70,5 @@ MNM_OP_TYPE("mnm.op.cross_entropy", "CrossEntropy", SmoothL1Infer);
 MNM_OP_TYPE("mnm.op.cross_entropy_dpred", "CrossEntropyDpred", SmoothL1Back);
 MNM_OP_TYPE("mnm.op.cross_entropy_dtrue", "CrossEntropyDtrue", SmoothL1Back);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

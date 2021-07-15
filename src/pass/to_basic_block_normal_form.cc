@@ -38,14 +38,14 @@ Expr ToBasicBlockNormalFormExpr(const Expr& expr) {
 }
 
 Pass ToBasicBlockNormalForm() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        ICHECK_EQ(FreeVars(f).size(), 0);
-        Expr ret = TransformF([&](const Expr& e) { return ToBasicBlockNormalFormExpr(e); }, f);
-        ICHECK_EQ(FreeVars(ret).size(), 0)
-            << AsText(ret) << "should not has free vars: " << FreeVars(ret);
-        return Downcast<Function>(ret);
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    ICHECK_EQ(FreeVars(f).size(), 0);
+    Expr ret = TransformF([&](const Expr& e) { return ToBasicBlockNormalFormExpr(e); }, f);
+    ICHECK_EQ(FreeVars(ret).size(), 0)
+        << ir::AsText(ret) << "should not has free vars: " << FreeVars(ret);
+    return Downcast<Function>(ret);
+  };
   return CreateMNMFunctionPass(pass_func, 1, "ToBasicBlockNormalForm", {});
 }
 

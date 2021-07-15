@@ -16,19 +16,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
-using tvm::Array;
-using tvm::Downcast;
-using tvm::FloatImm;
-using tvm::Integer;
-using tvm::PrimExpr;
-using tvm::relay::TensorType;
-using tvm::relay::TupleType;
-using tvm::relay::Type;
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace schema;
-using namespace mnm::type;
 
 Type Conv2DInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvArgs>();
@@ -187,7 +178,6 @@ MNM_OP_TYPE("mnm.op.conv2d_transpose_dw", "Conv2dTransposeDxw", Conv2DTransposeD
 MNM_OP_TYPE("mnm.op.conv2d_transpose_dx", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
 
 Type Pool2DInfer(const CallValues& value) {
-  using namespace tvm::tir;
   const auto* args = value->args.as<PoolArgs>();
   TensorType x = Downcast<TensorType>(GetType(args->x));
   std::vector<int64_t> kernel = Pad<2>(args->kernel);
@@ -310,7 +300,7 @@ Type ContribDropoutInfer(const CallValues& value) {
   TensorType x_ty = Downcast<TensorType>(GetType(args->x));
   TensorType states_ty;
   Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
-      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
+      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(GetType(args->x));
   Array<PrimExpr> reserve_space_shape = {reserve_space_size_in_bytes};
   TensorType reserve_space(reserve_space_shape, DataType::UInt(8));
   if (args->in_states.defined()) {
@@ -392,6 +382,5 @@ Type PadInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.pad", "Pad", PadInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

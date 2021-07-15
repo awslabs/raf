@@ -12,11 +12,9 @@ namespace mnm {
 namespace op {
 namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
-using namespace schema;
-using tvm::relay::Type;
-using namespace tvm;
-using namespace tvm::relay;
+using namespace mnm::op::schema;
 
 Type GetValidCountsInfer(const CallValues& value) {
   const auto* args = value->args.as<GetValidCountsArgs>();

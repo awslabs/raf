@@ -18,8 +18,6 @@ namespace op {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using namespace tvm;
-using namespace ::tvm::relay;
 
 #define MNM_APPEND_BYTES(type, nbytes, value)                               \
   {                                                                         \

@@ -14,7 +14,7 @@ class Backend:
     backends : List[str]
         The list of preferred backends, with descending priority
     """
-    valid_backends = ["tvmjit", "cudnn", "cutlass", "cublas"]
+    valid_backends = ["tvm", "cuda", "cudnn", "cutlass", "cublas", "nccl"]
     storage = threading.local()
     storage.scope = []
 

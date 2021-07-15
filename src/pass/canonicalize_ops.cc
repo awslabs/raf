@@ -18,8 +18,6 @@ namespace canonicalize_ops {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using namespace tvm;
-using namespace runtime;
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
@@ -92,11 +90,11 @@ class BiasAddSimplifier : public ExprRewriter {
 }  // namespace canonicalize_ops
 
 Pass CanonicalizeOps() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto rewriter = canonicalize_ops::BiasAddSimplifier();
-        return Downcast<Function>(PostOrderRewrite(f, &rewriter));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    auto rewriter = canonicalize_ops::BiasAddSimplifier();
+    return Downcast<Function>(PostOrderRewrite(f, &rewriter));
+  };
   return CreateMNMFunctionPass(pass_func, 1, "CanonicalizeOps", {});
 }
 

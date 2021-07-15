@@ -180,7 +180,7 @@ IRModule ToANormalFormAux(IRModule m) {
     Expr ret = TransformF([&](const Expr& e) { return ToANormalFormExpr(e); },
                           Downcast<Function>(it.second));
     ICHECK_EQ(FreeVars(ret).size(), 0)
-        << AsText(ret) << "should not has free vars: " << FreeVars(ret);
+        << ir::AsText(ret) << "should not has free vars: " << FreeVars(ret);
     updates.Set(it.first, Downcast<Function>(ret));
   }
 
@@ -194,8 +194,9 @@ IRModule ToANormalFormAux(IRModule m) {
 }
 
 Pass ToANormalForm() {
-  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =
-      [=](IRModule m, PassContext pc) { return ToANormalFormAux(m); };
+  TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m, PassContext pc) {
+    return ToANormalFormAux(m);
+  };
   return CreateModulePass(pass_func, 1, "ToANormalForm", {});
 }
 

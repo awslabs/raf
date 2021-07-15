@@ -10,10 +10,9 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace schema;
-using tvm::relay::Type;
 
 Type CompilerInfer(const CallValues& value) {
   const auto* args = value->args.as<CompilerArgs>();
@@ -24,6 +23,5 @@ Type CompilerInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.compiler_begin", "Compiler", CompilerInfer);
 MNM_OP_TYPE("mnm.op.compiler_end", "Compiler", CompilerInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

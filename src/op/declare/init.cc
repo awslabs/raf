@@ -26,7 +26,7 @@ MNM_OP_DECLARE("mnm.op.zeros", [](const CallValues& call) {
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
   call->device = device;
-}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+});
 
 MNM_OP_DECLARE("mnm.op.ones", [](const CallValues& call) {
   const auto* args = call->args.as<InitOpArgs>();
@@ -40,7 +40,7 @@ MNM_OP_DECLARE("mnm.op.ones", [](const CallValues& call) {
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
   call->device = device;
-}).set_attr<TOpPattern>("TOpPattern", kElemWise);
+});
 
 MNM_OP_DECLARE("mnm.op.one_hot", [](const CallValues& call) {
   const auto* args = call->args.as<OneHotArgs>();
@@ -57,7 +57,7 @@ MNM_OP_DECLARE("mnm.op.one_hot", [](const CallValues& call) {
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/shape);
   call->device = device;
-}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+});
 
 }  // namespace init
 }  // namespace op

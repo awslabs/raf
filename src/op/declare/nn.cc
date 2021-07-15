@@ -88,7 +88,7 @@ void Conv2D(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d", Conv2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.conv2d", Conv2D);
 
 void Conv2dTrans(const CallValues& call) {
   // N.B.: NCHW + OIHW
@@ -167,8 +167,7 @@ void Conv2dTrans(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_transpose", Conv2dTrans)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.conv2d_transpose", Conv2dTrans);
 
 void Pool2D(const CallValues& call) {
   // NCHW
@@ -220,8 +219,8 @@ void Pool2D(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.avg_pool2d", Pool2D).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D);
+MNM_OP_DECLARE("mnm.op.avg_pool2d", Pool2D);
 
 void AdaptivePool2D(const CallValues& call) {
   const auto* args = call->args.as<AdaptivePoolArgs>();
@@ -250,10 +249,8 @@ void AdaptivePool2D(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d", AdaptivePool2D)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d", AdaptivePool2D)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d", AdaptivePool2D);
+MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d", AdaptivePool2D);
 
 void Softmax(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxArgs>();
@@ -267,25 +264,22 @@ void Softmax(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
-MNM_OP_DECLARE("mnm.op.log_softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.softmax", Softmax);
+MNM_OP_DECLARE("mnm.op.log_softmax", Softmax);
 
-MNM_OP_DECLARE("mnm.op.batch_norm_train",
-               [](const CallValues& call) {
-                 const auto* args = call->args.as<BatchNormArgs>();
-                 CHECK(args != nullptr);
-                 const DLTensor* x = args->x;
-                 std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-                 TensorValue y = TensorValue::Assemble(/*dev=*/x->device,
-                                                       /*dtype=*/x->dtype,
-                                                       /*shape=*/shape);
-                 TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
-                 TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
-                 call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
-                 call->device = x->device;
-               })
-    .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{1, 1}, {2, 2}});
+MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
+  const auto* args = call->args.as<BatchNormArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  TensorValue y = TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape);
+  TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
+  TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
+  call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
+  call->device = x->device;
+}).set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{1, 1}, {2, 2}});
 
 MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
   // FIXME(@were): please fix this: bn-infer should only output y
@@ -298,7 +292,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
                                         /*shape=*/shape);
   call->out = y;
   call->device = x->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+});
 
 void Conv2dDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvDxwArgs>();
@@ -311,8 +305,8 @@ void Conv2dDxw(const CallValues& call) {
   call->device = x_or_w->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw);
+MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw);
 
 void Conv2dTransposeDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvTransposeDxwArgs>();
@@ -325,23 +319,15 @@ void Conv2dTransposeDxw(const CallValues& call) {
   call->device = x_or_w->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_transpose_dx", Conv2dTransposeDxw)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.conv2d_transpose_dw", Conv2dTransposeDxw)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.conv2d_transpose_dx", Conv2dTransposeDxw);
+MNM_OP_DECLARE("mnm.op.conv2d_transpose_dw", Conv2dTransposeDxw);
 
-MNM_OP_DECLARE("mnm.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOpaque);
-MNM_OP_DECLARE("mnm.op.log_softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>)
-    .set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
+MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
+MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
+MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
+MNM_OP_DECLARE("mnm.op.softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
+MNM_OP_DECLARE("mnm.op.log_softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
 
 MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormTrainDxwbArgs>();
@@ -361,7 +347,7 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
                                          /*shape=*/wshape);
   call->out = TupleValue::make(tvm::Array<Value>({dx, dw, db}));
   call->device = x->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+});
 
 void BiasAdd(const CallValues& call) {
   const auto* args = call->args.as<BiasAddArgs>();
@@ -376,7 +362,7 @@ void BiasAdd(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd);
 
 void ContribDropout(const CallValues& call) {
   const auto* args = call->args.as<DropoutArgs>();
@@ -385,9 +371,9 @@ void ContribDropout(const CallValues& call) {
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   std::vector<int64_t> states_shape;
   Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
-      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(type::GetType(args->x));
+      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(GetType(args->x));
   std::vector<int64_t> reserve_space_shape;
-  // The CUDNN compute requires in_states. While the TVMJIT compute don't support in_states for now.
+  // The CUDNN compute requires in_states. While the TVM compute don't support in_states for now.
   if (args->in_states.defined()) {
     const DLTensor* in_states = args->in_states.value();
     for (size_t i = 0; i < in_states->ndim; i++) {
@@ -398,7 +384,7 @@ void ContribDropout(const CallValues& call) {
   TensorValue output = TensorValue::Assemble(/*dev=*/x->device,
                                              /*dtype=*/x->dtype,
                                              /*shape=*/shape);
-  // valid for tvmjit only
+  // valid for tvm only
   TensorValue mask = TensorValue::Assemble(/*dev=*/x->device,
                                            /*dtype=*/DType(DTypeCode::kFloat(), 32),
                                            /*shape=*/shape);
@@ -414,8 +400,7 @@ void ContribDropout(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropout)
-    .set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropout);
 
 void DropoutDx(const CallValues& call) {
   const auto* args = call->args.as<DropoutDxArgs>();
@@ -428,7 +413,7 @@ void DropoutDx(const CallValues& call) {
   call->device = dy->device;
 }
 
-MNM_OP_DECLARE("mnm.op._contrib_dropout_dx", DropoutDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._contrib_dropout_dx", DropoutDx);
 
 void LayerNorm(const CallValues& call) {
   const auto* args = call->args.as<LayerNormArgs>();
@@ -440,7 +425,7 @@ void LayerNorm(const CallValues& call) {
                                     /*shape=*/shape);
   call->device = x->device;
 }
-MNM_OP_DECLARE("mnm.op.layer_norm", LayerNorm).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.layer_norm", LayerNorm);
 
 void LayerNormDx(const CallValues& call) {
   const auto* args = call->args.as<LayerNormDxArgs>();
@@ -467,7 +452,7 @@ void LayerNormDx(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx);
 
 void Threshold(const CallValues& call) {
   const auto* args = call->args.as<ThresholdArgs>();
@@ -488,7 +473,7 @@ void Threshold(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op.threshold", Threshold).set_attr<TOpPattern>("TOpPattern", kElemWise);
+MNM_OP_DECLARE("mnm.op.threshold", Threshold);
 
 void ThresholdDx(const CallValues& call) {
   const auto* args = call->args.as<ThresholdDxArgs>();
@@ -501,7 +486,7 @@ void ThresholdDx(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.threshold_dx", ThresholdDx).set_attr<TOpPattern>("TOpPattern", kElemWise);
+MNM_OP_DECLARE("mnm.op.threshold_dx", ThresholdDx);
 
 void Pad(const CallValues& call) {
   const auto* args = call->args.as<PadArgs>();
@@ -534,7 +519,7 @@ void Pad(const CallValues& call) {
                                     /*shape=*/oshape);
   call->device = data->device;
 }
-MNM_OP_DECLARE("mnm.op.pad", Pad).set_attr<TOpPattern>("TOpPattern", kInjective);
+MNM_OP_DECLARE("mnm.op.pad", Pad);
 
 }  // namespace declare
 }  // namespace op

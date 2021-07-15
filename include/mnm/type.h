@@ -16,13 +16,21 @@
 #include "./registry.h"
 
 namespace mnm {
-namespace type {
-using namespace tvm;
+namespace ir {
+
+using tvm::PrimType;
+using tvm::PrimTypeNode;
+using tvm::VoidType;
 using tvm::relay::FuncType;
+using tvm::relay::FuncTypeNode;
 using tvm::relay::IncompleteType;
+using tvm::relay::IncompleteTypeNode;
 using tvm::relay::TensorType;
+using tvm::relay::TensorTypeNode;
 using tvm::relay::TupleType;
+using tvm::relay::TupleTypeNode;
 using tvm::relay::Type;
+using tvm::relay::TypeNode;
 
 using TypeInferenceFn = tvm::TypedEnvFunc<Type(const op::CallValues& value)>;
 
@@ -68,9 +76,9 @@ class TypeInference : public tvm::TypeConstraint {
 OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
                   tvm::runtime::TypedPackedFunc<Type(const op::CallValues& value)> fn);
 
-}  // namespace type
+}  // namespace ir
 }  // namespace mnm
 
-#define MNM_OP_TYPE(op_name, fn_name, body)                 \
-  RELAY_REGISTER_OP(op_name).set_attr<::mnm::type::OpType>( \
-      "OpType", ::mnm::type::MakeOpType(op_name, fn_name, body))
+#define MNM_OP_TYPE(op_name, fn_name, body)               \
+  RELAY_REGISTER_OP(op_name).set_attr<::mnm::ir::OpType>( \
+      "OpType", ::mnm::ir::MakeOpType(op_name, fn_name, body))

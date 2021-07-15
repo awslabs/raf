@@ -15,9 +15,9 @@
 namespace mnm {
 namespace pass {
 
-using namespace tvm;
-using namespace tvm::transform;
-using namespace ::mnm::ir;
+using namespace mnm::ir;
+using tvm::transform::Pass;
+using tvm::transform::PassInfo;
 
 class MNMSequentialNode;
 

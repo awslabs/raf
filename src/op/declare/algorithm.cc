@@ -26,7 +26,7 @@ MNM_OP_DECLARE("mnm.op.argsort", [](const CallValues& call) {
                                     /*dtype=*/ir::String2DLDataType(dtype),
                                     /*shape=*/oshape);
   call->device = data->device;
-}).set_attr<TOpPattern>("TOpPattern", kInjective);
+});
 
 MNM_OP_DECLARE("mnm.op.sort", [](const CallValues& call) {
   const auto* args = call->args.as<SortArgs>();
@@ -38,7 +38,7 @@ MNM_OP_DECLARE("mnm.op.sort", [](const CallValues& call) {
                                     /*dtype=*/data->dtype,
                                     /*shape=*/oshape);
   call->device = data->device;
-}).set_attr<TOpPattern>("TOpPattern", kInjective);
+});
 
 MNM_OP_DECLARE("mnm.op.topk", [](const CallValues& call) {
   const auto* args = call->args.as<TopkArgs>();
@@ -78,7 +78,7 @@ MNM_OP_DECLARE("mnm.op.topk", [](const CallValues& call) {
     call->out = out_b;
   }
   call->device = data->device;
-}).set_attr<TOpPattern>("TOpPattern", kInjective);
+});
 
 }  // namespace declare
 }  // namespace op

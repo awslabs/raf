@@ -16,7 +16,6 @@ namespace binding {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using namespace tvm::relay;
 using executor::interpreter::InvokeClosure;
 using op::CallValues;
 using op::MakeListArgs;
@@ -96,7 +95,7 @@ Var MakeManagedBinding(const BindingEntry& entry, const std::string& name_hint,
 
 Var BindNDArray(Value value, GradTape tape, std::string name_hint) {
   std::string grad_name_hint = "d" + name_hint;
-  Type type = op::type::GetType(value);
+  Type type = op::GetType(value);
   return MakeManagedBinding(NDArrayBinding::make(
                                 /*value=*/value,
                                 /*tape=*/tape),

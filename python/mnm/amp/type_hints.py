@@ -115,7 +115,7 @@ register_op_cast_rule("mnm.op.cross_entropy_dtrue", generic_cast(False, 2))
 # over float32, so never cast.
 register_op_cast_rule("mnm.op.embedding_dx", generic_cast(False, 2))
 
-# FIXME: These ops should support float16, but the current TVMJIT code results in
+# FIXME: These ops should support float16, but the current TVM code results in
 # either runtime error or mismatch outputs.
 register_op_cast_rule("mnm.op.atan", generic_cast(False, 1))
 register_op_cast_rule("mnm.op.tanh", generic_cast(False, 1))

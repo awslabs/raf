@@ -98,8 +98,8 @@ class InplaceUpdateMutator : public MixedModeMutator {
 
   Expr Rewrite_(const CallNode* pre, const Expr& post) final {
     static auto finplace = Op::GetAttrMap<op::TMNMInplaceUpdate>("TMNMInplaceUpdate");
-    static auto add_op = op::GetOp("mnm.op.add");
-    static auto subtract_op = op::GetOp("mnm.op.subtract");
+    static auto add_op = Op::Get("mnm.op.add");
+    static auto subtract_op = Op::Get("mnm.op.subtract");
     auto call = Downcast<Call>(post);
     auto op = Mutate(call->op);
     if (op.as<OpNode>()) {
@@ -298,23 +298,23 @@ class InplaceUpdateValidator : public ExprMutator {
 }  // namespace inplace_update
 
 Pass InplaceUpdate() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto body = inplace_update::InplaceUpdateMutator().Mutate(f->body);
-        return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    auto body = inplace_update::InplaceUpdateMutator().Mutate(f->body);
+    return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
+  };
   return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {});
 }
 
 Pass ValidateInplaceUpdate(bool enforce_inplace_update) {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto analyzer = liveness_analysis::LivenessAnalyzer(f);
-        analyzer.Run();
-        auto body =
-            inplace_update::InplaceUpdateValidator(f->body, analyzer, enforce_inplace_update).Run();
-        return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    auto analyzer = liveness_analysis::LivenessAnalyzer(f);
+    analyzer.Run();
+    auto body =
+        inplace_update::InplaceUpdateValidator(f->body, analyzer, enforce_inplace_update).Run();
+    return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
+  };
   return CreateMNMFunctionPass(pass_func, 1, "ValidateInplaceUpdate", {});
 }
 

@@ -5,13 +5,11 @@
  */
 #include "./from_relay_utils.h"
 
-using namespace mnm::value;
-using namespace tvm;
-using namespace ::tvm::relay;
-
 namespace mnm {
 namespace op {
 namespace from_relay {
+
+using namespace mnm::value;
 
 const ConstantNode* GetKonstFromValueMap(const Expr& expr, const VarValueMap& val_map) {
   ICHECK(expr->IsInstance<VarNode>()) << "Assume ANF!";

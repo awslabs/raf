@@ -72,7 +72,7 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_se
     )
     with env_tracing_task:
         with mnm.ir.PassContext(config={"relay.backend.use_auto_scheduler": True,
-                                        "mnm.tvmjit.allow_jit_failure": True},
+                                        "mnm.tvm.allow_jit_failure": True},
                                 disabled_pass={"AutoSchedulerLayoutRewrite"}):
             executor.vm.run(*args, profile_memory=True)
 

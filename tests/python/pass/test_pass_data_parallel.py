@@ -121,7 +121,7 @@ def test_dp(config):
 
         expr_t = tvm.relay.Tuple([var_x1])
 
-        op__allreduce = mnm._ffi.op.GetOp('mnm.op.comm.allreduce')
+        op__allreduce = mnm._ffi.op.GetOp('mnm.op._allreduce')
         expr_g = tvm.relay.Call(op__allreduce, [expr_t])
         var_g = tvm.relay.var('g')
 
@@ -131,7 +131,7 @@ def test_dp(config):
 
         expr_t1 = tvm.relay.Tuple([var_x2])
 
-        op__allreduce = mnm._ffi.op.GetOp('mnm.op.comm.allreduce')
+        op__allreduce = mnm._ffi.op.GetOp('mnm.op._allreduce')
         expr_g1 = tvm.relay.Call(op__allreduce, [expr_t1])
         var_g1 = tvm.relay.var('g1')
 
@@ -142,7 +142,7 @@ def test_dp(config):
 
         expr_t2 = tvm.relay.Tuple([var_x4])
 
-        op__allreduce = mnm._ffi.op.GetOp('mnm.op.comm.allreduce')
+        op__allreduce = mnm._ffi.op.GetOp('mnm.op._allreduce')
         expr_g2 = tvm.relay.Call(op__allreduce, [expr_t2])
         var_g2 = tvm.relay.var('g2')
 
@@ -198,7 +198,7 @@ def test_dp(config):
     func_expected = expected()
     text = func_after.astext()
 
-    assert "mnm.op.comm.allreduce" in text
+    assert "mnm.op._allreduce" in text
     assert "mnm.op.stream_sync" in text
     assert tvm.ir.structural_equal(func_after, func_expected)
 

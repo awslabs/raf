@@ -45,16 +45,13 @@ using tvm::Downcast;
     return;                                     \
   }
 
-#define MNM_DECLARE_UNARY_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kElemWise)
-
 TensorValue MakeUnaryTensor(DLTensor* x) {
   int ndim = x->ndim;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   return TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.negative", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   MNM_UNARY_SCALAR(-, args->x);
@@ -63,7 +60,7 @@ MNM_DECLARE_UNARY_OP("mnm.op.negative", [](const CallValues& call) {
   throw;
 });
 
-MNM_DECLARE_UNARY_OP("mnm.op.rsqrt", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.rsqrt", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   MNM_SWITCH_SCALAR(v, args->x, {
@@ -78,7 +75,7 @@ MNM_DECLARE_UNARY_OP("mnm.op.rsqrt", [](const CallValues& call) {
   throw;
 });
 
-MNM_DECLARE_UNARY_OP("mnm.op.logical_not", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.logical_not", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   MNM_UNARY_SCALAR(!, args->x);
@@ -103,28 +100,28 @@ void Unary(const CallValues& call) {
   }
 }
 
-MNM_DECLARE_UNARY_OP("mnm.op.relu", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.gelu", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.tanh", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.sigmoid", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.copy", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.abs", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.ceil", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.floor", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.log", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.log2", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.exp", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.cos", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.sin", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.sign", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.round", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.erf", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.sqrt", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.atan", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.zeros_like", Unary);
-MNM_DECLARE_UNARY_OP("mnm.op.ones_like", Unary);
+MNM_OP_DECLARE("mnm.op.relu", Unary);
+MNM_OP_DECLARE("mnm.op.gelu", Unary);
+MNM_OP_DECLARE("mnm.op.tanh", Unary);
+MNM_OP_DECLARE("mnm.op.sigmoid", Unary);
+MNM_OP_DECLARE("mnm.op.copy", Unary);
+MNM_OP_DECLARE("mnm.op.abs", Unary);
+MNM_OP_DECLARE("mnm.op.ceil", Unary);
+MNM_OP_DECLARE("mnm.op.floor", Unary);
+MNM_OP_DECLARE("mnm.op.log", Unary);
+MNM_OP_DECLARE("mnm.op.log2", Unary);
+MNM_OP_DECLARE("mnm.op.exp", Unary);
+MNM_OP_DECLARE("mnm.op.cos", Unary);
+MNM_OP_DECLARE("mnm.op.sin", Unary);
+MNM_OP_DECLARE("mnm.op.sign", Unary);
+MNM_OP_DECLARE("mnm.op.round", Unary);
+MNM_OP_DECLARE("mnm.op.erf", Unary);
+MNM_OP_DECLARE("mnm.op.sqrt", Unary);
+MNM_OP_DECLARE("mnm.op.atan", Unary);
+MNM_OP_DECLARE("mnm.op.zeros_like", Unary);
+MNM_OP_DECLARE("mnm.op.ones_like", Unary);
 
-MNM_DECLARE_UNARY_OP("mnm.op.trunc", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.trunc", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   MNM_SWITCH_SCALAR(v, args->x, {
@@ -157,18 +154,18 @@ void UnaryDx(const CallValues& call) {
   call->device = source->device;
 }
 
-MNM_DECLARE_UNARY_OP("mnm.op.relu_dx", UnaryDx);
-MNM_DECLARE_UNARY_OP("mnm.op.gelu_dx", UnaryDx);
-MNM_DECLARE_UNARY_OP("mnm.op.tanh_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.relu_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.gelu_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.tanh_dx", UnaryDx);
 // TODO(@yzhliu, @icemelon9): We don't have tvm impl for sigmoid_dx. So currently don't fuse it.
 MNM_OP_DECLARE("mnm.op.sigmoid_dx", UnaryDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
-MNM_DECLARE_UNARY_OP("mnm.op.erf_dx", UnaryDx);
-MNM_DECLARE_UNARY_OP("mnm.op.sqrt_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.erf_dx", UnaryDx);
+MNM_OP_DECLARE("mnm.op.sqrt_dx", UnaryDx);
 
 void Shape(const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  auto x_type = op::type::GetType(args->x);
+  auto x_type = op::GetType(args->x);
   std::vector<Value> shape;
   if (auto* t_type = x_type.as<ir::TensorTypeNode>()) {
     for (auto ty : t_type->shape) {
@@ -184,7 +181,7 @@ void Shape(const CallValues& call) {
 // TODO(@icemelon9): Currently use opaque for shape related op.
 MNM_OP_DECLARE("mnm.op.shape", Shape).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
-MNM_DECLARE_UNARY_OP("mnm.op.ndarray_size", [](const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.ndarray_size", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
 

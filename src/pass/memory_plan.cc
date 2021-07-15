@@ -361,7 +361,7 @@ class MemoryPlanner : public ExprMutator {
   /*! \brief The current processing let var. */
   Var curr_let_;
   /*! \brief A map from let varr to its expression. */
-  std::unordered_map<Var, Expr, ObjectHash, ObjectEqual> expr_map_;
+  std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> expr_map_;
   /*! \brief The liveness analyzer, including liveness analysis results. */
   liveness_analysis::LivenessAnalyzer* analyzer_;
   /*! \brief A list of storage allocation groups. */
@@ -495,7 +495,7 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
   /*! \brief The let list. */
   std::unique_ptr<ExplicitLetList> ell_{nullptr};
   /*! \brief A map from let varr to its expression. */
-  std::unordered_map<Var, Expr, ObjectHash, ObjectEqual> expr_map_;
+  std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> expr_map_;
   /*! \brief The liveness analyzer, including liveness analysis results. */
   liveness_analysis::LivenessAnalyzer* analyzer_;
   /*! \brief A list of storage allocation groups. */
@@ -517,17 +517,17 @@ Pass MemoryPlan() {
   PassContext pass_ctx = PassContext::Current();
   Bool inert_free = pass_ctx->GetConfig("mnm.memory_plan.insert_free", Bool(true)).value();
   Bool reuse_storage = pass_ctx->GetConfig("mnm.memory_plan.reuse_storage", Bool(false)).value();
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto analyzer = liveness_analysis::LivenessAnalyzer(f);
-        analyzer.Run();
-        if (!analyzer.IsSuccess()) {
-          LOG(WARNING) << "Memory planning is disabled because liveness analysis was failed";
-          return f;
-        }
-        return Downcast<ir::Function>(
-            memory_plan::MemoryPlanner(f, &analyzer, inert_free, reuse_storage).Run());
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    auto analyzer = liveness_analysis::LivenessAnalyzer(f);
+    analyzer.Run();
+    if (!analyzer.IsSuccess()) {
+      LOG(WARNING) << "Memory planning is disabled because liveness analysis was failed";
+      return f;
+    }
+    return Downcast<ir::Function>(
+        memory_plan::MemoryPlanner(f, &analyzer, inert_free, reuse_storage).Run());
+  };
   auto func_pass = CreateMNMFunctionPass(pass_func, 3, "MemoryPlan", {});
   PassInfo pass_info(3, "MemoryPlan", {});
   return MNMSequential({InferType(), func_pass}, pass_info);

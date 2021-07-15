@@ -149,7 +149,7 @@ def test_allgather_with_tensor_list(axis):
         def build(self):
             pass
 
-        @ mnm.model.trace
+        @mnm.model.trace
         def forward(self, x1, x2):
             x = mnm.allgather([x1, x2], axis=axis)
             return mnm.concatenate(x)

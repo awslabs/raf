@@ -92,10 +92,10 @@ class ExprSimplifier : public ExprMutator {
 }  // namespace simplify_expr
 
 Pass SimplifyExpr() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(simplify_expr::ExprSimplifier().Simplify(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(simplify_expr::ExprSimplifier().Simplify(f));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "SimplifyExpr", {});
 }
 

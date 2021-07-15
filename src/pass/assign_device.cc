@@ -199,11 +199,11 @@ class DeviceAssigner : public ExprMutator {
 }  // namespace assign_device
 
 Pass AssignDevice(std::string device) {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto assigner = assign_device::DeviceAssigner(device);
-        return Downcast<Function>(assigner.Mutate(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    auto assigner = assign_device::DeviceAssigner(device);
+    return Downcast<Function>(assigner.Mutate(f));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "AssignDevice", {});
 }
 

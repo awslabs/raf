@@ -235,7 +235,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     ICHECK(call->out.defined()) << "ValueError: Tensor compute of " << op->name
                                 << " is not implemented.";
     AllocOutputBuffer(call->out);
-    std::shared_ptr<OpEnv> op_env = OpDispatch::Dispatch(call);
+    std::shared_ptr<OpEnv> op_env = Dispatch(call);
     if (op_env != nullptr) {
       InvokePrimitiveOpEnv(std::move(op_env), call, use_upper_bound);
     } else {
@@ -243,6 +243,13 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       throw;
     }
     return call->out;
+  }
+
+  void RunDeclare(const CallValues& call) {
+    static const auto f_op_make_output = Op::GetAttrMap<FMNMDeclare>("FMNMDeclare");
+    const Op& op = Downcast<OpValue>(call->callee)->op;
+    const auto& f = f_op_make_output[op];
+    f(call);
   }
 
   void InvokePrimitiveOpEnv(std::shared_ptr<OpEnv> op_env, const CallValues& call,

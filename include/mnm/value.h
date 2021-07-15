@@ -38,7 +38,6 @@ enum ValueType {
   kOpaqueValue = 11,
   kNoGradValue = 12,
   kVoidValue = 13,
-  kCallValue = 14,
 };
 
 /*!

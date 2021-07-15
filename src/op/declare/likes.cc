@@ -76,7 +76,7 @@ void Sum(const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-MNM_OP_DECLARE("mnm.op.sum", Sum).set_attr<TOpPattern>("TOpPattern", kCommReduce);
+MNM_OP_DECLARE("mnm.op.sum", Sum);
 
 void SumDx(const CallValues& call) {
   // the shape of the output of reduce_dx op is same as input x
@@ -89,7 +89,7 @@ void SumDx(const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
 }
-MNM_OP_DECLARE("mnm.op.sum_dx", SumDx).set_attr<TOpPattern>("TOpPattern", kBroadcast);
+MNM_OP_DECLARE("mnm.op.sum_dx", SumDx);
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

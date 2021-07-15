@@ -114,7 +114,7 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) {
     static auto vm_set_shape_op = Op::Get("mnm.op.vm.set_shape");
-    static std::unordered_set<Op, ObjectHash, ObjectEqual> reshape_ops{
+    static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
         Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze")};
 
     const auto* op = node->op.as<OpNode>();
@@ -199,7 +199,7 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr MakeAllocStorage(const Array<Expr>& args, int device_type, int device_id,
-                        const tvm::runtime::DataType& dtype) {
+                        const DataType& dtype) {
     static const Op& op = Op::Get("mnm.op.vm.alloc_storage");
     Array<Expr> new_args = args;
     new_args.push_back(MakeConstant(ScalarValue::make(device_type)));
@@ -208,8 +208,7 @@ class ManifestAllocMutator : public ExprMutator {
     return Call(op, new_args);
   }
 
-  Expr MakeAllocTensor(const Array<Expr>& args, const Expr& assert_shape,
-                       const tvm::runtime::DataType& dtype) {
+  Expr MakeAllocTensor(const Array<Expr>& args, const Expr& assert_shape, const DataType& dtype) {
     static const Op& op = Op::Get("mnm.op.vm.alloc_tensor");
     Array<Expr> new_args = args;
     new_args.push_back(MakeConstant(StringValue::make(DLDataType2String(dtype))));
@@ -322,10 +321,10 @@ class ManifestAllocMutator : public ExprMutator {
 }  // namespace manifest_alloc
 
 Pass ManifestAlloc() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<ir::Function>(manifest_alloc::ManifestAllocMutator()(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<ir::Function>(manifest_alloc::ManifestAllocMutator()(f));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "ManifestAlloc", {});
 }
 

@@ -1,0 +1,22 @@
+"""Schedule registries for broadcast operators."""
+from .._lib import _reg
+
+_reg.register_broadcast_schedule("mnm.op.tvm.add")
+_reg.register_broadcast_schedule("mnm.op.tvm.subtract")
+_reg.register_broadcast_schedule("mnm.op.tvm.multiply")
+_reg.register_broadcast_schedule("mnm.op.tvm.divide")
+_reg.register_broadcast_schedule("mnm.op.tvm.floor_divide")
+_reg.register_broadcast_schedule("mnm.op.tvm.maximum")
+_reg.register_broadcast_schedule("mnm.op.tvm.minimum")
+_reg.register_broadcast_schedule("mnm.op.tvm.bias_add")
+_reg.register_broadcast_schedule("mnm.op.tvm.power")
+_reg.register_broadcast_schedule("mnm.op.tvm.where")
+_reg.register_broadcast_schedule("mnm.op.tvm.logical_and")
+_reg.register_broadcast_schedule("mnm.op.tvm.right_shift")
+_reg.register_broadcast_schedule("mnm.op.tvm.left_shift")
+_reg.register_broadcast_schedule("mnm.op.tvm.equal")
+_reg.register_broadcast_schedule("mnm.op.tvm.not_equal")
+_reg.register_broadcast_schedule("mnm.op.tvm.less")
+_reg.register_broadcast_schedule("mnm.op.tvm.less_equal")
+_reg.register_broadcast_schedule("mnm.op.tvm.greater")
+_reg.register_broadcast_schedule("mnm.op.tvm.greater_equal")

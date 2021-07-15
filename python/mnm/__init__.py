@@ -10,7 +10,7 @@ from . import random
 from . import build
 from . import ir
 from . import model
-from . import _tvmjit
+from . import _tvm_op
 from . import optim
 from . import utils
 from . import _core

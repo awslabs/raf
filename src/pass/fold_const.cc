@@ -200,10 +200,10 @@ ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args) {
 }
 
 Pass FoldConstant() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(fold_const::ConstantFolder().Mutate(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(fold_const::ConstantFolder().Mutate(f));
+  };
   return CreateMNMFunctionPass(pass_func, 1, "FoldConstant", {});
 }
 

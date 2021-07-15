@@ -52,8 +52,8 @@ function(mnm_customized_cutlass_kernels)
   cutlass_target_sources(
     cutlass_lib
     PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/op/dispatch/cutlass/operation_table_ext.cu
-    ${PROJECT_SOURCE_DIR}/src/op/dispatch/cutlass/singleton_ext.cu
+    ${PROJECT_SOURCE_DIR}/src/op/dialect/cutlass/operation_table_ext.cu
+    ${PROJECT_SOURCE_DIR}/src/op/dialect/cutlass/singleton_ext.cu
   )
 endfunction()
 

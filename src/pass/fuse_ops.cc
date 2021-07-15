@@ -605,10 +605,10 @@ Pass FuseOps() {
   PassContext pass_ctx = PassContext::Current();
   Integer fuse_level = pass_ctx->GetConfig("mnm.fuse_level", Integer(static_cast<int>(3))).value();
   DLOG(INFO) << "Fuse level: " << fuse_level;
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(fuse_ops::FuseMutator().Transform(f, fuse_level));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(fuse_ops::FuseMutator().Transform(f, fuse_level));
+  };
 
   Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "FuseOpsHelper", {});
   PassInfo pass_info(2, "FuseOps", {});

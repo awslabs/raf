@@ -13,17 +13,12 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using schema::UnaryArgs;
 using schema::UnaryDxArgs;
 using schema::UnaryUfuncArgs;
-using tvm::Array;
-using tvm::Downcast;
-using tvm::relay::TensorType;
-using tvm::relay::TupleType;
-using tvm::relay::Type;
 
 Type UnaryInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
@@ -95,6 +90,5 @@ MNM_OP_TYPE("mnm.op.shape", "Shape", UnaryShapeInfer);
 MNM_OP_TYPE("mnm.op.zeros_like", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.ones_like", "Identity", UnaryInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

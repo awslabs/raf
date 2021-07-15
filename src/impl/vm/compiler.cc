@@ -32,11 +32,9 @@ namespace vm {
 using namespace mnm::ir;
 using namespace mnm::op;
 using namespace mnm::value;
-using namespace mnm::type;
-using namespace tvm;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
-using relay::Shape;
+using tvm::relay::Shape;
 
 /*!
  * \brief Bind params to function by using name
@@ -113,7 +111,7 @@ class OpMatch {
 
  private:
   /*! \brief The match function map. */
-  std::unordered_map<Op, MatchFunc, ObjectHash, ObjectEqual> match_map_;
+  std::unordered_map<Op, MatchFunc, ObjectPtrHash, ObjectPtrEqual> match_map_;
   /*! \brief An optional default case. */
   MatchFunc default_;
 };
@@ -553,7 +551,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       VisitExpr(MakeConstant(ClosureValue::make({}, GetRef<Function>(func_node))));
     } else {
       LOG(FATAL) << "local functions should have been removed by lambda lifting:" << std::endl
-                 << "Program: " << tvm::AsText(GetRef<Function>(func_node), false) << std::endl
+                 << "Program: " << ir::AsText(GetRef<Function>(func_node), false) << std::endl
                  << "AST: " << GetRef<Function>(func_node);
     }
   }
@@ -665,13 +663,13 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
 
  protected:
   /*! \brief Store the expression a variable points to. */
-  std::unordered_map<Var, Expr, ObjectHash, ObjectEqual> expr_map_;
+  std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> expr_map_;
   /*! \brief Instructions in the VMFunction. */
   std::vector<Instruction> instructions_;
   /*! \brief Parameter names of the function. */
   std::vector<std::string> params_;
   /*! \brief Map from var to register number. */
-  std::unordered_map<Var, RegName, ObjectHash, ObjectEqual> var_register_map_;
+  std::unordered_map<Var, RegName, ObjectPtrHash, ObjectPtrEqual> var_register_map_;
   /*! \brief Last used register number. */
   Index last_register_;
   /*! \brief Total number of virtual registers allocated. */
@@ -749,7 +747,7 @@ void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Targe
 IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targets) {
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
-  With<tvm::Target> tctx((*it).second);
+  tvm::With<tvm::Target> tctx((*it).second);
   Array<pass::Pass> pass_seqs;
 
   // optimization passes that work on ANF
@@ -777,7 +775,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   pass_seqs.push_back(pass::MemoryPlan());
 
   pass::MNMSequential seq(pass_seqs);
-  relay::transform::PassContext pass_ctx = pass::PassContext::Current();
+  pass::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
   return seq(mod);
 }
@@ -791,9 +789,9 @@ void VMCompiler::PopulateGlobalMap() {
   }
 }
 
-runtime::Module CreateVMCompiler() {
+tvm::runtime::Module CreateVMCompiler() {
   auto exec = make_object<VMCompiler>();
-  return runtime::Module(exec);
+  return tvm::runtime::Module(exec);
 }
 
 PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Object>& sptr_to_self) {
@@ -805,7 +803,7 @@ PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Obje
     });
   } else if (name == "get_executable") {
     return PackedFunc(
-        [sptr_to_self, this](TVMArgs args, TVMRetValue* rv) { *rv = runtime::Module(exec_); });
+        [sptr_to_self, this](TVMArgs args, TVMRetValue* rv) { *rv = tvm::runtime::Module(exec_); });
   } else if (name == "set_params") {
     return PackedFunc([sptr_to_self, this](TVMArgs args, TVMRetValue* rv) {
       Map<String, Var> params = args[0];

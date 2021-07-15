@@ -85,10 +85,10 @@ class LetInliner : public ExprMutator {
 }  // namespace inline_let
 
 Pass InlineLet() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(inline_let::LetInliner().VisitExpr(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(inline_let::LetInliner().VisitExpr(f));
+  };
   return CreateMNMFunctionPass(pass_func, 1, "InlineLet", {});
 }
 

@@ -11,12 +11,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
-using namespace tvm;
-using namespace tvm::relay;
 
 Type AllReduceInfer(const CallValues& value) {
   const auto* args = value->args.as<AllreduceArgs>();
@@ -27,7 +25,7 @@ Type AllReduceInfer(const CallValues& value) {
   return TupleType(x);
 }
 
-MNM_OP_TYPE("mnm.op.comm.allreduce", "AllReduce", AllReduceInfer);
+MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", AllReduceInfer);
 
 Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();
@@ -40,7 +38,7 @@ Type ReduceScatterInfer(const CallValues& value) {
   return ty;
 }
 
-MNM_OP_TYPE("mnm.op.comm.reduce_scatter", "ReduceScatter", ReduceScatterInfer);
+MNM_OP_TYPE("mnm.op._reduce_scatter", "ReduceScatter", ReduceScatterInfer);
 
 Type SendInfer(const CallValues& value) {
   const auto* args = value->args.as<SendArgs>();
@@ -49,7 +47,7 @@ Type SendInfer(const CallValues& value) {
   return TensorType({}, ty->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.comm.send", "Send", SendInfer);
+MNM_OP_TYPE("mnm.op._send", "Send", SendInfer);
 
 Type RecvInfer(const CallValues& value) {
   const auto* args = value->args.as<RecvArgs>();
@@ -62,8 +60,7 @@ Type RecvInfer(const CallValues& value) {
   return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
 }
 
-MNM_OP_TYPE("mnm.op.comm.recv", "Recv", RecvInfer);
+MNM_OP_TYPE("mnm.op._recv", "Recv", RecvInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

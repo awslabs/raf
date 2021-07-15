@@ -14,9 +14,7 @@
 namespace mnm {
 namespace pass {
 
-using namespace tvm;
 using namespace mnm::ir;
-using namespace tvm::transform;
 using tvm::ReprPrinter;
 using tvm::runtime::TVMArgs;
 using tvm::runtime::TVMRetValue;
@@ -86,11 +84,11 @@ const MNMSequentialNode* MNMSequential::operator->() const {
 }
 
 inline Pass GetPass(const String& pass_name) {
-  const runtime::PackedFunc* f;
+  const PackedFunc* f;
   if (pass_name.operator std::string().find("mnm.pass_.") != std::string::npos) {
-    f = runtime::Registry::Get(pass_name);
+    f = tvm::runtime::Registry::Get(pass_name);
   } else {
-    f = runtime::Registry::Get("mnm.pass_." + pass_name);
+    f = tvm::runtime::Registry::Get("mnm.pass_." + pass_name);
   }
   ICHECK(f != nullptr) << "Cannot use " << pass_name << " to create the pass";
   return (*f)();
@@ -136,7 +134,7 @@ class MNMFunctionPassNode : public PassNode {
    * `pass_func` and let it run on a given module. The same `pass_func` will
    * then be applied on each function in the module.
    */
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func;
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func;
 
   MNMFunctionPassNode() = default;
 
@@ -182,15 +180,14 @@ class MNMFunctionPass : public Pass {
    * \param pass_func The packed function which implements a pass.
    * \param pass_info The pass info.
    */
-  MNMFunctionPass(runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
+  MNMFunctionPass(TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
                   PassInfo pass_info);
 
   MNM_OBJECT_REF(MNMFunctionPass, Pass, MNMFunctionPassNode);
 };
 
 MNMFunctionPass::MNMFunctionPass(
-    runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
-    PassInfo pass_info) {
+    TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func, PassInfo pass_info) {
   auto n = make_object<MNMFunctionPassNode>();
   n->pass_func = std::move(pass_func);
   n->pass_info = std::move(pass_info);
@@ -237,8 +234,8 @@ bool MNMFunctionPassNode::SkipFunction(const Function& func) const {
 }
 
 Pass CreateMNMFunctionPass(
-    const runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
-    int opt_level, String name, tvm::Array<String> required) {
+    const TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func, int opt_level,
+    String name, tvm::Array<String> required) {
   PassInfo pass_info = PassInfo(opt_level, name, required);
   return MNMFunctionPass(pass_func, pass_info);
 }
@@ -246,9 +243,8 @@ Pass CreateMNMFunctionPass(
 TVM_REGISTER_NODE_TYPE(MNMFunctionPassNode);
 
 TVM_REGISTER_GLOBAL("mnm.pass_.MakeMNMFunctionPass")
-    .set_body_typed(
-        [](runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
-           PassInfo pass_info) { return MNMFunctionPass(pass_func, pass_info); });
+    .set_body_typed([](TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,
+                       PassInfo pass_info) { return MNMFunctionPass(pass_func, pass_info); });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<MNMFunctionPassNode>([](const ObjectRef& ref, ReprPrinter* p) {
@@ -262,7 +258,7 @@ MNM_REGISTER_GLOBAL("mnm.pass_.MNMSequential").set_body([](TVMArgs args, TVMRetV
   tvm::Array<Pass> passes = args[0];
   int opt_level = args[1];
   std::string name = args[2];
-  tvm::Array<runtime::String> required = args[3];
+  tvm::Array<String> required = args[3];
   PassInfo pass_info = PassInfo(opt_level, name, required);
   *ret = MNMSequential(passes, pass_info);
 });

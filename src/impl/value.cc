@@ -63,9 +63,6 @@ ValueType TypeKey2ValueType(const char* type_key) {
   if (strcmp(type_key, "mnm.value.VoidValue") == 0) {
     return kVoidValue;
   }
-  if (strcmp(type_key, "mnm.value.CallValue") == 0) {
-    return kCallValue;
-  }
   LOG(FATAL) << "Unknown value type key: " << type_key;
   return kNullptr;
 }
@@ -100,8 +97,9 @@ std::string ValueType2String(ValueType type) {
       return "NoGradValue";
     case kVoidValue:
       return "VoidValue";
-    case kCallValue:
-      return "CallValue";
+    default:
+      LOG(FATAL) << "Unknown value type: " << static_cast<int32_t>(type);
+      return "";
   }
 }
 

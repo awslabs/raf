@@ -21,8 +21,6 @@ namespace pass {
 namespace partition_graph {
 
 using namespace mnm::ir;
-using namespace tvm;
-using namespace tvm::relay;
 using mnm::op::schema::CompilerArgs;
 
 static const Op& begin_op = CompilerBeginOp();
@@ -339,10 +337,10 @@ Expr PartitionGraph(const Expr& expr) {
 }  // namespace partition_graph
 
 Pass PartitionGraph() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(partition_graph::PartitionGraph(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(partition_graph::PartitionGraph(f));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "PartitionGraph", {});
 }
 

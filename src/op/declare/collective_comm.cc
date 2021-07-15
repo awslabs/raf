@@ -41,7 +41,7 @@ void AllReduce(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op.comm.allreduce", AllReduce);
+MNM_OP_DECLARE("mnm.op._allreduce", AllReduce);
 
 void AllGather(const CallValues& call) {
   const auto* args = call->args.as<AllgatherArgs>();
@@ -56,7 +56,7 @@ void AllGather(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op.comm.allgather", AllGather);
+MNM_OP_DECLARE("mnm.op._allgather", AllGather);
 
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
@@ -75,7 +75,7 @@ void ReduceScatter(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op.comm.reduce_scatter", ReduceScatter);
+MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter);
 
 void Send(const CallValues& call) {
   const auto* args = call->args.as<SendArgs>();
@@ -87,7 +87,7 @@ void Send(const CallValues& call) {
                                     /*shape=*/std::vector<int64_t>{});
 }
 
-MNM_OP_DECLARE("mnm.op.comm.send", Send);
+MNM_OP_DECLARE("mnm.op._send", Send);
 
 void Recv(const CallValues& call) {
   const auto* args = call->args.as<RecvArgs>();
@@ -99,7 +99,7 @@ void Recv(const CallValues& call) {
                                     /*shape=*/args->shape);
 }
 
-MNM_OP_DECLARE("mnm.op.comm.recv", Recv);
+MNM_OP_DECLARE("mnm.op._recv", Recv);
 
 }  // namespace declare
 }  // namespace op

@@ -11,12 +11,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
-using namespace tvm;
-using namespace tvm::relay;
 
 Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
   size_t ndim_1 = x1->shape.size();
@@ -27,9 +25,9 @@ Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
     PrimExpr lhs = (i < ndim_1) ? x1->shape[ndim_1 - 1 - i] : Integer(1);
     PrimExpr rhs = (i < ndim_2) ? x2->shape[ndim_2 - 1 - i] : Integer(1);
 
-    if (tir::is_const_int(lhs, 1)) {
+    if (tvm::tir::is_const_int(lhs, 1)) {
       oshape.Set(ndim - 1 - i, rhs);
-    } else if (tir::is_const_int(rhs, 1)) {
+    } else if (tvm::tir::is_const_int(rhs, 1)) {
       oshape.Set(ndim - 1 - i, lhs);
     } else if (lhs.as<AnyNode>()) {
       oshape.Set(ndim - 1 - i, rhs);
@@ -45,8 +43,6 @@ Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
 }
 
 Type BroadcastInfer(const CallValues& value) {
-  using namespace tvm;
-  using namespace tvm::relay;
   const auto* args = value->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
@@ -58,8 +54,6 @@ Type BroadcastInfer(const CallValues& value) {
 }
 
 Type BroadcastUfuncInfer(const CallValues& value) {
-  using namespace tvm;
-  using namespace tvm::relay;
   const auto* args = value->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
@@ -71,8 +65,6 @@ Type BroadcastUfuncInfer(const CallValues& value) {
 }
 
 Type LogicalBroadcastInfer(const CallValues& value) {
-  using namespace tvm;
-  using namespace tvm::relay;
   const auto* args = value->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   TensorType x1 = Downcast<TensorType>(GetType(args->x1));
@@ -118,6 +110,6 @@ Type AxisTypeInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.get_reduce_axis", "ReduceAxis", AxisTypeInfer);
 MNM_OP_TYPE("mnm.op.get_kept_dims", "KeptDims", AxisTypeInfer);
-}  // namespace type
+
 }  // namespace op
 }  // namespace mnm

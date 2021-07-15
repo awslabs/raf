@@ -11,9 +11,6 @@
 namespace mnm {
 namespace pass {
 
-using namespace tvm;
-using namespace tvm::relay;
-
 struct ExplicitLetList {
  public:
   std::vector<ir::Var> vars;

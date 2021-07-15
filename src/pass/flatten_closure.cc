@@ -174,8 +174,9 @@ class ClosureFlattener : public MixedModeMutator {
 }  // namespace flatten_closure
 
 Pass FlattenClosure() {
-  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =
-      [=](IRModule m, PassContext pc) { return flatten_closure::ClosureFlattener(m).Flatten(); };
+  TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m, PassContext pc) {
+    return flatten_closure::ClosureFlattener(m).Flatten();
+  };
   return CreateModulePass(pass_func, 1, "FlattenClosure", {});
 }
 

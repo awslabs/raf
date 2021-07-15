@@ -11,13 +11,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace schema;
-using tvm::relay::Type;
-using namespace tvm;
-using namespace relay;
 
 Type InitOpInfer(const CallValues& value) {
   const auto* args = value->args.as<InitOpArgs>();
@@ -46,6 +43,5 @@ Type OneHotInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.one_hot", "OneHot", OneHotInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

@@ -46,18 +46,17 @@ using tvm::FloatImmNode;
 using tvm::Integer;
 using tvm::IntImm;
 using tvm::IntImmNode;
+using tvm::PrimExpr;
 
 // Attributes
 using tvm::Attrs;
 using tvm::AttrsNode;
 
-using tvm::BaseTensorType;
-using tvm::BaseTensorTypeNode;
-using tvm::Type;
-using tvm::TypeNode;
-
-// Object protocol
+// TVM basic objects
 using tvm::NullValue;
+using tvm::Target;
+
+// TVM runtime objects
 using tvm::runtime::DataType;
 using tvm::runtime::Downcast;
 using tvm::runtime::GetObjectPtr;
@@ -81,6 +80,7 @@ using tvm::IRModuleNode;
 // Relay Expression
 using tvm::relay::Expr;
 using tvm::relay::ExprNode;
+using tvm::relay::IndexExpr;
 
 using tvm::relay::Id;
 using tvm::relay::IdNode;

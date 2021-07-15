@@ -15,13 +15,17 @@
 
 namespace mnm {
 namespace pass {
-using tvm::AsText;
+
 using tvm::relay::ExpandANormalForm;
 using tvm::relay::FreeVars;
+using tvm::relay::Function;
+using tvm::runtime::PackedFunc;
+using tvm::runtime::TypedPackedFunc;
 using tvm::transform::CreateModulePass;
 using tvm::transform::Pass;
 using tvm::transform::PassContext;
 using tvm::transform::PassInfo;
+using tvm::transform::PassNode;
 
 /*!
  * \brief A special trace pass that prints the header and IR to LOG(INFO).
@@ -229,9 +233,9 @@ Pass ToGraphNormalForm();
  */
 Pass ToANormalForm();
 
-TVM_DLL Pass CreateMNMFunctionPass(
-    const runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
-    int opt_level, String name, tvm::Array<String> required);
+TVM_DLL Pass
+CreateMNMFunctionPass(const TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
+                      int opt_level, String name, tvm::Array<String> required);
 
 /*!
  * \brief A pass that turns an expression to Basic Block Normal Form.

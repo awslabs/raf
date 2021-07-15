@@ -15,7 +15,6 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
 /*! \brief Get the type of value.
  *
@@ -72,12 +71,11 @@ int32_t CalArangeOutputSize(const schema::ArangeArgs* args) {
  */
 template <typename Comparator>
 bool TypeCheckCompare(const tvm::PrimExpr& lhs, const tvm::PrimExpr& rhs, Comparator compare) {
-  using namespace tvm;
-  if (lhs.as<tir::AnyNode>() || rhs.as<tir::AnyNode>()) {
+  if (lhs.as<tvm::tir::AnyNode>() || rhs.as<tvm::tir::AnyNode>()) {
     return true;
   }
-  PrimExpr diff = lhs - rhs;
-  if (const int64_t* pdiff = tir::as_const_int(diff)) {
+  tvm::PrimExpr diff = lhs - rhs;
+  if (const int64_t* pdiff = tvm::tir::as_const_int(diff)) {
     return compare(pdiff[0], 0);
   }
   return true;
@@ -101,6 +99,5 @@ tvm::Type GeneralDxInfer(const CallValues& value) {
   return x;
 }
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

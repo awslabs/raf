@@ -10,13 +10,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
-using tvm::relay::Type;
+using namespace mnm::ir;
 using namespace mnm::value;
 using schema::BinaryArgs;
-using namespace tvm;
-using namespace tvm::relay;
 
 template <bool transpose_a, bool transpose_b>
 Type MatmulInfer(const CallValues& value) {
@@ -80,6 +77,5 @@ MNM_OP_TYPE("mnm.op.batch_matmul_nt", "BatchMatmulNT", (BatchMatmulInfer<false, 
 MNM_OP_TYPE("mnm.op.batch_matmul_tn", "BatchMatmulTN", (BatchMatmulInfer<true, false>));
 MNM_OP_TYPE("mnm.op.batch_matmul_tt", "BatchMatmulTT", (BatchMatmulInfer<true, true>));
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

@@ -1,0 +1,234 @@
+/*!
+ * Copyright (c) 2021 by Contributors
+ * \file ./src/op/dialect/tvm_dialect/binary.cc
+ * \brief Binary operators bridged from TVM.
+ */
+#include <vector>
+#include <numeric>
+#include "./tvm_attrs.h"
+#include "./tvm_utils.h"
+#include "../../schema/reduce.h"
+#include "../../../common/shape_utils.h"
+#include "../../schema/likes.h"
+
+namespace mnm {
+namespace op {
+namespace tvm_dialect {
+
+using namespace mnm::ir;
+using namespace mnm::op::schema;
+using common::shape_utils::GetNumel;
+
+std::vector<Value> ReduceSchema2Args(const ReduceArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ReduceSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs ReduceSchema2Attrs(const ReduceArgs* args) {
+  auto attrs = make_object<ReduceAttrs>();
+  // expand the empty axis
+  DLTensor* x = args->x;
+  auto ndim = x->ndim;
+  std::vector<int64_t> axis;
+  if (args->axis.empty()) {
+    axis.resize(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+  } else {
+    axis = args->axis;
+  }
+  for (int i = 0, n = axis.size(); i < n; ++i) {
+    attrs->axis.push_back(axis[i]);
+  }
+  attrs->keepdims = args->keepdims;
+  attrs->exclude = args->exclude;
+  return Attrs(attrs);
+}
+
+HashKey ReduceHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                     const ReduceArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    key << args->axis[i];
+  }
+  key << args->keepdims;
+  key << args->exclude;
+  return key;
+}
+
+std::vector<Value> ReduceDxSchema2Args(const ReduceDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> ReduceDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "y", "dy"};
+}
+
+Attrs ReduceDxSchema2Attrs(const ReduceDxArgs* args) {
+  auto attrs = make_object<ReduceAttrs>();
+  // expand the empty axis
+  DLTensor* x = args->x;
+  auto ndim = x->ndim;
+  std::vector<int64_t> axis;
+  if (args->axis.empty()) {
+    axis.resize(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+  } else {
+    axis = args->axis;
+  }
+  for (int i = 0, n = axis.size(); i < n; ++i) {
+    attrs->axis.push_back(axis[i]);
+  }
+  attrs->keepdims = args->keepdims;
+  attrs->exclude = args->exclude;
+  return Attrs(attrs);
+}
+
+HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                       const ReduceDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    key << args->axis[i];
+  }
+  key << args->keepdims;
+  key << args->exclude;
+  return key;
+}
+
+#define MNM_TVM_REDUCE(OP, FUNC)                                                             \
+  MNM_TVM(OP, FUNC, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames, ReduceSchema2Attrs, \
+          ReduceHasher, kCommReduce)
+
+#define MNM_TVM_REDUCE_DX(OP, FUNC)                                            \
+  MNM_TVM(OP, FUNC, ReduceDxArgs, ReduceDxSchema2Args, ReduceDxSchemaArgNames, \
+          ReduceDxSchema2Attrs, ReduceDxHasher, kBroadcast)
+
+MNM_TVM_REDUCE(argmax, Argmax);
+MNM_TVM_REDUCE(argmin, Argmin);
+MNM_TVM_REDUCE(max, Max);
+MNM_TVM_REDUCE(min, Min);
+MNM_TVM_REDUCE(all, All);
+MNM_TVM_REDUCE(any, Any);
+MNM_TVM_REDUCE(mean, Mean);
+MNM_TVM_REDUCE(prod, Prod);
+
+MNM_TVM_REDUCE_DX(prod_dx, ProdDx);
+
+std::vector<Value> SumSchema2Args(const SumArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> SumSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs SumSchema2Attrs(const SumArgs* args) {
+  auto attrs = make_object<SumAttrs>();
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    attrs->axis.push_back(args->axis[i]);
+  }
+  for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
+    attrs->keepdims.push_back(args->keepdims[i]);
+  }
+  attrs->exclude = args->exclude;
+  return Attrs(attrs);
+}
+
+HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, const SumArgs* args) {
+  HashKey key = GenericHasher<std::nullptr_t>(param_types, ret_type, nullptr);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    key << args->axis[i];
+    key << args->keepdims[i];
+  }
+  key << args->exclude;
+  return key;
+}
+
+std::vector<Value> SumDxSchema2Args(const SumDxArgs* args) {
+  return {args->x, args->y, args->dy};
+}
+
+std::vector<std::string> SumDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "y", "dy"};
+}
+
+Attrs SumDxSchema2Attrs(const SumDxArgs* args) {
+  auto attrs = make_object<SumAttrs>();
+  // expand the empty axis
+  DLTensor* x = args->x;
+  std::vector<int64_t> axis;
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    attrs->axis.push_back(args->axis[i]);
+  }
+  for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
+    attrs->keepdims.push_back(args->keepdims[i]);
+  }
+  attrs->exclude = args->exclude;
+  return Attrs(attrs);
+}
+
+HashKey SumDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                    const SumDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  for (int i = 0, n = args->axis.size(); i < n; ++i) {
+    key << args->axis[i];
+    key << args->keepdims[i];
+  }
+  key << args->exclude;
+  return key;
+}
+
+MNM_TVM(sum, Sum, SumArgs, SumSchema2Args, SumSchemaArgNames, SumSchema2Attrs, SumHasher,
+        kCommReduce);
+
+MNM_TVM(sum_dx, SumDx, SumDxArgs, SumDxSchema2Args, SumDxSchemaArgNames, SumDxSchema2Attrs,
+        SumDxHasher, kBroadcast);
+
+std::vector<Value> MeanDxSchema2Args(const MeanDxArgs* args) {
+  return {args->dy};
+}
+
+std::vector<std::string> MeanDxSchemaArgNames(const op::CallValues& call) {
+  return {"dy"};
+}
+
+Attrs MeanDxSchema2Attrs(const MeanDxArgs* args) {
+  auto attrs = make_object<MeanDxAttrs>();
+  std::vector<int64_t> shape = args->x_shape;
+  auto ndim = shape.size();
+  for (int64_t s : shape) {
+    attrs->shape.push_back(s);
+  }
+  std::vector<int64_t> axis;
+  if (args->axis.empty()) {
+    axis.resize(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+  } else {
+    axis = args->axis;
+  }
+  for (int i = 0, n = axis.size(); i < n; ++i) {
+    attrs->axis.push_back(axis[i]);
+  }
+  attrs->keepdims = args->keepdims;
+  attrs->exclude = args->exclude;
+  return Attrs(attrs);
+}
+
+HashKey MeanDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                     const MeanDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
+  key << args->x_shape;
+  key << args->axis;
+  key << args->keepdims;
+  key << args->exclude;
+  return key;
+}
+
+MNM_TVM(mean_dx, MeanDx, MeanDxArgs, MeanDxSchema2Args, MeanDxSchemaArgNames, MeanDxSchema2Attrs,
+        MeanDxHasher, kBroadcast);
+
+}  // namespace tvm_dialect
+}  // namespace op
+}  // namespace mnm

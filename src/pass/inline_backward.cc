@@ -91,10 +91,10 @@ class InlineBackwardFunc : public ExprVisitor {
 }  // namespace inline_backward
 
 Pass InlineBackward() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return inline_backward::InlineBackwardFunc().Inline(f);
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return inline_backward::InlineBackwardFunc().Inline(f);
+  };
   return CreateMNMFunctionPass(pass_func, 1, "InlineBackward", {});
 }
 

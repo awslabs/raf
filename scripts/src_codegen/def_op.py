@@ -115,7 +115,7 @@ OPS = [
     Op(name="swap_axis", schema_name="swap_axis"),
     Op(name="take", schema_name="take"),
     Op(name="take_dx", schema_name="take_dx"),
-    Op(name="embedding", schema_name="embedding"), 
+    Op(name="embedding", schema_name="embedding"),
     Op(name="embedding_dx", schema_name="embedding_dx"),
     Op(name="dense", schema_name="binary"),
     Op(name="repeat", schema_name="repeat"),
@@ -148,11 +148,6 @@ OPS = [
     Op(name="_contrib_dropout", schema_name="dropout"),
     Op(name="_contrib_dropout_dx", schema_name="dropout_dx"),
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
-    Op(name="comm.allreduce", schema_name="allreduce"),
-    Op(name="comm.allgather", schema_name="allgather"),
-    Op(name="comm.reduce_scatter", schema_name="reduce_scatter"),
-    Op(name="comm.send", schema_name="send"),
-    Op(name="comm.recv", schema_name="recv"),
     Op(name="stream_sync", schema_name="stream"),
     Op(name="cast", schema_name="cast"),
     Op(name="cast_like", schema_name="cast_like"),
@@ -175,12 +170,6 @@ OPS = [
     Op(name="ones", schema_name="init_op"),
     Op(name="ones_like", schema_name="unary"),
     Op(name="one_hot", schema_name="one_hot"),
-    Op(name="vm.alloc_storage", schema_name="alloc_storage"),
-    Op(name="vm.alloc_tensor", schema_name="alloc_tensor"),
-    Op(name="vm.free", schema_name="free"),
-    Op(name="vm.invoke_op", schema_name="invoke_op"),
-    Op(name="vm.infer_type", schema_name="infer_type"),
-    Op(name="vm.set_shape", schema_name="set_shape"),
     Op(name="left_shift", schema_name="binary"),
     Op(name="argwhere", schema_name="argwhere"),
     Op(name="upper_bound.argwhere", schema_name="argwhere"),
@@ -189,6 +178,21 @@ OPS = [
     Op(name="stream_start", schema_name="stream"),
     Op(name="stream_end", schema_name="stream"),
     Op(name="stream_wait", schema_name="stream"),
+    # Communication ops
+    # Using underscore before the op name is because these ops won't be directly used in the
+    # frontend and the wrapper ops are defined in python/mnm/distributed/op.py
+    Op(name="_allreduce", schema_name="allreduce"),
+    Op(name="_allgather", schema_name="allgather"),
+    Op(name="_reduce_scatter", schema_name="reduce_scatter"),
+    Op(name="_send", schema_name="send"),
+    Op(name="_recv", schema_name="recv"),
+    # VM ops
+    Op(name="vm.alloc_storage", schema_name="alloc_storage"),
+    Op(name="vm.alloc_tensor", schema_name="alloc_tensor"),
+    Op(name="vm.free", schema_name="free"),
+    Op(name="vm.invoke_op", schema_name="invoke_op"),
+    Op(name="vm.infer_type", schema_name="infer_type"),
+    Op(name="vm.set_shape", schema_name="set_shape"),
 ]
 
 def by_name():

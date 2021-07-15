@@ -6,12 +6,13 @@
 #include <map>
 #include <tvm/relay/transform.h>
 #include <tvm/support/with.h>
+#include <relay/transforms/pattern_utils.h>
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
-#include "../3rdparty/tvm/src/relay/transforms/pattern_utils.h"
+#include "../op/dialect/tvm/tvm_attrs.h"
 
 namespace mnm {
 namespace pass {
@@ -19,8 +20,9 @@ namespace from_relay {
 
 using namespace mnm::ir;
 using namespace mnm::value;
-using namespace tvm;
-using namespace ::tvm::relay;
+using namespace mnm::op::tvm_dialect;
+using tvm::TVMArgs;
+using tvm::TVMRetValue;
 
 struct RelayPattern {
  public:
@@ -119,10 +121,10 @@ struct CompositeGelu : RelayPattern {
  private:
   inline DFPattern IsFloatExpr(int bits, double value) {
     if (bits == 32) {
-      return IsExpr(MakeConstantScalar(DataType::Float(32), static_cast<float>(value)));
+      return IsExpr(tvm::relay::MakeConstantScalar(DataType::Float(32), static_cast<float>(value)));
     }
     CHECK_EQ(bits, 64);
-    return IsExpr(MakeConstantScalar(DataType::Float(64), value));
+    return IsExpr(tvm::relay::MakeConstantScalar(DataType::Float(64), value));
   }
 };
 
@@ -216,7 +218,7 @@ struct FromRelayMutator : public ExprMutator {
 
       auto expr = GetRef<Expr>(op);
       if (value->IsInstance<FunctionNode>() &&
-          Downcast<Function>(value)->GetAttr<String>(relay::attr::kComposite)) {
+          Downcast<Function>(value)->GetAttr<String>(attr::kComposite)) {
         // Discard composite functions because their callers will be substitited to an op
         this->memo_[expr] = body;
       } else {
@@ -247,7 +249,7 @@ struct FromRelayMutator : public ExprMutator {
     // Convert the composite function call with the Meta op
     if (is_composite_op) {
       if (auto func = curr_op.as<FunctionNode>()) {
-        if (auto comp_name = func->GetAttr<String>(relay::attr::kComposite)) {
+        if (auto comp_name = func->GetAttr<String>(attr::kComposite)) {
           auto comp_name_str = comp_name.value();
           CHECK_GT(composite_patterns.count(comp_name_str), 0)
               << "Unrecognized composite: " << comp_name_str;
@@ -318,7 +320,7 @@ struct FromRelayMutator : public ExprMutator {
     }
 
     auto body = node->body;
-    if (!node->GetAttr<String>(relay::attr::kComposite)) {
+    if (!node->GetAttr<String>(attr::kComposite)) {
       // Do not mutate composite functions, because the pattern rewriter is based on Relay ops
       body = Mutate(body);
     }
@@ -395,16 +397,15 @@ IRModule ApplyTransformSeq(const IRModule& mod) {
 }
 
 Pass FromRelay(Array<String> disabled_pass) {
-  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m,
-                                                                            PassContext pc) {
+  TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m, PassContext pc) {
     IRModule updated_mod = IRModule(m->functions, m->type_definitions, m->Imports(), m->source_map);
 
     // Apply Relay optimization passes before conversion
-    auto pass_ctx = relay::transform::PassContext::Create();
+    auto pass_ctx = pass::PassContext::Create();
     pass_ctx->opt_level = 4;
     pass_ctx->disabled_pass = disabled_pass;
     {
-      tvm::With<relay::transform::PassContext> ctx_scope(pass_ctx);
+      tvm::With<pass::PassContext> ctx_scope(pass_ctx);
       updated_mod = ApplyTransformSeq(updated_mod);
     }
 
@@ -437,7 +438,7 @@ Pass FromRelay(Array<String> disabled_pass) {
       updated_mod->Add(pair.first, pair.second, true);
     }
     {
-      tvm::With<relay::transform::PassContext> ctx_scope(pass_ctx);
+      tvm::With<pass::PassContext> ctx_scope(pass_ctx);
       updated_mod = DeadCodeElimination()(updated_mod);
     }
     return updated_mod;

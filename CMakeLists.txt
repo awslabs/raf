@@ -94,7 +94,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/op/declare/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/regs/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/grad/*.cc
-  ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/tvmjit/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/tvm/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/from_relay/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/ty/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
@@ -119,11 +119,11 @@ else ()
   file(GLOB_RECURSE MNM_CUDA_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/profiler/cuda/*.cc
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/cuda/*.cc
   )
 
   file(GLOB_RECURSE MNM_CUDA_KERNEL_FILES
-	${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cuda/kernels/*.cu
+	${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/cuda/kernels/*.cu
   )
 endif()
 
@@ -131,7 +131,7 @@ if (${MNM_USE_CUDNN} STREQUAL "OFF")
   set(MNM_CUDNN_SOURCE_FILES "")
 else()
   file(GLOB_RECURSE MNM_CUDNN_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cudnn/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/cudnn/*.cc
   )
 endif()
 
@@ -139,7 +139,7 @@ if (${MNM_USE_CUBLAS} STREQUAL "OFF")
   set(MNM_CUBLAS_SOURCE_FILES "")
 else()
   file(GLOB_RECURSE MNM_CUBLAS_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cublas/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/cublas/*.cc
   )
 endif()
 
@@ -147,7 +147,7 @@ if (${MNM_USE_CUTLASS} STREQUAL "OFF")
   set(MNM_CUTLASS_SOURCE_FILES "")
 else()
   file(GLOB_RECURSE MNM_CUTLASS_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/cutlass/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/cutlass/*.cc
   )
 endif()
 
@@ -156,7 +156,7 @@ if (${MNM_USE_NCCL} STREQUAL "OFF")
 else ()
   file(GLOB_RECURSE MNM_DISTRIBUTED_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/*.cc
-    ${CMAKE_CURRENT_LIST_DIR}/src/op/dispatch/nccl/*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/nccl/*.cc
   )
 endif()
 

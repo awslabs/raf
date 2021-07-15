@@ -585,10 +585,10 @@ namespace regs {
 namespace f_mnm_schema {
 
 #define MNM_BIND_SCHEMA(op_str, op_name, schema) \\
-  MNM_OP_REGISTER(op_str).set_attr<FMNMSchema>("FMNMSchema", schema<op_name>);
+  MNM_REGISTER_OP(op_str).set_attr<FMNMSchema>("FMNMSchema", schema<op_name>);
 
 #define MNM_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \\
-  MNM_OP_REGISTER(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
+  MNM_REGISTER_OP(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
 """.strip()
 
 F_MNM_SCHEMA_EPILOG = """

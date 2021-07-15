@@ -92,7 +92,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
          << "#Duration(us): Sum/Mean/Min/Max" << std::endl;
 
       for (auto kv : op_acc_time) {
-        std::string name = kv.first->env_name;
+        std::string name = kv.first->name();
         if (show_shape) {
           name += " " + op_shapes_[kv.first];
         }
@@ -129,7 +129,7 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
       os << std::endl;
 
       for (size_t i = 0; i < memory_trace_.size(); ++i) {
-        std::string name = memory_trace_[i].first->env_name;
+        std::string name = memory_trace_[i].first->name();
         os << std::setw(6) << std::left << i << "\t" << std::setw(80) << std::left << name;
         for (auto trace : memory_trace_[i].second) {
           os << "\t" << std::setw(15) << std::left << trace.first;
@@ -161,9 +161,9 @@ PackedFunc VirtualMachineProfiler::GetFunction(const std::string& name,
           memory_pool::Memory::ResetPool(device);
         }
 
-        PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(true));
+        PassContext::Current()->config.Set("mnm.tvm.allow_jit_failure", tvm::Bool(true));
         Run(ctx);
-        PassContext::Current()->config.Set("mnm.tvmjit.allow_jit_failure", tvm::Bool(false));
+        PassContext::Current()->config.Set("mnm.tvm.allow_jit_failure", tvm::Bool(false));
         Map<String, ObjectRef> ret;
         for (size_t i = 0; i < devices_.size(); ++i) {
           const auto& device = devices_[i];
@@ -267,7 +267,7 @@ void VirtualMachineProfiler::ExecuteOpEnv(OpEnv* op_env, const std::vector<value
     }
     op_inputs_.push_back(input);
     op_outputs_.push_back(CopyTo(output, cpu));
-    op_names_.push_back(op_env->env_name);
+    op_names_.push_back(op_env->name());
   }
 }
 

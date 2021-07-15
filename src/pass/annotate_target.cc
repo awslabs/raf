@@ -14,15 +14,9 @@
 
 namespace mnm {
 namespace pass {
-
-using namespace tvm::transform;
-using namespace tvm::relay::transform;
-
 namespace annotate_target {
 
 using namespace mnm::ir;
-using namespace tvm;
-using namespace tvm::relay;
 using mnm::op::FMNMAnnotateTarget;
 using mnm::op::schema::CompilerArgs;
 
@@ -172,18 +166,18 @@ class AnnotateTargetRewriter : public ExprRewriter {
   Array<ir::String> targets_;
 };
 
-Expr AnnotateTarget(const Expr& expr, const Array<String>& targets) {
+Expr AnnotateTarget(const Expr& expr, const Array<ir::String>& targets) {
   auto rewriter = AnnotateTargetRewriter(targets);
   return PostOrderRewrite(expr, &rewriter);
 }
 
 }  // namespace annotate_target
 
-Pass AnnotateTarget(Array<runtime::String> targets) {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(annotate_target::AnnotateTarget(f, targets));
-      };
+Pass AnnotateTarget(Array<ir::String> targets) {
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(annotate_target::AnnotateTarget(f, targets));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "AnnotateTargetFunc", {"mnm.pass_.InferType"});
 }
 

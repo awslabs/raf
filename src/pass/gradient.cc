@@ -334,7 +334,7 @@ struct ReverseAD : public ExprVisitor {
     static const auto ffpg = Op::GetAttrMap<FFusedPrimalGradient>("FFusedPrimalGradient");
     const VarNode* var = let_var_.operator->();
     const Expr& _ograds = tuple_length.count(var) ? Tuple(ograds) : ograds[0];
-    CHECK(IsDefined(ograds)) << "Output grads are undefined for " << AsText(ograds, false);
+    CHECK(IsDefined(ograds)) << "Output grads are undefined for " << ir::AsText(ograds, false);
     Array<Expr> ret;
     auto call = Downcast<Call>(orig);
     if (ffpg.count(op)) {
@@ -908,8 +908,7 @@ std::unordered_map<const VarNode*, bool> ParseRequireGradsMain(
 }
 
 Pass AutoDiff(ir::Array<tvm::Bool> requires_grads) {
-  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m,
-                                                                            PassContext pc) {
+  TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m, PassContext pc) {
     // Copy the module to avoid any in-place module update
     ir::IRModule mod = ir::IRModule(m->functions);
 

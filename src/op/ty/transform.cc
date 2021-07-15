@@ -3,8 +3,6 @@
  * \file src/op/ty/transform.cc
  * \brief Typing of transform operators
  */
-#include <tvm/relay/type.h>
-#include <tvm/runtime/data_type.h>
 #include "mnm/type.h"
 #include "../schema/ufunc.h"
 #include "../schema/nn.h"
@@ -16,14 +14,11 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace schema;
 using declare::NormalizeAxis;
-using tvm::relay::Type;
-using namespace tvm;
-using namespace relay;
 
 Type ArangeInfer(const CallValues& value) {
   const auto* args = value->args.as<ArangeArgs>();
@@ -40,7 +35,7 @@ Type ArangeInfer(const CallValues& value) {
     } else {
       LOG(FATAL) << "Do not support type: " << args->dtype;
     }
-    auto out_type = DataType(ir::String2DLDataType(args->dtype));
+    auto out_type = DataType(String2DLDataType(args->dtype));
     return TensorType({PrimExpr(size)}, out_type);
   } else {
     return IncompleteType(tvm::kType);
@@ -849,7 +844,7 @@ Type ResizeInfer(const CallValues& value) {
     throw;
   }
 
-  DataType out_dtype(runtime::String2DLDataType(args->out_dtype));
+  DataType out_dtype(String2DLDataType(args->out_dtype));
   if (args->out_dtype.size() == 0) out_dtype = x->dtype;
 
   return TensorType(shape, out_dtype);
@@ -887,6 +882,5 @@ Type UpperBoundArgwhereInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.upper_bound.argwhere", "UpperBoundArgwhere", UpperBoundArgwhereInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

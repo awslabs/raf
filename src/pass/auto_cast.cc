@@ -8,6 +8,7 @@
 #include <stack>
 #include "mnm/op.h"
 #include "mnm/ir.h"
+#include "mnm/type.h"
 #include "mnm/value.h"
 #include "mnm/pass.h"
 #include "./let_list.h"
@@ -19,8 +20,6 @@ namespace auto_cast {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using namespace tvm;
-using namespace runtime;
 using namespace mnm::value;
 
 using TypeHint = Type;
@@ -66,7 +65,7 @@ inline Expr GenCastCall(Expr expr, DataType dtype) {
     target_dtype = "float32";
   }
   auto cast_call = Call(op, {expr, MakeConstant(StringValue::make(target_dtype))}, {});
-  DataType new_dtype = DataType(ir::String2DLDataType(target_dtype));
+  DataType new_dtype = DataType(String2DLDataType(target_dtype));
   cast_call->checked_type_ = TensorType(old_type->shape, new_dtype);
   return cast_call;
 }
@@ -103,8 +102,8 @@ Type UpdateDTypeByHint(const Type ori_type, const TypeHint target_type, std::str
 class AutoCastMutator : public ExprMutator {
  public:
   AutoCastMutator(const String amp_dtype, const String out_dtype) : scopes_{LetList()} {
-    amp_dtype_ = DataType(ir::String2DLDataType(amp_dtype));
-    out_dtype_ = DataType(ir::String2DLDataType(out_dtype));
+    amp_dtype_ = DataType(String2DLDataType(amp_dtype));
+    out_dtype_ = DataType(String2DLDataType(out_dtype));
   }
 
   /*!
@@ -284,7 +283,7 @@ class AutoCastMutator : public ExprMutator {
     const Op op = Downcast<Op>(op_node);
 
     if (frule.count(op)) {
-      return frule[op](args, ret_type, DLDataType2String(target_dtype.operator DLDataType()));
+      return frule[op](args, ret_type, DLDataType2String(target_dtype));
     } else {
       miss_rule_ops_[op]++;
     }
@@ -425,17 +424,17 @@ Pass AutoCast() {
   String amp_dtype = pass_ctx->GetConfig("mnm.amp.dtype", String("float16")).value();
   String out_dtype = pass_ctx->GetConfig("mnm.amp.out_dtype", String("float16")).value();
   DLOG(INFO) << "AMP dtype: " << amp_dtype << ", output dtype: " << out_dtype;
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        auto mutator = auto_cast::AutoCastMutator(amp_dtype, out_dtype);
-        auto ret = mutator.Mutate(f);
-        std::string miss_rule_op_str = mutator.ListMissRuleOps();
-        if (!miss_rule_op_str.empty()) {
-          LOG(FATAL) << "One or more ops missed the casting rule:\n" << miss_rule_op_str;
-          throw;
-        }
-        return Downcast<Function>(ret);
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    auto mutator = auto_cast::AutoCastMutator(amp_dtype, out_dtype);
+    auto ret = mutator.Mutate(f);
+    std::string miss_rule_op_str = mutator.ListMissRuleOps();
+    if (!miss_rule_op_str.empty()) {
+      LOG(FATAL) << "One or more ops missed the casting rule:\n" << miss_rule_op_str;
+      throw;
+    }
+    return Downcast<Function>(ret);
+  };
   auto insert_cast = CreateMNMFunctionPass(pass_func, 0, "AutoCastFunc", {});
   return MNMSequential({InferType(), insert_cast, InferType()}, "AutoCast");
 }

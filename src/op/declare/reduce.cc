@@ -14,12 +14,6 @@ namespace declare {
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-#define MNM_DECLARE_REDUCE_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kCommReduce)
-
-#define MNM_DECLARE_REDUCE_DX_OP(op_name, body) \
-  MNM_OP_DECLARE(op_name, body).set_attr<TOpPattern>("TOpPattern", kBroadcast)
-
 void GenerateReduceShape(const ReduceArgs* args, const DLTensor* x, std::vector<int64_t>* shape) {
   CHECK(args != nullptr);
   auto ndim = x->ndim;
@@ -102,16 +96,16 @@ void MeanDxDecl(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_DECLARE_REDUCE_OP("mnm.op.argmax", ReduceOutInt);
-MNM_DECLARE_REDUCE_OP("mnm.op.argmin", ReduceOutInt);
-MNM_DECLARE_REDUCE_OP("mnm.op.max", ReduceOutSame);
-MNM_DECLARE_REDUCE_OP("mnm.op.min", ReduceOutSame);
-MNM_DECLARE_REDUCE_OP("mnm.op.all", ReduceOutSame);
-MNM_DECLARE_REDUCE_OP("mnm.op.any", ReduceOutSame);
-MNM_DECLARE_REDUCE_OP("mnm.op.mean", ReduceOutSame);
-MNM_DECLARE_REDUCE_OP("mnm.op.prod", ReduceOutSame);
-MNM_DECLARE_REDUCE_DX_OP("mnm.op.mean_dx", MeanDxDecl);
-MNM_DECLARE_REDUCE_DX_OP("mnm.op.prod_dx", ReduceDxOutSame);
+MNM_OP_DECLARE("mnm.op.argmax", ReduceOutInt);
+MNM_OP_DECLARE("mnm.op.argmin", ReduceOutInt);
+MNM_OP_DECLARE("mnm.op.max", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.min", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.all", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.any", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.mean", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.prod", ReduceOutSame);
+MNM_OP_DECLARE("mnm.op.mean_dx", MeanDxDecl);
+MNM_OP_DECLARE("mnm.op.prod_dx", ReduceDxOutSame);
 
 }  // namespace declare
 }  // namespace op

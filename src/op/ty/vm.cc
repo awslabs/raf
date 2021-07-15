@@ -3,7 +3,6 @@
  * \file src/op/ty/vm.cc
  * \brief Typing of vm dialect operators
  */
-#include <tvm/relay/type.h>
 #include "mnm/type.h"
 #include "mnm/value.h"
 #include "mnm/ir_ext.h"
@@ -14,12 +13,9 @@ namespace mnm {
 namespace op {
 namespace type {
 
+using namespace mnm::ir;
 using namespace schema;
 using namespace mnm::value;
-using namespace mnm::type;
-using namespace tvm;
-using namespace tvm::relay;
-using tvm::relay::Type;
 
 Type AllocStorageInfer(const CallValues& value) {
   const auto* args = value->args.as<AllocStorageArgs>();

@@ -30,7 +30,7 @@ MNM_OP_DECLARE("mnm.op.threefry_generate", [](const CallValues& call) {
                                                    /*shape=*/oshape);
   call->out = TupleValue::make({new_key, random_array});
   call->device = key->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+});
 
 MNM_OP_DECLARE("mnm.op.threefry_split", [](const CallValues& call) {
   const auto* args = call->args.as<ThreefrySplitArgs>();
@@ -48,7 +48,7 @@ MNM_OP_DECLARE("mnm.op.threefry_split", [](const CallValues& call) {
                                                  /*shape=*/kshape);
   call->out = TupleValue::make({new_key, new_subkey});
   call->device = key->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+});
 
 }  // namespace declare
 }  // namespace op

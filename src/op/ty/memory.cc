@@ -11,10 +11,9 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace schema;
-using tvm::relay::Type;
 
 Type DeviceCopyInfer(const CallValues& value) {
   const auto* args = value->args.as<DeviceCopyArgs>();
@@ -24,6 +23,5 @@ Type DeviceCopyInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.device_copy", "Memory", DeviceCopyInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

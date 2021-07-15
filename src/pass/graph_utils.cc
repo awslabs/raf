@@ -110,9 +110,9 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     ICHECK(graph_.node_map.count(call));
     Node* node = graph_.node_map.at(call);
     static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
-    static auto finplace = Op::GetAttrMap<TOpPattern>("TMNMInplaceUpdate");
-    static auto add_op = op::GetOp("mnm.op.add");
-    static auto subtract_op = op::GetOp("mnm.op.subtract");
+    static auto finplace = Op::GetAttrMap<TMNMInplaceUpdate>("TMNMInplaceUpdate");
+    static auto add_op = Op::Get("mnm.op.add");
+    static auto subtract_op = Op::Get("mnm.op.subtract");
 
     // Now we set the pattern of this call.
     //

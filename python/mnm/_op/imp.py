@@ -8,15 +8,15 @@ from mnm._core.core_utils import set_module
 from . import imp_utils
 
 __all__ = [
-    "_contrib_dropout", "_contrib_dropout_dx", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx",
+    "_allgather", "_allreduce", "_contrib_dropout", "_contrib_dropout_dx", "_recv",
+    "_reduce_scatter", "_send", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx",
     "adaptive_max_pool2d", "adaptive_max_pool2d_dx", "add", "adv_index", "adv_index_dx",
     "all", "any", "arange", "argmax", "argmin",
     "argsort", "argwhere", "atan", "avg_pool2d", "avg_pool2d_dx",
     "batch_flatten", "batch_matmul", "batch_matmul_nt", "batch_matmul_tn", "batch_matmul_tt",
     "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "broadcast_to",
     "broadcast_to_like", "cast", "cast_like", "ceil", "clip",
-    "clip_dx", "collapse_sum_like", "comm_allgather", "comm_allreduce", "comm_recv",
-    "comm_reduce_scatter", "comm_send", "compiler_begin", "compiler_end", "concatenate",
+    "clip_dx", "collapse_sum_like", "compiler_begin", "compiler_end", "concatenate",
     "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx", "conv2d_transpose",
     "conv2d_transpose_dw", "conv2d_transpose_dx", "copy", "cos", "cross_entropy",
     "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy", "divide",
@@ -49,6 +49,18 @@ __all__ = [
 ]
 
 @set_module("mnm")
+def _allgather(x, axis):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_int(axis)
+    return imp_utils.ret(ffi._allgather(x, axis))
+
+@set_module("mnm")
+def _allreduce(x, computation="sum"):
+    x = imp_utils.to_tensor_tuple(x)
+    computation = imp_utils.to_string(computation)
+    return imp_utils.ret(ffi._allreduce(x, computation))
+
+@set_module("mnm")
 def _contrib_dropout(x, p=0.5, in_states=None):
     x = imp_utils.to_tensor(x)
     p = imp_utils.to_double(p)
@@ -61,6 +73,24 @@ def _contrib_dropout_dx(dy, reserve_space, p=0.5):
     reserve_space = imp_utils.to_tensor(reserve_space)
     p = imp_utils.to_double(p)
     return imp_utils.ret(ffi._contrib_dropout_dx(dy, reserve_space, p))
+
+@set_module("mnm")
+def _recv(peer, shape, dtype="float32"):
+    peer = imp_utils.to_int(peer)
+    shape = imp_utils.to_int_tuple(shape)
+    dtype = imp_utils.to_string(dtype)
+    return imp_utils.ret(ffi._recv(peer, shape, dtype))
+
+@set_module("mnm")
+def _reduce_scatter(x):
+    x = imp_utils.to_tensor_tuple(x)
+    return imp_utils.ret(ffi._reduce_scatter(x))
+
+@set_module("mnm")
+def _send(x, peer):
+    x = imp_utils.to_tensor(x)
+    peer = imp_utils.to_int(peer)
+    return imp_utils.ret(ffi._send(x, peer))
 
 @set_module("mnm")
 def abs(x):
@@ -316,36 +346,6 @@ def collapse_sum_like(x, shape):
     x = imp_utils.to_tensor(x)
     shape = imp_utils.to_int_tuple(shape)
     return imp_utils.ret(ffi.collapse_sum_like(x, shape))
-
-@set_module("mnm")
-def comm_allgather(x, axis):
-    x = imp_utils.to_tensor(x)
-    axis = imp_utils.to_int(axis)
-    return imp_utils.ret(ffi.comm.allgather(x, axis))
-
-@set_module("mnm")
-def comm_allreduce(x, computation="sum"):
-    x = imp_utils.to_tensor_tuple(x)
-    computation = imp_utils.to_string(computation)
-    return imp_utils.ret(ffi.comm.allreduce(x, computation))
-
-@set_module("mnm")
-def comm_recv(peer, shape, dtype="float32"):
-    peer = imp_utils.to_int(peer)
-    shape = imp_utils.to_int_tuple(shape)
-    dtype = imp_utils.to_string(dtype)
-    return imp_utils.ret(ffi.comm.recv(peer, shape, dtype))
-
-@set_module("mnm")
-def comm_reduce_scatter(x):
-    x = imp_utils.to_tensor_tuple(x)
-    return imp_utils.ret(ffi.comm.reduce_scatter(x))
-
-@set_module("mnm")
-def comm_send(x, peer):
-    x = imp_utils.to_tensor(x)
-    peer = imp_utils.to_int(peer)
-    return imp_utils.ret(ffi.comm.send(x, peer))
 
 @set_module("mnm")
 def compiler_begin(x, compiler):

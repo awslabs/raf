@@ -21,8 +21,6 @@ namespace pass {
 namespace merge_compiler_regions {
 
 using namespace mnm::ir;
-using namespace tvm;
-using namespace tvm::relay;
 using mnm::op::schema::CompilerArgs;
 
 static const Op& begin_op = CompilerBeginOp();
@@ -79,10 +77,10 @@ Expr MergeCompilerRegions(const Expr& expr) {
 }  // namespace merge_compiler_regions
 
 Pass MergeCompilerRegions() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(merge_compiler_regions::MergeCompilerRegions(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(merge_compiler_regions::MergeCompilerRegions(f));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "MergeCompilerRegions", {});
 }
 

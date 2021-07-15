@@ -13,12 +13,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
-using namespace tvm;
-using namespace tvm::relay;
 
 Type StreamInfer(const CallValues& value) {
   const auto* args = value->args.as<StreamArgs>();
@@ -31,6 +29,5 @@ MNM_OP_TYPE("mnm.op.stream_start", "Stream", StreamInfer);
 MNM_OP_TYPE("mnm.op.stream_end", "Stream", StreamInfer);
 MNM_OP_TYPE("mnm.op.stream_wait", "Stream", StreamInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

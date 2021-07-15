@@ -10,13 +10,10 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace schema;
-using tvm::relay::Type;
-using namespace tvm;
-using namespace tvm::relay;
 
 Type ArgsortInfer(const CallValues& value) {
   const auto* args = value->args.as<ArgsortArgs>();
@@ -70,6 +67,5 @@ Type TopkInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.topk", "TopK", TopkInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

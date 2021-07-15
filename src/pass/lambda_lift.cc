@@ -17,7 +17,6 @@ namespace lambda_lift {
 
 using namespace mnm::ir;
 using namespace mnm::op;
-using namespace tvm::relay::transform;
 
 inline std::string GenerateName(const Function& func) {
   size_t hash = tvm::StructuralHash()(func);

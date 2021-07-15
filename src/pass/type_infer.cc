@@ -24,10 +24,7 @@ namespace type_infer {
 using namespace mnm::ir;
 using namespace mnm::op;
 using namespace mnm::value;
-using namespace mnm::type;
-using namespace tvm;
-using namespace tvm::relay;
-using namespace tvm::transform;
+using tvm::kType;
 using tvm::TypeFunctor;
 
 Type Unify(const Type& src, const Type& dst);
@@ -53,7 +50,7 @@ class TypeInferencer : public ExprMutator {
   }
 
   Type GetValueType(const Value& v) {
-    return op::type::GetType(v);
+    return op::GetType(v);
   }
 
   Expr VisitExpr_(const VarNode* op) override {
@@ -183,7 +180,7 @@ class TypeInferencer : public ExprMutator {
     FuncType fty = Downcast<FuncType>(fn->checked_type());
     CHECK_EQ(call->args.size(), fty->arg_types.size());
     for (size_t i = 0; i < call->args.size(); ++i) {
-      CHECK(StructuralEqual()(call->args[i]->checked_type(), fty->arg_types[i]))
+      CHECK(tvm::StructuralEqual()(call->args[i]->checked_type(), fty->arg_types[i]))
           << "Type of argument and function parameter mismatch: " << call->args[i]->checked_type()
           << " vs " << fty->arg_types[i];
     }

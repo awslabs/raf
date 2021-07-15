@@ -23,6 +23,7 @@
  * \brief Ensure that primitives only appear in the call position.
  */
 #include "mnm/ir.h"
+#include "mnm/ir_ext.h"
 #include "mnm/pass.h"
 
 namespace mnm {
@@ -128,13 +129,15 @@ class PrimitiveInliner : public ExprMutator {
         if (n->GetAttr<String>(attr::kCompiler).defined()) continue;
         auto func = GetRef<Function>(n);
 
-        DLOG(INFO) << "Before inlining primitives: " << global << std::endl << AsText(func, false);
+        DLOG(INFO) << "Before inlining primitives: " << global << std::endl
+                   << ir::AsText(func, false);
 
         func = Function(func->params, VisitExpr(func->body), func->ret_type, func->type_params,
                         func->attrs);
         module_->Add(global, func, true);
 
-        DLOG(INFO) << "After inlining primitives: " << global << std::endl << AsText(func, false);
+        DLOG(INFO) << "After inlining primitives: " << global << std::endl
+                   << ir::AsText(func, false);
       }
     }
     return module_;
@@ -148,11 +151,12 @@ class PrimitiveInliner : public ExprMutator {
 }  // namespace inline_primitives
 
 Pass InlinePrimitives() {
-  runtime::TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func =
-      [=](IRModule m, PassContext pc) { return inline_primitives::PrimitiveInliner(m).Inline(); };
+  TypedPackedFunc<IRModule(IRModule, PassContext)> pass_func = [=](IRModule m, PassContext pc) {
+    return inline_primitives::PrimitiveInliner(m).Inline();
+  };
   auto inline_pass = CreateModulePass(pass_func, 0, "Inline", {});
   // Eliminate dead code for each function after inlining.
-  return Sequential({inline_pass, DeadCodeElimination()}, "InlinePrimitives");
+  return MNMSequential({inline_pass, DeadCodeElimination()}, "InlinePrimitives");
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InlinePrimitives").set_body_typed(InlinePrimitives);

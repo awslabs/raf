@@ -86,7 +86,7 @@ Var GetMayShare(Expr var);
  */
 Var TryGetMayShare(Expr var);
 
-String AsText(const ObjectRef& node, bool show_meta_data = false);
+std::string AsText(const ObjectRef& node, bool show_meta_data = false);
 
 }  // namespace ir
 }  // namespace mnm

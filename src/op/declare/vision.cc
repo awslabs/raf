@@ -31,7 +31,7 @@ MNM_OP_DECLARE("mnm.op.get_valid_counts", [](const CallValues& call) {
 
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
   call->device = data->device;
-}).set_attr<TOpPattern>("TOpPattern", kInjective);
+});
 
 MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
   const auto* args = call->args.as<NonMaxSuppressionArgs>();
@@ -55,7 +55,7 @@ MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
                                       /*shape=*/dshape);
   }
   call->device = data->device;
-}).set_attr<TOpPattern>("TOpPattern", kInjective);
+});
 
 MNM_OP_DECLARE(
     "mnm.op.roi_align", ([](const CallValues& call) {
@@ -77,8 +77,7 @@ MNM_OP_DECLARE(
       call->out = TensorValue::Assemble(/*dev=*/data->device,
                                         /*dtype=*/data->dtype,
                                         /*shape=*/oshape);
-    }))
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+    }));
 
 MNM_OP_DECLARE("mnm.op.roi_align_dx", [](const CallValues& call) {
   const auto* args = call->args.as<RoiAlignDxArgs>();
@@ -89,7 +88,7 @@ MNM_OP_DECLARE("mnm.op.roi_align_dx", [](const CallValues& call) {
   call->out = TensorValue::Assemble(/*dev=*/data->device,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/dshape);
-}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+});
 
 }  // namespace declare
 }  // namespace op

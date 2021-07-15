@@ -318,10 +318,10 @@ Expr AnnotateStream(const Expr& expr, const Integer& stream_tag_) {
 }  // namespace annotate_stream
 
 Pass AnnotateStream() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(annotate_stream::AnnotateStream(f, -1));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(annotate_stream::AnnotateStream(f, -1));
+  };
   return CreateMNMFunctionPass(pass_func, 0, "AnnotateStream", {});
 }
 

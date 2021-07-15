@@ -7,7 +7,7 @@ def allreduce(x, computation="sum"):
     """General allreduce operators, take tensor or list of tensors as input."""
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym.comm_allreduce(x, computation)
+    return sym._allreduce(x, computation)
 
 
 def allgather(x, axis):
@@ -45,7 +45,7 @@ def allgather(x, axis):
         x = x[0]
 
     # broadcast the packed tensor
-    x = sym.comm_allgather(x, axis=0)
+    x = sym._allgather(x, axis=0)
 
     # unpack the tensor
     if l > 1:
@@ -76,7 +76,7 @@ def reduce_scatter(x):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
-    return sym.comm_reduce_scatter(x)
+    return sym._reduce_scatter(x)
 
 
 def send(x, peer):
@@ -96,7 +96,7 @@ def send(x, peer):
     ret: Tensor
         a tensor of zero dimension, which is equivalent to "no return value"
     """
-    return sym.comm_send(x, peer=peer)
+    return sym._send(x, peer=peer)
 
 
 def recv(peer, shape, dtype):
@@ -119,4 +119,4 @@ def recv(peer, shape, dtype):
     ret: Tensor
         the received tensor
     """
-    return sym.comm_recv(peer=peer, shape=shape, dtype=dtype)
+    return sym._recv(peer=peer, shape=shape, dtype=dtype)

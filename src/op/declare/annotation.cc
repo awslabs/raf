@@ -25,7 +25,7 @@ MNM_OP_DECLARE("mnm.op.compiler_begin", [](const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
   call->device = x->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+});
 
 MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
   const auto* args = call->args.as<CompilerArgs>();
@@ -37,7 +37,7 @@ MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
   call->device = x->device;
-}).set_attr<TOpPattern>("TOpPattern", kOpaque);
+});
 
 }  // namespace declare
 }  // namespace op

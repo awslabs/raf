@@ -91,13 +91,7 @@ Var TryGetMayShare(Expr var) {
   return GetRef<Var>(vn);
 }
 
-MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
-  ObjectRef value = args[0];
-  bool show_meta_data = false;
-  if (args.size() == 2) {
-    show_meta_data = args[1];
-  }
-
+std::string AsText(const ObjectRef& node, bool show_meta_data) {
   auto annotate =
       tvm::runtime::TypedPackedFunc<String(ObjectRef)>([](const ObjectRef& expr) -> String {
         std::ostringstream os;
@@ -122,12 +116,14 @@ MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetV
         }
         return String(os.str());
       });
-  *rv = tvm::AsText(value, show_meta_data, annotate);
-});
-
-String AsText(const ObjectRef& node, bool show_meta_data) {
-  return registry::GetPackedFunc("mnm.ir.AsText")(node, show_meta_data);
+  return tvm::AsText(node, show_meta_data, annotate);
 }
+
+MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+  ObjectRef value = args[0];
+  bool show_meta_data = args.size() == 2 ? args[1] : false;
+  *rv = AsText(value, show_meta_data);
+});
 
 MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
 MNM_REGISTER_GLOBAL("mnm.ir._make.Var").set_body_typed(MakeVar);

@@ -8,15 +8,15 @@ from mnm._core.ndarray import Symbol
 from . import sym_utils
 
 __all__ = [
-    "_contrib_dropout", "_contrib_dropout_dx", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx",
+    "_allgather", "_allreduce", "_contrib_dropout", "_contrib_dropout_dx", "_recv",
+    "_reduce_scatter", "_send", "abs", "adaptive_avg_pool2d", "adaptive_avg_pool2d_dx",
     "adaptive_max_pool2d", "adaptive_max_pool2d_dx", "add", "adv_index", "adv_index_dx",
     "all", "any", "arange", "argmax", "argmin",
     "argsort", "argwhere", "atan", "avg_pool2d", "avg_pool2d_dx",
     "batch_flatten", "batch_matmul", "batch_matmul_nt", "batch_matmul_tn", "batch_matmul_tt",
     "batch_norm_infer", "batch_norm_train", "batch_norm_train_dxwb", "bias_add", "broadcast_to",
     "broadcast_to_like", "cast", "cast_like", "ceil", "clip",
-    "clip_dx", "collapse_sum_like", "comm_allgather", "comm_allreduce", "comm_recv",
-    "comm_reduce_scatter", "comm_send", "compiler_begin", "compiler_end", "concatenate",
+    "clip_dx", "collapse_sum_like", "compiler_begin", "compiler_end", "concatenate",
     "concatenate_dx", "conv2d", "conv2d_dw", "conv2d_dx", "conv2d_transpose",
     "conv2d_transpose_dw", "conv2d_transpose_dx", "copy", "cos", "cross_entropy",
     "cross_entropy_dpred", "cross_entropy_dtrue", "dense", "device_copy", "divide",
@@ -48,6 +48,16 @@ __all__ = [
     "zeros", "zeros_like",
 ]
 
+def _allgather(x, axis):
+    x = sym_utils.to_tensor(x)
+    axis = sym_utils.to_int(axis)
+    return Symbol.from_expr(ffi._allgather(x, axis))
+
+def _allreduce(x, computation="sum"):
+    x = sym_utils.to_tensor_tuple(x)
+    computation = sym_utils.to_string(computation)
+    return Symbol.from_expr(ffi._allreduce(x, computation))
+
 def _contrib_dropout(x, p=0.5, in_states=None):
     x = sym_utils.to_tensor(x)
     p = sym_utils.to_double(p)
@@ -59,6 +69,21 @@ def _contrib_dropout_dx(dy, reserve_space, p=0.5):
     reserve_space = sym_utils.to_tensor(reserve_space)
     p = sym_utils.to_double(p)
     return Symbol.from_expr(ffi._contrib_dropout_dx(dy, reserve_space, p))
+
+def _recv(peer, shape, dtype="float32"):
+    peer = sym_utils.to_int(peer)
+    shape = sym_utils.to_int_tuple(shape)
+    dtype = sym_utils.to_string(dtype)
+    return Symbol.from_expr(ffi._recv(peer, shape, dtype))
+
+def _reduce_scatter(x):
+    x = sym_utils.to_tensor_tuple(x)
+    return Symbol.from_expr(ffi._reduce_scatter(x))
+
+def _send(x, peer):
+    x = sym_utils.to_tensor(x)
+    peer = sym_utils.to_int(peer)
+    return Symbol.from_expr(ffi._send(x, peer))
 
 def abs(x):
     x = sym_utils.to_any(x)
@@ -279,31 +304,6 @@ def collapse_sum_like(x, shape):
     x = sym_utils.to_tensor(x)
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.collapse_sum_like(x, shape))
-
-def comm_allgather(x, axis):
-    x = sym_utils.to_tensor(x)
-    axis = sym_utils.to_int(axis)
-    return Symbol.from_expr(ffi.comm.allgather(x, axis))
-
-def comm_allreduce(x, computation="sum"):
-    x = sym_utils.to_tensor_tuple(x)
-    computation = sym_utils.to_string(computation)
-    return Symbol.from_expr(ffi.comm.allreduce(x, computation))
-
-def comm_recv(peer, shape, dtype="float32"):
-    peer = sym_utils.to_int(peer)
-    shape = sym_utils.to_int_tuple(shape)
-    dtype = sym_utils.to_string(dtype)
-    return Symbol.from_expr(ffi.comm.recv(peer, shape, dtype))
-
-def comm_reduce_scatter(x):
-    x = sym_utils.to_tensor_tuple(x)
-    return Symbol.from_expr(ffi.comm.reduce_scatter(x))
-
-def comm_send(x, peer):
-    x = sym_utils.to_tensor(x)
-    peer = sym_utils.to_int(peer)
-    return Symbol.from_expr(ffi.comm.send(x, peer))
 
 def compiler_begin(x, compiler):
     x = sym_utils.to_tensor(x)

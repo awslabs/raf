@@ -60,10 +60,10 @@ print("After allreduce : ", x)
 
 To use auto data parallel, you just need to set `mnm.distributed.get_context().enable_data_parallel = True` before running model.
 
-What need to be mentioned is that currently meta run operators synchronously, as we will call `stream->wait()` after each op. If you want to overlap the communication and computation, you need to make some change to src code: add a if-else statement before comment the code `req->stream[i].stream->Wait();` in `interpreter.cc::Interpreter::InvokePrimitiveOpEnv()`.  
+What need to be mentioned is that currently meta run operators synchronously, as we will call `stream->wait()` after each op. If you want to overlap the communication and computation, you need to make some change to src code: add a if-else statement before comment the code `req->stream[i].stream->Wait();` in `interpreter.cc::Interpreter::InvokePrimitiveOpEnv()`.
 
 ``` cpp
-if (op->name != "mnm.op.comm.allreduce") req->stream[i].stream->Wait();
+if (op->name != "mnm.op._allreduce") req->stream[i].stream->Wait();
 ```
 
 *note: We have ensured that communication operators will run on specific stream (different with computation operators).*

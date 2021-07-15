@@ -38,8 +38,8 @@
 
 #ifdef MNM_USE_CUDA
 #include "../../common/cuda_utils.h"
-#include "../../op/dispatch/cudnn/cudnn_utils.h"
-#include "../../op/dispatch/cublas/cublas_utils.h"
+#include "../../op/dialect/cudnn/cudnn_utils.h"
+#include "../../op/dialect/cublas/cublas_utils.h"
 #endif
 
 namespace mnm {
@@ -49,7 +49,6 @@ namespace vm {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op;
-using namespace mnm::type;
 using namespace mnm::registry;
 using namespace mnm::requests;
 using namespace mnm::device_api;
@@ -642,7 +641,7 @@ std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::Pr
     op_env = *p;
   } else {
     // Create a new OpEnv.
-    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+    static auto fschema = Op::GetAttrMap<FMNMSchema>("FMNMSchema");
     auto call_values = CallValues::make();
     Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
     const auto* op = callee.as<OpValueObj>();
@@ -690,7 +689,7 @@ void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
     args.push_back(ctx.ReadRegister(instr.infer_type.args[i]));
   }
   // infer type
-  static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+  static auto fschema = Op::GetAttrMap<FMNMSchema>("FMNMSchema");
   Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
   Type ret_type;
   if (const auto* opv = callee.as<OpValueObj>()) {
@@ -702,7 +701,7 @@ void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
     auto func = callee.as<ClosureValueObj>()->func;
     CHECK_EQ(func->params.size(), args.size());
     for (size_t i = 0; i < args.size(); ++i) {
-      func->params[i]->checked_type_ = op::type::GetType(args[i]);
+      func->params[i]->checked_type_ = GetType(args[i]);
     }
     Function new_func = Downcast<Function>(pass::InferType(func));
     ctx.WriteRegister(instr.invoke_jit.op_reg, ClosureValue::make({}, new_func));

@@ -8,10 +8,9 @@
 
 namespace mnm {
 namespace op {
-namespace type {
 
-using namespace value;
-using namespace tvm;
+using namespace mnm::ir;
+using namespace mnm::value;
 
 class ValueTyper : public ValueFunctor<Type(const Value&)> {
   Type VisitValue_(const IntValueObj* value) override {
@@ -64,14 +63,12 @@ Type GetType(Value value) {
   return typer(value);
 }
 
-bool TypeCheck(const tvm::PrimExpr& cond) {
-  using namespace tvm;
-  if (const int64_t* pdiff = tir::as_const_int(cond)) {
+bool TypeCheck(const PrimExpr& cond) {
+  if (const int64_t* pdiff = tvm::tir::as_const_int(cond)) {
     return pdiff[0];
   }
   return true;
 }
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

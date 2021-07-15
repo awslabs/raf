@@ -8,15 +8,13 @@
 #include "../schema/random.h"
 #include "../declare/declare_utils.h"
 #include "./utils.h"
+
 namespace mnm {
 namespace op {
-namespace type {
 
+using namespace mnm::ir;
 using namespace mnm::value;
 using namespace schema;
-using tvm::relay::Type;
-using namespace tvm;
-using namespace relay;
 
 Type ThreefryGenerateInfer(const CallValues& value) {
   const auto* args = value->args.as<ThreefryGenerateArgs>();
@@ -44,6 +42,5 @@ Type ThreefrySplitInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.threefry_split", "ThreefrySplit", ThreefrySplitInfer);
 
-}  // namespace type
 }  // namespace op
 }  // namespace mnm

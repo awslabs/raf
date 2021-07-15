@@ -25,7 +25,7 @@ using tvm::te::Tensor;
 using tvm::relay::FTVMCompute;
 using tvm::relay::FTVMSchedule;
 #define MNM_TVM_OP(MNM_OP, OP)                                                                  \\
-  MNM_OP_REGISTER(MNM_OP)                                                                       \\
+  MNM_REGISTER_OP(MNM_OP)                                                                       \\
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \\
                              [](const Attrs& attrs, const Array<Tensor>& inputs,                \\
                                 const Type& out_type) -> Array<Tensor> {{                        \\
@@ -61,7 +61,7 @@ MNM_TVM_OP("{MNM_OP_NAME}", "{RELAY_OP_NAME}");
                       RELAY_OP_NAME=relay_op_name)
 
 
-def main(path="./src/op/regs/tvmjit_regs.cc"):
+def main(path="./src/op/regs/tvm_op_regs.cc"):
     result = gen_file(path)
     write_to_file(path, result)
 

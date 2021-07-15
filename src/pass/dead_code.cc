@@ -28,10 +28,10 @@ ir::Expr DeadCodeElimination(const ir::Expr& expr) {
 }
 
 Pass DeadCodeElimination() {
-  runtime::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
-      [=](Function f, IRModule m, PassContext pc) {
-        return Downcast<Function>(DeadCodeElimination(f));
-      };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
+                                                                             PassContext pc) {
+    return Downcast<Function>(DeadCodeElimination(f));
+  };
   return CreateMNMFunctionPass(pass_func, 1, "DeadCodeElimination", {});
 }
 

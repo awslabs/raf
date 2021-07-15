@@ -44,7 +44,7 @@ Array<Expr> ContribDropoutGrad(const Expr& orig_call, const Array<Expr> orig_arg
   const Expr& reserve_space = TupleGetItem(y, 3);
   const Expr& p = orig_args[1];
   if (orig_args.size() == 2) {
-    // tvmjit is used
+    // tvm is used
     Call cast_mask = Call(cast_like, {mask, dy});
     return {Call(multiply, {dy, cast_mask})};
   }

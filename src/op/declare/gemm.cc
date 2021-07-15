@@ -50,10 +50,10 @@ auto MatmulNT = MatmulDecl<false, true>;
 auto MatmulTN = MatmulDecl<true, false>;
 auto MatmulTT = MatmulDecl<true, true>;
 
-MNM_OP_DECLARE("mnm.op.matmul", MatmulNN).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.matmul", MatmulNN);
+MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT);
+MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN);
+MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT);
 
 template <bool transpose_a, bool transpose_b>
 void BatchMatmulDecl(const CallValues& call) {
@@ -99,14 +99,10 @@ auto BatchMatmulNT = BatchMatmulDecl<false, true>;
 auto BatchMatmulTN = BatchMatmulDecl<true, false>;
 auto BatchMatmulTT = BatchMatmulDecl<true, true>;
 
-MNM_OP_DECLARE("mnm.op.batch_matmul", BatchMatmulNN)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.batch_matmul_nt", BatchMatmulNT)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.batch_matmul_tn", BatchMatmulTN)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
-MNM_OP_DECLARE("mnm.op.batch_matmul_tt", BatchMatmulTT)
-    .set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+MNM_OP_DECLARE("mnm.op.batch_matmul", BatchMatmulNN);
+MNM_OP_DECLARE("mnm.op.batch_matmul_nt", BatchMatmulNT);
+MNM_OP_DECLARE("mnm.op.batch_matmul_tn", BatchMatmulTN);
+MNM_OP_DECLARE("mnm.op.batch_matmul_tt", BatchMatmulTT);
 
 MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
   const auto* args = call->args.as<schema::BinaryArgs>();
@@ -126,7 +122,7 @@ MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
   if (!n1 || !n2 || !m1 || !m2) {
     call->callee = ir::NullValue<OpValue>();
   }
-}).set_attr<TOpPattern>("TOpPattern", kOutEWiseFusable);
+});
 
 }  // namespace declare
 }  // namespace op
