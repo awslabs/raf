@@ -1,4 +1,4 @@
-# pylint: disable=too-many-locals, no-self-use, line-too-long
+# pylint: disable=too-many-locals, no-self-use, line-too-long, attribute-defined-outside-init
 import numpy as np
 import pytest
 import torch
@@ -184,7 +184,6 @@ def test_log_softmax(device, dtype, shape):
 @pytest.mark.parametrize("learnable_affine_transform", [False, True])
 def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform):
     # pylint: disable=import-outside-toplevel
-    # pylint: disable=attribute-defined-outside-init
     import mxnet as mx
 
     class LayerNorm(mnm.Model):
@@ -574,7 +573,6 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
 @pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
 @with_seed(0)
 def test_mnm_batch_norm_train(shape, momentum, eps, device):
-    # pylint: disable=attribute-defined-outside-init
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, device=device, requires_grad=True)
     m_m, t_m = randn_torch(stats_shape, device=device)
@@ -645,6 +643,36 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
     t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)
     check(m_y, t_y)
 
+
+@pytest.mark.parametrize("hyperparam", [(0.6, 1.2), (-0.2, 1.2)])
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_threshold_with_grad(hyperparam, shape, dtype, device):
+    class TestModel(mnm.Model):
+        def build(self, threshold, value):
+            self.threshold = threshold
+            self.value = value
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm._op.sym.threshold(x, self.threshold, self.value)
+
+    m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True)
+    threshold, value = hyperparam
+    model = TestModel(threshold, value)
+    m_y = model(m_x)
+    v_y = run_vm_model(model, device, [m_x])
+    t_model = torch.nn.Threshold(threshold, value)
+    t_y = t_model(t_x)
+    # check forward
+    check(m_y, t_y)
+    check(v_y, t_y)
+    # check backward
+    m_dy, t_dy = randn_torch(shape, dtype=dtype, device=device)
+    m_y.backward(m_dy)
+    t_y.backward(t_dy)
+    check(m_x.grad, t_x.grad)
 
 if __name__ == "__main__":
     pytest.main([__file__])

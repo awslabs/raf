@@ -413,6 +413,18 @@ Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, co
 
 MNM_OP_GRAD("mnm.op.layer_norm", LayerNormGrad);
 
+Array<Expr> ThresholdGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                          const Expr& dy) {
+  static auto op_dx = Op::Get("mnm.op.threshold_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  const Expr& threshold = call->args[1];
+  return {Call(op_dx, {x, dy, threshold})};
+}
+
+MNM_OP_GRAD("mnm.op.threshold", ThresholdGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

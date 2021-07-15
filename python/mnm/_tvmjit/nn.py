@@ -2,6 +2,7 @@
 # pylint: disable=missing-module-docstring
 from functools import reduce
 import operator
+
 from . import cuda
 from .._lib import register_compute
 from .._lib import generic_func
@@ -216,6 +217,31 @@ def compute_relu_dx(attr, inputs, output_type):
     return [G]
 
 _reg.register_injective_schedule("mnm.op.relu_dx")
+
+@register_compute("mnm.op.threshold")
+def compute_threshold(attr, inputs, output_type):
+    # pylint: disable=unused-argument
+    x = inputs[0]
+    threshold = _tvm.tir.const(attr.threshold, x.dtype)
+    value = _tvm.tir.const(attr.value, x.dtype)
+    return [_tvm.te.compute(x.shape,
+                            lambda *idx: _tvm.te.if_then_else(
+                                x[idx] > threshold, x[idx], value),
+                            tag=_tvm.topi.tag.ELEMWISE)]
+
+_reg.register_injective_schedule("mnm.op.threshold")
+
+@register_compute("mnm.op.threshold_dx")
+def compute_threshold_dx(attr, inputs, output_type):
+    # pylint: disable=unused-argument
+    x, dy = inputs[0], inputs[1]
+    threshold = _tvm.tir.const(attr.threshold, x.dtype)
+    return [_tvm.te.compute(dy.shape,
+                            lambda *idx: _tvm.te.if_then_else(
+                                x[idx] > threshold, dy[idx], _tvm.tir.const(0, dy.dtype)),
+                            tag=_tvm.topi.tag.ELEMWISE)]
+
+_reg.register_injective_schedule("mnm.op.threshold_dx")
 
 @register_compute("mnm.op.layer_norm")
 def compute_layer_norm(attr, inputs, output_type):

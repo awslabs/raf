@@ -42,9 +42,10 @@ __all__ = [
     "stream_end", "stream_start", "stream_sync", "stream_wait", "strided_slice",
     "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
     "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
-    "threefry_split", "topk", "transpose", "transpose_dx", "trunc",
-    "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free", "vm_infer_type",
-    "vm_invoke_op", "vm_set_shape", "where", "zeros", "zeros_like",
+    "threefry_split", "threshold", "threshold_dx", "topk", "transpose",
+    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where",
+    "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -1271,6 +1272,20 @@ def threefry_generate(key, shape):
 def threefry_split(key):
     key = imp_utils.to_tensor(key)
     return imp_utils.ret(ffi.threefry_split(key))
+
+@set_module("mnm")
+def threshold(x, threshold=0.0, value=0.0):
+    x = imp_utils.to_any(x)
+    threshold = imp_utils.to_double(threshold)
+    value = imp_utils.to_double(value)
+    return imp_utils.ret(ffi.threshold(x, threshold, value))
+
+@set_module("mnm")
+def threshold_dx(x, dy, threshold=0.0):
+    x = imp_utils.to_any(x)
+    dy = imp_utils.to_tensor(dy)
+    threshold = imp_utils.to_double(threshold)
+    return imp_utils.ret(ffi.threshold_dx(x, dy, threshold))
 
 @set_module("mnm")
 def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):

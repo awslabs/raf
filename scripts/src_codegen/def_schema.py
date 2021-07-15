@@ -307,6 +307,16 @@ SCHEMAS = {
             cxx_type="value::Value", cxx_default="nullptr"),
         Arg(name="axis", cxx_type="int", cxx_default=0),
     ],
+    "nn.h::threshold": [
+        Arg(name="x", cxx_type="value::Value"),
+        Arg(name="threshold", cxx_type="double", cxx_default=0.0),
+        Arg(name="value", cxx_type="double", cxx_default=0.0),
+    ],
+    "nn.h::threshold_dx": [
+        Arg(name="x", cxx_type="value::Value"),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="threshold", cxx_type="double", cxx_default=0.0),
+    ],
     "loss.h::loss": [
         Arg(name="y_true", cxx_type="value::BaseTensorValue"),
         Arg(name="y_pred", cxx_type="value::BaseTensorValue"),

@@ -42,9 +42,10 @@ __all__ = [
     "stream_end", "stream_start", "stream_sync", "stream_wait", "strided_slice",
     "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
     "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
-    "threefry_split", "topk", "transpose", "transpose_dx", "trunc",
-    "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free", "vm_infer_type",
-    "vm_invoke_op", "vm_set_shape", "where", "zeros", "zeros_like",
+    "threefry_split", "threshold", "threshold_dx", "topk", "transpose",
+    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "where",
+    "zeros", "zeros_like",
 ]
 
 def _contrib_dropout(x, p=0.5, in_states=None):
@@ -1100,6 +1101,18 @@ def threefry_generate(key, shape):
 def threefry_split(key):
     key = sym_utils.to_tensor(key)
     return Symbol.from_expr(ffi.threefry_split(key))
+
+def threshold(x, threshold=0.0, value=0.0):
+    x = sym_utils.to_any(x)
+    threshold = sym_utils.to_double(threshold)
+    value = sym_utils.to_double(value)
+    return Symbol.from_expr(ffi.threshold(x, threshold, value))
+
+def threshold_dx(x, dy, threshold=0.0):
+    x = sym_utils.to_any(x)
+    dy = sym_utils.to_tensor(dy)
+    threshold = sym_utils.to_double(threshold)
+    return Symbol.from_expr(ffi.threshold_dx(x, dy, threshold))
 
 def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
     data = sym_utils.to_tensor(data)

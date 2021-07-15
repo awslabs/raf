@@ -944,6 +944,85 @@ MNM_TVMJIT(BatchNormTrainDxwb, "mnm.op.batch_norm_train_dxwb", BatchNormTrainDxw
            BatchNormTrainDxwbSchema2Args, BatchNormTrainDxwbSchemaArgNames,
            BatchNormTrainDxwbSchema2Attrs, BatchNormTrainDxwbHasher);
 
+struct ThresholdAttrs : public tvm::AttrsNode<ThresholdAttrs> {
+  double threshold;
+  double value;
+  TVM_DECLARE_ATTRS(ThresholdAttrs, "mnm.attrs.ThresholdAttrs") {
+    TVM_ATTR_FIELD(threshold).set_default(0.0).describe("The value to threshold at");
+    TVM_ATTR_FIELD(value).set_default(0.0).describe("The value to replace with");
+  }
+};  // struct ThresholdAttrs
+
+TVM_REGISTER_NODE_TYPE(ThresholdAttrs);
+
+std::vector<Value> ThresholdSchema2Args(const ThresholdArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> ThresholdSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+Attrs ThresholdSchema2Attrs(const ThresholdArgs* args) {
+  // attrs will be later passed to compute & schedule functions
+  auto attrs = make_object<ThresholdAttrs>();
+  attrs->threshold = args->threshold;
+  attrs->value = args->value;
+  return Attrs(attrs);
+}
+
+HashKey ThresholdHasher(const std::vector<Type>& param_types, const Type& y_type,
+                        const ThresholdArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->threshold;
+  key << args->value;
+  return key;
+}
+
+MNM_TVMJIT(Threshold, "mnm.op.threshold", ThresholdArgs, ThresholdSchema2Args,
+           ThresholdSchemaArgNames, ThresholdSchema2Attrs, ThresholdHasher);
+
+struct ThresholdDxAttr : public tvm::AttrsNode<ThresholdDxAttr> {
+  double threshold;
+
+  TVM_DECLARE_ATTRS(ThresholdDxAttr, "relay.attrs.ThresholdDxAttr") {
+    TVM_ATTR_FIELD(threshold).set_default(0.0).describe("The value to threshold at");
+  }
+};
+
+TVM_REGISTER_NODE_TYPE(ThresholdDxAttr);
+
+std::vector<Value> ThresholdDxSchema2Args(const ThresholdDxArgs* args) {
+  std::vector<Value> ret;
+  ret.push_back(args->x);
+  ret.push_back(args->dy);
+  return ret;
+}
+
+std::vector<std::string> ThresholdDxSchemaArgNames(const op::CallValues& call) {
+  const auto* args = call->args.as<ThresholdDxArgs>();
+  std::vector<std::string> ret;
+  ret.push_back("x");
+  ret.push_back("dy");
+  return ret;
+}
+
+Attrs ThresholdDxSchema2Attrs(const ThresholdDxArgs* args) {
+  auto attrs = make_object<ThresholdDxAttr>();
+  attrs->threshold = args->threshold;
+  return Attrs(attrs);
+}
+
+HashKey ThresholdDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                          const ThresholdDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->threshold;
+  return key;
+}
+
+MNM_TVMJIT(ThresholdDx, "mnm.op.threshold_dx", ThresholdDxArgs, ThresholdDxSchema2Args,
+           ThresholdDxSchemaArgNames, ThresholdDxSchema2Attrs, ThresholdDxHasher);
+
 struct PadAttrs : public tvm::AttrsNode<PadAttrs> {
   double pad_value;
   Array<Array<Integer>> pad_width;

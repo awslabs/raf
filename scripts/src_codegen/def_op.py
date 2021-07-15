@@ -134,6 +134,8 @@ OPS = [
     Op(name="squeeze", schema_name="squeeze"),
     Op(name="stack", schema_name="stack"),
     Op(name="split", schema_name="split"),
+    Op(name="threshold", schema_name="threshold"),
+    Op(name="threshold_dx", schema_name="threshold_dx"),
     Op(name="layer_norm", schema_name="layer_norm"),
     Op(name="scatter", schema_name="scatter"),
     Op(name="scatter_dx", schema_name="scatter_dx"),

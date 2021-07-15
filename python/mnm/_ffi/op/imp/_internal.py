@@ -335,6 +335,10 @@ threefry_generate = _APIS.get("mnm.op.imp.threefry_generate", None)
 # Defined in ./src/op/regs/regs.cc
 threefry_split = _APIS.get("mnm.op.imp.threefry_split", None)
 # Defined in ./src/op/regs/regs.cc
+threshold = _APIS.get("mnm.op.imp.threshold", None)
+# Defined in ./src/op/regs/regs.cc
+threshold_dx = _APIS.get("mnm.op.imp.threshold_dx", None)
+# Defined in ./src/op/regs/regs.cc
 topk = _APIS.get("mnm.op.imp.topk", None)
 # Defined in ./src/op/regs/regs.cc
 transpose = _APIS.get("mnm.op.imp.transpose", None)

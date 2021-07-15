@@ -331,6 +331,22 @@ class TakeDxArgs : public ir::AttrsNode<TakeDxArgs> {
   std::string mode{"clip"};
   MNM_OP_SCHEMA(TakeDxArgs, "mnm.args.take_dx");
 };
+
+class ThresholdArgs : public ir::AttrsNode<ThresholdArgs> {
+ public:
+  value::Value x;
+  double threshold{0.0};
+  double value{0.0};
+  MNM_OP_SCHEMA(ThresholdArgs, "mnm.args.threshold");
+};
+
+class ThresholdDxArgs : public ir::AttrsNode<ThresholdDxArgs> {
+ public:
+  value::Value x;
+  value::BaseTensorValue dy;
+  double threshold{0.0};
+  MNM_OP_SCHEMA(ThresholdDxArgs, "mnm.args.threshold_dx");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

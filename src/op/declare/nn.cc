@@ -469,6 +469,40 @@ void LayerNormDx(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
+void Threshold(const CallValues& call) {
+  const auto* args = call->args.as<ThresholdArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+
+  // stop generating ir code when the size of tensor is zero
+  for (auto len : shape) {
+    if (len == 0) {
+      call->callee = ir::NullValue<OpValue>();
+      break;
+    }
+  }
+}
+
+MNM_OP_DECLARE("mnm.op.threshold", Threshold).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
+void ThresholdDx(const CallValues& call) {
+  const auto* args = call->args.as<ThresholdDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+}
+
+MNM_OP_DECLARE("mnm.op.threshold_dx", ThresholdDx).set_attr<TOpPattern>("TOpPattern", kElemWise);
+
 void Pad(const CallValues& call) {
   const auto* args = call->args.as<PadArgs>();
   CHECK(args != nullptr);

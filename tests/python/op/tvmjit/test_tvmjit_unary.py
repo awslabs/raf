@@ -34,7 +34,7 @@ def verify_unify_op(m_op, m_arg, device, ref_fwd_out, m_dy=None, ref_grad=None):
 
     # Check backward if dy is provided
     m_y.backward(m_dy)
-    check(m_arg.grad, ref_grad)
+    check(m_arg.grad, ref_grad, rtol=1e-3, atol=1e-3)
 
 
 @pytest.mark.parametrize("device", get_device_list())

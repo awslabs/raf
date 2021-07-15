@@ -213,6 +213,8 @@ static const char tanh[] = "mnm.op.tanh";
 static const char tanh_dx[] = "mnm.op.tanh_dx";
 static const char threefry_generate[] = "mnm.op.threefry_generate";
 static const char threefry_split[] = "mnm.op.threefry_split";
+static const char threshold[] = "mnm.op.threshold";
+static const char threshold_dx[] = "mnm.op.threshold_dx";
 static const char topk[] = "mnm.op.topk";
 static const char transpose[] = "mnm.op.transpose";
 static const char transpose_dx[] = "mnm.op.transpose_dx";
@@ -1110,6 +1112,22 @@ Attrs ThreefryGenerate(const TVMArgs& values, GradTape* tapes) {
 Attrs ThreefrySplit(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::ThreefrySplitArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, key);
+  return Attrs(attrs);
+}
+
+Attrs Threshold(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ThresholdArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::ArrayLike, x);
+  MNM_POD(1, ffi2schema::Double, threshold);
+  MNM_POD(2, ffi2schema::Double, value);
+  return Attrs(attrs);
+}
+
+Attrs ThresholdDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ThresholdDxArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::ArrayLike, x);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_POD(2, ffi2schema::Double, threshold);
   return Attrs(attrs);
 }
 
@@ -2911,6 +2929,26 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.threefry_split").set_body([](TVMArgs args, TVMRe
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.threshold").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(threshold, 3, ffi2schema::Threshold,
+              schema::ThresholdArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->threshold));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->value));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.threshold_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(threshold_dx, 3, ffi2schema::ThresholdDx,
+              schema::ThresholdDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->threshold));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.topk").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(topk, 6, ffi2schema::Topk, schema::TopkArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
@@ -3927,6 +3965,22 @@ Array<Expr> ThreefrySplit(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Threshold(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::ArrayLike, x);
+  MNM_ARG(1, ffi2expr::Double, threshold);
+  MNM_ARG(2, ffi2expr::Double, value);
+  MNM_RET();
+}
+
+Array<Expr> ThresholdDx(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::ArrayLike, x);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::Double, threshold);
+  MNM_RET();
+}
+
 Array<Expr> Topk(const TVMArgs& values) {
   MNM_PRELUDE(6);
   MNM_ARG(0, ffi2expr::Tensor, data);
@@ -4232,6 +4286,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.threefry_generate")
     .set_body(MNM_SYMBOLIC_API(threefry_generate, 2, ThreefryGenerate));
 MNM_REGISTER_GLOBAL("mnm.op.sym.threefry_split")
     .set_body(MNM_SYMBOLIC_API(threefry_split, 1, ThreefrySplit));
+MNM_REGISTER_GLOBAL("mnm.op.sym.threshold").set_body(MNM_SYMBOLIC_API(threshold, 3, Threshold));
+MNM_REGISTER_GLOBAL("mnm.op.sym.threshold_dx")
+    .set_body(MNM_SYMBOLIC_API(threshold_dx, 3, ThresholdDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.topk").set_body(MNM_SYMBOLIC_API(topk, 6, Topk));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose").set_body(MNM_SYMBOLIC_API(transpose, 2, Transpose));
 MNM_REGISTER_GLOBAL("mnm.op.sym.transpose_dx")
@@ -5247,6 +5304,24 @@ template <const char* op_name>
 Attrs ThreefrySplit(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::ThreefrySplitArgs);
   MNM_REQUIRED(0, value2schema::Tensor, key);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Threshold(const Array<Value>& values) {
+  MNM_PRELUDE(1, 3, schema::ThresholdArgs);
+  MNM_REQUIRED(0, value2schema::ArrayLike, x);
+  MNM_OPTIONAL(1, value2schema::Double, threshold);
+  MNM_OPTIONAL(2, value2schema::Double, value);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs ThresholdDx(const Array<Value>& values) {
+  MNM_PRELUDE(2, 3, schema::ThresholdDxArgs);
+  MNM_REQUIRED(0, value2schema::ArrayLike, x);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_OPTIONAL(2, value2schema::Double, threshold);
   return Attrs(attrs);
 }
 
@@ -7030,6 +7105,36 @@ int ThreefrySplit(const std::string& field) {
 }
 
 template <const char* op_name>
+int Threshold(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "threshold") {
+    return 1;
+  }
+  if (field == "value") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int ThresholdDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "dy") {
+    return 1;
+  }
+  if (field == "threshold") {
+    return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Topk(const std::string& field) {
   if (field == "data") {
     return 0;
@@ -7807,7 +7912,15 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.threefry_generate", names::threefry_generate
 MNM_BIND_SCHEMA("mnm.op.threefry_split", names::threefry_split,
                 value2schema::ThreefrySplit);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.threefry_split", names::threefry_split,
-                            schema_field_idx::ThreefrySplit);     // NOLINT(whitespace/line_length)
+                            schema_field_idx::ThreefrySplit);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.threshold", names::threshold,
+                value2schema::Threshold);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.threshold", names::threshold,
+                            schema_field_idx::Threshold);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.threshold_dx", names::threshold_dx,
+                value2schema::ThresholdDx);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.threshold_dx", names::threshold_dx,
+                            schema_field_idx::ThresholdDx);       // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.topk", names::topk, value2schema::Topk);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.topk", names::topk,
                             schema_field_idx::Topk);  // NOLINT(whitespace/line_length)
@@ -7974,6 +8087,8 @@ MNM_REGISTER_OBJECT_REFLECT(TernaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(TernaryUfuncArgs);
 MNM_REGISTER_OBJECT_REFLECT(ThreefryGenerateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ThreefrySplitArgs);
+MNM_REGISTER_OBJECT_REFLECT(ThresholdArgs);
+MNM_REGISTER_OBJECT_REFLECT(ThresholdDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(TopkArgs);
 MNM_REGISTER_OBJECT_REFLECT(TransposeArgs);
 MNM_REGISTER_OBJECT_REFLECT(TransposeDxArgs);

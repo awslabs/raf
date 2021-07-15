@@ -345,6 +345,22 @@ Type LayerNormDxbInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.layer_norm_dx", "LayerNormDx", LayerNormDxbInfer);
 
+Type ThresholdInfer(const CallValues& value) {
+  const auto* args = value->args.as<ThresholdArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op.threshold", "Threshold", ThresholdInfer);
+
+Type ThresholdDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<ThresholdDxArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op.threshold_dx", "ThresholdDx", ThresholdDxInfer);
+
 Type PadInfer(const CallValues& value) {
   const auto* args = value->args.as<PadArgs>();
   CHECK(args != nullptr);
