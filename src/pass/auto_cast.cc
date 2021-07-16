@@ -11,6 +11,7 @@
 #include "mnm/type.h"
 #include "mnm/value.h"
 #include "mnm/pass.h"
+#include "mnm/op_utils.h"
 #include "./let_list.h"
 #include "./common.h"
 
@@ -99,6 +100,47 @@ Type UpdateDTypeByHint(const Type ori_type, const TypeHint target_type, std::str
   return TensorType(old_type->shape, AsPrimType(target_type, msg_str)->dtype);
 }
 
+inline HashKey TypeHintHash(TypeHint type_hint) {
+  HashKey key;
+  if (auto prim_type = type_hint.as<PrimTypeNode>()) {
+    DataType dtype = prim_type->dtype;
+    key << DLDataType2String(dtype);
+  } else if (auto tuple_type = type_hint.as<TupleTypeNode>()) {
+    for (auto field : tuple_type->fields) {
+      key << TypeHintHash(field);
+    }
+  } else {
+    LOG(FATAL) << "Unrecorgnized type hint: " << type_hint->GetTypeKey();
+    throw;
+  }
+  return key;
+}
+
+/*! \brief Hash of the cast cache. */
+struct CastCacheHash {
+  std::size_t operator()(const std::pair<Expr, TypeHint>& pair) const {
+    HashKey key;
+    // Simply use the object hash.
+    key << ObjectPtrHash()(pair.first);
+    // Cannot use the object hash because type hints are different objects.
+    key << TypeHintHash(pair.second);
+
+    std::string str_key(key.byte_vector.begin(), key.byte_vector.end());
+    return std::hash<std::string>()(str_key);
+  }
+};
+
+/*! \brief KeyEqual of the cast cache. */
+struct CastCacheEqual {
+  bool operator()(const std::pair<Expr, TypeHint>& pair1,
+                  const std::pair<Expr, TypeHint>& pair2) const {
+    // When two pairs have the same hash key, we simply check if their expr is the same.
+    return ObjectPtrEqual()(pair1.first, pair2.first);
+  }
+};
+
+using CastCache = std::unordered_map<std::pair<Expr, TypeHint>, Var, CastCacheHash, CastCacheEqual>;
+
 class AutoCastMutator : public ExprMutator {
  public:
   AutoCastMutator(const String amp_dtype, const String out_dtype) : scopes_{LetList()} {
@@ -147,15 +189,22 @@ class AutoCastMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) {
+    static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
     TypeHints type_hints = GenTypeHints(node->args, node->checked_type(), amp_dtype_, node->op);
 
     Array<Expr> call_args;
     auto op = Downcast<Op>(node->op);
     CHECK_EQ(type_hints.size(), node->args.size() + 1)
         << "Type hint number and argument size of " << op->name << " are mismatching";
+
+    // If the fusion pattern of this op is elementwise or broadcast, we disable the cache
+    // to make sure they their argument cast op will not be reused and can fused together.
+    // TODO(comaniac): Let the recompute or fusion pass work on this.
+    bool use_cache = fpattern[op] > kInjective;
+
     for (size_t i = 0; i < node->args.size(); ++i) {
       UpdateCurrExprStr(op->name, i);
-      call_args.push_back(CastExpr(VisitExpr(node->args[i]), type_hints[i]));
+      call_args.push_back(CastExpr(VisitExpr(node->args[i]), type_hints[i], use_cache));
     }
 
     auto new_call = Call(op, call_args, node->attrs, node->type_args);
@@ -301,7 +350,7 @@ class AutoCastMutator : public ExprMutator {
   }
 
   /*! \brief Generate a tuple of casted tensors. */
-  Expr CastTuple(const Expr arg, const TypeHint type_hint) {
+  Expr CastTuple(const Expr arg, const TypeHint type_hint, bool use_cache = true) {
     auto& scope = scopes_.back();
 
     auto expr = GetBindExpr(arg);
@@ -337,9 +386,9 @@ class AutoCastMutator : public ExprMutator {
       auto field_type = field->checked_type();
       Expr new_expr;
       if (field_type->IsInstance<TensorTypeNode>()) {
-        new_expr = CastExpr(field, tuple_type_hint->fields[i]);
+        new_expr = CastExpr(field, tuple_type_hint->fields[i], use_cache);
       } else if (field_type->IsInstance<TupleTypeNode>()) {
-        new_expr = CastTuple(field, tuple_type_hint->fields[i]);
+        new_expr = CastTuple(field, tuple_type_hint->fields[i], use_cache);
       } else {
         LOG(FATAL) << "Unsupported field type: " << field_type->GetTypeKey();
       }
@@ -354,13 +403,13 @@ class AutoCastMutator : public ExprMutator {
   }
 
   /*! \brief Cast the expr based on the given type hint. */
-  Expr CastExpr(const Expr expr, const TypeHint& type_hint) {
+  Expr CastExpr(const Expr expr, const TypeHint& type_hint, bool use_cache = true) {
     auto& scope = scopes_.back();
     CHECK(expr->checked_type_.defined()) << "Missing type:\n" << mnm::ir::AsText(expr);
 
     auto expr_type = expr->checked_type();
     if (expr_type->IsInstance<TupleTypeNode>()) {
-      auto cast_call = CastTuple(expr, type_hint);
+      auto cast_call = CastTuple(expr, type_hint, use_cache);
       if (expr != cast_call) {
         auto new_var = scope.Push(cast_call);
         new_var->checked_type_ = cast_call->checked_type_;
@@ -389,14 +438,23 @@ class AutoCastMutator : public ExprMutator {
       target_dtype = Downcast<TensorType>(orig_type)->dtype;
     }
 
+    auto pair_key = std::make_pair(expr, type_hint);
     if (ttype->dtype == target_dtype) {
       return expr;
-    } else {
-      auto cast_call = GenCastCall(expr, target_dtype);
-      auto new_var = scope.Push(cast_call);
-      new_var->checked_type_ = cast_call->checked_type_;
-      return new_var;
     }
+    if (use_cache && cast_cache_.count(pair_key) > 0) {
+      // Reuse the cast if this expression has been casted already.
+      return cast_cache_[pair_key];
+    }
+
+    auto cast_call = GenCastCall(expr, target_dtype);
+    auto new_var = scope.Push(cast_call);
+    new_var->checked_type_ = cast_call->checked_type_;
+    if (use_cache) {
+      // If not using cache, then we make sure this new cast op is only used by one op.
+      cast_cache_[pair_key] = new_var;
+    }
+    return new_var;
   }
 
   /*! \brief The scope stack of the let list. */
@@ -407,6 +465,8 @@ class AutoCastMutator : public ExprMutator {
   DataType out_dtype_;
   /*! \brief The current processing call node op name and argument index (for debugging purpose). */
   std::string curr_call_n_arg_str_ = "";
+  /*! \brief Map from expr and type hint to the casted var. */
+  CastCache cast_cache_;
   /*! \brief The mapping from let bound var to its expr. */
   std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> let_vars_;
   /*! \brief The mapping from let bound var to its original type. */

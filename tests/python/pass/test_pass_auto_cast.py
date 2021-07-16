@@ -1,5 +1,5 @@
 # pylint: disable=protected-access, no-self-use, unused-argument
-# pylint: disable=too-many-locals, too-many-arguments
+# pylint: disable=too-many-locals, too-many-arguments, attribute-defined-outside-init
 import pytest
 import torch
 
@@ -18,7 +18,7 @@ def verify_correctness(model, device, args, ref_outs=None, tol=1e-5):
     amp_model = mnm.amp.autocast(model, args)
     outs = run_vm_model(amp_model, device, args)
 
-    outs = outs if isinstance(outs, (tuple, list)) else (outs,)
+    outs = outs if isinstance(outs, (tuple, list, mnm._core.value.TupleValue)) else (outs,)
     assert len(ref_outs) == len(outs)
     for ref_out, out in zip(ref_outs, outs):
         check(ref_out, out, rtol=tol, atol=tol)
@@ -153,7 +153,7 @@ def test_batch_norm_train():
         @mnm.model.trace
         def forward(self, m_x, m_m, m_v, m_w, m_b):
             result = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
-            return result[0]
+            return (result[0], result[1], result[2])
 
     t_x_fp16 = t_x.to(torch.float16)
     t_y = torch.nn.functional.batch_norm(t_x_fp16, t_mean, t_var, t_w, t_b, True, momentum, eps)
@@ -161,7 +161,7 @@ def test_batch_norm_train():
     model = TestModel()
     with mnm.ir.PassContext(config={"mnm.amp.out_dtype": "float16"}):
         amp_model = mnm.amp.autocast(model, args)
-        verify_correctness(amp_model, device, args, ref_outs=t_y)
+        verify_correctness(amp_model, device, args, ref_outs=(t_y, t_mean, t_var))
 
 
 def test_binary_ufunc():
@@ -185,6 +185,31 @@ def test_binary_ufunc():
     args = [m_x, m_w, m_y]
     verify_cast_num(model, args, 3)
     verify_correctness(model, device, args, tol=1e-2)
+
+
+def test_cast_reuse():
+    xshape = (32, 1024)
+    wshape = (1024, 1000)
+
+    class Model(mnm.Model):
+        def build(self):
+            self.w, _ = randn(wshape, requires_grad=True)
+
+        @mnm.model.trace
+        def forward(self, x):
+            out1 = mnm.matmul(x, self.w) # Always cast.
+            out6 = mnm.matmul(x, self.w) # Should reuse the cast ops of two inputs.
+            out2 = mnm.softmax(out1) # Use a never cast op to produce a cast op.
+            out3 = mnm.exp(out1) # This is a fuable op so it cannot reuse the cast op.
+            out4 = mnm.add(out2, out3)
+            out5 = mnm.add(out4, out6)
+            return out5
+
+    model = Model()
+    model.infer_mode()
+    m_x, _ = randn(xshape, requires_grad=False)
+    verify_cast_num(model, [m_x], 5)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

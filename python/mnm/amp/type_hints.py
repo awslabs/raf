@@ -124,6 +124,8 @@ register_op_cast_rule("mnm.op.rsqrt", generic_cast(False, 1))
 
 # These ops needs to accumulate the result in float32, so we never cast them,
 # and expect they will be fused with the cast ops.
+register_op_cast_rule("mnm.op.multiply", generic_cast(False, 2))
+register_op_cast_rule("mnm.op.sum", generic_cast(False, 1))
 register_op_cast_rule("mnm.op.take_dx", generic_cast(False, 3))
 register_op_cast_rule("mnm.op.gather_dx", generic_cast(False, 4))
 register_op_cast_rule("mnm.op.gather_nd", generic_cast(False, 1))
@@ -202,7 +204,6 @@ register_op_cast_rule("mnm.op.ndarray_size", infer_cast(1))
 register_op_cast_rule("mnm.op.transpose", infer_cast(1))
 register_op_cast_rule("mnm.op.transpose_dx", infer_cast(1))
 register_op_cast_rule("mnm.op.collapse_sum_like", infer_cast(1))
-register_op_cast_rule("mnm.op.sum", infer_cast(1))
 register_op_cast_rule("mnm.op.sum_dx", infer_cast(3))
 register_op_cast_rule("mnm.op.argmax", infer_cast(1))
 register_op_cast_rule("mnm.op.argmin", infer_cast(1))
@@ -269,7 +270,6 @@ register_op_cast_rule("mnm.op.layer_norm", infer_cast(3))
 register_op_cast_rule("mnm.op.layer_norm_dx", infer_cast(3))
 register_op_cast_rule("mnm.op.embedding", infer_cast(2))
 register_op_cast_rule("mnm.op.gather", infer_cast(1))
-register_op_cast_rule("mnm.op.multiply", infer_cast(2))
 register_op_cast_rule("mnm.op.divide", infer_cast(2))
 
 # Special cases.
@@ -282,7 +282,7 @@ def op_cast_binary_ufunc(args, ret_type, amp_dtype):
     cast_to_amp = not isinstance(ret_type, tvm.ir.TupleType) and ret_type.dtype == "float32"
     if cast_to_amp:
         cast_to_amp = any([check_amp_dtype(arg.checked_type, amp_dtype)
-                           for arg in args[:3]])
+                           for arg in args[:2]])
 
     ret = []
     for arg in args[:2]:
@@ -335,6 +335,6 @@ register_op_cast_rule("mnm.op.batch_norm_infer", op_cast_norm(1, 1))
 register_op_cast_rule("mnm.op.batch_norm_train", op_cast_norm(1, 3))
 
 # TODO(@comaniac): batch_norm_train_dxwb produces different results as PyTorch BatchNorm backward
-# and we have not figured out the reason, so currently we limit batch_norm_train_dxwb to be
-# executed with float32 to guarantee the correctness.
-register_op_cast_rule("mnm.op.batch_norm_train_dxwb", generic_cast(False, 2))
+# and we have not figured out the reason. However, it does not affect the convergence of AMP models
+# so we still cast it.
+register_op_cast_rule("mnm.op.batch_norm_train_dxwb", op_cast_norm(2, 3))

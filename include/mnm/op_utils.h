@@ -121,6 +121,11 @@ class HashKey {
     return *this;
   }
 
+  inline HashKey& operator<<(const HashKey& other) {
+    byte_vector.insert(byte_vector.end(), other.byte_vector.begin(), other.byte_vector.end());
+    return *this;
+  }
+
   HashKey() {
     byte_vector.reserve(1024);
   }
