@@ -25,7 +25,7 @@ As can be seen, we do not directly write C++ code to define a schema. Instead, w
 scripts/src_codegen/run_all.sh
 ```
 
-In the above schema, `nn.h` is the place for generated C++ implementation, so we can find the generated code in [src/op/schema/nn.h](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/schema/nn.h):
+In the above schema, `nn.h` is the place for generated C++ implementation, so we can find the generated code in [src/op/schema/nn.h](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/schema/nn.h#L277):
 
 ```c++
 class SoftmaxArgs : public ir::AttrsNode<SoftmaxArgs> {
@@ -36,7 +36,7 @@ class SoftmaxArgs : public ir::AttrsNode<SoftmaxArgs> {
 };
 ```
 
-You can also find the schema registration in [src/op/regs/regs.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/regs/regs.cc). These are the implementations about how this schema should be processed in the IR graph.
+You can also find the schema registration in [src/op/regs/regs.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/regs/regs.cc). These are the implementations about how this schema should be processed in the IR graph.
 
 ```c++
 Attrs Softmax(const TVMArgs& values, GradTape* tapes) {
@@ -66,7 +66,7 @@ MNM_REGISTER_OBJECT_REFLECT(SoftmaxArgs);
 
 ### Define Operator Symbol
 
-Now let's define the `softmax` operator. In this example, we define a `softmax` operator and bind to the schema we just defined. We just need to add one line to [scripts/src_codegen/def_op.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/scripts/src_codegen/def_op.py):
+Now let's define the `softmax` operator. In this example, we define a `softmax` operator and bind to the schema we just defined. We just need to add one line to [scripts/src_codegen/def_op.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/scripts/src_codegen/def_op.py#L15):
 
 ```python
 Op(name="softmax", schema_name="softmax"),
@@ -78,7 +78,7 @@ Be aware that a schema is just a list of input arguments and their types instead
 Op(name="log_softmax", schema_name="softmax"),
 ```
 
-Let's run [scripts/src_codegen/run_all.sh](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/scripts/src_codegen/run_all.sh) again to see what will be generated in [src/op/regs/regs.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/regs/regs.cc):
+Let's run [scripts/src_codegen/run_all.sh] again to see what will be generated in [src/op/regs/regs.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/regs/regs.cc):
 
 ```c++
 static const char softmax[] = "mnm.op.softmax";
@@ -147,7 +147,7 @@ backend (CUDA, CuBLAS, CuDNN, TVM, LLVM, etc), then we only need to assign a ten
       call->device = x->device;
     }
 
-    MNM_OP_DECLARE("mnm.op.softmax", Softmax).set_attr<TOpPattern>("TOpPattern", kOpaque);
+    MNM_OP_DECLARE("mnm.op.softmax", Softmax);
     ```
 
     2. On the other hand, if the result can be simply computed and does not need to be offloaded
@@ -170,17 +170,8 @@ backend (CUDA, CuBLAS, CuDNN, TVM, LLVM, etc), then we only need to assign a ten
       call->callee = ir::NullValue<OpValue>();
     }
 
-    MNM_OP_DECLARE("mnm.op.shape", Shape).set_attr<TOpPattern>("TOpPattern", kOpaque);
+    MNM_OP_DECLARE("mnm.op.shape", Shape);
     ```
-
-If you are confused about determining the fusion pattern for this operator, please refer to this note:
-<details>
-
-Fusion patterns are the patterns that let the fusion pass know if this operator can be fused with others. You can check out https://github.com/apache/tvm/blob/15bdf28209e5f2bcb5ffc21bd56b3ae428cf2da7/include/tvm/relay/op_attr_types.h#L45 for the full list of fusion patterns and their explanations.
-
-Note that we usually prefer to avoid `kOpaque` pattern, because it means this operator cannot fuse anything. The reason of setting an operator to `kOpaque` is usually because it is either implemented by invoking an external library (e.g., CuBLAS/CuDNN/CUDA kernel), or it has a special process in run time (e.g., dynamic shape related operators such as `shape`).
-
-</details>
 
 ### Define Type Function
 
@@ -233,8 +224,8 @@ Noe let's introduce the two approaches for gradient expression implementations:
 
 Intuitively, you can write a compute expression using TE (i.e., tensor expression, a TVM DSL to describe a computation graph) as you may have done for the forward operator. In this way, the backward logic in an IR graph would be a series of small operators. We usually choose this approach for two reasons:
 
-1. The gradient compute is simple, such as `add` in https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/grad/binary.cc#L14.
-2. The gradient compute can be decompose to provide more fusion opportunities, such as `rsqrt` in https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/grad/nn.cc#L185.
+1. The gradient compute is simple, such as `add` in https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/grad/binary.cc#L14.
+2. The gradient compute can be decompose to provide more fusion opportunities, such as `rsqrt` in https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/grad/nn.cc#L185.
 
 #### Define a backward operator
 
@@ -243,7 +234,7 @@ On the other hand, you can also define another **backward** operator and use it 
 1. The backward logic is supported by kernel libraries, such as `conv2d_dx`.
 2. By re-computing some operators (usually `add` or `multiply`) in the backward logic instead of using the forward tensors, we can improve the memory footprint.
 
-Taking `softmax` as an example, we define and register its gradient in [src/op/grad/nn.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/grad/nn.cc):
+Taking `softmax` as an example, we define and register its gradient in [src/op/grad/nn.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/grad/nn.cc):
 
 ```c++
 Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
@@ -261,7 +252,7 @@ MNM_OP_GRAD("mnm.op.softmax", SoftmaxGradImpl);
 Since `softmax_dx` can be offloaded to CuDNN or optimized by TVM, we defined this backward operator and use it here. Its schema is `softmax_dx(x, y, dy, axis)`, so we just need to map the forward schema to the backward schema (i.e., `softmax(x, axis) -> softmax_dx(x, y, dy, axis)`).
 
 
-## Implement Operator Backends
+## Implement Dialect Operators
 
 We now have a well-defined `softmax`. Let’s build Meta and run the operator:
 
@@ -270,15 +261,25 @@ We now have a well-defined `softmax`. Let’s build Meta and run the operator:
 ValueError: Cannot dispatch mnm.op.softmax@cpu(0)
 ```
 
-Oops, we still get an error...Recall that we attempt to offload this operator to a backend when implementing its declare, so we put a placeholder to its `call->out`. When Meta sees a placeholder in `call->out`, it tries to dispatch this operator to one of the available backends as the callee for execution. However, since we have not defined any backend for this operator, the dispatching was failed. In this section, we introduce the available backend options for an operators in Meta.
+Oops, we still get an error...Recall that we attempt to offload this operator to a backend when implementing its declare, so we put a placeholder to its `call->out`. When Meta sees a placeholder in `call->out`, it tries to dispatch this operator to one of the available backends as the callee for execution. However, since we have not defined any backend for this operator, the dispatching was failed. 
 
-#### Relay/TVM
+Formally, the operator we just defined is named **base operator** in Meta, which includes backend independent scheme and attributes. Meanwhile, the backend-specific operators are named **dialect operators**. One base operator can be associated with multiple dialect operators, and each of them is in charge of one backend execution. For example, the base operator `mnm.op.softmax` has the following dialect operators in Meta:
 
-Every operator should have a Relay/TVM backend implementation as the default option for dispatching, because TVM can generate the binary executable for any hardware platform, given a compute and schedule definition.
+```
+mnm.op.softmax
+ |- mnm.op.tvm.softmax
+ |- mnm.op.cudnn.softmax
+```
+
+where `mnm.op.tvm.softmax` dispatchs the operator to TVM to generate LLVM or CUDA code for CPUs and GPUs; `mnm.op.cudnn.softmax` dispatchs the operator to CuDNN for GPUs. In this section, we introduce how to implement dialect operators in Meta.
+
+#### Relay/TVM Dialect
+
+Every base operator should have a Relay/TVM dialect operator implementation as the default option for dispatching, because TVM can generate the binary executable for any hardware platform, given a compute and schedule definition.
 
 ##### The operator has an implementation in Relay
 
-If an operator has a corresponding implementation in Relay, then we can simply add one line to [scripts/op_def/topi.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/scripts/op_def/topi.py):
+If an operator has a corresponding implementation in Relay, then we can simply add one line to [scripts/op_def/topi.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/scripts/op_def/topi.py):
 
 ```python
 OP_MAP = [
@@ -290,16 +291,16 @@ OP_MAP = [
 
 In this line, we map `mnm.op.softmax` to `relay.nn.softmax`, which has a Relay attribute `relay.attrs.SoftmaxAttrs` and its fusion pattern is `kOpaque`.
 
-In addition, some Relay operators have "op strategy" registered (see https://tvm.apache.org/docs/dev/relay_op_strategy.html for details.) In short, Relay op strategy is a set of rules that determine how to lower a Relay operator. If the Relay operator has defined a strategy, we just simply register it to the Meta operator in [python/mnm/_tvmjit/nn.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/python/mnm/_tvmjit/nn.py):
+In addition, some Relay operators have "op strategy" registered (see https://tvm.apache.org/docs/dev/relay_op_strategy.html for details.) In short, Relay op strategy is a set of rules that determine how to lower a Relay operator. If the Relay operator has defined a strategy, we just simply register it to the Meta operator in [python/mnm/_tvm_op/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/python/mnm/_tvm_op/nn.py):
 
 ```python
 from .._lib import strategy
-_reg.register_strategy("mnm.op.softmax", strategy.softmax_strategy)
+_reg.register_strategy("mnm.op.tvm.softmax", strategy.softmax_strategy)
 ```
 
 ##### The operator does not have an implementation in Relay
 
-On the other hand, if the operator does not have corresponding implementation in Relay or it does not have Relay op strategy registered, such as `softmax_dx`, then we have to write a compute and schedule function for it. In this example, we also implement them in [python/mnm/_tvmjit/nn.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/python/mnm/_tvmjit/nn.py):
+On the other hand, if the operator does not have corresponding implementation in Relay or it does not have Relay op strategy registered, such as `softmax_dx`, then we have to write a compute and schedule function for it. In this example, we also implement them in [python/mnm/_tvm_op/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/python/mnm/_tvm_op/nn.py):
 
 ```python
 @register_compute("mnm.op.softmax_dx")
@@ -308,7 +309,7 @@ def compute_softmax_dx(attr, inputs, output_type):
     axis = attr.axis
     return [(dy - _topi.sum(dy * y, axis, True)) * y]
 
-_reg.register_injective_schedule("mnm.op.softmax_dx")
+_reg.register_injective_schedule("mnm.op.tvm.softmax_dx")
 ```
 
 where the compute function specifies the arithmetic expression of `softmax_dx`, and the schedule function is the simplest injective schedule in TVM. You are welcome to craft a better schedule for the operator you implemented.
@@ -329,43 +330,54 @@ te.compute(shape, lambda *idx: tvm.tir.if_then_else(data[idx] > 0, data[idx], tv
 
 </details>
 
-Finally, we need to bridge the gap between the Meta op and Relay op in [python/mnm/_tvmjit/nn.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/python/mnm/_tvmjit/nn.py) when dispatching. In this example, we implement them in [src/op/dispatch/tvmjit/nn.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/dispatch/tvmjit/nn.cc):
+Finally, as mentioned in the beginning of this section, one important difference between Meta op and Relay op is that Meta op does not separate arguments and attributes while Relay does. As a result, to offload a Meta op to a Relay op, we need to bridge the gap by mapping Meta arguments to the corresponding Relay arguments and attributes. The `softmax` example is implemented in [src/op/dialect/tvm/nn.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/dialect/tvm/nn.cc):
 
 ```c++
-// This function transfers the Meta operator argument value to a vector of values.
-// The return list will become the arguments of the corresponding Relay op.
 std::vector<Value> SoftmaxSchema2Args(const SoftmaxArgs* args) {
   return {args->x};
 }
 
-// This function returns a list of Relay argument names. The size of the returned
-// vector should be the same of the SoftmaxSchema2Args.
 std::vector<std::string> SoftmaxSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
-// This function transfers the Meta operator argument value to the corresponding Relay attributes.
 Attrs SoftmaxSchema2Attrs(const SoftmaxArgs* args) {
   auto attrs = make_object<tvm::relay::SoftmaxAttrs>();
   attrs->axis = args->axis;
   return Attrs(attrs);
 }
 
-// This function generates a hash key of this operator. This can eliminate the compilation
-// of the same operators in a model.
 HashKey SoftmaxHasher(const std::vector<Type>& param_types, const Type& y_type,
                       const SoftmaxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->axis;
   return key;
 }
-
-// Register the above utility functions to TVM JIT. The default plevel is 10.
-// "pevel" is a priority level of this backend. Higher plevel means Meta will dispatch
-// the operator to this backend prior to others.
-MNM_TVMJIT(Softmax, "mnm.op.softmax", SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
-           SoftmaxSchema2Attrs, SoftmaxHasher);
 ```
+
+Here we explain the purpose of each function:
+- **SoftmaxSchema2Args**: This function takes the Meta operator arguments and returns a list of Relay arguments. In the `softmax` example, Meta op has argument `(x, axis)` while Relay op has argument `x` and attribute `axis`, so we only need to return `{x}` in this function.
+- **SoftmaxSchemaArgNames**: This function returns a list of Relay argument names corresponding to SoftmaxSchema2Args.
+- **SoftmaxSchema2Attrs**: Similar to SoftmaxSchema2Args, this function also takes the Meta operator arguments but returns a Relay attribute (note that the attribute will be used by the compute function we defined above). If a Meta operator does not have a Relay implementation, you have to choose either an existing Relay attribute, or define a new attribute in `src/op/dialect/tvm/attrs` and register them to [src/op/dialect/tvm/tvm_attrs.cc](https://github.com/meta-project/meta/blob/d4437ccefa4b7dd9f4e8cba08f3e2ae0343c4d90/src/op/dialect/tvm/tvm_attrs.cc). In this example, since `softmax_dx` has the same attribute as `softmax`, we simply reuse `SoftmaxAttrs` in Relay.
+- **SoftmaxHasher**: This function generates a hash key of this operator. This can avoid compiling the same operators in a model multiple times during the execution.
+
+
+Finally, we register the above functions to bridge the gap between the Meta dialect op and Relay op using the `MNM_TVM` macro with plevel 10. "pevel" is a priority level of this dialect operator. Higher plevel means Meta will dispatch the base operator to this dialect operator prior to others.
+
+```c++
+MNM_TVM(softmax, Softmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
+        SoftmaxSchema2Attrs, SoftmaxHasher, kOpaque);
+```
+
+where `kOpaque` is the fusion pattern of this dialect operator. If you have no idea about determining the fusion pattern, please refer to this note:
+
+<details>
+
+Fusion patterns are the patterns that let the fusion pass know if this operator can be fused with others. You can check out https://github.com/apache/tvm/blob/3977c035cd6571a4c2504be88701c39550b56d11/include/tvm/relay/op_attr_types.h#L45 for the full list of fusion patterns and their explanations.
+
+Note that we usually prefer to avoid `kOpaque` pattern, because it means this operator cannot fuse anything. The reason of setting an operator to `kOpaque` is usually because it is either implemented by invoking an external library (e.g., CuBLAS/CuDNN/CUDA kernel), or it has a special process in run time (e.g., dynamic shape related operators such as `shape`).
+
+</details>
 
 Once the implementation has been registered, we can now run this operator in Meta:
 
@@ -375,9 +387,9 @@ Once the implementation has been registered, we can now run this operator in Met
 <NDArray [1 x 2] @ cpu, dtype=float32>
 ```
 
-#### CuBLAS/CuDNN (GPU only)
+#### CuBLAS/CuDNN Dialect (GPU only)
 
-If the operator is supported by kernel libraries such as CuBLAS or CuDNN, you should also register their implementations to achieve a better performance. Since `softmax` and `softmax` are supported in CuDNN, we demonstrate how to add CuDNN implementations for this operator. The implementation is in [src/op/dispatch/cudnn/softmax.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/dispatch/cudnn/softmax.cc). In particular, we first derive an OpEnv, which stands for operator environment, and then register its `make` function to the dispatcher:
+If the operator is supported by kernel libraries such as CuBLAS or CuDNN, you should also register their implementations to achieve a better performance. Since `softmax` and `softmax` are supported in CuDNN, we demonstrate how to add a CuDNN dialect for this operator. The dialect is in [src/op/dialect/cudnn/softmax.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/dialect/cudnn/softmax.cc). In particular, we derive an OpEnv, which stands for operator environment:
 
 ```c++
 class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
@@ -390,44 +402,60 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
         // Skip
     }
 
+    std::string name() const override {
+      return TruncateName(GetUniqueName("mnm.op.cudnn.softmax"));
+    }
+
     void Execute(const CallValues& cv) {
       auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
       DLTensor* x = args->x;
       DLTensor* out = cv->out;
-      CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE, mode, CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
-      CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+      CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
+                                    mode, CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                    CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
     }
 
     void Execute(const std::vector<Value>& inputs, Value output) {
       CHECK_EQ(inputs.size(), 1);
       DLTensor* x = Downcast<TensorValue>(inputs[0]);
       DLTensor* out = Downcast<TensorValue>(output);
-      CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE, mode, CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
-      CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
+      CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
+                                    mode, CUDNNDType(out->dtype).const_addr<1>(), xDesc, x->data,
+                                    CUDNNDType(out->dtype).const_addr<0>(), yDesc, out->data));
     }
 
     static OpEnv* make(const CallValues& cv) {
       return new SoftmaxImplementedByCUDNNSoftmaxForward(cv);
     }
 }
-
-MNM_OP_DISPATCH_PLEVEL("mnm.op.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make,
-                       DevType::kCUDA(), "cudnn", 15);
 ```
 
-where `make` will be invoked when building the operator, and `Execute` will be invoked to execute the operator. You may notice that we set the PLEVEL to 15, meaning that we prefer to use the CuDNN implementation for `softmax` when it is available.
+where `make` will be invoked when building the operator, and `Execute` will be invoked to execute the operator.
 
-#### CUDA Kernel (GPU only)
+Finally, we register this OpEnv to be a CuDNN dialect operator:
 
-If the operator is not supported by any kernel libraries and it cannot be scheduled well by TVM, then you probably have to write a CUDA kernel by yourselves for this operator. Similar to CuDNN, we need to derive an OpEnv, but instead of simply calling CuDNN kernel, here we need to call a self-written CUDA kernel. See [src/op/dispatch/cuda/embedding.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/dispatch/cuda/embedding.cc) for details.
+```c++
+// Register a dialect op "mnm.op.cudnn.softmax".
+MNM_REGISTER_DIALECT_OP(cudnn, softmax);
+// Let "mnm.op.cudnn.softmax" be dispatched to CUDA with plevel=15.
+MNM_OP_DISPATCH_DIALECT_PLEVEL(softmax, cudnn, DevType::kCUDA(), 15);
+// Use the "make" function we just implemented to create the OpEnv for "mnm.op.cudnn.softmax".
+MNM_OP_ENV_MAKER("mnm.op.cudnn.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make);
+```
+
+You may notice that we set the PLEVEL to 15, meaning that we prefer to use the CuDNN dialect for `softmax` when it is available.
+
+#### CUDA Dialect (GPU only)
+
+If the operator is not supported by any kernel libraries and it cannot be scheduled well by TVM, then you probably have to write a CUDA kernel by yourselves for this operator. Similar to CuDNN, we need to derive an OpEnv, but instead of simply calling CuDNN kernel, here we need to call a self-written CUDA kernel. See [src/op/dialect/cuda/embedding.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/dialect/cuda/embedding.cc) and [src/op/dialect/cuda/kernel/embedding_dx_cuda.cu](https://github.com/meta-project/meta/blob/d4437ccefa4b7dd9f4e8cba08f3e2ae0343c4d90/src/op/dialect/cuda/kernels/embedding_dx_cuda.cu) for details.
 
 ## Write Test Cases
 
-Finally, we need to write unit tests for this operator and every of its backend implementations. We first write a unit test for TVMJIT in [tests/python/op/tvmjit/nn.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/tests/python/op/tvmjit/test_tvmjit_nn.py). Note that you should the pytest parameterize to make the test concise while covering most common cases.
+Finally, we need to write unit tests for this operator and every of its backend implementations. We first write a unit test for TVM dialect in [tests/python/op/tvm/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/tests/python/op/tvm/test_tvm_nn.py). Note that you should the pytest parameterize to make the test concise while covering most common cases.
 
 ```python
 @pytest.mark.parametrize("device", get_device_list()) # Test all available devices.
-@pytest.mark.parameterize("backend", ["cudnn", "tvmjit"]) # Test all backends.
+@pytest.mark.parameterize("backend", ["cudnn", "tvm"]) # Test all dialect ops.
 @pytest.mark.parametrize("dtype", ["float16", "float32"]) # Test supported dtypes.
 @pytest.mark.parametrize("shape", [ # Test some shapes. Please pick just 2-3 representative shapes.
     [3],                            # Please do not put too many shapes; otherwise the CI time
@@ -475,7 +503,7 @@ Please note that since an operator can be evaluated and executed without these s
 
 ### Define Relay Conversion
 
-**If the operator you implemented is not implemented in Relay, then you can skip this section.** If the operator you implemented has a corresponding one in Relay, you need to also implement the a Relay converter. i.e., how to convert the corresponding Relay op to the Meta op. In this way, we can leverage the `FromRelay` pass to convert a Relay model with this op to Meta. Taking `softmax` as an example, we implemented a convert function in [src/op/from_relay/nn.cc](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/src/op/from_relay/nn.cc):
+**If the operator you implemented is not implemented in Relay, then you can skip this section.** If the operator you implemented has a corresponding one in Relay, you need to also implement the a Relay converter. i.e., how to convert the corresponding Relay op to the Meta op. In this way, we can leverage the `FromRelay` pass to convert a Relay model with this op to Meta. Taking `softmax` as an example, we implemented a convert function in [src/op/from_relay/nn.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/from_relay/nn.cc):
 
 ```c++
 MNM_OP_FROM_RELAY("nn.softmax", "mnm.op.softmax",                                    \
@@ -499,7 +527,7 @@ Accordingly, we create a converter returning `mnm_args` that aligns to `SoftmaxA
 
 ### Define Auto Casting Rules
 
-Automatic mixed precision (AMP) is getting popular in recent years. Its core idea is training or inference the model with some operators running with full precision data while others running in half precision to achieve better performance. In Meta, we let every operator specify the auto casting rules to indicate whether the operator can be executed with half precision data. The casting rules are called "type hint", and are implemented in [python/mnm/amp/type_hint.py](https://github.com/meta-project/meta/blob/308cc3fc34020a70d506290bbec2bb7f09ce4892/python/mnm/amp/type_hints.py).
+Automatic mixed precision (AMP) is getting popular in recent years. Its core idea is training or inference the model with some operators running with full precision data while others running in half precision to achieve better performance. In Meta, we let every operator specify the auto casting rules to indicate whether the operator can be executed with half precision data. The casting rules are called "type hint", and are implemented in [python/mnm/amp/type_hint.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/python/mnm/amp/type_hints.py).
 
 In general, there are 3 types of casting rules:
 
@@ -528,11 +556,11 @@ In summary, here is the checklist you can refer to when adding a new operator. I
 - [ ] Define FromRelay conversion
 - [ ] Define auto casting rules
 - [ ] Define gradient
-- [ ] Implement Backends
-  - [ ] Implement TVM/Relay backend
-  - [ ] Implement CuBLAS/CuDNN backend
-  - [ ] Implement CUTLASS backend
-  - [ ] Implement CUDA kernel backend
+- [ ] Implement Dialect ops
+  - [ ] Implement TVM/Relay dialect
+  - [ ] Implement CuBLAS/CuDNN dialect
+  - [ ] Implement CUTLASS dialect
+  - [ ] Implement CUDA kernel dialect
 - [ ] Write a unit test
   - [ ] Test forward
       - [ ] Test type function
