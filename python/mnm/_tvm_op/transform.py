@@ -1,4 +1,4 @@
-# pylint: disable=missing-function-docstring, line-too-long, undefined-loop-variable
+# pylint: disable=missing-function-docstring, undefined-loop-variable, unused-argument
 """Compute definition and schedules for data transform operators"""
 from mnm._tvm_op.nn import schedule_generic
 from .._lib import register_compute
@@ -9,7 +9,7 @@ from .._lib import _reg
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
 @register_compute("mnm.op.tvm.embedding")
-def embedding_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def embedding_compute(attrs, inputs, output_type):
     x, indices = inputs
     return [_topi.take(x, indices, axis=0)]
 
@@ -17,7 +17,7 @@ _reg.register_injective_schedule("mnm.op.tvm.embedding")
 
 
 @register_compute("mnm.op.tvm.transpose_dx")
-def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def transpose_dx_compute(attrs, inputs, output_type):
     dy = inputs[0]
     axes = list(_topi.utils.get_const_tuple(attrs.axes))
     axes_inverse = axes.copy()
@@ -28,7 +28,7 @@ def transpose_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
 
 
 @register_compute("mnm.op.tvm.repeat_dx")
-def repeat_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def repeat_dx_compute(attrs, inputs, output_type):
     x = inputs[0]
     dy = inputs[1]
     axis = int(attrs.axis)
@@ -43,7 +43,7 @@ def repeat_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-arg
 _reg.register_schedule("mnm.op.tvm.repeat_dx", schedule_generic)
 
 @register_compute("mnm.op.tvm.swap_axis")
-def swap_axis_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def swap_axis_compute(attrs, inputs, output_type):
     axis1, axis2 = attrs.axis1, attrs.axis2
     x = inputs[0]
     ndim = len(x.shape)
@@ -54,17 +54,17 @@ def swap_axis_compute(attrs, inputs, output_type):  # pylint: disable=unused-arg
     return [out]
 
 @register_compute("mnm.op.tvm.full")
-def full_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def full_compute(attrs, inputs, output_type):
     out = _topi.full(attrs.shape, attrs.dtype, attrs.fill_value)
     return [out]
 
 @register_compute("mnm.op.tvm.full_like")
-def full_like_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def full_like_compute(attrs, inputs, output_type):
     out = _topi.full_like(inputs[0], attrs.fill_value)
     return [out]
 
 @register_compute("mnm.op.tvm.mesh_grid")
-def mesh_grid_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
+def mesh_grid_compute(attrs, inputs, output_type):
     target_shape = []
     for tensor in inputs:
         target_shape.append(tensor.shape[0])
@@ -77,14 +77,10 @@ def mesh_grid_compute(attrs, inputs, output_type): # pylint: disable=unused-argu
     return out
 
 @register_compute("mnm.op.tvm.scatter_dx")
-def scatter_dx_like_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, line-too-long
-    x = inputs[0]
-    y = inputs[1]
-    dy = inputs[2]
-    index = inputs[3]
-    src = inputs[4]
+def scatter_dx_like_compute(attrs, inputs, output_type):
+    x, y, dy, index, src = inputs
     for i in range(len(index.shape)):
-        #gradient only implement for index and src tensor shape are the same
+        # gradient only implement for index and src tensor shape are the same
         assert index.shape[i] == src.shape[i]
 
     def fcompute(*args):
@@ -124,10 +120,7 @@ _reg.register_injective_schedule("mnm.op.tvm.strided_slice")
 
 @register_compute("mnm.op.tvm.take_dx")
 def take_dx_compute(attrs, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
-    # pylint: disable=unused-variable
-    x, y, dy, indices = inputs
+    x, dy, indices = inputs
     axis, mode = int(attrs.axis), attrs.mode
     idim = len(indices.shape)
     # infer axis when negative
@@ -141,34 +134,31 @@ def take_dx_compute(attrs, inputs, output_type):
     else:
         raise ValueError("Not supported mode: " + mode)
     shape = dy.shape[:axis + idim] + [x.shape[axis],] + dy.shape[axis + idim:]
-    A = _tvm.te.compute(
+    out1 = _tvm.te.compute(
         shape,
         lambda *idx: _tvm.tir.if_then_else(
             idx[axis + idim] == normalized[idx[axis: axis + idim]],
             dy[idx[:axis + idim] + idx[axis + idim + 1:]],
             _tvm.tir.const(0, dy.dtype)
         ))
-    B = _topi.sum(A, axis=tuple(range(axis, axis + idim))) if idim > 0 else A
-    return [B]
+    out2 = _topi.sum(out1, axis=tuple(range(axis, axis + idim))) if idim > 0 else out1
+    return [out2]
 
 _reg.register_injective_schedule("mnm.op.tvm.take_dx")
 
 @register_compute("mnm.op.tvm.strided_slice_dx")
 def strided_slice_dx_compute(attrs, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
-    # pylint: disable=unused-variable
     dy = inputs[0]
     begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
-    X = _tvm.te.placeholder(shape=attrs.primal_shape, dtype=dy.dtype)
-    R = _topi.nn.strided_slice(X, begin, end, strides, slice_mode)
-    grads = _tvm.te.gradient(R, [X], head=dy)
+    var = _tvm.te.placeholder(shape=attrs.primal_shape, dtype=dy.dtype)
+    out = _topi.nn.strided_slice(var, begin, end, strides, slice_mode)
+    grads = _tvm.te.gradient(out, [var], head=dy)
     return grads
 
 _reg.register_injective_schedule("mnm.op.tvm.strided_slice_dx")
 
 @register_compute("mnm.op.tvm.resize")
-def compute_resize(attrs, inputs, out_type): # pylint: disable=unused-argument
+def compute_resize(attrs, inputs, out_type):
     """ compute definition for resize op """
     size = attrs.size
     layout = attrs.layout
@@ -195,7 +185,7 @@ def compute_resize(attrs, inputs, out_type): # pylint: disable=unused-argument
 _reg.register_injective_schedule("mnm.op.tvm.resize")
 
 @register_compute("mnm.op.tvm.adv_index")
-def adv_index_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def adv_index_compute(attrs, inputs, output_type):
     data = inputs[0]
     indices = inputs[1:]
     out = _topi.adv_index(data, indices)
@@ -206,10 +196,7 @@ _reg.register_injective_schedule("mnm.op.tvm.adv_index")
 
 
 @register_compute("mnm.op.tvm.adv_index_dx")
-def adv_index_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
-    # pylint: disable=unused-variable
+def adv_index_dx_compute(attrs, inputs, output_type):
     dy = inputs[0]
     data = inputs[1]
     indices = inputs[2:]
@@ -232,32 +219,32 @@ def adv_index_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
         return _tvm.tir.if_then_else(expr, dy[idx[:b_len] + idx[b_len + idim:]],
                                      _tvm.tir.const(0, dy.dtype))
 
-    A = _tvm.te.compute(shape, index_dx)
-    B = _topi.sum(A, axis=tuple(range(b_len)))
-    return [B]
+    out1 = _tvm.te.compute(shape, index_dx)
+    out2 = _topi.sum(out1, axis=tuple(range(b_len)))
+    return [out2]
 
 _reg.register_injective_schedule("mnm.op.tvm.adv_index_dx")
 
 
 @register_compute("mnm.op.tvm.clip_dx")
-def clip_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
-    x = inputs[0]
-    grad = inputs[1]
+def clip_dx_compute(attrs, inputs, output_type):
+    x, dy = inputs
     a_min = _tvm.tir.const(attrs.a_min, x.dtype)
     a_max = _tvm.tir.const(attrs.a_max, x.dtype)
 
     def _select(*indices):
         return _tvm.tir.if_then_else(_tvm.tir.any(x[indices] <= a_min,
                                                   x[indices] >= a_max),
-                                     0, grad(*indices))
+                                     0, dy(*indices))
     return [_tvm.te.compute(x.shape, _select)]
 
 
 _reg.register_injective_schedule("mnm.op.tvm.clip_dx")
 
-# pylint: disable=too-many-locals
+
 @register_compute("mnm.op.tvm.gather_nd_dx")
-def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
+def gather_nd_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=too-many-locals
     data, indices, dy = inputs
     ind_s = _topi.utils.get_const_tuple(indices.shape)
     ind_l = len(ind_s)
@@ -265,6 +252,7 @@ def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
     ind_s_1 = ind_s[1:]
     data_s = _topi.utils.get_const_tuple(data.shape)
     data_s_0 = data_s[:x]
+
     def compute_match(*idx):
         ind_i = idx[:ind_l - 1]
         data_i = idx[ind_l - 1:]
@@ -274,6 +262,7 @@ def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
             ret = _tvm.tir.And(ret, indices[ind_idx] == data_i[i])
         return ret
     match = _tvm.te.compute(ind_s_1 + data_s_0, compute_match)
+
     def compute_temp(*idx):
         ind_i = idx[:ind_l - 1]
         data_i_0 = idx[ind_l - 1: ind_l - 1 + x]
@@ -282,15 +271,13 @@ def gather_nd_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-
         t_val = dy[ind_i + data_i_1]
         f_val = _tvm.tir.const(0, dy.dtype)
         return _tvm.tir.if_then_else(temp_cond, t_val, f_val)
+
     temp = _tvm.te.compute(ind_s_1 + data_s, compute_temp)
     ret = _topi.sum(temp, axis=tuple(range(0, ind_l - 1)))
     return [ret]
 
 @register_compute("mnm.op.tvm.gather_dx")
 def gather_dx_compute(attrs, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
-    # pylint: disable=unused-variable
     data, indices, dy = inputs
     axis = int(attrs.axis)
     dim = len(data.shape)
@@ -298,13 +285,13 @@ def gather_dx_compute(attrs, inputs, output_type):
         assert axis > -dim
         axis = dim + axis
     shape = dy.shape[:axis+1] + [data.shape[axis],] + dy.shape[axis + 1:]
-    A = _tvm.te.compute(shape, lambda *idx:
-                        _tvm.tir.if_then_else(idx[axis + 1] ==
-                                              indices[idx[: axis + 1] + idx[axis + 2:]],
-                                              dy[idx[: axis + 1] + idx[axis + 2:]],
-                                              _tvm.tir.const(0, dy.dtype)))
-    B = _topi.sum(A, axis=axis)
-    return [B]
+    out1 = _tvm.te.compute(shape, lambda *idx:
+                           _tvm.tir.if_then_else(idx[axis + 1] ==
+                                                 indices[idx[: axis + 1] + idx[axis + 2:]],
+                                                 dy[idx[: axis + 1] + idx[axis + 2:]],
+                                                 _tvm.tir.const(0, dy.dtype)))
+    out2 = _topi.sum(out1, axis=axis)
+    return [out2]
 
 _reg.register_injective_schedule("mnm.op.tvm.gather")
 _reg.register_injective_schedule("mnm.op.tvm.gather_dx")
@@ -313,21 +300,18 @@ _reg.register_injective_schedule("mnm.op.tvm.gather_nd_dx")
 
 @register_compute("mnm.op.tvm.embedding_dx")
 def embedding_dx_compute(attrs, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
-    # pylint: disable=unused-variable
     dy, indices = inputs
     num_weight = int(attrs.dims[0])
     idim = len(indices.shape)
     shape = dy.shape[:idim] + [num_weight,] + dy.shape[idim:]
-    A = _tvm.te.compute(
+    out1 = _tvm.te.compute(
         shape,
         lambda *idx: _tvm.tir.if_then_else(
             idx[idim] == indices[idx[:idim]],
             dy[idx[:idim] + idx[idim + 1:]],
             _tvm.tir.const(0, dy.dtype)
         ))
-    B = _topi.sum(A, axis=tuple(range(idim))) if idim > 0 else A
-    return [B]
+    out2 = _topi.sum(out1, axis=tuple(range(idim))) if idim > 0 else out1
+    return [out2]
 
 _reg.register_injective_schedule("mnm.op.tvm.embedding_dx")

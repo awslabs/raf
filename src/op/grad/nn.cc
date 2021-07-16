@@ -171,10 +171,13 @@ MNM_OP_GRAD("mnm.op.conv2d_transpose", Conv2dTransGrad);
 template <const char* GradOp>
 Array<Expr> UnaryGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
-  // schema for relu is:
+  // schema for unary_op is:
   //    x
-  // schema for relu_dx is:
+  // schema for unary_dx_op is:
   //    x, y, dy
+  // Note that unary_dx schema allows y to be optional. If the unary_dx op supports
+  // optional y, we need to specify it in GradientInputSelection pass to remove the
+  // y dependency.
   static auto op_dx = Op::Get(GradOp);
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);

@@ -103,7 +103,7 @@ OPS = [
     Op(name="argmax", schema_name="reduce"),
     Op(name="argmin", schema_name="reduce"),
     Op(name="prod", schema_name="reduce"),
-    Op(name="prod_dx", schema_name="reduce_dx"),
+    Op(name="prod_dx", schema_name="prod_dx"),
     Op(name="max", schema_name="reduce"),
     Op(name="min", schema_name="reduce"),
     Op(name="mean", schema_name="reduce"),

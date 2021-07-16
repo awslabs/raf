@@ -22,6 +22,16 @@ class MeanDxArgs : public ir::AttrsNode<MeanDxArgs> {
   MNM_OP_SCHEMA(MeanDxArgs, "mnm.args.mean_dx");
 };
 
+class ProdDxArgs : public ir::AttrsNode<ProdDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue dy;
+  std::vector<int64_t> axis{};
+  bool keepdims{false};
+  bool exclude{false};
+  MNM_OP_SCHEMA(ProdDxArgs, "mnm.args.prod_dx");
+};
+
 class ReduceArgs : public ir::AttrsNode<ReduceArgs> {
  public:
   value::BaseTensorValue x;
@@ -29,17 +39,6 @@ class ReduceArgs : public ir::AttrsNode<ReduceArgs> {
   bool keepdims{false};
   bool exclude{false};
   MNM_OP_SCHEMA(ReduceArgs, "mnm.args.reduce");
-};
-
-class ReduceDxArgs : public ir::AttrsNode<ReduceDxArgs> {
- public:
-  value::BaseTensorValue x;
-  value::BaseTensorValue y;
-  value::BaseTensorValue dy;
-  std::vector<int64_t> axis{};
-  bool keepdims{false};
-  bool exclude{false};
-  MNM_OP_SCHEMA(ReduceDxArgs, "mnm.args.reduce_dx");
 };
 }  // namespace schema
 }  // namespace op

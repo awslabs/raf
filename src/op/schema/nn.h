@@ -324,7 +324,6 @@ class TakeArgs : public ir::AttrsNode<TakeArgs> {
 class TakeDxArgs : public ir::AttrsNode<TakeDxArgs> {
  public:
   value::BaseTensorValue x;
-  value::BaseTensorValue y;
   value::BaseTensorValue dy;
   value::BaseTensorValue indices;
   value::Value axis{nullptr};

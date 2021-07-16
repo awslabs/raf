@@ -212,7 +212,6 @@ SCHEMAS = {
     ],
     "nn.h::take_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="y", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="indices", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
@@ -431,9 +430,8 @@ SCHEMAS = {
         Arg(name="keepdims", cxx_type="bool", cxx_default=False),
         Arg(name="exclude", cxx_type="bool", cxx_default=False),
     ],
-    "reduce.h::reduce_dx": [
+    "reduce.h::prod_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="y", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="axis",
             cxx_type="std::vector<int64_t>",
@@ -556,7 +554,6 @@ SCHEMAS = {
     ],
     "likes.h::sum_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="y", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="axis",
             cxx_type="std::vector<int64_t>",

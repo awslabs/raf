@@ -415,18 +415,17 @@ def tune_take_dx(sch_file, space_dict=None, device="cuda", only_extract_tasks=Fa
             pass
 
         @mnm.model.trace
-        def forward(self, x, y, dy, indices):
-            return mnm.take_dx(x, y, dy, indices, axis=0, mode="clip")
+        def forward(self, x, dy, indices):
+            return mnm.take_dx(x, dy, indices, axis=0, mode="clip")
 
     def gen_arg_func(batch_size, seq_length, hidden_size, vocab_size):
         x_shape = (vocab_size, hidden_size)
         y_shape = (batch_size, seq_length, hidden_size)
         i_shape = (batch_size, seq_length)
         m_x, _ = randn(x_shape, device=device)
-        m_y, _ = randn(y_shape, device=device)
         m_dy, _ = randn_torch(y_shape, std=0.0, mean=1.0, requires_grad=False, device=device)
         m_indices, _ = randint(i_shape, low=0, high=y_shape[1], dtype="int32", device=device)
-        return [], [m_x, m_y, m_dy, m_indices]
+        return [], [m_x, m_dy, m_indices]
 
     if space_dict is None:
         space_dict = {
@@ -459,9 +458,9 @@ def tune_fused_take_dx(sch_file, space_dict=None, device="cuda", only_extract_ta
             self.m = array(0.1, dtype='float32')
 
         @mnm.model.trace
-        def forward(self, x, y, dy, indices):
+        def forward(self, x, dy, indices):
             mul = mnm.multiply(self.m, x)
-            out = mnm.take_dx(x, y, dy, indices, axis=0, mode="clip")
+            out = mnm.take_dx(x, dy, indices, axis=0, mode="clip")
             return mnm.add(mul, out)
 
     def gen_arg_func(batch_size, seq_length, hidden_size, vocab_size):
@@ -469,10 +468,9 @@ def tune_fused_take_dx(sch_file, space_dict=None, device="cuda", only_extract_ta
         y_shape = (batch_size, seq_length, hidden_size)
         i_shape = (batch_size, seq_length)
         m_x, _ = randn(x_shape, device=device)
-        m_y, _ = randn(y_shape, device=device)
         m_dy, _ = randn_torch(y_shape, std=0.0, mean=1.0, requires_grad=False, device=device)
         m_indices, _ = randint(i_shape, low=0, high=y_shape[1], dtype="int32", device=device)
-        return [], [m_x, m_y, m_dy, m_indices]
+        return [], [m_x, m_dy, m_indices]
 
     if space_dict is None:
         space_dict = {

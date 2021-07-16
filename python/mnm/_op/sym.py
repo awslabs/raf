@@ -793,14 +793,13 @@ def prod(x, axis=(), keepdims=False, exclude=False):
     exclude = sym_utils.to_bool(exclude)
     return Symbol.from_expr(ffi.prod(x, axis, keepdims, exclude))
 
-def prod_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
+def prod_dx(x, dy, axis=(), keepdims=False, exclude=False):
     x = sym_utils.to_tensor(x)
-    y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int_tuple(axis)
     keepdims = sym_utils.to_bool(keepdims)
     exclude = sym_utils.to_bool(exclude)
-    return Symbol.from_expr(ffi.prod_dx(x, y, dy, axis, keepdims, exclude))
+    return Symbol.from_expr(ffi.prod_dx(x, dy, axis, keepdims, exclude))
 
 def relu(x):
     x = sym_utils.to_any(x)
@@ -1052,14 +1051,13 @@ def sum(x, axis=(), keepdims=0, exclude=False):
     exclude = sym_utils.to_bool(exclude)
     return Symbol.from_expr(ffi.sum(x, axis, keepdims, exclude))
 
-def sum_dx(x, y, dy, axis=(), keepdims=0, exclude=False):
+def sum_dx(x, dy, axis=(), keepdims=0, exclude=False):
     x = sym_utils.to_tensor(x)
-    y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     axis = sym_utils.to_int_tuple(axis)
     keepdims = sym_utils.to_int_tuple(keepdims)
     exclude = sym_utils.to_bool(exclude)
-    return Symbol.from_expr(ffi.sum_dx(x, y, dy, axis, keepdims, exclude))
+    return Symbol.from_expr(ffi.sum_dx(x, dy, axis, keepdims, exclude))
 
 def swap_axis(x, axis1, axis2):
     x = sym_utils.to_tensor(x)
@@ -1074,14 +1072,13 @@ def take(x, indices, axis=None, mode="clip"):
     mode = sym_utils.to_string(mode)
     return Symbol.from_expr(ffi.take(x, indices, axis, mode))
 
-def take_dx(x, y, dy, indices, axis=None, mode="clip"):
+def take_dx(x, dy, indices, axis=None, mode="clip"):
     x = sym_utils.to_tensor(x)
-    y = sym_utils.to_tensor(y)
     dy = sym_utils.to_tensor(dy)
     indices = sym_utils.to_tensor(indices)
     axis = sym_utils.to_any(axis)
     mode = sym_utils.to_string(mode)
-    return Symbol.from_expr(ffi.take_dx(x, y, dy, indices, axis, mode))
+    return Symbol.from_expr(ffi.take_dx(x, dy, indices, axis, mode))
 
 def tanh(x):
     x = sym_utils.to_any(x)

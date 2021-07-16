@@ -198,11 +198,11 @@ MNM_TVM(embedding, Embedding, EmbeddingArgs, TakeSchema2Args<EmbeddingArgs>, Tak
         GenericAttrs, GenericHasher, kInjective);
 
 std::vector<Value> TakeDxSchema2Args(const TakeDxArgs* args) {
-  return {args->x, args->y, args->dy, args->indices};
+  return {args->x, args->dy, args->indices};
 }
 
 std::vector<std::string> TakeDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy", "indices"};
+  return {"x", "dy", "indices"};
 }
 
 Attrs TakeDxSchema2Attrs(const TakeDxArgs* args) {

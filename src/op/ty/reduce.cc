@@ -17,8 +17,8 @@ namespace op {
 
 using namespace mnm::ir;
 using namespace mnm::value;
+using schema::ProdDxArgs;
 using schema::ReduceArgs;
-using schema::ReduceDxArgs;
 using schema::SumArgs;
 using schema::SumDxArgs;
 
@@ -151,8 +151,8 @@ Type ReduceOutSameDType(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
-Type ReduceDxDType(const CallValues& value) {
-  const auto* args = value->args.as<ReduceDxArgs>();
+Type ProdDxDType(const CallValues& value) {
+  const auto* args = value->args.as<ProdDxArgs>();
   CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
   return x;
@@ -177,7 +177,7 @@ MNM_OP_TYPE("mnm.op.all", "All", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.any", "Any", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod", "Prod", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ReduceDxDType);
+MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ProdDxDType);
 MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", MeanDxInfer);
 
 }  // namespace op

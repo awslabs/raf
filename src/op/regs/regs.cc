@@ -785,6 +785,16 @@ Attrs PoolDx(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs ProdDx(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::ProdDxArgs, 5);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, axis);
+  MNM_POD(3, ffi2schema::Bool, keepdims);
+  MNM_POD(4, ffi2schema::Bool, exclude);
+  return Attrs(attrs);
+}
+
 Attrs Recv(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::RecvArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::Int, peer);
@@ -799,17 +809,6 @@ Attrs Reduce(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(1, ffi2schema::IntOrTupleInt, axis);
   MNM_POD(2, ffi2schema::Bool, keepdims);
   MNM_POD(3, ffi2schema::Bool, exclude);
-  return Attrs(attrs);
-}
-
-Attrs ReduceDx(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::ReduceDxArgs, 6);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
-  MNM_TAPE(2, ffi2schema::Tensor, dy);
-  MNM_POD(3, ffi2schema::IntOrTupleInt, axis);
-  MNM_POD(4, ffi2schema::Bool, keepdims);
-  MNM_POD(5, ffi2schema::Bool, exclude);
   return Attrs(attrs);
 }
 
@@ -1036,13 +1035,12 @@ Attrs Sum(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs SumDx(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::SumDxArgs, 6);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::SumDxArgs, 5);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
-  MNM_TAPE(2, ffi2schema::Tensor, dy);
-  MNM_POD(3, ffi2schema::IntOrTupleInt, axis);
-  MNM_POD(4, ffi2schema::IntOrTupleInt, keepdims);
-  MNM_POD(5, ffi2schema::Bool, exclude);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, axis);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, keepdims);
+  MNM_POD(4, ffi2schema::Bool, exclude);
   return Attrs(attrs);
 }
 
@@ -1064,13 +1062,12 @@ Attrs Take(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs TakeDx(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::TakeDxArgs, 6);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::TakeDxArgs, 5);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_TAPE(1, ffi2schema::Tensor, y);
-  MNM_TAPE(2, ffi2schema::Tensor, dy);
-  MNM_TAPE(3, ffi2schema::Tensor, indices);
-  MNM_TAPE(4, ffi2schema::ArrayLike, axis);
-  MNM_POD(5, ffi2schema::String, mode);
+  MNM_TAPE(1, ffi2schema::Tensor, dy);
+  MNM_TAPE(2, ffi2schema::Tensor, indices);
+  MNM_TAPE(3, ffi2schema::ArrayLike, axis);
+  MNM_POD(4, ffi2schema::String, mode);
   return Attrs(attrs);
 }
 
@@ -2439,14 +2436,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.prod").set_body([](TVMArgs args, TVMRetValue* re
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.prod_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(prod_dx, 6, ffi2schema::ReduceDx,
-              schema::ReduceDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(prod_dx, 5, ffi2schema::ProdDx,
+              schema::ProdDxArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axis));
-  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->keepdims));
-  MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->exclude));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[3], schema2value::Bool(schema->keepdims));
+  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->exclude));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2851,13 +2847,12 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.sum").set_body([](TVMArgs args, TVMRetValue* ret
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.sum_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(sum_dx, 6, ffi2schema::SumDx, schema::SumDxArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(sum_dx, 5, ffi2schema::SumDx, schema::SumDxArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->axis));
-  MNM_SET_ENV(vpack->x[4], schema2value::IntOrTupleInt(schema->keepdims));
-  MNM_SET_ENV(vpack->x[5], schema2value::Bool(schema->exclude));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->axis));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->keepdims));
+  MNM_SET_ENV(vpack->x[4], schema2value::Bool(schema->exclude));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2883,14 +2878,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.take").set_body([](TVMArgs args, TVMRetValue* re
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.take_dx").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(take_dx, 6, ffi2schema::TakeDx,
+  MNM_PRELUDE(take_dx, 5, ffi2schema::TakeDx,
               schema::TakeDxArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y));
-  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->dy));
-  MNM_SET_ENV(vpack->x[3], schema2value::Tensor(schema->indices));
-  MNM_SET_ENV(vpack->x[4], schema2value::ArrayLike(schema->axis));
-  MNM_SET_ENV(vpack->x[5], schema2value::String(schema->mode));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->dy));
+  MNM_SET_ENV(vpack->x[2], schema2value::Tensor(schema->indices));
+  MNM_SET_ENV(vpack->x[3], schema2value::ArrayLike(schema->axis));
+  MNM_SET_ENV(vpack->x[4], schema2value::String(schema->mode));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3635,6 +3629,16 @@ Array<Expr> PoolDx(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> ProdDx(const TVMArgs& values) {
+  MNM_PRELUDE(5);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, axis);
+  MNM_ARG(3, ffi2expr::Bool, keepdims);
+  MNM_ARG(4, ffi2expr::Bool, exclude);
+  MNM_RET();
+}
+
 Array<Expr> Recv(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Int, peer);
@@ -3649,17 +3653,6 @@ Array<Expr> Reduce(const TVMArgs& values) {
   MNM_ARG(1, ffi2expr::IntOrTupleInt, axis);
   MNM_ARG(2, ffi2expr::Bool, keepdims);
   MNM_ARG(3, ffi2expr::Bool, exclude);
-  MNM_RET();
-}
-
-Array<Expr> ReduceDx(const TVMArgs& values) {
-  MNM_PRELUDE(6);
-  MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Tensor, y);
-  MNM_ARG(2, ffi2expr::Tensor, dy);
-  MNM_ARG(3, ffi2expr::IntOrTupleInt, axis);
-  MNM_ARG(4, ffi2expr::Bool, keepdims);
-  MNM_ARG(5, ffi2expr::Bool, exclude);
   MNM_RET();
 }
 
@@ -3886,13 +3879,12 @@ Array<Expr> Sum(const TVMArgs& values) {
 }
 
 Array<Expr> SumDx(const TVMArgs& values) {
-  MNM_PRELUDE(6);
+  MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Tensor, y);
-  MNM_ARG(2, ffi2expr::Tensor, dy);
-  MNM_ARG(3, ffi2expr::IntOrTupleInt, axis);
-  MNM_ARG(4, ffi2expr::IntOrTupleInt, keepdims);
-  MNM_ARG(5, ffi2expr::Bool, exclude);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, axis);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, keepdims);
+  MNM_ARG(4, ffi2expr::Bool, exclude);
   MNM_RET();
 }
 
@@ -3914,13 +3906,12 @@ Array<Expr> Take(const TVMArgs& values) {
 }
 
 Array<Expr> TakeDx(const TVMArgs& values) {
-  MNM_PRELUDE(6);
+  MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::Tensor, y);
-  MNM_ARG(2, ffi2expr::Tensor, dy);
-  MNM_ARG(3, ffi2expr::Tensor, indices);
-  MNM_ARG(4, ffi2expr::ArrayLike, axis);
-  MNM_ARG(5, ffi2expr::String, mode);
+  MNM_ARG(1, ffi2expr::Tensor, dy);
+  MNM_ARG(2, ffi2expr::Tensor, indices);
+  MNM_ARG(3, ffi2expr::ArrayLike, axis);
+  MNM_ARG(4, ffi2expr::String, mode);
   MNM_RET();
 }
 
@@ -4224,7 +4215,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.ones_like").set_body(MNM_SYMBOLIC_API(ones_like,
 MNM_REGISTER_GLOBAL("mnm.op.sym.pad").set_body(MNM_SYMBOLIC_API(pad, 4, Pad));
 MNM_REGISTER_GLOBAL("mnm.op.sym.power").set_body(MNM_SYMBOLIC_API(power, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.prod").set_body(MNM_SYMBOLIC_API(prod, 4, Reduce));
-MNM_REGISTER_GLOBAL("mnm.op.sym.prod_dx").set_body(MNM_SYMBOLIC_API(prod_dx, 6, ReduceDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.prod_dx").set_body(MNM_SYMBOLIC_API(prod_dx, 5, ProdDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu").set_body(MNM_SYMBOLIC_API(relu, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx").set_body(MNM_SYMBOLIC_API(relu_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.repeat").set_body(MNM_SYMBOLIC_API(repeat, 3, Repeat));
@@ -4274,10 +4265,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice_dx")
     .set_body(MNM_SYMBOLIC_API(strided_slice_dx, 6, StridedSliceDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.subtract").set_body(MNM_SYMBOLIC_API(subtract, 4, BinaryUfunc));
 MNM_REGISTER_GLOBAL("mnm.op.sym.sum").set_body(MNM_SYMBOLIC_API(sum, 4, Sum));
-MNM_REGISTER_GLOBAL("mnm.op.sym.sum_dx").set_body(MNM_SYMBOLIC_API(sum_dx, 6, SumDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.sum_dx").set_body(MNM_SYMBOLIC_API(sum_dx, 5, SumDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.swap_axis").set_body(MNM_SYMBOLIC_API(swap_axis, 3, SwapAxis));
 MNM_REGISTER_GLOBAL("mnm.op.sym.take").set_body(MNM_SYMBOLIC_API(take, 4, Take));
-MNM_REGISTER_GLOBAL("mnm.op.sym.take_dx").set_body(MNM_SYMBOLIC_API(take_dx, 6, TakeDx));
+MNM_REGISTER_GLOBAL("mnm.op.sym.take_dx").set_body(MNM_SYMBOLIC_API(take_dx, 5, TakeDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh").set_body(MNM_SYMBOLIC_API(tanh, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.tanh_dx").set_body(MNM_SYMBOLIC_API(tanh_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.threefry_generate")
@@ -4939,6 +4930,17 @@ Attrs PoolDx(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs ProdDx(const Array<Value>& values) {
+  MNM_PRELUDE(2, 5, schema::ProdDxArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, axis);
+  MNM_OPTIONAL(3, value2schema::Bool, keepdims);
+  MNM_OPTIONAL(4, value2schema::Bool, exclude);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs Recv(const Array<Value>& values) {
   MNM_PRELUDE(2, 3, schema::RecvArgs);
   MNM_REQUIRED(0, value2schema::Int, peer);
@@ -4954,18 +4956,6 @@ Attrs Reduce(const Array<Value>& values) {
   MNM_OPTIONAL(1, value2schema::IntOrTupleInt, axis);
   MNM_OPTIONAL(2, value2schema::Bool, keepdims);
   MNM_OPTIONAL(3, value2schema::Bool, exclude);
-  return Attrs(attrs);
-}
-
-template <const char* op_name>
-Attrs ReduceDx(const Array<Value>& values) {
-  MNM_PRELUDE(3, 6, schema::ReduceDxArgs);
-  MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
-  MNM_REQUIRED(2, value2schema::Tensor, dy);
-  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, axis);
-  MNM_OPTIONAL(4, value2schema::Bool, keepdims);
-  MNM_OPTIONAL(5, value2schema::Bool, exclude);
   return Attrs(attrs);
 }
 
@@ -5218,13 +5208,12 @@ Attrs Sum(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs SumDx(const Array<Value>& values) {
-  MNM_PRELUDE(3, 6, schema::SumDxArgs);
+  MNM_PRELUDE(2, 5, schema::SumDxArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
-  MNM_REQUIRED(2, value2schema::Tensor, dy);
-  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, axis);
-  MNM_OPTIONAL(4, value2schema::IntOrTupleInt, keepdims);
-  MNM_OPTIONAL(5, value2schema::Bool, exclude);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, axis);
+  MNM_OPTIONAL(3, value2schema::IntOrTupleInt, keepdims);
+  MNM_OPTIONAL(4, value2schema::Bool, exclude);
   return Attrs(attrs);
 }
 
@@ -5249,13 +5238,12 @@ Attrs Take(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs TakeDx(const Array<Value>& values) {
-  MNM_PRELUDE(4, 6, schema::TakeDxArgs);
+  MNM_PRELUDE(3, 5, schema::TakeDxArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::Tensor, y);
-  MNM_REQUIRED(2, value2schema::Tensor, dy);
-  MNM_REQUIRED(3, value2schema::Tensor, indices);
-  MNM_OPTIONAL(4, value2schema::ArrayLike, axis);
-  MNM_OPTIONAL(5, value2schema::String, mode);
+  MNM_REQUIRED(1, value2schema::Tensor, dy);
+  MNM_REQUIRED(2, value2schema::Tensor, indices);
+  MNM_OPTIONAL(3, value2schema::ArrayLike, axis);
+  MNM_OPTIONAL(4, value2schema::String, mode);
   return Attrs(attrs);
 }
 
@@ -6446,6 +6434,27 @@ int PoolDx(const std::string& field) {
 }
 
 template <const char* op_name>
+int ProdDx(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "dy") {
+    return 1;
+  }
+  if (field == "axis") {
+    return 2;
+  }
+  if (field == "keepdims") {
+    return 3;
+  }
+  if (field == "exclude") {
+    return 4;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int Recv(const std::string& field) {
   if (field == "peer") {
     return 0;
@@ -6473,30 +6482,6 @@ int Reduce(const std::string& field) {
   }
   if (field == "exclude") {
     return 3;
-  }
-  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
-  return -1;
-}
-
-template <const char* op_name>
-int ReduceDx(const std::string& field) {
-  if (field == "x") {
-    return 0;
-  }
-  if (field == "y") {
-    return 1;
-  }
-  if (field == "dy") {
-    return 2;
-  }
-  if (field == "axis") {
-    return 3;
-  }
-  if (field == "keepdims") {
-    return 4;
-  }
-  if (field == "exclude") {
-    return 5;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -6948,20 +6933,17 @@ int SumDx(const std::string& field) {
   if (field == "x") {
     return 0;
   }
-  if (field == "y") {
+  if (field == "dy") {
     return 1;
   }
-  if (field == "dy") {
+  if (field == "axis") {
     return 2;
   }
-  if (field == "axis") {
+  if (field == "keepdims") {
     return 3;
   }
-  if (field == "keepdims") {
-    return 4;
-  }
   if (field == "exclude") {
-    return 5;
+    return 4;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7005,20 +6987,17 @@ int TakeDx(const std::string& field) {
   if (field == "x") {
     return 0;
   }
-  if (field == "y") {
+  if (field == "dy") {
     return 1;
   }
-  if (field == "dy") {
+  if (field == "indices") {
     return 2;
   }
-  if (field == "indices") {
+  if (field == "axis") {
     return 3;
   }
-  if (field == "axis") {
-    return 4;
-  }
   if (field == "mode") {
-    return 5;
+    return 4;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7721,9 +7700,9 @@ MNM_BIND_SCHEMA("mnm.op.prod", names::prod,
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.prod", names::prod,
                             schema_field_idx::Reduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.prod_dx", names::prod_dx,
-                value2schema::ReduceDx);  // NOLINT(whitespace/line_length)
+                value2schema::ProdDx);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.prod_dx", names::prod_dx,
-                            schema_field_idx::ReduceDx);           // NOLINT(whitespace/line_length)
+                            schema_field_idx::ProdDx);             // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.relu", names::relu, value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.relu", names::relu,
                             schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
@@ -8048,9 +8027,9 @@ MNM_REGISTER_OBJECT_REFLECT(OneHotArgs);
 MNM_REGISTER_OBJECT_REFLECT(PadArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolArgs);
 MNM_REGISTER_OBJECT_REFLECT(PoolDxArgs);
+MNM_REGISTER_OBJECT_REFLECT(ProdDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(RecvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceArgs);
-MNM_REGISTER_OBJECT_REFLECT(ReduceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReduceScatterArgs);
 MNM_REGISTER_OBJECT_REFLECT(RepeatArgs);
 MNM_REGISTER_OBJECT_REFLECT(RepeatDxArgs);

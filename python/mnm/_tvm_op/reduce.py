@@ -1,14 +1,14 @@
-# pylint: disable=missing-function-docstring, too-many-locals
+# pylint: disable=missing-function-docstring, too-many-locals, unused-argument
 """Reduction compute definition and schedules."""
 from mnm._tvm_op.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
-_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
+_topi = _tvm.topi  # pylint: disable=invalid-name, no-member
 
 @register_compute("mnm.op.tvm.sum")
-def sum_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,no-member
+def sum_compute(attrs, inputs, output_type):  # pylint: disable=no-member
     x = inputs[0]
     axes = list(_topi.utils.get_const_tuple(attrs.axis))
     keep = list(_topi.utils.get_const_tuple(attrs.keepdims))
@@ -118,9 +118,8 @@ def mul_shapes(shape_list, axis_list):
 
 
 @register_compute("mnm.op.tvm.prod_dx")
-def prod_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument, too-many-locals
-    x = inputs[0]
-    dy = inputs[2]
+def prod_dx_compute(attrs, inputs, output_type):
+    x, dy = inputs
     axis = list(_topi.utils.get_const_tuple(attrs.axis))
     exclude = attrs.exclude
     if exclude:
@@ -155,7 +154,7 @@ def prod_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argume
 _reg.register_schedule("mnm.op.tvm.prod_dx", schedule_generic)
 
 @register_compute("mnm.op.tvm.mean_dx")
-def mean_dx_compute(attrs, inputs, output_type): # pylint: disable=unused-argument
+def mean_dx_compute(attrs, inputs, output_type):
     dy = inputs[0]
     axis = sorted(list(_topi.utils.get_const_tuple(attrs.axis)))
     keepdims = attrs.keepdims
@@ -198,9 +197,8 @@ _reg.register_injective_schedule("mnm.op.tvm.mean_dx")
 
 
 @register_compute("mnm.op.tvm.sum_dx")
-def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument,no-member,consider-using-enumerate
-    dy = inputs[2]
-    x = inputs[0]
+def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=no-member
+    x, dy = inputs
     axes = list(_topi.utils.get_const_tuple(attrs.axis))
     exclude = attrs.exclude
     keepdims = list(_topi.utils.get_const_tuple(attrs.keepdims))

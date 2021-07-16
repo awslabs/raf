@@ -73,9 +73,9 @@ void ReduceOutSame(const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-void ReduceDxOutSame(const CallValues& call) {
+void ProdDxOutSame(const CallValues& call) {
   // the shape of the output of reduce_dx op is same as input x
-  const auto* args = call->args.as<ReduceDxArgs>();
+  const auto* args = call->args.as<ProdDxArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
@@ -105,7 +105,7 @@ MNM_OP_DECLARE("mnm.op.any", ReduceOutSame);
 MNM_OP_DECLARE("mnm.op.mean", ReduceOutSame);
 MNM_OP_DECLARE("mnm.op.prod", ReduceOutSame);
 MNM_OP_DECLARE("mnm.op.mean_dx", MeanDxDecl);
-MNM_OP_DECLARE("mnm.op.prod_dx", ReduceDxOutSame);
+MNM_OP_DECLARE("mnm.op.prod_dx", ProdDxOutSame);
 
 }  // namespace declare
 }  // namespace op

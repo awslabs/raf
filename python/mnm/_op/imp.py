@@ -915,14 +915,13 @@ def prod(x, axis=(), keepdims=False, exclude=False):
     return imp_utils.ret(ffi.prod(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def prod_dx(x, y, dy, axis=(), keepdims=False, exclude=False):
+def prod_dx(x, dy, axis=(), keepdims=False, exclude=False):
     x = imp_utils.to_tensor(x)
-    y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_bool(keepdims)
     exclude = imp_utils.to_bool(exclude)
-    return imp_utils.ret(ffi.prod_dx(x, y, dy, axis, keepdims, exclude))
+    return imp_utils.ret(ffi.prod_dx(x, dy, axis, keepdims, exclude))
 
 @set_module("mnm")
 def relu(x):
@@ -1216,14 +1215,13 @@ def sum(x, axis=(), keepdims=0, exclude=False):
     return imp_utils.ret(ffi.sum(x, axis, keepdims, exclude))
 
 @set_module("mnm")
-def sum_dx(x, y, dy, axis=(), keepdims=0, exclude=False):
+def sum_dx(x, dy, axis=(), keepdims=0, exclude=False):
     x = imp_utils.to_tensor(x)
-    y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     axis = imp_utils.to_int_tuple(axis)
     keepdims = imp_utils.to_int_tuple(keepdims)
     exclude = imp_utils.to_bool(exclude)
-    return imp_utils.ret(ffi.sum_dx(x, y, dy, axis, keepdims, exclude))
+    return imp_utils.ret(ffi.sum_dx(x, dy, axis, keepdims, exclude))
 
 @set_module("mnm")
 def swap_axis(x, axis1, axis2):
@@ -1241,14 +1239,13 @@ def take(x, indices, axis=None, mode="clip"):
     return imp_utils.ret(ffi.take(x, indices, axis, mode))
 
 @set_module("mnm")
-def take_dx(x, y, dy, indices, axis=None, mode="clip"):
+def take_dx(x, dy, indices, axis=None, mode="clip"):
     x = imp_utils.to_tensor(x)
-    y = imp_utils.to_tensor(y)
     dy = imp_utils.to_tensor(dy)
     indices = imp_utils.to_tensor(indices)
     axis = imp_utils.to_any(axis)
     mode = imp_utils.to_string(mode)
-    return imp_utils.ret(ffi.take_dx(x, y, dy, indices, axis, mode))
+    return imp_utils.ret(ffi.take_dx(x, dy, indices, axis, mode))
 
 @set_module("mnm")
 def tanh(x):

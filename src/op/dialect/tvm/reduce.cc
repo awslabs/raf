@@ -58,15 +58,28 @@ HashKey ReduceHasher(const std::vector<Type>& param_types, const Type& ret_type,
   return key;
 }
 
-std::vector<Value> ReduceDxSchema2Args(const ReduceDxArgs* args) {
-  return {args->x, args->y, args->dy};
+#define MNM_TVM_REDUCE(OP, FUNC)                                                             \
+  MNM_TVM(OP, FUNC, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames, ReduceSchema2Attrs, \
+          ReduceHasher, kCommReduce)
+
+MNM_TVM_REDUCE(argmax, Argmax);
+MNM_TVM_REDUCE(argmin, Argmin);
+MNM_TVM_REDUCE(max, Max);
+MNM_TVM_REDUCE(min, Min);
+MNM_TVM_REDUCE(all, All);
+MNM_TVM_REDUCE(any, Any);
+MNM_TVM_REDUCE(mean, Mean);
+MNM_TVM_REDUCE(prod, Prod);
+
+std::vector<Value> ProdDxSchema2Args(const ProdDxArgs* args) {
+  return {args->x, args->dy};
 }
 
-std::vector<std::string> ReduceDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy"};
+std::vector<std::string> ProdDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "dy"};
 }
 
-Attrs ReduceDxSchema2Attrs(const ReduceDxArgs* args) {
+Attrs ProdDxSchema2Attrs(const ProdDxArgs* args) {
   auto attrs = make_object<ReduceAttrs>();
   // expand the empty axis
   DLTensor* x = args->x;
@@ -86,8 +99,8 @@ Attrs ReduceDxSchema2Attrs(const ReduceDxArgs* args) {
   return Attrs(attrs);
 }
 
-HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
-                       const ReduceDxArgs* args) {
+HashKey ProdDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
+                     const ProdDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
     key << args->axis[i];
@@ -97,24 +110,8 @@ HashKey ReduceDxHasher(const std::vector<Type>& param_types, const Type& ret_typ
   return key;
 }
 
-#define MNM_TVM_REDUCE(OP, FUNC)                                                             \
-  MNM_TVM(OP, FUNC, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames, ReduceSchema2Attrs, \
-          ReduceHasher, kCommReduce)
-
-#define MNM_TVM_REDUCE_DX(OP, FUNC)                                            \
-  MNM_TVM(OP, FUNC, ReduceDxArgs, ReduceDxSchema2Args, ReduceDxSchemaArgNames, \
-          ReduceDxSchema2Attrs, ReduceDxHasher, kBroadcast)
-
-MNM_TVM_REDUCE(argmax, Argmax);
-MNM_TVM_REDUCE(argmin, Argmin);
-MNM_TVM_REDUCE(max, Max);
-MNM_TVM_REDUCE(min, Min);
-MNM_TVM_REDUCE(all, All);
-MNM_TVM_REDUCE(any, Any);
-MNM_TVM_REDUCE(mean, Mean);
-MNM_TVM_REDUCE(prod, Prod);
-
-MNM_TVM_REDUCE_DX(prod_dx, ProdDx);
+MNM_TVM(prod_dx, ProdDx, ProdDxArgs, ProdDxSchema2Args, ProdDxSchemaArgNames, ProdDxSchema2Attrs,
+        ProdDxHasher, kBroadcast);
 
 std::vector<Value> SumSchema2Args(const SumArgs* args) {
   return {args->x};
@@ -147,11 +144,11 @@ HashKey SumHasher(const std::vector<Type>& param_types, const Type& ret_type, co
 }
 
 std::vector<Value> SumDxSchema2Args(const SumDxArgs* args) {
-  return {args->x, args->y, args->dy};
+  return {args->x, args->dy};
 }
 
 std::vector<std::string> SumDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy"};
+  return {"x", "dy"};
 }
 
 Attrs SumDxSchema2Attrs(const SumDxArgs* args) {

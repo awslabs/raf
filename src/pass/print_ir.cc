@@ -17,7 +17,7 @@ Pass PrintIR(const std::string& header, bool show_meta_data) {
   return CreateModulePass(pass_func, 0, "PrintIR", {});
 }
 
-TVM_REGISTER_GLOBAL("mnm.pass_.PrintIR").set_body_typed(PrintIR);
+MNM_REGISTER_GLOBAL("mnm.pass_.PrintIR").set_body_typed(PrintIR);
 
 }  // namespace pass
 }  // namespace mnm

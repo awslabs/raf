@@ -35,7 +35,7 @@ Array<Expr> SumGrad(const Expr& orig_call, const Array<Expr> orig_args, const Ex
   const Expr& axis = call->args[1];
   const Expr& keepdims = call->args[2];
   const Expr& exclude = call->args[3];
-  return {Call(sum_dx, {x, y, dy, axis, keepdims, exclude})};
+  return {Call(sum_dx, {x, dy, axis, keepdims, exclude})};
 }
 
 MNM_OP_GRAD("mnm.op.sum", SumGrad);
@@ -49,7 +49,7 @@ Array<Expr> ProdGrad(const Expr& orig_call, const Array<Expr> orig_args, const E
   const Expr& axis = call->args[1];
   const Expr& keepdims = call->args[2];
   const Expr& exclude = call->args[3];
-  return {Call(prod_dx, {x, y, dy, axis, keepdims, exclude})};
+  return {Call(prod_dx, {x, dy, axis, keepdims, exclude})};
 }
 
 MNM_OP_GRAD("mnm.op.prod", ProdGrad);

@@ -259,7 +259,7 @@ Array<Expr> TakeGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   const Expr& indices = call->args[1];
   const Expr& axis = call->args[2];
   const Expr& mode = call->args[3];
-  return {Call(op_dx, {x, y, dy, indices, axis, mode})};
+  return {Call(op_dx, {x, dy, indices, axis, mode})};
 }
 
 MNM_OP_GRAD("mnm.op.take", TakeGrad);

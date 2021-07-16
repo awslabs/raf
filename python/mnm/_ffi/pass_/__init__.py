@@ -32,6 +32,7 @@ from ._internal import ManifestAlloc
 from ._internal import MemoryPlan
 from ._internal import MergeCompilerRegions
 from ._internal import PartitionGraph
+from ._internal import PrintIR
 from ._internal import RenameVars
 from ._internal import SimplifyExpr
 from ._internal import Substitute

@@ -13,7 +13,7 @@ using namespace mnm::ir;
 
 Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
-  // schema for relu is:
+  // schema for binary is:
   //    x1, x2
   // schema for binary_dx is:
   //    x1, x2, y, dy

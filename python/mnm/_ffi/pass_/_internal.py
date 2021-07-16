@@ -62,6 +62,8 @@ MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 # Defined in ./src/pass/partition_graph.cc
 PartitionGraph = _APIS.get("mnm.pass_.PartitionGraph", None)
+# Defined in ./src/pass/print_ir.cc
+PrintIR = _APIS.get("mnm.pass_.PrintIR", None)
 # Defined in ./src/pass/rename_vars.cc
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/simplify_expr.cc

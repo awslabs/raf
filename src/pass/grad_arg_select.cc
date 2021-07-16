@@ -19,6 +19,8 @@ using namespace mnm::op;
 
 // Init a map to set which argument should be skipped (set to Null) for which op
 MNM_OP_GRAD_SKIP_INPUTS("mnm.op.relu_dx", "x");
+MNM_OP_GRAD_SKIP_INPUTS("mnm.op.gelu_dx", "y");
+MNM_OP_GRAD_SKIP_INPUTS("mnm.op.sqrt_dx", "x");
 MNM_OP_GRAD_SKIP_INPUTS("mnm.op.conv2d_dx", "y");
 MNM_OP_GRAD_SKIP_INPUTS("mnm.op.conv2d_dw", "y");
 

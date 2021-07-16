@@ -53,7 +53,6 @@ class SumArgs : public ir::AttrsNode<SumArgs> {
 class SumDxArgs : public ir::AttrsNode<SumDxArgs> {
  public:
   value::BaseTensorValue x;
-  value::BaseTensorValue y;
   value::BaseTensorValue dy;
   std::vector<int64_t> axis{};
   std::vector<int64_t> keepdims{0};
