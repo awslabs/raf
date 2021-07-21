@@ -46,18 +46,18 @@ def test_output_view(view_op):
     model2 = TestOutputView()
     y1 = model1(x)
     y2 = model2(x)
-    np.testing.assert_equal(y1.asnumpy().flatten(), x.asnumpy().flatten())
-    np.testing.assert_equal(y2.asnumpy().flatten(), x.asnumpy().flatten() * 2)
-    np.testing.assert_equal(y1.asnumpy() * 2, y2.asnumpy())
+    np.testing.assert_equal(y1.numpy().flatten(), x.numpy().flatten())
+    np.testing.assert_equal(y2.numpy().flatten(), x.numpy().flatten() * 2)
+    np.testing.assert_equal(y1.numpy() * 2, y2.numpy())
 
     if mnm.build.with_cuda():
         x = x.to(device='cuda')
         model3 = TestOutputViewGPU()
         y1 = model1(x)
         y3 = model3(x)
-        np.testing.assert_equal(y1.asnumpy().flatten(), x.asnumpy().flatten())
-        np.testing.assert_equal(y3.asnumpy().flatten(), x.asnumpy().flatten())
-        np.testing.assert_equal(y1.asnumpy(), y3.asnumpy())
+        np.testing.assert_equal(y1.numpy().flatten(), x.numpy().flatten())
+        np.testing.assert_equal(y3.numpy().flatten(), x.numpy().flatten())
+        np.testing.assert_equal(y1.numpy(), y3.numpy())
 
 
 if __name__ == "__main__":

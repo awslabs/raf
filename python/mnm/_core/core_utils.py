@@ -58,6 +58,7 @@ def _get_device_map():
 _STR2DEV = _get_device_map()
 
 
+@tvm._ffi.register_func("mnm._core.core_utils.dev2str") # pylint: disable=protected-access
 def dev2str(dev: _DLDevice) -> str:
     mask = [
         None, "cpu", "cuda", "cpu_pinned", "cl", "aocl", 'sdaccel', 'vulkan',

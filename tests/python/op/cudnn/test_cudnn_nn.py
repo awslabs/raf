@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 
 import mnm
-from mnm.testing import randint, randn_torch, run_vm_model, check, asnumpy, with_seed
+from mnm.testing import randint, randn_torch, run_vm_model, check, numpy, with_seed
 from mnm._core.ndarray import ndarray
 
 
@@ -213,8 +213,8 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     m_var, t_var = randn_torch(stats_shape, device="cuda", positive=True)
     m_w, t_w = randn_torch(stats_shape, device="cuda", requires_grad=True)
     m_b, t_b = randn_torch(stats_shape, device="cuda", requires_grad=True)
-    np_mean = m_mean.asnumpy()
-    np_var = m_var.asnumpy()
+    np_mean = m_mean.numpy()
+    np_var = m_var.numpy()
 
     class TestModel(mnm.Model):
         def build(self):
@@ -253,14 +253,14 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
 @pytest.mark.parametrize("dropout", [0.4, 0.6])
 def test_mnm_dropout(dropout):
     def check_dropout(x, y, dx=None, dy=None):
-        x, y = x.asnumpy(), y.asnumpy()
+        x, y = x.numpy(), y.numpy()
         mask = y != 0
         expected = mask * x / (1 - dropout)
         check(expected, y)
         frac = np.sum(y == 0) / y.size
         assert dropout - 0.1 < frac < dropout + 0.1
         if dx is not None and dy is not None:
-            dx, dy = dx.asnumpy(), dy.asnumpy()
+            dx, dy = dx.numpy(), dy.numpy()
             expected = mask / (1 - dropout) * dy
             check(expected, dx)
 
@@ -287,10 +287,10 @@ def test_mnm_dropout(dropout):
     check_dropout(x, v_y)
     # state updates (cudnn enforce state inplace updates)
     n_y = model(x)[0]
-    assert not np.array_equal(asnumpy(state_0), asnumpy(state_1))
-    assert not np.array_equal(asnumpy(state_1), asnumpy(state_2))
-    assert not np.array_equal(asnumpy(m_y), asnumpy(v_y))
-    assert not np.array_equal(asnumpy(m_y), asnumpy(n_y))
+    assert not np.array_equal(numpy(state_0), numpy(state_1))
+    assert not np.array_equal(numpy(state_1), numpy(state_2))
+    assert not np.array_equal(numpy(m_y), numpy(v_y))
+    assert not np.array_equal(numpy(m_y), numpy(n_y))
     # reproducible
     model.dropout_state = state_0
     r_y = model(x)[0]

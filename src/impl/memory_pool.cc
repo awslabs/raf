@@ -48,7 +48,7 @@ class MemoryPoolManager {
           pool_name = default_strategies[dev.device_type];
         }
         snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", pool_name.c_str());
-        void* ret = GetPackedFunc(maker_name)(dev.operator DLContext());
+        void* ret = GetPackedFunc(maker_name)(dev.operator DLDevice());
         result.reset(static_cast<MemoryPool*>(ret));
         return result.get();
       }

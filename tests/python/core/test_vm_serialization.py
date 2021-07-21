@@ -53,7 +53,7 @@ def test_simple(fuse):
     opt_level = 3 if fuse else 1
     with mnm.ir.PassContext(opt_level=opt_level):
         executor = VMExecutor(mod, device)
-    ref_z = executor.make_executor()(m_x).asnumpy()
+    ref_z = executor.make_executor()(m_x).numpy()
 
     loaded_exe = serialize_and_load(executor.executable)
     m_z = run_exec(loaded_exe, [m_x])

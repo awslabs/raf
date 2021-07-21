@@ -121,7 +121,7 @@ struct CastCacheHash {
   std::size_t operator()(const std::pair<Expr, TypeHint>& pair) const {
     HashKey key;
     // Simply use the object hash.
-    key << ObjectPtrHash()(pair.first);
+    key << uint64_t(ObjectPtrHash()(pair.first));
     // Cannot use the object hash because type hints are different objects.
     key << TypeHintHash(pair.second);
 

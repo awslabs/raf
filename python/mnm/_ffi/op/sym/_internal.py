@@ -257,7 +257,7 @@ repeat_dx = _APIS.get("mnm.op.sym.repeat_dx", None)
 # Defined in ./src/op/regs/regs.cc
 reshape = _APIS.get("mnm.op.sym.reshape", None)
 # Defined in ./src/op/regs/regs.cc
-resize = _APIS.get("mnm.op.sym.resize", None)
+resize2d = _APIS.get("mnm.op.sym.resize2d", None)
 # Defined in ./src/op/regs/regs.cc
 reverse = _APIS.get("mnm.op.sym.reverse", None)
 # Defined in ./src/op/regs/regs.cc

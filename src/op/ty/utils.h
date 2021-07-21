@@ -6,7 +6,6 @@
 #pragma once
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
-#include <tvm/runtime/container.h>
 #include <tvm/ir/env_func.h>
 #include <tvm/tir/expr.h>
 #include "mnm/op.h"
@@ -33,7 +32,7 @@ tvm::Type GetType(value::Value value);
 template <typename T>
 T GetScalarValue(value::BaseTensorValue v) {
   if (auto* tvo = v.as<value::TensorValueObj>()) {
-    DLContext cpu_ctx;
+    DLDevice cpu_ctx;
     cpu_ctx.device_type = kDLCPU;
     cpu_ctx.device_id = 0;
     tensor::Tensor tensor = tvo->tensor;

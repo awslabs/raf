@@ -18,9 +18,9 @@ from tvm.relay import TensorType, FuncType
 ])
 @pytest.mark.parametrize("in_dtype", ["float32", "float64"])
 @pytest.mark.parametrize("out_dtype", ["float32", "float64"])
-def test_resize(params, in_dtype, out_dtype):
+def test_resize2d(params, in_dtype, out_dtype):
 
-    class Resize(mnm.Model):
+    class Resize2D(mnm.Model):
         def build(self, to_size, layout, out_dtype):
             self._size = to_size
             self._layout = layout
@@ -28,7 +28,7 @@ def test_resize(params, in_dtype, out_dtype):
 
         @mnm.model.trace
         def forward(self, x):
-            return mnm.resize(x, self._size, self._layout, out_dtype=self._dtype)
+            return mnm.resize2d(x, self._size, self._layout, out_dtype=self._dtype)
 
     batchs, layout, orig_shape, to_shape, infer_shape = \
             params["batchs"], params["layout"], params["orig_shape"], \
@@ -40,7 +40,7 @@ def test_resize(params, in_dtype, out_dtype):
         shape = [batchs, orig_shape[0], orig_shape[1], 3]
 
     # forward
-    model = Resize(to_shape, layout, out_dtype)
+    model = Resize2D(to_shape, layout, out_dtype)
     m_x, _ = randn(shape, dtype=in_dtype)
     record = model._internal(m_x)
     m_mod = record.mod

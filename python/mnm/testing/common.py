@@ -34,10 +34,10 @@ def get_arr_addr(arr):
     return mnm._ffi.value.ToTVM(arr).handle.contents.data
 
 
-def asnumpy(x):
+def numpy(x):
     """Helper function to convert x to numpy"""
     if isinstance(x, (mnm.ndarray, mnm._core.value.TensorValue)):
-        return x.asnumpy()
+        return x.numpy()
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
     if isinstance(x, mx.nd.NDArray):
@@ -50,8 +50,8 @@ def asnumpy(x):
 
 def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     """Helper function to check if m_x and m_y are equal"""
-    m_x = asnumpy(m_x)
-    m_y = asnumpy(m_y)
+    m_x = numpy(m_x)
+    m_y = numpy(m_y)
     np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
 
 

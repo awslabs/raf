@@ -67,7 +67,7 @@ def test_sort(device, shape, axis, dtype):
         with mx.autograd.record():
             mx_y = mx.nd.sort(mx_x, axis)
             mx_y.backward(mx_dy)
-        check(mx_x.grad.asnumpy(), m_x.grad)
+        check(mx_x.grad, m_x.grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())

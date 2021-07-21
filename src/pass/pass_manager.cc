@@ -203,8 +203,6 @@ IRModule MNMFunctionPassNode::operator()(IRModule mod, const PassContext& pass_c
   DLOG(INFO) << "Executing function pass : " << pass_info->name
              << " with opt level: " << pass_info->opt_level;
 
-  pass_ctx.Trace(mod, pass_info, true);
-
   // Execute the pass function and return a new module.
   IRModule updated_mod =
       IRModule(mod->functions, mod->type_definitions, mod->Imports(), mod->source_map);
@@ -222,8 +220,6 @@ IRModule MNMFunctionPassNode::operator()(IRModule mod, const PassContext& pass_c
   for (const auto& pair : updates) {
     updated_mod->Add(pair.first, pair.second, true);
   }
-
-  pass_ctx.Trace(updated_mod, pass_info, false);
 
   return updated_mod;
 }

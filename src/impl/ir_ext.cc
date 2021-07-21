@@ -97,15 +97,13 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
         std::ostringstream os;
         const auto* constant = expr.as<ConstantNode>();
         if (constant) {
-          // \b to erase "-114514"
           if (constant->value.defined()) {
-            os << "\b\b\b\b\b\b\b" << constant->value;
+            os << constant->value;
           } else {
-            os << "\b\b\b\b\b\b\bnullptr";
+            os << "nullptr";
           }
         }
-        if ((expr.as<ConstantNode>() || expr.as<CallNode>()) &&
-            Downcast<Expr>(expr)->checked_type_.defined()) {
+        if (expr.as<CallNode>() && Downcast<Expr>(expr)->checked_type_.defined()) {
           auto meta = tvm::TextMetaDataContext();
           tvm::relay::RelayTextPrinter printer(false, &meta, nullptr);
           os << " /* ty=" << printer.Print(Downcast<Expr>(expr)->checked_type()).str() << " */";
@@ -116,7 +114,17 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
         }
         return String(os.str());
       });
-  return tvm::AsText(node, show_meta_data, annotate);
+
+  std::string ret = tvm::AsText(node, show_meta_data, annotate);
+  size_t index = 0;
+  while (true) {
+    index = ret.find("-114514", index);
+    if (index == std::string::npos) {
+      break;
+    }
+    ret.replace(index, 7, "");
+  }
+  return ret;
 }
 
 MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

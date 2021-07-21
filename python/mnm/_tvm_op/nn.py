@@ -112,7 +112,7 @@ _reg.register_schedule("mnm.op.tvm.adaptive_avg_pool2d_dx", strategy.schedule_po
 _reg.register_schedule("mnm.op.tvm.adaptive_max_pool2d", strategy.schedule_adaptive_pool)
 _reg.register_schedule("mnm.op.tvm.adaptive_max_pool2d_dx", strategy.schedule_pool_grad)
 
-_reg.register_schedule("mnm.op.tvm.log_softmax", strategy.schedule_log_softmax)
+_reg.register_strategy("mnm.op.tvm.log_softmax", strategy.log_softmax_strategy)
 
 @register_compute("mnm.op.tvm.log_softmax_dx")
 def compute_log_softmax_dx(attr, inputs, output_type):

@@ -28,8 +28,8 @@ def test_vm(device, shape):
     m_x, _ = randn(shape, device=device)
     mod = model._internal(m_x).mod
     executor = VMExecutor(mod, device)
-    m_z = executor.make_executor()(m_x).asnumpy()
-    ref_z = model(m_x).asnumpy()
+    m_z = executor.make_executor()(m_x).numpy()
+    ref_z = model(m_x).numpy()
     np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
 
     executable = executor.executable
@@ -37,7 +37,7 @@ def test_vm(device, shape):
     assert executable.globals[0] == 'main'
 
     # execute 2nd time to reuse the op env
-    m_z = executor.vm.run(m_x).asnumpy()
+    m_z = executor.vm.run(m_x).numpy()
     np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
 
 
@@ -66,13 +66,13 @@ def test_cuda_graph(shape):
     mod = model._internal(m_x).mod
     executor = VMExecutor(mod, dev, enable_cuda_graph=True)
     m_z = executor.make_executor()(m_x)
-    ref_z = model(m_x).asnumpy()
-    np.testing.assert_allclose(m_z.asnumpy(), ref_z, rtol=1e-5, atol=1e-5)
+    ref_z = model(m_x).numpy()
+    np.testing.assert_allclose(m_z.numpy(), ref_z, rtol=1e-5, atol=1e-5)
 
     m_x2, _ = randn(shape, device=dev)
     m_z2 = executor.vm.run(m_x2)
-    ref_z2 = model(m_x2).asnumpy()
-    np.testing.assert_allclose(m_z2.asnumpy(), ref_z2, rtol=1e-5, atol=1e-5)
+    ref_z2 = model(m_x2).numpy()
+    np.testing.assert_allclose(m_z2.numpy(), ref_z2, rtol=1e-5, atol=1e-5)
 
     executable = executor.executable
     assert len(executable.globals) == 1
@@ -103,9 +103,9 @@ def test_tuple(device, shape):
     mod = model._internal(m_x).mod
     executor = VMExecutor(mod, device)
     m_y, m_z = executor.make_executor()(m_x)
-    m_y, m_z = m_y.asnumpy(), m_z.asnumpy()
+    m_y, m_z = m_y.numpy(), m_z.numpy()
     ref_y, ref_z = model(m_x)
-    ref_y, ref_z = ref_y.asnumpy(), ref_z.asnumpy()
+    ref_y, ref_z = ref_y.numpy(), ref_z.numpy()
     np.testing.assert_allclose(m_y, ref_y, rtol=1e-5, atol=1e-5)
     np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
 

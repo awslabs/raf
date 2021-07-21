@@ -6,14 +6,14 @@ import mnm
 
 def test_mnm_array_cpu():
     array = mnm.array([1, 2, 3], dtype="int8", device="cpu")
-    array = array.asnumpy()
+    array = array.numpy()
     assert np.all(array == [1, 2, 3])
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_mnm_array_cuda():
     array = mnm.array([1, 2, 3], dtype="int8", device="cuda")
-    array = array.asnumpy()
+    array = array.numpy()
     assert np.all(array == [1, 2, 3])
 
 

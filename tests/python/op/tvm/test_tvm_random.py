@@ -23,7 +23,7 @@ def test_threefry_generate(device, shape):
             return res[1]
 
     seed = np.random.randint(0, high=sys.maxsize)
-    key = mnm.array(relay.random.threefry_key(seed).data.asnumpy(), dtype="uint64", device=device)
+    key = mnm.array(relay.random.threefry_key(seed).data.numpy(), dtype="uint64", device=device)
     model = ThreefryGenerate(key, shape)
     m_y0 = model()
     for _ in range(10):

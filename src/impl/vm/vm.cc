@@ -5,7 +5,6 @@
  */
 
 #include <dmlc/memory_io.h>
-#include <tvm/runtime/container.h>
 #include <tvm/runtime/memory.h>
 #include <tvm/runtime/object.h>
 #include <tvm/runtime/device_api.h>
@@ -195,7 +194,7 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
       std::vector<Device> devices;
       for (int i = 0; i < args.size(); ++i) {
-        DLContext dev = args[i];
+        DLDevice dev = args[i];
         devices.push_back(dev);
       }
       this->SetDevices(devices);

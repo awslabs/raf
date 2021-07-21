@@ -66,7 +66,7 @@ def test_take(shape, axis, device, mode, dtype):
         mx_dy = mx.nd.reshape(mx_dy, mx_y.shape)  # mx.nd.take does not support 0-dim indices
     mx_y.backward(mx_dy)
     m_y.backward(m_dy)
-    check(m_x.grad, mx_x.grad.asnumpy())
+    check(m_x.grad, mx_x.grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -123,7 +123,7 @@ def test_broadcast_to(shape, device, dtype):
             mx_y = mx.nd.broadcast_to(mx_x, shape[1])
         mx_y.backward(mx_dy)
         m_y.backward(m_dy)
-        check(m_x.grad, mx_x.grad.asnumpy())
+        check(m_x.grad, mx_x.grad)
 
 
 #pylint: disable=unused-variable
@@ -349,12 +349,12 @@ def test_reverse_sequence(inputs, axes, device):
     with mx.autograd.record():
         mx_y = mx.nd.SequenceReverse(mx_x, mx_seq_length, use_sequence_length=True)
         # check forward
-        check(m_y, mx_y.asnumpy())
-        check(v_y, mx_y.asnumpy())
+        check(m_y, mx_y)
+        check(v_y, mx_y)
         mx_y.backward(mx_dy)
     m_y.backward(m_dy)
     # check backward
-    check(m_x.grad, mx_x.grad.asnumpy())
+    check(m_x.grad, mx_x.grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -740,7 +740,7 @@ def test_gather_nd(dshape, ishape, device):
     mx_x.attach_grad()
     idim = len(ishape)
     m_i = mnm.transpose(m_i, axes=[idim - 1] + list(range(idim - 1)))
-    mx_i = mx.nd.array(m_i.asnumpy())
+    mx_i = mx.nd.array(m_i.numpy())
     model = TestModel(mnm._op.sym.gather_nd)
     # check forward
     m_y = model(m_x, m_i)
@@ -750,11 +750,11 @@ def test_gather_nd(dshape, ishape, device):
     with mx.autograd.record():
         mx_y = mx.nd.gather_nd(mx_x, mx_i)
         mx_y.backward(mx_dy)
-    check(m_y, mx_y.asnumpy())
-    check(v_y, mx_y.asnumpy())
+    check(m_y, mx_y)
+    check(v_y, mx_y)
     # check backward
     m_y.backward(m_dy)
-    check(m_x.grad, mx_x.grad.asnumpy())
+    check(m_x.grad, mx_x.grad)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -984,7 +984,7 @@ def test_embedding(device, num_weight, hiddend_state, seq_length, dtype):
     mx_dy = mx.nd.array(n_dy)
     mx_y.backward(mx_dy)
     m_y.backward(m_dy)
-    check(m_x.grad, mx_x.grad.asnumpy())
+    check(m_x.grad, mx_x.grad)
 
 
 if __name__ == "__main__":

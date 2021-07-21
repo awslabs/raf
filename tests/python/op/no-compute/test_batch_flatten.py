@@ -41,7 +41,7 @@ def test_batch_flatten(shape, device):
     assert y_i.shape == expected
     dy = mnm.reshape(y_i, mnm.shape(x))
     assert dy.shape == x.shape
-    assert (x.asnumpy() == dy.asnumpy()).all()
+    assert (x.numpy() == dy.numpy()).all()
     # traced
     model = Model()
     y_t = run_vm_model(model, device, [x])

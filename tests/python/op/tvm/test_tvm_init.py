@@ -61,9 +61,9 @@ def test_one_hot(indices_shape, on_value, off_value, depth, dtype, device):
     m_y = model(m_indices, m_on_value, m_off_value)
     mx_y = mx.nd.one_hot(mx_indices, depth=depth, on_value=on_value,
                          off_value=off_value, dtype=dtype)
-    check(m_y, mx_y.asnumpy())
+    check(m_y, mx_y)
     v_y = run_vm_model(model, device, [m_indices, m_on_value, m_off_value])
-    check(v_y, mx_y.asnumpy())
+    check(v_y, mx_y)
 
 
 if __name__ == "__main__":

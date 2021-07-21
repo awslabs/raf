@@ -106,7 +106,7 @@ class Executable:
             x_data = np.random.rand(10, 10).astype('float32')
             des_vm = mnm._core.vm.VirtualMachine(des_exec, "cpu")
             res = des_vm.run(x_data)
-            print(res.asnumpy())
+            print(res.numpy())
         """
         return self._save(), self._get_lib()
 

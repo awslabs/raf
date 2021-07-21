@@ -147,8 +147,8 @@ def test_sgd(shape):
     v0 = mnm.array(v0)
     m_v1, m_x1 = mnm.sgd(x0, dx, v0, learning_rate, mu)
 
-    np.testing.assert_allclose(m_v1.asnumpy(), n_v1, 1e-4, 1e-4)
-    np.testing.assert_allclose(m_x1.asnumpy(), n_x1, 1e-4, 1e-4)
+    np.testing.assert_allclose(m_v1.numpy(), n_v1, 1e-4, 1e-4)
+    np.testing.assert_allclose(m_x1.numpy(), n_x1, 1e-4, 1e-4)
 
 
 if __name__ == "__main__":

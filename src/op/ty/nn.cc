@@ -6,7 +6,6 @@
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
 #include <tvm/tir/data_layout.h>
-#include <tvm/runtime/container.h>
 #include <tvm/ir/env_func.h>
 #include <vector>
 #include "mnm/type.h"

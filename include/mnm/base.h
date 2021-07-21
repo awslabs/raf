@@ -28,8 +28,8 @@ class DevType final : public EnumBase<DevType, 13, int32_t, int> {
   ENUM_DEF_HEADER(DevType, 0, plain);
   ENUM_DEF_ENTRY_WITH_NAME(DevType, 0, kUnknown, 0, "???");
   ENUM_DEF_ENTRY_WITH_NAME(DevType, 1, kCPU, (int)kDLCPU, "cpu");
-  ENUM_DEF_ENTRY_WITH_NAME(DevType, 2, kCUDA, (int)kDLGPU, "cuda");
-  ENUM_DEF_ENTRY_WITH_NAME(DevType, 3, kCPUPinned, (int)kDLCPUPinned, "cpupinned");
+  ENUM_DEF_ENTRY_WITH_NAME(DevType, 2, kCUDA, (int)kDLCUDA, "cuda");
+  ENUM_DEF_ENTRY_WITH_NAME(DevType, 3, kCPUPinned, (int)kDLCUDAHost, "cpupinned");
   ENUM_DEF_ENTRY_WITH_NAME(DevType, 4, kOpenCL, (int)kDLOpenCL, "opencl");
   ENUM_DEF_ENTRY_WITH_NAME(DevType, 5, kAOCL, (int)kDLAOCL, "aocl");
   ENUM_DEF_ENTRY_WITH_NAME(DevType, 6, kSDAccel, (int)kDLSDAccel, "sdaccel");

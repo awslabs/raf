@@ -58,7 +58,7 @@ class HashKey {
   MNM_DEF_PRIMITIVE(9, float, 4);
   MNM_DEF_PRIMITIVE(10, double, 8);
   MNM_DEF_PRIMITIVE(11, DLDataType, 4);
-  MNM_DEF_PRIMITIVE(12, DLContext, 8);
+  MNM_DEF_PRIMITIVE(12, DLDevice, 8);
 
   inline HashKey& operator<<(const std::vector<int64_t>& v) {
     byte_vector.push_back(13);

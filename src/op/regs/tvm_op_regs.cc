@@ -79,7 +79,6 @@ MNM_TVM_OP("mnm.op.tvm.gather_nd", "gather_nd");
 MNM_TVM_OP("mnm.op.tvm.get_valid_counts", "get_valid_counts");
 MNM_TVM_OP("mnm.op.tvm.greater", "greater");
 MNM_TVM_OP("mnm.op.tvm.greater_equal", "greater_equal");
-MNM_TVM_OP("mnm.op.tvm.image.resize", "image.resize");
 MNM_TVM_OP("mnm.op.tvm.layout_transform", "layout_transform");
 MNM_TVM_OP("mnm.op.tvm.left_shift", "left_shift");
 MNM_TVM_OP("mnm.op.tvm.less", "less");

@@ -289,7 +289,7 @@ def test_constant_tensor():
 
     expected_ty = relay.TensorType((2, 2))
     assert str(func.body.checked_type) == str(expected_ty)
-    check(m_c, ToTVM(ExtractValue(func.body)).asnumpy())
+    check(m_c, ToTVM(ExtractValue(func.body)).numpy())
 
 
 def test_constant_tensor_tuple():
@@ -306,8 +306,8 @@ def test_constant_tensor_tuple():
 
     expected_ty = relay.TupleType([relay.TensorType((2, 2)), relay.TensorType((3, 3))])
     assert str(func.body.checked_type) == str(expected_ty)
-    check(m_c1, ToTVM(ExtractValue(func.body)[0]).asnumpy())
-    check(m_c2, ToTVM(ExtractValue(func.body)[1]).asnumpy())
+    check(m_c1, ToTVM(ExtractValue(func.body)[0]).numpy())
+    check(m_c2, ToTVM(ExtractValue(func.body)[1]).numpy())
 
 def test_closure_with_const_args1():
     # pylint: disable=attribute-defined-outside-init

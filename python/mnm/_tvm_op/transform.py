@@ -151,38 +151,38 @@ def strided_slice_dx_compute(attrs, inputs, output_type):
     dy = inputs[0]
     begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
     var = _tvm.te.placeholder(shape=attrs.primal_shape, dtype=dy.dtype)
-    out = _topi.nn.strided_slice(var, begin, end, strides, slice_mode)
+    out = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
     grads = _tvm.te.gradient(out, [var], head=dy)
     return grads
 
 _reg.register_injective_schedule("mnm.op.tvm.strided_slice_dx")
 
-@register_compute("mnm.op.tvm.resize")
-def compute_resize(attrs, inputs, out_type):
-    """ compute definition for resize op """
+@register_compute("mnm.op.tvm.resize2d")
+def compute_resize2d(attrs, inputs, out_type):
+    """ compute definition for resize2d op """
     size = attrs.size
     layout = attrs.layout
     method = attrs.method
     coord_trans = attrs.coordinate_transformation_mode
     rounding_method = attrs.rounding_method
-    bicubic_alpha = attrs.bicubic_alpha
-    bicubic_exclude = attrs.bicubic_exclude
+    cubic_alpha = attrs.cubic_alpha
+    cubic_exclude = attrs.cubic_exclude
     out_dtype = attrs.out_dtype
     return [
-        _topi.image.resize(
+        _topi.image.resize2d(
             inputs[0],
             size,
             layout,
             method,
             coord_trans,
             rounding_method,
-            bicubic_alpha,
-            bicubic_exclude,
+            cubic_alpha,
+            cubic_exclude,
             out_dtype
         )
     ]
 
-_reg.register_injective_schedule("mnm.op.tvm.resize")
+_reg.register_injective_schedule("mnm.op.tvm.resize2d")
 
 @register_compute("mnm.op.tvm.adv_index")
 def adv_index_compute(attrs, inputs, output_type):

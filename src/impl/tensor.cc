@@ -84,12 +84,12 @@ class Tensor::Impl {
     container->SetDeleter(DefaultDeleter);
     Tensor ret(ir::GetObjectPtr<ir::Object>(container));
     container->shape_ = shape;
-    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
+    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(shape);
     container->dl_tensor.data = data;
     container->dl_tensor.device = dev;
     container->dl_tensor.ndim = shape.size();
     container->dl_tensor.dtype = dtype;
-    container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
+    container->dl_tensor.shape = const_cast<int64_t*>(container->shape_.data());
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     container->dl_tensor.byte_offset = 0;
     return ret;
@@ -105,7 +105,7 @@ class Tensor::Impl {
                                tensor->dl_tensor.shape + tensor->dl_tensor.ndim);
     container->strides_ = Shape2Strides<int64_t>(shape);
     container->shape_ = std::move(shape);
-    container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
+    container->dl_tensor.shape = const_cast<int64_t*>(container->shape_.data());
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     return ret;
   }
@@ -125,12 +125,13 @@ class Tensor::Impl {
     TensorContainer* container = new TensorContainer();
     container->SetDeleter(DefaultDeleter);
     Tensor ret(ir::GetObjectPtr<ir::Object>(container));
-    container->shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
-    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(container->shape_);
+    std::vector<int64_t> shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
+    container->shape_ = shape_;
+    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(shape_);
     container->dl_tensor.device = self->device;
     container->dl_tensor.ndim = container->shape_.size();
     container->dl_tensor.dtype = self->dtype;
-    container->dl_tensor.shape = dmlc::BeginPtr(container->shape_);
+    container->dl_tensor.shape = const_cast<int64_t*>(container->shape_.data());
     container->dl_tensor.strides = dmlc::BeginPtr(container->strides_);
     container->dl_tensor.byte_offset = 0;
     self.get_mutable()->IncRef();

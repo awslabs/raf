@@ -752,8 +752,15 @@ std::vector<std::string> GatherNdSchemaArgNames(const op::CallValues& call) {
   return {"data", "indices"};
 }
 
+Attrs GatherNdSchema2Attrs(const GatherNdArgs* args) {
+  auto attrs = make_object<GatherNDAttrs>();
+  attrs->batch_dims = 0;
+  attrs->index_rank = NullValue<Integer>();
+  return Attrs(attrs);
+}
+
 MNM_TVM(gather_nd, GatherNd, GatherNdArgs, GatherNdSchema2Args, GatherNdSchemaArgNames,
-        GenericAttrs, GenericHasher, kInjective);
+        GatherNdSchema2Attrs, GenericHasher, kInjective);
 
 std::vector<Value> GatherNdDxSchema2Args(const GatherNdDxArgs* args) {
   return {args->data, args->indices, args->dy};
@@ -825,7 +832,8 @@ HashKey ReshapeHasher(const std::vector<Type>& param_types, const Type& y_type,
 MNM_TVM(reshape, Reshape, ReshapeArgs, ReshapeSchema2Args, ReshapeSchemaArgNames,
         ReshapeSchema2Attrs, ReshapeHasher, kInjective);
 
-std::vector<Value> ResizeSchema2Args(const ResizeArgs* args) {
+template <typename T>
+std::vector<Value> ResizeSchema2Args(const T* args) {
   return {args->x};
 }
 
@@ -833,14 +841,14 @@ std::vector<std::string> ResizeSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
-Attrs ResizeSchema2Attrs(const ResizeArgs* args) {
-  auto attrs = make_object<ResizeAttrs>();
+Attrs Resize2DSchema2Attrs(const Resize2DArgs* args) {
+  auto attrs = make_object<Resize2DAttrs>();
   attrs->layout = args->layout;
   attrs->method = args->method;
   attrs->coordinate_transformation_mode = args->coordinate_transformation_mode;
   attrs->rounding_method = args->rounding_method;
-  attrs->bicubic_alpha = args->bicubic_alpha;
-  attrs->bicubic_exclude = args->bicubic_exclude;
+  attrs->cubic_alpha = args->cubic_alpha;
+  attrs->cubic_exclude = args->cubic_exclude;
 
   DataType out_dtype(String2DLDataType(args->out_dtype));
   attrs->out_dtype = out_dtype;
@@ -855,22 +863,22 @@ Attrs ResizeSchema2Attrs(const ResizeArgs* args) {
   return Attrs(attrs);
 }
 
-HashKey ResizeHasher(const std::vector<Type>& param_types, const Type& y_type,
-                     const ResizeArgs* args) {
+template <typename T>
+HashKey ResizeHasher(const std::vector<Type>& param_types, const Type& y_type, const T* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << args->size;
   key << args->layout;
   key << args->method;
   key << args->coordinate_transformation_mode;
   key << args->rounding_method;
-  key << args->bicubic_alpha;
-  key << args->bicubic_exclude;
+  key << args->cubic_alpha;
+  key << args->cubic_exclude;
   key << args->out_dtype;
   return key;
 }
 
-MNM_TVM(resize, Resize, ResizeArgs, ResizeSchema2Args, ResizeSchemaArgNames, ResizeSchema2Attrs,
-        ResizeHasher, kInjective);
+MNM_TVM(resize2d, Resize2D, Resize2DArgs, ResizeSchema2Args<Resize2DArgs>, ResizeSchemaArgNames,
+        Resize2DSchema2Attrs, ResizeHasher<Resize2DArgs>, kInjective);
 
 std::vector<Value> ExpandDimsSchema2Args(const ExpandDimsArgs* args) {
   return {args->x};

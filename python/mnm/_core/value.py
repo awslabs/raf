@@ -85,8 +85,8 @@ class TensorValue(BaseTensorValue):
     def from_numpy(np_array):
         return TensorValue.from_tvm(tvm_ndarray(np_array))
 
-    def asnumpy(self):
-        return ToTVM(self).asnumpy()
+    def numpy(self):
+        return ToTVM(self).numpy()
 
 
 @register_node("mnm.value.TensorTypeValue")

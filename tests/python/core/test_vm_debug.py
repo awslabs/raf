@@ -33,10 +33,10 @@ def test_vm_debug(device, shape):
         executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
 
     # Testing whether we can get the correct intermediate tensor
-    m_z = executor.make_executor()(m_x).asnumpy()
-    ref_x = m_x.asnumpy()
+    m_z = executor.make_executor()(m_x).numpy()
+    ref_x = m_x.numpy()
     ref_y = ref_x + ref_x
-    ref_z = model(m_x).asnumpy()
+    ref_z = model(m_x).numpy()
     check(m_z, ref_z, rtol=1e-5, atol=1e-5)
     _, ins, outs = executor.get_interm_tensors()
     check(ins[0][0], ref_x)

@@ -14,7 +14,7 @@ from mnm._core.ndarray import Symbol
 
 
 def check(m_x, n_x, rtol=1e-5, atol=1e-5):
-    np.testing.assert_allclose(m_x.asnumpy(), n_x, rtol=rtol, atol=atol)
+    np.testing.assert_allclose(m_x.numpy(), n_x, rtol=rtol, atol=atol)
 
 
 def get_node_info():
@@ -57,13 +57,13 @@ def test_allreduce_with_tensor(computation):
     if rank == 0:
         target_y = 0
         if computation == "sum":
-            target_y = x.asnumpy() * (1 + 2)
+            target_y = x.numpy() * (1 + 2)
         elif computation == "prod":
-            target_y = x.asnumpy() * (1 * 2)
+            target_y = x.numpy() * (1 * 2)
         elif computation == "min":
-            target_y = x.asnumpy() * min(1, 2)
+            target_y = x.numpy() * min(1, 2)
         elif computation == "max":
-            target_y = x.asnumpy() * max(1, 2)
+            target_y = x.numpy() * max(1, 2)
         else:
             print("Invalid computation")
         print(f"{rank} - Y: ", y)
@@ -97,8 +97,8 @@ def test_allreduce_with_tensor_list(computation):
     y = model(x1, x2)
     if rank == 0:
         target_y = 0
-        x1 = x1.asnumpy()
-        x2 = x2.asnumpy()
+        x1 = x1.numpy()
+        x2 = x2.numpy()
         if computation == "sum":
             target_y = np.concatenate([x1 * (1+2), x2  * (-1) * ((-1)+(-2))])
         elif computation == "prod":
@@ -135,7 +135,7 @@ def test_allgather(axis):
     model.to(device=device)
     y = model(x)
     if rank == 0:
-        target_y = np.concatenate([x.asnumpy(), x.asnumpy() * 2], axis=axis)
+        target_y = np.concatenate([x.numpy(), x.numpy() * 2], axis=axis)
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
@@ -166,8 +166,8 @@ def test_allgather_with_tensor_list(axis):
     model.to(device=device)
     y = model(x1, x2)
     if rank == 0:
-        x1 = x1.asnumpy()
-        x2 = x2.asnumpy()
+        x1 = x1.numpy()
+        x2 = x2.numpy()
         target_y1 = np.concatenate([x1, x1 * 2], axis=axis)
         target_y2 = np.concatenate([x2, x2 * 2], axis=axis)
         target_y = np.concatenate([target_y1, target_y2])

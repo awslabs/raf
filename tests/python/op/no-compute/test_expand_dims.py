@@ -21,7 +21,7 @@ def test_batch_flatten(shape, axis, num_newaxis):
     assert list(y.shape) == expected
     dy = mnm.reshape(y, mnm.shape(x))
     assert dy.shape == x.shape
-    assert (x.asnumpy() == dy.asnumpy()).all()
+    assert (x.numpy() == dy.numpy()).all()
 
 
 if __name__ == "__main__":

@@ -231,14 +231,14 @@ def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform)
         mx_y = mx_model(mx_x)
         mx_y.backward(mx_dy)
 
-    check(m_y, mx_y.asnumpy(), rtol=1e-4, atol=1e-4)
-    check(v_y, mx_y.asnumpy(), rtol=1e-4, atol=1e-4)
+    check(m_y, mx_y, rtol=1e-4, atol=1e-4)
+    check(v_y, mx_y, rtol=1e-4, atol=1e-4)
     # check backward
     m_y.backward(m_dy)
-    check(m_x.grad, mx_x.grad.asnumpy(), rtol=1e-4, atol=1e-4)
+    check(m_x.grad, mx_x.grad, rtol=1e-4, atol=1e-4)
     if learnable_affine_transform:
-        check(m_scale.grad, mx_model.gamma.grad().asnumpy(), rtol=1e-4, atol=1e-4)
-        check(m_bias.grad, mx_model.beta.grad().asnumpy(), rtol=1e-4, atol=1e-4)
+        check(m_scale.grad, mx_model.gamma.grad(), rtol=1e-4, atol=1e-4)
+        check(m_bias.grad, mx_model.beta.grad(), rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -579,8 +579,8 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
     m_v, t_v = randn_torch(stats_shape, device=device, positive=True)
     m_w, t_w = randn_torch(stats_shape, device=device, requires_grad=True)
     m_b, t_b = randn_torch(stats_shape, device=device, requires_grad=True)
-    np_m = m_m.asnumpy()
-    np_v = m_v.asnumpy()
+    np_m = m_m.numpy()
+    np_v = m_v.numpy()
 
     class TestModel(mnm.Model):
         def build(self, m_m, m_v):

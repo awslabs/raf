@@ -103,14 +103,14 @@ class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
     def __str__(self):
         fmt = "{}\n<NDArray [{}] @ {}, dtype={}>"
         shape = " x ".join(map(str, self.shape))
-        npa = ToTVM(self.__value).asnumpy()
+        npa = ToTVM(self.__value).numpy()
         return fmt.format(str(npa), shape, self.device, self.dtype)
 
     def __repr__(self):
         return str(self)
 
-    def asnumpy(self):
-        return ToTVM(self.__value).asnumpy()  # pylint: disable=protected-access
+    def numpy(self):
+        return ToTVM(self.__value).numpy()  # pylint: disable=protected-access
 
     @property
     def device(self):
@@ -161,7 +161,7 @@ class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
         self.__byte_offset = byte_offset
 
     def to(self, *, device=None, dtype=None):  # pylint: disable=invalid-name
-        npa = self.asnumpy()
+        npa = self.numpy()
         if dtype is not None:
             npa = npa.astype(dtype)
         if device is None:

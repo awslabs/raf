@@ -9,7 +9,7 @@ from mxnet.gluon import nn
 import mnm
 
 def check(mnm_x, mx_x, *, rtol=1e-5, atol=1e-5):
-    mnm_x = mnm_x.asnumpy()
+    mnm_x = mnm_x.numpy()
     mx_x = mx_x.asnumpy()
     np.testing.assert_allclose(mnm_x, mx_x, rtol=rtol, atol=atol)
 

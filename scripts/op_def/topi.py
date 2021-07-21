@@ -38,7 +38,6 @@ OP_MAP = {
     "mnm.op.tvm.gather_nd": ["gather_nd", "", "kInjective"],
     "mnm.op.tvm.greater": ["greater", "", "kBroadcast"],
     "mnm.op.tvm.greater_equal": ["greater_equal", "", "kBroadcast"],
-    "mnm.op.tvm.image.resize": ["image.resize", "relay.attrs.ResizeAttrs", "kInjective"],
     "mnm.op.tvm.layout_transform": ["layout_transform", "relay.attrs.LayoutTransformAttrs", "kInjective"],
     "mnm.op.tvm.left_shift": ["left_shift", "", "kBroadcast"],
     "mnm.op.tvm.less": ["less", "", "kBroadcast"],

@@ -78,6 +78,6 @@ def from_pytorch(model, shape_dict):
     for var in relay_mod["main"].params:
         name = var.name_hint
         if name in relay_params:
-            meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].asnumpy())
+            meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].numpy())
     assert len(meta_params) == len(relay_params)
     return FrameworkModel(meta_mod, meta_mod, meta_params, {})

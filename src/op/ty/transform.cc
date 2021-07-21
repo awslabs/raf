@@ -821,8 +821,8 @@ Type WhereInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.where", "Where", WhereInfer);
 
-Type ResizeInfer(const CallValues& value) {
-  const auto* args = value->args.as<ResizeArgs>();
+Type Resize2DInfer(const CallValues& value) {
+  const auto* args = value->args.as<Resize2DArgs>();
   CHECK(args != nullptr);
 
   TensorType x = Downcast<TensorType>(GetType(args->x));
@@ -850,7 +850,7 @@ Type ResizeInfer(const CallValues& value) {
   return TensorType(shape, out_dtype);
 }
 
-MNM_OP_TYPE("mnm.op.resize", "Resize", ResizeInfer);
+MNM_OP_TYPE("mnm.op.resize2d", "Resize2D", Resize2DInfer);
 
 Type ArgwhereInfer(const CallValues& value) {
   const auto* args = value->args.as<ArgwhereArgs>();

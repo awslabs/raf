@@ -377,7 +377,7 @@ MNM_OP_GRAD("mnm.op.argwhere", NoGrads<1>);
 
 MNM_OP_GRAD("mnm.op.ndarray_size", NoGrads<1>);
 
-MNM_OP_GRAD("mnm.op.resize", NoGrads<1>);
+MNM_OP_GRAD("mnm.op.resize2d", NoGrads<1>);
 
 }  // namespace grad
 }  // namespace op

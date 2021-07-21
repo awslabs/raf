@@ -55,7 +55,7 @@ def test_mnm_constant():
 
     def expected():
         a1 = _relay.var("a1")  # pylint: disable=invalid-name
-        t_value = mnm._core.value.TensorValue.from_numpy(data.asnumpy())
+        t_value = mnm._core.value.TensorValue.from_numpy(data.numpy())
         constant = mnm._ffi.ir._make.Constant(t_value)
         let = _relay.Let(a1, constant, a1)
         return _relay.Function([], let)
@@ -1168,7 +1168,7 @@ def test_threefry_generate(shape):
         def forward(self, key):
             return mnm.threefry_generate(key, self.shape)
 
-    m_key = mnm.array(_relay.random.threefry_key(0).data.asnumpy(), dtype="uint64")
+    m_key = mnm.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
     model = ThreefryGenerate(shape)
 
     r_key = _relay.var("key", shape=(10,), dtype="uint64")
@@ -1187,7 +1187,7 @@ def test_threefry_split():
         def forward(self, key):
             return mnm.threefry_split(key)
 
-    m_key = mnm.array(_relay.random.threefry_key(0).data.asnumpy(), dtype="uint64")
+    m_key = mnm.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
     model = ThreefrySplit()
 
     r_key = _relay.var("key", shape=(10,), dtype="uint64")

@@ -154,8 +154,8 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.resize", [](const CallValues& call) {
-  const auto* args = call->args.as<ResizeArgs>();
+MNM_OP_DECLARE("mnm.op.resize2d", [](const CallValues& call) {
+  const auto* args = call->args.as<Resize2DArgs>();
   CHECK(args != nullptr);
 
   DLTensor* x = args->x;

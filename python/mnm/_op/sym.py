@@ -33,7 +33,7 @@ __all__ = [
     "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
     "one_hot", "ones", "ones_like", "pad", "power",
     "prod", "prod_dx", "relu", "relu_dx", "repeat",
-    "repeat_dx", "reshape", "resize", "reverse", "reverse_sequence",
+    "repeat_dx", "reshape", "resize2d", "reverse", "reverse_sequence",
     "right_shift", "roi_align", "roi_align_dx", "round", "rsqrt",
     "scatter", "scatter_dx", "sequence_mask", "sgd", "shape",
     "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
@@ -830,17 +830,17 @@ def reshape(x, shape, reverse=False):
     reverse = sym_utils.to_bool(reverse)
     return Symbol.from_expr(ffi.reshape(x, shape, reverse))
 
-def resize(x, size, layout="NCHW", method="bilinear", coordinate_transformation_mode="half_pixel", rounding_method="", bicubic_alpha=-0.5, bicubic_exclude=0, out_dtype=""):
+def resize2d(x, size, layout="NCHW", method="linear", coordinate_transformation_mode="half_pixel", rounding_method="", cubic_alpha=-0.5, cubic_exclude=0, out_dtype=""):
     x = sym_utils.to_tensor(x)
     size = sym_utils.to_int_tuple(size)
     layout = sym_utils.to_string(layout)
     method = sym_utils.to_string(method)
     coordinate_transformation_mode = sym_utils.to_string(coordinate_transformation_mode)
     rounding_method = sym_utils.to_string(rounding_method)
-    bicubic_alpha = sym_utils.to_double(bicubic_alpha)
-    bicubic_exclude = sym_utils.to_int(bicubic_exclude)
+    cubic_alpha = sym_utils.to_double(cubic_alpha)
+    cubic_exclude = sym_utils.to_int(cubic_exclude)
     out_dtype = sym_utils.to_string(out_dtype)
-    return Symbol.from_expr(ffi.resize(x, size, layout, method, coordinate_transformation_mode, rounding_method, bicubic_alpha, bicubic_exclude, out_dtype))
+    return Symbol.from_expr(ffi.resize2d(x, size, layout, method, coordinate_transformation_mode, rounding_method, cubic_alpha, cubic_exclude, out_dtype))
 
 def reverse(x, axis=0):
     x = sym_utils.to_tensor(x)

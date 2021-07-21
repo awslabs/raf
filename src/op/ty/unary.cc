@@ -5,7 +5,6 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
-#include <tvm/runtime/container.h>
 #include <tvm/ir/env_func.h>
 #include "mnm/type.h"
 #include "../schema/ufunc.h"

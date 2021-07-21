@@ -70,7 +70,7 @@ def test_mlp(config, is_train):
     m_y = m_model(m_x)
     t_y = t_model(t_x)
     if is_train:
-        m_dy, t_dy = randn_torch(m_y.shape, std=m_y.asnumpy().std() * 0.0001, device="cuda")
+        m_dy, t_dy = randn_torch(m_y.shape, std=m_y.numpy().std() * 0.0001, device="cuda")
         t_y.backward(t_dy)
         m_y.backward(m_dy)
         check(m_model.fc1.w.grad, t_model.fc1.weight.grad, rtol=1e-4, atol=1e-4)

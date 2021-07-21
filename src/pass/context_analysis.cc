@@ -628,7 +628,7 @@ class ContextAnalyzer : public MixedModeVisitor {
 
 }  // namespace context_analysis
 
-AnalysisResultMap ContextAnalysis(const IRModule& mod, const DLContext& default_context) {
+AnalysisResultMap ContextAnalysis(const IRModule& mod, const DLDevice& default_context) {
   auto entry = mod->GetGlobalVar("main");
   auto ca = context_analysis::ContextAnalyzer(mod, entry, default_context);
   auto expr = mod->Lookup(entry);
@@ -636,10 +636,10 @@ AnalysisResultMap ContextAnalysis(const IRModule& mod, const DLContext& default_
   return ca.Results();
 }
 
-// Unpack the device type and deivce id fields in DLContext for PackedFunc calls
-// as DLContext is not in the object system.
+// Unpack the device type and deivce id fields in DLDevice for PackedFunc calls
+// as DLDevice is not in the object system.
 PackedAnalysisResultMap ContextAnalysisPacked(const IRModule& mod,
-                                              const DLContext& default_context) {
+                                              const DLDevice& default_context) {
   PackedAnalysisResultMap ret;
   auto res = ContextAnalysis(mod, default_context);
   for (const auto& it : res) {

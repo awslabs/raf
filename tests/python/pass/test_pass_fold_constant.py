@@ -28,7 +28,7 @@ def test_fold_const_model(device, shape):
     m_dx = m_x.grad
     n_dx = 1 * n_dy
     check(m_dx, n_dx)
-    check(m_y, mnm.add(mnm.add(const, const), m_x).asnumpy())
+    check(m_y, mnm.add(mnm.add(const, const), m_x).numpy())
 
 
 @pytest.mark.parametrize("device", get_device_list()[1:])
@@ -54,7 +54,7 @@ def test_fold_const_ir(device, shape):
         x = tvm.relay.var('x', tvm.relay.TensorType(shape))
         c = tvm.relay.var('c', tvm.relay.TensorType(shape))
         # we are only interested in the structure
-        t_value = mnm._core.value.TensorValue.from_numpy(const.asnumpy())
+        t_value = mnm._core.value.TensorValue.from_numpy(const.numpy())
         const_var = mnm._ffi.ir._make.Constant(t_value)
         matmul_op = mnm._ffi.op.GetOp('mnm.op.matmul')
         closure2 = tvm.relay.Call(matmul_op, [x, const_var])

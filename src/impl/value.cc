@@ -314,7 +314,7 @@ bool GetScalarValueData<bool>(const Value& value) {
     return bvo->value;
   } else if (const auto* tvo = value.as<TensorValueObj>()) {
     tensor::Tensor tensor = tvo->tensor;
-    DLContext cpu_ctx;
+    DLDevice cpu_ctx;
     cpu_ctx.device_type = kDLCPU;
     cpu_ctx.device_id = 0;
     NDArray cpu_array = tensor.CopyTo(cpu_ctx);
@@ -332,7 +332,7 @@ float GetScalarValueData<float>(const Value& value) {
     return fvo->value;
   } else if (const auto* tvo = value.as<TensorValueObj>()) {
     tensor::Tensor tensor = tvo->tensor;
-    DLContext cpu_ctx;
+    DLDevice cpu_ctx;
     cpu_ctx.device_type = kDLCPU;
     cpu_ctx.device_id = 0;
     NDArray cpu_array = tensor.CopyTo(cpu_ctx);
@@ -433,13 +433,16 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<TensorValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
+      static auto* dev2str = tvm::runtime::Registry::Get("mnm._core.core_utils.dev2str");
       auto* node = static_cast<const TensorValueObj*>(ref.get());
       p->stream << "tensor(";
       for (int i = 0; i < node->tensor->ndim; ++i) {
         p->stream << node->tensor->shape[i];
         if (i != node->tensor->ndim - 1) p->stream << "x";
       }
-      p->stream << ", " << tvm::runtime::DLDataType2String(node->tensor->dtype) << ")";
+      p->stream << ", " << tvm::runtime::DLDataType2String(node->tensor->dtype);
+      tvm::String device_str = (*dev2str)(node->tensor->device);
+      p->stream << ", " << device_str << ")";
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)

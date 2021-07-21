@@ -169,7 +169,7 @@ static const char relu_dx[] = "mnm.op.relu_dx";
 static const char repeat[] = "mnm.op.repeat";
 static const char repeat_dx[] = "mnm.op.repeat_dx";
 static const char reshape[] = "mnm.op.reshape";
-static const char resize[] = "mnm.op.resize";
+static const char resize2d[] = "mnm.op.resize2d";
 static const char reverse[] = "mnm.op.reverse";
 static const char reverse_sequence[] = "mnm.op.reverse_sequence";
 static const char right_shift[] = "mnm.op.right_shift";
@@ -843,16 +843,16 @@ Attrs Reshape(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
-Attrs Resize(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::ResizeArgs, 9);  // NOLINT(whitespace/line_length)
+Attrs Resize2D(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::Resize2DArgs, 9);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, size);
   MNM_POD(2, ffi2schema::String, layout);
   MNM_POD(3, ffi2schema::String, method);
   MNM_POD(4, ffi2schema::String, coordinate_transformation_mode);
   MNM_POD(5, ffi2schema::String, rounding_method);
-  MNM_POD(6, ffi2schema::Double, bicubic_alpha);
-  MNM_POD(7, ffi2schema::Int, bicubic_exclude);
+  MNM_POD(6, ffi2schema::Double, cubic_alpha);
+  MNM_POD(7, ffi2schema::Int, cubic_exclude);
   MNM_POD(8, ffi2schema::String, out_dtype);
   return Attrs(attrs);
 }
@@ -2494,16 +2494,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.reshape").set_body([](TVMArgs args, TVMRetValue*
   *ret = MNM_RET();
 });
 
-MNM_REGISTER_GLOBAL("mnm.op.imp.resize").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(resize, 9, ffi2schema::Resize, schema::ResizeArgs);  // NOLINT(whitespace/line_length)
+MNM_REGISTER_GLOBAL("mnm.op.imp.resize2d").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(resize2d, 9, ffi2schema::Resize2D,
+              schema::Resize2DArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->size));
   MNM_SET_ENV(vpack->x[2], schema2value::String(schema->layout));
   MNM_SET_ENV(vpack->x[3], schema2value::String(schema->method));
   MNM_SET_ENV(vpack->x[4], schema2value::String(schema->coordinate_transformation_mode));
   MNM_SET_ENV(vpack->x[5], schema2value::String(schema->rounding_method));
-  MNM_SET_ENV(vpack->x[6], schema2value::Double(schema->bicubic_alpha));
-  MNM_SET_ENV(vpack->x[7], schema2value::Int(schema->bicubic_exclude));
+  MNM_SET_ENV(vpack->x[6], schema2value::Double(schema->cubic_alpha));
+  MNM_SET_ENV(vpack->x[7], schema2value::Int(schema->cubic_exclude));
   MNM_SET_ENV(vpack->x[8], schema2value::String(schema->out_dtype));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
@@ -3687,7 +3688,7 @@ Array<Expr> Reshape(const TVMArgs& values) {
   MNM_RET();
 }
 
-Array<Expr> Resize(const TVMArgs& values) {
+Array<Expr> Resize2D(const TVMArgs& values) {
   MNM_PRELUDE(9);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::IntOrTupleInt, size);
@@ -3695,8 +3696,8 @@ Array<Expr> Resize(const TVMArgs& values) {
   MNM_ARG(3, ffi2expr::String, method);
   MNM_ARG(4, ffi2expr::String, coordinate_transformation_mode);
   MNM_ARG(5, ffi2expr::String, rounding_method);
-  MNM_ARG(6, ffi2expr::Double, bicubic_alpha);
-  MNM_ARG(7, ffi2expr::Int, bicubic_exclude);
+  MNM_ARG(6, ffi2expr::Double, cubic_alpha);
+  MNM_ARG(7, ffi2expr::Int, cubic_exclude);
   MNM_ARG(8, ffi2expr::String, out_dtype);
   MNM_RET();
 }
@@ -4221,7 +4222,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.relu_dx").set_body(MNM_SYMBOLIC_API(relu_dx, 3, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.repeat").set_body(MNM_SYMBOLIC_API(repeat, 3, Repeat));
 MNM_REGISTER_GLOBAL("mnm.op.sym.repeat_dx").set_body(MNM_SYMBOLIC_API(repeat_dx, 4, RepeatDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reshape").set_body(MNM_SYMBOLIC_API(reshape, 3, Reshape));
-MNM_REGISTER_GLOBAL("mnm.op.sym.resize").set_body(MNM_SYMBOLIC_API(resize, 9, Resize));
+MNM_REGISTER_GLOBAL("mnm.op.sym.resize2d").set_body(MNM_SYMBOLIC_API(resize2d, 9, Resize2D));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse").set_body(MNM_SYMBOLIC_API(reverse, 2, Reverse));
 MNM_REGISTER_GLOBAL("mnm.op.sym.reverse_sequence")
     .set_body(MNM_SYMBOLIC_API(reverse_sequence, 4, ReverseSequence));
@@ -4995,16 +4996,16 @@ Attrs Reshape(const Array<Value>& values) {
 }
 
 template <const char* op_name>
-Attrs Resize(const Array<Value>& values) {
-  MNM_PRELUDE(2, 9, schema::ResizeArgs);
+Attrs Resize2D(const Array<Value>& values) {
+  MNM_PRELUDE(2, 9, schema::Resize2DArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, size);
   MNM_OPTIONAL(2, value2schema::String, layout);
   MNM_OPTIONAL(3, value2schema::String, method);
   MNM_OPTIONAL(4, value2schema::String, coordinate_transformation_mode);
   MNM_OPTIONAL(5, value2schema::String, rounding_method);
-  MNM_OPTIONAL(6, value2schema::Double, bicubic_alpha);
-  MNM_OPTIONAL(7, value2schema::Int, bicubic_exclude);
+  MNM_OPTIONAL(6, value2schema::Double, cubic_alpha);
+  MNM_OPTIONAL(7, value2schema::Int, cubic_exclude);
   MNM_OPTIONAL(8, value2schema::String, out_dtype);
   return Attrs(attrs);
 }
@@ -6545,7 +6546,7 @@ int Reshape(const std::string& field) {
 }
 
 template <const char* op_name>
-int Resize(const std::string& field) {
+int Resize2D(const std::string& field) {
   if (field == "x") {
     return 0;
   }
@@ -6564,10 +6565,10 @@ int Resize(const std::string& field) {
   if (field == "rounding_method") {
     return 5;
   }
-  if (field == "bicubic_alpha") {
+  if (field == "cubic_alpha") {
     return 6;
   }
-  if (field == "bicubic_exclude") {
+  if (field == "cubic_exclude") {
     return 7;
   }
   if (field == "out_dtype") {
@@ -7722,10 +7723,10 @@ MNM_BIND_SCHEMA("mnm.op.reshape", names::reshape,
                 value2schema::Reshape);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reshape", names::reshape,
                             schema_field_idx::Reshape);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA("mnm.op.resize", names::resize,
-                value2schema::Resize);  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.resize", names::resize,
-                            schema_field_idx::Resize);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.resize2d", names::resize2d,
+                value2schema::Resize2D);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.resize2d", names::resize2d,
+                            schema_field_idx::Resize2D);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.reverse", names::reverse,
                 value2schema::Reverse);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.reverse", names::reverse,
@@ -8034,7 +8035,7 @@ MNM_REGISTER_OBJECT_REFLECT(ReduceScatterArgs);
 MNM_REGISTER_OBJECT_REFLECT(RepeatArgs);
 MNM_REGISTER_OBJECT_REFLECT(RepeatDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReshapeArgs);
-MNM_REGISTER_OBJECT_REFLECT(ResizeArgs);
+MNM_REGISTER_OBJECT_REFLECT(Resize2DArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseArgs);
 MNM_REGISTER_OBJECT_REFLECT(ReverseSequenceArgs);
 MNM_REGISTER_OBJECT_REFLECT(RoiAlignArgs);

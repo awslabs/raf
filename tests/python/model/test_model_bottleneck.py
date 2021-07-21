@@ -142,7 +142,7 @@ def test_bottleneck(config, is_train):
     t_y = t_block(t_x)
     m_y = m_block(m_x)
     if is_train:
-        m_dy, t_dy = randn_torch(m_y.shape, std=m_y.asnumpy().std() * 0.0001, device="cuda")
+        m_dy, t_dy = randn_torch(m_y.shape, std=m_y.numpy().std() * 0.0001, device="cuda")
         t_y.backward(t_dy)
         m_y.backward(m_dy)
     # check outputs

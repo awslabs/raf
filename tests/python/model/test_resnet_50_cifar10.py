@@ -36,7 +36,7 @@ def test_build_fp16():
     print("### Switch to AMP model")
     amp_model = mnm.amp.autocast(model)
     m_y2 = amp_model(m_x)
-    np.testing.assert_allclose(m_y1.asnumpy(), m_y2.asnumpy(), rtol=0.1, atol=0.1)
+    np.testing.assert_allclose(m_y1.numpy(), m_y2.numpy(), rtol=0.1, atol=0.1)
 
 
 @pytest.mark.parametrize("device", get_device_list())
