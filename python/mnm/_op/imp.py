@@ -75,11 +75,12 @@ def _contrib_dropout_dx(dy, reserve_space, p=0.5):
     return imp_utils.ret(ffi._contrib_dropout_dx(dy, reserve_space, p))
 
 @set_module("mnm")
-def _recv(peer, shape, dtype="float32"):
+def _recv(peer, shape, dtype="float32", token=None):
     peer = imp_utils.to_int(peer)
     shape = imp_utils.to_int_tuple(shape)
     dtype = imp_utils.to_string(dtype)
-    return imp_utils.ret(ffi._recv(peer, shape, dtype))
+    token = imp_utils.to_tensor(token)
+    return imp_utils.ret(ffi._recv(peer, shape, dtype, token))
 
 @set_module("mnm")
 def _reduce_scatter(x):
@@ -87,10 +88,11 @@ def _reduce_scatter(x):
     return imp_utils.ret(ffi._reduce_scatter(x))
 
 @set_module("mnm")
-def _send(x, peer):
+def _send(x, peer, token=None):
     x = imp_utils.to_tensor(x)
     peer = imp_utils.to_int(peer)
-    return imp_utils.ret(ffi._send(x, peer))
+    token = imp_utils.to_tensor(token)
+    return imp_utils.ret(ffi._send(x, peer, token))
 
 @set_module("mnm")
 def abs(x):

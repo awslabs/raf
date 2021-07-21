@@ -79,7 +79,7 @@ def reduce_scatter(x):
     return sym._reduce_scatter(x)
 
 
-def send(x, peer):
+def send(x, peer, token=None):
     """ Send x to peer.
     This operation is blocking for GPU.
 
@@ -91,15 +91,18 @@ def send(x, peer):
     peer : int
         The send destination
 
+    token : OptionalTensor
+        A frame of data that introduces data dependency so that send will not be reordered
+
     Returns
     -------
     ret: Tensor
         a tensor of zero dimension, which is equivalent to "no return value"
     """
-    return sym._send(x, peer=peer)
+    return sym._send(x, peer=peer, token=token)
 
 
-def recv(peer, shape, dtype):
+def recv(peer, shape, dtype, token=None):
     """ Receive a tensor from peer
     This operation is blocking for GPU.
 
@@ -114,9 +117,12 @@ def recv(peer, shape, dtype):
     dtype : String
         The dtype of the tensor to be received
 
+    token : OptionalTensor
+        A frame of data that introduces data dependency so that recv will not be reordered
+
     Returns
     -------
     ret: Tensor
         the received tensor
     """
-    return sym._recv(peer=peer, shape=shape, dtype=dtype)
+    return sym._recv(peer=peer, shape=shape, dtype=dtype, token=token)

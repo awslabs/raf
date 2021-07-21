@@ -204,7 +204,6 @@ def test_reduce_scatter():
         n_out = -n_ones * 3
         check(m_out, n_out)
 
-
 @pytest.mark.skip()
 def test_send_recv():
     shape = [2, 2]
@@ -216,9 +215,10 @@ def test_send_recv():
 
         @mnm.model.trace
         def forward(self, x):
-            t1 = mnm.send(x, peer=1)
-            # TODO(@hzfan): How to handle send, which has no return value, but side effect
-            return t1
+            t = mnm.send(x, peer=1)
+            y = mnm.recv(peer=1, shape=shape, dtype=dtype, token=t)
+            out = mnm.add(x, y)
+            return Symbol.make_tuple([out, t])
 
     class TestModel_1(mnm.Model):
         def build(self):
@@ -227,9 +227,9 @@ def test_send_recv():
         @mnm.model.trace
         def forward(self, x):
             y = mnm.recv(peer=0, shape=shape, dtype=dtype)
+            t = mnm.send(x, peer=0, token=y)
             out = mnm.add(x, y)
-            # TODO(@hzfan): How to handle send, which has no return value, but side effect
-            return out
+            return Symbol.make_tuple([out, t])
 
     rank, local_rank = get_node_info()
     device = f"cuda({local_rank})"
@@ -239,6 +239,7 @@ def test_send_recv():
     m_x = mnm.array(n_x, device=device)
     model.to(device=device)
     m_out = model(m_x)
+    m_out = m_out[0]
     if rank == 1:
         n_out = n_ones * 3
         check(m_out, n_out)

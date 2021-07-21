@@ -70,20 +70,22 @@ def _contrib_dropout_dx(dy, reserve_space, p=0.5):
     p = sym_utils.to_double(p)
     return Symbol.from_expr(ffi._contrib_dropout_dx(dy, reserve_space, p))
 
-def _recv(peer, shape, dtype="float32"):
+def _recv(peer, shape, dtype="float32", token=None):
     peer = sym_utils.to_int(peer)
     shape = sym_utils.to_int_tuple(shape)
     dtype = sym_utils.to_string(dtype)
-    return Symbol.from_expr(ffi._recv(peer, shape, dtype))
+    token = sym_utils.to_tensor(token)
+    return Symbol.from_expr(ffi._recv(peer, shape, dtype, token))
 
 def _reduce_scatter(x):
     x = sym_utils.to_tensor_tuple(x)
     return Symbol.from_expr(ffi._reduce_scatter(x))
 
-def _send(x, peer):
+def _send(x, peer, token=None):
     x = sym_utils.to_tensor(x)
     peer = sym_utils.to_int(peer)
-    return Symbol.from_expr(ffi._send(x, peer))
+    token = sym_utils.to_tensor(token)
+    return Symbol.from_expr(ffi._send(x, peer, token))
 
 def abs(x):
     x = sym_utils.to_any(x)

@@ -699,6 +699,7 @@ SCHEMAS = {
     "communication.h::send": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="peer", cxx_type="int"),
+        Arg(name="token", cxx_type=OptionalTensor, cxx_default="nullptr", py_default="None"),
     ],
     "communication.h::recv": [
         Arg(name="peer", cxx_type="int"),
@@ -707,6 +708,7 @@ SCHEMAS = {
             cxx_normalizer="IntTuple"),
         Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"",
             py_default="\"float32\""),
+        Arg(name="token", cxx_type=OptionalTensor, cxx_default="nullptr", py_default="None"),
     ],
     "transform.h::gather": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),

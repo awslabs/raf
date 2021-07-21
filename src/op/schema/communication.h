@@ -31,6 +31,7 @@ class RecvArgs : public ir::AttrsNode<RecvArgs> {
   int peer;
   std::vector<int64_t> shape;
   std::string dtype{"float32"};
+  ir::Optional<value::BaseTensorValue> token{nullptr};
   MNM_OP_SCHEMA(RecvArgs, "mnm.args.recv");
 };
 
@@ -44,6 +45,7 @@ class SendArgs : public ir::AttrsNode<SendArgs> {
  public:
   value::BaseTensorValue x;
   int peer;
+  ir::Optional<value::BaseTensorValue> token{nullptr};
   MNM_OP_SCHEMA(SendArgs, "mnm.args.send");
 };
 }  // namespace schema

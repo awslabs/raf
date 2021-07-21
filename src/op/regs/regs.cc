@@ -796,10 +796,11 @@ Attrs ProdDx(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Recv(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::RecvArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::RecvArgs, 4);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::Int, peer);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
   MNM_POD(2, ffi2schema::String, dtype);
+  MNM_TAPE(3, ffi2schema::OptionalTensor, token);
   return Attrs(attrs);
 }
 
@@ -919,9 +920,10 @@ Attrs ScatterDx(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Send(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::SendArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::SendArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, peer);
+  MNM_TAPE(2, ffi2schema::OptionalTensor, token);
   return Attrs(attrs);
 }
 
@@ -1282,10 +1284,11 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._contrib_dropout_dx").set_body([](TVMArgs args, 
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._recv").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(_recv, 3, ffi2schema::Recv, schema::RecvArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(_recv, 4, ffi2schema::Recv, schema::RecvArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Int(schema->peer));
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
   MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[3], schema2value::OptionalTensor(schema->token));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -1299,9 +1302,10 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._reduce_scatter").set_body([](TVMArgs args, TVMR
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._send").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(_send, 2, ffi2schema::Send, schema::SendArgs);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(_send, 3, ffi2schema::Send, schema::SendArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->peer));
+  MNM_SET_ENV(vpack->x[2], schema2value::OptionalTensor(schema->token));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3641,10 +3645,11 @@ Array<Expr> ProdDx(const TVMArgs& values) {
 }
 
 Array<Expr> Recv(const TVMArgs& values) {
-  MNM_PRELUDE(3);
+  MNM_PRELUDE(4);
   MNM_ARG(0, ffi2expr::Int, peer);
   MNM_ARG(1, ffi2expr::IntOrTupleInt, shape);
   MNM_ARG(2, ffi2expr::String, dtype);
+  MNM_ARG(3, ffi2expr::OptionalTensor, token);
   MNM_RET();
 }
 
@@ -3764,9 +3769,10 @@ Array<Expr> ScatterDx(const TVMArgs& values) {
 }
 
 Array<Expr> Send(const TVMArgs& values) {
-  MNM_PRELUDE(2);
+  MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Int, peer);
+  MNM_ARG(2, ffi2expr::OptionalTensor, token);
   MNM_RET();
 }
 
@@ -4060,10 +4066,10 @@ MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout_dx")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout_dx, 3, DropoutDx));
-MNM_REGISTER_GLOBAL("mnm.op.sym._recv").set_body(MNM_SYMBOLIC_API(_recv, 3, Recv));
+MNM_REGISTER_GLOBAL("mnm.op.sym._recv").set_body(MNM_SYMBOLIC_API(_recv, 4, Recv));
 MNM_REGISTER_GLOBAL("mnm.op.sym._reduce_scatter")
     .set_body(MNM_SYMBOLIC_API(_reduce_scatter, 1, ReduceScatter));
-MNM_REGISTER_GLOBAL("mnm.op.sym._send").set_body(MNM_SYMBOLIC_API(_send, 2, Send));
+MNM_REGISTER_GLOBAL("mnm.op.sym._send").set_body(MNM_SYMBOLIC_API(_send, 3, Send));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
     .set_body(MNM_SYMBOLIC_API(adaptive_avg_pool2d, 3, AdaptivePool));
@@ -4943,10 +4949,11 @@ Attrs ProdDx(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Recv(const Array<Value>& values) {
-  MNM_PRELUDE(2, 3, schema::RecvArgs);
+  MNM_PRELUDE(2, 4, schema::RecvArgs);
   MNM_REQUIRED(0, value2schema::Int, peer);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, shape);
   MNM_OPTIONAL(2, value2schema::String, dtype);
+  MNM_OPTIONAL(3, value2schema::OptionalTensor, token);
   return Attrs(attrs);
 }
 
@@ -5079,9 +5086,10 @@ Attrs ScatterDx(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Send(const Array<Value>& values) {
-  MNM_PRELUDE(2, 2, schema::SendArgs);
+  MNM_PRELUDE(2, 3, schema::SendArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Int, peer);
+  MNM_OPTIONAL(2, value2schema::OptionalTensor, token);
   return Attrs(attrs);
 }
 
@@ -6466,6 +6474,9 @@ int Recv(const std::string& field) {
   if (field == "dtype") {
     return 2;
   }
+  if (field == "token") {
+    return 3;
+  }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
 }
@@ -6714,6 +6725,9 @@ int Send(const std::string& field) {
   }
   if (field == "peer") {
     return 1;
+  }
+  if (field == "token") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
