@@ -183,6 +183,14 @@ class VirtualMachine::CudaGraphImpl {
 };
 #endif
 
+VirtualMachine::~VirtualMachine() {
+#ifdef MNM_USE_CUDA
+  if (!devices_.empty()) MNMSetStream(devices_[0], 0);
+  for (auto stream : cuda_streams_) CUDA_CALL(cudaStreamDestroy(stream));
+  for (auto event : cuda_events_) CUDA_CALL(cudaEventDestroy(event));
+#endif
+}
+
 PackedFunc VirtualMachine::GetFunction(const std::string& name,
                                        const ObjectPtr<Object>& sptr_to_self) {
   if (name == "run") {
@@ -567,7 +575,10 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         std::tie(op_env, inputs, output) = PrepareOpEnv(ctx, instr);
         ExecuteOpEnv(op_env.get(), inputs, output);
 
-        // Release workspace memory.
+        // Release workspace memory
+        // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
+        //   kernel. Because the kernel may be in the executing status at this point due to
+        //   asynchronous execution. This would cause problem for multi-stream execution.
         std::shared_ptr<Requests> requests = op_env->GetRequests();
         for (size_t i = 0; i < requests->workspace.size(); ++i) {
           Requests::WorkspaceRequest& entry = requests->workspace[i];
@@ -584,6 +595,47 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         ctx->pc++;
         goto main_loop;
       }
+#ifdef MNM_USE_CUDA
+      case Opcode::CudaSetStream: {
+        while (cuda_streams_.size() <= instr.cuda_set_stream.stream_id) {
+          cudaStream_t stream;
+          CUDA_CALL(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+          cuda_streams_.push_back(stream);
+        }
+        MNMSetStream(Device(DevType::kCUDA(), static_cast<int>(instr.cuda_set_stream.device_id)),
+                     cuda_streams_[instr.cuda_set_stream.stream_id]);
+        ctx->stream_index = instr.cuda_set_stream.stream_id;
+        ctx->pc++;
+        goto main_loop;
+      }
+      case Opcode::CudaAddEvent: {
+        CHECK_LT(ctx->stream_index, cuda_streams_.size());
+        while (cuda_events_.size() <= instr.cuda_event.event_id) {
+          cudaEvent_t event;
+          CUDA_CALL(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
+          cuda_events_.push_back(event);
+        }
+        CUDA_CALL(cudaEventRecord(cuda_events_[instr.cuda_event.event_id],
+                                  cuda_streams_[ctx->stream_index]));
+        ctx->pc++;
+        goto main_loop;
+      }
+      case Opcode::CudaWaitEvent: {
+        CHECK_LT(ctx->stream_index, cuda_streams_.size());
+        CHECK_LT(instr.cuda_event.event_id, cuda_events_.size()) << "Wait for non-existing event";
+        CUDA_CALL(cudaStreamWaitEvent(cuda_streams_[ctx->stream_index],
+                                      cuda_events_[instr.cuda_event.event_id],
+                                      0 /*cudaEventWaitDefault*/));
+        ctx->pc++;
+        goto main_loop;
+      }
+#else   // MNM_USE_CUDA
+      case Opcode::CudaSetStream:
+      case Opcode::CudaAddEvent:
+      case Opcode::CudaWaitEvent: {
+        LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
+      }
+#endif  // MNM_USE_CUDA
     }
   }
 }

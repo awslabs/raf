@@ -113,13 +113,16 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) {
+    static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> exclude_ops{
+        Op::Get("mnm.op.set_stream"), Op::Get("mnm.op.wait_event"), Op::Get("mnm.op.add_event")};
     static auto vm_set_shape_op = Op::Get("mnm.op.vm.set_shape");
     static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
         Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze")};
 
     const auto* op = node->op.as<OpNode>();
     const auto* func = node->op.as<FunctionNode>();
-    if (op || func && func->HasNonzeroAttr(attr::kPrimitive)) {
+    if ((op && !exclude_ops.count(GetRef<Op>(op))) ||
+        (func && func->HasNonzeroAttr(attr::kPrimitive))) {
       Call call = GetRef<Call>(node);
       // change the op which uses upper-bound memory to its upper-bound dialect op
       bool use_upper_bound = false;

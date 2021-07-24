@@ -253,6 +253,74 @@ class TorchInceptionE(nn.Module):
         return torch.cat(outputs, 1)
 
 
+class TorchInceptionAB(nn.Module):
+    def __init__(self):
+        super(TorchInceptionAB, self).__init__()
+        self.block_a = TorchInceptionA(192, pool_features=64)
+        self.block_b = TorchInceptionB(288)
+
+    def forward(self, x):
+        x = self.block_a(x)
+        return self.block_b(x)
+
+
+class TorchInceptionDE(nn.Module):
+    def __init__(self):
+        super(TorchInceptionDE, self).__init__()
+        self.block_d = TorchInceptionD(768)
+        self.block_e = TorchInceptionE(1280)
+
+    def forward(self, x):
+        x = self.block_d(x)
+        x = self.block_e(x)
+        return x
+
+
+class TorchInceptionCD(nn.Module):
+    def __init__(self):
+        super(TorchInceptionCD, self).__init__()
+        self.block_c = TorchInceptionC(768, 192)
+        self.block_d = TorchInceptionD(768)
+
+    def forward(self, x):
+        x = self.block_c(x)
+        x = self.block_d(x)
+        return x
+
+
+class TorchInceptionCDE(nn.Module):
+    def __init__(self):
+        super(TorchInceptionCDE, self).__init__()
+        self.block_c = TorchInceptionC(768, 192)
+        self.block_d = TorchInceptionD(768)
+        self.block_e = TorchInceptionE(1280)
+
+    def forward(self, x):
+        x = self.block_c(x)
+        x = self.block_d(x)
+        x = self.block_e(x)
+        return x
+
+
+class TorchInceptionABCDE(nn.Module):
+    def __init__(self):
+        super(TorchInceptionABCDE, self).__init__()
+        self.block_a = TorchInceptionA(192, pool_features=64)
+        self.block_b = TorchInceptionB(288)
+        self.block_c = TorchInceptionC(768, 192)
+        self.block_d = TorchInceptionD(768)
+        self.block_e = TorchInceptionE(1280)
+
+    def forward(self, x):
+        x = self.block_a(x)
+        x = self.block_b(x)
+        x = self.block_c(x)
+        x = self.block_d(x)
+        x = self.block_e(x)
+        return x
+
+
+
 class TorchBasicConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, **kwargs):
         super(TorchBasicConv2d, self).__init__()
@@ -336,8 +404,8 @@ class MNMInception3(mnm.Model):
 
     @mnm.model.trace
     def forward(self, x, y_true):
-        y_pred = self.forward_infer(x)
-        y_pred = mnm.log_softmax(y_pred)
+        x = self.forward_infer(x)
+        y_pred = mnm.log_softmax(x)
         loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
         return loss
 
@@ -509,6 +577,68 @@ class MNMInceptionE(mnm.Model):
         return mnm.concatenate(outputs, 1)
 
 
+class MNMInceptionAB(mnm.Model):
+    def build(self):
+        self.block_a = MNMInceptionA(192, pool_features=64)
+        self.block_b = MNMInceptionB(288)
+
+    def forward(self, x):
+        x = self.block_a(x)
+        return self.block_b(x)
+
+
+class MNMInceptionCD(mnm.Model):
+    def build(self):
+        self.block_c = MNMInceptionC(768, 192)
+        self.block_d = MNMInceptionD(768)
+
+    def forward(self, x):
+        x = self.block_c(x)
+        x = self.block_d(x)
+        return x
+
+
+class MNMInceptionCDE(mnm.Model):
+    def build(self):
+        self.block_c = MNMInceptionC(768, 192)
+        self.block_d = MNMInceptionD(768)
+        self.block_e = MNMInceptionE(1280)
+
+    def forward(self, x):
+        x = self.block_c(x)
+        x = self.block_d(x)
+        x = self.block_e(x)
+        return x
+
+
+class MNMInceptionDE(mnm.Model):
+    def build(self):
+        self.block_d = MNMInceptionD(768)
+        self.block_e = MNMInceptionE(1280)
+
+    def forward(self, x):
+        x = self.block_d(x)
+        x = self.block_e(x)
+        return x
+
+
+class MNMInceptionABCDE(mnm.Model):
+    def build(self):
+        self.block_a = MNMInceptionA(192, pool_features=64)
+        self.block_b = MNMInceptionB(288)
+        self.block_c = MNMInceptionC(768, 192)
+        self.block_d = MNMInceptionD(768)
+        self.block_e = MNMInceptionE(1280)
+
+    def forward(self, x):
+        x = self.block_a(x)
+        x = self.block_b(x)
+        x = self.block_c(x)
+        x = self.block_d(x)
+        x = self.block_e(x)
+        return x
+
+
 class MNMBasicConv2d(mnm.Model):
     def build(self, in_channels, out_channels, **kwargs):
         self.conv = mnn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
@@ -675,7 +805,6 @@ def get_block_and_input(block_name: str, device='cpu', batch_size=1):
     The input equals to the input of its first occurrence in inception v3.
     """
     block_name = block_name.upper()
-    assert block_name in "ABCDE"
     m_block_args = {
         'A': {'block_class': MNMInceptionA, 'in_channels': 192, 'out_channels': 256,
               'pool_features': 32},
@@ -684,6 +813,11 @@ def get_block_and_input(block_name: str, device='cpu', batch_size=1):
               'channels_7x7': 128},
         'D': {'block_class': MNMInceptionD, 'in_channels': 768, 'out_channels': 1280},
         'E': {'block_class': MNMInceptionE, 'in_channels': 1280, 'out_channels': 2048},
+        'AB': {'block_class': MNMInceptionAB, 'out_channels': 768},
+        'CD': {'block_class': MNMInceptionCD, 'out_channels': 1280},
+        'DE': {'block_class': MNMInceptionDE, 'out_channels': 2048},
+        'CDE': {'block_class': MNMInceptionCDE, 'out_channels': 2048},
+        'ABCDE': {'block_class': MNMInceptionABCDE, 'out_channels': 2048},
     }
     t_block_args = {
         'A': {'block_class': TorchInceptionA, 'in_channels': 192, 'out_channels': 256,
@@ -693,6 +827,11 @@ def get_block_and_input(block_name: str, device='cpu', batch_size=1):
               'channels_7x7': 128},
         'D': {'block_class': TorchInceptionD, 'in_channels': 768, 'out_channels': 1280},
         'E': {'block_class': TorchInceptionE, 'in_channels': 1280, 'out_channels': 2048},
+        'AB': {'block_class': TorchInceptionAB, 'out_channels': 768},
+        'CD': {'block_class': TorchInceptionCD, 'out_channels': 1280},
+        'DE': {'block_class': TorchInceptionDE, 'out_channels': 2048},
+        'CDE': {'block_class': TorchInceptionCDE, 'out_channels': 2048},
+        'ABCDE': {'block_class': TorchInceptionABCDE, 'out_channels': 2048},
     }
     input_shapes = {
         'A': (batch_size, 192, 35, 35),
@@ -700,6 +839,11 @@ def get_block_and_input(block_name: str, device='cpu', batch_size=1):
         'C': (batch_size, 768, 17, 17),
         'D': (batch_size, 768, 17, 17),
         'E': (batch_size, 1280, 8, 8),
+        'AB': (batch_size, 192, 35, 35),
+        'DE': (batch_size, 768, 17, 17),
+        'CD': (batch_size, 768, 17, 17),
+        'CDE': (batch_size, 768, 17, 17),
+        'ABCDE': (batch_size, 192, 35, 35),
     }
     m_block = MNMInceptionBlock(**m_block_args[block_name])
     t_block = TorchInceptionBlock(**t_block_args[block_name])

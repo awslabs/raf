@@ -21,6 +21,10 @@
 #include "mnm/vm/executable.h"
 #include "mnm/vm/value.h"
 
+#ifdef MNM_USE_CUDA
+#include <cuda_runtime.h>
+#endif
+
 namespace mnm {
 namespace executor {
 namespace vm {
@@ -116,6 +120,8 @@ class VMContextObj : public ValueObj {
   std::vector<Value> inputs;
   /*! \brief The pointer to the executable. */
   const Executable* exec;
+  /*! \brief The index of current working stream into cuda_streams. -1 indicates default stream. */
+  Index stream_index{-1};
 
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("func_index", &func_index);
@@ -233,8 +239,7 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    */
   virtual PackedFunc GetFunction(const std::string& name, const ObjectPtr<Object>& sptr_to_self);
 
-  virtual ~VirtualMachine() {
-  }
+  virtual ~VirtualMachine();
 
   const char* type_key() const final {
     return "VirtualMachine";
@@ -310,6 +315,17 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * corresponding VM function. It's a map from pc to the OpEnv cache.
    */
   std::vector<std::shared_ptr<VMFuncOpEnvCache>> op_env_cache_;
+
+#ifdef MNM_USE_CUDA
+  /*!
+   * \brief The stream pool for runtime.
+   */
+  std::vector<cudaStream_t> cuda_streams_;
+  /*!
+   * \brief The events used in runtime.
+   */
+  std::vector<cudaEvent_t> cuda_events_;
+#endif
 
 #ifdef MNM_USE_CUDA
   /*!

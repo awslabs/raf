@@ -5,14 +5,15 @@
  */
 #include <vector>
 #include <unordered_map>
-#include <unordered_set>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
+#include "mnm/analysis.h"
 #include "./convert_utils.h"
 namespace mnm {
 namespace pass {
 
+using mnm::analysis::CreateDependencyGraph;
 using tvm::relay::CalcScope;
 
 Expr Fill::ToANormalForm(const Expr& e, const DependencyGraph& dg, NodeScopeMap* node_scope) {
@@ -154,7 +155,7 @@ Expr Fill::VisitExpr_(const OpNode* op, const Var& v) {
 
 Expr ToANormalFormExpr(const Expr& expr) {
   tvm::support::Arena arena;
-  DependencyGraph dg = DependencyGraph::Create(&arena, expr);
+  DependencyGraph dg = CreateDependencyGraph(&arena, expr, false);
   /* In order to model new subscopes created by lambda, if else and pattern matching,
    * we also assign scope to edge as well.
    * The scope of an edge is either the parent's scope, or a new subscope of the parent's scope.

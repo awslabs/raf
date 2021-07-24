@@ -15,6 +15,7 @@ from ._internal import adaptive_avg_pool2d_dx
 from ._internal import adaptive_max_pool2d
 from ._internal import adaptive_max_pool2d_dx
 from ._internal import add
+from ._internal import add_event
 from ._internal import adv_index
 from ._internal import adv_index_dx
 from ._internal import all
@@ -140,6 +141,7 @@ from ._internal import rsqrt
 from ._internal import scatter
 from ._internal import scatter_dx
 from ._internal import sequence_mask
+from ._internal import set_stream
 from ._internal import sgd
 from ._internal import shape
 from ._internal import sigmoid
@@ -157,10 +159,7 @@ from ._internal import sqrt
 from ._internal import sqrt_dx
 from ._internal import squeeze
 from ._internal import stack
-from ._internal import stream_end
-from ._internal import stream_start
 from ._internal import stream_sync
-from ._internal import stream_wait
 from ._internal import strided_slice
 from ._internal import strided_slice_dx
 from ._internal import subtract
@@ -179,6 +178,7 @@ from ._internal import topk
 from ._internal import transpose
 from ._internal import transpose_dx
 from ._internal import trunc
+from ._internal import wait_event
 from ._internal import where
 from ._internal import zeros
 from ._internal import zeros_like

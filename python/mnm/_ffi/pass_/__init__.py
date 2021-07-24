@@ -2,7 +2,6 @@
 # pylint: disable=redefined-builtin,line-too-long
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from __future__ import absolute_import
-from ._internal import AnnotateStream
 from ._internal import AnnotateTarget
 from ._internal import AssignDevice
 from ._internal import AutoCast
@@ -35,6 +34,7 @@ from ._internal import PartitionGraph
 from ._internal import PrintIR
 from ._internal import RenameVars
 from ._internal import SimplifyExpr
+from ._internal import StreamSchedule
 from ._internal import Substitute
 from ._internal import ToANormalForm
 from ._internal import ToBasicBlockNormalForm

@@ -3,6 +3,7 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from __future__ import absolute_import
 
+from . import analysis
 from . import backend
 from . import binding
 from . import build_info

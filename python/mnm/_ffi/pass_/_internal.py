@@ -2,8 +2,6 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
-# Defined in ./src/pass/annotate_stream.cc
-AnnotateStream = _APIS.get("mnm.pass_.AnnotateStream", None)
 # Defined in ./src/pass/annotate_target.cc
 AnnotateTarget = _APIS.get("mnm.pass_.AnnotateTarget", None)
 # Defined in ./src/pass/assign_device.cc
@@ -68,6 +66,8 @@ PrintIR = _APIS.get("mnm.pass_.PrintIR", None)
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/simplify_expr.cc
 SimplifyExpr = _APIS.get("mnm.pass_.SimplifyExpr", None)
+# Defined in ./src/pass/stream_schedule.cc
+StreamSchedule = _APIS.get("mnm.pass_.StreamSchedule", None)
 # Defined in ./src/pass/substitute.cc
 Substitute = _APIS.get("mnm.pass_.Substitute", None)
 # Defined in ./src/pass/to_a_normal_form.cc

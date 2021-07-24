@@ -121,6 +121,14 @@ Instruction::Instruction(const Instruction& instr) {
       this->infer_type.num_args = instr.infer_type.num_args;
       this->infer_type.args = Duplicate<RegName>(instr.infer_type.args, instr.infer_type.num_args);
       return;
+    case Opcode::CudaSetStream:
+      this->cuda_set_stream.device_id = instr.cuda_set_stream.device_id;
+      this->cuda_set_stream.stream_id = instr.cuda_set_stream.stream_id;
+      return;
+    case Opcode::CudaAddEvent:
+    case Opcode::CudaWaitEvent:
+      this->cuda_event.event_id = instr.cuda_event.event_id;
+      return;
     default:
       std::ostringstream out;
       out << "Invalid instruction " << static_cast<int>(instr.op);
@@ -235,6 +243,14 @@ Instruction& Instruction::operator=(const Instruction& instr) {
     case Opcode::Free:
       this->free = instr.free;
       return *this;
+    case Opcode::CudaSetStream:
+      this->cuda_set_stream.device_id = instr.cuda_set_stream.device_id;
+      this->cuda_set_stream.stream_id = instr.cuda_set_stream.stream_id;
+      return *this;
+    case Opcode::CudaAddEvent:
+    case Opcode::CudaWaitEvent:
+      this->cuda_event.event_id = instr.cuda_event.event_id;
+      return *this;
     default:
       std::ostringstream out;
       out << "Invalid instruction " << static_cast<int>(instr.op);
@@ -256,6 +272,9 @@ Instruction::~Instruction() {
     case Opcode::Free:
     case Opcode::SetShape:
     case Opcode::Fatal:
+    case Opcode::CudaSetStream:
+    case Opcode::CudaAddEvent:
+    case Opcode::CudaWaitEvent:
       return;
     case Opcode::AllocTensor:
       delete[] this->alloc_tensor.shape;
@@ -505,6 +524,28 @@ Instruction Instruction::InferType(RegName op_reg, const std::vector<RegName>& a
   return instr;
 }
 
+Instruction Instruction::CudaSetStream(Index device_id, Index stream_id) {
+  Instruction instr;
+  instr.op = Opcode::CudaSetStream;
+  instr.cuda_set_stream.device_id = device_id;
+  instr.cuda_set_stream.stream_id = stream_id;
+  return instr;
+}
+
+Instruction Instruction::CudaAddEvent(Index event_id) {
+  Instruction instr;
+  instr.op = Opcode::CudaAddEvent;
+  instr.cuda_event.event_id = event_id;
+  return instr;
+}
+
+Instruction Instruction::CudaWaitEvent(Index event_id) {
+  Instruction instr;
+  instr.op = Opcode::CudaWaitEvent;
+  instr.cuda_event.event_id = event_id;
+  return instr;
+}
+
 void DLDatatypePrint(std::ostream& os, const DLDataType& dtype) {
   switch (dtype.code) {
     case kDLInt:
@@ -652,6 +693,19 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
     case Opcode::InferType: {
       os << "infer_type $" << instr.dst << " $" << instr.infer_type.op_reg << "($"
          << StrJoin<RegName>(instr.infer_type.args, 0, instr.infer_type.num_args, ",$") << ")";
+      break;
+    }
+    case Opcode::CudaSetStream: {
+      os << "cuda_set_stream " << instr.cuda_set_stream.device_id << " "
+         << instr.cuda_set_stream.stream_id;
+      break;
+    }
+    case Opcode::CudaAddEvent: {
+      os << "cuda_add_event " << instr.cuda_event.event_id;
+      break;
+    }
+    case Opcode::CudaWaitEvent: {
+      os << "cuda_wait_event" << instr.cuda_event.event_id;
       break;
     }
     default:

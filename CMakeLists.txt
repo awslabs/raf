@@ -87,6 +87,7 @@ set_property(
 )
 
 file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
+  ${CMAKE_CURRENT_LIST_DIR}/src/analysis/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/common/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cpu/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/memory_pool/*.cc

@@ -123,10 +123,10 @@ class PerDeviceStore {
  protected:
   template <bool b = create_default>
   void CreateMissing(EntryPtr* p, typename std::enable_if_t<b, int> = 0) {
-    if (p == nullptr) {
+    if (*p == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (p == nullptr) {
-        p = std::make_shared<EntryType>();
+      if (*p == nullptr) {
+        *p = std::make_shared<EntryType>();
       }
     }
   }

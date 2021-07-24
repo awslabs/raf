@@ -175,9 +175,9 @@ OPS = [
     Op(name="upper_bound.argwhere", schema_name="argwhere"),
     Op(name="roi_align", schema_name="roi_align"),
     Op(name="roi_align_dx", schema_name="roi_align_dx"),
-    Op(name="stream_start", schema_name="stream"),
-    Op(name="stream_end", schema_name="stream"),
-    Op(name="stream_wait", schema_name="stream"),
+    Op(name="set_stream", schema_name="set_stream"),
+    Op(name="add_event", schema_name="event"),
+    Op(name="wait_event", schema_name="event"),
     # Communication ops
     # Using underscore before the op name is because these ops won't be directly used in the
     # frontend and the wrapper ops are defined in python/mnm/distributed/op.py

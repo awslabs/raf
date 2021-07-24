@@ -105,12 +105,6 @@ ir::Expr InferType(ir::Expr expr);
 Pass AnnotateTarget(ir::Array<ir::String> target);
 
 /*!
- * \brief Analyze the compuation graph and annotate operators with stream_start,
- * stream_end, and stream_wait, to enable multi-stream execution in CUDA.
- * \return The pass.
- */
-Pass AnnotateStream();
-/*!
  * \brief After operators have been annotated with the targets that support
  * them, this pass creates regions of the operators for each target. It
  * is guaranteed that the regions will have a topological rodering so that
@@ -272,6 +266,18 @@ Pass InplaceUpdate();
  * \return The created pass.
  */
 Pass ValidateInplaceUpdate(bool enforce_inplace_update);
+
+/*!
+ * \brief This pass implements the stream schedule policy. It transforms BBNF into ANF and
+ * injects stream-related operators (e.g., mnm.op.set_stream, mnm.op.add_event, and
+ * mnm.op.wait_event).
+ *
+ * Please use 'mnm.stream_schedule.policy' pass config to control the schedule policy used.
+ *   Candidates are: 'sequential', 'wavefront'.
+ *
+ * \return The created pass.
+ */
+Pass StreamSchedule();
 
 }  // namespace pass
 }  // namespace mnm

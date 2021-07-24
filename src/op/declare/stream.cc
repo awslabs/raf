@@ -7,7 +7,6 @@
 #include "mnm/value.h"
 #include "mnm/tensor.h"
 #include "../schema/stream.h"
-#include "../schema/ufunc.h"
 #include "./declare_utils.h"
 
 namespace mnm {
@@ -16,9 +15,35 @@ namespace declare {
 
 using namespace mnm::op::schema;
 using namespace mnm::value;
-using tensor::Tensor;
 
-void make_stream_op(const CallValues& call) {
+MNM_OP_DECLARE("mnm.op.set_stream",
+               [](const CallValues& call) {
+                 const auto* args = call->args.as<SetStreamArgs>();
+                 CHECK(args != nullptr);
+                 call->callee = ir::NullValue<OpValue>();
+               })
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMSideEffect>("TMNMSideEffect", true);
+
+MNM_OP_DECLARE("mnm.op.add_event",
+               [](const CallValues& call) {
+                 const auto* args = call->args.as<EventArgs>();
+                 CHECK(args != nullptr);
+                 call->callee = ir::NullValue<OpValue>();
+               })
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMSideEffect>("TMNMSideEffect", true);
+
+MNM_OP_DECLARE("mnm.op.wait_event",
+               [](const CallValues& call) {
+                 const auto* args = call->args.as<EventArgs>();
+                 CHECK(args != nullptr);
+                 call->callee = ir::NullValue<OpValue>();
+               })
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMSideEffect>("TMNMSideEffect", true);
+
+MNM_OP_DECLARE("mnm.op.stream_sync", [](const CallValues& call) {
   const auto* args = call->args.as<StreamArgs>();
   CHECK(args != nullptr);
   auto& tag = args->stream_tag;
@@ -26,31 +51,7 @@ void make_stream_op(const CallValues& call) {
   const DLTensor* x = data;
   call->device = x->device;
   call->out = data;
-}
-
-void StreamSync(const CallValues& call) {
-  make_stream_op(call);
-}
-
-MNM_OP_DECLARE("mnm.op.stream_sync", StreamSync);
-
-void StreamStart(const CallValues& call) {
-  make_stream_op(call);
-}
-
-MNM_OP_DECLARE("mnm.op.stream_start", StreamStart);
-
-void StreamEnd(const CallValues& call) {
-  make_stream_op(call);
-}
-
-MNM_OP_DECLARE("mnm.op.stream_end", StreamEnd);
-
-void StreamWait(const CallValues& call) {
-  make_stream_op(call);
-}
-
-MNM_OP_DECLARE("mnm.op.stream_wait", StreamWait);
+});
 
 }  // namespace declare
 }  // namespace op

@@ -29,6 +29,8 @@ adaptive_max_pool2d_dx = _APIS.get("mnm.op.sym.adaptive_max_pool2d_dx", None)
 # Defined in ./src/op/regs/regs.cc
 add = _APIS.get("mnm.op.sym.add", None)
 # Defined in ./src/op/regs/regs.cc
+add_event = _APIS.get("mnm.op.sym.add_event", None)
+# Defined in ./src/op/regs/regs.cc
 adv_index = _APIS.get("mnm.op.sym.adv_index", None)
 # Defined in ./src/op/regs/regs.cc
 adv_index_dx = _APIS.get("mnm.op.sym.adv_index_dx", None)
@@ -279,6 +281,8 @@ scatter_dx = _APIS.get("mnm.op.sym.scatter_dx", None)
 # Defined in ./src/op/regs/regs.cc
 sequence_mask = _APIS.get("mnm.op.sym.sequence_mask", None)
 # Defined in ./src/op/regs/regs.cc
+set_stream = _APIS.get("mnm.op.sym.set_stream", None)
+# Defined in ./src/op/regs/regs.cc
 sgd = _APIS.get("mnm.op.sym.sgd", None)
 # Defined in ./src/op/regs/regs.cc
 shape = _APIS.get("mnm.op.sym.shape", None)
@@ -313,13 +317,7 @@ squeeze = _APIS.get("mnm.op.sym.squeeze", None)
 # Defined in ./src/op/regs/regs.cc
 stack = _APIS.get("mnm.op.sym.stack", None)
 # Defined in ./src/op/regs/regs.cc
-stream_end = _APIS.get("mnm.op.sym.stream_end", None)
-# Defined in ./src/op/regs/regs.cc
-stream_start = _APIS.get("mnm.op.sym.stream_start", None)
-# Defined in ./src/op/regs/regs.cc
 stream_sync = _APIS.get("mnm.op.sym.stream_sync", None)
-# Defined in ./src/op/regs/regs.cc
-stream_wait = _APIS.get("mnm.op.sym.stream_wait", None)
 # Defined in ./src/op/regs/regs.cc
 strided_slice = _APIS.get("mnm.op.sym.strided_slice", None)
 # Defined in ./src/op/regs/regs.cc
@@ -356,6 +354,8 @@ transpose = _APIS.get("mnm.op.sym.transpose", None)
 transpose_dx = _APIS.get("mnm.op.sym.transpose_dx", None)
 # Defined in ./src/op/regs/regs.cc
 trunc = _APIS.get("mnm.op.sym.trunc", None)
+# Defined in ./src/op/regs/regs.cc
+wait_event = _APIS.get("mnm.op.sym.wait_event", None)
 # Defined in ./src/op/regs/regs.cc
 where = _APIS.get("mnm.op.sym.where", None)
 # Defined in ./src/op/regs/regs.cc

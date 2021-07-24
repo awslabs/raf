@@ -4,16 +4,16 @@
  * \brief Convert dataflow graph to A-normal form.
  */
 #include <vector>
-#include <unordered_map>
-#include <unordered_set>
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
+#include "mnm/analysis.h"
 #include "./convert_utils.h"
 
 namespace mnm {
 namespace pass {
 
+using mnm::analysis::CreateDependencyGraph;
 using tvm::relay::CalcScope;
 
 // For basic block normal form, bind expressions only if the original expression's scope
@@ -28,7 +28,7 @@ Expr Fill::ToBasicBlockNormalForm(const Expr& e, const DependencyGraph& dg,
 Expr ToBasicBlockNormalFormExpr(const Expr& expr) {
   // calculate all the dependency between nodes.
   tvm::support::Arena arena;
-  DependencyGraph dg = DependencyGraph::Create(&arena, expr);
+  DependencyGraph dg = CreateDependencyGraph(&arena, expr, false);
   /* The scope of the whole expr is global.
    * The scope of any subexpr, is the lowest common ancestor of all incoming edge.
    * We also record the set of expressions whose scope is lifted.

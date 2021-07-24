@@ -67,6 +67,11 @@ enum class Opcode {
   InvokePacked = 32U,
   InvokeJit = 33U,
   InferType = 34U,
+
+  // Cuda stream instructions
+  CudaSetStream = 40U,
+  CudaAddEvent = 41U,
+  CudaWaitEvent = 42U,
 };
 
 /*! \brief A single virtual machine instruction.
@@ -232,6 +237,16 @@ struct Instruction {
       /*! \brief The registers containing the arguments. */
       RegName* args;
     } infer_type;
+    struct /* CudaSetStream Operands */ {
+      /*! \brief The id of the cuda device that we want to set the stream */
+      Index device_id;
+      /*! \brief The id of the target stream */
+      Index stream_id;
+    } cuda_set_stream;
+    struct /* CudaAddEvent and CudaWaitEvent Operands */ {
+      /*! \brief The id of the event need to add or wait on current device */
+      Index event_id;
+    } cuda_event;
   };
 
   /*!
@@ -395,7 +410,6 @@ struct Instruction {
    */
   static Instruction InvokeJit(RegName op_reg, Index arity, Index output_size,
                                const std::vector<RegName>& args);
-
   /*!
    * \brief Construct an InferType instruction.
    * \param op_reg The register containing the OpValue to invoke OpType.
@@ -404,6 +418,25 @@ struct Instruction {
    * \return The invoke OpType instruction.
    */
   static Instruction InferType(RegName op_reg, const std::vector<RegName>& args, RegName dst);
+  /*!
+   * \brief Construct a CudaSetStream instruction.
+   * \param device_id The id of device we want to set the stream on.
+   * \param stream_id The id of target stream.
+   * \return The set stream instruction.
+   */
+  static Instruction CudaSetStream(Index device_id, Index stream_id);
+  /*!
+   * \brief Construct a CudaAddEvent instruction.
+   * \param event_id The id of event we would use to record on current stream.
+   * \return The add event instruction.
+   */
+  static Instruction CudaAddEvent(Index event_id);
+  /*!
+   * \brief Construct a CudaWaitEvent instruction.
+   * \param event_id The id of event we want to wait for.
+   * \return The wait event instruction.
+   */
+  static Instruction CudaWaitEvent(Index event_id);
 
   Instruction();
   Instruction(const Instruction& instr);

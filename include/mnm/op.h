@@ -255,6 +255,9 @@ using tvm::relay::kTuple;
 using tvm::relay::OpPatternKind;
 using tvm::relay::TOpPattern;
 
+/*! \brief indicate whether this operator has side effect. */
+using TMNMSideEffect = bool;
+
 /*! \brief Map from input index to output index that the output share the memory with input. */
 using TMNMInplaceUpdate = ir::Map<ir::Integer, ir::Integer>;
 /*! \brief Indicate which dialect this dialect op belongs to. */

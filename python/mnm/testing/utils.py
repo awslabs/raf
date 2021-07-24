@@ -38,21 +38,27 @@ def run_infer_type(expr):
     return mod["main"]
 
 
-def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, sch_file=None, pass_seq=None):
+def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, **kwargs):
     """get vm executor"""
     # pylint: disable=protected-access
+    kwargs.setdefault('stream_schedule_policy', 'sequential')
+    kwargs.setdefault('sch_file', None)
+    kwargs.setdefault('pass_seq', None)
+
     record = model._internal(*args)
     mod = record.mod
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
     config = {
         "mnm.fuse_level": fuse_level,
+        "mnm.stream_schedule.policy": kwargs['stream_schedule_policy'],
     }
+    pass_seq = kwargs['pass_seq']
     with mnm.ir.PassContext(opt_level=opt_level, config=config):
         mod = mnm._ffi.pass_.InferType()(mod)
         if pass_seq is not None:
             mod = pass_seq(mod)
         executor = VMExecutor(mod, device)
-    return executor.make_executor(sch_file=sch_file), inputs
+    return executor.make_executor(sch_file=kwargs['sch_file']), inputs
 
 
 def get_vm_profiler(model, device, args, fuse_level=3):
@@ -66,9 +72,9 @@ def get_vm_profiler(model, device, args, fuse_level=3):
     return executor, inputs
 
 
-def run_vm_model(model, device, args, opt_level=2, fuse_level=3, pass_seq=None):
+def run_vm_model(model, device, args, opt_level=2, fuse_level=3, **kwargs):
     """Helper function to execute model with VM"""
-    vm, inputs = get_vm_executor(model, device, args, opt_level, fuse_level, pass_seq=pass_seq)
+    vm, inputs = get_vm_executor(model, device, args, opt_level, fuse_level, **kwargs)
     out = vm(*inputs)
     return out
 

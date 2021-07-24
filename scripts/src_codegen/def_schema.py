@@ -830,6 +830,13 @@ SCHEMAS = {
     "transform.h::argwhere": [
         Arg(name="condition", cxx_type="value::BaseTensorValue"),
     ],
+    "stream.h::set_stream": [
+        Arg(name="device_id", cxx_type="int64_t"),
+        Arg(name="stream_id", cxx_type="int64_t")
+    ],
+    "stream.h::event": [
+        Arg(name="event_id", cxx_type="int64_t")
+    ],
 }
 
 

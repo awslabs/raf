@@ -418,6 +418,18 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
                     instr.infer_type.args + instr.infer_type.num_args);
       break;
     }
+    case Opcode::CudaSetStream: {
+      // Number of fields = 2
+      fields.push_back(instr.cuda_set_stream.device_id);
+      fields.push_back(instr.cuda_set_stream.stream_id);
+      break;
+    }
+    case Opcode::CudaAddEvent:
+    case Opcode::CudaWaitEvent: {
+      // Number of fields = 1
+      fields.push_back(instr.cuda_event.event_id);
+      break;
+    }
     default:
       LOG(FATAL) << "Invalid opcode" << static_cast<int>(instr.op);
       break;
@@ -717,6 +729,21 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       RegName dst = instr.fields[2];
       std::vector<RegName> args = ExtractFields(instr.fields, 3, num_args);
       return Instruction::InferType(op_reg, args, dst);
+    }
+    case Opcode::CudaSetStream: {
+      // Number of fields = 2
+      DCHECK_EQ(instr.fields.size(), 2U);
+      return Instruction::CudaSetStream(instr.fields[0], instr.fields[1]);
+    }
+    case Opcode::CudaAddEvent: {
+      // Number of fields = 1
+      DCHECK_EQ(instr.fields.size(), 1U);
+      return Instruction::CudaAddEvent(instr.fields[0]);
+    }
+    case Opcode::CudaWaitEvent: {
+      // Number of fields = 1
+      DCHECK_EQ(instr.fields.size(), 1U);
+      return Instruction::CudaWaitEvent(instr.fields[0]);
     }
     default:
       LOG(FATAL) << "Invalid opcode" << instr.opcode;

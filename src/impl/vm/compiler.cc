@@ -494,7 +494,34 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    this->VisitExpr(args[1]);
                    auto shape_reg = last_register_;
                    Emit(Instruction::SetShape(data_reg, shape_reg, NewRegister()));
-                 });
+                 })
+          .Match(
+              "mnm.op.set_stream",
+              [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                CHECK_EQ(args.size(), 2);
+                this->VisitExpr(args[0]);
+                auto device_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                Index device_id = device_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+                this->VisitExpr(args[1]);
+                auto stream_id_expr = expr_map_[GetRef<Var>(args[1].as<VarNode>())];
+                Index stream_id = stream_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+                Emit(Instruction::CudaSetStream(device_id, stream_id));
+              })
+          .Match("mnm.op.add_event",
+                 [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                   CHECK_EQ(args.size(), 1);
+                   auto event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                   Index event_id =
+                       event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+                   Emit(Instruction::CudaAddEvent(event_id));
+                 })
+          .Match("mnm.op.wait_event", [this](const Array<Expr>& args, const Attrs& attrs,
+                                             const Array<Type>& type_arg) {
+            CHECK_EQ(args.size(), 1);
+            auto event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+            Index event_id = event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+            Emit(Instruction::CudaWaitEvent(event_id));
+          });
       matcher(GetRef<Call>(call_node));
       return;
     }
@@ -748,6 +775,9 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
   const auto& it = targets.begin();
   tvm::With<tvm::Target> tctx((*it).second);
+  pass::PassContext pass_ctx = pass::PassContext::Current();
+  tvm::With<pass::PassContext> ctx(pass_ctx);
+
   Array<pass::Pass> pass_seqs;
 
   // optimization passes that work on ANF
@@ -761,8 +791,14 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::FuseOps());
 
+  // optimization passes that transform BBNF into ANF
+  if ((*it).second->kind->name == "cuda") {
+    pass_seqs.push_back(pass::StreamSchedule());
+  } else {
+    pass_seqs.push_back(pass::ToANormalForm());
+  }
+
   // optimization passes that work on ANF
-  pass_seqs.push_back(pass::ToANormalForm());
   pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
@@ -775,8 +811,6 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   pass_seqs.push_back(pass::MemoryPlan());
 
   pass::MNMSequential seq(pass_seqs);
-  pass::PassContext pass_ctx = pass::PassContext::Current();
-  tvm::With<pass::PassContext> ctx(pass_ctx);
   return seq(mod);
 }
 

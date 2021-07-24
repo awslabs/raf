@@ -12,6 +12,19 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class EventArgs : public ir::AttrsNode<EventArgs> {
+ public:
+  int64_t event_id;
+  MNM_OP_SCHEMA(EventArgs, "mnm.args.event");
+};
+
+class SetStreamArgs : public ir::AttrsNode<SetStreamArgs> {
+ public:
+  int64_t device_id;
+  int64_t stream_id;
+  MNM_OP_SCHEMA(SetStreamArgs, "mnm.args.set_stream");
+};
+
 class StreamArgs : public ir::AttrsNode<StreamArgs> {
  public:
   value::BaseTensorValue x;
