@@ -377,6 +377,17 @@ struct HasCallVisitor : ExprVisitor {
   void VisitExpr_(const CallNode* op) final {
     has_call = true;
   }
+  void VisitExpr_(const LetNode* op) final {
+    auto pre_visit = [this](const LetNode* op) {
+      this->VisitExpr(op->var);
+      this->VisitExpr(op->value);
+    };
+    auto post_visit = [this](const LetNode* op) {
+      this->VisitExpr(op->body);
+      this->visit_counter_[op] += 1;
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+  }
 };
 
 class FuseMutator : private ExprMutator {
@@ -525,20 +536,41 @@ class FuseMutator : private ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* let) {
-    auto ret_group = gmap_.at(let->var.get())->FindRoot();
-    if (ret_group->num_call_nodes == 1) {
-      // Skip the group with only one call node.
-      return ExprMutator::VisitExpr_(let);
-    }
-
-    auto new_value = Mutate(let->value);
-    let_binding_.emplace(let->var, std::make_pair(let->value, new_value));
-    auto new_body = Mutate(let->body);
-    if (let_inlined_.count(let->var)) {
-      // The var is already inlined into fused op, directly return the body.
-      return new_body;
-    }
-    return Let(let->var, new_value, new_body);
+    auto pre_visit = [this](const LetNode* op) {
+      auto ret_group = gmap_.at(op->var.get())->FindRoot();
+      if (ret_group->num_call_nodes == 1) {
+        // Skip the group with only one call node.
+        Mutate(op->var);
+        Mutate(op->value);
+      } else {
+        auto new_value = Mutate(op->value);
+        let_binding_.emplace(op->var, std::make_pair(op->value, new_value));
+      }
+    };
+    auto post_visit = [this](const LetNode* op) {
+      auto expr = GetRef<Expr>(op);
+      auto ret_group = gmap_.at(op->var.get())->FindRoot();
+      auto var = Downcast<Var>(Mutate(op->var));
+      auto value = Mutate(op->value);
+      auto body = Mutate(op->body);
+      if (ret_group->num_call_nodes == 1) {
+        // Skip the group with only one call node.
+        if (var.same_as(op->var) && value.same_as(op->value) && body.same_as(op->body)) {
+          this->memo_[expr] = expr;
+        } else {
+          this->memo_[expr] = Let(var, value, body);
+        }
+      } else {
+        if (let_inlined_.count(op->var)) {
+          // The var is already inlined into fused op, directly return the body.
+          this->memo_[expr] = body;
+        } else {
+          this->memo_[expr] = Let(op->var, value, body);
+        }
+      }
+    };
+    ExpandANormalForm(let, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(let)];
   }
 
   Expr MakeNewFunction(GraphPartitioner::Group* group, Type ret_type, Expr body) {

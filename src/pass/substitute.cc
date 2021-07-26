@@ -20,16 +20,38 @@ class SubstitueMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* op) final {
-    CHECK(!args_map_.count(op->var)) << "Cannot bind an internel variable in let";
-    const auto* var = static_cast<const ExtendedVarNode*>(op->var.get());
-    if (var->may_share.defined()) {
-      Expr may_share = VisitExpr(var->may_share);
-      const auto* msv = may_share.as<VarNode>();
-      Var new_var = MakeVar(var->name_hint(), var->type_annotation, msv ? GetRef<Var>(msv) : Var());
-      args_map_.Set(op->var, new_var);
-      return Let(new_var, VisitExpr(op->value), VisitExpr(op->body));
-    }
-    return ExprMutator::VisitExpr_(op);
+    auto pre_visit = [this](const LetNode* op) {
+      CHECK(!args_map_.count(op->var)) << "Cannot bind an internel variable in let";
+      const auto* var = static_cast<const ExtendedVarNode*>(op->var.get());
+      if (var->may_share.defined()) {
+        Expr may_share = VisitExpr(var->may_share);
+        const auto* msv = may_share.as<VarNode>();
+        Var new_var =
+            MakeVar(var->name_hint(), var->type_annotation, msv ? GetRef<Var>(msv) : Var());
+        args_map_.Set(op->var, new_var);
+      } else {
+        this->VisitExpr(op->var);
+      }
+      this->VisitExpr(op->value);
+    };
+    auto post_visit = [this](const LetNode* op) {
+      auto expr = GetRef<Expr>(op);
+      const auto* extended_var = static_cast<const ExtendedVarNode*>(op->var.get());
+      Var var = Downcast<Var>(this->VisitExpr(op->var));
+      auto value = this->VisitExpr(op->value);
+      auto body = this->VisitExpr(op->body);
+      if (extended_var->may_share.defined()) {
+        this->memo_[expr] = Let(Downcast<Var>(args_map_[op->var]), value, body);
+      } else {
+        if (var.same_as(op->var) && value.same_as(op->value) && body.same_as(op->body)) {
+          this->memo_[expr] = expr;
+        } else {
+          this->memo_[expr] = Let(var, value, body);
+        }
+      }
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(op)];
   }
 
   Expr VisitExpr_(const FunctionNode* op) final {

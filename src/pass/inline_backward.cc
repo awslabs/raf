@@ -17,20 +17,28 @@ using namespace mnm::ir;
 
 class InlineBackwardFunc : public ExprVisitor {
  public:
-  void VisitExpr_(const LetNode* let) final {
-    if (!in_closure_ && let->body.get() == let->var.get()) {
-      // The return stmt in original function
-      if (auto tup = let->value.as<TupleNode>()) {
-        old_ret_ = tup->fields;
+  void VisitExpr_(const LetNode* op) final {
+    auto pre_visit = [this](const LetNode* let) {
+      if (!in_closure_ && let->body.get() == let->var.get()) {
+        // The return stmt in original function
+        if (auto tup = let->value.as<TupleNode>()) {
+          old_ret_ = tup->fields;
+        }
+      } else if (let->value.as<FunctionNode>()) {
+        // The backward graph closure
+        closure_var_ = let->var.get();
+      } else {
+        ell_.exprs.push_back(let->value);
+        ell_.vars.push_back(let->var);
       }
-    } else if (let->value.as<FunctionNode>()) {
-      // The backward graph closure
-      closure_var_ = let->var.get();
-    } else {
-      ell_.exprs.push_back(let->value);
-      ell_.vars.push_back(let->var);
-    }
-    ExprVisitor::VisitExpr_(let);
+      this->VisitExpr(let->var);
+      this->VisitExpr(let->value);
+    };
+    auto post_visit = [this](const LetNode* let) {
+      this->VisitExpr(let->body);
+      this->visit_counter_[let] += 1;
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
   }
 
   void VisitExpr_(const FunctionNode* func_node) final {

@@ -74,20 +74,28 @@ class LambdaLifter : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* let_node) final {
-    bool is_lambda = false;
-    if (auto func = let_node->value.as<FunctionNode>()) {
-      if (!func->HasNonzeroAttr(attr::kPrimitive)) {
-        is_lambda = true;
-        letrec_.push_back(let_node->var);
+    auto pre_visit = [this](const LetNode* op) {
+      bool is_lambda = false;
+      if (auto func = op->value.as<FunctionNode>()) {
+        if (!func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
+          is_lambda = true;
+          letrec_.push_back(op->var);
+        }
       }
-    }
-    auto value = VisitExpr(let_node->value);
-    if (is_lambda) {
-      letrec_.pop_back();
-    }
-    auto body = VisitExpr(let_node->body);
-    auto new_let = Let(let_node->var, value, body);
-    return ANFNormalizer(new_let);
+      auto value = VisitExpr(op->value);
+      if (is_lambda) {
+        letrec_.pop_back();
+      }
+    };
+    auto post_visit = [this](const LetNode* op) {
+      auto expr = GetRef<Expr>(op);
+      auto value = VisitExpr(op->value);
+      auto body = VisitExpr(op->body);
+      auto new_let = Let(op->var, value, body);
+      this->memo_[expr] = ANFNormalizer(new_let);
+    };
+    ExpandANormalForm(let_node, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(let_node)];
   }
 
   Expr VisitExpr_(const CallNode* call_node) final {

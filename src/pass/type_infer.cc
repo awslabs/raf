@@ -249,39 +249,63 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* op) override {
-    Expr ovalue = op->value;
-    Var var = op->var;
-    Expr value = ovalue;
+    auto pre_visit = [this](const LetNode* op) {
+      Expr ovalue = op->value;
+      Var var = op->var;
+      Expr value = ovalue;
 
-    // Do not infer binded primitive functions here. Since we may need the caller arguments
-    // to infer types of function body, we defer type inference of primitive function to its caller.
-    auto fn_node = value.as<FunctionNode>();
-    bool infer_body = !fn_node || !fn_node->HasNonzeroAttr(attr::kPrimitive);
-    if (infer_body) {
-      value = VisitExpr(ovalue);
-    }
+      // Do not infer binded primitive functions here. Since we may need the caller arguments
+      // to infer types of function body, we defer type inference of primitive function to its
+      // caller.
+      auto fn_node = value.as<FunctionNode>();
+      bool infer_body = !fn_node || !fn_node->HasNonzeroAttr(attr::kPrimitive);
+      if (infer_body) {
+        value = VisitExpr(ovalue);
+      }
 
-    if (value.as<ConstantNode>()) {
-      memo_[var] = value;
-      return VisitExpr(op->body);
-    }
+      if (value.as<ConstantNode>()) {
+        this->memo_[var] = value;
+        return;
+      }
 
-    const VarNode* v = value.as<VarNode>();
-    if (v && var_value_map_.count(v)) {
-      var_value_map_[op->var.get()] = var_value_map_[v];
-    } else {
-      var_value_map_[op->var.get()] = value;
-    }
+      const VarNode* v = value.as<VarNode>();
+      if (v && var_value_map_.count(v)) {
+        var_value_map_[op->var.get()] = var_value_map_[v];
+      } else {
+        var_value_map_[op->var.get()] = value;
+      }
 
-    // If the binded primitive function has not been inferred, then it does not have the type yet.
-    if (infer_body) {
-      var->checked_type_ = value->checked_type();
-    }
+      // If the binded primitive function has not been inferred, then it does not have the type yet.
+      if (infer_body) {
+        var->checked_type_ = value->checked_type();
+      }
+    };
+    auto post_visit = [this](const LetNode* op) {
+      auto expr = GetRef<Expr>(op);
+      Expr ovalue = op->value;
+      Var var = op->var;
+      Expr value = ovalue;
 
-    Expr body = VisitExpr(op->body);
-    Let let(var, value, body);
-    let->checked_type_ = body->checked_type();
-    return let;
+      // Do not infer binded primitive functions here. Since we may need the caller arguments
+      // to infer types of function body, we defer type inference of primitive function to its
+      // caller.
+      auto fn_node = value.as<FunctionNode>();
+      bool infer_body = !fn_node || !fn_node->HasNonzeroAttr(attr::kPrimitive);
+      if (infer_body) {
+        value = this->VisitExpr(ovalue);
+      }
+
+      if (value.as<ConstantNode>()) {
+        this->memo_[expr] = this->VisitExpr(op->body);
+        return;
+      }
+      Expr body = this->VisitExpr(op->body);
+      Let let(var, value, body);
+      let->checked_type_ = body->checked_type();
+      this->memo_[expr] = let;
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(op)];
   }
 
   Expr VisitExpr_(const TupleNode* op) override {
