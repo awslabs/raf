@@ -231,13 +231,11 @@ register_op_cast_rule("mnm.op.reverse_sequence", infer_cast(1))
 register_op_cast_rule("mnm.op.reverse", infer_cast(1))
 register_op_cast_rule("mnm.op.broadcast_to", infer_cast(1))
 register_op_cast_rule("mnm.op.broadcast_to_like", infer_cast(1))
-register_op_cast_rule("mnm.op.concatenate", infer_cast(1))
 register_op_cast_rule("mnm.op.squeeze", infer_cast(1))
 register_op_cast_rule("mnm.op.stack", infer_cast(1))
 register_op_cast_rule("mnm.op.split", infer_cast(1))
 register_op_cast_rule("mnm.op.scatter", infer_cast(1))
 register_op_cast_rule("mnm.op.scatter_dx", infer_cast(3))
-register_op_cast_rule("mnm.op.concatenate_dx", infer_cast(1))
 register_op_cast_rule("mnm.op.clip", infer_cast(1))
 register_op_cast_rule("mnm.op.clip_dx", infer_cast(2))
 register_op_cast_rule("mnm.op.get_valid_counts", infer_cast(1))
@@ -338,3 +336,23 @@ register_op_cast_rule("mnm.op.batch_norm_train", op_cast_norm(1, 3))
 # and we have not figured out the reason. However, it does not affect the convergence of AMP models
 # so we still cast it.
 register_op_cast_rule("mnm.op.batch_norm_train_dxwb", op_cast_norm(2, 3))
+
+
+def op_cast_concatenate(args, ret_type, amp_dtype):
+    """Concatenate may have too many inputs that exceeds the GPU register when using the injective
+    schedule with float16, so we make a heuristic that prevents concat from being executed with
+    float16 if it has too many inputs.
+    """
+    in_types = args[0].checked_type.fields
+    cast_to_amp = sum([check_amp_dtype(t, amp_dtype) for t in in_types]) > len(in_types) // 2
+    cast_to_amp &= len(in_types) <= 5
+    target_dtype = amp_dtype if cast_to_amp else "float32"
+
+    ret = []
+    ret += [TupleType([PrimType(target_dtype) for _ in in_types])] # Input tuple.
+    ret += [PrimType(None)] # axis.
+    ret += [PrimType(target_dtype)] # Return type.
+    return ret
+
+register_op_cast_rule("mnm.op.concatenate", op_cast_concatenate)
+register_op_cast_rule("mnm.op.concatenate_dx", op_cast_concatenate)

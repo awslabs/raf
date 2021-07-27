@@ -211,5 +211,31 @@ def test_cast_reuse():
     verify_cast_num(model, [m_x], 5)
 
 
+@pytest.mark.parametrize("params", [
+    # Majority is float16, cast 2 float32 to float16.
+    (2, 3, 2),
+    # Majority is float32, cast 2 float16 to float32.
+    (3, 2, 2),
+    # Total input > 5, force to cast all inputs to float32.
+    (3, 4, 4)
+])
+def test_concatenate(params):
+    shape = (12, 10)
+    n_fp32_inputs, n_fp16_inputs, expected_cast_num = params
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, *args):
+            return mnm.concatenate(args, axis=0)
+
+    model = Model()
+    args = ([randn(shape, requires_grad=False, dtype="float32")[0] for _ in range(n_fp32_inputs)] +
+            [randn(shape, requires_grad=False, dtype="float16")[0] for _ in range(n_fp16_inputs)])
+    verify_cast_num(model, args, expected_cast_num)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
