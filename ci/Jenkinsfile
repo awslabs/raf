@@ -1,5 +1,5 @@
-ci_cpu = "metaprojdev/meta:ci_cpu-v0.12"
-ci_gpu = "metaprojdev/meta:ci_gpu-v0.13"
+ci_cpu = "metaprojdev/meta:ci_cpu-v0.13"
+ci_gpu = "metaprojdev/meta:ci_gpu-v0.14"
 
 docker_run = 'docker/bash.sh'
 max_time = 120
