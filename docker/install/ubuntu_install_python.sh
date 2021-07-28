@@ -28,7 +28,8 @@ pip3 install cmake
 pip3 install scikit-build==0.11.1
 pip3 install pylint==2.4.3 cpplint
 pip3 install six numpy pytest cython decorator scipy tornado typed_ast pytest mypy orderedset \
-             antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser
+             antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser \
+             pydot
 pip3 install torch==1.6.0 torchvision==0.7.0 -f https://download.pytorch.org/whl/torch_stable.html
 pip3 install mxnet==1.6.0
 pip3 install gluoncv==0.10.1
