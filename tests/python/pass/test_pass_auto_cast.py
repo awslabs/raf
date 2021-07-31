@@ -6,7 +6,7 @@ import torch
 import mnm
 from tvm.ir import PrimType
 from mnm.ir import AsText
-from mnm.testing import randn, randn_torch, run_vm_model, check
+from mnm.testing import randn, randn_torch, run_vm_model, check, get_device_list
 
 def verify_correctness(model, device, args, ref_outs=None, tol=1e-5):
     # A helper function to verify the correctness
@@ -235,6 +235,21 @@ def test_concatenate(params):
     args = ([randn(shape, requires_grad=False, dtype="float32")[0] for _ in range(n_fp32_inputs)] +
             [randn(shape, requires_grad=False, dtype="float16")[0] for _ in range(n_fp16_inputs)])
     verify_cast_num(model, args, expected_cast_num)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+def test_mean_dx(device):
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm._op.sym.mean_dx(x)
+
+    m_x, _ = randn((), dtype="float32", device=device)
+    model = Model()
+    verify_correctness(model, device, [m_x])
 
 
 if __name__ == "__main__":
