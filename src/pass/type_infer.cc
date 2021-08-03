@@ -66,6 +66,13 @@ class TypeInferencer : public ExprMutator {
 
   Expr VisitExpr_(const GlobalVarNode* op) override {
     CHECK(mod_.defined());
+    CHECK(mod_->ContainGlobalVar(op->name_hint))
+        << "Module does not contain " << GetRef<GlobalVar>(op);
+    Expr func = mod_->Lookup(GetRef<GlobalVar>(op));
+    if (!func->checked_type_.defined()) {
+      func = VisitExpr(func);
+    }
+    op->checked_type_ = func->checked_type();
     return std::move(GetRef<GlobalVar>(op));
   }
 
@@ -151,6 +158,8 @@ class TypeInferencer : public ExprMutator {
         ret->args[i]->checked_type_ = Unify(fty_node->arg_types[i], ret->args[i]->checked_type());
       }
       ret->checked_type_ = fty_node->ret_type;
+    } else if (const auto* ftn = op->checked_type().as<FuncTypeNode>()) {
+      ret->checked_type_ = ftn->ret_type;
     } else {
       LOG(FATAL) << "Invalid op type: " << call->op->GetTypeKey();
     }

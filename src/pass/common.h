@@ -193,8 +193,9 @@ static inline Function CreateGlobalFunc(const Array<Var>& free_vars, const Expr&
   Array<Var> new_free_vars;
   tvm::Map<Var, Var> mapping;
   for (auto old_free_var : free_vars) {
-    Var new_free_var =
-        mnm::ir::MakeVar(old_free_var->name_hint(), old_free_var->type_annotation, {});
+    Type type_annotation = old_free_var->checked_type_.defined() ? old_free_var->checked_type()
+                                                                 : old_free_var->type_annotation;
+    Var new_free_var = mnm::ir::MakeVar(old_free_var->name_hint(), type_annotation, {});
     new_free_vars.push_back(new_free_var);
     mapping.Set(old_free_var, new_free_var);
   }

@@ -65,16 +65,23 @@ class InplaceVisitor : public MixedModeVisitor {
 
 class ManifestAllocMutator : public ExprMutator {
  public:
-  ManifestAllocMutator() : scopes_{LetList()} {
+  ManifestAllocMutator() {
+    scopes_.emplace_back(new LetList);
   }
 
   Expr VisitExpr_(const TupleNode* node) {
-    auto& scope = scopes_.back();
+    // Previously `scopes_` is defined as `std::vector<LetList>` and
+    // `auto& scope = scopes_.back();` is heavily used to access the inner most scope.
+    // However, this pattern is erron prone and thus not recommended:
+    // scopes_.back() returns a reference to the last element, which is invalidated when
+    // reallocation happens in scopes_. See https://stackoverflow.com/questions/20098454/
+    // weird-behavior-of-reference-to-vector-back-after-vector-is-modified for reference.
+    auto scope = scopes_.back().get();
     Array<Expr> new_fields;
     for (auto field : node->fields) {
       auto new_field = VisitExpr(field);
       if (auto constant_field = field.as<ConstantNode>()) {
-        auto const_var = scope.Push(field);
+        auto const_var = scope->Push(field);
         new_field = const_var;
       }
       new_fields.push_back(new_field);
@@ -83,13 +90,13 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const RelayConstantNode* node) {
-    auto var = scopes_.back().Push(GetRef<Expr>(node));
+    auto var = scopes_.back()->Push(GetRef<Expr>(node));
     /*
      * After constant folding, sometimes the IR return a single ConstantNode.
      * In this case, get the body from LetList and return, otherwise there will be free vars.
      */
     if (scopes_.size() == 1) {
-      auto ret = scopes_.back().Get(var);
+      auto ret = scopes_.back()->Get(var);
       scopes_.pop_back();
       return ret;
     }
@@ -97,17 +104,17 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* node) {
-    scopes_.emplace_back();
-    auto& scope = scopes_.back();
+    scopes_.emplace_back(new LetList);
+    auto scope = scopes_.back().get();
     Expr body;
     do {
       let_binding_.emplace(node->value, node->var);
-      scope.Push(node->var, VisitExpr(node->value));
+      scope->Push(node->var, VisitExpr(node->value));
       body = node->body;
       node = body.as<LetNode>();
     } while (node);
     auto new_body = VisitExpr(body);
-    auto ret = scopes_.back().Get(new_body);
+    auto ret = scopes_.back()->Get(new_body);
     scopes_.pop_back();
     return ret;
   }
@@ -133,7 +140,7 @@ class ManifestAllocMutator : public ExprMutator {
         op = call->op.as<OpNode>();
         use_upper_bound = true;
       }
-      auto& scope = scopes_.back();
+      auto scope = scopes_.back().get();
       Var bind_var = let_binding_[GetRef<Call>(node)];
 
       auto ret_type = call->checked_type();
@@ -163,9 +170,9 @@ class ManifestAllocMutator : public ExprMutator {
 
         std::vector<Expr> outs;
         if (tvm::relay::IsDynamic(ret_type)) {
-          outs = DynamicInvoke(&scope, bind_var, call->op, new_args, out_types);
+          outs = DynamicInvoke(scope, bind_var, call->op, new_args, out_types);
         } else {
-          outs = StaticInvoke(&scope, bind_var, call->op, new_args, out_types);
+          outs = StaticInvoke(scope, bind_var, call->op, new_args, out_types);
         }
 
         // if op uses upper bound shape, reshapes its results
@@ -314,7 +321,7 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   /*! \brief The scope stack of the let list. */
-  std::vector<LetList> scopes_;
+  std::vector<std::unique_ptr<LetList>> scopes_;
   /*! \brief The mapping from expr to let bound var. */
   std::unordered_map<Expr, Var, ObjectPtrHash, ObjectPtrEqual> let_binding_;
   /*! \breif Inplace visitor to check the may_share information. */

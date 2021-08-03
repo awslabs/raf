@@ -213,7 +213,13 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     }
 
     if (tvm::relay::vm::IsClosure(func)) {
-      Function inner_func = Downcast<Function>(func->body);
+      Function inner_func;
+      if (const auto* fn = func->body.as<FunctionNode>()) {
+        inner_func = GetRef<Function>(fn);
+      } else if (const auto* ln = func->body.as<LetNode>()) {
+        CHECK_EQ(ln->var, ln->body);
+        inner_func = Downcast<Function>(ln->value);
+      }
       for (auto param : inner_func->params) {
         auto arg_register = NewRegister();
         CHECK_EQ(i, arg_register);

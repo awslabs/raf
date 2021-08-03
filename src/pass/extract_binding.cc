@@ -6,6 +6,7 @@
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/binding.h"
+#include "mnm/pass.h"
 
 namespace mnm {
 namespace pass {
@@ -28,6 +29,7 @@ class Extractor final : public ExprVisitor {
   }
 
   void VisitExpr_(const CallNode* node) final {
+    EnqueueVar(node->op);
     for (const Expr& expr : node->args) {
       EnqueueVar(expr);
     }
@@ -49,8 +51,14 @@ class Extractor final : public ExprVisitor {
     EnqueueVar(node->false_branch);
   }
 
+  void VisitExpr_(const FunctionNode* node) final {
+    for (const Var& var : FreeVars(GetRef<Function>(node))) {
+      EnqueueVar(var);
+    }
+  }
+
   void EnqueueVar(const Expr& expr) {
-    if (expr->IsInstance<ConstantNode>()) {
+    if (expr->IsInstance<ConstantNode>() || expr->IsInstance<OpNode>()) {
       return;
     }
     if (phase == 0) {

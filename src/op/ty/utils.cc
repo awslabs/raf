@@ -5,6 +5,7 @@
  */
 #include "./utils.h"
 #include "mnm/value_functor.h"
+#include "mnm/pass.h"
 
 namespace mnm {
 namespace op {
@@ -52,6 +53,15 @@ class ValueTyper : public ValueFunctor<Type(const Value&)> {
 
   Type VisitValue_(const TensorTypeValueObj* value) override {
     return value->type;
+  }
+
+  Type VisitValue_(const ClosureValueObj* value) override {
+    std::vector<Type> fields;
+    if (value->func->checked_type_.defined()) {
+      return value->func->checked_type();
+    }
+    ir::Expr func = pass::InferType(value->func);
+    return func->checked_type();
   }
 };
 

@@ -204,8 +204,8 @@ class MemoryPlanner : public ExprMutator {
       : func_(func),
         analyzer_(analyzer),
         tensor_groups_(Group(reuse_storage)),
-        insert_free_(inert_free),
-        scopes_{LetList()} {
+        insert_free_(inert_free) {
+    scopes_.emplace_back(new LetList);
   }
 
   Expr Run() {
@@ -225,8 +225,8 @@ class MemoryPlanner : public ExprMutator {
 
   Expr VisitExpr_(const LetNode* node) {
     static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
-    scopes_.emplace_back();
-    auto& scope = scopes_.back();
+    scopes_.emplace_back(new LetList);
+    auto scope = scopes_.back().get();
     Expr body;
     do {
       curr_let_ = node->var;
@@ -250,7 +250,7 @@ class MemoryPlanner : public ExprMutator {
               // Free allocated storages that will not be used anymore.
               auto group = tensor_groups_.groups[group_id];
               if (group.members.size() == 0) {
-                scope.Push(MakeFreeMemory(group.storage));
+                scope->Push(MakeFreeMemory(group.storage));
               }
             }
             it = live_tensors_.erase(it);
@@ -273,14 +273,14 @@ class MemoryPlanner : public ExprMutator {
       }
       if (!dismiss_storage) {
         expr_map_.emplace(node->var, value);
-        scope.Push(node->var, value);
+        scope->Push(node->var, value);
       }
 
       body = node->body;
       node = body.as<LetNode>();
     } while (node);
     auto new_body = VisitExpr(body);
-    auto ret = scopes_.back().Get(new_body);
+    auto ret = scopes_.back()->Get(new_body);
     scopes_.pop_back();
     return ret;
   }
@@ -355,7 +355,7 @@ class MemoryPlanner : public ExprMutator {
 
  private:
   /*! \brief The scope stack of the let list. */
-  std::vector<LetList> scopes_;
+  std::vector<std::unique_ptr<LetList>> scopes_;
   /*! \brief The functio to be optimized. */
   const Function& func_;
   /*! \brief The current processing let var. */

@@ -16,7 +16,6 @@ class Backend:
     """
     valid_backends = ["tvm", "cuda", "cudnn", "cutlass", "cublas", "nccl"]
     storage = threading.local()
-    storage.scope = []
 
     def __init__(self, backends):
         if not set(Backend.valid_backends).issuperset(set(backends)):
@@ -25,6 +24,8 @@ class Backend:
         self.backends = backends
 
     def __enter__(self):
+        if not hasattr(Backend.storage, "scope"):
+            Backend.storage.scope = []
         Backend.storage.scope.append(self)
         return self
 
@@ -35,7 +36,7 @@ class Backend:
 @tvm._ffi.register_func("mnm.backend.preferred_backends")
 def preferred_backends():
     """Get a list of preferred backends, with descending priority"""
-    if not Backend.storage.scope:
+    if not hasattr(Backend.storage, "scope") or not Backend.storage.scope:
         return None
     return Backend.storage.scope[-1].backends
 

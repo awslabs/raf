@@ -143,7 +143,8 @@ using CastCache = std::unordered_map<std::pair<Expr, TypeHint>, Var, CastCacheHa
 
 class AutoCastMutator : public ExprMutator {
  public:
-  AutoCastMutator(const String amp_dtype, const String out_dtype) : scopes_{LetList()} {
+  AutoCastMutator(const String amp_dtype, const String out_dtype) {
+    scopes_.emplace_back(new LetList);
     amp_dtype_ = DataType(String2DLDataType(amp_dtype));
     out_dtype_ = DataType(String2DLDataType(out_dtype));
   }
@@ -165,13 +166,13 @@ class AutoCastMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* node) {
-    scopes_.emplace_back();
-    auto& scope = scopes_.back();
+    scopes_.emplace_back(new LetList);
+    auto scope = scopes_.back().get();
     Expr body;
     do {
       auto new_value = VisitExpr(node->value);
       node->var->checked_type_ = new_value->checked_type();
-      scope.Push(node->var, new_value);
+      scope->Push(node->var, new_value);
       let_vars_to_orig_type_.emplace(node->var, node->value->checked_type());
       let_vars_.emplace(node->var, new_value);
       body = node->body;
@@ -182,7 +183,7 @@ class AutoCastMutator : public ExprMutator {
     // Cast output tensors if needed.
     TypeHint ret_type_hint = GenOutputTypeHint(new_body->checked_type());
     new_body = CastExpr(new_body, ret_type_hint);
-    auto ret = scopes_.back().Get(new_body);
+    auto ret = scopes_.back()->Get(new_body);
     ret->checked_type_ = new_body->checked_type();
     scopes_.pop_back();
     return ret;
@@ -351,7 +352,7 @@ class AutoCastMutator : public ExprMutator {
 
   /*! \brief Generate a tuple of casted tensors. */
   Expr CastTuple(const Expr arg, const TypeHint type_hint, bool use_cache = true) {
-    auto& scope = scopes_.back();
+    auto scope = scopes_.back().get();
 
     auto expr = GetBindExpr(arg);
     if (expr->IsInstance<ConstantNode>()) {
@@ -392,7 +393,7 @@ class AutoCastMutator : public ExprMutator {
       } else {
         LOG(FATAL) << "Unsupported field type: " << field_type->GetTypeKey();
       }
-      auto new_var = scope.Push(new_expr);
+      auto new_var = scope->Push(new_expr);
       new_var->checked_type_ = new_expr->checked_type_;
       fields.push_back(new_var);
     }
@@ -404,14 +405,14 @@ class AutoCastMutator : public ExprMutator {
 
   /*! \brief Cast the expr based on the given type hint. */
   Expr CastExpr(const Expr expr, const TypeHint& type_hint, bool use_cache = true) {
-    auto& scope = scopes_.back();
+    auto scope = scopes_.back().get();
     CHECK(expr->checked_type_.defined()) << "Missing type:\n" << mnm::ir::AsText(expr);
 
     auto expr_type = expr->checked_type();
     if (expr_type->IsInstance<TupleTypeNode>()) {
       auto cast_call = CastTuple(expr, type_hint, use_cache);
       if (expr != cast_call) {
-        auto new_var = scope.Push(cast_call);
+        auto new_var = scope->Push(cast_call);
         new_var->checked_type_ = cast_call->checked_type_;
         return new_var;
       }
@@ -448,7 +449,7 @@ class AutoCastMutator : public ExprMutator {
     }
 
     auto cast_call = GenCastCall(expr, target_dtype);
-    auto new_var = scope.Push(cast_call);
+    auto new_var = scope->Push(cast_call);
     new_var->checked_type_ = cast_call->checked_type_;
     if (use_cache) {
       // If not using cache, then we make sure this new cast op is only used by one op.
@@ -458,7 +459,7 @@ class AutoCastMutator : public ExprMutator {
   }
 
   /*! \brief The scope stack of the let list. */
-  std::vector<LetList> scopes_;
+  std::vector<std::unique_ptr<LetList>> scopes_;
   /*! \brief The dtype of the generated AMP model. */
   DataType amp_dtype_;
   /*! \brief The output dtype of the generated AMP model. */
