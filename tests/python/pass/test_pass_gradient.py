@@ -7,7 +7,7 @@ from tvm import relay
 from mnm._ffi.pass_ import InferType, AutoDiff, FromRelay, LiftBranchBody
 from mnm._ffi.pass_ import LambdaLift, FlattenClosure, InlineBackward
 from mnm.frontend.model import FrameworkModel
-from mnm.ir import MNMSequential
+from mnm.ir import MNMSequential, ScopeBuilder
 from mnm.testing import get_device_list, randn, check, utils
 
 
@@ -667,7 +667,7 @@ def test_basic_if():
     main = relay.GlobalVar("main")
 
     def get_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f
@@ -701,7 +701,7 @@ def test_if_with_multiple_vars():
     main = relay.GlobalVar("main")
 
     def get_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f
@@ -737,7 +737,7 @@ def test_recursive_with_if():
     main = relay.GlobalVar("main")
 
     def get_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f
@@ -795,7 +795,7 @@ def test_while_loop():
     """
 
     def get_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         loop = relay.var("loop")

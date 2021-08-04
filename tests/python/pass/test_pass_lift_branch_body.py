@@ -1,12 +1,13 @@
 import pytest
 import tvm
 from mnm._ffi.pass_ import FromRelay, InferType, LiftBranchBody
+from mnm.ir import ScopeBuilder
 from tvm import relay
 
 def test_basic_if():
     main = relay.GlobalVar("main")
     def get_recursive_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f
@@ -33,7 +34,7 @@ def test_mnm_recursive_function():
     f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
     main = relay.GlobalVar("main")
     def get_recursive_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f

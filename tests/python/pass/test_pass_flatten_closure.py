@@ -1,5 +1,6 @@
 import pytest
 import tvm
+from mnm.ir import ScopeBuilder
 from mnm._ffi.pass_ import LambdaLift, FromRelay, FlattenClosure, LiftBranchBody
 from tvm import relay
 
@@ -55,7 +56,7 @@ def test_while_loop():
     """
 
     def get_recursive_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = ScopeBuilder()
         mod = tvm.IRModule()
 
         loop = relay.var("loop")

@@ -7,3 +7,4 @@ from .._lib import PassContext
 from .serialization import save_json
 from .constant import to_value, const
 from .pass_manager import MNMSequential
+from .scope_builder import ScopeBuilder

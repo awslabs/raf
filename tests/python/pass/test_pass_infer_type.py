@@ -48,7 +48,7 @@ def test_mnm_recursive_function():
     f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
     main = relay.GlobalVar("main")
     def get_recursive_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = mnm.ir.ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f

@@ -59,7 +59,7 @@ def test_while_loop():
     """
 
     def get_recursive_mod():
-        sb = relay.ScopeBuilder()  # pylint: disable=invalid-name
+        sb = mnm.ir.ScopeBuilder()
         mod = tvm.IRModule()
 
         loop = relay.var("loop")
