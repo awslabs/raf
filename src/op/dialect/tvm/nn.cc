@@ -24,6 +24,15 @@ Attrs BinarySchema2DenseAttrs(const BinaryArgs* args) {
   return Attrs(attrs);
 }
 
+template <bool transpose_a, bool transpose_b>
+Attrs BinarySchema2BatchMatmulAttrs(const BinaryArgs* args) {
+  auto attrs = make_object<tvm::relay::BatchMatmulAttrs>();
+  attrs->out_dtype = NullValue<DataType>();
+  attrs->transpose_a = transpose_a;
+  attrs->transpose_b = transpose_b;
+  return Attrs(attrs);
+}
+
 MNM_TVM(matmul, Matmul, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
 MNM_TVM(matmul_tn, MatmulTN, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
@@ -35,13 +44,13 @@ MNM_TVM(matmul_tt, MatmulTT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames
 MNM_TVM(dense, Dense, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, BinarySchema2DenseAttrs,
         GenericHasher, kOutEWiseFusable);
 MNM_TVM(batch_matmul, BatchMatmul, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
-        GenericAttrs, GenericHasher, kOutEWiseFusable);
+        (BinarySchema2BatchMatmulAttrs<false, false>), GenericHasher, kOutEWiseFusable);
 MNM_TVM(batch_matmul_nt, BatchMatmulNT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
-        BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
+        (BinarySchema2BatchMatmulAttrs<false, true>), GenericHasher, kOutEWiseFusable);
 MNM_TVM(batch_matmul_tn, BatchMatmulTN, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
-        BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
+        (BinarySchema2BatchMatmulAttrs<true, false>), GenericHasher, kOutEWiseFusable);
 MNM_TVM(batch_matmul_tt, BatchMatmulTT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
-        BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
+        (BinarySchema2BatchMatmulAttrs<true, true>), GenericHasher, kOutEWiseFusable);
 
 std::vector<Value> ConvSchema2Args(const ConvArgs* args) {
   return {args->x, args->w};
