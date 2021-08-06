@@ -10,9 +10,9 @@ from copy import copy
 import tvm
 
 import mnm
-from mnm._core.profiler_vm import VMProfilerExecutor
 from mnm._core.executor import MetaFallbackContext
 from mnm._core.ndarray import array
+from mnm._core.vm_debug import VMDebugExecutor
 from mnm.model.trace import _get_func_inputs
 from mnm.testing import randn, randint, randn_torch
 from tvm import auto_scheduler, autotvm
@@ -24,7 +24,7 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_se
 
     Parameters
     ----------
-    mod_or_executor: Union[mnm.Model, IRModule, VMProfilerExecutor]
+    mod_or_executor: Union[mnm.Model, mnm.ir.IRModule, VMDebugExecutor]
         The module or the compiled VMProfilerExecutor to be extracted.
 
     args: List[mnm.ndarray]
@@ -45,22 +45,24 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_se
         A tuple of tasks and weights (appearance in the model).
     """
     # pylint: disable=protected-access
-    if isinstance(mod_or_executor, mnm.Model):
-        record = mod_or_executor._internal(*args)
-        mod = record.mod
-        if pass_seq is not None:
-            mod = pass_seq(mod)
-        args = _get_func_inputs(record, args, {}, get_handle=False)
+    if isinstance(mod_or_executor, VMDebugExecutor):
+        executor = mod_or_executor
     else:
-        mod = mod_or_executor
-
-    if not isinstance(mod_or_executor, VMProfilerExecutor):
-        assert mod is not None
+        assert isinstance(mod_or_executor, (mnm.Model, mnm.ir.IRModule))
+        if isinstance(mod_or_executor, mnm.Model):
+            record = mod_or_executor._internal(*args)
+            mod = record.mod
+            if pass_seq is not None:
+                mod = pass_seq(mod)
+            args = _get_func_inputs(record, args, {}, get_handle=False)
+        else: # mnm.ir.IRModule
+            mod = mod_or_executor
         with mnm.ir.PassContext(opt_level=3, config={"mnm.fuse_level": fuse_level},
                                 disabled_pass={"AutoSchedulerLayoutRewrite"}):
-            executor = VMProfilerExecutor(mod, device)
-    else:
-        executor = mod_or_executor
+            # Enable profile_memory mode to skip the op execution; otherwise it becomes
+            # a chicken-egg problem: we need to run through every ops to collect tuning tasks,
+            # but we cannot execute ops without schedules.
+            executor = VMDebugExecutor(mod, device, option="profile_memory")
 
     old_auto_scheduler_fallback_context = auto_scheduler.DispatchContext.current
     auto_scheduler.DispatchContext.current = MetaFallbackContext(verbose=0)
@@ -71,10 +73,9 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_se
         auto_scheduler.relay_integration.TracingMode.EXTRACT_COMPLEX_TASK_ONLY
     )
     with env_tracing_task:
-        with mnm.ir.PassContext(config={"relay.backend.use_auto_scheduler": True,
-                                        "mnm.tvm.allow_jit_failure": True},
+        with mnm.ir.PassContext(config={"relay.backend.use_auto_scheduler": True},
                                 disabled_pass={"AutoSchedulerLayoutRewrite"}):
-            executor.vm.run(*args, profile_memory=True)
+            executor.vm.trace(*args)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
     auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context

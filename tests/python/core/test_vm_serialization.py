@@ -2,7 +2,8 @@
 import pytest
 import numpy as np
 import mnm
-from mnm._core.executor import VMExecutor, Executable, VirtualMachine
+from mnm._core.vm import Executable, VirtualMachine
+from mnm._core.executor import VMExecutor
 from mnm.testing import check, randn
 import tvm
 from tvm import relay

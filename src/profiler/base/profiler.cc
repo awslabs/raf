@@ -16,23 +16,9 @@ Profiler::Profiler() {
 Profiler::~Profiler() {
 }
 
-Profiler* Profiler::Get(std::shared_ptr<Profiler>* sp) {
-  static std::mutex mtx;
-  static std::shared_ptr<Profiler> prof = nullptr;
-  if (!prof) {
-    std::unique_lock<std::mutex> lk(mtx);
-    if (!prof) {
-      prof = std::make_shared<Profiler>();
-    }
-  }
-  if (sp) {
-    *sp = prof;
-  }
-  return prof.get();
-}
-
-void Profiler::SetConfig(bool profiling = false) {
-  profiling_ = std::move(profiling);
+Profiler* Profiler::Get() {
+  static Profiler prof;
+  return &prof;
 }
 
 void Profiler::AddNewProfileStat(std::string categories, std::string name, uint64_t start_time,
@@ -94,7 +80,12 @@ ProfileStat::ProfileStat(std::string categories, std::string name, uint64_t star
                          uint64_t end_time, const std::vector<std::string>& args) {
   categories_ = categories;
   name_ = name;
-  for (int i = 0; i < args.size(); i++) args_string += args[i] + ";";
+  if (!args.empty()) {
+    for (int i = 0; i < args.size() - 1; i++) {
+      args_string += args[i] + ";";
+    }
+    args_string += args[args.size() - 1];
+  }
   items_[kStart].enabled_ = items_[kStop].enabled_ = true;
   items_[kStart].event_type_ = kDurationBegin;
   items_[kStart].timestamp_ = start_time;
@@ -129,12 +120,12 @@ void ProfileStat::EmitEvents(std::ostream* os) {
   }
 }
 
-void EnableProfiler() {
-  Profiler::Get()->SetConfig(true);
+void EnableProfiler(int profile_level) {
+  Profiler::Get()->set_profile_level(profile_level);
 }
 
 void DisableProfiler() {
-  Profiler::Get()->SetConfig(false);
+  Profiler::Get()->set_profile_level(0);
 }
 
 std::string GetProfile() {

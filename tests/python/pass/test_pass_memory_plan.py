@@ -2,12 +2,8 @@
 # pylint: disable=unused-variable, too-many-arguments
 import pytest
 import mnm
-from mnm._core.executor import VMExecutor
-from mnm._core.profiler_vm import VMProfilerExecutor
 from mnm._lib import tvm
-from mnm._ffi.ir import AsText
-from mnm.model.trace import _get_func_inputs
-from mnm.testing import get_device_list, randn, check
+from mnm.testing import get_device_list, randn, check, get_vm_executor
 
 
 def optimize(mod, device, reuse_storage=False, fusion=False):
@@ -16,21 +12,8 @@ def optimize(mod, device, reuse_storage=False, fusion=False):
     with tvm.transform.PassContext(opt_level=3,
                                    config={"mnm.memory_plan.reuse_storage": reuse_storage,
                                            "mnm.fuse_level": fuse_level}):
-        opt_mod, _ = mnm._core.executor.VMCompiler().optimize(mod, target=target_name, params={})
+        opt_mod, _ = mnm._core.vm.VMCompiler().optimize(mod, target=target_name, params={})
     return opt_mod
-
-
-def get_vm_executor(model, device, args, reuse_storage, fusion, profile=False):
-    fuse_level = 1 if fusion else 0
-
-    record = model._internal(*args)
-    mod = record.mod
-    vm_inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    with tvm.transform.PassContext(opt_level=3,
-                                   config={"mnm.memory_plan.reuse_storage": reuse_storage,
-                                           "mnm.fuse_level": fuse_level}):
-        vm_executor = VMExecutor(mod, device) if not profile else VMProfilerExecutor(mod, device)
-    return vm_executor, vm_inputs
 
 
 def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expected_out_tensor,
@@ -41,7 +24,7 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
     out_tensor = 0
     free_memory = 0
     total_size = 0
-    for line in AsText(func).split("\n"):
+    for line in mnm.ir.AsText(func).split("\n"):
         if line.find("mnm.op.vm.alloc_storage") != -1:
             alloc_storage += 1
             total_size += int(line[line.find("int64(") + 6 : line.find(")")])
@@ -65,8 +48,9 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
 
 def verify_correctness(model, device, args, reuse_storage, fusion):
     # A helper function to verify the correctness
-    vm_executor, vm_inputs = get_vm_executor(model, device, args, reuse_storage, fusion)
-    executor = vm_executor.make_executor()
+    fuse_level = 1 if fusion else 0
+    executor, vm_inputs = get_vm_executor(model, device, args, fuse_level=fuse_level,
+                                          reuse_storage=reuse_storage)
     outs = executor(*vm_inputs)
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
 

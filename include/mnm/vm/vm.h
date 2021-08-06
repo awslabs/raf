@@ -183,7 +183,7 @@ class VMContext : public Value {
   MNM_OBJECT_REF(VMContext, Value, VMContextObj);
 };
 
-using OpEnvCache = MetaCache<std::shared_ptr<OpEnv>>;
+using OpEnvCache = MetaCache<OpEnvPtr>;
 
 /*! \brief The OpEnv cache for a VM function. */
 class VMFuncOpEnvCache {
@@ -220,6 +220,24 @@ class VMFuncOpEnvCache {
  */
 class VirtualMachine : public tvm::runtime::ModuleNode {
  public:
+  VirtualMachine(bool enable_cuda_graph) : exec_(nullptr), enable_cuda_graph_(enable_cuda_graph) {
+#ifndef MNM_USE_CUDA
+    if (enable_cuda_graph) {
+      LOG(WARNING) << "Because CUDA is not enabled in Meta, CUDA graph will be disabled in the VM.";
+      enable_cuda_graph_ = false;
+    }
+#endif
+    if (enable_cuda_graph_) {
+      LOG(WARNING) << "Concurrent execution is not supported for VM in CUDA graph mode.";
+    }
+  }
+
+  virtual ~VirtualMachine();
+
+  const char* type_key() const final {
+    return "VirtualMachine";
+  }
+
   /*!
    * \brief Get a PackedFunc from module.
    *
@@ -238,25 +256,6 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    *   it should capture sptr_to_self.
    */
   virtual PackedFunc GetFunction(const std::string& name, const ObjectPtr<Object>& sptr_to_self);
-
-  virtual ~VirtualMachine();
-
-  const char* type_key() const final {
-    return "VirtualMachine";
-  }
-
-  VirtualMachine(bool enable_cuda_graph) : exec_(nullptr), enable_cuda_graph_(enable_cuda_graph) {
-#ifndef MNM_USE_CUDA
-    if (enable_cuda_graph) {
-      LOG(WARNING) << "Because CUDA is not enabled in Meta, CUDA graph will be disabled in the VM.";
-      enable_cuda_graph_ = false;
-    }
-#endif
-    if (enable_cuda_graph_) {
-      LOG(WARNING) << "Concurrent execution is not supported for VM in CUDA graph mode.";
-    }
-  }
-
   /*!
    * \brief load the executable for the virtual machine.
    * \param exec The executable.
@@ -282,29 +281,63 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   Value Run(VMContext ctx);
 
  protected:
+  /*! \brief Get device for params. */
+  Device GetParamsDevice() const;
+  /*! \brief Run VM dispatch loop. */
+  virtual void RunLoop(VMContext& ctx);
+  /*! \brief Prepare an OpEnv with its inputs and output */
+  virtual std::tuple<OpEnvPtr, std::vector<Value>, Value, std::string> PrepareOpEnv(
+      const VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle Move instruction*/
+  virtual void HandleMove(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle LoadConst instruction*/
+  virtual void HandleLoadConst(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle LoadConsti instruction*/
+  virtual void HandleLoadConsti(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle GetField instruction*/
+  virtual void HandleGetField(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle If instruction*/
+  virtual void HandleIf(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle AllocStorage instruction*/
+  virtual void HandleAllocStorage(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle AllocTensor instruction*/
+  virtual void HandleAllocTensor(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle AllocTensorReg instruction*/
+  virtual void HandleAllocTensorReg(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle AllocTuple instruction*/
+  virtual void HandleAllocTuple(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle AllocClosure instruction*/
+  virtual void HandleAllocClosure(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle Free instruction*/
+  virtual void HandleFree(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle InvokeFunc instruction*/
+  virtual void HandleInvokeFunc(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle InvokeClosure instruction*/
+  virtual void HandleInvokeClosure(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle InvokeJit instruction*/
+  virtual void HandleInvokeJit(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle SetShape instruction*/
+  virtual void HandleSetShape(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle Ret instruction and return whether it's the final return instruction. */
+  virtual bool HandleRet(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle InferType instruction*/
+  virtual void HandleInferType(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle CudaSetStream instruction*/
+  virtual void HandleCudaSetStream(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle CudaAddEvent instruction*/
+  virtual void HandleCudaAddEvent(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle CudaWaitEvent instruction*/
+  virtual void HandleCudaWaitEvent(VMContext& ctx, const Instruction& instr);
+
+ protected:
   /*! \brief The virtual machine's packed function table. */
   std::vector<PackedFunc> packed_funcs_;
   /*! \brief The executable the VM will operate on. */
   const Executable* exec_;
-  /*! \brief The set of devices the VM is currently executing on. */
+  /*! \brief The set of devices the VM is executing on. */
   std::vector<Device> devices_;
-
-  /*! \brief Run VM dispatch loop. */
-  void RunLoop(VMContext ctx);
-  /*! \brief Get device context for params. */
-  Device GetParamsDevice() const;
-
-  /*! \brief Prepare an OpEnv with its inputs and output */
-  virtual std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> PrepareOpEnv(
-      const VMContext& ctx, const Instruction& instr);
-
-  /*! \brief Execute OpEnv */
-  virtual void ExecuteOpEnv(OpEnv*, const std::vector<value::Value>& inputs, value::Value output);
-
-  /*! \brief Run InferType Instruction */
-  virtual void RunInferType(VMContext& ctx, const Instruction& instr);
-
- protected:
+  /*! \brief The host devices. */
+  Device host_device_;
   /*!
    * \brief The constant pool for runtime. It caches the device dependent
    * object to avoid rellocation of constants during inference.
@@ -315,6 +348,10 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * corresponding VM function. It's a map from pc to the OpEnv cache.
    */
   std::vector<std::shared_ptr<VMFuncOpEnvCache>> op_env_cache_;
+  /*! \brief Indicates whether CUDA is used. */
+  bool use_cuda_ = false;
+  /*! \brief Indicates whether CUDA Graph is enabled when VM is initialized. */
+  bool enable_cuda_graph_ = false;
 
 #ifdef MNM_USE_CUDA
   /*!
@@ -325,14 +362,10 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * \brief The events used in runtime.
    */
   std::vector<cudaEvent_t> cuda_events_;
-#endif
-
-#ifdef MNM_USE_CUDA
   /*!
    * \brief A class to store, cache and execute CUDA Graph
    *
-   * Cached CUDA Graph is stored in this class, as well as
-   * stream for capturing.
+   * Cached CUDA Graph is stored in this class, as well as stream for capturing.
    */
   class CudaGraphImpl;
   /*! \brief A pointer into the CUDA Graph instance. */
@@ -344,9 +377,6 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   /*! \brief The mutex to access CUDA graph related fields. */
   std::mutex cuda_graph_mutex_;
 #endif
-
-  /*! \brief Indicates whether CUDA Graph is enabled when VM is initialized. */
-  bool enable_cuda_graph_ = false;
 };
 
 }  // namespace vm

@@ -39,6 +39,7 @@
 #include "../../common/cuda_utils.h"
 #include "../../op/dialect/cudnn/cudnn_utils.h"
 #include "../../op/dialect/cublas/cublas_utils.h"
+#include "../../profiler/cuda/cuda_profiler.h"
 #endif
 
 namespace mnm {
@@ -300,6 +301,7 @@ VMContext VirtualMachine::PrepareVMContext(const std::string& func_name,
 
 Value VirtualMachine::Run(VMContext ctx) {
   auto frun = [&]() {
+    // ctx->pc will be reset to 0 in the PushFrame
     ctx.PushFrame(ctx->entry_func_index, ctx->inputs, -1);
     RunLoop(ctx);
   };
@@ -342,92 +344,57 @@ Device VirtualMachine::GetParamsDevice() const {
 
 void VirtualMachine::SetDevices(const std::vector<Device>& devices) {
   devices_ = devices;
-  bool has_gpu = false;
+  use_cuda_ = false;
   for (const Device& dev : devices) {
     if (dev.device_type == DevType::kCUDA()) {
-      has_gpu = true;
-      break;
+      use_cuda_ = true;
+    }
+    if (dev.device_type == DevType::kCPU()) {
+      host_device_ = dev;
     }
   }
-  if (!has_gpu) {
+  if (host_device_.device_id < 0) {
+    host_device_ = Device(DevType::kCPU(), 0);
+  }
+  if (!use_cuda_) {
     enable_cuda_graph_ = false;
   }
 }
 
-void VirtualMachine::RunLoop(VMContext ctx) {
+void VirtualMachine::RunLoop(VMContext& ctx) {
   CHECK(this->exec_);
   CHECK_GT(ctx->frames.size(), 0) << "The call stack is empty";
   CHECK(ctx->code);
-  ctx->pc = 0;
+#ifdef MNM_USE_CUDA
+  if (use_cuda_ && profiler::Profiler::Get()->IsProfiling(1)) {
+    profiler::CudaProfiler::Get()->start();
+  }
+#endif
   while (true) {
   main_loop:
     auto const& instr = ctx->code[ctx->pc];
-#if USE_RELAY_DEBUG
-    InstructionPrint(std::cout, instr);
-#endif  // USE_RELAY_DEBUG
-
     switch (instr.op) {
       case Opcode::Move: {
-        Value from_obj = ctx.ReadRegister(instr.from);
-        ctx.WriteRegister(instr.dst, from_obj);
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "Move", "VMInstruction", {},
+                                 { HandleMove(ctx, instr); });
         goto main_loop;
       }
       case Opcode::Fatal: {
         throw std::runtime_error("VM encountered fatal error");
       }
       case Opcode::LoadConst: {
-        auto constant_obj = exec_->constants[instr.const_index];
-        // We cache the allocated object in the constant pool. To measure, the
-        // first iteration will set the pool up. The other iterations will
-        // directly reuse the allocated objects.
-        if (const_pool_.size() <= static_cast<size_t>(instr.const_index)) {
-          const_pool_.resize(instr.const_index + 1);
-        }
-
-        if (!const_pool_[instr.const_index].defined()) {
-          // TODO(@zhiics): device could be obtained from the device list.
-          const_pool_[instr.const_index] = CopyTo(constant_obj, devices_[0]);
-        }
-        ctx.WriteRegister(instr.dst, const_pool_[instr.const_index]);
-        ctx->frames.back().is_const[instr.dst] = true;
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "LoadConst", "VMInstruction", {},
+                                 { HandleLoadConst(ctx, instr); });
         goto main_loop;
       }
       case Opcode::LoadConsti: {
-        ctx.WriteRegister(instr.dst, ScalarValue::make(instr.load_consti.val));
-        ctx->pc++;
-        goto main_loop;
-      }
-      case Opcode::InvokeFunc: {
-        std::vector<Value> args;
-        for (Index i = 0; i < instr.invoke_func.num_args; ++i) {
-          args.push_back(ctx.ReadRegister(instr.invoke_func.args[i]));
-        }
-        ctx.PushFrame(instr.invoke_func.func_index, args, instr.dst);
-        goto main_loop;
-      }
-      case Opcode::InvokePacked: {
-        LOG(FATAL) << "Not supported.";
-      }
-      case Opcode::InvokeClosure: {
-        auto closure = Downcast<VMClosureValue>(ctx.ReadRegister(instr.invoke_closure.closure));
-        std::vector<Value> args;
-        for (auto free_var : closure->free_vars) {
-          args.push_back(free_var);
-        }
-        for (Index i = 0; i < instr.invoke_closure.num_args; ++i) {
-          args.push_back(ctx.ReadRegister(instr.invoke_closure.args[i]));
-        }
-        ctx.PushFrame(closure->func_index, args, instr.dst);
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "LoadConsti", "VMInstruction", {},
+                                 { HandleLoadConsti(ctx, instr); });
         goto main_loop;
       }
       case Opcode::GetField: {
-        auto object = ctx.ReadRegister(instr.get_field.object);
-        const auto& tuple = Downcast<TupleValue>(object);
-        auto field = tuple->fields[instr.get_field.field_index];
-        ctx.WriteRegister(instr.dst, field);
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "GetField", "VMInstruction", {},
+                                 { HandleGetField(ctx, instr); });
         goto main_loop;
       }
       case Opcode::Goto: {
@@ -435,306 +402,313 @@ void VirtualMachine::RunLoop(VMContext ctx) {
         goto main_loop;
       }
       case Opcode::If: {
-        int32_t test_val = ctx.LoadScalarInt(instr.if_op.test);
-        int32_t target_val = ctx.LoadScalarInt(instr.if_op.target);
-
-        if (test_val == target_val) {
-          CHECK_NE(instr.if_op.true_offset, 0);
-          ctx->pc += instr.if_op.true_offset;
-        } else {
-          CHECK_NE(instr.if_op.false_offset, 0);
-          ctx->pc += instr.if_op.false_offset;
-        }
-
-        goto main_loop;
-      }
-      case Opcode::AllocTensor: {
-        auto shape = std::vector<int64_t>(instr.alloc_tensor.ndim);
-
-        for (uint32_t i = 0; i < instr.alloc_tensor.ndim; ++i) {
-          shape[i] = instr.alloc_tensor.shape[i];
-        }
-
-        auto storage_obj = ctx.ReadRegister(instr.alloc_tensor.storage);
-        auto storage = Downcast<StorageValue>(storage_obj);
-        std::shared_ptr<memory_pool::Memory> mem = nullptr;
-        if (instr.alloc_tensor.own) {
-          mem = storage->buffer;
-        }
-        auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor.dtype,
-                                            shape, {}, storage->buffer->data, mem);
-        ctx.WriteRegister(instr.dst, tensor);
-        ctx->pc++;
-        goto main_loop;
-      }
-      case Opcode::AllocTensorReg: {
-        Value value = ctx.ReadRegister(instr.alloc_tensor_reg.shape_register);
-        const auto* tuple = value.as<TupleValueObj>();
-        auto shape = std::vector<int64_t>(tuple->fields.size());
-        for (size_t i = 0; i < tuple->fields.size(); ++i) {
-          shape[i] = Downcast<IntValue>(tuple->fields[i])->value;
-        }
-
-        auto storage_obj = ctx.ReadRegister(instr.alloc_tensor_reg.storage);
-        auto storage = Downcast<StorageValue>(storage_obj);
-        std::shared_ptr<memory_pool::Memory> mem = nullptr;
-        if (instr.alloc_tensor_reg.own) {
-          mem = storage->buffer;
-        }
-        auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor_reg.dtype,
-                                            shape, {}, storage->buffer->data, mem);
-        ctx.WriteRegister(instr.dst, tensor);
-        ctx->pc++;
-        goto main_loop;
-      }
-      case Opcode::AllocTuple: {
-        Array<Value> fields;
-        for (Index i = 0; i < instr.alloc_tuple.num_fields; ++i) {
-          fields.push_back(ctx.ReadRegister(instr.alloc_tuple.fields[i]));
-        }
-        ctx.WriteRegister(instr.dst, TupleValue::make(fields));
-        ctx->pc++;
-        goto main_loop;
-      }
-      case Opcode::AllocClosure: {
-        std::vector<Value> free_vars;
-        for (Index i = 0; i < instr.alloc_closure.num_free_vars; i++) {
-          free_vars.push_back(ctx.ReadRegister(instr.alloc_closure.free_vars[i]));
-        }
-        auto clo = VMClosureValue::make(instr.alloc_closure.func_index, free_vars);
-        ctx.WriteRegister(instr.dst, clo);
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "If", "VMInstruction", {},
+                                 { HandleIf(ctx, instr); });
         goto main_loop;
       }
       case Opcode::AllocStorage: {
-        auto size = ctx.LoadScalarInt(instr.alloc_storage.allocation_size);
-        auto alignment = instr.alloc_storage.alignment;
-
-        DLOG(INFO) << "AllocStorage: allocation_size=" << size << " alignment=" << alignment
-                   << " dtype_hint="
-                   << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
-
-        auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-        auto buffer = memory_pool::Memory::Alloc(dev, size, alignment);
-        auto storage = StorageValue::make(buffer);
-        ctx.WriteRegister(instr.dst, storage);
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "AllocStorage", "VMInstruction", {},
+                                 { HandleAllocStorage(ctx, instr); });
+        goto main_loop;
+      }
+      case Opcode::AllocTensor: {
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "AllocTensor", "VMInstruction", {},
+                                 { HandleAllocTensor(ctx, instr); });
+        goto main_loop;
+      }
+      case Opcode::AllocTensorReg: {
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "AllocTensorReg", "VMInstruction", {},
+                                 { HandleAllocTensorReg(ctx, instr); });
+        goto main_loop;
+      }
+      case Opcode::AllocTuple: {
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "AllocTuple", "VMInstruction", {},
+                                 { HandleAllocTuple(ctx, instr); });
+        goto main_loop;
+      }
+      case Opcode::AllocClosure: {
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "AllocClosure", "VMInstruction", {},
+                                 { HandleAllocClosure(ctx, instr); });
         goto main_loop;
       }
       case Opcode::Free: {
-        RegName reg = instr.free.memory;
-        auto reg_val = ctx.ReadRegister(reg);
-        if (reg_val->IsInstance<StorageValueObj>()) {
-          auto storage_val = Downcast<StorageValue>(reg_val);
-          storage_val->buffer.reset();
-        } else {
-          CHECK(reg_val->IsInstance<TensorValueObj>())
-              << "Expected StorageValue or TensorValue, but got " << reg_val->GetTypeKey();
-          auto tensor_val = Downcast<TensorValue>(reg_val);
-          tensor_val->mem.reset();
-        }
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "Free", "VMInstruction", {},
+                                 { HandleFree(ctx, instr); });
         goto main_loop;
       }
       case Opcode::SetShape: {
-        auto data = Downcast<TensorValue>(ctx.ReadRegister(instr.set_shape.data));
-        auto raw_shape = ctx.ReadRegister(instr.set_shape.shape);
-        std::vector<int64_t> shape;
-        if (const auto tuple = raw_shape.as<TupleValueObj>()) {
-          for (size_t i = 0; i < tuple->fields.size(); ++i) {
-            shape.push_back(Downcast<IntValue>(tuple->fields[i])->value);
-          }
-        } else {
-          raw_shape = CopyTo(raw_shape, Device(DevType::kCPU(), 0));
-          shape = common::shape_utils::GetShapeVecFromData(raw_shape);
-        }
-        ctx.WriteRegister(instr.dst, data.CreateView(shape));
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "SetShape", "VMInstruction", {},
+                                 { HandleSetShape(ctx, instr); });
         goto main_loop;
       }
-      case Opcode::Ret: {
-        // If we have hit the point from which we started
-        // running, we should return to the caller breaking
-        // the dispatch loop.
-        auto ret_val = ctx.ReadRegister(instr.result);
-        auto caller_return_register = ctx.PopFrame();
-
-        if (caller_return_register < 0) {
-          ctx->return_register = ret_val;
-          return;
-        } else {  // Otherwise we are just returning from a local call.
-          ctx.WriteRegister(caller_return_register, ret_val);
-          goto main_loop;
-        }
+      case Opcode::InvokeFunc: {
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "InvokeFunc", "VMInstruction", {},
+                                 { HandleInvokeFunc(ctx, instr); });
+        goto main_loop;
+      }
+      case Opcode::InvokePacked: {
+        LOG(FATAL) << "Not supported.";
+      }
+      case Opcode::InvokeClosure: {
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "InvokeClosure", "VMInstruction", {},
+                                 { HandleInvokeClosure(ctx, instr); });
+        goto main_loop;
       }
       case Opcode::InvokeJit: {
-        std::shared_ptr<OpEnv> op_env;
-        std::vector<Value> inputs;
-        Value output;
-
-        std::tie(op_env, inputs, output) = PrepareOpEnv(ctx, instr);
-        ExecuteOpEnv(op_env.get(), inputs, output);
-
-        // Release workspace memory
-        // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
-        //   kernel. Because the kernel may be in the executing status at this point due to
-        //   asynchronous execution. This would cause problem for multi-stream execution.
-        std::shared_ptr<Requests> requests = op_env->GetRequests();
-        for (size_t i = 0; i < requests->workspace.size(); ++i) {
-          Requests::WorkspaceRequest& entry = requests->workspace[i];
-          if (entry.nbytes > 0 && entry.memory != nullptr) {
-            *entry.dest = nullptr;
-            entry.memory.reset();
-          }
-        }
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "InvokeJit", "VMInstruction", {},
+                                 { HandleInvokeJit(ctx, instr); });
         goto main_loop;
       }
       case Opcode::InferType: {
-        RunInferType(ctx, instr);
-        ctx->pc++;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "InferType", "VMInstruction", {},
+                                 { HandleInferType(ctx, instr); });
         goto main_loop;
       }
-#ifdef MNM_USE_CUDA
-      case Opcode::CudaSetStream: {
-        while (cuda_streams_.size() <= instr.cuda_set_stream.stream_id) {
-          cudaStream_t stream;
-          CUDA_CALL(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
-          cuda_streams_.push_back(stream);
+      case Opcode::Ret: {
+        bool final_ret;
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "Ret", "VMInstruction", {},
+                                 { final_ret = HandleRet(ctx, instr); });
+        if (final_ret) {
+          return;
         }
-        MNMSetStream(Device(DevType::kCUDA(), static_cast<int>(instr.cuda_set_stream.device_id)),
-                     cuda_streams_[instr.cuda_set_stream.stream_id]);
-        ctx->stream_index = instr.cuda_set_stream.stream_id;
-        ctx->pc++;
+        goto main_loop;
+      }
+      case Opcode::CudaSetStream: {
+        HandleCudaSetStream(ctx, instr);
         goto main_loop;
       }
       case Opcode::CudaAddEvent: {
-        CHECK_LT(ctx->stream_index, cuda_streams_.size());
-        while (cuda_events_.size() <= instr.cuda_event.event_id) {
-          cudaEvent_t event;
-          CUDA_CALL(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-          cuda_events_.push_back(event);
-        }
-        CUDA_CALL(cudaEventRecord(cuda_events_[instr.cuda_event.event_id],
-                                  cuda_streams_[ctx->stream_index]));
-        ctx->pc++;
+        HandleCudaAddEvent(ctx, instr);
         goto main_loop;
       }
       case Opcode::CudaWaitEvent: {
-        CHECK_LT(ctx->stream_index, cuda_streams_.size());
-        CHECK_LT(instr.cuda_event.event_id, cuda_events_.size()) << "Wait for non-existing event";
-        CUDA_CALL(cudaStreamWaitEvent(cuda_streams_[ctx->stream_index],
-                                      cuda_events_[instr.cuda_event.event_id],
-                                      0 /*cudaEventWaitDefault*/));
-        ctx->pc++;
+        HandleCudaWaitEvent(ctx, instr);
         goto main_loop;
       }
-#else   // MNM_USE_CUDA
-      case Opcode::CudaSetStream:
-      case Opcode::CudaAddEvent:
-      case Opcode::CudaWaitEvent: {
-        LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
-      }
-#endif  // MNM_USE_CUDA
     }
   }
 }
 
-tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph) {
-  auto vm = make_object<VirtualMachine>(enable_cuda_graph);
-  vm->LoadExecutable(exec);
-  return tvm::runtime::Module(vm);
+void VirtualMachine::HandleMove(VMContext& ctx, const Instruction& instr) {
+  Value from_obj = ctx.ReadRegister(instr.from);
+  ctx.WriteRegister(instr.dst, from_obj);
+  ctx->pc++;
 }
 
-std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value> VirtualMachine::PrepareOpEnv(
-    const VMContext& ctx, const Instruction& instr) {
-  Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
-  HashKey key;
-  Array<Value> args;
-  Value output;
-
-  // extract the input args and prepare the hash key to query op env
-  for (Index i = 0; i < num_inputs; i++) {
-    Index reg_idx = instr.invoke_jit.args[i];
-    auto reg = ctx.ReadRegister(reg_idx);
-    args.push_back(reg);
-    if (!ctx.IsConst(reg_idx)) {
-      if (auto t = reg.as<TensorValueObj>()) {
-        key << GetRef<TensorValue>(t);
-      } else if (auto tup = reg.as<TupleValueObj>()) {
-        for (auto field : tup->fields) {
-          auto t = field.as<TensorValueObj>();
-          CHECK(t != nullptr);
-          key << GetRef<TensorValue>(t);
-        }
-      } else {
-        LOG(FATAL) << "Unsupported non-const register type: " << reg->GetTypeKey();
-      }
-    }
+void VirtualMachine::HandleLoadConst(VMContext& ctx, const Instruction& instr) {
+  auto constant_obj = exec_->constants[instr.const_index];
+  // We cache the allocated object in the constant pool. To measure, the
+  // first iteration will set the pool up. The other iterations will
+  // directly reuse the allocated objects.
+  if (const_pool_.size() <= static_cast<size_t>(instr.const_index)) {
+    const_pool_.resize(instr.const_index + 1);
   }
 
-  // extract the output
-  if (instr.invoke_jit.output_size == 1) {
-    output = ctx.ReadRegister(instr.invoke_jit.args[num_inputs]);
+  if (!const_pool_[instr.const_index].defined()) {
+    // TODO(@zhiics): device could be obtained from the device list.
+    const_pool_[instr.const_index] = CopyTo(constant_obj, devices_[0]);
+  }
+  ctx.WriteRegister(instr.dst, const_pool_[instr.const_index]);
+  ctx->frames.back().is_const[instr.dst] = true;
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleLoadConsti(VMContext& ctx, const Instruction& instr) {
+  ctx.WriteRegister(instr.dst, ScalarValue::make(instr.load_consti.val));
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleGetField(VMContext& ctx, const Instruction& instr) {
+  auto object = ctx.ReadRegister(instr.get_field.object);
+  const auto& tuple = Downcast<TupleValue>(object);
+  auto field = tuple->fields[instr.get_field.field_index];
+  ctx.WriteRegister(instr.dst, field);
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleIf(VMContext& ctx, const Instruction& instr) {
+  int32_t test_val = ctx.LoadScalarInt(instr.if_op.test);
+  int32_t target_val = ctx.LoadScalarInt(instr.if_op.target);
+
+  if (test_val == target_val) {
+    CHECK_NE(instr.if_op.true_offset, 0);
+    ctx->pc += instr.if_op.true_offset;
   } else {
-    Array<Value> outs;
-    for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
-      outs.push_back(ctx.ReadRegister(instr.invoke_jit.args[i]));
-    }
-    output = TupleValue::make(outs);
+    CHECK_NE(instr.if_op.false_offset, 0);
+    ctx->pc += instr.if_op.false_offset;
+  }
+}
+
+void VirtualMachine::HandleAllocStorage(VMContext& ctx, const Instruction& instr) {
+  auto size = ctx.LoadScalarInt(instr.alloc_storage.allocation_size);
+  auto alignment = instr.alloc_storage.alignment;
+
+  DLOG(INFO) << "AllocStorage: allocation_size=" << size << " alignment=" << alignment
+             << " dtype_hint=" << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
+
+  auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
+  auto buffer = memory_pool::Memory::Alloc(dev, size, alignment);
+  auto storage = StorageValue::make(buffer);
+  ctx.WriteRegister(instr.dst, storage);
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleAllocTensor(VMContext& ctx, const Instruction& instr) {
+  auto shape = std::vector<int64_t>(instr.alloc_tensor.ndim);
+  for (uint32_t i = 0; i < instr.alloc_tensor.ndim; ++i) {
+    shape[i] = instr.alloc_tensor.shape[i];
   }
 
-  // check the OpEnv cache
-  std::shared_ptr<OpEnv> op_env;
-  auto op_env_cache = op_env_cache_[ctx->func_index]->Get(ctx->pc);
-  if (auto p = op_env_cache->Get(key.byte_vector)) {
-    // Cache hit. Reuse the OpEnv from the cache.
-    op_env = *p;
+  auto storage_obj = ctx.ReadRegister(instr.alloc_tensor.storage);
+  auto storage = Downcast<StorageValue>(storage_obj);
+  std::shared_ptr<memory_pool::Memory> mem = nullptr;
+  if (instr.alloc_tensor.own) {
+    mem = storage->buffer;
+  }
+  auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor.dtype, shape, {},
+                                      storage->buffer->data, mem);
+  ctx.WriteRegister(instr.dst, tensor);
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleAllocTensorReg(VMContext& ctx, const Instruction& instr) {
+  Value value = ctx.ReadRegister(instr.alloc_tensor_reg.shape_register);
+  const auto* tuple = value.as<TupleValueObj>();
+  auto shape = std::vector<int64_t>(tuple->fields.size());
+  for (size_t i = 0; i < tuple->fields.size(); ++i) {
+    shape[i] = Downcast<IntValue>(tuple->fields[i])->value;
+  }
+
+  auto storage_obj = ctx.ReadRegister(instr.alloc_tensor_reg.storage);
+  auto storage = Downcast<StorageValue>(storage_obj);
+  std::shared_ptr<memory_pool::Memory> mem = nullptr;
+  if (instr.alloc_tensor_reg.own) {
+    mem = storage->buffer;
+  }
+  auto tensor = TensorValue::Assemble(storage->buffer->device, instr.alloc_tensor_reg.dtype, shape,
+                                      {}, storage->buffer->data, mem);
+  ctx.WriteRegister(instr.dst, tensor);
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleAllocTuple(VMContext& ctx, const Instruction& instr) {
+  Array<Value> fields;
+  for (Index i = 0; i < instr.alloc_tuple.num_fields; ++i) {
+    fields.push_back(ctx.ReadRegister(instr.alloc_tuple.fields[i]));
+  }
+  ctx.WriteRegister(instr.dst, TupleValue::make(fields));
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleAllocClosure(VMContext& ctx, const Instruction& instr) {
+  std::vector<Value> free_vars;
+  for (Index i = 0; i < instr.alloc_closure.num_free_vars; i++) {
+    free_vars.push_back(ctx.ReadRegister(instr.alloc_closure.free_vars[i]));
+  }
+  auto clo = VMClosureValue::make(instr.alloc_closure.func_index, free_vars);
+  ctx.WriteRegister(instr.dst, clo);
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleFree(VMContext& ctx, const Instruction& instr) {
+  RegName reg = instr.free.memory;
+  auto reg_val = ctx.ReadRegister(reg);
+  if (reg_val->IsInstance<StorageValueObj>()) {
+    auto storage_val = Downcast<StorageValue>(reg_val);
+    storage_val->buffer.reset();
   } else {
-    // Create a new OpEnv.
-    static auto fschema = Op::GetAttrMap<FMNMSchema>("FMNMSchema");
-    auto call_values = CallValues::make();
-    Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
-    const auto* op = callee.as<OpValueObj>();
-    const auto* closure = callee.as<ClosureValueObj>();
-    call_values->callee = callee;
-    if (op) {
-      call_values->args = fschema[op->op](args);
-    } else {
-      call_values->args = MakeListArgs(args);
-    }
-    call_values->device = devices_[0];
-    call_values->out = output;
-    op_env = Dispatch(call_values);
-    CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
-                             << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
-                             << call_values->device.c_str();
-    // add to cache
-    op_env_cache->Set(key.byte_vector, op_env);
+    CHECK(reg_val->IsInstance<TensorValueObj>())
+        << "Expected StorageValue or TensorValue, but got " << reg_val->GetTypeKey();
+    auto tensor_val = Downcast<TensorValue>(reg_val);
+    tensor_val->mem.reset();
   }
+  ctx->pc++;
+}
 
-  std::shared_ptr<Requests> requests = op_env->GetRequests();
-  for (size_t i = 0; i < requests->workspace.size(); i++) {
-    Requests::WorkspaceRequest& entry = requests->workspace[i];
-    auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
-    entry.memory = buf;
-    *entry.dest = buf->data;
+void VirtualMachine::HandleInvokeFunc(VMContext& ctx, const Instruction& instr) {
+  std::vector<Value> args;
+  for (Index i = 0; i < instr.invoke_func.num_args; ++i) {
+    args.push_back(ctx.ReadRegister(instr.invoke_func.args[i]));
   }
+  ctx.PushFrame(instr.invoke_func.func_index, args, instr.dst);
+}
 
+void VirtualMachine::HandleInvokeClosure(VMContext& ctx, const Instruction& instr) {
+  auto closure = Downcast<VMClosureValue>(ctx.ReadRegister(instr.invoke_closure.closure));
+  std::vector<Value> args;
+  for (auto free_var : closure->free_vars) {
+    args.push_back(free_var);
+  }
+  for (Index i = 0; i < instr.invoke_closure.num_args; ++i) {
+    args.push_back(ctx.ReadRegister(instr.invoke_closure.args[i]));
+  }
+  ctx.PushFrame(closure->func_index, args, instr.dst);
+}
+
+void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
+  OpEnvPtr op_env;
   std::vector<Value> inputs;
-  for (int i : op_env->arg_indices) {
-    CHECK_GE(i, 0) << "Invalid input index: " << i;
-    inputs.push_back(args[i]);
+  Value output;
+  std::string input_str;
+
+  std::tie(op_env, inputs, output, input_str) = PrepareOpEnv(ctx, instr);
+#ifdef MNM_USE_CUDA
+  if (use_cuda_) {
+    WITH_CUDA_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {input_str},
+                       { op_env->Execute(inputs, output); });
+  } else
+#endif
+  {  // cpu
+    WITH_BASE_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {input_str},
+                       { op_env->Execute(inputs, output); });
   }
-  return std::make_tuple(op_env, std::move(inputs), std::move(output));
+
+  // Release workspace memory.
+  // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
+  //   kernel. Because the kernel may be in the executing status at this point due to
+  //   asynchronous execution. This would cause problem for multi-stream execution.
+  std::shared_ptr<Requests> requests = op_env->GetRequests();
+  for (size_t i = 0; i < requests->workspace.size(); ++i) {
+    Requests::WorkspaceRequest& entry = requests->workspace[i];
+    if (entry.nbytes > 0 && entry.memory != nullptr) {
+      *entry.dest = nullptr;
+      entry.memory.reset();
+    }
+  }
+  ctx->pc++;
 }
 
-void VirtualMachine::ExecuteOpEnv(OpEnv* op_env, const std::vector<value::Value>& inputs,
-                                  value::Value output) {
-  op_env->Execute(inputs, output);
+void VirtualMachine::HandleSetShape(VMContext& ctx, const Instruction& instr) {
+  auto data = Downcast<TensorValue>(ctx.ReadRegister(instr.set_shape.data));
+  auto raw_shape = ctx.ReadRegister(instr.set_shape.shape);
+  std::vector<int64_t> shape;
+  if (const auto tuple = raw_shape.as<TupleValueObj>()) {
+    for (size_t i = 0; i < tuple->fields.size(); ++i) {
+      shape.push_back(Downcast<IntValue>(tuple->fields[i])->value);
+    }
+  } else {
+    raw_shape = CopyTo(raw_shape, Device(DevType::kCPU(), 0));
+    shape = common::shape_utils::GetShapeVecFromData(raw_shape);
+  }
+  ctx.WriteRegister(instr.dst, data.CreateView(shape));
+  ctx->pc++;
 }
 
-void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
+bool VirtualMachine::HandleRet(VMContext& ctx, const Instruction& instr) {
+  auto ret_val = ctx.ReadRegister(instr.result);
+  auto caller_return_register = ctx.PopFrame();
+  if (caller_return_register < 0) {
+    // We have hit the point from which we started running, we should return to the caller breaking
+    // the dispatch loop.
+    ctx->return_register = ret_val;
+    return true;
+  } else {  // Otherwise we are just returning from a local call.
+    ctx.WriteRegister(caller_return_register, ret_val);
+    return false;
+  }
+}
+
+void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
   Array<Value> args;
   for (Index i = 0; i < instr.infer_type.num_args; i++) {
     args.push_back(ctx.ReadRegister(instr.infer_type.args[i]));
@@ -778,6 +752,182 @@ void VirtualMachine::RunInferType(VMContext& ctx, const Instruction& instr) {
     LOG(FATAL) << "Unknown type " << ret_type->_type_key;
   }
   ctx.WriteRegister(instr.dst, TupleValue::make(ret_tup));
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleCudaSetStream(VMContext& ctx, const Instruction& instr) {
+#ifdef MNM_USE_CUDA
+  while (cuda_streams_.size() <= instr.cuda_set_stream.stream_id) {
+    cudaStream_t stream;
+    CUDA_CALL(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+    cuda_streams_.push_back(stream);
+  }
+  MNMSetStream(Device(DevType::kCUDA(), static_cast<int>(instr.cuda_set_stream.device_id)),
+               cuda_streams_[instr.cuda_set_stream.stream_id]);
+  ctx->stream_index = instr.cuda_set_stream.stream_id;
+  ctx->pc++;
+#else
+  LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
+#endif
+}
+
+void VirtualMachine::HandleCudaAddEvent(VMContext& ctx, const Instruction& instr) {
+#ifdef MNM_USE_CUDA
+  CHECK_LT(ctx->stream_index, cuda_streams_.size());
+  while (cuda_events_.size() <= instr.cuda_event.event_id) {
+    cudaEvent_t event;
+    CUDA_CALL(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
+    cuda_events_.push_back(event);
+  }
+  CUDA_CALL(
+      cudaEventRecord(cuda_events_[instr.cuda_event.event_id], cuda_streams_[ctx->stream_index]));
+  ctx->pc++;
+#else
+  LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
+#endif
+}
+
+void VirtualMachine::HandleCudaWaitEvent(VMContext& ctx, const Instruction& instr) {
+#ifdef MNM_USE_CUDA
+  CHECK_LT(ctx->stream_index, cuda_streams_.size());
+  CHECK_LT(instr.cuda_event.event_id, cuda_events_.size()) << "Wait for non-existing event";
+  CUDA_CALL(cudaStreamWaitEvent(cuda_streams_[ctx->stream_index],
+                                cuda_events_[instr.cuda_event.event_id],
+                                0 /*cudaEventWaitDefault*/));
+  ctx->pc++;
+#else
+  LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
+#endif
+}
+
+std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value, std::string>
+VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
+  Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
+  Array<Value> args;
+  Value output;
+
+  auto ftensor_str = [](std::ostringstream& os, const TensorValueObj* tensor) {
+    const DLTensor* t = tensor->tensor.operator->();
+    os << "T<";
+    for (int i = 0; i < t->ndim; ++i) {
+      os << t->shape[i] << "x";
+    }
+    switch (t->dtype.code) {
+      case kDLInt: {
+        os << "i" << static_cast<int>(t->dtype.bits);
+        break;
+      }
+      case kDLUInt: {
+        os << "u" << static_cast<int>(t->dtype.bits);
+        break;
+      }
+      case kDLFloat: {
+        os << "f" << static_cast<int>(t->dtype.bits);
+        break;
+      }
+      case kDLBfloat: {
+        os << "bf" << static_cast<int>(t->dtype.bits);
+        break;
+      }
+      default: {
+        os << "unk";
+        break;
+      }
+    }
+    if (t->dtype.lanes > 1) {
+      os << "x" << static_cast<int>(t->dtype.lanes);
+    }
+    os << ">";
+  };
+
+  // extract the input args and prepare the hash key to query op env
+  std::ostringstream os;
+  for (Index i = 0; i < num_inputs; i++) {
+    Index reg_idx = instr.invoke_jit.args[i];
+    auto reg = ctx.ReadRegister(reg_idx);
+    args.push_back(reg);
+    if (ctx.IsConst(reg_idx)) {
+      // Skip constatnts in the hash key
+      continue;
+    }
+    if (auto tensor = reg.as<TensorValueObj>()) {
+      ftensor_str(os, tensor);
+    } else if (auto tup = reg.as<TupleValueObj>()) {
+      os << "(";
+      for (auto field : tup->fields) {
+        auto t = field.as<TensorValueObj>();
+        CHECK(t != nullptr);
+        ftensor_str(os, t);
+        os << ",";
+      }
+      os << ")";
+    } else {
+      LOG(FATAL) << "Unsupported non-const register type: " << reg->GetTypeKey();
+    }
+    os << ",";
+  }
+  std::string input_str = os.str();
+
+  // extract the output
+  if (instr.invoke_jit.output_size == 1) {
+    output = ctx.ReadRegister(instr.invoke_jit.args[num_inputs]);
+  } else {
+    Array<Value> outs;
+    for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
+      outs.push_back(ctx.ReadRegister(instr.invoke_jit.args[i]));
+    }
+    output = TupleValue::make(outs);
+  }
+
+  // check the OpEnv cache
+  std::shared_ptr<OpEnv> op_env;
+  auto op_env_cache = op_env_cache_[ctx->func_index]->Get(ctx->pc);
+  if (auto p = op_env_cache->Get(input_str)) {
+    // Cache hit. Reuse the OpEnv from the cache.
+    op_env = *p;
+  } else {
+    // Create a new OpEnv.
+    static auto fschema = Op::GetAttrMap<FMNMSchema>("FMNMSchema");
+    auto call_values = CallValues::make();
+    Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
+    const auto* op = callee.as<OpValueObj>();
+    const auto* closure = callee.as<ClosureValueObj>();
+    call_values->callee = callee;
+    if (op) {
+      call_values->args = fschema[op->op](args);
+    } else {
+      call_values->args = MakeListArgs(args);
+    }
+    call_values->device = devices_[0];
+    call_values->out = output;
+    op_env = Dispatch(call_values);
+    CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
+                             << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
+                             << call_values->device.c_str();
+    // add to cache
+    op_env_cache->Set(input_str, op_env);
+  }
+
+  std::shared_ptr<Requests> requests = op_env->GetRequests();
+  for (size_t i = 0; i < requests->workspace.size(); i++) {
+    Requests::WorkspaceRequest& entry = requests->workspace[i];
+    auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
+    entry.memory = buf;
+    *entry.dest = buf->data;
+  }
+
+  std::vector<Value> inputs;
+  for (int i : op_env->arg_indices) {
+    CHECK_GE(i, 0) << "Invalid input index: " << i;
+    inputs.push_back(args[i]);
+  }
+  return std::make_tuple(op_env, std::move(inputs), std::move(output), input_str);
+}
+
+tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph) {
+  auto vm = make_object<VirtualMachine>(enable_cuda_graph);
+  vm->LoadExecutable(exec);
+  return tvm::runtime::Module(vm);
 }
 
 MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

@@ -14,7 +14,9 @@ GetPrimitiveFields = _APIS.get("mnm.vm.GetPrimitiveFields", None)
 Load_Executable = _APIS.get("mnm.vm.Load_Executable", None)
 # Defined in ./src/impl/vm/compiler.cc
 VMCompiler = _APIS.get("mnm.vm.VMCompiler", None)
+# Defined in ./src/impl/vm/vm_debugger.cc
+VMDebugger = _APIS.get("mnm.vm.VMDebugger", None)
+# Defined in ./src/impl/vm/vm_memory_profiler.cc
+VMMemoryProfiler = _APIS.get("mnm.vm.VMMemoryProfiler", None)
 # Defined in ./src/impl/vm/vm.cc
 VirtualMachine = _APIS.get("mnm.vm.VirtualMachine", None)
-# Defined in ./src/impl/vm/vm_profiler.cc
-VirtualMachineProfiler = _APIS.get("mnm.vm.VirtualMachineProfiler", None)

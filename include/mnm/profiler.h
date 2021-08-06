@@ -24,19 +24,22 @@
 #include <unistd.h>
 #endif
 
-#define WITH_BASE_PROFILER(DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)                                 \
-  {                                                                                               \
-    bool profiling = profiler::Profiler::Get()->IsProfiling();                                    \
-    if (profiling) {                                                                              \
-      profiler::ProfilerBaseHelper phelper(profiling, DEVICE.device_id, DEVICE.device_type, NAME, \
-                                           CAT, ARGS);                                            \
-      phelper.start();                                                                            \
-      CODE_SNIPPET                                                                                \
-      phelper.stop();                                                                             \
-    } else {                                                                                      \
-      CODE_SNIPPET                                                                                \
-    }                                                                                             \
+#define WITH_BASE_PROFILER_LEVEL(LEVEL, DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)               \
+  {                                                                                          \
+    bool profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                     \
+    if (profiling) {                                                                         \
+      mnm::profiler::ProfilerHelper phelper(DEVICE.device_id, DEVICE.device_type, NAME, CAT, \
+                                            ARGS);                                           \
+      phelper.start();                                                                       \
+      CODE_SNIPPET                                                                           \
+      phelper.stop();                                                                        \
+    } else {                                                                                 \
+      CODE_SNIPPET                                                                           \
+    }                                                                                        \
   }
+
+#define WITH_BASE_PROFILER(DEVICE, NAME, CAT, ARGS, CODE_SNIPPET) \
+  WITH_BASE_PROFILER_LEVEL(1, DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)
 
 namespace mnm {
 namespace profiler {
@@ -95,7 +98,7 @@ class ProfileStat {
   enum DurationStatIndex { kStart, kStop };
   std::string name_;
   std::string categories_;
-  std::string args_string = "=";
+  std::string args_string = "";
 
   size_t process_id_ = current_process_id();
   std::thread::id thread_id_ = std::this_thread::get_id();
@@ -143,44 +146,55 @@ class DeviceStats {
 
 class Profiler {
  public:
-  Profiler();
   ~Profiler();
-  static Profiler* Get(std::shared_ptr<Profiler>* sp = nullptr);
-  void SetConfig(bool profiling);
+  static Profiler* Get();  // std::shared_ptr<Profiler>* sp = nullptr);
   void AddNewProfileStat(std::string categories, std::string name, uint64_t start_time,
                          uint64_t end_time, const std::vector<std::string>& args);
   std::string GetProfile();
   std::vector<ProfileStat> GetProfileStats();
-  inline bool IsProfiling() {
-    return profiling_;
+
+  inline bool IsProfiling(int level) {
+    return profile_level_ >= level;
+  }
+
+  inline int profile_level() const {
+    return profile_level_;
+  }
+
+  inline void set_profile_level(int profile_level = 0) {
+    profile_level_ = profile_level;
   }
 
  private:
+  Profiler();
+
+  /*! \brief Profile statistics. */
   DeviceStats profile_stats_;
-  bool profiling_{false};
+  /*! \brief Profiling level. */
+  int profile_level_{0};
+  /*! \brief Mutex for multi-threading. */
   std::recursive_mutex m_;
+  /*! \brief Initial time for profiler. */
   uint64_t init_time_;
 };
 
-class ProfilerBaseHelper {
+class ProfilerHelper {
  public:
-  ProfilerBaseHelper(bool profiling, uint32_t dev_id, mnm::DevType dev_type, std::string name,
-                     std::string categories, std::vector<std::string> args = {})
-      : profiling_(profiling),
-        device_(Device(dev_type, dev_id)),
-        name_(name),
-        categories_(categories),
-        args(args) {
+  ProfilerHelper(uint32_t dev_id, mnm::DevType dev_type, std::string name, std::string categories,
+                 std::vector<std::string> args = {})
+      : device_(Device(dev_type, dev_id)), name_(name), categories_(categories), args(args) {
     if (dev_type != mnm::DevType::kUnknown()) {
       dev_api_ = device_api::DeviceAPI::Get(dev_type);
     }
   }
+
+  virtual ~ProfilerHelper() {
+  }
+
   void start();
   void stop();
 
  protected:
-  /*! \brief whether the profiler is recording */
-  const bool profiling_;
   /*! \brief the device on which profiled code runs */
   Device device_;
   /*! \brief the name annotation of profiling results */
@@ -197,23 +211,19 @@ class ProfilerBaseHelper {
   std::vector<std::string> args;
 };
 
-inline void ProfilerBaseHelper::start() {
-  if (profiling_) {
-    if (dev_api_) {
-      dev_api_->WaitDevice(device_);
-    }
-    start_time_ = ProfileStat::NowInMicrosec();
+inline void ProfilerHelper::start() {
+  if (dev_api_) {
+    dev_api_->WaitDevice(device_);
   }
+  start_time_ = ProfileStat::NowInMicrosec();
 }
 
-inline void ProfilerBaseHelper::stop() {
-  if (profiling_) {
-    if (dev_api_) {
-      dev_api_->WaitDevice(device_);
-    }
-    end_time_ = ProfileStat::NowInMicrosec();
-    Profiler::Get()->AddNewProfileStat(categories_, name_, start_time_, end_time_, args);
+inline void ProfilerHelper::stop() {
+  if (dev_api_) {
+    dev_api_->WaitDevice(device_);
   }
+  end_time_ = ProfileStat::NowInMicrosec();
+  Profiler::Get()->AddNewProfileStat(categories_, name_, start_time_, end_time_, args);
 }
 
 }  // namespace profiler

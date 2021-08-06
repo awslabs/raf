@@ -76,6 +76,8 @@ class OpEnv {
   std::vector<int> arg_indices;
 };
 
+using OpEnvPtr = std::shared_ptr<OpEnv>;
+
 /*!
  * \brief Registry to make an OpEnv for an operator.
  */

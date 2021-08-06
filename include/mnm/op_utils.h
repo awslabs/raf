@@ -147,10 +147,24 @@ class MetaCache {
     return cached_.count(s);
   }
 
+  bool Has(const std::string& key) {
+    std::lock_guard<std::mutex> lock(mu_);
+    return cached_.count(key);
+  }
+
   const T* Get(const std::vector<uint8_t>& key) {
     const std::string s(key.begin(), key.end());
     std::lock_guard<std::mutex> lock(mu_);
     auto iter = cached_.find(s);
+    if (iter == cached_.end()) {
+      return nullptr;
+    }
+    return &iter->second;
+  }
+
+  const T* Get(const std::string& key) {
+    std::lock_guard<std::mutex> lock(mu_);
+    auto iter = cached_.find(key);
     if (iter == cached_.end()) {
       return nullptr;
     }
@@ -166,6 +180,16 @@ class MetaCache {
       throw;
     }
     cached_.emplace(s, val);
+  }
+
+  void Set(const std::string& key, T val) {
+    std::lock_guard<std::mutex> lock(mu_);
+    auto iter = cached_.find(key);
+    if (iter != cached_.end()) {
+      LOG(FATAL) << "KeyError: The key is already cached!";
+      throw;
+    }
+    cached_.emplace(key, val);
   }
 
  private:

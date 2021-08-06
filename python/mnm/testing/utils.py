@@ -2,8 +2,8 @@
 # pylint: disable=invalid-name,protected-access,too-many-arguments
 import mnm
 from mnm.model.trace import _get_func_inputs
-from mnm._core.executor import VMExecutor, VMCompiler
-from mnm._core.profiler_vm import VMProfilerExecutor
+from mnm._core.executor import VMExecutor
+from mnm._core.vm import VMCompiler
 from mnm._core.core_utils import get_chained_attr
 from .._core.module import IRModule
 from .._ffi import pass_
@@ -39,18 +39,20 @@ def run_infer_type(expr):
 
 
 def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, **kwargs):
-    """get vm executor"""
+    """Get VM executor"""
     # pylint: disable=protected-access
-    kwargs.setdefault('stream_schedule_policy', 'sequential')
-    kwargs.setdefault('sch_file', None)
-    kwargs.setdefault('pass_seq', None)
+    kwargs.setdefault("stream_schedule_policy", "sequential")
+    kwargs.setdefault("sch_file", None)
+    kwargs.setdefault("pass_seq", None)
+    kwargs.setdefault("reuse_storage", False)
 
     record = model._internal(*args)
     mod = record.mod
     inputs = _get_func_inputs(record, args, {}, get_handle=False)
     config = {
         "mnm.fuse_level": fuse_level,
-        "mnm.stream_schedule.policy": kwargs['stream_schedule_policy'],
+        "mnm.stream_schedule.policy": kwargs["stream_schedule_policy"],
+        "mnm.memory_plan.reuse_storage": kwargs["reuse_storage"],
     }
     pass_seq = kwargs['pass_seq']
     with mnm.ir.PassContext(opt_level=opt_level, config=config):
@@ -59,17 +61,6 @@ def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, **kwargs):
             mod = pass_seq(mod)
         executor = VMExecutor(mod, device)
     return executor.make_executor(sch_file=kwargs['sch_file']), inputs
-
-
-def get_vm_profiler(model, device, args, fuse_level=3):
-    """get vm profiler"""
-    # pylint: disable=invalid-name, protected-access
-    record = model._internal(*args)
-    mod = record.mod
-    inputs = _get_func_inputs(record, args, {}, get_handle=False)
-    with mnm.ir.PassContext(config={"mnm.fuse_level": fuse_level}):
-        executor = VMProfilerExecutor(mod, device)
-    return executor, inputs
 
 
 def run_vm_model(model, device, args, opt_level=2, fuse_level=3, **kwargs):

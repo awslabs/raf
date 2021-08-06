@@ -5,10 +5,15 @@ from mnm._ffi.profiler import EnableProfiler, DisableProfiler
 from mnm._ffi.profiler import CollectCudaProfile, GetProfile
 
 
-def start():
+def start(prof_level=1):
     """Enable the profiler in backend and start to profile the execution from now.
+
+    Parameters
+    ----------
+    prof_level : int
+        Specify the profiling level.
     """
-    EnableProfiler()
+    EnableProfiler(prof_level)
 
 
 def stop():

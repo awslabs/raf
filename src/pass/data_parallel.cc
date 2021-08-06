@@ -132,14 +132,14 @@ struct DataParallel {
   // Compute the dctx->scheduling_param according to the analysis of op profiling.
   void GetSchedulingParameters() {
     auto dctx = DistContext::Global();
-    static bool profiling = Profiler::Get()->IsProfiling();  // Store user's config
+    static int prof_level = Profiler::Get()->profile_level();  // Store user's config
 
     // Store the running time of all ops.
     static std::vector<std::pair<std::string, int64_t> > op_running_time;
     if (dctx->iteration < dctx->auto_dp_profiling_start_iter) {
-      Profiler::Get()->SetConfig(false);  // Disable profiling to warm up
+      Profiler::Get()->set_profile_level(0);  // Disable profiling to warm up
     } else if (dctx->iteration <= dctx->auto_dp_profiling_end_iter) {
-      Profiler::Get()->SetConfig(true);  // Profiling the execution
+      Profiler::Get()->set_profile_level(1);  // Profiling the execution
       if (op_running_time.empty()) {
         for (auto& item : Profiler::Get()->GetProfileStats()) {
           if (item.categories_ == "SchedulingCommunication") {
@@ -166,7 +166,7 @@ struct DataParallel {
         }
       }
     } else if (dctx->iteration == dctx->auto_dp_profiling_end_iter + 1) {
-      Profiler::Get()->SetConfig(profiling);  // Enbale user's config
+      Profiler::Get()->set_profile_level(prof_level);  // Enbale user's config
       // Analyse the profiling result of iter2-iter4,
       // and figure out a scheduling strategy.
       int64_t comp_total_time = 0;

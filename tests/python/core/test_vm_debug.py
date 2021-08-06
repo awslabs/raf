@@ -3,7 +3,7 @@ import mnm
 import tvm
 from mnm.testing import check
 from mnm._core.core_utils import str2dev
-from mnm._core.profiler_vm import VMProfilerExecutor
+from mnm._core.vm_debug import VMDebugExecutor
 from mnm._ffi.memory_pool import InitPool
 from mnm.testing import get_device_list, randn, with_seed
 
@@ -11,7 +11,7 @@ from mnm.testing import get_device_list, randn, with_seed
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 @with_seed(0)
-def test_vm_debug(device, shape):
+def test_vm_debugger(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -30,7 +30,7 @@ def test_vm_debug(device, shape):
     mod = model._internal(m_x).mod
     # disable fusion
     with mnm.ir.PassContext(opt_level=1):
-        executor = VMProfilerExecutor(mod, device, cache_interm_tensors=True)
+        executor = VMDebugExecutor(mod, device, option="debug")
 
     # Testing whether we can get the correct intermediate tensor
     m_z = executor.make_executor()(m_x).numpy()
@@ -49,7 +49,7 @@ def test_vm_debug(device, shape):
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("pool_name", ["no_pool", "page_unit_pool"])
-def test_vm_memory_profile(device, pool_name):
+def test_vm_memory_profiler(device, pool_name):
     # pylint: disable=protected-access
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init,no-self-use
@@ -75,8 +75,8 @@ def test_vm_memory_profile(device, pool_name):
     mod = model._internal(m_x, m_w).mod
     with tvm.transform.PassContext(opt_level=3):
         # Enable memory planning to check if memory profiler reflects buffer sharing.
-        executor = VMProfilerExecutor(mod, device)
-        ret_map = executor.make_executor()(m_x, m_w, profile_memory=True)
+        executor = VMDebugExecutor(mod, device, option="profile_memory")
+        ret_map = executor.make_executor()(m_x, m_w)
 
     # The buffer size in MBs for an output tensor of the conv2d in the model.
     # Note that since it fits to the page size, we can allocate the exact size for it.
