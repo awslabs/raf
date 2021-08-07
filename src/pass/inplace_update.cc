@@ -110,7 +110,7 @@ class InplaceUpdateMutator : public MixedModeMutator {
           auto arg = Downcast<Var>(call->args[it.first]);
           auto var = arg.as<ExtendedVarNode>();
           if (var && var->may_share.defined()) {
-            arg = var->may_share;
+            arg = GetLatestShareVar(var->may_share);
           }
           share.emplace(it.second, arg);
         }
@@ -119,8 +119,9 @@ class InplaceUpdateMutator : public MixedModeMutator {
         // Currently only support add and subtract in the binary ops for inplace update.
         // If the inplace arg is true, the output tensor will share memory with the 1st input tensor
         CHECK_GT(pre->args.size(), 2);
-        if (auto var = pre->args[2].as<ExtendedVarNode>()) {
-          ExprShareMap share{{0, GetRef<Var>(var)}};
+        if (pre->args[2].as<ExtendedVarNode>()) {
+          auto var = Downcast<Var>(pre->args[2]);
+          ExprShareMap share{{0, GetLatestShareVar(var)}};
           expr_share_map_.emplace(post, share);
         }
       }
@@ -184,6 +185,29 @@ class InplaceUpdateMutator : public MixedModeMutator {
   }
 
  private:
+  /*!
+   * \brief Get the up-to-date shared var.
+   * If the shared var is already in the update map, meaning that the shared var
+   * also shares another var, forming a share chain. In this case, we need to use
+   * the up-to-date shared var. For example:
+   *
+   * let %x1 = mnm.op.add(%x, %x, nullptr, nullptr);
+   * let %x2(share: %x1) = mnm.op.add(%x1, %x, %x1, nullptr);
+   * let %x3(share: %x2) = mnm.op.add(%x2, %x, %x2, nullptr);
+   *
+   * In %x3, its shared var should be the new created %x2(share: %x1) instead of
+   * the original %x2(share: nullptr).
+   * \param var The original shared var.
+   * \return The up-to-date shared var, which can be the identical shared var or
+   * a new created shared var.
+   */
+  inline Var GetLatestShareVar(const Var& var) {
+    if (var_update_map_.count(var) > 0) {
+      return var_update_map_[var];
+    }
+    return var;
+  }
+
   /*! \brief Mapping from expr to the share information of its output. */
   std::unordered_map<Expr, ExprShareMap, ObjectPtrHash, ObjectPtrEqual> expr_share_map_;
   /*! \brief Mapping from fused function to its share information. */

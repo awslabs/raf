@@ -1,4 +1,5 @@
-# pylint: disable=protected-access
+# pylint: disable=protected-access, no-self-use, attribute-defined-outside-init
+# pylint: disable=too-many-locals, too-many-arguments
 import pytest
 import numpy as np
 import mnm
@@ -134,7 +135,6 @@ def test_bn():
 
 @pytest.mark.parametrize("device", get_device_list())
 def test_grad(device):
-    # pylint: disable=too-many-locals, too-many-arguments, attribute-defined-outside-init
     class Model(mnm.Model):
         def build(self, shape):
             self.shape = shape
@@ -144,7 +144,7 @@ def test_grad(device):
             self.x = mnm.array(np.random.randn(*self.shape), device=device)
 
         @mnm.model.trace
-        def forward(self):  # pylint: disable=no-self-use
+        def forward(self):
             return mnm.relu(self.x)
 
     # fn (%dy: Tensor[(2, 3, 4), float64], %model.x: Tensor[(2, 3, 4), float64]) {
@@ -210,6 +210,44 @@ def test_grad(device):
     # 12: 1 11   # ret $11
     model.x.update(param)
     bytecode = compile_vm_model(sgd, device, [dy, model.x])
+    assert bytecode.count("alloc_tensor") == 1
+
+
+def test_chain():
+    shape = (10, 20)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            a_1 = mnm.add(x, x)
+            a_prev = a_1
+            for _ in range(5):
+                a_i = mnm.add(a_prev, x, out=a_prev)
+                a_prev = a_i
+            return a_i
+
+    # fn (%x: Tensor[(10, 20), float64]) {
+    #   let %x1 = mnm.op.add(%x, %x, nullptr, nullptr);
+    #   let %x2(share: %x1) = mnm.op.add(%x1, %x, %x1, nullptr);
+    #   let %x3(share: %x2) = mnm.op.add(%x2, %x, %x2, nullptr);
+    #   ...
+    # }
+    model = Model()
+    device = "cpu"
+    x = mnm.array(np.random.randn(*shape), device=device)
+    func = lower(model, x)["main"]
+    variables = extract_vars(func.body)
+    prev_var = None
+    for variable in variables:
+        extended_var = ExtendedVar(variable)
+        if prev_var is not None:
+            assert extended_var.may_share == prev_var
+        prev_var = extended_var
+
+    bytecode = compile_vm_model(model, device, [x])
     assert bytecode.count("alloc_tensor") == 1
 
 
