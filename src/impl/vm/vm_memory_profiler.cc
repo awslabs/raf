@@ -16,6 +16,7 @@
 #include "mnm/memory_pool.h"
 #include "mnm/pass.h"
 #include "./vm_memory_profiler.h"
+#include "../../requests.h"
 
 namespace mnm {
 namespace executor {
@@ -123,6 +124,20 @@ void VMMemoryProfiler::HandleInvokeJit(VMContext& ctx, const Instruction& instr)
                                          (peak_total < curr_total) ? curr_total : peak_total);
   }
   memory_trace_.emplace_back(op_env, curr_mems);
+
+  // Release workspace memory.
+  // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
+  //   kernel. Because the kernel may be in the executing status at this point due to
+  //   asynchronous execution. This would cause problem for multi-stream execution.
+  std::shared_ptr<requests::Requests> requests = op_env->GetRequests();
+  for (size_t i = 0; i < requests->workspace.size(); ++i) {
+    requests::Requests::WorkspaceRequest& entry = requests->workspace[i];
+    if (entry.nbytes > 0 && entry.memory != nullptr) {
+      *entry.dest = nullptr;
+      entry.memory.reset();
+    }
+  }
+
   ctx->pc++;
 }
 
