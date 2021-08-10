@@ -69,9 +69,7 @@ class TypeInferencer : public ExprMutator {
     CHECK(mod_->ContainGlobalVar(op->name_hint))
         << "Module does not contain " << GetRef<GlobalVar>(op);
     Expr func = mod_->Lookup(GetRef<GlobalVar>(op));
-    if (!func->checked_type_.defined()) {
-      func = VisitExpr(func);
-    }
+    func = VisitExpr(func);
     op->checked_type_ = func->checked_type();
     return std::move(GetRef<GlobalVar>(op));
   }
@@ -344,6 +342,13 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const FunctionNode* op) override {
+    if (visited_.count(GetRef<Function>(op))) {
+      if (!op->checked_type_.defined()) {
+        op->checked_type_ = IncompleteType(kType);
+      }
+      return GetRef<Function>(op);
+    }
+    visited_.insert(GetRef<Function>(op));
     Array<Var> params;
     Array<Type> param_types;
     for (const auto& p : op->params) {
@@ -365,6 +370,8 @@ class TypeInferencer : public ExprMutator {
    * E.g. Let %a = %b; Let %c = some_op(%a). The var_value_map_ will map %b to some_op.
    */
   std::unordered_map<const VarNode*, Expr> var_value_map_;
+  /*! \brief Track visited Expr to avoid indefinite recursion in IR with recursive functions */
+  std::unordered_set<Expr, ObjectPtrHash, ObjectPtrEqual> visited_;
 };
 
 class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {

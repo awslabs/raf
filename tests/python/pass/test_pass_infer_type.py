@@ -1,10 +1,13 @@
-# pylint: disable=protected-access
+# pylint: disable=protected-access, invalid-name, attribute-defined-outside-init, no-self-use
+# pylint: disable=too-many-locals
 import numpy as np
 import pytest
 import tvm
 import mnm
 from mnm._core.ndarray import Symbol
-from mnm._ffi.pass_ import AutoDiff, ExtractBinding, FromRelay, InferType
+from mnm._core.module import IRModule
+from mnm._core.ir_ext import extended_var
+from mnm._ffi.pass_ import AutoDiff, ExtractBinding, FromRelay, InferType, LambdaLift
 from mnm._op import sym as op
 from mnm.testing import check, randn, run_infer_type
 from tvm import relay
@@ -17,7 +20,7 @@ def assert_has_type(expr, typ):
 
 
 def test_mnm_module():
-    f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
+    f1 = relay.GlobalVar("f1")
     main = relay.GlobalVar("main")
     def get_tvm_mod():
         x = relay.var("x", shape=(1, 100))
@@ -45,7 +48,7 @@ def test_mnm_module():
 
 
 def test_mnm_recursive_function():
-    f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
+    f1 = relay.GlobalVar("f1")
     main = relay.GlobalVar("main")
     def get_recursive_mod():
         sb = mnm.ir.ScopeBuilder()
@@ -62,7 +65,7 @@ def test_mnm_recursive_function():
         mod[f1] = relay.Function([n, x], sb.get())
         mod = relay.transform.InferType()(mod)
 
-        n1 = relay.var("n1", ti32)  # pylint: disable=invalid-name
+        n1 = relay.var("n1", ti32)
         y = relay.var("y", shape=(1, 100), dtype="float32")
         out = f1(n1, y)
         mod[main] = relay.Function([n1, y], out)
@@ -82,7 +85,7 @@ def test_mnm_recursive_function():
 
 
 def test_mnm_return_function():
-    f = relay.GlobalVar("f")  # pylint: disable=invalid-name
+    f = relay.GlobalVar("f")
     main = relay.GlobalVar("main")
     def get_tvm_mod():
         tvm_mod = tvm.IRModule()
@@ -112,7 +115,6 @@ def test_mnm_return_function():
 
 def test_model_params():
     class Model(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
         def build(self):
             self.b = mnm.array(np.arange(4).reshape(
                 [2, 1, 2]), dtype='float32')
@@ -137,11 +139,9 @@ def test_model_params():
 
 def test_any():
     class Model(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        # pylint: disable=no-self-use
         @mnm.model.trace
         def forward(self, a, b):
             c = mnm.add(a, b)
@@ -170,11 +170,9 @@ def test_any():
 
 def test_incomplete_call():
     class Model(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        # pylint: disable=no-self-use
         @mnm.model.trace
         def forward(self, a, b):
             c = mnm.add(a, b)
@@ -199,11 +197,9 @@ def test_incomplete_call():
 
 def test_gradient_closure():
     class Model(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        # pylint: disable=no-self-use
         @mnm.model.trace
         def forward(self, x):
             y = mnm.transpose(x, (0, 2, 1))
@@ -231,7 +227,6 @@ def test_gradient_op():
     x = Symbol.make_var("x", x_ty)
 
     def get_type_func(net):
-        # pylint: disable=protected-access
         body = net._Symbol__handle
         body = ExtractBinding(body, [])
         func = relay.Function(relay.analysis.free_vars(body), body)
@@ -248,7 +243,6 @@ def test_gradient_op():
 
 
 def test_shape_op():
-    # pylint: disable=protected-access
     shape = mnm._ffi.op.GetOp("mnm.op.shape")
     conv2d_dx = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
 
@@ -277,7 +271,7 @@ def test_shape_op():
     check_conv2d_dx()
 
 
-# pylint: disable=import-outside-toplevel, protected-access
+# pylint: disable=import-outside-toplevel
 def test_constant_tensor():
     from mnm._ffi.ir.constant import ExtractValue
     from mnm._ffi.value import ToTVM
@@ -310,7 +304,6 @@ def test_constant_tensor_tuple():
     check(m_c2, ToTVM(ExtractValue(func.body)[1]).numpy())
 
 def test_closure_with_const_args1():
-    # pylint: disable=attribute-defined-outside-init
     rand, _ = randn((1,), device="cpu")
 
     class Model(mnm.Model):
@@ -362,6 +355,68 @@ def test_closure_with_const_args2():
     mod = mnm._ffi.pass_.FuseOps()(mod)
     mod = mnm._ffi.pass_.ToANormalForm()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
+
+
+def test_multi_functions():
+    # Create a symbolic model and run it
+    class Add(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, y):
+            return mnm.add(x, y)
+
+    # Get a Relay func
+    shape = [3, 3]
+    model = Add()
+    m_x, _ = randn(shape, requires_grad=True)
+    m_y, _ = randn(shape, requires_grad=True)
+    record = model._internal(m_x, m_y)
+    mod = record.mod
+
+    # Run AutoDiff to get nested functions
+    # The backward function will be lifted
+    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = AutoDiff(record.requires_grads)(mod)
+
+    # Call Lambda lift pass on the Meta module
+    lifted_mod = LambdaLift()(mod)
+    assert len(lifted_mod.functions) == 2
+
+    # Invoke the backward closure in main
+    fwd, bwd, fwd_var, bwd_var = None, None, None, None
+    for k, v in lifted_mod.functions.items():
+        if k.name_hint == "main":
+            fwd_var, fwd = relay.GlobalVar("fwd"), v
+        else:
+            bwd_var, bwd = k, v
+    v, v1, v2, v3 = extended_var("v"), extended_var("v"), extended_var("v"), extended_var("v")
+    v4, v5, v6, v7 = extended_var("v"), extended_var("v"), extended_var("v"), extended_var("v")
+    x = extended_var("x", shape=(3, 3), dtype="float32")
+    y = extended_var("x", shape=(3, 3), dtype="float32")
+    dy = extended_var("dy", shape=(3, 3), dtype="float32")
+    # pylint: disable=bad-continuation
+    body = relay.Let(v, fwd_var,
+        relay.Let(v1, relay.Call(v, [x, y]),
+        relay.Let(v2, relay.TupleGetItem(v1, 0),
+        relay.Let(v3, relay.TupleGetItem(v1, 1),
+        relay.Let(v4, relay.Call(v3, [dy]),
+        relay.Let(v5, relay.TupleGetItem(v4, 0),
+        relay.Let(v6, relay.TupleGetItem(v4, 1),
+        relay.Let(v7, relay.Tuple([v2, v5, v6]),  # forward, dx, dy
+        v7
+    ))))))))
+    # pylint: enable=bad-continuation
+    func = relay.Function([x, y, dy], body)
+    mod = IRModule({fwd_var: fwd, bwd_var: bwd, relay.GlobalVar("main"): func})
+    mod = mnm._ffi.pass_.InferType()(mod)
+    expected_ty = relay.FuncType([relay.TensorType((3, 3)), relay.TensorType((3, 3)),
+                                  relay.TensorType((3, 3))],
+                                 relay.TupleType([relay.TensorType((3, 3)),
+                                                  relay.TensorType((3, 3)),
+                                                  relay.TensorType((3, 3))]))
+    assert mod["main"].checked_type == expected_ty
 
 
 if __name__ == "__main__":
