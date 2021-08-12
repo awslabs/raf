@@ -6,7 +6,12 @@
 #pragma once
 
 #include <vector>
+#include <tvm/ir/type_functor.h>
 #include "mnm/ir.h"
+
+using namespace mnm::value;
+using tvm::kType;
+using tvm::TypeFunctor;
 
 namespace mnm {
 namespace pass {
@@ -210,5 +215,65 @@ static inline Function CreateGlobalFunc(const Array<Var>& free_vars, const Expr&
 
   return Function(new_free_vars, new_body, type_annotation, {});
 }
+
+// Forward declarations of GetValue functions, which generate Value from
+// the given type expression.
+Value GetValue(Type type);
+Value GetValue(Expr expr);
+
+class TypeGetter : public TypeFunctor<Value(const Type&)> {
+  Value VisitType_(const TensorTypeNode* op) {
+    return TensorTypeValue::make(GetRef<TensorType>(op));
+  }
+
+  Value VisitType_(const TupleTypeNode* op) {
+    Array<Value> ret;
+    for (const auto& ty : op->fields) {
+      ret.push_back(VisitType(ty));
+    }
+    return TupleValue::make(ret);
+  }
+
+  Value VisitType_(const FuncTypeNode* op) {
+    // FuncType doesn't really carry value so we return void
+    return VoidValue::make();
+  }
+};
+
+class ValueGetter : public ExprFunctor<Value(const Expr&)> {
+  Value VisitExpr_(const RelayConstantNode* op) {
+    const ConstantNode* node = static_cast<const ConstantNode*>(op);
+    if (const ArrayNode* arr = node->value.as<ArrayNode>()) {
+      Array<Value> fields;
+      for (const auto& it : *arr) {
+        fields.push_back(IntValue::make(DataType::Int(64), (Downcast<IntImm>(it))->value));
+      }
+      return TupleValue::make(fields);
+    }
+    return node->value.defined() ? Downcast<Value>(node->value) : NullValue<Value>();
+  }
+
+  Value VisitExpr_(const OpNode* op) {
+    return OpValue::make(GetRef<Op>(op));
+  }
+
+  Value VisitExpr_(const FunctionNode* op) {
+    return ClosureValue::make({}, GetRef<Function>(op));
+  }
+
+  Value VisitExprDefault_(const Object* op) {
+    const auto* e = static_cast<const ExprNode*>(op);
+    return GetValue(e->checked_type());
+  }
+};
+
+inline Value GetValue(Type type) {
+  return TypeGetter()(type);
+}
+
+inline Value GetValue(Expr expr) {
+  return ValueGetter()(expr);
+}
+
 };  // namespace pass
 };  // namespace mnm

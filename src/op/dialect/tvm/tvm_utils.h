@@ -27,6 +27,8 @@ ir::Type GetTensorType(const DLTensor& dlt);
 ir::Type GetTupleType(const std::vector<DLTensor>& dlts);
 ir::Function LowerOp(const ir::Op& op, const ir::Attrs& attrs,
                      const std::vector<ir::Type>& param_types, const ir::Type& ret_type);
+int CalcFuncFLOPS(const op::CallValues& call, const Array<Type>& param_types, const Type& ret_type,
+                  const Target& target);
 
 class TVMOpEnv : public op::OpEnv {
  public:

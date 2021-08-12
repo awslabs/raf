@@ -20,6 +20,8 @@ CanonicalizeOps = _APIS.get("mnm.pass_.CanonicalizeOps", None)
 ContextAnalysis = _APIS.get("mnm.pass_.ContextAnalysis", None)
 # Defined in ./src/pass/dead_code.cc
 DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
+# Defined in ./src/pass/estimate_flops.cc
+EstimateFLOPS = _APIS.get("mnm.pass_.EstimateFLOPS", None)
 # Defined in ./src/pass/substitute.cc
 ExprAppend = _APIS.get("mnm.pass_.ExprAppend", None)
 # Defined in ./src/pass/extract_binding.cc

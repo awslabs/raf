@@ -257,6 +257,25 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   return env.release();
 }
 
+/*!
+ * \brief Calculate the total computation FLOPS required by a function.
+ * \param call The call values, which callee is a ClosureValue that includes the target function.
+ * \param param_types The type of function parameters.
+ * \param ret_type The function return type.
+ * \param target The target.
+ * \return The calculated FLOPS.
+ */
+int CalcFuncFLOPS(const op::CallValues& call, const Array<Type>& param_types, const Type& ret_type,
+                  const Target& target) {
+  static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  static auto* fcalc = tvm::runtime::Registry::Get("mnm._tvm_op.utils.calc_flops");
+
+  auto dev = Device(static_cast<tvm::Device>((*str2dev)(target->kind->name)));
+  Meta2TVM meta_to_tvm(call, dev.device_type);
+  Function func = Downcast<Function>(meta_to_tvm());
+  return (*fcalc)(func, target);
+}
+
 MNM_OP_ENV_MAKER("mnm.op.tvm._fused", FusedFuncBuild);
 MNM_FUNC_DISPATCH(FusedFuncBuild, DevType::kCPU(), "tvm");
 MNM_FUNC_DISPATCH(FusedFuncBuild, DevType::kCUDA(), "tvm");
