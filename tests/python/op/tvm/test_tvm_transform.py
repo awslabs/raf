@@ -269,13 +269,17 @@ def test_swap_axis(shape, dtype, axis, device):# pylint: disable=unused-argument
 ])
 def test_broadcast_to_like(shape, device):
     model = TestModel(mnm._op.sym.broadcast_to_like)
-    m_x, n_x = randn(shape[0], device=device)
+    m_x, n_x = randn(shape[0], device=device, requires_grad=True)
     m_broadcast_type, _ = randn(shape[1], device=device)
     m_y = model(m_x, m_broadcast_type)
     v_y = run_vm_model(model, device, [m_x, m_broadcast_type])
     n_y = np.broadcast_to(n_x, shape[1])
     check(m_y, n_y)
     check(v_y, n_y)
+    # backward
+    n_dy = np.ones(shape[1], dtype="float32")
+    m_y.backward(mnm.array(n_dy))
+    check(m_x.grad, np.ones(shape[0], dtype="float32") * (n_dy.size / n_x.size))
 
 
 @pytest.mark.parametrize("device", get_device_list())

@@ -104,6 +104,8 @@ Array<Expr> BroadcastToGrad(const Expr& orig_call, const Array<Expr> orig_args, 
 
 MNM_OP_GRAD("mnm.op.broadcast_to", BroadcastToGrad);
 
+MNM_OP_GRAD("mnm.op.broadcast_to_like", BroadcastToGrad);
+
 Array<Expr> StackGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
   static auto op_dx = Op::Get("mnm.op.split");
@@ -378,6 +380,10 @@ MNM_OP_GRAD("mnm.op.argwhere", NoGrads<1>);
 MNM_OP_GRAD("mnm.op.ndarray_size", NoGrads<1>);
 
 MNM_OP_GRAD("mnm.op.resize2d", NoGrads<1>);
+
+MNM_OP_GRAD("mnm.op.arange", NoGrads<0>);
+MNM_OP_GRAD("mnm.op.zeros", NoGrads<0>);
+MNM_OP_GRAD("mnm.op.ones", NoGrads<0>);
 
 }  // namespace grad
 }  // namespace op

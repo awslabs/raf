@@ -216,6 +216,7 @@ MNM_OP_GRAD("mnm.op.less", BinaryZeroGrad);
 MNM_OP_GRAD("mnm.op.less_equal", BinaryZeroGrad);
 MNM_OP_GRAD("mnm.op.greater", BinaryZeroGrad);
 MNM_OP_GRAD("mnm.op.greater_equal", BinaryZeroGrad);
+MNM_OP_GRAD("mnm.op.logical_and", BinaryZeroGrad);
 
 }  // namespace grad
 }  // namespace op

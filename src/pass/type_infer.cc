@@ -180,9 +180,7 @@ class TypeInferencer : public ExprMutator {
     FuncType fty = Downcast<FuncType>(fn->checked_type());
     CHECK_EQ(call->args.size(), fty->arg_types.size());
     for (size_t i = 0; i < call->args.size(); ++i) {
-      CHECK(tvm::StructuralEqual()(call->args[i]->checked_type(), fty->arg_types[i]))
-          << "Type of argument and function parameter mismatch: " << call->args[i]->checked_type()
-          << " vs " << fty->arg_types[i];
+      Unify(call->args[i]->checked_type(), fty->arg_types[i]);
     }
     return fty->ret_type;
   }
@@ -403,9 +401,9 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
     auto left_index = lhs.as<tvm::IntImmNode>();
     auto right_index = rhs.as<tvm::IntImmNode>();
     if (!left_index && right_index) {
-      return rhs;
-    } else if (left_index && !right_index) {
       return lhs;
+    } else if (left_index && !right_index) {
+      return rhs;
     } else if (left_index && right_index && left_index->value == right_index->value) {
       return lhs;
     }

@@ -16,6 +16,7 @@ namespace fold_const {
 
 using namespace mnm::ir;
 using namespace mnm::op;
+using namespace mnm::value;
 
 class ConstantChecker : private ExprVisitor {
  public:
@@ -121,6 +122,10 @@ class ConstantFolder : public ExprMutator {
     op = res.as<TupleGetItemNode>();
     if (const auto* tuple = op->tuple.as<TupleNode>()) {
       return tuple->fields[op->index];
+    } else if (const auto* relay_const = op->tuple.as<RelayConstantNode>()) {
+      const auto* mnm_const = static_cast<const ConstantNode*>(relay_const);
+      auto value = Downcast<TupleValue>(mnm_const->value);
+      return MakeConstant(value->fields[op->index]);
     } else {
       return res;
     }

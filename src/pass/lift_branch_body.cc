@@ -65,22 +65,18 @@ class BranchBodyLift : public MixedModeMutator {
       func_params.push_back(mnm::ir::Var(fv));
     }
 
-    // both true and false branch will have same ret type, set the return type of the global
-    // funcs to simplify InferType.
-    auto if_node_ret_type = if_node->true_branch->checked_type_;
-
     // Create new functions for the true and false branches.
-    Function true_branch_func = CreateGlobalFunc(func_params, true_branch, if_node_ret_type);
+    auto true_branch_type = if_node->true_branch->checked_type_;
+    Function true_branch_func = CreateGlobalFunc(func_params, true_branch, true_branch_type);
     GlobalVar true_branch_gvar = GlobalVar("true_branch_" + std::to_string(unique_name_counter_));
     module_->Add(true_branch_gvar, true_branch_func);
     auto new_true_branch = Call(true_branch_gvar, free_vars);
-    new_true_branch->checked_type_ = if_node_ret_type;
 
-    Function false_branch_func = CreateGlobalFunc(func_params, false_branch, if_node_ret_type);
+    auto false_branch_type = if_node->false_branch->checked_type_;
+    Function false_branch_func = CreateGlobalFunc(func_params, false_branch, false_branch_type);
     GlobalVar false_branch_gvar = GlobalVar("false_branch_" + std::to_string(unique_name_counter_));
     module_->Add(false_branch_gvar, false_branch_func);
     auto new_false_branch = Call(false_branch_gvar, free_vars);
-    new_false_branch->checked_type_ = if_node_ret_type;
 
     If new_if = If(cond, new_true_branch, new_false_branch);
     unique_name_counter_++;

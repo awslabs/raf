@@ -725,10 +725,11 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
   } else {
     auto func = callee.as<ClosureValueObj>()->func;
     CHECK_EQ(func->params.size(), args.size());
+    auto new_func = Function(func->params, func->body, {}, {});
     for (size_t i = 0; i < args.size(); ++i) {
-      func->params[i]->checked_type_ = GetType(args[i]);
+      new_func->params[i]->checked_type_ = GetType(args[i]);
     }
-    Function new_func = Downcast<Function>(pass::InferType(func));
+    new_func = Downcast<Function>(pass::InferType(new_func));
     ctx.WriteRegister(instr.invoke_jit.op_reg, ClosureValue::make({}, new_func));
     FuncType fty = Downcast<FuncType>(new_func->checked_type());
     ret_type = fty->ret_type;

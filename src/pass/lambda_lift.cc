@@ -56,7 +56,7 @@ Expr ANFNormalizer(const Let& let) {
   //    let %a13 = %gvar(%a, %b);
   if (auto value_call_node = let_node->value.as<CallNode>()) {
     if (auto op_call_node = value_call_node->op.as<CallNode>()) {
-      mnm::ir::Var gvar("gvar", {});
+      mnm::ir::Var gvar = ir::MakeVar("gvar", {});
       auto new_let = Let(
           gvar, GetRef<Call>(op_call_node),
           Let(let_node->var,

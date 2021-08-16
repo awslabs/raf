@@ -454,6 +454,10 @@ struct ReverseAD : public ExprVisitor {
         }
 
         if (auto ttype = expr_type.as<TensorTypeNode>()) {
+          if (tvm::relay::IsDynamic(expr_type)) {
+            static auto zeros_like = Op::Get("mnm.op.zeros_like");
+            return adjoint_ll_->Push(Call(zeros_like, {var}));
+          }
           static auto zeros = Op::Get("mnm.op.zeros");
           return adjoint_ll_->Push(
               Call(zeros, {MakeConstant(ArrayToIntTuple(ttype->shape)),
@@ -792,10 +796,9 @@ struct ReverseAD : public ExprVisitor {
         // (i.e. input arguments or outputs of an operator/function)
         // Therefore, its length is unknown
         const VarNode* var_node = tuple_get_item->tuple.as<VarNode>();
-        const Expr& tuple_expr = var_to_primal_expr_[var_node];
         int size;
-        if (tuple_expr->checked_type_.defined()) {
-          const TupleType& tuple_type = Downcast<TupleType>(tuple_expr->checked_type());
+        if (var_node->checked_type_.defined()) {
+          const TupleType& tuple_type = Downcast<TupleType>(var_node->checked_type());
           size = tuple_type->fields.size();
         } else {
           size = tuple_get_item->index + 1;
@@ -849,8 +852,13 @@ struct ReverseAD : public ExprVisitor {
 
  public:
   Function Run(ir::Function func) {
+    auto body = func->body;
+    if (body.as<RelayConstantNode>()) {
+      Var var = mnm::ir::MakeVar("v1", {});
+      body = Let(var, body, var);
+    }
     current_func_node_ = func.get();
-    primal_ell_ = ExplicitLetList::make(func->body);
+    primal_ell_ = ExplicitLetList::make(body);
     Init();
     Var dy = MakeOutputGrad();
     Expr adjoint_body = GetAdjoint(dy);

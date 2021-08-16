@@ -30,6 +30,8 @@ Array<Expr> RoiAlignGrad(const Expr& orig_call, const Array<Expr> orig_args, con
 
 MNM_OP_GRAD("mnm.op.roi_align", RoiAlignGrad);
 
+MNM_OP_GRAD("mnm.op.non_max_suppression", NoGrads<1>);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm
