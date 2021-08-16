@@ -71,8 +71,39 @@ inline void VMContext::WriteRegister(Index reg, const Value& val) {
   self->frames.back().register_file[reg] = val;
 }
 
+inline int64_t VMContext::LoadTensorInt(Index r) const {
+  int64_t result = 0;
+  const auto& obj = ReadRegister(r);
+  DLTensor* tensor = CopyTo(obj, Device(DevType::kCPU(), 0));
+
+  switch (tensor->dtype.bits) {
+    case 1: {
+      result = reinterpret_cast<bool*>(tensor->data)[0];
+      break;
+    }
+    case 8: {
+      result = reinterpret_cast<int8_t*>(tensor->data)[0];
+      break;
+    }
+    case 16: {
+      result = reinterpret_cast<int16_t*>(tensor->data)[0];
+      break;
+    }
+    case 32: {
+      result = reinterpret_cast<int32_t*>(tensor->data)[0];
+      break;
+    }
+    case 64: {
+      result = reinterpret_cast<int64_t*>(tensor->data)[0];
+      break;
+    }
+    default:
+      LOG(FATAL) << "Unknown scalar int type: " << tvm::runtime::DLDataType2String(tensor->dtype);
+  }
+  return result;
+}
+
 inline int64_t VMContext::LoadScalarInt(Index r) const {
-  int32_t result;
   const auto& obj = ReadRegister(r);
   auto int_value = Downcast<IntValue>(obj);
   return int_value->value;
@@ -527,7 +558,7 @@ void VirtualMachine::HandleGetField(VMContext& ctx, const Instruction& instr) {
 }
 
 void VirtualMachine::HandleIf(VMContext& ctx, const Instruction& instr) {
-  int32_t test_val = ctx.LoadScalarInt(instr.if_op.test);
+  int32_t test_val = ctx.LoadTensorInt(instr.if_op.test);
   int32_t target_val = ctx.LoadScalarInt(instr.if_op.target);
 
   if (test_val == target_val) {

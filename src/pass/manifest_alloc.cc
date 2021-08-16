@@ -124,7 +124,8 @@ class ManifestAllocMutator : public ExprMutator {
         Op::Get("mnm.op.set_stream"), Op::Get("mnm.op.wait_event"), Op::Get("mnm.op.add_event")};
     static auto vm_set_shape_op = Op::Get("mnm.op.vm.set_shape");
     static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
-        Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze")};
+        Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze"),
+        Op::Get("mnm.op.batch_flatten")};
 
     const auto* op = node->op.as<OpNode>();
     const auto* func = node->op.as<FunctionNode>();
@@ -148,19 +149,26 @@ class ManifestAllocMutator : public ExprMutator {
       Array<Expr> new_args;
       if (reshape_ops.find(GetRef<Op>(op)) != reshape_ops.end()) {
         // generate vm.set_shape for reshape ops to avoid unnecessary kernels and allocations
-
+        CHECK_EQ(out_types.size(), 1U);
         // first push the input tensor
         new_args.push_back(VisitExpr(call->args[0]));
 
         // the new shape is determined in run time if it is dynamic;
         // otherwise the new shape is just the output shape
         if (tvm::relay::IsDynamic(ret_type)) {
-          new_args.push_back(VisitExpr(call->args[1]));
-        } else {
-          CHECK_EQ(out_types.size(), 1U);
-          auto tensor_ty_node = out_types[0].as<TensorTypeNode>();
-          new_args.push_back(MakeConstant(op::ArrayToIntTuple(tensor_ty_node->shape)));
+          for (size_t i = 1; i < call->args.size(); ++i) {
+            new_args.push_back(VisitExpr(call->args[i]));
+          }
+          auto ins = scope->Push(Tuple(new_args));
+          auto op_var = scope->Push(call->op);
+          auto infer_type = Call(Op::Get("mnm.op.vm.infer_type"), Array<Expr>{op_var, ins});
+          auto out_type_exprs = scope->Push(infer_type);
+          auto out_type_expr = scope->Push(TupleGetItem(out_type_exprs, 0));
+          auto shape = scope->Push(TupleGetItem(out_type_expr, 0));
+          return Call(vm_set_shape_op, {new_args[0], shape});
         }
+        auto tensor_ty_node = out_types[0].as<TensorTypeNode>();
+        new_args.push_back(MakeConstant(op::ArrayToIntTuple(tensor_ty_node->shape)));
         return Call(vm_set_shape_op, new_args);
       } else {
         // allocate necessary memory buffers and invoke ops

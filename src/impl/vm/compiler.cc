@@ -812,6 +812,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   // attr in some cases without any error messages.
   // pass_seqs.push_back(pass::ValidateInplaceUpdate(true));
   // pass_seqs.push_back(pass::InferType());
+  pass_seqs.push_back(pass::LambdaLift());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::ManifestAlloc());
   pass_seqs.push_back(pass::MemoryPlan());

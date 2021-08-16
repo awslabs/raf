@@ -160,6 +160,12 @@ class VMContext : public Value {
    * \param reg The register to read from.
    * \return The read scalar.
    */
+  inline int64_t LoadTensorInt(Index reg) const;
+  /*!
+   * \brief Read a VM register and cast it to int64_t
+   * \param reg The register to read from.
+   * \return The read scalar.
+   */
   inline int64_t LoadScalarInt(Index reg) const;
   /*!
    * \brief Check if a VM register is constant.
