@@ -119,15 +119,14 @@ class Tensor::Impl {
                            const std::vector<int64_t>& shape,    //
                            const std::vector<int64_t>& strides,  //
                            void* data) {
-    if (!shape.empty() && !strides.empty()) {
+    if (!strides.empty()) {
       CHECK_EQ(shape.size(), strides.size());
     }
     TensorContainer* container = new TensorContainer();
     container->SetDeleter(DefaultDeleter);
     Tensor ret(ir::GetObjectPtr<ir::Object>(container));
-    std::vector<int64_t> shape_ = !shape.empty() ? shape : GetShape<int64_t>(*self.operator->());
-    container->shape_ = shape_;
-    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(shape_);
+    container->shape_ = shape;
+    container->strides_ = !strides.empty() ? strides : Shape2Strides<int64_t>(shape);
     container->dl_tensor.device = self->device;
     container->dl_tensor.ndim = container->shape_.size();
     container->dl_tensor.dtype = self->dtype;

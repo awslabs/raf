@@ -26,5 +26,12 @@ def test_reshape(shapes):
     assert y.shape == reshape
 
 
+def test_create_view_with_empty_shape():
+    x = np.random.randn(1).astype("float32")
+    x = mnm.array(x)
+    y = mnm.squeeze(x)
+    assert y.shape == ()
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

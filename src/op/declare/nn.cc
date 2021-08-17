@@ -275,8 +275,14 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   TensorValue y = TensorValue::Assemble(/*dev=*/x->device,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape);
-  TensorValue running_mean = Downcast<TensorValue>(args->running_mean).CreateView();
-  TensorValue running_var = Downcast<TensorValue>(args->running_var).CreateView();
+  TensorValue running_mean = Downcast<TensorValue>(args->running_mean);
+  std::vector<int64_t> running_mean_shape(running_mean->tensor.Shape().begin(),
+                                          running_mean->tensor.Shape().end());
+  running_mean = running_mean.CreateView(running_mean_shape);
+  TensorValue running_var = Downcast<TensorValue>(args->running_var);
+  std::vector<int64_t> running_var_shape(running_var->tensor.Shape().begin(),
+                                         running_var->tensor.Shape().end());
+  running_var = running_var.CreateView(running_var_shape);
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
   call->device = x->device;
 }).set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{1, 1}, {2, 2}});
