@@ -7,7 +7,7 @@
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
 #include "mnm/tensor.h"
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/device_api.h"
 #include "../schema/nn.h"
 #include "../ty/utils.h"

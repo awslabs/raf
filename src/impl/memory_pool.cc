@@ -4,7 +4,7 @@
  * \brief MNM memory pool manager
  */
 #include <unordered_map>
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/memory_pool.h"
 #include "mnm/registry.h"
 
@@ -45,10 +45,10 @@ class MemoryPoolManager {
         // ok, it is truly a nullptr
         pool_name = name;
         if (name == "") {
-          pool_name = default_strategies[dev.device_type];
+          pool_name = default_strategies[dev.device_type()];
         }
         snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", pool_name.c_str());
-        void* ret = GetPackedFunc(maker_name)(dev.operator DLDevice());
+        void* ret = GetPackedFunc(maker_name)(dev);
         result.reset(static_cast<MemoryPool*>(ret));
         return result.get();
       }
@@ -144,16 +144,16 @@ void InitPool(const Device& dev, std::string pool_name) {
 }
 
 MNM_REGISTER_GLOBAL("mnm.memory_pool.InitPool")
-    .set_body_typed([](const tvm::Device& dev, const std::string pool_name) {
-      return InitPool(Device(dev), pool_name);
+    .set_body_typed([](const Device& dev, const std::string pool_name) {
+      return InitPool(dev, pool_name);
     });
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed([](const tvm::Device& dev) {
-  return RemovePool(Device(dev));
+MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed([](const Device& dev) {
+  return RemovePool(dev);
 });
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool.ResetPool").set_body_typed([](const tvm::Device& dev) {
-  return ResetPool(Device(dev));
+MNM_REGISTER_GLOBAL("mnm.memory_pool.ResetPool").set_body_typed([](const Device& dev) {
+  return ResetPool(dev);
 });
 
 }  // namespace memory_pool

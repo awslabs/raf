@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include <mnm/base.h>
+#include <mnm/device.h>
 #include <mnm/op.h>
 
 using mnm::DevType;

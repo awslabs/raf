@@ -19,7 +19,7 @@ using namespace mnm::ir;
 using namespace mnm::value;
 
 CutlassOpEnv::CutlassOpEnv(const CallValues& call) : device_(call->device) {
-  CUDA_CALL(cudaGetDeviceProperties(&device_prop_, device_.device_id));
+  CUDA_CALL(cudaGetDeviceProperties(&device_prop_, device_.device_id()));
 }
 
 int CutlassOpEnv::compute_capability() const {

@@ -13,7 +13,7 @@
 #include <vector>
 #include <functional>
 #include <numeric>
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/op.h"
 #include "mnm/enum_base.h"
 #include "mnm/ir.h"

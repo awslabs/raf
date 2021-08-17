@@ -5,7 +5,7 @@
  */
 #pragma once
 #include <cublas_v2.h>
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/enum_base.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"

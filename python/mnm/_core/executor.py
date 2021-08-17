@@ -6,7 +6,7 @@ from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler.dispatcher import ApplyHistoryBest
 from .. import _ffi
 from . import vm
-from .core_utils import str2dev
+from .device import Device
 
 def interpret(expr, module=None):
     """use interpreter to execute the program.
@@ -99,6 +99,9 @@ class VMExecutor:
 
     device : str
         The runtime context to run the code on.
+
+    enable_cuda_graph : bool
+        Whether to use CUDA graph.
     """
 
     def __init__(self, mod, device, enable_cuda_graph=False):
@@ -107,9 +110,8 @@ class VMExecutor:
         if "gpu" not in device and "cuda" not in device:
             enable_cuda_graph = False
         self.mod = mod
-        self.target = device
-        self.device = str2dev(device)
-        self.executable = vm.compile(mod, self.target)
+        self.device = Device(device)
+        self.executable = vm.compile(mod, self.device)
         self.vm = vm.VirtualMachine(self.executable, self.device,
                                     enable_cuda_graph=enable_cuda_graph)
         self.auto_scheduler_fallback_context = None

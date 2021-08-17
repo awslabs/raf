@@ -193,12 +193,8 @@ struct TagCompare : ConditionNode {
 
 class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
  public:
-  VMFunctionCompiler(VMCompilerContext* context, TargetsMap targets, Target target_host)
-      : last_register_(0),
-        registers_num_(0),
-        context_(context),
-        targets_(targets),
-        target_host_(target_host) {
+  VMFunctionCompiler(VMCompilerContext* context, DeviceMap device_map)
+      : last_register_(0), registers_num_(0), context_(context), device_map_(device_map) {
   }
 
   VMFunction Compile(const GlobalVar& var, const Function& func) {
@@ -651,15 +647,8 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       argument_registers.push_back(reg->second);
     }
 
-    Target target;
-    if (targets_.size() == 1) {
-      // homogeneous execution.
-      const auto& it = targets_.begin();
-      target = (*it).second;
-    } else {
-      // heterogeneous execution.
-      LOG(FATAL) << "Currently VM compiler doesn't support heterogeneous compilation";
-    }
+    CHECK_EQ(device_map_.size(), 1U)
+        << "Currently VM compiler doesn't support heterogeneous compilation";
     Emit(Instruction::InvokeJit(op_reg, argument_registers.size(), output_tuple->fields.size(),
                                 argument_registers));
   }
@@ -709,18 +698,17 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
   size_t registers_num_;
   /*! \brief Global shared meta data */
   VMCompilerContext* context_;
-  /*! \brief Target devices. */
-  TargetsMap targets_;
-  /*! \brief Host target. */
-  Target target_host_;
+  /*! \brief Device map. */
+  DeviceMap device_map_;
 };
 
 void VMCompiler::SetParam(const std::string& name, Value data_in) {
   params_[name] = data_in;
 }
 
-void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Target& target_host) {
-  CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
+void VMCompiler::Lower(IRModule mod, const DeviceMap& device_map) {
+  CHECK_EQ(device_map.size(), 1U)
+      << "Currently VM compiler doesn't support heterogeneous compilation";
   if (params_.size()) {
     BaseFunc base_func = mod->Lookup("main");
     CHECK(base_func->IsInstance<FunctionNode>())
@@ -731,11 +719,10 @@ void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Targe
   }
 
   exec_ = make_object<Executable>();
-  targets_ = targets;
-  target_host_ = target_host;
+  device_map_ = device_map;
 
   // Run the optimizations necessary to target the VM.
-  context_.module = OptimizeModule(mod, targets_);
+  context_.module = OptimizeModule(mod, device_map_);
 
   // Populate the global map.
   //
@@ -751,7 +738,7 @@ void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Targe
     auto gvar = named_func.first;
     if (auto* n = named_func.second.as<FunctionNode>()) {
       auto func = GetRef<Function>(n);
-      VMFunctionCompiler func_compiler(&context_, targets_, target_host_);
+      VMFunctionCompiler func_compiler(&context_, device_map_);
       auto vm_func = func_compiler.Compile(gvar, func);
 
       size_t func_index = context_.global_map.at(gvar);
@@ -777,10 +764,11 @@ void VMCompiler::Lower(IRModule mod, const TargetsMap& targets, const tvm::Targe
   }
 }
 
-IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targets) {
-  CHECK_EQ(targets.size(), 1) << "Currently VM compiler doesn't support heterogeneous compilation";
-  const auto& it = targets.begin();
-  tvm::With<tvm::Target> tctx((*it).second);
+IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device_map) {
+  CHECK_EQ(device_map.size(), 1U)
+      << "Currently VM compiler doesn't support heterogeneous compilation";
+  const auto& it = device_map.begin();
+  tvm::With<Device> dctx((*it).second);
   pass::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
 
@@ -798,7 +786,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const TargetsMap& targe
   pass_seqs.push_back(pass::FuseOps());
 
   // optimization passes that transform BBNF into ANF
-  if ((*it).second->kind->name == "cuda") {
+  if ((*it).second.device_type() == DevType::kCUDA()) {
     pass_seqs.push_back(pass::StreamSchedule());
   } else {
     pass_seqs.push_back(pass::ToANormalForm());
@@ -838,9 +826,9 @@ tvm::runtime::Module CreateVMCompiler() {
 PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Object>& sptr_to_self) {
   if (name == "lower") {
     return PackedFunc([sptr_to_self, this](TVMArgs args, TVMRetValue* rv) {
-      CHECK_EQ(args.num_args, 3);
+      CHECK_EQ(args.num_args, 2);
       IRModule mod = args[0];
-      this->Lower(mod, args[1], args[2]);
+      this->Lower(mod, args[1]);
     });
   } else if (name == "get_executable") {
     return PackedFunc(

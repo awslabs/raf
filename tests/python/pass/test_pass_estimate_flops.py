@@ -4,12 +4,13 @@ import mnm
 import tvm
 from tvm import relay
 
+from mnm._core.device import Device
 from mnm._ffi.pass_ import EstimateFLOPS
 from mnm.ir import ScopeBuilder
 from mnm.testing import run_infer_type
 
 def verify_flops(mod, expected_map):
-    with tvm.target.Target("llvm"):
+    with Device("cpu"):
         ret = EstimateFLOPS(run_infer_type(mod))
         ret = {k.name_hint: v.value for k, v in ret.items()}
 

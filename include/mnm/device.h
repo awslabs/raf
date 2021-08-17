@@ -1,16 +1,20 @@
 /*!
- * Copyright (c) 2019 by Contributors
- * \file base.h
- * \brief Definition of basic data structure
+ * Copyright (c) 2021 by Contributors
+ * \file device.h
+ * \brief Definition of device related data structure.
  */
 #pragma once
 #include <string>
 #include "dlpack/dlpack.h"
 #include "tvm/runtime/c_runtime_api.h"
 #include "tvm/runtime/ndarray.h"
+#include "tvm/support/with.h"
 #include "./enum_base.h"
+#include "./ir.h"
 
 namespace mnm {
+
+using namespace mnm::ir;
 
 constexpr int64_t kDefaultMemoryAlignment = 64;
 
@@ -51,32 +55,110 @@ class DevType final : public EnumBase<DevType, 13, int32_t, int> {
   }
 };
 
-class Device {
+class DeviceObj : public Object {
  public:
-  Device() = default;
-  Device(DevType device_type, int device_id) : device_type(device_type), device_id(device_id) {
+  /*! \brief The device type. */
+  DevType device_type;
+  /*! \brief The device ID. */
+  int device_id;
+
+  void VisitAttrs(tvm::AttrVisitor* v) {
+    int device_type_value = device_type;
+    v->Visit("device_type", &device_type_value);
+    v->Visit("device_id", &device_id);
   }
-  Device(tvm::Device dev)  // NOLINT(runtime/explicit)
-      : device_type(dev.device_type), device_id(dev.device_id) {
-  }
+
+ public:
+  static constexpr const char* _type_key = "mnm.device.Device";
+  MNM_FINAL_OBJECT(DeviceObj, Object);
+
+  friend class Device;
+};
+
+class Device : public ObjectRef {
+ public:
+  static Device make(Integer device_type_value, Integer device_id);
+  /*! \brief Default constructor, which behaves as Device(kUnknown, -1). Note that
+   * this object is non-nullable and defined() is always true. */
+  Device();
+  Device(DevType device_type, int device_id);
+  Device(tvm::Device dev);
+
   operator tvm::Device() const {
-    return tvm::Device{DLDeviceType(device_type), device_id};
+    return tvm::Device{DLDeviceType(self()->device_type), self()->device_id};
   }
+
+  tvm::Target tvm_target() const {
+    auto dl_device_type = tvm::runtime::String(self()->device_type.c_str());
+    if (dl_device_type == "cpu") {
+      // Device type in DLDevice does not recognize "cpu" but only "llvm".
+      dl_device_type = tvm::runtime::String("llvm");
+    }
+    return tvm::Target(dl_device_type);
+  }
+
   const char* c_str() const {
     thread_local char buffer[128];
-    snprintf(buffer, sizeof(buffer), "%s(%d)", device_type.c_str(), device_id);
+    snprintf(buffer, sizeof(buffer), "%s(%d)", self()->device_type.c_str(), self()->device_id);
     return buffer;
   }
-  bool operator==(const Device& other) {
-    return device_type == other.device_type && device_id == other.device_id;
+
+  bool operator==(const Device& other_dev) {
+    auto other = other_dev.operator->();
+    return self()->device_type == other->device_type && self()->device_id == other->device_id;
   }
+
   bool operator!=(const Device& other) {
     return !(*this == other);
   }
 
+  DevType device_type() const {
+    return self()->device_type;
+  }
+
+  void set_device_type(const DevType dev_type) const {
+    self()->device_type = dev_type;
+  }
+
+  int device_id() const {
+    return self()->device_id;
+  }
+
+  void set_device_id(int dev_id) const {
+    self()->device_id = dev_id;
+  }
+
+  /*!
+   * \brief Push a new device context onto the thread local stack.
+   *  The Device on top of the stack is used to determine which
+   *  specialization to use when invoking a GenericFunc.
+   */
+  void EnterWithScope();
+  /*!
+   * \brief Pop a device off the thread local context stack,
+   *  restoring the previous device as the current context.
+   */
+  void ExitWithScope();
+
+  /*!
+   * \brief Get the current device context from thread local storage.
+   * \param allow_default If the context stack is empty and this is set to true, a
+   *   default Device will be returned. Otherwise, an empty context stack will cause a
+   *   runtime error.
+   * \return The device that is the current context. The default device is returned if
+   * allow_default is true.
+   */
+  static Device Current(bool allow_default = true);
+
  public:
-  DevType device_type{DevType::kUnknown()};
-  int device_id{-1};
+  MNM_NOTNULLABLE_OBJECT_REF(Device, ir::ObjectRef, DeviceObj);
+
+ private:
+  inline DeviceObj* self() const {
+    return this->operator->();
+  }
+
+  friend class tvm::With<Device>;
 };
 
 class DType {

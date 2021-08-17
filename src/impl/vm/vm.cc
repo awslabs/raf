@@ -188,7 +188,7 @@ class VirtualMachine::CudaGraphImpl {
 
   void BeginCapture() {
     stream_for_graph_ = static_cast<cudaStream_t>(
-        mnm::device_api::DeviceAPI::Get(device_.device_type)->CreateStream(device_));
+        mnm::device_api::DeviceAPI::Get(device_.device_type())->CreateStream(device_));
 
     MNMSetStream(device_, stream_for_graph_);
     CUDA_CALL(cudaStreamBeginCapture(stream_for_graph_, cudaStreamCaptureModeRelaxed));
@@ -234,7 +234,7 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
       std::vector<Device> devices;
       for (int i = 0; i < args.size(); ++i) {
-        DLDevice dev = args[i];
+        Device dev = args[i];
         devices.push_back(dev);
       }
       this->SetDevices(devices);
@@ -363,29 +363,24 @@ Device VirtualMachine::GetParamsDevice() const {
   CHECK(!devices_.empty()) << "Devices have not been initialized yet.";
 
   // Use the fallback device if no device index is available.
-  int fallback_device_type = static_cast<int>(devices_[0].device_type);
+  int fallback_device_type = static_cast<int>(devices_[0].device_type());
   // TODO(@zhiics): For heterogeneous execution, get device information from byte
 
   const auto& cit =
       std::find_if(devices_.begin(), devices_.end(), [&fallback_device_type](const Device& d) {
-        return fallback_device_type == static_cast<int>(d.device_type);
+        return fallback_device_type == static_cast<int>(d.device_type());
       });
   return (cit == devices_.end() ? devices_[0] : *cit);
 }
 
 void VirtualMachine::SetDevices(const std::vector<Device>& devices) {
   devices_ = devices;
+  host_device_ = Device(DevType::kCPU(), 0);
   use_cuda_ = false;
   for (const Device& dev : devices) {
-    if (dev.device_type == DevType::kCUDA()) {
+    if (dev.device_type() == DevType::kCUDA()) {
       use_cuda_ = true;
     }
-    if (dev.device_type == DevType::kCPU()) {
-      host_device_ = dev;
-    }
-  }
-  if (host_device_.device_id < 0) {
-    host_device_ = Device(DevType::kCPU(), 0);
   }
   if (!use_cuda_) {
     enable_cuda_graph_ = false;

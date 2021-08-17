@@ -227,6 +227,15 @@ using tvm::relay::attr::kSkipOptimization;
   }                                                                                        \
   using ContainerType = ObjectName;
 
+#define MNM_NOTNULLABLE_OBJECT_REF(TypeName, ParentType, ObjectName)                       \
+  explicit TypeName(::tvm::runtime::ObjectPtr<::tvm::runtime::Object> n) : ParentType(n) { \
+  }                                                                                        \
+  ObjectName* operator->() const {                                                         \
+    return static_cast<ObjectName*>(data_.get());                                          \
+  }                                                                                        \
+  static constexpr bool _type_is_nullable = false;                                         \
+  using ContainerType = ObjectName;
+
 #define MNM_REGISTER_OBJECT_NO_REFLECT(TypeName)                              \
   static DMLC_ATTRIBUTE_UNUSED uint32_t __make_Object_tidx##_##TypeName##__ = \
       TypeName::_GetOrAllocRuntimeTypeIndex()

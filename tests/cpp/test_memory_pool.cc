@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <mnm/base.h>
+#include <mnm/device.h>
 #include <mnm/memory_pool.h>
 
 using mnm::Device;

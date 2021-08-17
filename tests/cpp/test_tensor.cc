@@ -6,7 +6,7 @@
 
 #include <dlpack/dlpack.h>
 
-#include <mnm/base.h>
+#include <mnm/device.h>
 #include <mnm/tensor.h>
 
 using mnm::Device;

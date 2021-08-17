@@ -2,7 +2,7 @@ import pytest
 import mnm
 import tvm
 from mnm.testing import check
-from mnm._core.core_utils import str2dev
+from mnm._core.device import Device
 from mnm._core.vm_debug import VMDebugExecutor
 from mnm._ffi.memory_pool import InitPool
 from mnm.testing import get_device_list, randn, with_seed
@@ -63,7 +63,7 @@ def test_vm_memory_profiler(device, pool_name):
             y = mnm.conv2d(y, w, stride=1, padding=1, dilation=1, groups=1)
             return y
 
-    InitPool(str2dev(device), pool_name)
+    InitPool(Device(device), pool_name)
 
     xshape = (32, 3, 224, 224)
     wshape = (3, 3, 3, 3)

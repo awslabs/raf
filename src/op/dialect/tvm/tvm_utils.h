@@ -28,7 +28,7 @@ ir::Type GetTupleType(const std::vector<DLTensor>& dlts);
 ir::Function LowerOp(const ir::Op& op, const ir::Attrs& attrs,
                      const std::vector<ir::Type>& param_types, const ir::Type& ret_type);
 int CalcFuncFLOPS(const op::CallValues& call, const Array<Type>& param_types, const Type& ret_type,
-                  const Target& target);
+                  const Device& device);
 
 class TVMOpEnv : public op::OpEnv {
  public:
@@ -133,19 +133,17 @@ using FMNMArgIndices =
       CHECK_GE(idx, 0) << "Cannot find " << field << " in the schema for OP";                      \
       env->arg_indices.push_back(idx);                                                             \
     }                                                                                              \
-    tvm::Target target;                                                                            \
-    /* Determine cache and target */                                                               \
+    /* Determine cache */                                                                          \
     MetaCache<registry::PackedFunc>* cache;                                                        \
-    if (dev.device_type == DevType::kCPU()) {                                                      \
+    if (dev.device_type() == DevType::kCPU()) {                                                    \
       cache = &FUNC##CacheBuildCpu;                                                                \
-      target = tvm::Target("llvm");                                                                \
-    } else if (dev.device_type == DevType::kCUDA()) {                                              \
+    } else if (dev.device_type() == DevType::kCUDA()) {                                            \
       cache = &FUNC##CacheBuildCuda;                                                               \
-      target = tvm::Target("cuda");                                                                \
     } else {                                                                                       \
-      LOG(FATAL) << "NotImplementedError: target is not supported " << dev.device_type.c_str();    \
+      LOG(FATAL) << "NotImplementedError: device is not supported " << dev.device_type().c_str();  \
       throw;                                                                                       \
     }                                                                                              \
+    tvm::Target target = dev.tvm_target();                                                         \
     env->env_name = TruncateName(GetUniqueName(MNM_DIALECT_OP_NAME(tvm, OP)));                     \
     std::function<registry::PackedFunc(const ir::Function&)> f_post_lower(                         \
         [&](const ir::Function& f) {                                                               \

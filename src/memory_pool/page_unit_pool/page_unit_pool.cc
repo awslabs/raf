@@ -63,7 +63,7 @@ class PageUnitPool : public MemoryPool {
  public:
   explicit PageUnitPool(Device dev, int64_t pool_limit = 0) {
     this->device = dev;
-    this->api = DeviceAPI::Get(dev.device_type);
+    this->api = DeviceAPI::Get(dev.device_type());
     this->max_pool_size = pool_limit;
   }
 
@@ -211,8 +211,9 @@ class PageUnitPool : public MemoryPool {
   std::unordered_map<int64_t, std::list<std::shared_ptr<Memory>>> _pool;
 };
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.page_unit_pool")
-    .set_body_typed([](const tvm::Device& dev) { return PageUnitPool::make(Device(dev)); });
+MNM_REGISTER_GLOBAL("mnm.memory_pool._make.page_unit_pool").set_body_typed([](const Device& dev) {
+  return PageUnitPool::make(dev);
+});
 
 }  // namespace page_unit_pool
 }  // namespace memory_pool

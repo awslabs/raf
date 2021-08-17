@@ -6,7 +6,7 @@
 #pragma once
 #include <memory>
 #include <string>
-#include "./base.h"
+#include "./device.h"
 #include "./enum_base.h"
 
 namespace mnm {

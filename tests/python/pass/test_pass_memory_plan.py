@@ -8,11 +8,11 @@ from mnm.testing import get_device_list, randn, check, get_vm_executor
 
 def optimize(mod, device, reuse_storage=False, fusion=False):
     fuse_level = 1 if fusion else 0
-    target_name = device if device != "cpu" else "llvm"
+    device_name = device if device != "cpu" else "llvm"
     with tvm.transform.PassContext(opt_level=3,
                                    config={"mnm.memory_plan.reuse_storage": reuse_storage,
                                            "mnm.fuse_level": fuse_level}):
-        opt_mod, _ = mnm._core.vm.VMCompiler().optimize(mod, target=target_name, params={})
+        opt_mod, _ = mnm._core.vm.VMCompiler().optimize(mod, device=device_name, params={})
     return opt_mod
 
 

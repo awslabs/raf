@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include "mnm/device.h"
 #include "mnm/ir.h"
 #include "mnm/registry.h"
 #include "mnm/vm/bytecode.h"
@@ -34,7 +35,7 @@ using TagNameMap = std::unordered_map<size_t, tvm::relay::Constructor>;
 using GlobalMap = NodeMap<GlobalVar, Index>;
 using ConstMap = NodeMap<Constant, Index>;
 using ConstTensorShapeMap = NodeMap<TensorType, std::pair<Index, NDArray>>;
-using TargetsMap = Map<tvm::Integer, tvm::Target>;
+using DeviceMap = Map<tvm::Integer, Device>;
 
 struct VMCompilerContext {
   // The module context for the compilation
@@ -74,25 +75,22 @@ class VMCompiler : public tvm::runtime::ModuleNode {
    * \brief Lower the functions in a Module
    *
    * \param mod Relay Module
-   * \param targets For heterogeneous compilation, it is a dictionary indicating context
-                    to target mapping. For homogeneous compilation, it is a build target.
-   * \param target_host Host compilation target, if target is device.
+   * \param device_map Mapping from context to device mapping. If it has more than one entries,
+   * then it means the heterogeneous compilation.
    */
-  void Lower(IRModule mod, const TargetsMap& targets, const tvm::Target& target_host);
+  void Lower(IRModule mod, const DeviceMap& device_map);
 
   // /*! \brief Generate the machine code for lowered functions. */
   // void Codegen();
 
  protected:
-  IRModule OptimizeModule(const IRModule& mod, const TargetsMap& targets);
+  IRModule OptimizeModule(const IRModule& mod, const DeviceMap& device_map);
 
   void PopulateGlobalMap();
 
  protected:
-  /*! \brief Target devices. */
-  TargetsMap targets_;
-  /*! \brief Target host device. */
-  tvm::Target target_host_;
+  /*! \brief Device map. */
+  DeviceMap device_map_;
   /*! \brief Global shared meta data */
   VMCompilerContext context_;
   /*! \brief Compiled executable. */

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "mnm/device.h"
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
 #include "mnm/ir.h"
@@ -234,33 +235,35 @@ class ManifestAllocMutator : public ExprMutator {
     return Call(op, new_args);
   }
 
-  Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type) {
-    Expr shape = MakeConstant(type->shape);
-    Expr size = MakeConstant(ScalarValue::make(BytesCompactTensor(type)));
+  Expr MakeAllocationCommon(LetList* scope, const TensorTypeNode* type, const Expr& shape,
+                            const Expr& size) {
     Expr alignment = ComputeAlignment(type->dtype);
     auto dtype = type->dtype;
-    auto target = tvm::Target::Current();
-    auto device_type = target.defined() ? target->kind->device_type : kDLCPU;
+    auto device = Device::Current();
+    int device_type = kDLCPU;
     int device_id = 0;
+    // Note that the device type here follows DLDevice type (i.e., tvm::Target device type).
+    if (device.device_type() != DevType::kUnknown()) {
+      device_type = device.tvm_target()->kind->device_type;
+      device_id = device.device_id();
+    }
     auto storage = scope->Push(MakeAllocStorage(Array<Expr>{size, alignment},
                                                 static_cast<int>(device_type), device_id, dtype));
     auto tensor = scope->Push(MakeAllocTensor(Array<Expr>{storage, shape}, shape, dtype));
     return tensor;
   }
 
+  Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type) {
+    Expr shape = MakeConstant(type->shape);
+    Expr size = MakeConstant(ScalarValue::make(BytesCompactTensor(type)));
+    return MakeAllocationCommon(scope, type, shape, size);
+  }
+
   Expr MakeDynamicAllocation(LetList* scope, const TensorTypeNode* type,
                              const Expr& out_type_expr) {
     Expr shape = scope->Push(TupleGetItem(out_type_expr, 0));
     Expr size = scope->Push(TupleGetItem(out_type_expr, 1));
-    Expr alignment = ComputeAlignment(type->dtype);
-    auto dtype = type->dtype;
-    auto target = tvm::Target::Current();
-    auto device_type = target.defined() ? target->kind->device_type : kDLCPU;
-    int device_id = 0;
-    auto storage = scope->Push(MakeAllocStorage(Array<Expr>{size, alignment},
-                                                static_cast<int>(device_type), device_id, dtype));
-    auto tensor = scope->Push(MakeAllocTensor(Array<Expr>{storage, shape}, shape, dtype));
-    return tensor;
+    return MakeAllocationCommon(scope, type, shape, size);
   }
 
   std::vector<Expr> DynamicInvoke(LetList* scope, const Var& bind_var, const Expr& op,

@@ -61,7 +61,7 @@ Expr AssignDeviceHelper(const CallNode* node, const Array<Expr> args, std::strin
   Device target_device = Device(static_cast<tvm::Device>((*str2dev)(target_device_str)));
 
   // Current node is not on the desired device, adjust the device argument.
-  if (target_device.device_type != call_device.device_type) {
+  if (target_device.device_type() != call_device.device_type()) {
     for (auto arg_idx = 0; arg_idx < default_vals.size(); ++arg_idx) {
       if (!default_vals[arg_idx].defined()) {
         // Do nothing with required arguments.

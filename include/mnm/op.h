@@ -9,7 +9,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "./base.h"
+#include "./device.h"
 #include "./ir.h"
 #include "./registry.h"
 #include "./value.h"

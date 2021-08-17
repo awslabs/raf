@@ -6,7 +6,7 @@
 #include "mnm/ir.h"
 #include "mnm/registry.h"
 #include "mnm/op_utils.h"
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/device_api.h"
 #include "../../../common/cuda_utils.h"
 #include "../../schema/nn.h"

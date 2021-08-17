@@ -93,30 +93,26 @@ void FLOPSEstimater::VisitExpr_(const CallNode* call) {
     throw;
   }
   var_flops_map_[curr_let_] =
-      tvm_dialect::CalcFuncFLOPS(call_values, param_types, ret_type, target_);
+      tvm_dialect::CalcFuncFLOPS(call_values, param_types, ret_type, device_);
 }
 
 }  // namespace estimate_flops
 
 using PackedFLOPSMap = Map<Var, Integer>;
 
-estimate_flops::StdMap<int64_t> EstimateFLOPS(const IRModule& mod, const Target& target) {
+estimate_flops::StdMap<int64_t> EstimateFLOPS(const IRModule& mod, const Device& device) {
   auto entry = mod->GetGlobalVar("main");
   auto func = Downcast<Function>(mod->Lookup(entry));
   auto estimator = estimate_flops::FLOPSEstimater();
-  return estimator.Run(target, func, mod);
+  return estimator.Run(device, func, mod);
 }
 
 // Put the flops to Map as std::unordered_map is not in the object system.
 PackedFLOPSMap EstimateFLOPSPacked(const IRModule& mod) {
-  auto target = tvm::Target::Current();
-  if (!target.defined()) {
-    LOG(FATAL) << "Target device is undefined.";
-    throw;
-  }
+  auto device = Device::Current(false);
 
   PackedFLOPSMap ret;
-  auto res = EstimateFLOPS(mod, target);
+  auto res = EstimateFLOPS(mod, device);
   for (const auto& it : res) {
     ret.Set(it.first, it.second);
   }

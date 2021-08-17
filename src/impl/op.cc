@@ -227,7 +227,7 @@ FusedOpDispatch::TDispatchList* FusedOpDispatch::Get(DevType device_type) {
 }
 
 std::shared_ptr<OpEnv> FusedOpDispatch::Dispatch(const CallValues& call) {
-  TDispatchList* default_list = FusedOpDispatch::Get(call->device.device_type);
+  TDispatchList* default_list = FusedOpDispatch::Get(call->device.device_type());
   TDispatchList list = get_preferred_backends<TDispatchList>(default_list);
   for (const auto& e : list) {
     const auto& maker = e.maker;
@@ -284,7 +284,7 @@ std::shared_ptr<OpEnv> DispatchOp(const CallValues& call) {
     op = base_op;
   }
   // Iterate over all dialect ops based on plevel.
-  auto dialect_list = OpDialect::GetDispatchList(op, call->device.device_type);
+  auto dialect_list = OpDialect::GetDispatchList(op, call->device.device_type());
   for (const auto& entry : dialect_list) {
     if (entry.backend == skip_dialect) {
       continue;

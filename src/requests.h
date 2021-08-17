@@ -6,7 +6,7 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/memory_pool.h"
 #include "mnm/stream_pool.h"
 

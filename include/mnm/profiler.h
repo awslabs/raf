@@ -15,7 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "base.h"
+#include "device.h"
 #include "device_api.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
@@ -24,18 +24,18 @@
 #include <unistd.h>
 #endif
 
-#define WITH_BASE_PROFILER_LEVEL(LEVEL, DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)               \
-  {                                                                                          \
-    bool profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                     \
-    if (profiling) {                                                                         \
-      mnm::profiler::ProfilerHelper phelper(DEVICE.device_id, DEVICE.device_type, NAME, CAT, \
-                                            ARGS);                                           \
-      phelper.start();                                                                       \
-      CODE_SNIPPET                                                                           \
-      phelper.stop();                                                                        \
-    } else {                                                                                 \
-      CODE_SNIPPET                                                                           \
-    }                                                                                        \
+#define WITH_BASE_PROFILER_LEVEL(LEVEL, DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)                   \
+  {                                                                                              \
+    bool profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                         \
+    if (profiling) {                                                                             \
+      mnm::profiler::ProfilerHelper phelper(DEVICE.device_id(), DEVICE.device_type(), NAME, CAT, \
+                                            ARGS);                                               \
+      phelper.start();                                                                           \
+      CODE_SNIPPET                                                                               \
+      phelper.stop();                                                                            \
+    } else {                                                                                     \
+      CODE_SNIPPET                                                                               \
+    }                                                                                            \
   }
 
 #define WITH_BASE_PROFILER(DEVICE, NAME, CAT, ARGS, CODE_SNIPPET) \

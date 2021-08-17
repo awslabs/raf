@@ -2,6 +2,7 @@ import pytest
 import mnm
 from mnm._lib import tvm
 from mnm._core.module import IRModule
+from mnm._core.device import Device
 from mnm.testing import get_device_list, randn
 
 
@@ -29,8 +30,7 @@ def test_memory_alloc(device, shape):
     func = model_before._internal(m_x).mod['main']
     mod = IRModule.from_expr(func)
     mod = mnm._ffi.pass_.InferType()(mod)
-    target_name = device if device != 'cpu' else 'llvm'
-    with tvm.target.Target(target_name):
+    with Device(device if device != 'cpu' else 'llvm'):
         mod = mnm._ffi.pass_.ManifestAlloc()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
     text = mod['main'].astext()
@@ -137,7 +137,7 @@ def test_reshape():
     func = model._internal(m_x).mod['main']
     mod = IRModule.from_expr(func)
     mod = mnm._ffi.pass_.InferType()(mod)
-    with tvm.target.Target("llvm"):
+    with Device("cpu"):
         mod = mnm._ffi.pass_.ManifestAlloc()(mod)
     text = mod['main'].astext()
     assert text.count("vm.set_shape") == 4

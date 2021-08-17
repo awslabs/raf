@@ -7,7 +7,8 @@ from .. import _ffi
 from .._lib import _ByteArray
 from .._core.value import Value, TupleValue
 from . import ndarray as _nd
-from .core_utils import register_node
+from .core_utils import register_node, DEVICE_TYPE_MAP
+from .device import Device
 
 class Executable:
     # pylint: disable=too-many-instance-attributes
@@ -271,7 +272,7 @@ class VMCompiler:
             ret[key] = value.data
         return ret
 
-    def lower(self, mod, target=None, target_host=None):
+    def lower(self, mod, device=None):
         """Lower the module to VM bytecode.
 
         Parameters
@@ -279,35 +280,25 @@ class VMCompiler:
         mod : Module
             The Relay module to build.
 
-        target : str, :any:`tvm.target.Target`, or dict of str(i.e.
-            device/context name) to str/tvm.target.Target, optional
-            For heterogeneous compilation, it is a dictionary indicating context
-            to target mapping. For homogeneous compilation, it is a build target.
-
-        target_host : str or :any:`tvm.target.Target`, optional
-            Host compilation target, if target is device.
-            When TVM compiles device specific program such as CUDA,
-            we also need host(CPU) side code to interact with the driver
-            to setup the dimensions and parameters correctly.
-            target_host is used to specify the host side codegen target.
-            By default, llvm is used if it is enabled,
-            otherwise a stackvm intepreter is used.
+        device: Union[str, Device, Dict[Union[str, int], Union[str, Device]]]
+            It can be either a device string, a Device object, or a dict mapping from
+            device type name/ID to device string/object.
         """
-        target = self._update_target(target)
-        target_host = self._update_target_host(target, target_host)
-        self._lower(mod, target, target_host)
+        device = self._unify_device(device)
+        self._lower(mod, device)
 
-    def optimize(self, mod, target=None, params=None):
+    def optimize(self, mod, device=None, params=None):
         """Helper method that optimizes a Relay module via VM.
 
         Parameters
         ----------
         mod : Module
 
-        target : str, :any:`tvm.target.Target`, or dict of str (i.e.
-            device/context name) to str/tvm.target.Target, optional
+        device: Union[str, Device, Dict[Union[str, int], Union[str, Device]]]
+            It can be either a device string, a Device object, or a dict mapping from
+            device type name/ID to device string/object.
 
-        params : dict of str to ndarray
+        params : Dict[str, ndarray]
             Input parameters to the graph that do not change
             during inference time. Used for constant folding.
 
@@ -316,13 +307,13 @@ class VMCompiler:
         mod : tvm.IRModule
             The optimized relay module.
 
-        params : dict
+        params : Dict
             The parameters of the final module.
         """
-        target = self._update_target(target)
+        device = self._unify_device(device)
         if params:
             self.set_params(params)
-        return self._optimize(mod, target), self.get_params()
+        return self._optimize(mod, device), self.get_params()
 
     def get_exec(self):
         """Get the VM executable.
@@ -334,46 +325,42 @@ class VMCompiler:
         """
         return self._get_exec()
 
-    def _update_target(self, target):
-        """Update target."""
-        target = target if target else tvm.target.Target.current()
-        if target is None:
-            raise ValueError("Target is not set in env or passed as argument.")
-        tgts = {}
-        if isinstance(target, (str, tvm.target.Target)):
-            target = "llvm" if target == "cpu" else target
-            dev_type = tvm.tir.IntImm(
-                "int32", tvm.nd.device(str(target)).device_type)
-            tgts[dev_type] = tvm.target.Target(target)
-        elif isinstance(target, dict):
-            for dev, tgt in target.items():
-                tgt = "llvm" if tgt == "cpu" else tgt
-                dev_type = tvm.tir.IntImm(
-                    "int32", tvm.nd.device(dev).device_type)
-                tgts[dev_type] = tvm.target.Target(tgt)
+    def _unify_device(self, device):
+        """Unifiy device to be a dict that maps from device type names to
+        the corresponding Device object.
+
+        Parameters
+        ----------
+        device: Union[str, Device, Dict[Union[str, int], Union[str, Device]]]
+            It can be either a device string, a Device object, or a dict mapping from
+            device type name/ID to device string/object.
+
+        Returns
+        -------
+        Dict[tvm.tir.IntImm, Device]
+            The unified dict mapping from device type ID to the corresponding device.
+        """
+        device = device if device else Device.current()
+        if device is None:
+            raise ValueError("Device is not set in env or passed as argument.")
+
+        device_map = {}
+        if isinstance(device, (str, Device)):
+            device = Device(device) if isinstance(device, str) else device
+            device_map[tvm.tir.IntImm("int32", device.device_type)] = device
+        elif isinstance(device, dict):
+            for dev_type, dev in device.items():
+                if dev_type not in DEVICE_TYPE_MAP:
+                    raise ValueError("Unrecognized device type: %s" % dev_type)
+                device = Device(dev) if isinstance(dev, str) else dev
+                device_map[tvm.tir.IntImm("int32", DEVICE_TYPE_MAP[dev_type])] = device
         else:
-            raise TypeError("target is expected to be str, tvm.target.Target, " +
-                            "or dict of str to str/tvm.target.Target, but received " +
-                            "{}".format(type(target)))
-        return tgts
-
-    def _update_target_host(self, target, target_host):
-        """Update target host."""
-        target_host = None if target_host == "" else target_host
-        if not target_host:
-            for device_type, tgt in target.items():
-                if device_type.value == tvm.nd.cpu(0).device_type:
-                    target_host = tgt
-                    break
-        if not target_host:
-            target_host = "llvm" if tvm.runtime.enabled("llvm") else "stackvm"
-        if isinstance(target_host, str):
-            target_host = "llvm" if target_host == "cpu" else target_host
-            target_host = tvm.target.Target(target_host)
-        return target_host
+            raise TypeError("device is expected to be str, Device, "
+                            "or dict of str to str/Device, but received %s" % type(device))
+        return device_map
 
 
-def compile(mod, target=None, target_host=None, params=None): #pylint: disable=redefined-builtin
+def compile(mod, device=None, params=None): #pylint: disable=redefined-builtin
     """Compile the module to VM executable. A helper function for VMCompiler.
 
     Parameters
@@ -381,19 +368,9 @@ def compile(mod, target=None, target_host=None, params=None): #pylint: disable=r
     mod : Module
         The module to build.
 
-    target : str, :any:`tvm.target.Target`, or dict of str(i.e.
-        device/context name) to str/tvm.target.Target, optional
-        For heterogeneous compilation, it is a dictionary indicating context
-        to target mapping. For homogeneous compilation, it is a build target.
-
-    target_host : str or :any:`tvm.target.Target`, optional
-        Host compilation target, if target is device.
-        When TVM compiles device specific program such as CUDA,
-        we also need host(CPU) side code to interact with the driver
-        to setup the dimensions and parameters correctly.
-        target_host is used to specify the host side codegen target.
-        By default, llvm is used if it is enabled,
-        otherwise a stackvm intepreter is used.
+    device: Union[str, Device, Dict[Union[str, int], Union[str, Device]]]
+        It can be either a device string, a Device object, or a dict mapping from
+        device type name/ID to device string/object.
 
     params : dict of str to ndarray
         Input parameters to the graph that do not change
@@ -407,7 +384,7 @@ def compile(mod, target=None, target_host=None, params=None): #pylint: disable=r
     compiler = VMCompiler()
     if params:
         compiler.set_params(params)
-    compiler.lower(mod, target, target_host)
+    compiler.lower(mod, device)
     return Executable(compiler.get_exec())
 
 

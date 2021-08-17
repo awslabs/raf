@@ -9,6 +9,27 @@ from mnm._lib import _DLDevice
 from mnm._lib import _NodeBase as NodeBase  # pylint: disable=unused-import
 from mnm._lib import _register_object as _register_node
 
+DEVICE_TYPE_MAP = {
+    'llvm': 1,
+    'stackvm': 1,
+    'cpu': 1,
+    'c': 1,
+    'gpu': 2,
+    'cuda': 2,
+    'nvptx': 2,
+    'cl': 4,
+    'opencl': 4,
+    'aocl': 5,
+    'aocl_sw_emu': 5,
+    'sdaccel': 6,
+    'vulkan': 7,
+    'metal': 8,
+    'vpi': 9,
+    'rocm': 10,
+    'opengl': 11,
+    'ext_dev': 12,
+    'micro_dev': 13,
+}
 
 def register_node(type_key=None):
     assert isinstance(type_key, str)
@@ -25,29 +46,8 @@ def set_module(module):
 
 
 def _get_device_map():
-    dev_type_mask = {
-        'llvm': 1,
-        'stackvm': 1,
-        'cpu': 1,
-        'c': 1,
-        'gpu': 2,
-        'cuda': 2,
-        'nvptx': 2,
-        'cl': 4,
-        'opencl': 4,
-        'aocl': 5,
-        'aocl_sw_emu': 5,
-        'sdaccel': 6,
-        'vulkan': 7,
-        'metal': 8,
-        'vpi': 9,
-        'rocm': 10,
-        'opengl': 11,
-        'ext_dev': 12,
-        'micro_dev': 13,
-    }
     _str2ctx = {}
-    for device_type, idx in dev_type_mask.items():
+    for device_type, idx in DEVICE_TYPE_MAP.items():
         _str2ctx[device_type] = _DLDevice(device_type=idx, device_id=0)
         for device_id in range(128):
             name = f"{device_type}({device_id})"

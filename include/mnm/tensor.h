@@ -8,7 +8,7 @@
 #include <utility>
 #include "tvm/runtime/ndarray.h"
 #include "tvm/runtime/packed_func.h"
-#include "./base.h"
+#include "./device.h"
 
 class MNMTester;
 

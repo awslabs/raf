@@ -2,6 +2,7 @@ import pytest
 import mnm
 from mnm.testing import randn
 from mnm._lib import relay, tvm
+from mnm._core.device import Device
 from mnm._core.module import IRModule
 from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
 # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
@@ -103,7 +104,7 @@ def test_memory_alloc(shape):
     func = model_before._internal(m_x).mod['main']
     mod = IRModule.from_expr(func)
     mod = InferType()(mod)
-    with tvm.target.Target(dev):
+    with Device(dev):
         mod = mnm._ffi.pass_.ManifestAlloc(mod)
     mod = InferType()(mod)
     ca = ContextAnalysis(mod, tvm.cpu())

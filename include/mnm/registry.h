@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "./base.h"
+#include "./device.h"
 
 #define MNM_REGISTER_GLOBAL(name) TVM_REGISTER_GLOBAL(name)
 
@@ -111,9 +111,9 @@ class PerDeviceStore {
   }
 
   EntryPtr& Get(Device dev) {
-    int dev_type_int = dev.device_type;
-    EnsureCapacity(dev_type_int, dev.device_id);
-    EntryPtr& ret = entries_[dev_type_int][dev.device_id];
+    int dev_type_int = dev.device_type();
+    EnsureCapacity(dev_type_int, dev.device_id());
+    EntryPtr& ret = entries_[dev_type_int][dev.device_id()];
     if (create_default) {
       CreateMissing(&ret);
     }

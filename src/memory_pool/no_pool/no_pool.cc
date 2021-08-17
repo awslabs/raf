@@ -4,7 +4,7 @@
  * \brief No memory pool
  */
 #include <atomic>
-#include "mnm/base.h"
+#include "mnm/device.h"
 #include "mnm/device_api.h"
 #include "mnm/memory_pool.h"
 #include "mnm/registry.h"
@@ -37,7 +37,7 @@ class NoPool final : public MemoryPool {
  public:
   explicit NoPool(Device dev) {
     this->device = dev;
-    this->api = DeviceAPI::Get(dev.device_type);
+    this->api = DeviceAPI::Get(dev.device_type());
   }
 
   int64_t GetAllocBytes(int64_t nbytes) override {
@@ -77,8 +77,8 @@ class NoPool final : public MemoryPool {
   std::shared_ptr<DeviceAPI> api;
 };
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.no_pool").set_body_typed([](const tvm::Device& dev) {
-  return NoPool::make(Device(dev));
+MNM_REGISTER_GLOBAL("mnm.memory_pool._make.no_pool").set_body_typed([](const Device& dev) {
+  return NoPool::make(dev);
 });
 
 }  // namespace no_pool

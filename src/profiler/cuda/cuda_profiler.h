@@ -12,19 +12,20 @@
 #include "mnm/registry.h"
 #include "mnm/profiler.h"
 
-#define WITH_CUDA_PROFILER_LEVEL(LEVEL, CTX, NAME, CAT, ARGS, CODE_SNIPPET)                        \
-  {                                                                                                \
-    bool profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                           \
-    if (profiling) {                                                                               \
-      std::shared_ptr<mnm::profiler::CudaProfilerHelper> phelper(                                  \
-          new mnm::profiler::CudaProfilerHelper(CTX.device_id, CTX.device_type, NAME, CAT, ARGS)); \
-      mnm::profiler::CudaProfiler::Get()->AddProfilerHelper(phelper);                              \
-      cudaEventRecord(phelper->start_event, 0);                                                    \
-      CODE_SNIPPET                                                                                 \
-      cudaEventRecord(phelper->end_event, 0);                                                      \
-    } else {                                                                                       \
-      CODE_SNIPPET                                                                                 \
-    }                                                                                              \
+#define WITH_CUDA_PROFILER_LEVEL(LEVEL, CTX, NAME, CAT, ARGS, CODE_SNIPPET)                    \
+  {                                                                                            \
+    bool profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                       \
+    if (profiling) {                                                                           \
+      std::shared_ptr<mnm::profiler::CudaProfilerHelper> phelper(                              \
+          new mnm::profiler::CudaProfilerHelper(CTX.device_id(), CTX.device_type(), NAME, CAT, \
+                                                ARGS));                                        \
+      mnm::profiler::CudaProfiler::Get()->AddProfilerHelper(phelper);                          \
+      cudaEventRecord(phelper->start_event, 0);                                                \
+      CODE_SNIPPET                                                                             \
+      cudaEventRecord(phelper->end_event, 0);                                                  \
+    } else {                                                                                   \
+      CODE_SNIPPET                                                                             \
+    }                                                                                          \
   }
 
 #define WITH_CUDA_PROFILER(CTX, NAME, CAT, ARGS, CODE_SNIPPET) \

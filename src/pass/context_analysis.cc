@@ -69,8 +69,6 @@ class DeviceDomain {
  public:
   // Construct an empty domain.
   DeviceDomain() {
-    device_.device_type = DevType::kUnknown();
-    device_.device_id = -1;
   }
 
   // Construct a domain based on a given context.
@@ -79,13 +77,13 @@ class DeviceDomain {
 
   // Check if the current domain is empty.
   bool IsEmptyDomain() const {
-    return device_.device_type == DevType::kUnknown() && device_.device_id == -1;
+    return device_.device_type() == DevType::kUnknown() && device_.device_id() == -1;
   }
 
   // Check if the current domain equals the other one.
   bool operator==(const DeviceDomain& other) const {
-    return device_.device_type == other.device_.device_type &&
-           device_.device_id == other.device_.device_id;
+    return device_.device_type() == other.device_.device_type() &&
+           device_.device_id() == other.device_.device_id();
   }
 
   bool operator!=(const DeviceDomain& other) const {
@@ -99,8 +97,8 @@ class DeviceDomain {
       if (domain->IsEmptyDomain()) {
         return (size_t)(domain.get());
       } else {
-        size_t const h1(std::hash<int>()(static_cast<int>(domain->device_.device_type)));
-        size_t const h2(std::hash<int>()(domain->device_.device_id));
+        size_t const h1(std::hash<int>()(static_cast<int>(domain->device_.device_type())));
+        size_t const h2(std::hash<int>()(domain->device_.device_id()));
         return h1 ^ (h2 << 1);
       }
     }
@@ -151,8 +149,6 @@ class ContextAnalyzer : public MixedModeVisitor {
         mod_(mod),
         current_func_(current_func),
         default_context_(default_context) {
-    cpu_ctx_.device_type = DevType::kCPU();
-    cpu_ctx_.device_id = 0;
   }
 
   // Create an empty domain.
@@ -218,18 +214,14 @@ class ContextAnalyzer : public MixedModeVisitor {
   // attribute of other nodes can be propagated from it.
   void UnifyDeviceCopy(const std::vector<Expr>& inps, const std::vector<Expr>& outputs,
                        DevType src_dev_type, DevType dst_dev_type) {
-    Device src_ctx;
-    src_ctx.device_type = src_dev_type;
-    src_ctx.device_id = 0;
+    Device src_ctx = Device(src_dev_type, 0);
     auto src_domain = DeviceType(src_ctx);
     for (const auto& it : inps) {
       auto lhs = DeviceFor(it);
       Unify(lhs, src_domain);
     }
 
-    Device dst_ctx;
-    dst_ctx.device_type = dst_dev_type;
-    dst_ctx.device_id = 0;
+    Device dst_ctx = Device(dst_dev_type, 0);
     auto dst_domain = DeviceType(dst_ctx);
     for (const auto& it : outputs) {
       auto lhs = DeviceFor(it);
@@ -465,10 +457,8 @@ class ContextAnalyzer : public MixedModeVisitor {
       Unify(DeviceFor(call->args[i]), DeviceType(cpu_ctx_));
       MixedModeVisitor::VisitExpr(call->args[i]);
     }
-    Device dev;
     const auto* attrs = call->attrs.as<tvm::relay::AllocStorageAttrs>();
-    dev.device_type = static_cast<DevType>(attrs->device_type);
-    dev.device_id = attrs->device_id;
+    Device dev = Device(static_cast<DevType>(attrs->device_type), attrs->device_id);
     Unify(DeviceFor(GetRef<Call>(call)), DeviceType(dev));
   }
 
@@ -607,7 +597,7 @@ class ContextAnalyzer : public MixedModeVisitor {
 
  private:
   /* \brief The cpu context. */
-  Device cpu_ctx_;
+  Device cpu_ctx_ = Device(DevType::kCPU(), 0);
   /* \brief The module that helps context analysis. */
   const IRModule& mod_;
   /* \brief The current function that is being analyzed. */
@@ -645,7 +635,7 @@ PackedAnalysisResultMap ContextAnalysisPacked(const IRModule& mod,
   for (const auto& it : res) {
     Device dev = it.second;
     Integer dev_ty = static_cast<int>(dev.operator tvm::Device().device_type);
-    Integer dev_id = it.second.device_id;
+    Integer dev_id = it.second.device_id();
     ret.Set(it.first, {dev_ty, dev_id});
   }
   return ret;

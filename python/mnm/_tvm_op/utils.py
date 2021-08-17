@@ -6,8 +6,7 @@ from tvm.auto_scheduler.relay_integration import traverse_to_get_io_tensors
 
 @tvm._ffi.register_func("mnm._tvm_op.utils.calc_flops") # pylint: disable=protected-access
 def calc_flops(func, tvm_target):
-    """Calculate the compute FLOPS of the given call node.
-    """
+    """Calculate the compute FLOPS of the given call node."""
     engine = relay.backend.compile_engine.get()
     cached_func = engine.lower(func, tvm_target)
 

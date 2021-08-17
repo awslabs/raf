@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "./base.h"
+#include "./device.h"
 
 namespace mnm {
 namespace memory_pool {

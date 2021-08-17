@@ -6,6 +6,7 @@
 #pragma once
 
 #include <tvm/ir/type_functor.h>
+#include "mnm/device.h"
 #include "mnm/op.h"
 #include "mnm/pass.h"
 
@@ -29,8 +30,8 @@ using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
  */
 class FLOPSEstimater : public ExprVisitor {
  public:
-  StdMap<int64_t> Run(const Target& target, const Function& func, const IRModule& mod) {
-    target_ = target;
+  StdMap<int64_t> Run(const Device& target, const Function& func, const IRModule& mod) {
+    device_ = target;
     mod_ = mod;
     this->VisitExpr(func);
     return var_flops_map_;
@@ -54,7 +55,7 @@ class FLOPSEstimater : public ExprVisitor {
    * and estimate the FLOPS of other functions called by global symbols. */
   IRModule mod_;
   /*! \brief The target device used to estimate the rematerialization cost. */
-  tvm::Target target_;
+  Device device_;
   /*! \brief Mapping from the let binding var to the FLOPS of its expression. */
   StdMap<int64_t> var_flops_map_;
 };

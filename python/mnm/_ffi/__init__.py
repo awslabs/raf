@@ -7,6 +7,7 @@ from . import analysis
 from . import backend
 from . import binding
 from . import build_info
+from . import device
 from . import device_api
 from . import distributed
 from . import executor

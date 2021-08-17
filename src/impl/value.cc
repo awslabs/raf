@@ -350,7 +350,7 @@ Value CopyTo(Value src, const Device& dev) {
   }
   if (src.as<TensorValueObj>()) {
     auto tensor = Downcast<TensorValue>(src)->tensor;
-    if (tensor->device.device_type != dev.device_type) {
+    if (tensor->device.device_type != dev.device_type()) {
       return TensorValue::make(tensor::Tensor(tensor.CopyTo(dev)));
     }
     return src;

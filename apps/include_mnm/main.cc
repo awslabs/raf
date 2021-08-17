@@ -1,7 +1,7 @@
 #include <cassert>
 #include <iostream>
 
-#include <mnm/base.h>
+#include <mnm/device.h>
 #include <mnm/device_api.h>
 #include <mnm/enum_base.h>
 #include <mnm/ir.h>

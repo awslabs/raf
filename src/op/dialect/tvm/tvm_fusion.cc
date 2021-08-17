@@ -227,16 +227,10 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   static auto engine_clear = registry::GetPackedFunc("relay.backend._CompileEngineClear");
   auto env = std::make_unique<TVMOpEnv>();
   Device dev = call->device;
-  tvm::Target target;
-  if (dev.device_type == DevType::kCPU()) {
-    target = tvm::Target("llvm");
-  } else if (dev.device_type == DevType::kCUDA()) {
-    target = tvm::Target("cuda");
-  } else {
-    LOG(FATAL) << "NotImplementedError: target is not supported " << dev.device_type.c_str();
-    throw;
-  }
-  Meta2TVM meta_to_tvm(call, dev.device_type);
+  tvm::Target target = dev.tvm_target();
+  CHECK(dev.device_type() == DevType::kCPU() || dev.device_type() == DevType::kCUDA())
+      << "NotImplementedError: target is not supported " << dev.device_type().c_str();
+  Meta2TVM meta_to_tvm(call, dev.device_type());
   Function func = Downcast<Function>(meta_to_tvm());
   // TODO(@hzfan): add cache for meta
   engine_clear(engine);
@@ -262,17 +256,17 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
  * \param call The call values, which callee is a ClosureValue that includes the target function.
  * \param param_types The type of function parameters.
  * \param ret_type The function return type.
- * \param target The target.
+ * \param device The device.
  * \return The calculated FLOPS.
  */
 int CalcFuncFLOPS(const op::CallValues& call, const Array<Type>& param_types, const Type& ret_type,
-                  const Target& target) {
+                  const Device& device) {
   static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   static auto* fcalc = tvm::runtime::Registry::Get("mnm._tvm_op.utils.calc_flops");
 
-  auto dev = Device(static_cast<tvm::Device>((*str2dev)(target->kind->name)));
-  Meta2TVM meta_to_tvm(call, dev.device_type);
+  Meta2TVM meta_to_tvm(call, device.device_type());
   Function func = Downcast<Function>(meta_to_tvm());
+  tvm::Target target = device.tvm_target();
   return (*fcalc)(func, target);
 }
 

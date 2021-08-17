@@ -2,6 +2,7 @@
 import pytest
 import numpy as np
 import mnm
+from mnm._core.device import Device
 from mnm._core.vm import Executable, VirtualMachine
 from mnm._core.executor import VMExecutor
 from mnm.testing import check, randn
@@ -10,7 +11,7 @@ from tvm import relay
 
 
 def run_exec(exe, inputs):
-    vm = VirtualMachine(exe, tvm.cpu())
+    vm = VirtualMachine(exe, Device("cpu"))
     out = vm.run(*inputs)
     return out
 

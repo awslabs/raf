@@ -9,7 +9,7 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
-#include "mnm/base.h"
+#include "mnm/device.h"
 
 #define CUDA_CALL(func)                                           \
   do {                                                            \
