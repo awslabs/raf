@@ -70,8 +70,8 @@ def test_dense_add_relu(batch_size, in_features, out_features):
     m_w, _ = randn_torch([out_features, in_features], requires_grad=True, device=device)
     m_b, _ = randn_torch([out_features], requires_grad=True, device=device)
     t_model = torch.nn.Linear(in_features, out_features, bias=True)
-    t_model.weight[:] = torch.from_numpy(m_w.numpy())
-    t_model.bias[:] = torch.from_numpy(m_b.numpy())
+    t_model.weight.data[:] = torch.from_numpy(m_w.numpy())
+    t_model.bias.data[:] = torch.from_numpy(m_b.numpy())
     model = TestModel(in_features=in_features,
                       out_features=out_features)
     model.linear.w = m_w

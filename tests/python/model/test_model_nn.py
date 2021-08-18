@@ -32,8 +32,8 @@ def test_model_batch_norm(num_features, affine, is_train):
     t_model.running_mean[:] = torch.from_numpy(m_m.numpy())
     t_model.running_var[:] = torch.from_numpy(m_v.numpy())
     if affine:
-        t_model.weight[:] = torch.from_numpy(m_w.numpy())
-        t_model.bias[:] = torch.from_numpy(m_b.numpy())
+        t_model.weight.data[:] = torch.from_numpy(m_w.numpy())
+        t_model.bias.data[:] = torch.from_numpy(m_b.numpy())
     # pylint: enable=no-member
     if is_train:
         model.train_mode()
@@ -98,9 +98,9 @@ def test_model_dense(batch_size, in_features, out_features, bias):
 
     # pylint: disable=no-member
     t_model = torch.nn.Linear(in_features, out_features, bias=bias)
-    t_model.weight[:] = torch.from_numpy(m_w.numpy())
+    t_model.weight.data[:] = torch.from_numpy(m_w.numpy())
     if bias:
-        t_model.bias[:] = torch.from_numpy(m_b.numpy())
+        t_model.bias.data[:] = torch.from_numpy(m_b.numpy())
     # pylint: enable=no-member
     model = mnm.model.Linear(in_features=in_features,
                              out_features=out_features,
