@@ -2,6 +2,8 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+# Defined in ./src/pass/stream_schedule_asap.cc
+ASAPStreamSchedule = _APIS.get("mnm.pass_.ASAPStreamSchedule", None)
 # Defined in ./src/pass/annotate_target.cc
 AnnotateTarget = _APIS.get("mnm.pass_.AnnotateTarget", None)
 # Defined in ./src/pass/assign_device.cc
@@ -68,8 +70,6 @@ PrintIR = _APIS.get("mnm.pass_.PrintIR", None)
 RenameVars = _APIS.get("mnm.pass_.RenameVars", None)
 # Defined in ./src/pass/simplify_expr.cc
 SimplifyExpr = _APIS.get("mnm.pass_.SimplifyExpr", None)
-# Defined in ./src/pass/stream_schedule.cc
-StreamSchedule = _APIS.get("mnm.pass_.StreamSchedule", None)
 # Defined in ./src/pass/substitute.cc
 Substitute = _APIS.get("mnm.pass_.Substitute", None)
 # Defined in ./src/pass/to_a_normal_form.cc
@@ -80,6 +80,8 @@ ToBasicBlockNormalForm = _APIS.get("mnm.pass_.ToBasicBlockNormalForm", None)
 ToGraphNormalForm = _APIS.get("mnm.pass_.ToGraphNormalForm", None)
 # Defined in ./src/pass/inplace_update.cc
 ValidateInplaceUpdate = _APIS.get("mnm.pass_.ValidateInplaceUpdate", None)
+# Defined in ./src/pass/stream_schedule_wavefront.cc
+WavefrontStreamSchedule = _APIS.get("mnm.pass_.WavefrontStreamSchedule", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
 # Defined in ./src/pass/from_relay.cc

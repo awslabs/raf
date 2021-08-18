@@ -62,7 +62,7 @@ def test_vm_forward(fuse_lv):
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("block_name", ["a", "ab"])
 @pytest.mark.parametrize("fuse_lv", [0, 1])
-@pytest.mark.parametrize("stream_schedule_policy", ["wavefront"])
+@pytest.mark.parametrize("stream_schedule_policy", ["wavefront", "asap"])
 def test_block_vm_multi_stream(block_name, stream_schedule_policy, fuse_lv):
     if block_name == "ab":
         pytest.xfail(reason="Workspace of kernels on different stream may overlap.")
@@ -77,7 +77,7 @@ def test_block_vm_multi_stream(block_name, stream_schedule_policy, fuse_lv):
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.xfail(reason="Workspace of kernels on different stream may overlap.")
 @pytest.mark.parametrize("fuse_lv", [0, 1])
-@pytest.mark.parametrize("stream_schedule_policy", ["wavefront"])
+@pytest.mark.parametrize("stream_schedule_policy", ["wavefront", "asap"])
 def test_vm_multi_stream(stream_schedule_policy, fuse_lv):
     device = 'cuda'
     model, _ = inception.get_model()

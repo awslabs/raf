@@ -787,7 +787,17 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
 
   // optimization passes that transform BBNF into ANF
   if ((*it).second.device_type() == DevType::kCUDA()) {
-    pass_seqs.push_back(pass::StreamSchedule());
+    auto policy_name = pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
+    if (policy_name == "sequential") {
+      pass_seqs.push_back(pass::ToANormalForm());
+    } else if (policy_name == "wavefront") {
+      pass_seqs.push_back(pass::WavefrontStreamSchedule());
+    } else if (policy_name == "asap") {
+      pass_seqs.push_back(pass::ASAPStreamSchedule());
+    } else {
+      LOG(FATAL) << "Can not recognize schedule policy: " << policy_name << ", candidates are \n"
+                 << "  sequential, wavefront, and asap" << std::endl;
+    }
   } else {
     pass_seqs.push_back(pass::ToANormalForm());
   }

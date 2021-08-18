@@ -268,16 +268,20 @@ Pass InplaceUpdate();
 Pass ValidateInplaceUpdate(bool enforce_inplace_update);
 
 /*!
- * \brief This pass implements the stream schedule policy. It transforms BBNF into ANF and
+ * \brief This pass implements wavefront stream schedule policy. It transforms BBNF into ANF and
  * injects stream-related operators (e.g., mnm.op.set_stream, mnm.op.add_event, and
  * mnm.op.wait_event).
- *
- * Please use 'mnm.stream_schedule.policy' pass config to control the schedule policy used.
- *   Candidates are: 'sequential', 'wavefront'.
- *
  * \return The created pass.
  */
-Pass StreamSchedule();
+Pass WavefrontStreamSchedule();
+
+/*!
+ * \brief This pass implements ASAP (as soon as possible) stream schedule policy. It transforms
+ * BBNF into ANF and injects stream-related operators (e.g., mnm.op.set_stream, mnm.op.add_event,
+ * and mnm.op.wait_event).
+ * \return The created pass.
+ */
+Pass ASAPStreamSchedule();
 
 }  // namespace pass
 }  // namespace mnm

@@ -786,7 +786,7 @@ void VirtualMachine::HandleCudaSetStream(VMContext& ctx, const Instruction& inst
 #ifdef MNM_USE_CUDA
   while (cuda_streams_.size() <= instr.cuda_set_stream.stream_id) {
     cudaStream_t stream;
-    CUDA_CALL(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+    CUDA_CALL(cudaStreamCreateWithFlags(&stream, cudaStreamDefault));
     cuda_streams_.push_back(stream);
   }
   MNMSetStream(Device(DevType::kCUDA(), static_cast<int>(instr.cuda_set_stream.device_id)),
