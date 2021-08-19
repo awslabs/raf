@@ -30,16 +30,16 @@ using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
  */
 class FLOPSEstimater : public ExprVisitor {
  public:
-  StdMap<int64_t> Run(const Device& target, const Function& func, const IRModule& mod) {
+  StdMap<float> Run(const Device& target, const Function& func, const IRModule& mod) {
     device_ = target;
     mod_ = mod;
     this->VisitExpr(func);
     return var_flops_map_;
   }
 
-  int64_t GetFLOPS(const Var& var) {
+  float GetFLOPS(const Var& var) {
     if (var_flops_map_.count(var) == 0) {
-      LOG(WARNING) << "Var " << var->name_hint() << " does not have FLOPS";
+      DLOG(WARNING) << "Var " << var->name_hint() << " does not have GFLOPS";
       return -1;
     }
     return var_flops_map_[var];
@@ -56,8 +56,8 @@ class FLOPSEstimater : public ExprVisitor {
   IRModule mod_;
   /*! \brief The target device used to estimate the rematerialization cost. */
   Device device_;
-  /*! \brief Mapping from the let binding var to the FLOPS of its expression. */
-  StdMap<int64_t> var_flops_map_;
+  /*! \brief Mapping from the let binding var to the GFLOPS of its expression. */
+  StdMap<float> var_flops_map_;
 };
 
 }  // namespace estimate_flops

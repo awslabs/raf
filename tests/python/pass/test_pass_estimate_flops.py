@@ -5,18 +5,19 @@ import tvm
 from tvm import relay
 
 from mnm._core.device import Device
-from mnm._ffi.pass_ import EstimateFLOPS
+from mnm._ffi.pass_ import EstimateGFLOPS
 from mnm.ir import ScopeBuilder
 from mnm.testing import run_infer_type
 
 def verify_flops(mod, expected_map):
     with Device("cpu"):
-        ret = EstimateFLOPS(run_infer_type(mod))
+        ret = EstimateGFLOPS(run_infer_type(mod))
         ret = {k.name_hint: v.value for k, v in ret.items()}
 
     for var_name, expected_flops in expected_map.items():
         assert var_name in ret, "Missing %s" % var_name
-        assert abs(expected_flops - ret[var_name]) <= 1, "%s FLOPS mismatch" % var_name
+        assert abs(expected_flops / 1e9 - ret[var_name]) <= 1e-2, \
+            "%s GFLOPS mismatch" % var_name
 
 def test_conv2d():
     shape = (16, 16, 64, 64)

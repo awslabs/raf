@@ -22,7 +22,8 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=no-member
         axes = None if not axes else axes
         return [_topi.sum(x, axis=axes, keepdims=keep[0])]
     axes = sorted(zip(axes, keep))
-    red_axis = [_tvm.te.reduce_axis((0, x.shape[i])) for i, _ in axes]
+    red_axis = [_tvm.te.reduce_axis((0, x.shape[i]), name="rv%d" % e)
+                for e, (i, _) in enumerate(axes)]
     shape = list(x.shape)
     for i, j in axes:
         shape[i] = 1 if j else None
@@ -135,7 +136,7 @@ def prod_dx_compute(attrs, inputs, output_type):
             reduce_dim.append(shape[dim])
         else:
             output_dim.append(1)
-            reduce_axis.append(_tvm.te.reduce_axis((0, shape[dim])))
+            reduce_axis.append(_tvm.te.reduce_axis((0, shape[dim]), name="rv%d" % dim))
 
     product = _tvm.te.comm_reducer(lambda x, y: x*y, lambda t: _tvm.tir.const(1, dtype=t))
     def fcompute(*args):

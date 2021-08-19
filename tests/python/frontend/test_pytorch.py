@@ -205,7 +205,7 @@ def test_conv_bn(shape_dict, mode, fuse):
         t_loss = F.nll_loss(t_ypred, t_ytrue)
         t_loss.backward(t_dy)
         t_trainer.step()
-        check(m_loss, t_loss)
+        check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")

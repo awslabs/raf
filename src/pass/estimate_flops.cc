@@ -93,14 +93,14 @@ void FLOPSEstimater::VisitExpr_(const CallNode* call) {
     throw;
   }
   var_flops_map_[curr_let_] =
-      tvm_dialect::CalcFuncFLOPS(call_values, param_types, ret_type, device_);
+      tvm_dialect::CalcFuncGFLOPS(call_values, param_types, ret_type, device_);
 }
 
 }  // namespace estimate_flops
 
-using PackedFLOPSMap = Map<Var, Integer>;
+using PackedFLOPSMap = Map<Var, FloatImm>;
 
-estimate_flops::StdMap<int64_t> EstimateFLOPS(const IRModule& mod, const Device& device) {
+estimate_flops::StdMap<float> EstimateGFLOPS(const IRModule& mod, const Device& device) {
   auto entry = mod->GetGlobalVar("main");
   auto func = Downcast<Function>(mod->Lookup(entry));
   auto estimator = estimate_flops::FLOPSEstimater();
@@ -108,18 +108,18 @@ estimate_flops::StdMap<int64_t> EstimateFLOPS(const IRModule& mod, const Device&
 }
 
 // Put the flops to Map as std::unordered_map is not in the object system.
-PackedFLOPSMap EstimateFLOPSPacked(const IRModule& mod) {
+PackedFLOPSMap EstimateGFLOPSPacked(const IRModule& mod) {
   auto device = Device::Current(false);
 
   PackedFLOPSMap ret;
-  auto res = EstimateFLOPS(mod, device);
+  auto res = EstimateGFLOPS(mod, device);
   for (const auto& it : res) {
-    ret.Set(it.first, it.second);
+    ret.Set(it.first, FloatImm(DataType::Float(32), it.second));
   }
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.EstimateFLOPS").set_body_typed(EstimateFLOPSPacked);
+MNM_REGISTER_GLOBAL("mnm.pass_.EstimateGFLOPS").set_body_typed(EstimateGFLOPSPacked);
 
 }  // namespace pass
 }  // namespace mnm

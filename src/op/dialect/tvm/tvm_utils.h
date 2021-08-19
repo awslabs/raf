@@ -10,6 +10,8 @@
 #include "tvm/relay/transform.h"
 #include "tvm/ir/expr.h"
 #include "tvm/runtime/c_runtime_api.h"
+#include "relay/backend/te_compiler.h"
+#include "relay/backend/te_compiler_cache.h"
 #include "mnm/ir.h"
 #include "mnm/value.h"
 #include "mnm/registry.h"
@@ -27,8 +29,8 @@ ir::Type GetTensorType(const DLTensor& dlt);
 ir::Type GetTupleType(const std::vector<DLTensor>& dlts);
 ir::Function LowerOp(const ir::Op& op, const ir::Attrs& attrs,
                      const std::vector<ir::Type>& param_types, const ir::Type& ret_type);
-int CalcFuncFLOPS(const op::CallValues& call, const Array<Type>& param_types, const Type& ret_type,
-                  const Device& device);
+float CalcFuncGFLOPS(const op::CallValues& call, const Array<Type>& param_types,
+                     const Type& ret_type, const Device& device);
 
 class TVMOpEnv : public op::OpEnv {
  public:
@@ -120,10 +122,7 @@ using FMNMArgIndices =
     return ret;                                                                                    \
   }                                                                                                \
   OpEnv* FUNC##Build(const op::CallValues& call) {                                                 \
-    static auto engine = registry::GetPackedFunc("relay.backend._CompileEngineGlobal")();          \
-    static auto c_cache_key = registry::GetPackedFunc("relay.backend._make_CCacheKey");            \
-    static auto jit = registry::GetPackedFunc("relay.backend._CompileEngineJIT");                  \
-    static auto engine_clear = registry::GetPackedFunc("relay.backend._CompileEngineClear");       \
+    tvm::relay::tec::TECompiler te_compiler;                                                       \
     const auto& dev = call->device;                                                                \
     static const auto base_op = Op::Get(MNM_BASE_OP_NAME(OP));                                     \
     auto env = new TVMOpEnv();                                                                     \
@@ -147,8 +146,8 @@ using FMNMArgIndices =
     env->env_name = TruncateName(GetUniqueName(MNM_DIALECT_OP_NAME(tvm, OP)));                     \
     std::function<registry::PackedFunc(const ir::Function&)> f_post_lower(                         \
         [&](const ir::Function& f) {                                                               \
-          engine_clear(engine);                                                                    \
-          return jit(engine, c_cache_key(f, target));                                              \
+          te_compiler->Clear();                                                                    \
+          return te_compiler->JIT(tvm::relay::tec::CCacheKey(f, target));                          \
         });                                                                                        \
     try {                                                                                          \
       env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                                 \

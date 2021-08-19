@@ -10,6 +10,9 @@
 #include "mnm/ir_ext.h"
 #include "mnm/pass.h"
 #include "tvm/ir/type_functor.h"
+#include "tvm/auto_scheduler/compute_dag.h"
+#include "relay/backend/te_compiler.h"
+#include "relay/backend/te_compiler_cache.h"
 #include "./tvm_utils.h"
 #include "../../../common/shape_utils.h"
 
@@ -221,10 +224,7 @@ class Meta2TVM : public ExprMutator {
 };
 
 OpEnv* FusedFuncBuild(const op::CallValues& call) {
-  static auto engine = registry::GetPackedFunc("relay.backend._CompileEngineGlobal")();
-  static auto c_cache_key = registry::GetPackedFunc("relay.backend._make_CCacheKey");
-  static auto jit = registry::GetPackedFunc("relay.backend._CompileEngineJIT");
-  static auto engine_clear = registry::GetPackedFunc("relay.backend._CompileEngineClear");
+  tvm::relay::tec::TECompiler te_compiler;
   auto env = std::make_unique<TVMOpEnv>();
   Device dev = call->device;
   tvm::Target target = dev.tvm_target();
@@ -233,10 +233,10 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   Meta2TVM meta_to_tvm(call, dev.device_type());
   Function func = Downcast<Function>(meta_to_tvm());
   // TODO(@hzfan): add cache for meta
-  engine_clear(engine);
+  te_compiler->Clear();
   env->env_name = TruncateName(GetUniqueName(meta_to_tvm.func_name));
   try {
-    env->f = jit(engine, c_cache_key(func, target));
+    env->f = te_compiler->JIT(tvm::relay::tec::CCacheKey(func, target));
   } catch (const dmlc::Error& e) {
     if (!AllowJitFailure()) {
       LOG(FATAL) << "Failed to build a fused op " << env->env_name << ": " << e.what();
@@ -252,22 +252,30 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
 }
 
 /*!
- * \brief Calculate the total computation FLOPS required by a function.
+ * \brief Calculate the total computation GFLOPS required by a function.
  * \param call The call values, which callee is a ClosureValue that includes the target function.
  * \param param_types The type of function parameters.
  * \param ret_type The function return type.
  * \param device The device.
- * \return The calculated FLOPS.
+ * \return The calculated GFLOPS.
  */
-int CalcFuncFLOPS(const op::CallValues& call, const Array<Type>& param_types, const Type& ret_type,
-                  const Device& device) {
-  static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
-  static auto* fcalc = tvm::runtime::Registry::Get("mnm._tvm_op.utils.calc_flops");
+float CalcFuncGFLOPS(const op::CallValues& call, const Array<Type>& param_types,
+                     const Type& ret_type, const Device& device) {
+  tvm::relay::tec::TECompiler compiler;
 
   Meta2TVM meta_to_tvm(call, device.device_type());
   Function func = Downcast<Function>(meta_to_tvm());
   tvm::Target target = device.tvm_target();
-  return (*fcalc)(func, target);
+
+  auto cache_key = tvm::relay::tec::CCacheKey(func, target);
+  try {
+    auto tensors = compiler->Lower(cache_key, "mod_calc_flops")->outputs;
+    auto dag = tvm::auto_scheduler::ComputeDAG(tensors);
+    return dag->flop_ct / 1e9;
+  } catch (dmlc::Error& e) {
+    LOG(WARNING) << "Failed to create ComputeDAG for " << mnm::ir::AsText(func) << "\n" << e.what();
+  }
+  return -1;
 }
 
 MNM_OP_ENV_MAKER("mnm.op.tvm._fused", FusedFuncBuild);
