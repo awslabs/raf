@@ -151,8 +151,17 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const FunctionNode* node) {
 }
 
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const CallNode* node) {
-  Var dummy = analyzer_->CreateTensorVar(node->checked_type());
-  analyzer_->Init(let_var_, dummy);
+  if (node->op->IsInstance<OpNode>() && op::IsReshapeOp(Downcast<Op>(node->op))) {
+    // Reshape ops does not create a new tensor but just a view, so treat them as a direct assign.
+    auto var = node->args[0].as<VarNode>();
+    CHECK(var != nullptr) << "Expected the first argument of reshape op to be a Var, but got "
+                          << node->args[0]->GetTypeKey();
+    this->VisitExpr_(var);
+
+  } else {
+    Var dummy = analyzer_->CreateTensorVar(node->checked_type());
+    analyzer_->Init(let_var_, dummy);
+  }
 }
 
 void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const TupleNode* node) {
@@ -242,20 +251,28 @@ void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const FunctionNode* node) {
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const CallNode* node) {
   const Array<Expr>& args = node->args;
-  Array<Var> vargs;
-  for (const auto& arg : node->args) {
-    if (arg.as<VarNode>()) {
-      // use %arg
-      vargs.push_back(Downcast<Var>(arg));
-    } else if (arg.as<ConstantNode>() || arg.as<OpNode>()) {
-      // use nothing
-    } else {
-      LOG(FATAL) << "NotImplementedError: unsupported args: " << arg->GetTypeKey();
+  if (node->op->IsInstance<OpNode>() && op::IsReshapeOp(Downcast<Op>(node->op))) {
+    // Reshape ops does not create a new tensor but just a view, so treat them as a direct assign.
+    auto var = args[0].as<VarNode>();
+    CHECK(var != nullptr) << "Expected the first argument of reshape op to be a Var, but got "
+                          << args[0]->GetTypeKey();
+    this->VisitExpr_(var);
+  } else {
+    Array<Var> vargs;
+    for (const auto& arg : node->args) {
+      if (arg.as<VarNode>()) {
+        // use %arg
+        vargs.push_back(Downcast<Var>(arg));
+      } else if (arg.as<ConstantNode>() || arg.as<OpNode>()) {
+        // use nothing
+      } else {
+        LOG(FATAL) << "NotImplementedError: unsupported args: " << arg->GetTypeKey();
+      }
     }
+    Var d1 = analyzer_->Merge(vargs);
+    Var d2 = MergeLive(d1, let_var_);
+    analyzer_->live_[let_var_] = analyzer_->vset_[d2];
   }
-  Var d1 = analyzer_->Merge(vargs);
-  Var d2 = MergeLive(d1, let_var_);
-  analyzer_->live_[let_var_] = analyzer_->vset_[d2];
 }
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const TupleNode* node) {
@@ -299,9 +316,9 @@ void LivenessAnalyzer::BackwardAnalyzer::Run(Var next_var) {
     let_var_ = vars[i];
     next_var_ = i == n - 1 ? analyzer_->dummy_output_ : vars[i + 1];
 
-    // We need to handle OpNode and ConstantNode here, because all these nodes with
+    // We need to handle these nodes here, because all these nodes with
     // the same value may point to the same reference, so only the first one will be visited.
-    if (exprs[i].as<OpNode>() || exprs[i].as<ConstantNode>()) {
+    if (exprs[i].as<OpNode>() || exprs[i].as<ConstantNode>() || exprs[i].as<FunctionNode>()) {
       auto dummy_vars = analyzer_->GetTensorVars(next_var_);
       Var d1 = analyzer_->Merge(dummy_vars);
       Var d2 = MergeLive(d1, next_var_);

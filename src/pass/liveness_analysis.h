@@ -6,6 +6,7 @@
 #pragma once
 #include <vector>
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "tvm/ir/type_functor.h"

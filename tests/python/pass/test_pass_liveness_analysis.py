@@ -3,6 +3,7 @@
 import pytest
 import mnm
 from mnm._lib import tvm, relay
+from mnm.ir import ScopeBuilder
 from mnm._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc
 from mnm.testing import randn
 
@@ -177,6 +178,60 @@ def test_unused_tuple():
         "a2": {"param_0", "param_1"},
         "a3": {"param_0", "param_1", "t_0"},
         "n_1": {"t_0", "t_1"},
+    }
+
+    mod = model._internal(*args).mod
+    verify_live_in_set(mod, expected)
+
+
+def test_direct_assign():
+    relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
+
+    sb = ScopeBuilder()
+    p0 = mnm.ir.var("p0", shape=(10, 10))
+    a_1 = sb.let("a1", relay.Call(relu_op, [p0]))
+    a_2 = sb.let("a2", a_1)
+    a_3 = sb.let("a3", relay.Call(relu_op, [a_2]))
+    sb.ret(a_3)
+    mod = tvm.IRModule.from_expr(relay.Function([p0], sb.get()))
+
+    expected = {
+        "n_0": {},
+        "a1": {"param_0"},
+        "a2": {"t_0"},
+        "a3": {"t_0"},
+        "n_1": {"t_1"},
+    }
+    verify_live_in_set(mod, expected)
+
+
+def test_reshape():
+    shape = (10, 10)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            t_0 = mnm.relu(x)
+            t_1 = mnm.reshape(t_0, (shape[0] * shape[1],))
+            t_2 = mnm.relu(t_1)
+            return t_2
+
+    model = Model()
+    model.infer_mode()
+
+    device = "cpu"
+    m_x, _ = randn(shape, device=device)
+    args = [m_x]
+
+    expected = {
+        "n_0": {},
+        "a1": {"param_0"},
+        "a2": {"t_0"},
+        "a3": {"t_0"},
+        "n_1": {"t_1"},
     }
 
     mod = model._internal(*args).mod

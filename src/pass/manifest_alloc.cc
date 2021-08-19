@@ -124,9 +124,6 @@ class ManifestAllocMutator : public ExprMutator {
     static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> exclude_ops{
         Op::Get("mnm.op.set_stream"), Op::Get("mnm.op.wait_event"), Op::Get("mnm.op.add_event")};
     static auto vm_set_shape_op = Op::Get("mnm.op.vm.set_shape");
-    static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
-        Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze"),
-        Op::Get("mnm.op.batch_flatten")};
 
     const auto* op = node->op.as<OpNode>();
     const auto* func = node->op.as<FunctionNode>();
@@ -148,7 +145,7 @@ class ManifestAllocMutator : public ExprMutator {
       auto ret_type = call->checked_type();
       auto out_types = tvm::relay::FlattenTupleType(ret_type);
       Array<Expr> new_args;
-      if (reshape_ops.find(GetRef<Op>(op)) != reshape_ops.end()) {
+      if (op::IsReshapeOp(GetRef<Op>(op))) {
         // generate vm.set_shape for reshape ops to avoid unnecessary kernels and allocations
         CHECK_EQ(out_types.size(), 1U);
         // first push the input tensor
