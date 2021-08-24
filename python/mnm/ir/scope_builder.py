@@ -4,13 +4,14 @@ from tvm._ffi.base import string_types
 from tvm.relay.expr import Var as RelayVar
 from tvm.relay.scope_builder import ScopeBuilder as RelayScopeBuilder
 from .._core.ir_ext import ExtendedVar, extended_var
+from .._ffi.ir._make import Var as _Var
 
 class ScopeBuilder(RelayScopeBuilder):
     """Meta scope builder, which is mostly derived from Relay's scope builder,
     but creates ExtendedVar instead of Var.
     """
 
-    def let(self, var, value):
+    def let(self, var, value, may_share=None): # pylint: disable=arguments-differ
         """Create a new let binding using ExtendedVar.
 
         Parameters
@@ -20,15 +21,18 @@ class ScopeBuilder(RelayScopeBuilder):
 
         value: tvm.relay.Expr
             The value to be bound.
+
+        may_share: Optional[mnm._core.ir_ext.ExtendedVar]
+            The shared variable.
         """
         if isinstance(var, (tuple, list)):
             if len(var) > 2:
                 raise ValueError("Expect var to be Tuple[str, relay.Type]")
-            var = extended_var(*var)
+            var = extended_var(*var, may_share=may_share)
         elif isinstance(var, string_types):
-            var = extended_var(var)
+            var = extended_var(var, may_share=may_share)
         elif isinstance(var, RelayVar):
-            var = ExtendedVar(var)
+            var = ExtendedVar(_Var(var, may_share=may_share))
 
         assert isinstance(var, ExtendedVar)
         self._bindings[-1].append((var, value))
