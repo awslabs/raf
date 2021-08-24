@@ -13,6 +13,8 @@ _contrib_dropout_dx = _APIS.get("mnm.op.sym._contrib_dropout_dx", None)
 # Defined in ./src/op/regs/regs.cc
 _recv = _APIS.get("mnm.op.sym._recv", None)
 # Defined in ./src/op/regs/regs.cc
+_reduce = _APIS.get("mnm.op.sym._reduce", None)
+# Defined in ./src/op/regs/regs.cc
 _reduce_scatter = _APIS.get("mnm.op.sym._reduce_scatter", None)
 # Defined in ./src/op/regs/regs.cc
 _send = _APIS.get("mnm.op.sym._send", None)

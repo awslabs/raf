@@ -183,6 +183,7 @@ OPS = [
     # frontend and the wrapper ops are defined in python/mnm/distributed/op.py
     Op(name="_allreduce", schema_name="allreduce"),
     Op(name="_allgather", schema_name="allgather"),
+    Op(name="_reduce", schema_name="comm_reduce"),
     Op(name="_reduce_scatter", schema_name="reduce_scatter"),
     Op(name="_send", schema_name="send"),
     Op(name="_recv", schema_name="recv"),

@@ -55,7 +55,6 @@ def test_allreduce_with_tensor(computation):
     model.to(device=device)
     y = model(x)
     if rank == 0:
-        target_y = 0
         if computation == "sum":
             target_y = x.numpy() * (1 + 2)
         elif computation == "prod":
@@ -96,7 +95,6 @@ def test_allreduce_with_tensor_list(computation):
     model.to(device=device)
     y = model(x1, x2)
     if rank == 0:
-        target_y = 0
         x1 = x1.numpy()
         x2 = x2.numpy()
         if computation == "sum":
@@ -245,6 +243,87 @@ def test_send_recv():
         check(m_out, n_out)
 
 
+@pytest.mark.skip()
+def test_reduce(computation):
+    print("Testing reduce")
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            x = mnm.reduce(x, 0, computation=computation)
+            return x
+
+    model = TestModel()
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    x = mnm.array(x, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", x)
+    model.to(device=device)
+    y = model(x)
+    if rank == 0:
+        if computation == "sum":
+            target_y = x.numpy() * (1 + 2)
+        elif computation == "prod":
+            target_y = x.numpy() * (1 * 2)
+        elif computation == "min":
+            target_y = x.numpy() * min(1, 2)
+        elif computation == "max":
+            target_y = x.numpy() * max(1, 2)
+        else:
+            print("Invalid computation")
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+        check(y, target_y)
+
+
+@pytest.mark.skip()
+def test_reduce_list(computation):
+    print("Testing reduce with list of tensor")
+
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x1, x2):
+            x = mnm.reduce([x1, x2], 0, computation=computation)
+            return mnm.concatenate(x)
+
+    model = TestModel()
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    x1 = mnm.array(x1, device=device)
+    x2 = mnm.array(x2, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", [x1, x2])
+    model.to(device=device)
+    y = model(x1, x2)
+    if rank == 0:
+        target_y = 0
+        x1 = x1.numpy()
+        x2 = x2.numpy()
+        if computation == "sum":
+            target_y = np.concatenate([x1 * (1+2), x2  * (-1) * ((-1)+(-2))])
+        elif computation == "prod":
+            target_y = np.concatenate([x1 * (1*2), x2  * (-1) * ((-1)*(-2))])
+        elif computation == "min":
+            target_y = np.concatenate([x1 * min(1, 2), x2  * (-1) * min(-1, -2)])
+        elif computation == "max":
+            target_y = np.concatenate([x1 * max(1, 2), x2  * (-1) * max(-1, -2)])
+        else:
+            print("Invalid computation")
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+        check(y, target_y)
+
+
 if __name__ == "__main__":
     if mnm.build.with_distributed():
         test_reduce_scatter()
@@ -256,6 +335,14 @@ if __name__ == "__main__":
         test_allreduce_with_tensor_list(computation="prod")
         test_allreduce_with_tensor_list(computation="min")
         test_allreduce_with_tensor_list(computation="max")
+        test_reduce("sum")
+        test_reduce("prod")
+        test_reduce("min")
+        test_reduce("max")
+        test_reduce_list("sum")
+        test_reduce_list("prod")
+        test_reduce_list("min")
+        test_reduce_list("max")
         test_allgather(axis=0)
         test_allgather(axis=1)
         test_allgather_with_tensor_list(axis=0)

@@ -27,6 +27,19 @@ Type AllReduceInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", AllReduceInfer);
 
+Type CommReduceInfer(const CallValues& value) {
+  const auto* args = value->args.as<CommReduceArgs>();
+  CHECK(args != nullptr);
+  if (args->x.size() == 1) {
+    return GetType(args->x[0]);
+  }
+  Array<Type> x;
+  std::transform(args->x.begin(), args->x.end(), std::back_inserter(x), GetType);
+  return TupleType(x);
+}
+
+MNM_OP_TYPE("mnm.op._reduce", "Reduce", CommReduceInfer);
+
 Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);

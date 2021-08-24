@@ -324,6 +324,109 @@ MNM_REGISTER_DIALECT_OP(nccl, _recv);
 MNM_OP_ENV_MAKER("mnm.op.nccl._recv", NCCLRecv::make);
 MNM_OP_DISPATCH_DIALECT_PLEVEL(_recv, nccl, DevType::kCUDA(), 10);
 
+class NCCLReduce : public mnm::op::OpEnv {
+  void* stream;
+  void* communicator;
+  ncclRedOp_t compute;
+  int root;
+  DType dtype;
+  size_t total_size = 0;
+  std::vector<size_t> tuple_sizes;
+  void* fused_data;
+
+  explicit NCCLReduce(const CallValues& cv) {
+    auto op = ir::Op::Get("mnm.op._reduce");
+    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("x")};
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+    auto args = cv->args.as<mnm::op::schema::CommReduceArgs>();
+    root = args->root;
+    if (args->computation.compare("sum") == 0) {
+      compute = ncclSum;
+    } else if (args->computation.compare("prod") == 0) {
+      compute = ncclProd;
+    } else if (args->computation.compare("min") == 0) {
+      compute = ncclMin;
+    } else if (args->computation.compare("max") == 0) {
+      compute = ncclMax;
+    } else {
+      LOG(FATAL) << "Invalid computation " << args->computation;
+    }
+
+    auto& tv = args->x;
+    for (int i = 0; i < tv.size(); ++i) {
+      DLTensor* x = tv[i];
+      size_t size = BytesCompactTensor(*x);
+      tuple_sizes.push_back(size);
+      total_size += size;
+      dtype = x->dtype;
+    }
+    if (tv.size() >= 1) {
+      RequestWorkspace(&fused_data, cv->device, total_size);
+    }
+  }
+
+ public:
+  ~NCCLReduce() {
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("mnm.op.nccl._reduce"));
+  }
+
+  void Execute(const CallValues& cv) override {
+    auto args = cv->args.as<mnm::op::schema::CommReduceArgs>();
+    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
+    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto input_x = Downcast<value::TupleValue>(inputs[0]);
+    size_t dtype_size = 0;
+    if (input_x->fields.size() == 1) {
+      DLTensor* x = input_x->fields[0];
+      DLTensor* out = output;
+      dtype_size = sizeof(x->dtype);
+
+      size_t dtype_size = sizeof(x->dtype);
+      NCCL_CALL(ncclReduce(x->data, out->data, total_size / dtype_size, dtype, compute, root,
+                           (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    } else {
+      size_t offset = 0;
+      for (int i = 0; i < input_x->fields.size(); ++i) {
+        DLTensor* x = input_x->fields[i];
+        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
+        cudaMemcpyAsync(buffer_data_at_offset, x->data, tuple_sizes[i], cudaMemcpyDeviceToDevice,
+                        (cudaStream_t)stream);
+        offset += tuple_sizes[i];
+        dtype_size = sizeof(x->dtype);
+      }
+
+      NCCL_CALL(ncclReduce(fused_data, fused_data, total_size / dtype_size, dtype, compute, root,
+                           (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      // UnFuse Tensor
+      value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
+      auto& of = out->fields;
+      for (int i = of.size() - 1; i >= 0; --i) {
+        DLTensor* x = of[i];
+        offset -= tuple_sizes[i];
+        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
+        cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
+                        (cudaStream_t)stream);
+      }
+    }
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLReduce(cv);
+  }
+};
+
+MNM_REGISTER_DIALECT_OP(nccl, _reduce);
+MNM_OP_ENV_MAKER("mnm.op.nccl._reduce", NCCLReduce::make);
+MNM_OP_DISPATCH_DIALECT_PLEVEL(_reduce, nccl, DevType::kCUDA(), 10);
+
 }  // namespace nccl
 }  // namespace communication
 }  // namespace op

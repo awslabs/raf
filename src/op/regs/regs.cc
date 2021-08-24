@@ -47,6 +47,7 @@ static const char _allreduce[] = "mnm.op._allreduce";
 static const char _contrib_dropout[] = "mnm.op._contrib_dropout";
 static const char _contrib_dropout_dx[] = "mnm.op._contrib_dropout_dx";
 static const char _recv[] = "mnm.op._recv";
+static const char _reduce[] = "mnm.op._reduce";
 static const char _reduce_scatter[] = "mnm.op._reduce_scatter";
 static const char _send[] = "mnm.op._send";
 static const char abs[] = "mnm.op.abs";
@@ -453,6 +454,14 @@ Attrs CollapseLike(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::CollapseLikeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+Attrs CommReduce(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::CommReduceArgs, 3);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, x);
+  MNM_POD(1, ffi2schema::Int, root);
+  MNM_POD(2, ffi2schema::String, computation);
   return Attrs(attrs);
 }
 
@@ -1302,6 +1311,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._recv").set_body([](TVMArgs args, TVMRetValue* r
   MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->shape));
   MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dtype));
   MNM_SET_ENV(vpack->x[3], schema2value::OptionalTensor(schema->token));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._reduce").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_reduce, 3, ffi2schema::CommReduce,
+              schema::CommReduceArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->root));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->computation));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3316,6 +3335,14 @@ Array<Expr> CollapseLike(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> CommReduce(const TVMArgs& values) {
+  MNM_PRELUDE(3);
+  MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_ARG(1, ffi2expr::Int, root);
+  MNM_ARG(2, ffi2expr::String, computation);
+  MNM_RET();
+}
+
 Array<Expr> Compiler(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4091,6 +4118,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout_dx")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout_dx, 3, DropoutDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym._recv").set_body(MNM_SYMBOLIC_API(_recv, 4, Recv));
+MNM_REGISTER_GLOBAL("mnm.op.sym._reduce").set_body(MNM_SYMBOLIC_API(_reduce, 3, CommReduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym._reduce_scatter")
     .set_body(MNM_SYMBOLIC_API(_reduce_scatter, 1, ReduceScatter));
 MNM_REGISTER_GLOBAL("mnm.op.sym._send").set_body(MNM_SYMBOLIC_API(_send, 3, Send));
@@ -4593,6 +4621,15 @@ Attrs CollapseLike(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::CollapseLikeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::IntOrTupleInt, shape);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs CommReduce(const Array<Value>& values) {
+  MNM_PRELUDE(2, 3, schema::CommReduceArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  MNM_REQUIRED(1, value2schema::Int, root);
+  MNM_OPTIONAL(2, value2schema::String, computation);
   return Attrs(attrs);
 }
 
@@ -5804,6 +5841,21 @@ int CollapseLike(const std::string& field) {
   }
   if (field == "shape") {
     return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int CommReduce(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "root") {
+    return 1;
+  }
+  if (field == "computation") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7328,6 +7380,10 @@ MNM_BIND_SCHEMA("mnm.op._recv", names::_recv,
                 value2schema::Recv);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._recv", names::_recv,
                             schema_field_idx::Recv);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._reduce", names::_reduce,
+                value2schema::CommReduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._reduce", names::_reduce,
+                            schema_field_idx::CommReduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op._reduce_scatter", names::_reduce_scatter,
                 value2schema::ReduceScatter);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._reduce_scatter", names::_reduce_scatter,
@@ -8067,6 +8123,7 @@ MNM_REGISTER_OBJECT_REFLECT(CastLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(CommReduceArgs);
 MNM_REGISTER_OBJECT_REFLECT(CompilerArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);

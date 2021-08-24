@@ -43,6 +43,31 @@ void AllReduce(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op._allreduce", AllReduce);
 
+void Reduce(const CallValues& call) {
+  const auto* args = call->args.as<CommReduceArgs>();
+  CHECK(args != nullptr);
+  ir::Array<Value> ret;
+  auto& tv = args->x;
+  const DLTensor* x = tv[0];
+  call->device = x->device;
+  for (int i = 0; i < tv.size(); ++i) {
+    const DLTensor* x = tv[i];
+    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
+  }
+  if (ret.size() == 0) {
+    call->callee = ir::NullValue<OpValue>();
+  } else if (ret.size() == 1) {
+    call->out = ret[0];
+  } else {
+    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  }
+}
+
+MNM_OP_DECLARE("mnm.op._reduce", Reduce).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
 void AllGather(const CallValues& call) {
   const auto* args = call->args.as<AllgatherArgs>();
   CHECK(args != nullptr);

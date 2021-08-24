@@ -7,6 +7,7 @@ from ._internal import _allreduce
 from ._internal import _contrib_dropout
 from ._internal import _contrib_dropout_dx
 from ._internal import _recv
+from ._internal import _reduce
 from ._internal import _reduce_scatter
 from ._internal import _send
 from ._internal import abs

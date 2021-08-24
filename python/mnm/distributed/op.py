@@ -61,6 +61,28 @@ def allgather(x, axis):
     return x
 
 
+def reduce(x, root, computation="sum"):
+    """Performs reduce operation. Collect data to root rank
+
+    Parameters
+    ----------
+    x : Tensor or list of Tensor
+        Tensor(s) to be reduced
+    root: int
+        The root rank
+    computation: string
+        The reduction operation, default is sum
+
+    Returns
+    -------
+    ret: Tensor
+        reduction result
+    """
+    if not isinstance(x, (tuple, list)):
+        x = [x]
+    return sym._reduce(x, root, computation)
+
+
 def reduce_scatter(x):
     """Performs reduction then scatter
 
