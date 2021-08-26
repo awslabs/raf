@@ -161,9 +161,10 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   CHECK_GE(call->args.size(), 2);
   const Expr& x1 = call->args[0];
   const Expr& x2 = call->args[1];
-  Call x2_square = Call(op_multiply, {x2, x2});
-  Call dx1 = Call(op_divide, {x2, x2_square});
-  Call dx2 = Call(op_divide, {Call(op_negative, {x1}), x2_square});
+  Call dx1 = Call(op_divide, {dy, x2});
+  Call dx2 = Call(op_negative, {dy});
+  dx2 = Call(op_multiply, {dx2, Call(op_divide, {x1, x2})});
+  dx2 = Call(op_divide, {dx2, x2});
 
   auto f = [](const Expr& dx, const Expr& x) {
     static auto collapse_axis = Op::Get("mnm.op.get_reduce_axis");
@@ -174,7 +175,7 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     return Call(sum, {dx, axes, keep});
   };
 
-  return {f(Call(op_multiply, {dy, dx1}), x1), f(Call(op_multiply, {dy, dx2}), x2)};
+  return {f(dx1, x1), f(dx2, x2)};
 }
 
 MNM_OP_GRAD("mnm.op.divide", DivGrad);
