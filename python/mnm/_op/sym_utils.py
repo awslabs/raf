@@ -18,8 +18,12 @@ def to_any(a):
     if isinstance(a, (Number, str)):
         return a
 
-    if isinstance(a, tuple):
-        return to_int_tuple(a)
+    if isinstance(a, (list, tuple)):
+        if all(isinstance(i, int) for i in a):
+            return to_int_tuple(a)
+        tup = (i if isinstance(i, Symbol) else Value.as_const_expr(i) for i in a)
+        return Symbol.make_tuple(tup)._Symbol__handle  # pylint: disable=protected-access
+
 
     return to_tensor(a)
 

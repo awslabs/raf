@@ -15,7 +15,6 @@ namespace schema {
 class CompilerArgs : public ir::AttrsNode<CompilerArgs> {
  public:
   value::BaseTensorValue x;
-  std::string compiler;
   MNM_OP_SCHEMA(CompilerArgs, "mnm.args.compiler");
 };
 }  // namespace schema

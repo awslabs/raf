@@ -13,7 +13,6 @@
 #include "./schema2value.h"
 #include "../schema/list_args.h"
 #include "../schema/algorithm.h"
-#include "../schema/annotation.h"
 #include "../schema/communication.h"
 #include "../schema/init.h"
 #include "../schema/likes.h"
@@ -462,13 +461,6 @@ Attrs CommReduce(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(0, ffi2schema::TupleTensor, x);
   MNM_POD(1, ffi2schema::Int, root);
   MNM_POD(2, ffi2schema::String, computation);
-  return Attrs(attrs);
-}
-
-Attrs Compiler(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::CompilerArgs, 2);  // NOLINT(whitespace/line_length)
-  MNM_TAPE(0, ffi2schema::Tensor, x);
-  MNM_POD(1, ffi2schema::String, compiler);
   return Attrs(attrs);
 }
 
@@ -1703,19 +1695,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.collapse_sum_like").set_body([](TVMArgs args, TV
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.compiler_begin").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(compiler_begin, 2, ffi2schema::Compiler,
-              schema::CompilerArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->compiler));
+  MNM_PRELUDE(compiler_begin, 1, ffi2schema::Unary,
+              schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.compiler_end").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(compiler_end, 2, ffi2schema::Compiler,
-              schema::CompilerArgs);  // NOLINT(whitespace/line_length)
-  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
-  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->compiler));
+  MNM_PRELUDE(compiler_end, 1, ffi2schema::Unary,
+              schema::UnaryArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3343,13 +3333,6 @@ Array<Expr> CommReduce(const TVMArgs& values) {
   MNM_RET();
 }
 
-Array<Expr> Compiler(const TVMArgs& values) {
-  MNM_PRELUDE(2);
-  MNM_ARG(0, ffi2expr::Tensor, x);
-  MNM_ARG(1, ffi2expr::String, compiler);
-  MNM_RET();
-}
-
 Array<Expr> Concatenate(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
@@ -4174,9 +4157,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.clip_dx").set_body(MNM_SYMBOLIC_API(clip_dx, 4, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.collapse_sum_like")
     .set_body(MNM_SYMBOLIC_API(collapse_sum_like, 2, CollapseLike));
 MNM_REGISTER_GLOBAL("mnm.op.sym.compiler_begin")
-    .set_body(MNM_SYMBOLIC_API(compiler_begin, 2, Compiler));
-MNM_REGISTER_GLOBAL("mnm.op.sym.compiler_end")
-    .set_body(MNM_SYMBOLIC_API(compiler_end, 2, Compiler));
+    .set_body(MNM_SYMBOLIC_API(compiler_begin, 1, Unary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.compiler_end").set_body(MNM_SYMBOLIC_API(compiler_end, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate")
     .set_body(MNM_SYMBOLIC_API(concatenate, 2, Concatenate));
 MNM_REGISTER_GLOBAL("mnm.op.sym.concatenate_dx")
@@ -4630,14 +4612,6 @@ Attrs CommReduce(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
   MNM_REQUIRED(1, value2schema::Int, root);
   MNM_OPTIONAL(2, value2schema::String, computation);
-  return Attrs(attrs);
-}
-
-template <const char* op_name>
-Attrs Compiler(const Array<Value>& values) {
-  MNM_PRELUDE(2, 2, schema::CompilerArgs);
-  MNM_REQUIRED(0, value2schema::Tensor, x);
-  MNM_REQUIRED(1, value2schema::String, compiler);
   return Attrs(attrs);
 }
 
@@ -5856,18 +5830,6 @@ int CommReduce(const std::string& field) {
   }
   if (field == "computation") {
     return 2;
-  }
-  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
-  return -1;
-}
-
-template <const char* op_name>
-int Compiler(const std::string& field) {
-  if (field == "x") {
-    return 0;
-  }
-  if (field == "compiler") {
-    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7531,13 +7493,13 @@ MNM_BIND_SCHEMA("mnm.op.collapse_sum_like", names::collapse_sum_like,
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.collapse_sum_like", names::collapse_sum_like,
                             schema_field_idx::CollapseLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.compiler_begin", names::compiler_begin,
-                value2schema::Compiler);  // NOLINT(whitespace/line_length)
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.compiler_begin", names::compiler_begin,
-                            schema_field_idx::Compiler);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.compiler_end", names::compiler_end,
-                value2schema::Compiler);  // NOLINT(whitespace/line_length)
+                value2schema::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.compiler_end", names::compiler_end,
-                            schema_field_idx::Compiler);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::Unary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.concatenate", names::concatenate,
                 value2schema::Concatenate);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.concatenate", names::concatenate,
@@ -8124,7 +8086,6 @@ MNM_REGISTER_OBJECT_REFLECT(ClipArgs);
 MNM_REGISTER_OBJECT_REFLECT(ClipDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(CollapseLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(CommReduceArgs);
-MNM_REGISTER_OBJECT_REFLECT(CompilerArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConcatenateArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);

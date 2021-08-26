@@ -13,15 +13,14 @@
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./common.h"
-#include "../op/schema/annotation.h"
-#include <tvm/ir/function.h>
+#include "../op/dialect/tvm/tvm_attrs.h"
 
 namespace mnm {
 namespace pass {
 namespace partition_graph {
 
 using namespace mnm::ir;
-using mnm::op::schema::CompilerArgs;
+using mnm::op::tvm_dialect::CompilerAttrs;
 
 static const Op& begin_op = CompilerBeginOp();
 static const Op& end_op = CompilerEndOp();
@@ -198,11 +197,11 @@ std::pair<std::string, std::string> CheckAnnotationBoundary(Expr expr) {
     const CallNode* call = expr.as<CallNode>();
     if (call->op == end_op) {
       CHECK_EQ(call->args.size(), 1U);
-      std::string end_target = call->attrs.as<CompilerArgs>()->compiler;
+      std::string end_target = call->attrs.as<CompilerAttrs>()->compiler;
       const CallNode* op_call = call->args[0].as<CallNode>();
       if (op_call->args[0].as<CallNode>() && op_call->args[0].as<CallNode>()->op == begin_op) {
         const CallNode* begin_call = op_call->args[0].as<CallNode>();
-        std::string begin_target = begin_call->attrs.as<CompilerArgs>()->compiler;
+        std::string begin_target = begin_call->attrs.as<CompilerAttrs>()->compiler;
         CHECK_EQ(end_target, begin_target);
         boundary.first = "single";
         boundary.second = begin_target;
@@ -213,7 +212,7 @@ std::pair<std::string, std::string> CheckAnnotationBoundary(Expr expr) {
       return boundary;
     } else if (call->args[0].as<CallNode>() && call->args[0].as<CallNode>()->op == begin_op) {
       const CallNode* begin_call = call->args[0].as<CallNode>();
-      std::string begin_target = begin_call->attrs.as<CompilerArgs>()->compiler;
+      std::string begin_target = begin_call->attrs.as<CompilerAttrs>()->compiler;
       boundary.first = "begin";
       boundary.second = begin_target;
       return boundary;
@@ -226,7 +225,7 @@ std::pair<std::string, std::string> CheckAnnotationBoundary(Expr expr) {
     const TupleNode* tuple = expr.as<TupleNode>();
     if (tuple->fields[0].as<CallNode>() && tuple->fields[0].as<CallNode>()->op == begin_op) {
       const CallNode* begin_call = tuple->fields[0].as<CallNode>();
-      std::string begin_target = begin_call->attrs.as<CompilerArgs>()->compiler;
+      std::string begin_target = begin_call->attrs.as<CompilerAttrs>()->compiler;
       boundary.first = "begin";
       boundary.second = begin_target;
       return boundary;

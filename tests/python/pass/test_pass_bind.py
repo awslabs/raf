@@ -1,4 +1,6 @@
 import pytest
+import mnm
+
 from mnm._lib import relay, tvm
 from mnm._ffi.pass_ import Substitute
 from mnm._core.ir_ext import ExtendedVar, extended_var
@@ -10,16 +12,14 @@ def test_basic():
     y = relay.var('y')
     a = relay.var('a')
     b = relay.var('b')
-    add = relay.op.get("mnm.op.add")
-    multiply = relay.op.get("mnm.op.multiply")
-    expr = relay.Call(add, [x, y])
+    expr = mnm.ir.op.add(x, y)
     vmap = {
-        x: relay.Call(multiply, [a, b]),
-        y: relay.Call(add, [a, b])
+        x: mnm.ir.op.multiply(a, b),
+        y: mnm.ir.op.add(a, b)
     }
 
     def expected():
-        return relay.Call(add, [relay.Call(multiply, [a, b]), relay.Call(add, [a, b])])
+        return mnm.ir.op.add(mnm.ir.op.multiply(a, b), mnm.ir.op.add(a, b))
 
     expr_after = Substitute(expr, vmap)
     expr_expected = expected()
@@ -34,15 +34,14 @@ def test_extended_var():
     n = relay.var('n')
     x = extended_var('x', may_share=p)
     y = extended_var('y', may_share=p)
-    add = relay.op.get("mnm.op.add")
-    expr = relay.Let(x, relay.Call(add, [p, r]), relay.Let(y, relay.Call(add, [x, r]), y))
+    expr = relay.Let(x, mnm.ir.op.add(p, r), relay.Let(y, mnm.ir.op.add(x, r), y))
     vmap = {
         p: m,
         r: n
     }
 
     def expected():
-        return relay.Let(x, relay.Call(add, [m, n]), relay.Let(y, relay.Call(add, [x, n]), y))
+        return relay.Let(x, mnm.ir.op.add(m, n), relay.Let(y, mnm.ir.op.add(x, n), y))
 
     expr_after = Substitute(expr, vmap)
     expr_expected = expected()

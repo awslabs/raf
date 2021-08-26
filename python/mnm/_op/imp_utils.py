@@ -14,7 +14,7 @@ def to_any(a):
         return a._ndarray__handle  # pylint: disable=protected-access
     if a is None:
         return None
-    if isinstance(a, tuple):
+    if isinstance(a, (list, tuple)):
         return to_int_tuple(a)
     if isinstance(a, (Number, str)):
         return a

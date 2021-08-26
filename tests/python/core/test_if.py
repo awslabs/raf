@@ -23,15 +23,11 @@ def test_basic_if(device, shape):
     c = relay.var('c')
     cond = relay.var('cond')
     ret = relay.var('ret')
-    cos_op = relay.op.get("mnm.op.cos")
-    add_op = relay.op.get("mnm.op.add")
-    subtract_op = relay.op.get("mnm.op.subtract")
-    greater_op = relay.op.get("mnm.op.greater")
     lets = [
-        (a, relay.Call(cos_op, [x])),
-        (cond, relay.Call(greater_op, [cond_p, cond_q])),
-        (b, relay.Call(subtract_op, [a, x])),
-        (c, relay.Call(add_op, [a, x])),
+        (a, mnm.ir.op.cos(x)),
+        (cond, mnm.ir.op.greater(cond_p, cond_q)),
+        (b, mnm.ir.op.subtract(a, x)),
+        (c, mnm.ir.op.add(a, x)),
         (ret, relay.If(cond, b, c)),
         ret
     ]

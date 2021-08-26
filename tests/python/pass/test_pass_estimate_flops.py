@@ -23,12 +23,7 @@ def test_conv2d():
     shape = (16, 16, 64, 64)
 
     def get_mod():
-        conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
-        conv2d_call = lambda x, w: relay.Call(conv2d_op,
-                                              [x, w, mnm.ir.const([1]), mnm.ir.const([1]),
-                                               mnm.ir.const([1]), mnm.ir.const(1),
-                                               mnm.ir.const("NCHW"), mnm.ir.const("OIHW"),
-                                               mnm.ir.const("NCHW")])
+        conv2d_call = lambda x, w: mnm.ir.op.conv2d(x, w, 1, 1)
 
         data = mnm.ir.var("x", shape=shape)
         weight = mnm.ir.var("w", shape=(16, 16, 3, 3))
@@ -46,12 +41,11 @@ def test_unary():
     shape = (10, 5)
 
     def get_mod():
-        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
         data = mnm.ir.var("x", shape=shape)
 
         sb = ScopeBuilder()
-        a_1 = sb.let("a1", relay.Call(relu_op, [data]))
-        a_2 = sb.let("a2", relay.Call(relu_op, [a_1]))
+        a_1 = sb.let("a1", mnm.ir.op.relu(data))
+        a_2 = sb.let("a2", mnm.ir.op.relu(a_1))
         sb.ret(a_2)
         func = relay.Function([data], sb.get())
         return tvm.IRModule.from_expr(func)
@@ -63,12 +57,11 @@ def test_fusion():
     shape = (10, 5)
 
     def get_mod():
-        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
         data = mnm.ir.var("x", shape=shape)
 
         p_0 = mnm.ir.var("p0", shape=shape)
-        out = relay.Call(relu_op, [p_0])
-        out = relay.Call(relu_op, [out])
+        out = mnm.ir.op.relu(p_0)
+        out = mnm.ir.op.relu(out)
         closure = relay.Function([p_0], out)
         closure = closure.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
@@ -84,12 +77,10 @@ def test_multi_func():
     shape = (10, 5)
 
     def get_mod():
-        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
-
         sb = ScopeBuilder()
         data = mnm.ir.var("x", shape=shape)
-        a_1 = sb.let("a1", relay.Call(relu_op, [data]))
-        a_2 = sb.let("a2", relay.Call(relu_op, [a_1]))
+        a_1 = sb.let("a1", mnm.ir.op.relu(data))
+        a_2 = sb.let("a2", mnm.ir.op.relu(a_1))
         sb.ret(a_2)
 
         mod = tvm.IRModule()

@@ -362,16 +362,14 @@ def collapse_sum_like(x, shape):
     return imp_utils.ret(ffi.collapse_sum_like(x, shape))
 
 @set_module("mnm")
-def compiler_begin(x, compiler):
-    x = imp_utils.to_tensor(x)
-    compiler = imp_utils.to_string(compiler)
-    return imp_utils.ret(ffi.compiler_begin(x, compiler))
+def compiler_begin(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.compiler_begin(x))
 
 @set_module("mnm")
-def compiler_end(x, compiler):
-    x = imp_utils.to_tensor(x)
-    compiler = imp_utils.to_string(compiler)
-    return imp_utils.ret(ffi.compiler_end(x, compiler))
+def compiler_end(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.compiler_end(x))
 
 @set_module("mnm")
 def concatenate(x, axis=0):

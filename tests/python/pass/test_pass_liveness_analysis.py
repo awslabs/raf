@@ -185,13 +185,11 @@ def test_unused_tuple():
 
 
 def test_direct_assign():
-    relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
-
     sb = ScopeBuilder()
     p0 = mnm.ir.var("p0", shape=(10, 10))
-    a_1 = sb.let("a1", relay.Call(relu_op, [p0]))
+    a_1 = sb.let("a1", mnm.ir.op.relu(p0))
     a_2 = sb.let("a2", a_1)
-    a_3 = sb.let("a3", relay.Call(relu_op, [a_2]))
+    a_3 = sb.let("a3", mnm.ir.op.relu(a_2))
     sb.ret(a_3)
     mod = tvm.IRModule.from_expr(relay.Function([p0], sb.get()))
 
@@ -240,9 +238,6 @@ def test_reshape():
 
 def test_manifest_alloc_compatible():
     def test_func():
-        storage_op = mnm._ffi.op.GetOp("mnm.op.vm.alloc_storage")
-        tensor_op = mnm._ffi.op.GetOp("mnm.op.vm.alloc_tensor")
-        invoke_op = mnm._ffi.op.GetOp("mnm.op.vm.invoke_op")
         add_op = mnm._ffi.op.GetOp("mnm.op.add")
         null = mnm.ir.const(None)
 
@@ -258,18 +253,14 @@ def test_manifest_alloc_compatible():
         a7 = relay.var("a7")
 
         let7 = relay.Let(a7, a1, a7)
-        let6 = relay.Let(a6, relay.Call(invoke_op, [a2, a4, a5]), let7)
+        let6 = relay.Let(a6, mnm.ir.op.vm_invoke_op(a2, a4, a5), let7)
         let5 = relay.Let(a5, relay.Tuple((a1,)), let6)
         # Test both binded and non-binded constants
         let4 = relay.Let(a4, relay.Tuple((x, y, a3, null)), let5)
         let3 = relay.Let(a3, null, let4)
         let2 = relay.Let(a2, add_op, let3)
-        let1 = relay.Let(a1, relay.Call(tensor_op,
-                                        [a0, mnm.ir.const([5, 5]), mnm.ir.const("float32"),
-                                         mnm.ir.const([5, 5])]), let2)
-        let0 = relay.Let(a0, relay.Call(storage_op,
-                                        [mnm.ir.const(100), mnm.ir.const(64), mnm.ir.const(1),
-                                         mnm.ir.const(0), mnm.ir.const("float32")]), let1)
+        let1 = relay.Let(a1, mnm.ir.op.vm_alloc_tensor(a0, [5, 5], "float32", [5, 5]), let2)
+        let0 = relay.Let(a0, mnm.ir.op.vm_alloc_storage(100, 64, 1, 0), let1)
         # pylint: disable=line-too-long
         # fn (%x: Tensor[(5, 5), float32], %y: Tensor[(5, 5), float32]) {
         #   let %a0 = mnm.op.vm.alloc_storage(int64(100), int64(64), int64(1), int64(0), str"float32");

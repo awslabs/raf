@@ -8,6 +8,10 @@ from mnm._lib import tvm
 from mnm._lib import relay as _relay
 
 
+def make_compiler_attrs(compiler):
+    return tvm.ir.make_node("relay.attrs.CompilerAttrs", compiler=compiler)
+
+
 def test_multiple_ends():
     # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
     @tvm.ir.register_op_attr("mnm.op.relu", "target.test")
@@ -30,21 +34,21 @@ def test_multiple_ends():
         # build the expected ir after annotated
         # expected_func:
         # fn (%x: Tensor[(10, 10), float64]) {
-        # %0 = mnm.op.compiler_begin(%x, meta[mnm.args.compiler][0]);
+        # %0 = mnm.op.compiler_begin(%x, meta[relay.attrs.CompilerAttrs][0]);
         # %1 = mnm.op.relu(%0);
-        # let %a1 = mnm.op.compiler_end(%1, meta[mnm.args.compiler][1]);
-        # %2 = mnm.op.compiler_begin(%a1, meta[mnm.args.compiler][2]);
+        # let %a1 = mnm.op.compiler_end(%1, meta[relay.attrs.CompilerAttrs][1]);
+        # %2 = mnm.op.compiler_begin(%a1, meta[relay.attrs.CompilerAttrs][2]);
         # %3 = mnm.op.abs(%2);
-        # let %a2 = mnm.op.compiler_end(%3, meta[mnm.args.compiler][3]);
-        # %4 = mnm.op.compiler_begin(%a1, meta[mnm.args.compiler][4]);
+        # let %a2 = mnm.op.compiler_end(%3, meta[relay.attrs.CompilerAttrs][3]);
+        # %4 = mnm.op.compiler_begin(%a1, meta[relay.attrs.CompilerAttrs][4]);
         # %5 = mnm.op.abs(%4);
-        # let %a3 = mnm.op.compiler_end(%5, meta[mnm.args.compiler][5]);
-        # %6 = mnm.op.compiler_begin(%a2, meta[mnm.args.compiler][6]);
-        # %7 = mnm.op.compiler_begin(%a3, meta[mnm.args.compiler][7]);
-        # %8 = mnm.op.compiler_begin(nullptr, meta[mnm.args.compiler][8]);
-        # %9 = mnm.op.compiler_begin(nullptr, meta[mnm.args.compiler][9]);
+        # let %a3 = mnm.op.compiler_end(%5, meta[relay.attrs.CompilerAttrs][5]);
+        # %6 = mnm.op.compiler_begin(%a2, meta[relay.attrs.CompilerAttrs][6]);
+        # %7 = mnm.op.compiler_begin(%a3, meta[relay.attrs.CompilerAttrs][7]);
+        # %8 = mnm.op.compiler_begin(nullptr, meta[relay.attrs.CompilerAttrs][8]);
+        # %9 = mnm.op.compiler_begin(nullptr, meta[relay.attrs.CompilerAttrs][9]);
         # %10 = mnm.op.add(%6, %7, %8, %9);
-        # let %a4 = mnm.op.compiler_end(%10, meta[mnm.args.compiler][10]);
+        # let %a4 = mnm.op.compiler_end(%10, meta[relay.attrs.CompilerAttrs][10]);
         # %a4
         # }
         # define variables
@@ -53,28 +57,22 @@ def test_multiple_ends():
         a2 = extended_var("a2")
         a3 = extended_var("a3")
         a4 = extended_var("a4")
-        null = mnm.ir.const(None)
-        relu = _relay.op.get("mnm.op.relu")
-        abs = _relay.op.get("mnm.op.abs")
-        add = _relay.op.get("mnm.op.add")
-        begin = _relay.op.get("mnm.op.compiler_begin")
-        end = _relay.op.get("mnm.op.compiler_end")
         # define calls
-        relu_call = _relay.Call(begin, [x], tvm.ir.make_node("mnm.args.compiler"))
-        relu_call = _relay.Call(relu, [relu_call])
-        relu_call = _relay.Call(end, [relu_call], tvm.ir.make_node("mnm.args.compiler"))
-        abs_call1 = _relay.Call(begin, [a1], tvm.ir.make_node("mnm.args.compiler"))
-        abs_call1 = _relay.Call(abs, [abs_call1])
-        abs_call1 = _relay.Call(end, [abs_call1], tvm.ir.make_node("mnm.args.compiler"))
-        abs_call2 = _relay.Call(begin, [a1], tvm.ir.make_node("mnm.args.compiler"))
-        abs_call2 = _relay.Call(abs, [abs_call2])
-        abs_call2 = _relay.Call(end, [abs_call2], tvm.ir.make_node("mnm.args.compiler"))
-        let_call2 = _relay.Call(begin, [a2], tvm.ir.make_node("mnm.args.compiler"))
-        let_call3 = _relay.Call(begin, [a3], tvm.ir.make_node("mnm.args.compiler"))
-        const_call1 = _relay.Call(begin, [null], tvm.ir.make_node("mnm.args.compiler"))
-        const_call2 = _relay.Call(begin, [null], tvm.ir.make_node("mnm.args.compiler"))
-        add_call = _relay.Call(add, [let_call2, let_call3, const_call1, const_call2])
-        add_call = _relay.Call(end, [add_call], tvm.ir.make_node("mnm.args.compiler"))
+        relu_call = mnm.ir.op.compiler_begin(x, attrs=make_compiler_attrs("test"))
+        relu_call = mnm.ir.op.relu(relu_call)
+        relu_call = mnm.ir.op.compiler_end(relu_call, attrs=make_compiler_attrs("test"))
+        abs_call1 = mnm.ir.op.compiler_begin(a1, attrs=make_compiler_attrs("default"))
+        abs_call1 = mnm.ir.op.abs(abs_call1)
+        abs_call1 = mnm.ir.op.compiler_end(abs_call1, attrs=make_compiler_attrs("default"))
+        abs_call2 = mnm.ir.op.compiler_begin(a1, attrs=make_compiler_attrs("default"))
+        abs_call2 = mnm.ir.op.abs(abs_call2)
+        abs_call2 = mnm.ir.op.compiler_end(abs_call2, attrs=make_compiler_attrs("default"))
+        let_call2 = mnm.ir.op.compiler_begin(a2, attrs=make_compiler_attrs("default"))
+        let_call3 = mnm.ir.op.compiler_begin(a3, attrs=make_compiler_attrs("default"))
+        const_call1 = mnm.ir.op.compiler_begin(None, attrs=make_compiler_attrs("default"))
+        const_call2 = mnm.ir.op.compiler_begin(None, attrs=make_compiler_attrs("default"))
+        add_call = mnm.ir.op.add(let_call2, let_call3, const_call1, const_call2)
+        add_call = mnm.ir.op.compiler_end(add_call, attrs=make_compiler_attrs("default"))
         # make anf
         body = _relay.Let(a4, add_call, a4)
         body = _relay.Let(a3, abs_call2, body)
@@ -120,17 +118,17 @@ def test_tuple():
         # build the expected ir after annotated
         # expected_func:
         # fn (%x: Tensor[(10, 10), float64], %y: Tensor[(10, 10), float64]) {
-        # %0 = mnm.op.compiler_begin(%x, meta[mnm.args.compiler][0]);
+        # %0 = mnm.op.compiler_begin(%x, meta[relay.attrs.CompilerAttrs][0]);
         # %1 = mnm.op.relu(%0);
-        # let %a1 = mnm.op.compiler_end(%1, meta[mnm.args.compiler][1]);
-        # %2 = mnm.op.compiler_begin(%y, meta[mnm.args.compiler][2]);
+        # let %a1 = mnm.op.compiler_end(%1, meta[relay.attrs.CompilerAttrs][1]);
+        # %2 = mnm.op.compiler_begin(%y, meta[relay.attrs.CompilerAttrs][2]);
         # %3 = mnm.op.relu(%2);
-        # let %a2 = mnm.op.compiler_end(%3, meta[mnm.args.compiler][3]);
+        # let %a2 = mnm.op.compiler_end(%3, meta[relay.attrs.CompilerAttrs][3]);
         # let %a3 = (%a1, %a2);
-        # %4 = mnm.op.compiler_begin(%a3, meta[mnm.args.compiler][4]);
-        # %5 = mnm.op.compiler_begin(-114514, meta[mnm.args.compiler][5]);
+        # %4 = mnm.op.compiler_begin(%a3, meta[relay.attrs.CompilerAttrs][4]);
+        # %5 = mnm.op.compiler_begin(-114514, meta[relay.attrs.CompilerAttrs][5]);
         # %6 = mnm.op.concatenate(%4, %5);
-        # let %a4 = mnm.op.compiler_end(%6, meta[mnm.args.compiler][6]);
+        # let %a4 = mnm.op.compiler_end(%6, meta[relay.attrs.CompilerAttrs][6]);
         # %a4
         # }
         # define variables
@@ -140,26 +138,26 @@ def test_tuple():
         a2 = extended_var("a2")
         a3 = extended_var("a3")
         a4 = extended_var("a4")
-        const = _relay.Constant(tvm.nd.array(-114514))
+        const = mnm.ir.const(None)
         relu = _relay.op.get("mnm.op.relu")
         concatenate = _relay.op.get("mnm.op.concatenate")
         begin = _relay.op.get("mnm.op.compiler_begin")
         end = _relay.op.get("mnm.op.compiler_end")
         # define calls
-        relu_call_x = _relay.Call(begin, [x], tvm.ir.make_node("mnm.args.compiler"))
-        relu_call_x = _relay.Call(relu, [relu_call_x])
-        relu_call_x = _relay.Call(end, [relu_call_x], tvm.ir.make_node("mnm.args.compiler"))
-        relu_call_y = _relay.Call(begin, [y], tvm.ir.make_node("mnm.args.compiler"))
-        relu_call_y = _relay.Call(relu, [relu_call_y])
-        relu_call_y = _relay.Call(end, [relu_call_y], tvm.ir.make_node("mnm.args.compiler"))
-        relu_tuple1 = _relay.Call(begin, [a1], tvm.ir.make_node("mnm.args.compiler"))
-        relu_tuple2 = _relay.Call(begin, [a2], tvm.ir.make_node("mnm.args.compiler"))
+        relu_call_x = mnm.ir.op.compiler_begin(x, attrs=make_compiler_attrs(target))
+        relu_call_x = mnm.ir.op.relu(relu_call_x)
+        relu_call_x = mnm.ir.op.compiler_end(relu_call_x, attrs=make_compiler_attrs(target))
+        relu_call_y = mnm.ir.op.compiler_begin(y, attrs=make_compiler_attrs(target))
+        relu_call_y = mnm.ir.op.relu(relu_call_y)
+        relu_call_y = mnm.ir.op.compiler_end(relu_call_y, attrs=make_compiler_attrs(target))
+        relu_tuple1 = mnm.ir.op.compiler_begin(a1, attrs=make_compiler_attrs(target))
+        relu_tuple2 = mnm.ir.op.compiler_begin(a2, attrs=make_compiler_attrs(target))
         relu_tuple = _relay.Tuple([relu_tuple1, relu_tuple2])
-        relu_tuple = _relay.Call(end, [relu_tuple], tvm.ir.make_node("mnm.args.compiler"))
-        concat_call1 = _relay.Call(begin, [a3], tvm.ir.make_node("mnm.args.compiler"))
-        concat_call2 = _relay.Call(begin, [const], tvm.ir.make_node("mnm.args.compiler"))
-        concat_call = _relay.Call(concatenate, [concat_call1, concat_call2])
-        concat_call = _relay.Call(end, [concat_call], tvm.ir.make_node("mnm.args.compiler"))
+        relu_tuple = mnm.ir.op.compiler_end(relu_tuple, attrs=make_compiler_attrs(target))
+        concat_call1 = mnm.ir.op.compiler_begin(a3, attrs=make_compiler_attrs(target))
+        concat_call2 = mnm.ir.op.compiler_begin(const, attrs=make_compiler_attrs(target))
+        concat_call = mnm.ir.op.concatenate(concat_call1, concat_call2)
+        concat_call = mnm.ir.op.compiler_end(concat_call, attrs=make_compiler_attrs(target))
         # make anf
         body = _relay.Let(a4, concat_call, a4)
         body = _relay.Let(a3, relu_tuple, body)

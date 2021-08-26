@@ -10,7 +10,7 @@
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./common.h"
-#include "../op/schema/annotation.h"
+#include "../op/dialect/tvm/tvm_attrs.h"
 
 namespace mnm {
 namespace pass {
@@ -18,7 +18,7 @@ namespace annotate_target {
 
 using namespace mnm::ir;
 using mnm::op::FMNMAnnotateTarget;
-using mnm::op::schema::CompilerArgs;
+using mnm::op::tvm_dialect::CompilerAttrs;
 
 static const Op& begin_op = CompilerBeginOp();
 static const Op& end_op = CompilerEndOp();
@@ -31,7 +31,7 @@ class AnnotateTargetRewriter : public ExprRewriter {
   }
 
   Expr InsertAnnotation(const Expr& expr, const std::string& target, const Op& ann_op) {
-    auto attrs = make_object<CompilerArgs>();
+    auto attrs = make_object<CompilerAttrs>();
     attrs->compiler = target;
     Expr new_op = {Call(ann_op, {expr}, Attrs(attrs), {})};
     new_op->checked_type_ = expr->checked_type_;

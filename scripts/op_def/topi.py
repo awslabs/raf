@@ -109,8 +109,6 @@ OP_MAP = {
     "mnm.op.tvm.adaptive_max_pool2d_dx": ["nn.max_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
     "mnm.op.tvm.get_valid_counts": ["get_valid_counts", "", "kInjective"],
     "mnm.op.tvm.non_max_suppression": ["non_max_suppression", "relay.attrs.NonMaxSuppressionAttrs", "kInjective"],
-    "mnm.op.tvm.compiler_begin": ["annotation.compiler_begin", "relay.attrs.CompilerAttrs", "kOpaque"],
-    "mnm.op.tvm.compiler_end": ["annotation.compiler_end", "relay.attrs.CompilerAttrs", "kOpaque"],
     "mnm.op.tvm.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
     "mnm.op.tvm.device_copy": ["device_copy", "relay.attrs.DeviceCopyAttrs", "kOpaque"],
     "mnm.op.tvm.roi_align": ["vision.roi_align", "relay.attrs.ROIAlignAttrs", "kOutEWiseFusable"],

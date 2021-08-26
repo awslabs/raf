@@ -15,13 +15,18 @@ class Value(Object):
     def as_const_expr(value):
         if isinstance(value, Value):
             return make_const_expr(value)
+        if isinstance(value, bool):
+            return make_const_expr(BoolValue(value))
         if isinstance(value, int):
             return make_const_expr(IntValue(value, "int64"))
         if isinstance(value, float):
             return make_const_expr(FloatValue(value, "float64"))
-        if isinstance(value, bool):
-            return make_const_expr(BoolValue(value))
-        raise NotImplementedError
+        if isinstance(value, str):
+            return make_const_expr(StringValue(value))
+        if isinstance(value, (list, tuple)):
+            values = [Value.as_const_expr(v) for v in value]
+            return make_const_expr(TupleValue(values))
+        raise TypeError("Unsupported input type: {}".format(type(value)))
 
 
 @register_node("mnm.value.BaseTensorValue")

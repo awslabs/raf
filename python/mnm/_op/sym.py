@@ -317,15 +317,13 @@ def collapse_sum_like(x, shape):
     shape = sym_utils.to_int_tuple(shape)
     return Symbol.from_expr(ffi.collapse_sum_like(x, shape))
 
-def compiler_begin(x, compiler):
-    x = sym_utils.to_tensor(x)
-    compiler = sym_utils.to_string(compiler)
-    return Symbol.from_expr(ffi.compiler_begin(x, compiler))
+def compiler_begin(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.compiler_begin(x))
 
-def compiler_end(x, compiler):
-    x = sym_utils.to_tensor(x)
-    compiler = sym_utils.to_string(compiler)
-    return Symbol.from_expr(ffi.compiler_end(x, compiler))
+def compiler_end(x):
+    x = sym_utils.to_any(x)
+    return Symbol.from_expr(ffi.compiler_end(x))
 
 def concatenate(x, axis=0):
     x = sym_utils.to_tensor_tuple(x)

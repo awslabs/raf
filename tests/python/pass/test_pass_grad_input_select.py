@@ -21,34 +21,9 @@ def test_conv2d():
             return z
 
     def expected():
-        v_zero = mnm._core.value.IntValue(0)
-        v_one = mnm._core.value.IntValue(1)
-        v_xd = mnm._core.value.IntValue(224)
-        v_wd = mnm._core.value.IntValue(3)
-        konst0 = mnm._ffi.ir._make.Constant(
-            mnm._core.value.TupleValue([v_zero]))
-        int_one = mnm._ffi.ir._make.Constant(v_one)
-        konst1 = mnm._ffi.ir._make.Constant(
-            mnm._core.value.TupleValue([v_one]))
-        constantN = mnm._ffi.ir._make.Constant(None)
-        konst_nchw = mnm._ffi.ir._make.Constant(
-            mnm._core.value.StringValue("NCHW"))
-        konst_oihw = mnm._ffi.ir._make.Constant(
-            mnm._core.value.StringValue("OIHW"))
-
-        conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
-        relu = mnm._ffi.op.GetOp("mnm.op.relu")
-        relu_dx = mnm._ffi.op.GetOp("mnm.op.relu_dx")
-        conv2d_dx = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
-        conv2d_dw = mnm._ffi.op.GetOp("mnm.op.conv2d_dw")
-
         x = relay.var("x", shape=(1, 1, 224, 224))
         w = relay.var("w", shape=(1, 1, 3, 3))
         dy = relay.var("dy", shape=(1, 1, 222, 222))
-        x_shape = mnm._ffi.ir._make.Constant(
-            mnm._core.value.TupleValue([v_one, v_one, v_xd, v_xd]))
-        w_shape = mnm._ffi.ir._make.Constant(
-            mnm._core.value.TupleValue([v_one, v_one, v_wd, v_wd]))
 
         # backward pass closure
         x1 = relay.var("x1")
@@ -62,20 +37,16 @@ def test_conv2d():
         v1 = relay.var("a2")
 
         let4 = relay.Let(x4, relay.Tuple((x2, x3)), x4)
-        let3 = relay.Let(x3, relay.Call(
-            conv2d_dw, [x, constantN, x1, w_shape, konst1, konst0, konst1, int_one]), let4)
-        let2 = relay.Let(x2, relay.Call(
-            conv2d_dx, [w, constantN, x1, x_shape, konst1, konst0, konst1, int_one]), let3)
-        let1 = relay.Let(x1, relay.Call(relu_dx, [constantN, v1, dy]), let2)
+        let3 = relay.Let(x3, mnm.ir.op.conv2d_dw(x, None, x1, (1, 1, 3, 3), 1, 0, 1, 1), let4)
+        let2 = relay.Let(x2, mnm.ir.op.conv2d_dx(w, None, x1, (1, 1, 224, 224), 1, 0, 1, 1), let3)
+        let1 = relay.Let(x1, mnm.ir.op.relu_dx(None, v1, dy), let2)
 
         let_ret = relay.Let(ret, relay.Tuple((v1, closure)), ret)
         let_closure = relay.Let(closure, relay.Function([dy], let1), let_ret)
 
         # forward pass
-        letv1 = relay.Let(v1, relay.Call(relu, [v]), let_closure)
-        letv = relay.Let(v, relay.Call(
-            conv2d_op, [x, w, konst1, konst0, konst1, int_one, konst_nchw, konst_oihw,
-                        konst_nchw]), letv1)
+        letv1 = relay.Let(v1, mnm.ir.op.relu(v), let_closure)
+        letv = relay.Let(v, mnm.ir.op.conv2d(x, w), letv1)
 
         f = relay.Function([x, w], letv)
         return f
@@ -100,8 +71,7 @@ def test_multi_func():
         f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
         a1 = relay.var("a1")  # pylint: disable=invalid-name
         x = relay.var("x", shape=(1, 100))
-        tanh_op = mnm._ffi.op.GetOp("mnm.op.tanh")
-        let = relay.Let(a1, relay.Call(tanh_op, [x]), a1)
+        let = relay.Let(a1, mnm.ir.op.tanh(x), a1)
         f1_out = relay.Function([x], let)
         mod = IRModule({f1: f1_out})
 

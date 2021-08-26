@@ -14,14 +14,14 @@
 #include "mnm/ir.h"
 #include "mnm/pass.h"
 #include "./common.h"
-#include "../op/schema/annotation.h"
+#include "../op/dialect/tvm/tvm_attrs.h"
 
 namespace mnm {
 namespace pass {
 namespace merge_compiler_regions {
 
 using namespace mnm::ir;
-using mnm::op::schema::CompilerArgs;
+using mnm::op::tvm_dialect::CompilerAttrs;
 
 static const Op& begin_op = CompilerBeginOp();
 static const Op& end_op = CompilerEndOp();
@@ -45,8 +45,8 @@ class MergeAnnotations : public ExprRewriter {
         const CallNode* call = ell_->exprs[i].as<CallNode>();
 
         // Merge the CallNodes inside two LetNodes if they have the same target.
-        if (ref_ell_->exprs[i - 1].as<CallNode>()->attrs.as<CompilerArgs>()->compiler ==
-            ref_ell_->exprs[i].as<CallNode>()->attrs.as<CompilerArgs>()->compiler) {
+        if (ref_ell_->exprs[i - 1].as<CallNode>()->attrs.as<CompilerAttrs>()->compiler ==
+            ref_ell_->exprs[i].as<CallNode>()->attrs.as<CompilerAttrs>()->compiler) {
           // Remove the compiler_begin annotations of the previous CallNode.
           Expr prev_expr = RemoveAnnotation(GetRef<Expr>(prev_call), end_op);
           ell_->exprs[i - 1] = prev_expr;

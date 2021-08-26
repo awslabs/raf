@@ -99,57 +99,45 @@ def test_dp(config):
         y_true = tvm.relay.var('y_true', tvm.relay.TensorType([1, ], dtype='int64'))
 
         # Forward IR components
-        op_matmul = mnm._ffi.op.GetOp('mnm.op.matmul')
-        expr_a1 = tvm.relay.Call(op_matmul, [x, c])
+        expr_a1 = mnm.ir.op.matmul(x, c)
         var_a1 = tvm.relay.var('a1')
 
-        op_nll_loss = mnm._ffi.op.GetOp('mnm.op.nll_loss')
-        expr_a2 = tvm.relay.Call(op_nll_loss, [y_true, var_a1])
+        expr_a2 = mnm.ir.op.nll_loss(y_true, var_a1)
         var_a2 = tvm.relay.var('a2')
 
         # Backward IR components
         dy = tvm.relay.var('dy')
         var_closure = tvm.relay.var('closure')
 
-        op_nll_loss_dpred = mnm._ffi.op.GetOp('mnm.op.nll_loss_dpred')
-        expr_x1 = tvm.relay.Call(op_nll_loss_dpred, [dy, y_true, var_a1])
+        expr_x1 = mnm.ir.op.nll_loss_dpred(dy, y_true, var_a1)
         var_x0 = tvm.relay.var('x0')
 
-        op_matmul_nt = mnm._ffi.op.GetOp('mnm.op.matmul_nt')
-        expr_x2 = tvm.relay.Call(op_matmul_nt, [var_x0, c])
+        expr_x2 = mnm.ir.op.matmul_nt(var_x0, c)
         var_x1 = tvm.relay.var('x1')
 
         expr_t = tvm.relay.Tuple([var_x1])
 
-        op__allreduce = mnm._ffi.op.GetOp('mnm.op._allreduce')
-        expr_g = tvm.relay.Call(op__allreduce, [expr_t])
+        expr_g = mnm.ir.op._allreduce(expr_t)
         var_g = tvm.relay.var('g')
 
-        op_matmul_tn = mnm._ffi.op.GetOp('mnm.op.matmul_tn')
-        expr_x3 = tvm.relay.Call(op_matmul_tn, [x, var_x0])
+        expr_x3 = mnm.ir.op.matmul_tn(x, var_x0)
         var_x2 = tvm.relay.var('x2')
 
         expr_t1 = tvm.relay.Tuple([var_x2])
 
-        op__allreduce = mnm._ffi.op.GetOp('mnm.op._allreduce')
-        expr_g1 = tvm.relay.Call(op__allreduce, [expr_t1])
+        expr_g1 = mnm.ir.op._allreduce(expr_t1)
         var_g1 = tvm.relay.var('g1')
 
-        zeros_like = mnm._ffi.op.GetOp('mnm.op.zeros_like')
-        expr_x4 = tvm.relay.Call(zeros_like, [y_true])
+        expr_x4 = mnm.ir.op.zeros_like(y_true)
         var_x3 = tvm.relay.var('x3')
         var_x4 = tvm.relay.var('x4')
 
         expr_t2 = tvm.relay.Tuple([var_x4])
 
-        op__allreduce = mnm._ffi.op.GetOp('mnm.op._allreduce')
-        expr_g2 = tvm.relay.Call(op__allreduce, [expr_t2])
+        expr_g2 = mnm.ir.op._allreduce(expr_t2)
         var_g2 = tvm.relay.var('g2')
 
-        op_stream_sync = mnm._ffi.op.GetOp('mnm.op.stream_sync')
-        const_sream_tag = mnm._ffi.ir._make.Constant(
-            mnm._core.value.IntValue(5))
-        expr_null = tvm.relay.Call(op_stream_sync, [var_g2, const_sream_tag])
+        expr_null = mnm.ir.op.stream_sync(var_g2, 5)
         var_null = tvm.relay.var('null')
 
         expr_x5 = tvm.relay.Tuple([var_g, var_g2, var_g1])

@@ -56,11 +56,10 @@ def test_fold_const_ir(device, shape):
         # we are only interested in the structure
         t_value = mnm._core.value.TensorValue.from_numpy(const.numpy())
         const_var = mnm._ffi.ir._make.Constant(t_value)
-        matmul_op = mnm._ffi.op.GetOp('mnm.op.matmul')
-        closure2 = tvm.relay.Call(matmul_op, [x, const_var])
+        closure2 = mnm.ir.op.matmul(x, const_var)
         var_a2 = tvm.relay.var('a2')
         var_a3 = tvm.relay.var('a3')
-        closure3 = tvm.relay.Call(matmul_op, [x, var_a2])
+        closure3 = mnm.ir.op.matmul(x, var_a2)
         let3 = tvm.relay.Let(var_a3, closure3, var_a3)
         let2 = tvm.relay.Let(var_a2, closure2, let3)
         return tvm.relay.Function([x, c], let2)

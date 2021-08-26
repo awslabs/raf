@@ -243,12 +243,6 @@ def test_gradient_op():
 
 
 def test_shape_op():
-    shape = mnm._ffi.op.GetOp("mnm.op.shape")
-    conv2d_dx = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
-
-    konst0 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(0))
-    konst1 = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(1))
-
     x_ty = relay.TensorType((1, 1, 224, 224))
     y_ty = relay.TensorType((1, 1, 222, 222))
     w_ty = relay.TensorType((1, 1, 3, 3))
@@ -260,9 +254,8 @@ def test_shape_op():
 
     def check_conv2d_dx():
         tmp0 = relay.var("tmp0")
-        c = relay.Call(shape, [x])
-        let_node = relay.Let(tmp0, relay.Call(
-            conv2d_dx, [w, y, dy, c, konst1, konst0, konst1, konst1]), tmp0)
+        c = mnm.ir.op.shape(x)
+        let_node = relay.Let(tmp0, mnm.ir.op.conv2d_dx(w, y, dy, c, 1, 0, 1, 1), tmp0)
         func = relay.Function([x, w, dy, y], let_node)
         func = run_infer_type(func)
         expected_ty = relay.FuncType([x_ty, w_ty, y_ty, y_ty], x_ty)

@@ -111,8 +111,6 @@ def test_no_grad1(shape, device):
 
 @pytest.mark.parametrize("device", get_device_list())
 def test_no_grad2(device):
-    matmul_op = mnm._ffi.op.GetOp("mnm.op.matmul")
-    matmul_nt_op = mnm._ffi.op.GetOp("mnm.op.matmul_nt")
     shape = [3, 2]
     dtype = "float32"
 
@@ -132,10 +130,10 @@ def test_no_grad2(device):
             ),
             x2,
         )
-        inner_let1 = relay.Let(x1, relay.Call(matmul_op, [dy, y]), inner_let2)
+        inner_let1 = relay.Let(x1, mnm.ir.op.matmul(dy, y), inner_let2)
         let3 = relay.Let(ret, relay.Tuple([a1, closure]), ret)
         let2 = relay.Let(closure, relay.Function([dy], body=inner_let1), let3)
-        let1 = relay.Let(a1, relay.Call(matmul_nt_op, [x, y]), let2)
+        let1 = relay.Let(a1, mnm.ir.op.matmul_nt(x, y), let2)
         func = relay.Function([x, y], let1)
         mod = tvm.IRModule()
         mod["main"] = func

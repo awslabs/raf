@@ -19,8 +19,6 @@ MNM_OP_DECLARE("mnm.op.compiler_begin", [](const CallValues& call) {
   const auto* args = call->args.as<CompilerArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
-  std::string compiler = args->compiler;
-
   call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));
@@ -31,8 +29,6 @@ MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
   const auto* args = call->args.as<CompilerArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
-  std::string compiler = args->compiler;
-
   call->out = TensorValue::Assemble(/*dev=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/std::vector<int64_t>(x->shape, x->shape + x->ndim));

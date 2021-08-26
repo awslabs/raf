@@ -88,8 +88,7 @@ def test_mnm_module():
     def expected():
         a1 = _relay.var("a1")  # pylint: disable=invalid-name
         x = _relay.var("x", shape=(1, 100))
-        tanh_op = mnm._ffi.op.GetOp("mnm.op.tanh")
-        let = _relay.Let(a1, _relay.Call(tanh_op, [x]), a1)
+        let = _relay.Let(a1, mnm.ir.op.tanh(x), a1)
         f1_out = _relay.Function([x], let)
         mod = IRModule({f1: f1_out})
 

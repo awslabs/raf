@@ -28,7 +28,7 @@ Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dy, x});
     Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep});
+    return Call(sum, {dy, axes, keep, MakeConstant(value::BoolValue::make(false))});
   };
 
   return {f(x1), f(x2)};
