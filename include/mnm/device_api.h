@@ -26,6 +26,10 @@ class DeviceAPI {
     return std::make_pair(0, 0);
   };
 
+  // Set the device for memory allocation. This API is for GPU only,
+  // CPU should never call this API
+  virtual void SetDevice(const int device_id) = 0;
+
   // Stream
   virtual void* CreateStream(const Device& dev) = 0;
 

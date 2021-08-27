@@ -61,6 +61,10 @@ class CPUDeviceAPI final : public DeviceAPI {
     throw;
   }
 
+  void SetDevice(const int device_id) override {
+    throw;
+  }
+
   static void* make() {
     return new CPUDeviceAPI();
   }

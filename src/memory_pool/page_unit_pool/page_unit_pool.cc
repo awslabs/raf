@@ -65,6 +65,10 @@ class PageUnitPool : public MemoryPool {
     this->device = dev;
     this->api = DeviceAPI::Get(dev.device_type());
     this->max_pool_size = pool_limit;
+
+    if (dev.device_type() == DevType::kCUDA()) {
+      this->api->SetDevice(dev.device_id());
+    }
   }
 
   int64_t GetAllocBytes(int64_t nbytes) override {

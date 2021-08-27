@@ -38,6 +38,10 @@ class NoPool final : public MemoryPool {
   explicit NoPool(Device dev) {
     this->device = dev;
     this->api = DeviceAPI::Get(dev.device_type());
+
+    if (dev.device_type() == DevType::kCUDA()) {
+      this->api->SetDevice(dev.device_id());
+    }
   }
 
   int64_t GetAllocBytes(int64_t nbytes) override {

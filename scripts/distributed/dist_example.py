@@ -3,6 +3,7 @@ import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
 from mnm import distributed as dist
 from mnm import testing
+import numpy as np
 
 
 class MNMTest(mnm.Model):
@@ -56,9 +57,9 @@ def run(config):
     m_model.train_mode()
 
     for i in range(num_interactions):
-        m_x, _ = testing.randn_torch(shape, device=device, requires_grad=True)
+        m_x, _ = testing.randn(shape, device=device, requires_grad=True)
         m_y, _ = testing.one_hot_torch(batch_size=batch_size,
-                                       num_classes=num_classes, device=device)
+                                      num_classes=num_classes, device=device)
         loss = m_model(m_x, m_y)
         print("The loss of single iteration: ", loss)
         loss.backward()

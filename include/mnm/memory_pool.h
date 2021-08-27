@@ -83,7 +83,7 @@ class MemoryPool {
    * \brief Allocate a chunk of memory with given size and alignment.
    *
    * \param nbytes The size of the memory chunk to allocate.
-   * \param align The alignment of the memory chunk to allocate.
+   * \param alignment The alignment of the memory chunk to allocate.
    *
    * \return A shared pointer to Memory object which holds the memory chunk.
    */
@@ -94,7 +94,7 @@ class MemoryPool {
    * \brief Allocate a bacth of memory chunks with given sizes and alignments.
    *
    * \param nbytes The sizes of the memory chunks to allocate.
-   * \param align The alignments of the memory chunks to allocate.
+   * \param alignment The alignments of the memory chunks to allocate.
    *
    * \return The shared pointers to Memory object which hold the memory chunks.
    */

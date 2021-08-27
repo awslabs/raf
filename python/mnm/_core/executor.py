@@ -99,7 +99,6 @@ class VMExecutor:
 
     device : str
         The runtime context to run the code on.
-
     enable_cuda_graph : bool
         Whether to use CUDA graph.
     """
@@ -109,7 +108,6 @@ class VMExecutor:
             raise RuntimeError("Must provide module to get VM executor.")
         if "gpu" not in device and "cuda" not in device:
             enable_cuda_graph = False
-        self.mod = mod
         self.device = Device(device)
         self.executable = vm.compile(mod, self.device)
         self.vm = vm.VirtualMachine(self.executable, self.device,

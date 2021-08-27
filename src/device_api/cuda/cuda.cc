@@ -24,9 +24,13 @@ class CUDADeviceAPI final : public DeviceAPI {
   }
 
 #if CUDA_VERSION >= 11030
-  static cudaMemPool_t GetCUDAMemoryPool() {
+  void SetDevice(const int dev_id) override {
+    device_id_ = dev_id;
+  }
+
+  static cudaMemPool_t GetCUDAMemoryPool(int dev_id) {
     cudaMemPool_t mem_pool;
-    CUDA_CALL(cudaDeviceGetDefaultMemPool(&mem_pool, 0));
+    CUDA_CALL(cudaDeviceGetDefaultMemPool(&mem_pool, dev_id));
 
     cuuint64_t setVal = UINT64_MAX;
     CUDA_CALL(cudaMemPoolSetAttribute(mem_pool, cudaMemPoolAttrReleaseThreshold, &setVal));
@@ -35,7 +39,7 @@ class CUDADeviceAPI final : public DeviceAPI {
 
   std::pair<int64_t, int64_t> GetPoolSize() override {
     cudaMemPool_t mem_pool;
-    CUDA_CALL(cudaDeviceGetDefaultMemPool(&mem_pool, 0));
+    CUDA_CALL(cudaDeviceGetDefaultMemPool(&mem_pool, device_id_));
     cuuint64_t allocated;
     cuuint64_t used;
 
@@ -49,8 +53,7 @@ class CUDADeviceAPI final : public DeviceAPI {
     // TODO(@junrushao1994): make sure it is correct
     CHECK_EQ(512 % alignment, 0);
 
-    static auto cuda_pool = GetCUDAMemoryPool();
-
+    static auto cuda_pool = GetCUDAMemoryPool(device_id_);
     // TODO(@comaniac): Specify stream ID when multi-stream is enabled.
     try {
       CUDA_CALL(cudaMallocFromPoolAsync(&ptr, nbytes, cuda_pool, 0));
@@ -66,6 +69,11 @@ class CUDADeviceAPI final : public DeviceAPI {
     CUDA_CALL(cudaFreeAsync(ptr, 0));
   }
 #else
+  void SetDevice(const int dev_id) override {
+    device_id_ = dev_id;
+    CUDA_CALL(cudaSetDevice(dev_id));
+  }
+
   void* AllocMemory(int64_t nbytes, int64_t alignment) override {
     void* ptr = nullptr;
     // TODO(@junrushao1994): make sure it is correct
@@ -113,6 +121,9 @@ class CUDADeviceAPI final : public DeviceAPI {
   static void* make() {
     return new CUDADeviceAPI();
   }
+
+ private:
+  int device_id_;
 };
 
 MNM_REGISTER_GLOBAL("mnm.device_api._make.cuda").set_body_typed(CUDADeviceAPI::make);

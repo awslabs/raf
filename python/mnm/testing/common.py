@@ -4,6 +4,7 @@ import logging
 import functools
 import random
 import sys
+import re
 import numpy as np
 import mxnet as mx
 import torch
@@ -55,6 +56,14 @@ def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
     np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
 
 
+def to_torch_dev(device_str):
+    """Change device string form `cuda(id)` to pytorch style `cuda:id`"""
+    tokens = re.search(r"(\w+).?(\d?)", device_str)
+    dev_type = tokens.groups()[0]
+    dev_id = int(tokens.groups()[1]) if tokens.groups()[1] else 0
+    return "%s:%d" % (dev_type, dev_id)
+
+
 def randn(shape, *, device="cpu", dtype="float32", positive=False, requires_grad=False):
     """Helper function to generate a pair of mnm and numpy arrays"""
     x = np.random.randn(*shape)
@@ -92,7 +101,7 @@ def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, me
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, device=device)
     m_x.requires_grad = requires_grad
-    t_x = torch.tensor(n_x, requires_grad=requires_grad, device=device)  # pylint: disable=not-callable
+    t_x = torch.tensor(n_x, requires_grad=requires_grad, device=to_torch_dev(device))  # pylint: disable=not-callable
     return m_x, t_x
 
 
@@ -118,7 +127,7 @@ def one_hot_torch(batch_size, num_classes, device="cpu"):
     """Helper function to generate one hot tensors in mnm and torch"""
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = mnm.array(targets, device=device)
-    t_x = torch.tensor(targets, requires_grad=False, device=device)  # pylint: disable=not-callable
+    t_x = torch.tensor(targets, requires_grad=False, device=to_torch_dev(device))  # pylint: disable=not-callable
     assert list(m_x.shape) == [batch_size]
     assert list(t_x.shape) == [batch_size]
     return m_x, t_x
