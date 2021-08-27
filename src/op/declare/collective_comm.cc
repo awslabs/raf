@@ -102,6 +102,30 @@ void ReduceScatter(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter);
 
+void Broadcast(const CallValues& call) {
+  const auto* args = call->args.as<BroadcastArgs>();
+  CHECK(args != nullptr);
+  ir::Array<Value> ret;
+  auto& tv = args->x;
+  for (int i = 0; i < tv.size(); ++i) {
+    const DLTensor* x = tv[i];
+    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
+  }
+  if (ret.size() == 0) call->callee = ir::NullValue<OpValue>();
+  const DLTensor* x = tv[0];
+  call->device = x->device;
+  if (ret.size() == 1) {
+    call->out = ret[0];
+  } else {
+    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  }
+}
+
+MNM_OP_DECLARE("mnm.op._broadcast", Broadcast).set_attr<TOpPattern>("TOpPattern", kOpaque);
+
 void Send(const CallValues& call) {
   const auto* args = call->args.as<SendArgs>();
   CHECK(args != nullptr);

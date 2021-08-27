@@ -26,6 +26,13 @@ class AllreduceArgs : public ir::AttrsNode<AllreduceArgs> {
   MNM_OP_SCHEMA(AllreduceArgs, "mnm.args.allreduce");
 };
 
+class BroadcastArgs : public ir::AttrsNode<BroadcastArgs> {
+ public:
+  std::vector<value::BaseTensorValue> x;
+  int root;
+  MNM_OP_SCHEMA(BroadcastArgs, "mnm.args.broadcast");
+};
+
 class CommReduceArgs : public ir::AttrsNode<CommReduceArgs> {
  public:
   std::vector<value::BaseTensorValue> x;

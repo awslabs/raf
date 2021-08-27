@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 from ._internal import _allgather
 from ._internal import _allreduce
+from ._internal import _broadcast
 from ._internal import _contrib_dropout
 from ._internal import _contrib_dropout_dx
 from ._internal import _recv

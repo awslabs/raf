@@ -43,6 +43,7 @@ namespace regs {
 namespace names {
 static const char _allgather[] = "mnm.op._allgather";
 static const char _allreduce[] = "mnm.op._allreduce";
+static const char _broadcast[] = "mnm.op._broadcast";
 static const char _contrib_dropout[] = "mnm.op._contrib_dropout";
 static const char _contrib_dropout_dx[] = "mnm.op._contrib_dropout_dx";
 static const char _recv[] = "mnm.op._recv";
@@ -401,6 +402,13 @@ Attrs BinaryUfunc(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(1, ffi2schema::ArrayLike, x2);
   MNM_TAPE(2, ffi2schema::ArrayLike, out);
   MNM_TAPE(3, ffi2schema::ArrayLike, where);
+  return Attrs(attrs);
+}
+
+Attrs Broadcast(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::BroadcastArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, x);
+  MNM_POD(1, ffi2schema::Int, root);
   return Attrs(attrs);
 }
 
@@ -1273,6 +1281,15 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetVal
               schema::AllreduceArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::String(schema->computation));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp._broadcast").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(_broadcast, 2, ffi2schema::Broadcast,
+              schema::BroadcastArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->root));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3273,6 +3290,13 @@ Array<Expr> BinaryUfunc(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Broadcast(const TVMArgs& values) {
+  MNM_PRELUDE(2);
+  MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_ARG(1, ffi2expr::Int, root);
+  MNM_RET();
+}
+
 Array<Expr> BroadcastTo(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4096,6 +4120,7 @@ namespace symbolic {
 
 MNM_REGISTER_GLOBAL("mnm.op.sym._allgather").set_body(MNM_SYMBOLIC_API(_allgather, 2, Allgather));
 MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 2, Allreduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym._broadcast").set_body(MNM_SYMBOLIC_API(_broadcast, 2, Broadcast));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout_dx")
@@ -4544,6 +4569,14 @@ Attrs BinaryUfunc(const Array<Value>& values) {
   MNM_REQUIRED(1, value2schema::ArrayLike, x2);
   MNM_OPTIONAL(2, value2schema::ArrayLike, out);
   MNM_OPTIONAL(3, value2schema::ArrayLike, where);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Broadcast(const Array<Value>& values) {
+  MNM_PRELUDE(2, 2, schema::BroadcastArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  MNM_REQUIRED(1, value2schema::Int, root);
   return Attrs(attrs);
 }
 
@@ -5722,6 +5755,18 @@ int BinaryUfunc(const std::string& field) {
   }
   if (field == "where") {
     return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Broadcast(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "root") {
+    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7330,6 +7375,10 @@ MNM_BIND_SCHEMA("mnm.op._allreduce", names::_allreduce,
                 value2schema::Allreduce);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._allreduce", names::_allreduce,
                             schema_field_idx::Allreduce);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op._broadcast", names::_broadcast,
+                value2schema::Broadcast);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._broadcast", names::_broadcast,
+                            schema_field_idx::Broadcast);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op._contrib_dropout", names::_contrib_dropout,
                 value2schema::Dropout);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op._contrib_dropout", names::_contrib_dropout,
@@ -8078,6 +8127,7 @@ MNM_REGISTER_OBJECT_REFLECT(BiasAddArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(BinaryUfuncArgs);
+MNM_REGISTER_OBJECT_REFLECT(BroadcastArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToArgs);
 MNM_REGISTER_OBJECT_REFLECT(BroadcastToLikeArgs);
 MNM_REGISTER_OBJECT_REFLECT(CastArgs);

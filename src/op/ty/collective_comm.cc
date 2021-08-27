@@ -16,20 +16,11 @@ using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
 
-Type AllReduceInfer(const CallValues& value) {
-  const auto* args = value->args.as<AllreduceArgs>();
+template <typename T>
+Type IdentityType(const CallValues& value) {
+  const auto* args = value->args.as<T>();
   CHECK(args != nullptr);
   CHECK(args->x.size() > 0);
-  Array<Type> x;
-  std::transform(args->x.begin(), args->x.end(), std::back_inserter(x), GetType);
-  return TupleType(x);
-}
-
-MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", AllReduceInfer);
-
-Type CommReduceInfer(const CallValues& value) {
-  const auto* args = value->args.as<CommReduceArgs>();
-  CHECK(args != nullptr);
   if (args->x.size() == 1) {
     return GetType(args->x[0]);
   }
@@ -38,7 +29,9 @@ Type CommReduceInfer(const CallValues& value) {
   return TupleType(x);
 }
 
-MNM_OP_TYPE("mnm.op._reduce", "Reduce", CommReduceInfer);
+MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", IdentityType<AllreduceArgs>);
+MNM_OP_TYPE("mnm.op._broadcast", "Broadcast", IdentityType<BroadcastArgs>);
+MNM_OP_TYPE("mnm.op._reduce", "Reduce", IdentityType<CommReduceArgs>);
 
 Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();

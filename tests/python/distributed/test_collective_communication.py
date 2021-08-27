@@ -202,6 +202,7 @@ def test_reduce_scatter():
         n_out = -n_ones * 3
         check(m_out, n_out)
 
+
 @pytest.mark.skip()
 def test_send_recv():
     shape = [2, 2]
@@ -324,6 +325,35 @@ def test_reduce_list(computation):
         check(y, target_y)
 
 
+@pytest.mark.skip()
+def test_broadcast():
+    print("Testing broadcast with a list of tensors.")
+
+    # pylint: disable=attribute-defined-outside-init
+    class TestModel(mnm.Model):
+        def build(self, root):
+            self.root = root
+
+        @mnm.model.trace
+        def forward(self, x):
+            res = mnm.broadcast(x, self.root)
+            return res
+
+    model = TestModel(root=0)
+    rank, local_rank = get_node_info()
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    x = mnm.array(x, device=device)
+    print(f"{rank} - X: ", x)
+    model.to(device=device)
+    y = model(x)
+
+    target_y = np.ones(shape=(4, 4), dtype="float32")  # rank 0's data
+    print(f"{rank} - Y: ", y)
+    print(f"{rank} - T: ", target_y)
+    check(y, target_y)
+
+
 if __name__ == "__main__":
     if mnm.build.with_distributed():
         test_reduce_scatter()
@@ -348,4 +378,5 @@ if __name__ == "__main__":
         test_allgather_with_tensor_list(axis=0)
         test_allgather_with_tensor_list(axis=1)
         test_send_recv()
+        test_broadcast()
         dist.RemoveCommunicator()

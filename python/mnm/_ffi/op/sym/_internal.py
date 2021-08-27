@@ -7,6 +7,8 @@ _allgather = _APIS.get("mnm.op.sym._allgather", None)
 # Defined in ./src/op/regs/regs.cc
 _allreduce = _APIS.get("mnm.op.sym._allreduce", None)
 # Defined in ./src/op/regs/regs.cc
+_broadcast = _APIS.get("mnm.op.sym._broadcast", None)
+# Defined in ./src/op/regs/regs.cc
 _contrib_dropout = _APIS.get("mnm.op.sym._contrib_dropout", None)
 # Defined in ./src/op/regs/regs.cc
 _contrib_dropout_dx = _APIS.get("mnm.op.sym._contrib_dropout_dx", None)

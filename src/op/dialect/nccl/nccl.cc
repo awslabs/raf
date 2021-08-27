@@ -30,6 +30,9 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   std::string computation;
 
   explicit NCCLAllReduce(const CallValues& cv) {
+    auto op = ir::Op::Get("mnm.op._allreduce");
+    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("x")};
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
@@ -144,6 +147,9 @@ class NCCLAllGather : public mnm::op::OpEnv {
   void* stream;
   void* communicator;
   explicit NCCLAllGather(const CallValues& cv) {
+    auto op = ir::Op::Get("mnm.op._allgather");
+    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
   }
@@ -190,6 +196,9 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   size_t size;
 
   explicit NCCLReduceScatter(const CallValues& cv) {
+    auto op = ir::Op::Get("mnm.op._reduce_scatter");
+    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
     const DLTensor* out = cv->out;
@@ -236,12 +245,107 @@ MNM_REGISTER_DIALECT_OP(nccl, _reduce_scatter);
 MNM_OP_ENV_MAKER("mnm.op.nccl._reduce_scatter", NCCLReduceScatter::make);
 MNM_OP_DISPATCH_DIALECT_PLEVEL(_reduce_scatter, nccl, DevType::kCUDA(), 10);
 
+class NCCLBroadcast : public mnm::op::OpEnv {
+  void* stream;
+  void* communicator;
+  void* fused_data;
+  size_t total_size = 0;
+  std::vector<size_t> tuple_sizes;
+  DType dtype;
+  int root;
+
+  explicit NCCLBroadcast(const CallValues& cv) {
+    auto op = ir::Op::Get("mnm.op._broadcast");
+    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("x")};
+    auto args = cv->args.as<mnm::op::schema::BroadcastArgs>();
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+    auto& tv = args->x;
+    root = args->root;
+    for (int i = 0; i < tv.size(); ++i) {
+      DLTensor* x = tv[i];
+      size_t size = BytesCompactTensor(*x);
+      tuple_sizes.push_back(size);
+      total_size += size;
+      dtype = x->dtype;
+    }
+    if (tv.size() == 1) return;
+    RequestWorkspace(&fused_data, cv->device, total_size);
+  }
+
+ public:
+  ~NCCLBroadcast() {
+    // Nothing
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("mnm.op.nccl._broadcast"));
+  }
+
+  void Execute(const CallValues& cv) override {
+    auto args = cv->args.as<mnm::op::schema::BroadcastArgs>();
+    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
+    size_t dtype_size = 0;
+    if (tv->fields.size() == 1) {
+      DLTensor* x = tv->fields[0];
+      DLTensor* out = output;
+      dtype_size = sizeof(x->dtype);
+      NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, dtype, root,
+                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      return;
+    }
+
+    size_t offset = 0;
+    for (int i = 0; i < tv->fields.size(); ++i) {
+      DLTensor* x = tv->fields[i];
+      void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
+      cudaMemcpyAsync(buffer_data_at_offset, x->data, tuple_sizes[i], cudaMemcpyDeviceToDevice,
+                      (cudaStream_t)stream);
+      offset += tuple_sizes[i];
+      CHECK(dtype_size == 0 || dtype_size == sizeof(x->dtype))
+          << "Broadcast requires tensors to be the same type.";
+      dtype_size = sizeof(x->dtype);
+    }
+
+    NCCL_CALL(ncclBroadcast(fused_data, fused_data, total_size / dtype_size, dtype, root,
+                            (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+
+    // UnFuse Tensor
+    value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
+    auto& of = out->fields;
+    for (int i = of.size() - 1; i >= 0; --i) {
+      DLTensor* x = of[i];
+      offset -= tuple_sizes[i];
+      void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
+      cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
+                      (cudaStream_t)stream);
+    }
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLBroadcast(cv);
+  }
+};
+
+MNM_REGISTER_DIALECT_OP(nccl, _broadcast);
+MNM_OP_ENV_MAKER("mnm.op.nccl._broadcast", NCCLBroadcast::make);
+MNM_OP_DISPATCH_DIALECT_PLEVEL(_broadcast, nccl, DevType::kCUDA(), 10);
+
 class NCCLSend : public mnm::op::OpEnv {
   void* stream;
   void* communicator;
   int peer;
 
   explicit NCCLSend(const CallValues& cv) {
+    auto op = ir::Op::Get("mnm.op._send");
+    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
     const auto* args = cv->args.as<mnm::op::schema::SendArgs>();

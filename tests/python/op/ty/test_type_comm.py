@@ -51,7 +51,7 @@ def test_allreduce_with_tensor(computation):
     m_func = run_infer_type(m_func)
     t_a = TensorType(shape, dtype=dtype)
     t_b = TensorType(shape, dtype=dtype)
-    desire_type = FuncType([t_a], TupleType([t_b]))
+    desire_type = FuncType([t_a], t_b)
     check_type(m_func, desire_type)
 
 

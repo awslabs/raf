@@ -101,6 +101,26 @@ def reduce_scatter(x):
     return sym._reduce_scatter(x)
 
 
+def broadcast(x, root):
+    """Performs broadcast
+
+    Parameters
+    ----------
+    x : List[Tensor]
+        A list of tensors on rank root to broadcast
+    root : int
+        root rank
+
+    Returns
+    -------
+    ret: List[Tensor]
+        broadcast-ed results
+    """
+    if not isinstance(x, (tuple, list)):
+        x = [x]
+    return sym._broadcast(x, root)
+
+
 def send(x, peer, token=None):
     """ Send x to peer.
     This operation is blocking for GPU.
