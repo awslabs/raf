@@ -10,8 +10,8 @@ class ExtendedVar(_tvm.relay.expr.Var):  # pylint: disable=too-many-ancestors
 
     Parameters
     ----------
-        var : _tvm.relay.expr.Var
-            Downcast var from a relay var to extended meta var, with no type check
+    var : _tvm.relay.expr.Var
+        Downcast var from a relay var to extended meta var, with no type check
 
     Note
     ----

@@ -132,9 +132,11 @@ inline int64_t BytesCompactTensor(const DLTensor& dlt) {
 inline int64_t BytesCompactTensor(const ir::TensorTypeNode* type) {
   int64_t size = 1;
   for (auto dim : type->shape) {
-    auto dim_imm = dim.as<ir::IntImmNode>();
-    CHECK(dim_imm);
-    size *= dim_imm->value;
+    if (auto dim_imm = dim.as<ir::IntImmNode>()) {
+      size *= dim_imm->value;
+    } else {  // Dynamic shape
+      return 0;
+    }
   }
   size *= (type->dtype.bits() * type->dtype.lanes() + 7) / 8;
   return size;

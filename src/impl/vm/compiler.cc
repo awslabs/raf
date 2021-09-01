@@ -786,9 +786,11 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::FuseOps());
 
   // optimization passes that transform BBNF into ANF
+  bool enable_stream_schedule = true;
   if ((*it).second.device_type() == DevType::kCUDA()) {
     auto policy_name = pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
     if (policy_name == "sequential") {
+      enable_stream_schedule = false;
       pass_seqs.push_back(pass::ToANormalForm());
     } else if (policy_name == "wavefront") {
       pass_seqs.push_back(pass::WavefrontStreamSchedule());
@@ -799,6 +801,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
                  << "  sequential, wavefront, and asap" << std::endl;
     }
   } else {
+    enable_stream_schedule = false;
     pass_seqs.push_back(pass::ToANormalForm());
   }
 
@@ -806,6 +809,11 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
+  if (!enable_stream_schedule) {
+    // TODO(@comaniac): Support rematerialization with multi-streaming.
+    pass_seqs.push_back(pass::InferType());
+    pass_seqs.push_back(pass::Rematerialization());
+  }
   // TODO(@hzfan): Currently disable the ValidateInplaceUpdate pass because it removes the may_share
   // attr in some cases without any error messages.
   // pass_seqs.push_back(pass::ValidateInplaceUpdate(true));

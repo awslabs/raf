@@ -129,6 +129,12 @@ Pass PartitionGraph();
 Pass AutoCast();
 
 /*!
+ * \brief A pass that rematerializes tensors to reduce memory footprint.
+ * \return The created pass.
+ */
+Pass Rematerialization();
+
+/*!
  * \brief A pass that inlines the Let stmt that assigns a var to another and TupleGetItem that can
  * be simplified.
  * \return The created pass.
