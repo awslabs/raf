@@ -110,11 +110,12 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         self.params[x._ndarray__handle] = (name, x, v_i)
 
             @trace
-            def forward(self, dy, *args):
+            def forward(self, dy, *args, **kwargs):
                 # pylint: disable=missing-function-docstring, invalid-name
-                y, dxs = self.ad_model(dy, *args)
-                record = self.ad_model._internal(dy, *args)
-                inputs = _get_func_inputs(record, args, {})
+                y, dxs = self.ad_model(dy, *args, **kwargs)
+                record = self.ad_model._internal(dy, *args, **kwargs)
+                inputs = _get_func_inputs(record, [dy, *args], kwargs)
+                inputs = inputs[1:]  # remove dy
                 for i, param in enumerate(inputs):
                     dxi = dxs[i] if len(inputs) > 1 else dxs
                     if param in self.params and has_grad(dxi):

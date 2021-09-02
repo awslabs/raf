@@ -6,7 +6,6 @@ import tvm
 from tvm import relay
 from mnm._ffi.pass_ import InferType, AutoDiff, FromRelay, LiftBranchBody
 from mnm._ffi.pass_ import LambdaLift, FlattenClosure, InlineBackward
-from mnm.frontend.model import FrameworkModel
 from mnm.ir import MNMSequential, ScopeBuilder
 from mnm.testing import get_device_list, randn, check, utils
 
@@ -189,13 +188,12 @@ def test_basic(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -226,13 +224,12 @@ def test_concatenate(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((2, 100), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -266,13 +263,12 @@ def test_split(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 102), device=device)
     m_dy, _ = randn((1, 34), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -302,13 +298,12 @@ def test_split_unused_output(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 50), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -339,13 +334,12 @@ def test_fanout(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -376,13 +370,12 @@ def test_split_concat(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -416,13 +409,12 @@ def test_split_with_fanout(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_dy], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_dy)
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -458,14 +450,13 @@ def test_concatenate_fanout(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_y, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 200), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, m_y, [m_dy, m_dy]], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, m_y, [m_dy, m_dy])
 
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -495,13 +486,12 @@ def test_tuple_outputs(device):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    model = FrameworkModel(mod, mod, {}, {})
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor, args = utils.get_vm_executor(
-        model, "cpu", [m_x, [m_dy, m_dy]], pass_seq=vm_passes
+    vm_executor = utils.get_vm_executor(
+        mod, "cpu", pass_seq=vm_passes
     )
-    vm_executor(*args)
+    vm_executor(m_x, [m_dy, m_dy])
 
 
 def test_nested_tuple_outputs():
@@ -533,12 +523,11 @@ def test_nested_tuple_outputs():
 
     # TODO (@janimesh) - List of lists is not supported in vm_executor
     # Run via VM to ensure that the generated mod can be executed
-    # model = FrameworkModel(mod, mod, {}, {})
     # m_x, _ = randn((1, 100), device=device)
     # m_dy, _ = randn((1, 100), device=device)
-    # vm_executor, args = \
-    #   utils.get_vm_executor(model, 'cpu', [m_x, [[m_dy, m_dy], m_dy]], pass_seq=vm_passes)
-    # m_out = vm_executor(*args)
+    # vm_executor = \
+    #   utils.get_vm_executor(model, 'cpu', pass_seq=vm_passes)
+    # m_out = vm_executor(m_x, [[m_dy, m_dy], m_dy])
 
 
 def test_basic_function():
@@ -576,11 +565,10 @@ def test_basic_function():
 
     # Run via VM to ensure that the generated mod can be executed
     # TODO (@janimesh) - Fails because of InlineBackward
-    # model = FrameworkModel(mod, mod, {}, {})
     # m_x, _ = randn((1, 100), device=device)
     # m_dy, _ = randn((1, 100), device=device)
-    # vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x, m_dy], pass_seq=vm_passes)
-    # m_out = vm_executor(*args)
+    # vm_executor = utils.get_vm_executor(model, 'cpu', pass_seq=vm_passes)
+    # m_out = vm_executor(m_x, m_dy)
 
 
 def test_basic_function_with_multiple_vars():

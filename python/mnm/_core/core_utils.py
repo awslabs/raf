@@ -98,30 +98,45 @@ def get_func_name(pyfunc):
 
 
 def get_bound_args(pyfunc, args, kwargs) -> inspect.BoundArguments:
-    # pylint: disable=protected-access
+    # pylint: disable=protected-access,too-many-locals
     sig = inspect.signature(pyfunc)
     bound_args = sig.bind(*args, **kwargs)
     bound_args.apply_defaults()
     # check if there's variable positional arguments
     var_pos_name = None
+    var_keyword_name = None
     for name, _ in bound_args.arguments.items():
         if sig.parameters[name].kind == inspect.Parameter.VAR_POSITIONAL:
+            assert var_pos_name is None
             var_pos_name = name
-            break
-    if var_pos_name:
+        elif sig.parameters[name].kind == inspect.Parameter.VAR_KEYWORD:
+            assert var_keyword_name is None
+            var_keyword_name = name
+
+    if var_pos_name or var_keyword_name:
         # expand the variable positional arguments and update the signature
         new_params = []
         for name, param in sig.parameters.items():
-            if name != var_pos_name:
+            if name == var_pos_name:
+                for i, arg in enumerate(bound_args.arguments[name]):
+                    new_name = f"_p{i}"
+                    assert new_name not in bound_args.arguments
+                    bound_args.arguments[new_name] = arg
+                    new_params.append(
+                        inspect.Parameter(new_name, inspect.Parameter.POSITIONAL_OR_KEYWORD))
+            elif name == var_keyword_name:
+                for kw_name, kw_arg in bound_args.arguments[name].items():
+                    assert kw_name not in bound_args.arguments
+                    bound_args.arguments[kw_name] = kw_arg
+                    new_params.append(
+                        inspect.Parameter(kw_name, inspect.Parameter.POSITIONAL_OR_KEYWORD))
+            else:
                 new_params.append(param)
-                continue
-            for i, arg in enumerate(bound_args.arguments[name]):
-                new_name = f"_p{i}"
-                assert new_name not in bound_args.arguments
-                bound_args.arguments[new_name] = arg
-                new_params.append(
-                    inspect.Parameter(new_name, inspect.Parameter.POSITIONAL_OR_KEYWORD))
-        del bound_args.arguments[var_pos_name]
+
+        if var_pos_name:
+            del bound_args.arguments[var_pos_name]
+        if var_keyword_name:
+            del bound_args.arguments[var_keyword_name]
         sig = sig.replace(parameters=new_params)
         bound_args._signature = sig
     return bound_args

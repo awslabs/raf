@@ -71,26 +71,40 @@ def _run_trace_record(record, args, kwargs):
     return _unflatten_from_struct(result, record.o_struct)
 
 
+def _get_handle_or_origin(arg, get_handle=True):
+    # pylint: disable=protected-access
+    if isinstance(arg, ndarray):
+        return arg._ndarray__handle if get_handle else arg
+    if isinstance(arg, Symbol):
+        return arg._Symbol__handle if get_handle else arg
+    if isinstance(arg, (tuple, list)):
+        sym = Symbol.make_tuple([i._ndarray__handle for i in arg])
+        return sym._Symbol__handle if get_handle else arg
+    raise NotImplementedError("Not supported arg type: ", type(arg))
+
+
 def _get_func_inputs(record, args, kwargs, get_handle=True):
     # pylint: disable=protected-access
-    if kwargs:
-        # TODO(@junrushao1994): implement it
-        raise NotImplementedError("keyword arguments not supported yet.")
+    func = record.mod["main"]
     func_inputs = []
     for arg in args:
-        if isinstance(arg, ndarray):
-            handle = arg._ndarray__handle if get_handle else arg
-        elif isinstance(arg, Symbol):
-            handle = arg._Symbol__handle if get_handle else arg
-        elif isinstance(arg, (tuple, list)):
-            sym = Symbol.make_tuple([i._ndarray__handle for i in arg])
-            handle = sym._Symbol__handle if get_handle else arg
-        else:
-            raise NotImplementedError("Not supported arg type: ", type(arg))
-        func_inputs.append(handle)
+        func_inputs.append(_get_handle_or_origin(arg, get_handle))
+    if kwargs:
+        visited_params = set()
+        for param_name in [p.name_hint for p in func.params]:
+            if param_name not in kwargs:
+                continue
+            if param_name in visited_params:
+                raise ValueError("Duplicated parameter: %s" % param_name)
+            visited_params.add(param_name)
+            val = kwargs[param_name]
+            func_inputs.append(_get_handle_or_origin(val, get_handle))
     for param in record.named_params.values():
         handle = param._ndarray__handle if get_handle else param
         func_inputs.append(handle)
+    if len(func_inputs) != len(func.params):
+        raise ValueError("Input size does not match main function params. %d v.s. %d." %
+                         (len(func_inputs), len(func.params)))
     return func_inputs
 
 

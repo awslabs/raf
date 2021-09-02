@@ -3,7 +3,7 @@
 import pytest
 import mnm
 from mnm._lib import tvm
-from mnm.testing import get_device_list, randn, check, get_vm_executor
+from mnm.testing import get_device_list, randn, check, run_vm_model
 
 
 def optimize(mod, device, reuse_storage=False, fusion=False):
@@ -49,9 +49,7 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
 def verify_correctness(model, device, args, reuse_storage, fusion):
     # A helper function to verify the correctness
     fuse_level = 1 if fusion else 0
-    executor, vm_inputs = get_vm_executor(model, device, args, fuse_level=fuse_level,
-                                          reuse_storage=reuse_storage)
-    outs = executor(*vm_inputs)
+    outs = run_vm_model(model, device, args, fuse_level=fuse_level, reuse_storage=reuse_storage)
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
 
     ref_outs = model(*args)

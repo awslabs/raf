@@ -38,34 +38,35 @@ def run_infer_type(expr):
     return mod["main"]
 
 
-def get_vm_executor(model, device, args, opt_level=2, fuse_level=3, **kwargs):
+def get_vm_executor(mod, device, opt_level=2, fuse_level=3, **options):
     """Get VM executor"""
     # pylint: disable=protected-access
-    kwargs.setdefault("stream_schedule_policy", "sequential")
-    kwargs.setdefault("sch_file", None)
-    kwargs.setdefault("pass_seq", None)
-    kwargs.setdefault("reuse_storage", False)
+    options.setdefault("stream_schedule_policy", "sequential")
+    options.setdefault("sch_file", None)
+    options.setdefault("pass_seq", None)
+    options.setdefault("reuse_storage", False)
 
-    record = model._internal(*args)
-    mod = record.mod
-    inputs = _get_func_inputs(record, args, {}, get_handle=False)
     config = {
         "mnm.fuse_level": fuse_level,
-        "mnm.stream_schedule.policy": kwargs["stream_schedule_policy"],
-        "mnm.memory_plan.reuse_storage": kwargs["reuse_storage"],
+        "mnm.stream_schedule.policy": options["stream_schedule_policy"],
+        "mnm.memory_plan.reuse_storage": options["reuse_storage"],
     }
-    pass_seq = kwargs['pass_seq']
+    pass_seq = options['pass_seq']
     with mnm.ir.PassContext(opt_level=opt_level, config=config):
         mod = mnm._ffi.pass_.InferType()(mod)
         if pass_seq is not None:
             mod = pass_seq(mod)
         executor = VMExecutor(mod, device)
-    return executor.make_executor(sch_file=kwargs['sch_file']), inputs
+    return executor.make_executor(sch_file=options['sch_file'])
 
 
-def run_vm_model(model, device, args, opt_level=2, fuse_level=3, **kwargs):
+def run_vm_model(model, device, args, opt_level=2, fuse_level=3, **options):
     """Helper function to execute model with VM"""
-    vm, inputs = get_vm_executor(model, device, args, opt_level, fuse_level, **kwargs)
+    args, kwargs = ([], args) if isinstance(args, dict) else (args, {})
+    record = model._internal(*args, **kwargs)
+    mod = record.mod
+    inputs = _get_func_inputs(record, args, kwargs, get_handle=False)
+    vm = get_vm_executor(mod, device, opt_level, fuse_level, **options)
     out = vm(*inputs)
     return out
 

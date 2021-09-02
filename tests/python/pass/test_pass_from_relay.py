@@ -68,7 +68,8 @@ def test_mnm_constant():
     check(data, model())
 
 
-def test_mnm_module():
+@pytest.mark.parametrize("use_kwargs", [False, True])
+def test_mnm_module(use_kwargs):
     f1 = _relay.GlobalVar("f1")  # pylint: disable=invalid-name
 
     def get_tvm_mod():
@@ -110,8 +111,8 @@ def test_mnm_module():
     m_x, n_x = randn((1, 100))
 
     # Check that VM can execute multi-module functions
-    vm_executor, args = utils.get_vm_executor(model, 'cpu', [m_x], fuse_level=1)
-    m_out = vm_executor(*args)
+    args = [m_x] if not use_kwargs else {"y": m_x}
+    m_out = utils.run_vm_model(model, 'cpu', args, fuse_level=1)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
 
@@ -1150,8 +1151,7 @@ def test_full_fusion(dtype):
     mod = FromRelay(["FoldConstant", "SimplifyExpr"])(r_mod)
     model = FrameworkModel(mod, mod, {}, {})
 
-    vm_exec, vm_inputs = utils.get_vm_executor(model, 'cpu', [], fuse_level=1)
-    out = vm_exec(*vm_inputs)
+    out = utils.run_vm_model(model, 'cpu', [], fuse_level=1)
     ref = np.ones((5, 5), dtype=dtype) * 2
     assert out.dtype == dtype
     check(ref, out)

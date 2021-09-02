@@ -58,16 +58,16 @@ def with_autodiff(model):
             self.model = model
 
         @trace
-        def forward(self, dy, *args):
+        def forward(self, dy, *args, **kwargs):
             # pylint: disable=protected-access, missing-function-docstring
-            record = self.model._internal(*args)
+            record = self.model._internal(*args, **kwargs)
             dy = calc_dy(dy, record)
             mod = record.mod
             seq = MNMSequential([InferType(), AutoDiff(record.requires_grads),
                                  InferType(), SimplifyExpr(), FoldConstant(),
                                  DeadCodeElimination(), InlineBackward()])
             mod = seq(mod)
-            inputs = _get_func_inputs(record, args, {})
+            inputs = _get_func_inputs(record, args, kwargs)
             inputs = inputs + [get_symbol_handle(dy)]
             out = inline(mod['main'], inputs)
             y = out[0]
