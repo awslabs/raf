@@ -71,6 +71,8 @@ class StreamTagEnum : public EnumBase<StreamTagEnum, 16, int32_t, StreamTag> {
                            "Reserved for other devices");
 };
 
+class Stream;
+
 class Stream final {
  public:
   class Impl;

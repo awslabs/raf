@@ -155,6 +155,12 @@ class PageUnitPool : public MemoryPool {
     }
   }
 
+  std::shared_ptr<Memory> AllocAsync(int64_t nbytes, void* stream,
+                                     int64_t alignment = kDefaultMemoryAlignment) override {
+    LOG(FATAL) << "Please use NoPool to use AllocAsync.";
+    throw;
+  }
+
   std::vector<std::shared_ptr<Memory>> AllocBatch(const std::vector<int64_t>& nbytes,
                                                   int64_t alignment) override {
     std::vector<std::shared_ptr<Memory>> ret;

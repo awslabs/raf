@@ -222,7 +222,7 @@ class ASAPScheduler : public StreamSchedulerBase {
       }
     }
     // Allocate a new stream
-    int stream_id = static_cast<int>(stream_last_node_.size());
+    int stream_id = static_cast<int>(stream_last_node_.size()) + 1;
     stream_last_node_[stream_id] = nullptr;
     return stream_id;
   }

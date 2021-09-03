@@ -17,6 +17,9 @@
 #include "mnm/value.h"
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
+#include "mnm/memory_pool.h"
+#include "mnm/stream_pool.h"
+#include "mnm/event_pool.h"
 #include "mnm/vm/bytecode.h"
 #include "mnm/vm/executable.h"
 #include "mnm/vm/value.h"
@@ -32,6 +35,9 @@ namespace vm {
 using namespace mnm::ir;
 using namespace mnm::op;
 using namespace mnm::value;
+using namespace mnm::memory_pool;
+using namespace mnm::stream_pool;
+using namespace mnm::event_pool;
 using mnm::registry::PackedFunc;
 
 /*! \brief Magic number for NDArray list file  */
@@ -120,8 +126,14 @@ class VMContextObj : public ValueObj {
   std::vector<Value> inputs;
   /*! \brief The pointer to the executable. */
   const Executable* exec;
-  /*! \brief The index of current working stream into cuda_streams. -1 indicates default stream. */
-  Index stream_index{-1};
+  /*! \brief The events used in runtime. */
+  std::vector<std::vector<std::shared_ptr<Event>>> events;
+  /*! \brief The streams used in runtime. */
+  std::vector<std::vector<std::shared_ptr<Stream>>> streams;
+  /*! \brief The index of current device id to launch kernels. */
+  Index current_device_id{0};
+  /*! \brief The index of current working stream into cuda_streams. 0 indicates default stream. */
+  Index current_stream_id{0};
 
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("func_index", &func_index);
@@ -238,8 +250,6 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
     }
   }
 
-  virtual ~VirtualMachine();
-
   const char* type_key() const final {
     return "VirtualMachine";
   }
@@ -289,6 +299,17 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
  protected:
   /*! \brief Get device for params. */
   Device GetParamsDevice() const;
+  /*!
+   * \brief Allocate memory on given device. For cuda device, it would allocate asynchronously on
+   * current stream.
+   * \param ctx The VM context.
+   * \param dev The device to allocate memory from.
+   * \param nbytes The number of bytes.
+   * \param alignment The alignment requirement.
+   * \return The allocated memory.
+   */
+  inline std::shared_ptr<Memory> Alloc(const VMContext& ctx, Device dev, int64_t nbytes,
+                                       int64_t alignment = kDefaultMemoryAlignment) const;
   /*! \brief Run VM dispatch loop. */
   virtual void RunLoop(VMContext& ctx);
   /*! \brief Prepare an OpEnv with its inputs and output */
@@ -360,14 +381,6 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   bool enable_cuda_graph_ = false;
 
 #ifdef MNM_USE_CUDA
-  /*!
-   * \brief The stream pool for runtime.
-   */
-  std::vector<cudaStream_t> cuda_streams_;
-  /*!
-   * \brief The events used in runtime.
-   */
-  std::vector<cudaEvent_t> cuda_events_;
   /*!
    * \brief A class to store, cache and execute CUDA Graph
    *

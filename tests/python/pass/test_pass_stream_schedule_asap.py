@@ -90,16 +90,16 @@ def test_asap_schedule_simple_branches():
     def expected():
         """
         fn (%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_0 = mnm.op.set_stream(int64(0), int64(1));
           let %x_1 = mnm.op.atan(%x);
           let %x_2 = mnm.op.atan(%x_1);
           let %x_3 = mnm.op.atan(%x_2);
           let %x_4 = mnm.op.add_event(int64(0));
-          let %x_5 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_5 = mnm.op.set_stream(int64(0), int64(2));
           let %x_6 = mnm.op.atan(%x);
           let %x_7 = mnm.op.atan(%x_6);
           let %x_8 = mnm.op.add_event(int64(1));
-          let %x_9 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_9 = mnm.op.set_stream(int64(0), int64(3));
           let %x_10 = mnm.op.atan(%x);
           let %x_11 = mnm.op.wait_event(int64(1));
           let %x_12 = mnm.op.wait_event(int64(0));
@@ -110,16 +110,16 @@ def test_asap_schedule_simple_branches():
         """
         sb = ANFBuilder()
         x = extended_var("x", shape=input_shape)
-        x_0 = sb.set_stream(0, 0)
+        x_0 = sb.set_stream(0, 1)
         x_1 = sb.atan(x)       # atan 2
         x_2 = sb.atan(x_1)     # atan 4
         x_3 = sb.atan(x_2)     # atan 6
         x_4 = sb.add_event(0)
-        x_5 = sb.set_stream(0, 1)
+        x_5 = sb.set_stream(0, 2)
         x_6 = sb.atan(x)       # atan 1
         x_7 = sb.atan(x_6)     # atan 3
         x_8 = sb.add_event(1)
-        x_9 = sb.set_stream(0, 2)
+        x_9 = sb.set_stream(0, 3)
         x_10 = sb.atan(x)      # atan 0
         x_11 = sb.wait_event(1)
         x_12 = sb.wait_event(0)
@@ -184,26 +184,26 @@ def test_asap_schedule_branch_in_branch():
     def expected():
         """
         fn (%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_0 = mnm.op.set_stream(int64(0), int64(1));
           let %x_1 = mnm.op.atan(%x);
           let %x_2 = mnm.op.atan(%x_1);
           let %x_3 = mnm.op.add_event(int64(0));
           let %x_4 = mnm.op.atan(%x_2);
-          let %x_5 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_5 = mnm.op.set_stream(int64(0), int64(2));
           let %x_6 = mnm.op.wait_event(int64(0));
           let %x_7 = mnm.op.atan(%x_2);
           let %x_8 = mnm.op.add_event(int64(1));
-          let %x_9 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_9 = mnm.op.set_stream(int64(0), int64(3));
           let %x_10 = mnm.op.atan(%x);
           let %x_11 = mnm.op.atan(%x_10);
           let %x_12 = mnm.op.atan(%x_11);
           let %x_13 = mnm.op.add_event(int64(2));
-          let %x_14 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_14 = mnm.op.set_stream(int64(0), int64(1));
           let %x_15 = mnm.op.wait_event(int64(1));
           let %x_16 = (%x_4, %x_7);
           let %x_17 = mnm.op.concatenate(%x_16, int64(0));
           let %x_18 = mnm.op.add_event(int64(3));
-          let %x_19 = mnm.op.set_stream(int64(0), int64(3));
+          let %x_19 = mnm.op.set_stream(int64(0), int64(4));
           let %x_20 = mnm.op.atan(%x);
           let %x_21 = mnm.op.wait_event(int64(3));
           let %x_22 = mnm.op.wait_event(int64(2));
@@ -214,26 +214,26 @@ def test_asap_schedule_branch_in_branch():
         """
         sb = ANFBuilder()
         x = extended_var("x", shape=input_shape)
-        x_0 = sb.set_stream(0, 0)
+        x_0 = sb.set_stream(0, 1)
         x_1 = sb.atan(x)  # atan 1
         x_2 = sb.atan(x_1)  # atan 3
         x_3 = sb.add_event(0)
         x_4 = sb.atan(x_2)  # atan 5
-        x_5 = sb.set_stream(0, 1)
+        x_5 = sb.set_stream(0, 2)
         x_6 = sb.wait_event(0)
         x_7 = sb.atan(x_2)  # atan 4
         x_8 = sb.add_event(1)
-        x_9 = sb.set_stream(0, 2)
+        x_9 = sb.set_stream(0, 3)
         x_10 = sb.atan(x)  # atan 2
         x_11 = sb.atan(x_10)  # atan 6
         x_12 = sb.atan(x_11)  # atan 7
         x_13 = sb.add_event(2)
-        x_14 = sb.set_stream(0, 0)
+        x_14 = sb.set_stream(0, 1)
         x_15 = sb.wait_event(1)
         x_16 = sb.make_tuple([x_4, x_7])
         x_17 = sb.concatenate(x_16, 0)  # concat 0
         x_18 = sb.add_event(3)
-        x_19 = sb.set_stream(0, 3)
+        x_19 = sb.set_stream(0, 4)
         x_20 = sb.atan(x)  # atan 0
         x_21 = sb.wait_event(3)
         x_22 = sb.wait_event(2)
@@ -296,14 +296,14 @@ def test_asap_schedule_stacked_blocks():
     def expected():
         """
         fn (%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_0 = mnm.op.set_stream(int64(0), int64(1));
           let %x_1 = mnm.op.atan(%x);
           let %x_2 = mnm.op.atan(%x_1);
           let %x_3 = mnm.op.add_event(int64(0));
-          let %x_4 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_4 = mnm.op.set_stream(int64(0), int64(2));
           let %x_5 = mnm.op.atan(%x);
           let %x_6 = mnm.op.add_event(int64(1));
-          let %x_7 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_7 = mnm.op.set_stream(int64(0), int64(3));
           let %x_8 = mnm.op.atan(%x);
           let %x_9 = mnm.op.wait_event(int64(1));
           let %x_10 = mnm.op.wait_event(int64(0));
@@ -313,11 +313,11 @@ def test_asap_schedule_stacked_blocks():
           let %x_14 = mnm.op.atan(%x_12);
           let %x_15 = mnm.op.atan(%x_14);
           let %x_16 = mnm.op.add_event(int64(3));
-          let %x_17 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_17 = mnm.op.set_stream(int64(0), int64(2));
           let %x_18 = mnm.op.wait_event(int64(2));
           let %x_19 = mnm.op.atan(%x_12);
           let %x_20 = mnm.op.add_event(int64(4));
-          let %x_21 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_21 = mnm.op.set_stream(int64(0), int64(1));
           let %x_22 = mnm.op.wait_event(int64(2));
           let %x_23 = mnm.op.atan(%x_12);
           let %x_24 = mnm.op.wait_event(int64(4));
@@ -330,14 +330,14 @@ def test_asap_schedule_stacked_blocks():
         sb = ANFBuilder()
 
         x = extended_var("x", shape=input_shape)
-        x_0 = sb.set_stream(0, 0)
+        x_0 = sb.set_stream(0, 1)
         x_1 = sb.atan(x)  # atan 2
         x_2 = sb.atan(x_1)  # atan 3
         x_3 = sb.add_event(0)
-        x_4 = sb.set_stream(0, 1)
+        x_4 = sb.set_stream(0, 2)
         x_5 = sb.atan(x)  # atan 1
         x_6 = sb.add_event(1)
-        x_7 = sb.set_stream(0, 2)
+        x_7 = sb.set_stream(0, 3)
         x_8 = sb.atan(x)  # atan 0
         x_9 = sb.wait_event(1)
         x_10 = sb.wait_event(0)
@@ -347,11 +347,11 @@ def test_asap_schedule_stacked_blocks():
         x_14 = sb.atan(x_12)  # atan 6
         x_15 = sb.atan(x_14)  # atan 7
         x_16 = sb.add_event(3)
-        x_17 = sb.set_stream(0, 1)
+        x_17 = sb.set_stream(0, 2)
         x_18 = sb.wait_event(2)
         x_19 = sb.atan(x_12)  # atan 5
         x_20 = sb.add_event(4)
-        x_21 = sb.set_stream(0, 0)
+        x_21 = sb.set_stream(0, 1)
         x_22 = sb.wait_event(2)
         x_23 = sb.atan(x_12)  # atan 4
         x_24 = sb.wait_event(4)

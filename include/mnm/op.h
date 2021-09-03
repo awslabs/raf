@@ -74,6 +74,13 @@ class OpEnv {
   std::shared_ptr<requests::Requests> GetRequests() const;
   /*! \brief Data input indices in the argument list. This is used by VM executor. */
   std::vector<int> arg_indices;
+
+  /*!
+   * \brief Set the stream to launch the kernels for all enabled backends
+   * \param device The device of the stream.
+   * \param stream The stream to launch the operators on.
+   */
+  static void SetStreamForAllBackends(Device device, void* stream);
 };
 
 using OpEnvPtr = std::shared_ptr<OpEnv>;

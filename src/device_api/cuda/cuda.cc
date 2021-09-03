@@ -23,6 +23,18 @@ class CUDADeviceAPI final : public DeviceAPI {
     return count;
   }
 
+  void* AllocMemory(int64_t nbytes, int64_t alignment) override {
+    void* ptr = nullptr;
+    // TODO(@junrushao1994): make sure it is correct
+    CHECK_EQ(512 % alignment, 0);
+    CUDA_CALL(cudaMalloc(&ptr, nbytes));
+    return ptr;
+  }
+
+  void FreeMemory(void* ptr) override {
+    CUDA_CALL(cudaFree(ptr));
+  }
+
 #if CUDA_VERSION >= 11030
   void SetDevice(const int dev_id) override {
     device_id_ = dev_id;
@@ -48,25 +60,27 @@ class CUDADeviceAPI final : public DeviceAPI {
     return {used, allocated};
   }
 
-  void* AllocMemory(int64_t nbytes, int64_t alignment) override {
+  void* AllocMemoryAsync(int64_t nbytes, void* stream,
+                         int64_t alignment = kDefaultMemoryAlignment) {
+    static auto cuda_pool = GetCUDAMemoryPool(device_id_);
     void* ptr = nullptr;
+
     // TODO(@junrushao1994): make sure it is correct
     CHECK_EQ(512 % alignment, 0);
 
-    static auto cuda_pool = GetCUDAMemoryPool(device_id_);
-    // TODO(@comaniac): Specify stream ID when multi-stream is enabled.
     try {
-      CUDA_CALL(cudaMallocFromPoolAsync(&ptr, nbytes, cuda_pool, 0));
+      CUDA_CALL(
+          cudaMallocFromPoolAsync(&ptr, nbytes, cuda_pool, static_cast<cudaStream_t>(stream)));
     } catch (const dmlc::Error& e) {
-      CUDA_CALL(cudaStreamSynchronize(0));
-      CUDA_CALL(cudaMallocFromPoolAsync(&ptr, nbytes, cuda_pool, 0));
+      CUDA_CALL(cudaStreamSynchronize(static_cast<cudaStream_t>(stream)));
+      CUDA_CALL(
+          cudaMallocFromPoolAsync(&ptr, nbytes, cuda_pool, static_cast<cudaStream_t>(stream)));
     }
     return ptr;
   }
 
-  void FreeMemory(void* ptr) override {
-    // TODO(@comaniac): Specify stream ID when multi-stream is enabled.
-    CUDA_CALL(cudaFreeAsync(ptr, 0));
+  void FreeMemoryAsync(void* ptr, void* stream) {
+    CUDA_CALL(cudaFreeAsync(ptr, static_cast<cudaStream_t>(stream)));
   }
 #else
   void SetDevice(const int dev_id) override {
@@ -74,16 +88,13 @@ class CUDADeviceAPI final : public DeviceAPI {
     CUDA_CALL(cudaSetDevice(dev_id));
   }
 
-  void* AllocMemory(int64_t nbytes, int64_t alignment) override {
-    void* ptr = nullptr;
-    // TODO(@junrushao1994): make sure it is correct
-    CHECK_EQ(512 % alignment, 0);
-    CUDA_CALL(cudaMalloc(&ptr, nbytes));
-    return ptr;
+  void* AllocMemoryAsync(int64_t nbytes, void* stream,
+                         int64_t alignment = kDefaultMemoryAlignment) {
+    LOG(FATAL) << "AllocMemroyAsync requires CUDA Version >= 11.3";
   }
 
-  void FreeMemory(void* ptr) override {
-    CUDA_CALL(cudaFree(ptr));
+  void FreeMemoryAsync(void* ptr, void* stream) {
+    LOG(FATAL) << " FreeMemoryAsync requires CUDA Version >= 11.3";
   }
 #endif
 
@@ -99,6 +110,34 @@ class CUDADeviceAPI final : public DeviceAPI {
     CHECK_EQ(dev.device_type(), DevType::kCUDA());
     CUDA_CALL(cudaSetDevice(dev.device_id()));
     CUDA_CALL(cudaStreamDestroy(static_cast<cudaStream_t>(stream)));
+  }
+
+  void* CreateEvent(const Device& dev, uint32_t flags) override {
+    CHECK_EQ(dev.device_type(), DevType::kCUDA());
+    cudaEvent_t event;
+    CUDA_CALL(cudaSetDevice(dev.device_id()));
+    CUDA_CALL(cudaEventCreate(&event, flags));
+    return event;
+  }
+
+  void FreeEvent(const Device& dev, void* event) override {
+    CHECK_EQ(dev.device_type(), DevType::kCUDA());
+    CUDA_CALL(cudaSetDevice(dev.device_id()));
+    CUDA_CALL(cudaEventDestroy(static_cast<cudaEvent_t>(event)));
+  }
+
+  // Between event and stream
+  void EventRecordOnStream(const Device& dev, void* event, void* stream) override {
+    CHECK_EQ(dev.device_type(), DevType::kCUDA());
+    CUDA_CALL(cudaSetDevice(dev.device_id()));
+    CUDA_CALL(cudaEventRecord(static_cast<cudaEvent_t>(event), static_cast<cudaStream_t>(stream)));
+  }
+
+  void StreamWaitEvent(const Device& dev, void* stream, void* event) override {
+    CHECK_EQ(dev.device_type(), DevType::kCUDA());
+    CUDA_CALL(cudaSetDevice(dev.device_id()));
+    CUDA_CALL(cudaStreamWaitEvent(static_cast<cudaStream_t>(stream),
+                                  static_cast<cudaEvent_t>(event), 0 /*cudaEventWaitDefault*/));
   }
 
   void SyncStream(const Device& prev_dev, void* prev, void* next) override {

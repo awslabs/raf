@@ -31,6 +31,10 @@ class Memory {
 
   static std::shared_ptr<Memory> Alloc(const Device& dev, int64_t nbytes,
                                        int64_t alignment = kDefaultMemoryAlignment);
+
+  static std::shared_ptr<Memory> AllocAsync(const Device& dev, int64_t nbytes, void* stream,
+                                            int64_t alignment = kDefaultMemoryAlignment);
+
   static std::vector<std::shared_ptr<Memory> > AllocBatch(
       const Device& dev, const std::vector<int64_t>& nbytes,
       int64_t alignment = kDefaultMemoryAlignment);
@@ -89,6 +93,9 @@ class MemoryPool {
    */
   virtual std::shared_ptr<Memory> Alloc(int64_t nbytes,
                                         int64_t alignment = kDefaultMemoryAlignment) = 0;
+
+  virtual std::shared_ptr<Memory> AllocAsync(int64_t nbytes, void* stream,
+                                             int64_t alignment = kDefaultMemoryAlignment) = 0;
 
   /*!
    * \brief Allocate a bacth of memory chunks with given sizes and alignments.

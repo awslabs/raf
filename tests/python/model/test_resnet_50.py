@@ -59,8 +59,8 @@ def test_vm_backward(fuse_lv):
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("fuse_lv", [0, 1])
-@pytest.mark.parametrize("stream_schedule_policy", ["wavefront", "asap"])
-def test_vm_multi_stream(stream_schedule_policy, fuse_lv):
+@pytest.mark.parametrize("policy", ["wavefront", "asap"])
+def test_vm_multi_stream(policy, fuse_lv):
     device = 'cuda'
     layers = [3, 4, 6, 3]
     model, _ = resnet.get_model(layers)
@@ -68,7 +68,7 @@ def test_vm_multi_stream(stream_schedule_policy, fuse_lv):
     model.infer_mode()
     (x, _), _ = resnet.get_input(batch_size=1, device=device)
     y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
-    y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=stream_schedule_policy)
+    y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=policy)
     check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 

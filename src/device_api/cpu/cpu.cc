@@ -33,6 +33,11 @@ class CPUDeviceAPI final : public DeviceAPI {
     return ptr;
   }
 
+  void* AllocMemoryAsync(int64_t nbytes, void* stream,
+                         int64_t alignment = kDefaultMemoryAlignment) {
+    throw;
+  }
+
   void FreeMemory(void* ptr) override {
 #if _MSC_VER
     _aligned_free(ptr);
@@ -41,11 +46,31 @@ class CPUDeviceAPI final : public DeviceAPI {
 #endif
   }
 
+  void FreeMemoryAsync(void* ptr, void* stream) {
+    throw;
+  }
+
   void* CreateStream(const Device&) override {
     throw;
   }
 
   void FreeStream(const Device&, void* stream) override {
+    throw;
+  }
+
+  void* CreateEvent(const Device& dev, uint32_t flags) override {
+    throw;
+  }
+
+  void FreeEvent(const Device& dev, void* event) {
+    throw;
+  }
+
+  void EventRecordOnStream(const Device& dev, void* event, void* stream) {
+    throw;
+  }
+
+  void StreamWaitEvent(const Device& dev, void* stream, void* event) {
     throw;
   }
 

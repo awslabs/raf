@@ -60,34 +60,35 @@ def test_vm_forward(fuse_lv):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("block_name", ["a", "ab"])
+@pytest.mark.parametrize("block_name", ["a", "ab", "c", "e"])
 @pytest.mark.parametrize("fuse_lv", [0, 1])
-@pytest.mark.parametrize("stream_schedule_policy", ["wavefront", "asap"])
-def test_block_vm_multi_stream(block_name, stream_schedule_policy, fuse_lv):
-    if block_name == "ab":
-        pytest.xfail(reason="Workspace of kernels on different stream may overlap.")
+@pytest.mark.parametrize("policy", ["wavefront", "asap"])
+def test_block_vm_multi_stream(block_name, policy, fuse_lv):
     device = 'cuda'
     (model, x, _), _ = inception.get_block_and_input(block_name=block_name, device=device)
     model.infer_mode()
-    y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
-    y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=stream_schedule_policy)
-    check(y_1, y_2, rtol=1e-5, atol=1e-5)
+    for _ in range(2):
+        y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
+        y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=policy)
+        check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.xfail(reason="Workspace of kernels on different stream may overlap.")
+@pytest.mark.skipif(mnm.build.with_cuda() and float(mnm.build.with_cuda()) <= 11.2,
+                    reason="Workspace may overlap for cuda <= 11.2.")
 @pytest.mark.parametrize("fuse_lv", [0, 1])
-@pytest.mark.parametrize("stream_schedule_policy", ["wavefront", "asap"])
-def test_vm_multi_stream(stream_schedule_policy, fuse_lv):
+@pytest.mark.parametrize("policy", ["wavefront", "asap"])
+def test_vm_multi_stream(policy, fuse_lv):
     device = 'cuda'
     model, _ = inception.get_model()
     model.to(device=device)
     model.infer_mode()
     (x, _), _ = inception.get_input(batch_size=1, device=device)
-    y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
-    y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=stream_schedule_policy)
-    check(y_1, y_2, rtol=1e-5, atol=1e-5)
+    for _ in range(2):
+        y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
+        y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=policy)
+        check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    pytest.main([__file__, '-s'])

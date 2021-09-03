@@ -28,6 +28,7 @@
 #include "mnm/vm/vm.h"
 #include "mnm/device_api.h"
 #include "mnm/profiler.h"
+#include "mnm/stream_pool.h"
 #include "../../requests.h"
 #include "../../op/ty/utils.h"
 #include "../../common/shape_utils.h"
@@ -52,6 +53,43 @@ using namespace mnm::op;
 using namespace mnm::registry;
 using namespace mnm::requests;
 using namespace mnm::device_api;
+using namespace mnm::stream_pool;
+
+namespace utils {
+inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id, Index event_id) {
+  if (device_id >= ctx->events.size()) {
+    ctx->events.resize(device_id + 1);
+  }
+  if (event_id >= ctx->events[device_id].size()) {
+    ctx->events[device_id].resize(event_id + 1);
+  }
+  if (ctx->events[device_id][event_id] == nullptr) {
+    Device device(DevType::kCUDA(), static_cast<int>(device_id));
+    ctx->events[device_id][event_id] = Event::Create(device, 0x02 /*cudaEventDisableTiming*/);
+  }
+  return ctx->events[device_id][event_id];
+}
+
+inline std::shared_ptr<Stream> GetStreamById(const VMContext& ctx, Index device_id,
+                                             Index stream_id) {
+  if (device_id >= ctx->streams.size()) {
+    ctx->streams.resize(device_id + 1);
+  }
+  if (stream_id >= ctx->streams[device_id].size()) {
+    ctx->streams[device_id].resize(stream_id + 1);
+  }
+  if (ctx->streams[device_id][stream_id] == nullptr) {
+    if (stream_id == 0) {
+      ctx->streams[device_id][stream_id] = std::make_shared<Stream>(nullptr);
+    } else {
+      Device device(DevType::kCUDA(), static_cast<int>(device_id));
+      ctx->streams[device_id][stream_id] =
+          Stream::Get(device, kCudaCompute, static_cast<int>(stream_id));
+    }
+  }
+  return ctx->streams[device_id][stream_id];
+}
+}  // namespace utils
 
 MNM_REGISTER_OBJECT_REFLECT(VMContextObj);
 
@@ -159,12 +197,6 @@ void VMFuncOpEnvCache::Clear() {
 }
 
 #ifdef MNM_USE_CUDA
-void MNMSetStream(Device dev, cudaStream_t stream) {
-  tvm::runtime::DeviceAPI::Get(dev)->SetStream(dev, stream);
-  mnm::op::cudnn::SetStream(stream);
-  mnm::op::cublas::SetStream(stream);
-}
-
 class VirtualMachine::CudaGraphImpl {
  public:
   CudaGraphImpl(Device dev) : device_(dev) {
@@ -190,7 +222,7 @@ class VirtualMachine::CudaGraphImpl {
     stream_for_graph_ = static_cast<cudaStream_t>(
         mnm::device_api::DeviceAPI::Get(device_.device_type())->CreateStream(device_));
 
-    MNMSetStream(device_, stream_for_graph_);
+    OpEnv::SetStreamForAllBackends(device_, stream_for_graph_);
     CUDA_CALL(cudaStreamBeginCapture(stream_for_graph_, cudaStreamCaptureModeRelaxed));
   }
 
@@ -214,14 +246,6 @@ class VirtualMachine::CudaGraphImpl {
   Device device_;
 };
 #endif
-
-VirtualMachine::~VirtualMachine() {
-#ifdef MNM_USE_CUDA
-  if (!devices_.empty()) MNMSetStream(devices_[0], 0);
-  for (auto stream : cuda_streams_) CUDA_CALL(cudaStreamDestroy(stream));
-  for (auto event : cuda_events_) CUDA_CALL(cudaEventDestroy(event));
-#endif
-}
 
 PackedFunc VirtualMachine::GetFunction(const std::string& name,
                                        const ObjectPtr<Object>& sptr_to_self) {
@@ -384,6 +408,25 @@ void VirtualMachine::SetDevices(const std::vector<Device>& devices) {
   }
   if (!use_cuda_) {
     enable_cuda_graph_ = false;
+  }
+}
+
+inline std::shared_ptr<Memory> VirtualMachine::Alloc(const VMContext& ctx, Device dev,
+                                                     int64_t nbytes, int64_t alignment) const {
+  if (dev.device_type() == DevType::kCUDA()) {
+#if CUDA_VERSION >= 11030
+    if (enable_cuda_graph_) {
+      // We can not use async memory allocation in cuda graph tracing mode
+      return memory_pool::Memory::Alloc(dev, nbytes, alignment);
+    } else {
+      auto stream = utils::GetStreamById(ctx, ctx->current_device_id, ctx->current_stream_id);
+      return memory_pool::Memory::AllocAsync(dev, nbytes, stream->data(), alignment);
+    }
+#else
+    return memory_pool::Memory::Alloc(dev, nbytes, alignment);
+#endif
+  } else {
+    return memory_pool::Memory::Alloc(dev, nbytes, alignment);
   }
 }
 
@@ -573,7 +616,7 @@ void VirtualMachine::HandleAllocStorage(VMContext& ctx, const Instruction& instr
              << " dtype_hint=" << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
 
   auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-  auto buffer = memory_pool::Memory::Alloc(dev, size, alignment);
+  auto buffer = Alloc(ctx, dev, size, alignment);
   auto storage = StorageValue::make(buffer);
   ctx.WriteRegister(instr.dst, storage);
   ctx->pc++;
@@ -783,48 +826,38 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
 }
 
 void VirtualMachine::HandleCudaSetStream(VMContext& ctx, const Instruction& instr) {
-#ifdef MNM_USE_CUDA
-  while (cuda_streams_.size() <= instr.cuda_set_stream.stream_id) {
-    cudaStream_t stream;
-    CUDA_CALL(cudaStreamCreateWithFlags(&stream, cudaStreamDefault));
-    cuda_streams_.push_back(stream);
-  }
-  MNMSetStream(Device(DevType::kCUDA(), static_cast<int>(instr.cuda_set_stream.device_id)),
-               cuda_streams_[instr.cuda_set_stream.stream_id]);
-  ctx->stream_index = instr.cuda_set_stream.stream_id;
+  Index device_id = instr.cuda_set_stream.device_id;
+  Index stream_id = instr.cuda_set_stream.stream_id;
+  Device device(DevType::kCUDA(), static_cast<int>(device_id));
+  auto stream = utils::GetStreamById(ctx, device_id, stream_id);
+  OpEnv::SetStreamForAllBackends(device, stream->data());
+  ctx->current_device_id = device_id;
+  ctx->current_stream_id = stream_id;
   ctx->pc++;
-#else
-  LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
-#endif
 }
 
 void VirtualMachine::HandleCudaAddEvent(VMContext& ctx, const Instruction& instr) {
-#ifdef MNM_USE_CUDA
-  CHECK_LT(ctx->stream_index, cuda_streams_.size());
-  while (cuda_events_.size() <= instr.cuda_event.event_id) {
-    cudaEvent_t event;
-    CUDA_CALL(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    cuda_events_.push_back(event);
-  }
-  CUDA_CALL(
-      cudaEventRecord(cuda_events_[instr.cuda_event.event_id], cuda_streams_[ctx->stream_index]));
+  Index device_id = ctx->current_device_id;
+  Index stream_id = ctx->current_stream_id;
+  Index event_id = instr.cuda_event.event_id;
+  auto event = utils::GetEventById(ctx, device_id, event_id);
+  auto stream = utils::GetStreamById(ctx, device_id, stream_id);
+  auto api = DeviceAPI::Get(DevType::kCUDA());
+  Device device(DevType::kCUDA(), static_cast<int>(device_id));
+  api->EventRecordOnStream(device, event->data(), stream->data());
   ctx->pc++;
-#else
-  LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
-#endif
 }
 
 void VirtualMachine::HandleCudaWaitEvent(VMContext& ctx, const Instruction& instr) {
-#ifdef MNM_USE_CUDA
-  CHECK_LT(ctx->stream_index, cuda_streams_.size());
-  CHECK_LT(instr.cuda_event.event_id, cuda_events_.size()) << "Wait for non-existing event";
-  CUDA_CALL(cudaStreamWaitEvent(cuda_streams_[ctx->stream_index],
-                                cuda_events_[instr.cuda_event.event_id],
-                                0 /*cudaEventWaitDefault*/));
+  Index device_id = ctx->current_device_id;
+  Index stream_id = ctx->current_stream_id;
+  Index event_id = instr.cuda_event.event_id;
+  auto event = utils::GetEventById(ctx, device_id, event_id);
+  auto stream = utils::GetStreamById(ctx, device_id, stream_id);
+  auto api = DeviceAPI::Get(DevType::kCUDA());
+  Device device(DevType::kCUDA(), static_cast<int>(device_id));
+  api->StreamWaitEvent(device, stream->data(), event->data());
   ctx->pc++;
-#else
-  LOG(FATAL) << "CUDA is not enabled but encounter the instruction: " << instr;
-#endif
 }
 
 std::tuple<std::shared_ptr<OpEnv>, std::vector<Value>, Value, std::string>
@@ -938,7 +971,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
   std::shared_ptr<Requests> requests = op_env->GetRequests();
   for (size_t i = 0; i < requests->workspace.size(); i++) {
     Requests::WorkspaceRequest& entry = requests->workspace[i];
-    auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
+    auto buf = Alloc(ctx, entry.device, entry.nbytes);
     entry.memory = buf;
     *entry.dest = buf->data;
   }

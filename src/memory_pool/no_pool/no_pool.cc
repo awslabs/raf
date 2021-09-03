@@ -33,6 +33,27 @@ class NonOwnedMemory final : public Memory {
   std::shared_ptr<DeviceAPI> api;
 };
 
+class NonOwnedAsyncMemory final : public Memory {
+ public:
+  explicit NonOwnedAsyncMemory(void* data, void* stream, const Device& dev,
+                               std::shared_ptr<DeviceAPI> api) {
+    this->data = data;
+    this->stream = stream;
+    this->device = dev;
+    this->api = std::move(api);
+  }
+
+  ~NonOwnedAsyncMemory() {
+    if (data != nullptr) {
+      api->FreeMemoryAsync(data, stream);
+    }
+  }
+
+ public:
+  std::shared_ptr<DeviceAPI> api;
+  void* stream;
+};
+
 class NoPool final : public MemoryPool {
  public:
   explicit NoPool(Device dev) {
@@ -55,6 +76,16 @@ class NoPool final : public MemoryPool {
       data = api->AllocMemory(nbytes, alignment);
     }
     return std::make_shared<NonOwnedMemory>(data, device, api);
+  }
+
+  std::shared_ptr<Memory> AllocAsync(int64_t nbytes, void* stream,
+                                     int64_t alignment = kDefaultMemoryAlignment) override {
+    CHECK_GE(nbytes, 0);
+    void* data = nullptr;
+    if (nbytes > 0) {
+      data = api->AllocMemoryAsync(nbytes, stream, alignment);
+    }
+    return std::make_shared<NonOwnedAsyncMemory>(data, stream, device, api);
   }
 
   std::vector<std::shared_ptr<Memory>> AllocBatch(const std::vector<int64_t>& nbytes,

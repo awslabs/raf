@@ -3,14 +3,21 @@
  * \file src/impl/op.cc
  * \brief MNM operator interface underlying implementation
  */
+#include <tvm/runtime/device_api.h>
 #include "dmlc/registry.h"
 #include "mnm/executor.h"
 #include "mnm/ir.h"
 #include "mnm/op.h"
 #include "mnm/registry.h"
 #include "mnm/value.h"
+#include "mnm/device_api.h"
 #include "../requests.h"
 #include "../op/schema/list_args.h"
+
+#ifdef MNM_USE_CUDA
+#include "../op/dialect/cudnn/cudnn_utils.h"
+#include "../op/dialect/cublas/cublas_utils.h"
+#endif
 
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mnm::op::OpDialect);
@@ -104,6 +111,14 @@ void OpEnv::BindExecutor(Executor* executor) {
 
 std::shared_ptr<Requests> OpEnv::GetRequests() const {
   return this->impl;
+}
+
+void OpEnv::SetStreamForAllBackends(Device device, void* stream) {
+#ifdef MNM_USE_CUDA
+  tvm::runtime::DeviceAPI::Get(device)->SetStream(device, stream);
+  mnm::op::cudnn::SetStream(static_cast<cudaStream_t>(stream));
+  mnm::op::cublas::SetStream(static_cast<cudaStream_t>(stream));
+#endif
 }
 
 // Implementation: OpEnvMaker
