@@ -18,13 +18,14 @@ using namespace mnm::ir;
 
 constexpr int64_t kDefaultMemoryAlignment = 64;
 
-class DTypeCode final : public EnumBase<DTypeCode, 4, int32_t, DLDataTypeCode> {
+class DTypeCode final : public EnumBase<DTypeCode, 5, int32_t, DLDataTypeCode> {
  public:
-  ENUM_DEF_HEADER(DTypeCode, 0, plain + 1);
+  ENUM_DEF_HEADER(DTypeCode, 0, plain < 3 ? plain + 1 : plain);
   ENUM_DEF_ENTRY_WITH_NAME(DTypeCode, 0, kUnknown, kDLInt, "???");
   ENUM_DEF_ENTRY_WITH_NAME(DTypeCode, 1, kInt, kDLInt, "i");
   ENUM_DEF_ENTRY_WITH_NAME(DTypeCode, 2, kUInt, kDLUInt, "u");
   ENUM_DEF_ENTRY_WITH_NAME(DTypeCode, 3, kFloat, kDLFloat, "f");
+  ENUM_DEF_ENTRY_WITH_NAME(DTypeCode, 4, kBFloat, kDLBfloat, "bf");
 };
 
 class DevType final : public EnumBase<DevType, 13, int32_t, int> {
