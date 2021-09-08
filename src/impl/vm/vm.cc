@@ -439,6 +439,9 @@ void VirtualMachine::RunLoop(VMContext& ctx) {
     profiler::CudaProfiler::Get()->start();
   }
 #endif
+  ctx->current_device_id = 0;
+  ctx->current_stream_id = 0;
+  ctx->current_barrier_event_index = 0;
   while (true) {
   main_loop:
     auto const& instr = ctx->code[ctx->pc];
@@ -552,6 +555,10 @@ void VirtualMachine::RunLoop(VMContext& ctx) {
       }
       case Opcode::CudaWaitEvent: {
         HandleCudaWaitEvent(ctx, instr);
+        goto main_loop;
+      }
+      case Opcode::CudaStreamBarrier: {
+        HandleCudaStreamBarrier(ctx, instr);
         goto main_loop;
       }
     }
@@ -857,6 +864,29 @@ void VirtualMachine::HandleCudaWaitEvent(VMContext& ctx, const Instruction& inst
   auto api = DeviceAPI::Get(DevType::kCUDA());
   Device device(DevType::kCUDA(), static_cast<int>(device_id));
   api->StreamWaitEvent(device, stream->data(), event->data());
+  ctx->pc++;
+}
+
+void VirtualMachine::HandleCudaStreamBarrier(VMContext& ctx, const Instruction& instr) {
+  Device device(DevType::kCUDA(), static_cast<int>(ctx->current_device_id));
+  if (ctx->current_barrier_event_index >= ctx->barrier_events.size()) {
+    ctx->barrier_events.resize(ctx->current_barrier_event_index + 1);
+    ctx->barrier_events[ctx->current_barrier_event_index] =
+        Event::Create(device, 0x02 /*cudaEventDisableTiming*/);
+  }
+  auto api = DeviceAPI::Get(DevType::kCUDA());
+  /*
+   * We implement the cuda stream barrier by recording an event on the default stream. See also
+   * the cudaEventRecord API in
+   * https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EVENT.html
+   * and the default stream synchronization behavior in
+   * https://docs.nvidia.com/cuda/cuda-runtime-api/stream-sync-behavior.html#stream-sync-behavior.
+   *
+   * We can also use cudaDeviceSynchronize() to implement the stream barrier op, but this function
+   * would block the host thread, which may hurt the performance.
+   */
+  api->EventRecordOnStream(device, ctx->barrier_events[ctx->current_barrier_event_index]->data(),
+                           nullptr /* default stream */);
   ctx->pc++;
 }
 

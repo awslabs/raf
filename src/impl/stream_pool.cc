@@ -109,5 +109,6 @@ void Stream::Wait() const {
 std::shared_ptr<Stream> Stream::Get(const Device& dev, int tag_index, int index) {
   return StreamPool::Get(dev)->GetStream(tag_index, index);
 }
+
 }  // namespace stream_pool
 }  // namespace mnm

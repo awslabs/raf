@@ -129,6 +129,8 @@ Instruction::Instruction(const Instruction& instr) {
     case Opcode::CudaWaitEvent:
       this->cuda_event.event_id = instr.cuda_event.event_id;
       return;
+    case Opcode::CudaStreamBarrier:
+      return;
     default:
       std::ostringstream out;
       out << "Invalid instruction " << static_cast<int>(instr.op);
@@ -251,6 +253,8 @@ Instruction& Instruction::operator=(const Instruction& instr) {
     case Opcode::CudaWaitEvent:
       this->cuda_event.event_id = instr.cuda_event.event_id;
       return *this;
+    case Opcode::CudaStreamBarrier:
+      return *this;
     default:
       std::ostringstream out;
       out << "Invalid instruction " << static_cast<int>(instr.op);
@@ -275,6 +279,7 @@ Instruction::~Instruction() {
     case Opcode::CudaSetStream:
     case Opcode::CudaAddEvent:
     case Opcode::CudaWaitEvent:
+    case Opcode::CudaStreamBarrier:
       return;
     case Opcode::AllocTensor:
       delete[] this->alloc_tensor.shape;
@@ -546,6 +551,12 @@ Instruction Instruction::CudaWaitEvent(Index event_id) {
   return instr;
 }
 
+Instruction Instruction::CudaStreamBarrier() {
+  Instruction instr;
+  instr.op = Opcode::CudaStreamBarrier;
+  return instr;
+}
+
 void DLDatatypePrint(std::ostream& os, const DLDataType& dtype) {
   switch (dtype.code) {
     case kDLInt:
@@ -707,6 +718,9 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
     case Opcode::CudaWaitEvent: {
       os << "cuda_wait_event" << instr.cuda_event.event_id;
       break;
+    }
+    case Opcode::CudaStreamBarrier: {
+      os << "cuda_stream_barrier";
     }
     default:
       LOG(FATAL) << "should never hit this case" << static_cast<int>(instr.op);

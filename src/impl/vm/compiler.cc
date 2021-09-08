@@ -262,6 +262,10 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
       case Opcode::Ret:
       case Opcode::Goto:
       case Opcode::Fatal:
+      case Opcode::CudaSetStream:
+      case Opcode::CudaAddEvent:
+      case Opcode::CudaWaitEvent:
+      case Opcode::CudaStreamBarrier:
         last_register_ = -1;
         break;
     }
@@ -517,13 +521,19 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                        event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
                    Emit(Instruction::CudaAddEvent(event_id));
                  })
-          .Match("mnm.op.wait_event", [this](const Array<Expr>& args, const Attrs& attrs,
-                                             const Array<Type>& type_arg) {
-            CHECK_EQ(args.size(), 1);
-            auto event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
-            Index event_id = event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
-            Emit(Instruction::CudaWaitEvent(event_id));
-          });
+          .Match("mnm.op.wait_event",
+                 [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                   CHECK_EQ(args.size(), 1);
+                   auto event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                   Index event_id =
+                       event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+                   Emit(Instruction::CudaWaitEvent(event_id));
+                 })
+          .Match("mnm.op.stream_barrier",
+                 [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
+                   CHECK_EQ(args.size(), 0);
+                   Emit(Instruction::CudaStreamBarrier());
+                 });
       matcher(GetRef<Call>(call_node));
       return;
     }

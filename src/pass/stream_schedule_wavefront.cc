@@ -144,50 +144,21 @@ class WavefrontScheduler : public StreamSchedulerBase {
 
     Partition partition = WavefrontPartition(&dg);
 
-    int64_t event_idclock = 0;
-
-    std::unordered_map<int64_t, std::unordered_map<int64_t, int64_t>> chain_event;
-    std::unordered_map<int64_t, int64_t> wave_event;
-
     for (int i = 0; i < partition.size(); i++) {
       Wave& wave = partition.at(i);
       for (int j = 0; j < wave.size(); j++) {
         Chain& chain = wave[j];
-        AnnotateSetStream(0, j + 1);
-        if (i != 0) {
-          // wait for the wave event of the i-1 wave
-          AnnotateWaitEvent(wave_event[i - 1]);
-        }
+        AnnotateSetStream(0, j);
         for (Node* node : chain) {
           Expr expr = node_expr.at(node);
           VisitExpr(expr);
         }
-        if (i + 1 == partition.size() && j + 1 == wave.size()) {
-          // we do not need to add the chain event for the last op in the last wave
-          continue;
-        }
-        chain_event[i][j] = event_idclock++;
-        AnnotateAddEvent(chain_event[i][j]);
       }
-      if (i + 1 == partition.size()) {
-        // we do not need to add the wave event for the last wave
-        continue;
+      if (i + 1 < partition.size()) {
+        AnnotateStreamBarrier();
       }
-      wave_event[i] = event_idclock++;
-      // we add an wave event to stream 0 to
-      // wait for all chain events of this wave
-      AnnotateSetStream(0, 0);
-      for (int j = 0; j < wave.size(); j++) {
-        AnnotateWaitEvent(chain_event[i][j]);
-      }
-      AnnotateAddEvent(wave_event[i]);
     }
-
-    size_t num_chains_in_last_wave = partition.back().size();
-    CHECK_EQ(num_chains_in_last_wave, 1U)
-        << "The last wave can only have a single chain because there is only a single output";
-    Expr output_expr = VisitExpr(node_expr.at(partition.back().back().back()));
-    return let_list_.Get(output_expr);
+    return let_list_.Get(VisitExpr(e));
   }
 };
 

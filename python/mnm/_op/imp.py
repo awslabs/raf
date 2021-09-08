@@ -39,13 +39,13 @@ __all__ = [
     "sequence_mask", "set_stream", "sgd", "shape", "sigmoid",
     "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
     "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stream_sync",
-    "strided_slice", "strided_slice_dx", "subtract", "sum", "sum_dx",
-    "swap_axis", "take", "take_dx", "tanh", "tanh_dx",
-    "threefry_generate", "threefry_split", "threshold", "threshold_dx", "topk",
-    "transpose", "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage",
-    "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape",
-    "wait_event", "where", "zeros", "zeros_like",
+    "sqrt", "sqrt_dx", "squeeze", "stack", "stream_barrier",
+    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
+    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
+    "tanh_dx", "threefry_generate", "threefry_split", "threshold", "threshold_dx",
+    "topk", "transpose", "transpose_dx", "trunc", "upper_bound_argwhere",
+    "vm_alloc_storage", "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op",
+    "vm_set_shape", "wait_event", "where", "zeros", "zeros_like",
 ]
 
 @set_module("mnm")
@@ -1178,6 +1178,11 @@ def stack(x, axis=0):
     x = imp_utils.to_tensor_tuple(x)
     axis = imp_utils.to_int(axis)
     return imp_utils.ret(ffi.stack(x, axis))
+
+@set_module("mnm")
+def stream_barrier():
+
+    return imp_utils.ret(ffi.stream_barrier())
 
 @set_module("mnm")
 def stream_sync(x, stream_tag=0):

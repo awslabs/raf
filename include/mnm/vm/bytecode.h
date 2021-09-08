@@ -72,6 +72,7 @@ enum class Opcode {
   CudaSetStream = 40U,
   CudaAddEvent = 41U,
   CudaWaitEvent = 42U,
+  CudaStreamBarrier = 43U,
 };
 
 /*! \brief A single virtual machine instruction.
@@ -437,6 +438,12 @@ struct Instruction {
    * \return The wait event instruction.
    */
   static Instruction CudaWaitEvent(Index event_id);
+
+  /*!
+   * \brief Construct a CudaStreamBarrier instruction.
+   * \return The stream barrier instruction.
+   */
+  static Instruction CudaStreamBarrier();
 
   Instruction();
   Instruction(const Instruction& instr);

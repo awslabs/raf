@@ -31,6 +31,11 @@ class StreamArgs : public ir::AttrsNode<StreamArgs> {
   int stream_tag{0};
   MNM_OP_SCHEMA(StreamArgs, "mnm.args.stream");
 };
+
+class StreamBarrierArgs : public ir::AttrsNode<StreamBarrierArgs> {
+ public:
+  MNM_OP_SCHEMA(StreamBarrierArgs, "mnm.args.stream_barrier");
+};
 }  // namespace schema
 }  // namespace op
 }  // namespace mnm

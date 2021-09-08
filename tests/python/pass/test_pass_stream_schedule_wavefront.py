@@ -36,6 +36,9 @@ class ANFBuilder:
     def wait_event(self, event_id: int) -> tvm.relay.Var:
         return self.call("wait_event", [mnm.ir.const(event_id)])
 
+    def stream_barrier(self) -> tvm.relay.Var:
+        return self.call("stream_barrier", [])
+
     def atan(self, x: tvm.ir.RelayExpr) -> tvm.relay.Var:
         return self.call("atan", [x])
 
@@ -81,59 +84,43 @@ def test_wavefront_schedule_three_simple_branches():
 
     def expected():
         """
-         #[version = "0.0.5"]
-         fn (%x: Tensor[(2, 2), float32]) {
-           let %x_0 = mnm.op.set_stream(int64(0), int64(1));
-           let %x_1 = mnm.op.atan(%x);
-           let %x_2 = mnm.op.add_event(int64(0));
-           let %x_3 = mnm.op.set_stream(int64(0), int64(2));
-           let %x_4 = mnm.op.atan(%x);
-           let %x_5 = mnm.op.atan(%x_4);
-           let %x_6 = mnm.op.add_event(int64(1));
-           let %x_7 = mnm.op.set_stream(int64(0), int64(3));
-           let %x_8 = mnm.op.atan(%x);
-           let %x_9 = mnm.op.atan(%x_8);
-           let %x_10 = mnm.op.atan(%x_9);
-           let %x_11 = mnm.op.add_event(int64(2));
-           let %x_12 = mnm.op.set_stream(int64(0), int64(0));
-           let %x_13 = mnm.op.wait_event(int64(0));
-           let %x_14 = mnm.op.wait_event(int64(1));
-           let %x_15 = mnm.op.wait_event(int64(2));
-           let %x_16 = mnm.op.add_event(int64(3));
-           let %x_17 = mnm.op.set_stream(int64(0), int64(1));
-           let %x_18 = mnm.op.wait_event(int64(3));
-           let %x_19 = (%x_1, %x_5, %x_10);
-           let %x_20 = mnm.op.concatenate(%x_19, int64(0));
-           %x_21
-         }
+        def @main(%x: Tensor[(2, 2), float32]) {
+          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_1 = mnm.op.atan(%x);
+          let %x_2 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_3 = mnm.op.atan(%x);
+          let %x_4 = mnm.op.atan(%x_3);
+          let %x_5 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_6 = mnm.op.atan(%x);
+          let %x_7 = mnm.op.atan(%x_6);
+          let %x_8 = mnm.op.atan(%x_7);
+          let %x_9 = mnm.op.stream_barrier();
+          let %x_10 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_11 = (%x_1, %x_4, %x_8);
+          let %x_12 = mnm.op.concatenate(%x_11, int64(0));
+          %x_12
+        }
         """
         sb = ANFBuilder()
         x = extended_var("x", shape=input_shape)
-        x_0 = sb.set_stream(0, 1)
+        x_0 = sb.set_stream(0, 0)
         x_1 = sb.atan(x)
-        x_2 = sb.add_event(0)
-        x_3 = sb.set_stream(0, 2)
-        x_4 = sb.atan(x)
-        x_5 = sb.atan(x_4)
-        x_6 = sb.add_event(1)
-        x_7 = sb.set_stream(0, 3)
-        x_8 = sb.atan(x)
-        x_9 = sb.atan(x_8)
-        x_10 = sb.atan(x_9)
-        x_11 = sb.add_event(2)
-        x_12 = sb.set_stream(0, 0)
-        x_13 = sb.wait_event(0)
-        x_14 = sb.wait_event(1)
-        x_15 = sb.wait_event(2)
-        x_16 = sb.add_event(3)
-        x_17 = sb.set_stream(0, 1)
-        x_18 = sb.wait_event(3)
-        x_19 = sb.make_tuple([x_1, x_5, x_10])
-        x_20 = sb.concatenate(x_19, 0)
-        return tvm.relay.Function([x], sb.ret(x_20))
+        x_2 = sb.set_stream(0, 1)
+        x_3 = sb.atan(x)
+        x_4 = sb.atan(x_3)
+        x_5 = sb.set_stream(0, 2)
+        x_6 = sb.atan(x)
+        x_7 = sb.atan(x_6)
+        x_8 = sb.atan(x_7)
+        x_9 = sb.stream_barrier()
+        x_10 = sb.set_stream(0, 0)
+        x_11 = sb.make_tuple([x_1, x_4, x_8])
+        x_12 = sb.concatenate(x_11, 0)
+        return tvm.relay.Function([x], sb.ret(x_12))
 
     # We verify the correctness of the pass by structural_equal here, but it does not check the
     # equivalence of meta's extended constant. See issue #700.
+    print(mnm.ir.AsText(mod))
     assert tvm.ir.structural_equal(mod['main'], expected())
 
 
@@ -177,84 +164,53 @@ def test_wavefront_schedule_branch_in_branch():
 
     def expected():
         """
-         #[version = "0.0.5"]
-         fn (%x: Tensor[(2, 2), float32]) {
-           let %x_0 = mnm.op.set_stream(int64(0), int64(1));
-           let %x_1 = mnm.op.atan(%x);
-           let %x_2 = mnm.op.add_event(int64(0));
-           let %x_3 = mnm.op.set_stream(int64(0), int64(2));
-           let %x_4 = mnm.op.atan(%x);
-           let %x_5 = mnm.op.atan(%x_4);
-           let %x_6 = mnm.op.add_event(int64(1));
-           let %x_7 = mnm.op.set_stream(int64(0), int64(3));
-           let %x_8 = mnm.op.atan(%x);
-           let %x_9 = mnm.op.atan(%x_8);
-           let %x_10 = mnm.op.atan(%x_9);
-           let %x_11 = mnm.op.add_event(int64(2));
-           let %x_12 = mnm.op.set_stream(int64(0), int64(0));
-           let %x_13 = mnm.op.wait_event(int64(0));
-           let %x_14 = mnm.op.wait_event(int64(1));
-           let %x_15 = mnm.op.wait_event(int64(2));
-           let %x_16 = mnm.op.add_event(int64(3));
-           let %x_17 = mnm.op.set_stream(int64(0), int64(1));
-           let %x_18 = mnm.op.wait_event(int64(3));
-           let %x_19 = mnm.op.atan(%x_5);
-           let %x_20 = mnm.op.add_event(int64(4));
-           let %x_21 = mnm.op.set_stream(int64(0), int64(2));
-           let %x_22 = mnm.op.wait_event(int64(3));
-           let %x_23 = mnm.op.atan(%x_5);
-           let %x_24 = mnm.op.add_event(int64(5));
-           let %x_25 = mnm.op.set_stream(int64(0), int64(0));
-           let %x_26 = mnm.op.wait_event(int64(4));
-           let %x_27 = mnm.op.wait_event(int64(5));
-           let %x_28 = mnm.op.add_event(int64(6));
-           let %x_29 = mnm.op.set_stream(int64(0), int64(1));
-           let %x_30 = mnm.op.wait_event(int64(6));
-           let %x_31 = (%x_19, %x_23);
-           let %x_32 = mnm.op.concatenate(%x_31, int64(0));
-           let %x_33 = (%x_1, %x_32, %x_10);
-           let %x_34 = mnm.op.concatenate(%x_33, int64(0));
-           %x_36
-         }
+        def @main(%x: Tensor[(2, 2), float32]) {
+          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_1 = mnm.op.atan(%x);
+          let %x_2 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_3 = mnm.op.atan(%x);
+          let %x_4 = mnm.op.atan(%x_3);
+          let %x_5 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_6 = mnm.op.atan(%x);
+          let %x_7 = mnm.op.atan(%x_6);
+          let %x_8 = mnm.op.atan(%x_7);
+          let %x_9 = mnm.op.stream_barrier();
+          let %x_10 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_11 = mnm.op.atan(%x_4);
+          let %x_12 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_13 = mnm.op.atan(%x_4);
+          let %x_14 = mnm.op.stream_barrier();
+          let %x_15 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_16 = (%x_11, %x_13);
+          let %x_17 = mnm.op.concatenate(%x_16, int64(0));
+          let %x_18 = (%x_1, %x_17, %x_8);
+          let %x_19 = mnm.op.concatenate(%x_18, int64(0));
+          %x_19
+        }
         """
         sb = ANFBuilder()
         x = extended_var("x", shape=input_shape)
-        x_0 = sb.set_stream(0, 1)
+        x_0 = sb.set_stream(0, 0)
         x_1 = sb.atan(x)
-        x_2 = sb.add_event(0)
-        x_3 = sb.set_stream(0, 2)
-        x_4 = sb.atan(x)
-        x_5 = sb.atan(x_4)
-        x_6 = sb.add_event(1)
-        x_7 = sb.set_stream(0, 3)
-        x_8 = sb.atan(x)
-        x_9 = sb.atan(x_8)
-        x_10 = sb.atan(x_9)
-        x_11 = sb.add_event(2)
-        x_12 = sb.set_stream(0, 0)
-        x_13 = sb.wait_event(0)
-        x_14 = sb.wait_event(1)
-        x_15 = sb.wait_event(2)
-        x_16 = sb.add_event(3)
-        x_17 = sb.set_stream(0, 1)
-        x_18 = sb.wait_event(3)
-        x_19 = sb.atan(x_5)
-        x_20 = sb.add_event(4)
-        x_21 = sb.set_stream(0, 2)
-        x_22 = sb.wait_event(3)
-        x_23 = sb.atan(x_5)
-        x_24 = sb.add_event(5)
-        x_25 = sb.set_stream(0, 0)
-        x_26 = sb.wait_event(4)
-        x_27 = sb.wait_event(5)
-        x_28 = sb.add_event(6)
-        x_29 = sb.set_stream(0, 1)
-        x_30 = sb.wait_event(6)
-        x_31 = sb.make_tuple([x_19, x_23])
-        x_32 = sb.concatenate(x_31, 0)
-        x_33 = sb.make_tuple([x_1, x_32, x_10])
-        x_34 = sb.concatenate(x_33, 0)
-        return tvm.relay.Function([x], sb.ret(x_34))
+        x_2 = sb.set_stream(0, 1)
+        x_3 = sb.atan(x)
+        x_4 = sb.atan(x_3)
+        x_5 = sb.set_stream(0, 2)
+        x_6 = sb.atan(x)
+        x_7 = sb.atan(x_6)
+        x_8 = sb.atan(x_7)
+        x_9 = sb.stream_barrier()
+        x_10 = sb.set_stream(0, 0)
+        x_11 = sb.atan(x_4)
+        x_12 = sb.set_stream(0, 1)
+        x_13 = sb.atan(x_4)
+        x_14 = sb.stream_barrier()
+        x_15 = sb.set_stream(0, 0)
+        x_16 = sb.make_tuple([x_11, x_13])
+        x_17 = sb.concatenate(x_16, 0)
+        x_18 = sb.make_tuple([x_1, x_17, x_8])
+        x_19 = sb.concatenate(x_18, 0)
+        return tvm.relay.Function([x], sb.ret(x_19))
 
     assert tvm.ir.structural_equal(mod['main'], expected())
 
@@ -300,104 +256,59 @@ def test_wavefront_schedule_stacked_blocks():
 
     def expected():
         """
-        fn (%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(1));
+        def @main(%x: Tensor[(2, 2), float32]) {
+          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
           let %x_1 = mnm.op.atan(%x);
-          let %x_2 = mnm.op.add_event(int64(0));
-          let %x_3 = mnm.op.set_stream(int64(0), int64(2));
-          let %x_4 = mnm.op.atan(%x);
-          let %x_5 = mnm.op.add_event(int64(1));
-          let %x_6 = mnm.op.set_stream(int64(0), int64(3));
-          let %x_7 = mnm.op.atan(%x);
-          let %x_8 = mnm.op.atan(%x_7);
-          let %x_9 = mnm.op.add_event(int64(2));
-          let %x_10 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_11 = mnm.op.wait_event(int64(0));
-          let %x_12 = mnm.op.wait_event(int64(1));
-          let %x_13 = mnm.op.wait_event(int64(2));
-          let %x_14 = mnm.op.add_event(int64(3));
-          let %x_15 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_16 = mnm.op.wait_event(int64(3));
-          let %x_17 = (%x_1, %x_4, %x_8);
-          let %x_18 = mnm.op.concatenate(%x_17, int64(0));
-          let %x_19 = mnm.op.add_event(int64(4));
+          let %x_2 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_3 = mnm.op.atan(%x);
+          let %x_4 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_5 = mnm.op.atan(%x);
+          let %x_6 = mnm.op.atan(%x_5);
+          let %x_7 = mnm.op.stream_barrier();
+          let %x_8 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_9 = (%x_1, %x_3, %x_6);
+          let %x_10 = mnm.op.concatenate(%x_9, int64(0));
+          let %x_11 = mnm.op.stream_barrier();
+          let %x_12 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_13 = mnm.op.atan(%x_10);
+          let %x_14 = mnm.op.set_stream(int64(0), int64(1));
+          let %x_15 = mnm.op.atan(%x_10);
+          let %x_16 = mnm.op.set_stream(int64(0), int64(2));
+          let %x_17 = mnm.op.atan(%x_10);
+          let %x_18 = mnm.op.atan(%x_17);
+          let %x_19 = mnm.op.stream_barrier();
           let %x_20 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_21 = mnm.op.wait_event(int64(4));
-          let %x_22 = mnm.op.add_event(int64(5));
-          let %x_23 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_24 = mnm.op.wait_event(int64(5));
-          let %x_25 = mnm.op.atan(%x_18);
-          let %x_26 = mnm.op.add_event(int64(6));
-          let %x_27 = mnm.op.set_stream(int64(0), int64(2));
-          let %x_28 = mnm.op.wait_event(int64(5));
-          let %x_29 = mnm.op.atan(%x_18);
-          let %x_30 = mnm.op.add_event(int64(7));
-          let %x_31 = mnm.op.set_stream(int64(0), int64(3));
-          let %x_32 = mnm.op.wait_event(int64(5));
-          let %x_33 = mnm.op.atan(%x_18);
-          let %x_34 = mnm.op.atan(%x_33);
-          let %x_35 = mnm.op.add_event(int64(8));
-          let %x_36 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_37 = mnm.op.wait_event(int64(6));
-          let %x_38 = mnm.op.wait_event(int64(7));
-          let %x_39 = mnm.op.wait_event(int64(8));
-          let %x_40 = mnm.op.add_event(int64(9));
-          let %x_41 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_42 = mnm.op.wait_event(int64(9));
-          let %x_43 = (%x_25, %x_29, %x_34);
-          let %x_44 = mnm.op.concatenate(%x_43, int64(0));
-          %x_44
+          let %x_21 = (%x_13, %x_15, %x_18);
+          let %x_22 = mnm.op.concatenate(%x_21, int64(0));
+          %x_22
         }
         """
         sb = ANFBuilder()
         x = extended_var("x", shape=input_shape)
-        x_0 = sb.set_stream(0, 1)
+        x_0 = sb.set_stream(0, 0)
         x_1 = sb.atan(x)
-        x_2 = sb.add_event(0)
-        x_3 = sb.set_stream(0, 2)
-        x_4 = sb.atan(x)
-        x_5 = sb.add_event(1)
-        x_6 = sb.set_stream(0, 3)
-        x_7 = sb.atan(x)
-        x_8 = sb.atan(x_7)
-        x_9 = sb.add_event(2)
-        x_10 = sb.set_stream(0, 0)
-        x_11 = sb.wait_event(0)
-        x_12 = sb.wait_event(1)
-        x_13 = sb.wait_event(2)
-        x_14 = sb.add_event(3)
-        x_15 = sb.set_stream(0, 1)
-        x_16 = sb.wait_event(3)
-        x_17 = sb.make_tuple([x_1, x_4, x_8])
-        x_18 = sb.concatenate(x_17, 0)
-        x_19 = sb.add_event(4)
+        x_2 = sb.set_stream(0, 1)
+        x_3 = sb.atan(x)
+        x_4 = sb.set_stream(0, 2)
+        x_5 = sb.atan(x)
+        x_6 = sb.atan(x_5)
+        x_7 = sb.stream_barrier()
+        x_8 = sb.set_stream(0, 0)
+        x_9 = sb.make_tuple([x_1, x_3, x_6])
+        x_10 = sb.concatenate(x_9, 0)
+        x_11 = sb.stream_barrier()
+        x_12 = sb.set_stream(0, 0)
+        x_13 = sb.atan(x_10)
+        x_14 = sb.set_stream(0, 1)
+        x_15 = sb.atan(x_10)
+        x_16 = sb.set_stream(0, 2)
+        x_17 = sb.atan(x_10)
+        x_18 = sb.atan(x_17)
+        x_19 = sb.stream_barrier()
         x_20 = sb.set_stream(0, 0)
-        x_21 = sb.wait_event(4)
-        x_22 = sb.add_event(5)
-        x_23 = sb.set_stream(0, 1)
-        x_24 = sb.wait_event(5)
-        x_25 = sb.atan(x_18)
-        x_26 = sb.add_event(6)
-        x_27 = sb.set_stream(0, 2)
-        x_28 = sb.wait_event(5)
-        x_29 = sb.atan(x_18)
-        x_30 = sb.add_event(7)
-        x_31 = sb.set_stream(0, 3)
-        x_32 = sb.wait_event(5)
-        x_33 = sb.atan(x_18)
-        x_34 = sb.atan(x_33)
-        x_35 = sb.add_event(8)
-        x_36 = sb.set_stream(0, 0)
-        x_37 = sb.wait_event(6)
-        x_38 = sb.wait_event(7)
-        x_39 = sb.wait_event(8)
-        x_40 = sb.add_event(9)
-        x_41 = sb.set_stream(0, 1)
-        x_42 = sb.wait_event(9)
-        x_43 = sb.make_tuple([x_25, x_29, x_34])
-        x_44 = sb.concatenate(x_43, 0)
-
-        return tvm.relay.Function([x], sb.ret(x_44))
+        x_21 = sb.make_tuple([x_13, x_15, x_18])
+        x_22 = sb.concatenate(x_21, 0)
+        return tvm.relay.Function([x], sb.ret(x_22))
 
     assert tvm.ir.structural_equal(mod['main'], expected())
 

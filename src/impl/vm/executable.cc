@@ -430,6 +430,10 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       fields.push_back(instr.cuda_event.event_id);
       break;
     }
+    case Opcode::CudaStreamBarrier: {
+      // Number of fields = 0
+      break;
+    }
     default:
       LOG(FATAL) << "Invalid opcode" << static_cast<int>(instr.op);
       break;
@@ -744,6 +748,11 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       // Number of fields = 1
       DCHECK_EQ(instr.fields.size(), 1U);
       return Instruction::CudaWaitEvent(instr.fields[0]);
+    }
+    case Opcode::CudaStreamBarrier: {
+      // Number of fields = 0
+      DCHECK(instr.fields.empty());
+      return Instruction::Fatal();
     }
     default:
       LOG(FATAL) << "Invalid opcode" << instr.opcode;

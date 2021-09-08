@@ -13,7 +13,8 @@ from mnm._ffi.ir.constant import ExtractValue
 STREAM_OPS = {
     "set_stream": tvm.ir.op.Op.get("mnm.op.set_stream"),
     "add_event": tvm.ir.op.Op.get("mnm.op.add_event"),
-    "wait_event": tvm.ir.op.Op.get("mnm.op.wait_event")
+    "wait_event": tvm.ir.op.Op.get("mnm.op.wait_event"),
+    "stream_barrier": tvm.ir.op.Op.get("mnm.op.stream_barrier")
 }
 
 
@@ -201,6 +202,7 @@ def build_dataflow_graph(nodes: List[Expr], var2value: Mapping[Var, Expr]):
 
 
 def build_control_graph(nodes: List[Expr]):
+    # pylint: disable=too-many-branches
     """
     Build the control graph.
 
@@ -226,6 +228,7 @@ def build_control_graph(nodes: List[Expr]):
 
     # Classify the nodes into corresponding stream_nodes. Record the the mapping from event_id to
     # add_event node.
+    previous_barrier = None
     for node in nodes:
         if isinstance(node, tvm.relay.Call):
             if node.op == STREAM_OPS["set_stream"]:
@@ -238,6 +241,15 @@ def build_control_graph(nodes: List[Expr]):
                 event_id = ExtractValue(node.args[0]).value
                 if event_id not in id2event:
                     raise ValueError(f"Event {event_id} used before add.")
+            elif node.op == STREAM_OPS["stream_barrier"]:
+                for stream_id in stream_nodes:
+                    if current_stream_id == stream_id:
+                        # avoid add barrier to this stream twice
+                        continue
+                    stream_nodes[stream_id].append(node)
+                previous_barrier = node
+        if current_stream_id not in stream_nodes and previous_barrier:
+            stream_nodes[current_stream_id].append(previous_barrier)
         stream_nodes[current_stream_id].append(node)
 
     # Create the control graph

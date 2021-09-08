@@ -33,7 +33,7 @@ class Event final {
    * \param flags The flags of the event. The flags depends on the underlying device. For cuda
    * device, refers to https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EVENT.html for
    * available flags.
-   * \return
+   * \return The created event.
    */
   static std::shared_ptr<Event> Create(const Device& dev, uint32_t flags = 0);
 

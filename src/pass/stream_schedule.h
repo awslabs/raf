@@ -12,8 +12,8 @@ namespace pass {
 namespace stream_schedule {
 
 /*!
- * The base class of all stream schedulers. A stream scheduler transforms an expr in GNF format to
- * scheduled expr in ANF format, injecting stream-related operators (set_stream, add_event, and
+ * The base class of all stream schedulers. A stream scheduler transforms an expr in GNF/BBNF format
+ * to scheduled expr in ANF format, injecting stream-related operators (set_stream, add_event, and
  * wait_event).
  */
 class StreamSchedulerBase : public ExprMutator {
@@ -81,6 +81,11 @@ class StreamSchedulerBase : public ExprMutator {
     Expr event_id_e = MakeConstant(value::ScalarValue::make(event_id));
     Array<Expr> args({event_id_e});
     return let_list_.Push(Call(op, args));
+  }
+
+  Expr AnnotateStreamBarrier() {
+    static Op op = Op::Get("mnm.op.stream_barrier");
+    return let_list_.Push(Call(op, {}));
   }
 
   LetList let_list_;

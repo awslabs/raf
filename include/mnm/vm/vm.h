@@ -126,10 +126,14 @@ class VMContextObj : public ValueObj {
   std::vector<Value> inputs;
   /*! \brief The pointer to the executable. */
   const Executable* exec;
-  /*! \brief The events used in runtime. */
+  /*! \brief The events used in add and wait event. */
   std::vector<std::vector<std::shared_ptr<Event>>> events;
+  /*! \brief The events used in stream barrier. */
+  std::vector<std::shared_ptr<Event>> barrier_events;
   /*! \brief The streams used in runtime. */
   std::vector<std::vector<std::shared_ptr<Stream>>> streams;
+  /*! \brief The index of the barrier event to use for next stream barrier. */
+  Index current_barrier_event_index{0};
   /*! \brief The index of current device id to launch kernels. */
   Index current_device_id{0};
   /*! \brief The index of current working stream into cuda_streams. 0 indicates default stream. */
@@ -355,6 +359,8 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
   virtual void HandleCudaAddEvent(VMContext& ctx, const Instruction& instr);
   /*! \brief Handle CudaWaitEvent instruction*/
   virtual void HandleCudaWaitEvent(VMContext& ctx, const Instruction& instr);
+  /*! \brief Handle CudaStreamBarrier instruction*/
+  virtual void HandleCudaStreamBarrier(VMContext& ctx, const Instruction& instr);
 
  protected:
   /*! \brief The virtual machine's packed function table. */

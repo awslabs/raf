@@ -122,7 +122,8 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) {
     static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> exclude_ops{
-        Op::Get("mnm.op.set_stream"), Op::Get("mnm.op.wait_event"), Op::Get("mnm.op.add_event")};
+        Op::Get("mnm.op.set_stream"), Op::Get("mnm.op.wait_event"), Op::Get("mnm.op.add_event"),
+        Op::Get("mnm.op.stream_barrier")};
     static auto vm_set_shape_op = Op::Get("mnm.op.vm.set_shape");
 
     const auto* op = node->op.as<OpNode>();

@@ -4,6 +4,7 @@ The visualizer utilities.
 # pylint: disable=too-many-arguments, too-many-instance-attributes, missing-function-docstring
 # pylint: disable=too-many-public-methods
 from collections import defaultdict
+import os
 import pydot
 import tvm
 from tvm import relay
@@ -17,24 +18,74 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
     """
 
     def __init__(self, expr, always_draw_exprs=None, graph_label="", draw_atomic_nodes=False,
-                 draw_event_nodes=False):
+                 draw_control_nodes=False):
+        """
+        Init the dataflow graph drawer
+
+        Parameters
+        ----------
+        expr : tvm.relay.Expr
+            The relay expression to draw.
+        always_draw_exprs : List[tvm.relay.Expr]
+            The set of relay expressions that we should always draw.
+        graph_label : str
+            The label of the graph, which would be drawn at the bottom of the image.
+        draw_atomic_nodes : bool
+            Whether to draw atomic nodes. All nodes except Call, Tuple, and TupleGetItem are atomic
+            nodes.
+        draw_control_nodes : bool
+            Whether to draw control nodes, including event nodes and barrier nodes.
+        """
         super().__init__()
+        # the expr to draw
         self.expr = expr
+        # the set of exprs that always should be drawn
         self.always_draw_exprs = always_draw_exprs if always_draw_exprs else []
+        # whether to draw atomic nodes
         self.draw_atomic_nodes = draw_atomic_nodes
-        self.draw_event_nodes = draw_event_nodes
+        # whether to draw control nodes
+        self.draw_control_nodes = draw_control_nodes
+        # the pydot graph object
         self.graph = pydot.Dot(graph_type='digraph', label=graph_label)
 
+        # stream-related members:
+        # mapping from event id to the expr captured by the event
         self.event_expr = {}
+        # the current stream id
         self.current_stream = 0
+        # mapping from stream id to the launched exprs
         self.stream_exprs = defaultdict(list)
+        # mapping from stream id to the events to wait for the next expr on that stream
         self.stream_wait_events = defaultdict(list)
+        # mapping from stream id to the barrier to wait for the next expr on that stream
+        self.stream_barrier = defaultdict(type(None))
+        # the previous global barrier, used to synchronize with new stream
+        self.previous_barrier = None
 
     def draw(self) -> pydot.Dot:
+        """
+        Draw the dataflow graph and saves it as a pydot Graph, which can be saved to image.
+
+        Returns
+        -------
+        graph : pydot.Dot
+            A pydot graph.
+        """
         self.visit(self.expr)
         return self.graph
 
     def need_draw(self, e):
+        """
+        Check whether to need to draw expression e.
+        Parameters
+        ----------
+        e : tvm.relay.Expr
+            The expression to check.
+        Returns
+        -------
+        ret : bool
+            Whether to draw.
+        """
         # Always draw some exprs
         if e in self.always_draw_exprs:
             return True
@@ -46,14 +97,53 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
 
     @staticmethod
     def is_atomic_expr(e):
+        """
+        Check the given expression is an atomic expression.
+        Parameters
+        ----------
+        e : tvm.relay.Expr
+            The given expression.
+
+        Returns
+        -------
+        ret : bool
+            Whether the given expression is an atomic expression.
+        """
         return not isinstance(e, (relay.Call, relay.Tuple, relay.TupleGetItem))
 
     @staticmethod
     def is_scalar_value(value):
+        """
+        Check the given meta value is a scalar value (i.e., IntValue, FloatValue, StringValue).
+        Parameters
+        ----------
+        value : mnm.value.Value
+            The given value.
+
+        Returns
+        -------
+        ret : bool
+            Whether the given value is a scalar value.
+        """
         return isinstance(value, (IntValue, FloatValue, StringValue))
 
     @staticmethod
     def get_fused_op_name(func):
+        """
+        Get the name of a fused function. The name contains the names of all sub-functions and
+        starts with 'fused_'.
+
+        Parameters
+        ----------
+        func : tvm.relay.Function
+            The fused function.
+
+        Returns
+        -------
+        ret : str
+            The name of the fused function.
+        """
+
         class FusedOpCalleeVisitor(tvm.relay.ExprVisitor):
             """
             Collect the callee names in the relay function.
@@ -79,7 +169,19 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         callee_names = FusedOpCalleeVisitor(func).get_callee_names()
         return 'fused_' + '_'.join(callee_names)
 
-    def add_node(self, e, label, event_node=False):
+    def add_node(self, e, label, control_node=False):
+        """
+        Add a node to the pydot graph, and add it to the operators of current stream.
+
+        Parameters
+        ----------
+        e : tvm.relay.Expr
+            The expression (node) to add.
+        label : str
+            The label for the node.
+        control_node : bool
+            Whether the node is a control node.
+        """
         if self.need_draw(e):
             node_style = {
                 'shape': 'box',
@@ -93,7 +195,7 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
             node_style['fillcolor'] = colors[self.current_stream % len(colors)]
             if e in self.always_draw_exprs:
                 node_style['fillcolor'] = 'white'
-            if event_node:
+            if control_node:
                 node_style['shape'] = 'diamond'
                 node_style['fillcolor'] = 'white'
             node = pydot.Node(name=str(len(self.memo_map)), label=label, **node_style)
@@ -103,14 +205,39 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         else:
             self.memo_map[e] = None
 
-    def wait_events(self, e):
+    def wait_events_and_barrier(self, e):
+        """
+        Add control edges from the nodes that the current stream waits for to given node.
+
+        Parameters
+        ----------
+        e : tvm.relay.Expr
+            The relay expression (node).
+        """
+        # add the control edge derived from add_event/wait_event
         event_ids = self.stream_wait_events[self.current_stream]
-        if len(event_ids) > 0:
-            for event_id in event_ids:
-                self.add_edge(self.event_expr[event_id], e, control_edge=True)
-            self.stream_wait_events[self.current_stream].clear()
+        for event_id in event_ids:
+            self.add_edge(self.event_expr[event_id], e, control_edge=True)
+        self.stream_wait_events[self.current_stream].clear()
+
+        # add the control edge derived from stream_barrier
+        if self.stream_barrier[self.current_stream]:
+            self.add_edge(self.stream_barrier[self.current_stream], e, control_edge=True)
+            self.stream_barrier[self.current_stream] = None
 
     def add_edge(self, u_expr, v_expr, control_edge=False):
+        """
+        Add an edge from a node to another node to the pydot graph.
+
+        Parameters
+        ----------
+        u_expr : tvm.relay.Expr
+            The source node.
+        v_expr : tvm.relay.Expr
+            The dest node.
+        control_edge : bool
+            Whether this edge is a control edge. Control edges would be drawn in dashed lines.
+        """
         u_node = self.memo_map[u_expr]
         v_node = self.memo_map[v_expr]
         if u_node and v_node:
@@ -134,34 +261,48 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         return self.memo_map[let]
 
     def visit_call(self, call):
+        # pylint: disable=too-many-nested-blocks, too-many-branches
         op = call.op
 
         # deal with the schedule-related op specially
-        schedule_ops = ["mnm.op.set_stream", "mnm.op.add_event", "mnm.op.wait_event"]
+        schedule_ops = ["mnm.op.set_stream", "mnm.op.add_event", "mnm.op.wait_event",
+                        "mnm.op.stream_barrier"]
         if isinstance(op, tvm.ir.Op) and op.name in schedule_ops:
             if op.name == "mnm.op.set_stream":
                 self.current_stream = ExtractValue(call.args[1]).value
+                if self.current_stream not in self.stream_exprs and self.previous_barrier:
+                    self.stream_barrier[self.current_stream] = self.previous_barrier
                 self.memo_map[call] = None
             else:
-                if self.draw_event_nodes:
-                    event_id = ExtractValue(call.args[0]).value
-                    if op.name == "mnm.op.add_event":
-                        self.add_node(call, f"Event({event_id})", event_node=True)
-                        if len(self.stream_exprs[self.current_stream]) > 1:
-                            prev_expr = self.stream_exprs[self.current_stream][-2]
-                            self.add_edge(prev_expr, call, control_edge=True)
-                        self.wait_events(call)
-                        self.event_expr[event_id] = call
-                    elif op.name == "mnm.op.wait_event":
-                        self.stream_wait_events[self.current_stream].append(event_id)
-                        self.memo_map[call] = None
+                if self.draw_control_nodes:
+                    if op.name == "mnm.op.stream_barrier":
+                        self.add_node(call, 'Barrier', True)
+                        self.stream_exprs[self.current_stream].pop()
+                        for stream_id in self.stream_exprs:
+                            if len(self.stream_exprs[stream_id]) > 0:
+                                self.add_edge(self.stream_exprs[stream_id][-1], call,
+                                              control_edge=True)
+                            self.stream_barrier[stream_id] = call
+                        self.previous_barrier = call
+                    else:
+                        event_id = ExtractValue(call.args[0]).value
+                        if op.name == "mnm.op.add_event":
+                            self.add_node(call, f"Event({event_id})", control_node=True)
+                            if len(self.stream_exprs[self.current_stream]) > 1:
+                                prev_expr = self.stream_exprs[self.current_stream][-2]
+                                self.add_edge(prev_expr, call, control_edge=True)
+                            self.wait_events_and_barrier(call)
+                            self.event_expr[event_id] = call
+                        elif op.name == "mnm.op.wait_event":
+                            self.stream_wait_events[self.current_stream].append(event_id)
+                            self.memo_map[call] = None
         else:
             self.visit(op)
             if isinstance(op, tvm.ir.Op):
                 self.add_node(call, f'Call({op.name.split(".")[-1]})')
             else:
                 self.add_node(call, f'Call({self.get_fused_op_name(op)})')
-            self.wait_events(call)
+            self.wait_events_and_barrier(call)
             self.add_edge(op, call)
             for arg in call.args:
                 self.visit(arg)
@@ -175,7 +316,7 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
 
     def visit_tuple(self, tup):
         self.add_node(tup, "Tuple")
-        self.wait_events(tup)
+        self.wait_events_and_barrier(tup)
         for field in tup.fields:
             self.visit(field)
             self.add_edge(field, tup)
@@ -183,7 +324,7 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
 
     def visit_tuple_getitem(self, tup_item):
         self.add_node(tup_item, f"TupleGetItem({tup_item.index})")
-        self.wait_events(tup_item)
+        self.wait_events_and_barrier(tup_item)
         self.visit(tup_item.tuple_value)
         self.add_edge(tup_item.tuple_value, tup_item)
         return self.memo_map[tup_item]
@@ -234,7 +375,7 @@ def draw_dataflow_graph(mod_or_func_or_expr,
                         graph_label='Dataflow Graph',
                         num_inputs=1,
                         draw_atomic_nodes=False,
-                        draw_event_nodes=False):
+                        draw_control_nodes=False):
     """
     Draw the dataflow graph of given module, relay function or expression. When a module is given,
     the 'main' function is drawn. The input expr or function can be either GNF, BBNF, or ANF. If
@@ -262,8 +403,8 @@ def draw_dataflow_graph(mod_or_func_or_expr,
         Whether to draw the atomic nodes. We take all expressions other than Call, Tuple and
         TupleGetItem as atomic nodes. Default: False.
 
-    draw_event_nodes : bool
-        Whether to draw the event node and control dependency. All data dependency are drawn in
+    draw_control_nodes : bool
+        Whether to draw the control node and control dependency. All data dependency are drawn in
         solid line and the control dependency are drawn in dashed line. Default: False.
     """
     if isinstance(mod_or_func_or_expr, tvm.ir.IRModule):
@@ -283,6 +424,9 @@ def draw_dataflow_graph(mod_or_func_or_expr,
                                  always_draw_exprs=always_draw_exprs,
                                  graph_label=graph_label,
                                  draw_atomic_nodes=draw_atomic_nodes,
-                                 draw_event_nodes=draw_event_nodes)
+                                 draw_control_nodes=draw_control_nodes)
     dgraph = drawer.draw()
+    dirname = os.path.dirname(out_file_name)
+    if dirname != "":
+        os.makedirs(dirname, exist_ok=True)
     dgraph.write(out_file_name, format='png')

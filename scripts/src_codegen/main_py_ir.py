@@ -31,7 +31,7 @@ __all__ = [
 
 def gen_method(op):
     METHOD = """
-def {FUNC_NAME}({PARAMS_W_DEFAULT}, attrs=None):
+def {FUNC_NAME}({PARAMS_W_DEFAULT}{SEP}attrs=None):
     op = GetOp(\"mnm.op.{OP_NAME}\")
 {NORMS}
     return relay.Call(op, [{PARAMS_WO_DEFAULT}], attrs)
@@ -43,6 +43,7 @@ def {FUNC_NAME}({PARAMS_W_DEFAULT}, attrs=None):
                          OP_NAME=op.name,
                          NORMS=norms,
                          PARAMS_W_DEFAULT=param_w,
+                         SEP=", " if len(param_w) != 0 else "",
                          PARAMS_WO_DEFAULT=param_wo)
 
 

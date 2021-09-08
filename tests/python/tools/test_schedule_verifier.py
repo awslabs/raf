@@ -36,6 +36,9 @@ class ANFBuilder:
     def wait_event(self, event_id: int) -> tvm.relay.Var:
         return self.call("wait_event", [mnm.ir.const(event_id)])
 
+    def stream_barrier(self) -> tvm.relay.Var:
+        return self.call("stream_barrier", [])
+
     def atan(self, x: tvm.ir.RelayExpr) -> tvm.relay.Var:
         return self.call("atan", [x])
 
@@ -48,7 +51,7 @@ class ANFBuilder:
 
 
 @pytest.mark.parametrize("removed_events", [[], [0], [1], [0, 1]])
-def test_simple_branches(removed_events):
+def test_simple_branches_event(removed_events):
     def scheduled_func():
         sb = ANFBuilder()
         x = extended_var("x", shape=[2, 2])
@@ -84,7 +87,7 @@ def test_simple_branches(removed_events):
 
 
 @pytest.mark.parametrize("removed_events", [[], [0], [1], [2], [3], [4], [0, 1, 2, 3, 4]])
-def test_stacked_blocks(removed_events):
+def test_stacked_blocks_event(removed_events):
     def scheduled_func():
         sb = ANFBuilder()
         x = extended_var("x", shape=[2, 2])
@@ -134,6 +137,95 @@ def test_stacked_blocks(removed_events):
     # draw_dataflow_graph(func, f"./graphs/stacked_blocks_remove_events_{removed_events}.png",
     #                     draw_event_nodes=True)
     if len(removed_events) > 0:
+        with pytest.raises(ExecutionOrderError):
+            verify_schedule(func)
+    else:
+        verify_schedule(func)
+
+
+@pytest.mark.parametrize("removed_barriers", [[], [0]])
+def test_simple_branches_barrier(removed_barriers):
+    def scheduled_func():
+        sb = ANFBuilder()
+        x = extended_var("x", shape=[2, 2])
+        x_0 = sb.set_stream(0, 2)
+        x_1 = sb.atan(x)
+        x_2 = sb.atan(x_1)
+        x_3 = sb.atan(x_2)
+        x_4 = sb.set_stream(0, 1)
+        x_5 = sb.atan(x)
+        x_6 = sb.atan(x_5)
+        x_7 = sb.set_stream(0, 0)
+        x_8 = sb.atan(x)
+        if 0 not in removed_barriers:
+            x_9 = sb.stream_barrier()
+        x_10 = sb.make_tuple([x_8, x_6, x_3])
+        x_11 = sb.concatenate(x_10, 0)
+        return tvm.relay.Function([x], sb.ret(x_11))
+
+    func = scheduled_func()
+    if len(removed_barriers) > 0:
+        with pytest.raises(ExecutionOrderError):
+            verify_schedule(func)
+    else:
+        verify_schedule(func)
+
+
+@pytest.mark.parametrize("removed_barriers", [[], [0], [1], [2], [0, 1, 2]])
+def test_stacked_blocks_barrier(removed_barriers):
+    def scheduled_func():
+        sb = ANFBuilder()
+        x = extended_var("x", shape=[2, 2])
+        x_0 = sb.set_stream(0, 2)
+        x_1 = sb.atan(x)
+        x_2 = sb.atan(x_1)
+        x_3 = sb.set_stream(0, 1)
+        x_4 = sb.atan(x)
+        x_5 = sb.set_stream(0, 0)
+        x_6 = sb.atan(x)
+        if 0 not in removed_barriers:
+            x_7 = sb.stream_barrier()
+        x_8 = sb.make_tuple([x_6, x_4, x_2])
+        x_9 = sb.concatenate(x_8, 0)
+        if 1 not in removed_barriers:
+            x_10 = sb.stream_barrier()
+        x_11 = sb.set_stream(0, 2)
+        x_12 = sb.atan(x_9)
+        x_13 = sb.atan(x_12)
+        x_14 = sb.set_stream(0, 1)
+        x_15 = sb.atan(x_9)
+        x_16 = sb.set_stream(0, 0)
+        x_17 = sb.atan(x_9)
+        if 2 not in removed_barriers:
+            x_18 = sb.stream_barrier()
+        x_19 = sb.make_tuple([x_17, x_15, x_13])
+        x_20 = sb.concatenate(x_19, 0)
+        return tvm.relay.Function([x], sb.ret(x_20))
+
+    func = scheduled_func()
+    if len(removed_barriers) > 0:
+        with pytest.raises(ExecutionOrderError):
+            verify_schedule(func)
+    else:
+        verify_schedule(func)
+
+
+@pytest.mark.parametrize("removed_barriers", [[], [0]])
+def test_chain_to_another_chain_barrier(removed_barriers):
+    def scheduled_func():
+        sb = ANFBuilder()
+        x = extended_var("x", shape=[2, 2])
+        x_0 = sb.set_stream(0, 0)
+        x_1 = sb.atan(x)
+        x_2 = sb.atan(x_1)
+        if 0 not in removed_barriers:
+            x_3 = sb.stream_barrier()
+        x_4 = sb.set_stream(0, 1)
+        x_5 = sb.atan(x_2)
+        return tvm.relay.Function([x], sb.ret(x_5))
+
+    func = scheduled_func()
+    if len(removed_barriers) > 0:
         with pytest.raises(ExecutionOrderError):
             verify_schedule(func)
     else:

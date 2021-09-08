@@ -200,6 +200,7 @@ static const char sqrt[] = "mnm.op.sqrt";
 static const char sqrt_dx[] = "mnm.op.sqrt_dx";
 static const char squeeze[] = "mnm.op.squeeze";
 static const char stack[] = "mnm.op.stack";
+static const char stream_barrier[] = "mnm.op.stream_barrier";
 static const char stream_sync[] = "mnm.op.stream_sync";
 static const char strided_slice[] = "mnm.op.strided_slice";
 static const char strided_slice_dx[] = "mnm.op.strided_slice_dx";
@@ -1025,6 +1026,12 @@ Attrs Stream(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::StreamArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, stream_tag);
+  return Attrs(attrs);
+}
+
+Attrs StreamBarrier(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::StreamBarrierArgs, 0);  // NOLINT(whitespace/line_length)
+
   return Attrs(attrs);
 }
 
@@ -2825,6 +2832,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.stack").set_body([](TVMArgs args, TVMRetValue* r
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.stream_barrier").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(stream_barrier, 0, ffi2schema::StreamBarrier,
+              schema::StreamBarrierArgs);  // NOLINT(whitespace/line_length)
+
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.stream_sync").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(stream_sync, 2, ffi2schema::Stream,
               schema::StreamArgs);  // NOLINT(whitespace/line_length)
@@ -3913,6 +3928,12 @@ Array<Expr> Stream(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> StreamBarrier(const TVMArgs& values) {
+  MNM_PRELUDE(0);
+
+  MNM_RET();
+}
+
 Array<Expr> StridedSlice(const TVMArgs& values) {
   MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4323,6 +4344,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt").set_body(MNM_SYMBOLIC_API(sqrt, 1, Unary)
 MNM_REGISTER_GLOBAL("mnm.op.sym.sqrt_dx").set_body(MNM_SYMBOLIC_API(sqrt_dx, 3, UnaryDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.squeeze").set_body(MNM_SYMBOLIC_API(squeeze, 2, Squeeze));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stack").set_body(MNM_SYMBOLIC_API(stack, 2, Stack));
+MNM_REGISTER_GLOBAL("mnm.op.sym.stream_barrier")
+    .set_body(MNM_SYMBOLIC_API(stream_barrier, 0, StreamBarrier));
 MNM_REGISTER_GLOBAL("mnm.op.sym.stream_sync").set_body(MNM_SYMBOLIC_API(stream_sync, 2, Stream));
 MNM_REGISTER_GLOBAL("mnm.op.sym.strided_slice")
     .set_body(MNM_SYMBOLIC_API(strided_slice, 5, StridedSlice));
@@ -5262,6 +5285,13 @@ Attrs Stream(const Array<Value>& values) {
   MNM_PRELUDE(1, 2, schema::StreamArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_OPTIONAL(1, value2schema::Int, stream_tag);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs StreamBarrier(const Array<Value>& values) {
+  MNM_PRELUDE(0, 0, schema::StreamBarrierArgs);
+
   return Attrs(attrs);
 }
 
@@ -7000,6 +7030,12 @@ int Stream(const std::string& field) {
 }
 
 template <const char* op_name>
+int StreamBarrier(const std::string& field) {
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int StridedSlice(const std::string& field) {
   if (field == "x") {
     return 0;
@@ -7979,6 +8015,10 @@ MNM_BIND_SCHEMA("mnm.op.stack", names::stack,
                 value2schema::Stack);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stack", names::stack,
                             schema_field_idx::Stack);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.stream_barrier", names::stream_barrier,
+                value2schema::StreamBarrier);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_barrier", names::stream_barrier,
+                            schema_field_idx::StreamBarrier);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.stream_sync", names::stream_sync,
                 value2schema::Stream);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.stream_sync", names::stream_sync,
@@ -8197,6 +8237,7 @@ MNM_REGISTER_OBJECT_REFLECT(SplitArgs);
 MNM_REGISTER_OBJECT_REFLECT(SqueezeArgs);
 MNM_REGISTER_OBJECT_REFLECT(StackArgs);
 MNM_REGISTER_OBJECT_REFLECT(StreamArgs);
+MNM_REGISTER_OBJECT_REFLECT(StreamBarrierArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceArgs);
 MNM_REGISTER_OBJECT_REFLECT(StridedSliceDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(SumArgs);

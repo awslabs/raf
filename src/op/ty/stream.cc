@@ -30,6 +30,7 @@ Type StreamInfer(const CallValues& value) {
 MNM_OP_TYPE("mnm.op.set_stream", "StreamSwitch", StreamEventInfer);
 MNM_OP_TYPE("mnm.op.add_event", "EventAdd", StreamEventInfer);
 MNM_OP_TYPE("mnm.op.wait_event", "EventWait", StreamEventInfer);
+MNM_OP_TYPE("mnm.op.stream_barrier", "StreamBarrier", StreamEventInfer);
 MNM_OP_TYPE("mnm.op.stream_sync", "StreamSync", StreamInfer);
 
 }  // namespace op

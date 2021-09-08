@@ -63,7 +63,7 @@ class DeviceAPI {
   /*!
    * Create a stream on given device.
    * \param dev The device to create the stream.
-   * \return
+   * \return The created stream.
    */
   virtual void* CreateStream(const Device& dev) = 0;
 
@@ -80,7 +80,7 @@ class DeviceAPI {
    * \param flags The flags of the event. The value depends on the underlying device. For cuda
    * device, refers to https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EVENT.html for
    * the available flags.
-   * \return
+   * \return The created event.
    */
   virtual void* CreateEvent(const Device& dev, uint32_t flags = 0) = 0;
 

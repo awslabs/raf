@@ -43,6 +43,15 @@ MNM_OP_DECLARE("mnm.op.wait_event",
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TMNMSideEffect>("TMNMSideEffect", true);
 
+MNM_OP_DECLARE("mnm.op.stream_barrier",
+               [](const CallValues& call) {
+                 const auto* args = call->args.as<StreamBarrierArgs>();
+                 CHECK(args != nullptr);
+                 call->callee = ir::NullValue<OpValue>();
+               })
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMSideEffect>("TMNMSideEffect", true);
+
 MNM_OP_DECLARE("mnm.op.stream_sync", [](const CallValues& call) {
   const auto* args = call->args.as<StreamArgs>();
   CHECK(args != nullptr);
