@@ -6,8 +6,9 @@ from operator import attrgetter
 import pytest
 import numpy as np
 import mnm
+import tvm
 from mnm.frontend import FrameworkModel
-from mnm.ir import AsText
+from mnm.ir import AsText, ScopeBuilder
 from mnm.testing import get_device_list, randint, randn, check, utils, randn_torch
 from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import IRModule
@@ -15,12 +16,18 @@ from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
 
-def check_from_relay(m_model, r_func, args, check_model_structure=True,
+def check_from_relay(model_or_mod, r_func, args, check_model_structure=True,
                      check_correctness=True, device="cpu", disabled_pass=None):
-    m_mod = m_model._internal(*args).mod
-    m_func = m_mod["main"]
+    if isinstance(model_or_mod, tvm.IRModule):
+        m_mod = model_or_mod
+        m_model = FrameworkModel(model_or_mod, model_or_mod, {}, {})
+    else:
+        m_mod = model_or_mod._internal(*args).mod
+        m_model = model_or_mod
+
     ref_outs = m_model(*args)
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
+    m_func = m_mod["main"]
 
     try:
         r_mod = _tvm.IRModule()
@@ -1042,16 +1049,23 @@ def test_embedding_pattern():
     data_shape = (32, 128)
     indices_shape = (512, 768)
 
-    class TestModel(mnm.Model):
-        def build(self):
-            pass
+    def get_mod():
+        x = mnm.ir.var("x", shape=data_shape)
+        indices = mnm.ir.var("i", shape=indices_shape, dtype="int64")
+        indices2 = mnm.ir.var("i2", shape=(), dtype="int64")
 
-        @mnm.model.trace
-        def forward(self, data, indices, indices2):
-            x = mnm.embedding(data, indices)
-            return mnm.take(x, indices2, axis=1, mode="wrap")
+        sb = ScopeBuilder()
+        a_1 = sb.let("a1", mnm.ir.op.embedding(x, indices))
+        ones = np.ones(shape=indices_shape, dtype="int32")
+        a_2 = sb.let("a2", mnm.ir.op.embedding(x, mnm.ir.const(ones)))
+        a_3 = sb.let("a3", mnm.ir.op.add(a_1, a_2))
+        a_4 = sb.let("a4", mnm.ir.op.take(a_3, indices2, axis=1, mode="wrap"))
+        a_5 = sb.let("a5", _relay.Tuple([a_3, a_4]))
+        sb.ret(a_5)
+        func = _relay.Function([x, indices, indices2], sb.get())
+        return tvm.IRModule.from_expr(func)
 
-    model = TestModel()
+
     m_x, _ = randn_torch(data_shape)
     m_i, _ = randint(indices_shape, high=10000)
     m_i2 = mnm.array(0, dtype="int64")
@@ -1060,11 +1074,17 @@ def test_embedding_pattern():
     r_i = _relay.var("i", shape=indices_shape, dtype="int64")
     r_i2 = _relay.var("i2", shape=(), dtype="int64")
     out = _relay.cast(r_i, "int32")
-    out = _relay.take(r_x, out) # Should be converted to embedding along with the cast.
-    out = _relay.take(out, r_i2, axis=1, mode="wrap") # Should be just take.
+    out1 = _relay.take(r_x, out) # Should be converted to embedding along with the cast.
+
+    ones = np.ones(shape=indices_shape, dtype="int32")
+    out2 = _relay.take(r_x, _relay.const(ones)) # Should be converted to embedding.
+    out = _relay.add(out1, out2)
+
+    out3 = _relay.take(out, r_i2, axis=1, mode="wrap") # Should be just take.
+    out = _relay.Tuple([out, out3])
     r_func = _relay.Function(params=[r_x, r_i, r_i2], body=out)
 
-    check_from_relay(model, r_func, [m_x, m_i, m_i2])
+    check_from_relay(get_mod(), r_func, [m_x, m_i, m_i2])
 
 
 @pytest.mark.parametrize("shape", [(4, 3, 4, 5)])

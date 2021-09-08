@@ -60,44 +60,49 @@ inline Expr GenCastCall(Expr expr, DataType dtype) {
   static const Op& op = Op::Get("mnm.op.cast");
   const auto old_type = Downcast<TensorType>(expr->checked_type());
   std::string target_dtype;
-  if (dtype.is_float16()) {
-    target_dtype = "float16";
-  } else {
-    target_dtype = "float32";
+  switch (dtype.code()) {
+    case DataType::kFloat:
+      target_dtype = "float";
+      break;
+    case DataType::kUInt:
+      target_dtype = "uint";
+      break;
+    case DataType::kInt:
+      target_dtype = "int";
+      break;
+    default:
+      LOG(FATAL) << "Unsupported dtype: " << dtype;
   }
+  target_dtype += std::to_string(dtype.bits());
   auto cast_call = Call(op, {expr, MakeConstant(StringValue::make(target_dtype))}, {});
   DataType new_dtype = DataType(String2DLDataType(target_dtype));
   cast_call->checked_type_ = TensorType(old_type->shape, new_dtype);
   return cast_call;
 }
 
-/*! \brief Update ori_type's dtype based on the given type hint.
- * This is used to avoid the overhead of running InferType after mutating every single node.
- * However, if the type hint does not match the actual op output type, it will result in
- * type error of the output IR after this pass. In the future, we should let InferType
- * provide a lightweight utility to only infer the expression type in a limited depth.
- */
-Type UpdateDTypeByHint(const Type ori_type, const TypeHint target_type, std::string msg_str) {
-  if (IsDontTouchTypeHint(target_type)) {
-    return ori_type;
-  } else if (ori_type->IsInstance<TupleTypeNode>()) {
-    auto old_tuple_type = Downcast<TupleType>(ori_type);
-    auto target_tuple_type_fields = AsTupleType(target_type, msg_str)->fields;
-    CHECK_EQ(target_tuple_type_fields.size(), old_tuple_type->fields.size());
+/*! \brief Infer the return type of the given call. */
+Type InferRetType(const Call& call) {
+  static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+  auto op_node = call->op.as<OpNode>();
+  CHECK(op_node != nullptr) << "Not support closure or global function yet";
 
-    Array<Type> new_field_types;
-    for (size_t i = 0; i < old_tuple_type->fields.size(); ++i) {
-      auto field_type = old_tuple_type->fields[i];
-      new_field_types.push_back(
-          UpdateDTypeByHint(field_type, target_tuple_type_fields[i], msg_str));
-    }
-    return TupleType(new_field_types);
+  // Generate call values.
+  CallValues call_values = CallValues::make();
+
+  // Make argument values.
+  Array<Value> arg_values;
+  for (const auto& arg : call->args) {
+    arg_values.push_back(GetValue(arg));
   }
 
-  CHECK(ori_type->IsInstance<TensorTypeNode>())
-      << "Expected tensor type node, but got " << ori_type->GetTypeKey();
-  auto old_type = Downcast<TensorType>(ori_type);
-  return TensorType(old_type->shape, AsPrimType(target_type, msg_str)->dtype);
+  call_values->args = fschema[GetRef<Op>(op_node)](arg_values);
+  call_values->callee = OpValue::make(GetRef<Op>(op_node));
+
+  static const auto op_type = Op::GetAttrMap<OpType>("OpType");
+  auto fty = Downcast<FuncType>(op_type[Downcast<Op>(call->op)]);
+  CHECK_EQ(fty->type_constraints.size(), 1);
+  TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
+  return ti->func(call_values);
 }
 
 inline HashKey TypeHintHash(TypeHint type_hint) {
@@ -170,11 +175,46 @@ class AutoCastMutator : public ExprMutator {
     auto scope = scopes_.back().get();
     Expr body;
     do {
+      curr_let_ = node->var;
       auto new_value = VisitExpr(node->value);
-      node->var->checked_type_ = new_value->checked_type();
-      scope->Push(node->var, new_value);
-      let_vars_to_orig_type_.emplace(node->var, node->value->checked_type());
-      let_vars_.emplace(node->var, new_value);
+      auto new_type = new_value->checked_type();
+
+      // If the binding var shares with another var, then its type must align to the shared var.
+      // For example, the original IR:
+      //  fn (%x: Tensor[(10, 10), float32], %w: Tensor[(10, 10), float32]) {
+      //    let %a = matmul(%x, %w); /* Tensor[(10, 10), float32]*/
+      //    let %b(share: %x) = %a;
+      //    %b;
+      //  };
+      // becomes:
+      //  fn (%x: Tensor[(10, 10), float32], %w: Tensor[(10, 10), float32]) {
+      //    let %x_0 = cast(%x, "float16");
+      //    let %x_1 = cast(%w, "float16");
+      //    let %a = matmul(%x_0, %x_1); /* Tensor[(10, 10), float16]*/
+      //    let %x_2 = %a;
+      //    let %x_3 = cast(%x_2, "float32");
+      //    let %b(share: %x) = %x_3;
+      //    %b;
+      //  };
+      auto extended_var = curr_let_.as<ExtendedVarNode>();
+      if (extended_var->may_share.defined()) {
+        auto target_type = extended_var->may_share->checked_type().as<TensorTypeNode>();
+        auto curr_type = new_type.as<TensorTypeNode>();
+        CHECK(target_type != nullptr && curr_type != nullptr);
+        if (target_type->dtype != curr_type->dtype) {
+          auto uncast_var = scope->Push(new_value);
+          uncast_var->checked_type_ = new_type;
+          new_type = GetRef<TensorType>(target_type);
+          new_value = scope->Push(GenCastCall(uncast_var, target_type->dtype));
+          new_value->checked_type_ = new_type;
+        }
+      }
+
+      curr_let_->checked_type_ = new_type;
+      scope->Push(curr_let_, new_value);
+      let_vars_to_orig_type_.emplace(curr_let_, node->value->checked_type());
+      let_vars_.emplace(curr_let_, new_value);
+
       body = node->body;
       node = body.as<LetNode>();
     } while (node);
@@ -190,19 +230,58 @@ class AutoCastMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) {
+    static const Op& cast_op = Op::Get("mnm.op.cast");
     static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
-    TypeHints type_hints = GenTypeHints(node->args, node->checked_type(), amp_dtype_, node->op);
 
-    Array<Expr> call_args;
+    // If the argument is a cast, then we use the uncasted one to generate the type hints,
+    // so that the infer cast ops can follow the uncasted argument and minimize the cast op.
+    Array<Expr> uncasted_call_args;
+    for (size_t i = 0; i < node->args.size(); ++i) {
+      auto arg_var = node->args[i].as<VarNode>();
+      if (arg_var != nullptr && let_vars_.count(GetRef<Var>(arg_var)) > 0) {
+        auto arg_call = let_vars_[GetRef<Var>(arg_var)].as<CallNode>();
+        if (arg_call && arg_call->op->IsInstance<OpNode>()) {
+          auto arg_op = arg_call->op.as<OpNode>();
+          if (GetRef<Op>(arg_op) == cast_op) {
+            uncasted_call_args.push_back(arg_call->args[0]);
+            continue;
+          }
+        }
+      }
+      uncasted_call_args.push_back(node->args[i]);
+    }
+    TypeHints type_hints =
+        GenTypeHints(uncasted_call_args, node->checked_type(), amp_dtype_, node->op);
+
     auto op = Downcast<Op>(node->op);
-    CHECK_EQ(type_hints.size(), node->args.size() + 1)
+    CHECK_EQ(type_hints.size(), node->args.size())
         << "Type hint number and argument size of " << op->name << " are mismatching";
+
+    // Special process for existing cast ops.
+    if (op == cast_op) {
+      auto in_type = node->args[0]->checked_type().as<TensorTypeNode>();
+      auto ret_type = node->checked_type().as<TensorTypeNode>();
+      CHECK(node->args[0]->IsInstance<VarNode>() && in_type != nullptr && ret_type != nullptr);
+
+      // This case op is not required anymore because its argument already produces the AMP dtype.
+      if (in_type->dtype == ret_type->dtype) {
+        return node->args[0];
+      }
+
+      // Add the cast op to the reversed cache to avoid generating back-to-back cast ops.
+      auto pair_key = std::make_pair(curr_let_, PrimType(in_type->dtype));
+      reversed_cast_cache_[pair_key] = Downcast<Var>(node->args[0]);
+      auto new_call = Call(op, node->args, node->attrs, node->type_args);
+      new_call->checked_type_ = node->checked_type();
+      return new_call;
+    }
 
     // If the fusion pattern of this op is elementwise or broadcast, we disable the cache
     // to make sure they their argument cast op will not be reused and can fused together.
     // TODO(comaniac): Let the recompute or fusion pass work on this.
     bool use_cache = fpattern[op] > kInjective;
 
+    Array<Expr> call_args;
     for (size_t i = 0; i < node->args.size(); ++i) {
       UpdateCurrExprStr(op->name, i);
       call_args.push_back(CastExpr(VisitExpr(node->args[i]), type_hints[i], use_cache));
@@ -210,8 +289,7 @@ class AutoCastMutator : public ExprMutator {
 
     auto new_call = Call(op, call_args, node->attrs, node->type_args);
     UpdateCurrExprStr(op->name, -1);
-    new_call->checked_type_ =
-        UpdateDTypeByHint(node->checked_type(), type_hints.back(), curr_call_n_arg_str_);
+    new_call->checked_type_ = InferRetType(new_call);
 
     UpdateCurrExprStr("", 0);
     return new_call;
@@ -318,7 +396,7 @@ class AutoCastMutator : public ExprMutator {
   TypeHints GetDefaultTypeHint(const Array<Expr>& args, const Type& ret_type,
                                const DataType target_dtype) {
     TypeHints type_hints;
-    for (size_t i = 0; i < args.size() + 1; ++i) {
+    for (size_t i = 0; i < args.size(); ++i) {
       type_hints.push_back(GetDontTouchTypeHint());
     }
     return type_hints;
@@ -382,6 +460,7 @@ class AutoCastMutator : public ExprMutator {
         << tuple_type_hint->fields.size() << mnm::ir::AsText(tuple);
 
     Array<Expr> fields;
+    Array<Type> field_types;
     for (size_t i = 0; i < tuple->fields.size(); ++i) {
       auto field = tuple->fields[i];
       auto field_type = field->checked_type();
@@ -396,10 +475,10 @@ class AutoCastMutator : public ExprMutator {
       auto new_var = scope->Push(new_expr);
       new_var->checked_type_ = new_expr->checked_type_;
       fields.push_back(new_var);
+      field_types.push_back(new_var->checked_type_);
     }
     auto new_tuple = Tuple(fields);
-    new_tuple->checked_type_ =
-        UpdateDTypeByHint(tuple->checked_type(), tuple_type_hint, curr_call_n_arg_str_);
+    new_tuple->checked_type_ = TupleType(field_types);
     return new_tuple;
   }
 
@@ -440,6 +519,11 @@ class AutoCastMutator : public ExprMutator {
     }
 
     auto pair_key = std::make_pair(expr, type_hint);
+    if (reversed_cast_cache_.count(pair_key) > 0) {
+      // Directly use the uncasted expression if available when the expr is a cast call
+      // but we want an uncasted expression.
+      return reversed_cast_cache_[pair_key];
+    }
     if (ttype->dtype == target_dtype) {
       return expr;
     }
@@ -468,6 +552,10 @@ class AutoCastMutator : public ExprMutator {
   std::string curr_call_n_arg_str_ = "";
   /*! \brief Map from expr and type hint to the casted var. */
   CastCache cast_cache_;
+  /*! \brief Map from the casted var and type hint to the uncasted var. */
+  CastCache reversed_cast_cache_;
+  /*! \brief The current processing let-binding var. */
+  Var curr_let_;
   /*! \brief The mapping from let bound var to its expr. */
   std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> let_vars_;
   /*! \brief The mapping from let bound var to its original type. */
@@ -497,7 +585,7 @@ Pass AutoCast() {
     return Downcast<Function>(ret);
   };
   auto insert_cast = CreateMNMFunctionPass(pass_func, 0, "AutoCastFunc", {});
-  return MNMSequential({InferType(), insert_cast, InferType()}, "AutoCast");
+  return MNMSequential({InferType(), insert_cast, InferType(), DeadCodeElimination()}, "AutoCast");
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoCast").set_body_typed(AutoCast);

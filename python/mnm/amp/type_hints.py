@@ -2,7 +2,7 @@
 """Operator-specific type hints for automatic mixed precision.
 
 The type hint function for each operator should return a list of type hints,
-and the list size should be the same as the argument number plus one (i.e., output).
+and the list size should be the same as the argument number.
 Here are some type hint examples:
 
 - PrimType("float32"): The argument must be in float32.
@@ -59,6 +59,7 @@ def check_amp_dtype(ttype, amp_dtype):
     assert isinstance(ttype, tvm.ir.TensorType)
     return ttype.dtype == amp_dtype
 
+
 def generic_cast(cast_to_amp, input_num):
     """The generic cast function that generates AMP type hints for inputs, and generates
     don't touch type hints for rest arguments.
@@ -67,7 +68,6 @@ def generic_cast(cast_to_amp, input_num):
         ret = [gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype)
                for arg in args[:input_num]]
         ret += [PrimType(None) for _ in range(len(args) - input_num)]
-        ret += [gen_hint_helper(ret_type, cast_to_amp, amp_dtype)]
         return ret
 
     return _gen
@@ -111,10 +111,6 @@ register_op_cast_rule("mnm.op.cross_entropy", generic_cast(False, 2))
 register_op_cast_rule("mnm.op.cross_entropy_dpred", generic_cast(False, 2))
 register_op_cast_rule("mnm.op.cross_entropy_dtrue", generic_cast(False, 2))
 
-# embedding_dx has accuracy issue and its performance does not improve significantly
-# over float32, so never cast.
-register_op_cast_rule("mnm.op.embedding_dx", generic_cast(False, 2))
-
 # FIXME: These ops should support float16, but the current TVM code results in
 # either runtime error or mismatch outputs.
 register_op_cast_rule("mnm.op.atan", generic_cast(False, 1))
@@ -126,7 +122,6 @@ register_op_cast_rule("mnm.op.rsqrt", generic_cast(False, 1))
 # and expect they will be fused with the cast ops.
 register_op_cast_rule("mnm.op.multiply", generic_cast(False, 2))
 register_op_cast_rule("mnm.op.sum", generic_cast(False, 1))
-register_op_cast_rule("mnm.op.take_dx", generic_cast(False, 2))
 register_op_cast_rule("mnm.op.gather_dx", generic_cast(False, 4))
 register_op_cast_rule("mnm.op.gather_nd", generic_cast(False, 1))
 register_op_cast_rule("mnm.op.gather_nd_dx", generic_cast(False, 3))
@@ -148,7 +143,6 @@ def infer_cast(input_num):
         for arg in args[:input_num]:
             ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
         ret += [PrimType(None) for _ in range(len(args) - input_num)]
-        ret += [gen_hint_helper(ret_type, cast_to_amp, amp_dtype)]
         return ret
 
     return _gen
@@ -218,7 +212,6 @@ register_op_cast_rule("mnm.op.get_kept_dims", infer_cast(2))
 register_op_cast_rule("mnm.op.sgd", infer_cast(1))
 register_op_cast_rule("mnm.op.shape", infer_cast(1))
 register_op_cast_rule("mnm.op.swap_axis", infer_cast(1))
-register_op_cast_rule("mnm.op.take", infer_cast(1))
 register_op_cast_rule("mnm.op.repeat", infer_cast(1))
 register_op_cast_rule("mnm.op.repeat_dx", infer_cast(3))
 register_op_cast_rule("mnm.op.expand_dims", infer_cast(1))
@@ -246,8 +239,6 @@ register_op_cast_rule("mnm.op.non_max_suppression", infer_cast(1))
 register_op_cast_rule("mnm.op._allreduce", infer_cast(1))
 register_op_cast_rule("mnm.op._allgather", infer_cast(1))
 register_op_cast_rule("mnm.op._reduce_scatter", infer_cast(1))
-register_op_cast_rule("mnm.op.cast", infer_cast(1))
-register_op_cast_rule("mnm.op.cast_like", infer_cast(1))
 register_op_cast_rule("mnm.op.argsort", infer_cast(1))
 register_op_cast_rule("mnm.op.sort", infer_cast(1))
 register_op_cast_rule("mnm.op.full", infer_cast(0))
@@ -266,31 +257,47 @@ register_op_cast_rule("mnm.op.roi_align", infer_cast(2))
 register_op_cast_rule("mnm.op.roi_align_dx", infer_cast(2))
 register_op_cast_rule("mnm.op.layer_norm", infer_cast(3))
 register_op_cast_rule("mnm.op.layer_norm_dx", infer_cast(3))
-register_op_cast_rule("mnm.op.embedding", infer_cast(2))
 register_op_cast_rule("mnm.op.gather", infer_cast(1))
 register_op_cast_rule("mnm.op.divide", infer_cast(2))
 
 # Special cases.
+
+def op_cast_cast(args, ret_type, amp_dtype):
+    """For cast ops, we only need to put the correct return dtype to the type hint
+    so that another cast op will be generated if it does not match to the requirement of
+    the next op.
+    """
+    return [PrimType(None), PrimType(None)]
+
+register_op_cast_rule("mnm.op.cast", op_cast_cast)
+register_op_cast_rule("mnm.op.cast_like", op_cast_cast)
 
 def op_cast_binary_ufunc(args, ret_type, amp_dtype):
     """The 3rd and 4th arguments of binary ufunc scheme are out and where, which may be
     nullptr that cannot be casted. On the other hand, if they are not nullptr (constant node),
     then we need to treat them as the first two arguments.
     """
-    cast_to_amp = not isinstance(ret_type, tvm.ir.TupleType) and ret_type.dtype == "float32"
+    assert isinstance(ret_type, tvm.ir.TensorType), \
+        "Op with binary_ufunc schema should not return a tuple"
+    ret_dtype = ret_type.dtype
+    cast_to_amp = ret_dtype == "float32"
     if cast_to_amp:
         cast_to_amp = any([check_amp_dtype(arg.checked_type, amp_dtype)
                            for arg in args[:2]])
 
+    # This op inplace updates an existing tensor, so the type hints must align to it.
+    if not isinstance(args[2], relay.Constant):
+        assert isinstance(args[2].checked_type, tvm.ir.TensorType)
+        cast_to_amp = args[2].checked_type.dtype == amp_dtype
+        ret_dtype = args[2].checked_type.dtype
+
     ret = []
     for arg in args[:2]:
         ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
-    for arg in args[2:]:
-        if isinstance(arg, relay.Constant):
-            ret.append(PrimType(None))
-        else:
-            ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
-    ret += [gen_hint_helper(ret_type, cast_to_amp, amp_dtype)]
+
+     # out: same as the return type.
+    ret.append(PrimType(None) if isinstance(args[2], relay.Constant) else PrimType(ret_dtype))
+    ret.append(PrimType(None)) # where: do not touch
     return ret
 
 register_op_cast_rule("mnm.op.add", op_cast_binary_ufunc)
@@ -300,7 +307,7 @@ def op_cast_adv_index(args, ret_type, amp_dtype):
     """adv_index/adv_index_dx are the only ops that need to take a tuple with different dtypes
     as an input.
     """
-    return [TupleType([PrimType(amp_dtype), PrimType(None), PrimType(None)]), PrimType(amp_dtype)]
+    return [TupleType([PrimType(amp_dtype), PrimType(None), PrimType(None)])]
 
 register_op_cast_rule("mnm.op.adv_index", op_cast_adv_index)
 
@@ -308,8 +315,7 @@ def op_cast_adv_index_dx(args, ret_type, amp_dtype):
     """adv_index/adv_index_dx are the only ops that need to take a tuple with different dtypes
     as an input.
     """
-    return [PrimType(amp_dtype), TupleType([PrimType(amp_dtype), PrimType(None), PrimType(None)]),
-            TupleType([PrimType(amp_dtype)])]
+    return [PrimType(amp_dtype), TupleType([PrimType(amp_dtype), PrimType(None), PrimType(None)])]
 
 register_op_cast_rule("mnm.op.adv_index_dx", op_cast_adv_index_dx)
 
@@ -319,11 +325,6 @@ def op_cast_norm(data_num, out_num):
     def _gen_rules(args, ret_type, amp_dtype):
         ret = [PrimType(amp_dtype) for _ in range(data_num)]
         ret += [PrimType(None) for _ in range(len(args) - data_num)]
-        if out_num == 1:
-            ret.append(PrimType(amp_dtype))
-        else:
-            assert out_num == 3
-            ret += [TupleType([PrimType(amp_dtype), PrimType("float32"), PrimType("float32")])]
         return ret
 
     return _gen_rules
@@ -351,8 +352,40 @@ def op_cast_concatenate(args, ret_type, amp_dtype):
     ret = []
     ret += [TupleType([PrimType(target_dtype) for _ in in_types])] # Input tuple.
     ret += [PrimType(None)] # axis.
-    ret += [PrimType(target_dtype)] # Return type.
     return ret
 
 register_op_cast_rule("mnm.op.concatenate", op_cast_concatenate)
 register_op_cast_rule("mnm.op.concatenate_dx", op_cast_concatenate)
+
+
+def op_cast_with_indices(float_input_num, index_input_idx, infer_mode=True):
+    """For the ops that takes indices as an input (e.g., embedding, take, etc), their indices
+    must be in the integer type, even it may be generated by another op that produces floating
+    types.
+    """
+    def _gen(args, ret_type, amp_dtype):
+        ret = []
+        if not infer_mode:
+            ret = [gen_hint_helper(arg.checked_type, False, amp_dtype)
+                   for arg in args[:float_input_num]]
+        else:
+            cast_to_amp = not isinstance(ret_type, tvm.ir.TupleType) and ret_type.dtype == "float32"
+            if cast_to_amp:
+                cast_to_amp = any([check_amp_dtype(arg.checked_type, amp_dtype)
+                                   for arg in args[:float_input_num]])
+            for arg in args[:float_input_num]:
+                ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
+
+        ret += [PrimType(None) for _ in range(len(args) - float_input_num)]
+        ret[index_input_idx] = PrimType("int64")
+        return ret
+
+    return _gen
+
+register_op_cast_rule("mnm.op.embedding", op_cast_with_indices(1, 1))
+register_op_cast_rule("mnm.op.take", op_cast_with_indices(1, 1))
+
+# embedding_dx/take_dx has accuracy issue and its performance does not improve significantly
+# over float32, so never cast.
+register_op_cast_rule("mnm.op.take_dx", op_cast_with_indices(2, 2, False))
+register_op_cast_rule("mnm.op.embedding_dx", op_cast_with_indices(1, 1, False))

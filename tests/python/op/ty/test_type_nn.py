@@ -1,6 +1,7 @@
 import pytest
 import torch
 import mnm
+from mnm._lib import _TVMError
 from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
@@ -11,12 +12,9 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("shape", [
     [3],
     [3, 2],
-    [3, 2, 5],
     [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
-    [3, 2, 5, 8, 4, 7],
 ])
-@pytest.mark.parametrize("axis", range(-8, 8))
+@pytest.mark.parametrize("axis", range(-5, 5))
 @pytest.mark.parametrize(
     "funcs",
     [
@@ -39,7 +37,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     m_x.requires_grad = True
     t_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
-        with pytest.raises(ValueError):
+        with pytest.raises(_TVMError):
             m_func = model._internal(m_x).mod['main']
             m_func = run_infer_type(m_func)
         return

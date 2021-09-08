@@ -172,7 +172,14 @@ class TypeInferencer : public ExprMutator {
     auto fty = Downcast<FuncType>(op->checked_type());
     CHECK_EQ(fty->type_constraints.size(), 1);
     TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
-    return ti->func(call_values);
+    try {
+      return ti->func(call_values);
+    } catch (const dmlc::Error& e) {
+      LOG(FATAL) << "Failed to infer type of the following primitive: " << std::endl
+                 << mnm::ir::AsText(call) << std::endl
+                 << std::endl
+                 << e.what();
+    }
   }
 
   Type InferClosure(const Call& call, const FunctionNode* fn) {
@@ -418,7 +425,7 @@ class Unifier : public TypeFunctor<Type(const Type&, const Type&)> {
     if (tvm::StructuralEqual()(tt1, tt2)) {
       return std::move(tt1);
     }
-    CHECK(tt1->dtype == tt2->dtype);
+    CHECK(tt1->dtype == tt2->dtype) << "dtype mismatch: " << tt1->dtype << " vs. " << tt2->dtype;
 
     tvm::Array<IndexExpr> shape;
     CHECK_EQ(tt1->shape.size(), tt2->shape.size())

@@ -4,8 +4,11 @@ import pytest
 import torch
 
 import mnm
+import tvm
+from tvm import relay
 from tvm.ir import PrimType
-from mnm.ir import AsText
+from mnm.ir import AsText, ScopeBuilder
+from mnm.frontend.model import FrameworkModel
 from mnm.testing import randn, randn_torch, run_vm_model, check, get_device_list
 
 def verify_correctness(model, device, args, ref_outs=None, tol=1e-5):
@@ -27,7 +30,7 @@ def verify_correctness(model, device, args, ref_outs=None, tol=1e-5):
 def verify_cast_num(model, args, expected):
     amp_model = mnm.amp.autocast(model, args)
     mod = amp_model._internal(*args).mod
-    text = AsText(mod["main"])
+    text = AsText(mnm._ffi.pass_.InferType()(mod)["main"])
     cast_cnt = 0
     for line in text.split("\n"):
         if line.find("mnm.op.cast") != -1:
@@ -64,7 +67,7 @@ def test_basic():
     verify_correctness(model, device, args, tol=1e-1)
 
     def never_cast_bias_add(args, ret_type, amp_dtype):
-        return [PrimType("float32"), PrimType("float32"), PrimType(None), PrimType("float32")]
+        return [PrimType("float32"), PrimType("float32"), PrimType(None)]
 
     with mnm.amp.CustomTypeHint({"mnm.op.bias_add": never_cast_bias_add}):
         # cast x, w to fp16; cast x1 back to fp32.
@@ -97,6 +100,83 @@ def test_tuple_n_output_dtype(out_dtype):
         # If output dtype is fp32, then cast 2 outputs back to fp32: Total 4 casts.
         # If output dtype if fp16, then do nothing: Total 2 casts.
         verify_cast_num(model, args, 4 if out_dtype == "float32" else 2)
+
+
+@pytest.mark.parametrize("out_dtype", ["float16", "float32"])
+def test_existing_cast_with_always_op(out_dtype):
+    xshape = (1, 3, 224, 224)
+    wshape = (32, 3, 3, 3)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w):
+            fp32_x = mnm.cast(x, "float32")
+            fp32_w = mnm.cast(w, "float32")
+            fp32_out = mnm.conv2d(fp32_x, fp32_w)
+            return mnm.cast(fp32_out, "float16")
+
+    model = Model()
+    m_x, _ = randn(xshape, requires_grad=False, dtype="float16")
+    m_w, _ = randn(wshape, requires_grad=True, dtype="float16")
+    args = [m_x, m_w]
+
+    with mnm.ir.PassContext(config={"mnm.amp.out_dtype": out_dtype}):
+        verify_cast_num(model, args, 0 if out_dtype == "float16" else 1)
+
+
+@pytest.mark.parametrize("out_dtype", ["float16", "float32"])
+def test_existing_cast_with_infer_op(out_dtype):
+    xshape = (10, 10)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            fp32_x = mnm.cast(x, "float32")
+            fp32_out = mnm.relu(fp32_x)
+            return mnm.cast(fp32_out, "float16")
+
+    model = Model()
+    m_x, _ = randn(xshape, requires_grad=False, dtype="float16")
+    args = [m_x]
+
+    with mnm.ir.PassContext(config={"mnm.amp.out_dtype": out_dtype}):
+        verify_cast_num(model, args, 0 if out_dtype == "float16" else 1)
+
+
+def test_inplace():
+    xshape = (10, 10)
+    wshape = (10, 10)
+
+    def get_model():
+        """matmul always produces fp16 output, so it is illegal for the new a1 (fp16)
+        to share with data_x (fp32).
+        """
+        matmul_op = mnm._ffi.op.GetOp("mnm.op.matmul")
+
+        data_x = mnm.ir.var("x", shape=xshape, dtype="float32")
+        data_w = mnm.ir.var("w", shape=wshape, dtype="float32")
+
+        sb = ScopeBuilder()
+        a_1 = sb.let("a1", relay.Call(matmul_op, [data_x, data_w]))
+        a_2 = sb.let("a2", a_1, may_share=data_x)
+        sb.ret(a_2)
+        func = relay.Function([data_x, data_w], sb.get())
+        mod = tvm.IRModule.from_expr(func)
+        return FrameworkModel(mod, mod, {}, {})
+
+    model = get_model()
+    m_x, _ = randn(xshape, dtype="float32")
+    m_w, _ = randn(wshape, dtype="float32")
+    args = [m_x, m_w]
+
+    with mnm.ir.PassContext(config={"mnm.amp.out_dtype": "float16"}):
+        verify_cast_num(model, args, 4)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")

@@ -6,6 +6,8 @@
 #include "./grad_utils.h"
 #include "mnm/pass.h"
 #include "mnm/ir.h"
+#include "mnm/type.h"
+#include "mnm/value.h"
 
 namespace mnm {
 namespace op {
@@ -296,10 +298,19 @@ MNM_OP_GRAD("mnm.op.scatter", ScatterGrad);
 
 Array<Expr> CastGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
-  static auto op_dx = Op::Get("mnm.op.cast_like");
+  static auto cast_op = Op::Get("mnm.op.cast");
+  static auto cast_like_op = Op::Get("mnm.op.cast_like");
+
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
-  return {Call(op_dx, {dy, x})};
+  if (x->checked_type_.defined()) {  // Use cast op if we know the target type.
+    auto ttype = x->checked_type().as<TensorTypeNode>();
+    CHECK(ttype != nullptr);
+    auto dl_dtype = ttype->dtype.operator DLDataType();
+    return {Call(cast_op, {dy, MakeConstant(mnm::value::StringValue::make(
+                                   tvm::runtime::DLDataType2String(dl_dtype)))})};
+  }
+  return {Call(cast_like_op, {dy, x})};
 }
 
 MNM_OP_GRAD("mnm.op.cast", CastGrad);

@@ -231,7 +231,7 @@ HashKey TakeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
 }
 
 MNM_TVM(take_dx, TakeDx, TakeDxArgs, TakeDxSchema2Args, TakeDxSchemaArgNames, TakeDxSchema2Attrs,
-        TakeDxHasher, kInjective);
+        TakeDxHasher, kOpaque);
 
 std::vector<Value> EmbeddingDxSchema2Args(const EmbeddingDxArgs* args) {
   return {args->dy, args->indices};
