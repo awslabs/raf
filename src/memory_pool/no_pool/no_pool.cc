@@ -65,6 +65,10 @@ class NoPool final : public MemoryPool {
     }
   }
 
+  std::string GetName() {
+    return "no_pool";
+  }
+
   int64_t GetAllocBytes(int64_t nbytes) override {
     return nbytes;
   }

@@ -1056,8 +1056,9 @@ def test_embedding_pattern():
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", mnm.ir.op.embedding(x, indices))
-        ones = np.ones(shape=indices_shape, dtype="int32")
-        a_2 = sb.let("a2", mnm.ir.op.embedding(x, mnm.ir.const(ones)))
+        ones = mnm.ir.const(np.ones(shape=indices_shape, dtype="int32"))
+        fp64_ones = sb.let("x", mnm.ir.op.cast(ones, "int64"))
+        a_2 = sb.let("a2", mnm.ir.op.embedding(x, fp64_ones))
         a_3 = sb.let("a3", mnm.ir.op.add(a_1, a_2))
         a_4 = sb.let("a4", mnm.ir.op.take(a_3, indices2, axis=1, mode="wrap"))
         a_5 = sb.let("a5", _relay.Tuple([a_3, a_4]))

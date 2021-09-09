@@ -29,8 +29,9 @@ struct RelayPattern {
   /*! \brief The converter to convert the matched Relay composite function to a Meta call.
    *  \param func The composite function to be converted.
    *  \param args The argument array of the converted op.
+   * \param scope The current scope of letlist.
    */
-  virtual Call converter(Function func, Array<Expr> args) = 0;
+  virtual Expr convert(Function func, Array<Expr> args, LetList* scope) = 0;
 
   /*! \brief The data flow pattern to match the Relay graph. */
   DFPattern pattern;
@@ -52,7 +53,7 @@ struct ConvertDense : RelayPattern {
     this->check = PackedFunc([](TVMArgs args, TVMRetValue* rv) { *rv = true; });
   }
 
-  Call converter(Function func, Array<Expr> args) {
+  Expr convert(Function func, Array<Expr> args, LetList* scope) {
     // nn.dense is equal to matmul_nt so the second input is already transposed
     bool transposes[] = {false, true};
 
@@ -113,7 +114,7 @@ struct CompositeGelu : RelayPattern {
     this->check = PackedFunc([](TVMArgs args, TVMRetValue* rv) { *rv = true; });
   }
 
-  Call converter(Function func, Array<Expr> args) {
+  Expr convert(Function func, Array<Expr> args, LetList* scope) {
     static const Op& op = Op::Get("mnm.op.gelu");
     return Call(op, args);
   }
@@ -162,18 +163,29 @@ struct ConvertEmbedding : RelayPattern {
     });
   }
 
-  Call converter(Function func, Array<Expr> args) {
+  Expr convert(Function func, Array<Expr> args, LetList* scope) {
     LOG(WARNING) << "Converted a relay.take(data, indices, axis=0, mode=clip) to mnm.embedding, "
                  << "which requires all values in indices within the range; otherwise it will "
                  << "encounter memory error on GPUs";
     static const Op& op = Op::Get("mnm.op.embedding");
 
     // The second argument is a constant and has been embedded into the composite function.
-    // In this case, we retrieve the second argument from the function body.
+    // In this case, we retrieve the second argument from the function body and make sure its
+    // dtype is int64, which is required by our embedding/embedding_dx kernels.
     if (args.size() == 1) {
       auto const_arg = Downcast<Call>(func->body)->args[1].as<ConstantNode>();
       CHECK(const_arg != nullptr);
-      args.push_back(GetRef<Constant>(const_arg));
+      auto const_expr = GetRef<Constant>(const_arg);
+      auto ttype = Downcast<TensorValue>(const_arg->value)->tensor;
+      CHECK(ttype->dtype.code == kDLInt);
+      if (ttype->dtype.bits != 64) {
+        static const Op& cast_op = Op::Get("mnm.op.cast");
+        auto cast_var =
+            scope->Push(Call(cast_op, {const_expr, MakeConstant(StringValue::make("int64"))}));
+        args.push_back(cast_var);
+      } else {
+        args.push_back(const_expr);
+      }
     }
     return Call(op, args);
   }
@@ -194,6 +206,10 @@ String ValidateRelayParamName(const String var_name) {
 
 struct FromRelayMutator : public ExprMutator {
  public:
+  FromRelayMutator() {
+    scopes_.emplace_back(new LetList);
+  }
+
   Expr VisitExpr_(const VarNode* node) final {
     return var_map_.at(GetRef<Var>(node));
   }
@@ -210,32 +226,35 @@ struct FromRelayMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* node) final {
-    auto pre_visit = [this](const LetNode* op) {
-      const Var& var = op->var;
+    scopes_.emplace_back(new LetList);
+    auto scope = scopes_.back().get();
+    Expr body;
+    do {
+      const Var& var = node->var;
       CHECK_EQ(var_map_.count(var), 0) << "IR is malformed: cannot bind the same var twice";
       Var new_var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
       var_map_.Set(var, new_var);
       curr_let_var_ = new_var;
-      var_value_map_.Set(var, this->Mutate(op->value));
-    };
-    auto post_visit = [this](const LetNode* op) {
-      Expr value = this->Mutate(op->value);
-      Expr body = this->Mutate(op->body);
-      if (body.as<VarNode>()) {
-        body = MakeRet(Downcast<Var>(body));
+      auto new_value = this->Mutate(node->value);
+      var_value_map_.Set(var, new_value);
+
+      if (!new_value->IsInstance<FunctionNode>() ||
+          !Downcast<Function>(new_value)->GetAttr<String>(attr::kComposite)) {
+        // Discard composite functions because their callers will be substitited to an op
+        scope->Push(new_var, new_value);
       }
 
-      auto expr = GetRef<Expr>(op);
-      if (value->IsInstance<FunctionNode>() &&
-          Downcast<Function>(value)->GetAttr<String>(attr::kComposite)) {
-        // Discard composite functions because their callers will be substitited to an op
-        this->memo_[expr] = body;
-      } else {
-        this->memo_[expr] = Let(var_map_[op->var], value, body);
-      }
-    };
-    ExpandANormalForm(node, pre_visit, post_visit);
-    return memo_[GetRef<Expr>(node)];
+      body = node->body;
+      node = body.as<LetNode>();
+    } while (node);
+
+    body = this->Mutate(body);
+    if (body.as<VarNode>()) {
+      body = MakeRet(Downcast<Var>(body));
+    }
+    auto ret = scopes_.back()->Get(body);
+    scopes_.pop_back();
+    return ret;
   }
 
   Expr VisitExpr_(const CallNode* node) final {
@@ -278,7 +297,8 @@ struct FromRelayMutator : public ExprMutator {
             auto new_arg = VisitExpr(arg);
             call_args.push_back(new_arg);
           }
-          return composite_patterns.at(comp_name_str)->converter(GetRef<Function>(func), call_args);
+          return composite_patterns.at(comp_name_str)
+              ->convert(GetRef<Function>(func), call_args, scopes_.back().get());
         }
       }
     }
@@ -352,16 +372,15 @@ struct FromRelayMutator : public ExprMutator {
     if (mutation_.size() == 0U) {
       return ret;
     }
-    Expr body = LetList::With([&](LetList* ll) {
-      Array<Expr> res{ret};
-      for (const auto& kv : mutation_) {
-        Var var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}, kv.first);
-        ll->Push(var, kv.second);
-        res.push_back(var);
-      }
-      return ll->Push(mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}), Tuple(res));
-    });
-    return body;
+
+    auto scope = scopes_.back().get();
+    Array<Expr> res{ret};
+    for (const auto& kv : mutation_) {
+      Var var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}, kv.first);
+      scope->Push(var, kv.second);
+      res.push_back(var);
+    }
+    return scope->Push(mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}), Tuple(res));
   }
 
   /*!
@@ -381,6 +400,8 @@ struct FromRelayMutator : public ExprMutator {
   }
 
  private:
+  /*! \brief The scope stack of the let list. */
+  std::vector<std::unique_ptr<LetList>> scopes_;
   /*! \brief The counter of bound variables. */
   int num_bound_var_ = 0;
   /*! \brief Map from var in Relay graph to the converted Meta graph. */

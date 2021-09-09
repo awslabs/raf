@@ -36,6 +36,12 @@ class MemoryPoolManager {
     return instance;
   }
 
+  /*!
+   * \brief Get an existing memory pool of the given device. If the memory pool for the device
+   * is not created, then this function initializes a new one. On the other hand, if the memory
+   * pool of the device has been created, the 2nd argument (i.e., "name") is ignored. To switch
+   * to another memory pool during runtime, one has to first remove the existing pool first.
+   */
   MemoryPool* GetPool(const Device& dev, const std::string& name) {
     thread_local char maker_name[128];
     std::shared_ptr<MemoryPool>& result = reg.Get(dev);
@@ -43,10 +49,7 @@ class MemoryPoolManager {
       std::lock_guard<std::mutex> lock(reg.mutex_);
       if (result == nullptr) {
         // ok, it is truly a nullptr
-        pool_name = name;
-        if (name == "") {
-          pool_name = default_strategies[dev.device_type()];
-        }
+        std::string pool_name = (name == "") ? default_strategies[dev.device_type()] : name;
         snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", pool_name.c_str());
         void* ret = GetPackedFunc(maker_name)(dev);
         result.reset(static_cast<MemoryPool*>(ret));
@@ -65,7 +68,6 @@ class MemoryPoolManager {
 
  public:
   PerDeviceStore<MemoryPool, false> reg;
-  std::string pool_name = "";
 };
 
 int64_t Memory::GetAllocBytes(const Device& dev, int64_t nbytes) {
@@ -103,7 +105,7 @@ void Memory::RemovePool(const Device& dev) {
 
 MemoryPool* Memory::ResetPool(const Device& dev) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
-  std::string pool_name = mgr->pool_name;
+  std::string pool_name = mgr->GetPool(dev, "")->GetName();
   mgr->Remove(dev);
   return mgr->GetPool(dev, pool_name);
 }

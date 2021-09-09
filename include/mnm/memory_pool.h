@@ -66,6 +66,12 @@ class MemoryPool {
   virtual ~MemoryPool() = default;
 
   /*!
+   * \brief Get the name of this memory pool.
+   * \return The memory pool name.
+   */
+  virtual std::string GetName() = 0;
+
+  /*!
    * \brief Calculate the actual bytes to be allocated. This may be different as the requested
    * size due to alignment or page unit.
    * \param nbytes The requested bytes to be allocated.

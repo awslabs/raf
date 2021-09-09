@@ -71,6 +71,10 @@ class PageUnitPool : public MemoryPool {
     }
   }
 
+  std::string GetName() {
+    return "page_unit_pool";
+  }
+
   int64_t GetAllocBytes(int64_t nbytes) override {
     // round the chunck size to mutlpile page size.
     return !!(nbytes & ((1 << page_size_exp) - 1)) + (nbytes >> page_size_exp) << page_size_exp;
