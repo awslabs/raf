@@ -34,7 +34,7 @@ pip3 install torch==1.8.1+cu102 torchvision==0.9.1+cu102 -f https://download.pyt
 pip3 install mxnet==1.6.0
 pip3 install gluoncv==0.10.1
 
-if [ -x "$(command -v nvidia-smi)" ]; then
+if [[ "$1" == "gpu" ]]; then
     mkdir -p build && cd build
     git clone https://github.com/szhengac/apex --branch lans
     cd apex
