@@ -3,7 +3,6 @@ import pytest
 import numpy as np
 
 import mnm
-from mnm.model import Conv2d, Linear, BatchNorm
 from mnm import distributed as dist
 
 import tvm
@@ -30,36 +29,6 @@ def randn(shape, *, device="cuda", dtype="float32", std=1.0, mean=0.0,
     if requires_grad:
         m_x.requires_grad = True
     return m_x
-
-
-class MNMTest(mnm.Model):
-    # pylint: disable=attribute-defined-outside-init
-    def build(self, input_shape=28, num_classes=10):
-        self.conv1 = Conv2d(in_channels=3,
-                            out_channels=6,
-                            kernel_size=5,
-                            padding=2,
-                            bias=False)
-        self.bn1 = BatchNorm(6)
-        self.linear1 = Linear((input_shape // 2) ** 2 * 6,
-                              num_classes)
-    # pylint: enable=attribute-defined-outside-init
-
-    @mnm.model.trace
-    def forward(self, x, y_true):
-        y_pred = self.forward_infer(x)
-        y_pred = mnm.log_softmax(y_pred)
-        loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
-        return loss
-
-    @mnm.model.trace
-    def forward_infer(self, x):
-        out = self.bn1(self.conv1(x))
-        out = mnm.sigmoid(out)
-        out = mnm.avg_pool2d(out, (2, 2), (2, 2))
-        out = mnm.batch_flatten(out)
-        out = self.linear1(out)
-        return out
 
 
 # pylint: disable=unused-variable
@@ -115,26 +84,29 @@ def test_dp(config):
         expr_x2 = mnm.ir.op.matmul_nt(var_x0, c)
         var_x1 = tvm.relay.var('x1')
 
+        allreduce_in = tvm.relay.var("allreduce_in")
         expr_t = tvm.relay.Tuple([var_x1])
 
-        expr_g = mnm.ir.op._allreduce(expr_t)
+        expr_g = mnm.ir.op._allreduce(allreduce_in)
         var_g = tvm.relay.var('g')
 
         expr_x3 = mnm.ir.op.matmul_tn(x, var_x0)
         var_x2 = tvm.relay.var('x2')
 
+        allreduce_in1 = tvm.relay.var("allreduce_in1")
         expr_t1 = tvm.relay.Tuple([var_x2])
 
-        expr_g1 = mnm.ir.op._allreduce(expr_t1)
+        expr_g1 = mnm.ir.op._allreduce(allreduce_in1)
         var_g1 = tvm.relay.var('g1')
 
         expr_x4 = mnm.ir.op.zeros_like(y_true)
         var_x3 = tvm.relay.var('x3')
         var_x4 = tvm.relay.var('x4')
 
+        allreduce_in2 = tvm.relay.var("allreduce_in2")
         expr_t2 = tvm.relay.Tuple([var_x4])
 
-        expr_g2 = mnm.ir.op._allreduce(expr_t2)
+        expr_g2 = mnm.ir.op._allreduce(allreduce_in2)
         var_g2 = tvm.relay.var('g2')
 
         expr_null = mnm.ir.op.stream_sync(var_g2, 5)
@@ -151,12 +123,15 @@ def test_dp(config):
         let9 = tvm.relay.Let(var_x5, expr_x5, var_x5)
         let8 = tvm.relay.Let(var_null, expr_null, let9)
         let7 = tvm.relay.Let(var_g2, expr_g2, let8)
-        let_t = tvm.relay.Let(var_x4, var_x3, let7)
+        let_ad2 = tvm.relay.Let(allreduce_in2, expr_t2, let7)
+        let_t = tvm.relay.Let(var_x4, var_x3, let_ad2)
         let6 = tvm.relay.Let(var_x3, expr_x4, let_t)
         let5 = tvm.relay.Let(var_g1, expr_g1, let6)
-        let4 = tvm.relay.Let(var_x2, expr_x3, let5)
+        let_ad1 = tvm.relay.Let(allreduce_in1, expr_t1, let5)
+        let4 = tvm.relay.Let(var_x2, expr_x3, let_ad1)
         let3 = tvm.relay.Let(var_g, expr_g, let4)
-        let2 = tvm.relay.Let(var_x1, expr_x2, let3)
+        let_ad = tvm.relay.Let(allreduce_in, expr_t, let3)
+        let2 = tvm.relay.Let(var_x1, expr_x2, let_ad)
         let1 = tvm.relay.Let(var_x0, expr_x1, let2)
         closure_func = tvm.relay.Function([dy], let1)
 
@@ -185,11 +160,9 @@ def test_dp(config):
     func_after = mod_before['main']
     func_expected = expected()
     text = func_after.astext()
-
     assert "mnm.op._allreduce" in text
     assert "mnm.op.stream_sync" in text
     assert tvm.ir.structural_equal(func_after, func_expected)
-
     dctx.enable_data_parallel = False
 
 

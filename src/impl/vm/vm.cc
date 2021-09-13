@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "mnm/communicator.h"
 #include "mnm/memory_pool.h"
 #include "mnm/ir.h"
 #include "mnm/op.h"
@@ -994,6 +995,21 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
                              << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
                              << call_values->device.c_str();
+    std::shared_ptr<Requests> requests = op_env->GetRequests();
+    // prepare distributed requests
+    for (size_t i = 0; i < requests->distributed.size(); i++) {
+      Requests::DistributedRequest& entry = requests->distributed[i];
+      *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
+    }
+#ifdef MNM_USE_CUDA
+    // prepare cuda stream requests
+    for (size_t i = 0; i < requests->stream.size(); i++) {
+      Requests::StreamRequest& entry = requests->stream[i];
+      std::shared_ptr<Stream> stream = Stream::Get(entry.device, entry.tag_idx, entry.stream_idx);
+      *entry.dest = stream->data();
+      entry.stream = stream;
+    }
+#endif
     // add to cache
     op_env_cache->Set(input_str, op_env);
   }

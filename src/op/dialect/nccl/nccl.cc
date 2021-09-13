@@ -27,17 +27,28 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   size_t total_size = 0;
   std::vector<size_t> tuple_sizes;
   DType dtype;
-  std::string computation;
+  ncclRedOp_t compute;
 
   explicit NCCLAllReduce(const CallValues& cv) {
     auto op = ir::Op::Get("mnm.op._allreduce");
     auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
-    auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
+    auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     auto& tv = args->x;
-    computation = args->computation;
+
+    if (args->computation.compare("sum") == 0) {
+      compute = ncclSum;
+    } else if (args->computation.compare("prod") == 0) {
+      compute = ncclProd;
+    } else if (args->computation.compare("min") == 0) {
+      compute = ncclMin;
+    } else if (args->computation.compare("max") == 0) {
+      compute = ncclMax;
+    } else {
+      LOG(FATAL) << "Invalid computation " << args->computation;
+    }
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
       size_t size = BytesCompactTensor(*x);
@@ -45,8 +56,9 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       total_size += size;
       dtype = x->dtype;
     }
-    if (tv.size() == 1) return;
-    RequestWorkspace(&fused_data, cv->device, total_size);
+    if (tv.size() > 1) {
+      RequestWorkspace(&fused_data, cv->device, total_size);
+    }
   }
 
  public:
@@ -59,79 +71,52 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   }
 
   void Execute(const CallValues& cv) override {
-    // // We can use sleep to test communication scheduling locally.
+    auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
+    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
+    // We can use sleep to test communication scheduling locally.
     // using namespace std::this_thread;
     // using namespace std::chrono;
     // sleep_until(system_clock::now() + nanoseconds(200));
-
     void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
-    auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
+
     // Fuse Tensor
-    auto& tv = args->x;
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
     size_t dtype_size = 0;
-    if (tv.size() == 1) {
-      DLTensor* x = tv[0];
-      DLTensor* out = cv->out;
+    if (tv->fields.size() == 1) {
+      DLTensor* x = tv->fields[0];
+      DLTensor* out = output;
       dtype_size = sizeof(x->dtype);
-      if (computation.compare("sum") == 0) {
-        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclSum,
-                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-      } else if (computation.compare("prod") == 0) {
-        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclProd,
-                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-      } else if (computation.compare("min") == 0) {
-        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclMin,
-                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-      } else if (computation.compare("max") == 0) {
-        NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, ncclMax,
-                                (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-      } else {
-        LOG(FATAL) << "Invalid computation " << computation;
+      NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, compute,
+                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+
+    } else {
+      size_t offset = 0;
+      for (int i = 0; i < tv->fields.size(); ++i) {
+        DLTensor* x = tv->fields[i];
+        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
+        cudaMemcpyAsync(buffer_data_at_offset, x->data, tuple_sizes[i], cudaMemcpyDeviceToDevice,
+                        (cudaStream_t)stream);
+        offset += tuple_sizes[i];
+        dtype_size = sizeof(x->dtype);
       }
 
-      return;
-    }
-    size_t offset = 0;
-    for (int i = 0; i < tv.size(); ++i) {
-      DLTensor* x = tv[i];
-      void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
-      cudaMemcpyAsync(buffer_data_at_offset, x->data, tuple_sizes[i], cudaMemcpyDeviceToDevice,
-                      (cudaStream_t)stream);
-      offset += tuple_sizes[i];
-      dtype_size = sizeof(x->dtype);
-    }
-
-    // Allreduce
-    if (computation.compare("sum") == 0) {
-      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclSum,
+      // Allreduce
+      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, compute,
                               (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-    } else if (computation.compare("prod") == 0) {
-      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclProd,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-    } else if (computation.compare("min") == 0) {
-      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclMin,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-    } else if (computation.compare("max") == 0) {
-      NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, ncclFloat, ncclMax,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
-    } else {
-      LOG(FATAL) << "Invalid computation " << computation;
+      // UnFuse Tensor
+      value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
+      auto& of = out->fields;
+      for (int i = of.size() - 1; i >= 0; --i) {
+        DLTensor* x = of[i];
+        offset -= tuple_sizes[i];
+        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
+        cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
+                        (cudaStream_t)stream);
+      }
     }
-    // UnFuse Tensor
-    value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(cv->out);
-    auto& of = out->fields;
-    for (int i = of.size() - 1; i >= 0; --i) {
-      DLTensor* x = of[i];
-      offset -= tuple_sizes[i];
-      void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
-      cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
-                      (cudaStream_t)stream);
-    }
-  }
-
-  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    // TODO(@icemelon9): add implementation for this
-    LOG(FATAL) << "Not implemented";
   }
 
   static OpEnv* make(const CallValues& cv) {

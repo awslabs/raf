@@ -3,9 +3,9 @@
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
 # Defined in ./src/distributed/common/dist_context.cc
-AudoDPProfilingEndIter = _APIS.get("mnm.distributed.AudoDPProfilingEndIter", None)
+AutoDPProfilingEndIter = _APIS.get("mnm.distributed.AutoDPProfilingEndIter", None)
 # Defined in ./src/distributed/common/dist_context.cc
-AudoDPProfilingStartIter = _APIS.get("mnm.distributed.AudoDPProfilingStartIter", None)
+AutoDPProfilingStartIter = _APIS.get("mnm.distributed.AutoDPProfilingStartIter", None)
 # Defined in ./src/distributed/common/dist_context.cc
 EnableDataParallel = _APIS.get("mnm.distributed.EnableDataParallel", None)
 # Defined in ./src/distributed/common/dist_context.cc

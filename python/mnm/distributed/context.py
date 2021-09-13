@@ -37,7 +37,7 @@ class DistContext(Object):
     @auto_dp_profiling_start_iter.setter
     def auto_dp_profiling_start_iter(self, value):
         self.auto_dp_profiling_start_iter_ = value
-        ffi.AudoDPProfilingStartIter(value)
+        ffi.AutoDPProfilingStartIter(value)
 
     @property
     def auto_dp_profiling_end_iter(self):
@@ -46,7 +46,7 @@ class DistContext(Object):
     @auto_dp_profiling_end_iter.setter
     def auto_dp_profiling_end_iter(self, value):
         self.auto_dp_profiling_end_iter_ = value
-        ffi.AudoDPProfilingEndIter(value)
+        ffi.AutoDPProfilingEndIter(value)
 
 
 def get_context():

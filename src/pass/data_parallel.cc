@@ -133,7 +133,6 @@ struct DataParallel {
   void GetSchedulingParameters() {
     auto dctx = DistContext::Global();
     static int prof_level = Profiler::Get()->profile_level();  // Store user's config
-
     // Store the running time of all ops.
     static std::vector<std::pair<std::string, int64_t> > op_running_time;
     if (dctx->iteration < dctx->auto_dp_profiling_start_iter) {
@@ -207,7 +206,6 @@ struct DataParallel {
     if (dctx->overlap_comm_forward && dctx->iteration <= dctx->auto_dp_profiling_end_iter + 1) {
       GetSchedulingParameters();
     }
-
     size_t fp_n = fp_ell->vars.size();
     auto closure_expr = fp_ell->exprs.at(fp_n - 2);
     Array<Var> bp_params;
@@ -229,15 +227,17 @@ struct DataParallel {
     } else {
       LOG(FATAL) << "Return of backward IR must be Var or tuple of Vars in Data Parallel Pass.";
     }
-
+    if (gradset.empty()) {
+      return Function(func->params, fp_ell->AsExpr(), {}, {});
+    }
     // The map from original local gradient to aggregated global gradient.
     std::map<mnm::ir::Expr, mnm::ir::Var> var_var_map;
     // Enlarge the size of bp_ell to fit the allreduce ops.
-    bp_ell->vars.resize(bp_n + gradset.size());
-    bp_ell->exprs.resize(bp_n + gradset.size());
+    bp_ell->vars.resize(bp_n + 2 * gradset.size());
+    bp_ell->exprs.resize(bp_n + 2 * gradset.size());
     // p1 tracks the processing var/expr (from end to begin)
     // p2 tracks the next vacant position to paste the processing var/expr or allreduce op.
-    int p1 = bp_n - 1, p2 = bp_n - 1 + gradset.size();
+    int p1 = bp_n - 1, p2 = bp_n - 1 + 2 * gradset.size();
 
     bp_ell->vars[p2] = bp_ell->vars[p1];
     bp_ell->exprs[p2] = bp_ell->exprs[p1];
@@ -249,12 +249,18 @@ struct DataParallel {
         // If the current expr is an op-expr which generate local gradient,
         // we should add a allreduce op after it.
         static Op op_allreduce = Op::Get("mnm.op._allreduce");
+        auto input_var = mnm::ir::MakeVar("allreduce_in", {});
+        if (dctx->overlap_comm_forward) {
+          global_grad.insert(input_var);
+        }
+        bp_ell->vars[p2 - 1] = input_var;
+        bp_ell->exprs[p2 - 1] = Tuple({bp_ell->vars[i]});
         // Here we name the var as 'g'(global gradient), to help us identify it easier.
         bp_ell->vars[p2] = mnm::ir::MakeVar("g", {});
         bp_ell->exprs[p2] =
-            Call(op_allreduce, {Tuple({bp_ell->vars[i]}), MakeConstant(StringValue::make("sum"))});
+            Call(op_allreduce, {bp_ell->vars[p2 - 1], MakeConstant(StringValue::make("sum"))});
         var_var_map.insert({bp_ell->vars[i], bp_ell->vars[p2]});
-        --p2;
+        p2 -= 2;
       }
       bp_ell->vars[p2] = bp_ell->vars[i];
       bp_ell->exprs[p2] = bp_ell->exprs[i];
@@ -290,18 +296,21 @@ struct DataParallel {
       int fp_order_grad_count = var_var_map.size() - dctx->scheduling_param;
       int bp_order_grad_count = 0;
       int p_j = bp_n - 1;
-      std::vector<Var> fp_order_grad_var;    // grads whose trasmission order will be reversed.
-      std::vector<Expr> fp_order_grad_expr;  // grads whose trasmission order will be reversed.
+      std::vector<Var> fp_order_grad_var;    // grads whose transmission order will be reversed.
+      std::vector<Expr> fp_order_grad_expr;  // grads whose transmission order will be reversed.
       for (int i = 0; i < bp_n - 1; i++) {
-        // If name_hint is 'g', the it means taht this is a global gradient
-        // ,and there is a communication operator in bp_ell->exprs[i].
-        if (bp_ell->vars[i]->name_hint() == "g") {
+        if (global_grad.count(bp_ell->vars[i])) {
           bp_order_grad_count++;
           if (bp_order_grad_count > dctx->scheduling_param) {
             fp_order_grad_var.push_back(bp_ell->vars[i]);
             fp_order_grad_expr.push_back(bp_ell->exprs[i]);
-            if (bp_order_grad_count == dctx->scheduling_param + 1) p_j = i;
-            while (i + 1 < bp_n - 1 && bp_ell->vars[i + 1]->name_hint() != "g") {
+            fp_order_grad_var.push_back(bp_ell->vars[i + 1]);
+            fp_order_grad_expr.push_back(bp_ell->exprs[i + 1]);
+            if (bp_order_grad_count == dctx->scheduling_param + 1) {
+              p_j = i;
+            }
+            i++;
+            while (i + 1 < bp_n - 1 && (!global_grad.count(bp_ell->vars[i + 1]))) {
               bp_ell->vars[p_j] = bp_ell->vars[i + 1];
               bp_ell->exprs[p_j] = bp_ell->exprs[i + 1];
               p_j++;
@@ -310,11 +319,13 @@ struct DataParallel {
           }
         }
       }
-      CHECK_EQ(fp_order_grad_count, fp_order_grad_var.size());
+      CHECK_EQ(2 * fp_order_grad_count, fp_order_grad_var.size());
       for (int i = fp_order_grad_count - 1; i >= 0; i--) {
-        bp_ell->vars[p_j] = fp_order_grad_var[i];
-        bp_ell->exprs[p_j] = fp_order_grad_expr[i];
-        p_j++;
+        bp_ell->vars[p_j] = fp_order_grad_var[2 * i];
+        bp_ell->exprs[p_j] = fp_order_grad_expr[2 * i];
+        bp_ell->vars[p_j + 1] = fp_order_grad_var[2 * i + 1];
+        bp_ell->exprs[p_j + 1] = fp_order_grad_expr[2 * i + 1];
+        p_j += 2;
       }
       CHECK_EQ(p_j, bp_n - 1);
     }
@@ -339,6 +350,8 @@ struct DataParallel {
   std::unique_ptr<ExplicitLetList> bp_ell{nullptr};
   // The comminication operators whose profiling will be collected for scheduling.
   const std::set<std::string> scheduled_communication_ops = {"mnm.op._allreduce"};
+  // The global gradient set
+  std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> global_grad;
 };
 
 }  // namespace data_parallel
