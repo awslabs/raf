@@ -9,6 +9,7 @@
 #include "mnm/tensor.h"
 #include "mnm/device.h"
 #include "mnm/device_api.h"
+#include "mnm/registry.h"
 #include "../schema/nn.h"
 #include "../ty/utils.h"
 #include "./declare_utils.h"
@@ -370,30 +371,40 @@ void BiasAdd(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd);
 
+template <bool include_mask, bool include_reserve_space>
 void ContribDropout(const CallValues& call) {
   const auto* args = call->args.as<DropoutArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   std::vector<int64_t> states_shape;
-  Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
-      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(GetType(args->x));
   std::vector<int64_t> reserve_space_shape;
-  // The CUDNN compute requires in_states. While the TVM compute don't support in_states for now.
+  // The CUDNN compute generates reserve_space for backward usage.
+#ifdef MNM_USE_CUDA
+  const tvm::runtime::PackedFunc* pf =
+      tvm::runtime::Registry::Get("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes");
+  if (include_reserve_space && pf) {
+    Integer reserve_space_size_in_bytes = (*pf)(GetType(args->x));
+    reserve_space_shape.push_back(reserve_space_size_in_bytes->value);
+  }
+#endif
   if (args->in_states.defined()) {
     const DLTensor* in_states = args->in_states.value();
     for (size_t i = 0; i < in_states->ndim; i++) {
       states_shape.push_back(tvm::Integer(in_states->shape[i]));
     }
-    reserve_space_shape.push_back(reserve_space_size_in_bytes->value);
   }
   TensorValue output = TensorValue::Assemble(/*dev=*/x->device,
                                              /*dtype=*/x->dtype,
                                              /*shape=*/shape);
   // valid for tvm only
+  std::vector<int64_t> mask_shape;
+  if (include_mask) {
+    mask_shape = shape;
+  }
   TensorValue mask = TensorValue::Assemble(/*dev=*/x->device,
                                            /*dtype=*/DType(DTypeCode::kFloat(), 32),
-                                           /*shape=*/shape);
+                                           /*shape=*/mask_shape);
   // valid for cudnn only
   TensorValue out_states = TensorValue::Assemble(/*dev=*/x->device,
                                                  /*dtype=*/DType(DTypeCode::kUInt(), 8),
@@ -406,7 +417,12 @@ void ContribDropout(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropout);
+static const auto ContribDropoutBase = ContribDropout<true, true>;
+static const auto ContribDropoutTVM = ContribDropout<true, false>;
+static const auto ContribDropoutCudnn = ContribDropout<false, true>;
+MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropoutBase);
+MNM_OP_DECLARE("mnm.op.tvm._contrib_dropout", ContribDropoutTVM);
+MNM_OP_DECLARE("mnm.op.cudnn._contrib_dropout", ContribDropoutCudnn);
 
 void DropoutDx(const CallValues& call) {
   const auto* args = call->args.as<DropoutDxArgs>();

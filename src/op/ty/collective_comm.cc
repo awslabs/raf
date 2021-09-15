@@ -29,9 +29,9 @@ Type IdentityType(const CallValues& value) {
   return TupleType(x);
 }
 
-MNM_OP_TYPE("mnm.op._allreduce", "AllReduce", IdentityType<AllreduceArgs>);
-MNM_OP_TYPE("mnm.op._broadcast", "Broadcast", IdentityType<BroadcastArgs>);
-MNM_OP_TYPE("mnm.op._reduce", "Reduce", IdentityType<CommReduceArgs>);
+MNM_OP_TYPE("mnm.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
+MNM_OP_TYPE("mnm.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
+MNM_OP_TYPE("mnm.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 
 Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();
@@ -44,7 +44,7 @@ Type ReduceScatterInfer(const CallValues& value) {
   return ty;
 }
 
-MNM_OP_TYPE("mnm.op._reduce_scatter", "ReduceScatter", ReduceScatterInfer);
+MNM_OP_TYPE("mnm.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
 
 Type SendInfer(const CallValues& value) {
   const auto* args = value->args.as<SendArgs>();
@@ -53,7 +53,7 @@ Type SendInfer(const CallValues& value) {
   return TensorType({}, ty->dtype);
 }
 
-MNM_OP_TYPE("mnm.op._send", "Send", SendInfer);
+MNM_OP_TYPE("mnm.op._send", "NCCLSend", SendInfer);
 
 Type RecvInfer(const CallValues& value) {
   const auto* args = value->args.as<RecvArgs>();
@@ -66,7 +66,7 @@ Type RecvInfer(const CallValues& value) {
   return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
 }
 
-MNM_OP_TYPE("mnm.op._recv", "Recv", RecvInfer);
+MNM_OP_TYPE("mnm.op._recv", "NCCLRecv", RecvInfer);
 
 }  // namespace op
 }  // namespace mnm

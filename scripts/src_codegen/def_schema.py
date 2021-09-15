@@ -126,6 +126,7 @@ SCHEMAS = {
     ],
     "nn.h::dropout_dx": [
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="mask", cxx_type="value::BaseTensorValue"),
         Arg(name="reserve_space", cxx_type="value::BaseTensorValue"),
         Arg(name="p", cxx_type="double", cxx_default=0.5),
     ],

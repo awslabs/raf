@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 import mnm
-from mnm.testing import randn, get_device_list, randn_torch, with_seed, check, run_vm_model
+from mnm.testing import randint, randn, numpy, get_device_list, randn_torch, with_seed, check, run_vm_model
 from mnm.model.trace import trace_mutate_attr
 
 
@@ -673,6 +673,51 @@ def test_threshold_with_grad(hyperparam, shape, dtype, device):
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad)
+
+
+# pylint: disable=protected-access
+@pytest.mark.parametrize("dropout", [0.4, 0.6])
+def test_mnm_dropout(dropout):
+    def check_dropout(x, y, dx=None, dy=None):
+        x, y = x.numpy(), y.numpy()
+        mask = y != 0
+        expected = mask * x / (1 - dropout)
+        check(expected, y)
+        frac = np.sum(y == 0) / y.size
+        assert dropout - 0.1 < frac < dropout + 0.1
+        if dx is not None and dy is not None:
+            dx, dy = dx.numpy(), dy.numpy()
+            expected = mask / (1 - dropout) * dy
+            check(expected, dx)
+
+    class TestModel(mnm.Model):
+        def build(self):
+            self.dropout = dropout
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm._contrib_dropout(x, dropout)
+
+    shape, dtype = [128, 128], "float32"
+    x, _ = randint(shape, low=10, high=20, dtype=dtype)
+    x.requires_grad = True
+    model = TestModel()
+
+    m_y = model(x)[0]
+    check_dropout(x, m_y)
+
+    # TODO(yizhiliu): unify CPU and CUDNN (defined in test_cudnn_nn.py) dropout model
+    v_y = run_vm_model(model, "cpu", [x])[0]
+    check_dropout(x, v_y)
+
+    n_y = model(x)[0]
+    assert not np.array_equal(numpy(m_y), numpy(v_y))
+    assert not np.array_equal(numpy(m_y), numpy(n_y))
+    # backward
+    dy, _ = randn_torch(shape, dtype=dtype)
+    m_y.backward(dy)
+    check_dropout(x, m_y, x.grad, dy)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

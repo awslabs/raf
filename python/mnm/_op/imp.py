@@ -74,11 +74,12 @@ def _contrib_dropout(x, p=0.5, in_states=None):
     return imp_utils.ret(ffi._contrib_dropout(x, p, in_states))
 
 @set_module("mnm")
-def _contrib_dropout_dx(dy, reserve_space, p=0.5):
+def _contrib_dropout_dx(dy, mask, reserve_space, p=0.5):
     dy = imp_utils.to_tensor(dy)
+    mask = imp_utils.to_tensor(mask)
     reserve_space = imp_utils.to_tensor(reserve_space)
     p = imp_utils.to_double(p)
-    return imp_utils.ret(ffi._contrib_dropout_dx(dy, reserve_space, p))
+    return imp_utils.ret(ffi._contrib_dropout_dx(dy, mask, reserve_space, p))
 
 @set_module("mnm")
 def _recv(peer, shape, dtype="float32", token=None):

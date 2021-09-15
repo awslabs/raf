@@ -72,12 +72,13 @@ def _contrib_dropout(x, p=0.5, in_states=None, attrs=None):
     in_states = op_utils.to_tensor(in_states)
     return relay.Call(op, [x, p, in_states], attrs)
 
-def _contrib_dropout_dx(dy, reserve_space, p=0.5, attrs=None):
+def _contrib_dropout_dx(dy, mask, reserve_space, p=0.5, attrs=None):
     op = GetOp("mnm.op._contrib_dropout_dx")
     dy = op_utils.to_tensor(dy)
+    mask = op_utils.to_tensor(mask)
     reserve_space = op_utils.to_tensor(reserve_space)
     p = op_utils.to_double(p)
-    return relay.Call(op, [dy, reserve_space, p], attrs)
+    return relay.Call(op, [dy, mask, reserve_space, p], attrs)
 
 def _recv(peer, shape, dtype="float32", token=None, attrs=None):
     op = GetOp("mnm.op._recv")

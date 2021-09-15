@@ -294,25 +294,47 @@ Type BiasAddInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
 
+template <bool include_mask, bool include_reserve_space>
 Type ContribDropoutInfer(const CallValues& value) {
   const auto* args = value->args.as<DropoutArgs>();
   TensorType x_ty = Downcast<TensorType>(GetType(args->x));
+  TensorType reserve_space({}, DataType::UInt(8));
+#ifdef MNM_USE_CUDA
+  const tvm::runtime::PackedFunc* pf =
+      tvm::runtime::Registry::Get("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes");
+  if (include_reserve_space && pf) {
+    Integer reserve_space_size_in_bytes = (*pf)(GetType(args->x));
+    Array<PrimExpr> reserve_space_shape = {reserve_space_size_in_bytes};
+    reserve_space = TensorType(reserve_space_shape, DataType::UInt(8));
+  }
+#endif
   TensorType states_ty;
-  Integer reserve_space_size_in_bytes = registry::GetPackedFunc(
-      "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")(GetType(args->x));
-  Array<PrimExpr> reserve_space_shape = {reserve_space_size_in_bytes};
-  TensorType reserve_space(reserve_space_shape, DataType::UInt(8));
   if (args->in_states.defined()) {
     states_ty = Downcast<TensorType>(GetType(args->in_states.value()));
   } else {
-    std::vector<PrimExpr> states_shape;
-    states_ty = TensorType(states_shape, DataType::UInt(8));
+    states_ty = TensorType({}, DataType::UInt(8));
   }
-  return TupleType(
-      Array<Type>{x_ty, TensorType(x_ty->shape, DataType::Float(32)), states_ty, reserve_space});
+  Array<PrimExpr> mask_shape;
+  if (include_mask) {
+    mask_shape = x_ty->shape;
+  }
+  TensorType mask_ty(mask_shape, DataType::Float(32));
+  return TupleType(Array<Type>{x_ty, mask_ty, states_ty, reserve_space});
 }
 
-MNM_OP_TYPE("mnm.op._contrib_dropout", "ContribDropout", ContribDropoutInfer);
+static const auto ContribDropoutBase = ContribDropoutInfer<true, true>;
+static const auto ContribDropoutTVM = ContribDropoutInfer<true, false>;
+static const auto ContribDropoutCudnn = ContribDropoutInfer<false, true>;
+MNM_OP_TYPE("mnm.op._contrib_dropout", "ContribDropout", ContribDropoutBase);
+MNM_OP_TYPE("mnm.op.tvm._contrib_dropout", "ContribDropoutTVM", ContribDropoutTVM);
+MNM_OP_TYPE("mnm.op.cudnn._contrib_dropout", "ContribDropoutCudnn", ContribDropoutCudnn);
+
+Type ContribDropoutDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<DropoutDxArgs>();
+  return GetType(args->dy);
+}
+
+MNM_OP_TYPE("mnm.op._contrib_dropout_dx", "ContribDropoutDx", ContribDropoutDxInfer);
 
 MNM_OP_TYPE("mnm.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
 

@@ -128,10 +128,15 @@ _reg.register_injective_schedule("mnm.op.tvm.log_softmax_dx")
 
 @register_compute("mnm.op.tvm._contrib_dropout")
 def compute_contrib_dropout(attr, inputs, output_type):
-    # pylint: disable=invalid-name, unused-argument
+    # pylint: disable=invalid-name, unused-argument, import-outside-toplevel
+    from .._ffi.backend.cudnn import GetDropoutReserveSpaceSizeInBytes
     x = inputs[0]
+    reserve_space_shape = ()
+    if GetDropoutReserveSpaceSizeInBytes:
+        x_ty = _tvm.relay.TensorType(x.shape, dtype=x.dtype)
+        reserve_space_shape = (GetDropoutReserveSpaceSizeInBytes(x_ty),)
     p = attr.rate
-    if (x.dtype != "float32" and x.dtype != "float64"):
+    if x.dtype != "float32" and x.dtype != "float64":
         raise TypeError("input array of mnm.dropout is expected to be the type of float32 " +
                         "or float64, but received {}".format(x.dtype))
     if p < 0. or p >= 1:
@@ -146,10 +151,24 @@ def compute_contrib_dropout(attr, inputs, output_type):
         mask[ix] <= _tvm.tir.const(p, "float32"),
         _tvm.tir.const(0, "float32"),
         _tvm.tir.const(1 / (1 - p), "float32")))
-    states = _topi.full((), dtype="int8", fill_value=0.)
-    return [ret, mask, states]
+    # states and reserve_space are valid in cudnn only
+    states = _topi.full((), dtype="uint8", fill_value=0.)
+    reserve_space = _topi.full(reserve_space_shape, dtype="uint8", fill_value=0.)
+    return [ret, mask, states, reserve_space]
 
 _reg.register_injective_schedule("mnm.op.tvm._contrib_dropout")
+
+@register_compute("mnm.op.tvm._contrib_dropout_dx")
+def compute_contrib_dropout_dx(attr, inputs, output_type):
+    # pylint: disable=invalid-name, unused-argument
+    dy = inputs[0]
+    mask = inputs[1]
+    assert _topi.utils.get_const_tuple(dy.shape) == _topi.utils.get_const_tuple(mask.shape), \
+        "dy.shape %s != mask.shape %s" % (str(dy.shape), str(mask.shape))
+    ret = _tvm.te.compute(dy.shape, lambda *idx: dy[idx] * _tvm.topi.cast(mask[idx], dy.dtype))
+    return [ret]
+
+_reg.register_injective_schedule("mnm.op.tvm._contrib_dropout_dx")
 
 @register_compute("mnm.op.tvm.relu_dx")
 @_tvm.te.tag_scope(tag=_tvm.topi.tag.ELEMWISE)

@@ -69,11 +69,12 @@ def _contrib_dropout(x, p=0.5, in_states=None):
     in_states = sym_utils.to_tensor(in_states)
     return Symbol.from_expr(ffi._contrib_dropout(x, p, in_states))
 
-def _contrib_dropout_dx(dy, reserve_space, p=0.5):
+def _contrib_dropout_dx(dy, mask, reserve_space, p=0.5):
     dy = sym_utils.to_tensor(dy)
+    mask = sym_utils.to_tensor(mask)
     reserve_space = sym_utils.to_tensor(reserve_space)
     p = sym_utils.to_double(p)
-    return Symbol.from_expr(ffi._contrib_dropout_dx(dy, reserve_space, p))
+    return Symbol.from_expr(ffi._contrib_dropout_dx(dy, mask, reserve_space, p))
 
 def _recv(peer, shape, dtype="float32", token=None):
     peer = sym_utils.to_int(peer)

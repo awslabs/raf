@@ -147,6 +147,7 @@ class DropoutArgs : public ir::AttrsNode<DropoutArgs> {
 class DropoutDxArgs : public ir::AttrsNode<DropoutDxArgs> {
  public:
   value::BaseTensorValue dy;
+  value::BaseTensorValue mask;
   value::BaseTensorValue reserve_space;
   double p{0.5};
   MNM_OP_SCHEMA(DropoutDxArgs, "mnm.args.dropout_dx");

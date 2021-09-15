@@ -36,19 +36,12 @@ MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
 
 Array<Expr> ContribDropoutGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                                const Expr& dout) {
-  const static auto cast_like = Op::Get("mnm.op.cast_like");
-  const static auto multiply = Op::Get("mnm.op.multiply");
   const static auto dropout_dx = Op::Get("mnm.op._contrib_dropout_dx");
   const Expr& dy = AsTupleExpr(dout, 2)[0];
   const Expr& mask = TupleGetItem(y, 1);
   const Expr& reserve_space = TupleGetItem(y, 3);
   const Expr& p = orig_args[1];
-  if (orig_args.size() == 2) {
-    // tvm is used
-    Call cast_mask = Call(cast_like, {mask, dy});
-    return {Call(multiply, {dy, cast_mask})};
-  }
-  return {Call(dropout_dx, {dy, reserve_space, p})};
+  return {Call(dropout_dx, {dy, mask, reserve_space, p})};
 }
 
 MNM_OP_GRAD("mnm.op._contrib_dropout", ContribDropoutGrad);

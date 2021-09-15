@@ -406,6 +406,31 @@ HashKey ContribDropoutHasher(const std::vector<Type>& param_types, const Type& y
 MNM_TVM(_contrib_dropout, Dropout, DropoutArgs, ContribDropoutSchema2Args,
         ContribDropoutSchemaArgNames, ContribDropoutSchema2Attrs, ContribDropoutHasher, kOpaque);
 
+std::vector<Value> ContribDropoutDxSchema2Args(const DropoutDxArgs* args) {
+  return {args->dy, args->mask};
+}
+
+std::vector<std::string> ContribDropoutDxSchemaArgNames(const op::CallValues& call) {
+  return {"dy", "mask"};
+}
+
+Attrs ContribDropoutDxSchema2Attrs(const DropoutDxArgs* args) {
+  auto attrs = make_object<DropoutAttrs>();
+  attrs->rate = args->p;
+  return Attrs(attrs);
+}
+
+HashKey ContribDropoutDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                               const DropoutDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->p;
+  return key;
+}
+
+MNM_TVM(_contrib_dropout_dx, DropoutDx, DropoutDxArgs, ContribDropoutDxSchema2Args,
+        ContribDropoutDxSchemaArgNames, ContribDropoutDxSchema2Attrs, ContribDropoutDxHasher,
+        kOpaque);
+
 template <typename T>
 std::vector<Value> PoolSchema2Args(const T* args) {
   return {args->x};

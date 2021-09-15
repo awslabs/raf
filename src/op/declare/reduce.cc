@@ -22,7 +22,10 @@ void GenerateReduceShape(const ReduceArgs* args, const DLTensor* x, std::vector<
     axis.resize(ndim);
     std::iota(axis.begin(), axis.end(), 0);
   } else {
-    axis = args->axis;
+    for (int64_t i : args->axis) {
+      i = i < 0 ? i + ndim : i;
+      axis.push_back(i);
+    }
   }
   std::sort(axis.begin(), axis.end());
   axis.resize(std::unique(axis.begin(), axis.end()) - axis.begin());
