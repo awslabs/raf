@@ -102,6 +102,8 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 self.momentum = array(momentum, dtype='float32')
                 self.params = {}
                 for name, x in self.model.state().items():
+                    # For each tensor "w" that requires gradient (i.e., training weights),
+                    # create a tensor "w.v" to be its SGD variant.
                     if x.requires_grad is True:
                         assert isinstance(x, ndarray), "Only `mnm.ndarray' can be optimized!"
                         npa = np.zeros(x.shape, dtype=x.dtype)
@@ -122,11 +124,13 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         name, x, v = self.params[param]
                         # TODO(@anijain2305): Improve the gradient pass for better has_grad results.
                         if "float" in x.dtype:
+                            # Inplace update variant.
                             new_v = add(multiply(self.momentum, v), dxi, out=v)
+                            # Inplace update weight.
                             new_x = subtract(x, multiply(self.learning_rate, new_v), out=x)
                             param_model = get_chained_attr(self.model, name.split('.')[:-1])
+                            # Put the updated weight to the model output to avoid being dead code.
                             trace_mutate_attr(param_model, name.split('.')[-1], new_x)
-                            trace_mutate_attr(self, f'{name}.v', new_v)
                 return y
         return SGDWrapper(model)
     return decorator
