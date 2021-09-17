@@ -426,8 +426,9 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
     }
     case Opcode::CudaAddEvent:
     case Opcode::CudaWaitEvent: {
-      // Number of fields = 1
+      // Number of fields = 2
       fields.push_back(instr.cuda_event.event_id);
+      fields.push_back(instr.cuda_event.stream_id);
       break;
     }
     case Opcode::CudaStreamBarrier: {
@@ -740,14 +741,14 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       return Instruction::CudaSetStream(instr.fields[0], instr.fields[1]);
     }
     case Opcode::CudaAddEvent: {
-      // Number of fields = 1
-      DCHECK_EQ(instr.fields.size(), 1U);
-      return Instruction::CudaAddEvent(instr.fields[0]);
+      // Number of fields = 2
+      DCHECK_EQ(instr.fields.size(), 2U);
+      return Instruction::CudaAddEvent(instr.fields[0], instr.fields[1]);
     }
     case Opcode::CudaWaitEvent: {
-      // Number of fields = 1
-      DCHECK_EQ(instr.fields.size(), 1U);
-      return Instruction::CudaWaitEvent(instr.fields[0]);
+      // Number of fields = 2
+      DCHECK_EQ(instr.fields.size(), 2U);
+      return Instruction::CudaWaitEvent(instr.fields[0], instr.fields[1]);
     }
     case Opcode::CudaStreamBarrier: {
       // Number of fields = 0

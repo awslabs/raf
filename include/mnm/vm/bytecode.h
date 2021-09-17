@@ -247,6 +247,8 @@ struct Instruction {
     struct /* CudaAddEvent and CudaWaitEvent Operands */ {
       /*! \brief The id of the event need to add or wait on current device */
       Index event_id;
+      /*! \brief The id of the stream need to add or wait on current device */
+      Index stream_id;
     } cuda_event;
   };
 
@@ -428,16 +430,18 @@ struct Instruction {
   static Instruction CudaSetStream(Index device_id, Index stream_id);
   /*!
    * \brief Construct a CudaAddEvent instruction.
-   * \param event_id The id of event we would use to record on current stream.
+   * \param event_id The id of event we would use to record.
+   * \param stream_id The id of the stream we record on. -1 for current stream.
    * \return The add event instruction.
    */
-  static Instruction CudaAddEvent(Index event_id);
+  static Instruction CudaAddEvent(Index event_id, Index stream_id);
   /*!
    * \brief Construct a CudaWaitEvent instruction.
    * \param event_id The id of event we want to wait for.
+   * \param stream_id The id of the stream to wait. -1 for current stream.
    * \return The wait event instruction.
    */
-  static Instruction CudaWaitEvent(Index event_id);
+  static Instruction CudaWaitEvent(Index event_id, Index stream_id);
 
   /*!
    * \brief Construct a CudaStreamBarrier instruction.

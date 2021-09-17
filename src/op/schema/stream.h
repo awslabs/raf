@@ -15,6 +15,7 @@ namespace schema {
 class EventArgs : public ir::AttrsNode<EventArgs> {
  public:
   int64_t event_id;
+  int64_t stream_id{-1};
   MNM_OP_SCHEMA(EventArgs, "mnm.args.event");
 };
 

@@ -848,7 +848,11 @@ SCHEMAS = {
         Arg(name="stream_id", cxx_type="int64_t")
     ],
     "stream.h::event": [
-        Arg(name="event_id", cxx_type="int64_t")
+        Arg(name="event_id", cxx_type="int64_t"),
+        Arg(name="stream_id", 
+            cxx_type="int64_t",
+            cxx_default=-1,
+            py_default=-1)
     ],
     "stream.h::stream_barrier": [
         # empty arg list

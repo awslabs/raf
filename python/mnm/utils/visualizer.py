@@ -53,6 +53,8 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         self.event_expr = {}
         # the current stream id
         self.current_stream = 0
+        # the communication stream id
+        self.communication_stream = None
         # mapping from stream id to the launched exprs
         self.stream_exprs = defaultdict(list)
         # mapping from stream id to the events to wait for the next expr on that stream
@@ -169,9 +171,9 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         callee_names = FusedOpCalleeVisitor(func).get_callee_names()
         return 'fused_' + '_'.join(callee_names)
 
-    def add_node(self, e, label, control_node=False):
+    def add_node(self, e, label, control_node=False, stream=None):
         """
-        Add a node to the pydot graph, and add it to the operators of current stream.
+        Add a node to the pydot graph, and add it to the operators of the specified stream.
 
         Parameters
         ----------
@@ -181,6 +183,8 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
             The label for the node.
         control_node : bool
             Whether the node is a control node.
+        stream : int | None
+            Add the node to the specified stream. None for the current stream (default).
         """
         if self.need_draw(e):
             node_style = {
@@ -192,38 +196,44 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
                 "darkgreen", "darkorchid2", "firebrick1", "gold1", "antiquewhite", "aquamarine",
                 "chartreuse1", "crimson",
             ]
-            node_style['fillcolor'] = colors[self.current_stream % len(colors)]
+            if stream is None:
+                stream = self.current_stream
+            node_style['fillcolor'] = colors[stream % len(colors)]
             if e in self.always_draw_exprs:
                 node_style['fillcolor'] = 'white'
             if control_node:
                 node_style['shape'] = 'diamond'
                 node_style['fillcolor'] = 'white'
             node = pydot.Node(name=str(len(self.memo_map)), label=label, **node_style)
-            self.stream_exprs[self.current_stream].append(e)
+            self.stream_exprs[stream].append(e)
             self.graph.add_node(node)
             self.memo_map[e] = node
         else:
             self.memo_map[e] = None
 
-    def wait_events_and_barrier(self, e):
+    def wait_events_and_barrier(self, e, stream=None):
         """
-        Add control edges from the nodes that the current stream waits for to given node.
+        Add control edges from the nodes that the given node's stream waits for to the given node.
 
         Parameters
         ----------
         e : tvm.relay.Expr
             The relay expression (node).
+        stream : int | None
+            The stream where the given node is executed on. None for current stream (default).
         """
+        if stream is None:
+            stream = self.current_stream
         # add the control edge derived from add_event/wait_event
-        event_ids = self.stream_wait_events[self.current_stream]
+        event_ids = self.stream_wait_events[stream]
         for event_id in event_ids:
             self.add_edge(self.event_expr[event_id], e, control_edge=True)
-        self.stream_wait_events[self.current_stream].clear()
+        self.stream_wait_events[stream].clear()
 
         # add the control edge derived from stream_barrier
-        if self.stream_barrier[self.current_stream]:
-            self.add_edge(self.stream_barrier[self.current_stream], e, control_edge=True)
-            self.stream_barrier[self.current_stream] = None
+        if self.stream_barrier[stream]:
+            self.add_edge(self.stream_barrier[stream], e, control_edge=True)
+            self.stream_barrier[stream] = None
 
     def add_edge(self, u_expr, v_expr, control_edge=False):
         """
@@ -261,7 +271,7 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         return self.memo_map[let]
 
     def visit_call(self, call):
-        # pylint: disable=too-many-nested-blocks, too-many-branches
+        # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
         op = call.op
 
         # deal with the schedule-related op specially
@@ -286,23 +296,50 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
                         self.previous_barrier = call
                     else:
                         event_id = ExtractValue(call.args[0]).value
+                        stream_id = ExtractValue(call.args[1]).value
+                        if stream_id == -1:
+                            stream_id = self.current_stream
                         if op.name == "mnm.op.add_event":
-                            self.add_node(call, f"Event({event_id})", control_node=True)
-                            if len(self.stream_exprs[self.current_stream]) > 1:
-                                prev_expr = self.stream_exprs[self.current_stream][-2]
+                            self.add_node(call, f"Event({event_id}, {stream_id})",
+                                          control_node=True, stream=stream_id)
+                            if len(self.stream_exprs[stream_id]) > 1:
+                                prev_expr = self.stream_exprs[stream_id][-2]
                                 self.add_edge(prev_expr, call, control_edge=True)
-                            self.wait_events_and_barrier(call)
+                            self.wait_events_and_barrier(call, stream=stream_id)
                             self.event_expr[event_id] = call
                         elif op.name == "mnm.op.wait_event":
-                            self.stream_wait_events[self.current_stream].append(event_id)
+                            self.stream_wait_events[stream_id].append(event_id)
                             self.memo_map[call] = None
         else:
             self.visit(op)
+            stream = self.current_stream
             if isinstance(op, tvm.ir.Op):
-                self.add_node(call, f'Call({op.name.split(".")[-1]})')
+                if op.get_attr("TMNMCollective"):
+                    if self.communication_stream is None:
+                        # when data parallel is enabled, we currently assume all communication ops
+                        # are executed in a single stream, while all computation ops are executed
+                        # in another. when we encounter a collective op, we should have at least
+                        # encountered a computation op and a wait_event op
+                        all_stream_ids = (set(self.stream_exprs.keys())
+                                          .union(self.stream_wait_events.keys())
+                                          .union(self.stream_barrier.keys()))
+                        if not (len(all_stream_ids) == 2 and len(self.stream_exprs) == 1):
+                            # the two-stream assumption does not hold, or the scheduling
+                            # ops are not used properly
+                            print("[WARNING] Cannot find valid communication stream. \
+                                  Drawing communication ops on the default stream.")
+                            self.communication_stream = 0
+                        else:
+                            self.communication_stream = list(
+                                all_stream_ids - set(self.stream_exprs.keys())
+                                )[0]
+                    stream = self.communication_stream
+                    self.add_node(call, f'Call({op.name.split(".")[-1]})', stream=stream)
+                else:
+                    self.add_node(call, f'Call({op.name.split(".")[-1]})')
             else:
                 self.add_node(call, f'Call({self.get_fused_op_name(op)})')
-            self.wait_events_and_barrier(call)
+            self.wait_events_and_barrier(call, stream=stream)
             self.add_edge(op, call)
             for arg in call.args:
                 self.visit(arg)

@@ -150,10 +150,11 @@ def add(x1, x2, out=None, where=None, attrs=None):
     where = op_utils.to_any(where)
     return relay.Call(op, [x1, x2, out, where], attrs)
 
-def add_event(event_id, attrs=None):
+def add_event(event_id, stream_id=-1, attrs=None):
     op = GetOp("mnm.op.add_event")
     event_id = op_utils.to_int(event_id)
-    return relay.Call(op, [event_id], attrs)
+    stream_id = op_utils.to_int(stream_id)
+    return relay.Call(op, [event_id, stream_id], attrs)
 
 def adv_index(inputs, attrs=None):
     op = GetOp("mnm.op.adv_index")
@@ -1370,10 +1371,11 @@ def vm_set_shape(data, shape, attrs=None):
     shape = op_utils.to_any(shape)
     return relay.Call(op, [data, shape], attrs)
 
-def wait_event(event_id, attrs=None):
+def wait_event(event_id, stream_id=-1, attrs=None):
     op = GetOp("mnm.op.wait_event")
     event_id = op_utils.to_int(event_id)
-    return relay.Call(op, [event_id], attrs)
+    stream_id = op_utils.to_int(stream_id)
+    return relay.Call(op, [event_id, stream_id], attrs)
 
 def where(condition, x, y, attrs=None):
     op = GetOp("mnm.op.where")

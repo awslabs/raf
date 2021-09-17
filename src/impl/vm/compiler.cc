@@ -15,6 +15,7 @@
 #include "mnm/binding.h"
 #include "mnm/type.h"
 #include "mnm/pass.h"
+#include "mnm/dist_context.h"
 #include "./compiler.h"
 
 namespace tvm {
@@ -34,6 +35,7 @@ using namespace mnm::op;
 using namespace mnm::value;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
+using mnm::distributed::DistContext;
 using tvm::relay::Shape;
 
 /*!
@@ -506,28 +508,74 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
               [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                 CHECK_EQ(args.size(), 2);
                 this->VisitExpr(args[0]);
-                auto device_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                Expr device_id_expr;
+                if (args[0].as<VarNode>()) {
+                  device_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                } else {
+                  device_id_expr = args[0];
+                }
                 Index device_id = device_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
                 this->VisitExpr(args[1]);
-                auto stream_id_expr = expr_map_[GetRef<Var>(args[1].as<VarNode>())];
+                Expr stream_id_expr;
+                if (args[1].as<VarNode>()) {
+                  stream_id_expr = expr_map_[GetRef<Var>(args[1].as<VarNode>())];
+                } else {
+                  stream_id_expr = args[1];
+                }
                 Index stream_id = stream_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
                 Emit(Instruction::CudaSetStream(device_id, stream_id));
               })
           .Match("mnm.op.add_event",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 1);
-                   auto event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                   CHECK(args.size() == 1 || args.size() == 2);
+                   Expr event_id_expr;
+                   if (args[0].as<VarNode>()) {
+                     event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                   } else {
+                     event_id_expr = args[0];
+                   }
                    Index event_id =
                        event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
-                   Emit(Instruction::CudaAddEvent(event_id));
+                   Index stream_id;
+                   if (args.size() == 2) {
+                     Expr stream_id_expr;
+                     if (args[1].as<VarNode>()) {
+                       stream_id_expr = expr_map_[GetRef<Var>(args[1].as<VarNode>())];
+                     } else {
+                       stream_id_expr = args[1];
+                     }
+                     stream_id = stream_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+                   } else {
+                     // default stream_id to -1
+                     stream_id = -1;
+                   }
+                   Emit(Instruction::CudaAddEvent(event_id, stream_id));
                  })
           .Match("mnm.op.wait_event",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 1);
-                   auto event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                   CHECK(args.size() == 1 || args.size() == 2);
+                   Expr event_id_expr;
+                   if (args[0].as<VarNode>()) {
+                     event_id_expr = expr_map_[GetRef<Var>(args[0].as<VarNode>())];
+                   } else {
+                     event_id_expr = args[0];
+                   }
                    Index event_id =
                        event_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
-                   Emit(Instruction::CudaWaitEvent(event_id));
+                   Index stream_id;
+                   if (args.size() == 2) {
+                     Expr stream_id_expr;
+                     if (args[1].as<VarNode>()) {
+                       stream_id_expr = expr_map_[GetRef<Var>(args[1].as<VarNode>())];
+                     } else {
+                       stream_id_expr = args[1];
+                     }
+                     stream_id = stream_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
+                   } else {
+                     // default stream_id to -1
+                     stream_id = -1;
+                   }
+                   Emit(Instruction::CudaWaitEvent(event_id, stream_id));
                  })
           .Match("mnm.op.stream_barrier",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
@@ -797,7 +845,8 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
 
   // optimization passes that transform BBNF into ANF
   bool enable_stream_schedule = true;
-  if ((*it).second.device_type() == DevType::kCUDA()) {
+  if ((*it).second.device_type() == DevType::kCUDA() &&
+      !DistContext::Global()->enable_data_parallel) {
     auto policy_name = pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
     if (policy_name == "sequential") {
       enable_stream_schedule = false;
@@ -816,6 +865,19 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   }
 
   // optimization passes that work on ANF
+  if ((*it).second.device_type() == DevType::kCUDA() &&
+      DistContext::Global()->enable_data_parallel) {
+    // The current design of AnnotateDistOps assumes ops are executed on two CUDA streams:
+    // all computation ops are executed on one stream, and all communication collectives
+    // are executed on another dedicated stream. This ensures that no two collectives
+    // can execute concurrently, and we can enforce strictly identical order of the collectives
+    // across different devices. (There is a potential problem if NCCL collectives are executed
+    // in parallel, see e.g. https://github.com/NVIDIA/nccl/issues/522,
+    // https://github.com/NVIDIA/nccl/issues/195). Thus currently AnnotateDistOps and the
+    // multi-stream passes are mutually exclusive.
+    // TODO: make AnnotateDistOps and multi-stream scheduling compatible
+    pass_seqs.push_back(pass::AnnotateDistOps());
+  }
   pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());

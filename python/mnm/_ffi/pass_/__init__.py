@@ -3,6 +3,7 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from __future__ import absolute_import
 from ._internal import ASAPStreamSchedule
+from ._internal import AnnotateDistOps
 from ._internal import AnnotateTarget
 from ._internal import AssignDevice
 from ._internal import AutoCast

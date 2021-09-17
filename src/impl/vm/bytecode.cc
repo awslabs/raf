@@ -128,6 +128,7 @@ Instruction::Instruction(const Instruction& instr) {
     case Opcode::CudaAddEvent:
     case Opcode::CudaWaitEvent:
       this->cuda_event.event_id = instr.cuda_event.event_id;
+      this->cuda_event.stream_id = instr.cuda_event.stream_id;
       return;
     case Opcode::CudaStreamBarrier:
       return;
@@ -252,6 +253,7 @@ Instruction& Instruction::operator=(const Instruction& instr) {
     case Opcode::CudaAddEvent:
     case Opcode::CudaWaitEvent:
       this->cuda_event.event_id = instr.cuda_event.event_id;
+      this->cuda_event.stream_id = instr.cuda_event.stream_id;
       return *this;
     case Opcode::CudaStreamBarrier:
       return *this;
@@ -537,17 +539,19 @@ Instruction Instruction::CudaSetStream(Index device_id, Index stream_id) {
   return instr;
 }
 
-Instruction Instruction::CudaAddEvent(Index event_id) {
+Instruction Instruction::CudaAddEvent(Index event_id, Index stream_id) {
   Instruction instr;
   instr.op = Opcode::CudaAddEvent;
   instr.cuda_event.event_id = event_id;
+  instr.cuda_event.stream_id = stream_id;
   return instr;
 }
 
-Instruction Instruction::CudaWaitEvent(Index event_id) {
+Instruction Instruction::CudaWaitEvent(Index event_id, Index stream_id) {
   Instruction instr;
   instr.op = Opcode::CudaWaitEvent;
   instr.cuda_event.event_id = event_id;
+  instr.cuda_event.stream_id = stream_id;
   return instr;
 }
 
@@ -712,11 +716,11 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       break;
     }
     case Opcode::CudaAddEvent: {
-      os << "cuda_add_event " << instr.cuda_event.event_id;
+      os << "cuda_add_event " << instr.cuda_event.event_id << " " << instr.cuda_event.stream_id;
       break;
     }
     case Opcode::CudaWaitEvent: {
-      os << "cuda_wait_event" << instr.cuda_event.event_id;
+      os << "cuda_wait_event" << instr.cuda_event.event_id << " " << instr.cuda_event.stream_id;
       break;
     }
     case Opcode::CudaStreamBarrier: {

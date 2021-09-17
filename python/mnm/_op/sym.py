@@ -136,9 +136,10 @@ def add(x1, x2, out=None, where=None):
     where = sym_utils.to_any(where)
     return Symbol.from_expr(ffi.add(x1, x2, out, where))
 
-def add_event(event_id):
+def add_event(event_id, stream_id=-1):
     event_id = sym_utils.to_int(event_id)
-    return Symbol.from_expr(ffi.add_event(event_id))
+    stream_id = sym_utils.to_int(stream_id)
+    return Symbol.from_expr(ffi.add_event(event_id, stream_id))
 
 def adv_index(inputs):
     inputs = sym_utils.to_tensor_tuple(inputs)
@@ -1185,9 +1186,10 @@ def vm_set_shape(data, shape):
     shape = sym_utils.to_any(shape)
     return Symbol.from_expr(ffi.vm.set_shape(data, shape))
 
-def wait_event(event_id):
+def wait_event(event_id, stream_id=-1):
     event_id = sym_utils.to_int(event_id)
-    return Symbol.from_expr(ffi.wait_event(event_id))
+    stream_id = sym_utils.to_int(stream_id)
+    return Symbol.from_expr(ffi.wait_event(event_id, stream_id))
 
 def where(condition, x, y):
     condition = sym_utils.to_tensor(condition)

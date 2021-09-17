@@ -41,7 +41,9 @@ void AllReduce(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._allreduce", AllReduce).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._allreduce", AllReduce)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 void Reduce(const CallValues& call) {
   const auto* args = call->args.as<CommReduceArgs>();
@@ -66,7 +68,9 @@ void Reduce(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._reduce", Reduce).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._reduce", Reduce)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 void AllGather(const CallValues& call) {
   const auto* args = call->args.as<AllgatherArgs>();
@@ -81,7 +85,9 @@ void AllGather(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op._allgather", AllGather).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._allgather", AllGather)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
@@ -100,7 +106,9 @@ void ReduceScatter(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 void Broadcast(const CallValues& call) {
   const auto* args = call->args.as<BroadcastArgs>();
@@ -136,7 +144,9 @@ void Send(const CallValues& call) {
                                     /*shape=*/std::vector<int64_t>{});
 }
 
-MNM_OP_DECLARE("mnm.op._send", Send).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._send", Send)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 void Recv(const CallValues& call) {
   const auto* args = call->args.as<RecvArgs>();
@@ -148,7 +158,9 @@ void Recv(const CallValues& call) {
                                     /*shape=*/args->shape);
 }
 
-MNM_OP_DECLARE("mnm.op._recv", Recv).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._recv", Recv)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 }  // namespace declare
 }  // namespace op

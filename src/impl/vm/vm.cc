@@ -29,6 +29,7 @@
 #include "mnm/vm/vm.h"
 #include "mnm/device_api.h"
 #include "mnm/profiler.h"
+#include "mnm/communicator.h"
 #include "mnm/stream_pool.h"
 #include "../../requests.h"
 #include "../../op/ty/utils.h"
@@ -846,7 +847,10 @@ void VirtualMachine::HandleCudaSetStream(VMContext& ctx, const Instruction& inst
 
 void VirtualMachine::HandleCudaAddEvent(VMContext& ctx, const Instruction& instr) {
   Index device_id = ctx->current_device_id;
-  Index stream_id = ctx->current_stream_id;
+  Index stream_id = instr.cuda_event.stream_id;
+  if (stream_id == -1) {
+    stream_id = ctx->current_stream_id;
+  }
   Index event_id = instr.cuda_event.event_id;
   auto event = utils::GetEventById(ctx, device_id, event_id);
   auto stream = utils::GetStreamById(ctx, device_id, stream_id);
@@ -858,7 +862,10 @@ void VirtualMachine::HandleCudaAddEvent(VMContext& ctx, const Instruction& instr
 
 void VirtualMachine::HandleCudaWaitEvent(VMContext& ctx, const Instruction& instr) {
   Index device_id = ctx->current_device_id;
-  Index stream_id = ctx->current_stream_id;
+  Index stream_id = instr.cuda_event.stream_id;
+  if (instr.cuda_event.stream_id == -1) {
+    stream_id = ctx->current_stream_id;
+  }
   Index event_id = instr.cuda_event.event_id;
   auto event = utils::GetEventById(ctx, device_id, event_id);
   auto stream = utils::GetStreamById(ctx, device_id, stream_id);
@@ -1005,7 +1012,10 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     // prepare cuda stream requests
     for (size_t i = 0; i < requests->stream.size(); i++) {
       Requests::StreamRequest& entry = requests->stream[i];
-      std::shared_ptr<Stream> stream = Stream::Get(entry.device, entry.tag_idx, entry.stream_idx);
+      // currently ignores the stream_idx field in requests, all requests with the same tag_idx will
+      // get the same cuda stream in vm
+      std::shared_ptr<Stream> stream =
+          utils::GetStreamById(ctx, entry.device.device_id(), entry.tag_idx);
       *entry.dest = stream->data();
       entry.stream = stream;
     }

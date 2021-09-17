@@ -289,5 +289,13 @@ Pass WavefrontStreamSchedule();
  */
 Pass ASAPStreamSchedule();
 
+/*!
+ * \brief This pass works in ANF and adds necessary synchronization ops (i.e., mnm.op.set_stream,
+ * mnm.op.add_event, and mnm.op.wait_event) between communication ops and computation ops to
+ * ensure correctness. This pass must be run if AutoDataParallel is enabled.
+ * \return The created pass.
+ */
+Pass AnnotateDistOps();
+
 }  // namespace pass
 }  // namespace mnm

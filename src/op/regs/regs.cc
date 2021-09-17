@@ -577,8 +577,9 @@ Attrs EmbeddingDx(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Event(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::EventArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::EventArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::Int, event_id);
+  MNM_POD(1, ffi2schema::Int, stream_id);
   return Attrs(attrs);
 }
 
@@ -1423,9 +1424,10 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.add").set_body([](TVMArgs args, TVMRetValue* ret
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.add_event").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(add_event, 1, ffi2schema::Event,
+  MNM_PRELUDE(add_event, 2, ffi2schema::Event,
               schema::EventArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Int(schema->event_id));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_id));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3100,9 +3102,10 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.vm.set_shape").set_body([](TVMArgs args, TVMRetV
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp.wait_event").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(wait_event, 1, ffi2schema::Event,
+  MNM_PRELUDE(wait_event, 2, ffi2schema::Event,
               schema::EventArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Int(schema->event_id));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->stream_id));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3478,8 +3481,9 @@ Array<Expr> EmbeddingDx(const TVMArgs& values) {
 }
 
 Array<Expr> Event(const TVMArgs& values) {
-  MNM_PRELUDE(1);
+  MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Int, event_id);
+  MNM_ARG(1, ffi2expr::Int, stream_id);
   MNM_RET();
 }
 
@@ -4164,7 +4168,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_max_pool2d")
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_max_pool2d_dx")
     .set_body(MNM_SYMBOLIC_API(adaptive_max_pool2d_dx, 4, AdaptivePoolDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.add").set_body(MNM_SYMBOLIC_API(add, 4, BinaryUfunc));
-MNM_REGISTER_GLOBAL("mnm.op.sym.add_event").set_body(MNM_SYMBOLIC_API(add_event, 1, Event));
+MNM_REGISTER_GLOBAL("mnm.op.sym.add_event").set_body(MNM_SYMBOLIC_API(add_event, 2, Event));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adv_index").set_body(MNM_SYMBOLIC_API(adv_index, 1, AdvIndex));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adv_index_dx")
     .set_body(MNM_SYMBOLIC_API(adv_index_dx, 2, AdvIndexDx));
@@ -4387,7 +4391,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.vm.invoke_op")
     .set_body(MNM_SYMBOLIC_API(vm_invoke_op, 3, InvokeOp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.vm.set_shape")
     .set_body(MNM_SYMBOLIC_API(vm_set_shape, 2, SetShape));
-MNM_REGISTER_GLOBAL("mnm.op.sym.wait_event").set_body(MNM_SYMBOLIC_API(wait_event, 1, Event));
+MNM_REGISTER_GLOBAL("mnm.op.sym.wait_event").set_body(MNM_SYMBOLIC_API(wait_event, 2, Event));
 MNM_REGISTER_GLOBAL("mnm.op.sym.where").set_body(MNM_SYMBOLIC_API(where, 3, Where));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros").set_body(MNM_SYMBOLIC_API(zeros, 3, InitOp));
 MNM_REGISTER_GLOBAL("mnm.op.sym.zeros_like").set_body(MNM_SYMBOLIC_API(zeros_like, 1, Unary));
@@ -4789,8 +4793,9 @@ Attrs EmbeddingDx(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Event(const Array<Value>& values) {
-  MNM_PRELUDE(1, 1, schema::EventArgs);
+  MNM_PRELUDE(1, 2, schema::EventArgs);
   MNM_REQUIRED(0, value2schema::Int, event_id);
+  MNM_OPTIONAL(1, value2schema::Int, stream_id);
   return Attrs(attrs);
 }
 
@@ -6137,6 +6142,9 @@ template <const char* op_name>
 int Event(const std::string& field) {
   if (field == "event_id") {
     return 0;
+  }
+  if (field == "stream_id") {
+    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

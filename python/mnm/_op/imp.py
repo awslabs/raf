@@ -152,9 +152,10 @@ def add(x1, x2, out=None, where=None):
     return imp_utils.ret(ffi.add(x1, x2, out, where))
 
 @set_module("mnm")
-def add_event(event_id):
+def add_event(event_id, stream_id=-1):
     event_id = imp_utils.to_int(event_id)
-    return imp_utils.ret(ffi.add_event(event_id))
+    stream_id = imp_utils.to_int(stream_id)
+    return imp_utils.ret(ffi.add_event(event_id, stream_id))
 
 @set_module("mnm")
 def adv_index(inputs):
@@ -1372,9 +1373,10 @@ def vm_set_shape(data, shape):
     return imp_utils.ret(ffi.vm.set_shape(data, shape))
 
 @set_module("mnm")
-def wait_event(event_id):
+def wait_event(event_id, stream_id=-1):
     event_id = imp_utils.to_int(event_id)
-    return imp_utils.ret(ffi.wait_event(event_id))
+    stream_id = imp_utils.to_int(stream_id)
+    return imp_utils.ret(ffi.wait_event(event_id, stream_id))
 
 @set_module("mnm")
 def where(condition, x, y):
