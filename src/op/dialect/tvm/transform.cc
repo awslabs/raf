@@ -880,6 +880,54 @@ HashKey ResizeHasher(const std::vector<Type>& param_types, const Type& y_type, c
 MNM_TVM(resize2d, Resize2D, Resize2DArgs, ResizeSchema2Args<Resize2DArgs>, ResizeSchemaArgNames,
         Resize2DSchema2Attrs, ResizeHasher<Resize2DArgs>, kInjective);
 
+std::vector<Value> Resize2DDxSchema2Args(const Resize2DDxArgs* args) {
+  return {args->x, args->dy};
+}
+
+std::vector<std::string> Resize2DDxSchemaArgNames(const op::CallValues& call) {
+  return {"x", "dy"};
+}
+
+Attrs Resize2DDxSchema2Attrs(const Resize2DDxArgs* args) {
+  auto attrs = make_object<Resize2DAttrs>();
+  attrs->layout = args->layout;
+  attrs->method = args->method;
+  attrs->coordinate_transformation_mode = args->coordinate_transformation_mode;
+  attrs->rounding_method = args->rounding_method;
+  attrs->cubic_alpha = args->cubic_alpha;
+  attrs->cubic_exclude = args->cubic_exclude;
+
+  DataType out_dtype(String2DLDataType(args->out_dtype));
+  attrs->out_dtype = out_dtype;
+
+  std::vector<int64_t> size(args->size);
+  CHECK(size.size() > 0);
+  if (size.size() == 1) size.push_back(size[0]);
+
+  for (auto dim : size) {
+    attrs->size.push_back(IndexExpr((int32_t)dim));
+  }
+
+  return Attrs(attrs);
+}
+
+HashKey Resize2DDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                         const Resize2DDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->size;
+  key << args->layout;
+  key << args->method;
+  key << args->coordinate_transformation_mode;
+  key << args->rounding_method;
+  key << args->cubic_alpha;
+  key << args->cubic_exclude;
+  key << args->out_dtype;
+  return key;
+}
+
+MNM_TVM(resize2d_dx, Resize2DDx, Resize2DDxArgs, Resize2DDxSchema2Args, Resize2DDxSchemaArgNames,
+        Resize2DDxSchema2Attrs, Resize2DDxHasher, kInjective);
+
 std::vector<Value> ExpandDimsSchema2Args(const ExpandDimsArgs* args) {
   return {args->x};
 }

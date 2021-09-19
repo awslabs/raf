@@ -265,6 +265,8 @@ reshape = _APIS.get("mnm.op.sym.reshape", None)
 # Defined in ./src/op/regs/regs.cc
 resize2d = _APIS.get("mnm.op.sym.resize2d", None)
 # Defined in ./src/op/regs/regs.cc
+resize2d_dx = _APIS.get("mnm.op.sym.resize2d_dx", None)
+# Defined in ./src/op/regs/regs.cc
 reverse = _APIS.get("mnm.op.sym.reverse", None)
 # Defined in ./src/op/regs/regs.cc
 reverse_sequence = _APIS.get("mnm.op.sym.reverse_sequence", None)

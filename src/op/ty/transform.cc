@@ -852,6 +852,16 @@ Type Resize2DInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.resize2d", "Resize2D", Resize2DInfer);
 
+Type Resize2DDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<Resize2DDxArgs>();
+  CHECK(args != nullptr);
+
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
+MNM_OP_TYPE("mnm.op.resize2d_dx", "Resize2DDx", Resize2DDxInfer);
+
 Type ArgwhereInfer(const CallValues& value) {
   const auto* args = value->args.as<ArgwhereArgs>();
   CHECK(args != nullptr);

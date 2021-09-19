@@ -194,6 +194,17 @@ MNM_OP_DECLARE("mnm.op.resize2d", [](const CallValues& call) {
   call->device = x->device;
 });
 
+MNM_OP_DECLARE("mnm.op.resize2d_dx", [](const CallValues& call) {
+  const auto* args = call->args.as<Resize2DDxArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+  call->device = x->device;
+});
+
 void TakeFunc(const CallValues& call) {
   const auto* args = call->args.as<TakeArgs>();
   CHECK(args != nullptr);

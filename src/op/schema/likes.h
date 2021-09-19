@@ -41,6 +41,21 @@ class Resize2DArgs : public ir::AttrsNode<Resize2DArgs> {
   MNM_OP_SCHEMA(Resize2DArgs, "mnm.args.resize2d");
 };
 
+class Resize2DDxArgs : public ir::AttrsNode<Resize2DDxArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::BaseTensorValue dy;
+  std::vector<int64_t> size;
+  std::string layout{"NCHW"};
+  std::string method{"linear"};
+  std::string coordinate_transformation_mode{"half_pixel"};
+  std::string rounding_method{};
+  float cubic_alpha{-0.5};
+  int cubic_exclude{0};
+  std::string out_dtype{};
+  MNM_OP_SCHEMA(Resize2DDxArgs, "mnm.args.resize2d_dx");
+};
+
 class SumArgs : public ir::AttrsNode<SumArgs> {
  public:
   value::BaseTensorValue x;

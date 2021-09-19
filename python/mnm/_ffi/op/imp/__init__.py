@@ -133,6 +133,7 @@ from ._internal import repeat
 from ._internal import repeat_dx
 from ._internal import reshape
 from ._internal import resize2d
+from ._internal import resize2d_dx
 from ._internal import reverse
 from ._internal import reverse_sequence
 from ._internal import right_shift

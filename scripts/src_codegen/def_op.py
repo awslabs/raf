@@ -94,6 +94,7 @@ OPS = [
     Op(name="cross_entropy_dtrue", schema_name="loss"),
     Op(name="reshape", schema_name="reshape"),
     Op(name="resize2d", schema_name="resize2d"),
+    Op(name="resize2d_dx", schema_name="resize2d_dx"),
     Op(name="ndarray_size", schema_name="unary"),
     Op(name="transpose", schema_name="transpose"),
     Op(name="transpose_dx", schema_name="transpose_dx"),

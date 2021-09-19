@@ -184,6 +184,35 @@ def compute_resize2d(attrs, inputs, out_type):
 
 _reg.register_injective_schedule("mnm.op.tvm.resize2d")
 
+@register_compute("mnm.op.tvm.resize2d_dx")
+def resize2d_dx_compute(attrs, inputs, out_type):
+    """ compute definition for resize2d_dx op """
+    dy = inputs[1]
+    size = attrs.size
+    layout = attrs.layout
+    method = attrs.method
+    coord_trans = attrs.coordinate_transformation_mode
+    rounding_method = attrs.rounding_method
+    cubic_alpha = attrs.cubic_alpha
+    cubic_exclude = attrs.cubic_exclude
+    out_dtype = attrs.out_dtype
+
+    out = _topi.image.resize2d(
+        inputs[0],
+        size,
+        layout,
+        method,
+        coord_trans,
+        rounding_method,
+        cubic_alpha,
+        cubic_exclude,
+        out_dtype
+    )
+    grads = _tvm.te.gradient(out, [inputs[0]], head=dy)
+    return grads
+
+_reg.register_injective_schedule("mnm.op.tvm.resize2d_dx")
+
 @register_compute("mnm.op.tvm.adv_index")
 def adv_index_compute(attrs, inputs, output_type):
     data = inputs[0]

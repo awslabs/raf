@@ -390,7 +390,25 @@ MNM_OP_GRAD("mnm.op.argwhere", NoGrads<1>);
 
 MNM_OP_GRAD("mnm.op.ndarray_size", NoGrads<1>);
 
-MNM_OP_GRAD("mnm.op.resize2d", NoGrads<1>);
+Array<Expr> Resize2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                         const Expr& dy) {
+  static auto resize2d_dx = Op::Get("mnm.op.resize2d_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  const Expr& size = call->args[1];
+  const Expr& layout = call->args[2];
+  const Expr& method = call->args[3];
+  const Expr& coordinate_transformation_mode = call->args[4];
+  const Expr& rounding_method = call->args[5];
+  const Expr& cubic_alpha = call->args[6];
+  const Expr& cubic_exclude = call->args[7];
+  const Expr& out_dtype = call->args[8];
+  return {Call(resize2d_dx, {x, dy, size, layout, method, coordinate_transformation_mode,
+                             rounding_method, cubic_alpha, cubic_exclude, out_dtype})};
+}
+
+MNM_OP_GRAD("mnm.op.resize2d", Resize2dGrad);
 
 MNM_OP_GRAD("mnm.op.arange", NoGrads<0>);
 MNM_OP_GRAD("mnm.op.zeros", NoGrads<0>);

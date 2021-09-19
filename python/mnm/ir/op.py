@@ -33,18 +33,19 @@ __all__ = [
     "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot", "ones",
     "ones_like", "pad", "power", "prod", "prod_dx",
     "relu", "relu_dx", "repeat", "repeat_dx", "reshape",
-    "resize2d", "reverse", "reverse_sequence", "right_shift", "roi_align",
-    "roi_align_dx", "round", "rsqrt", "scatter", "scatter_dx",
-    "sequence_mask", "set_stream", "sgd", "shape", "sigmoid",
-    "sigmoid_dx", "sign", "sin", "smooth_l1_loss", "smooth_l1_loss_dpred",
-    "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort", "split",
-    "sqrt", "sqrt_dx", "squeeze", "stack", "stream_barrier",
-    "stream_sync", "strided_slice", "strided_slice_dx", "subtract", "sum",
-    "sum_dx", "swap_axis", "take", "take_dx", "tanh",
-    "tanh_dx", "threefry_generate", "threefry_split", "threshold", "threshold_dx",
-    "topk", "transpose", "transpose_dx", "trunc", "upper_bound_argwhere",
-    "vm_alloc_storage", "vm_alloc_tensor", "vm_free", "vm_infer_type", "vm_invoke_op",
-    "vm_set_shape", "wait_event", "where", "zeros", "zeros_like",
+    "resize2d", "resize2d_dx", "reverse", "reverse_sequence", "right_shift",
+    "roi_align", "roi_align_dx", "round", "rsqrt", "scatter",
+    "scatter_dx", "sequence_mask", "set_stream", "sgd", "shape",
+    "sigmoid", "sigmoid_dx", "sign", "sin", "smooth_l1_loss",
+    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stream_barrier", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
+    "sum", "sum_dx", "swap_axis", "take", "take_dx",
+    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "threshold",
+    "threshold_dx", "topk", "transpose", "transpose_dx", "trunc",
+    "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free", "vm_infer_type",
+    "vm_invoke_op", "vm_set_shape", "wait_event", "where", "zeros",
+    "zeros_like",
 ]
 
 def _allgather(x, axis, attrs=None):
@@ -988,6 +989,20 @@ def resize2d(x, size, layout="NCHW", method="linear", coordinate_transformation_
     cubic_exclude = op_utils.to_int(cubic_exclude)
     out_dtype = op_utils.to_string(out_dtype)
     return relay.Call(op, [x, size, layout, method, coordinate_transformation_mode, rounding_method, cubic_alpha, cubic_exclude, out_dtype], attrs)
+
+def resize2d_dx(x, dy, size, layout="NCHW", method="linear", coordinate_transformation_mode="half_pixel", rounding_method="", cubic_alpha=-0.5, cubic_exclude=0, out_dtype="", attrs=None):
+    op = GetOp("mnm.op.resize2d_dx")
+    x = op_utils.to_tensor(x)
+    dy = op_utils.to_tensor(dy)
+    size = op_utils.to_int_tuple(size)
+    layout = op_utils.to_string(layout)
+    method = op_utils.to_string(method)
+    coordinate_transformation_mode = op_utils.to_string(coordinate_transformation_mode)
+    rounding_method = op_utils.to_string(rounding_method)
+    cubic_alpha = op_utils.to_double(cubic_alpha)
+    cubic_exclude = op_utils.to_int(cubic_exclude)
+    out_dtype = op_utils.to_string(out_dtype)
+    return relay.Call(op, [x, dy, size, layout, method, coordinate_transformation_mode, rounding_method, cubic_alpha, cubic_exclude, out_dtype], attrs)
 
 def reverse(x, axis=0, attrs=None):
     op = GetOp("mnm.op.reverse")
