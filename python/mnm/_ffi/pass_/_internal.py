@@ -24,6 +24,10 @@ CanonicalizeOps = _APIS.get("mnm.pass_.CanonicalizeOps", None)
 ContextAnalysis = _APIS.get("mnm.pass_.ContextAnalysis", None)
 # Defined in ./src/pass/dead_code.cc
 DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
+# Defined in ./src/pass/dispatch_dialect.cc
+DispatchDialect = _APIS.get("mnm.pass_.DispatchDialect", None)
+# Defined in ./src/pass/type_erase.cc
+EraseType = _APIS.get("mnm.pass_.EraseType", None)
 # Defined in ./src/pass/estimate_flops.cc
 EstimateGFLOPS = _APIS.get("mnm.pass_.EstimateGFLOPS", None)
 # Defined in ./src/pass/substitute.cc
@@ -36,8 +40,10 @@ FlattenClosure = _APIS.get("mnm.pass_.FlattenClosure", None)
 FoldConstant = _APIS.get("mnm.pass_.FoldConstant", None)
 # Defined in ./src/pass/from_relay.cc
 FromRelay = _APIS.get("mnm.pass_.FromRelay", None)
-# Defined in ./src/pass/fuse_ops.cc
-FuseOps = _APIS.get("mnm.pass_.FuseOps", None)
+# Defined in ./src/pass/fuse_dialect.cc
+FuseDialect = _APIS.get("mnm.pass_.FuseDialect", None)
+# Defined in ./src/pass/fuse_tvm.cc
+FuseTVM = _APIS.get("mnm.pass_.FuseTVM", None)
 # Defined in ./src/pass/grad_arg_select.cc
 GradientInputSelection = _APIS.get("mnm.pass_.GradientInputSelection", None)
 # Defined in ./src/pass/type_infer.cc

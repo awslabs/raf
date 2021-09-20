@@ -81,8 +81,7 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, avg_pool2d);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(avg_pool2d, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, avg_pool2d, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.avg_pool2d", AvgPool2DImplementedByCUDNNPoolingForward::make);
 
 class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
@@ -165,8 +164,7 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, avg_pool2d_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(avg_pool2d_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, avg_pool2d_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.avg_pool2d_dx", AvgPool2DDxImplementedByCUDNNPoolingBackward::make);
 
 class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
@@ -229,8 +227,7 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, max_pool2d);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(max_pool2d, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, max_pool2d, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.max_pool2d", MaxPool2DImplementedByCUDNNPoolingForward::make);
 
 class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
@@ -311,8 +308,7 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, max_pool2d_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(max_pool2d_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, max_pool2d_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.max_pool2d_dx", MaxPool2DDxImplementedByCUDNNPoolingBackward::make);
 
 }  // namespace cudnn

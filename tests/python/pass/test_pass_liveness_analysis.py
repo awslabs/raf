@@ -382,6 +382,7 @@ def test_after_manifest_alloc():
     verify_live_in_set(mod, expected)
 
 
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_fuse_closure():
     class Model(mnm.Model):
         def build(self):
@@ -390,7 +391,7 @@ def test_fuse_closure():
         @mnm.model.trace
         def forward(self, p0, p1, p2):
             t_0 = mnm.matmul(p0, p1)
-            t_1 = mnm.add(t_0, p2)
+            t_1 = mnm.multiply(t_0, p2)
             t_2 = mnm.relu(t_1)
             return t_2
 
@@ -405,20 +406,21 @@ def test_fuse_closure():
     args = [m_p0, m_p1, m_p2]
 
     mod = model._internal(*args).mod
-    with mnm.ir.PassContext(config={"mnm.fuse_level": 1}):
+    with mnm.device("cuda"):
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
         mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseOps()(mod)
+        mod = mnm._ffi.pass_.FuseDialect()(mod)
+        mod = mnm._ffi.pass_.FuseTVM()(mod)
         mod = mnm._ffi.pass_.ToANormalForm()(mod)
         mod = mnm._ffi.pass_.InlinePrimitives()(mod)
     # fn (%p0: Tensor[(5, 5), float32],
     #     %p1: Tensor[(5, 5), float32],
     #     %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x1 = mnm.op.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x1 = mnm.op.cublas.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
     #   %1 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32],
-    #            Primitive=1) -> Tensor[(5, 5), float32] {
-    #     %0 = mnm.op.add(%p01, %p11);
-    #     mnm.op.relu(%0)
+    #            Primitive=1, Dialect="tvm") -> Tensor[(5, 5), float32] {
+    #     %0 = mnm.op.tvm.multiply(%p01, %p11);
+    #     mnm.op.tvm.relu(%0)
     #   };
     #   let %x3 = %1(%x1, %p2);
     #   %x3
@@ -438,7 +440,7 @@ def test_fuse_closure():
     #           %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
     #   let %x_0 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
     #   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, [5, 5], str"float32",[5, 5]);
-    #   let %x_2 = mnm.op.matmul;
+    #   let %x_2 = mnm.op.cublas.matmul;
     #   let %x_3 = (%p0, %p1);
     #   let %x_4 = (%x_1,);
     #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
@@ -446,9 +448,10 @@ def test_fuse_closure():
     #   let %x_6 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
     #   let %x_7 = mnm.op.vm.alloc_tensor(%x_6, [5, 5], str"float32",[5, 5]);
     #   let %x_8 = fn (%p01: Tensor[(5, 5), float32],
-    #                  %p11: Tensor[(5, 5), float32], Primitive=1) -> Tensor[(5, 5), float32] {
-    #     %0 = mnm.op.add(%p01, %p11, nullptr /* ty=() */, nullptr /* ty=() */);
-    #     mnm.op.relu(%0)
+    #                  %p11: Tensor[(5, 5), float32], Primitive=1, Dialect="tvm")
+    #              -> Tensor[(5, 5), float32] {
+    #     %0 = mnm.op.tvm.add(%p01, %p11, nullptr /* ty=() */, nullptr /* ty=() */);
+    #     mnm.op.tvm.relu(%0)
     #   };
     #   let %x_9 = (%x1, %p2);
     #   let %x_10 = (%x_7,);

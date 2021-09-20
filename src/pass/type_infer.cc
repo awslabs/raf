@@ -68,7 +68,6 @@ class TypeInferencer : public ExprMutator {
   }
 
   CallValues SchemaToValue(Array<Expr> args, const OpNode* op) {
-    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
     CallValues call_values = CallValues::make();
     Array<Value> arg_values;
     for (const auto& arg : args) {
@@ -78,7 +77,7 @@ class TypeInferencer : public ExprMutator {
         arg_values.push_back(GetValue(arg));
       }
     }
-    call_values->args = fschema[GetRef<Op>(op)](arg_values);
+    call_values->args = GetOpAttr<op::FMNMSchema>(GetRef<Op>(op), "FMNMSchema")(arg_values);
     call_values->callee = OpValue::make(GetRef<Op>(op));
     return call_values;
   }
@@ -333,10 +332,10 @@ class TypeInferencer : public ExprMutator {
     return ret;
   }
 
-  Expr VisitExpr_(const OpNode* op) override {
-    static const auto op_type = Op::GetAttrMap<OpType>("OpType");
-    op->checked_type_ = op_type[GetRef<Op>(op)];
-    return GetRef<Expr>(op);
+  Expr VisitExpr_(const OpNode* node) override {
+    auto op = GetRef<Op>(node);
+    op->checked_type_ = GetOpAttr<OpType>(op, "OpType");
+    return op;
   }
 
   Expr VisitExpr_(const FunctionNode* op) override {
@@ -540,11 +539,6 @@ void AddGlobalTypes(ir::IRModule mod) {
   }
 }
 
-ir::Expr InferType(ir::Expr func) {
-  auto mod = ir::GlobalModule();
-  return type_infer::TypeInferencer(mod).VisitExpr(func);
-}
-
 Pass InferType() {
   return CreateModulePass(
       [=](IRModule mod, const PassContext& pass_ctx) {
@@ -561,6 +555,39 @@ Pass InferType() {
         return updated_mod;
       },
       0, "InferType", {});
+}
+
+Expr InferType(Expr func) {
+  auto mod = GlobalModule();
+  return type_infer::TypeInferencer(mod).VisitExpr(func);
+}
+
+Expr InferTypeWithModule(const Expr& expr, const IRModule& m) {
+  IRModule mod(m->functions, m->type_definitions, m->Imports());
+  int idx = 0;
+  std::string gv_name;
+  do {
+    std::ostringstream oss;
+    oss << "_tmp" << idx;
+    gv_name = oss.str();
+    ++idx;
+  } while (mod->ContainGlobalVar(gv_name));
+  GlobalVar gvar(gv_name);
+  BaseFunc func;
+  if (expr.as<FunctionNode>()) {
+    func = Downcast<Function>(expr);
+  } else {
+    func = Function(pass::FreeVars(expr), expr, Type(), pass::FreeTypeVars(expr, mod), {});
+  }
+  mod->Add(gvar, func);
+  mod = InferType()(mod);
+  Expr ret;
+  if (expr.as<FunctionNode>()) {
+    ret = mod->Lookup(gvar);
+  } else {
+    ret = mod->Lookup(gvar).as<FunctionNode>()->body;
+  }
+  return ret;
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([]() { return InferType(); });

@@ -23,6 +23,7 @@ CUBlasThreadEntry* CUBlasThreadEntry::ThreadLocal() {
   return CUBlasThreadStore::Get();
 }
 
+MNM_REGISTER_DIALECT("cublas").set_enable(DevType::kCUDA());
 TVM_REGISTER_PASS_CONFIG_OPTION("mnm.cublas.allow_tf32", tvm::Bool);
 
 }  // namespace cublas

@@ -141,18 +141,14 @@ using BatchMatmulNT = BatchMatmulImpl<false, true>;
 using BatchMatmulTN = BatchMatmulImpl<true, false>;
 using BatchMatmulTT = BatchMatmulImpl<true, true>;
 
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul);
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_nt);
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_tn);
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_tt);
+MNM_REGISTER_DIALECT_OP(cublas, batch_matmul, 15);
+MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_nt, 15);
+MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_tn, 15);
+MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_tt, 15);
 MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul", BatchMatmulNN::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul_nt", BatchMatmulNT::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul_tn", BatchMatmulTN::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul_tt", BatchMatmulTT::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_matmul, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_matmul_nt, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_matmul_tn, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_matmul_tt, cublas, DevType::kCUDA(), 14);
 
 }  // namespace manual
 }  // namespace cublas

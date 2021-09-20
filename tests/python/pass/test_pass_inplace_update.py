@@ -33,8 +33,8 @@ def optimize(mod):
     return mod
 
 
-def lower(model, *data):
-    mod = model._internal(*data).mod
+def lower(model, args):
+    mod = model._internal(*args).mod
     return optimize(mod)
 
 
@@ -79,7 +79,7 @@ def test_bn():
     # }
     # pylint: enable=line-too-long
     model = Test1(num_features=3)
-    func = lower(model, data)["main"]
+    func = lower(model, [data])["main"]
     variables = extract_vars(func.body)
     running_mean = func.params[2]
     running_var = func.params[3]
@@ -120,7 +120,7 @@ def test_bn():
     # }
     # pylint: enable=line-too-long
     model = Test2(num_features=3)
-    func = lower(model, data)["main"]
+    func = lower(model, [data])["main"]
     variables = extract_vars(func.body)
     running_mean = func.params[2]
     running_var = func.params[3]
@@ -238,7 +238,7 @@ def test_chain():
     model = Model()
     device = "cpu"
     x = mnm.array(np.random.randn(*shape), device=device)
-    func = lower(model, x)["main"]
+    func = lower(model, [x])["main"]
     variables = extract_vars(func.body)
     prev_var = None
     for variable in variables:

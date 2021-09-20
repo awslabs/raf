@@ -62,8 +62,8 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
         InitPool(Device(device), "page_unit_pool")
         budget = budget_in_mbs if with_remat else 10000
         with tvm.transform.PassContext(opt_level=3,
-                                       config={"mnm.fuse_level": 0,
-                                               "mnm.memory_budget": int(budget * 1048576)}):
+                                       disabled_pass=["FuseTVM", "FuseDialect"],
+                                       config={"mnm.memory_budget": int(budget * 1048576)}):
             executor = VMDebugExecutor(mod, device, option="profile_memory")
             ret_map = executor.make_executor()(*args)
 
@@ -207,10 +207,11 @@ def test_closure():
 
         # Closure
         p_0 = mnm.ir.var("p0", shape=shape)
-        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.relu"), [p_0])
-        out = relay.Call(softmax_op, [out])
+        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.tvm.relu"), [p_0])
+        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.tvm.softmax"), [out])
         closure = relay.Function([p_0], out)
         closure = closure.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        closure = closure.with_attr("Dialect", "tvm")
 
         a_4 = sb.let("a4", relay.Call(closure, [a_3]))
         a_5 = sb.let("a5", relay.Call(softmax_dx_op, [a_2, a_3, a_4]))

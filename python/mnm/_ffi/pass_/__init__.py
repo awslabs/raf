@@ -13,13 +13,16 @@ from ._internal import BindParam
 from ._internal import CanonicalizeOps
 from ._internal import ContextAnalysis
 from ._internal import DeadCodeElimination
+from ._internal import DispatchDialect
+from ._internal import EraseType
 from ._internal import EstimateGFLOPS
 from ._internal import ExprAppend
 from ._internal import ExtractBinding
 from ._internal import FlattenClosure
 from ._internal import FoldConstant
 from ._internal import FromRelay
-from ._internal import FuseOps
+from ._internal import FuseDialect
+from ._internal import FuseTVM
 from ._internal import GradientInputSelection
 from ._internal import InferType
 from ._internal import InlineBackward

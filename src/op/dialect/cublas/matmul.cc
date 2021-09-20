@@ -75,12 +75,11 @@ class MatmulImpl : public mnm::op::OpEnv {
 
  public:
   explicit MatmulImpl(const CallValues& cv) {
-    static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
     auto op = ir::Op::Get("mnm.op.matmul");
+    static auto fschema_index = op::GetOpAttr<op::FMNMSchemaFieldIndex>(op, "FMNMSchemaFieldIndex");
     this->arg_indices = {
-        fschema_index[op]("x1"),
-        fschema_index[op]("x2"),
+        fschema_index("x1"),
+        fschema_index("x2"),
     };
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
@@ -121,21 +120,16 @@ using MatmulNT = MatmulImpl<false, true>;
 using MatmulTN = MatmulImpl<true, false>;
 using MatmulTT = MatmulImpl<true, true>;
 
-MNM_REGISTER_DIALECT_OP(cublas, matmul);
-MNM_REGISTER_DIALECT_OP(cublas, matmul_nt);
-MNM_REGISTER_DIALECT_OP(cublas, matmul_tn);
-MNM_REGISTER_DIALECT_OP(cublas, matmul_tt);
-MNM_REGISTER_DIALECT_OP(cublas, dense);
+MNM_REGISTER_DIALECT_OP(cublas, matmul, 15);
+MNM_REGISTER_DIALECT_OP(cublas, matmul_nt, 15);
+MNM_REGISTER_DIALECT_OP(cublas, matmul_tn, 15);
+MNM_REGISTER_DIALECT_OP(cublas, matmul_tt, 15);
+MNM_REGISTER_DIALECT_OP(cublas, dense, 15);
 MNM_OP_ENV_MAKER("mnm.op.cublas.matmul", MatmulNN::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.matmul_nt", MatmulNT::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.matmul_tn", MatmulTN::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.matmul_tt", MatmulTT::make);
 MNM_OP_ENV_MAKER("mnm.op.cublas.dense", MatmulNT::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(matmul, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(matmul_nt, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(matmul_tn, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(matmul_tt, cublas, DevType::kCUDA(), 14);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(dense, cublas, DevType::kCUDA(), 14);
 
 }  // namespace manual
 }  // namespace cublas

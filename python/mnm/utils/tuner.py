@@ -19,7 +19,7 @@ from tvm import auto_scheduler, autotvm
 from tvm.auto_scheduler import compute_dag
 
 
-def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_seq=None):
+def extract_tuning_tasks(mod_or_executor, args, device, *, fusion=False, pass_seq=None):
     """Extract tuning tasks from the given function and the target.
 
     Parameters
@@ -33,8 +33,8 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_se
     device: str
         The target device.
 
-    fuse_level: int
-        The fusion level. Default 0.
+    fusion: bool
+        Whether to apply fusion. Default: False.
 
     pass_seq: Optional[MNMSequential]
         A pass sequence to be applied.
@@ -57,8 +57,9 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fuse_level=0, pass_se
             args = _get_func_inputs(record, args, {}, get_handle=False)
         else: # mnm.ir.IRModule
             mod = mod_or_executor
-        with mnm.ir.PassContext(opt_level=3, config={"mnm.fuse_level": fuse_level},
-                                disabled_pass={"AutoSchedulerLayoutRewrite"}):
+        disabled_pass = ["FuseDialect", "FuseTVM"] if not fusion else []
+        disabled_pass.append("AutoSchedulerLayoutRewrite")
+        with mnm.ir.PassContext(opt_level=3, disabled_pass=disabled_pass):
             # Enable profile_memory mode to skip the op execution; otherwise it becomes
             # a chicken-egg problem: we need to run through every ops to collect tuning tasks,
             # but we cannot execute ops without schedules.
@@ -146,7 +147,7 @@ def tune_tasks(tasks, weights, log_file, n_trials):
     del measure_device
     print("Done tuning. Records saved in %s" % log_file)
 
-def run_tuning(model_or_executor, device, args, log_file, *, fuse_level=0, pass_seq=None,
+def run_tuning(model_or_executor, device, args, log_file, *, fusion=False, pass_seq=None,
                n_trials=lambda l: 300 * min(l, 100), only_tune_tasks_with_name=None,
                only_extract_tasks=False):
     """Tune the given tasks.
@@ -166,8 +167,8 @@ def run_tuning(model_or_executor, device, args, log_file, *, fuse_level=0, pass_
         The log file to dump the tuning records. If the file already contains tuning records,
         we use them to initialize the task scheduler and new records will be appended.
 
-    fuse_level: int
-        The fusion level. Default 0.
+    fusion: bool
+        Whether to apply fusion. Default: False.
 
     pass_seq: Optional[MNMSequential]
         A pass sequence to be applied.
@@ -185,7 +186,7 @@ def run_tuning(model_or_executor, device, args, log_file, *, fuse_level=0, pass_
         Whether to extract and print tasks only without actual tuning them.
     """
     print("Extracting tasks...")
-    tasks, weights = extract_tuning_tasks(model_or_executor, args, device, fuse_level=fuse_level,
+    tasks, weights = extract_tuning_tasks(model_or_executor, args, device, fusion=fusion,
                                           pass_seq=pass_seq)
     ori_task_num = len(tasks)
 
@@ -263,8 +264,7 @@ def tune_op(sch_file, model_cls, gen_arg_func, space_dict, n_trials=None,
         m_model.infer_mode()
         m_model.to(device=device)
 
-        fuse_level = 3 if fusion else 0
-        extract_tasks, _ = extract_tuning_tasks(m_model, input_args, device, fuse_level=fuse_level,
+        extract_tasks, _ = extract_tuning_tasks(m_model, input_args, device, fusion=fusion,
                                                 pass_seq=None)
         assert len(extract_tasks) == 1
         tasks.append(extract_tasks[0])

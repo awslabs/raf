@@ -97,7 +97,7 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     const auto* op = static_cast<const ConstantNode*>(_op);
     this->AddNode(op);
     Node* node = graph_.node_map.at(op);
-    if (!op->IsTensor()) {
+    if (op->IsScalar()) {
       node->pattern = kElemWise;
     } else {
       // for now, mark non-scalar constant
@@ -126,16 +126,26 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     OpPatternKind op_pattern = kOpaque;
     if (const OpNode* opnode = call->op.as<OpNode>()) {
       auto op = GetRef<Op>(opnode);
-      // TODO(@icemelon9): Check if the op has data dependant shape inference
-      op_pattern = static_cast<OpPatternKind>(fpattern[op]);
-      // Check if the op has inplace update to the outputs
-      if (finplace.count(op)) {
-        node->inplace_update = true;
-      } else if (op == add_op || op == subtract_op) {
-        CHECK_GT(call->args.size(), 2);
-        auto out = call->args[2];
-        if (out.defined() && out.as<ExtendedVarNode>()) {
+      if (!IsDialectOp(op)) {
+        auto tvm_op = OpDialect::Lower(op, "tvm");
+        if (tvm_op.defined()) {
+          // TODO(@icemelon9): Check if the op has data dependant shape inference
+          op_pattern = static_cast<OpPatternKind>(fpattern[tvm_op]);
+        }
+        // Check if this op performs inplace update to the outputs
+        // No need to check inplace update for dialect ops
+        if (finplace.count(op)) {
           node->inplace_update = true;
+        } else if (op == add_op || op == subtract_op) {
+          CHECK_GT(call->args.size(), 2);
+          auto out = call->args[2];
+          if (out.defined()) {
+            auto konst = out.as<ConstantNode>();
+            // Inplace update when out is not constant or konst->value is defined
+            if (!konst || konst->value.defined()) {
+              node->inplace_update = true;
+            }
+          }
         }
       }
     } else {

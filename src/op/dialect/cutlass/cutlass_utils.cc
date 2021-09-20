@@ -18,6 +18,8 @@ namespace cutlass {
 using namespace mnm::ir;
 using namespace mnm::value;
 
+MNM_REGISTER_DIALECT("cutlass").set_enable(DevType::kCUDA());
+
 CutlassOpEnv::CutlassOpEnv(const CallValues& call) : device_(call->device) {
   CUDA_CALL(cudaGetDeviceProperties(&device_prop_, device_.device_id()));
 }
@@ -103,6 +105,14 @@ DType GetAccumulationDType(DType dtype) {
   }
   return DType();
 }
+
+// Register auxilary ops
+MNM_REGISTER_DIALECT_OP(cutlass, add, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, subtract, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, multiply, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, divide, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, relu, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, gelu, 0);
 
 }  // namespace cutlass
 }  // namespace op

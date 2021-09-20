@@ -277,7 +277,8 @@ inline bool IsReshapeOp(const Op& op) {
   static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
       Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze"),
       Op::Get("mnm.op.batch_flatten")};
-  return reshape_ops.find(op) != reshape_ops.end();
+  auto op_ = IsDialectOp(op) ? GetBaseOp(op) : op;
+  return reshape_ops.find(op_) != reshape_ops.end();
 }
 
 }  // namespace op

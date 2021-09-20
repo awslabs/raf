@@ -9,7 +9,7 @@ import numpy as np
 import mxnet as mx
 import torch
 import mnm
-from .._core.backends import Backend
+from .._op.dialect import DialectPreference
 
 def check_type(expr, typ):
     """Helper function to check expr.checked_type == typ"""
@@ -221,18 +221,20 @@ def with_seed(seed=None):
     return test_helper
 
 
-def with_backend(backend):
+def with_dialect(dialect):
     """
-    A decorator to specify available backends
+    A decorator to specify available dialects
 
     Parameters
     ----------
-    backend : Union[str, List[str]]
+    dialect : Union[str, List[str]]
     """
     def decorator(wrapped):
+
         @functools.wraps(wrapped)
         def wrapper(*args, **kwargs):
-            with Backend([backend] if isinstance(backend, str) else backend):
+            dialects = [dialect] if isinstance(dialect, str) else dialect
+            with DialectPreference(dialects):
                 return wrapped(*args, **kwargs)
         return wrapper
     return decorator

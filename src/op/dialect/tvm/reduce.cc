@@ -62,14 +62,38 @@ HashKey ReduceHasher(const std::vector<Type>& param_types, const Type& ret_type,
   MNM_TVM(OP, FUNC, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames, ReduceSchema2Attrs, \
           ReduceHasher, kCommReduce)
 
-MNM_TVM_REDUCE(argmax, Argmax);
-MNM_TVM_REDUCE(argmin, Argmin);
 MNM_TVM_REDUCE(max, Max);
 MNM_TVM_REDUCE(min, Min);
 MNM_TVM_REDUCE(all, All);
 MNM_TVM_REDUCE(any, Any);
 MNM_TVM_REDUCE(mean, Mean);
 MNM_TVM_REDUCE(prod, Prod);
+
+Attrs ReduceSchema2ArgReduceAttrs(const ReduceArgs* args) {
+  auto attrs = make_object<ArgReduceAttrs>();
+  // expand the empty axis
+  DLTensor* x = args->x;
+  auto ndim = x->ndim;
+  std::vector<int64_t> axis;
+  if (args->axis.empty()) {
+    axis.resize(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+  } else {
+    axis = args->axis;
+  }
+  for (int i = 0, n = axis.size(); i < n; ++i) {
+    attrs->axis.push_back(axis[i]);
+  }
+  attrs->keepdims = args->keepdims;
+  attrs->exclude = args->exclude;
+  attrs->select_last_index = false;
+  return Attrs(attrs);
+}
+
+MNM_TVM(argmax, Argmax, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
+        ReduceSchema2ArgReduceAttrs, ReduceHasher, kCommReduce);
+MNM_TVM(argmin, Argmin, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
+        ReduceSchema2ArgReduceAttrs, ReduceHasher, kCommReduce)
 
 std::vector<Value> ProdDxSchema2Args(const ProdDxArgs* args) {
   return {args->x, args->dy};

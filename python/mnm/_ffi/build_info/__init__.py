@@ -6,6 +6,7 @@ from ._internal import cmake_build_type
 from ._internal import cuda_version
 from ._internal import cudnn_version
 from ._internal import git_version
+from ._internal import use_cublas
 from ._internal import use_cuda
 from ._internal import use_cudnn
 from ._internal import use_cutlass

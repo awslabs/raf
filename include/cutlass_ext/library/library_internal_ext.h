@@ -40,7 +40,7 @@ template <typename ElementOutput_, int Count, typename ElementAccumulator_,
           typename ElementCompute_, FloatRoundStyle Round>
 struct EpilogueOpMap<cutlass::epilogue::thread::LinearCombinationGELU<
     ElementOutput_, Count, ElementAccumulator_, ElementCompute_, Round>> {
-  static EpilogueKindExt const kId = EpilogueKindExt::kLinearCombinationGELU;
+  static EpilogueKindExt const kId = EpilogueKindExt::kLinearCombinationGelu;
 };
 
 }  // namespace library

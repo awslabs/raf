@@ -17,6 +17,7 @@ namespace mnm {
 namespace pass {
 
 using tvm::relay::ExpandANormalForm;
+using tvm::relay::FreeTypeVars;
 using tvm::relay::FreeVars;
 using tvm::relay::Function;
 using tvm::runtime::PackedFunc;
@@ -26,6 +27,18 @@ using tvm::transform::Pass;
 using tvm::transform::PassContext;
 using tvm::transform::PassInfo;
 using tvm::transform::PassNode;
+
+/*!
+ * \brief Create a function pass.
+ * \param pass_func The packed function that contains the optimization.
+ * \param opt_level The optimization level of the function pass.
+ * \param name The name of the function pass.
+ * \param required The list of the passes that the function pass is dependent on.
+ * \return The created function pass.
+ */
+TVM_DLL Pass
+CreateMNMFunctionPass(const TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
+                      int opt_level, String name, tvm::Array<String> required);
 
 /*!
  * \brief A special trace pass that prints the header and IR to LOG(INFO).
@@ -57,7 +70,6 @@ Pass AutoDataParallel();
  * \return The created pass.
  */
 Pass FoldConstant();
-ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
 
 /*!
  * \brief A pass that lifts the lambda to the global scope.
@@ -94,7 +106,12 @@ Pass CanonicalizeOps();
  * \return The created pass.
  */
 Pass InferType();
-ir::Expr InferType(ir::Expr expr);
+
+/*!
+ * \brief Create a type erasing pass.
+ * \return The created pass.
+ */
+Pass EraseType();
 
 /*!
  * \brief Create a pass to wrap an expr with compiler_begin and compiler_end to indicate that this
@@ -201,21 +218,37 @@ Pass LiftBranchBody();
  * \return The created pass.
  */
 Pass FlattenClosure();
+
 /*!
- * \brief Performs operator fusion.
+ * \brief Fuse the operators based on registered dialect fusion patterns.
  * \return The created pass.
  */
-Pass FuseOps();
+Pass FuseDialect();
+
+/*!
+ * \brief Performs operator fusion using TVM.
+ * \return The created pass.
+ */
+Pass FuseTVM();
+
+/*!
+ * \brief Dispatch the base operators to dialect operators based on plevel.
+ * \return The created pass.
+ */
+Pass DispatchDialect();
+
 /*!
  * \brief A pass that eliminates dead code.
  * \return The created pass.
  */
 Pass DeadCodeElimination();
+
 /*!
  * \brief A pass that convert A-normal form to dataflow graph.
  * \return The created pass.
  */
 Pass ToGraphNormalForm();
+
 /*!
  * \brief A pass that turns a dataflow graph into Administrative Normal Form, or A-Normal Form
  * (ANF).
@@ -232,10 +265,6 @@ Pass ToGraphNormalForm();
  * \return The created pass.
  */
 Pass ToANormalForm();
-
-TVM_DLL Pass
-CreateMNMFunctionPass(const TypedPackedFunc<Function(Function, IRModule, PassContext)>& pass_func,
-                      int opt_level, String name, tvm::Array<String> required);
 
 /*!
  * \brief A pass that turns an expression to Basic Block Normal Form.
@@ -296,6 +325,31 @@ Pass ASAPStreamSchedule();
  * \return The created pass.
  */
 Pass AnnotateDistOps();
+
+// Helper functions
+
+/*!
+ * \brief Replace the variables that appear in the args by the bound constant values.
+ * \param func The function to mutate.
+ * \param args A list of arguments that have bound values.
+ * \return The updated experience.
+ */
+ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
+
+/*!
+ * \brief Infer the type of a given expression.
+ * \param expr The expression.
+ * \return The expression with checked types.
+ */
+
+ir::Expr InferType(ir::Expr expr);
+/*!
+ * \brief Infer the type of a given expression and IR module.
+ * \param expr The expression.
+ * \param module The module associated with the expression.
+ * \return The expression with checked types.
+ */
+ir::Expr InferTypeWithModule(const ir::Expr& expr, const ir::IRModule& module);
 
 }  // namespace pass
 }  // namespace mnm

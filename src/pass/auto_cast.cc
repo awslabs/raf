@@ -231,7 +231,6 @@ class AutoCastMutator : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) {
     static const Op& cast_op = Op::Get("mnm.op.cast");
-    static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
 
     // If the argument is a cast, then we use the uncasted one to generate the type hints,
     // so that the infer cast ops can follow the uncasted argument and minimize the cast op.
@@ -276,10 +275,17 @@ class AutoCastMutator : public ExprMutator {
       return new_call;
     }
 
+    // Try to lower to tvm dialect op and get op pattern
+    int pattern = kOpaque;
+    auto tvm_op = OpDialect::Lower(op, "tvm");
+    if (tvm_op.defined()) {
+      pattern = GetOpAttr<TOpPattern>(tvm_op, "TOpPattern");
+    }
+
     // If the fusion pattern of this op is elementwise or broadcast, we disable the cache
     // to make sure they their argument cast op will not be reused and can fused together.
     // TODO(comaniac): Let the recompute or fusion pass work on this.
-    bool use_cache = fpattern[op] > kInjective;
+    bool use_cache = pattern > kInjective;
 
     Array<Expr> call_args;
     for (size_t i = 0; i < node->args.size(); ++i) {

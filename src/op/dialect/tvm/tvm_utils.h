@@ -126,9 +126,9 @@ using FMNMArgIndices =
     const auto& dev = call->device;                                                                \
     static const auto base_op = Op::Get(MNM_BASE_OP_NAME(OP));                                     \
     auto env = new TVMOpEnv();                                                                     \
-    auto fschema_index = Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");         \
+    auto fschema_index = op::GetOpAttr<op::FMNMSchemaFieldIndex>(base_op, "FMNMSchemaFieldIndex"); \
     for (auto field : SCHEMA_ARG_NAMES(call)) {                                                    \
-      int idx = fschema_index[base_op](field);                                                     \
+      int idx = fschema_index(field);                                                              \
       CHECK_GE(idx, 0) << "Cannot find " << field << " in the schema for OP";                      \
       env->arg_indices.push_back(idx);                                                             \
     }                                                                                              \
@@ -169,7 +169,7 @@ using FMNMArgIndices =
   Array<tvm::IntImm> FUNC##ArgIndices(const op::CallValues& call) {                                \
     static const auto op = Op::Get(MNM_BASE_OP_NAME(OP));                                          \
     static const auto fschema_index =                                                              \
-        Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex")[op];                      \
+        op::GetOpAttr<op::FMNMSchemaFieldIndex>(op, "FMNMSchemaFieldIndex");                       \
     std::vector<tvm::IntImm> ret;                                                                  \
     for (const auto& field : SCHEMA_ARG_NAMES(call)) {                                             \
       ret.push_back(tvm::IntImm(DataType::Int(32), fschema_index(field)));                         \
@@ -184,15 +184,12 @@ using FMNMArgIndices =
     auto env = std::make_unique<TVMOpEnv>();                                                       \
     return FUNC##CacheCompile(env.get(), call, cache, identity);                                   \
   }                                                                                                \
-  MNM_REGISTER_DIALECT_OP(tvm, OP)                                                                 \
+  MNM_REGISTER_DIALECT_OP(tvm, OP, PLEVEL)                                                         \
       .set_attr<::mnm::op::TOpPattern>("TOpPattern", OP_PATTERN)                                   \
       .set_attr<::mnm::op::tvm_dialect::FMNMLower>("FMNMLower", FUNC##Lower)                       \
       .set_attr<::mnm::op::tvm_dialect::FMNMAttr>("FMNMAttr", FUNC##Attr)                          \
       .set_attr<::mnm::op::tvm_dialect::FMNMArgIndices>("FMNMArgIndices", FUNC##ArgIndices);       \
-  MNM_REGISTER_OP(MNM_BASE_OP_NAME(OP)).set_attr<::mnm::op::TOpPattern>("TOpPattern", OP_PATTERN); \
-  MNM_OP_ENV_MAKER(MNM_DIALECT_OP_NAME(tvm, OP), FUNC##Build);                                     \
-  MNM_OP_DISPATCH_DIALECT_PLEVEL(OP, tvm, DevType::kCPU(), PLEVEL);                                \
-  MNM_OP_DISPATCH_DIALECT_PLEVEL(OP, tvm, DevType::kCUDA(), PLEVEL);
+  MNM_OP_ENV_MAKER(MNM_DIALECT_OP_NAME(tvm, OP), FUNC##Build);
 
 #define MNM_TVM(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN)  \
   MNM_TVM_PLEVEL(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN, \

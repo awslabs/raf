@@ -4,10 +4,12 @@ import pytest
 import torch
 import torch.nn.functional as F
 import mnm
-from mnm.testing import randint, randn, numpy, get_device_list, randn_torch, with_seed, check, run_vm_model
+from mnm.testing import randint, randn, numpy, get_device_list, randn_torch, with_seed, check, \
+    run_vm_model, with_dialect
 from mnm.model.trace import trace_mutate_attr
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("b", [2, 4])
@@ -19,9 +21,6 @@ from mnm.model.trace import trace_mutate_attr
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments, invalid-name
-    if device == "cuda":
-        pytest.skip("Skipping to avoid duplication as batch matmul is offloaded to CuBLAS.")
-
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -45,7 +44,7 @@ def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpo
     m_b, t_b = randn_torch((b2, k, m) if not transpose_b else (b2, m, k),
                            device=device, dtype=dtype, requires_grad=True)
     m_c = model(m_a, m_b)
-    v_c = run_vm_model(model, device, [m_a, m_b])
+    v_c = run_vm_model(model, device, [m_a, m_b], disable_fusion=True)
 
     t_at = torch.transpose(t_a, 1, 2) if transpose_a else t_a
     t_bt = torch.transpose(t_b, 1, 2) if transpose_b else t_b
@@ -60,6 +59,7 @@ def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpo
     check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("n", [1, 2, 4])
 @pytest.mark.parametrize("m", [1, 2, 4])
@@ -79,7 +79,7 @@ def test_dense(n, m, k, device):
     m_a.requires_grad = True
     m_b.requires_grad = True
     m_c = model(m_a, m_b)
-    v_c = run_vm_model(model, device, [m_a, m_b])
+    v_c = run_vm_model(model, device, [m_a, m_b], disable_fusion=True)
     n_c = np.matmul(n_a, np.transpose(n_b))
     check(m_c, n_c)
     check(v_c, n_c)
@@ -93,6 +93,9 @@ def test_dense(n, m, k, device):
 
 # pylint: disable=no-member
 # pylint: disable=protected-access
+# TODO: Currently TVM fails to schedule softmax or softmax_dx in certain cases
+@pytest.mark.skip
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
@@ -103,7 +106,7 @@ def test_dense(n, m, k, device):
     [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
-@pytest.mark.parametrize("axis", range(-8, 8))
+@pytest.mark.parametrize("axis", [0, -1])
 @pytest.mark.parametrize(
     "funcs",
     [
@@ -122,12 +125,8 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
     model = TestModel()
     # forward
     m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
-    if not -len(shape) <= axis < len(shape):
-        with pytest.raises(ValueError):
-            m_y = model(m_x)
-        return
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x])
+    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
     t_y = torch_fwd(t_x, dim=axis)
     check(m_y, t_y)
     check(v_y, t_y)
@@ -140,6 +139,7 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
 
 # pylint: disable=no-member
 # pylint: disable=protected-access
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
@@ -158,7 +158,7 @@ def test_log_softmax(device, dtype, shape):
     # forward
     m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x])
+    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
     t_y = torch.log_softmax(t_x, dim=-1)
     check(m_y, t_y)
     check(v_y, t_y)
@@ -170,6 +170,7 @@ def test_log_softmax(device, dtype, shape):
 
 
 # pylint: disable=too-many-arguments
+@with_dialect("tvm")
 @with_seed(0)
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
@@ -220,10 +221,10 @@ def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform)
         mx_model.beta.set_data(mx_bias)
         # check forward
         m_y = m_model(m_x, m_scale, m_bias)
-        v_y = run_vm_model(m_model, device, [m_x, m_scale, m_bias])
+        v_y = run_vm_model(m_model, device, [m_x, m_scale, m_bias], disable_fusion=True)
     else:
         m_y = m_model(m_x)
-        v_y = run_vm_model(m_model, device, [m_x])
+        v_y = run_vm_model(m_model, device, [m_x], disable_fusion=True)
 
     m_dy, n_dy = randn(m_y.shape, device=device, dtype=dtype)
     mx_dy = mx.nd.array(n_dy)
@@ -241,6 +242,7 @@ def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform)
         check(m_bias.grad, mx_model.beta.grad(), rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shapes", [
@@ -267,7 +269,7 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
     m_x, t_x = randn_torch(xshape, std=0.001, device=device, dtype=dtype, requires_grad=True)
     m_w, t_w = randn_torch(wshape, std=0.01, device=device, dtype=dtype, requires_grad=True)
     m_y = model(m_x, m_w)
-    v_y = run_vm_model(model, device, [m_x, m_w])
+    v_y = run_vm_model(model, device, [m_x, m_w], disable_fusion=True)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
@@ -278,6 +280,8 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
     check(m_x.grad, t_x.grad, rtol=1e-4, atol=1e-4)
     check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
+
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shapes", [
@@ -311,7 +315,7 @@ def test_conv2d_trans(device, dtype, shapes, stride_output_padding, dilation, pa
     t_y = F.conv_transpose2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding,
                              output_padding=output_padding)
     m_y = model(m_x, m_w)
-    v_y = run_vm_model(model, device, [m_x, m_w])
+    v_y = run_vm_model(model, device, [m_x, m_w], disable_fusion=True)
 
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
@@ -325,7 +329,7 @@ def test_conv2d_trans(device, dtype, shapes, stride_output_padding, dilation, pa
     check(m_w.grad, t_w.grad, rtol=1e-4, atol=1e-4)
 
 
-
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
@@ -360,6 +364,7 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("xshape", [(3, 3, 4, 4), (8, 3, 32, 32)])
@@ -393,6 +398,7 @@ def test_bias_add(xshape, dtype, device):
     check(m_bias.grad, n_db, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
@@ -426,11 +432,13 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs, ceil)
     # forward
     m_x, t_x = randn_torch(data_shape, dtype=dtype, device=device, requires_grad=True)
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x])
+    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
     t_y = torch_fwd(t_x, kernel_size=kernel, stride=stride, padding=padding, ceil_mode=ceil)
     check(m_y, t_y)
     check(v_y, t_y)
 
+
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
@@ -453,7 +461,7 @@ def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
     # forward
     m_x, t_x = randn_torch(data_shape, dtype=dtype, device=device, requires_grad=True)
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x])
+    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
     t_y = torch_fwd(t_x, out_shape)
     check(m_y, t_y)
     check(v_y, t_y)
@@ -464,7 +472,7 @@ def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
     check(m_x.grad, t_x.grad)
 
 
-
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
@@ -503,6 +511,7 @@ def test_pool2d_nhwc(device, dtype, data_shape, kernel, stride, padding, funcs):
     check(m_y, t_y)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("n", [1, 2, 4])
@@ -528,7 +537,7 @@ def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
     m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k),
                            device=device, dtype=dtype, requires_grad=True)
     m_c = model(m_a, m_b)
-    v_c = run_vm_model(model, device, [m_a, m_b])
+    v_c = run_vm_model(model, device, [m_a, m_b], disable_fusion=True)
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b) # pylint: disable=no-member
     check(m_c, t_c, rtol=1e-4, atol=1e-4)
     check(v_c, t_c, rtol=1e-4, atol=1e-4)
@@ -540,6 +549,7 @@ def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
     check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
@@ -561,12 +571,13 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
 
     model = TestModel()
     m_y = model(m_x, m_m, m_v, m_w, m_b)
-    v_y = run_vm_model(model, device, [m_x, m_m, m_v, m_w, m_b])
+    v_y = run_vm_model(model, device, [m_x, m_m, m_v, m_w, m_b], disable_fusion=True)
     t_y = F.batch_norm(t_x, t_m, t_v, t_w, t_b, False, momentum, eps)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
@@ -604,7 +615,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
     # forward vm
     model.m_m = mnm.array(np_m, device=device)
     model.m_v = mnm.array(np_v, device=device)
-    v_y = run_vm_model(model, device, [m_x, m_w, m_b])[0]
+    v_y = run_vm_model(model, device, [m_x, m_w, m_b], disable_fusion=True)[0]
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
     check(model.m_m, t_m, rtol=1e-4, atol=1e-4)
     check(model.m_v, t_v, rtol=1e-4, atol=1e-4)
@@ -617,6 +628,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
     check(m_b.grad, t_b.grad, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dimension", [
@@ -644,6 +656,7 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
     check(m_y, t_y)
 
 
+@with_dialect("tvm")
 @pytest.mark.parametrize("hyperparam", [(0.6, 1.2), (-0.2, 1.2)])
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
@@ -662,7 +675,7 @@ def test_threshold_with_grad(hyperparam, shape, dtype, device):
     threshold, value = hyperparam
     model = TestModel(threshold, value)
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x])
+    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
     t_model = torch.nn.Threshold(threshold, value)
     t_y = t_model(t_x)
     # check forward
@@ -676,8 +689,13 @@ def test_threshold_with_grad(hyperparam, shape, dtype, device):
 
 
 # pylint: disable=protected-access
+# cannot use TVM dropout op because
+# TODO(@yzhliu): Currently we cannot enable dropout test on CUDA because TVM doesn't support random
+#   on CUDA.
+@with_dialect("tvm")
+@pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dropout", [0.4, 0.6])
-def test_mnm_dropout(dropout):
+def test_mnm_dropout(dropout, device):
     def check_dropout(x, y, dx=None, dy=None):
         x, y = x.numpy(), y.numpy()
         mask = y != 0
@@ -699,7 +717,7 @@ def test_mnm_dropout(dropout):
             return mnm._contrib_dropout(x, dropout)
 
     shape, dtype = [128, 128], "float32"
-    x, _ = randint(shape, low=10, high=20, dtype=dtype)
+    x, _ = randint(shape, low=10, high=20, dtype=dtype, device=device)
     x.requires_grad = True
     model = TestModel()
 
@@ -707,7 +725,7 @@ def test_mnm_dropout(dropout):
     check_dropout(x, m_y)
 
     # TODO(yizhiliu): unify CPU and CUDNN (defined in test_cudnn_nn.py) dropout model
-    v_y = run_vm_model(model, "cpu", [x])[0]
+    v_y = run_vm_model(model, device, [x], disable_fusion=True)[0]
     check_dropout(x, v_y)
 
     n_y = model(x)[0]

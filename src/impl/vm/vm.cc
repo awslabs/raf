@@ -792,22 +792,25 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
     args.push_back(ctx.ReadRegister(instr.infer_type.args[i]));
   }
   // infer type
-  static auto fschema = Op::GetAttrMap<FMNMSchema>("FMNMSchema");
-  Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
+  const Value& callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
   Type ret_type;
   if (const auto* opv = callee.as<OpValueObj>()) {
-    auto call_values = CallValues::make(callee, fschema[opv->op](args));
+    auto fschema = GetOpAttr<FMNMSchema>(opv->op, "FMNMSchema");
+    auto call_values = CallValues::make(callee, fschema(args));
     auto fty = Downcast<FuncType>(opv->op->checked_type());
     TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
     ret_type = ti->func(call_values);
   } else {
     auto func = callee.as<ClosureValueObj>()->func;
     CHECK_EQ(func->params.size(), args.size());
-    auto new_func = Function(func->params, func->body, {}, {});
+    auto new_func =
+        Function(func->params, func->body, {}, func->type_params, func->attrs, func->span);
     for (size_t i = 0; i < args.size(); ++i) {
       new_func->params[i]->checked_type_ = GetType(args[i]);
     }
     new_func = Downcast<Function>(pass::InferType(new_func));
+    // TODO(@hgt312): Do NOT modify the register that is supposed to be an input to the instruction.
+    //   Please fix this by changing the type-inferred closure into an output.
     ctx.WriteRegister(instr.invoke_jit.op_reg, ClosureValue::make({}, new_func));
     FuncType fty = Downcast<FuncType>(new_func->checked_type());
     ret_type = fty->ret_type;
@@ -985,14 +988,13 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     op_env = *p;
   } else {
     // Create a new OpEnv.
-    static auto fschema = Op::GetAttrMap<FMNMSchema>("FMNMSchema");
     auto call_values = CallValues::make();
     Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
     const auto* op = callee.as<OpValueObj>();
     const auto* closure = callee.as<ClosureValueObj>();
     call_values->callee = callee;
     if (op) {
-      call_values->args = fschema[op->op](args);
+      call_values->args = GetOpAttr<FMNMSchema>(op->op, "FMNMSchema")(args);
     } else {
       call_values->args = MakeListArgs(args);
     }

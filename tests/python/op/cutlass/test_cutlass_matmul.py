@@ -5,8 +5,17 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import randn_torch, run_vm_model, check, with_backend
-from mnm.model.nn import Linear, GELU
+from mnm.testing import randn_torch, run_vm_model, check, DialectChecker
+from mnm.model.nn import Linear
+
+
+def verify_ir(mod):
+    with mnm.device("cuda"):
+        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = mnm._ffi.pass_.FuseDialect()(mod)
+        DialectChecker("cutlass").visit(mod["main"])
+
 
 @pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize("m", [1, 15])
@@ -15,10 +24,9 @@ from mnm.model.nn import Linear, GELU
 @pytest.mark.parametrize("epilogue", [
     [None, None],
     [mnm._op.sym.relu, torch.nn.functional.relu],
-    [GELU(), torch.nn.GELU()]
+    [mnm._op.sym.gelu, torch.nn.GELU()]
 ])
 @pytest.mark.parametrize("beta", [None, 0.5, 2.0])
-@with_backend("cutlass")
 def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     m_epilogue, t_epilogue = epilogue
 
@@ -42,6 +50,8 @@ def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     m_bias, t_bias = randn_torch([n,], requires_grad=True, device=device)
     model = TestModel()
     model.to(device=device)
+    mod = model._internal(m_x, m_w, m_bias).mod
+    verify_ir(mod)
     m_y = run_vm_model(model, device, [m_x, m_w, m_bias])
     t_scaled_bias = t_bias * beta if beta else t_bias
     t_y = torch.matmul(t_x, t_w) + t_scaled_bias
@@ -53,7 +63,6 @@ def test_matmul_add_epilogue(m, n, k, epilogue, beta):
 @pytest.mark.parametrize("batch_size", [1, 15])
 @pytest.mark.parametrize("in_features", [16, 32])
 @pytest.mark.parametrize("out_features", [16, 32])
-@with_backend("cutlass")
 def test_dense_add_relu(batch_size, in_features, out_features):
     class TestModel(mnm.Model):
         def build(self, in_features, out_features):
@@ -78,6 +87,8 @@ def test_dense_add_relu(batch_size, in_features, out_features):
     model.linear.b = m_b
     model.to(device=device)
     t_model.to(device=device)
+    mod = model._internal(m_x).mod
+    verify_ir(mod)
     m_y = run_vm_model(model, device, [m_x])
     t_y = F.relu(t_model(t_x))
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
@@ -92,9 +103,8 @@ def test_dense_add_relu(batch_size, in_features, out_features):
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
 @pytest.mark.parametrize("epilogue", [
     [None, None],
-    [GELU(), torch.nn.GELU()]
+    [mnm._op.sym.gelu, torch.nn.GELU()]
 ])
-@with_backend("cutlass")
 def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue):
     m_epilogue, t_epilogue = epilogue
 
@@ -116,6 +126,8 @@ def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue)
     m_b, t_b = randn_torch([batch_size, m, n], device=device, dtype=dtype)
     model = TestModel()
     model.to(device=device, dtype=dtype)
+    mod = model._internal(m_x, m_w, m_b).mod
+    verify_ir(mod)
     m_y = run_vm_model(model, device, [m_x, m_w, m_b])
     t_y = torch.matmul(t_x, t_w.permute(0, 2, 1)) + t_b
     t_y = t_epilogue(t_y) if t_epilogue else t_y

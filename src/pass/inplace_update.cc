@@ -16,6 +16,25 @@ namespace mnm {
 namespace pass {
 namespace inplace_update {
 
+using namespace mnm::op;
+
+/*! \brief Extract the mapping from the parmeters of fused func to call arg expr. */
+class ExtractCallArgs : public MixedModeVisitor {
+ public:
+  void VisitExpr_(const CallNode* call) final {
+    auto func = call->op.as<FunctionNode>();
+    if (func && func->HasNonzeroAttr(attr::kPrimitive)) {
+      ICHECK_EQ(func->params.size(), call->args.size());
+      for (uint i = 0; i < func->params.size(); ++i) {
+        param_value_map.emplace(func->params[i], call->args[i]);
+      }
+    }
+  }
+
+  /*! \brief Mapping from fused function parameter to actual argument value. */
+  std::unordered_map<Expr, Expr, ObjectPtrHash, ObjectPtrEqual> param_value_map;
+};
+
 /*!
  * \brief InplaceUpdateMutator marks may_share in the variable for ops that have attr
  * TMNMInplaceUpdate so that inputs and outputs may share the memory and perform inplace update.
@@ -47,10 +66,19 @@ namespace inplace_update {
  */
 class InplaceUpdateMutator : public MixedModeMutator {
  public:
-  // Mapping from the output index in the expression to a variable to share memory with
+  // Mapping from the output index in the expr to a variable that shares the buffer
+  //   The output index is always 0 if the expr type is tensor; otherwise, the index indicates
+  //   the index of elements in a tuple.
   using ExprShareMap = std::unordered_map<int, Var>;
-  // Mapping from the output index to the input index to share memory in fused op functions
+  // Mapping from the output index to the parameter index that shares the memory for fused functions
   using FusedOpShareMap = std::unordered_map<int, int>;
+
+  Expr Run(const Expr& expr) {
+    auto extract = ExtractCallArgs();
+    extract.VisitExpr(expr);
+    param_value_map_ = extract.param_value_map;
+    return Mutate(expr);
+  }
 
   Expr VisitExpr_(const VarNode* node) final {
     auto var = GetRef<Var>(node);
@@ -74,10 +102,12 @@ class InplaceUpdateMutator : public MixedModeMutator {
         Function(params, body, func->ret_type, func->type_params, func->attrs, func->span);
     auto find = expr_share_map_.find(body);
     if (find != expr_share_map_.end()) {
-      auto& expr_map = find->second;
-      FusedOpShareMap fuse_map;
-      // replace the memory sharing var to the param index in the fused function
-      for (auto it : expr_map) {
+      // The output(s) of the fused op may need to share memory with input(s) of the fused op.
+      // We need to replace the memory-sharing var in the expr_share_map by the param index in the
+      // fused function
+      auto& expr_share_map = find->second;
+      FusedOpShareMap fuse_share_map;
+      for (auto it : expr_share_map) {
         int out_idx = it.first;
         Var param = it.second;
         int input_idx = -1;
@@ -89,9 +119,9 @@ class InplaceUpdateMutator : public MixedModeMutator {
         }
         CHECK_GE(input_idx, 0) << "Cannot find the variable " << param
                                << " in the function parameters";
-        fuse_map.emplace(out_idx, input_idx);
+        fuse_share_map.emplace(out_idx, input_idx);
+        fused_op_share_map_.emplace(new_func, fuse_share_map);
       }
-      fused_op_share_map_.emplace(new_func, fuse_map);
     }
     return new_func;
   }
@@ -104,28 +134,39 @@ class InplaceUpdateMutator : public MixedModeMutator {
     auto op = Mutate(call->op);
     if (op.as<OpNode>()) {
       auto opn = Downcast<Op>(op);
+      if (IsDialectOp(opn)) {
+        opn = GetBaseOp(opn);
+      }
       if (finplace.count(opn)) {
         ExprShareMap share;
         for (auto it : finplace[opn]) {
           auto arg = Downcast<Var>(call->args[it.first]);
           auto var = arg.as<ExtendedVarNode>();
           if (var && var->may_share.defined()) {
-            arg = GetLatestShareVar(var->may_share);
+            arg = GetLatestVar(var->may_share);
           }
           share.emplace(it.second, arg);
         }
         expr_share_map_.emplace(post, share);
       } else if (opn == add_op || opn == subtract_op) {
         // Currently only support add and subtract in the binary ops for inplace update.
-        // If the inplace arg is true, the output tensor will share memory with the 1st input tensor
-        CHECK_GT(pre->args.size(), 2);
-        if (pre->args[2].as<ExtendedVarNode>()) {
-          auto var = Downcast<Var>(pre->args[2]);
-          ExprShareMap share{{0, GetLatestShareVar(var)}};
+        // If the out_arg is a variable, the output tensor needs to share memory with the out_arg
+        ICHECK_GT(pre->args.size(), 2) << "Invalid add/subtract schema";
+        auto out_arg = pre->args[2];
+        // Extract the actual call arg if the out_arg is a param in the fused function
+        auto it = param_value_map_.find(out_arg);
+        if (it != param_value_map_.end()) {
+          out_arg = it->second;
+        }
+        if (out_arg.as<ExtendedVarNode>()) {
+          // Use the call arg in the share map because the shared var could be used to
+          // map to the func parameter if this call node is inside a fused function.
+          ExprShareMap share{{0, Downcast<Var>(call->args[2])}};
           expr_share_map_.emplace(post, share);
         }
       }
     } else if (op.as<FunctionNode>()) {
+      // Propagate the fused_op_share_map to expr_share_map
       auto it = fused_op_share_map_.find(op);
       if (it != fused_op_share_map_.end()) {
         auto& fuse_map = it->second;
@@ -158,14 +199,14 @@ class InplaceUpdateMutator : public MixedModeMutator {
       Expr value = this->Mutate(node->value);
       Var var = node->var;
       if (expr_share_map_.count(value)) {
-        auto share = expr_share_map_[value];
+        auto share_map = expr_share_map_[value];
         if (node->value->checked_type().as<TensorTypeNode>()) {
-          CHECK(share.count(0));
-          Var new_var = MakeVar(var->name_hint(), var->type_annotation, share[0]);
+          CHECK(share_map.count(0));
+          Var new_var = MakeVar(var->name_hint(), var->type_annotation, GetLatestVar(share_map[0]));
           var_update_map_.emplace(var, new_var);
         } else {
-          // Tuple output, propagate the share map to the binding var
-          expr_share_map_[var] = share;
+          // Tuple type, just propagate the share map to the binding var
+          expr_share_map_[var] = share_map;
         }
       }
     };
@@ -201,7 +242,7 @@ class InplaceUpdateMutator : public MixedModeMutator {
    * \return The up-to-date shared var, which can be the identical shared var or
    * a new created shared var.
    */
-  inline Var GetLatestShareVar(const Var& var) {
+  inline Var GetLatestVar(const Var& var) {
     if (var_update_map_.count(var) > 0) {
       return var_update_map_[var];
     }
@@ -212,8 +253,10 @@ class InplaceUpdateMutator : public MixedModeMutator {
   std::unordered_map<Expr, ExprShareMap, ObjectPtrHash, ObjectPtrEqual> expr_share_map_;
   /*! \brief Mapping from fused function to its share information. */
   std::unordered_map<Expr, FusedOpShareMap, ObjectPtrHash, ObjectPtrEqual> fused_op_share_map_;
-  /*! \brief Mapping from original var to updated var with share annotation. */
+  /*! \brief Mapping from original var to updated var with may_share annotation. */
   std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> var_update_map_;
+  /*! \brief Mapping from fused function parameter to actual call argument value. */
+  std::unordered_map<Expr, Expr, ObjectPtrHash, ObjectPtrEqual> param_value_map_;
 };
 
 /*
@@ -324,7 +367,7 @@ class InplaceUpdateValidator : public ExprMutator {
 Pass InplaceUpdate() {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    auto body = inplace_update::InplaceUpdateMutator().Mutate(f->body);
+    auto body = inplace_update::InplaceUpdateMutator().Run(f->body);
     return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
   };
   return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {});

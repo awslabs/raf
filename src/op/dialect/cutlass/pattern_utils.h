@@ -27,10 +27,10 @@ namespace cutlass {
 using namespace ::cutlass;
 using namespace ::cutlass::library;
 
-static const char add[] = "mnm.op.add";
-static const char subtract[] = "mnm.op.subtract";
-static const char multiply[] = "mnm.op.multiply";
-static const char divide[] = "mnm.op.divide";
+static const char add[] = "mnm.op.cutlass.add";
+static const char subtract[] = "mnm.op.cutlass.subtract";
+static const char multiply[] = "mnm.op.cutlass.multiply";
+static const char divide[] = "mnm.op.cutlass.divide";
 
 template <const char* Binary>
 struct BinaryOp {

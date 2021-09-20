@@ -11,7 +11,6 @@ namespace cutlass {
 namespace library {
 
 enum class EpilogueKindExt {
-  kLinearCombinationGelu,
   kUnknown,
   kConversion,
   kLinearCombination,
@@ -19,7 +18,7 @@ enum class EpilogueKindExt {
   kLinearCombinationPlanarComplex,
   kLinearCombinationRelu,
   kLinearCombinationSigmoid,
-  kLinearCombinationGELU,
+  kLinearCombinationGelu,
   kInvalid
 };
 

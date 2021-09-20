@@ -129,12 +129,7 @@ _reg.register_injective_schedule("mnm.op.tvm.log_softmax_dx")
 @register_compute("mnm.op.tvm._contrib_dropout")
 def compute_contrib_dropout(attr, inputs, output_type):
     # pylint: disable=invalid-name, unused-argument, import-outside-toplevel
-    from .._ffi.backend.cudnn import GetDropoutReserveSpaceSizeInBytes
     x = inputs[0]
-    reserve_space_shape = ()
-    if GetDropoutReserveSpaceSizeInBytes:
-        x_ty = _tvm.relay.TensorType(x.shape, dtype=x.dtype)
-        reserve_space_shape = (GetDropoutReserveSpaceSizeInBytes(x_ty),)
     p = attr.rate
     if x.dtype != "float32" and x.dtype != "float64":
         raise TypeError("input array of mnm.dropout is expected to be the type of float32 " +
@@ -153,6 +148,13 @@ def compute_contrib_dropout(attr, inputs, output_type):
         _tvm.tir.const(1 / (1 - p), "float32")))
     # states and reserve_space are valid in cudnn only
     states = _topi.full((), dtype="uint8", fill_value=0.)
+    reserve_space_shape = ()
+    if len(output_type.fields[-1].shape) > 0:
+        # Reserve_space is not scalar type. It is dispatched from the base op
+        from .._ffi.backend.cudnn import GetDropoutReserveSpaceSizeInBytes
+        if GetDropoutReserveSpaceSizeInBytes:
+            x_ty = _tvm.relay.TensorType(x.shape, dtype=x.dtype)
+            reserve_space_shape = (GetDropoutReserveSpaceSizeInBytes(x_ty),)
     reserve_space = _topi.full(reserve_space_shape, dtype="uint8", fill_value=0.)
     return [ret, mask, states, reserve_space]
 

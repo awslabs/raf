@@ -7,10 +7,11 @@ import torch.nn.functional as F
 import numpy as np
 
 import mnm
-from mnm.testing import randint, randn_torch, run_vm_model, check, numpy, with_seed
+from mnm.testing import randint, randn_torch, run_vm_model, check, numpy, with_seed, with_dialect
 from mnm._core.ndarray import ndarray
 
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
@@ -46,6 +47,7 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
     check(m_x.grad, t_x.grad, rtol=rtol, atol=atol)
     check(m_w.grad, t_w.grad, rtol=rtol, atol=atol)
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [
     [],
@@ -88,6 +90,7 @@ def test_mnm_unary(shape, funcs):
     check(m_x.grad, t_x.grad)
 
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [
     [3],
@@ -133,6 +136,7 @@ def test_mnm_softmax(shape, axis, funcs):
     check(m_x.grad, t_x.grad)
 
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("kernel", [1, 2, 3, 4])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
@@ -170,6 +174,7 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
     check(m_x.grad, t_x.grad)
 
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
@@ -200,6 +205,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
 
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
@@ -249,6 +255,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)
 
 
+@with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("dropout", [0.4, 0.6])
 def test_mnm_dropout(dropout):

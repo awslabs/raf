@@ -27,7 +27,7 @@ def check_inline(func):
 def optimize(mod):
     mod = pass_.ToGraphNormalForm()(mod)
     mod = pass_.ToBasicBlockNormalForm()(mod)
-    mod = pass_.FuseOps()(mod)
+    mod = pass_.FuseTVM()(mod)
     mod = pass_.ToANormalForm()(mod)
     mod = pass_.InferType()(mod)
     return mod

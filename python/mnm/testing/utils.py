@@ -7,6 +7,7 @@ from mnm._core.vm import VMCompiler
 from mnm._core.core_utils import get_chained_attr
 from .._core.module import IRModule
 from .._ffi import pass_
+from .._lib import tvm
 
 
 def get_param(model, name):
@@ -38,7 +39,30 @@ def run_infer_type(expr):
     return mod["main"]
 
 
-def get_vm_executor(mod, device, opt_level=2, fuse_level=3, **options):
+class DialectChecker(tvm.relay.ExprVisitor):
+    """
+    Check if all ops in the expr belong to the given dialect list.
+    """
+    def __init__(self, dialects):
+        super(DialectChecker, self).__init__()
+        assert isinstance(dialects, (str, list, tuple))
+        self.dialects = [dialects] if isinstance(dialects, str) else dialects
+
+    def visit_call(self, call):
+        if isinstance(call.op, tvm.relay.Function):
+            assert call.op.attrs.Primitive == 1
+            assert call.op.attrs.Dialect in self.dialects
+        else:  # op
+            match = False
+            for dialect in self.dialects:
+                if dialect in call.op.name:
+                    match = True
+                    break
+            assert match
+        super().visit_call(call)
+
+
+def get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     """Get VM executor"""
     # pylint: disable=protected-access
     options.setdefault("stream_schedule_policy", "sequential")
@@ -47,12 +71,14 @@ def get_vm_executor(mod, device, opt_level=2, fuse_level=3, **options):
     options.setdefault("reuse_storage", False)
 
     config = {
-        "mnm.fuse_level": fuse_level,
         "mnm.stream_schedule.policy": options["stream_schedule_policy"],
         "mnm.memory_plan.reuse_storage": options["reuse_storage"],
     }
     pass_seq = options['pass_seq']
-    with mnm.ir.PassContext(opt_level=opt_level, config=config):
+    disabled_pass = []
+    if disable_fusion:
+        disabled_pass += ["FuseDialect", "FuseTVM"]
+    with mnm.ir.PassContext(opt_level=opt_level, config=config, disabled_pass=disabled_pass):
         mod = mnm._ffi.pass_.InferType()(mod)
         if pass_seq is not None:
             mod = pass_seq(mod)
@@ -60,13 +86,13 @@ def get_vm_executor(mod, device, opt_level=2, fuse_level=3, **options):
     return executor.make_executor(sch_file=options['sch_file'])
 
 
-def run_vm_model(model, device, args, opt_level=2, fuse_level=3, **options):
+def run_vm_model(model, device, args, opt_level=2, disable_fusion=False, **options):
     """Helper function to execute model with VM"""
     args, kwargs = ([], args) if isinstance(args, dict) else (args, {})
     record = model._internal(*args, **kwargs)
     mod = record.mod
     inputs = _get_func_inputs(record, args, kwargs, get_handle=False)
-    vm = get_vm_executor(mod, device, opt_level, fuse_level, **options)
+    vm = get_vm_executor(mod, device, opt_level, disable_fusion, **options)
     out = vm(*inputs)
     return out
 

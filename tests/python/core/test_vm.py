@@ -151,7 +151,7 @@ def test_memory(device, shape):
 def test_simple_fusion(device, shape):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     def check_e2e(model, device, args):
-        out_before = run_vm_model(model, device, args)
+        out_before = run_vm_model(model, device, args, disable_fusion=True)
         out_after = run_vm_model(model, device, args)
         check(out_before, out_after)
 
@@ -216,13 +216,13 @@ def test_reshape():
     model = Model()
     device = "cpu"
     m_x, _ = randn(shape, device=device)
-    with mnm.ir.PassContext(config={"mnm.fuse_level": 0}):
+    with mnm.ir.PassContext(disabled_pass=["FuseTVM", "FuseDialect"]):
         # Disable fusion pass to prevent them from being fused.
         bytecode = compile_vm_model(model, device, [m_x])
     assert bytecode.count("set_shape") == 3
 
     # Enable memory plan and disable fusion.
-    out = run_vm_model(model, device, [m_x], opt_level=3, fuse_level=0)
+    out = run_vm_model(model, device, [m_x], opt_level=3)
     ref_out = model(m_x)
     check(out, ref_out)
 

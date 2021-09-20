@@ -45,9 +45,9 @@ class Conv2dX : public Conv2d {
     return new Conv2dX();
   }
 };
-MNM_REGISTER_DIALECT_OP(mklShallowNN, cpptest.conv2d);
+MNM_REGISTER_DIALECT("mklShallowNN").set_enable(DevType::kCPU());
+MNM_REGISTER_DIALECT_OP(mklShallowNN, cpptest.conv2d, 10);
 MNM_OP_ENV_MAKER("mnm.op.mklShallowNN.cpptest.conv2d", Conv2dX::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(cpptest.conv2d, mklShallowNN, DevType::kCPU(), 10);
 
 // Implement 1 of "mnm.cpptest.conv2d"
 class Conv2dY : public Conv2d {
@@ -60,9 +60,9 @@ class Conv2dY : public Conv2d {
     return new Conv2dY();
   }
 };
-MNM_REGISTER_DIALECT_OP(sshadow, cpptest.conv2d);
+MNM_REGISTER_DIALECT("sshadow").set_enable(DevType::kCPU());
+MNM_REGISTER_DIALECT_OP(sshadow, cpptest.conv2d, 12);
 MNM_OP_ENV_MAKER("mnm.op.sshadow.cpptest.conv2d", Conv2dY::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(cpptest.conv2d, sshadow, DevType::kCPU(), 12);
 
 TEST(OpDialect, Registry) {
   auto dispatch_list =
@@ -73,15 +73,15 @@ TEST(OpDialect, Registry) {
     auto dialect_op = Op::Get(e.dialect_op);
     ASSERT_TRUE(dialect_op.defined());
     ASSERT_TRUE(IsDialectOp(dialect_op));
-    ASSERT_EQ(GetDialect(dialect_op), e.backend);
-    auto maker = OpEnvMaker::Get(dialect_op);
+    ASSERT_EQ(GetDialect(dialect_op), e.dialect);
+    auto maker = OpEnvMaker::Get(e.dialect_op);
     ASSERT_NE(maker, nullptr);
     const auto* env = static_cast<Conv2d*>((*maker)(call));
     ASSERT_NE(env, nullptr);
-    if (e.backend == "mklShallowNN") {
+    if (e.dialect == "mklShallowNN") {
       ASSERT_EQ(dialect_op->name, "mnm.op.mklShallowNN.cpptest.conv2d");
       ASSERT_EQ(env->type, 0);
-    } else if (e.backend == "sshadow") {
+    } else if (e.dialect == "sshadow") {
       ASSERT_EQ(dialect_op->name, "mnm.op.sshadow.cpptest.conv2d");
       ASSERT_EQ(env->type, 1);
     } else {

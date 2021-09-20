@@ -7,11 +7,13 @@ from mnm.testing import get_device_list, randn, check, run_vm_model
 
 
 def optimize(mod, device, reuse_storage=False, fusion=False):
-    fuse_level = 1 if fusion else 0
     device_name = device if device != "cpu" else "llvm"
+    disabled_pass = []
+    if not fusion:
+        disabled_pass = ["FuseDialect", "FuseTVM"]
     with tvm.transform.PassContext(opt_level=3,
-                                   config={"mnm.memory_plan.reuse_storage": reuse_storage,
-                                           "mnm.fuse_level": fuse_level}):
+                                   disabled_pass=disabled_pass,
+                                   config={"mnm.memory_plan.reuse_storage": reuse_storage}):
         opt_mod, _ = mnm._core.vm.VMCompiler().optimize(mod, device=device_name, params={})
     return opt_mod
 
@@ -48,8 +50,7 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
 
 def verify_correctness(model, device, args, reuse_storage, fusion):
     # A helper function to verify the correctness
-    fuse_level = 1 if fusion else 0
-    outs = run_vm_model(model, device, args, fuse_level=fuse_level, reuse_storage=reuse_storage)
+    outs = run_vm_model(model, device, args, disable_fusion=not fusion, reuse_storage=reuse_storage)
     outs = outs if isinstance(outs, (tuple, list)) else (outs,)
 
     ref_outs = model(*args)

@@ -28,6 +28,7 @@ namespace tvm_dialect {
 
 // Reuse attrs from TVM
 using tvm::relay::ArangeAttrs;
+using tvm::relay::ArgReduceAttrs;
 using tvm::relay::ArgsortAttrs;
 using tvm::relay::BiasAddAttrs;
 using tvm::relay::CastAttrs;

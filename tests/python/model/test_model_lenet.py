@@ -155,7 +155,7 @@ def test_lenet_amp(config):
     t_model.eval()
     with torch.cuda.amp.autocast():
         t_y = t_model.forward_infer(t_x)
-    m_y = run_vm_model(m_model, "cuda", [m_x], fuse_level=1, pass_seq=mnm._ffi.pass_.AutoCast())
+    m_y = run_vm_model(m_model, "cuda", [m_x], pass_seq=mnm._ffi.pass_.AutoCast())
     check(m_y, t_y, rtol=1e-3, atol=1e-3)
 
 

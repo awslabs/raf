@@ -176,7 +176,6 @@ def test_bottleneck(config, is_train):
     for m_name, t_v in mapping.items():
         m_v = m_dict[m_name]
         if "running_" not in m_name:
-            print(m_name)
             check(m_v.grad, t_v.grad, rtol=1e-2, atol=1e-2)
 
 

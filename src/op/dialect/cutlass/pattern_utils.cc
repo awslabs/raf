@@ -25,8 +25,13 @@ EpilogueKindExt GetEpilogueKind(const Op& op) {
     return EpilogueKindExt::kLinearCombination;
   }
   const static std::unordered_map<Op, EpilogueKindExt, ObjectPtrHash, ObjectPtrEqual> epilogue_map =
-      {{Op::Get("mnm.op.relu"), EpilogueKindExt::kLinearCombinationRelu}};
-  return epilogue_map.at(op);
+      {{Op::Get("mnm.op.cutlass.relu"), EpilogueKindExt::kLinearCombinationRelu},
+       {Op::Get("mnm.op.cutlass.gelu"), EpilogueKindExt::kLinearCombinationGelu}};
+  auto it = epilogue_map.find(op);
+  if (it == epilogue_map.end()) {
+    LOG(FATAL) << "Unknown epilogue op: " << op->name;
+  }
+  return it->second;
 }
 
 }  // namespace cutlass

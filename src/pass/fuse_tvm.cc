@@ -1,7 +1,7 @@
 /*!
- * Copyright (c) 2020 by Contributors
- * \file fuse_ops.cc
- * \brief Extracting a relay body from frontend defined binding
+ * Copyright (c) 2021 by Contributors
+ * \file src/pass/tvm_fuse.cc
+ * \brief Fuse the operators using TVM op patterns.
  */
 #include "mnm/op.h"
 #include "mnm/ir.h"
@@ -13,7 +13,7 @@
 
 namespace mnm {
 namespace pass {
-namespace fuse_ops {
+namespace fuse_tvm {
 
 using namespace mnm::ir;
 using namespace mnm::op;
@@ -72,7 +72,7 @@ constexpr uint32_t kMaxFusedOps = 256;
  */
 class GraphPartitioner {
  public:
-  explicit GraphPartitioner(Arena* arena, int opt_level) : arena_(arena), opt_level_(opt_level) {
+  explicit GraphPartitioner(Arena* arena) : arena_(arena) {
   }
   /*!
    * \brief Group as a union find data structure.
@@ -142,8 +142,6 @@ class GraphPartitioner {
  private:
   /*! \brief The internal arena for temporary space. */
   Arena* arena_;
-  /*! \brief optimization level for fuse operation. */
-  int opt_level_;
   /*! \brief The internal groups. */
   std::vector<Group*> groups_;
   /*! \brief internal field used for deduplication */
@@ -265,8 +263,6 @@ class GraphPartitioner {
       auto* dom_node = post_dom_tree.nodes[nid];
       Group* group_node = groups_[nid];
       CHECK(group_node != nullptr);
-      // only take actions up to injecive nodes in level 1 fusion
-      if (opt_level_ == 1 && group_node->pattern > kInjective) continue;
       // no actions for opaque nodes
       if (group_node->pattern == kOpaque) continue;
       // no nodes fuse into inplace update nodes
@@ -360,14 +356,18 @@ class GraphPartitioner {
 std::vector<GraphPartitioner::Group*> GraphPartitioner::Partition(
     const IndexedForwardGraph& graph) {
   this->InitGroups(graph);
-  if (opt_level_ == 0) return std::move(groups_);
   // get post dominator tree
   auto post_dom_tree = DominatorTree::PostDom(arena_, graph);
-  // The following line can be used for debug the post dominator tree
+  // The following line can be used tofor the post dominator tree
   // LOG(INFO) << post_dom_tree.DebugDump();
   // run fusion algorithm.
   for (int phase = 0; phase < 3; ++phase) {
     this->RunFuse(graph, post_dom_tree, phase);
+    // The following lines can be used to debug the fusion phase
+    // LOG(INFO) << "PHASE " << phase;
+    // for (int i = 0; i < groups_.size(); ++i) {
+    //   LOG(INFO) << "group[" << i << "]: " << groups_[i]->DebugDump();
+    // }
   }
   return std::move(groups_);
 }
@@ -390,13 +390,23 @@ struct HasCallVisitor : ExprVisitor {
   }
 };
 
+struct DispatchToTVMOps : ExprMutator {
+  Expr VisitExpr_(const OpNode* node) {
+    auto op = GetRef<Op>(node);
+    ICHECK(!IsDialectOp(op)) << "Encountered dialect op " << op->name;
+    auto tvm_op = OpDialect::Lower(op, "tvm");
+    ICHECK(tvm_op.defined()) << "Cannot find tvm dialect op for " << op->name;
+    return tvm_op;
+  }
+};
+
 class FuseMutator : private ExprMutator {
  public:
   // Run the transform
-  Expr Transform(const Expr& body, int fuse_opt_level) {
+  Expr Transform(const Expr& body) {
     // setup the group map.
     auto graph = IndexedForwardGraph::Create(&arena_, body);
-    auto groups = GraphPartitioner(&arena_, fuse_opt_level).Partition(graph);
+    auto groups = GraphPartitioner(&arena_).Partition(graph);
     for (size_t nid = 0; nid < graph.post_dfs_order.size(); ++nid) {
       CHECK(graph.post_dfs_order[nid]->ref != nullptr);
       gmap_[graph.post_dfs_order[nid]->ref] = groups[nid];
@@ -579,7 +589,9 @@ class FuseMutator : private ExprMutator {
     visitor(body);
     const GroupInfo& ginfo = ginfo_[group];
     auto func = Function(ginfo.params, body, ret_type, {});
-    func = WithAttr(std::move(func), attr::kPrimitive, tvm::Integer(visitor.has_call));
+    func = Downcast<Function>(DispatchToTVMOps().Mutate(func));
+    func = WithAttr(std::move(func), attr::kPrimitive, Integer(visitor.has_call));
+    func = WithAttr(std::move(func), attr::kDialect, String("tvm"));
     return Call(func, ginfo.arguments, Attrs());
   }
 
@@ -629,25 +641,21 @@ class FuseMutator : private ExprMutator {
   }
 };
 
-}  // namespace fuse_ops
+}  // namespace fuse_tvm
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.fuse_level", IntImm);
-
-Pass FuseOps() {
+Pass FuseTVM() {
   PassContext pass_ctx = PassContext::Current();
-  Integer fuse_level = pass_ctx->GetConfig("mnm.fuse_level", Integer(static_cast<int>(3))).value();
-  DLOG(INFO) << "Fuse level: " << fuse_level;
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    return Downcast<Function>(fuse_ops::FuseMutator().Transform(f, fuse_level));
+    return Downcast<Function>(fuse_tvm::FuseMutator().Transform(f));
   };
 
-  Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "FuseOpsHelper", {});
-  PassInfo pass_info(2, "FuseOps", {});
-  return MNMSequential({InlineLet(), DeadCodeElimination(), InferType(), func_pass}, pass_info);
+  Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "FuseTVM", {});
+  PassInfo pass_info(2, "FuseTVM", {});
+  return MNMSequential({InferType(), func_pass}, pass_info);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FuseOps").set_body_typed(FuseOps);
+MNM_REGISTER_GLOBAL("mnm.pass_.FuseTVM").set_body_typed(FuseTVM);
 
 }  // namespace pass
 }  // namespace mnm

@@ -18,10 +18,10 @@ def test_block_intpr_forward(block, device):
 
 @pytest.mark.parametrize("block", ["A"])
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("fuse_lv", [0, 1])
-def test_block_vm_forward(block, device, fuse_lv):
+@pytest.mark.parametrize("fuse", [False, True])
+def test_block_vm_forward(block, device, fuse):
     (m_model, m_x, m_y), (t_model, t_x, t_y) = inception.get_block_and_input(block, device=device)
-    m_loss = run_vm_model(m_model, device, [m_x, m_y], fuse_level=fuse_lv)[0]
+    m_loss = run_vm_model(m_model, device, [m_x, m_y], disable_fusion=not fuse)[0]
     t_loss = t_model(t_x, t_y)
     check(m_loss, t_loss, rtol=1e-3, atol=1e-3)
     inception.check_params(m_model, t_model, rtol=1e-3, atol=1e-3)
@@ -42,14 +42,14 @@ def test_inception_v3_intpr_forward(device='cuda'):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("fuse_lv", [0, 1])
-def test_vm_forward(fuse_lv):
+@pytest.mark.parametrize("fuse", [False, True])
+def test_vm_forward(fuse):
     device = 'cuda'
     m_model, t_model = inception.get_model()
     m_model.to(device=device)
     t_model.to(device)
     m_in, t_in = inception.get_input(batch_size=1, device=device)
-    m_loss = run_vm_model(m_model, device, [*m_in], fuse_level=fuse_lv)[0]
+    m_loss = run_vm_model(m_model, device, [*m_in], disable_fusion=not fuse)[0]
     t_loss = t_model(*t_in)
     check(m_loss, t_loss, atol=1e-3, rtol=1e-3)
     inception.check_params(m_model, t_model, atol=1e-3, rtol=1e-3)
@@ -61,34 +61,38 @@ def test_vm_forward(fuse_lv):
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("block_name", ["a", "ab", "c", "e"])
-@pytest.mark.parametrize("fuse_lv", [0, 1])
+@pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("policy", ["wavefront", "asap"])
-def test_block_vm_multi_stream(block_name, policy, fuse_lv):
+def test_block_vm_multi_stream(block_name, policy, fuse):
     device = 'cuda'
     (model, x, _), _ = inception.get_block_and_input(block_name=block_name, device=device)
     model.infer_mode()
     for _ in range(2):
-        y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
-        y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=policy)
+        y_1 = run_vm_model(model, device, [x], disable_fusion=not fuse,
+                           stream_schedule_policy='sequential')
+        y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse,
+                           stream_schedule_policy=policy)
         check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.skipif(mnm.build.with_cuda() and float(mnm.build.with_cuda()) <= 11.2,
                     reason="Workspace may overlap for cuda <= 11.2.")
-@pytest.mark.parametrize("fuse_lv", [0, 1])
+@pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("policy", ["wavefront", "asap"])
-def test_vm_multi_stream(policy, fuse_lv):
+def test_vm_multi_stream(policy, fuse):
     device = 'cuda'
     model, _ = inception.get_model()
     model.to(device=device)
     model.infer_mode()
     (x, _), _ = inception.get_input(batch_size=1, device=device)
     for _ in range(2):
-        y_1 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy='sequential')
-        y_2 = run_vm_model(model, device, [x], fuse_lv, stream_schedule_policy=policy)
+        y_1 = run_vm_model(model, device, [x], disable_fusion=not fuse,
+                           stream_schedule_policy='sequential')
+        y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse,
+                           stream_schedule_policy=policy)
         check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, '-s'])
+    pytest.main([__file__])

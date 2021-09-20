@@ -120,6 +120,7 @@ void TVMOpEnv::Execute(const std::vector<Value>& inputs, Value output) {
   f.CallPacked(targs, &rv);
 }
 
+MNM_REGISTER_DIALECT("tvm").set_enable(DevType::kCPU()).set_enable(DevType::kCUDA());
 TVM_REGISTER_PASS_CONFIG_OPTION("mnm.tvm.allow_jit_failure", tvm::Bool);
 
 }  // namespace tvm_dialect

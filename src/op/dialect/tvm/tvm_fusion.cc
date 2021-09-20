@@ -90,12 +90,12 @@ class CallValuesGetter : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) override {
     const Op& op = Downcast<Op>(node->op);
-    auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema")[op];
+    auto fschema = GetOpAttr<op::FMNMSchema>(op, "FMNMSchema");
     Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
     std::vector<Value> fake_args;
     std::string op_name = op->name;
-    if (!op_name.compare(0, 7, "mnm.op.")) {
-      op_name = op_name.substr(7);
+    if (!op_name.compare(0, 11, "mnm.op.tvm.")) {
+      op_name = op_name.substr(11);
     }
     readable_name_stream << "_" << op_name;
     for (size_t i = 0; i < node->args.size(); ++i) {
@@ -142,6 +142,29 @@ class CallValuesGetter : public ExprMutator {
   Function func_;
 };
 
+/*! \brief Cast base and dialect ops to TVM dialect if possible. */
+class Cast2TVMDialect : public ExprMutator {
+ public:
+  Expr VisitExpr(const Expr& expr) override {
+    auto ret = ExprMutator::VisitExpr(expr);
+    if (expr->checked_type_.defined()) {
+      ret->checked_type_ = expr->checked_type_;
+    }
+    return ret;
+  }
+
+  Expr VisitExpr_(const OpNode* node) override {
+    auto op = GetRef<Op>(node);
+    auto base_op = IsDialectOp(op) ? GetBaseOp(op) : op;
+    auto tvm_op = OpDialect::Lower(base_op, "tvm");
+    if (tvm_op.defined()) {
+      return tvm_op;
+    }
+    // No TVM op registered for this base op, just return the original op
+    return op;
+  }
+};
+
 /*!
  * \brief Converter from meta style (all inputs are arguments) to
  *        tvm style (inputs are explicitly marked as arguments or attrs)
@@ -174,9 +197,10 @@ class Meta2TVM : public ExprMutator {
   Expr VisitExpr_(const CallNode* node) override {
     CallValues op_call_values = call_values_getter_.call_values.at(GetRef<Call>(node));
     const Op& op = Downcast<Op>(node->op);
-    const Op& tvm_op = OpDialect::Dispatch(op, device_type_, "tvm");
-    auto farg_indices = Op::GetAttrMap<FMNMArgIndices>("FMNMArgIndices")[tvm_op];
-    auto fattr = Op::GetAttrMap<FMNMAttr>("FMNMAttr")[tvm_op];
+    ICHECK_EQ(GetDialect(op), "tvm")
+        << "Encountered a non-TVM op in fused TVM closure: " << op->name;
+    auto farg_indices = GetOpAttr<FMNMArgIndices>(op, "FMNMArgIndices");
+    auto fattr = GetOpAttr<FMNMAttr>(op, "FMNMAttr");
     Attrs op_tvm_attr = fattr(op_call_values);
     Array<IntImm> arg_indices = farg_indices(op_call_values);
     std::vector<Expr> inputs;
@@ -187,7 +211,7 @@ class Meta2TVM : public ExprMutator {
         input_.insert(GetRef<Var>(vn));
       }
     }
-    return Call(tvm_op, inputs, op_tvm_attr);
+    return Call(op, inputs, op_tvm_attr);
   }
 
   Expr VisitExpr_(const FunctionNode* node) override {
@@ -262,25 +286,32 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
 float CalcFuncGFLOPS(const op::CallValues& call, const Array<Type>& param_types,
                      const Type& ret_type, const Device& device) {
   tvm::relay::tec::TECompiler compiler;
+  // Create a new call value and cast ops in callee to TVM dialect
+  auto new_call = op::CallValues::make();
+  auto callee = Downcast<ClosureValue>(call->callee)->func;
+  callee = Downcast<Function>(Cast2TVMDialect().Mutate(callee));
+  new_call->callee = ClosureValue::make({}, callee);
+  new_call->args = call->args;
+  new_call->out = call->out;
+  new_call->device = call->device;
 
-  Meta2TVM meta_to_tvm(call, device.device_type());
-  Function func = Downcast<Function>(meta_to_tvm());
+  Meta2TVM meta_to_tvm(new_call, device.device_type());
+  Function tvm_func = Downcast<Function>(meta_to_tvm());
   tvm::Target target = device.tvm_target();
 
-  auto cache_key = tvm::relay::tec::CCacheKey(func, target);
+  auto cache_key = tvm::relay::tec::CCacheKey(tvm_func, target);
   try {
     auto tensors = compiler->Lower(cache_key, "mod_calc_flops")->outputs;
     auto dag = tvm::auto_scheduler::ComputeDAG(tensors);
     return dag->flop_ct / 1e9;
   } catch (dmlc::Error& e) {
-    LOG(WARNING) << "Failed to create ComputeDAG for " << mnm::ir::AsText(func) << "\n" << e.what();
+    LOG(WARNING) << "Failed to create ComputeDAG for " << mnm::ir::AsText(tvm_func) << "\n"
+                 << e.what();
   }
   return -1;
 }
 
-MNM_OP_ENV_MAKER("mnm.op.tvm._fused", FusedFuncBuild);
-MNM_FUNC_DISPATCH(FusedFuncBuild, DevType::kCPU(), "tvm");
-MNM_FUNC_DISPATCH(FusedFuncBuild, DevType::kCUDA(), "tvm");
+MNM_OP_ENV_MAKER("mnm.op.tvm._fused_op", FusedFuncBuild);
 
 }  // namespace tvm_dialect
 }  // namespace op

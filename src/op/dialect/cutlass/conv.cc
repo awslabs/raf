@@ -18,8 +18,8 @@ using mnm::registry::TypedPackedFunc;
 
 bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
   Expr expr = Downcast<ClosureValue>(cv->callee)->func->body;
-  const static std::vector<std::string> conv_ops = {"mnm.op.conv2d"};
-  const static std::vector<std::string> epilogue_ops = {"mnm.op.relu"};
+  const static std::vector<std::string> conv_ops = {"mnm.op.cutlass.conv2d"};
+  const static std::vector<std::string> epilogue_ops = {"mnm.op.cutlass.relu"};
   auto conv2d = IsOps(conv_ops);
   auto epilogue = IsOps(epilogue_ops);
   auto x = IsVar("");
@@ -35,9 +35,9 @@ bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
   DFPattern pat =
       conv2d({x, w, stride, padding, dilation, groups, layout, kernel_layout, out_layout});
   DFPattern with_bias = Add()(pat, bias);
-  pat = pat || with_bias;
+  pat = with_bias || pat;
   DFPattern with_epilogue = epilogue({pat});
-  pat = pat || with_epilogue;
+  pat = with_epilogue || pat;
 
   if (!MatchPattern(pat, expr)) {
     return false;
@@ -111,6 +111,9 @@ void CutlassConv2dOpEnv::Execute(const std::vector<Value>& inputs, Value output)
   arguments_.D = out->data;
   CUTLASS_CALL(operation_->run(&arguments_, host_workspace_, workspace_, stream_));
 }
+
+// TODO(@hzfan): Using plevel 0 due to lack of OpEnvMaker
+MNM_REGISTER_DIALECT_OP(cutlass, conv2d, 0);
 
 }  // namespace cutlass
 }  // namespace op

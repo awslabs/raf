@@ -42,9 +42,8 @@ class CudaStreamSync : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cuda, stream_sync);
+MNM_REGISTER_DIALECT_OP(cuda, stream_sync, 10);
 MNM_OP_ENV_MAKER("mnm.op.cuda.stream_sync", CudaStreamSync::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(stream_sync, cuda, DevType::kCUDA(), 10);
 
 }  // namespace nccl
 }  // namespace communication

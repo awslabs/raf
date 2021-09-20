@@ -52,16 +52,20 @@ def test_inline():
         x = mnm.ir.var("p0", shape=(20, 15))
         y = mnm.ir.var("p1", shape=(20, 10))
         z = mnm.ir.var("p2", shape=(10, 15))
-        o = mnm.ir.op.matmul(y, z)
-        o = mnm.ir.op.subtract(x, o)
-        f = relay.Function([x, y, z], o)
+        p3 = mnm.ir.var("p", relay.TupleType(()))
+        p4 = mnm.ir.var("p", relay.TupleType(()))
+        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.tvm.matmul"), [y, z])
+        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.tvm.subtract"), [x, out, p3, p4])
+        f = relay.Function([x, y, z, p3, p4], out)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f = f.with_attr("Dialect", "tvm")
 
         x = mnm.ir.var("x", shape=(10, 20))
         dy = mnm.ir.var("dy", shape=(10, 15))
         w = mnm.ir.var("dy", shape=(20, 15))
+        null = mnm.ir.const(None)
         out = mnm.ir.op.transpose(x)
-        out = relay.Call(f, [w, out, dy])
+        out = relay.Call(f, [w, out, dy, null, null])
         return relay.Function([x, dy, w], out)
 
     model = Model()
@@ -80,7 +84,7 @@ def test_inline():
 
     mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.FuseOps()(mod)
+    mod = mnm._ffi.pass_.FuseTVM()(mod)
     func_expected = run_infer_type(expected3())
     assert tvm.ir.structural_equal(mod['main'], func_expected)
 

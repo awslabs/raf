@@ -119,7 +119,7 @@ def test_mnm_module(use_kwargs):
 
     # Check that VM can execute multi-module functions
     args = [m_x] if not use_kwargs else {"y": m_x}
-    m_out = utils.run_vm_model(model, 'cpu', args, fuse_level=1)
+    m_out = utils.run_vm_model(model, 'cpu', args)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
 
@@ -1172,7 +1172,7 @@ def test_full_fusion(dtype):
     mod = FromRelay(["FoldConstant", "SimplifyExpr"])(r_mod)
     model = FrameworkModel(mod, mod, {}, {})
 
-    out = utils.run_vm_model(model, 'cpu', [], fuse_level=1)
+    out = utils.run_vm_model(model, 'cpu', [])
     ref = np.ones((5, 5), dtype=dtype) * 2
     assert out.dtype == dtype
     check(ref, out)

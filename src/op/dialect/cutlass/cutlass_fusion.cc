@@ -62,21 +62,30 @@ OpEnv* Tune(const op::CallValues& call, OpEnv* op_env) {
  * \return the CUTLASS OpEnv. nullptr if not supported by CUTLASS
  */
 OpEnv* FusedFuncBuild(const op::CallValues& call) {
+  using FMaker = std::function<OpEnv*(const CallValues& call)>;
   Function func = Downcast<ClosureValue>(call->callee)->func;
-  std::vector<std::function<OpEnv*(const CallValues& call)>> makers = {CutlassMatmulOpEnv::make,
-                                                                       CutlassConv2dOpEnv::make};
+  auto attr = func->GetAttr<String>(attr::kPatternName);
+  ICHECK(attr.defined()) << "No pattern name marked for the function";
+  std::string pattern_name = attr.value();
   OpEnv* env = nullptr;
-  for (const auto& maker : makers) {
+  auto fmake_tune = [&env, &call](FMaker maker) {
     env = maker(call);
     if (env) {
-      env = Tune(call, env);
-      break;
+      Tune(call, env);
     }
+  };
+  if (!pattern_name.compare(0, 6, "matmul") || !pattern_name.compare(0, 12, "batch_matmul")) {
+    fmake_tune(CutlassMatmulOpEnv::make);
+  } else if (!pattern_name.compare(0, 4, "conv")) {
+    fmake_tune(CutlassConv2dOpEnv::make);
+  } else {
+    LOG(FATAL) << "Unknown cutlass fusion pattern: " << pattern_name;
   }
+
   return env;
 }
 
-MNM_FUNC_DISPATCH_PLEVEL(FusedFuncBuild, DevType::kCUDA(), "cutlass", 30);
+MNM_OP_ENV_MAKER("mnm.op.cutlass._fused_op", FusedFuncBuild);
 
 }  // namespace cutlass
 }  // namespace op

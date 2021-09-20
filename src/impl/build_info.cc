@@ -20,6 +20,10 @@ bool UseCUDA() {
 #endif
 }
 
+std::string UseCuBLAS() {
+  return MNM_USE_CUBLAS;
+}
+
 std::string UseCuDNN() {
   return MNM_USE_CUDNN;
 }
@@ -55,6 +59,7 @@ std::string CmakeBuildType() {
 MNM_REGISTER_GLOBAL("mnm.build_info.git_version").set_body_typed(GitVersion);
 MNM_REGISTER_GLOBAL("mnm.build_info.cuda_version").set_body_typed(CudaVersion);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_cuda").set_body_typed(UseCUDA);
+MNM_REGISTER_GLOBAL("mnm.build_info.use_cublas").set_body_typed(UseCuBLAS);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_cudnn").set_body_typed(UseCuDNN);
 MNM_REGISTER_GLOBAL("mnm.build_info.cudnn_version").set_body_typed(CudnnVersion);
 MNM_REGISTER_GLOBAL("mnm.build_info.cmake_build_type").set_body_typed(CmakeBuildType);

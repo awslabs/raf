@@ -28,6 +28,7 @@ void CudnnConfigSetBenchmark(bool benchmark) {
   CUDNNThreadEntry::ThreadLocal()->benchmark = benchmark;
 }
 
+MNM_REGISTER_DIALECT("cudnn").set_enable(DevType::kCUDA());
 MNM_REGISTER_GLOBAL("mnm.backend.cudnn.ConfigGetBenchmark").set_body_typed(CudnnConfigGetBenchmark);
 MNM_REGISTER_GLOBAL("mnm.backend.cudnn.ConfigSetBenchmark").set_body_typed(CudnnConfigSetBenchmark);
 

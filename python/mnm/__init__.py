@@ -14,6 +14,7 @@ from . import _tvm_op
 from . import optim
 from . import utils
 from . import _core
+from ._core.device import device, cpu, cuda, Device
 from .model.model import Model
 from .hybrid import hybrid
 from .distributed import *

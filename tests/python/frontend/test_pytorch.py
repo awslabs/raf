@@ -101,7 +101,7 @@ def test_lenet(shape_dict, mode):
         m_model.to(device=device)
 
         m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
-        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue], fuse_level=1)[0]
+        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue])[0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()
@@ -193,8 +193,7 @@ def test_conv_bn(shape_dict, mode, fuse):
 
         m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
         m_loss = run_vm_model(
-            m_trainer, device, [m_dy, m_x, m_ytrue],
-            fuse_level=1 if fuse else 0)[0][0]
+            m_trainer, device, [m_dy, m_x, m_ytrue], disable_fusion=not fuse)[0][0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()
@@ -227,7 +226,7 @@ def test_batch_norm_train(shape_dict):
 
     m_model.train_mode()
     t_model.train()
-    m_y = run_vm_model(m_model, device, [m_x], fuse_level=1)[0]
+    m_y = run_vm_model(m_model, device, [m_x])[0]
     t_y = t_model(t_x)
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_model.state()["model_running_mean"], t_model.running_mean)

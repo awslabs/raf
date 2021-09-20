@@ -69,8 +69,12 @@ class Device(Object):
             Return the current device, or None if the current device is not set
             and allow_none=True.
         """
-        device = ffi.DeviceCurrent(allow_none)
-        return device if device.device_type != 0 or device.device_id != -1 else None
+        dev = ffi.DeviceCurrent(allow_none)
+        return dev if dev.device_type != 0 or dev.device_id != -1 else None
+
+def device(device_str):
+    """Create a device."""
+    return Device(device_str)
 
 def cpu(device_id=0):
     """Create a CPU device object."""

@@ -4,6 +4,7 @@
  * \brief MNM extension to TVM/Relay IR.
  */
 #include <printer/text_printer.h>
+#include <relay/ir/dataflow_matcher_impl.h>
 #include "mnm/ir_ext.h"
 #include "mnm/registry.h"
 #include "mnm/pass.h"
@@ -39,6 +40,10 @@ tvm::runtime::NDArray MakeFakeTensor() {
 
 bool ConstantNode::IsTensor() const {
   return value.defined() && value.as<BaseTensorValueObj>();
+}
+
+bool ConstantNode::IsScalar() const {
+  return value.defined() && value.as<ScalarValueObj>();
 }
 
 ObjectPtr<ConstantNode> MakeConstantNode(ObjectRef node_ref) {
@@ -125,6 +130,45 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
     ret.replace(index, 7, "");
   }
   return ret;
+}
+
+class MNMPatternRewriter : protected tvm::relay::PatternRewriter {
+ public:
+  MNMPatternRewriter(IRModule mod) : PatternRewriter(mod) {
+  }
+  Expr Rewrite(const Array<DFPatternCallback>& callbacks, const Expr& pre) override {
+    auto post = pre;
+    auto last = post;
+    // rewrite the graph until it stops changing to make sure all rewrites are complete
+    int count = 0;
+    bool equal = true;
+    static auto* structural_equal = tvm::runtime::Registry::Get("node.StructuralEqual");
+    ICHECK(structural_equal) << "node.StructuralEqual is not registered.";
+    do {
+      last = post;
+      for (auto callback : callbacks) {
+        callback_ = callback;
+        if (callback_->require_type) {
+          post = pass::InferTypeWithModule(post, mod_);
+        }
+        auto grouper = tvm::relay::PatternGrouper();
+        groups_ = grouper.GroupMatches(callback_->pattern, post);
+        gid_assignments_ = grouper.GetGIDAssignments();
+        memo_.clear();
+        post = this->VisitExpr(post);
+        count++;
+      }
+      equal = (*structural_equal)(last, post, false, true);
+    } while (!equal && count < 100);
+    if (count >= 100) {
+      LOG(FATAL) << "Observed 100 rewrite passes, possible conflicting passes?";
+    }
+    return post;
+  }
+};
+
+Expr RewritePatterns(Array<DFPatternCallback> callbacks, Expr expr, IRModule mod) {
+  return MNMPatternRewriter(mod).Rewrite(callbacks, expr);
 }
 
 MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {

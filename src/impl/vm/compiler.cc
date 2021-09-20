@@ -841,7 +841,12 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::ToGraphNormalForm());
   pass_seqs.push_back(pass::ToBasicBlockNormalForm());
   pass_seqs.push_back(pass::InferType());
-  pass_seqs.push_back(pass::FuseOps());
+  pass_seqs.push_back(pass::FuseDialect());
+  pass_seqs.push_back(pass::FuseTVM());
+  pass_seqs.push_back(pass::DispatchDialect());
+  // We need to erase the type after dialect dispatching because dialect ops may have different
+  // output type than the base ops.
+  pass_seqs.push_back(pass::EraseType());
 
   // optimization passes that transform BBNF into ANF
   bool enable_stream_schedule = true;

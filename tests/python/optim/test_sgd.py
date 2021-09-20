@@ -194,7 +194,7 @@ def test_traced_sgd(config):
         m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
         m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device=device)
         m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device=device)
-        m_loss = run_vm_model(m_optimizer, device, [m_dy, m_x, m_y], fuse_level=1)
+        m_loss = run_vm_model(m_optimizer, device, [m_dy, m_x, m_y])
         t_optimizer.zero_grad()
         t_loss = t_model(t_x, t_y)
         t_loss.backward(t_dy)
@@ -230,7 +230,7 @@ def test_mxnet_model(device):
         mx_loss = net(mx_x)
     mx_loss.backward(mx_dy)
     mx_trainer.step(1)
-    loss = run_vm_model(trainer, device, [dy, x], fuse_level=1)[0]
+    loss = run_vm_model(trainer, device, [dy, x])[0]
     check(loss, mx_loss, rtol=1e-4, atol=1e-4)
     params = model.state()
     for name, param in net.collect_params().items():

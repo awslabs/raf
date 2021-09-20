@@ -130,8 +130,7 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, _contrib_dropout);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_contrib_dropout, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, _contrib_dropout, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn._contrib_dropout", DropoutImplementedByCUDNNDropoutForward::make);
 
 class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
@@ -200,8 +199,7 @@ class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, _contrib_dropout_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_contrib_dropout_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, _contrib_dropout_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn._contrib_dropout_dx",
                  DropoutImplementedByCUDNNDropoutBackward::make);
 

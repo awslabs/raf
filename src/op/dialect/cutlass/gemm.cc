@@ -31,11 +31,12 @@ using mnm::registry::TypedPackedFunc;
 
 std::tuple<bool, bool> GetTranspose(const Op& op) {
   const static std::vector<Op> transpose_a_ops = {
-      Op::Get("mnm.op.matmul_tn"), Op::Get("mnm.op.matmul_tt"), Op::Get("mnm.op.batch_matmul_tn"),
-      Op::Get("mnm.op.batch_matmul_tt")};
+      Op::Get("mnm.op.cutlass.matmul_tn"), Op::Get("mnm.op.cutlass.matmul_tt"),
+      Op::Get("mnm.op.cutlass.batch_matmul_tn"), Op::Get("mnm.op.cutlass.batch_matmul_tt")};
   const static std::vector<Op> transpose_b_ops = {
-      Op::Get("mnm.op.dense"), Op::Get("mnm.op.matmul_nt"), Op::Get("mnm.op.matmul_tt"),
-      Op::Get("mnm.op.batch_matmul_nt"), Op::Get("mnm.op.batch_matmul_tt")};
+      Op::Get("mnm.op.cutlass.dense"), Op::Get("mnm.op.cutlass.matmul_nt"),
+      Op::Get("mnm.op.cutlass.matmul_tt"), Op::Get("mnm.op.cutlass.batch_matmul_nt"),
+      Op::Get("mnm.op.cutlass.batch_matmul_tt")};
   bool transpose_a =
       std::find(transpose_a_ops.begin(), transpose_a_ops.end(), op) != transpose_a_ops.end();
   bool transpose_b =
@@ -45,8 +46,8 @@ std::tuple<bool, bool> GetTranspose(const Op& op) {
 
 bool IsBatch(const Op& op) {
   const static std::vector<Op> batched_ops = {
-      Op::Get("mnm.op.batch_matmul"), Op::Get("mnm.op.batch_matmul_nt"),
-      Op::Get("mnm.op.batch_matmul_tn"), Op::Get("mnm.op.batch_matmul_tt")};
+      Op::Get("mnm.op.cutlass.batch_matmul"), Op::Get("mnm.op.cutlass.batch_matmul_nt"),
+      Op::Get("mnm.op.cutlass.batch_matmul_tn"), Op::Get("mnm.op.cutlass.batch_matmul_tt")};
   return std::find(batched_ops.begin(), batched_ops.end(), op) != batched_ops.end();
 }
 
@@ -61,15 +62,15 @@ DFPattern GELU(DFPattern pat) {
 bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   Expr expr = Downcast<ClosureValue>(cv->callee)->func->body;
   const static std::vector<std::string> matmul_ops = {
-      "mnm.op.dense",           "mnm.op.matmul",          "mnm.op.matmul_nt",
-      "mnm.op.matmul_tn",       "mnm.op.matmul_tt",       "mnm.op.batch_matmul",
-      "mnm.op.batch_matmul_nt", "mnm.op.batch_matmul_tn", "mnm.op.batch_matmul_tt"};
-  const static std::vector<std::string> epilogue_ops = {"mnm.op.relu"};
+      "mnm.op.cutlass.dense",           "mnm.op.cutlass.matmul",
+      "mnm.op.cutlass.matmul_nt",       "mnm.op.cutlass.matmul_tn",
+      "mnm.op.cutlass.matmul_tt",       "mnm.op.cutlass.batch_matmul",
+      "mnm.op.cutlass.batch_matmul_nt", "mnm.op.cutlass.batch_matmul_tn",
+      "mnm.op.cutlass.batch_matmul_tt"};
+  const static std::vector<std::string> epilogue_ops = {"mnm.op.cutlass.relu",
+                                                        "mnm.op.cutlass.gelu"};
   auto matmul = IsOps(matmul_ops);
-  auto add = IsOp("mnm.op.add");
   auto epilogue = IsOps(epilogue_ops);
-  auto konst1 = IsConstant();
-  auto konst2 = IsConstant();
   auto x1 = IsVar("");
   auto x2 = IsVar("");
   auto beta = IsVar("");
@@ -77,14 +78,12 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   DFPattern pat = matmul({x1, x2});
   DFPattern scaled_bias = bias || Multiply()(beta, bias);
   DFPattern with_bias = Add()(pat, scaled_bias);
-  pat = pat || with_bias;
+  pat = with_bias || pat;
   DFPattern with_epilogue = epilogue({pat});
-  pat = pat || with_epilogue;
-  // TODO(@hzfan): after we have mnm.op.gelu, add it to epilogue_ops
-  DFPattern with_epilogue_gelu = GELU(pat);
-  pat = pat || with_epilogue_gelu;
+  pat = with_epilogue || pat;
 
   if (!MatchPattern(pat, expr)) {
+    LOG(INFO) << "Failed to match the pattern";
     return false;
   }
 
@@ -97,10 +96,6 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
         b_ = GetPattern<Var>(node_map, x2);
         with_bias_ = GetPattern<Expr>(node_map, scaled_bias).defined();
         epilogue_op_ = GetEpilogueKind(GetPattern<Op>(node_map, epilogue));
-        // TODO(@hzfan): remove this if after we have mnm.op.gelu
-        if (GetPattern<Expr>(node_map, with_epilogue_gelu).defined()) {
-          epilogue_op_ = EpilogueKindExt::kLinearCombinationGELU;
-        }
         batched_ = IsBatch(matmul_op);
         std::tie(transpose_a_, transpose_b_) = GetTranspose(matmul_op);
         if (with_bias_) {
@@ -192,6 +187,17 @@ void CutlassMatmulOpEnv::Execute(const std::vector<Value>& inputs, Value output)
   arguments_.D = out->data;
   CUTLASS_CALL(operation_->run(&arguments_, host_workspace_, workspace_, stream_));
 }
+
+// TODO(@hzfan): Using plevel 0 due to lack of OpEnvMaker
+MNM_REGISTER_DIALECT_OP(cutlass, matmul, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, matmul_nt, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, matmul_tn, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, matmul_tt, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, dense, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul_nt, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul_tn, 0);
+MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul_tt, 0);
 
 }  // namespace cutlass
 }  // namespace op

@@ -23,7 +23,7 @@ def test_dynamic_model(device, fuse):
     n_x = np.ones((2, 2)).astype("float32")
     m_x = mnm.array(n_x, device=device)
     m_res = model(m_x)
-    v_res = run_vm_model(model, device, [m_x], fuse_level=3 if fuse else 0)
+    v_res = run_vm_model(model, device, [m_x], disable_fusion=not fuse)
     expected = mnm.array([[1, 0], [1, 2]], dtype="int32")
     check(m_res, expected)
     check(v_res, expected)

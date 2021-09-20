@@ -76,8 +76,7 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, log_softmax);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(log_softmax, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, log_softmax, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.log_softmax", LogSoftmaxImplementedByCUDNNSoftmaxForward::make);
 
 class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
@@ -154,8 +153,7 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, log_softmax_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(log_softmax_dx, cudnn, DevType::kCUDA(), 7);
+MNM_REGISTER_DIALECT_OP(cudnn, log_softmax_dx, 7);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.log_softmax_dx",
                  LogSoftmaxDxImplementedByCUDNNSoftmaxBackward::make);
 
@@ -215,8 +213,7 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, softmax);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(softmax, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, softmax, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make);
 
 class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
@@ -293,8 +290,7 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, softmax_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(softmax_dx, cudnn, DevType::kCUDA(), 7);
+MNM_REGISTER_DIALECT_OP(cudnn, softmax_dx, 7);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.softmax_dx", SoftmaxDxImplementedByCUDNNSoftmaxBackward::make);
 
 }  // namespace cudnn

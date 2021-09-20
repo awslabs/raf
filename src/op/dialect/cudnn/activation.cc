@@ -73,8 +73,7 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, relu);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(relu, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, relu, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.relu", ReluImplementedByCUDNNActivationForward::make);
 
 class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
@@ -156,8 +155,7 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, relu_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(relu_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, relu_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.relu_dx", ReluDxImplementedByCUDNNActivationBackward::make);
 
 class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
@@ -216,8 +214,7 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, sigmoid);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(sigmoid, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, sigmoid, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.sigmoid", SigmoidImplementedByCUDNNActivationForward::make);
 
 class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
@@ -304,8 +301,7 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, sigmoid_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(sigmoid_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, sigmoid_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.sigmoid_dx", SigmoidDxImplementedByCUDNNActivationBackward::make);
 
 class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
@@ -364,8 +360,7 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, tanh);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(tanh, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, tanh, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.tanh", TanhImplementedByCUDNNActivationForward::make);
 
 class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
@@ -446,8 +441,7 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, tanh_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(tanh_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, tanh_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.tanh_dx", TanhDxImplementedByCUDNNActivationBackward::make);
 
 }  // namespace cudnn

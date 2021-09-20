@@ -306,8 +306,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, conv2d);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(conv2d, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, conv2d, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.conv2d", Conv2DImplementedByCUDNNConvolutionForward::make);
 
 class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEnv {
@@ -406,8 +405,7 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, conv2d_dw);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(conv2d_dw, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, conv2d_dw, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.conv2d_dw",
                  Conv2DDwImplementedByCUDNNConvolutionBackwardFilter::make);
 
@@ -502,8 +500,7 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, conv2d_dx);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(conv2d_dx, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, conv2d_dx, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.conv2d_dx", Conv2DDxImplementedByCUDNNConvolutionBackwardData::make);
 
 }  // namespace cudnn

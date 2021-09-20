@@ -92,8 +92,7 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_infer);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_norm_infer, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_infer, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.batch_norm_infer",
                  BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference::make);
 
@@ -174,8 +173,7 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_train);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_norm_train, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_train, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.batch_norm_train",
                  BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining::make);
 
@@ -259,8 +257,7 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_train_dxwb);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(batch_norm_train_dxwb, cudnn, DevType::kCUDA(), 15);
+MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_train_dxwb, 15);
 MNM_OP_ENV_MAKER("mnm.op.cudnn.batch_norm_train_dxwb",
                  BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward::make);
 

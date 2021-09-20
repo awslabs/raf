@@ -34,6 +34,11 @@ class ConstantNode : public RelayConstantNode {
    * \return Whether the constant is tensor
    */
   bool IsTensor() const;
+  /*!
+   * \brief Check if the constant is a scalar
+   * \return Whether the constant is a scalar
+   */
+  bool IsScalar() const;
 
   bool SEqualReduce(const ConstantNode* other, tvm::SEqualReducer equal) const {
     return equal(value, other->value);
@@ -87,6 +92,8 @@ Var GetMayShare(Expr var);
 Var TryGetMayShare(Expr var);
 
 std::string AsText(const ObjectRef& node, bool show_meta_data = false);
+
+Expr RewritePatterns(Array<DFPatternCallback> callbacks, Expr expr, IRModule mod = IRModule());
 
 }  // namespace ir
 }  // namespace mnm

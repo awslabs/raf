@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2021 by Contributors
- * \file src/op/dialect/cuda/kernels/transform.cc
+ * \file src/op/dialect/cuda/embedding.cc
  * \brief embedding_dx cuda backend
  */
 #include "mnm/op.h"
@@ -66,9 +66,8 @@ class EmbeddingDxImpl : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cuda, embedding_dx);
+MNM_REGISTER_DIALECT_OP(cuda, embedding_dx, 20);
 MNM_OP_ENV_MAKER("mnm.op.cuda.embedding_dx", EmbeddingDxImpl::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(embedding_dx, cuda, DevType::kCUDA(), 20);
 
 }  // namespace cuda
 }  // namespace op

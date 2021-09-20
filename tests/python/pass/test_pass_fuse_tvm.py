@@ -10,11 +10,13 @@ import tvm
 from tvm import relay
 
 
-def fuse_module(mod, fuse_level=3):
-    with mnm.ir.PassContext(config={"mnm.fuse_level": fuse_level}):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseOps()(mod)
+def fuse_module(mod, fuse_dialect=False):
+    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+    if fuse_dialect:
+        mod = mnm._ffi.pass_.FuseDialect()(mod)
+    mod = mnm._ffi.pass_.FuseTVM()(mod)
+    mod = mnm._ffi.pass_.InferType()(mod)
     return mod
 
 
@@ -33,15 +35,23 @@ def test_fuse_simple():
             return y
 
     def expected(shape):
+        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
+        relu_op = mnm._ffi.op.GetOp("mnm.op.tvm.relu")
+        log_op = mnm._ffi.op.GetOp("mnm.op.tvm.log")
+        null = mnm.ir.const(None)
+
         x = mnm.ir.var("p0", shape=shape)
         y = mnm.ir.var("p1", shape=(1,))
-        z = mnm.ir.op.add(x, y)
-        z = mnm.ir.op.log(mnm.ir.op.relu(z))
-        f1 = relay.Function([x, y], z)
+        p2 = mnm.ir.var("p2", relay.TupleType(()))
+        p3 = mnm.ir.var("p3", relay.TupleType(()))
+        z = relay.Call(add_op, [x, y, p2, p3])
+        z = relay.Call(log_op, [relay.Call(relu_op, [z])])
+        f1 = relay.Function([x, y, p2, p3], z)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-        x = relay.var("x", shape=shape)
-        y = relay.var("c", shape=(1,))
-        ret = relay.Call(f1, [x, y])
+        f1 = f1.with_attr("Dialect", "tvm")
+        x = mnm.ir.var("x", shape=shape)
+        y = mnm.ir.var("c", shape=(1,))
+        ret = relay.Call(f1, [x, y, null, null])
         return relay.Function([x, y], ret)
 
     model = Model()
@@ -82,60 +92,73 @@ def test_conv2d():
         konst1 = mnm.ir.const(1)
         konst_nchw = mnm.ir.const("NCHW")
         konst_oihw = mnm.ir.const("OIHW")
+        null = mnm.ir.const(None)
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        tvm_add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
+        conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
+        tvm_conv2d_op = mnm._ffi.op.GetOp("mnm.op.tvm.conv2d")
 
         # segment 1
-        x = relay.var("p0", shape=(1, 16, 64, 64))
-        w = relay.var("p1", shape=(16, 16, 3, 3))
-        p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
-        p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
-        p5 = relay.var("p5", "int64")
-        p6 = relay.var("p6", "int64")
-        p7 = relay.var("p7", "int64")
-        p8 = relay.var("p8", "int64")
-        p9 = relay.var("p9", shape=(1,))
-        y = mnm.ir.op.conv2d(x, w, p2, p3, p4, p5, p6, p7, p8)
-        y1 = mnm.ir.op.add(y, p9)
-        y = mnm.ir.op.add(y, y1)
-        f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p9], y)
+        x = mnm.ir.var("p0", shape=(1, 16, 64, 64))
+        w = mnm.ir.var("p1", shape=(16, 16, 3, 3))
+        p2 = mnm.ir.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
+        p3 = mnm.ir.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
+        p4 = mnm.ir.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
+        p5 = mnm.ir.var("p5", "int64")
+        p6 = mnm.ir.var("p6", "int64")
+        p7 = mnm.ir.var("p7", "int64")
+        p8 = mnm.ir.var("p8", "int64")
+        p9 = mnm.ir.var("p9", shape=(1,))
+        p10 = mnm.ir.var("p10", relay.TupleType(()))
+        p11 = mnm.ir.var("p11", relay.TupleType(()))
+        p12 = mnm.ir.var("p12", relay.TupleType(()))
+        p13 = mnm.ir.var("p13", relay.TupleType(()))
+        y = relay.Call(tvm_conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
+        y1 = relay.Call(tvm_add_op, [y, p9, p10, p11])
+        y = relay.Call(tvm_add_op, [y, y1, p12, p13])
+        f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f1 = f1.with_attr("Dialect", "tvm")
 
         # segment 3
-        x = relay.var("p0", shape=(1, 16, 64, 64))
-        w = relay.var("p1", shape=(16, 16, 1, 1))
-        p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
-        p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
-        p5 = relay.var("p5", "int64")
-        p6 = relay.var("p6", "int64")
-        p7 = relay.var("p7", "int64")
-        p8 = relay.var("p8", "int64")
-        p91 = relay.var("p91", shape=(1, 16, 64, 64))
-        y = mnm.ir.op.conv2d(x, w, p2, p3, p4, p5, p6, p7, p8)
-        y = mnm.ir.op.add(y, p91)
-        f3 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p91], y)
+        x = mnm.ir.var("p0", shape=(1, 16, 64, 64))
+        w = mnm.ir.var("p1", shape=(16, 16, 1, 1))
+        p2 = mnm.ir.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
+        p3 = mnm.ir.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
+        p4 = mnm.ir.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
+        p5 = mnm.ir.var("p5", "int64")
+        p6 = mnm.ir.var("p6", "int64")
+        p7 = mnm.ir.var("p7", "int64")
+        p8 = mnm.ir.var("p8", "int64")
+        p9 = mnm.ir.var("p9", shape=(1, 16, 64, 64))
+        p10 = mnm.ir.var("p10", relay.TupleType(()))
+        p11 = mnm.ir.var("p11", relay.TupleType(()))
+        y = relay.Call(tvm_conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
+        y = relay.Call(tvm_add_op, [y, p9, p10, p11])
+        f3 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11], y)
         f3 = f3.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f3 = f3.with_attr("Dialect", "tvm")
 
         # compose
-        x = relay.var("x", shape=(1, 16, 64, 64))
-        c = relay.var("c", shape=(1,))
-        w1 = relay.var("conv1.w", shape=(16, 16, 3, 3))
-        w2 = relay.var("conv2.w", shape=(16, 16, 1, 1))
-        w3 = relay.var("conv3.w", shape=(16, 16, 3, 3))
-        y1 = mnm.ir.op.add(x, c)
+        x = mnm.ir.var("x", shape=(1, 16, 64, 64))
+        c = mnm.ir.var("c", shape=(1,))
+        w1 = mnm.ir.var("conv1.w", shape=(16, 16, 3, 3))
+        w2 = mnm.ir.var("conv2.w", shape=(16, 16, 1, 1))
+        w3 = mnm.ir.var("conv3.w", shape=(16, 16, 3, 3))
+        y1 = relay.Call(add_op, [x, c, null, null])
         y2 = relay.Call(f1, [y1, w1, v_one, v_one, v_one, konst1, konst_nchw,
-                             konst_oihw, konst_nchw, c])
-        y3 = mnm.ir.op.conv2d(y2, w3, 1, 1)
+                             konst_oihw, konst_nchw, c, null, null, null, null])
+        y3 = relay.Call(conv2d_op, [y2, w3, v_one, v_one, v_one, konst1,
+                                    konst_nchw, konst_oihw, konst_nchw])
         ret = relay.Call(f3, [y2, w2, v_one, v_zero, v_one, konst1,
-                              konst_nchw, konst_oihw, konst_nchw, y3])
+                              konst_nchw, konst_oihw, konst_nchw, y3, null, null])
         return relay.Function([x, c, w1, w2, w3], ret)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
     mod = fuse_module(mod)
-    func_expected = expected()
-    func_expected = run_infer_type(func_expected)
+    func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(mod['main'], func_expected)
 
 
@@ -154,19 +177,32 @@ def test_concatenate():
             return mnm.add(concat, self.c)
 
     def expected(shape):
+        max_pool2d_op = mnm._ffi.op.GetOp("mnm.op.max_pool2d")
+        concat_op = mnm._ffi.op.GetOp("mnm.op.tvm.concatenate")
+        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
+        konst1 = mnm.ir.const(1)
+        konst3 = mnm.ir.const(3)
+        knchw = mnm.ir.const("NCHW")
+        true = mnm.ir.const(True)
+        false = mnm.ir.const(False)
+        null = mnm.ir.const(None)
 
-        p0 = relay.var("p0", shape=shape)
-        p1 = relay.var("p0", shape=shape)
-        p2 = relay.var("p2", shape=(1,))
-        concat = mnm.ir.op.concatenate([p0, p1], 1)
-        out = mnm.ir.op.add(concat, p2)
-        f2 = relay.Function([p0, p1, p2], out)
+        p0 = mnm.ir.var("p", shape=shape)
+        p1 = mnm.ir.var("p", shape=shape)
+        p2 = mnm.ir.var("p", shape=(1,))
+        p3 = mnm.ir.var("p", relay.TupleType(()))
+        p4 = mnm.ir.var("p", relay.TupleType(()))
+        concat = relay.Call(concat_op, [relay.Tuple([p0, p1]), konst1])
+        out = relay.Call(add_op, [concat, p2, p3, p4])
+        f2 = relay.Function([p0, p1, p2, p3, p4], out)
         f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f2 = f2.with_attr("Dialect", "tvm")
 
-        x = relay.var("x", shape=shape)
-        c = relay.var("c", shape=(1,))
-        y1 = mnm.ir.op.max_pool2d(x, 3, 1, 1)
-        y2 = relay.Call(f2, [y1, x, c])
+        x = mnm.ir.var("x", shape=shape)
+        c = mnm.ir.var("c", shape=(1,))
+        y1 = relay.Call(max_pool2d_op, [x, konst3, konst1, konst1, konst1,
+                                        false, true, knchw])
+        y2 = relay.Call(f2, [y1, x, c, null, null])
         return relay.Function([x, c], y2)
 
     model = Model()
@@ -191,31 +227,38 @@ def test_tuple_root_fuse():
             return (mnm.add(pooled, self.c), x)
 
     def expected(shape):
+        max_pool2d_op = mnm._ffi.op.GetOp("mnm.op.tvm.max_pool2d")
+        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
         v_three = mnm.ir.const([3, 3], dtype="int32")
         v_one = mnm.ir.const([1])
         knchw = mnm.ir.const("NCHW")
         true = mnm.ir.const(True)
         false = mnm.ir.const(False)
+        null = mnm.ir.const(None)
 
-        p0 = relay.var("p0", shape=shape)
-        p1 = relay.var("p1", relay.TupleType(
+        p0 = mnm.ir.var("p0", shape=shape)
+        p1 = mnm.ir.var("p1", relay.TupleType(
             (relay.TensorType((), "int32"), relay.TensorType((), "int32"))))
-        p2 = relay.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
-        p3 = relay.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
-        p4 = relay.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
-        p5 = relay.var("p5", "bool")
-        p6 = relay.var("p6", "bool")
-        p7 = relay.var("p7", "int64")
-        c = relay.var("c", shape=(1,))
+        p2 = mnm.ir.var("p2", relay.TupleType((relay.TensorType((), "int64"),)))
+        p3 = mnm.ir.var("p3", relay.TupleType((relay.TensorType((), "int64"),)))
+        p4 = mnm.ir.var("p4", relay.TupleType((relay.TensorType((), "int64"),)))
+        p5 = mnm.ir.var("p5", "bool")
+        p6 = mnm.ir.var("p6", "bool")
+        p7 = mnm.ir.var("p7", "int64")
+        p8 = mnm.ir.var("p8", relay.TupleType(()))
+        p9 = mnm.ir.var("p9", relay.TupleType(()))
+        c = mnm.ir.var("c", shape=(1,))
 
-        pooled = mnm.ir.op.max_pool2d(p0, p1, p2, p3, p4, p5, p6, p7)
-        out = mnm.ir.op.add(pooled, c)
-        f = relay.Function([p0, p1, p2, p3, p4, p5, p6, p7, c], out)
+        pooled = relay.Call(max_pool2d_op, [p0, p1, p2, p3, p4, p5, p6, p7])
+        out = relay.Call(add_op, [pooled, c, p8, p9])
+        f = relay.Function([p0, p1, p2, p3, p4, p5, p6, p7, c, p8, p9], out)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f = f.with_attr("Dialect", "tvm")
 
-        x = relay.var("x", shape=shape)
-        c = relay.var("c", shape=(1,))
-        y = relay.Call(f, [x, v_three, v_one, v_one, v_one, false, true, knchw, c])
+        x = mnm.ir.var("x", shape=shape)
+        c = mnm.ir.var("c", shape=(1,))
+        y = relay.Call(f, [x, v_three, v_one, v_one, v_one, false, true, knchw,
+                           c, null, null])
         y = relay.Tuple([y, x])
         return relay.Function([x, c], y)
 
@@ -287,8 +330,9 @@ def test_single_w_tuple():
     assert tvm.ir.structural_equal(after["main"], before["main"])
 
 
-def test_fuse_level_1():
-    """Fuse level 1 only fuses injective nodes."""
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+def test_fuse_with_dialect():
+    """Fuse TVM after fusing dialect."""
     rand, _ = randn((1,), device="cpu")
 
     class Model(mnm.Model):
@@ -299,32 +343,66 @@ def test_fuse_level_1():
         @mnm.model.trace
         def forward(self, x):
             y = self.conv1(x)
-            y1 = mnm.add(y, self.c)
-            y = mnm.add(y, y1)
+            y = mnm.add(y, self.c)
+            y = mnm.add(y, self.c)
+            y = mnm.relu(y)
             return y
 
     def expected():
+        v_one = mnm.ir.const([1])
+        konst1 = mnm.ir.const(1)
+        null = mnm.ir.const(None)
+        konst_nchw = mnm.ir.const("NCHW")
+        konst_oihw = mnm.ir.const("OIHW")
+        conv2d_op = mnm._ffi.op.GetOp("mnm.op.cutlass.conv2d")
+        cutlass_add_op = mnm._ffi.op.GetOp("mnm.op.cutlass.add")
+        tvm_add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
+        relu_op = mnm._ffi.op.GetOp("mnm.op.tvm.relu")
+
         # segment
-        x = relay.var("p0", shape=(1, 16, 64, 64))
-        w = relay.var("p1", shape=(16, 16, 3, 3))
-        conv_out = mnm.ir.op.conv2d(x, w, 1, 1)
-
-        p0 = relay.var("p0", shape=(1, 16, 64, 64))
-        p1 = relay.var("p1", shape=(1,))
-        y = mnm.ir.op.add(p0, p1)
-        y = mnm.ir.op.add(p0, y)
-        f1 = relay.Function([p0, p1], y)
+        x = mnm.ir.var("p", shape=(1, 16, 64, 64))
+        w = mnm.ir.var("p", shape=(16, 16, 3, 3))
+        p2 = mnm.ir.var("p", relay.TupleType((relay.TensorType((), "int64"),)))
+        p3 = mnm.ir.var("p", relay.TupleType((relay.TensorType((), "int64"),)))
+        p4 = mnm.ir.var("p", relay.TupleType((relay.TensorType((), "int64"),)))
+        p5 = mnm.ir.var("p", "int64")
+        p6 = mnm.ir.var("p", "int64")
+        p7 = mnm.ir.var("p", "int64")
+        p8 = mnm.ir.var("p", "int64")
+        p9 = mnm.ir.var("p", shape=(1,))
+        p10 = mnm.ir.var("p", relay.TupleType(()))
+        p11 = mnm.ir.var("p", relay.TupleType(()))
+        y = relay.Call(conv2d_op, [x, w, p2, p3, p4, p5, p6, p7, p8])
+        y = relay.Call(cutlass_add_op, [y, p9, p10, p11])
+        f1 = relay.Function([x, w, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11], y)
         f1 = f1.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f1 = f1.with_attr("Dialect", "cutlass")
+        f1 = f1.with_attr("PatternName", "conv2d_fusion")
 
-        c = relay.var("c", shape=(1,))
-        out = relay.Call(f1, [conv_out, c])
+        p0 = mnm.ir.var("p", shape=(1, 16, 64, 64))
+        p1 = mnm.ir.var("p", shape=(1,))
+        p2 = mnm.ir.var("p", relay.TupleType(()))
+        p3 = mnm.ir.var("p", relay.TupleType(()))
+        y = relay.Call(tvm_add_op, [p0, p1, p2, p3])
+        y = relay.Call(relu_op, [y])
+        f2 = relay.Function([p0, p1, p2, p3], y)
+        f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f2 = f2.with_attr("Dialect", "tvm")
+
+        x = mnm.ir.var("p0", shape=(1, 16, 64, 64))
+        w = mnm.ir.var("p1", shape=(16, 16, 3, 3))
+        c = mnm.ir.var("c", shape=(1,))
+        y = relay.Call(f1, [x, w, v_one, v_one, v_one, konst1, konst_nchw,
+                            konst_oihw, konst_nchw, c, null, null])
+        out = relay.Call(f2, [y, c, null, null])
 
         return relay.Function([x, c, w], out)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
-    mod = fuse_module(mod, fuse_level=1)
+    with mnm.device("cuda"):
+        mod = fuse_module(mod, True)
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
     assert tvm.ir.structural_equal(mod["main"], func_expected)
@@ -374,21 +452,25 @@ def test_sgd():
             return y
 
     def expected():
+        relu_op = mnm._ffi.op.GetOp("mnm.op.tvm.relu")
+        relu_dx_op = mnm._ffi.op.GetOp("mnm.op.tvm.relu_dx")
+        sgd_op = mnm._ffi.op.GetOp("mnm.op.tvm.sgd")
         default = mnm._ffi.ir._make.Constant(mnm._core.value.IntValue(-114514))
 
-        x = relay.var("p0", shape=shape)
-        dy = relay.var("p1", shape=shape)
-        v = relay.var("p2", shape=shape)
-        y = mnm.ir.op.relu(x)
-        y1 = mnm.ir.op.relu_dx(x, y, dy)
-        y2 = mnm.ir.op.sgd(x, y1, v, default, default)
+        x = mnm.ir.var("p0", shape=shape)
+        dy = mnm.ir.var("p1", shape=shape)
+        v = mnm.ir.var("p2", shape=shape)
+        y = relay.Call(relu_op, [x])
+        y1 = relay.Call(relu_dx_op, [x, y, dy])
+        y2 = relay.Call(sgd_op, [x, y1, v, default, default])
         out = relay.Tuple([y, relay.TupleGetItem(y2, 1), relay.TupleGetItem(y2, 0)])
         f = relay.Function([x, dy, v], out)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f = f.with_attr("Dialect", "tvm")
 
-        x = relay.var("model.x", shape=shape)
-        dy = relay.var("dy", shape=shape)
-        v = relay.var("v", shape=shape)
+        x = mnm.ir.var("model.x", shape=shape)
+        dy = mnm.ir.var("dy", shape=shape)
+        v = mnm.ir.var("v", shape=shape)
         y = relay.Call(f, [x, dy, v])
         return relay.Function([dy, v, x], y)
 
@@ -422,19 +504,27 @@ def test_fuse_inplace():
             return z
 
     def expected(shape):
+        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
+        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
+        null = mnm.ir.const(None)
+
         p0 = mnm.ir.var("p0", shape=shape)
         p1 = mnm.ir.var("p1", shape=shape)
         p2 = mnm.ir.var("p2", shape=(1,))
-        y = mnm.ir.op.add(p1, p2)
-        y = mnm.ir.op.add(p0, y, p0)
-        f = relay.Function([p0, p1, p2], y)
+        p3 = mnm.ir.var("p", relay.TupleType(()))
+        p4 = mnm.ir.var("p", relay.TupleType(()))
+        p5 = mnm.ir.var("p", relay.TupleType(()))
+        y = relay.Call(add_op, [p1, p2, p3, p4])
+        y = relay.Call(add_op, [p0, y, p0, p5])
+        f = relay.Function([p0, p1, p2, p3, p4, p5], y)
         f = f.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        f = f.with_attr("Dialect", "tvm")
 
         x = mnm.ir.var("x", shape=shape)
         y = mnm.ir.var("y", shape=shape)
         c = mnm.ir.var("c", shape=(1,))
-        out = relay.Call(f, [x, y, c])
-        out = mnm.ir.op.relu(out)
+        out = relay.Call(f, [x, y, c, null, null, null])
+        out = relay.Call(relu_op, [out])
         return relay.Function([x, y, c], out)
 
     shape = (10, 20)
@@ -448,4 +538,5 @@ def test_fuse_inplace():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    test_fuse_with_dialect()
+    #pytest.main([__file__])

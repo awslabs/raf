@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2021 by Contributors
  * \file op.h
  * \brief Operator interface
  */
@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "./device.h"
+#include "./dialect.h"
 #include "./ir.h"
 #include "./registry.h"
 #include "./value.h"
@@ -109,15 +110,15 @@ class OpEnvMaker {
 
   /*! \brief Get the registry. */
   static TRegistry* Registry();
-  /*! \brief Get the OpEnvMaker given an operator. */
-  static const OpEnvMaker* Get(const ir::Op& op);
+  /*! \brief Get the OpEnvMaker given the operator name. */
+  static const OpEnvMaker* Get(const std::string& op_name);
   /*!
    * \brief Make an OpEnv given the operator and call value.
    * \param op The operator.
    * \param call The call value.
    * \return The generated OpEnv.
    */
-  static std::shared_ptr<OpEnv> Make(const ir::Op& op, const CallValues& call);
+  static std::shared_ptr<OpEnv> Make(const std::string& op_name, const CallValues& call);
 
   /*! \brief The op name. */
   std::string name;
@@ -127,115 +128,8 @@ class OpEnvMaker {
   FMakeOpEnv func_ = nullptr;
 };
 
-/*!
- * \brief The dialect registry for base ops.
- */
-class OpDialect {
-  /*! \brief Dialect op registry entry. */
-  struct DialectOpEntry {
-    /*! \brief The dialect name. Using "backend" is because we can reuse get_preferred_backends. */
-    std::string backend;
-    /*! \brief The name of dialect op. */
-    std::string dialect_op;
-    /*! \brief Priority level for this dialect op. */
-    int plevel;
-  };
+// Operator helper functions
 
-  using TRegistry = ::dmlc::Registry<OpDialect>;
-  using TDialectList = std::list<DialectOpEntry>;
-
- public:
-  OpDialect() = default;
-  /*! \brief Set the name of base op and return the OpDialect itself. */
-  OpDialect& set_name(const std::string& name);
-  /*!
-   * \brief Register a dialect op to the base op.
-   * \param device_type The device type.
-   * \param dialect_name The dialect name, e.g., "cudnn".
-   * \param dialect_op The dialect op name, e.g., "mnm.op.cudnn.conv2d".
-   * \param plevel The priority level.
-   * \return The OpDialect itself.
-   */
-  OpDialect& add_dialect(DevType device_type, const std::string& dialect_name,
-                         const std::string& dialect_op, int plevel = 10);
-
-  /*! \brief Get the registry. */
-  static TRegistry* Registry();
-  /*!
-   * \brief Get the dialect dispatch list given a base op and device type.
-   * \param op The base op.
-   * \param device_type The device type.
-   * \return The dialect dispatch list, ordered by the dialect plevel.
-   */
-  static TDialectList GetDispatchList(const ir::Op& op, DevType device_type);
-  /*!
-   * \brief Dispatch a base op to a dialect op.
-   * \param base_op The base op.
-   * \param device_type The device type.
-   * \param skip_dialects The list of dialects to be skipped.
-   * \return The dialect op.
-   */
-  static ir::Op Dispatch(const ir::Op& base_op, DevType device_type,
-                         std::vector<std::string> skip_dialects = {});
-  /*!
-   * \brief Dispatch a base op to the specified dialect.
-   * \param base_op The base op.
-   * \param device_type The device type.
-   * \param dialect The dialect name.
-   * \return The dialect op if it's registered; otherwise an undefined op.
-   */
-  static ir::Op Dispatch(const ir::Op& base_op, DevType device_type, const std::string& dialect);
-
-  /*! \brief The name of base op. */
-  std::string name;
-  /*! \brief The dialects registered to the base op. */
-  registry::PerDevTypeStore<TDialectList> dialects;
-};
-
-/*!
- * \brief Singleton dispatcher for fused ops
- */
-class FusedOpDispatch {
-  struct FuncEnvMaker {
-    int plevel;
-    std::string backend;
-    OpEnvMaker maker;
-  };
-  using TDispatchList = std::list<FuncEnvMaker>;
-
- private:
-  FusedOpDispatch() = default;
-
- public:
-  /*!
-   * \brief add a dispatch for a specific backend
-   * \param device_type the device type
-   * \param backend_name the backend name
-   * \param op_env_maker a function that converts a call value into the corresponding op env
-   * \param plevel the backend priority. Backends with higher priority is preferred in dispatch.
-   */
-  FusedOpDispatch& add_dispatch(DevType device_type, const std::string& backend_name,
-                                const OpEnvMaker::FMakeOpEnv& op_env_maker, int plevel = 10);
-
- public:
-  /*! \brief get the FusedOpDispatch instance */
-  static FusedOpDispatch* Get();
-  /*! \brief get the list of all available backends on a specific device */
-  static TDispatchList* Get(DevType device_type);
-  /*! \brief dispatch call to some backend according to its device */
-  static std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
-
- public:
-  /*! \brief the list of backends and their dispatch mathods available on different devices */
-  registry::PerDevTypeStore<TDispatchList> dispatch;
-};
-
-/*! \brief Check if an op is a dialect op. */
-bool IsDialectOp(const ir::Op& op);
-/*! \brief Get the dialect name given an op. Return empty string if it's a base op. */
-std::string GetDialect(const ir::Op& op);
-/*! \brief Dispatch (fused or un-fused) ops to backend implementation */
-std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
 /*! \brief Convert a list of values into ListArgs. */
 ir::Attrs MakeListArgs(const ir::Array<value::Value>& values);
 /*! \brief Retrieve the list of values from ListArgs. */
@@ -252,6 +146,24 @@ std::string GetUniqueName(std::string name);
  * \return The truncated name
  */
 std::string TruncateName(std::string name);
+/*!
+ * \brief Get the operator attributes.
+ *
+ *   If `op` is a dialect op, the function will first check whether this attribute is registered
+ *   to it. If not, it will try to retrieve the attribute from its base op.
+ *
+ * \param op The operator.
+ * \param attr_name The attribute name.
+ * \return The attribute.
+ */
+template <class T>
+inline T GetOpAttr(const ir::Op& op, const std::string attr_name);
+/*!
+ * \brief Dispatch (fused or un-fused) ops to backend implementation.
+ * \param call The call values.
+ * \return The created OpEnv.
+ */
+std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
 
 // Operator pattern
 using tvm::relay::kBroadcast;
@@ -266,10 +178,8 @@ using tvm::relay::TOpPattern;
 
 /*! \brief indicate whether this operator has side effect. */
 using TMNMSideEffect = bool;
-
 /*! \brief indicate whether this operator is a collective communication op. */
 using TMNMCollective = bool;
-
 /*! \brief Map from input index to output index that the output share the memory with input. */
 using TMNMInplaceUpdate = ir::Map<ir::Integer, ir::Integer>;
 /*! \brief Indicate which dialect this dialect op belongs to. */
@@ -326,6 +236,24 @@ using FMNMFromRelay =
 using FMNMMutationFromRelay = registry::TypedPackedFunc<ir::Array<ir::Array<ir::Expr>>(
     const ir::Var& var, const ir::Call& call)>;
 
+// Implementation
+
+template <class T>
+inline T GetOpAttr(const ir::Op& op, const std::string attr_name) {
+  static auto fattr = ir::Op::GetAttrMap<T>(attr_name);
+  if (fattr.count(op)) {
+    return fattr[op];
+  }
+  if (IsDialectOp(op)) {
+    auto base_op = GetBaseOp(op);
+    if (fattr.count(base_op)) {
+      return fattr[base_op];
+    }
+  }
+  LOG(FATAL) << "No attribute " << attr_name << " registered for " << op->name;
+  return T();
+}
+
 }  // namespace op
 }  // namespace mnm
 
@@ -334,23 +262,14 @@ using FMNMMutationFromRelay = registry::TypedPackedFunc<ir::Array<ir::Array<ir::
 #define _MNM_OP_ENV_MAKER_DEF \
   static DMLC_ATTRIBUTE_UNUSED ::mnm::op::OpEnvMaker& __make_##OpEnvMaker
 
+#define _MNM_DIALECT_DEF static DMLC_ATTRIBUTE_UNUSED ::mnm::op::Dialect& __make_##Dialect
+
 #define _MNM_OP_DISPATCH_DEF static DMLC_ATTRIBUTE_UNUSED ::mnm::op::OpDispatch& __make_##OpDispatch
 
 #define _MNM_FUNC_DISPATCH_DEF \
   static DMLC_ATTRIBUTE_UNUSED ::mnm::op::FusedOpDispatch& __make_##FusedOpDispatch
 
-#define _MNM_STRINGIZE(S) #S
-
-#define MNM_BASE_OP_NAME(NAME) _MNM_STRINGIZE(mnm.op.NAME)
-
-#define MNM_DIALECT_OP_NAME(DIALECT, NAME) _MNM_STRINGIZE(mnm.op.DIALECT.NAME)
-
 #define MNM_REGISTER_OP(OP_NAME) RELAY_REGISTER_OP(OP_NAME)
-
-#define MNM_REGISTER_DIALECT_OP(DIALECT, OP)                     \
-  RELAY_REGISTER_OP(MNM_DIALECT_OP_NAME(DIALECT, OP))            \
-      .set_attr<::mnm::op::TMNMDialect>("TMNMDialect", #DIALECT) \
-      .set_attr<::mnm::op::TMNMBaseOp>("TMNMBaseOp", MNM_BASE_OP_NAME(OP))
 
 #define MNM_OP_DECLARE(OP_NAME, BODY) \
   RELAY_REGISTER_OP(OP_NAME).set_attr<::mnm::op::FMNMDeclare>("FMNMDeclare", BODY)
@@ -359,21 +278,6 @@ using FMNMMutationFromRelay = registry::TypedPackedFunc<ir::Array<ir::Array<ir::
   DMLC_STR_CONCAT(_MNM_OP_ENV_MAKER_DEF, __COUNTER__) =                                           \
       ::mnm::op::OpEnvMaker::Registry()->__REGISTER_OR_GET__(OP_NAME).set_name(OP_NAME).set_func( \
           FOP_ENV_MAKER)
-
-#define MNM_OP_DISPATCH_DIALECT_PLEVEL(OP, DIALECT, DEVICE_TYPE, PLEVEL) \
-  DMLC_STR_CONCAT(_MNM_OP_DIALECT_DEF, __COUNTER__) =                    \
-      ::mnm::op::OpDialect::Registry()                                   \
-          ->__REGISTER_OR_GET__(MNM_BASE_OP_NAME(OP))                    \
-          .set_name(MNM_BASE_OP_NAME(OP))                                \
-          .add_dialect(DEVICE_TYPE, #DIALECT, MNM_DIALECT_OP_NAME(DIALECT, OP), PLEVEL)
-
-#define MNM_FUNC_DISPATCH_PLEVEL(func_env_maker, device_type, backend_name, plevel)              \
-  DMLC_STR_CONCAT(_MNM_FUNC_DISPATCH_DEF, __COUNTER__) =                                         \
-      ::mnm::op::FusedOpDispatch::Get()->add_dispatch(device_type, backend_name, func_env_maker, \
-                                                      plevel)
-
-#define MNM_FUNC_DISPATCH(func_env_maker, device_type, backend_name) \
-  MNM_FUNC_DISPATCH_PLEVEL(func_env_maker, device_type, backend_name, 10)
 
 #define MNM_OP_SCHEMA(class_name, type_key)          \
   static constexpr const char* _type_key = type_key; \

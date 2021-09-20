@@ -20,6 +20,8 @@ using namespace distributed::communicator;
 using common::shape_utils::BytesCompactTensor;
 using stream_pool::StreamTagEnum;
 
+MNM_REGISTER_DIALECT("nccl").set_enable(DevType::kCUDA());
+
 class NCCLAllReduce : public mnm::op::OpEnv {
   void* stream;
   void* communicator;
@@ -124,9 +126,8 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _allreduce);
+MNM_REGISTER_DIALECT_OP(nccl, _allreduce, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._allreduce", NCCLAllReduce::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_allreduce, nccl, DevType::kCUDA(), 10);
 
 class NCCLAllGather : public mnm::op::OpEnv {
   void* stream;
@@ -169,9 +170,8 @@ class NCCLAllGather : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _allgather);
+MNM_REGISTER_DIALECT_OP(nccl, _allgather, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._allgather", NCCLAllGather::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_allgather, nccl, DevType::kCUDA(), 10);
 
 class NCCLReduceScatter : public mnm::op::OpEnv {
   void* stream;
@@ -226,9 +226,8 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _reduce_scatter);
+MNM_REGISTER_DIALECT_OP(nccl, _reduce_scatter, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._reduce_scatter", NCCLReduceScatter::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_reduce_scatter, nccl, DevType::kCUDA(), 10);
 
 class NCCLBroadcast : public mnm::op::OpEnv {
   void* stream;
@@ -318,9 +317,8 @@ class NCCLBroadcast : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _broadcast);
+MNM_REGISTER_DIALECT_OP(nccl, _broadcast, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._broadcast", NCCLBroadcast::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_broadcast, nccl, DevType::kCUDA(), 10);
 
 class NCCLSend : public mnm::op::OpEnv {
   void* stream;
@@ -364,9 +362,8 @@ class NCCLSend : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _send);
+MNM_REGISTER_DIALECT_OP(nccl, _send, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._send", NCCLSend::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_send, nccl, DevType::kCUDA(), 10);
 
 class NCCLRecv : public mnm::op::OpEnv {
   void* stream;
@@ -409,9 +406,8 @@ class NCCLRecv : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _recv);
+MNM_REGISTER_DIALECT_OP(nccl, _recv, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._recv", NCCLRecv::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_recv, nccl, DevType::kCUDA(), 10);
 
 class NCCLReduce : public mnm::op::OpEnv {
   void* stream;
@@ -512,9 +508,8 @@ class NCCLReduce : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _reduce);
+MNM_REGISTER_DIALECT_OP(nccl, _reduce, 10);
 MNM_OP_ENV_MAKER("mnm.op.nccl._reduce", NCCLReduce::make);
-MNM_OP_DISPATCH_DIALECT_PLEVEL(_reduce, nccl, DevType::kCUDA(), 10);
 
 }  // namespace nccl
 }  // namespace communication

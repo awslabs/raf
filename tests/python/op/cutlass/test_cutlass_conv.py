@@ -4,7 +4,15 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import randn_torch, run_vm_model, check, with_backend
+from mnm.testing import randn_torch, run_vm_model, check, DialectChecker
+
+
+def verify_ir(mod):
+    with mnm.device("cuda"):
+        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = mnm._ffi.pass_.FuseDialect()(mod)
+        DialectChecker("cutlass").visit(mod["main"])
 
 
 @pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
@@ -27,13 +35,15 @@ def test_conv2d_relu(shapes, stride, dilation, padding):
             y = mnm.relu(y)
             return y
 
-    model = Conv2D()
     xshape, wshape = shapes
     m_x, t_x = randn_torch(xshape, device=device, dtype=dtype)
     m_w, t_w = randn_torch(wshape, device=device, dtype=dtype)
     m_x = mnm.transpose(m_x, (0, 2, 3, 1))
     m_w = mnm.transpose(m_w, (0, 2, 3, 1))
-    m_y = with_backend("cutlass")(run_vm_model)(model, device, [m_x, m_w])
+    model = Conv2D()
+    mod = model._internal(m_x, m_w).mod
+    verify_ir(mod)
+    m_y = run_vm_model(model, device, [m_x, m_w])
     t_model = torch.nn.Conv2d(
         wshape[3], wshape[0], (wshape[1], wshape[2]),
         stride=stride, padding=padding, dilation=dilation, bias=False).cuda().float()
