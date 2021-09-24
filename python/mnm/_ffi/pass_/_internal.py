@@ -22,6 +22,8 @@ BindParam = _APIS.get("mnm.pass_.BindParam", None)
 CanonicalizeOps = _APIS.get("mnm.pass_.CanonicalizeOps", None)
 # Defined in ./src/pass/context_analysis.cc
 ContextAnalysis = _APIS.get("mnm.pass_.ContextAnalysis", None)
+# Defined in ./src/pass/data_parallel_schedule.cc
+DataParallelSchedule = _APIS.get("mnm.pass_.DataParallelSchedule", None)
 # Defined in ./src/pass/dead_code.cc
 DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
 # Defined in ./src/pass/dispatch_dialect.cc

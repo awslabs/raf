@@ -29,7 +29,6 @@
 #include "mnm/vm/vm.h"
 #include "mnm/device_api.h"
 #include "mnm/profiler.h"
-#include "mnm/communicator.h"
 #include "mnm/stream_pool.h"
 #include "../../requests.h"
 #include "../../op/ty/utils.h"

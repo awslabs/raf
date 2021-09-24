@@ -12,6 +12,7 @@ from ._internal import AutoDiff
 from ._internal import BindParam
 from ._internal import CanonicalizeOps
 from ._internal import ContextAnalysis
+from ._internal import DataParallelSchedule
 from ._internal import DeadCodeElimination
 from ._internal import DispatchDialect
 from ._internal import EraseType

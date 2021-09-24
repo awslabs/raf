@@ -850,19 +850,34 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
 
   // optimization passes that transform BBNF into ANF
   bool enable_stream_schedule = true;
-  if ((*it).second.device_type() == DevType::kCUDA() &&
-      !DistContext::Global()->enable_data_parallel) {
-    auto policy_name = pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
-    if (policy_name == "sequential") {
+  if ((*it).second.device_type() == DevType::kCUDA()) {
+    if (DistContext::Global()->enable_data_parallel) {
+      // The current design of AnnotateDistOps assumes ops are executed on two CUDA streams:
+      // all computation ops are executed on one stream, and all communication collectives
+      // are executed on another dedicated stream. This ensures that no two collectives
+      // can execute concurrently, and we can enforce strictly identical order of the collectives
+      // across different devices. (There is a potential problem if NCCL collectives are executed
+      // in parallel, see e.g. https://github.com/NVIDIA/nccl/issues/522,
+      // https://github.com/NVIDIA/nccl/issues/195). Thus currently AnnotateDistOps and the
+      // multi-stream passes are mutually exclusive.
+      // TODO: make AnnotateDistOps and multi-stream scheduling compatible
       enable_stream_schedule = false;
-      pass_seqs.push_back(pass::ToANormalForm());
-    } else if (policy_name == "wavefront") {
-      pass_seqs.push_back(pass::WavefrontStreamSchedule());
-    } else if (policy_name == "asap") {
-      pass_seqs.push_back(pass::ASAPStreamSchedule());
+      pass_seqs.push_back(pass::DataParallelSchedule());
+      pass_seqs.push_back(pass::AnnotateDistOps());
     } else {
-      LOG(FATAL) << "Can not recognize schedule policy: " << policy_name << ", candidates are \n"
-                 << "  sequential, wavefront, and asap" << std::endl;
+      auto policy_name =
+          pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
+      if (policy_name == "sequential") {
+        enable_stream_schedule = false;
+        pass_seqs.push_back(pass::ToANormalForm());
+      } else if (policy_name == "wavefront") {
+        pass_seqs.push_back(pass::WavefrontStreamSchedule());
+      } else if (policy_name == "asap") {
+        pass_seqs.push_back(pass::ASAPStreamSchedule());
+      } else {
+        LOG(FATAL) << "Can not recognize schedule policy: " << policy_name << ", candidates are \n"
+                   << "  sequential, wavefront, and asap" << std::endl;
+      }
     }
   } else {
     enable_stream_schedule = false;
@@ -870,19 +885,6 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   }
 
   // optimization passes that work on ANF
-  if ((*it).second.device_type() == DevType::kCUDA() &&
-      DistContext::Global()->enable_data_parallel) {
-    // The current design of AnnotateDistOps assumes ops are executed on two CUDA streams:
-    // all computation ops are executed on one stream, and all communication collectives
-    // are executed on another dedicated stream. This ensures that no two collectives
-    // can execute concurrently, and we can enforce strictly identical order of the collectives
-    // across different devices. (There is a potential problem if NCCL collectives are executed
-    // in parallel, see e.g. https://github.com/NVIDIA/nccl/issues/522,
-    // https://github.com/NVIDIA/nccl/issues/195). Thus currently AnnotateDistOps and the
-    // multi-stream passes are mutually exclusive.
-    // TODO: make AnnotateDistOps and multi-stream scheduling compatible
-    pass_seqs.push_back(pass::AnnotateDistOps());
-  }
   pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
