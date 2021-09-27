@@ -362,13 +362,135 @@ class InplaceUpdateValidator : public ExprMutator {
   bool enforce_inplace_update_;
 };
 
+/*!
+ * \brief A simple mutator to mutate the case:
+ * let %a1 = call(...);
+ * let %a2(may_share: %w) = add(%a1, 0, %w)
+ *
+ * to:
+ *
+ * let %a1(may_share: %w) = call(...);
+ *
+ * TODO(issue 758): This case should only created by PartitionOptimizerStatus pass, and this pass
+ * can be removed once issue 758 is resolved.
+ */
+class InplaceSimplifer : public ExprMutator {
+ public:
+  InplaceSimplifer() {
+    scopes_.emplace_back(new LetList);
+  }
+
+  Function Run(const Function& func) {
+    for (auto param : func->params) {
+      func_params_.insert(param);
+    }
+    return Downcast<Function>(this->Mutate(func));
+  }
+
+  Expr VisitExpr_(const LetNode* node) {
+    scopes_.emplace_back(new LetList);
+    auto scope = scopes_.back().get();
+    Expr body;
+    Var prev_var, curr_var;
+    Expr prev_value, curr_value;
+    bool ignore_prev = false;
+    do {
+      curr_var = node->var;
+      curr_value = VisitExpr(node->value);
+
+      bool ignore_curr = false;
+      if (curr_value->IsInstance<CallNode>() && IsInplaceAddZero(Downcast<Call>(curr_value))) {
+        auto add_call = Downcast<Call>(curr_value);
+        if (prev_var.defined() && add_call->args[0] == prev_var) {
+          // We only consider the consecutive case; otherwise we may have correctness issue.
+          prev_var = MakeVar(prev_var->name_hint(), prev_var->type_annotation,
+                             Downcast<Var>(add_call->args[2]));
+          mutated_vars_.Set(curr_var, prev_var);
+          ignore_curr = true;
+        }
+      }
+
+      if (!ignore_prev && prev_var.defined()) {
+        scope->Push(prev_var, prev_value);
+      }
+
+      prev_var = curr_var;
+      prev_value = curr_value;
+      ignore_prev = ignore_curr;
+
+      body = node->body;
+      node = body.as<LetNode>();
+    } while (node);
+
+    if (!ignore_prev && prev_var.defined()) {
+      scope->Push(prev_var, prev_value);
+    }
+
+    auto ret = scopes_.back()->Get(this->Mutate(body));
+    scopes_.pop_back();
+    return ret;
+  }
+
+  Expr VisitExpr_(const VarNode* node) {
+    auto var = GetRef<Var>(node);
+    if (mutated_vars_.count(var) > 0) {
+      return mutated_vars_[var];
+    }
+    return var;
+  }
+
+ private:
+  bool IsInplaceAddZero(const Call& call) {
+    static auto add_op = Op::Get("mnm.op.add");
+
+    if (!call->op->IsInstance<OpNode>()) {
+      return false;
+    }
+
+    auto op = Downcast<Op>(call->op);
+    if (op != add_op || call->args.size() < 3) {
+      return false;
+    }
+
+    // 1st argument cannot be an input parameter.
+    if (func_params_.find(Downcast<Var>(call->args[0])) != func_params_.end()) {
+      return false;
+    }
+
+    // 2nd argument must be 0.
+    auto const_node = call->args[1].as<ConstantNode>();
+    if (!const_node || !const_node->value->IsInstance<FloatValueObj>()) {
+      return false;
+    }
+    auto value = const_node->value.as<FloatValueObj>()->value;
+    if (value != 0) {
+      return false;
+    }
+
+    // 3rd argument must be an input parameter.
+    if (func_params_.find(Downcast<Var>(call->args[2])) == func_params_.end()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /*! \brief The scope stack of the let list. */
+  std::vector<std::unique_ptr<LetList>> scopes_;
+  /*! \brief All function parameters. */
+  std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> func_params_;
+  /*! \brief Mapping from the removed var (bind to add) to the new target var. */
+  Map<Var, Var> mutated_vars_;
+};
+
 }  // namespace inplace_update
 
 Pass InplaceUpdate() {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
     auto body = inplace_update::InplaceUpdateMutator().Run(f->body);
-    return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
+    auto func = Function(f->params, body, f->ret_type, f->type_params, f->attrs);
+    return inplace_update::InplaceSimplifer().Run(func);
   };
   return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {});
 }

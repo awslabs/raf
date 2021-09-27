@@ -33,8 +33,8 @@ void EnableDataParallel(bool enable) {
   DistContext::Global()->enable_data_parallel = enable;
 }
 
-void OverlapCommForward(bool overlap) {
-  DistContext::Global()->overlap_comm_forward = overlap;
+void ZeroOpt(int opt_level) {
+  DistContext::Global()->zero_opt_level = opt_level;
 }
 
 void AutoDPProfilingStartIter(int auto_dp_profiling_start_iter) {
@@ -48,7 +48,7 @@ void AutoDPProfilingEndIter(int auto_dp_profiling_end_iter) {
 MNM_REGISTER_GLOBAL("mnm.distributed._make.DistContext").set_body_typed(DistContext::make);
 MNM_REGISTER_GLOBAL("mnm.distributed.Global").set_body_typed(DistContext::Global);
 MNM_REGISTER_GLOBAL("mnm.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
-MNM_REGISTER_GLOBAL("mnm.distributed.OverlapCommForward").set_body_typed(OverlapCommForward);
+MNM_REGISTER_GLOBAL("mnm.distributed.ZeroOpt").set_body_typed(ZeroOpt);
 MNM_REGISTER_GLOBAL("mnm.distributed.AutoDPProfilingStartIter")
     .set_body_typed(AutoDPProfilingStartIter);
 MNM_REGISTER_GLOBAL("mnm.distributed.AutoDPProfilingEndIter")

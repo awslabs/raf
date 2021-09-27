@@ -1,31 +1,39 @@
 # Distributed Training With Meta
 
-This blog will introduce how to train your model with Data Parallel.
-To enable distributed training, you need to turn the `MNM_USE_MPI` and `MNM_USE_NCCL` on in `${MNM_HOME}/build/config.cmake` before cmake.
-Next, we will introduce related operators and AutoParallel(still in progress) separately.
+This tutorial introduces how to train your model with multiple GPUs.
+To enable distributed training, you need to turn `MNM_USE_CUDA`, `MNM_USE_MPI`, and `MNM_USE_NCCL` on in `${MNM_HOME}/build/config.cmake` before cmake.
 
-## Resources for communication Operators
+We will first introduce collective communication operators for distribution, followed by data parallel and ZeRO optimizations.
 
-Using collective communication operators like allreduce, you must take the network resources.
+## Resources for Collective Communication Operators
+
+Using collective communication operators like `allreduce`, you must take the network resources.
 In the current design, theses operators need `Connector` and `Communicator`.
 
 ### Connector
 
 The `Connector` is used to establish connection between workers. It provides information including size (the number of workers in the cluster), rank, local_size(the number of workers in this node), local_rank. Meanwhile, it provides some methods like `Barrier()` and `Broadcast(*)`.
 
-Currenly, we have implemented `MPIConnector`, which will use mpi to establish connection. (You must install mpi in your machine to enable this Connector).
+Currenly, we have implemented `MPIConnector`, which will use mpi to establish connection. (You must install MPI in your machine to enable this Connector).
 
 ### Communicator
 
 The `Communicator` is used to transfer data and information between workers. Each collective_comm operator will request a communicator before execution. The communicator will tell the operator how to and where to tranfer the data.
 
-## Operators
+## Collective Communication Operators
 
-### AllReduce
+You can check the current supported collective communication operators by querying the
+distributed op:
 
-AllReduce is a common collective communication operator. It takes an `ndarray` or list of `ndarray` as input, and return the aggregated data.
+```python
+pyhton3
+>>> import mnm
+>>> dir(mnm.distributed.op)
+```
 
-### Examples
+Here we use `AllReduce` as an example to show how to use collective communication operators `AllReduce` takes an `ndarray` or list of `ndarray` as input, and return the aggregated data.
+You can check the user guides of NVIDIA Collective Communications Library (NCCL) for the detail
+functions of each operators: https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html.
 
 Before you use the operator, you must get a distributed context, from which you will know which GPU is owned by the current process.
 
@@ -35,13 +43,13 @@ import mnm
 from mnm import distributed as dist
 
 dctx = dist.get_context()
-root_rank = dctx.root_rank
-rank = dctx.rank
-size = dctx.size
-local_rank = dctx.local_rank
-local_size = dctx.local_size
+root_rank = dctx.root_rank     # The root rank.
+size = dctx.size               # The total available ranks.
+rank = dctx.rank               # The rank of this process, ranging from 0 to (size - 1).
+local_rank = dctx.local_rank   # The local rank of this process on this instance.
+local_size = dctx.local_size   # The local rank number of this instance.
 
-device = f'cuda({local_rank})'
+device = f'cuda({local_rank})' # Let this process control the rank-th GPU on this instance.
 ```
 
 Then you can use allreduce operators.
@@ -54,29 +62,30 @@ x = mnm.allreduce(x) # or: x = mnm.allreduce([x])
 print("After allreduce : ", x)
 ```
 
-## Auto Parallel - Data Parallel Part
+## Distributed Training
 
-### How to use
+To enable distributed training, you need to set the corresponding flags in the distributed context. For example:
 
-To use auto data parallel, you just need to set `mnm.distributed.get_context().enable_data_parallel = True` before running model.
-
-What need to be mentioned is that currently meta run operators synchronously, as we will call `stream->wait()` after each op. If you want to overlap the communication and computation, you need to make some change to src code: add a if-else statement before comment the code `req->stream[i].stream->Wait();` in `interpreter.cc::Interpreter::InvokePrimitiveOpEnv()`.
-
-``` cpp
-if (op->name != "mnm.op._allreduce") req->stream[i].stream->Wait();
+```python
+import mnm
+from mnm import distributed as dist
+dctx = dist.get_context()
+dctx.enable_data_parallel = True
 ```
 
-*note: We have ensured that communication operators will run on specific stream (different with computation operators).*
+Note that if you are using the provided script (i.e., `dist_example.py`), you can simply change the values in `meta_dist_config`. We will introduce each configure in the following subsections along with the distribution methodologies.
 
-To launch a data parallel training job, currenlt you can use mpirun, for exmaple:
+Since now we rely on MPI to manage multi-processing, we need to launch the script
+with `mpirun`:
 
 ```bash
-# The following command will run data parallel training on single machine with 4 gpus.
+# Run training on a single machine with 4 GPUs.
 mpirun -np 4 python3 scripts/distributed/dist_example.py
 
-# The following command will run data parallel training on 2 machines with 4 gpus each.
+# Run training on 2 machines with 4 GPUs each.
 mpirun -H node1:4,node2:4 python3 scripts/distributed/dist_example.py
-# or using hostfile to specify hosts and number of gpus on each hosts.
+
+# Using hostfile to specify hosts and number of GPUs on each host.
 mpirun -np 8 --hostfile my_hosts.txt python3 scripts/distributed/dist_example.py
 ```
 
@@ -94,20 +103,35 @@ node1:4
 node2:4
 ```
 
-### Basic design
+### Data Parallelism
 
-Design a new Pass for the IR. Add a communication operator (eg. allreduce) after the gradient of a parameter is generated.
+Data parallelism distributes the input training data to each device, and performs
+`AllReduce` on gradients.
 
-What's more, we will add a new operator called `stream_sync` before return of backward to make sure that all the communication tasks have finished.
+To enable data parallelism, set the corresponding configure to be `True` in the script:
 
-### Advanced design
+```python
+meta_dist_config = {
+    "enable_data_parallel": True
+}
+```
 
-See [PR:dev-dist](https://github.com/meta-project/meta/pull/201) for details if you want.
+### ZeRO Optimizations
 
-### TODO
+ZeRO optimizations are introduced in this paper https://arxiv.org/abs/1910.02054. It has 3 stages:
+- ZeRO-1: Partition the optimizer status, such as variants and momentum, so that each device only needs to own a partition of optimizer status, reducing the memory footprint of optimizer status by 1/N, where N is the total number of working devices.
+- ZeRO-2: Based on ZeRO-1, but replaces `AllReduce` by `ReduceAndScatter` to further reduce the gradient memory footprint.
+- ZeRO-3: Based on ZeRO-2, further partition the learnable weights (not supported yet).
 
-These todos will be implemented in following PRs.
+To enable ZeRO, again we just need to set the corresponding configure in the script:
 
-* Auto Model Parallel
-* Overlapping communication with forward propagation (of next iteration)
-* Fuse small tensors when communicating. (Could Pass::FuseOps support this?)
+```python
+meta_dist_config = {
+    "zero_opt_level": 1, # Use ZeRO-1
+    ...
+}
+```
+
+### Possible Improvements
+
+* Fuse small tensors to reduce communication overhead.

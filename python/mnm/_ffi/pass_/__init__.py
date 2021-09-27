@@ -37,6 +37,7 @@ from ._internal import MNMSequential
 from ._internal import ManifestAlloc
 from ._internal import MemoryPlan
 from ._internal import MergeCompilerRegions
+from ._internal import PartitionGradient
 from ._internal import PartitionGraph
 from ._internal import PrintIR
 from ._internal import Rematerialization

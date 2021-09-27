@@ -22,13 +22,13 @@ class DistContext(Object):
         ffi.EnableDataParallel(value)
 
     @property
-    def overlap_comm_forward(self):
-        return self.overlap_comm_forward_
+    def zero_opt_level(self):
+        return self.zero_opt_level_
 
-    @overlap_comm_forward.setter
-    def overlap_comm_forward(self, value):
-        self.overlap_comm_forward_ = value
-        ffi.OverlapCommForward(value)
+    @zero_opt_level.setter
+    def zero_opt_level(self, value):
+        self.zero_opt_level_ = value
+        ffi.ZeroOpt(value)
 
     @property
     def auto_dp_profiling_start_iter(self):

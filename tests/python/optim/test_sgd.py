@@ -1,5 +1,10 @@
+import math
+import re
+
+from unittest.mock import patch
 import pytest
 import numpy as np
+
 import mxnet as mx
 from mxnet import gluon
 import torch
@@ -71,10 +76,7 @@ class MNMTest(mnm.Model):
 # pylint: disable=unused-variable
 @with_seed(0)
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (10, 32, 10),
-    (4, 28, 10),
-])
+@pytest.mark.parametrize("config", [(10, 32, 10)])
 def test_sgd(config):
     t_model = TorchTest(config[1], config[2])
     t_model.to(device='cuda')
@@ -165,10 +167,7 @@ def test_traced_sgd_simple(device):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (10, 32, 10),
-    (4, 28, 10),
-])
+@pytest.mark.parametrize("config", [(10, 32, 10)])
 def test_traced_sgd(config):
     # pylint: disable=too-many-locals
     device = "cuda"
@@ -235,6 +234,57 @@ def test_mxnet_model(device):
     params = model.state()
     for name, param in net.collect_params().items():
         check(params[name], param.data(), rtol=1e-4, atol=1e-4)
+
+@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@patch("mnm.distributed.get_context")
+def test_state_partition(mock_get_context):
+    """Note that this test only verifies the IR with SGD without checking the correctness.
+    Accordingly, this test does not require multiple devices.
+    """
+    # pylint: disable=too-many-locals, protected-access
+    # Mock the context to let with_sgd generate the desired IR.
+    class MockContext():
+        def __init__(self):
+            self.enable_data_parallel = True
+            self.zero_opt_level = 1
+            self.size = 4
+            self.rank = 3
+
+    mock_get_context.return_value = MockContext()
+
+    shape, n_classes = 28, 10
+    batch_size = 7
+    m_model = MNMTest(shape, 10)
+    m_model.train_mode()
+    m_optimizer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+
+    device = "cuda"
+    m_x, _ = randn_torch([batch_size, 3, shape, shape], requires_grad=True, device=device)
+    m_dy, _ = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
+    m_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=n_classes, device=device)
+    args = [m_dy, m_x, m_ytrue]
+
+    record = m_optimizer._internal(*args)
+    mod = record.mod
+    text = mnm.ir.AsText(mod)
+
+    # Verify main function arguments.
+    func_def = [line for line in text.split("\n") if line.startswith("def @main")]
+    assert len(func_def) == 1
+    # Extract all tensor arguments and create a {name -> first axis shape} map.
+    param_map = {}
+    for name, ttype in re.findall(r"%([^:]+): Tensor\[([^\]]+)\]", func_def[0]):
+        param_map[name] = int(ttype[ttype.find("(") + 1:ttype.find(")")].split(",")[0])
+    for name, shape in param_map.items():
+        if name.find("sgd_") == -1:
+            continue
+        param_name = f"model.{name[:-6]}" # Find the original parameter.
+        # The size of sgd status should be 1/4 of the original parameter.
+        assert param_name in param_map and math.ceil(param_map[param_name] / 4) == shape
+
+    # Verify IR. Note that this model has 7 gradients.
+    assert text.count("mnm.op._allgather") == 7
+    assert text.count("mnm.op.strided_slice") == 7
 
 
 if __name__ == "__main__":

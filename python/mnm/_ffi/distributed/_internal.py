@@ -10,9 +10,9 @@ AutoDPProfilingStartIter = _APIS.get("mnm.distributed.AutoDPProfilingStartIter",
 EnableDataParallel = _APIS.get("mnm.distributed.EnableDataParallel", None)
 # Defined in ./src/distributed/common/dist_context.cc
 Global = _APIS.get("mnm.distributed.Global", None)
-# Defined in ./src/distributed/common/dist_context.cc
-OverlapCommForward = _APIS.get("mnm.distributed.OverlapCommForward", None)
 # Defined in ./src/distributed/common/void_communicator.cc
 RemoveCommunicator = _APIS.get("mnm.distributed.RemoveCommunicator", None)
 # Defined in ./src/distributed/cuda/nccl_communicator.cc
 Synchronize = _APIS.get("mnm.distributed.Synchronize", None)
+# Defined in ./src/distributed/common/dist_context.cc
+ZeroOpt = _APIS.get("mnm.distributed.ZeroOpt", None)

@@ -72,6 +72,8 @@ ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
 MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
+# Defined in ./src/pass/partition_gradient.cc
+PartitionGradient = _APIS.get("mnm.pass_.PartitionGradient", None)
 # Defined in ./src/pass/partition_graph.cc
 PartitionGraph = _APIS.get("mnm.pass_.PartitionGraph", None)
 # Defined in ./src/pass/print_ir.cc

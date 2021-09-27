@@ -1,10 +1,10 @@
 """Traced Optimizers"""
 from mnm.frontend.model import _get_func_output_var
 from mnm.ir import MNMSequential
+from .. import distributed as dist
 from .._core.ndarray import Symbol, get_symbol_handle
 from .._core.value import NoGradValue, Value
 from .._core.ir_ext import ExtendedVar
-from ..distributed import get_context
 from ..model.trace import _get_func_inputs
 from ..model import Model, trace
 from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType, FoldConstant
@@ -65,7 +65,8 @@ def with_autodiff(model):
             dy = calc_dy(dy, record)
             mod = record.mod
             passes = [InferType(), AutoDiff(record.requires_grads)]
-            if get_context().enable_data_parallel:
+            if dist.get_context().enable_data_parallel:
+                # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward.
                 passes.append(AutoDataParallel())
             passes += [InferType(), SimplifyExpr(), FoldConstant(),
                        DeadCodeElimination(), InlineBackward()]

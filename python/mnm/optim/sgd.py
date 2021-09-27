@@ -6,9 +6,12 @@ from mnm._core.ndarray import ndarray, array
 from mnm.model import trace, Model, trace_mutate_attr
 from mnm.model.trace import _get_func_inputs
 from mnm._op import imp
-from mnm._op.sym import multiply, add, subtract
+from mnm._op.sym import multiply, add, subtract, strided_slice
+from .. import distributed as dist
+from .data_parallel import with_data_parallel
+from ..distributed.op import allgather
 from .optim import with_autodiff
-from .utils import has_grad
+from .utils import has_grad, split_ndarray_with_padding
 
 
 # pylint: disable=too-few-public-methods
@@ -74,43 +77,77 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
             model: the forward model
             """
             # pylint: disable=attribute-defined-outside-init, protected-access, too-many-locals
+            # pylint: disable=missing-function-docstring
             def build(self, model):
-                # pylint: disable=missing-function-docstring
                 self.model = model
-                self.ad_model = with_autodiff(model)
+                self.ad_model = with_data_parallel(with_autodiff(model))
                 self.learning_rate = array(learning_rate, dtype='float32')
                 self.momentum = array(momentum, dtype='float32')
+
+                # TODO(issue 758): Remove this and in-place update parameters.
+                self.zero = array(0, dtype="float32")
+
+                dctx = dist.get_context()
                 self.params = {}
-                for name, x in self.model.state().items():
-                    # For each tensor "w" that requires gradient (i.e., training weights),
-                    # create a tensor "w.v" to be its SGD variant.
-                    if x.requires_grad is True:
-                        assert isinstance(x, ndarray), "Only `mnm.ndarray` can be optimized!"
-                        npa = np.zeros(x.shape, dtype=x.dtype)
-                        v_i = ndarray(npa, device=x.device, name=f'{name}.v')
-                        setattr(self, f'{name}.v', v_i)
-                        self.params[x._ndarray__handle] = (name, x, v_i)
+                for name, param in self.model.state().items():
+                    # For each tensor "param" that requires gradient (i.e., training weights),
+                    # create a tensor "param.sgd_v" to be its SGD variant.
+                    if param.requires_grad is True:
+                        assert isinstance(param, ndarray), "Only `mnm.ndarray` can be optimized!"
+
+                        # If optimizer status partitioning is enable, then the first axis of
+                        # variant and weight is partitioned to 1/n. Accordingly, we have to
+                        # also keep a param.w (size 1/n) locally.
+                        part_shape = param.shape
+                        if dctx.zero_opt_level:
+                            # Pad and copy a slice of weight to be the SGD statues.
+                            param_np = param.to(device="cpu")
+                            slice_param = split_ndarray_with_padding(param_np, dctx.size)[dctx.rank]
+                            v_w = ndarray(slice_param, device=param.device, name=f'{name}.sgd_w')
+                            setattr(self, f'{name}.sgd_w', v_w)
+                            part_shape = slice_param.shape
+                        else:
+                            v_w = param
+
+                        v_i = ndarray(np.zeros(part_shape, dtype=param.dtype), device=param.device,
+                                      name=f'{name}.sgd_v')
+                        setattr(self, f'{name}.sgd_v', v_i)
+                        self.params[param._ndarray__handle] = (name, param, v_w, v_i)
 
             @trace
             def forward(self, dy, *args, **kwargs):
-                # pylint: disable=missing-function-docstring, invalid-name
                 y, dxs = self.ad_model(dy, *args, **kwargs)
                 record = self.ad_model._internal(dy, *args, **kwargs)
                 inputs = _get_func_inputs(record, [dy, *args], kwargs)
                 inputs = inputs[1:]  # remove dy
+                dctx = dist.get_context()
                 for i, param in enumerate(inputs):
                     dxi = dxs[i] if len(inputs) > 1 else dxs
                     if param in self.params and has_grad(dxi):
-                        name, x, v = self.params[param]
+                        name, weight, sgd_w, sgd_v = self.params[param]
                         # TODO(@anijain2305): Improve the gradient pass for better has_grad results.
-                        if "float" in x.dtype:
-                            # Inplace update variant.
-                            new_v = add(multiply(self.momentum, v), dxi, out=v)
-                            # Inplace update weight.
-                            new_x = subtract(x, multiply(self.learning_rate, new_v), out=x)
-                            param_model = get_chained_attr(self.model, name.split('.')[:-1])
-                            # Put the updated weight to the model output to avoid being dead code.
-                            trace_mutate_attr(param_model, name.split('.')[-1], new_x)
+                        if "float" not in sgd_w.dtype:
+                            continue
+
+                        # Inplace update SGD variant and weight.
+                        new_sgd_v = add(multiply(self.momentum, sgd_v), dxi, out=sgd_v)
+                        new_sgd_w = subtract(sgd_w, multiply(self.learning_rate, new_sgd_v),
+                                             out=sgd_w)
+
+                        # If the SGD status is partitioned, use all-gather to sync
+                        # the updated weights.
+                        if dctx.zero_opt_level > 0:
+                            new_weight = allgather(new_sgd_w, axis=0)
+                            # Slice to remove the zero-padding if needed.
+                            if sgd_w.shape[0] * dctx.size > weight.shape[0]:
+                                new_weight = strided_slice(new_weight, [0], [weight.shape[0]], [1])
+                            new_weight = add(new_weight, self.zero, out=weight)
+                        else:
+                            new_weight = new_sgd_w
+
+                        # Put the updated weight to the model output to avoid being dead code.
+                        param_model = get_chained_attr(self.model, name.split('.')[:-1])
+                        trace_mutate_attr(param_model, name.split('.')[-1], new_weight)
                 return y
         return SGDWrapper(model)
     return decorator

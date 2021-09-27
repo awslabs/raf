@@ -1,10 +1,11 @@
-# pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements
+# pylint: disable=attribute-defined-outside-init,protected-access,too-many-locals
+# pylint: disable=too-many-statements
 import pytest
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
 from mnm import distributed as dist
-from mnm.testing import randn, one_hot_torch, run_vm_model
+from mnm.testing import randn, one_hot_torch, run_vm_model, skip_dist_test, with_seed
 
 import tvm
 
@@ -38,30 +39,50 @@ class MNMTest(mnm.Model):
         out = self.linear1(out)
         return out
 
-
-# pylint: disable=unused-variable
-@pytest.mark.skip()
-def test_dp():
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
-    device = f"cuda({dctx.local_rank})"
+def run_model(device):
     tvm_device = tvm.nd.device("cuda")
 
     m_model = MNMTest()
     m_model.to(device=device)
-    m_param_dict = m_model.state()
     m_model.train_mode()
 
-    m_x, _ = randn([1, 3, 28, 28], device=device, requires_grad=True)
-    m_y, _ = one_hot_torch(batch_size=1, num_classes=10, device=device)
+    m_x, _ = randn([4, 3, 28, 28], device=device, requires_grad=True)
+    m_y, _ = one_hot_torch(batch_size=4, num_classes=10, device=device)
     m_dy, _ = randn((), device=device)
 
     model_train = mnm.optim.sgd.with_sgd()(m_model)
     run_vm_model(model_train, device, [m_dy, m_x, m_y])
     tvm_device.sync()
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2),
+                    reason="Distribution is not enabled or only one device is available")
+@with_seed(0)
+def test_data_parallel():
+    dctx = dist.get_context()
+    dctx.enable_data_parallel = True
+    device = f"cuda({dctx.local_rank})"
+
+    run_model(device)
+
     dctx.enable_data_parallel = False
-    dist.RemoveCommunicator()
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2),
+                    reason="Distribution is not enabled or only one device is available")
+@with_seed(0)
+def test_zero_opt_1():
+    dctx = dist.get_context()
+    dctx.enable_data_parallel = True
+    dctx.zero_opt_level = 1
+    device = f"cuda({dctx.local_rank})"
+
+    run_model(device)
+
+    dctx.enable_data_parallel = False
+    dctx.zero_opt_level = 0
 
 
 if __name__ == "__main__":
-    test_dp()
+    pytest.main([__file__])
+    dist.RemoveCommunicator()

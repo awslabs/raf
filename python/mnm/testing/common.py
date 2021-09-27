@@ -9,6 +9,7 @@ import numpy as np
 import mxnet as mx
 import torch
 import mnm
+from mnm import distributed as dist
 from .._op.dialect import DialectPreference
 
 def check_type(expr, typ):
@@ -208,7 +209,7 @@ def with_seed(seed=None):
                                ' to reproduce.').format(this_test_seed)
             logger.log(log_level, pre_test_msg)
             try:
-                orig_test(*args, **kwargs)
+                ret = orig_test(*args, **kwargs)
             except:
                 # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
                 if log_level < logging.WARNING:
@@ -217,6 +218,7 @@ def with_seed(seed=None):
             finally:
                 # Provide test-isolation for any test having this decorator
                 np.random.set_state(post_test_state)
+            return ret
         return test_new
     return test_helper
 
@@ -238,3 +240,55 @@ def with_dialect(dialect):
                 return wrapped(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def get_dist_info(verbose=False):
+    """Helper function to get the distributed context info.
+
+    Parameters
+    ----------
+    verbose: bool
+        Whether to print the distributed context information.
+
+    Returns
+    -------
+    Tuple[int, int, int]
+        A tuple of (total rank, self rank, self local rank)
+    """
+    dctx = dist.get_context()
+    root_rank = dctx.root_rank
+    rank = dctx.rank
+    size = dctx.size
+    local_rank = dctx.local_rank
+    local_size = dctx.local_size
+
+    if verbose and rank == 0:
+        node_info = f"root_rank={root_rank},rank={rank}, \
+        size={size},local_rank={local_rank}, local_size={local_size} "
+        print(node_info)
+    return size, rank, local_rank
+
+
+def skip_dist_test(min_rank_num=1, require_exact_rank=False):
+    """Helper function to determine whether to skip the unit tests for distributed training.
+
+    Parameters
+    ----------
+    min_rank_num: int
+        The minimial rank number required to run the test.
+
+    require_exact_rank: bool
+        Whether to require the exact number of rank to run the test.
+
+    Returns
+    -------
+    bool
+        Whether to skip the test.
+    """
+    if not mnm.build.with_distributed():
+        return True
+
+    size, _, _ = get_dist_info()
+    if require_exact_rank:
+        return size != min_rank_num
+    return size < min_rank_num

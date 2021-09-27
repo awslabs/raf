@@ -50,8 +50,8 @@ sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev           \
 
 </details>
 
-**(Optional) CUDA.** Meta currently recommend to use CUDA 11.0. 
-It is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-11.0-download-archive). 
+**(Optional) CUDA.** Meta currently recommend to use CUDA 11.3. 
+It is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-11.3.0-download-archive) with CUDA driver 465+.
 The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network). 
 Then the CUDA paths need to be specified. 
 The following lines can be inserted to the `.bashrc` file for auto loading (see bonus below).
@@ -59,7 +59,7 @@ The following lines can be inserted to the `.bashrc` file for auto loading (see 
 <details>
 
 ```bash
-# this is for CUDA 11.0
+# this is for CUDA 11.3
 export CUDA_HOME=/usr/local/cuda
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64
 export PATH=$PATH:$CUDA_HOME/bin

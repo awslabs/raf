@@ -203,7 +203,7 @@ struct DataParallel {
 
     // If we want to overlap communication and forward pass,
     // we need to analyze the running time of Ops
-    if (dctx->overlap_comm_forward && dctx->iteration <= dctx->auto_dp_profiling_end_iter + 1) {
+    if (dctx->iteration <= dctx->auto_dp_profiling_end_iter + 1) {
       GetSchedulingParameters();
     }
     size_t fp_n = fp_ell->vars.size();
@@ -250,9 +250,6 @@ struct DataParallel {
         // we should add a allreduce op after it.
         static Op op_allreduce = Op::Get("mnm.op._allreduce");
         auto input_var = mnm::ir::MakeVar("allreduce_in", {});
-        if (dctx->overlap_comm_forward) {
-          global_grad.insert(input_var);
-        }
         bp_ell->vars[p2 - 1] = input_var;
         bp_ell->exprs[p2 - 1] = Tuple({bp_ell->vars[i]});
         // Here we name the var as 'g'(global gradient), to help us identify it easier.
@@ -284,51 +281,12 @@ struct DataParallel {
       LOG(FATAL) << "Return of backward IR must be Var or tuple of Vars in Data Parallel Pass.";
     }
 
-    if (!dctx->overlap_comm_forward) {
-      static Op op_sync = Op::Get("mnm.op.stream_sync");
-      auto args_x = bp_ell->vars[bp_ell->vars.size() - 2];
-      auto args_stream = MakeConstant(value::ScalarValue::make(StreamTagEnum::CudaCommunicate()));
-      bp_ell->vars.insert(--bp_ell->vars.end(), mnm::ir::MakeVar("null", {}));
-      bp_ell->exprs.insert(--bp_ell->exprs.end(), Call(op_sync, {args_x, args_stream}));
-    } else if (dctx->iteration > dctx->auto_dp_profiling_end_iter) {
-      // Start scheduling from the this iteration.
-      bp_n = bp_ell->vars.size();
-      int fp_order_grad_count = var_var_map.size() - dctx->scheduling_param;
-      int bp_order_grad_count = 0;
-      int p_j = bp_n - 1;
-      std::vector<Var> fp_order_grad_var;    // grads whose transmission order will be reversed.
-      std::vector<Expr> fp_order_grad_expr;  // grads whose transmission order will be reversed.
-      for (int i = 0; i < bp_n - 1; i++) {
-        if (global_grad.count(bp_ell->vars[i])) {
-          bp_order_grad_count++;
-          if (bp_order_grad_count > dctx->scheduling_param) {
-            fp_order_grad_var.push_back(bp_ell->vars[i]);
-            fp_order_grad_expr.push_back(bp_ell->exprs[i]);
-            fp_order_grad_var.push_back(bp_ell->vars[i + 1]);
-            fp_order_grad_expr.push_back(bp_ell->exprs[i + 1]);
-            if (bp_order_grad_count == dctx->scheduling_param + 1) {
-              p_j = i;
-            }
-            i++;
-            while (i + 1 < bp_n - 1 && (!global_grad.count(bp_ell->vars[i + 1]))) {
-              bp_ell->vars[p_j] = bp_ell->vars[i + 1];
-              bp_ell->exprs[p_j] = bp_ell->exprs[i + 1];
-              p_j++;
-              i++;
-            }
-          }
-        }
-      }
-      CHECK_EQ(2 * fp_order_grad_count, fp_order_grad_var.size());
-      for (int i = fp_order_grad_count - 1; i >= 0; i--) {
-        bp_ell->vars[p_j] = fp_order_grad_var[2 * i];
-        bp_ell->exprs[p_j] = fp_order_grad_expr[2 * i];
-        bp_ell->vars[p_j + 1] = fp_order_grad_var[2 * i + 1];
-        bp_ell->exprs[p_j + 1] = fp_order_grad_expr[2 * i + 1];
-        p_j += 2;
-      }
-      CHECK_EQ(p_j, bp_n - 1);
-    }
+    static Op op_sync = Op::Get("mnm.op.stream_sync");
+    auto args_x = bp_ell->vars[bp_ell->vars.size() - 2];
+    auto args_stream = MakeConstant(value::ScalarValue::make(StreamTagEnum::CudaCommunicate()));
+    bp_ell->vars.insert(--bp_ell->vars.end(), mnm::ir::MakeVar("null", {}));
+    bp_ell->exprs.insert(--bp_ell->exprs.end(), Call(op_sync, {args_x, args_stream}));
+
     dctx->iteration++;
 
     bp_n = bp_ell->vars.size();

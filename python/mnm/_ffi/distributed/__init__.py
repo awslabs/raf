@@ -6,9 +6,9 @@ from ._internal import AutoDPProfilingEndIter
 from ._internal import AutoDPProfilingStartIter
 from ._internal import EnableDataParallel
 from ._internal import Global
-from ._internal import OverlapCommForward
 from ._internal import RemoveCommunicator
 from ._internal import Synchronize
+from ._internal import ZeroOpt
 from . import _make
 from . import communicator
 from . import connector

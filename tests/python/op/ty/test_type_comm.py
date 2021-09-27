@@ -1,34 +1,20 @@
+# pylint: disable=no-member, no-self-use, protected-access, too-many-locals
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
 `mpirun -np 2 python3 tests/python/op/ty/test_type_comm.py`
-(in ci/task_python_unittest.sh)
 """
 import pytest
 import numpy as np
 import mnm
 from mnm import distributed as dist
-from mnm.testing import check_type, run_infer_type
+from mnm.testing import check_type, run_infer_type, skip_dist_test, get_dist_info
 from tvm.relay import TensorType, FuncType, TupleType
 
+SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 
-def get_node_info():
-    dctx = dist.get_context()
-    root_rank = dctx.root_rank
-    rank = dctx.rank
-    size = dctx.size
-    local_rank = dctx.local_rank
-    local_size = dctx.local_size
-
-    if rank == 0:
-        node_info = f"root_rank={root_rank},rank={rank}, \
-        size={size},local_rank={local_rank}, local_size={local_size} "
-        print(node_info)
-    return rank, local_rank
-
-
-# pylint: disable=no-member, no-self-use, protected-access, too-many-locals
-@pytest.mark.skip()
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_allreduce_with_tensor(computation):
     print("Testing allreduce with a single tensor as input.")
 
@@ -36,14 +22,14 @@ def test_allreduce_with_tensor(computation):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use,invalid-name
+        def forward(self, x):
             x = mnm.allreduce(x, computation=computation)
             return x
 
     shape = (4, 4)
     dtype = "float32"
     model = TestModel()
-    rank, local_rank = get_node_info()
+    _, rank, local_rank = get_dist_info()
     device = f"cuda({local_rank})"
     x = np.ones(shape=shape, dtype=dtype) * (rank+1)
     x = mnm.array(x, device=device)
@@ -55,8 +41,8 @@ def test_allreduce_with_tensor(computation):
     check_type(m_func, desire_type)
 
 
-# pylint: disable=no-member, no-self-use, protected-access, too-many-locals
-@pytest.mark.skip()
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_allreduce_with_tensor_list(computation):
     print("Testing allreduce with a list of tensors as input.")
 
@@ -64,15 +50,15 @@ def test_allreduce_with_tensor_list(computation):
         def build(self):
             pass
         @mnm.model.trace
-        def forward(self, x1, x2):  # pylint: disable=no-self-use
-            x = mnm.allreduce([x1, x2], computation=computation)  # pylint: disable=invalid-name
+        def forward(self, x1, x2):
+            x = mnm.allreduce([x1, x2], computation=computation)
             return x
 
     shape1 = (4, 4)
     shape2 = (3, 4, 5)
     dtype = "float32"
     model = TestModel()
-    rank, local_rank = get_node_info()
+    _, rank, local_rank = get_dist_info()
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=shape1, dtype=dtype) * (rank+1)
     x2 = np.ones(shape=shape2, dtype=dtype) * (-rank-1)
@@ -88,13 +74,5 @@ def test_allreduce_with_tensor_list(computation):
 
 
 if __name__ == "__main__":
-    if mnm.build.with_distributed():
-        test_allreduce_with_tensor(computation="sum")
-        test_allreduce_with_tensor(computation="prod")
-        test_allreduce_with_tensor(computation="min")
-        test_allreduce_with_tensor(computation="max")
-        test_allreduce_with_tensor_list(computation="sum")
-        test_allreduce_with_tensor_list(computation="prod")
-        test_allreduce_with_tensor_list(computation="min")
-        test_allreduce_with_tensor_list(computation="max")
-        dist.RemoveCommunicator()
+    pytest.main([__file__])
+    dist.RemoveCommunicator()
