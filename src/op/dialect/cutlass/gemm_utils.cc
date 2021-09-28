@@ -3,6 +3,7 @@
  * \file src/op/dialect/cutlass/gemm_utils.cc
  * \brief Helper functions for cutlass gemm
  */
+#include <sstream>
 #include "./cutlass_utils.h"
 #include "./gemm_utils.h"
 
@@ -23,7 +24,16 @@ void CutlassGemmOpEnv::InitGemmOperation(
       ComplexTransform::kNone, element_B, layout_B, ComplexTransform::kNone, element_C,
       epilogue_math_op);
   auto operators_it = SingletonExt::get().operation_table.gemm_operations.find(*functional_key_);
-  CHECK(operators_it != SingletonExt::get().operation_table.gemm_operations.end());
+  if (operators_it == SingletonExt::get().operation_table.gemm_operations.end()) {
+    std::stringstream ss;
+    ss << "Cannot find the required GEMM op in CUTLASS with the functional key:\n"
+       << *functional_key_ << "\nAvailable keys:\n";
+    for (auto pair : SingletonExt::get().operation_table.gemm_operations) {
+      ss << "  " << pair.first << "\n";
+    }
+    LOG(FATAL) << ss.str();
+  }
+
   CHECK(!operators_it->second.empty());
 
   // Maximum alignment expectation among all kernels (in units of bytes)

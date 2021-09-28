@@ -22,6 +22,31 @@ enum class EpilogueKindExt {
   kInvalid
 };
 
+inline std::ostream& operator<<(std::ostream& out, const EpilogueKindExt& value) {
+  std::string str;
+#define PROCESS_VAL(p) \
+  case (p):            \
+    str = "#p";        \
+    break;
+
+  switch (value) {
+    PROCESS_VAL(EpilogueKindExt::kUnknown);
+    PROCESS_VAL(EpilogueKindExt::kConversion);
+    PROCESS_VAL(EpilogueKindExt::kLinearCombination);
+    PROCESS_VAL(EpilogueKindExt::kLinearCombinationClamp);
+    PROCESS_VAL(EpilogueKindExt::kLinearCombinationPlanarComplex);
+    PROCESS_VAL(EpilogueKindExt::kLinearCombinationRelu);
+    PROCESS_VAL(EpilogueKindExt::kLinearCombinationSigmoid);
+    PROCESS_VAL(EpilogueKindExt::kLinearCombinationGelu);
+    PROCESS_VAL(EpilogueKindExt::kInvalid);
+    default:
+      str = "internal error";
+  }
+#undef PROCESS_VAL
+
+  return out << str;
+}
+
 /*! \brief Extention for ConvDescription, with epilogue operators information */
 struct ConvDescriptionExt : public ConvDescription {
   ConvDescriptionExt(const ConvDescription& op, const EpilogueKindExt& epilogue_math_op)

@@ -637,12 +637,16 @@ HashKey AdaptivePoolDxHasher(const std::vector<Type>& param_types, const Type& y
   return key;
 }
 
+// FIXME: We currently use injective schedule for these 2 ops so they cannot be fused
+// with others without tuning. To avoid the tuning overhead we now use kOpaque to avoid
+// fusion. After fixing the schedule to really support fusing output elementwise ops, we should
+// change their fusion pattern back to kOutEWiseFusable.
 MNM_TVM(adaptive_avg_pool2d_dx, AdaptiveAvgPool2DDx, AdaptivePoolDxArgs,
         PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames, AdaptiveAvgPoolDxSchema2Attrs,
-        AdaptivePoolDxHasher, kOutEWiseFusable);
+        AdaptivePoolDxHasher, kOpaque);
 MNM_TVM(adaptive_max_pool2d_dx, AdaptiveMaxPool2DDx, AdaptivePoolDxArgs,
         PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames, AdaptiveMaxPoolDxSchema2Attrs,
-        AdaptivePoolDxHasher, kOutEWiseFusable);
+        AdaptivePoolDxHasher, kOpaque);
 
 std::vector<Value> LayerNormSchema2Args(const LayerNormArgs* args) {
   std::vector<Value> re;

@@ -118,8 +118,10 @@ def GenerateSM70_TensorOp_884_Epilogue(manifest, args):
       math_inst.element_accumulator,
     ]
 
-    CreateGemmOperator(manifest, layouts, tile_descriptions,
-      data_type, alignment_constraints, epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
+    CreateGemmOperator(manifest, layouts, tile_descriptions, data_type, alignment_constraints,
+                       epilogue_functor=EpilogueFunctorExt.LinearCombinationRelu)
+    CreateGemmOperator(manifest, layouts, tile_descriptions, data_type, alignment_constraints,
+                       epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
 
     conv_layout = (LayoutType.TensorNHWC, LayoutType.TensorNHWC, LayoutType.TensorNHWC)
     # CreateConv2dOperator(manifest, conv_layout, tile_descriptions, data_type, 8)
@@ -134,9 +136,12 @@ def GenerateSM70_TensorOp_884_Epilogue(manifest, args):
         math_inst.element_accumulator,
       ]
 
-      CreateGemmOperator(manifest, layouts, tile_descriptions,
-        data_type_mixed, alignment_constraints,
-        epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
+      CreateGemmOperator(manifest, layouts, tile_descriptions, data_type_mixed,
+                         alignment_constraints,
+                         epilogue_functor=EpilogueFunctorExt.LinearCombinationRelu)
+      CreateGemmOperator(manifest, layouts, tile_descriptions, data_type_mixed,
+                         alignment_constraints,
+                         epilogue_functor=EpilogueFunctorExt.LinearCombinationGELU)
     
     #   CreateConv2dOperator(manifest, conv_layout, tile_descriptions, data_type_mixed, 8)
 

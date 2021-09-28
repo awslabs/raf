@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <sstream>
 #include "cutlass/library/library.h"
 #include "cutlass/library/operation_table.h"
 
@@ -42,6 +43,27 @@ struct GemmFunctionalKeyExt : public GemmFunctionalKey {
     return !(*this == rhs);
   }
 };
+
+inline std::ostream& operator<<(std::ostream& out, GemmFunctionalKeyExt const& k) {
+  std::stringstream ss;
+  ss << "{\n"
+     << "         provider: " << to_string(k.provider) << "\n"
+     << "        gemm_kind: " << to_string(k.gemm_kind) << "\n"
+     << "  element_compute: " << to_string(k.element_compute) << "\n"
+     << "   element_scalar: " << to_string(k.element_scalar) << "\n"
+     << "        element_A: " << to_string(k.element_A) << "\n"
+     << "         layout_A: " << to_string(k.layout_A) << "\n"
+     << "      transform_A: " << to_string(k.transform_A) << "\n"
+     << "        element_B: " << to_string(k.element_B) << "\n"
+     << "         layout_B: " << to_string(k.layout_B) << "\n"
+     << "      transform_B: " << to_string(k.transform_B) << "\n"
+     << "        element_C: " << to_string(k.element_C) << "\n"
+     << " epilogue_math_op: " << k.epilogue_math_op << "\n"
+     << "}";
+
+  out << ss.str();
+  return out;
+}
 
 struct GemmFunctionalKeyHasherExt : public GemmFunctionalKeyHasher {
   using IntHash = std::hash<int>;
