@@ -894,6 +894,92 @@ struct ReverseAD : public ExprVisitor {
   std::unordered_map<const VarNode*, Array<Expr>> tuple_grads;
 };
 
+/*! \brief A helper to canonicalize the IR with AutoDiff if its backward is going to be inlined.
+ * Specifically, it removes direct let assignment (i.e., let %a = %b;) and the sum ops with
+ * empty keepdims axis. The sum op used to calculate the gradient of certain ops (e.g., add/sub/etc)
+ * may use "mnm.op.get_kept_dims" to get the keep dims. InferType pass can infer the real keep
+ * dims and simplify the "mnm.op.get_kept_dims" op. If the keep dims are empty after InferType,
+ * then the sum op has no effect and can be simplified.
+ */
+class Canonicalizer : public ExprMutator {
+ public:
+  explicit Canonicalizer() : sum_op_(Op::Get("mnm.op.sum")) {
+  }
+
+ private:
+  bool IsEmptyTupleValue(const Expr& expr) {
+    if (auto const_node = expr.as<ConstantNode>()) {
+      auto data = const_node->value;
+      if (data.defined()) {
+        if (auto tuple_data = data.as<TupleValueObj>()) {
+          if (tuple_data->fields.size() == 0) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  Expr SimplifySum(const CallNode* call_node) {
+    if (call_node->args.size() > 2) {
+      if (IsEmptyTupleValue(call_node->args[1]) && IsEmptyTupleValue(call_node->args[2])) {
+        return call_node->args[0];
+      }
+    }
+    return GetRef<Expr>(call_node);
+  }
+
+ public:
+  Expr Canonicalize(const Expr& expr) {
+    return this->Mutate(expr);
+  }
+
+  Expr VisitExpr_(const VarNode* var_node) final {
+    Var var = GetRef<Var>(var_node);
+    if (mapping_.count(var)) {
+      return mapping_.at(var);
+    }
+    return var;
+  }
+
+  Expr VisitExpr_(const CallNode* node) final {
+    Expr expr = ExprMutator::VisitExpr_(node);
+    if (node->op.same_as(sum_op_)) {
+      return SimplifySum(expr.as<CallNode>());
+    }
+    return Downcast<Call>(expr);
+  }
+
+  Expr VisitExpr_(const LetNode* let_node) final {
+    auto pre_visit = [this](const LetNode* op) {
+      auto var = op->var;
+      auto value = this->Mutate(op->value);
+      // Simplify let %a = %b .. scenarios
+      if (auto value_var = value.as<VarNode>()) {
+        mapping_[var] = GetRef<Var>(value_var);
+      }
+    };
+    auto post_visit = [this](const LetNode* op) {
+      auto var = op->var;
+      auto value = this->Mutate(op->value);
+      auto body = this->Mutate(op->body);
+
+      if (auto value_var = value.as<VarNode>()) {
+        this->memo_[GetRef<Expr>(op)] = body;
+      } else {
+        this->memo_[GetRef<Expr>(op)] = Let(var, value, body);
+      }
+    };
+    ExpandANormalForm(let_node, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(let_node)];
+  }
+
+ private:
+  const Op& sum_op_;
+  std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> mapping_;
+};
+
 }  // namespace gradient
 
 // Parse the requires_grad and create a map from VarNode to boolean flag.
@@ -948,6 +1034,20 @@ Pass AutoDiff(ir::Array<tvm::Bool> requires_grads) {
       auto gv = GetRef<GlobalVar>(it.first);
       auto func = it.second;
       mod->Add(gv, func, true);
+    }
+
+    // Run InferType to get the collapse_ais and canonicalize the IR.
+    // TODO: Infer type may fail if the module parameters do not have type information.
+    // This is a legacy issue, and all modules with this case were only tested by interpreter,
+    // which does not require strong types. We should fix them to remove this exception.
+    try {
+      mod = InferType()(mod);
+      for (const auto& it : mod->functions) {
+        auto func = Downcast<Function>(gradient::Canonicalizer().Canonicalize(it.second));
+        mod->Update(it.first, func);
+      }
+    } catch (const dmlc::Error& e) {
+      LOG(WARNING) << "Failed to infer type after AutoDiff. This may lead to errors later with VM ";
     }
     return mod;
   };

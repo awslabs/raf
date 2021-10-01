@@ -79,7 +79,7 @@ Array<Expr> BatchMatmulGradImpl(const Expr& orig_call, const Array<Expr> orig_ar
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dx, x});
     Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep});
+    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
   };
 
   if (!transpose_a) {

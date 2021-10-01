@@ -98,7 +98,7 @@ Array<Expr> BroadcastToGrad(const Expr& orig_call, const Array<Expr> orig_args, 
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dy, x});
     Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep});
+    return Call(sum, {dy, axes, keep, MakeConstant(value::BoolValue::make(false))});
   };
 
   return {f(x)};
@@ -379,7 +379,7 @@ Array<Expr> WhereGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dx, x});
     Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep});
+    return Call(sum, {dx, axes, keep, MakeConstant(value::BoolValue::make(false))});
   };
   return {NullValue<Expr>(), f(dx1, x1), f(dx2, x2)};
 }

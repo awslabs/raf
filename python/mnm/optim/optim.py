@@ -8,7 +8,7 @@ from .._core.ir_ext import ExtendedVar
 from ..model.trace import _get_func_inputs
 from ..model import Model, trace
 from .._ffi.pass_ import AutoDiff, InlineBackward, Substitute, InferType, FoldConstant
-from .._ffi.pass_ import SimplifyExpr, DeadCodeElimination, AutoDataParallel
+from .._ffi.pass_ import DeadCodeElimination, AutoDataParallel
 from .._ffi.binding import BindSymbol
 from .._lib import tvm
 
@@ -68,8 +68,7 @@ def with_autodiff(model):
             if dist.get_context().enable_data_parallel:
                 # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward.
                 passes.append(AutoDataParallel())
-            passes += [InferType(), SimplifyExpr(), FoldConstant(),
-                       DeadCodeElimination(), InlineBackward()]
+            passes += [InferType(), FoldConstant(), DeadCodeElimination(), InlineBackward()]
             seq = MNMSequential(passes)
             mod = seq(mod)
             inputs = _get_func_inputs(record, args, kwargs)

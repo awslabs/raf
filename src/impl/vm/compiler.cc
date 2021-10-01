@@ -840,6 +840,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   // optimization passes that work on BBNF
   pass_seqs.push_back(pass::ToGraphNormalForm());
   pass_seqs.push_back(pass::ToBasicBlockNormalForm());
+  pass_seqs.push_back(pass::SimplifyExpr());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::FuseDialect());
   pass_seqs.push_back(pass::FuseTVM());

@@ -2,7 +2,7 @@ import pytest
 import tvm
 import mnm
 from mnm.testing import randn, get_device_list
-from mnm._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody
+from mnm._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody, InferType
 from tvm import relay
 
 @pytest.mark.parametrize("device", get_device_list())
@@ -31,7 +31,7 @@ def test_basic(device, shape):
 
     # Run AutoDiff to get nested functions
     # The backward function will be lifted
-    mod = AutoDiff(record.requires_grads)(mod)
+    mod = AutoDiff(record.requires_grads)(InferType()(mod))
 
     # Call Lambda lift pass on the Meta module
     lifted_mod = LambdaLift()(mod)

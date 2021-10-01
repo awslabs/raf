@@ -3,6 +3,7 @@ import pytest
 import tvm
 from tvm import relay
 import mnm
+from mnm.ir import MNMSequential
 from mnm.testing import randn
 
 
@@ -19,27 +20,18 @@ def test_basic():
         # pylint: disable=too-many-locals
         x = relay.var("x", shape=shape)
         y = relay.var("y", shape=shape)
-        dy = relay.var("dy")
+        dy = relay.var("dy", shape=shape)
         a1 = relay.var("a1")
-        x1 = relay.var("x1")
-        x2 = relay.var("x2")
-        x3 = relay.var("x3")
-        x4 = relay.var("x4")
-        x5 = relay.var("x5")
-        x6 = relay.var("x6")
         gradient = relay.var("gradient")
         ret = relay.var("ret")
 
-        let9 = relay.Let(ret, relay.Tuple([a1, gradient]), ret)
-        let8 = relay.Let(gradient, relay.Tuple([x3, x6]), let9)
-        let7 = relay.Let(x6, mnm.ir.op.sum(dy, x4, x5), let8)
-        let6 = relay.Let(x5, mnm.ir.op.get_kept_dims(dy, y), let7)
-        let5 = relay.Let(x4, mnm.ir.op.get_reduce_axis(dy, y), let6)
-        let4 = relay.Let(x3, mnm.ir.op.sum(dy, x1, x2), let5)
-        let3 = relay.Let(x2, mnm.ir.op.get_kept_dims(dy, x), let4)
-        let2 = relay.Let(x1, mnm.ir.op.get_reduce_axis(dy, x), let3)
+        let3 = relay.Let(ret, relay.Tuple([a1, gradient]), ret)
+        let2 = relay.Let(gradient, relay.Tuple([dy, dy]), let3)
         let1 = relay.Let(a1, mnm.ir.op.add(x, y), let2)
-        return relay.Function([x, y, dy], let1)
+        func = relay.Function([x, y, dy], let1)
+        mod = tvm.IRModule.from_expr(func)
+        mod = mnm._ffi.pass_.InferType()(mod)
+        return mod["main"]
 
     shape = (4, 5)
     model = Add()
@@ -50,9 +42,11 @@ def test_basic():
     m_y.requires_grad = True
     record = model._internal(m_x, m_y)
     mod = record.mod
-    mod = mnm._ffi.pass_.AutoDiff(record.requires_grads)(mod)
-    inlined_func = mnm._ffi.pass_.InlineBackward()(mod)["main"]
-    print(inlined_func, expected(shape))
+    seq = MNMSequential([mnm._ffi.pass_.InferType(),
+                         mnm._ffi.pass_.AutoDiff(record.requires_grads),
+                         mnm._ffi.pass_.InlineBackward(), mnm._ffi.pass_.InferType()])
+    mod = seq(mod)
+    inlined_func = mod["main"]
     assert tvm.ir.structural_equal(inlined_func, expected(shape))
 
 

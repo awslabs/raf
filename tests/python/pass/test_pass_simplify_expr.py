@@ -1,33 +1,107 @@
+# pylint: disable=protected-access, no-self-use
 import pytest
-import tvm
-from tvm import relay
-from mnm._ffi.pass_ import FromRelay, InferType, AutoDiff, SimplifyExpr
+import mnm
+from mnm._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm
 from mnm.ir import MNMSequential
+from mnm.testing import randn
 
-def test_basic():
-    # Get a Relay func
-    def get_mod():
-        mod = tvm.IRModule()
-        x = relay.var("x", shape=(10, 100), dtype="float32")
-        y = relay.var("y", shape=(1, 100), dtype="float32")
-        out = relay.add(x, y)
-        mod['main'] = relay.Function([x, y], out)
-        return mod
+def simplify(mod):
+    seq = MNMSequential([ToGraphNormalForm(), ToBasicBlockNormalForm(), SimplifyExpr()])
+    return seq(mod)
 
-    tvm_mod = get_mod()
-    mod = FromRelay()(tvm_mod)
-    seq = MNMSequential([InferType(), AutoDiff([]), InferType(),
-                         SimplifyExpr()])
-    mod = seq(mod)
 
-    # Ensure that there is only one sum operator
-    sum_ops = list()
-    find_sum = lambda x: sum_ops.append(
-        isinstance(x, tvm.relay.Call)
-        and x.op.name == "mnm.op.sum"
-    )
-    tvm.relay.analysis.post_order_visit(mod['main'], find_sum)
-    assert len(list(filter(lambda x: x, sum_ops))) == 1
+@pytest.mark.parametrize("op", ["zeros_like", "ones_like"])
+def test_unary_like(op):
+    device = "cpu"
+    shape = (10, 5)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return getattr(mnm._op.sym, op)(x)
+
+    model = Model()
+    m_x, _ = randn(shape, device=device, dtype="float32")
+
+    mod = model._internal(m_x).mod
+    mod = simplify(mod)
+    text = mnm.ir.AsText(mod["main"])
+    assert "like" not in text, text
+
+
+@pytest.mark.parametrize("params", [("cast_like", (10, 1), "float16"),
+                                    ("broadcast_to_like", (10, 10), "float32")])
+def test_binary_like(params):
+    op, shape_like, dtype_like = params
+    device = "cpu"
+    shape = (10, 1)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, y):
+            return getattr(mnm._op.sym, op)(x, y)
+
+    model = Model()
+    m_x, _ = randn(shape, device=device, dtype="float32")
+    m_y, _ = randn(shape_like, device=device, dtype=dtype_like)
+
+    mod = model._internal(m_x, m_y).mod
+    mod = simplify(mod)
+    text = mnm.ir.AsText(mod["main"])
+    assert "like" not in text, text
+
+
+def test_cast():
+    device = "cpu"
+    shape = (10, 5)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.cast(x, "float16")
+            y = mnm.cast(y, "float32")
+            y = mnm.cast(y, "float16")
+            y = mnm.cast(y, "float32")
+            return y
+
+    model = Model()
+    m_x, _ = randn(shape, device=device, dtype="float32")
+    mod = model._internal(m_x).mod
+    mod = simplify(mod)
+    text = mnm.ir.AsText(mod["main"])
+    assert "mnm.op.cast" not in text, text
+
+
+def test_reshape():
+    device = "cpu"
+    shape = (10, 5)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            y = mnm.reshape(x, (shape[0] * shape[1],))
+            y = mnm.reshape(y, (shape[1], shape[0]))
+            y = mnm.reshape(y, shape)
+            return y
+
+    model = Model()
+    m_x, _ = randn(shape, device=device, dtype="float32")
+    mod = model._internal(m_x).mod
+    mod = simplify(mod)
+    text = mnm.ir.AsText(mod["main"])
+    assert "mnm.op.reshape" not in text, text
 
 
 if __name__ == "__main__":

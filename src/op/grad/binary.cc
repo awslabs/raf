@@ -10,6 +10,7 @@ namespace op {
 namespace grad {
 
 using namespace mnm::ir;
+using namespace mnm::value;
 
 Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
@@ -28,7 +29,7 @@ Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dy, x});
     Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep, MakeConstant(value::BoolValue::make(false))});
+    return Call(sum, {dy, axes, keep, MakeConstant(BoolValue::make(false))});
   };
 
   return {f(x1), f(x2)};
@@ -49,7 +50,7 @@ Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dy, x});
     Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep});
+    return Call(sum, {dy, axes, keep, MakeConstant(BoolValue::make(false))});
   };
 
   auto fs = [&dy](const Expr& x) {
@@ -59,7 +60,7 @@ Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto neg = Op::Get("mnm.op.negative");
     Call axes = Call(collapse_axis, {dy, x});
     Call keep = Call(collapse_keep, {dy, x});
-    Call value = Call(sum, {dy, axes, keep});
+    Call value = Call(sum, {dy, axes, keep, MakeConstant(BoolValue::make(false))});
     return Call(neg, {value});
   };
   return {f(x1), fs(x2)};
@@ -114,7 +115,7 @@ Array<Expr> MulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dx, x});
     Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep});
+    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
   };
 
   return {f(Call(op_multiply, {dy, x2}), x1), f(Call(op_multiply, {dy, x1}), x2)};
@@ -144,7 +145,7 @@ Array<Expr> PowGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dx, x});
     Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep});
+    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
   };
 
   return {f(Call(op_multiply, {dy, dx1}), x1), f(Call(op_multiply, {dy, dx2}), x2)};
@@ -172,7 +173,7 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     static auto sum = Op::Get("mnm.op.sum");
     Call axes = Call(collapse_axis, {dx, x});
     Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep});
+    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
   };
 
   return {f(dx1, x1), f(dx2, x2)};

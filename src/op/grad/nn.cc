@@ -3,6 +3,7 @@
  * \file src/op/grad/nn.cc
  * \brief Declaration of gradients */
 #include <mnm/value.h>
+#include <mnm/op_utils.h>
 #include "./grad_utils.h"
 
 namespace mnm {
@@ -203,14 +204,22 @@ MNM_OP_GRAD("mnm.op.rsqrt", RsqrtGrad);
 
 Array<Expr> TruncGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
-  // give zero gradient for any gradient
-  static auto op_zeros = Op::Get("mnm.op.zeros");
-  static auto op_shape = Op::Get("mnm.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
-  Call zeros = Call(op_zeros, {Call(op_shape, {x})});
-  return {zeros};
+
+  Call grads;
+  if (x->checked_type_.defined()) {
+    static auto op_zeros = Op::Get("mnm.op.zeros");
+    auto ttype = x->checked_type().as<TensorTypeNode>();
+    auto shape = MakeConstant(ArrayToIntTuple(ttype->shape));
+    auto dtype = MakeConstant(StringValue::make(tvm::runtime::DLDataType2String(ttype->dtype)));
+    grads = Call(op_zeros, {shape, dtype});
+  } else {
+    static auto op_zeros_like = Op::Get("mnm.op.zeros_like");
+    grads = Call(op_zeros_like, {x});
+  }
+  return {grads};
 }
 MNM_OP_GRAD("mnm.op.trunc", TruncGrad);
 
@@ -377,7 +386,7 @@ Array<Expr> LogSoftmaxGrad(const Expr& orig_call, const Array<Expr> orig_args, c
   const Expr& axis = call->args[1];
   Expr softmax = Call(op_softmax, {x, axis});
   Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)1));
-  Expr e_1 = Call(op_sum, {dy, axis, keep_dims});
+  Expr e_1 = Call(op_sum, {dy, axis, keep_dims, MakeConstant(BoolValue::make(false))});
   Expr e_2 = Call(op_multiply, {e_1, softmax});
   Expr e_3 = Call(op_subtract, {dy, e_2, MakeNull(), MakeNull()});
   return {e_3};

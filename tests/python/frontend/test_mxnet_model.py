@@ -53,9 +53,9 @@ def test_backward_check(device, mx_model):
     param_map_list.clear()
 
 
-@ pytest.mark.parametrize("mx_model",
-                          [["resnet18", gluon.model_zoo.vision.resnet18_v1(pretrained=True)],
-                           ["resnest14", gluoncv.model_zoo.get_model("resnest14", pretrained=True)]])
+@pytest.mark.parametrize("mx_model",
+                         [["resnet18", gluon.model_zoo.vision.resnet18_v1(pretrained=True)],
+                          ["resnest14", gluoncv.model_zoo.get_model("resnest14", pretrained=True)]])
 @pytest.mark.parametrize("device", get_device_list())
 def test_forward_check(device, mx_model):
     mx_model[1].hybridize(static_alloc=True, static_shape=True)

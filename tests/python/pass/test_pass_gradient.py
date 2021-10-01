@@ -821,5 +821,30 @@ def test_while_loop():
     assert ad_mod["main"].ret_type == ret_type
 
 
+def test_simplify_sum():
+    # Get a Relay func
+    def get_mod():
+        mod = tvm.IRModule()
+        x = relay.var("x", shape=(10, 100), dtype="float32")
+        y = relay.var("y", shape=(1, 100), dtype="float32")
+        out = relay.add(x, y)
+        mod['main'] = relay.Function([x, y], out)
+        return mod
+
+    tvm_mod = get_mod()
+    mod = FromRelay()(tvm_mod)
+    seq = MNMSequential([InferType(), AutoDiff([])])
+    mod = seq(mod)
+
+    # Ensure that there is only one sum operator
+    sum_ops = list()
+    find_sum = lambda x: sum_ops.append(
+        isinstance(x, tvm.relay.Call)
+        and x.op.name == "mnm.op.sum"
+    )
+    tvm.relay.analysis.post_order_visit(mod['main'], find_sum)
+    assert len(list(filter(lambda x: x, sum_ops))) == 1
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
