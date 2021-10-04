@@ -17,7 +17,7 @@ def with_cublas():
 
 def with_cudnn():
     """Whether build with CUDNN. if true, return the CUDNN version, or None otherwise."""
-    if build_info.use_cudnn() == "ON":
+    if build_info.use_cudnn() != "OFF":
         return build_info.cudnn_version()
     return None
 
