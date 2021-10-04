@@ -11,6 +11,7 @@
 #include "mnm/binding.h"
 #include "../op/schema/nn.h"
 #include "../op/schema/transform.h"
+#include "./let_list.h"
 
 namespace mnm {
 namespace pass {
@@ -21,25 +22,22 @@ using namespace mnm::op;
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-inline Expr ExpandBiasToMatchAxis(Expr bias, int target_ndim, const Array<Integer>& axes) {
+inline Expr ExpandBiasToMatchAxis(Expr bias, int target_ndim, const Array<Integer>& axes,
+                                  LetList* ll) {
   static const Op& expand_dims = Op::Get("mnm.op.expand_dims");
   for (int64_t i = axes.size(); i != 0; --i) {
     if (i == axes.size()) {
       int64_t num_pad_axis = target_ndim - axes[i - 1]->value - 1;
       if (num_pad_axis > 0) {
-        bias = Call(expand_dims,
-                    {bias, MakeConstant(ScalarValue::make(i)),
-                     MakeConstant(ScalarValue::make(num_pad_axis))},
-                    Attrs(), {});
+        bias = ll->Push(Call(expand_dims, {bias, MakeConstant(ScalarValue::make(i)),
+                                           MakeConstant(ScalarValue::make(num_pad_axis))}));
       }
     } else {
       int64_t diff = axes[i]->value - axes[i - 1]->value;
       CHECK_GE(diff, 0L);
       if (diff > 0) {
-        bias =
-            Call(expand_dims,
-                 {bias, MakeConstant(ScalarValue::make(i)), MakeConstant(ScalarValue::make(diff))},
-                 Attrs(), {});
+        bias = ll->Push(Call(expand_dims, {bias, MakeConstant(ScalarValue::make(i)),
+                                           MakeConstant(ScalarValue::make(diff))}));
       }
     }
   }
@@ -51,35 +49,40 @@ inline Expr Add(Expr lhs, Expr rhs) {
   return Call(op, {lhs, rhs, MakeNull(), MakeNull()}, Attrs(), {});
 }
 
-class BiasAddSimplifier : public ExprRewriter {
+class BiasAddSimplifier : public ExprMutator {
  public:
   BiasAddSimplifier() : bias_add_op_(Op::Get("mnm.op.bias_add")) {
   }
 
-  Expr Rewrite_(const LetNode* n, const Expr& post) override {
-    const CallNode* node = n->value.as<CallNode>();
-    if (node != nullptr && node->op == bias_add_op_) {
-      Call call = Downcast<Call>(n->value);
-      CHECK_EQ(call->args.size(), 3);
-      const ConstantNode* axis_p = call->args[2].as<ConstantNode>();
-      int axis = Downcast<value::IntValue>(axis_p->value)->value;
-      auto x = call->args[0];
-      if (!x->checked_type_.defined()) {
-        // skip rewrite when type does not exist
-        return post;
+  Expr VisitExpr_(const LetNode* op) override {
+    auto pre_visit = [this](const LetNode* op) {};
+    auto post_visit = [this](const LetNode* op) {
+      memo_[GetRef<Let>(op)] = ExprMutator::VisitExpr_(op);
+      if (const auto* cn = op->value.as<CallNode>()) {
+        if (cn->op == bias_add_op_) {
+          CHECK_EQ(cn->args.size(), 3U);
+          Expr x = cn->args[0];
+          Expr bias = cn->args[1];
+          const auto& axis =
+              Downcast<value::IntValue>(ConstantExtractValue(Downcast<Constant>(cn->args[2])));
+          int normalized_axis = axis->value;
+          if (!x->checked_type_.defined()) return;
+          const auto* ttype = x->type_as<TensorTypeNode>();
+          CHECK(ttype);
+          size_t n_dim = ttype->shape.size();
+          if (normalized_axis < 0) {
+            normalized_axis += n_dim;
+          }
+          memo_[GetRef<Let>(op)] = LetList::With([&](LetList* ll) {
+            bias = ExpandBiasToMatchAxis(bias, n_dim, {normalized_axis}, ll);
+            ll->Push(op->var, Add(x, bias));
+            return VisitExpr(op->body);
+          });
+        }
       }
-      auto ttype = x->type_as<TensorTypeNode>();
-      size_t n_dim = ttype->shape.size();
-      if (axis < 0) {
-        axis += n_dim;
-      }
-      Expr body = n->body;
-      Var tmp("exp_bias_tmp", {});
-      body = Let(n->var, Add(call->args[0], tmp), body);
-      body = Let(tmp, ExpandBiasToMatchAxis(call->args[1], n_dim, {axis}), body);
-      return body;
-    }
-    return post;
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(op)];
   }
 
  private:
@@ -92,8 +95,8 @@ class BiasAddSimplifier : public ExprRewriter {
 Pass CanonicalizeOps() {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    auto rewriter = canonicalize_ops::BiasAddSimplifier();
-    return Downcast<Function>(PostOrderRewrite(f, &rewriter));
+    auto simplifier = canonicalize_ops::BiasAddSimplifier();
+    return Downcast<Function>(simplifier(f));
   };
   return CreateMNMFunctionPass(pass_func, 1, "CanonicalizeOps", {});
 }

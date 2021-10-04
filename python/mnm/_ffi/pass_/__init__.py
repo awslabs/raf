@@ -27,6 +27,7 @@ from ._internal import FuseTVM
 from ._internal import GradientInputSelection
 from ._internal import InferType
 from ._internal import InlineBackward
+from ._internal import InlineClosure
 from ._internal import InlineLet
 from ._internal import InlinePrimitives
 from ._internal import InplaceUpdate

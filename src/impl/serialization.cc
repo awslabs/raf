@@ -35,7 +35,9 @@ std::string SaveJSON(const ir::IRModule& mod) {
   ir::IRModule inst = ir::IRModule();
   for (auto kv : mod->functions) {
     ir::Expr func = IRRewrite4Loader()(kv.second);
-    inst->Add(kv.first, Downcast<ir::Function>(func));
+    // inst->Add cannot be used, which runs InferType automatically
+    // However, InferType cannot visit serialization::ConstantNode
+    inst->AddUnchecked(kv.first, Downcast<ir::Function>(func));
   }
   return tvm::SaveJSON(inst);
 }

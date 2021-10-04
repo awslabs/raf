@@ -288,6 +288,12 @@ Pass ToBasicBlockNormalForm();
 Pass InlinePrimitives();
 
 /*!
+ * \brief Inline closures
+ * \return The created pass.
+ */
+Pass InlineClosure();
+
+/*!
  * \brief This pass marks the may_share in the variables for ops that have attr TMNMInplaceUpdate
  * indicating the inputs and outputs to share the memory.
  * \return The created pass.
@@ -350,6 +356,7 @@ ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
  */
 
 ir::Expr InferType(ir::Expr expr);
+
 /*!
  * \brief Infer the type of a given expression and IR module.
  * \param expr The expression.
@@ -357,6 +364,13 @@ ir::Expr InferType(ir::Expr expr);
  * \return The expression with checked types.
  */
 ir::Expr InferTypeWithModule(const ir::Expr& expr, const ir::IRModule& module);
+
+/*!
+ * \brief Eliminate dead code in the give expression
+ * \param expr The expression.
+ * \return The expression with dead code eliminated
+ */
+ir::Expr DeadCodeElimination(const ir::Expr& expr);
 
 }  // namespace pass
 }  // namespace mnm

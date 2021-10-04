@@ -52,6 +52,8 @@ GradientInputSelection = _APIS.get("mnm.pass_.GradientInputSelection", None)
 InferType = _APIS.get("mnm.pass_.InferType", None)
 # Defined in ./src/pass/inline_backward.cc
 InlineBackward = _APIS.get("mnm.pass_.InlineBackward", None)
+# Defined in ./src/pass/inline_closure.cc
+InlineClosure = _APIS.get("mnm.pass_.InlineClosure", None)
 # Defined in ./src/pass/inline_let.cc
 InlineLet = _APIS.get("mnm.pass_.InlineLet", None)
 # Defined in ./src/pass/inline_primitives.cc
