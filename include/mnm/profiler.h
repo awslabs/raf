@@ -7,6 +7,7 @@
 #include <dmlc/concurrentqueue.h>
 #include <cstdint>
 #include <array>
+#include <utility>
 #include <vector>
 #include <string>
 #include <mutex>
@@ -24,18 +25,20 @@
 #include <unistd.h>
 #endif
 
-#define WITH_BASE_PROFILER_LEVEL(LEVEL, DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)                   \
-  {                                                                                              \
-    bool profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                         \
-    if (profiling) {                                                                             \
-      mnm::profiler::ProfilerHelper phelper(DEVICE.device_id(), DEVICE.device_type(), NAME, CAT, \
-                                            ARGS);                                               \
-      phelper.start();                                                                           \
-      CODE_SNIPPET                                                                               \
-      phelper.stop();                                                                            \
-    } else {                                                                                     \
-      CODE_SNIPPET                                                                               \
-    }                                                                                            \
+#define WITH_BASE_PROFILER_LEVEL(LEVEL, DEVICE, NAME, CAT, ARGS, CODE_SNIPPET)                \
+  {                                                                                           \
+    bool _profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                     \
+    if (_profiling) {                                                                         \
+      auto& _pool = mnm::profiler::Profiler::Get()->HelperPool();                             \
+      auto _phelper_index = _pool.size();                                                     \
+      _pool.push_back(mnm::profiler::ProfilerHelper(DEVICE.device_id(), DEVICE.device_type(), \
+                                                    NAME, CAT, ARGS));                        \
+      _pool[_phelper_index].start();                                                          \
+      CODE_SNIPPET                                                                            \
+      _pool[_phelper_index].stop();                                                           \
+    } else {                                                                                  \
+      CODE_SNIPPET                                                                            \
+    }                                                                                         \
   }
 
 #define WITH_BASE_PROFILER(DEVICE, NAME, CAT, ARGS, CODE_SNIPPET) \
@@ -144,45 +147,14 @@ class DeviceStats {
   ~DeviceStats();
 };
 
-class Profiler {
- public:
-  ~Profiler();
-  static Profiler* Get();  // std::shared_ptr<Profiler>* sp = nullptr);
-  void AddNewProfileStat(std::string categories, std::string name, uint64_t start_time,
-                         uint64_t end_time, const std::vector<std::string>& args);
-  std::string GetProfile();
-  std::vector<ProfileStat> GetProfileStats();
-
-  inline bool IsProfiling(int level) {
-    return profile_level_ >= level;
-  }
-
-  inline int profile_level() const {
-    return profile_level_;
-  }
-
-  inline void set_profile_level(int profile_level = 0) {
-    profile_level_ = profile_level;
-  }
-
- private:
-  Profiler();
-
-  /*! \brief Profile statistics. */
-  DeviceStats profile_stats_;
-  /*! \brief Profiling level. */
-  int profile_level_{0};
-  /*! \brief Mutex for multi-threading. */
-  std::recursive_mutex m_;
-  /*! \brief Initial time for profiler. */
-  uint64_t init_time_;
-};
-
 class ProfilerHelper {
  public:
-  ProfilerHelper(uint32_t dev_id, mnm::DevType dev_type, std::string name, std::string categories,
+  ProfilerHelper(int dev_id, mnm::DevType dev_type, std::string name, std::string categories,
                  std::vector<std::string> args = {})
-      : device_(Device(dev_type, dev_id)), name_(name), categories_(categories), args(args) {
+      : device_(Device(dev_type, dev_id)),
+        name_(std::move(name)),
+        categories_(std::move(categories)),
+        args(std::move(args)) {
     if (dev_type != mnm::DevType::kUnknown()) {
       dev_api_ = device_api::DeviceAPI::Get(dev_type);
     }
@@ -191,8 +163,9 @@ class ProfilerHelper {
   virtual ~ProfilerHelper() {
   }
 
-  void start();
-  void stop();
+  inline void start();
+  inline void stop();
+  inline void collect();
 
  protected:
   /*! \brief the device on which profiled code runs */
@@ -211,6 +184,53 @@ class ProfilerHelper {
   std::vector<std::string> args;
 };
 
+class Profiler {
+ public:
+  ~Profiler();
+  static Profiler* Get();  // std::shared_ptr<Profiler>* sp = nullptr);
+  void AddNewProfileStat(std::string categories, std::string name, uint64_t start_time,
+                         uint64_t end_time, const std::vector<std::string>& args);
+  std::string GetProfile();
+  std::vector<ProfileStat> GetProfileStats();
+
+  inline bool IsProfiling(int level) {
+    return profile_level_ >= level;
+  }
+
+  void CollectStat() {
+    for (int i = 0; i < helpers_.size(); i++) {
+      helpers_[i].collect();
+    }
+    helpers_.clear();
+  }
+
+  inline int profile_level() const {
+    return profile_level_;
+  }
+
+  inline void set_profile_level(int profile_level = 0) {
+    profile_level_ = profile_level;
+  }
+
+  std::vector<ProfilerHelper>& HelperPool() {
+    return helpers_;
+  }
+
+ private:
+  Profiler();
+
+  /*! \brief Profile statistics. */
+  DeviceStats profile_stats_;
+  /*! \brief Profiling level. */
+  int profile_level_{0};
+  /*! \brief Mutex for multi-threading. */
+  std::recursive_mutex m_;
+  /*! \brief The helper pool. */
+  std::vector<ProfilerHelper> helpers_;
+  /*! \brief Initial time for profiler. */
+  uint64_t init_time_;
+};
+
 inline void ProfilerHelper::start() {
   if (dev_api_) {
     dev_api_->WaitDevice(device_);
@@ -223,6 +243,9 @@ inline void ProfilerHelper::stop() {
     dev_api_->WaitDevice(device_);
   }
   end_time_ = ProfileStat::NowInMicrosec();
+}
+
+inline void ProfilerHelper::collect() {
   Profiler::Get()->AddNewProfileStat(categories_, name_, start_time_, end_time_, args);
 }
 

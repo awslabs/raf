@@ -9,39 +9,41 @@
 namespace mnm {
 namespace profiler {
 
-CudaProfilerHelper::CudaProfilerHelper(int dev_id, mnm::DevType dev_type, std::string name,
-                                       std::string categories, std::vector<std::string> args)
-    : ProfilerHelper(dev_id, dev_type, name, categories, args) {
-  start_event = CudaProfiler::Get()->GetCudaEvent();
-  end_event = CudaProfiler::Get()->GetCudaEvent();
+std::shared_ptr<device_api::DeviceAPI> CudaProfilerHelper::cuda_api =
+    device_api::DeviceAPI::Get(DevType::kCUDA());
+
+CudaProfilerHelper::CudaProfilerHelper(int dev_id, mnm::DevType dev_type, void* stream,
+                                       std::string name, std::string categories,
+                                       std::vector<std::string> args)
+    : ProfilerHelper(dev_id, dev_type, std::move(name), std::move(categories), std::move(args)),
+      stream(stream) {
+  Device device(dev_type, dev_id);
+  start_event = event_pool::EventPool::Get(device)->GetEvent();
+  end_event = event_pool::EventPool::Get(device)->GetEvent();
 }
 
-void CudaProfilerHelper::start() {
-  start_time_ = ProfileStat::NowInMicrosec();
-}
-
-void CudaProfilerHelper::stop() {
-  CUDA_CALL(cudaEventSynchronize(end_event));
+void CudaProfilerHelper::collect() {
+  cuda_api->WaitEvent(end_event->data());
   auto cuda_profiler = CudaProfiler::Get();
   start_time_ = cuda_profiler->GetElapsedTimeInMicrosec(start_event);
   end_time_ = cuda_profiler->GetElapsedTimeInMicrosec(end_event);
-  cuda_profiler->ReleaseCudaEvent(start_event);
-  cuda_profiler->ReleaseCudaEvent(end_event);
-  start_event = nullptr;
-  end_event = nullptr;
   Profiler::Get()->AddNewProfileStat(categories_, name_, start_time_, end_time_, args);
 }
 
 CudaProfiler::CudaProfiler() {
-  CUDA_CALL(cudaEventCreate(&start_event_));
+  // Each cuda event is associated with a cuda context (each device has a default cuda context when
+  // we use the cuda runtime api). Thus, if we want to support multi-device profiling on a single
+  // machine, we need a parameter to specify the cuda device id. But for now, we only support the
+  // profiling on the first cuda device.
+  int device_id = 0;
+  auto api = device_api::DeviceAPI::Get(DevType::kCUDA());
+  if (api->GetDeviceCount() > 1) {
+    LOG(WARNING) << "Multi-GPU detected, current CUDA profiler only supports single GPU profiling.";
+  }
+  start_event_ = event_pool::EventPool::Get(Device(DevType::kCUDA(), device_id))->GetEvent();
 }
 
 CudaProfiler::~CudaProfiler() {
-  CollectCudaStat();
-  CUDA_CALL(cudaEventDestroy(start_event_));
-  for (auto event : cuda_events_) {
-    CUDA_CALL(cudaEventDestroy(event));
-  }
 }
 
 CudaProfiler* CudaProfiler::Get() {
@@ -50,10 +52,12 @@ CudaProfiler* CudaProfiler::Get() {
 }
 
 void CudaProfiler::start() {
+  static auto api = device_api::DeviceAPI::Get(DevType::kCUDA());
   if (!started_) {
-    CUDA_CALL(cudaEventRecord(start_event_, 0));
-    CUDA_CALL(cudaEventSynchronize(start_event_));
+    api->WaitDevice(Device(DevType::kCUDA(), 0));
+    api->EventRecordOnStream(start_event_->data(), nullptr);
     start_time_ = ProfileStat::NowInMicrosec();
+    api->WaitEvent(start_event_->data());
     started_ = true;
   }
 }
@@ -63,41 +67,21 @@ void CudaProfiler::stop() {
   start_time_ = 0;
 }
 
-cudaEvent_t CudaProfiler::GetCudaEvent() {
-  cudaEvent_t event;
-  if (cuda_events_.empty()) {
-    CUDA_CALL(cudaEventCreate(&event));
-  } else {
-    event = cuda_events_.back();
-    cuda_events_.pop_back();
-  }
-  return event;
-}
-
-void CudaProfiler::ReleaseCudaEvent(cudaEvent_t event) {
-  cuda_events_.push_back(event);
-}
-
-uint64_t CudaProfiler::GetElapsedTimeInMicrosec(cudaEvent_t event) {
-  float elapsedTime;
-  CUDA_CALL(cudaEventElapsedTime(&elapsedTime, start_event_, event));
+uint64_t CudaProfiler::GetElapsedTimeInMicrosec(std::shared_ptr<Event> event) {
+  static auto api = device_api::DeviceAPI::Get(DevType::kCUDA());
+  float elapsedTime = api->EventElapsedTimeInMilliSeconds(start_event_->data(), event->data());
   return start_time_ + static_cast<uint64_t>(elapsedTime * 1000);
-}
-
-void CudaProfiler::AddProfilerHelper(std::shared_ptr<CudaProfilerHelper> helper) {
-  cuda_helpers_.push_back(helper);
 }
 
 void CudaProfiler::CollectCudaStat() {
   for (int i = 0; i < cuda_helpers_.size(); i++) {
-    cuda_helpers_[i]->stop();
+    cuda_helpers_[i].collect();
   }
   cuda_helpers_.clear();
   stop();
 }
 
 void CollectCudaProfile() {
-  LOG(INFO) << "Collecting cuda profiling";
   CudaProfiler::Get()->CollectCudaStat();
 }
 

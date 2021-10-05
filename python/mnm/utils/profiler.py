@@ -2,7 +2,7 @@
 import json
 from mnm import build
 from mnm._ffi.profiler import EnableProfiler, DisableProfiler
-from mnm._ffi.profiler import CollectCudaProfile, GetProfile
+from mnm._ffi.profiler import CollectBaseProfile, CollectCudaProfile, GetProfile
 
 
 def start(prof_level=1):
@@ -42,6 +42,48 @@ def get():
     ----------
         The profiling results in json format.
     """
+    CollectBaseProfile()
     if build.with_cuda():
         CollectCudaProfile()
     return json.loads(GetProfile())
+
+
+def get_duration(data, event, category=None):
+    """
+    Get the duration of given event on given category in milliseconds.
+
+    Parameters
+    ----------
+    data : Dict[str, ...]
+        The traced data in google trace event format, See
+        https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview.
+        It can be get by mnm.utils.profiler.get().
+
+    event : str
+        The event name.
+
+    category : Optional[str]
+        The category name. None matches any category. Default: None. The available categories
+        includes:
+        - 'VMInstruction': The events of each virtual machine instruction.
+        - 'Default Stream': The kernel executed on the default stream.
+        - 'Stream 1': The kernels executed on the first computation stream. There are also
+          categories such as 'Stream 2', 'Stream 3' and so on.
+
+    Returns
+    -------
+    ret : float
+        The duration of the event in milliseconds.
+    """
+    start_time_stamp = None
+    end_time_stamp = None
+    for e in data['traceEvents']:
+        if (not category or e['cat'] == category) and e['name'] == event and e['ph'] == 'B':
+            assert start_time_stamp is None, 'Multiple events with the same event name'
+            start_time_stamp = int(e['ts'])
+        if (not category or e['cat'] == category) and e['name'] == event and e['ph'] == 'E':
+            assert end_time_stamp is None, 'Multiple events with the same event name'
+            end_time_stamp = int(e['ts'])
+    if start_time_stamp is None or end_time_stamp is None:
+        raise ValueError(f"The start or end time stamp of event {event} does not exist")
+    return float((end_time_stamp - start_time_stamp) / 1000.0)

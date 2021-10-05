@@ -16,6 +16,12 @@ class DeviceAPI {
   virtual ~DeviceAPI() = default;
 
   /*!
+   * Get the number of devices.
+   * \return The number of devices.
+   */
+  virtual int GetDeviceCount() = 0;
+
+  /*!
    * Allocate a chuck of memory.
    * \param nbytes The size of memory in bytes to allocate.
    * \param alignment The alignment size.
@@ -92,25 +98,27 @@ class DeviceAPI {
   virtual void FreeEvent(const Device& dev, void* event) = 0;
 
   /*!
+   * Get the elapsed time between two events in milliseconds.
+   * \param start_event The start event.
+   * \param end_event The end event.
+   * \return The elapsed time in milliseconds represented by a float number.
+   */
+  virtual float EventElapsedTimeInMilliSeconds(void* start_event, void* end_event) = 0;
+
+  /*!
    * Place an event on given stream. It would record the pending workloads on that stream.
-   * \param dev The device of the event and stream.
    * \param event The event to record workloads.
    * \param stream The stream to be recorded.
    */
-  virtual void EventRecordOnStream(const Device& dev, void* event, void* stream) = 0;
+  virtual void EventRecordOnStream(void* event, void* stream) = 0;
 
   /*!
    * Let a stream wait for an event. This call is asynchronous. All workloads issued to given
    * stream would be executed after the workloads recorded by the event.
-   * \param dev The device of the event and stream.
    * \param stream The stream to wait for the event.
    * \param event The event to be waited for.
    */
-  virtual void StreamWaitEvent(const Device& dev, void* stream, void* event) = 0;
-
-  // will call the device api of `next_ctx` to wait for `prev`
-  // therefore, we should the assumption that `after.device == device_api.device`
-  virtual void SyncStream(const Device& prev_dev, void* prev, void* next) = 0;
+  virtual void StreamWaitEvent(void* stream, void* event) = 0;
 
   // Granularity of synchronization
   /*!
@@ -123,10 +131,16 @@ class DeviceAPI {
   /*!
    * Synchronize the stream. It would block the host thread until all pending workloads on the given
    * stream finished.
-   * \param dev The device of the stream.
    * \param stream The stream to wait.
    */
-  virtual void WaitStream(const Device& dev, void* stream) = 0;
+  virtual void WaitStream(void* stream) = 0;
+
+  /*!
+   * Synchronize the event. It would block the host thread until the the workloads captured by the
+   * given event finished.
+   * \param event The event to wait.
+   */
+  virtual void WaitEvent(void* event) = 0;
 
  public:
   /*!

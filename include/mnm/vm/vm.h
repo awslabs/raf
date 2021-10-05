@@ -299,6 +299,35 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * \return The return value.
    */
   Value Run(VMContext ctx);
+  /*!
+   * \brief Profile the end-to-end execution latency using virtual machine.
+
+     It uses the following procedure to measure the end-to-end latency of the model:
+     ```
+         Warmup the model by running `warmup` times.
+         results = []
+         for i in [0, repeat):
+           sync()
+           t1 = cur_time()
+           for j in [0, number):
+             run the model
+           sync()
+           t2 = cur_time()
+           results.append((t2 - t1) / number)
+         return results
+     ```
+     where sync() would do a device synchronization, and cur_time() get the current time.
+
+     To measure the average latency of N runs, we can use whether `number=1, repeat=N` or
+     `number=N, repeat=1`, where the former one would synchronize the device for each run, and
+     the latter one would not.
+
+   * \param ctx The runtime context.
+   * \param warmup The number of warmup runs.
+   * \param repeat The number of repeat runs.
+   * \return A list of latency numbers in milliseconds (length of the list equals 'repeat').
+   */
+  Array<FloatValue> Profile(VMContext ctx, int warmup, int number, int repeat);
 
  protected:
   /*! \brief Get device for params. */

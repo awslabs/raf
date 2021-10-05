@@ -103,7 +103,7 @@ void* Stream::data() const {
 }
 
 void Stream::Wait() const {
-  impl->api->WaitStream(impl->device, data());
+  impl->api->WaitStream(data());
 }
 
 std::shared_ptr<Stream> Stream::Get(const Device& dev, int tag_index, int index) {

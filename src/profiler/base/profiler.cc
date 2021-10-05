@@ -128,12 +128,17 @@ void DisableProfiler() {
   Profiler::Get()->set_profile_level(0);
 }
 
+void CollectBaseProfile() {
+  Profiler::Get()->CollectStat();
+}
+
 std::string GetProfile() {
   return Profiler::Get()->GetProfile();
 }
 
 MNM_REGISTER_GLOBAL("mnm.profiler.EnableProfiler").set_body_typed(EnableProfiler);
 MNM_REGISTER_GLOBAL("mnm.profiler.DisableProfiler").set_body_typed(DisableProfiler);
+MNM_REGISTER_GLOBAL("mnm.profiler.CollectBaseProfile").set_body_typed(CollectBaseProfile);
 MNM_REGISTER_GLOBAL("mnm.profiler.GetProfile").set_body_typed(GetProfile);
 
 }  // namespace profiler

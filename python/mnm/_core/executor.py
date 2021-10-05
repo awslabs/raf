@@ -114,18 +114,23 @@ class VMExecutor:
                                     enable_cuda_graph=enable_cuda_graph)
         self.auto_scheduler_fallback_context = None
 
-    def make_executor(self, sch_file=None):
-        """Create a VM executor.
+    def _make_vm_helper(self, maker, sch_file=None):
+        """
+        Get a wrapper that runs given maker function. The wrapper would configure the relay auto
+        scheduler to use the tuning records in given schedule file.
 
         Parameters
         ----------
-        sch_file: Optional[str]
-            The tuned schedule file path.
+        maker : Callable
+            The maker function to be wrapped.
+
+        sch_file : str
+            The schedule file that contains the tuning records.
 
         Returns
         -------
-        executor: Callable
-            The VM executor
+        result: Callable
+            The wrapped function.
         """
         if self.auto_scheduler_fallback_context is None:
             verbose = int(os.environ["MNM_SCH_VERBOSE"]) if "MNM_SCH_VERBOSE" in os.environ else 2
@@ -146,10 +151,77 @@ class VMExecutor:
                         config={"relay.backend.use_auto_scheduler": True},
                         disabled_pass={"AutoSchedulerLayoutRewrite"},
                 ):
-                    ret = self.vm.run(*args, **kwargs)
+                    ret = maker(*args, **kwargs)
 
             # Recover the configurations
             autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
             auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context
             return ret
         return _vm_wrapper
+
+    def make_profiler(self, warmup=5, number=10, repeat=10, sch_file=None):
+        """Create a VM profiler that measure the latency of model execution.
+
+        It uses the following procedure to measure the end-to-end latency of the model:
+        ```
+            Warmup the model by running `warmup` times.
+            results = []
+            for i in [0, repeat):
+              sync()
+              t1 = cur_time()
+              for j in [0, number):
+                run the model
+              sync()
+              t2 = cur_time()
+              results.append((t2 - t1) / number)
+            return results
+        ```
+        where sync() would do a device synchronization, and cur_time() get the current time.
+
+        To measure the average latency of N runs, we can use whether `number=1, repeat=N` or
+        `number=N, repeat=1`, where the former one would synchronize the device for each run, and
+        the latter one would not.
+
+        Parameters
+        ----------
+        warmup : int
+            The number of runs used to warmup. Default 5.
+
+        number : int
+            The number of times to run the generated code for taking average. We call these runs as
+            one repeat of measurement. Default 10.
+
+        repeat : int
+            The number of times to repeat the measurement. In total, the generated code will be run
+            (warmup + number x repeat) times, where the first “warmup” results will be discarded.
+            The returned result contains repeat costs, each of which is an average of number costs.
+            Default 10.
+
+        sch_file: Optional[str]
+            The tuned schedule file path.
+
+        Returns
+        -------
+        result : List[float]
+            The list of latency for each repeat in milliseconds, where len(result) == repeat.
+        """
+        def _maker(*args, **kwargs):
+            return self.vm.profile(*args, **kwargs, warmup=warmup, number=number, repeat=repeat)
+        return self._make_vm_helper(_maker, sch_file)
+
+    def make_executor(self, sch_file=None):
+        """Create a VM executor.
+
+        Parameters
+        ----------
+        sch_file: Optional[str]
+            The tuned schedule file path.
+
+        Returns
+        -------
+        executor: Callable
+            The VM executor
+        """
+        def _maker(*args, **kwargs):
+            return self.vm.run(*args, **kwargs)
+        return self._make_vm_helper(_maker, sch_file)

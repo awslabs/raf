@@ -37,11 +37,11 @@
 #include "mnm/device_api.h"
 #include "mnm/registry.h"
 
+#include "../../profiler/cuda/cuda_profiler.h"
 #ifdef MNM_USE_CUDA
 #include "../../common/cuda_utils.h"
 #include "../../op/dialect/cudnn/cudnn_utils.h"
 #include "../../op/dialect/cublas/cublas_utils.h"
-#include "../../profiler/cuda/cuda_profiler.h"
 #endif
 
 namespace mnm {
@@ -66,7 +66,8 @@ inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id
   }
   if (ctx->events[device_id][event_id] == nullptr) {
     Device device(DevType::kCUDA(), static_cast<int>(device_id));
-    ctx->events[device_id][event_id] = Event::Create(device, 0x02 /*cudaEventDisableTiming*/);
+    ctx->events[device_id][event_id] =
+        EventPool::Get(device)->GetEvent(0x02 /*cudaEventDisableTiming*/);
   }
   return ctx->events[device_id][event_id];
 }
@@ -89,6 +90,48 @@ inline std::shared_ptr<Stream> GetStreamById(const VMContext& ctx, Index device_
     }
   }
   return ctx->streams[device_id][stream_id];
+}
+
+const char* GetStreamName(Index stream_id) {
+  static std::vector<std::string> names = {"Default Stream"};
+  while (stream_id >= names.size()) {
+    names.push_back("Stream " + std::to_string(names.size()));
+  }
+  return names[stream_id].c_str();
+}
+
+void TensorRepr(std::ostringstream& os, const TensorValueObj* tensor) {
+  const DLTensor* t = tensor->tensor.operator->();
+  os << "T<";
+  for (int i = 0; i < t->ndim; ++i) {
+    os << t->shape[i] << "x";
+  }
+  switch (t->dtype.code) {
+    case kDLInt: {
+      os << "i" << static_cast<int>(t->dtype.bits);
+      break;
+    }
+    case kDLUInt: {
+      os << "u" << static_cast<int>(t->dtype.bits);
+      break;
+    }
+    case kDLFloat: {
+      os << "f" << static_cast<int>(t->dtype.bits);
+      break;
+    }
+    case kDLBfloat: {
+      os << "bf" << static_cast<int>(t->dtype.bits);
+      break;
+    }
+    default: {
+      os << "unk";
+      break;
+    }
+  }
+  if (t->dtype.lanes > 1) {
+    os << "x" << static_cast<int>(t->dtype.lanes);
+  }
+  os << ">";
 }
 }  // namespace utils
 
@@ -255,6 +298,14 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
       VMContext ctx = args[0];
       *rv = Run(ctx);
     });
+  } else if (name == "profile") {
+    return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
+      VMContext ctx = args[0];
+      int warmup = args[1];
+      int number = args[2];
+      int repeat = args[3];
+      *rv = Profile(ctx, warmup, number, repeat);
+    });
   } else if (name == "set_devices") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
       std::vector<Device> devices;
@@ -382,6 +433,29 @@ Value VirtualMachine::Run(VMContext ctx) {
 #endif
   frun();
   return ctx->return_register;
+}
+
+Array<FloatValue> VirtualMachine::Profile(VMContext ctx, int warmup, int number, int repeat) {
+  Array<FloatValue> results;
+  Device device = devices_[0];
+
+  auto api = DeviceAPI::Get(device.device_type());
+
+  for (int i = 0; i < warmup; ++i) {
+    Run(ctx);
+  }
+  for (int i = 0; i < repeat; i++) {
+    api->WaitDevice(device);
+    auto beg = mnm::profiler::ProfileStat::NowInMicrosec();
+    for (int j = 0; j < number; ++j) {
+      Run(ctx);
+    }
+    api->WaitDevice(device);
+    auto end = mnm::profiler::ProfileStat::NowInMicrosec();
+    auto latency = static_cast<float>(static_cast<double>(end - beg) / number / 1000.0);
+    results.push_back(FloatValue::make(DataType::Float(32), latency));
+  }
+  return results;
 }
 
 Device VirtualMachine::GetParamsDevice() const {
@@ -547,19 +621,23 @@ void VirtualMachine::RunLoop(VMContext& ctx) {
         goto main_loop;
       }
       case Opcode::CudaSetStream: {
-        HandleCudaSetStream(ctx, instr);
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "CudaSetStream", "VMInstruction", {},
+                                 HandleCudaSetStream(ctx, instr););
         goto main_loop;
       }
       case Opcode::CudaAddEvent: {
-        HandleCudaAddEvent(ctx, instr);
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "CudaAddEvent", "VMInstruction", {},
+                                 HandleCudaAddEvent(ctx, instr););
         goto main_loop;
       }
       case Opcode::CudaWaitEvent: {
-        HandleCudaWaitEvent(ctx, instr);
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "CudaWaitEvent", "VMInstruction", {},
+                                 HandleCudaWaitEvent(ctx, instr););
         goto main_loop;
       }
       case Opcode::CudaStreamBarrier: {
-        HandleCudaStreamBarrier(ctx, instr);
+        WITH_BASE_PROFILER_LEVEL(2, host_device_, "CudaStreamBarrier", "VMInstruction", {},
+                                 HandleCudaStreamBarrier(ctx, instr););
         goto main_loop;
       }
     }
@@ -731,8 +809,11 @@ void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
   std::tie(op_env, inputs, output, input_str) = PrepareOpEnv(ctx, instr);
 #ifdef MNM_USE_CUDA
   if (use_cuda_) {
-    WITH_CUDA_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {input_str},
-                       { op_env->Execute(inputs, output); });
+    WITH_CUDA_PROFILER(
+        devices_[0],
+        utils::GetStreamById(ctx, ctx->current_device_id, ctx->current_stream_id)->data(),
+        op_env->name(), utils::GetStreamName(ctx->current_stream_id), {input_str},
+        { op_env->Execute(inputs, output); });
   } else
 #endif
   {  // cpu
@@ -858,7 +939,7 @@ void VirtualMachine::HandleCudaAddEvent(VMContext& ctx, const Instruction& instr
   auto stream = utils::GetStreamById(ctx, device_id, stream_id);
   auto api = DeviceAPI::Get(DevType::kCUDA());
   Device device(DevType::kCUDA(), static_cast<int>(device_id));
-  api->EventRecordOnStream(device, event->data(), stream->data());
+  api->EventRecordOnStream(event->data(), stream->data());
   ctx->pc++;
 }
 
@@ -872,17 +953,16 @@ void VirtualMachine::HandleCudaWaitEvent(VMContext& ctx, const Instruction& inst
   auto event = utils::GetEventById(ctx, device_id, event_id);
   auto stream = utils::GetStreamById(ctx, device_id, stream_id);
   auto api = DeviceAPI::Get(DevType::kCUDA());
-  Device device(DevType::kCUDA(), static_cast<int>(device_id));
-  api->StreamWaitEvent(device, stream->data(), event->data());
+  api->StreamWaitEvent(stream->data(), event->data());
   ctx->pc++;
 }
 
 void VirtualMachine::HandleCudaStreamBarrier(VMContext& ctx, const Instruction& instr) {
-  Device device(DevType::kCUDA(), static_cast<int>(ctx->current_device_id));
   if (ctx->current_barrier_event_index >= ctx->barrier_events.size()) {
+    Device device(DevType::kCUDA(), static_cast<int>(ctx->current_device_id));
     ctx->barrier_events.resize(ctx->current_barrier_event_index + 1);
     ctx->barrier_events[ctx->current_barrier_event_index] =
-        Event::Create(device, 0x02 /*cudaEventDisableTiming*/);
+        EventPool::Get(device)->GetEvent(0x02 /*cudaEventDisableTiming*/);
   }
   auto api = DeviceAPI::Get(DevType::kCUDA());
   /*
@@ -895,7 +975,7 @@ void VirtualMachine::HandleCudaStreamBarrier(VMContext& ctx, const Instruction& 
    * We can also use cudaDeviceSynchronize() to implement the stream barrier op, but this function
    * would block the host thread, which may hurt the performance.
    */
-  api->EventRecordOnStream(device, ctx->barrier_events[ctx->current_barrier_event_index]->data(),
+  api->EventRecordOnStream(ctx->barrier_events[ctx->current_barrier_event_index]->data(),
                            nullptr /* default stream */);
   ctx->pc++;
 }
@@ -905,40 +985,6 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
   Index num_inputs = instr.invoke_jit.arity - instr.invoke_jit.output_size;
   Array<Value> args;
   Value output;
-
-  auto ftensor_str = [](std::ostringstream& os, const TensorValueObj* tensor) {
-    const DLTensor* t = tensor->tensor.operator->();
-    os << "T<";
-    for (int i = 0; i < t->ndim; ++i) {
-      os << t->shape[i] << "x";
-    }
-    switch (t->dtype.code) {
-      case kDLInt: {
-        os << "i" << static_cast<int>(t->dtype.bits);
-        break;
-      }
-      case kDLUInt: {
-        os << "u" << static_cast<int>(t->dtype.bits);
-        break;
-      }
-      case kDLFloat: {
-        os << "f" << static_cast<int>(t->dtype.bits);
-        break;
-      }
-      case kDLBfloat: {
-        os << "bf" << static_cast<int>(t->dtype.bits);
-        break;
-      }
-      default: {
-        os << "unk";
-        break;
-      }
-    }
-    if (t->dtype.lanes > 1) {
-      os << "x" << static_cast<int>(t->dtype.lanes);
-    }
-    os << ">";
-  };
 
   // extract the input args and prepare the hash key to query op env
   std::ostringstream os;
@@ -951,13 +997,13 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
       continue;
     }
     if (auto tensor = reg.as<TensorValueObj>()) {
-      ftensor_str(os, tensor);
+      utils::TensorRepr(os, tensor);
     } else if (auto tup = reg.as<TupleValueObj>()) {
       os << "(";
       for (auto field : tup->fields) {
         auto t = field.as<TensorValueObj>();
         CHECK(t != nullptr);
-        ftensor_str(os, t);
+        utils::TensorRepr(os, t);
         os << ",";
       }
       os << ")";

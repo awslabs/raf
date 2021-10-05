@@ -43,6 +43,7 @@ class DialectChecker(tvm.relay.ExprVisitor):
     """
     Check if all ops in the expr belong to the given dialect list.
     """
+
     def __init__(self, dialects):
         super(DialectChecker, self).__init__()
         assert isinstance(dialects, (str, list, tuple))
@@ -62,7 +63,7 @@ class DialectChecker(tvm.relay.ExprVisitor):
         super().visit_call(call)
 
 
-def get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
+def _get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     """Get VM executor"""
     # pylint: disable=protected-access
     options.setdefault("stream_schedule_policy", "sequential")
@@ -83,7 +84,20 @@ def get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
         if pass_seq is not None:
             mod = pass_seq(mod)
         executor = VMExecutor(mod, device)
-    return executor.make_executor(sch_file=options['sch_file'])
+    return executor
+
+
+def get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
+    """Get VM executor"""
+    executor = _get_vm_executor(mod, device, opt_level, disable_fusion, **options)
+    return executor.make_executor(sch_file=options.get('sch_file', None))
+
+
+def get_vm_profiler(mod, device, opt_level=2, disable_fusion=False, warmup=5, number=10, repeat=10,
+                    **options):
+    """Get VM Profiler"""
+    executor = _get_vm_executor(mod, device, opt_level, disable_fusion, **options)
+    return executor.make_profiler(warmup, number, repeat, sch_file=options.get('sch_file', None))
 
 
 def run_vm_model(model, device, args, opt_level=2, disable_fusion=False, **options):
@@ -93,6 +107,18 @@ def run_vm_model(model, device, args, opt_level=2, disable_fusion=False, **optio
     mod = record.mod
     inputs = _get_func_inputs(record, args, kwargs, get_handle=False)
     vm = get_vm_executor(mod, device, opt_level, disable_fusion, **options)
+    out = vm(*inputs)
+    return out
+
+
+def profile_vm_model(model, device, args, opt_level=2, disable_fusion=False, warmup=5, number=10,
+                     repeat=10, **options):
+    """Helper function to profile model executed by VM"""
+    args, kwargs = ([], args) if isinstance(args, dict) else (args, {})
+    record = model._internal(*args, **kwargs)
+    mod = record.mod
+    inputs = _get_func_inputs(record, args, kwargs, get_handle=False)
+    vm = get_vm_profiler(mod, device, opt_level, disable_fusion, warmup, number, repeat, **options)
     out = vm(*inputs)
     return out
 

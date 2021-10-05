@@ -17,7 +17,7 @@ class CUDADeviceAPI final : public DeviceAPI {
 
   ~CUDADeviceAPI() = default;
 
-  int GetDeviceCount() {
+  int GetDeviceCount() override {
     int count = 0;
     CUDA_CALL(cudaGetDeviceCount(&count));
     return count;
@@ -126,22 +126,23 @@ class CUDADeviceAPI final : public DeviceAPI {
     CUDA_CALL(cudaEventDestroy(static_cast<cudaEvent_t>(event)));
   }
 
+  float EventElapsedTimeInMilliSeconds(void* start_event, void* end_event) override {
+    float elapsed_time;
+    int dev_id;
+    CUDA_CALL(cudaGetDevice(&dev_id));
+    CUDA_CALL(cudaEventElapsedTime(&elapsed_time, static_cast<cudaEvent_t>(start_event),
+                                   static_cast<cudaEvent_t>(end_event)));
+    return elapsed_time;
+  }
+
   // Between event and stream
-  void EventRecordOnStream(const Device& dev, void* event, void* stream) override {
-    CHECK_EQ(dev.device_type(), DevType::kCUDA());
-    CUDA_CALL(cudaSetDevice(dev.device_id()));
+  void EventRecordOnStream(void* event, void* stream) override {
     CUDA_CALL(cudaEventRecord(static_cast<cudaEvent_t>(event), static_cast<cudaStream_t>(stream)));
   }
 
-  void StreamWaitEvent(const Device& dev, void* stream, void* event) override {
-    CHECK_EQ(dev.device_type(), DevType::kCUDA());
-    CUDA_CALL(cudaSetDevice(dev.device_id()));
+  void StreamWaitEvent(void* stream, void* event) override {
     CUDA_CALL(cudaStreamWaitEvent(static_cast<cudaStream_t>(stream),
                                   static_cast<cudaEvent_t>(event), 0 /*cudaEventWaitDefault*/));
-  }
-
-  void SyncStream(const Device& prev_dev, void* prev, void* next) override {
-    throw;
   }
 
   void WaitDevice(const Device& dev) override {
@@ -150,11 +151,13 @@ class CUDADeviceAPI final : public DeviceAPI {
     CUDA_CALL(cudaDeviceSynchronize());
   }
 
-  void WaitStream(const Device& dev, void* stream) override {
-    CHECK_EQ(dev.device_type(), DevType::kCUDA());
-    CHECK(stream != nullptr) << "Cannot sync a null stream";
-    CUDA_CALL(cudaSetDevice(dev.device_id()));
+  void WaitStream(void* stream) override {
     CUDA_CALL(cudaStreamSynchronize(static_cast<cudaStream_t>(stream)));
+  }
+
+  virtual void WaitEvent(void* event) override {
+    CHECK(event != nullptr) << "Cannot sync a null event";
+    CUDA_CALL(cudaEventSynchronize(static_cast<cudaEvent_t>(event)));
   }
 
   static void* make() {

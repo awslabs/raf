@@ -380,7 +380,7 @@ inline ir::Array<ir::Integer> ToArrayOfInteger(const std::vector<T>& v) {
 }
 
 inline void SetStream(cudaStream_t stream) {
-  cudnnSetStream(CUDNNThreadEntry::ThreadLocal()->handle, stream);
+  CUDNN_CALL(cudnnSetStream(CUDNNThreadEntry::ThreadLocal()->handle, stream));
 }
 
 inline size_t ComputeStorageInBytes(const ir::TensorType& type) {

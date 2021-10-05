@@ -119,9 +119,7 @@ class BatchMatmulImpl : public mnm::op::OpEnv {
 
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<op::schema::BinaryArgs>();
-    std::string op_name = tvm::runtime::Downcast<value::OpValue>(cv->callee)->op->name;
-    WITH_CUDA_PROFILER(cv->device, op_name, "ComputationOperator", {},
-                       { GemmBatchedImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out); })
+    GemmBatchedImpl(args->x1, transpose_a, args->x2, transpose_b, cv->out);
   }
 
   void Execute(const std::vector<Value>& inputs, Value output) {

@@ -11,7 +11,7 @@ namespace op {
 namespace cudnn {
 
 CUDNNThreadEntry::CUDNNThreadEntry() {
-  cudnnCreate(&handle);
+  CUDNN_CALL(cudnnCreate(&handle));
 }
 
 using CUDNNThreadStore = dmlc::ThreadLocalStore<CUDNNThreadEntry>;

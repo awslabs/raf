@@ -433,6 +433,7 @@ class VirtualMachine:
         self._set_devices = self.module["set_devices"]
         self._prepare_context = self.module["prepare_context"]
         self._run = self.module["run"]
+        self._profile = self.module["profile"]
         self._set_devices(device)
 
     def prepare_context(self, func_name, *args, **kwargs):
@@ -491,3 +492,39 @@ class VirtualMachine:
         """
         ctx = self.prepare_context(func_name, *args, **kwargs)
         return self._run(ctx)
+
+    def profile(self, *args, func_name="main", warmup=5, number=10, repeat=10, **kwargs):
+        """Profile the virtual machine.
+
+        Parameters
+        ----------
+        args : list[mnm.ndarray] or list[np.ndarray]
+            The arguments to the function.
+
+        func_name : str
+            The name of function to run.
+
+        warmup : int
+            The number of runs used to warmup. Default 5.
+
+        number : int
+            The number of times to run the generated code for taking average. We call these runs as
+            one repeat of measurement. Default 10.
+
+        repeat : int
+            The number of times to repeat the measurement. In total, the generated code will be run
+            (warmup + number x repeat) times, where the first “warmup” results will be discarded.
+            The returned result contains repeat costs, each of which is an average of number costs.
+            Default 10.
+
+        kwargs: dict of str to mnm.ndarray or np.ndarray
+            Named arguments to the function.
+
+        Returns
+        -------
+        result : List[float]
+            The list of latency for each repeat in milliseconds, where len(result) == repeat.
+        """
+        ctx = self.prepare_context(func_name, *args, **kwargs)
+        result = [v.value for v in self._profile(ctx, warmup, number, repeat)]
+        return result
