@@ -3,9 +3,10 @@
 import numpy as np
 import random
 import pytest
+import torch
 import mnm
 import mxnet as mx
-from mnm.testing import get_device_list, randn, check, run_vm_model
+from mnm.testing import get_device_list, randn, randn_torch, check, run_vm_model, to_torch_dev
 
 
 class TestModel(mnm.Model):
@@ -92,8 +93,6 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
     x = x.reshape(shape)
     m_x = mnm.array(x, dtype=dtype, device=device)
     n_x = mx.nd.array(x, dtype=dtype)
-    # uncomment once topk_dx is merged.
-    # m_x.requires_grad = True
 
     model = TestModel(mnm._op.sym.topk, k=k, axis=axis, ret_type=ret_type,  # pylint: disable=protected-access
                       is_ascend=is_ascend, dtype=dtype)
@@ -115,6 +114,52 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
             check(m_y, n_y)
             check(v_y, n_y)
 
+
+@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("k", [1, 3])
+@pytest.mark.parametrize("axis", [2, -1])
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("ret_type", ["both"])
+@pytest.mark.parametrize("is_ascend", [True, False])
+@pytest.mark.parametrize("shape", [(5, 3, 3), (5, 5, 5, 5, 5, 5)])
+def test_topk_dx(shape, k, axis, ret_type, is_ascend, dtype, device): #pylint: disable=R0915
+    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=not-callable
+    # pylint: disable=no-member
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
+    # pylint: disable=no-self-use
+    # pylint: disable=protected-access
+    if (dtype == "float16" and device == "cpu"):
+        pytest.skip("""float16 doesn't support in cpu""")
+
+    # Generate a set of non-duplicated numbers
+    size = 1
+    for i in shape:
+        size *= i
+    n_x = np.arange(size)
+    np.random.shuffle(n_x)
+    n_x = n_x.reshape(shape).astype(dtype)
+
+    if (dtype == "float16" and size >= 2048):
+        pytest.skip("""For float16, shape is too big to produce non-duplicated array""")
+
+    m_x = mnm.array(n_x, dtype=dtype, device=device)
+    m_x.requires_grad = True
+    t_x = torch.tensor(n_x, requires_grad=True, device=to_torch_dev(device))
+
+    model = TestModel(mnm._op.sym.topk, k=k, axis=axis, ret_type=ret_type,
+                      is_ascend=is_ascend, dtype=dtype)
+    m_y = model(m_x)
+    m_dy, t_dy = randn_torch(m_y[0].shape, dtype=dtype, device=device, requires_grad=True)
+    t_y = torch.topk(t_x, k=k, dim=axis, largest=not is_ascend)
+
+    check(t_y[0], m_y[0])
+    check(t_y[1], m_y[1])
+
+    t_y[0].backward(t_dy)
+    m_y[0].backward(m_dy)
+    check(t_x.grad, m_x.grad)
 
 if __name__ == "__main__":
     pytest.main([__file__])

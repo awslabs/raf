@@ -1,7 +1,5 @@
 # pylint: disable=protected-access
-import random
 import pytest
-import numpy as np
 import mnm
 from mnm.testing import check_type, run_infer_type, randn, get_device_list
 from mnm._ffi.pass_ import AutoDiff, InferType
@@ -108,13 +106,8 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
             return mnm.topk(data, k=self._k, axis=self._axis, ret_type=self._ret_type,
                             is_ascend=self._is_ascend, dtype=self._dtype)
 
-    size = 1
-    for i in shape:
-        size *= i
-    x = np.arange(size)
-    random.shuffle(x)
-    x = x.reshape(shape)
-    m_x = mnm.array(x, dtype=dtype, device=device)
+    m_x, n_x = randn(shape, device=device, dtype=dtype)
+    m_x = mnm.array(n_x, dtype=dtype, device=device)
     m_x.requires_grad = True
     model = Topk(k=k, axis=axis, ret_type=ret_type,
                  is_ascend=is_ascend, dtype=dtype)
@@ -136,7 +129,13 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
         y_ty = TupleType([y_a_ty, y_b_ty])
         expected_type = FuncType([x_ty], y_ty)
     check_type(m_mod['main'], expected_type)
-
+    # check backward
+    if ret_type == "both":
+        m_mod = AutoDiff(record.requires_grads)(m_mod)
+        m_mod = InferType()(m_mod)
+        bwd_ty = FuncType([y_ty], x_ty)
+        desired_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
+        check_type(m_mod['main'], desired_type)
 
 if __name__ == "__main__":
     pytest.main([__file__])

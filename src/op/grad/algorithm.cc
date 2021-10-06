@@ -59,6 +59,41 @@ Array<Expr> SortGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
 
 MNM_OP_GRAD("mnm.op.sort", SortGrad);
 
+Array<Expr> TopkGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                     const Expr& dy) {
+  static auto op_topk = Op::Get("mnm.op.topk");
+  static auto op_gather_dx = Op::Get("mnm.op.gather_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& data = call->args[0];
+  const Expr& k = call->args[1];
+  const Expr& axis = call->args[2];
+  const Expr& ret_type = orig_args[3];
+  const Expr& is_ascend = call->args[4];
+  const Expr& dtype = call->args[5];
+
+  const auto* ret_type_const = ret_type.as<ConstantNode>();
+  if (ret_type_const) {
+    const auto* ret_type_str = ret_type_const->value.as<value::StringValueObj>();
+    CHECK(ret_type_str && ret_type_str->value == "both")
+        << "TopKGrad only supports \"both\" as return type. ret_type = " << ret_type_str->value;
+  }
+
+  // There are two options to get data indices here.
+  // 1) Reuse the results in the forwarding (more memory)
+  // 2) Recompute the algorithm (more latency)
+  // The current implementation is option 2
+  Expr data_indices = Call(op_topk, {data, k, axis, ret_type, is_ascend, dtype});
+  Expr indices, dy_tensor, result;
+  indices = TupleGetItem(data_indices, 1);
+  dy_tensor = TupleGetItem(dy, 0);
+  result = Call(op_gather_dx, {data, axis, indices, dy_tensor});
+
+  return {result};
+}
+
+MNM_OP_GRAD("mnm.op.topk", TopkGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm
