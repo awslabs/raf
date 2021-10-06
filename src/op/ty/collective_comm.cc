@@ -36,12 +36,15 @@ MNM_OP_TYPE("mnm.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
 MNM_OP_TYPE("mnm.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 
 Type ReduceScatterInfer(const CallValues& value) {
+  static auto* structural_equal = tvm::runtime::Registry::Get("node.StructuralEqual");
+  ICHECK(structural_equal) << "node.StructuralEqual is not registered.";
+
   const auto* args = value->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
   CHECK_GE(args->x.size(), 1U);
   const auto& ty = GetType(args->x[0]);
   for (const auto& x : args->x) {
-    CHECK(GetType(x) == ty);
+    (*structural_equal)(GetType(x), ty, true, true);
   }
   return ty;
 }

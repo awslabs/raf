@@ -5,7 +5,7 @@
  * ZeRO-1: Partition the gradients outputed by the given model, so that the later wrapped
  *         optimizer can have a partitioend optimizer status. Note that optimizers must
  *         consider gradient partitioning if applied; otherwise the result will be incorrect.
- * ZeRO-2: (TODO) Replace the reduce inserted by AutoDataParallel to obtain only
+ * ZeRO-2: Replace the allreduce inserted by AutoDataParallel with reduce_scatter to obtain only
  *         a partition of gradients.
  */
 #include "mnm/pass.h"
@@ -20,11 +20,13 @@ namespace partition_gradient {
 
 class GradientPartitioner : public ExprMutator {
  public:
-  GradientPartitioner(int n_part, const Function& func) : n_part_(n_part), func_(func) {
+  GradientPartitioner(int opt_level, int n_part, const Function& func)
+      : opt_level_(opt_level), n_part_(n_part), func_(func) {
     // Build the var to expr map for the ANF.
+    Map<Var, Expr> var_to_expr;
     auto ell = ExplicitLetList::make(func->body);
     for (size_t i = 0; i < ell->vars.size(); ++i) {
-      var_to_expr_.Set(ell->vars[i], ell->exprs[i]);
+      var_to_expr.Set(ell->vars[i], ell->exprs[i]);
     }
 
     // Assume output is a tuple of (forward out, (grads, ...))
@@ -36,13 +38,13 @@ class GradientPartitioner : public ExprMutator {
 
     // Traverse back to find the gradient tuple.
     grad_tuple_var_ = Downcast<Var>(ret->fields[1]);
-    auto grads = var_to_expr_[grad_tuple_var_];
+    auto grads = var_to_expr[grad_tuple_var_];
     while (!grads->IsInstance<TupleNode>()) {
       auto tgi = grads.as<TupleGetItemNode>();
       CHECK(tgi != nullptr) << "Expected TupleGetItem, but got " << grads->GetTypeKey();
-      auto tuple = Downcast<Tuple>(var_to_expr_[Downcast<Var>(tgi->tuple)]);
+      auto tuple = Downcast<Tuple>(var_to_expr[Downcast<Var>(tgi->tuple)]);
       grad_tuple_var_ = Downcast<Var>(tuple->fields[tgi->index]);
-      grads = var_to_expr_[grad_tuple_var_];
+      grads = var_to_expr[grad_tuple_var_];
     }
 
     for (auto field : Downcast<Tuple>(grads)->fields) {
@@ -71,50 +73,15 @@ class GradientPartitioner : public ExprMutator {
     auto scope = scopes_.back().get();
     Expr body;
     do {
-      // TODO(comaniac): ZeRO-2.
-      // 1. Check if node->value is an allreduce, and change it to reduce scatter if so.
-      // 2. Remove the following split logic. Once the gradient is already a slice by
-      //    reduce scatter, we do not need to split it anymore.
       auto curr_var = node->var;
       auto value = VisitExpr(node->value);
+      var_to_expr_.Set(curr_var, value);
 
       if (grads_.count(curr_var) > 0) {
-        // Add the gradient slicing.
-        scope->Push(curr_var, value);
+        // The curr_var is a complete gradient.
         CHECK(!grads_[curr_var].defined());
-        static const Op& split_op = Op::Get("mnm.op.split");
-        static const Op& pad_op = Op::Get("mnm.op.pad");
-
-        auto ttype = curr_var->checked_type().as<TensorTypeNode>();
-        auto shape_expr = ttype->shape[0];
-        if (!shape_expr->IsInstance<IntImmNode>()) {
-          LOG(FATAL) << "Do not support dynamic shape yet";
-          throw;
-        }
-        auto shape = tvm::tir::as_const_int(shape_expr)[0];
-
-        // Padding is required if the axis to be splitted is not dividable.
-        auto grad_var = curr_var;
-        if (shape % n_part_ != 0) {
-          auto part_shape = shape / n_part_;
-          if (shape % n_part_ != 0) {
-            part_shape += 1;
-          }
-          auto target_shape = part_shape * n_part_;
-          auto pad_width = Array<Value>(ttype->shape.size() * 2, ScalarValue::make(0));
-          // Always pad 0s to the end of the first axis.
-          pad_width.Set(1, ScalarValue::make(target_shape - shape));
-          grad_var = scope->Push(Call(pad_op, {grad_var, MakeConstant(TupleValue::make(pad_width)),
-                                               MakeConstant(ScalarValue::make(0)),
-                                               MakeConstant(StringValue::make("constant"))}));
-        }
-
-        // TODO(comaniac): Construct if-branches if rank_ is unknown.
-        auto split_grad =
-            scope->Push(Call(split_op, {grad_var, MakeConstant(ScalarValue::make(n_part_)),
-                                        MakeConstant(ScalarValue::make(0))}));
-        auto slice_grad = scope->Push(TupleGetItem(split_grad, rank_));
-        grads_.Set(curr_var, slice_grad);
+        auto grad_var = SliceGrad(scope, curr_var, value, opt_level_);
+        grads_.Set(curr_var, grad_var);
       } else if (curr_var == grad_tuple_var_) {
         // Replace gradients with sliced ones.
         Array<Expr> fields;
@@ -153,9 +120,123 @@ class GradientPartitioner : public ExprMutator {
     return ss.str();
   }
 
- protected:
+ private:
+  /*! \brief Check whether a given expression is a call expression with all_reduce. */
+  inline bool IsAllReduceCall(const Expr& expr) {
+    static const Op& allreduce_op = Op::Get("mnm.op._allreduce");
+    if (!expr->IsInstance<CallNode>()) {
+      return false;
+    }
+    auto call = Downcast<Call>(expr);
+    if (auto node = call->op.as<OpNode>()) {
+      return GetRef<Op>(node) == allreduce_op;
+    }
+    return false;
+  }
+
+  /*! \brief Return the first argument of the given call expr. */
+  inline Expr GetFirstArg(const Expr& expr) {
+    CHECK(expr->IsInstance<CallNode>());
+    auto call = Downcast<Call>(expr);
+    CHECK_GE(call->args.size(), 1U)
+        << "Expected at least one argument, but got " << mnm::ir::AsText(expr);
+    return call->args[0];
+  }
+
+  /*! \brief Since we always partition the first dimension of gradient tensors, we have to
+   * make sure the length of the first dimension is dividable to the total device number.
+   * This helper function analyzes the tensor size and generates the pad call if needed.
+   * */
+  inline Var GenPadCall(LetList* scope, const Var& var) {
+    static const Op& pad_op = Op::Get("mnm.op.pad");
+
+    // Extract the length of the first dimension.
+    auto ttype = var->checked_type().as<TensorTypeNode>();
+    CHECK(ttype != nullptr) << "Expected a tesnor, but got " << var->checked_type();
+    auto shape_expr = ttype->shape[0];
+    if (!shape_expr->IsInstance<IntImmNode>()) {
+      LOG(FATAL) << "Do not support dynamic shape yet";
+      throw;
+    }
+    auto dim0_length = tvm::tir::as_const_int(shape_expr)[0];
+
+    // Check if we need to pad the gradient or not.
+    auto ret_var = var;
+    if (dim0_length % n_part_ != 0) {
+      Array<Value> pad_width;
+      auto part_dim0_length = dim0_length / n_part_ + 1;
+      auto target_dim0_length = part_dim0_length * n_part_;
+      pad_width = Array<Value>(ttype->shape.size() * 2, ScalarValue::make(0));
+      // Always pad 0s to the end of the first axis.
+      pad_width.Set(1, ScalarValue::make(target_dim0_length - dim0_length));
+
+      ret_var = scope->Push(Call(pad_op, {var, MakeConstant(TupleValue::make(pad_width)),
+                                          MakeConstant(ScalarValue::make(0)),
+                                          MakeConstant(StringValue::make("constant"))}));
+    }
+    return ret_var;
+  }
+
+  /*!
+   * \brief Slice gradient based on ZeRO-1 and ZeRO-2.
+   * The desired IR for ZeRO-1 is:
+   * let %1 = all_reduce(%0); // Could also be a backward op if data_parallel is disabled
+   * let %2 = pad(%1, ...);   // %1 is the complete global gradient
+   * let %3 = split(%2, ...);
+   * let %4 = TupleGetItem(%3, rank);
+   * TODO(comaniac): Add %rank to the function argument if rank_ is unknown.
+   *
+   * The desired IR for ZeRO-2 is:
+   * let %1 = op(%0);       // A backward op to generate gradient
+   * let %2 = pad(%1, ...); // %1 is the complete local gradient
+   * let %3 = split(%2, ...);
+   * let %4 = reduce_scatter(%3, ...);
+   */
+  Var SliceGrad(LetList* scope, const Var& var, const Expr& value, int opt_level) {
+    static const Op& split_op = Op::Get("mnm.op.split");
+    static const Op& reduce_scatter_op = Op::Get("mnm.op._reduce_scatter");
+
+    if (opt_level_ > 1 && !IsAllReduceCall(value)) {
+      // If this is not an AllReduce, then the gradient was generated locally and
+      // no need to apply ZeRO-2.
+      opt_level = 1;
+    }
+
+    auto grad_var = var;
+    if (opt_level > 1) {
+      // ZeRO-2: Replace the AllReduce with ReduceScatter.
+      auto first_arg = Downcast<Var>(GetFirstArg(value));
+      // The 1st arg of allreduce is a tuple of tensors.
+      auto arg_tuple = Downcast<Tuple>(var_to_expr_[first_arg]);
+      CHECK_EQ(arg_tuple->fields.size(), 1U) << "Not supported yet";
+
+      // FIXME(comaniac): This happens when gradients are zeros and are folded.
+      // However, we should eliminate zero gradients to reduce communication overheads.
+      if (arg_tuple->fields[0]->IsInstance<ConstantNode>()) {
+        grad_var = scope->Push(TupleGetItem(first_arg, 0));
+        grad_var->checked_type_ = arg_tuple->fields[0]->checked_type();
+      } else {
+        grad_var = Downcast<Var>(arg_tuple->fields[0]);
+      }
+    } else {
+      // ZeRO-1: Keep AllReduce (or the backward op if data parallel is disabled).
+      scope->Push(var, value);
+    }
+
+    grad_var = GenPadCall(scope, grad_var);
+    grad_var = scope->Push(Call(split_op, {grad_var, MakeConstant(ScalarValue::make(n_part_)),
+                                           MakeConstant(ScalarValue::make(0))}));
+
+    if (opt_level > 1) {
+      return scope->Push(Call(reduce_scatter_op, {grad_var}));
+    }
+    return scope->Push(TupleGetItem(grad_var, rank_));
+  }
+
   /*! \brief The scope stack of the let list. */
   std::vector<std::unique_ptr<LetList>> scopes_;
+  /*! \brief The optimization level (ZeRO-n). */
+  int opt_level_;
   /*! \brief The expected number of partitions. */
   int n_part_;
   /*! \brief The target function. */
@@ -172,12 +253,14 @@ class GradientPartitioner : public ExprMutator {
 
 }  // namespace partition_gradient
 
-Pass PartitionGradient(size_t n_part, int rank) {
+Pass PartitionGradient(int opt_level, size_t n_part, int rank) {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    return partition_gradient::GradientPartitioner(n_part, f).Partition(rank);
+    return partition_gradient::GradientPartitioner(opt_level, n_part, f).Partition(rank);
   };
-  return CreateMNMFunctionPass(pass_func, 0, "PartitionGradientFunc", {});
+  auto partition_gradient = CreateMNMFunctionPass(pass_func, 0, "PartitionGradientFunc", {});
+  return MNMSequential({partition_gradient, EraseType(), DeadCodeElimination()},
+                       "PartitionGradient");
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.PartitionGradient").set_body_typed(PartitionGradient);

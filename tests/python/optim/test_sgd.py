@@ -246,7 +246,7 @@ def test_state_partition(mock_get_context):
     class MockContext():
         def __init__(self):
             self.enable_data_parallel = True
-            self.zero_opt_level = 1
+            self.zero_opt_level = 2
             self.size = 4
             self.rank = 3
 
@@ -282,9 +282,11 @@ def test_state_partition(mock_get_context):
         # The size of sgd status should be 1/4 of the original parameter.
         assert param_name in param_map and math.ceil(param_map[param_name] / 4) == shape
 
-    # Verify IR. Note that this model has 7 gradients.
-    assert text.count("mnm.op._allgather") == 7
-    assert text.count("mnm.op.strided_slice") == 7
+    # Verify IR. This model has 7 parameters and 9 gradients
+    # (gradients for input data and ytrure are useless).
+    assert text.count("mnm.op._reduce_scatter") == 9, text
+    assert text.count("mnm.op._allgather") == 7, text
+    assert text.count("mnm.op.strided_slice") == 7, text
 
 
 if __name__ == "__main__":

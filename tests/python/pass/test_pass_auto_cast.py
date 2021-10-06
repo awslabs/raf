@@ -102,6 +102,31 @@ def test_tuple_n_output_dtype(out_dtype):
         verify_cast_num(model, args, 4 if out_dtype == "float32" else 2)
 
 
+def test_tuple_from_op():
+    xshape = (2, 3, 224, 224)
+    wshape = (32, 3, 3, 3)
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w):
+            y = mnm.conv2d(x, w)
+            y = mnm.split(y, 2)
+            z = mnm.concatenate(y)
+            return z
+
+    model = Model()
+    m_x, _ = randn(xshape, requires_grad=False)
+    m_w, _ = randn(wshape, requires_grad=True)
+    args = [m_x, m_w]
+
+    with mnm.ir.PassContext(config={"mnm.amp.out_dtype": "float16"}):
+        # Cast 2 inputs.
+        verify_cast_num(model, args, 2)
+
+
 @pytest.mark.parametrize("out_dtype", ["float16", "float32"])
 def test_existing_cast_with_always_op(out_dtype):
     xshape = (1, 3, 224, 224)

@@ -226,7 +226,6 @@ register_op_cast_rule("mnm.op.broadcast_to", infer_cast(1))
 register_op_cast_rule("mnm.op.broadcast_to_like", infer_cast(1))
 register_op_cast_rule("mnm.op.squeeze", infer_cast(1))
 register_op_cast_rule("mnm.op.stack", infer_cast(1))
-register_op_cast_rule("mnm.op.split", infer_cast(1))
 register_op_cast_rule("mnm.op.scatter", infer_cast(1))
 register_op_cast_rule("mnm.op.scatter_dx", infer_cast(3))
 register_op_cast_rule("mnm.op.clip", infer_cast(1))
@@ -389,3 +388,15 @@ register_op_cast_rule("mnm.op.take", op_cast_with_indices(1, 1))
 # over float32, so never cast.
 register_op_cast_rule("mnm.op.take_dx", op_cast_with_indices(2, 2, False))
 register_op_cast_rule("mnm.op.embedding_dx", op_cast_with_indices(1, 1, False))
+
+def op_cast_split(args, ret_type, amp_dtype):
+    """Split generates a tuple output but its behavior is quite simple, so it is safe
+    to always let it follow the argument dtype.
+    """
+    cast_to_amp = check_amp_dtype(args[0].checked_type, amp_dtype)
+
+    ret = [gen_hint_helper(args[0].checked_type, cast_to_amp, amp_dtype)]
+    ret += [PrimType(None) for _ in range(len(args) - 1)]
+    return ret
+
+register_op_cast_rule("mnm.op.split", op_cast_split)

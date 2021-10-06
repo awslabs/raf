@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name, protected-access
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
@@ -9,11 +9,30 @@ import pytest
 import numpy as np
 
 import mnm
+import tvm
 from mnm import distributed as dist
 from mnm._core.ndarray import Symbol
-from mnm.testing import check, get_dist_info, skip_dist_test
+from mnm.testing import check, get_dist_info, skip_dist_test, run_vm_model
 
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
+
+def run_model(model, args, device, check_result=True):
+    """Helper function to run the model using both interpreter and VM, and check if their
+    results are the same. Note that some ops (e.g., reduce, send/recv) may only produce
+    valid results at the target device. In this case, check_result should be skipped on
+    other devices.
+    """
+    out1 = model(*args)
+    ret = out1
+    out2 = run_vm_model(model, device, args)
+    if check_result:
+        if not isinstance(out1, (tuple, tvm.ir.container.Array, mnm._core.value.TupleValue)):
+            out1 = [out1]
+            out2 = [out2]
+        for o1, o2 in zip(out1, out2):
+            assert check(o1, o2), "Inconsistent results between interpreter and VM at %s" % device
+    return ret
+
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
@@ -38,7 +57,7 @@ def test_allreduce_with_tensor(dtype, computation):
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = model(x)
+    y = run_model(model, [x], device)
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype=dtype)
         if computation == "sum":
@@ -80,7 +99,7 @@ def test_allreduce_with_tensor_list(computation):
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
-    y = model(x1, x2)
+    y = run_model(model, [x1, x2], device)
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
@@ -121,7 +140,7 @@ def test_allgather(axis):
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = model(x)
+    y = run_model(model, [x], device)
     if rank == 0:
         target_y = np.concatenate([x.numpy() * (r + 1) for r in range(total_rank)], axis=axis)
         print(f"{rank} - Y: ", y)
@@ -153,7 +172,7 @@ def test_allgather_with_tensor_list(axis):
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
-    y = model(x1, x2)
+    y = run_model(model, [x1, x2], device)
     if rank == 0:
         x1 = x1.numpy()
         x2 = x2.numpy()
@@ -185,7 +204,7 @@ def test_reduce_scatter():
     n_y = -n_ones * (rank + 1)
     m_x, m_y = mnm.array(n_x, device=device), mnm.array(n_y, device=device)
     model.to(device=device)
-    m_out = model(m_x, m_y)
+    m_out = run_model(model, [m_x, m_y], device)
     if rank == 0:
         n_out = n_ones * sum(range(1, total_rank + 1))
         check(m_out, n_out)
@@ -231,7 +250,7 @@ def test_send_recv():
     n_x = n_ones * (rank+1)
     m_x = mnm.array(n_x, device=device)
     model.to(device=device)
-    m_out = model(m_x)
+    m_out = run_model(model, [m_x], device, check_result=bool(rank > 0))
     m_out = m_out[0]
     if rank > 0:
         n_out = n_ones * 3
@@ -260,7 +279,7 @@ def test_reduce(computation):
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = model(x)
+    y = run_model(model, [x], device, check_result=bool(rank == 0))
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
@@ -302,7 +321,7 @@ def test_reduce_list(computation):
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
-    y = model(x1, x2)
+    y = run_model(model, [x1, x2], device)
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
@@ -344,7 +363,7 @@ def test_broadcast():
     x = mnm.array(x, device=device)
     print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = model(x)
+    y = run_model(model, [x], device)
 
     target_y = np.ones(shape=(4, 4), dtype="float32")  # rank 0's data
     print(f"{rank} - Y: ", y)

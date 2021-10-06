@@ -204,7 +204,7 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
 
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<mnm::op::schema::ReduceScatterArgs>();
-    Execute(std::vector<value::Value>(args->x.begin(), args->x.end()), cv->out);
+    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
@@ -212,8 +212,10 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
     size_t offset = 0;
     DLTensor* out = output;
     DType dtype;
-    for (size_t i = 0; i < inputs.size(); ++i) {
-      const DLTensor* x = inputs[i];
+
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
+    for (int i = 0; i < tv->fields.size(); ++i) {
+      DLTensor* x = tv->fields[i];
       void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(in_buffer) + size_in_bytes * i;
       cudaMemcpyAsync(buffer_data_at_offset, x->data, size_in_bytes, cudaMemcpyDeviceToDevice,
                       (cudaStream_t)stream);
