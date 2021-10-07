@@ -1114,8 +1114,10 @@ HashKey WhereHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
+// FIXME: where should be kBroadcast, but it might be super slow when fused with other ops
+// such as sum. We should change it back to kBroadcast after resolving this issue.
 MNM_TVM(where, Where, WhereArgs, WhereSchema2Args, WhereSchemaArgNames, GenericAttrs, GenericHasher,
-        kBroadcast);
+        kOutEWiseFusable);
 
 std::vector<Value> SwapAxisSchema2Args(const SwapAxisArgs* args) {
   return {args->x};
