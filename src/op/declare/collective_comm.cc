@@ -43,7 +43,8 @@ void AllReduce(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op._allreduce", AllReduce)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TMNMCollective>("TMNMCollective", true)
+    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{0, 0}});
 
 void Reduce(const CallValues& call) {
   const auto* args = call->args.as<CommReduceArgs>();
@@ -70,7 +71,8 @@ void Reduce(const CallValues& call) {
 
 MNM_OP_DECLARE("mnm.op._reduce", Reduce)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TMNMCollective>("TMNMCollective", true)
+    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{0, 0}});
 
 void AllGather(const CallValues& call) {
   const auto* args = call->args.as<AllgatherArgs>();

@@ -141,11 +141,21 @@ class InplaceUpdateMutator : public MixedModeMutator {
         ExprShareMap share;
         for (auto it : finplace[opn]) {
           auto arg = Downcast<Var>(call->args[it.first]);
-          auto var = arg.as<ExtendedVarNode>();
-          if (var && var->may_share.defined()) {
-            arg = GetLatestVar(var->may_share);
+          if (var_tuple_map_.count(arg)) {
+            auto tnode = var_tuple_map_[arg].as<TupleNode>();
+            // Two tuples share the same storage. The two tuples should have the same
+            // number of the tensors. So the input tuple index is also the output tensor
+            // index. The tuple is expended.
+            for (int i = 0; i < tnode->fields.size(); ++i) {
+              share.emplace(i, Downcast<Var>(tnode->fields[i]));
+            }
+          } else {
+            auto var = arg.as<ExtendedVarNode>();
+            if (var && var->may_share.defined()) {
+              arg = GetLatestVar(var->may_share);
+            }
+            share.emplace(it.second, arg);
           }
-          share.emplace(it.second, arg);
         }
         expr_share_map_.emplace(post, share);
       } else if (opn == add_op || opn == subtract_op) {
@@ -196,13 +206,17 @@ class InplaceUpdateMutator : public MixedModeMutator {
 
   Expr VisitExpr_(const LetNode* node) final {
     auto pre_visit = [this](const LetNode* node) {
-      Expr value = this->Mutate(node->value);
       Var var = node->var;
+      Expr value = this->Mutate(node->value);
+      if (node->value.as<TupleNode>()) {
+        var_tuple_map_.emplace(var, value);
+      }
       if (expr_share_map_.count(value)) {
         auto share_map = expr_share_map_[value];
         if (node->value->checked_type().as<TensorTypeNode>()) {
           CHECK(share_map.count(0));
           Var new_var = MakeVar(var->name_hint(), var->type_annotation, GetLatestVar(share_map[0]));
+          new_var->checked_type_ = var->checked_type();
           var_update_map_.emplace(var, new_var);
         } else {
           // Tuple type, just propagate the share map to the binding var
@@ -255,6 +269,8 @@ class InplaceUpdateMutator : public MixedModeMutator {
   std::unordered_map<Expr, FusedOpShareMap, ObjectPtrHash, ObjectPtrEqual> fused_op_share_map_;
   /*! \brief Mapping from original var to updated var with may_share annotation. */
   std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> var_update_map_;
+  /*! \brief Mapping from var to tuple, which records each var to tuple binding. */
+  std::unordered_map<Expr, Expr, ObjectPtrHash, ObjectPtrEqual> var_tuple_map_;
   /*! \brief Mapping from fused function parameter to actual call argument value. */
   std::unordered_map<Expr, Expr, ObjectPtrHash, ObjectPtrEqual> param_value_map_;
 };
@@ -492,7 +508,7 @@ Pass InplaceUpdate() {
     auto func = Function(f->params, body, f->ret_type, f->type_params, f->attrs);
     return inplace_update::InplaceSimplifer().Run(func);
   };
-  return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {});
+  return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {"InferType"});
 }
 
 Pass ValidateInplaceUpdate(bool enforce_inplace_update) {

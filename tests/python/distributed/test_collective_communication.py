@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name, protected-access
+# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
@@ -57,7 +57,11 @@ def test_allreduce_with_tensor(dtype, computation):
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = run_model(model, [x], device)
+    y = model(x)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    vx = mnm.array(vx, device=device)
+    run_vm_model(model, device, [vx])
+    check(y, vx)
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype=dtype)
         if computation == "sum":
@@ -87,7 +91,9 @@ def test_allreduce_with_tensor_list(computation):
         @ mnm.model.trace
         def forward(self, x1, x2):
             x = mnm.allreduce([x1, x2], computation=computation)
-            return mnm.concatenate(x)
+            a = x[0]
+            b = x[1]
+            return mnm.concatenate((a, b))
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
@@ -99,6 +105,12 @@ def test_allreduce_with_tensor_list(computation):
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
+    y = model(x1, x2)
+    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    vx1 = mnm.array(vx1, device=device)
+    vx2 = mnm.array(vx2, device=device)
+    run_vm_model(model, device, [vx1, vx2])
     y = run_model(model, [x1, x2], device)
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
@@ -118,6 +130,8 @@ def test_allreduce_with_tensor_list(computation):
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
+        vy = np.concatenate([vx1.numpy(), vx2.numpy()])
+        check(vy, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
@@ -279,7 +293,11 @@ def test_reduce(computation):
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = run_model(model, [x], device, check_result=bool(rank == 0))
+    y = model(x)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    vx = mnm.array(vx, device=device)
+    run_vm_model(model, device, [vx])
+    check(y, vx)
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
@@ -309,7 +327,9 @@ def test_reduce_list(computation):
         @mnm.model.trace
         def forward(self, x1, x2):
             x = mnm.reduce([x1, x2], 0, computation=computation)
-            return mnm.concatenate(x)
+            a = x[0]
+            b = x[1]
+            return mnm.concatenate((a, b))
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
@@ -318,6 +338,11 @@ def test_reduce_list(computation):
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
     x1 = mnm.array(x1, device=device)
     x2 = mnm.array(x2, device=device)
+    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    vx1 = mnm.array(vx1, device=device)
+    vx2 = mnm.array(vx2, device=device)
+    run_vm_model(model, device, [vx1, vx2])
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
@@ -340,6 +365,8 @@ def test_reduce_list(computation):
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
+        vy = np.concatenate([vx1.numpy(), vx2.numpy()])
+        check(vy, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
