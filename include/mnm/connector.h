@@ -34,8 +34,8 @@ class Connector {
   std::string type;
   int local_size = 0;
   int local_rank = 0;
-  int size;
-  int rank;
+  int size = 1;
+  int rank = 0;
 };
 
 class ConnectorManager {
