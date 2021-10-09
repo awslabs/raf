@@ -875,9 +875,12 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
         pass_seqs.push_back(pass::WavefrontStreamSchedule());
       } else if (policy_name == "asap") {
         pass_seqs.push_back(pass::ASAPStreamSchedule());
+      } else if (policy_name == "ios") {
+        pass_seqs.push_back(pass::InferType());
+        pass_seqs.push_back(pass::IOSStreamSchedule());
       } else {
-        LOG(FATAL) << "Can not recognize schedule policy: " << policy_name << ", candidates are \n"
-                   << "  sequential, wavefront, and asap" << std::endl;
+        LOG(FATAL) << "Cannot recognize schedule policy: " << policy_name << ", candidates are \n"
+                   << "  sequential, wavefront, asap, and ios" << std::endl;
       }
     }
   } else {

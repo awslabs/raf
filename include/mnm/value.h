@@ -370,5 +370,13 @@ float GetScalarValueData<float>(const Value& value);
  */
 Value CopyTo(Value src, const Device& dev);
 
+/*!
+ * \brief Create a dummy value according to type.
+ * \param type The tensor or tuple type.
+ * \param device The device to allocate memory from when creating a tensor.
+ * \return The dummy value.
+ */
+Value CreateDummyValueFromType(const tvm::Type& type, Device device);
+
 }  // namespace value
 }  // namespace mnm

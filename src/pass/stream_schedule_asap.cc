@@ -118,7 +118,8 @@ class ASAPScheduler : public StreamSchedulerBase {
     }
 
     // Get the depth and number of parents of each node.
-    for (auto node : GetReversedTopologicalOrder(&dg_)) {
+    for (size_t i = dg_.post_dfs_order.size(); i != 0; i--) {
+      Node* node = dg_.post_dfs_order[i - 1];
       info_[node].depth = 1;
       info_[node].num_parents = 0;
       for (auto iit = node->parents.head; iit; iit = iit->next) {

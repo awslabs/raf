@@ -463,6 +463,7 @@ def draw_dataflow_graph(mod_or_func_or_expr,
                                  draw_atomic_nodes=draw_atomic_nodes,
                                  draw_control_nodes=draw_control_nodes)
     dgraph = drawer.draw()
+
     dirname = os.path.dirname(out_file_name)
     if dirname != "":
         os.makedirs(dirname, exist_ok=True)

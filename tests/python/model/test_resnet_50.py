@@ -59,7 +59,7 @@ def test_vm_backward(fuse):
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("fuse", [False, True])
-@pytest.mark.parametrize("policy", ["wavefront", "asap"])
+@pytest.mark.parametrize("policy", ["wavefront", "asap", "ios"])
 def test_vm_multi_stream(policy, fuse):
     device = 'cuda'
     layers = [3, 4, 6, 3]

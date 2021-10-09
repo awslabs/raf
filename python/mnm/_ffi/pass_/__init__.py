@@ -25,6 +25,7 @@ from ._internal import FromRelay
 from ._internal import FuseDialect
 from ._internal import FuseTVM
 from ._internal import GradientInputSelection
+from ._internal import IOSStreamSchedule
 from ._internal import InferType
 from ._internal import InlineBackward
 from ._internal import InlineClosure

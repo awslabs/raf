@@ -5,20 +5,21 @@
  * Tuple, and TupleGetItem as nodes and the dependency among them as edges. It is a directed acyclic
  * graph (DAG) and can be used to analyze the expr.
  */
+#include "support/arena.h"
 #include "mnm/analysis.h"
 #include "mnm/registry.h"
 
+#include "./dependency_graph.h"
+
 namespace mnm {
 namespace analysis {
+namespace dependency_graph {
 
-using Arena = tvm::support::Arena;
-using Node = DependencyGraph::Node;
-using LinkedList = tvm::relay::LinkedList<Node*>;
-using NodeExprMap = std::unordered_map<const Node*, Expr>;
+using tvm::support::LinkNode;
 
 /*! Remove the edges between parent and child. */
 void RemoveGraphEdge(Node* parent, Node* child) {
-  auto remove_from_linklist = [](LinkedList* list, Node* value) {
+  auto remove_from_nodelist = [](NodeList* list, Node* value) {
     if (list->head->value == value) {
       list->head = list->head->next;
       if (list->head == nullptr) {
@@ -34,9 +35,29 @@ void RemoveGraphEdge(Node* parent, Node* child) {
       }
     }
   };
-  remove_from_linklist(&parent->children, child);
-  remove_from_linklist(&child->parents, parent);
+  remove_from_nodelist(&parent->children, child);
+  remove_from_nodelist(&child->parents, parent);
 };
+
+void AddGraphEdge(Arena* arena, Node* parent, Node* child) {
+  auto* parent_link = arena->make<LinkNode<Node*>>();
+  parent_link->value = parent;
+  child->parents.Push(parent_link);
+
+  auto* child_link = arena->make<LinkNode<Node*>>();
+  child_link->value = child;
+  parent->children.Push(child_link);
+}
+
+/*! \brief Get the size (length) of a linked list. */
+size_t GetListSize(const tvm::relay::LinkedList<Node*>& list) {
+  if (list.head == nullptr) return 0;
+  size_t size = 0;
+  for (auto p = list.head; p; p = p->next) {
+    size++;
+  }
+  return size;
+}
 
 /*! A predicate function indicates whether a Node should be pruned. */
 using FNodePredicate = std::function<bool(const Node*)>;
@@ -65,6 +86,24 @@ void DependencyGraphPruneNodes(DependencyGraph* dg, const FNodePredicate& predic
       }
     }
   }
+  std::vector<Node*> new_post_dfs_order;
+  for (auto node : dg->post_dfs_order) {
+    if (!nodes2remove.count(node)) {
+      new_post_dfs_order.push_back(node);
+    }
+  }
+  dg->post_dfs_order = new_post_dfs_order;
+
+  std::unordered_set<Node*> existing_nodes(new_post_dfs_order.begin(), new_post_dfs_order.end());
+  std::vector<Expr> expr2remove;
+  for (auto& pr : dg->expr_node) {
+    if (existing_nodes.count(pr.second) == 0) {
+      expr2remove.push_back(pr.first);
+    }
+  }
+  for (const Expr& e : expr2remove) {
+    dg->expr_node.erase(e);
+  }
 
   std::vector<std::pair<Node*, Node*>> edges2remove;
   for (auto node : nodes2remove) {
@@ -72,13 +111,6 @@ void DependencyGraphPruneNodes(DependencyGraph* dg, const FNodePredicate& predic
       edges2remove.emplace_back(parent->value, node);
     }
   }
-  std::vector<Node*> new_order;
-  for (auto node : dg->post_dfs_order) {
-    if (!nodes2remove.count(node)) {
-      new_order.push_back(node);
-    }
-  }
-  dg->post_dfs_order = new_order;
   for (auto edge : edges2remove) {
     RemoveGraphEdge(edge.first, edge.second);
   }
@@ -147,40 +179,6 @@ void DependencyGraphPruneAtomicNodes(DependencyGraph* dg) {
 }
 
 /*!
- * \brief Get the nodes and edges of given relay expression's dependency graph
- * \param e The expr for which we want to get the dataflow graph
- * \param keep_atomic_nodes Whether to keep the atomic nodes in the result graph.
- * \return A map {"nodes": nodes, "edges": edges}. Here nodes is an array of expr, representing the
- * nodes in the dataflow graph. And edges are an array of expr pairs, representing the edges in the
- * dataflow graph.
- */
-Map<String, ObjectRef> GetDependencyGraphNodesEdges(Expr e, bool prune_atomic_nodes,
-                                                    bool prune_redundant_edges) {
-  Arena arena;
-  DependencyGraph graph;
-
-  graph = CreateDependencyGraph(&arena, e, prune_atomic_nodes, prune_redundant_edges);
-  NodeExprMap node_expr;
-  for (auto& it : graph.expr_node) {
-    node_expr[it.second] = it.first;
-  }
-
-  Array<Expr> nodes;
-  Array<Array<Expr>> edges;
-  for (auto node : graph.post_dfs_order) {
-    nodes.push_back(node_expr[node]);
-  }
-  for (auto node : graph.post_dfs_order) {
-    Expr parent = node_expr[node];
-    for (auto child_iter = node->children.head; child_iter; child_iter = child_iter->next) {
-      Expr child = node_expr[child_iter->value];
-      edges.push_back({parent, child});
-    }
-  }
-  return {{"nodes", nodes}, {"edges", edges}};
-}
-
-/*!
  * \brief Prune the redundant edges in the dependency graph. One edge (u, v) is redundant if and
  * only if there exists a path from u to v that does not go through the edge (u, v) directly. We
  * call the edge "redundant" because the dependency relation has been indicated by the path.
@@ -234,48 +232,93 @@ void DependencyGraphPruneRedundantEdges(DependencyGraph* dg) {
     RemoveGraphEdge(parent, child);
   }
 }
-DependencyGraph CreateDependencyGraph(Arena* arena, const Expr& e, bool prune_atomic_nodes,
-                                      bool prune_redundant_edges) {
-  DependencyGraph dg = DependencyGraph::Create(arena, e);
 
-  if (prune_atomic_nodes) {
-    DependencyGraphPruneAtomicNodes(&dg);
-  }
-
-  if (prune_redundant_edges) {
-    DependencyGraphPruneRedundantEdges(&dg);
-  }
-
-  return std::move(dg);
-}
-
-std::vector<Node*> GetReversedTopologicalOrder(DependencyGraph* dg) {
-  std::unordered_map<Node*, int> in_degree;
-  std::vector<Node*> reversed_post_dfs_order;
-  for (auto node : dg->post_dfs_order) {
-    for (auto iit = node->children.head; iit; iit = iit->next) {
-      auto child = iit->value;
-      in_degree[child]++;
+std::vector<Node*> GetTopologicalOrder(const std::vector<Node*>& nodes) {
+  std::unordered_set<Node*> nodes_set(nodes.begin(), nodes.end());
+  std::unordered_map<Node*, int> out_degree;
+  std::vector<Node*> post_dfs_order;
+  for (auto node : nodes) {
+    for (auto iit = node->parents.head; iit; iit = iit->next) {
+      auto parent = iit->value;
+      CHECK_NE(nodes_set.count(parent), 0);
+      out_degree[parent]++;
     }
   }
   std::vector<Node*> stack;
-  for (auto node : dg->post_dfs_order) {
-    if (in_degree[node] == 0) {
+  for (auto node : nodes) {
+    if (out_degree[node] == 0) {
       stack.push_back(node);
     }
   }
   while (!stack.empty()) {
     Node* node = stack.back();
     stack.pop_back();
-    reversed_post_dfs_order.push_back(node);
-    for (auto iit = node->children.head; iit; iit = iit->next) {
-      auto child = iit->value;
-      if (--in_degree[child] == 0) {
-        stack.push_back(child);
+    post_dfs_order.push_back(node);
+    for (auto iit = node->parents.head; iit; iit = iit->next) {
+      auto parent = iit->value;
+      if (--out_degree[parent] == 0) {
+        stack.push_back(parent);
       }
     }
   }
-  return reversed_post_dfs_order;
+  return post_dfs_order;
+}
+
+Node* CreateNewNode(Arena* arena) {
+  Node* node = arena->make<DependencyGraph::Node>();
+  node->new_scope = false;
+  return node;
+}
+
+}  // namespace dependency_graph
+
+DependencyGraph CreateDependencyGraph(Arena* arena, const Expr& e, bool prune_atomic_nodes,
+                                      bool prune_redundant_edges) {
+  DependencyGraph dg = DependencyGraph::Create(arena, e);
+
+  if (prune_atomic_nodes) {
+    dependency_graph::DependencyGraphPruneAtomicNodes(&dg);
+  }
+
+  if (prune_redundant_edges) {
+    dependency_graph::DependencyGraphPruneRedundantEdges(&dg);
+  }
+
+  return std::move(dg);
+}
+
+/*!
+ * \brief Get the nodes and edges of given relay expression's dependency graph
+ * \param e The expr for which we want to get the dataflow graph
+ * \param keep_atomic_nodes Whether to keep the atomic nodes in the result graph.
+ * \return A map {"nodes": nodes, "edges": edges}. Here nodes is an array of expr, representing the
+ * nodes in the dataflow graph. And edges are an array of expr pairs, representing the edges in the
+ * dataflow graph.
+ */
+Map<String, ObjectRef> GetDependencyGraphNodesEdges(Expr e, bool prune_atomic_nodes,
+                                                    bool prune_redundant_edges) {
+  Arena arena;
+  DependencyGraph graph;
+
+  graph = CreateDependencyGraph(&arena, e, prune_atomic_nodes, prune_redundant_edges);
+  dependency_graph::NodeExprMap node_expr;
+  for (auto& it : graph.expr_node) {
+    node_expr[it.second] = it.first;
+  }
+
+  Array<Expr> nodes;
+  Array<Array<Expr>> edges;
+  for (auto node : graph.post_dfs_order) {
+    nodes.push_back(node_expr[node]);
+  }
+  for (auto node : graph.post_dfs_order) {
+    Expr parent = node_expr[node];
+    for (auto child_iter = node->children.head; child_iter; child_iter = child_iter->next) {
+      Expr child = node_expr[child_iter->value];
+      edges.push_back({parent, child});
+    }
+  }
+  return {{"nodes", nodes}, {"edges", edges}};
 }
 
 MNM_REGISTER_GLOBAL("mnm.analysis.GetDependencyGraphNodesEdges")

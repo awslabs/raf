@@ -7,6 +7,7 @@
 #include "mnm/pass.h"
 #include "mnm/analysis.h"
 #include "./stream_schedule.h"
+#include "../analysis/dependency_graph.h"
 
 namespace mnm {
 namespace pass {
@@ -16,21 +17,12 @@ using namespace mnm::analysis;
 using stream_schedule::StreamSchedulerBase;
 using Node = DependencyGraph::Node;
 using NodeExprMap = std::unordered_map<const Node*, Expr>;
+using analysis::dependency_graph::GetListSize;
 
 /*! Chain, Wave, and Partition are used to describe a wavefront schedule. */
 using Chain = std::vector<Node*>;
 using Wave = std::vector<Chain>;
 using Partition = std::vector<Wave>;
-
-/*! \brief Get the size (length) of a linked list. */
-size_t GetListSize(const tvm::relay::LinkedList<Node*>& list) {
-  if (list.head == nullptr) return 0;
-  size_t size = 0;
-  for (auto p = list.head; p; p = p->next) {
-    size++;
-  }
-  return size;
-}
 
 /*!
  * \brief Partition the dependency graph into waves of operator chains.

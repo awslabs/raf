@@ -55,29 +55,52 @@ def flatten_a_normal_form(e):
     """
 
     class ANFValueChecker(ExprVisitor):
+        """
+        Check whether an expression is a valid let value in ANF. It is valid if all its
+        sub-expressions are valid sub-expression. A valid sub-expression is valid if it is Var,
+        GlobalVar, Constant, Op, or primitive Function.
+        """
         # pylint: disable=missing-function-docstring
-        """
-        Check whether a relay expr is a valid let value in ANF form. The value can not have nested
-        non atomic sub-expressions. In other words, the dependent expressions of given expression
-        must be atomic expressions.
-        """
-        atomic_classes = (tvm.relay.Var, tvm.relay.GlobalVar, tvm.relay.Constant, tvm.ir.Op)
 
         def __init__(self):
             super().__init__()
             # the non atomic expr we have met
-            self.non_atomic_expr = None
+            self.let_value = None
+
+        @staticmethod
+        def is_valid_sub_expr(expr):
+            """
+            Check whether given expression is a valid sub-expression in a let value in ANF.
+
+            Parameters
+            ----------
+            expr : tvm.relay.Expr
+                The given expression.
+
+            Returns
+            -------
+            ret : bool
+                Whether the given expr is a valid sub_expr
+            """
+            if isinstance(expr,
+                          (tvm.relay.Var, tvm.relay.GlobalVar, tvm.relay.Constant, tvm.ir.Op)):
+                return True
+            if isinstance(expr, tvm.relay.Function):
+                attrs = expr.attrs
+                if attrs and 'Primitive' in attrs and attrs['Primitive'] == 1:
+                    return True
+            return False
 
         def visit(self, expr):
-            if not isinstance(expr, self.atomic_classes):
-                if self.non_atomic_expr:
-                    msg = f"Non-atomic expression {expr} is nested in {self.non_atomic_expr}"
-                    raise ValueError(msg)
-                self.non_atomic_expr = expr
+            if self.let_value is None:
+                self.let_value = expr
+            else:
+                if not self.is_valid_sub_expr(expr):
+                    raise ValueError(f"Let value {self.let_value} referred {expr}, violating ANF.")
             super().visit(expr)
 
         def visit_function(self, fn):
-            # We take Function as a constant
+            # We take Function as a constant, thus do not visit its sub-expressions
             return
 
         def visit_if(self, i):

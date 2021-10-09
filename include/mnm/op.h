@@ -165,6 +165,15 @@ inline T GetOpAttr(const ir::Op& op, const std::string attr_name);
  */
 std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
 
+/*!
+ * \brief Create a dummy call_values from a call expression. The inputs and output of the call
+ * values are dummy values created according to the inferred type of the call expression.
+ * \param call The call expression.
+ * \param device The target device.
+ * \return The created dummy call_values.
+ */
+CallValues CreateDummyCallValues(Call call, Device device);
+
 // Operator pattern
 using tvm::relay::kBroadcast;
 using tvm::relay::kCommReduce;

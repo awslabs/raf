@@ -35,13 +35,5 @@ using tvm::support::Arena;
 DependencyGraph CreateDependencyGraph(Arena* arena, const Expr& e, bool prune_atomic_nodes = false,
                                       bool prune_redundant_edges = false);
 
-/*!
- * \brief Get a topological order on the graph that reverses all the edges in the dependency graph.
- * Thus, the first node in the order is the node corresponding to the expression used to create the
- * dependency graph.
- * \param dg The dependency graph.
- * \return The post dfs order on the reversed graph.
- */
-std::vector<DependencyGraph::Node*> GetReversedTopologicalOrder(DependencyGraph* dg);
 }  // namespace analysis
 }  // namespace mnm

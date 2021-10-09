@@ -432,6 +432,10 @@ Value VirtualMachine::Run(VMContext ctx) {
   }
 #endif
   frun();
+  if (ctx->current_stream_id != 0) {
+    // reset the working stream to default stream.
+    OpEnv::SetStreamForAllBackends(devices_[0], nullptr);
+  }
   return ctx->return_register;
 }
 

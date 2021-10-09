@@ -339,6 +339,36 @@ Pass DataParallelSchedule();
  */
 Pass AnnotateDistOps();
 
+/*!
+ * \brief This pass implements IOS (Inter-Operator-Scheduler) stream schedule policy. It transforms
+ * BBNF into ANF and injects stream-related operators (e.g., mnm.op.set_stream, mnm.op.add_event,
+ * and mnm.op.wait_event).
+ *
+ * This pass provides the following config parameters:
+ * mnm.stream_schedule.ios.block_max_size: tvm::Integer
+ *  The maximum block size to schedule.
+ * mnm.stream_schedule.ios.max_stream_num: tvm::Integer
+ *  The maximum number of streams to support.
+ * mnm.stream_schedule.ios.max_stage_ops: tvm::Integer;
+ *  The maximum number of operators in a stage.
+ * mnm.stream_schedule.ios.search_group_combination: tvm::Bool;
+ *  Whether to search the group combination.
+ * mnm.stream_schedule.ios.warmup: tvm::Integer;
+ *  The number of warmups in a measurement.
+ * mnm.stream_schedule.ios.number: tvm::Integer;
+ *  The number of execution times of a repeat.
+ * mnm.stream_schedule.ios.repeat: tvm::Integer;
+ *  The number of repeats in a measurement.
+ * mnm.stream_schedule.ios.verbose: tvm::Bool;
+ *  Whether to print verbose messages.
+ * mnm.stream_schedule.ios.schedule_units: Array<Array<Op>>;
+ *  The schedule units. Each schedule unit is a sequence of operators. IOS would schedule based on
+ *  these schedule units.
+ *
+ * \return The created pass.
+ */
+Pass IOSStreamSchedule();
+
 // Helper functions
 
 /*!

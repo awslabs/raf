@@ -366,6 +366,32 @@ Value CopyTo(Value src, const Device& dev) {
   return src;
 }
 
+Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
+  if (auto tensor_type = type.as<tvm::TensorTypeNode>()) {
+    std::vector<int64_t> shape;
+    for (auto v : tensor_type->shape) {
+      const auto* int_imm = v.as<tvm::IntImmNode>();
+      CHECK(int_imm != nullptr) << "Only supports creating dummy tensor value with static shape.";
+      shape.push_back(tvm::Integer(GetRef<tvm::IntImm>(int_imm)));
+    }
+    int64_t nbytes = tensor_type->dtype.bytes();
+    for (auto v : shape) {
+      nbytes *= v;
+    }
+    std::shared_ptr<memory_pool::Memory> memory = memory_pool::Memory::Alloc(device, nbytes);
+    DLDataType data_type = tensor_type->dtype;
+    return TensorValue::Assemble(device, data_type, shape, {}, memory->data, memory);
+  } else if (auto tuple_type = type.as<tvm::TupleTypeNode>()) {
+    tvm::Array<Value> fields;
+    for (auto field_type : tuple_type->fields)
+      fields.push_back(CreateDummyValueFromType(field_type, device));
+    return TupleValue::make(fields);
+  } else {
+    LOG(FATAL) << "NotImplementedError: Do not support creating dummy value for type " << type;
+    throw;
+  }
+}
+
 MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue")
     .set_body_typed([](const tvm::Device& dev, DLDataType dtype, Array<Integer> shape,
                        Array<Integer> strides, void* data) {

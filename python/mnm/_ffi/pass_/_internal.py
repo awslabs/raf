@@ -48,6 +48,8 @@ FuseDialect = _APIS.get("mnm.pass_.FuseDialect", None)
 FuseTVM = _APIS.get("mnm.pass_.FuseTVM", None)
 # Defined in ./src/pass/grad_arg_select.cc
 GradientInputSelection = _APIS.get("mnm.pass_.GradientInputSelection", None)
+# Defined in ./src/pass/stream_schedule_ios.cc
+IOSStreamSchedule = _APIS.get("mnm.pass_.IOSStreamSchedule", None)
 # Defined in ./src/pass/type_infer.cc
 InferType = _APIS.get("mnm.pass_.InferType", None)
 # Defined in ./src/pass/inline_backward.cc
