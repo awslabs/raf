@@ -23,8 +23,7 @@ static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSc
 
 template <class Algo, class F>
 void GetMaxWorkspaceSize(const Algo* algos, int n_algos, F fget_workspace, size_t* max_ws_size,
-                         std::shared_ptr<Memory>* memory) {
-  static Device dev(DevType::kCUDA(), 0);
+                         std::shared_ptr<Memory>* memory, const Device& device) {
   std::priority_queue<size_t> max_ws_sizes;
   for (int i = 0; i < n_algos; ++i) {
     size_t ws_size = 0;
@@ -39,7 +38,7 @@ void GetMaxWorkspaceSize(const Algo* algos, int n_algos, F fget_workspace, size_
     try {
       size_t size = max_ws_sizes.top();
       max_ws_sizes.pop();
-      *memory = Memory::Alloc(dev, size);
+      *memory = Memory::Alloc(device, size);
       *max_ws_size = size;
       break;
     } catch (const dmlc::Error& e) {
@@ -53,7 +52,7 @@ MetaCache<cudnnConvolutionFwdAlgoPerf_t> CacheForcudnnConvolutionFwdAlgoPerf_t;
 cudnnConvolutionFwdAlgoPerf_t FindcudnnConvolutionFwdAlgoPerf_tExWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc, const void* x,
     const cudnnFilterDescriptor_t wDesc, const void* w, const cudnnConvolutionDescriptor_t convDesc,
-    const cudnnTensorDescriptor_t yDesc, void* y) {
+    const cudnnTensorDescriptor_t yDesc, void* y, const Device& device) {
   if (auto* val = CacheForcudnnConvolutionFwdAlgoPerf_t.Get(key)) {
     return *val;
   }
@@ -75,7 +74,7 @@ cudnnConvolutionFwdAlgoPerf_t FindcudnnConvolutionFwdAlgoPerf_tExWrapper(
           CUDNNThreadEntry::ThreadLocal()->handle, xDesc, wDesc, convDesc, yDesc, algo, ws_size));
     };
     GetMaxWorkspaceSize(algos, sizeof(algos) / sizeof(cudnnConvolutionFwdAlgo_t), fget_workspace,
-                        &max_ws_size, &memory);
+                        &max_ws_size, &memory, device);
     void* workspace_temp = memory->data;
     CUDNN_CALL(cudnnFindConvolutionForwardAlgorithmEx(
         CUDNNThreadEntry::ThreadLocal()->handle, xDesc, x, wDesc, w, convDesc, yDesc, y, num_algos,
@@ -109,7 +108,8 @@ MetaCache<cudnnConvolutionBwdDataAlgoPerf_t> CacheForcudnnConvolutionBwdDataAlgo
 cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tExWrapper(
     const std::vector<uint8_t>& key, const cudnnFilterDescriptor_t wDesc, const void* w,
     const cudnnTensorDescriptor_t dyDesc, const void* dy,
-    const cudnnConvolutionDescriptor_t convDesc, const cudnnTensorDescriptor_t dxDesc, void* dx) {
+    const cudnnConvolutionDescriptor_t convDesc, const cudnnTensorDescriptor_t dxDesc, void* dx,
+    const Device& device) {
   if (auto* val = CacheForcudnnConvolutionBwdDataAlgoPerf_t.Get(key)) {
     return *val;
   }
@@ -127,7 +127,7 @@ cudnnConvolutionBwdDataAlgoPerf_t FindcudnnConvolutionBwdDataAlgoPerf_tExWrapper
           CUDNNThreadEntry::ThreadLocal()->handle, wDesc, dyDesc, convDesc, dxDesc, algo, ws_size));
     };
     GetMaxWorkspaceSize(algos, sizeof(algos) / sizeof(cudnnConvolutionBwdDataAlgo_t),
-                        fget_workspace, &max_ws_size, &memory);
+                        fget_workspace, &max_ws_size, &memory, device);
     void* workspace_temp = memory->data;
     CUDNN_CALL(cudnnFindConvolutionBackwardDataAlgorithmEx(
         CUDNNThreadEntry::ThreadLocal()->handle, wDesc, w, dyDesc, dy, convDesc, dxDesc, dx,
@@ -161,7 +161,8 @@ MetaCache<cudnnConvolutionBwdFilterAlgoPerf_t> CacheForcudnnConvolutionBwdFilter
 cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tExWrapper(
     const std::vector<uint8_t>& key, const cudnnTensorDescriptor_t xDesc, const void* x,
     const cudnnTensorDescriptor_t dyDesc, const void* dy,
-    const cudnnConvolutionDescriptor_t convDesc, const cudnnFilterDescriptor_t dwDesc, void* dw) {
+    const cudnnConvolutionDescriptor_t convDesc, const cudnnFilterDescriptor_t dwDesc, void* dw,
+    const Device& device) {
   if (auto* val = CacheForcudnnConvolutionBwdFilterAlgoPerf_t.Get(key)) {
     return *val;
   }
@@ -179,7 +180,7 @@ cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tExWra
           CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algo, ws_size));
     };
     GetMaxWorkspaceSize(algos, sizeof(algos) / sizeof(cudnnConvolutionBwdFilterAlgo_t),
-                        fget_workspace, &max_ws_size, &memory);
+                        fget_workspace, &max_ws_size, &memory, device);
     void* workspace_temp = memory->data;
     CUDNN_CALL(cudnnFindConvolutionBackwardFilterAlgorithmEx(
         CUDNNThreadEntry::ThreadLocal()->handle, xDesc, x, dyDesc, dy, convDesc, dwDesc, dw,
@@ -254,7 +255,7 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
                 << yDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
     algo = FindcudnnConvolutionFwdAlgoPerf_tExWrapper(algo_key, xDesc, x->data, wDesc, w->data,
-                                                      convDesc, yDesc, out->data);
+                                                      convDesc, yDesc, out->data, cv->device);
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                        xDesc, wDesc, convDesc, yDesc, algo.algo,
                                                        &workSpaceSizeInBytes));
@@ -357,8 +358,8 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
     algo_hasher << args->stride << args->padding << args->dilation << xDesc_tt << dyDesc_tt
                 << dwDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionBwdFilterAlgoPerf_tExWrapper(algo_key, xDesc, x_or_w->data, dyDesc,
-                                                            dy->data, convDesc, dwDesc, out->data);
+    algo = FindcudnnConvolutionBwdFilterAlgoPerf_tExWrapper(
+        algo_key, xDesc, x_or_w->data, dyDesc, dy->data, convDesc, dwDesc, out->data, cv->device);
     CUDNN_CALL(cudnnGetConvolutionBackwardFilterWorkspaceSize(
         CUDNNThreadEntry::ThreadLocal()->handle, xDesc, dyDesc, convDesc, dwDesc, algo.algo,
         &workSpaceSizeInBytes));
@@ -452,8 +453,8 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
     algo_hasher << args->stride << args->padding << args->dilation << wDesc_tt << dyDesc_tt
                 << dxDesc_tt;
     const auto& algo_key = algo_hasher.byte_vector;
-    algo = FindcudnnConvolutionBwdDataAlgoPerf_tExWrapper(algo_key, wDesc, x_or_w->data, dyDesc,
-                                                          dy->data, convDesc, dxDesc, out->data);
+    algo = FindcudnnConvolutionBwdDataAlgoPerf_tExWrapper(
+        algo_key, wDesc, x_or_w->data, dyDesc, dy->data, convDesc, dxDesc, out->data, cv->device);
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(CUDNNThreadEntry::ThreadLocal()->handle,
                                                             wDesc, dyDesc, convDesc, dxDesc,
                                                             algo.algo, &workSpaceSizeInBytes));

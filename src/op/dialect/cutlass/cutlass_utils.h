@@ -17,6 +17,7 @@
 #include "mnm/registry.h"
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
+#include "mnm/device_api.h"
 #include "mnm/memory_pool.h"
 
 #include "../../../common/cuda_utils.h"
@@ -138,6 +139,11 @@ T GetValue(const op::CallValues& call, const Var& var) {
     }
   }
   return T{};
+}
+
+inline cudaStream_t GetStream() {
+  static auto cuda_device_api = device_api::DeviceAPI::Get(DevType::kCUDA());
+  return static_cast<cudaStream_t>(cuda_device_api->GetStream());
 }
 
 }  // namespace cutlass

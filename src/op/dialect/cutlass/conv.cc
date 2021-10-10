@@ -109,7 +109,7 @@ void CutlassConv2dOpEnv::Execute(const std::vector<Value>& inputs, Value output)
   arguments_.B = x2->data;
   arguments_.C = bias->data;
   arguments_.D = out->data;
-  CUTLASS_CALL(operation_->run(&arguments_, host_workspace_, workspace_, stream_));
+  CUTLASS_CALL(operation_->run(&arguments_, host_workspace_, workspace_, GetStream()));
 }
 
 // TODO(@hzfan): Using plevel 0 due to lack of OpEnvMaker

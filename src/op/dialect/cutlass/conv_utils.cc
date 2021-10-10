@@ -63,7 +63,7 @@ void CutlassConvOpEnv::InitConvOperation(
   }
 
   // Initialize host and device workspaces
-  CUTLASS_CALL(operation->initialize(&configuration, host_workspace_, workspace_, stream_));
+  CUTLASS_CALL(operation->initialize(&configuration, host_workspace_, workspace_, GetStream()));
 
   arguments_ = ConvArguments{
       nullptr, nullptr, nullptr, nullptr, alpha, beta, scalar_pointer_mode_,

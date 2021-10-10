@@ -66,7 +66,7 @@ void CutlassGemmOpEnv::InitGemmOperation(
   }
 
   // Initialize host and device workspaces
-  CUTLASS_CALL(operation->initialize(&configuration, host_workspace_, workspace_, stream_));
+  CUTLASS_CALL(operation->initialize(&configuration, host_workspace_, workspace_, GetStream()));
   arguments_ = GemmUniversalArguments{nullptr,
                                       nullptr,
                                       nullptr,

@@ -28,6 +28,7 @@
 #include "mnm/ir.h"
 #include "mnm/ir_ext.h"
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/dist_context.h"
 #include "mnm/pass.h"
 #include "mnm/analysis.h"
@@ -43,7 +44,7 @@ namespace data_parallel_schedule {
 using namespace mnm::ir;
 using mnm::distributed::DistContext;
 using namespace mnm::analysis;
-using op::TMNMCollective;
+using op::IsCollectiveOp;
 using stream_pool::StreamTagEnum;
 using tvm::OpAttrMap;
 using Node = DependencyGraph::Node;
@@ -132,8 +133,6 @@ class FIFOScheduler : public StreamSchedulerBase {
     std::unordered_map<Node*, int> out_degree;
     // keeps track of whether an op directly depends on a communication op
     std::unordered_set<Node*> comm_successor_nodes;
-    // collective ops attr map
-    OpAttrMap<TMNMCollective> fcollective_ops = Op::GetAttrMap<TMNMCollective>("TMNMCollective");
 
     for (auto& it : dfg.expr_node) {
       node_expr[it.second] = it.first;
@@ -143,13 +142,15 @@ class FIFOScheduler : public StreamSchedulerBase {
     // calculate out-degree for each node and populate comm_successor_nodes map
     for (auto node_it = nodes.rbegin(); node_it != nodes.rend(); node_it++) {
       out_degree[(*node_it)] = 0;
-      if (node_expr[*node_it].as<CallNode>() &&
-          fcollective_ops.get(node_expr[*node_it].as<CallNode>()->op, false)) {
-        // record direct successor nodes of communication op
-        for (auto parent = (*node_it)->parents.head; parent; parent = parent->next) {
-          comm_successor_nodes.insert(parent->value);
+      if (auto call_node = node_expr[*node_it].as<CallNode>()) {
+        if (IsCollectiveOp(call_node->op)) {
+          // record direct successor nodes of communication op
+          for (auto parent = (*node_it)->parents.head; parent; parent = parent->next) {
+            comm_successor_nodes.insert(parent->value);
+          }
         }
       }
+
       for (auto child = (*node_it)->children.head; child; child = child->next) {
         out_degree[(*node_it)]++;
       }

@@ -11,7 +11,8 @@ namespace cuda {
 
 template <typename scalar_t, typename accscalar_t>
 void embedding_dense_backward_cuda(const scalar_t* grad, accscalar_t* output,
-                                   const int64_t* indices, int num, int range, int stride);
+                                   const int64_t* indices, int num, int range,
+                                   int stride, void* stream);
 
 }  // namespace cuda
 }  // namespace op

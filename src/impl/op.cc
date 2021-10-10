@@ -16,11 +16,6 @@
 #include "../requests.h"
 #include "../op/schema/list_args.h"
 
-#ifdef MNM_USE_CUDA
-#include "../op/dialect/cudnn/cudnn_utils.h"
-#include "../op/dialect/cublas/cublas_utils.h"
-#endif
-
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mnm::op::OpEnvMaker);
 }  // namespace dmlc
@@ -92,9 +87,7 @@ std::shared_ptr<Requests> OpEnv::GetRequests() const {
 
 void OpEnv::SetStreamForAllBackends(Device device, void* stream) {
 #ifdef MNM_USE_CUDA
-  tvm::runtime::DeviceAPI::Get(device)->SetStream(device, stream);
-  mnm::op::cudnn::SetStream(static_cast<cudaStream_t>(stream));
-  mnm::op::cublas::SetStream(static_cast<cudaStream_t>(stream));
+  device_api::DeviceAPI::Get(DevType::kCUDA())->SetStream(device, stream);
 #endif
 }
 

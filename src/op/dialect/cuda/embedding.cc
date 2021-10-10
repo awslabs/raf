@@ -4,6 +4,7 @@
  * \brief embedding_dx cuda backend
  */
 #include "mnm/op.h"
+#include "mnm/device_api.h"
 #include "../../schema/nn.h"
 #include "./kernels/kernel_util.cuh"
 
@@ -12,6 +13,7 @@ namespace op {
 namespace cuda {
 
 using namespace mnm::value;
+using device_api::DeviceAPI;
 
 class EmbeddingDxImpl : public mnm::op::OpEnv {
  public:
@@ -31,6 +33,7 @@ class EmbeddingDxImpl : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<Value>& inputs, Value output) override {
+    static auto cuda_device_api = DeviceAPI::Get(DevType::kCUDA());
     DLTensor* dy = ir::Downcast<TensorValue>(inputs[0]);
     DLTensor* indices = ir::Downcast<TensorValue>(inputs[1]);
     DLTensor* out = ir::Downcast<TensorValue>(output);
@@ -45,14 +48,16 @@ class EmbeddingDxImpl : public mnm::op::OpEnv {
     CHECK((out->dtype.bits == 32) || (out->dtype.bits == 16));
     switch (out->dtype.bits) {
       case 32:
-        embedding_dense_backward_cuda<float, float>(
-            static_cast<const float*>(dy->data), static_cast<float*>(out->data),
-            static_cast<const int64_t*>(indices->data), n, range, stride);
+        embedding_dense_backward_cuda<float, float>(static_cast<const float*>(dy->data),
+                                                    static_cast<float*>(out->data),
+                                                    static_cast<const int64_t*>(indices->data), n,
+                                                    range, stride, cuda_device_api->GetStream());
         return;
       case 16:
-        embedding_dense_backward_cuda<__half, __half>(
-            static_cast<const __half*>(dy->data), static_cast<__half*>(out->data),
-            static_cast<const int64_t*>(indices->data), n, range, stride);
+        embedding_dense_backward_cuda<__half, __half>(static_cast<const __half*>(dy->data),
+                                                      static_cast<__half*>(out->data),
+                                                      static_cast<const int64_t*>(indices->data), n,
+                                                      range, stride, cuda_device_api->GetStream());
         return;
     }
   }

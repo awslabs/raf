@@ -159,6 +159,19 @@ std::string TruncateName(std::string name);
 template <class T>
 inline T GetOpAttr(const ir::Op& op, const std::string attr_name);
 /*!
+ * \brief Get the operator attributes with a default value.
+ *
+ *   Same as GetOpAttr, but returns the default value when the attribute is registered to
+ *   neither the dialect op nor the base op.
+ *
+ * \param op The operator.
+ * \param attr_name The attribute name.
+ * \param default_value The default value.
+ * \return The attribute or the default value.
+ */
+template <class T>
+inline T GetOpAttrOrDefault(const ir::Op& op, const std::string attr_name, T default_value);
+/*!
  * \brief Dispatch (fused or un-fused) ops to backend implementation.
  * \param call The call values.
  * \return The created OpEnv.
@@ -246,21 +259,37 @@ using FMNMMutationFromRelay = registry::TypedPackedFunc<ir::Array<ir::Array<ir::
     const ir::Var& var, const ir::Call& call)>;
 
 // Implementation
-
 template <class T>
-inline T GetOpAttr(const ir::Op& op, const std::string attr_name) {
+inline std::pair<bool, T> _TryRetrieveAttr(const ir::Op& op, const std::string attr_name) {
   static auto fattr = ir::Op::GetAttrMap<T>(attr_name);
   if (fattr.count(op)) {
-    return fattr[op];
+    return std::make_pair(true, fattr[op]);
   }
   if (IsDialectOp(op)) {
     auto base_op = GetBaseOp(op);
     if (fattr.count(base_op)) {
-      return fattr[base_op];
+      return std::make_pair(true, fattr[base_op]);
     }
   }
-  LOG(FATAL) << "No attribute " << attr_name << " registered for " << op->name;
-  return T();
+  return std::make_pair(false, T());
+}
+
+template <class T>
+inline T GetOpAttr(const ir::Op& op, const std::string attr_name) {
+  auto optional_value = _TryRetrieveAttr<T>(op, attr_name);
+  if (!optional_value.first) {
+    LOG(FATAL) << "No attribute " << attr_name << " registered for " << op->name;
+  }
+  return optional_value.second;
+}
+
+template <class T>
+inline T GetOpAttrOrDefault(const ir::Op& op, const std::string attr_name, T default_value) {
+  auto optional_value = _TryRetrieveAttr<T>(op, attr_name);
+  if (!optional_value.first) {
+    return default_value;
+  }
+  return optional_value.second;
 }
 
 }  // namespace op

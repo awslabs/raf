@@ -3,9 +3,15 @@
  * \file src/device_api/cuda/cuda.cc
  * \brief CUDA device API
  */
+#include <tvm/runtime/device_api.h>
+#include "mnm/op.h"
 #include "mnm/device_api.h"
 #include "mnm/registry.h"
 #include "../../common/cuda_utils.h"
+
+#include "../../op/dialect/cudnn/cudnn_utils.h"
+#include "../../op/dialect/cublas/cublas_utils.h"
+#include "../../op/dialect/cutlass/cutlass_utils.h"
 
 namespace mnm {
 namespace device_api {
@@ -112,6 +118,17 @@ class CUDADeviceAPI final : public DeviceAPI {
     CUDA_CALL(cudaStreamDestroy(static_cast<cudaStream_t>(stream)));
   }
 
+  void SetStream(const Device& dev, void* stream) override {
+    stream_ = stream;
+    tvm::runtime::DeviceAPI::Get(dev)->SetStream(dev, stream);
+    mnm::op::cudnn::SetStream(static_cast<cudaStream_t>(stream));
+    mnm::op::cublas::SetStream(static_cast<cudaStream_t>(stream));
+  }
+
+  void* GetStream() override {
+    return stream_;
+  }
+
   void* CreateEvent(const Device& dev, uint32_t flags) override {
     CHECK_EQ(dev.device_type(), DevType::kCUDA());
     cudaEvent_t event;
@@ -166,6 +183,8 @@ class CUDADeviceAPI final : public DeviceAPI {
 
  private:
   int device_id_;
+  // using cuda default stream if stream is not set explicitly
+  void* stream_ = nullptr;
 };
 
 MNM_REGISTER_GLOBAL("mnm.device_api._make.cuda").set_body_typed(CUDADeviceAPI::make);

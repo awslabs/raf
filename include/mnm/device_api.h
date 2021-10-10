@@ -80,6 +80,14 @@ class DeviceAPI {
    */
   virtual void FreeStream(const Device& dev, void* stream) = 0;
 
+  // Set the stream for executing computation ops. This API is for GPU only,
+  // CPU should never call this API
+  virtual void SetStream(const Device& dev, void* stream) = 0;
+
+  // Get the current stream for executing computation ops. This API is for GPU only,
+  // CPU should never call this API
+  virtual void* GetStream() = 0;
+
   /*!
    * Create an event on given device.
    * \param dev The device to create the event.

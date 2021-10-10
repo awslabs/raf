@@ -64,6 +64,14 @@ class CPUDeviceAPI final : public DeviceAPI {
     throw;
   }
 
+  void SetStream(const Device&, void* stream) override {
+    throw;
+  }
+
+  void* GetStream() override {
+    throw;
+  }
+
   void* CreateEvent(const Device& dev, uint32_t flags) override {
     throw;
   }

@@ -29,6 +29,7 @@
 #include "mnm/pass.h"
 #include "mnm/analysis.h"
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "./common.h"
 #include "mnm/stream_pool.h"
 
@@ -36,11 +37,10 @@ namespace mnm {
 namespace pass {
 namespace annotate_dist_ops {
 
-using tvm::OpAttrMap;
 using namespace mnm::ir;
 using mnm::distributed::DistContext;
 using namespace mnm::analysis;
-using op::TMNMCollective;
+using op::IsCollectiveOp;
 using stream_pool::StreamTagEnum;
 
 using OpSet = std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual>;
@@ -121,7 +121,7 @@ class SyncAnalyzer : ExprVisitor {
   }
 
   void VisitExpr_(const CallNode* call) {
-    if (fcollective_ops_.get(call->op, false)) {
+    if (IsCollectiveOp(call->op)) {
       comm_calls_.insert(GetRef<Expr>(call));
     }
     UpdateDependencyInfo_(GetRef<Expr>(call), call->args);
@@ -141,7 +141,7 @@ class SyncAnalyzer : ExprVisitor {
     // to track event ids used across differnt runs
     auto ell = ExplicitLetList::make(op->body);
     for (auto& expr : ell->exprs) {
-      CHECK(!(expr.as<CallNode>() && fcollective_ops_.get(expr.as<CallNode>()->op, false)))
+      CHECK(!(expr.as<CallNode>() && IsCollectiveOp(expr.as<CallNode>()->op)))
           << "Unimplemented: Collectives in closures are currently not supported.";
     }
   }
@@ -250,8 +250,6 @@ class SyncAnalyzer : ExprVisitor {
   // map each Call, Tuple or TupleGetItem op to the index (in the input ANF expr) of the first
   // consumer of the op's outputs
   std::map<Expr, int> first_consumer_idx_map_;
-
-  OpAttrMap<TMNMCollective> fcollective_ops_ = Op::GetAttrMap<TMNMCollective>("TMNMCollective");
 };
 
 class DistOpAnnotator : ExprMutator {
@@ -371,7 +369,7 @@ class DistOpAnnotator : ExprMutator {
       Expr body = this->VisitExpr(op->body);
       // insert add_events after op
       if (this->analyzer_.add_event_after_op.count(value)) {
-        if (value.as<CallNode>() && fcollective_ops_.get(value.as<CallNode>()->op, false)) {
+        if (value.as<CallNode>() && IsCollectiveOp(value.as<CallNode>()->op)) {
           // this is a communication op
           Var event_var = mnm::ir::MakeVar("add_event_comm", {});
           Expr event_value = CreateAddEventOp(this->analyzer_.add_event_after_op.at(value),
@@ -388,7 +386,7 @@ class DistOpAnnotator : ExprMutator {
       Expr orig_op = GetRef<Expr>(op);
       // insert wait_events before op
       if (this->analyzer_.wait_event_before_op.count(value)) {
-        if (value.as<CallNode>() && fcollective_ops_.get(value.as<CallNode>()->op, false)) {
+        if (value.as<CallNode>() && IsCollectiveOp(value.as<CallNode>()->op)) {
           // this is a communication op
           body = Let(var, value, body);
           var = mnm::ir::MakeVar("wait_for_comp", {});
@@ -460,7 +458,6 @@ class DistOpAnnotator : ExprMutator {
   int64_t communication_stream_idx_ = StreamTagEnum::CudaCommunicate();
 
   SyncAnalyzer analyzer_;
-  OpAttrMap<TMNMCollective> fcollective_ops_ = Op::GetAttrMap<TMNMCollective>("TMNMCollective");
 };
 
 }  // namespace annotate_dist_ops
