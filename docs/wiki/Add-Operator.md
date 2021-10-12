@@ -284,12 +284,12 @@ If an operator has a corresponding implementation in Relay, then we can simply a
 ```python
 OP_MAP = [
     ...
-    "mnm.op.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
+    "mnm.op.tvm.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
     ...
 ]
 ```
 
-In this line, we map `mnm.op.softmax` to `relay.nn.softmax`, which has a Relay attribute `relay.attrs.SoftmaxAttrs` and its fusion pattern is `kOpaque`.
+In this line, we map `mnm.op.tvm.softmax` to `relay.nn.softmax`, which has a Relay attribute `relay.attrs.SoftmaxAttrs` and its fusion pattern is `kOpaque`.
 
 In addition, some Relay operators have "op strategy" registered (see https://tvm.apache.org/docs/dev/relay_op_strategy.html for details.) In short, Relay op strategy is a set of rules that determine how to lower a Relay operator. If the Relay operator has defined a strategy, we just simply register it to the Meta operator in [python/mnm/_tvm_op/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/python/mnm/_tvm_op/nn.py):
 
@@ -303,7 +303,7 @@ _reg.register_strategy("mnm.op.tvm.softmax", strategy.softmax_strategy)
 On the other hand, if the operator does not have corresponding implementation in Relay or it does not have Relay op strategy registered, such as `softmax_dx`, then we have to write a compute and schedule function for it. In this example, we also implement them in [python/mnm/_tvm_op/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/python/mnm/_tvm_op/nn.py):
 
 ```python
-@register_compute("mnm.op.softmax_dx")
+@register_compute("mnm.op.tvm.softmax_dx")
 def compute_softmax_dx(attr, inputs, output_type):
     x, y, dy = inputs[0], inputs[1], inputs[2]
     axis = attr.axis

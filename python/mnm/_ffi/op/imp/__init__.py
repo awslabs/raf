@@ -62,6 +62,7 @@ from ._internal import cos
 from ._internal import cross_entropy
 from ._internal import cross_entropy_dpred
 from ._internal import cross_entropy_dtrue
+from ._internal import cumsum
 from ._internal import dense
 from ._internal import device_copy
 from ._internal import divide

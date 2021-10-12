@@ -62,6 +62,7 @@ MNM_TVM_OP("mnm.op.tvm.collapse_sum_like", "collapse_sum_like");
 MNM_TVM_OP("mnm.op.tvm.concatenate", "concatenate");
 MNM_TVM_OP("mnm.op.tvm.copy", "copy");
 MNM_TVM_OP("mnm.op.tvm.cos", "cos");
+MNM_TVM_OP("mnm.op.tvm.cumsum", "cumsum");
 MNM_TVM_OP("mnm.op.tvm.dense", "nn.dense");
 MNM_TVM_OP("mnm.op.tvm.device_copy", "device_copy");
 MNM_TVM_OP("mnm.op.tvm.divide", "divide");

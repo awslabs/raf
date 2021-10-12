@@ -229,6 +229,22 @@ MNM_GENERIC_ATTR_OP_FROM_RELAY("where", "mnm.op.where");
 
 MNM_GENERIC_ATTR_OP_FROM_RELAY("argwhere", "mnm.op.argwhere");
 
+MNM_OP_FROM_RELAY("cumsum", "mnm.op.cumsum",
+                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                    Array<Expr> mnm_args = args;
+                    const auto* relay_attrs = attrs.as<ScanopAttrs>();
+                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    mnm_args.push_back(MakeConstant(
+                        StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
+
+                    bool exclusive = false;
+                    if (relay_attrs->exclusive.defined()) {
+                      exclusive = bool(relay_attrs->exclusive);
+                    }
+                    mnm_args.push_back(MakeConstant(BoolValue::make(exclusive)));
+                    return mnm_args;
+                  });
+
 }  // namespace from_relay
 }  // namespace op
 }  // namespace mnm

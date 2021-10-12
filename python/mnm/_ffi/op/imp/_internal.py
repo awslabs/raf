@@ -123,6 +123,8 @@ cross_entropy_dpred = _APIS.get("mnm.op.imp.cross_entropy_dpred", None)
 # Defined in ./src/op/regs/regs.cc
 cross_entropy_dtrue = _APIS.get("mnm.op.imp.cross_entropy_dtrue", None)
 # Defined in ./src/op/regs/regs.cc
+cumsum = _APIS.get("mnm.op.imp.cumsum", None)
+# Defined in ./src/op/regs/regs.cc
 dense = _APIS.get("mnm.op.imp.dense", None)
 # Defined in ./src/op/regs/regs.cc
 device_copy = _APIS.get("mnm.op.imp.device_copy", None)

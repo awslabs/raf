@@ -101,6 +101,7 @@ static const char cos[] = "mnm.op.cos";
 static const char cross_entropy[] = "mnm.op.cross_entropy";
 static const char cross_entropy_dpred[] = "mnm.op.cross_entropy_dpred";
 static const char cross_entropy_dtrue[] = "mnm.op.cross_entropy_dtrue";
+static const char cumsum[] = "mnm.op.cumsum";
 static const char dense[] = "mnm.op.dense";
 static const char device_copy[] = "mnm.op.device_copy";
 static const char divide[] = "mnm.op.divide";
@@ -534,6 +535,15 @@ Attrs ConvTransposeDxw(const TVMArgs& values, GradTape* tapes) {
   MNM_POD(6, ffi2schema::IntOrTupleInt, output_padding);
   MNM_POD(7, ffi2schema::IntOrTupleInt, dilation);
   MNM_POD(8, ffi2schema::Int, groups);
+  return Attrs(attrs);
+}
+
+Attrs Cumsum(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::CumsumArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
+  MNM_POD(1, ffi2schema::Int, axis);
+  MNM_POD(2, ffi2schema::String, dtype);
+  MNM_POD(3, ffi2schema::Bool, exclusive);
   return Attrs(attrs);
 }
 
@@ -1903,6 +1913,16 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.cross_entropy_dtrue").set_body([](TVMArgs args, 
               schema::LossArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->y_true));
   MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->y_pred));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.cumsum").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(cumsum, 4, ffi2schema::Cumsum, schema::CumsumArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dtype));
+  MNM_SET_ENV(vpack->x[3], schema2value::Bool(schema->exclusive));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3473,6 +3493,15 @@ Array<Expr> ConvTransposeDxw(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Cumsum(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_ARG(2, ffi2expr::String, dtype);
+  MNM_ARG(3, ffi2expr::Bool, exclusive);
+  MNM_RET();
+}
+
 Array<Expr> DeviceCopy(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, data);
@@ -4280,6 +4309,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dpred")
     .set_body(MNM_SYMBOLIC_API(cross_entropy_dpred, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dtrue")
     .set_body(MNM_SYMBOLIC_API(cross_entropy_dtrue, 2, Loss));
+MNM_REGISTER_GLOBAL("mnm.op.sym.cumsum").set_body(MNM_SYMBOLIC_API(cumsum, 4, Cumsum));
 MNM_REGISTER_GLOBAL("mnm.op.sym.dense").set_body(MNM_SYMBOLIC_API(dense, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.device_copy")
     .set_body(MNM_SYMBOLIC_API(device_copy, 3, DeviceCopy));
@@ -4793,6 +4823,16 @@ Attrs ConvTransposeDxw(const Array<Value>& values) {
   MNM_REQUIRED(6, value2schema::IntOrTupleInt, output_padding);
   MNM_REQUIRED(7, value2schema::IntOrTupleInt, dilation);
   MNM_REQUIRED(8, value2schema::Int, groups);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Cumsum(const Array<Value>& values) {
+  MNM_PRELUDE(2, 4, schema::CumsumArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
+  MNM_REQUIRED(1, value2schema::Int, axis);
+  MNM_OPTIONAL(2, value2schema::String, dtype);
+  MNM_OPTIONAL(3, value2schema::Bool, exclusive);
   return Attrs(attrs);
 }
 
@@ -6124,6 +6164,24 @@ int ConvTransposeDxw(const std::string& field) {
   }
   if (field == "groups") {
     return 8;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Cumsum(const std::string& field) {
+  if (field == "x") {
+    return 0;
+  }
+  if (field == "axis") {
+    return 1;
+  }
+  if (field == "dtype") {
+    return 2;
+  }
+  if (field == "exclusive") {
+    return 3;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7752,6 +7810,10 @@ MNM_BIND_SCHEMA("mnm.op.cross_entropy_dtrue", names::cross_entropy_dtrue,
                 value2schema::Loss);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cross_entropy_dtrue", names::cross_entropy_dtrue,
                             schema_field_idx::Loss);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.cumsum", names::cumsum,
+                value2schema::Cumsum);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cumsum", names::cumsum,
+                            schema_field_idx::Cumsum);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.dense", names::dense,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.dense", names::dense,
@@ -8302,6 +8364,7 @@ MNM_REGISTER_OBJECT_REFLECT(ConvArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvTransArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvTransposeDxwArgs);
+MNM_REGISTER_OBJECT_REFLECT(CumsumArgs);
 MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutDxArgs);

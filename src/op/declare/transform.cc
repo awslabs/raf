@@ -998,6 +998,17 @@ MNM_REGISTER_OP("mnm.op.argwhere")
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<Op>("TMNMUpperBoundOp", Op::Get("mnm.op.upper_bound.argwhere"));
 
+MNM_OP_DECLARE("mnm.op.cumsum", [](const CallValues& call) {
+  const auto* args = call->args.as<CumsumArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  auto ndim = x->ndim;
+
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->device = x->device;
+  call->out = TensorValue::Assemble(x->device, x->dtype, shape);
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

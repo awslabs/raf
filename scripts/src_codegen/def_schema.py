@@ -617,6 +617,13 @@ SCHEMAS = {
             py_default=(0)),
         Arg(name="exclude", cxx_type="bool", cxx_default=False),
     ],
+    "transform.h::cumsum": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int"),
+        Arg(name="dtype", cxx_type="std::string", cxx_default="\"float32\"",
+            py_default="\"float32\""),
+        Arg(name="exclusive", cxx_type="bool", cxx_default=False),
+    ],
     "transform.h::strided_slice_dx": [
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="primal_shape",

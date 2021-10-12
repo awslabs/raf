@@ -892,5 +892,13 @@ Type UpperBoundArgwhereInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.upper_bound.argwhere", "UpperBoundArgwhere", UpperBoundArgwhereInfer);
 
+Type CumsumInfer(const CallValues& value) {
+  const auto* args = value->args.as<CumsumArgs>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+MNM_OP_TYPE("mnm.op.cumsum", "Cumsum", CumsumInfer);
+
 }  // namespace op
 }  // namespace mnm

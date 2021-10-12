@@ -414,6 +414,14 @@ MNM_OP_GRAD("mnm.op.arange", NoGrads<0>);
 MNM_OP_GRAD("mnm.op.zeros", NoGrads<0>);
 MNM_OP_GRAD("mnm.op.ones", NoGrads<0>);
 
+Array<Expr> CumsumGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                       const Expr& dy) {
+  // TODO: TBA
+  return {};
+}
+
+MNM_OP_GRAD("mnm.op.cumsum", CumsumGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

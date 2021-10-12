@@ -72,6 +72,15 @@ class ClipDxArgs : public ir::AttrsNode<ClipDxArgs> {
   MNM_OP_SCHEMA(ClipDxArgs, "mnm.args.clip_dx");
 };
 
+class CumsumArgs : public ir::AttrsNode<CumsumArgs> {
+ public:
+  value::BaseTensorValue x;
+  int axis;
+  std::string dtype{"float32"};
+  bool exclusive{false};
+  MNM_OP_SCHEMA(CumsumArgs, "mnm.args.cumsum");
+};
+
 class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
  public:
   value::BaseTensorValue x;

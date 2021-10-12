@@ -317,26 +317,24 @@ struct FromRelayMutator : public ExprMutator {
 
     const Op& op = Downcast<Op>(node->op);
     Call res;
-    if (fmap.count(op)) {
-      try {
-        auto new_expr = fmap[op](node->attrs, node->args, var_value_map_);
-        if (new_expr.as<CallNode>()) {
-          Call new_call = Downcast<Call>(new_expr);
-          tvm::Array<Expr> call_args;
-          for (auto arg : new_call->args) {
-            auto new_arg = this->Mutate(arg);
-            call_args.push_back(new_arg);
-          }
-          res = Call(new_call->op, call_args);
-        } else {
-          return this->Mutate(new_expr);
+    try {
+      auto new_expr = fmap[op](node->attrs, node->args, var_value_map_);
+      if (new_expr.as<CallNode>()) {
+        Call new_call = Downcast<Call>(new_expr);
+        tvm::Array<Expr> call_args;
+        for (auto arg : new_call->args) {
+          auto new_arg = this->Mutate(arg);
+          call_args.push_back(new_arg);
         }
-      } catch (const dmlc::Error& e) {
-        LOG(WARNING) << e.what();
-        // Return the orignial Relay call and make a record for unsupported ops
-        unsupported_ops_[op->name]++;
-        return Call(node->op, node->args, node->attrs);
+        res = Call(new_call->op, call_args);
+      } else {
+        return this->Mutate(new_expr);
       }
+    } catch (const dmlc::Error& e) {
+      LOG(WARNING) << e.what();
+      // Return the orignial Relay call and make a record for unsupported ops
+      unsupported_ops_[op->name]++;
+      return Call(node->op, node->args, node->attrs);
     }
     CHECK(res.defined());
     if (fmutation.count(op)) {

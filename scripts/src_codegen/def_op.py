@@ -101,6 +101,7 @@ OPS = [
     Op(name="collapse_sum_like", schema_name="collapse_like"),
     Op(name="sum", schema_name="sum"),
     Op(name="sum_dx", schema_name="sum_dx"),
+    Op(name="cumsum", schema_name="cumsum"),
     Op(name="argmax", schema_name="reduce"),
     Op(name="argmin", schema_name="reduce"),
     Op(name="prod", schema_name="reduce"),

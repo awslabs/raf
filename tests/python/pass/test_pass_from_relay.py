@@ -487,7 +487,7 @@ def test_squeeze(shape, axis, dtype):
     check_from_relay(model, r_func, [m_x])
 
 
-@pytest.mark.parametrize("shape", [(2, 4, 1, 3), (1, 2, 3)])
+@pytest.mark.parametrize("shape", [(2, 4, 1, 3)])
 @pytest.mark.parametrize("a_min", [0.3])
 @pytest.mark.parametrize("a_max", [0.7])
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -771,12 +771,7 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
 
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("wshape", [(3, 16, 3, 3)])
-@pytest.mark.parametrize("stride_output_padding", [
-    (1, 0),
-    (2, 1),
-    (2, 0),
-    (3, 2)
-    ])
+@pytest.mark.parametrize("stride_output_padding", [(1, 0), (2, 1)])
 @pytest.mark.parametrize("dilation", [(1, 1)])
 @pytest.mark.parametrize("padding", [0, 1])
 def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, padding):
@@ -830,7 +825,7 @@ def test_contrib_dropout(device, shape, p):
     check_from_relay(model, r_func, [m_x], check_correctness=False, device=device)
 
 
-@pytest.mark.parametrize("kernel", [1, 2, 3])
+@pytest.mark.parametrize("kernel", [1, 3])
 @pytest.mark.parametrize("stride", [1, 2])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize(
@@ -1281,6 +1276,33 @@ def test_roi_align():
         r_data, r_rois, (7, 7), 1.0, -1, "NCHW", "avg"))
 
     check_from_relay(model, r_func, [m_data, m_rois])
+
+
+@pytest.mark.parametrize("shape", [(3, 5)])
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("exclusive", [False, True])
+def test_cumsum(shape, axis, exclusive):
+    dtype = "float32"
+
+    class Cumsum(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.cumsum(x, axis, dtype, exclusive)
+
+    m_x, _ = randn_torch(shape, dtype=dtype)
+    m_model = Cumsum()
+
+    # Relay cumsum allows exclusive to be None, whcih means False.
+    relaty_exclusive = exclusive if exclusive else None
+
+    r_data = _relay.var("data", shape=shape, dtype=dtype)
+    r_func = _relay.Function(params=[r_data], body=_relay.cumsum(
+        r_data, axis=axis, dtype=dtype, exclusive=relaty_exclusive))
+
+    check_from_relay(m_model, r_func, [m_x])
 
 
 if __name__ == "__main__":

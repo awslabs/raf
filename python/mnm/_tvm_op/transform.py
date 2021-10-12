@@ -344,3 +344,5 @@ def embedding_dx_compute(attrs, inputs, output_type):
     return [out2]
 
 _reg.register_injective_schedule("mnm.op.tvm.embedding_dx")
+
+_reg.register_strategy("mnm.op.tvm.cumsum", strategy.cumsum_strategy)

@@ -23,6 +23,7 @@ OP_MAP = {
     "mnm.op.tvm.ceil": ["ceil", "", "kElemWise"],
     "mnm.op.tvm.clip": ["clip", "relay.attrs.ClipAttrs", "kElemWise"],
     "mnm.op.tvm.collapse_sum_like": ["collapse_sum_like", "", "kCommReduce"],
+    "mnm.op.tvm.cumsum": ["cumsum", "relay.attrs.ScanopAttrs", "kOpaque"],
     "mnm.op.tvm.concatenate": ["concatenate", "relay.attrs.ConcatenateAttrs", "kInjective"],
     "mnm.op.tvm.copy": ["copy", "", "kElemWise"],
     "mnm.op.tvm.cos": ["cos", "", "kElemWise"],
