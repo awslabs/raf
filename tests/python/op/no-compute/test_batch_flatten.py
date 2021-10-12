@@ -19,7 +19,6 @@ def test_batch_flatten_error(shape):
 
 @pytest.mark.parametrize("shape", [
     [5, 3],
-    [5, 3, 2],
     [5, 2, 2, 2]
 ])
 @pytest.mark.parametrize("device", get_device_list())

@@ -14,6 +14,7 @@ try:
 except ImportError:
     LANS = None
 
+
 class TorchTest(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchTest, self).__init__()
@@ -97,7 +98,7 @@ def test_traced_lans_simple():
     # pylint: disable=attribute-defined-outside-init
     device = 'cuda'
     shape = (2, 2)
-    batch_size = 32
+    batch_size = 4
     t_model = TorchSimpleTest(shape)
     t_model.train()
     t_model.to(device)
@@ -118,7 +119,6 @@ def test_traced_lans_simple():
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("config", [
-    (10, 32, 10),
     (4, 28, 10),
 ])
 def test_traced_lans(config):

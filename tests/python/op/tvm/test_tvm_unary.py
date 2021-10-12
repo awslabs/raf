@@ -58,8 +58,8 @@ def verify_unify_op(m_op, m_arg, device, ref_fwd_out, m_dy=None, ref_grad=None):
         (np.ones_like, mnm._op.sym.ones_like),
         (np.trunc, mnm._op.sym.trunc),
     ])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_common_unary_ops(ops, shape, dtype, device):
     n_op, m_op = ops
     m_x, n_x = randn(shape, dtype=dtype, device=device)
@@ -83,8 +83,8 @@ def test_common_unary_ops(ops, shape, dtype, device):
         (torch.trunc, mnm._op.sym.trunc),
         (torch.tanh, mnm._op.sym.tanh)
     ])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_unary_ops_with_grad(ops, shape, dtype, device):
     t_op, m_op = ops
     m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True)
@@ -127,8 +127,8 @@ def test_unary_fp16_ops_with_grad(ops):
         (torch.log, mnm._op.sym.log),
         (torch.sqrt, mnm._op.sym.sqrt),
     ])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_pos_unary_ops_with_grad(ops, shape, dtype, device):
     t_op, m_op = ops
     m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True, positive=True)
@@ -145,8 +145,8 @@ def test_pos_unary_ops_with_grad(ops, shape, dtype, device):
     (np.sqrt, mnm._op.sym.sqrt),
     (np.log2, mnm._op.sym.log2),
 ])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
 def test_pos_unary_ops_without_grad(ops, shape, dtype, device):
     # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
     if dtype == "float16" and device == "cpu":

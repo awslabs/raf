@@ -18,13 +18,9 @@ from tvm.relay import TensorType, FuncType
 ])
 @pytest.mark.parametrize("shape", [
     [3],
-    [3, 2],
-    [3, 2, 5],
-    [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce(op, shape, keepdims, dtype):
     mnm_fwd, torch_fwd, same = op
@@ -69,13 +65,9 @@ def test_reduce(op, shape, keepdims, dtype):
 ])
 @pytest.mark.parametrize("shape", [
     [3],
-    [3, 2],
-    [3, 2, 5],
-    [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce_with_backward(op, shape, keepdims, dtype):
     mnm_fwd, torch_fwd = op
@@ -121,10 +113,6 @@ def test_reduce_with_backward(op, shape, keepdims, dtype):
 ])
 @pytest.mark.parametrize("shape", [
     [3],
-    [3, 2],
-    [3, 2, 5],
-    [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
 @pytest.mark.parametrize("dtype", ["uint8", "bool"])

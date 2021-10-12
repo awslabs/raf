@@ -8,10 +8,9 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3],
-    [3, 2],
     [3, 2, 5, 8],
 ])
 @pytest.mark.parametrize("axis", range(-5, 5))
@@ -64,12 +63,10 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
 # pylint: disable=attribute-defined-outside-init
 @pytest.mark.parametrize("shape", [
     (5, 4, 6, 9),
-    (6, 5, 7, 10),
-    (12, 32, 6, 8),
     (3, 7, 9)
 ])
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_batch_norm_train_dxwb(shape, eps, dtype):
 
     class BatchNormTrainDxwb(mnm.Model):
@@ -97,13 +94,11 @@ def test_batch_norm_train_dxwb(shape, eps, dtype):
 # pylint: disable=import-outside-toplevel, attribute-defined-outside-init
 @pytest.mark.parametrize("shape", [
     (5, 4, 6, 9),
-    (6, 5, 7, 10),
-    (12, 32, 6, 8),
     (3, 7, 9)
 ])
 @pytest.mark.parametrize("axis", [0, 1, 2, -1])
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_layer_norm(shape, axis, eps, dtype):
     import mxnet as mx
 
@@ -153,7 +148,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     check_type(m_mod['main'], checked_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
 @pytest.mark.parametrize("stride", [1, 2, 3, 4])
@@ -224,10 +219,10 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
 
 
 # pylint: disable=no-self-use, too-many-arguments
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
-@pytest.mark.parametrize("kernel", [1, 2, 3, 4])
-@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("kernel", [1, 3])
+@pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize("ceil", [True, False])
 @pytest.mark.parametrize(
@@ -277,7 +272,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
     check_type(m_mod['main'], checked_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dimension", [
     ((2, 3), (1, 1, 1, 1)),
 ])

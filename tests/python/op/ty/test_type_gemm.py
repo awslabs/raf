@@ -8,10 +8,9 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 @pytest.mark.parametrize("shape", [
     (1, 2, 3),
-    (1, 5, 7),
     (3, 7, 9),
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_dense(shape, dtype):
     # pylint: disable=no-member, too-many-locals
     class Dense(mnm.Model):
@@ -46,10 +45,9 @@ def test_dense(shape, dtype):
 
 @pytest.mark.parametrize("shape", [
     (1, 2, 3),
-    (1, 5, 7),
     (3, 7, 9),
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_matmul(shape, dtype, transpose_a, transpose_b):
@@ -89,11 +87,9 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
 
 @pytest.mark.parametrize("shape", [
     (1, 1, 2, 3),
-    (1, 3, 7, 9),
-    (3, 1, 2, 3),
     (5, 3, 7, 9),
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_batch_matmul(shape, dtype, transpose_a, transpose_b):

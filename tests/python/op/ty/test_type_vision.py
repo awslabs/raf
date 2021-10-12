@@ -8,11 +8,9 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 
 # pylint: disable=too-many-locals, attribute-defined-outside-init
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("inputs", [
     ((1, 2500, 6), 0, 0, 1),
-    ((1, 2500, 5), -1, -1, 0),
-    ((3, 1000, 6), 0.55, 1, 0),
     ((16, 500, 5), 0.95, -1, 0)
 ])
 def test_get_valid_counts(inputs, dtype):
@@ -46,7 +44,7 @@ def test_get_valid_counts(inputs, dtype):
 
 
 # pylint: disable=import-outside-toplevel, too-many-instance-attributes, too-many-arguments
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("return_indices", [True, False])
 def test_non_max_suppression(return_indices, dtype):
 

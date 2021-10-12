@@ -22,7 +22,7 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("shape", [
     [(10, 4), (5, 10, 1), (5, 10, 4)],
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64", "uint32", "int32", "int64",
+@pytest.mark.parametrize("dtype", ["float32", "uint32", "int32", "int64",
                                    "uint8", "int16"])
 def test_binary(op, shape, dtype):
     # pylint: disable=too-many-locals
@@ -73,7 +73,7 @@ def test_binary(op, shape, dtype):
 @pytest.mark.parametrize("shape", [
     [(10, 4), (5, 10, 1), (5, 10, 4)]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_logiacal(op, shape, dtype):
     # pylint: disable=too-many-locals
     class Binary(mnm.Model):

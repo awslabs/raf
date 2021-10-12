@@ -12,8 +12,6 @@ import tvm.topi.testing
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("inputs", [
     ((1, 2500, 6), 0, 0, 1),
-    ((1, 2500, 5), -1, -1, 0),
-    ((3, 1000, 6), 0.55, 1, 0),
     ((16, 500, 5), 0.95, -1, 0)
 ]) # pylint: disable=too-many-locals
 def test_get_valid_counts(inputs, device):

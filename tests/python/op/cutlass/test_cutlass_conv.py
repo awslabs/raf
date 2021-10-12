@@ -20,9 +20,9 @@ def verify_ir(mod):
     ((4, 256, 32, 32), (64, 256, 1, 1)),
     ((8, 3, 32, 32), (16, 3, 3, 3)),
 ])
-@pytest.mark.parametrize("stride", [1, 2, 3])
+@pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("dilation", [1])
-@pytest.mark.parametrize("padding", [0, 1, 2])
+@pytest.mark.parametrize("padding", [0, 1])
 def test_conv2d_relu(shapes, stride, dilation, padding):
     device, dtype = "cuda", "float32"
     class Conv2D(mnm.Model):

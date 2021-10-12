@@ -22,7 +22,6 @@ def one_hot(batch_size, num_classes, device="cpu", dtype="float32"):
 @pytest.mark.parametrize("shape", [
     [3],
     [1, 2],
-    [1, 2, 5],
 ])
 def test_smooth_l1_loss(device, shape):
     class TestModel(mnm.Model):
@@ -49,8 +48,8 @@ def test_smooth_l1_loss(device, shape):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("n", [3, 5, 7])
-@pytest.mark.parametrize("c", [2, 4, 6])
+@pytest.mark.parametrize("n", [3, 7])
+@pytest.mark.parametrize("c", [2, 6])
 def test_nll_loss(device, n, c):
     class TestModel(mnm.Model):
         def build(self):

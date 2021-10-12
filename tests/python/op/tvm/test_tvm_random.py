@@ -9,7 +9,7 @@ from mnm.model.trace import trace_mutate_attr
 
 
 @pytest.mark.parametrize("device", ["cpu"])
-@pytest.mark.parametrize("shape", [(4, 4), (3, 16), (100,)])
+@pytest.mark.parametrize("shape", [(4, 4), (100,)])
 def test_threefry_generate(device, shape):
     class ThreefryGenerate(mnm.Model):
         def build(self, key, shape):

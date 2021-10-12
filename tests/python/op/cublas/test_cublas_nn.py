@@ -5,9 +5,9 @@ import mnm
 from mnm.testing import check, randn_torch, run_vm_model, with_seed
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("n", [1, 2, 4])
-@pytest.mark.parametrize("m", [1, 2, 4])
-@pytest.mark.parametrize("k", [1, 2, 4])
+@pytest.mark.parametrize("n", [1, 4])
+@pytest.mark.parametrize("m", [1, 4])
+@pytest.mark.parametrize("k", [1, 4])
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
@@ -43,7 +43,7 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("dtype", ["float64", "float32", "float16"])
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("b", [2, 4])
 @pytest.mark.parametrize("n", [2, 4])
 @pytest.mark.parametrize("m", [2, 4])

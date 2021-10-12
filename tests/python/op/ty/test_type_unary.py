@@ -36,10 +36,9 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("shape", [
     (),
     (2,),
-    (1, 3),
     (3, 7, 9),
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_unary(op, shape, dtype):
     op, backward = op
 

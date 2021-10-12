@@ -61,9 +61,9 @@ def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpo
 
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("n", [1, 2, 4])
-@pytest.mark.parametrize("m", [1, 2, 4])
-@pytest.mark.parametrize("k", [1, 2, 4])
+@pytest.mark.parametrize("n", [1, 4])
+@pytest.mark.parametrize("m", [1, 4])
+@pytest.mark.parametrize("k", [1, 4])
 def test_dense(n, m, k, device):
     # pylint: disable=no-member
     class Dense(mnm.Model):
@@ -100,10 +100,6 @@ def test_dense(n, m, k, device):
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3],
-    [3, 2],
-    [3, 2, 5],
-    [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
 @pytest.mark.parametrize("axis", [0, -1])
@@ -175,8 +171,6 @@ def test_log_softmax(device, dtype, shape):
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [
     (5, 4, 6, 9),
-    (6, 5, 7, 10),
-    (12, 32, 6, 8),
     (3, 7, 9)
 ])
 @pytest.mark.parametrize("axis", [0, 1, 2, -1])
@@ -291,8 +285,6 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
 @pytest.mark.parametrize("stride_output_padding", [
     (1, 0),
     (2, 1),
-    (2, 0),
-    (3, 2)
 ])
 @pytest.mark.parametrize("dilation", [1])
 @pytest.mark.parametrize("padding", [0, 1, 2])
@@ -402,8 +394,8 @@ def test_bias_add(xshape, dtype, device):
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
-@pytest.mark.parametrize("kernel", [1, 2, 3, 4])
-@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("kernel", [1, 3])
+@pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize("ceil", [True, False])
 @pytest.mark.parametrize(
@@ -476,8 +468,8 @@ def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
-@pytest.mark.parametrize("kernel", [1, 2, 3, 4])
-@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("kernel", [1, 3])
+@pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize(
     "funcs",
@@ -552,8 +544,8 @@ def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
-@pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
-@pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+@pytest.mark.parametrize("momentum", [0.1, 0.4])
+@pytest.mark.parametrize("eps", [1e-3, 1e-6])
 def test_mnm_batch_norm_infer(shape, momentum, eps, device):
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, device=device)
@@ -580,8 +572,8 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
-@pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
-@pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+@pytest.mark.parametrize("momentum", [0.1, 0.4])
+@pytest.mark.parametrize("eps", [1e-3, 1e-6])
 @with_seed(0)
 def test_mnm_batch_norm_train(shape, momentum, eps, device):
     stats_shape = [shape[1]]
@@ -660,7 +652,7 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
 @pytest.mark.parametrize("hyperparam", [(0.6, 1.2), (-0.2, 1.2)])
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_threshold_with_grad(hyperparam, shape, dtype, device):
     class TestModel(mnm.Model):
         def build(self, threshold, value):
@@ -694,7 +686,7 @@ def test_threshold_with_grad(hyperparam, shape, dtype, device):
 #   on CUDA.
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", ["cpu"])
-@pytest.mark.parametrize("dropout", [0.4, 0.6])
+@pytest.mark.parametrize("dropout", [0.6])
 def test_mnm_dropout(dropout, device):
     def check_dropout(x, y, dx=None, dy=None):
         x, y = x.numpy(), y.numpy()

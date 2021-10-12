@@ -16,8 +16,8 @@ from tvm.relay import TensorType, FuncType
     {"batchs": 32, "layout": "NHWC", "orig_shape": (32, 32),
      "to_shape": 400, "infer_shape": (32, 400, 400, 3)},
 ])
-@pytest.mark.parametrize("in_dtype", ["float32", "float64"])
-@pytest.mark.parametrize("out_dtype", ["float32", "float64"])
+@pytest.mark.parametrize("in_dtype", ["float32"])
+@pytest.mark.parametrize("out_dtype", ["float32"])
 def test_resize2d(params, in_dtype, out_dtype):
 
     class Resize2D(mnm.Model):

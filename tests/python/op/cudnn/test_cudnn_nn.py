@@ -15,8 +15,8 @@ from mnm._core.ndarray import ndarray
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
-@pytest.mark.parametrize("stride", [1, 2, 3])
-@pytest.mark.parametrize("dilation", [1, 2, 3, 4])
+@pytest.mark.parametrize("stride", [1, 3])
+@pytest.mark.parametrize("dilation", [1, 2, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
@@ -52,10 +52,6 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
 @pytest.mark.parametrize("shape", [
     [],
     [3],
-    [3, 2],
-    [3, 2, 5],
-    [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
 @pytest.mark.parametrize(
@@ -94,10 +90,6 @@ def test_mnm_unary(shape, funcs):
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [
     [3],
-    [3, 2],
-    [3, 2, 5],
-    [3, 2, 5, 8],
-    [3, 2, 5, 8, 4],
     [3, 2, 5, 8, 4, 7],
 ])
 @pytest.mark.parametrize("axis", range(-8, 8))
@@ -138,8 +130,8 @@ def test_mnm_softmax(shape, axis, funcs):
 
 @with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("kernel", [1, 2, 3, 4])
-@pytest.mark.parametrize("stride", [1, 2, 3, 4])
+@pytest.mark.parametrize("kernel", [1, 3])
+@pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize(
     "funcs",
@@ -177,8 +169,8 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 @with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
-@pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
-@pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+@pytest.mark.parametrize("momentum", [0.1, 0.4])
+@pytest.mark.parametrize("eps", [1e-3, 1e-6])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @with_seed(0)
 def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
@@ -208,8 +200,8 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
 @with_dialect(["cudnn", "tvm"])
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
-@pytest.mark.parametrize("momentum", [0.1, 0.2, 0.3, 0.4])
-@pytest.mark.parametrize("eps", [1e-3, 1e-4, 1e-5, 1e-6])
+@pytest.mark.parametrize("momentum", [0.1, 0.4])
+@pytest.mark.parametrize("eps", [1e-3, 1e-6])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @with_seed(0)
 def test_mnm_batch_norm_train(shape, momentum, eps, dtype):

@@ -7,17 +7,19 @@
 // TODO(@zhen-jia): The code is mostly migrate from pytorch, we should consider the
 //                  copyright when opensource
 #include <stdio.h>
+#include "../../../../common/cuda_utils.h"
 #include "./kernel_util.cuh"
 namespace mnm {
 namespace op {
 namespace cuda {
 
 template void embedding_dense_backward_cuda<float, float>(const float*, float*, const int64_t*, int,
-                                                          int, int, void*);
+                                                          int, int, void*, int64_t);
 template void embedding_dense_backward_cuda<__half, __half>(const __half*, __half*, const int64_t*,
-                                                            int, int, int, void*);
+                                                            int, int, int, void*, int64_t);
 template void embedding_dense_backward_cuda<__half2, __half2>(const __half2*, __half2*,
-                                                              const int64_t*, int, int, int, void*);
+                                                              const int64_t*, int, int, int, void*,
+                                                              int64_t);
 
 __device__ __forceinline__ unsigned int WARP_BALLOT(int predicate, unsigned int mask = 0xffffffff) {
   return __ballot_sync(mask, predicate);
@@ -132,10 +134,10 @@ __global__ void embedding_backward_feature_kernel(const int64_t* indices,
 template <typename scalar_t, typename accscalar_t>
 void embedding_dense_backward_cuda(const scalar_t* grad, accscalar_t* output,
                                    const int64_t* indices, int num, int range, int stride,
-                                   void* stream) {
+                                   void* stream, int64_t element) {
   dim3 grid(CeilDiv(stride, (int64_t)WARP_SIZE));
   dim3 block(WARP_SIZE, BLOCKDIMY);
-
+  CUDA_CALL(cudaMemset(output, 0, element * sizeof(accscalar_t)));
   embedding_backward_feature_kernel<scalar_t, accscalar_t>
       <<<grid, block,
          sizeof(accscalar_t) * WARP_SIZE * BLOCKDIMY + sizeof(int) * WARP_SIZE * BLOCKDIMY,

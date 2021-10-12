@@ -11,8 +11,8 @@ from mnm.testing import get_device_list, randint, check, run_vm_model
     (np.zeros, mnm._op.sym.zeros),
     (np.ones, mnm._op.sym.ones),
 ])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32", "bool"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_init_ops(ops, shape, dtype, device):
     class InitOpModel(mnm.Model):
         def build(self, op, shape, dtype, device):
@@ -35,11 +35,11 @@ def test_init_ops(ops, shape, dtype, device):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("indices_shape", [(1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("indices_shape", [(1, ), (1, 2), (1, 2, 3, 4)])
 @pytest.mark.parametrize("on_value", [1.0, -1.0])
 @pytest.mark.parametrize("off_value", [0.0, 1.0])
 @pytest.mark.parametrize("depth", [0, 1, 3])
-@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32"])
+@pytest.mark.parametrize("dtype", ["float32", "int64", "int32"])
 def test_one_hot(indices_shape, on_value, off_value, depth, dtype, device):
     # pylint: disable=no-member, too-many-arguments, too-many-locals
     class OneHot(mnm.Model):

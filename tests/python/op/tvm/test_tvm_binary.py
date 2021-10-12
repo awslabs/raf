@@ -46,7 +46,7 @@ def verify_op(m_op, m_args, device, ref_fwd_out, m_dy=None, ref_grads=None):
     [(), (1, 2)],
     [(3, 3), (1, 1)]
 ])
-@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
 def test_binary_ops_without_grad(ops, shape, dtype, device):
     # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
     if dtype == "float16" and device == "cpu":
@@ -72,7 +72,7 @@ def test_binary_ops_without_grad(ops, shape, dtype, device):
     [(), (1, 2)],
     [(3, 3), (1, 1)]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_binary_ops_with_grad(ops, shape, dtype, device):
     t_op, m_op = ops
     m_x1, t_x1 = randn_torch(shape[0], dtype=dtype, device=device, requires_grad=True)
@@ -92,7 +92,6 @@ def test_binary_ops_with_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize("shape", [
     [(), (1, 2)],
     [(1, 2), (2, 1)],
-    [(3, 3), (1, 1)]
 ])
 @pytest.mark.parametrize("dtype", ["bool"])
 def test_binary_bool_ops(ops, shape, dtype, device):
@@ -137,7 +136,7 @@ def test_shift_ops_with_grad(ops, shape, dtype, device):
     [(), (1, 2)],
     [(3, 3), (1, 1)]
 ])
-@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
 def test_logic_ops(ops, shape, dtype, device):
     # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
     if dtype == "float16" and device == "cpu":

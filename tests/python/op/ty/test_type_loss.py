@@ -7,10 +7,10 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 
 # pylint: disable=invalid-name, attribute-defined-outside-init, too-many-locals
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [[4, 4]])
 @pytest.mark.parametrize("learning_rate", [0.01, 0.05])
-@pytest.mark.parametrize("mu", [-1.24, -0.47, 0.81])
+@pytest.mark.parametrize("mu", [-1.24, 0.81])
 def test_sgd(shape, dtype, learning_rate, mu):
 
     class Sgd(mnm.Model):
@@ -33,10 +33,9 @@ def test_sgd(shape, dtype, learning_rate, mu):
     expected_type = FuncType([x_ty, x_ty, x_ty], TupleType([x_ty, x_ty]))
     check_type(m_func, expected_type)
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [1, 1],
-    [1, 3],
     [3, 7],
 ])
 def test_nll_loss(shape, dtype):
@@ -71,7 +70,7 @@ def test_nll_loss(shape, dtype):
     check_type(m_mod['main'], desired_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3],
     [1, 3],

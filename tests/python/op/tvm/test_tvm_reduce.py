@@ -50,8 +50,8 @@ class ReduceModel(mnm.Model):
         (np.amax, mnm._op.sym.max),
         (np.amin, mnm._op.sym.min),
     ])
-@pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("axis", [0, 1])
 def test_reduce_ops(ops, shape, dtype, axis, device):
     n_op, m_op = ops
@@ -72,8 +72,8 @@ def test_reduce_ops(ops, shape, dtype, axis, device):
         (np.prod, mnm._op.sym.prod),
         (np.mean, mnm._op.sym.mean),
     ])
-@pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("axis", [1, (0, 1), None])
 @pytest.mark.parametrize("keepdims", [True, False])
 # pylint: disable=too-many-arguments
@@ -95,7 +95,7 @@ def test_reduce_keepdims_ops(ops, shape, dtype, axis, keepdims, device):
         (np.all, mnm._op.sym.all),
         (np.any, mnm._op.sym.any),
     ])
-@pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("axis", [1, (0, 1), None])
 @pytest.mark.parametrize("keepdims", [True, False])
 # pylint: disable=too-many-arguments
@@ -111,9 +111,9 @@ def test_all_any_ops(ops, shape, axis, keepdims, device):
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("axis", [1, (0, 1), 0])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 @pytest.mark.parametrize("exclude", [True, False])
 @pytest.mark.parametrize(
@@ -148,8 +148,8 @@ def test_reduce_op_with_axis_with_grad(ops, shape, dtype, axis, keepdims, exclud
 
 
 @pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("shape", [(2, 3), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize(
     "ops",
     [

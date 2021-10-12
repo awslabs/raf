@@ -13,10 +13,9 @@ from tvm.relay import TensorType, FuncType, TupleType, IncompleteType, Any
 @pytest.mark.parametrize("shape", [
     [(5, 4, 3), (1, 2)],
     [(6, 5), (2, 2)],
-    [(1, 1), (2, 2, 2)],
 ])
 @pytest.mark.parametrize("axis", [0, 1, -1])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_take(shape, axis, dtype):
     from functools import reduce
     import operator
@@ -56,9 +55,9 @@ def test_take(shape, axis, dtype):
 
 @pytest.mark.parametrize("max_length", [3, 4, 5, 6])
 @pytest.mark.parametrize("batch_size", [2, 3, 4])
-@pytest.mark.parametrize("other_feature_dims", [[1, 2], [3, 4], [5, 6]])
+@pytest.mark.parametrize("other_feature_dims", [[1, 2], [5, 6]])
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_sequence_mask(max_length, batch_size, other_feature_dims,
                        axis, dtype):
     class SequenceMask(mnm.Model):
@@ -87,9 +86,9 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     check_type(m_mod['main'], expected_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
-@pytest.mark.parametrize("axis", [0, 1, 2])
+@pytest.mark.parametrize("axis", [0, 2])
 def test_reverse(shape, axis, dtype):
 
     class Reverse(mnm.Model):
@@ -121,10 +120,9 @@ def test_reverse(shape, axis, dtype):
     check_type(m_mod['main'], expected_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("inputs", [
     {"shape": (3, 3, 3), "seq_length": [1, 2, 3]},
-    {"shape": (5, 5, 5), "seq_length": [1, 2, 3, 4, 5]},
     {"shape": (5, 5, 5), "seq_length": [2, 2, 3, 3, 4]}
 ])
 @pytest.mark.parametrize("axes", [[0, 1]])
@@ -166,10 +164,9 @@ def test_reverse_sequence(inputs, axes, dtype):
 
 @pytest.mark.parametrize("shape", [
     [[1, 4, 1], [1, 4, 1]],
-    [[1, 4, 1], [1, 2, 4, 1]],
     [[4, 1, 1], [3, 4, 2, 2]]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to(shape, dtype):
 
     class BroadcastTo(mnm.Model):
@@ -201,10 +198,9 @@ def test_broadcast_to(shape, dtype):
 
 @pytest.mark.parametrize("shape", [
     [[1, 4, 1], [1, 4, 1]],
-    [[1, 4, 1], [1, 2, 4, 1]],
     [[4, 1, 1], [3, 4, 2, 2]]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to_like(shape, dtype):
 
     class BroadcastToLike(mnm.Model):
@@ -227,15 +223,13 @@ def test_broadcast_to_like(shape, dtype):
     check_type(m_func, expected_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     (1, 4, 1),
     (3, 4, 2, 2),
-    (4, 1, 1),
-    (1, 2, 4, 1)
 ])
 @pytest.mark.parametrize("repeats", [0, 1, 2])
-@pytest.mark.parametrize("axis", [-1, 0, 1, 2])
+@pytest.mark.parametrize("axis", [-1, 0, 2])
 def test_repeat(shape, repeats, axis, dtype):
 
     class Repeat(mnm.Model):
@@ -269,12 +263,11 @@ def test_repeat(shape, repeats, axis, dtype):
     expected_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
     check_type(m_func['main'], expected_type)
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("params", [
     {"shapes": [[1, 4, 1]], "axis": 0},
     {"shapes": [[1, 4, 1], [1, 4, 1]], "axis": 0},
     {"shapes": [[2, 2, 2], [2, 2, 2], [2, 2, 2]], "axis": -1},
-    {"shapes": [[2, 1, 1], [2, 1, 1], [2, 1, 1], [2, 1, 1]], "axis": 1},
 ])
 def test_stack(params, dtype):
 
@@ -332,7 +325,7 @@ def test_stack(params, dtype):
 @pytest.mark.parametrize("shape", [[10, 20, 30], [6, 8, 10, 3]])
 @pytest.mark.parametrize("axis", [0, 1, 2])
 @pytest.mark.parametrize("indices_or_sections", [(2, 4), (1, 4), 2, (2,)])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_split(shape, axis, indices_or_sections, dtype):
 
     class Split(mnm.Model):
@@ -365,12 +358,10 @@ def test_split(shape, axis, indices_or_sections, dtype):
     [(2, 2), (1, 0)],
     [(2, 2), None],
     [(2, 2, 2), (1, 2, 0)],
-    [(2, 2, 2), (2, 1, 0)],
     [(2, 2, 2), None],
-    [(4, 4, 4, 4), (3, 2, 1, 0)],
     [(4, 4, 4, 4), (1, 2, 3, 0)]
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_transpose(shape, dtype):
 
     class Transpose(mnm.Model):
@@ -416,20 +407,14 @@ def test_transpose(shape, dtype):
 
 
 @pytest.mark.parametrize("shape", [
-    (5, 2),
     (1, 2),
-    (2, 3, 2),
     (6, 2, 5),
-    (5, 2, 2),
-    (1, 2, 3, 4),
 ])
 @pytest.mark.parametrize("axis", [
     (0, 1),
-    (0, 2),
-    (2, 1),
     (1, 3),
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_swap_axis(shape, dtype, axis):
 
     class SwapAxis(mnm.Model):
@@ -468,7 +453,7 @@ def test_swap_axis(shape, dtype, axis):
         check_type(m_func['main'], expected_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dtype_int", [
     ["int64", torch.int64], # only int64 is used since torch scatter only accrpt int64
 ])
@@ -521,9 +506,9 @@ def test_scatter(shape, axis, dtype_int, dtype):
 
 
 
-@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
-@pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
-@pytest.mark.parametrize("otype", ["float16", "float32", "float64", "int32", "int64", "bool"])
+@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (2, 0)])
+@pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
+@pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
 def test_cast(shape, itype, otype):
 
     class Cast(mnm.Model):
@@ -557,9 +542,9 @@ def test_cast(shape, itype, otype):
 
 
 
-@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
-@pytest.mark.parametrize("itype", ["float16", "float32", "float64", "int32", "int64", "bool"])
-@pytest.mark.parametrize("otype", ["float16", "float32", "float64", "int32", "int64", "bool"])
+@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (2, 0)])
+@pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
+@pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
 def test_cast_like(shape, itype, otype):
 
     class CastLike(mnm.Model):
@@ -586,9 +571,8 @@ def test_cast_like(shape, itype, otype):
     {"shapes": [[1, 4, 1]], "axis": 0},
     {"shapes": [[1, 4, 1], [2, 4, 1]], "axis": 0},
     {"shapes": [[2, 2, 2], [2, 3, 2], [2, 4, 2]], "axis": -2},
-    {"shapes": [[2, 1, 1], [2, 2, 1], [2, 3, 1], [2, 4, 1]], "axis": 1},
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_concatenate(params, dtype):
 
     class Concatenate1(mnm.Model):
@@ -653,12 +637,10 @@ def test_concatenate(params, dtype):
 
 # pylint: disable=no-self-use
 @pytest.mark.parametrize("shapes", [
-    [7, 2, 6, 3],
     [1, 5, 2],
     [6, 3],
-    [2, 3, 2, 9],
 ])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_mesh_grid(shapes, dtype):
     class MeshGrid2(mnm.Model):
         def build(self):
@@ -712,11 +694,10 @@ def test_mesh_grid(shapes, dtype):
 
 
 # pylint: disable=no-self-use
-@pytest.mark.parametrize("shape", [(1, 3), (1, 2), (4, 3, 2, 1),
-                                   (2, 4, 1, 3), (1, 2, 3), (1, 2, 3, 4)])
+@pytest.mark.parametrize("shape", [(1, 3), (2, 4, 1, 3)])
 @pytest.mark.parametrize("a_min", [0.1, 0.3, 0.4])
 @pytest.mark.parametrize("a_max", [0.6, 0.7, 0.8])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_clip(shape, a_min, a_max, dtype):
 
     class Clip(mnm.Model):
@@ -760,7 +741,7 @@ def test_clip(shape, a_min, a_max, dtype):
      "infer_shape": (2, 3, 20), "reverse_infer_shape": (3, 4, 10)},
 ])
 @pytest.mark.parametrize("reverse", [False, True])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 def test_reshape(params, reverse, dtype):
 
     class Reshape(mnm.Model):
@@ -798,10 +779,9 @@ def test_reshape(params, reverse, dtype):
 
 
 @pytest.mark.parametrize("shape", [
-    [10, 3, 2, 5],
     [1, 4, 5, 2],
     [9, 12, 18, 2, 1]])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("axis", [0, 1, 2, 3])
 @pytest.mark.parametrize("num_newaxis", [0, 1, 2, 5])
 def test_expand_dims(shape, dtype, axis, num_newaxis):
@@ -842,7 +822,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     # m_mod = InferType()(m_mod)
     # check_type(m_mod['main], expected_type)
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("i_dtype", ["int64"])
 @pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
 @pytest.mark.parametrize("ishape", [[3], [3, 2], [4, 5, 3]])
@@ -884,15 +864,11 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     check_type(m_mod['main'], desired_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("params", [
     ((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2]),
-    ((3, 4, 3), [1, 1, 0], [4, 4, 3], [2, 1, 1]),
-    ((3, 4, 3), [1, -1, 0], [4, -5, 3], [2, -1, 1]),
     ((3, 4, 3), [1, 0, 0], [2, 2, 3], [1, 1, 2]),
     ((3, 4, 3), [1, -1, 0], [2, -3, 3], [1, -1, 1]),
-    ((3, 4, 3), [1, 1, 0], [4, 4, 3], [1, 1, 1]),
-    ((3, 4, 3), [0, 2, 0], [1, 2, 3], [1, 1, 1])
 ])
 def test_strided_slice(dtype, params):
     class StridedSlice(mnm.Model):
@@ -952,8 +928,8 @@ def test_arange(data, dtype):
     assert isinstance(ret_type, IncompleteType)
 
 
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32", "bool"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_full(shape, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
     class FullModel(mnm.Model):
@@ -973,8 +949,8 @@ def test_full(shape, dtype):
     check_type(m_func, desired_type)
 
 
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32", "bool"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_full_like(shape, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
     class FullLikeModel(mnm.Model):
@@ -995,8 +971,8 @@ def test_full_like(shape, dtype):
     check_type(m_func, desired_type)
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("shape", [[2,], [4, 5], [10, 10, 10], [6, 8, 9, 10]])
+@pytest.mark.parametrize("dtype", ["float32"])
+@pytest.mark.parametrize("shape", [[2,], [4, 5], [6, 8, 9, 10]])
 def test_argwhere(shape, dtype):
     class Argwhere(mnm.Model):
         def build(self):

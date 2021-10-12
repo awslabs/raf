@@ -6,8 +6,8 @@ from tvm.relay import TensorType, FuncType
 
 
 @pytest.mark.parametrize("op", [mnm._op.sym.zeros, mnm._op.sym.ones])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32", "bool"])
+@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_init_ops(op, shape, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
     class InitOpModel(mnm.Model):
@@ -28,9 +28,9 @@ def test_init_ops(op, shape, dtype):
     check_type(m_func, desired_type)
 
 
-@pytest.mark.parametrize("indices_shape", [(1, ), (1, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("depth", [0, 1, 3])
-@pytest.mark.parametrize("dtype", ["float64", "float32", "int64", "int32"])
+@pytest.mark.parametrize("indices_shape", [(1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("depth", [0, 3])
+@pytest.mark.parametrize("dtype", ["float32", "int64", "int32"])
 def test_one_hot(indices_shape, depth, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
     class OneHotModel(mnm.Model):
