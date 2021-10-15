@@ -5,7 +5,7 @@
 # Below are the suggested configurations to CMake
 set(BUILD_SHARED_LIBS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
 set(CMAKE_C_COMPILER_LAUNCHER ccache)
 set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 set(CMAKE_CUDA_COMPILER_LAUNCHER ccache)
