@@ -24,7 +24,7 @@ class TorchTest(nn.Module):  # pylint: disable=abstract-method
                                out_channels=6,
                                kernel_size=5,
                                padding=2,
-                               bias=False)
+                               bias=True)
         self.bn1 = nn.BatchNorm2d(6)
         self.linear1 = nn.Linear((input_shape // 2) ** 2 * 6, num_classes)
 
@@ -50,7 +50,7 @@ class MNMTest(mnm.Model):
                             out_channels=6,
                             kernel_size=5,
                             padding=2,
-                            bias=False)
+                            bias=True)
         self.bn1 = BatchNorm(6)
         self.linear1 = Linear((input_shape // 2) ** 2 * 6,
                               num_classes)
@@ -83,6 +83,7 @@ def test_sgd(config):
     m_model = MNMTest(config[1], config[2])
     m_model.to(device='cuda')
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
+    m_model.conv1.b = t2m_param(t_model.conv1.bias)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
     m_model.linear1.b = t2m_param(t_model.linear1.bias)
     m_model.bn1.w = t2m_param(t_model.bn1.weight)
@@ -107,6 +108,7 @@ def test_sgd(config):
         t_loss.backward()
         check(m_loss, t_loss)
         check(m_model.conv1.w.grad, t_model.conv1.weight.grad, rtol=1e-4, atol=1e-4)
+        check(m_model.conv1.b.grad, t_model.conv1.bias.grad, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.w.grad, t_model.linear1.weight.grad, rtol=1e-4, atol=1e-4)
         check(m_model.linear1.b.grad, t_model.linear1.bias.grad, rtol=1e-4, atol=1e-4)
         check(m_model.bn1.w.grad, t_model.bn1.weight.grad, rtol=1e-4, atol=1e-4)
@@ -282,11 +284,11 @@ def test_state_partition(mock_get_context):
         # The size of sgd status should be 1/4 of the original parameter.
         assert param_name in param_map and math.ceil(param_map[param_name] / 4) == shape
 
-    # Verify IR. This model has 7 parameters and 9 gradients
+    # Verify IR. This model has 8 parameters and 10 gradients
     # (gradients for input data and ytrure are useless).
-    assert text.count("mnm.op._reduce_scatter") == 9, text
-    assert text.count("mnm.op._allgather") == 7, text
-    assert text.count("mnm.op.strided_slice") == 7, text
+    assert text.count("mnm.op._reduce_scatter") == 10, text
+    assert text.count("mnm.op._allgather") == 8, text
+    assert text.count("mnm.op.strided_slice") == 8, text
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         self.w_shape = (out_channels, in_channels // groups, *kernel_size)
-        self.b_shape = (out_channels, 1, 1) if bias else None
+        self.b_shape = (out_channels,) if bias else None
         self.b = None
         self.reset()
 
