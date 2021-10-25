@@ -24,7 +24,9 @@ void Sum(const CallValues& call) {
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
   std::vector<int64_t> keep = args->keepdims;
-
+  for (auto& x : axis) {
+    x = (x % ndim + ndim) % ndim;
+  }
   if (exclude && (keep.size() != 1)) {
     LOG(FATAL) << "invalid combination of argument in sum op";
   }

@@ -461,10 +461,9 @@ Pass FromRelay(Array<String> disabled_pass) {
         auto updated_func = PartitionPatterns(func);
 
         // Transform to ANF and convert Relay ops to Meta ops
-        auto anf_expr = tvm::relay::transform::ToANormalForm(updated_func);
-        Let let = Downcast<Let>(anf_expr);
+        auto anf_expr = Downcast<Function>(tvm::relay::transform::ToANormalForm(updated_func));
         auto mutator = from_relay::FromRelayMutator();
-        updated_func = Downcast<Function>(mutator.Mutate(let->value));
+        updated_func = Downcast<Function>(mutator.Mutate(anf_expr));
 
         // Check unsupported ops
         auto unsupported_ops_str = mutator.ListUnsupportedOps();

@@ -79,5 +79,6 @@ def from_pytorch(model, shape_dict):
         name = var.name_hint
         if name in relay_params:
             meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].numpy())
-    assert len(meta_params) == len(relay_params)
+    # relay_params may contain unused parameters, which are not present in meta_params
+    assert len(meta_params) <= len(relay_params)
     return FrameworkModel(meta_mod, meta_mod, meta_params, {})

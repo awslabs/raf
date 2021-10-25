@@ -360,23 +360,25 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("xshape", [(3, 3, 4, 4), (8, 3, 32, 32)])
-def test_bias_add(xshape, dtype, device):
+@pytest.mark.parametrize("axis", [-1, 1])
+def test_bias_add(xshape, dtype, device, axis):
     class BiasAdd(mnm.Model):
         def build(self):
             pass
 
         @mnm.model.trace
         def forward(self, x, bias):
-            return mnm.bias_add(x, bias)
+            return mnm.bias_add(x, bias, axis=axis)
 
     model = BiasAdd()
-    bshape = (xshape[1],)
+    bshape = (xshape[axis],)
+    dim = len(xshape)
     m_x, n_x = randn(xshape, dtype=dtype, device=device, requires_grad=True)
     m_bias, n_bias = randn(bshape, dtype=dtype, device=device, requires_grad=True)
     m_dy, n_dy = randn(xshape, dtype=dtype, device=device)
     # check forward
-    n_bias = np.reshape(n_bias, (n_bias.shape[0], 1, 1))
-    n_bias = n_bias.repeat(xshape[2], axis=1).repeat(xshape[3], axis=2)
+    n_axis = (axis % dim + dim) % dim
+    n_bias = np.reshape(n_bias, tuple([bshape[0]] + [1] * (dim - n_axis - 1)))
     n_y = np.add(n_x, n_bias)
     m_y = model(m_x, m_bias)
     check(m_y, n_y)
@@ -384,7 +386,7 @@ def test_bias_add(xshape, dtype, device):
     m_y.backward(m_dy)
     n_dx = np.reshape(n_dy, xshape)
     axes = list(range(len(xshape)))
-    axes.pop(1)
+    axes.pop(n_axis)
     n_db = np.sum(n_dy, axis=tuple(axes))
     check(m_x.grad, n_dx)
     check(m_bias.grad, n_db, rtol=1e-4, atol=1e-4)

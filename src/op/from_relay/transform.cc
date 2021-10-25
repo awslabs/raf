@@ -190,6 +190,17 @@ MNM_OP_FROM_RELAY("expand_dims", "mnm.op.expand_dims",
                     return mnm_args;
                   });
 
+MNM_OP_FROM_RELAY("ones", "mnm.op.ones",
+                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                    Array<Expr> mnm_args;
+                    const auto* relay_attrs = attrs.as<InitOpAttrs>();
+                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
+                    mnm_args.push_back(MakeConstant(
+                        StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
+                    mnm_args.push_back(MakeConstant(StringValue::make("cpu")));
+                    return mnm_args;
+                  });
+
 MNM_OP_FROM_RELAY("full", "mnm.op.full",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> mnm_args;

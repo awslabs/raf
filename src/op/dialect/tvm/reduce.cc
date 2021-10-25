@@ -147,8 +147,10 @@ std::vector<std::string> SumSchemaArgNames(const op::CallValues& call) {
 
 Attrs SumSchema2Attrs(const SumArgs* args) {
   auto attrs = make_object<SumAttrs>();
+  DLTensor* x = args->x;
+  CHECK(x);
   for (int i = 0, n = args->axis.size(); i < n; ++i) {
-    attrs->axis.push_back(args->axis[i]);
+    attrs->axis.push_back((args->axis[i] % x->ndim + x->ndim) % x->ndim);
   }
   for (int i = 0, n = args->keepdims.size(); i < n; ++i) {
     attrs->keepdims.push_back(args->keepdims[i]);

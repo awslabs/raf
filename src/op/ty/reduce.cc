@@ -32,7 +32,9 @@ Type SumInfer(const CallValues& value) {
   // Sort the axis
   std::vector<int64_t> axis = args->axis;
   std::vector<int64_t> keep = args->keepdims;
-
+  for (auto& x : axis) {
+    x = x < 0 ? x + (int64_t)ndim : x;
+  }
   if (exclude) {
     std::vector<int64_t> axis_exclude;
     for (int i = 0; i < ndim; i++) {

@@ -130,10 +130,11 @@ class TypeInferencer : public ExprMutator {
     Expr op = VisitExpr(call->op);
     Call ret = Call(op, args, call->attrs, call->type_args);
     if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {
-      ret->checked_type_ = InferClosure(ret, fn);
+      ret->checked_type_ = InferClosure(ret);
     } else if (const GlobalVarNode* gvn = ret->op.as<GlobalVarNode>()) {
-      ret->checked_type_ =
-          InferClosure(ret, Downcast<Function>(mod_->Lookup(GetRef<GlobalVar>(gvn))).get());
+      ret->op->checked_type_ =
+          Unify(gvn->checked_type(), mod_->Lookup(GetRef<GlobalVar>(gvn))->checked_type());
+      ret->checked_type_ = InferClosure(ret);
     } else if (const OpNode* opn = ret->op.as<OpNode>()) {
       ret->checked_type_ = InferPrimitive(ret, opn);
     } else if (const VarNode* var_node = ret->op.as<VarNode>()) {
@@ -181,9 +182,9 @@ class TypeInferencer : public ExprMutator {
     }
   }
 
-  Type InferClosure(const Call& call, const FunctionNode* fn) {
+  Type InferClosure(const Call& call) {
     // TODO(@hzfan): perform template param deduction to eliminate type_params
-    FuncType fty = Downcast<FuncType>(fn->checked_type());
+    FuncType fty = Downcast<FuncType>(call->op->checked_type());
     CHECK_EQ(call->args.size(), fty->arg_types.size());
     for (size_t i = 0; i < call->args.size(); ++i) {
       Unify(call->args[i]->checked_type(), fty->arg_types[i]);

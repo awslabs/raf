@@ -61,6 +61,7 @@ def find_lib_path(name=None, search_path=None):
     lib_path : list(string)
         List of all found path to the libraries
     """
+    package_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
     ffi_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
     source_dir = os.path.join(ffi_dir, "..", "..")
     install_lib_dir = os.path.join(ffi_dir, "..", "..", "..")
@@ -79,6 +80,8 @@ def find_lib_path(name=None, search_path=None):
         dll_path.extend(
             [p.strip() for p in os.environ['DYLD_LIBRARY_PATH'].split(":")])
 
+    # Package data directory when pip installed
+    dll_path.append(package_dir)
     # Pip lib directory
     dll_path.append(os.path.join(ffi_dir, ".."))
     # Default cmake build directory
