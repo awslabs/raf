@@ -985,19 +985,24 @@ def test_cumsum(device, shape, axis, dtype, exclusive):
 
     m_model = CumsumModel()
 
-    m_x, t_x = randn_torch(shape, device=device, dtype=dtype)
+    m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
     m_res = m_model(m_x)
     v_res = run_vm_model(m_model, device, [m_x])
     check(v_res, m_res)
 
     t_res = torch.cumsum(t_x, axis, dtype=getattr(torch, dtype))
-    if exclusive: # PyTorch does not support exclusive.
-        t_res -= t_x
+
+    m_dy, t_dy = randn_torch(m_res.shape, dtype=dtype, device=device)
+    m_res.backward(m_dy)
+    t_res.backward(t_dy)
 
     tol = 1e-5 if dtype == "float32" else 1e-2
-    check(m_res, t_res, rtol=tol, atol=tol)
-
-    # TODO: Test backward when available.
+    if exclusive: # PyTorch does not support exclusive.
+        check(m_res, t_res-t_x, rtol=tol, atol=tol)
+        check(m_x.grad, t_x.grad-t_dy, rtol=tol, atol=tol)
+    else:
+        check(m_res, t_res, rtol=tol, atol=tol)
+        check(m_x.grad, t_x.grad, rtol=tol, atol=tol)
 
 
 if __name__ == "__main__":

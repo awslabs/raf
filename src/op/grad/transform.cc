@@ -416,8 +416,19 @@ MNM_OP_GRAD("mnm.op.ones", NoGrads<0>);
 
 Array<Expr> CumsumGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                        const Expr& dy) {
-  // TODO: TBA
-  return {};
+  static auto op_cumsum = Op::Get("mnm.op.cumsum");
+  static auto op_flip = Op::Get("mnm.op.reverse");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& axis = call->args[1];
+  const Expr& dtype = call->args[2];
+  const Expr& exclusive = call->args[3];
+
+  Expr reverse = Call(op_flip, {dy, axis});
+  Expr cumsum_reverse = Call(op_cumsum, {reverse, axis, dtype, exclusive});
+  Expr result = Call(op_flip, {cumsum_reverse, axis});
+
+  return {result};
 }
 
 MNM_OP_GRAD("mnm.op.cumsum", CumsumGrad);
