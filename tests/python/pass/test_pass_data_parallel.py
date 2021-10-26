@@ -4,9 +4,11 @@ import numpy as np
 
 import mnm
 from mnm import distributed as dist
-
+from mnm.testing import randn, run_infer_type
+from mnm._ffi.pass_ import InferType, AutoDiff, AutoDataParallel
+from mnm.ir import MNMSequential
 import tvm
-
+from tvm import relay
 
 def one_hot(batch_size, num_classes, device="cuda"):
     targets = np.random.randint(0, num_classes, size=batch_size)
@@ -15,32 +17,17 @@ def one_hot(batch_size, num_classes, device="cuda"):
     return m_x
 
 
-def randn(shape, *, device="cuda", dtype="float32", std=1.0, mean=0.0,
-          requires_grad=False, positive=False):
-    if positive:
-        x = np.abs(np.random.randn(*shape)) * std + mean
-    else:
-        x = np.random.randn(*shape) * std + mean
-    if not isinstance(x, np.ndarray):
-        x = np.array(x)
-    assert list(x.shape) == list(shape)
-    x = x.astype(dtype)
-    m_x = mnm.array(x, device=device)
-    if requires_grad:
-        m_x.requires_grad = True
-    return m_x
-
-
 # pylint: disable=unused-variable
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("config", [
-    (2, 2, 4),
+    (2, 2, 2),
 ])
 def test_dp(config):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
     device = f"cuda({dctx.local_rank})"
-    const = randn([1, 3, config[1], config[1]], device=device)
+    const, _ = randn([config[0], config[1]], device=device)
+    nccl_version = mnm.build.with_nccl()
 
     class TestModel(mnm.Model):
         # pylint: disable=attribute-defined-outside-init
@@ -60,108 +47,142 @@ def test_dp(config):
             return out
 
     def expected():
-        shape = [1, 3, config[1], config[1]]
+        shape = [config[0], config[1]]
 
         # Params
-        x = tvm.relay.var('x', tvm.relay.TensorType(shape))
-        c = tvm.relay.var('c', tvm.relay.TensorType(shape))
-        y_true = tvm.relay.var('y_true', tvm.relay.TensorType([1, ], dtype='int64'))
+        x = relay.var('x', relay.TensorType(shape))
+        c = relay.var('c', relay.TensorType(shape))
+        y_true = relay.var('y_true', relay.TensorType([2, ], dtype='int64'))
 
         # Forward IR components
         expr_a1 = mnm.ir.op.matmul(x, c)
-        var_a1 = tvm.relay.var('a1')
+        var_a1 = relay.var('a1')
+
 
         expr_a2 = mnm.ir.op.nll_loss(y_true, var_a1)
-        var_a2 = tvm.relay.var('a2')
+        var_a2 = relay.var('a2')
 
         # Backward IR components
-        dy = tvm.relay.var('dy')
-        var_closure = tvm.relay.var('closure')
+        dy = relay.var('dy', relay.TensorType([1, ], dtype='float32'))
+        var_closure = relay.var('closure')
 
         expr_x1 = mnm.ir.op.nll_loss_dpred(dy, y_true, var_a1)
-        var_x0 = tvm.relay.var('x0')
+        var_x0 = relay.var('x0')
 
         expr_x2 = mnm.ir.op.matmul_nt(var_x0, c)
-        var_x1 = tvm.relay.var('x1')
+        var_x1 = relay.var('x1')
 
-        allreduce_in = tvm.relay.var("allreduce_in")
-        expr_t = tvm.relay.Tuple([var_x1])
-
-        expr_g = mnm.ir.op._allreduce(allreduce_in)
-        var_g = tvm.relay.var('g')
+        allreduce_in = relay.var("allreduce_in")
+        expr_t = relay.Tuple([var_x1])
 
         expr_x3 = mnm.ir.op.matmul_tn(x, var_x0)
-        var_x2 = tvm.relay.var('x2')
+        var_x2 = relay.var('x2')
 
-        allreduce_in1 = tvm.relay.var("allreduce_in1")
-        expr_t1 = tvm.relay.Tuple([var_x2])
-
-        expr_g1 = mnm.ir.op._allreduce(allreduce_in1)
-        var_g1 = tvm.relay.var('g1')
+        allreduce_in1 = relay.var("allreduce_in1")
+        expr_t1 = relay.Tuple([var_x2])
 
         expr_x4 = mnm.ir.op.zeros_like(y_true)
-        var_x3 = tvm.relay.var('x3')
-        var_x4 = tvm.relay.var('x4')
+        var_x3 = relay.var('x3')
 
-        allreduce_in2 = tvm.relay.var("allreduce_in2")
-        expr_t2 = tvm.relay.Tuple([var_x4])
+        allreduce_in2 = relay.var("allreduce_in2")
+        expr_t2 = relay.Tuple([var_x3])
 
-        expr_g2 = mnm.ir.op._allreduce(allreduce_in2)
-        var_g2 = tvm.relay.var('g2')
 
-        expr_null = mnm.ir.op.stream_sync(var_g2, 5)
-        var_null = tvm.relay.var('null')
+        if nccl_version > 21000:
+            expr_g = mnm.ir.op._allreduce(allreduce_in, "avg")
+            var_g = relay.var('g')
 
-        expr_x5 = tvm.relay.Tuple([var_g, var_g2, var_g1])
-        var_x5 = tvm.relay.var('x5')
+            expr_g1 = mnm.ir.op._allreduce(allreduce_in1, "avg")
+            var_g1 = relay.var('g1')
+
+            expr_g2 = mnm.ir.op._allreduce(allreduce_in2, "avg")
+            var_g2 = relay.var('g2')
+        else:
+            fdeno = mnm.ir.const(float(dctx.size), dtype="float32")
+            ideno = mnm.ir.const(dctx.size, dtype="int64")
+
+            expr_g = mnm.ir.op._allreduce(allreduce_in)
+            var_g_sum = relay.var('g_sum')
+            expr_avg = mnm.ir.op.divide(var_g_sum, fdeno)
+            var_g = relay.var('g')
+
+            expr_g1 = mnm.ir.op._allreduce(allreduce_in1)
+            var_g1_sum = relay.var('g_sum1')
+            expr_avg1 = mnm.ir.op.divide(var_g1_sum, fdeno)
+            var_g1 = relay.var('g1')
+
+            expr_g2 = mnm.ir.op._allreduce(allreduce_in2)
+            var_g2_sum = relay.var('g_sum2')
+            expr_avg2 = mnm.ir.op.divide(var_g2_sum, ideno)
+            var_g2 = relay.var('g2')
+
+        expr_x5 = relay.Tuple([var_g, var_g2, var_g1])
+        var_x5 = relay.var('x5')
 
         # Forward IR components
-        expr_ret = tvm.relay.Tuple([var_a2, var_closure])
-        var_ret = tvm.relay.var('ret')
-
-        # Construct Backward IR as a closure
-        let9 = tvm.relay.Let(var_x5, expr_x5, var_x5)
-        let8 = tvm.relay.Let(var_null, expr_null, let9)
-        let7 = tvm.relay.Let(var_g2, expr_g2, let8)
-        let_ad2 = tvm.relay.Let(allreduce_in2, expr_t2, let7)
-        let_t = tvm.relay.Let(var_x4, var_x3, let_ad2)
-        let6 = tvm.relay.Let(var_x3, expr_x4, let_t)
-        let5 = tvm.relay.Let(var_g1, expr_g1, let6)
-        let_ad1 = tvm.relay.Let(allreduce_in1, expr_t1, let5)
-        let4 = tvm.relay.Let(var_x2, expr_x3, let_ad1)
-        let3 = tvm.relay.Let(var_g, expr_g, let4)
-        let_ad = tvm.relay.Let(allreduce_in, expr_t, let3)
-        let2 = tvm.relay.Let(var_x1, expr_x2, let_ad)
-        let1 = tvm.relay.Let(var_x0, expr_x1, let2)
-        closure_func = tvm.relay.Function([dy], let1)
+        expr_ret = relay.Tuple([var_a2, var_closure])
+        var_ret = relay.var('ret')
+        if nccl_version >= 21000:
+            # Construct Backward IR as a closure
+            let8 = relay.Let(var_x5, expr_x5, var_x5)
+            let7 = relay.Let(var_g2, expr_g2, let8)
+            let_ad2 = relay.Let(allreduce_in2, expr_t2, let7)
+            let6 = relay.Let(var_x3, expr_x4, let_ad2)
+            let5 = relay.Let(var_g1, expr_g1, let6)
+            let_ad1 = relay.Let(allreduce_in1, expr_t1, let5)
+            let4 = relay.Let(var_x2, expr_x3, let_ad1)
+            let3 = relay.Let(var_g, expr_g, let4)
+            let_ad = relay.Let(allreduce_in, expr_t, let3)
+            let2 = relay.Let(var_x1, expr_x2, let_ad)
+            let1 = relay.Let(var_x0, expr_x1, let2)
+            closure_func = relay.Function([dy], let1)
+        else:
+            # Construct Backward IR as a closure
+            let8 = relay.Let(var_x5, expr_x5, var_x5)
+            let_div2 = relay.Let(var_g2, expr_avg2, let8)
+            let7 = relay.Let(var_g2_sum, expr_g2, let_div2)
+            let_ad2 = relay.Let(allreduce_in2, expr_t2, let7)
+            let6 = relay.Let(var_x3, expr_x4, let_ad2)
+            let_div1 = relay.Let(var_g1, expr_avg1, let6)
+            let5 = relay.Let(var_g1_sum, expr_g1, let_div1)
+            let_ad1 = relay.Let(allreduce_in1, expr_t1, let5)
+            let4 = relay.Let(var_x2, expr_x3, let_ad1)
+            let_div = relay.Let(var_g, expr_avg, let4)
+            let3 = relay.Let(var_g_sum, expr_g, let_div)
+            let_ad = relay.Let(allreduce_in, expr_t, let3)
+            let2 = relay.Let(var_x1, expr_x2, let_ad)
+            let1 = relay.Let(var_x0, expr_x1, let2)
+            closure_func = relay.Function([dy], let1)
 
         # Construct Forward IR
-        let10 = tvm.relay.Let(var_ret, expr_ret, var_ret)
-        let0 = tvm.relay.Let(var_closure, closure_func, let10)
+        let10 = relay.Let(var_ret, expr_ret, var_ret)
+        let0 = relay.Let(var_closure, closure_func, let10)
 
-        let_1 = tvm.relay.Let(var_a2, expr_a2, let0)
-        let_2 = tvm.relay.Let(var_a1, expr_a1, let_1)
+        let_1 = relay.Let(var_a2, expr_a2, let0)
+        let_2 = relay.Let(var_a1, expr_a1, let_1)
 
-        return tvm.relay.Function([x, y_true, c], let_2)
+        return relay.Function([x, y_true, c], let_2)
 
     m_model = TestModel()
     m_model.to(device=device)
     m_model.train_mode()
 
-    m_x = randn([1, 3, config[1], config[1]], device=device, requires_grad=True)
-    m_y = one_hot(batch_size=1, num_classes=config[2], device=device)
+    m_x, _ = randn([config[0], config[1]], device=device, requires_grad=True)
+    m_y = one_hot(batch_size=2, num_classes=config[2], device=device)
     m_x.requires_grad = True
     m_y.requires_grad = True
 
     record = m_model._internal(m_x, m_y)
     mod_before = record.mod
-    mod_before = mnm._ffi.pass_.AutoDiff(record.requires_grads)(mod_before)
-    mod_before = mnm._ffi.pass_.AutoDataParallel()(mod_before)
-    func_after = mod_before['main']
+    passes = [InferType(), AutoDiff(record.requires_grads), InferType(),
+              AutoDataParallel(), InferType()]
+    seq = MNMSequential(passes)
+    mod = seq(mod_before)
+    func_after = mod['main']
     func_expected = expected()
+    func_expected = run_infer_type(func_expected)
     text = func_after.astext()
     assert "mnm.op._allreduce" in text
-    assert "mnm.op.stream_sync" in text
     assert tvm.ir.structural_equal(func_after, func_expected)
     dctx.enable_data_parallel = False
 

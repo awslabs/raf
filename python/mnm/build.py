@@ -6,7 +6,7 @@ def git_version():
     return build_info.git_version()
 
 def with_cuda():
-    """Whether build with CUDA. if true, return the CUDNN version, or None otherwise."""
+    """Whether build with CUDA. if true, return the CUDA version, or None otherwise."""
     if build_info.use_cuda():
         return build_info.cuda_version()
     return None
@@ -26,8 +26,10 @@ def with_mpi():
     return build_info.use_mpi() != "OFF"
 
 def with_nccl():
-    """Whether NCCL build is turned on."""
-    return build_info.use_nccl() != "OFF"
+    """Whether build with NCCL, if true, return NCCL version, or None otherwise."""
+    if build_info.use_nccl():
+        return build_info.nccl_version()
+    return None
 
 def with_distributed():
     """Whether Distributed training is enabled."""
@@ -66,5 +68,5 @@ def build_with(backend): # pylint: disable=too-many-return-statements
     if backend == "cutlass":
         return with_cutlass()
     if backend == "nccl":
-        return with_nccl()
+        return with_nccl() is not None
     return False

@@ -98,9 +98,10 @@ def _reduce(x, root, computation="sum"):
     return imp_utils.ret(ffi._reduce(x, root, computation))
 
 @set_module("mnm")
-def _reduce_scatter(x):
+def _reduce_scatter(x, computation="sum"):
     x = imp_utils.to_tensor_tuple(x)
-    return imp_utils.ret(ffi._reduce_scatter(x))
+    computation = imp_utils.to_string(computation)
+    return imp_utils.ret(ffi._reduce_scatter(x, computation))
 
 @set_module("mnm")
 def _send(x, peer, token=None):

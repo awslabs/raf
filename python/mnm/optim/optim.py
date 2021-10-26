@@ -67,7 +67,7 @@ def with_autodiff(model):
             passes = [InferType(), AutoDiff(record.requires_grads)]
             if dist.get_context().enable_data_parallel:
                 # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward.
-                passes.append(AutoDataParallel())
+                passes += [AutoDataParallel()]
             passes += [InferType(), FoldConstant(), DeadCodeElimination(), InlineBackward()]
             seq = MNMSequential(passes)
             mod = seq(mod)

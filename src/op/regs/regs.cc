@@ -843,8 +843,9 @@ Attrs Reduce(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs ReduceScatter(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::ReduceScatterArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::ReduceScatterArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
+  MNM_POD(1, ffi2schema::String, computation);
   return Attrs(attrs);
 }
 
@@ -1371,9 +1372,10 @@ MNM_REGISTER_GLOBAL("mnm.op.imp._reduce").set_body([](TVMArgs args, TVMRetValue*
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._reduce_scatter").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(_reduce_scatter, 1, ffi2schema::ReduceScatter,
+  MNM_PRELUDE(_reduce_scatter, 2, ffi2schema::ReduceScatter,
               schema::ReduceScatterArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->computation));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3798,8 +3800,9 @@ Array<Expr> Reduce(const TVMArgs& values) {
 }
 
 Array<Expr> ReduceScatter(const TVMArgs& values) {
-  MNM_PRELUDE(1);
+  MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
+  MNM_ARG(1, ffi2expr::String, computation);
   MNM_RET();
 }
 
@@ -4233,7 +4236,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout_dx")
 MNM_REGISTER_GLOBAL("mnm.op.sym._recv").set_body(MNM_SYMBOLIC_API(_recv, 4, Recv));
 MNM_REGISTER_GLOBAL("mnm.op.sym._reduce").set_body(MNM_SYMBOLIC_API(_reduce, 3, CommReduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym._reduce_scatter")
-    .set_body(MNM_SYMBOLIC_API(_reduce_scatter, 1, ReduceScatter));
+    .set_body(MNM_SYMBOLIC_API(_reduce_scatter, 2, ReduceScatter));
 MNM_REGISTER_GLOBAL("mnm.op.sym._send").set_body(MNM_SYMBOLIC_API(_send, 3, Send));
 MNM_REGISTER_GLOBAL("mnm.op.sym.abs").set_body(MNM_SYMBOLIC_API(abs, 1, Unary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.adaptive_avg_pool2d")
@@ -5166,8 +5169,9 @@ Attrs Reduce(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs ReduceScatter(const Array<Value>& values) {
-  MNM_PRELUDE(1, 1, schema::ReduceScatterArgs);
+  MNM_PRELUDE(1, 2, schema::ReduceScatterArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
+  MNM_OPTIONAL(1, value2schema::String, computation);
   return Attrs(attrs);
 }
 
@@ -6779,6 +6783,9 @@ template <const char* op_name>
 int ReduceScatter(const std::string& field) {
   if (field == "x") {
     return 0;
+  }
+  if (field == "computation") {
+    return 1;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

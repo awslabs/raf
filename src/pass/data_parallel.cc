@@ -13,6 +13,10 @@
 #include "mnm/stream_pool.h"
 #include "./common.h"
 
+#ifdef MNM_USE_NCCL
+#include "../op/dialect/nccl/communication_utils.h"
+#endif
+
 namespace mnm {
 namespace pass {
 namespace data_parallel {
@@ -233,11 +237,23 @@ struct DataParallel {
     // The map from original local gradient to aggregated global gradient.
     std::map<mnm::ir::Expr, mnm::ir::Var> var_var_map;
     // Enlarge the size of bp_ell to fit the allreduce ops.
-    bp_ell->vars.resize(bp_n + 2 * gradset.size());
-    bp_ell->exprs.resize(bp_n + 2 * gradset.size());
     // p1 tracks the processing var/expr (from end to begin)
     // p2 tracks the next vacant position to paste the processing var/expr or allreduce op.
-    int p1 = bp_n - 1, p2 = bp_n - 1 + 2 * gradset.size();
+    int p1 = bp_n - 1;
+    // If NCCL version is 2.10+, then average allreduce is going to be inserted
+    // otherwise, a sum allreduce is used and then a divied op is followed
+    // So for NCCL version less than 2.10, the let list size is one more item(i.e. divide op)
+    // for each gradient
+
+#if defined MNM_USE_NCCL && NCCL_VERSION_CODE >= 21000
+    bp_ell->vars.resize(bp_n + 2 * gradset.size());
+    bp_ell->exprs.resize(bp_n + 2 * gradset.size());
+    int p2 = bp_n - 1 + 2 * gradset.size();
+#else
+    bp_ell->vars.resize(bp_n + 3 * gradset.size());
+    bp_ell->exprs.resize(bp_n + 3 * gradset.size());
+    int p2 = bp_n - 1 + 3 * gradset.size();
+#endif
 
     bp_ell->vars[p2] = bp_ell->vars[p1];
     bp_ell->exprs[p2] = bp_ell->exprs[p1];
@@ -250,14 +266,37 @@ struct DataParallel {
         // we should add a allreduce op after it.
         static Op op_allreduce = Op::Get("mnm.op._allreduce");
         auto input_var = mnm::ir::MakeVar("allreduce_in", {});
+
+#if defined MNM_USE_NCCL && NCCL_VERSION_CODE >= 21000
         bp_ell->vars[p2 - 1] = input_var;
         bp_ell->exprs[p2 - 1] = Tuple({bp_ell->vars[i]});
         // Here we name the var as 'g'(global gradient), to help us identify it easier.
         bp_ell->vars[p2] = mnm::ir::MakeVar("g", {});
         bp_ell->exprs[p2] =
-            Call(op_allreduce, {bp_ell->vars[p2 - 1], MakeConstant(StringValue::make("sum"))});
+            Call(op_allreduce, {bp_ell->vars[p2 - 1], MakeConstant(StringValue::make("avg"))});
         var_var_map.insert({bp_ell->vars[i], bp_ell->vars[p2]});
         p2 -= 2;
+#else
+        static Op op_div = Op::Get("mnm.op.divide");
+        bp_ell->vars[p2 - 2] = input_var;
+        bp_ell->exprs[p2 - 2] = Tuple({bp_ell->vars[i]});
+        bp_ell->vars[p2 - 1] = mnm::ir::MakeVar("g_sum", {});
+        bp_ell->exprs[p2 - 1] =
+            Call(op_allreduce, {bp_ell->vars[p2 - 2], MakeConstant(StringValue::make("sum"))});
+        bp_ell->vars[p2] = mnm::ir::MakeVar("g", {});
+        auto tt = bp_ell->vars[i]->checked_type().as<TensorTypeNode>();
+        if (tt->dtype.code() == kDLFloat) {
+          bp_ell->exprs[p2] = Call(
+              op_div, {bp_ell->vars[p2 - 1], MakeConstant(ScalarValue::make(float(dctx->size)))});
+        } else if (tt->dtype.code() == kDLInt) {
+          bp_ell->exprs[p2] = Call(
+              op_div, {bp_ell->vars[p2 - 1], MakeConstant(ScalarValue::make(int64_t(dctx->size)))});
+        } else {
+          LOG(FATAL) << "Do not support type other than KDLFloat  and KDLInt. \n";
+        }
+        var_var_map.insert({bp_ell->vars[i], bp_ell->vars[p2]});
+        p2 -= 3;
+#endif
       }
       bp_ell->vars[p2] = bp_ell->vars[i];
       bp_ell->exprs[p2] = bp_ell->exprs[i];
@@ -280,12 +319,6 @@ struct DataParallel {
     } else {
       LOG(FATAL) << "Return of backward IR must be Var or tuple of Vars in Data Parallel Pass.";
     }
-
-    static Op op_sync = Op::Get("mnm.op.stream_sync");
-    auto args_x = bp_ell->vars[bp_ell->vars.size() - 2];
-    auto args_stream = MakeConstant(value::ScalarValue::make(StreamTagEnum::CudaCommunicate()));
-    bp_ell->vars.insert(--bp_ell->vars.end(), mnm::ir::MakeVar("null", {}));
-    bp_ell->exprs.insert(--bp_ell->exprs.end(), Call(op_sync, {args_x, args_stream}));
 
     dctx->iteration++;
 
@@ -319,7 +352,7 @@ Pass AutoDataParallel() {
                                                                              PassContext pc) {
     return data_parallel::DataParallel(f.operator->()).Run();
   };
-  return CreateMNMFunctionPass(pass_func, 0, "AutoDataParallel", {});
+  return CreateMNMFunctionPass(pass_func, 0, "AutoDataParallel", {"InferType"});
 }
 
 MNM_REGISTER_GLOBAL("mnm.pass_.AutoDataParallel").set_body_typed(AutoDataParallel);

@@ -15,3 +15,6 @@ mpirun -np 2 python3 tests/python/distributed/test_collective_communication.py
 
 # distributed type function test
 mpirun -np 2 python3 tests/python/op/ty/test_type_comm.py
+
+# test Zero with NCCL enabled
+python3 tests/python/pass/test_pass_partition_gradient.py

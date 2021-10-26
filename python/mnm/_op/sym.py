@@ -90,9 +90,10 @@ def _reduce(x, root, computation="sum"):
     computation = sym_utils.to_string(computation)
     return Symbol.from_expr(ffi._reduce(x, root, computation))
 
-def _reduce_scatter(x):
+def _reduce_scatter(x, computation="sum"):
     x = sym_utils.to_tensor_tuple(x)
-    return Symbol.from_expr(ffi._reduce_scatter(x))
+    computation = sym_utils.to_string(computation)
+    return Symbol.from_expr(ffi._reduce_scatter(x, computation))
 
 def _send(x, peer, token=None):
     x = sym_utils.to_tensor(x)

@@ -48,6 +48,12 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       compute = ncclMin;
     } else if (args->computation.compare("max") == 0) {
       compute = ncclMax;
+    } else if (args->computation.compare("avg") == 0) {
+#if NCCL_VERSION_CODE >= 21000
+      compute = ncclAvg;
+#else
+      LOG(FATAL) << "AllReduce with avg is not supported in NCCL < 2.10";
+#endif
     } else {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
@@ -181,6 +187,7 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   void* in_buffer;
   size_t size_in_bytes;
   size_t size;
+  ncclRedOp_t compute;
 
   explicit NCCLReduceScatter(const CallValues& cv) {
     auto op = ir::Op::Get("mnm.op._reduce_scatter");
@@ -188,6 +195,25 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
+    auto args = cv->args.as<mnm::op::schema::ReduceScatterArgs>();
+    if (args->computation.compare("sum") == 0) {
+      compute = ncclSum;
+    } else if (args->computation.compare("prod") == 0) {
+      compute = ncclProd;
+    } else if (args->computation.compare("min") == 0) {
+      compute = ncclMin;
+    } else if (args->computation.compare("max") == 0) {
+      compute = ncclMax;
+    } else if (args->computation.compare("avg") == 0) {
+#if NCCL_VERSION_CODE >= 21000
+      compute = ncclAvg;
+#else
+      LOG(FATAL) << "ReduceScatter with avg is not supported in NCCL < 2.10";
+#endif
+    } else {
+      LOG(FATAL) << "Invalid computation " << args->computation;
+    }
+
     const DLTensor* out = cv->out;
     size_in_bytes = BytesCompactTensor(*out);
     size = size_in_bytes / (out->dtype.bits / 8);
@@ -221,7 +247,7 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
                       (cudaStream_t)stream);
       dtype = x->dtype;
     }
-    NCCL_CALL(ncclReduceScatter(in_buffer, out->data, size, dtype, ncclSum, (ncclComm_t)nccl_comm,
+    NCCL_CALL(ncclReduceScatter(in_buffer, out->data, size, dtype, compute, (ncclComm_t)nccl_comm,
                                 (cudaStream_t)stream));
   }
 
@@ -439,6 +465,12 @@ class NCCLReduce : public mnm::op::OpEnv {
       compute = ncclMin;
     } else if (args->computation.compare("max") == 0) {
       compute = ncclMax;
+    } else if (args->computation.compare("avg") == 0) {
+#if NCCL_VERSION_CODE >= 21000
+      compute = ncclAvg;
+#else
+      LOG(FATAL) << "Reduce with avg is not supported in NCCL < 2.10";
+#endif
     } else {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }

@@ -21,6 +21,7 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
     text = mnm.ir.AsText(mod)
     assert text.count("mnm.op.pad") == n_pad
     assert text.count("mnm.op.split") == n_grad
+    nccl_version = mnm.build.with_nccl()
 
     if opt_level == 1:
         # Gradients will be sliced as follows in ZeRO-1. Assuming rank_size=4 and rank=3:
@@ -34,11 +35,21 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
         assert text.count("mnm.op._reduce_scatter") == n_grad, text
 
         # Gradients will be sliced as follows in ZeRO-2:
+        # # if NCCL version is >= 2.10
         # let %x_1 = mnm.op.split(%a0, 4);
-        # let %x_2 = mnm.op._recuce_scatter(%x_1);
+        # let %x_2 = mnm.op._recuce_scatter(%x_1, avg);
         # ...
         # let %a10 = (..., %x_2, ...);
-        slice_grad_regex = fr"let %x_(\d+) = mnm.op._reduce_scatter.+"
+        # # else NCCL version is < 2.10
+        # let %x_1 = mnm.op.split(%a0, 4);
+        # let %x_2 = mnm.op._recuce_scatter(%x_1, sum);
+        # let %x_3 = mnm.op.divide(%x_2, ...)
+        # ...
+        # let %a10 = (..., %x_3, ...);
+        if nccl_version >= 21000:
+            slice_grad_regex = fr"let %x_(\d+) = mnm.op._reduce_scatter.+"
+        else:
+            slice_grad_regex = fr"let %x_(\d+) = mnm.op.divide.+"
     else:
         assert False, "Unsupported opt_level %d" % opt_level
 
@@ -101,6 +112,8 @@ def test_basic(mock_get_context, opt_level, batch):
             self.size = 4
             self.rank = 3
     mock_get_context.return_value = MockContext()
+    if opt_level == 2 and mnm.build.with_nccl() is None:
+        pytest.skip("NCCL is not supported")
 
     model = Model()
     ad_model = with_autodiff(model)

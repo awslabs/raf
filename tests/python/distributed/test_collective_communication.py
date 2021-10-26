@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals
+# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals, too-many-branches
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
@@ -14,6 +14,7 @@ from mnm import distributed as dist
 from mnm._core.ndarray import Symbol
 from mnm.testing import check, get_dist_info, skip_dist_test, run_vm_model
 
+dctx = dist.get_context()
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 
 def run_model(model, args, device, check_result=True):
@@ -36,7 +37,7 @@ def run_model(model, args, device, check_result=True):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_allreduce_with_tensor(dtype, computation):
     print("Testing allreduce with a single tensor as input.")
 
@@ -48,6 +49,8 @@ def test_allreduce_with_tensor(dtype, computation):
         def forward(self, x):
             x = mnm.allreduce(x, computation=computation)
             return x
+    if computation == "avg" and mnm.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
@@ -72,8 +75,11 @@ def test_allreduce_with_tensor(dtype, computation):
             target_y = ones * min(1, total_rank)
         elif computation == "max":
             target_y = ones * max(1, total_rank)
+        elif computation == "avg":
+            target_y = ones * sum(range(1, total_rank + 1))
+            target_y = target_y / total_rank
         else:
-            print("Invalid computation")
+            assert False, "Invalid computation"
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
@@ -94,6 +100,9 @@ def test_allreduce_with_tensor_list(computation):
             a = x[0]
             b = x[1]
             return mnm.concatenate((a, b))
+
+    if computation == "avg" and mnm.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
@@ -125,8 +134,12 @@ def test_allreduce_with_tensor_list(computation):
             target_y = np.concatenate([ones, ones * -total_rank])
         elif computation == "max":
             target_y = np.concatenate([ones * total_rank, ones * -1])
+        elif computation == "avg":
+            target_y = np.concatenate([ones * sum(range(1, total_rank + 1)),
+                                       ones * -sum(range(1, total_rank + 1))])
+            target_y = target_y / total_rank
         else:
-            print("Invalid computation")
+            assert False, "Invalid computation"
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
@@ -199,7 +212,8 @@ def test_allgather_with_tensor_list(axis):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
-def test_reduce_scatter():
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
+def test_reduce_scatter(computation):
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -207,8 +221,11 @@ def test_reduce_scatter():
         @mnm.model.trace
         def forward(self, x, y):
             z = Symbol.make_tuple([x, y])
-            out = mnm.reduce_scatter(z)
+            out = mnm.reduce_scatter(z, computation=computation)
             return out
+
+    if computation == "avg" and mnm.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
@@ -220,10 +237,32 @@ def test_reduce_scatter():
     model.to(device=device)
     m_out = run_model(model, [m_x, m_y], device)
     if rank == 0:
-        n_out = n_ones * sum(range(1, total_rank + 1))
+        if computation == "sum":
+            n_out = n_ones * sum(range(1, total_rank + 1))
+        elif computation == "prod":
+            n_out = n_ones * np.prod(range(1, total_rank + 1))
+        elif computation == "min":
+            n_out = n_ones * min(1, total_rank)
+        elif computation == "max":
+            n_out = n_ones * max(1, total_rank)
+        elif computation == "avg":
+            n_out = n_ones * sum(range(1, total_rank + 1))
+            n_out = n_out / total_rank
+        else:
+            assert False, "Invalid computation"
         check(m_out, n_out)
     elif rank == 1:
-        n_out = -n_ones * sum(range(1, total_rank + 1))
+        if computation == "sum":
+            n_out = -n_ones * sum(range(1, total_rank + 1))
+        elif computation == "prod":
+            n_out = -n_ones * np.prod(range(1, total_rank + 1))
+        elif computation == "min":
+            n_out = -n_ones * max(1, total_rank)
+        elif computation == "max":
+            n_out = -n_ones * min(1, total_rank)
+        elif computation == "avg":
+            n_out = -n_ones * sum(range(1, total_rank + 1))
+            n_out = n_out / total_rank
         check(m_out, n_out)
 
 
@@ -272,7 +311,7 @@ def test_send_recv():
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
-@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce(computation):
     print("Testing reduce")
 
@@ -285,6 +324,8 @@ def test_reduce(computation):
             x = mnm.reduce(x, 0, computation=computation)
             return x
 
+    if computation == "avg" and mnm.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
@@ -308,15 +349,18 @@ def test_reduce(computation):
             target_y = ones
         elif computation == "max":
             target_y = ones * total_rank
+        elif computation == "avg":
+            target_y = ones * sum(range(1, total_rank + 1))
+            target_y = target_y / total_rank
         else:
-            print("Invalid computation")
+            assert False, "Invalid computation"
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
-@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce_list(computation):
     print("Testing reduce with list of tensor")
 
@@ -331,6 +375,8 @@ def test_reduce_list(computation):
             b = x[1]
             return mnm.concatenate((a, b))
 
+    if computation == "avg" and mnm.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
@@ -360,8 +406,12 @@ def test_reduce_list(computation):
             target_y = np.concatenate([ones, ones * -total_rank])
         elif computation == "max":
             target_y = np.concatenate([ones * total_rank, ones * -1])
+        elif computation == "avg":
+            target_y = np.concatenate([ones * sum(range(1, total_rank + 1)),
+                                       ones * -sum(range(1, total_rank + 1))])
+            target_y = target_y / total_rank
         else:
-            print("Invalid computation")
+            assert False, "Invalid computation"
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)

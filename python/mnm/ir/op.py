@@ -96,10 +96,11 @@ def _reduce(x, root, computation="sum", attrs=None):
     computation = op_utils.to_string(computation)
     return relay.Call(op, [x, root, computation], attrs)
 
-def _reduce_scatter(x, attrs=None):
+def _reduce_scatter(x, computation="sum", attrs=None):
     op = GetOp("mnm.op._reduce_scatter")
     x = op_utils.to_tensor_tuple(x)
-    return relay.Call(op, [x], attrs)
+    computation = op_utils.to_string(computation)
+    return relay.Call(op, [x, computation], attrs)
 
 def _send(x, peer, token=None, attrs=None):
     op = GetOp("mnm.op._send")

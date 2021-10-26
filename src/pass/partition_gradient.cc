@@ -105,7 +105,6 @@ class GradientPartitioner : public ExprMutator {
       body = node->body;
       node = body.as<LetNode>();
     } while (node);
-
     auto ret = scopes_.back()->Get(this->Mutate(body));
     scopes_.pop_back();
     return ret;
@@ -134,13 +133,36 @@ class GradientPartitioner : public ExprMutator {
     return false;
   }
 
-  /*! \brief Return the first argument of the given call expr. */
-  inline Expr GetFirstArg(const Expr& expr) {
+  /*! \brief Detect allreduce expr or allreduce followed by divide due to use NCCL version<2.10.
+   *  return allreduce expr and divied expr if the pattern match otherwise NullValue*/
+  inline std::tuple<Expr, Expr> GetAllReduceExpr(const Expr& expr) {
+    Expr allreduce_expr = Expr();
+    Expr divide_expr = Expr();
+
+    if (expr->IsInstance<CallNode>()) {
+      static const Op& divide_op = Op::Get("mnm.op.divide");
+      auto call_node = expr.as<CallNode>();
+      auto node = call_node->op.as<OpNode>();
+      if (IsAllReduceCall(expr)) {
+        allreduce_expr = expr;
+      } else if (node && GetRef<Op>(node) == divide_op) {
+        Var allreduce_var = Downcast<Var>(call_node->args[0]);
+        if (var_to_expr_.count(allreduce_var) && IsAllReduceCall(var_to_expr_[allreduce_var])) {
+          allreduce_expr = var_to_expr_[allreduce_var];
+          divide_expr = expr;
+        }
+      }
+    }
+    return std::make_tuple(allreduce_expr, divide_expr);
+  }
+
+  /*! \brief Return the n'th argument of the given call expr. */
+  inline Expr GetNArg(const Expr& expr, int n) {
     CHECK(expr->IsInstance<CallNode>());
     auto call = Downcast<Call>(expr);
-    CHECK_GE(call->args.size(), 1U)
-        << "Expected at least one argument, but got " << mnm::ir::AsText(expr);
-    return call->args[0];
+    CHECK_GE(call->args.size(), n)
+        << "Expected at least " << n << " argument, but got " << mnm::ir::AsText(expr);
+    return call->args[n];
   }
 
   /*! \brief Since we always partition the first dimension of gradient tensors, we have to
@@ -187,25 +209,32 @@ class GradientPartitioner : public ExprMutator {
    * TODO(comaniac): Add %rank to the function argument if rank_ is unknown.
    *
    * The desired IR for ZeRO-2 is:
+   * // if NCCL version is >= 2.10
    * let %1 = op(%0);       // A backward op to generate gradient
    * let %2 = pad(%1, ...); // %1 is the complete local gradient
    * let %3 = split(%2, ...);
-   * let %4 = reduce_scatter(%3, ...);
+   * let %4 = reduce_scatter(%3, avg);
+   * // else NCCL version is < 2.10
+   * let %1 = op(%0);       // A backward op to generate gradient
+   * let %2 = pad(%1, ...); // %1 is the complete local gradient
+   * let %3 = split(%2, ...);
+   * let %4 = reduce_scatter(%3, sum);
+   * let %5 = divide(%4, ...)
    */
   Var SliceGrad(LetList* scope, const Var& var, const Expr& value, int opt_level) {
     static const Op& split_op = Op::Get("mnm.op.split");
     static const Op& reduce_scatter_op = Op::Get("mnm.op._reduce_scatter");
-
-    if (opt_level_ > 1 && !IsAllReduceCall(value)) {
+    Expr allreduce_expr, divide_expr;
+    std::tie(allreduce_expr, divide_expr) = GetAllReduceExpr(value);
+    if (opt_level_ > 1 && !allreduce_expr.defined()) {
       // If this is not an AllReduce, then the gradient was generated locally and
       // no need to apply ZeRO-2.
       opt_level = 1;
     }
-
     auto grad_var = var;
     if (opt_level > 1) {
       // ZeRO-2: Replace the AllReduce with ReduceScatter.
-      auto first_arg = Downcast<Var>(GetFirstArg(value));
+      auto first_arg = Downcast<Var>(GetNArg(allreduce_expr, 0));
       // The 1st arg of allreduce is a tuple of tensors.
       auto arg_tuple = Downcast<Tuple>(var_to_expr_[first_arg]);
       CHECK_EQ(arg_tuple->fields.size(), 1U) << "Not supported yet";
@@ -228,7 +257,14 @@ class GradientPartitioner : public ExprMutator {
                                            MakeConstant(ScalarValue::make(0))}));
 
     if (opt_level > 1) {
-      return scope->Push(Call(reduce_scatter_op, {grad_var}));
+      auto compute = Downcast<Constant>(GetNArg(allreduce_expr, 1));
+      auto reduce_scatter_var = scope->Push(Call(reduce_scatter_op, {grad_var, compute}));
+      if (divide_expr.defined()) {
+        // update the divide op args
+        auto divide_call = divide_expr.as<CallNode>();
+        return scope->Push(Call(divide_call->op, {reduce_scatter_var, divide_call->args[1]}));
+      }
+      return reduce_scatter_var;
     }
     return scope->Push(TupleGetItem(grad_var, rank_));
   }

@@ -11,6 +11,8 @@ cudnn_version = _APIS.get("mnm.build_info.cudnn_version", None)
 # Defined in ./src/impl/build_info.cc
 git_version = _APIS.get("mnm.build_info.git_version", None)
 # Defined in ./src/impl/build_info.cc
+nccl_version = _APIS.get("mnm.build_info.nccl_version", None)
+# Defined in ./src/impl/build_info.cc
 use_cublas = _APIS.get("mnm.build_info.use_cublas", None)
 # Defined in ./src/impl/build_info.cc
 use_cuda = _APIS.get("mnm.build_info.use_cuda", None)

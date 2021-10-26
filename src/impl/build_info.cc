@@ -4,6 +4,9 @@
  * \brief Reflect build-time information and expose to the frontend
  */
 #include "mnm/registry.h"
+#ifdef MNM_USE_NCCL
+#include <nccl.h>
+#endif
 
 namespace mnm {
 namespace build_info {
@@ -36,10 +39,21 @@ std::string UseMPI() {
   return MNM_USE_MPI;
 }
 
-std::string UseNCCL() {
-  return MNM_USE_NCCL;
+bool UseNCCL() {
+#ifdef MNM_USE_NCCL
+  return true;
+#else
+  return false;
+#endif
 }
 
+int NCCLVersion() {
+#ifdef MNM_USE_NCCL
+  return NCCL_VERSION_CODE;
+#else
+  return 0;
+#endif
+}
 std::string UseCUTLASS() {
   return MNM_USE_CUTLASS;
 }
@@ -67,5 +81,6 @@ MNM_REGISTER_GLOBAL("mnm.build_info.use_llvm").set_body_typed(UseLLVM);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_mpi").set_body_typed(UseMPI);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_nccl").set_body_typed(UseNCCL);
 MNM_REGISTER_GLOBAL("mnm.build_info.use_cutlass").set_body_typed(UseCUTLASS);
+MNM_REGISTER_GLOBAL("mnm.build_info.nccl_version").set_body_typed(NCCLVersion);
 }  // namespace build_info
 }  // namespace mnm

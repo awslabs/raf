@@ -83,7 +83,7 @@ def reduce(x, root, computation="sum"):
     return sym._reduce(x, root, computation)
 
 
-def reduce_scatter(x):
+def reduce_scatter(x, computation="sum"):
     """Performs reduction then scatter
 
     Parameters
@@ -91,6 +91,8 @@ def reduce_scatter(x):
     x : List[Tensor]
         A list of tensors of equal shape
         replica i receives reduction of x[i] over all replicas
+    computation: string
+        The reduction operation, default is sum
 
     Returns
     -------
@@ -98,7 +100,7 @@ def reduce_scatter(x):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
-    return sym._reduce_scatter(x)
+    return sym._reduce_scatter(x, computation)
 
 
 def broadcast(x, root):

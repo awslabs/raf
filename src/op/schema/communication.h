@@ -53,6 +53,7 @@ class RecvArgs : public ir::AttrsNode<RecvArgs> {
 class ReduceScatterArgs : public ir::AttrsNode<ReduceScatterArgs> {
  public:
   std::vector<value::BaseTensorValue> x;
+  std::string computation{"sum"};
   MNM_OP_SCHEMA(ReduceScatterArgs, "mnm.args.reduce_scatter");
 };
 
