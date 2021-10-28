@@ -8,52 +8,55 @@
 #include <vector>
 #include <tvm/ir/type_functor.h>
 #include "mnm/ir.h"
+#include "mnm/value.h"
 
-using namespace mnm::value;
 using tvm::kType;
 using tvm::TypeFunctor;
 
 namespace mnm {
 namespace pass {
 
+using namespace ir;
+using namespace value;
+
 struct ExplicitLetList {
  public:
-  std::vector<ir::Var> vars;
-  std::vector<ir::Expr> exprs;
-  ir::Var ret;
+  std::vector<Var> vars;
+  std::vector<Expr> exprs;
+  Var ret;
 
-  ir::Expr AsExpr() {
+  Expr AsExpr() {
     CHECK_EQ(vars.size(), exprs.size());
-    ir::Expr body = ret;
+    Expr body = ret;
     int n = exprs.size();
     for (int i = n - 1; i >= 0; --i) {
-      body = ir::Let(vars[i], exprs[i], body);
+      body = Let(vars[i], exprs[i], body);
     }
     return body;
   }
 
-  static std::unique_ptr<ExplicitLetList> make(const ir::Expr& node) {
+  static std::unique_ptr<ExplicitLetList> make(const Expr& node) {
     std::unique_ptr<ExplicitLetList> ell = std::make_unique<ExplicitLetList>();
     Maker(ell.get()).VisitExpr(node);
     return ell;
   }
 
-  struct Maker : public ir::ExprVisitor {
+  struct Maker : public ExprVisitor {
     explicit Maker(ExplicitLetList* ell) : ell(ell) {
     }
 
-    void VisitExpr_(const ir::LetNode* node) final {
+    void VisitExpr_(const LetNode* node) final {
       auto pre_visit = [this](const LetNode* op) {
         ell->vars.push_back(op->var);
         ell->exprs.push_back(op->value);
-        const ir::Expr& expr = op->body;
-        CHECK(expr->IsInstance<ir::LetNode>() || expr->IsInstance<ir::VarNode>())
+        const Expr& expr = op->body;
+        CHECK(expr->IsInstance<LetNode>() || expr->IsInstance<VarNode>())
             << "ValueError: assumes ANF";
-        if (expr->IsInstance<ir::VarNode>()) {
-          ell->ret = ir::Downcast<ir::Var>(expr);
+        if (expr->IsInstance<VarNode>()) {
+          ell->ret = Downcast<Var>(expr);
         }
       };
-      auto post_visit = [this](const LetNode* op) {};
+      auto post_visit = [](const LetNode* op) {};
       ExpandANormalForm(node, pre_visit, post_visit);
     }
     ExplicitLetList* ell;
@@ -189,6 +192,7 @@ class VarSubstitutor : public MixedModeMutator {
 
  private:
   tvm::Map<Var, Var> mapping_;
+  using MixedModeMutator::VisitExpr_;
 };
 
 static inline Function CreateGlobalFunc(const Array<Var>& free_vars, const Expr& body,
@@ -200,7 +204,7 @@ static inline Function CreateGlobalFunc(const Array<Var>& free_vars, const Expr&
   for (auto old_free_var : free_vars) {
     Type type_annotation = old_free_var->checked_type_.defined() ? old_free_var->checked_type()
                                                                  : old_free_var->type_annotation;
-    Var new_free_var = mnm::ir::MakeVar(old_free_var->name_hint(), type_annotation, {});
+    Var new_free_var = MakeVar(old_free_var->name_hint(), type_annotation, {});
     new_free_vars.push_back(new_free_var);
     mapping.Set(old_free_var, new_free_var);
   }
