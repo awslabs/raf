@@ -92,12 +92,14 @@ class ClosureInliner : public MixedModeMutator {
   Expr Rewrite_(const CallNode* pre, const Expr& post) override {
     auto call = Downcast<Call>(post);
     Array<Expr> updated_args = Downcast<Call>(post)->args;
+
     if (pre->checked_type().as<FuncTypeNode>()) {
       // Partial function application
       Function func = Downcast<Function>(func_map_.at(call->op));
       Map<Var, Expr> args_map;
       CHECK_EQ(pre->args.size(), func->params.size());
       for (size_t i = 0; i < pre->args.size(); ++i) {
+        updated_args[i]->checked_type_ = func->params[i]->checked_type();
         args_map.Set(func->params[i], updated_args[i]);
       }
       func_map_[let_var_] = Downcast<Function>(InferType(Substitute(func->body, args_map)));
@@ -116,25 +118,34 @@ class ClosureInliner : public MixedModeMutator {
     const std::vector<Expr>& exprs = ell->exprs;
     size_t n = vars.size();
     Var tmp = let_var_;
+
     CHECK_EQ(vars.size(), exprs.size());
     CHECK_EQ(func->params.size(), args.size());
     for (size_t i = 0; i < func->params.size(); ++i) {
       memo_[func->params[i]] = args[i];
     }
+
     for (size_t i = 0; i < n; ++i) {
       let_var_ = vars[i];
       Expr expr = VisitExpr(exprs[i]);
-      if (expr.as<ExtendedVarNode>()) {
-        memo_[let_var_] = Downcast<Var>(expr);
+
+      if (auto var_node = expr.as<ExtendedVarNode>()) {
+        // Direct assignment (e.g., let %a = %b;)
+        memo_[let_var_] = GetRef<Var>(var_node);
       } else if (expr.defined()) {
-        Var v = ll_->Push(expr);
-        if (expr.as<TupleNode>()) {
-          tuple_map_[v] = Downcast<Tuple>(expr);
-        } else if (expr.as<GlobalVarNode>()) {
-          func_map_[v] = func_map_[expr];
+        Var var = ll_->Push(expr);
+        if (auto tuple_node = expr.as<TupleNode>()) {
+          tuple_map_[var] = GetRef<Tuple>(tuple_node);
+        } else if (auto global_var_node = expr.as<GlobalVarNode>()) {
+          CHECK_EQ(func_map_.count(expr), 1U)
+              << "Internal error: GlobalVar " << global_var_node->name_hint
+              << " is not in the func_map_";
+          func_map_[var] = func_map_[expr];
         }
-        memo_[let_var_] = v;
+        memo_[let_var_] = var;
       }
+
+      // Update the function map to directly map to the closure.
       if (memo_.find(let_var_) != memo_.end() && func_map_.find(let_var_) != func_map_.end()) {
         func_map_[memo_[let_var_]] = func_map_[let_var_];
       }
