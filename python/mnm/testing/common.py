@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name,protected-access
+#pylint: disable=invalid-name,protected-access, import-outside-toplevel
 """Common utilities for testing"""
 import logging
 import functools
@@ -6,8 +6,6 @@ import random
 import sys
 import re
 import numpy as np
-import mxnet as mx
-import torch
 import mnm
 from mnm import distributed as dist
 from .._op.dialect import DialectPreference
@@ -38,6 +36,9 @@ def get_arr_addr(arr):
 
 def numpy(x):
     """Helper function to convert x to numpy"""
+    import torch
+    import mxnet as mx
+
     if isinstance(x, (mnm.ndarray, mnm._core.value.TensorValue)):
         return x.numpy()
     if isinstance(x, torch.Tensor):
@@ -93,6 +94,8 @@ def randint(shape, *, low=0, high=None, device="cpu", dtype="int64"):
 def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
                 positive=False):
     """Helper function to generate a pair of mnm and torch arrays"""
+    import torch
+
     x = np.random.randn(*shape) * std + mean
     if positive:
         x = np.abs(x) + 1e-5
@@ -109,6 +112,8 @@ def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, me
 def randn_mxnet(shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
                 positive=False):
     """Helper function to generate a pair of mnm and mxnet arrays"""
+    import mxnet as mx
+
     x = np.random.randn(*shape) * std + mean
     if positive:
         x = np.abs(x) + 1e-5
@@ -126,6 +131,8 @@ def randn_mxnet(shape, *, device="cpu", dtype="float32", requires_grad=False, me
 
 def one_hot_torch(batch_size, num_classes, device="cpu"):
     """Helper function to generate one hot tensors in mnm and torch"""
+    import torch
+
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = mnm.array(targets, device=device)
     t_x = torch.tensor(targets, requires_grad=False, device=to_torch_dev(device))  # pylint: disable=not-callable
@@ -136,6 +143,8 @@ def one_hot_torch(batch_size, num_classes, device="cpu"):
 
 def one_hot_mxnet(batch_size, num_classes, device="cpu"):
     """Helper function to generate one hot tensors in mnm and mxnet"""
+    import mxnet as mx
+
     targets = np.random.randint(0, num_classes, size=batch_size)
     mnm_x = mnm.array(targets, device=device)
     mx_x = mx.nd.array(targets, ctx=mx.cpu())  # pylint: disable=not-callable
