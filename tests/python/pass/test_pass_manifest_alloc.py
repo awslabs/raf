@@ -82,12 +82,12 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_8 = (%x1,);
   let %x_9 = mnm.op.upper_bound.argwhere;
   let %x_10 = mnm.op.vm.infer_type(%x_9, %x_8);
-  let %x_11 = %x_10.0;
+  let %x_11 = %x_10.1;
   let %x_12 = %x_11.0;
   let %x_13 = %x_11.1;
   let %x_14 = mnm.op.vm.alloc_storage(%x_13, int64(64), int32(1), int32(0), str"int32");
   let %x_15 = mnm.op.vm.alloc_tensor(%x_14, %x_12, str"int32", %x_12);
-  let %x_16 = %x_10.1;
+  let %x_16 = %x_10.2;
   let %x_17 = %x_16.0;
   let %x_18 = %x_16.1;
   let %x_19 = mnm.op.vm.alloc_storage(%x_18, int64(64), int32(1), int32(0), str"int64");
@@ -106,13 +106,14 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
     mnm.op.tvm.abs(%3) /* ty=Tensor[(meta[tir.Div][0], 2), int32] */
   };
   let %x_27 = mnm.op.vm.infer_type(%x_26, %x_25);
-  let %x_28 = %x_27.0;
+  let %x_28 = %x_27.1;
   let %x_29 = %x_28.0;
   let %x_30 = %x_28.1;
   let %x_31 = mnm.op.vm.alloc_storage(%x_30, int64(64), int32(1), int32(0), str"int32");
   let %x_32 = mnm.op.vm.alloc_tensor(%x_31, %x_29, str"int32", %x_29);
-  let %x_33 = (%x_32,);
-  let %x_34 = mnm.op.vm.invoke_op(%x_26, %x_25, %x_33);
+  let %x_33 = %x_27.0;
+  let %x_34 = (%x_32,);
+  let %x_35 = mnm.op.vm.invoke_op(%x_33, %x_25, %x_34);
   let %x4 = %x_32;
   %x4
 }"""

@@ -878,12 +878,14 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
   // infer type
   const Value& callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
   Type ret_type;
+  Array<Value> ret_tup;
   if (const auto* opv = callee.as<OpValueObj>()) {
     auto fschema = GetOpAttr<FMNMSchema>(opv->op, "FMNMSchema");
     auto call_values = CallValues::make(callee, fschema(args));
     auto fty = Downcast<FuncType>(opv->op->checked_type());
     TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
     ret_type = ti->func(call_values);
+    ret_tup.push_back(NullValue<Value>());
   } else {
     auto func = callee.as<ClosureValueObj>()->func;
     CHECK_EQ(func->params.size(), args.size());
@@ -893,14 +895,11 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
       new_func->params[i]->checked_type_ = GetType(args[i]);
     }
     new_func = Downcast<Function>(pass::InferType(new_func));
-    // TODO(@hgt312): Do NOT modify the register that is supposed to be an input to the instruction.
-    //   Please fix this by changing the type-inferred closure into an output.
-    ctx.WriteRegister(instr.invoke_jit.op_reg, ClosureValue::make({}, new_func));
+    ret_tup.push_back(ClosureValue::make({}, new_func));
     FuncType fty = Downcast<FuncType>(new_func->checked_type());
     ret_type = fty->ret_type;
   }
   // get result
-  Array<Value> ret_tup;
   auto push_ret_tuple = [&ret_tup](const TensorTypeNode* ty) {
     auto shape = ArrayToIntTuple(ty->shape);
     // compute storage size

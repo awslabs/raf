@@ -162,7 +162,7 @@ class ManifestAllocMutator : public ExprMutator {
           auto op_var = scope->Push(call->op);
           auto infer_type = Call(Op::Get("mnm.op.vm.infer_type"), Array<Expr>{op_var, ins});
           auto out_type_exprs = scope->Push(infer_type);
-          auto out_type_expr = scope->Push(TupleGetItem(out_type_exprs, 0));
+          auto out_type_expr = scope->Push(TupleGetItem(out_type_exprs, 1));
           auto shape = scope->Push(TupleGetItem(out_type_expr, 0));
           return Call(vm_set_shape_op, {new_args[0], shape});
         }
@@ -282,20 +282,28 @@ class ManifestAllocMutator : public ExprMutator {
         if (share[i].defined()) {
           outs.push_back(share[i]);
         } else {
-          Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i));
+          Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i + 1));
           outs.push_back(
               MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr));
         }
       }
     } else {
       for (size_t i = 0; i < out_types.size(); i++) {
-        Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i));
+        Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i + 1));
         outs.push_back(
             MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr));
       }
     }
-    auto invoke_op = Call(Op::Get("mnm.op.vm.invoke_op"),
-                          Array<Expr>{op_var, ins, scope->Push(Tuple(Array<Expr>(outs)))});
+    Call invoke_op;
+    if (op->IsInstance<OpNode>()) {
+      invoke_op = Call(Op::Get("mnm.op.vm.invoke_op"),
+                       Array<Expr>{op_var, ins, scope->Push(Tuple(Array<Expr>(outs)))});
+    } else {
+      ICHECK(op->IsInstance<FunctionNode>());
+      invoke_op = Call(Op::Get("mnm.op.vm.invoke_op"),
+                       Array<Expr>{scope->Push(TupleGetItem(out_type_exprs, 0)), ins,
+                                   scope->Push(Tuple(Array<Expr>(outs)))});
+    }
     scope->Push(invoke_op);
     return outs;
   }
