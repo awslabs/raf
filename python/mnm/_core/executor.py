@@ -43,13 +43,15 @@ class MetaFallbackContext(ApplyHistoryBest):
     def __init__(self, verbose=2):
         # Load the builtin schedules
         fallback_sch_log = ""
-        if "MNM_HOME" in os.environ:
-            fallback_sch_log = os.path.join(os.environ["MNM_HOME"], "sch/latest.json")
-        elif verbose > 0:
-            print('Cannot find Meta builtin schedules because "MNM_HOME" is not set')
+        if "MNM_SCH_FILE" in os.environ and os.path.exists(os.environ["MNM_SCH_FILE"]):
+            fallback_sch_log = os.environ["MNM_SCH_FILE"]
 
-        if verbose > 0 and not os.path.exists(fallback_sch_log):
-            print("Cannot find Meta builtin schedules in %s" % fallback_sch_log)
+        if verbose > 0:
+            if fallback_sch_log:
+                print(f"MNM schedule file is pointed to {fallback_sch_log}")
+            else:
+                print('No pretuned schedules because "MNM_SCH_FILE" is not set or does not exist')
+
         super(MetaFallbackContext, self).__init__(fallback_sch_log, include_compatible=True)
 
         self.verbose = verbose
