@@ -1,9 +1,13 @@
 # pylint: disable=protected-access, no-self-use
 import pytest
 import mnm
-from mnm._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm
+from mnm._core.ir_ext import extended_var
+from mnm._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm, InferType
 from mnm.ir import MNMSequential
 from mnm.testing import randn
+
+import tvm
+from tvm import relay
 
 def simplify(mod):
     seq = MNMSequential([ToGraphNormalForm(), ToBasicBlockNormalForm(), SimplifyExpr()])
@@ -102,6 +106,54 @@ def test_reshape():
     mod = simplify(mod)
     text = mnm.ir.AsText(mod["main"])
     assert "mnm.op.reshape" not in text, text
+
+
+@pytest.mark.parametrize("ndim", [2, 3])
+@pytest.mark.parametrize("act", [False, True])
+def test_matmul_reshape_bias(ndim, act):
+    device = "cpu"
+    xshape = (10, 10) if ndim == 2 else (1, 10, 10)
+    bshape = (10,)
+    matmul_op = getattr(mnm._op.sym, "matmul" if ndim == 2 else "batch_matmul")
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w, b):
+            y = matmul_op(x, w)
+            y = mnm.reshape(y, (2, 5, 10))
+            y = mnm.add(y, b)
+            y = mnm.gelu(y) if act else y
+            return y
+
+    model = Model()
+    m_x, _ = randn(xshape, device=device, dtype="float32")
+    m_w, _ = randn(xshape, device=device, dtype="float32")
+    m_b, _ = randn(bshape, device=device, dtype="float32")
+    mod = model._internal(m_x, m_w, m_b).mod
+    mod = simplify(mod)
+
+    def expected():
+        matmul_op = mnm._ffi.op.GetOp("mnm.op.%s" % ("matmul" if ndim == 2 else "batch_matmul"))
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        gelu_op = mnm._ffi.op.GetOp("mnm.op.gelu")
+        reshape_op = mnm._ffi.op.GetOp("mnm.op.reshape")
+        null = mnm.ir.const(None)
+
+        x = extended_var("x", shape=xshape, dtype="float32")
+        w = extended_var("w", shape=xshape, dtype="float32")
+        b = extended_var("b", shape=bshape, dtype="float32")
+        y = relay.Call(matmul_op, [x, w])
+        y = relay.Call(add_op, [y, b, null, null])
+        if act:
+            y = relay.Call(gelu_op, [y])
+        y = relay.Call(reshape_op, [y, mnm.ir.const((2, 5, 10)), mnm.ir.const(False)])
+        mod = tvm.IRModule.from_expr(relay.Function([x, w, b], y))
+        return InferType()(mod)["main"]
+
+    assert tvm.ir.structural_equal(mod['main'], expected()), mnm.ir.AsText(mod['main'])
 
 
 if __name__ == "__main__":

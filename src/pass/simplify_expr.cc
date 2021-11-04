@@ -249,6 +249,96 @@ class SimplifyCast : public DFPatternRewrite {
   DFPattern data_pat_;
 };
 
+class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
+ public:
+  SimplifyMatmulReshapeBiasAct() {
+    data_pat_ = IsWildcard();
+    weight_pat_ = IsWildcard();
+    bias_pat_ = IsWildcard();
+    matmul_op_ = IsOp("mnm.op.dense") || IsOp("mnm.op.matmul") || IsOp("mnm.op.matmul_nt") ||
+                 IsOp("mnm.op.matmul_tn") || IsOp("mnm.op.matmul_tt") ||
+                 IsOp("mnm.op.batch_matmul") || IsOp("mnm.op.batch_matmul_nt") ||
+                 IsOp("mnm.op.batch_matmul_tn") || IsOp("mnm.op.batch_matmul_tt");
+    pattern_ = matmul_op_({data_pat_, weight_pat_});
+    pattern_ = IsOp("mnm.op.reshape")({pattern_, IsWildcard(), IsWildcard()});
+    pattern_ = IsOp("mnm.op.add")({pattern_, bias_pat_, IsWildcard(), IsWildcard()});
+    act_op_ = IsOp("mnm.op.relu") || IsOp("mnm.op.gelu");
+    pattern_ = pattern_ || act_op_({pattern_});
+  }
+
+  /*! \brief Traverse back to find the bias add call. */
+  inline Call FindBiasAddCall(const Expr& pre) const {
+    auto call_node = pre.as<CallNode>();
+    ICHECK(call_node);
+
+    if (call_node->args.size() < 2) {
+      call_node = call_node->args[0].as<CallNode>();
+    }
+    static const Op& add_op = Op::Get("mnm.op.add");
+    CHECK_EQ(call_node->op, add_op)
+        << "Expected an add call, but got " << mnm::ir::AsText(GetRef<Call>(call_node));
+    return GetRef<Call>(call_node);
+  }
+
+  /*! \brief Check whether moving reshape after bias_add is legal. */
+  inline bool Check(const Expr& pre, const Expr& post,
+                    const Map<DFPattern, Array<Expr>>& node_map) const {
+    auto call = FindBiasAddCall(pre);
+
+    auto ttype1 = call->args[0]->checked_type().as<TensorTypeNode>();
+    auto ttype2 = call->args[1]->checked_type().as<TensorTypeNode>();
+    if (ttype1 == nullptr || ttype2 == nullptr) {
+      return false;
+    }
+
+    auto shape1 = ttype1->shape.back().as<ir::IntImmNode>();
+    auto shape2 = ttype2->shape.back().as<ir::IntImmNode>();
+    if (shape1 != nullptr && shape2 != nullptr) {
+      return shape1->value == shape2->value;
+    }
+    return false;
+  }
+
+  Expr Callback(const Expr& pre, const Expr& post,
+                const Map<DFPattern, Array<Expr>>& node_map) const override {
+    static auto reshape_op = Op::Get("mnm.op.reshape");
+    static auto add_op = Op::Get("mnm.op.add");
+
+    if (!Check(pre, post, node_map)) {
+      return post;
+    }
+
+    // Final output type.
+    const TensorTypeNode* out_ty = pre->checked_type().as<TensorTypeNode>();
+    Array<Integer> ret_shape;
+    for (auto dim : out_ty->shape) {
+      ICHECK(dim.as<IntImmNode>() != nullptr);
+      ret_shape.push_back(Downcast<Integer>(dim));
+    }
+
+    // Create a new subgraph: matmul -> add -> (act) -> reshape.
+    auto bias_call = FindBiasAddCall(pre);
+    auto data = node_map[data_pat_][0];
+    auto weight = node_map[weight_pat_][0];
+    auto bias = node_map[bias_pat_][0];
+
+    Op matmul_op = Downcast<Op>(node_map[matmul_op_][0]);
+    auto ret = Call(matmul_op, {data, weight});
+    ret = Call(add_op, {ret, bias, bias_call->args[2], bias_call->args[3]});
+    if (node_map.count(act_op_) > 0) {
+      Op act_op = Downcast<Op>(node_map[act_op_][0]);
+      ret = Call(act_op, {ret});
+    }
+    ret = Call(reshape_op, {ret, MakeConstant(ArrayToIntTuple(ret_shape)),
+                            MakeConstant(BoolValue::make(false))});
+    return ret;
+  }
+
+ private:
+  /*! \brief Pattern input. */
+  DFPattern data_pat_, weight_pat_, bias_pat_, matmul_op_, act_op_;
+};
+
 class SimplifyReshape : public DFPatternRewrite {
  public:
   SimplifyReshape() {
@@ -331,6 +421,7 @@ Expr SimplifyExpr(const Expr& expr, const IRModule& mod) {
 
   // Phase 2: Sequence patterns that may need to be applied iteratively.
   composer.Clear();
+  composer.AddRewrite<SimplifyMatmulReshapeBiasAct>();
   composer.AddRewrite<SimplifyCast>();
   composer.AddRewrite<SimplifyReshape>();
   return mnm::ir::RewritePatterns(composer.MakeCallbacks(), ret, mod);
