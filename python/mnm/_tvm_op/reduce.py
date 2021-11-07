@@ -228,3 +228,15 @@ def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=no-member
 
 
 _reg.register_injective_schedule("mnm.op.tvm.sum_dx")
+
+
+@register_compute("mnm.op.tvm.l2norm")
+def l2norm_compute(attrs, inputs, output_type):  # pylint: disable=no-member
+    x = inputs[0]
+    res = _topi.multiply(x, x)
+    res = _topi.sum(res, axis=[], keepdims=0)
+    res = _topi.sqrt(res)
+    return [res]
+
+
+_reg.register_reduce_schedule("mnm.op.tvm.l2norm")

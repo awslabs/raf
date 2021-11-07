@@ -252,6 +252,17 @@ HashKey MeanDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
 MNM_TVM(mean_dx, MeanDx, MeanDxArgs, MeanDxSchema2Args, MeanDxSchemaArgNames, MeanDxSchema2Attrs,
         MeanDxHasher, kBroadcast);
 
+std::vector<Value> L2NormSchema2Args(const L2NormArgs* args) {
+  return {args->x};
+}
+
+std::vector<std::string> L2NormSchemaArgNames(const op::CallValues& call) {
+  return {"x"};
+}
+
+MNM_TVM(l2norm, L2Norm, L2NormArgs, L2NormSchema2Args, L2NormSchemaArgNames, GenericAttrs,
+        GenericHasher, kCommReduce);
+
 }  // namespace tvm_dialect
 }  // namespace op
 }  // namespace mnm

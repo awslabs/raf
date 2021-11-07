@@ -127,6 +127,7 @@ static const char get_reduce_axis[] = "mnm.op.get_reduce_axis";
 static const char get_valid_counts[] = "mnm.op.get_valid_counts";
 static const char greater[] = "mnm.op.greater";
 static const char greater_equal[] = "mnm.op.greater_equal";
+static const char l2norm[] = "mnm.op.l2norm";
 static const char layer_norm[] = "mnm.op.layer_norm";
 static const char layer_norm_dx[] = "mnm.op.layer_norm_dx";
 static const char left_shift[] = "mnm.op.left_shift";
@@ -685,6 +686,12 @@ Attrs InvokeOp(const TVMArgs& values, GradTape* tapes) {
   MNM_TAPE(0, ffi2schema::ArrayLike, func);
   MNM_TAPE(1, ffi2schema::ArrayLike, inputs);
   MNM_TAPE(2, ffi2schema::ArrayLike, outputs);
+  return Attrs(attrs);
+}
+
+Attrs L2Norm(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::L2NormArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, x);
   return Attrs(attrs);
 }
 
@@ -2150,6 +2157,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.greater_equal").set_body([](TVMArgs args, TVMRet
               schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
   MNM_SET_ENV(vpack->x[1], schema2value::ArrayLike(schema->x2));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.l2norm").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(l2norm, 1, ffi2schema::L2Norm, schema::L2NormArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3645,6 +3659,12 @@ Array<Expr> InvokeOp(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> L2Norm(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::Tensor, x);
+  MNM_RET();
+}
+
 Array<Expr> LayerNorm(const TVMArgs& values) {
   MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4346,6 +4366,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.get_valid_counts")
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater").set_body(MNM_SYMBOLIC_API(greater, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
     .set_body(MNM_SYMBOLIC_API(greater_equal, 2, Binary));
+MNM_REGISTER_GLOBAL("mnm.op.sym.l2norm").set_body(MNM_SYMBOLIC_API(l2norm, 1, L2Norm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm").set_body(MNM_SYMBOLIC_API(layer_norm, 5, LayerNorm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm_dx")
     .set_body(MNM_SYMBOLIC_API(layer_norm_dx, 5, LayerNormDx));
@@ -4995,6 +5016,13 @@ Attrs InvokeOp(const Array<Value>& values) {
   MNM_REQUIRED(0, value2schema::ArrayLike, func);
   MNM_REQUIRED(1, value2schema::ArrayLike, inputs);
   MNM_REQUIRED(2, value2schema::ArrayLike, outputs);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs L2Norm(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::L2NormArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, x);
   return Attrs(attrs);
 }
 
@@ -6447,6 +6475,15 @@ int InvokeOp(const std::string& field) {
   }
   if (field == "outputs") {
     return 2;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int L2Norm(const std::string& field) {
+  if (field == "x") {
+    return 0;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -7917,6 +7954,10 @@ MNM_BIND_SCHEMA("mnm.op.greater_equal", names::greater_equal,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.greater_equal", names::greater_equal,
                             schema_field_idx::Binary);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.l2norm", names::l2norm,
+                value2schema::L2Norm);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.l2norm", names::l2norm,
+                            schema_field_idx::L2Norm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.layer_norm", names::layer_norm,
                 value2schema::LayerNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.layer_norm", names::layer_norm,
@@ -8390,6 +8431,7 @@ MNM_REGISTER_OBJECT_REFLECT(GetValidCountsArgs);
 MNM_REGISTER_OBJECT_REFLECT(InferTypeArgs);
 MNM_REGISTER_OBJECT_REFLECT(InitOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(InvokeOpArgs);
+MNM_REGISTER_OBJECT_REFLECT(L2NormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);

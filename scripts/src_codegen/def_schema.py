@@ -466,6 +466,9 @@ SCHEMAS = {
         Arg(name="keepdims", cxx_type="bool", cxx_default=False),
         Arg(name="exclude", cxx_type="bool", cxx_default=False),
     ],
+    "reduce.h::l2norm": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+    ],
     "reduce.h::prod_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),

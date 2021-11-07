@@ -110,6 +110,16 @@ MNM_OP_DECLARE("mnm.op.prod", ReduceOutSame);
 MNM_OP_DECLARE("mnm.op.mean_dx", MeanDxDecl);
 MNM_OP_DECLARE("mnm.op.prod_dx", ProdDxOutSame);
 
+void L2Norm(const CallValues& call) {
+  const auto* args = call->args.as<L2NormArgs>();
+  DLTensor* x = args->x;
+  call->device = x->device;
+  std::vector<int64_t> shape;
+  call->out = TensorValue::Assemble(x->device, x->dtype, shape);
+}
+
+MNM_OP_DECLARE("mnm.op.l2norm", L2Norm);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

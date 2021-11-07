@@ -110,6 +110,7 @@ OPS = [
     Op(name="min", schema_name="reduce"),
     Op(name="mean", schema_name="reduce"),
     Op(name="mean_dx", schema_name="mean_dx"),
+    Op(name="l2norm", schema_name="l2norm"),
     Op(name="get_reduce_axis", schema_name="binary"),
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),

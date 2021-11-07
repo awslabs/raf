@@ -182,5 +182,14 @@ MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
 MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ProdDxDType);
 MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", MeanDxInfer);
 
+Type L2NormDType(const CallValues& value) {
+  const auto* args = value->args.as<schema::L2NormArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  Array<tvm::PrimExpr> oshape;
+  return TensorType(oshape, x->dtype);
+}
+
+MNM_OP_TYPE("mnm.op.l2norm", "L2norm", L2NormDType);
 }  // namespace op
 }  // namespace mnm

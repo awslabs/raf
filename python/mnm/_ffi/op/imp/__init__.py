@@ -88,6 +88,7 @@ from ._internal import get_reduce_axis
 from ._internal import get_valid_counts
 from ._internal import greater
 from ._internal import greater_equal
+from ._internal import l2norm
 from ._internal import layer_norm
 from ._internal import layer_norm_dx
 from ._internal import left_shift

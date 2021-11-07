@@ -24,28 +24,28 @@ __all__ = [
     "expand_dims", "floor", "floor_divide", "full", "full_like",
     "gather", "gather_dx", "gather_nd", "gather_nd_dx", "gelu",
     "gelu_dx", "get_kept_dims", "get_reduce_axis", "get_valid_counts", "greater",
-    "greater_equal", "layer_norm", "layer_norm_dx", "left_shift", "less",
-    "less_equal", "log", "log2", "log_softmax", "log_softmax_dx",
-    "logical_and", "logical_not", "matmul", "matmul_nt", "matmul_tn",
-    "matmul_tt", "max", "max_pool2d", "max_pool2d_dx", "maximum",
-    "mean", "mean_dx", "mesh_grid", "min", "minimum",
-    "mod", "multiply", "ndarray_size", "negative", "nll_loss",
-    "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal", "one_hot",
-    "ones", "ones_like", "pad", "power", "prod",
-    "prod_dx", "relu", "relu_dx", "repeat", "repeat_dx",
-    "reshape", "resize2d", "resize2d_dx", "reverse", "reverse_sequence",
-    "right_shift", "roi_align", "roi_align_dx", "round", "rsqrt",
-    "scatter", "scatter_dx", "sequence_mask", "set_stream", "sgd",
-    "shape", "sigmoid", "sigmoid_dx", "sign", "sin",
-    "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx",
-    "sort", "split", "sqrt", "sqrt_dx", "squeeze",
-    "stack", "stream_barrier", "stream_sync", "strided_slice", "strided_slice_dx",
-    "subtract", "sum", "sum_dx", "swap_axis", "take",
-    "take_dx", "tanh", "tanh_dx", "threefry_generate", "threefry_split",
-    "threshold", "threshold_dx", "topk", "transpose", "transpose_dx",
-    "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free",
-    "vm_infer_type", "vm_invoke_op", "vm_set_shape", "wait_event", "where",
-    "zeros", "zeros_like",
+    "greater_equal", "l2norm", "layer_norm", "layer_norm_dx", "left_shift",
+    "less", "less_equal", "log", "log2", "log_softmax",
+    "log_softmax_dx", "logical_and", "logical_not", "matmul", "matmul_nt",
+    "matmul_tn", "matmul_tt", "max", "max_pool2d", "max_pool2d_dx",
+    "maximum", "mean", "mean_dx", "mesh_grid", "min",
+    "minimum", "mod", "multiply", "ndarray_size", "negative",
+    "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
+    "one_hot", "ones", "ones_like", "pad", "power",
+    "prod", "prod_dx", "relu", "relu_dx", "repeat",
+    "repeat_dx", "reshape", "resize2d", "resize2d_dx", "reverse",
+    "reverse_sequence", "right_shift", "roi_align", "roi_align_dx", "round",
+    "rsqrt", "scatter", "scatter_dx", "sequence_mask", "set_stream",
+    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
+    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
+    "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
+    "squeeze", "stack", "stream_barrier", "stream_sync", "strided_slice",
+    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
+    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
+    "threefry_split", "threshold", "threshold_dx", "topk", "transpose",
+    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
+    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "wait_event",
+    "where", "zeros", "zeros_like",
 ]
 
 def _allgather(x, axis, attrs=None):
@@ -663,6 +663,11 @@ def greater_equal(x1, x2, attrs=None):
     x1 = op_utils.to_any(x1)
     x2 = op_utils.to_any(x2)
     return relay.Call(op, [x1, x2], attrs)
+
+def l2norm(x, attrs=None):
+    op = GetOp("mnm.op.l2norm")
+    x = op_utils.to_tensor(x)
+    return relay.Call(op, [x], attrs)
 
 def layer_norm(x, scale=None, bias=None, axis=-1, eps=1e-05, attrs=None):
     op = GetOp("mnm.op.layer_norm")

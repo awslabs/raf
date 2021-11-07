@@ -12,6 +12,12 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class L2NormArgs : public ir::AttrsNode<L2NormArgs> {
+ public:
+  value::BaseTensorValue x;
+  MNM_OP_SCHEMA(L2NormArgs, "mnm.args.l2norm");
+};
+
 class MeanDxArgs : public ir::AttrsNode<MeanDxArgs> {
  public:
   value::BaseTensorValue dy;

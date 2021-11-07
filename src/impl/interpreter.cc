@@ -17,6 +17,7 @@
 #include "dmlc/thread_local.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
+#include "../op/schema/reduce.h"
 
 #include <list>
 
@@ -257,8 +258,8 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     const Op& op = Downcast<OpValue>(call->callee)->op;
     std::shared_ptr<Requests> req = op_env->GetRequests();
     {
-      // note: Request workspace, workspace is kind of special memory which will be freed once this
-      // op is done.
+      // note: Request workspace, workspace is kind of special memory which will be freed once
+      // this op is done.
       WITH_BASE_PROFILER(call->device, op->name, "WorkspaceRequest",
                          {"Count: " + std::to_string(req->workspace.size())}, {
                            for (int i = 0, n = req->workspace.size(); i < n; ++i) {
@@ -266,8 +267,9 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
                            }
                          });
 
-      // note: Request stream, every op will run on a given stream. For op that executed on cuda,
-      // the default one is cuda DefautlStream. Currently, all ops are running on default stream.
+      // note: Request stream, every op will run on a given stream. For op that executed on
+      // cuda, the default one is cuda DefautlStream. Currently, all ops are running on default
+      // stream.
       WITH_BASE_PROFILER(call->device, op->name, "StreamRequest",
                          {"Count: " + std::to_string(req->stream.size())}, {
                            for (int i = 0, n = req->stream.size(); i < n; ++i) {

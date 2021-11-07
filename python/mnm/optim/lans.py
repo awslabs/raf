@@ -102,9 +102,7 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01):
                 return y
 
             def _l2_norm(self, x):  # pylint: disable=no-self-use
-                y = _op.multiply(x, x)
-                y = _op.sum(y)
-                y = _op.sqrt(y)
+                y = _op.l2norm(x)
                 return y
 
             def _lans(self, p, g, m, v, step):  # pylint: disable=too-many-arguments

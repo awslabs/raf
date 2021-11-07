@@ -1,4 +1,4 @@
-# pylint: disable=protected-access,attribute-defined-outside-init
+# pylint: disable=protected-access,attribute-defined-outside-init,no-self-use
 import numpy as np
 import pytest
 import torch
@@ -172,6 +172,27 @@ def test_reduce_op_without_axis_with_grad(ops, shape, dtype, device):
     m_y.backward(m_dy)
     t_y.backward(t_dy)
     check(m_x.grad, t_x.grad)
+
+
+@pytest.mark.parametrize("device", get_device_list())
+def test_l2norm(device):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm._op.sym.l2norm(x)
+
+    model = TestModel()
+    shape = [2, 3, 4]
+    m_input, t_input = randn_torch(shape, device=device)
+
+    m_output = model(m_input)
+    t_output = torch.sqrt(torch.sum(t_input * t_input))
+    check(m_output, t_output)
+    v_output = run_vm_model(model, device, [m_input])
+    check(v_output, t_output)
 
 
 if __name__ == "__main__":
