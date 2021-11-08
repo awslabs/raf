@@ -289,7 +289,7 @@ class GradientPartitioner : public ExprMutator {
 
 }  // namespace partition_gradient
 
-Pass PartitionGradient(int opt_level, size_t n_part, int rank) {
+Pass PartitionGradient(int opt_level, int n_part, int rank) {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
     return partition_gradient::GradientPartitioner(opt_level, n_part, f).Partition(rank);

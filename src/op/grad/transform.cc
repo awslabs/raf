@@ -433,6 +433,8 @@ Array<Expr> CumsumGrad(const Expr& orig_call, const Array<Expr> orig_args, const
 
 MNM_OP_GRAD("mnm.op.cumsum", CumsumGrad);
 
+MNM_OP_GRAD("mnm.op.size", NoGrads<1>);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace mnm

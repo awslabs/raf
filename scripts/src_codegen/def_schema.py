@@ -906,6 +906,10 @@ SCHEMAS = {
     "stream.h::stream_barrier": [
         # empty arg list
     ],
+    "transform.h::size": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="value::Value", cxx_default="nullptr"),
+    ],
 }
 
 

@@ -164,6 +164,13 @@ class ScatterDxArgs : public ir::AttrsNode<ScatterDxArgs> {
   MNM_OP_SCHEMA(ScatterDxArgs, "mnm.args.scatter_dx");
 };
 
+class SizeArgs : public ir::AttrsNode<SizeArgs> {
+ public:
+  value::BaseTensorValue x;
+  value::Value axis{nullptr};
+  MNM_OP_SCHEMA(SizeArgs, "mnm.args.size");
+};
+
 class StridedSliceArgs : public ir::AttrsNode<StridedSliceArgs> {
  public:
   value::BaseTensorValue x;

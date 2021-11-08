@@ -122,6 +122,7 @@ from ._internal import nll_loss_dpred
 from ._internal import nll_loss_dtrue
 from ._internal import non_max_suppression
 from ._internal import not_equal
+from ._internal import numel
 from ._internal import one_hot
 from ._internal import ones
 from ._internal import ones_like
@@ -149,10 +150,12 @@ from ._internal import sequence_mask
 from ._internal import set_stream
 from ._internal import sgd
 from ._internal import shape
+from ._internal import shape_as_tensor
 from ._internal import sigmoid
 from ._internal import sigmoid_dx
 from ._internal import sign
 from ._internal import sin
+from ._internal import size
 from ._internal import smooth_l1_loss
 from ._internal import smooth_l1_loss_dpred
 from ._internal import smooth_l1_loss_dtrue

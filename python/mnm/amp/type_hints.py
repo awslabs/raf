@@ -259,6 +259,9 @@ register_op_cast_rule("mnm.op.layer_norm_dx", infer_cast(3))
 register_op_cast_rule("mnm.op.gather", infer_cast(1))
 register_op_cast_rule("mnm.op.divide", infer_cast(2))
 register_op_cast_rule("mnm.op.cumsum", infer_cast(1))
+register_op_cast_rule("mnm.op.size", infer_cast(1))
+register_op_cast_rule("mnm.op.numel", infer_cast(1))
+register_op_cast_rule("mnm.op.shape_as_tensor", infer_cast(1))
 
 # Special cases.
 

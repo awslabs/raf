@@ -199,6 +199,30 @@ MNM_OP_DECLARE("mnm.op.ndarray_size", [](const CallValues& call) {
   call->callee = ir::NullValue<OpValue>();
 });
 
+MNM_OP_DECLARE("mnm.op.numel", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+
+  DLTensor* x = args->x;
+  CHECK(x != nullptr);
+  call->out = TensorValue::Assemble(/*dev=*/Device(DevType::kCPU(), 0),
+                                    /*dtype=*/DType(DTypeCode::kInt(), 32),
+                                    /*shape=*/std::vector<int64_t>());
+  call->device = x->device;
+});
+
+MNM_OP_DECLARE("mnm.op.shape_as_tensor", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+
+  DLTensor* x = args->x;
+  CHECK(x != nullptr);
+  call->out = TensorValue::Assemble(/*dev=*/Device(DevType::kCPU(), 0),
+                                    /*dtype=*/DType(DTypeCode::kInt(), 32),
+                                    /*shape=*/{x->ndim});
+  call->device = x->device;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

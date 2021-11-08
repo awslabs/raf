@@ -900,5 +900,22 @@ Type CumsumInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.cumsum", "Cumsum", CumsumInfer);
 
+Type SizeInfer(const CallValues& value) {
+  const auto* args = value->args.as<SizeArgs>();
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    return TensorType({}, tvm::runtime::DataType::Int(32));
+  }
+  Array<Type> out_types;
+  for (int i = 0; i < x->shape.size(); ++i) {
+    out_types.push_back(TensorType({}, tvm::runtime::DataType::Int(32)));
+  }
+  return TupleType(out_types);
+}
+
+MNM_OP_TYPE("mnm.op.size", "Size", SizeInfer);
+
 }  // namespace op
 }  // namespace mnm

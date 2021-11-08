@@ -1009,6 +1009,30 @@ MNM_OP_DECLARE("mnm.op.cumsum", [](const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 });
 
+MNM_OP_DECLARE("mnm.op.size", [](const CallValues& call) {
+  const auto* args = call->args.as<SizeArgs>();
+  CHECK(args != nullptr);
+
+  DLTensor* x = args->x;
+  CHECK(x != nullptr);
+  if (args->axis.defined()) {
+    const auto* v = args->axis.as<IntValueObj>();
+    CHECK(v != nullptr);
+    call->out = TensorValue::Assemble(/*dev=*/Device(DevType::kCPU(), 0),
+                                      /*dtype=*/DType(DTypeCode::kInt(), 32),
+                                      /*shape=*/std::vector<int64_t>());
+  } else {
+    Array<Value> outs;
+    for (int i = 0; i < x->ndim; ++i) {
+      outs.push_back(TensorValue::Assemble(/*dev=*/Device(DevType::kCPU(), 0),
+                                           /*dtype=*/DType(DTypeCode::kInt(), 32),
+                                           /*shape=*/std::vector<int64_t>()));
+    }
+    call->out = TupleValue::make(outs);
+  }
+  call->device = x->device;
+});
+
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

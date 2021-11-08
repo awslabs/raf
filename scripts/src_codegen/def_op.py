@@ -200,6 +200,10 @@ OPS = [
     Op(name="vm.invoke_op", schema_name="invoke_op"),
     Op(name="vm.infer_type", schema_name="infer_type"),
     Op(name="vm.set_shape", schema_name="set_shape"),
+    # no_compute ops
+    Op(name="size", schema_name="size"),
+    Op(name="numel", schema_name="unary"),
+    Op(name="shape_as_tensor", schema_name="unary"),
 ]
 
 def by_name():

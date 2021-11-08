@@ -32,21 +32,22 @@ __all__ = [
     "maximum", "mean", "mean_dx", "mesh_grid", "min",
     "minimum", "mod", "multiply", "ndarray_size", "negative",
     "nll_loss", "nll_loss_dpred", "nll_loss_dtrue", "non_max_suppression", "not_equal",
-    "one_hot", "ones", "ones_like", "pad", "power",
-    "prod", "prod_dx", "relu", "relu_dx", "repeat",
-    "repeat_dx", "reshape", "resize2d", "resize2d_dx", "reverse",
-    "reverse_sequence", "right_shift", "roi_align", "roi_align_dx", "round",
-    "rsqrt", "scatter", "scatter_dx", "sequence_mask", "set_stream",
-    "sgd", "shape", "sigmoid", "sigmoid_dx", "sign",
-    "sin", "smooth_l1_loss", "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax",
-    "softmax_dx", "sort", "split", "sqrt", "sqrt_dx",
-    "squeeze", "stack", "stream_barrier", "stream_sync", "strided_slice",
-    "strided_slice_dx", "subtract", "sum", "sum_dx", "swap_axis",
-    "take", "take_dx", "tanh", "tanh_dx", "threefry_generate",
-    "threefry_split", "threshold", "threshold_dx", "topk", "transpose",
-    "transpose_dx", "trunc", "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor",
-    "vm_free", "vm_infer_type", "vm_invoke_op", "vm_set_shape", "wait_event",
-    "where", "zeros", "zeros_like",
+    "numel", "one_hot", "ones", "ones_like", "pad",
+    "power", "prod", "prod_dx", "relu", "relu_dx",
+    "repeat", "repeat_dx", "reshape", "resize2d", "resize2d_dx",
+    "reverse", "reverse_sequence", "right_shift", "roi_align", "roi_align_dx",
+    "round", "rsqrt", "scatter", "scatter_dx", "sequence_mask",
+    "set_stream", "sgd", "shape", "shape_as_tensor", "sigmoid",
+    "sigmoid_dx", "sign", "sin", "size", "smooth_l1_loss",
+    "smooth_l1_loss_dpred", "smooth_l1_loss_dtrue", "softmax", "softmax_dx", "sort",
+    "split", "sqrt", "sqrt_dx", "squeeze", "stack",
+    "stream_barrier", "stream_sync", "strided_slice", "strided_slice_dx", "subtract",
+    "sum", "sum_dx", "swap_axis", "take", "take_dx",
+    "tanh", "tanh_dx", "threefry_generate", "threefry_split", "threshold",
+    "threshold_dx", "topk", "transpose", "transpose_dx", "trunc",
+    "upper_bound_argwhere", "vm_alloc_storage", "vm_alloc_tensor", "vm_free", "vm_infer_type",
+    "vm_invoke_op", "vm_set_shape", "wait_event", "where", "zeros",
+    "zeros_like",
 ]
 
 @set_module("mnm")
@@ -905,6 +906,11 @@ def not_equal(x1, x2):
     return imp_utils.ret(ffi.not_equal(x1, x2))
 
 @set_module("mnm")
+def numel(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.numel(x))
+
+@set_module("mnm")
 def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device="cpu"):
     indices = imp_utils.to_tensor(indices)
     on_value = imp_utils.to_tensor(on_value)
@@ -1119,6 +1125,11 @@ def shape(x):
     return imp_utils.ret(ffi.shape(x))
 
 @set_module("mnm")
+def shape_as_tensor(x):
+    x = imp_utils.to_any(x)
+    return imp_utils.ret(ffi.shape_as_tensor(x))
+
+@set_module("mnm")
 def sigmoid(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.sigmoid(x))
@@ -1139,6 +1150,12 @@ def sign(x):
 def sin(x):
     x = imp_utils.to_any(x)
     return imp_utils.ret(ffi.sin(x))
+
+@set_module("mnm")
+def size(x, axis=None):
+    x = imp_utils.to_tensor(x)
+    axis = imp_utils.to_any(axis)
+    return imp_utils.ret(ffi.size(x, axis))
 
 @set_module("mnm")
 def smooth_l1_loss(y_true, y_pred):

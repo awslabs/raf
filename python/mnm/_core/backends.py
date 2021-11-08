@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 from .. import _ffi
 
+
 class CUDNNConfig:  # pylint: disable=too-few-public-methods
     """CUDNN configuration."""
 

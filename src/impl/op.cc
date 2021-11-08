@@ -123,14 +123,16 @@ std::shared_ptr<OpEnv> OpEnvMaker::Make(const std::string& op_name, const CallVa
 std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
   Op op = Downcast<OpValue>(call->callee)->op;
   std::string skip_dialect = "";
-  if (IsDialectOp(op)) {
-    // dialect op, directly call the OpEnvMaker registered to it
-    auto env = OpEnvMaker::Make(op->name, call);
+  // Try dispatch directly
+  auto maker = OpEnvMaker::Get(op->name);
+  if (maker != nullptr) {
+    auto env = std::shared_ptr<OpEnv>((*maker)(call));
     if (env != nullptr) {
       DLOG(INFO) << "Dispatch to " << op->name;
       return env;
     }
-    // failed to generate OpEnv, lift back to base op and try other dialects
+  }
+  if (IsDialectOp(op)) {
     skip_dialect = GetDialect(op);
     auto base_op = GetBaseOp(op);
     base_op->op_type = op->op_type;

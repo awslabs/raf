@@ -96,6 +96,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/op/regs/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/grad/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/tvm/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/op/base_ops.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/from_relay/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/op/ty/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc

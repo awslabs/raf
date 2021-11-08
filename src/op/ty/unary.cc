@@ -89,5 +89,24 @@ MNM_OP_TYPE("mnm.op.shape", "Shape", UnaryShapeInfer);
 MNM_OP_TYPE("mnm.op.zeros_like", "Identity", UnaryInfer);
 MNM_OP_TYPE("mnm.op.ones_like", "Identity", UnaryInfer);
 
+Type NumelInfer(const CallValues& value) {
+  const auto* args = value->args.as<UnaryArgs>();
+  ICHECK(args != nullptr);
+  ICHECK(args->x.defined());
+  return TensorType({}, tvm::runtime::DataType::Int(32));
+}
+
+MNM_OP_TYPE("mnm.op.numel", "Numel", NumelInfer);
+
+Type ShapeAsTensorInfer(const CallValues& value) {
+  const auto* args = value->args.as<UnaryArgs>();
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  Array<tvm::PrimExpr> shape;
+  shape.push_back(ir::Integer(x->shape.size()));
+  return TensorType(shape, tvm::runtime::DataType::Int(32));
+}
+
+MNM_OP_TYPE("mnm.op.shape_as_tensor", "ShapeAsTensor", ShapeAsTensorInfer);
+
 }  // namespace op
 }  // namespace mnm
