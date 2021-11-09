@@ -150,7 +150,15 @@ class ClosureInliner : public MixedModeMutator {
         func_map_[memo_[let_var_]] = func_map_[let_var_];
       }
     }
-    Expr ret = VisitExpr(ell->ret);
+
+    Expr ret;
+    if (n > 0) {
+      ret = VisitExpr(ell->ret);
+    } else {
+      // Although we assume the IR is ANF, it is possible to have a function like:
+      // fn (%in) { %in; }, which is treat as a special case of ANF.
+      ret = VisitExpr(func->body);
+    }
     let_var_ = tmp;
     return ret;
   }

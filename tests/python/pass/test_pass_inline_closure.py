@@ -140,5 +140,36 @@ def test_inplace():
     verify_ir(model, [m_x], _reconstructor)
 
 
+def test_no_let():
+    """Test the closure with a single return variable."""
+    shape = (2, 2)
+
+    sb = ScopeBuilder()
+    x = extended_var("x", shape=shape, dtype="float32")
+    sb.ret(x)
+    func1 = relay.Function([x], sb.get())
+    fun_var = relay.GlobalVar("func1")
+
+    sb = ScopeBuilder()
+    y = extended_var("y", shape=shape, dtype="float32")
+    v_0 = sb.let("v0", relay.Call(fun_var, [y]))
+    sb.ret(v_0)
+    func2 = relay.Function([y], sb.get())
+    mod = IRModule({fun_var: func1, relay.GlobalVar("main"): func2})
+    seq = MNMSequential([InferType(), InlineClosure(), DeadCodeElimination(), InferType()])
+    mod = seq(mod)
+
+    def expected():
+        sb = ScopeBuilder()
+        y = extended_var("y", shape=shape, dtype="float32")
+        sb.ret(y)
+        func = relay.Function([y], sb.get())
+        mod = IRModule.from_expr(func)
+        mod = InferType()(mod)
+        return mod
+
+    assert tvm.ir.structural_equal(mod['main'], expected()["main"]), mnm.ir.AsText(mod['main'])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
