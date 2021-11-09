@@ -34,5 +34,23 @@ def test_ext_constant():
     check(out_origin, out_loaded)
 
 
+def test_large_grpah():
+    def expected():
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        x_const, _ = randn((1, 3, 8, 8), device="cpu")
+        x_value = mnm._core.value.TensorValue.from_numpy(x_const.numpy())
+        x = mnm._ffi.ir._make.Constant(x_value)
+        size = int(1e5)
+        var = [extended_var("var_" + str(i)) for i in range(size)]
+        body = var[-1]
+        for i in range(size, 1, -1):
+            body = relay.Let(var[i - 1], relay.Call(add_op, [var[i - 2], x]), body)
+        return relay.Function([var[0]], body)
+
+    func_origin = expected()
+    json = mnm.ir.save_json(func_origin)
+    tvm.ir.load_json(json)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

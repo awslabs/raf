@@ -22,6 +22,21 @@ class IRRewrite4Loader : public ir::ExprMutator {
     return ret;
   }
 
+  Expr VisitExpr_(const LetNode* op) override {
+    auto pre_visit = [this](const LetNode* op) {
+      this->VisitExpr(op->var);
+      this->VisitExpr(op->value);
+    };
+    auto post_visit = [this](const LetNode* op) {
+      Var var = Downcast<Var>(this->VisitExpr(op->var));
+      Expr value = this->VisitExpr(op->value);
+      Expr body = this->VisitExpr(op->body);
+      this->memo_[GetRef<Expr>(op)] = Let(var, value, body);
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(op)];
+  }
+
   ir::Expr VisitExpr_(const tvm::relay::ConstantNode* _node) override {
     const ir::ConstantNode* node = static_cast<const ir::ConstantNode*>(_node);
     ir::ObjectPtr<serialization::ConstantNode> n = ir::make_object<serialization::ConstantNode>();
