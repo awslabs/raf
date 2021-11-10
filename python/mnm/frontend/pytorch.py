@@ -1,6 +1,8 @@
 """The frontend that converts PyTorch models to Meta models via Relay."""
 # pylint: disable=too-many-locals
 from collections import OrderedDict
+import os
+import hashlib
 import torch
 
 from .._core.ndarray import ndarray
@@ -8,29 +10,25 @@ from .._lib import relay
 from .._ffi.pass_ import FromRelay, validate_relay_param_name
 from ..frontend.model import FrameworkModel
 
-
-def from_pytorch(model, shape_dict):
-    """Load PyTorch model and convert into Meta via Relay.
+def trace_model(model, input_type, input_shape):
+    """Trace PyTorch model.
 
     Parameters
     ----------
     model: torch.nn.Module
         The PyTorch module to be converted.
 
-    shape_dict: Dict[str, Tuple[Tuple[int, ...], str]]
-        A map from input name to its shape and type. Note that we currently only support
-        the model with a single input.
+    input_type: str
+        Input type.
+
+    input_shape: Tuple[int, ...]
+        Input shape
 
     Returns
     -------
-    model: FrameworkModel
-        The converted FrameworkModel.
+    model: ScriptedModel
+        PyTorch scripted model.
     """
-    if len(shape_dict) > 1:
-        raise RuntimeError(
-            "Do not support PyTorch model with multiple inputs (%d) yet" % len(shape_dict))
-    input_name, (input_shape, input_type) = list(shape_dict.items())[0]
-
     class TraceWrapper(torch.nn.Module):
         """A wrapper to process the forward output. This is required for object detection
         models which have multiple outputs.
@@ -69,8 +67,55 @@ def from_pytorch(model, shape_dict):
         model.to(device=device)
         model(input_data)
         scripted_model = torch.jit.trace(model, input_data).eval()
-        scripted_model.eval()
 
+    return scripted_model
+
+
+def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
+    """Load PyTorch model and convert into Meta via Relay.
+
+    Parameters
+    ----------
+    model: torch.nn.Module
+        The PyTorch module to be converted.
+
+    shape_dict: Dict[str, Tuple[Tuple[int, ...], str]]
+        A map from input name to its shape and type. Note that we currently only support
+        the model with a single input.
+
+    model_file: str
+        The file that stores the scripted model
+
+    hash_file: str
+        The file that stores the scripted model hash
+    Returns
+    -------
+    model: FrameworkModel
+        The converted FrameworkModel.
+    """
+    if len(shape_dict) > 1:
+        raise RuntimeError(
+            "Do not support PyTorch model with multiple inputs (%d) yet" % len(shape_dict))
+    input_name, (input_shape, input_type) = list(shape_dict.items())[0]
+    if model_file is not None and hash_file is not None:
+        model_hash = hashlib.md5(str(model).encode(encoding='UTF-8')).hexdigest()
+        if os.path.exists(model_file) and os.path.exists(hash_file):
+            try:
+                with open(hash_file, 'r') as hashf:
+                    mhash = hashf.read()
+                    if mhash != model_hash:
+                        raise RuntimeError("Hash check failed")
+                    scripted_model = torch.jit.load(model_file)
+            except:
+                raise RuntimeError("Loading scripted model failed")
+        else:
+            scripted_model = trace_model(model, input_type, input_shape)
+            scripted_model.eval()
+            scripted_model.save(model_file)
+            with open(hash_file, "w") as hashf:
+                hashf.write(model_hash)
+    else:
+        scripted_model = trace_model(model, input_type, input_shape)
     shape_list = [(input_name, input_shape)]
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
     meta_mod = FromRelay()(relay_mod)

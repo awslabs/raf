@@ -264,5 +264,16 @@ def test_params_order():
     m_model = m_model + re
 
 
+@pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
+def test_save_and_load_model(shape_dict):
+    input_shape = list(shape_dict.values())[0][0]
+
+    t_model = TorchLeNet(input_shape[2])
+    # Test save model
+    from_pytorch(t_model, shape_dict, "test.pt", "test.hash")
+    # Test load model
+    from_pytorch(t_model, shape_dict, "test.pt", "test.hash")
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
