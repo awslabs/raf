@@ -144,7 +144,8 @@ struct CastCacheEqual {
   }
 };
 
-using CastCache = std::unordered_map<std::pair<Expr, TypeHint>, Var, CastCacheHash, CastCacheEqual>;
+using CastCache =
+    std::unordered_map<std::pair<Expr, TypeHint>, Expr, CastCacheHash, CastCacheEqual>;
 
 class AutoCastMutator : public ExprMutator {
  public:
@@ -260,7 +261,8 @@ class AutoCastMutator : public ExprMutator {
     if (op == cast_op) {
       auto in_type = node->args[0]->checked_type().as<TensorTypeNode>();
       auto ret_type = node->checked_type().as<TensorTypeNode>();
-      CHECK(node->args[0]->IsInstance<VarNode>() && in_type != nullptr && ret_type != nullptr);
+      CHECK(node->args[0]->IsInstance<VarNode>() || node->args[0]->IsInstance<ConstantNode>());
+      CHECK(in_type != nullptr && ret_type != nullptr);
 
       // This case op is not required anymore because its argument already produces the AMP dtype.
       if (in_type->dtype == ret_type->dtype) {
@@ -269,7 +271,7 @@ class AutoCastMutator : public ExprMutator {
 
       // Add the cast op to the reversed cache to avoid generating back-to-back cast ops.
       auto pair_key = std::make_pair(curr_let_, PrimType(in_type->dtype));
-      reversed_cast_cache_[pair_key] = Downcast<Var>(node->args[0]);
+      reversed_cast_cache_[pair_key] = node->args[0];
       auto new_call = Call(op, node->args, node->attrs, node->type_args);
       new_call->checked_type_ = node->checked_type();
       return new_call;
