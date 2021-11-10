@@ -49,6 +49,9 @@ template <typename T>
 using ExprMap = std::unordered_map<Expr, T, ObjectPtrHash, ObjectPtrEqual>;
 using DepList = std::vector<std::pair<int, int>>;
 
+static int64_t compute_stream_idx = StreamTagEnum::CudaCompute();
+static int64_t communication_stream_idx = StreamTagEnum::CudaCommunicate();
+
 class SyncAnalyzer : ExprVisitor {
  public:
   /*!
@@ -121,22 +124,28 @@ class SyncAnalyzer : ExprVisitor {
   }
 
   void VisitExpr_(const CallNode* call) {
+    auto call_expr = GetRef<Expr>(call);
     if (IsCollectiveOp(call->op)) {
-      comm_calls_.insert(GetRef<Expr>(call));
+      comm_calls_.insert(call_expr);
     }
-    UpdateDependencyInfo_(GetRef<Expr>(call), call->args);
+    UpdateStreamInfo_(call_expr);
+    UpdateDependencyInfo_(call_expr, call->args);
   }
 
   void VisitExpr_(const TupleNode* tuple) {
-    UpdateDependencyInfo_(GetRef<Expr>(tuple), tuple->fields);
+    auto tuple_expr = GetRef<Expr>(tuple);
+    UpdateStreamInfo_(tuple_expr);
+    UpdateDependencyInfo_(tuple_expr, tuple->fields);
   }
 
   void VisitExpr_(const TupleGetItemNode* tuple_get_item) {
-    UpdateDependencyInfo_(GetRef<Expr>(tuple_get_item), {tuple_get_item->tuple});
+    auto tuple_get_item_expr = GetRef<Expr>(tuple_get_item);
+    UpdateStreamInfo_(tuple_get_item_expr);
+    UpdateDependencyInfo_(tuple_get_item_expr, {tuple_get_item->tuple});
   }
 
   void VisitExpr_(const FunctionNode* op) {
-    // currently assumes closure does not contain collectives
+    // currently assumes closures do not contain collectives
     // TODO(@chenyu-jiang): move this pass after lambda lift and enable it
     // to track event ids used across differnt runs
     auto ell = ExplicitLetList::make(op->body);
@@ -168,12 +177,38 @@ class SyncAnalyzer : ExprVisitor {
   std::map<Expr, int> add_event_after_op;
   // maps Expr -> event_id to wait for
   std::map<Expr, int> wait_event_before_op;
+  // maps Expr -> whether it needs an set stream op
+  std::map<Expr, bool> set_stream_before_op;
 
  private:
   int GetUniqueEventId() {
     return next_unique_event_id_++;
   }
 
+  // Determines if a set_stream op should be added before the op.
+  // a set_stream op is needed if the executing stream of the previous op
+  // (previous_op_stream_idx_) is different from the executing stream
+  // of the current op. It also updates previous_op_stream_idx_.
+  void UpdateStreamInfo_(const Expr& op) {
+    int expected_stream_idx = compute_stream_idx;
+    if (op->IsInstance<CallNode>() && IsCollectiveOp(op.as<CallNode>()->op)) {
+      expected_stream_idx = communication_stream_idx;
+    }
+    if (previous_op_stream_idx_ == -1 || previous_op_stream_idx_ != expected_stream_idx) {
+      // `op` is the first op, or the previous op's stream is not the stream for current op
+      set_stream_before_op[op] = true;
+      previous_op_stream_idx_ = expected_stream_idx;
+    }
+  }
+
+  // This function is called once for every op during ANF expansion. It updates the
+  // last input producer (`last_producer_idx_map_`) and first output consumer
+  // (`first_consumer_idx_map_`) for communication ops. If `op` is a communication op,
+  // we directly fill `last_producer_idx_map_` using its inputs. If `op` is a computation
+  // op, we check if the op is a consumer of communication ops. If so, then
+  // `first_consumer_idx_map_` is updated for each communication op it consumes.
+  // `first_consumer_idx_map_` will contain the correct value after we iterate through
+  // every op, since we must have called the function on the true "first consumer" once.
   void UpdateDependencyInfo_(const Expr& op, const Array<Expr>& input_args) {
     for (auto arg : input_args) {
       if (var_idx_map_.count(arg)) {
@@ -233,6 +268,8 @@ class SyncAnalyzer : ExprVisitor {
   // current_idx_ keeps track of current "depth" (or the index of the op we are visiting in the ANF
   // order) when expanding the nested let exprs
   int current_idx_ = 0;
+  // stream index of the previous op
+  int previous_op_stream_idx_ = -1;
   // maps each var & expr to its index
   ExprMap<int> var_idx_map_;
   ExprMap<int> expr_idx_map_;
@@ -261,9 +298,8 @@ class DistOpAnnotator : ExprMutator {
    * sequential stream schedule)
    *
    * Specifically,
-   *    1. It inserts set_stream(device_id, comm_stream_id) & set_stream(device_id,
-   *       default_comp_stream_id) in the beginning of the program to make vm allocate the streams
-   *       needed.
+   *    1. It inserts set_stream(device_id, comm_stream_id / default_comp_stream_id) ops before
+   *       each op where the execution stream needs to be changed.
    *
    *    2. For each communication op, it
    *       (1) inserts an add_event(unique_event_id, default_comp_stream_id) after the last
@@ -295,14 +331,15 @@ class DistOpAnnotator : ExprMutator {
    *    After Transformation:
    *
    *      fn (%x: Tensor[(64, 128), float32]) {
-   *        let %set_stream_comm = mnm.op.set_stream(int64(0), int64(5));
    *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
    *        let %a1 = mnm.op.atan(%x);
    *        let %a2 = (%a1,);
    *        let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
+   *        let %set_stream_comm = mnm.op.set_stream(int64(0), int64(5));
    *        let %wait_for_comp = mnm.op.wait_event(int64(1), int64(5));
    *        let %a3 = mnm.op._allreduce(%a2, str"sum");
    *        let %add_event_comm = mnm.op.add_event(int64(2), int64(5));
+   *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
    *        let %wait_for_comm = mnm.op.wait_event(int64(2), int64(1));
    *        let %a4 = mnm.op.atan(%a3);
    *        %a4
@@ -338,18 +375,19 @@ class DistOpAnnotator : ExprMutator {
    *    After Transformation:
    *
    *      fn (%x: Tensor[(64, 128), float32]) {
-   *        let %set_stream_comm = mnm.op.set_stream(int64(0), int64(5));
    *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
    *        let %v = mnm.op.atan(%x);
    *        let %v1 = (%v,);
    *        let %v2 = mnm.op.atan(%v);
    *        let %v3 = (%v2,);
    *        let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
+   *        let %set_stream_comm = mnm.op.set_stream(int64(0), int64(5));
    *        let %wait_for_comp = mnm.op.wait_event(int64(1), int64(5));
    *        let %v4 = mnm.op._allreduce(%v3, str"sum");
    *        let %add_event_comm = mnm.op.add_event(int64(2), int64(5));
    *        let %v5 = mnm.op._allreduce(%v1, str"sum");
    *        let %add_event_comm1 = mnm.op.add_event(int64(3), int64(5));
+   *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
    *        let %wait_for_comm = mnm.op.wait_event(int64(2), int64(1));
    *        let %v6 = mnm.op.atan(%v4);
    *        let %wait_for_comm1 = mnm.op.wait_event(int64(3), int64(1));
@@ -369,35 +407,48 @@ class DistOpAnnotator : ExprMutator {
       Expr body = this->VisitExpr(op->body);
       // insert add_events after op
       if (this->analyzer_.add_event_after_op.count(value)) {
-        if (value.as<CallNode>() && IsCollectiveOp(value.as<CallNode>()->op)) {
+        if (value->IsInstance<CallNode>() && IsCollectiveOp(value.as<CallNode>()->op)) {
           // this is a communication op
           Var event_var = mnm::ir::MakeVar("add_event_comm", {});
           Expr event_value = CreateAddEventOp(this->analyzer_.add_event_after_op.at(value),
-                                              this->communication_stream_idx_);
+                                              communication_stream_idx);
           body = Let(event_var, event_value, body);
         } else {
           // this is a computation op
           Var event_var = mnm::ir::MakeVar("add_event_comp", {});
-          Expr event_value = CreateAddEventOp(this->analyzer_.add_event_after_op.at(value),
-                                              this->compute_stream_idx_);
+          Expr event_value =
+              CreateAddEventOp(this->analyzer_.add_event_after_op.at(value), compute_stream_idx);
           body = Let(event_var, event_value, body);
         }
       }
-      Expr orig_op = GetRef<Expr>(op);
       // insert wait_events before op
       if (this->analyzer_.wait_event_before_op.count(value)) {
-        if (value.as<CallNode>() && IsCollectiveOp(value.as<CallNode>()->op)) {
+        body = Let(var, value, body);
+        if (value->IsInstance<CallNode>() && IsCollectiveOp(value.as<CallNode>()->op)) {
           // this is a communication op
-          body = Let(var, value, body);
           var = mnm::ir::MakeVar("wait_for_comp", {});
           value = CreateWaitEventOp(this->analyzer_.wait_event_before_op.at(value),
-                                    this->communication_stream_idx_);
+                                    communication_stream_idx);
         } else {
           // this is a computation op
-          body = Let(var, value, body);
           var = mnm::ir::MakeVar("wait_for_comm", {});
-          value = CreateWaitEventOp(this->analyzer_.wait_event_before_op.at(value),
-                                    this->compute_stream_idx_);
+          value =
+              CreateWaitEventOp(this->analyzer_.wait_event_before_op.at(value), compute_stream_idx);
+        }
+      }
+      Expr orig_op = GetRef<Expr>(op);
+      Expr orig_value = op->value;
+      // insert set stream ops before wait_events, if needed
+      if (this->analyzer_.set_stream_before_op.count(orig_value)) {
+        body = Let(var, value, body);
+        if (orig_value->IsInstance<CallNode>() && IsCollectiveOp(orig_value.as<CallNode>()->op)) {
+          // this is a communication op
+          var = mnm::ir::MakeVar("set_stream_comm", {});
+          value = CreateSetStreamOp(device_id_, communication_stream_idx);
+        } else {
+          // this is a computation op
+          var = mnm::ir::MakeVar("set_stream_comp", {});
+          value = CreateSetStreamOp(device_id_, compute_stream_idx);
         }
       }
       this->memo_[orig_op] = Let(var, value, body);
@@ -409,8 +460,8 @@ class DistOpAnnotator : ExprMutator {
   Function Run() {
     auto device = Device::Current(/*allow_default=*/false);
     CHECK_NE(device.device_type(), DevType::kUnknown()) << "Encountered unknown device type.";
-    auto device_id = device.device_id();
-    CHECK_EQ(device_id, DistContext::Global()->local_rank) << "Current device id != local rank.";
+    device_id_ = device.device_id();
+    CHECK_EQ(device_id_, DistContext::Global()->local_rank) << "Current device id != local rank.";
 
     if (!analyzer_.Analyse(func_->body)) {
       // no collectives found in expr. do nothing.
@@ -418,12 +469,6 @@ class DistOpAnnotator : ExprMutator {
     }
 
     Expr new_body = Mutate(func_->body);
-
-    // add the two set_stream ops
-    new_body = Let(mnm::ir::MakeVar("set_stream_comp", {}),
-                   CreateSetStreamOp(device_id, compute_stream_idx_), new_body);
-    new_body = Let(mnm::ir::MakeVar("set_stream_comm", {}),
-                   CreateSetStreamOp(device_id, communication_stream_idx_), new_body);
 
     return Function(func_->params, new_body, {}, {});
   }
@@ -452,11 +497,8 @@ class DistOpAnnotator : ExprMutator {
     return Call(op, args);
   }
 
+  int device_id_ = -1;
   const FunctionNode* func_;
-
-  int64_t compute_stream_idx_ = StreamTagEnum::CudaCompute();
-  int64_t communication_stream_idx_ = StreamTagEnum::CudaCommunicate();
-
   SyncAnalyzer analyzer_;
 };
 

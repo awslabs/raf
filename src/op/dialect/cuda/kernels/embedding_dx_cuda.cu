@@ -137,7 +137,7 @@ void embedding_dense_backward_cuda(const scalar_t* grad, accscalar_t* output,
                                    void* stream, int64_t element) {
   dim3 grid(CeilDiv(stride, (int64_t)WARP_SIZE));
   dim3 block(WARP_SIZE, BLOCKDIMY);
-  CUDA_CALL(cudaMemset(output, 0, element * sizeof(accscalar_t)));
+  CUDA_CALL(cudaMemsetAsync(output, 0, element * sizeof(accscalar_t), static_cast<cudaStream_t>(stream)));
   embedding_backward_feature_kernel<scalar_t, accscalar_t>
       <<<grid, block,
          sizeof(accscalar_t) * WARP_SIZE * BLOCKDIMY + sizeof(int) * WARP_SIZE * BLOCKDIMY,
