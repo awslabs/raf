@@ -389,7 +389,15 @@ Once the implementation has been registered, we can now run this operator in Met
 
 #### CuBLAS/CuDNN Dialect (GPU only)
 
-If the operator is supported by kernel libraries such as CuBLAS or CuDNN, you should also register their implementations to achieve a better performance. Since `softmax` and `softmax` are supported in CuDNN, we demonstrate how to add a CuDNN dialect for this operator. The dialect is in [src/op/dialect/cudnn/softmax.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/dialect/cudnn/softmax.cc). In particular, we derive an OpEnv, which stands for operator environment:
+If the operator is supported by kernel libraries such as CuBLAS or CuDNN, you should also register their implementations to achieve a better performance. In this section, we demonstrate how to register a CuDNN dialect op for `softmax`.
+
+First, we need to register the dialect and enable it for a specific device type. In this example, we register a dialect "cudnn" and make it available on CUDA devices. Note that each dialect only needs to be registered once, so if you could find the following line in the codebase, you could skip this step. Taking "cudnn" dialect as an example, you can find its registration in `src/op/dialect/cudnn/cudnn_utils.cc`.
+
+```
+MNM_REGISTER_DIALECT("cudnn").set_enable(DevType::kCUDA());
+```
+
+We then demonstrate how to implement a CuDNN dialect op for `softmax`. The dialect is implemented in [src/op/dialect/cudnn/softmax.cc](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/src/op/dialect/cudnn/softmax.cc). In particular, we derive an OpEnv, which stands for operator environment:
 
 ```c++
 class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
@@ -435,10 +443,8 @@ where `make` will be invoked when building the operator, and `Execute` will be i
 Finally, we register this OpEnv to be a CuDNN dialect operator:
 
 ```c++
-// Register a dialect op "mnm.op.cudnn.softmax".
-MNM_REGISTER_DIALECT_OP(cudnn, softmax);
-// Let "mnm.op.cudnn.softmax" be dispatched to CUDA with plevel=15.
-MNM_OP_DISPATCH_DIALECT_PLEVEL(softmax, cudnn, DevType::kCUDA(), 15);
+// Now we register the dialect op "mnm.op.cudnn.softmax" with plevel=15 to the cudnn dialect we just registered.
+MNM_REGISTER_DIALECT_OP(cudnn, softmax, 15);
 // Use the "make" function we just implemented to create the OpEnv for "mnm.op.cudnn.softmax".
 MNM_OP_ENV_MAKER("mnm.op.cudnn.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make);
 ```
