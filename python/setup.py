@@ -65,7 +65,8 @@ setup_kwargs = {}
 if wheel_include_libs:
   with open("MANIFEST.in", "w") as fo:
     for path in LIB_LIST:
-      shutil.copy(path, os.path.join(CURRENT_DIR, 'mnm'))
+      if os.path.normpath(path) != os.path.normpath(os.path.join(CURRENT_DIR, 'mnm/libmnm.so')):
+        shutil.copy(path, os.path.join(CURRENT_DIR, 'mnm'))
       _, libname = os.path.split(path)
       fo.write("include mnm/%s\n" % libname)
   setup_kwargs = {"include_package_data": True}
