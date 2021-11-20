@@ -22,6 +22,24 @@ class DistContext(Object):
         ffi.EnableDataParallel(value)
 
     @property
+    def size(self):
+        return self.size_
+
+    @size.setter
+    def size(self, value):
+        self.size_ = value
+        ffi.SetGlobalSize(value)
+
+    @property
+    def rank(self):
+        return self.rank_
+
+    @rank.setter
+    def rank(self, value):
+        self.rank_ = value
+        ffi.SetGlobalRank(value)
+
+    @property
     def zero_opt_level(self):
         return self.zero_opt_level_
 
