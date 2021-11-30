@@ -256,13 +256,13 @@ constexpr const char* kPatternName = "PatternName";
 }  // namespace mnm
 
 #define MNM_BASE_OBJECT(TypeName, ParentType)                                                  \
-  static const uint32_t RuntimeTypeIndex() {                                                   \
+  static uint32_t RuntimeTypeIndex() {                                                         \
     if (TypeName::_type_index != ::tvm::runtime::TypeIndex::kDynamic) {                        \
       return TypeName::_type_index;                                                            \
     }                                                                                          \
     return _GetOrAllocRuntimeTypeIndex();                                                      \
   }                                                                                            \
-  static const uint32_t _GetOrAllocRuntimeTypeIndex() {                                        \
+  static uint32_t _GetOrAllocRuntimeTypeIndex() {                                              \
     static uint32_t tidx = GetOrAllocRuntimeTypeIndex(                                         \
         TypeName::_type_key, TypeName::_type_index, ParentType::_GetOrAllocRuntimeTypeIndex(), \
         TypeName::_type_child_slots, TypeName::_type_child_slots_can_overflow);                \

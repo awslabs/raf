@@ -7,7 +7,6 @@
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/tensor.h"
-#include "../3rdparty/tvm/src/relay/transforms/pattern_utils.h"
 
 namespace mnm {
 namespace op {
@@ -42,23 +41,7 @@ using VarValueMap = Map<Var, Expr>;
 
 template <typename T>
 ScalarValue Constant2ScalarValue(const ConstantNode* op) {
-  Tensor tensor = Downcast<TensorValue>(op->value)->tensor;
-  DataType dtype = DataType(tensor->dtype);
-  void* raw_data = tensor->data;
-  ICHECK_EQ(tensor->ndim, 0);
-  ICHECK_EQ(dtype.lanes(), 1);
-
-  T data;
-  TVM_DTYPE_DISPATCH(dtype, DType, {
-    if (dtype == DataType::Float(16)) {
-      // convert to float32
-      // storage is uint16_t
-      data = __extendXfYf2__<uint16_t, uint16_t, 10, float, uint32_t, 23>(
-          reinterpret_cast<uint16_t*>(raw_data)[0]);
-    } else {
-      data = static_cast<DType*>(raw_data)[0];
-    }
-  });
+  T data = GetScalarValueData<T>(Downcast<TensorValue>(op->value));
   return ScalarValue::make(data);
 }
 

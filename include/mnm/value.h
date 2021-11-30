@@ -11,6 +11,7 @@
 #include "./ir.h"
 #include "./tensor.h"
 #include "./memory_pool.h"
+#include "../3rdparty/tvm/src/relay/transforms/pattern_utils.h"
 
 namespace mnm {
 namespace op {
@@ -353,14 +354,48 @@ class VoidValue : public Value {
   MNM_OBJECT_REF(VoidValue, Value, VoidValueObj);
 };
 
-template <class T>
-T GetScalarValueData(const Value& value);
+template <typename T>
+T GetScalarValueData(const Value& value) {
+  using namespace tvm::runtime;
 
-template <>
-bool GetScalarValueData<bool>(const Value& value);
+  if (const auto* bvo = value.as<BoolValueObj>()) {
+    return bvo->value;
+  } else if (const auto* fvo = value.as<FloatValueObj>()) {
+    return fvo->value;
+  } else if (const auto* ivo = value.as<IntValueObj>()) {
+    return ivo->value;
+  } else if (const auto* tvo = value.as<TensorValueObj>()) {
+    tensor::Tensor tensor = tvo->tensor;
+    CHECK_EQ(tensor->ndim, 0U) << "Value is not a scalar";
 
-template <>
-float GetScalarValueData<float>(const Value& value);
+    DataType dtype = DataType(tensor->dtype);
+    NDArray nd_array;
+    if (tensor->device.device_type != kDLCPU) {
+      DLDevice cpu_dev;
+      cpu_dev.device_type = kDLCPU;
+      cpu_dev.device_id = 0;
+      nd_array = tensor.CopyTo(cpu_dev);
+    } else {
+      nd_array = tensor;
+    }
+    void* raw_data = nd_array->data;
+
+    T data;
+    TVM_DTYPE_DISPATCH(dtype, DType, {
+      if (dtype == DataType::Float(16)) {
+        // The storage of float16 is uint16_t. Here we convert it to float32.
+        data = __extendXfYf2__<uint16_t, uint16_t, 10, float, uint32_t, 23>(
+            reinterpret_cast<uint16_t*>(raw_data)[0]);
+      } else if (dtype == DataType::Bool()) {
+        data = reinterpret_cast<uint8_t*>(raw_data)[0];
+      } else {
+        data = static_cast<DType*>(raw_data)[0];
+      }
+    });
+    return data;
+  }
+  LOG(FATAL) << "Cannot convert to scalar value";
+}
 
 /*!
  * \brief Copy a value to specified device.

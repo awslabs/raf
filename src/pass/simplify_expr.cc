@@ -141,7 +141,7 @@ class ConcretizeLikeRewrite : public DFPatternRewrite {
 
 /*!
  * \brief Converts `*_like` unary operators to their explicit shape equivalent
- * (e.g. `zeros_like(x, y)` to `zeros(x, y.shape)`), when the target information is concrete.
+ * (e.g. `zeros_like(x)` to `zeros(x.shape, x.dtype)`), when the target information is concrete.
  */
 class ConcretizeUnaryLikeRewrite : public ConcretizeLikeRewrite {
  public:
@@ -214,6 +214,141 @@ class ConcretizeBroadcastToLikeRewrite : public ConcretizeBinaryLikeRewrite {
     static auto op = Op::Get("mnm.op.broadcast_to");
     return Call(op, {node_map[data_pat_][0], MakeConstant(ArrayToIntTuple(shape))});
   }
+};
+
+/*! \brief Check whether the given expr is a constant scalar with the expected value.
+ * It is also applicable when the constant is a 0-dim tensor.
+ */
+bool IsExpectedScalar(const Expr& arg, float expected) {
+  if (auto node = arg.as<ConstantNode>()) {
+    if (auto val_obj = node->value.as<IntValueObj>()) {
+      return val_obj->value == (int64_t)expected;
+    } else if (auto val_obj = node->value.as<FloatValueObj>()) {
+      return val_obj->value == expected;
+    } else if (auto val_obj = node->value.as<TensorValueObj>()) {
+      tensor::Tensor tensor = val_obj->tensor;
+      if (tensor->ndim != 0) {  // Not even a scalar.
+        return false;
+      }
+
+      bool is_expected = false;
+      if (DataType(tensor->dtype) == DataType::Float(32) ||
+          DataType(tensor->dtype) == DataType::Float(16)) {
+        float value = GetScalarValueData<float>(GetRef<TensorValue>(val_obj));
+        is_expected = value == expected;
+      } else if (DataType(tensor->dtype) == DataType::Int(32)) {
+        int32_t value = GetScalarValueData<int32_t>(GetRef<TensorValue>(val_obj));
+        is_expected = value == (int32_t)expected;
+      } else {
+        LOG(WARNING) << "Unsupported type: " << DataType(tensor->dtype);
+      }
+      return is_expected;
+    }
+  }
+  return false;
+}
+
+/*! \brief A helper function to free a constant tensor. */
+void FreeConstTensor(const Expr& expr) {
+  auto node = expr.as<ConstantNode>();
+  CHECK(node != nullptr) << "Expected a ConstantNode, but got " << expr->GetTypeKey();
+  if (auto val_obj = node->value.as<TensorValueObj>()) {
+    val_obj->mem.reset();
+  }
+}
+
+/*! \brief Remove *1 and fold *0. */
+class ConcretizeMultiplyRewrite : public DFPatternRewrite {
+ public:
+  ConcretizeMultiplyRewrite() {
+    in1_pat_ = IsWildcard();
+    in2_pat_ = IsWildcard();
+    pattern_ = IsOp("mnm.op.multiply")({in1_pat_, in2_pat_});
+  }
+
+  Expr Callback(const Expr& pre, const Expr& post,
+                const Map<DFPattern, Array<Expr>>& node_map) const override {
+    // Remove *1.
+    if (IsExpectedScalar(node_map[in1_pat_][0], 1)) {
+      FreeConstTensor(node_map[in1_pat_][0]);
+      return node_map[in2_pat_][0];
+    }
+    if (IsExpectedScalar(node_map[in2_pat_][0], 1)) {
+      FreeConstTensor(node_map[in2_pat_][0]);
+      return node_map[in1_pat_][0];
+    }
+
+    // Fold *0.
+    bool is_1st_zero = IsExpectedScalar(node_map[in1_pat_][0], 0);
+    bool is_2nd_zero = IsExpectedScalar(node_map[in2_pat_][0], 0);
+    if (is_1st_zero || is_2nd_zero) {
+      static auto op = Op::Get("mnm.op.zeros");
+      auto call = Downcast<Call>(pre);
+      auto non_zero_in = (is_1st_zero) ? call->args[1] : call->args[0];
+      const TensorTypeNode* ttype_node = non_zero_in->checked_type().as<TensorTypeNode>();
+      CHECK(ttype_node) << "Expected a TensorType, but got " << non_zero_in->GetTypeKey();
+      try {
+        auto shape = ArrayToInt(ttype_node->shape);
+        CHECK_GT(shape.size(), 0U) << "Expected non-scalar tensor (ndim > 0)";
+
+        // Free the useless 0 tensor(s).
+        if (is_1st_zero) {
+          FreeConstTensor(node_map[in1_pat_][0]);
+        }
+        if (is_2nd_zero) {
+          FreeConstTensor(node_map[in2_pat_][0]);
+        }
+        return Call(op, {MakeConstant(ArrayToIntTuple(shape)),
+                         MakeConstant(StringValue::make(DLDataType2String(ttype_node->dtype)))});
+      } catch (const dmlc::Error& e) {
+        // Shape is not static, don't concretize.
+        return post;
+      }
+    }
+    return post;
+  }
+
+ protected:
+  DFPattern in1_pat_, in2_pat_;
+};
+
+/*!
+ * \brief Remove +0 and -0.
+ */
+class ConcretizeAddSubRewrite : public DFPatternRewrite {
+ public:
+  ConcretizeAddSubRewrite() {
+    in1_pat_ = IsWildcard();
+    in2_pat_ = IsWildcard();
+    out_pat_ = IsWildcard();
+    op_pat_ = IsOp("mnm.op.add") || IsOp("mnm.op.subtract");
+    pattern_ = op_pat_({in1_pat_, in2_pat_, out_pat_, IsWildcard()});
+  }
+
+  Expr Callback(const Expr& pre, const Expr& post,
+                const Map<DFPattern, Array<Expr>>& node_map) const override {
+    // Do not rewrite if the output is shared.
+    if (!node_map[out_pat_][0]->IsInstance<ConstantNode>()) {
+      return post;
+    }
+
+    Op op = Downcast<Op>(node_map[op_pat_][0]);
+    static auto add_op = Op::Get("mnm.op.add");
+
+    // Remove 0+x, x+0, and x-0. Note that 0-x cannot be simplified.
+    if (op == add_op && IsExpectedScalar(node_map[in1_pat_][0], 0)) {
+      FreeConstTensor(node_map[in1_pat_][0]);
+      return node_map[in2_pat_][0];
+    }
+    if (IsExpectedScalar(node_map[in2_pat_][0], 0)) {
+      FreeConstTensor(node_map[in2_pat_][0]);
+      return node_map[in1_pat_][0];
+    }
+    return post;
+  }
+
+ protected:
+  DFPattern in1_pat_, in2_pat_, out_pat_, op_pat_;
 };
 
 /*! \brief Simplify useless cast ops. */
@@ -417,6 +552,8 @@ Expr SimplifyExpr(const Expr& expr, const IRModule& mod) {
   composer.AddRewrite<ConcretizeOnesLikeRewrite>();
   composer.AddRewrite<ConcretizeCastLikeRewrite>();
   composer.AddRewrite<ConcretizeBroadcastToLikeRewrite>();
+  composer.AddRewrite<ConcretizeMultiplyRewrite>();
+  composer.AddRewrite<ConcretizeAddSubRewrite>();
   auto ret = mnm::ir::RewritePatterns(composer.MakeCallbacks(), expr, mod);
 
   // Phase 2: Sequence patterns that may need to be applied iteratively.

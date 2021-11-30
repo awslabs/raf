@@ -93,8 +93,9 @@ inline DType::operator cudaDataType_t() const {
       if (bits == 16) return CUDA_R_16F;
       if (bits == 32) return CUDA_R_32F;
       if (bits == 64) return CUDA_R_64F;
+    default:
+      LOG(FATAL) << "NotImplementedError: " << c_str();
   }
-  LOG(FATAL) << "NotImplementedError: " << c_str();
   throw;
 }
 

@@ -1,13 +1,15 @@
-# pylint: disable=protected-access, no-self-use
+# pylint: disable=protected-access, no-self-use, too-many-locals
 import pytest
 import mnm
 from mnm._core.ir_ext import extended_var
+from mnm._core.ndarray import array
 from mnm._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm, InferType
-from mnm.ir import MNMSequential
+from mnm.ir import MNMSequential, ScopeBuilder
 from mnm.testing import randn
 
 import tvm
 from tvm import relay
+
 
 def simplify(mod):
     seq = MNMSequential([ToGraphNormalForm(), ToBasicBlockNormalForm(), SimplifyExpr()])
@@ -36,8 +38,9 @@ def test_unary_like(op):
     assert "like" not in text, text
 
 
-@pytest.mark.parametrize("params", [("cast_like", (10, 1), "float16"),
-                                    ("broadcast_to_like", (10, 10), "float32")])
+@pytest.mark.parametrize(
+    "params", [("cast_like", (10, 1), "float16"), ("broadcast_to_like", (10, 10), "float32")]
+)
 def test_binary_like(params):
     op, shape_like, dtype_like = params
     device = "cpu"
@@ -153,7 +156,69 @@ def test_matmul_reshape_bias(ndim, act):
         mod = tvm.IRModule.from_expr(relay.Function([x, w, b], y))
         return InferType()(mod)["main"]
 
-    assert tvm.ir.structural_equal(mod['main'], expected()), mnm.ir.AsText(mod['main'])
+    assert tvm.ir.structural_equal(mod["main"], expected()), mnm.ir.AsText(mod["main"])
+
+
+def test_multiply():
+    device = "cpu"
+    shape = (10, 5)
+    mul_op = mnm._ffi.op.GetOp("mnm.op.multiply")
+
+    data_x = mnm.ir.var("x", shape=shape, dtype="float32")
+    const_1 = mnm.ir.const(1.0, dtype="float32")
+    const_0 = mnm.ir.const(0.0, dtype="float32")
+    tensor_1 = mnm.ir.const(array(1, dtype="float32", device=device))
+    tensor_0 = mnm.ir.const(array(0, dtype="float32", device=device))
+
+    sb = ScopeBuilder()
+    a_1 = sb.let("a1", relay.Call(mul_op, [data_x, const_1]))
+    a_2 = sb.let("a2", relay.Call(mul_op, [a_1, tensor_1]))
+    a_3 = sb.let("a3", relay.Call(mul_op, [a_2, const_0]))
+    a_4 = sb.let("a4", relay.Call(mul_op, [tensor_0, a_3]))
+    sb.ret(a_4)
+    func = relay.Function([data_x], sb.get())
+    mod = tvm.IRModule.from_expr(func)
+    mod = simplify(mod)
+
+    def expected():
+        zeros_op = mnm._ffi.op.GetOp("mnm.op.zeros")
+        x = extended_var("x", shape=shape, dtype="float32")
+        y = relay.Call(zeros_op, [mnm.ir.const(shape), mnm.ir.const("float32")])
+        mod = tvm.IRModule.from_expr(relay.Function([x], y))
+        return InferType()(mod)["main"]
+
+    assert tvm.ir.structural_equal(mod["main"], expected()), mnm.ir.AsText(mod["main"])
+
+
+def test_add_sub():
+    device = "cpu"
+    shape = (10, 5)
+    add_op = mnm._ffi.op.GetOp("mnm.op.add")
+    sub_op = mnm._ffi.op.GetOp("mnm.op.subtract")
+
+    data_x = mnm.ir.var("x", shape=shape, dtype="float32")
+    const_0 = mnm.ir.const(0.0, dtype="float32")
+    tensor_0 = mnm.ir.const(array(0, dtype="float32", device=device))
+    null = mnm.ir.const(None)
+
+    sb = ScopeBuilder()
+    a_1 = sb.let("a1", relay.Call(sub_op, [const_0, data_x, null, null]))
+    a_2 = sb.let("a2", relay.Call(add_op, [a_1, const_0, null, null]))
+    a_3 = sb.let("a3", relay.Call(add_op, [a_2, tensor_0, null, null]))
+    a_4 = sb.let("a4", relay.Call(add_op, [a_3, const_0, data_x, null]))
+    sb.ret(a_4)
+    func = relay.Function([data_x], sb.get())
+    mod = tvm.IRModule.from_expr(func)
+    mod = simplify(mod)
+
+    def expected():
+        x = extended_var("x", shape=shape, dtype="float32")
+        y = relay.Call(sub_op, [const_0, x, null, null])
+        y = relay.Call(add_op, [y, const_0, x, null])
+        mod = tvm.IRModule.from_expr(relay.Function([x], y))
+        return InferType()(mod)["main"]
+
+    assert tvm.ir.structural_equal(mod["main"], expected()), mnm.ir.AsText(mod["main"])
 
 
 if __name__ == "__main__":
