@@ -17,7 +17,7 @@ namespace vm {
 
 class VMDebugger : public VirtualMachine {
  public:
-  VMDebugger() : VirtualMachine(false) {
+  VMDebugger() : VirtualMachine(false, false) {
   }
 
   PackedFunc GetFunction(const std::string& name, const ObjectPtr<Object>& sptr_to_self) final;

@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/impl/profiler.cc
+ * \file src/profiler/base/profiler.cc
  * \brief MNM profiler, a simple implementation
  */
 #include "mnm/registry.h"
@@ -10,7 +10,6 @@ namespace mnm {
 namespace profiler {
 
 Profiler::Profiler() {
-  init_time_ = ProfileStat::NowInMicrosec();
 }
 
 Profiler::~Profiler() {

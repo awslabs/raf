@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import mnm
 from mnm._core.device import Device
-from mnm._core.vm_debug import VMDebugExecutor
+from mnm._core.executor import VMExecutor
 from mnm._ffi.memory_pool import InitPool
 from mnm.ir import ScopeBuilder
 from mnm.model import Conv2d
@@ -64,13 +64,13 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
         with tvm.transform.PassContext(opt_level=3,
                                        disabled_pass=["FuseTVM", "FuseDialect"],
                                        config={"mnm.memory_budget": int(budget * 1048576)}):
-            executor = VMDebugExecutor(mod, device, option="profile_memory")
-            ret_map = executor.make_executor()(*args)
+            mnm.utils.memory_profiler.reset()
+            mnm.utils.memory_profiler.start()
+            VMExecutor(mod, device).make_executor()(*args)
+            mnm.utils.memory_profiler.stop()
 
-        peak_memory = sum(
-            [v[0].value for k, v in ret_map.items() \
-                if k.find(device) != -1 and not k.startswith("GC")]
-        ) + param_size
+        ret_map = mnm.utils.memory_profiler.get_max_memory_info(mnm.Device(device))
+        peak_memory = ret_map["max_allocated"].value + param_size
         assert abs(expected_peak - peak_memory) < 0.1, \
             "Incorrect peak memory with remat=%s" % with_remat
 

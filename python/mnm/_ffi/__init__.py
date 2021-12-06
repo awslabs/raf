@@ -13,6 +13,7 @@ from . import distributed
 from . import executor
 from . import ir
 from . import memory_pool
+from . import memory_profiler
 from . import model
 from . import op
 from . import pass_

@@ -9,5 +9,4 @@ from ._internal import GetPrimitiveFields
 from ._internal import Load_Executable
 from ._internal import VMCompiler
 from ._internal import VMDebugger
-from ._internal import VMMemoryProfiler
 from ._internal import VirtualMachine

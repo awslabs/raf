@@ -110,11 +110,15 @@ class VMExecutor:
 
     device : str
         The runtime context to run the code on.
+
     enable_cuda_graph : bool
         Whether to use CUDA graph.
+
+    dryrun: bool
+        Whether to create a dryrun VM that skips the op execution.
     """
 
-    def __init__(self, mod, device, enable_cuda_graph=False):
+    def __init__(self, mod, device, enable_cuda_graph=False, dryrun=False):
         if mod is None:
             raise RuntimeError("Must provide module to get VM executor.")
         if "gpu" not in device and "cuda" not in device:
@@ -122,7 +126,8 @@ class VMExecutor:
         self.device = Device(device)
         self.executable = vm.compile(mod, self.device)
         self.vm = vm.VirtualMachine(self.executable, self.device,
-                                    enable_cuda_graph=enable_cuda_graph)
+                                    enable_cuda_graph=enable_cuda_graph,
+                                    dryrun=dryrun)
 
     @staticmethod
     def _make_vm_helper(maker, sch_file=None):

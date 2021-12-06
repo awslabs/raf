@@ -102,6 +102,7 @@ file(GLOB_RECURSE MNM_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/op/ty/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/pass/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/profiler/memory_profiler.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/profiler/base/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/distributed/common/*.cc
 )

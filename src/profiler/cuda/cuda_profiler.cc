@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2019 by Contributors
- * \file src/common/cuda_profiler.cc
+ * \file src/profiler/cuda/cuda_profiler.cc
  * \brief async profiler for cuda operations
  */
 #include "./cuda_profiler.h"

@@ -29,6 +29,7 @@
 #include "mnm/vm/vm.h"
 #include "mnm/device_api.h"
 #include "mnm/profiler.h"
+#include "mnm/memory_profiler.h"
 #include "mnm/stream_pool.h"
 #include "../../requests.h"
 #include "../../op/ty/utils.h"
@@ -811,19 +812,22 @@ void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
   std::string input_str;
 
   std::tie(op_env, inputs, output, input_str) = PrepareOpEnv(ctx, instr);
+  if (!dryrun_) {  // Skip the execution in dryrun mode
 #ifdef MNM_USE_CUDA
-  if (use_cuda_) {
-    WITH_CUDA_PROFILER(
-        devices_[0],
-        utils::GetStreamById(ctx, ctx->current_device_id, ctx->current_stream_id)->data(),
-        op_env->name(), utils::GetStreamName(ctx->current_stream_id), {input_str},
-        { op_env->Execute(inputs, output); });
-  } else
+    if (use_cuda_) {
+      WITH_CUDA_PROFILER(
+          devices_[0],
+          utils::GetStreamById(ctx, ctx->current_device_id, ctx->current_stream_id)->data(),
+          op_env->name(), utils::GetStreamName(ctx->current_stream_id), {input_str},
+          { op_env->Execute(inputs, output); });
+    } else
 #endif
-  {  // cpu
-    WITH_BASE_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {input_str},
-                       { op_env->Execute(inputs, output); });
+    {  // cpu
+      WITH_BASE_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {input_str},
+                         { op_env->Execute(inputs, output); });
+    }
   }
+  PROFILE_MEMORY(devices_[0], op_env->name());
 
   // Release workspace memory.
   // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
@@ -1090,8 +1094,9 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
   return std::make_tuple(op_env, std::move(inputs), std::move(output), input_str);
 }
 
-tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph) {
-  auto vm = make_object<VirtualMachine>(enable_cuda_graph);
+tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph,
+                                          bool dryrun) {
+  auto vm = make_object<VirtualMachine>(enable_cuda_graph, dryrun);
   vm->LoadExecutable(exec);
   return tvm::runtime::Module(vm);
 }
@@ -1099,9 +1104,10 @@ tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cu
 MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   bool enable_cuda_graph = args[1];
+  bool dryrun = args[2];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec) << "The virtual machine executable has not been defined yet.";
-  *rv = CreateVirtualMachine(exec, enable_cuda_graph);
+  *rv = CreateVirtualMachine(exec, enable_cuda_graph, dryrun);
 });
 
 }  // namespace vm

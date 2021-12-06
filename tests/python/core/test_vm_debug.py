@@ -3,6 +3,7 @@ import mnm
 import tvm
 from mnm.testing import check
 from mnm._core.device import Device
+from mnm._core.executor import VMExecutor
 from mnm._core.vm_debug import VMDebugExecutor
 from mnm._ffi.memory_pool import InitPool
 from mnm.testing import get_device_list, randn, with_seed
@@ -30,7 +31,7 @@ def test_vm_debugger(device, shape):
     mod = model._internal(m_x).mod
     # disable fusion
     with mnm.ir.PassContext(opt_level=1):
-        executor = VMDebugExecutor(mod, device, option="debug")
+        executor = VMDebugExecutor(mod, device)
 
     # Testing whether we can get the correct intermediate tensor
     m_z = executor.make_executor()(m_x).numpy()
@@ -77,18 +78,19 @@ def test_vm_memory_profiler(device, pool_name):
     m_w, _ = randn(wshape, device=device)
 
     mod = model._internal(m_x, m_w).mod
+    # Enable memory planning with opt_level=3 to check if memory profiler reflects buffer sharing.
     with tvm.transform.PassContext(opt_level=3):
-        # Enable memory planning to check if memory profiler reflects buffer sharing.
-        executor = VMDebugExecutor(mod, device, option="profile_memory")
-        ret_map = executor.make_executor()(m_x, m_w)
+        mnm.utils.memory_profiler.reset()
+        mnm.utils.memory_profiler.start()
+        VMExecutor(mod, device).make_executor()(m_x, m_w)
+        mnm.utils.memory_profiler.stop()
+
+    ret_map = mnm.utils.memory_profiler.get_max_memory_info(mnm.Device(device))
+    peak_memory = ret_map["max_allocated"].value
 
     # The buffer size in MBs for an output tensor of the conv2d in the model.
     # Note that since it fits to the page size, we can allocate the exact size for it.
     buffer_size = (32 * 3 * 224 * 224) * 4 / 1048576
-
-    peak_memory = sum(
-        [v[0].value for k, v in ret_map.items() if k.find(device) != -1 and not k.startswith("GC")]
-    )
 
     if device == "cuda":
         if pool_name == "page_unit_pool" or float(mnm.build.with_cuda()) >= 11.3:

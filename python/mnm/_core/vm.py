@@ -423,12 +423,15 @@ class VirtualMachine:
 
     enable_cuda_graph : bool
         Whether use CUDA graph.
+
+    dryrun: bool
+        Whether to create a dryrun VM that skips the op execution.
     """
-    def __init__(self, exe, device, enable_cuda_graph=False):
+    def __init__(self, exe, device, enable_cuda_graph=False, dryrun=False):
         if not isinstance(exe, Executable):
             raise TypeError("mod is expected to be the type of Executable, but received {}"
                             .format(type(exe)))
-        self.module = _ffi.vm.VirtualMachine(exe.module, enable_cuda_graph)
+        self.module = _ffi.vm.VirtualMachine(exe.module, enable_cuda_graph, dryrun)
         self._exec = exe
         self._set_devices = self.module["set_devices"]
         self._prepare_context = self.module["prepare_context"]

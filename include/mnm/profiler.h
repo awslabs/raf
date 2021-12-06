@@ -227,8 +227,6 @@ class Profiler {
   std::recursive_mutex m_;
   /*! \brief The helper pool. */
   std::vector<ProfilerHelper> helpers_;
-  /*! \brief Initial time for profiler. */
-  uint64_t init_time_;
 };
 
 inline void ProfilerHelper::start() {
