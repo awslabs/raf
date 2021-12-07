@@ -12,7 +12,6 @@
 #include "./estimate_flops.h"
 #include "./let_list.h"
 #include "./liveness_analysis.h"
-#include "../common/shape_utils.h"
 #include "../op/dialect/tvm/tvm_utils.h"
 
 namespace mnm {
@@ -20,7 +19,6 @@ namespace pass {
 namespace rematerialization {
 
 using namespace mnm::op;
-using common::shape_utils::BytesCompactTensor;
 
 template <typename T>
 using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
@@ -99,7 +97,7 @@ class TensorInfos {
  public:
   void CreateTensorInfo(const Var& let_var, const Array<Var>& liveness_vars, bool is_param = false,
                         float gflops = -1) {
-    auto sizes = CalcBytesCompactSizes(let_var->checked_type());
+    auto sizes = liveness_analysis::CalcBytesCompactSizes(let_var->checked_type());
     CHECK_EQ(liveness_vars.size(), sizes.size());
     const auto* extended_var = static_cast<const ExtendedVarNode*>(let_var.operator->());
 
@@ -198,32 +196,6 @@ class TensorInfos {
   }
 
  private:
-  /*! \brief Calculate the byte compact size of the given type. If the type is a tuple,
-   * then the size of each tensor in the tuple will be returned. Note that size 0 means
-   * a tensor with dynamic shape.
-   */
-  std::vector<int64_t> CalcBytesCompactSizes(const Type& type) {
-    std::vector<const TensorTypeNode*> ttypes;
-    std::vector<int64_t> sizes;
-    if (auto tuple_type = type.as<TupleTypeNode>()) {
-      for (auto field : tuple_type->fields) {
-        auto ttype = field.as<TensorTypeNode>();
-        CHECK(ttype != nullptr) << "Nested tuple is not supported";
-        ttypes.push_back(ttype);
-      }
-    } else if (auto ttype = type.as<TensorTypeNode>()) {
-      ttypes.push_back(ttype);
-    } else {
-      LOG(FATAL) << "Unsupported type: " << type->GetTypeKey();
-      throw;
-    }
-
-    for (auto ttype : ttypes) {
-      sizes.push_back(BytesCompactTensor(ttype));
-    }
-    return sizes;
-  }
-
   /*! \brief The mapping from liveness vars to the analyzed tensor info. */
   StdMap<std::shared_ptr<TensorInfo>> liveness_var_to_info_;
   /*! \brief A reversed map of liveness vars to tensor info. */

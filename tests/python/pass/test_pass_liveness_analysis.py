@@ -9,6 +9,8 @@ from mnm.testing import randn
 
 def verify_live_in_set(mod, expected):
     mod = InferType()(mod)
+
+    # Check liveness analysis result.
     ret = LivenessAnalysis(mod)
     ret = {key.name_hint: {v.name_hint for v in var_list} for key, var_list in ret.items()}
 
@@ -36,6 +38,7 @@ def verify_live_in_set(mod, expected):
             else:
                 print("Missed live in of %s: %s" % (key, ",".join(var_list)))
         assert False, "Expected key or live in vars are missing"
+
 
 def test_basic():
     class Model(mnm.Model):
@@ -160,7 +163,8 @@ def test_unused_tuple():
             x = tup[0] # a1
             t_0 = mnm.add(x, x) # a2
             t_1 = mnm.concatenate(tup) # a3
-            return (t_0, t_1) # n_1
+            ret = (t_0, t_1) # a4
+            return ret # n_1
 
     model = Model()
     model.infer_mode()
@@ -177,6 +181,7 @@ def test_unused_tuple():
         "a1": {"param_0", "param_1"},
         "a2": {"param_0", "param_1"},
         "a3": {"param_0", "param_1", "t_0"},
+        "a4": {"t_0", "t_1"},
         "n_1": {"t_0", "t_1"},
     }
 

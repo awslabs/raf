@@ -69,12 +69,8 @@ def _get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     options.setdefault("stream_schedule_policy", "sequential")
     options.setdefault("sch_file", None)
     options.setdefault("pass_seq", None)
-    options.setdefault("reuse_storage", False)
 
-    config = {
-        "mnm.stream_schedule.policy": options["stream_schedule_policy"],
-        "mnm.memory_plan.reuse_storage": options["reuse_storage"],
-    }
+    config = {"mnm.stream_schedule.policy": options["stream_schedule_policy"]}
     pass_seq = options['pass_seq']
     disabled_pass = []
     if disable_fusion:

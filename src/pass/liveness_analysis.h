@@ -471,6 +471,15 @@ class LivenessAnalyzer::BackwardAnalyzer : public ExprVisitor {
   LivenessAnalyzer* analyzer_;
 };
 
+/*! \brief Calculate the byte compact size of the given type. If the type is a tuple,
+ * then the size of each tensor in the tuple will be returned. Note that size 0 means
+ * a tensor with dynamic shape.
+ */
+std::vector<int64_t> CalcBytesCompactSizes(const Type& type);
+
+/*! \brief Dump liveness analysis result statistics. */
+void DumpLivenessStat(const MapVSet& live_in);
+
 }  // namespace liveness_analysis
 }  // namespace pass
 }  // namespace mnm
