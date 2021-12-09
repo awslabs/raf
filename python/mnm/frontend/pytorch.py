@@ -116,7 +116,7 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
                 hashf.write(model_hash)
     else:
         scripted_model = trace_model(model, input_type, input_shape)
-    shape_list = [(input_name, input_shape)]
+    shape_list = [(input_name, (input_shape, input_type))]
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
     meta_mod = FromRelay()(relay_mod)
     meta_params = OrderedDict()
