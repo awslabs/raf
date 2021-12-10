@@ -5,6 +5,7 @@ To test collective_communication, you should run:
 `mpirun -np 2 python3 tests/python/distributed/test_collective_communication.py`
 (in ci/tash_python_unittest.sh)
 """
+import sys
 import pytest
 import numpy as np
 
@@ -31,7 +32,7 @@ def run_model(model, args, device, check_result=True):
             out1 = [out1]
             out2 = [out2]
         for o1, o2 in zip(out1, out2):
-            assert check(o1, o2), "Inconsistent results between interpreter and VM at %s" % device
+            check(o1, o2) # Check if there are inconsistent results between interpreter and VM
     return ret
 
 
@@ -211,7 +212,8 @@ def test_allgather_with_tensor_list(axis):
         check(y, target_y)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True),
+                    reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_reduce_scatter(computation):
     class TestModel(mnm.Model):
@@ -255,7 +257,7 @@ def test_reduce_scatter(computation):
         if computation == "sum":
             n_out = -n_ones * sum(range(1, total_rank + 1))
         elif computation == "prod":
-            n_out = -n_ones * np.prod(range(1, total_rank + 1))
+            n_out = n_ones * np.prod(range(1, total_rank + 1))
         elif computation == "min":
             n_out = -n_ones * max(1, total_rank)
         elif computation == "max":
@@ -303,11 +305,11 @@ def test_send_recv():
     n_x = n_ones * (rank+1)
     m_x = mnm.array(n_x, device=device)
     model.to(device=device)
-    m_out = run_model(model, [m_x], device, check_result=bool(rank > 0))
-    m_out = m_out[0]
-    if rank > 0:
-        n_out = n_ones * 3
-        check(m_out, n_out)
+    out1 = model(m_x)
+    out2 = run_vm_model(model, device, [m_x])
+    check(out1[0], out2[0]) # NOTE: out[1] is not set by NCCLSend currently
+    n_out = n_ones * 3
+    check(out1[0], n_out)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
@@ -337,8 +339,7 @@ def test_reduce(computation):
     y = model(x)
     vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     vx = mnm.array(vx, device=device)
-    run_vm_model(model, device, [vx])
-    check(y, vx)
+    vy = run_vm_model(model, device, [vx])
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
@@ -357,6 +358,7 @@ def test_reduce(computation):
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
+        check(y, vy)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
@@ -449,5 +451,6 @@ def test_broadcast():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    exit_code = pytest.main([__file__])
     dist.RemoveCommunicator()
+    sys.exit(exit_code)

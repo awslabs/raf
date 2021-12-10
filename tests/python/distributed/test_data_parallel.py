@@ -1,5 +1,6 @@
 # pylint: disable=attribute-defined-outside-init,protected-access,too-many-locals
-# pylint: disable=too-many-statements
+# pylint: disable=too-many-statements,invalid-name
+import sys
 import pytest
 
 import mnm
@@ -84,5 +85,6 @@ def test_zero_opt_1():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    exit_code = pytest.main([__file__])
     dist.RemoveCommunicator()
+    sys.exit(exit_code)
