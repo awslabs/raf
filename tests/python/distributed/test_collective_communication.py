@@ -32,7 +32,12 @@ def run_model(model, args, device, check_result=True):
             out1 = [out1]
             out2 = [out2]
         for o1, o2 in zip(out1, out2):
-            check(o1, o2) # Check if there are inconsistent results between interpreter and VM
+            try:
+                check(o1, o2)
+            except AssertionError as e:
+                raise AssertionError(
+                    "Inconsistent results between interpreter and VM at %s" % device
+                ) from e
     return ret
 
 
