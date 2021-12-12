@@ -5,7 +5,7 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
-#include "mnm/communicator.h"
+#include "mnm/dist_context.h"
 #include "mnm/type.h"
 #include "../schema/communication.h"
 #include "./utils.h"
@@ -16,7 +16,7 @@ namespace op {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
-using namespace mnm::distributed::communicator;
+using mnm::distributed::DistContext;
 
 template <typename T>
 Type IdentityType(const CallValues& value) {
@@ -76,10 +76,10 @@ MNM_OP_TYPE("mnm.op._recv", "NCCLRecv", RecvInfer);
 Type AllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<AllgatherArgs>();
   CHECK(args != nullptr);
+  auto dctx = DistContext::Global();
   auto ttype = GetType(args->x).as<TensorTypeNode>();
   auto shape = ttype->shape;
-  auto new_size = shape[args->axis].as<IntImmNode>()->value *
-                  CommunicatorManager::Get()->GetCommunicator()->GetSize();
+  auto new_size = shape[args->axis].as<IntImmNode>()->value * dctx->size;
   shape.Set(args->axis, Integer(new_size));
   return TensorType(shape, DataType(ttype->dtype));
 }
