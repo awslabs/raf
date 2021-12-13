@@ -36,9 +36,9 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator);
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     auto& tv = args->x;
+    
 
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
@@ -57,6 +57,12 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     } else {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
+
+    /*if (args->rank_list.empty()) {
+      RequestDistributed(&communicator);
+    } else {
+      communicator = CommunicatorManager::Get()->GetCommunicator
+    }*/
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
       size_t size = BytesCompactTensor(*x);

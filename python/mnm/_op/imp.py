@@ -51,16 +51,18 @@ __all__ = [
 ]
 
 @set_module("mnm")
-def _allgather(x, axis):
+def _allgather(x, axis, rank_list=None):
     x = imp_utils.to_tensor(x)
     axis = imp_utils.to_int(axis)
-    return imp_utils.ret(ffi._allgather(x, axis))
+    rank_list = imp_utils.to_int_tuple(rank_list)
+    return imp_utils.ret(ffi._allgather(x, axis, rank_list))
 
 @set_module("mnm")
-def _allreduce(x, computation="sum"):
+def _allreduce(x, computation="sum", rank_list=None):
     x = imp_utils.to_tensor_tuple(x)
     computation = imp_utils.to_string(computation)
-    return imp_utils.ret(ffi._allreduce(x, computation))
+    rank_list = imp_utils.to_int_tuple(rank_list)
+    return imp_utils.ret(ffi._allreduce(x, computation, rank_list))
 
 @set_module("mnm")
 def _broadcast(x, root):

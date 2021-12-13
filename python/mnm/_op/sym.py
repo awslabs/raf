@@ -50,15 +50,17 @@ __all__ = [
     "zeros_like",
 ]
 
-def _allgather(x, axis):
+def _allgather(x, axis, rank_list=None):
     x = sym_utils.to_tensor(x)
     axis = sym_utils.to_int(axis)
-    return Symbol.from_expr(ffi._allgather(x, axis))
+    rank_list = sym_utils.to_int_tuple(rank_list)
+    return Symbol.from_expr(ffi._allgather(x, axis, rank_list))
 
-def _allreduce(x, computation="sum"):
+def _allreduce(x, computation="sum", rank_list=None):
     x = sym_utils.to_tensor_tuple(x)
     computation = sym_utils.to_string(computation)
-    return Symbol.from_expr(ffi._allreduce(x, computation))
+    rank_list = sym_utils.to_int_tuple(rank_list)
+    return Symbol.from_expr(ffi._allreduce(x, computation, rank_list))
 
 def _broadcast(x, root):
     x = sym_utils.to_tensor_tuple(x)

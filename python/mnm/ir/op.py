@@ -49,17 +49,19 @@ __all__ = [
     "zeros_like",
 ]
 
-def _allgather(x, axis, attrs=None):
+def _allgather(x, axis, rank_list=None, attrs=None):
     op = GetOp("mnm.op._allgather")
     x = op_utils.to_tensor(x)
     axis = op_utils.to_int(axis)
-    return relay.Call(op, [x, axis], attrs)
+    rank_list = op_utils.to_int_tuple(rank_list)
+    return relay.Call(op, [x, axis, rank_list], attrs)
 
-def _allreduce(x, computation="sum", attrs=None):
+def _allreduce(x, computation="sum", rank_list=None, attrs=None):
     op = GetOp("mnm.op._allreduce")
     x = op_utils.to_tensor_tuple(x)
     computation = op_utils.to_string(computation)
-    return relay.Call(op, [x, computation], attrs)
+    rank_list = op_utils.to_int_tuple(rank_list)
+    return relay.Call(op, [x, computation, rank_list], attrs)
 
 def _broadcast(x, root, attrs=None):
     op = GetOp("mnm.op._broadcast")

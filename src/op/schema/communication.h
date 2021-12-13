@@ -16,6 +16,7 @@ class AllgatherArgs : public ir::AttrsNode<AllgatherArgs> {
  public:
   value::BaseTensorValue x;
   int axis;
+  std::vector<int64_t> rank_list{};
   MNM_OP_SCHEMA(AllgatherArgs, "mnm.args.allgather");
 };
 
@@ -23,6 +24,7 @@ class AllreduceArgs : public ir::AttrsNode<AllreduceArgs> {
  public:
   std::vector<value::BaseTensorValue> x;
   std::string computation{"sum"};
+  std::vector<int64_t> rank_list{};
   MNM_OP_SCHEMA(AllreduceArgs, "mnm.args.allreduce");
 };
 

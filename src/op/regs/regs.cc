@@ -299,9 +299,10 @@ Attrs AdvIndexDx(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Allgather(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::AllgatherArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::AllgatherArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
   MNM_POD(1, ffi2schema::Int, axis);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, rank_list);
   return Attrs(attrs);
 }
 
@@ -326,9 +327,10 @@ Attrs AllocTensor(const TVMArgs& values, GradTape* tapes) {
 }
 
 Attrs Allreduce(const TVMArgs& values, GradTape* tapes) {
-  MNM_PRELUDE(schema::AllreduceArgs, 2);  // NOLINT(whitespace/line_length)
+  MNM_PRELUDE(schema::AllreduceArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_POD(0, ffi2schema::TupleTensor, x);
   MNM_POD(1, ffi2schema::String, computation);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, rank_list);
   return Attrs(attrs);
 }
 
@@ -1321,19 +1323,21 @@ namespace imperative {
       {prev_tapes.begin(), prev_tapes.begin() + n_tapes});
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._allgather").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(_allgather, 2, ffi2schema::Allgather,
+  MNM_PRELUDE(_allgather, 3, ffi2schema::Allgather,
               schema::AllgatherArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->axis));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->rank_list));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
 
 MNM_REGISTER_GLOBAL("mnm.op.imp._allreduce").set_body([](TVMArgs args, TVMRetValue* ret) {
-  MNM_PRELUDE(_allreduce, 2, ffi2schema::Allreduce,
+  MNM_PRELUDE(_allreduce, 3, ffi2schema::Allreduce,
               schema::AllreduceArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->x));
   MNM_SET_ENV(vpack->x[1], schema2value::String(schema->computation));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->rank_list));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3299,9 +3303,10 @@ Array<Expr> AdvIndexDx(const TVMArgs& values) {
 }
 
 Array<Expr> Allgather(const TVMArgs& values) {
-  MNM_PRELUDE(2);
+  MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, x);
   MNM_ARG(1, ffi2expr::Int, axis);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, rank_list);
   MNM_RET();
 }
 
@@ -3326,9 +3331,10 @@ Array<Expr> AllocTensor(const TVMArgs& values) {
 }
 
 Array<Expr> Allreduce(const TVMArgs& values) {
-  MNM_PRELUDE(2);
+  MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::TupleTensor, x);
   MNM_ARG(1, ffi2expr::String, computation);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, rank_list);
   MNM_RET();
 }
 
@@ -4286,8 +4292,8 @@ namespace symbolic {
     }                                                            \
   }
 
-MNM_REGISTER_GLOBAL("mnm.op.sym._allgather").set_body(MNM_SYMBOLIC_API(_allgather, 2, Allgather));
-MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 2, Allreduce));
+MNM_REGISTER_GLOBAL("mnm.op.sym._allgather").set_body(MNM_SYMBOLIC_API(_allgather, 3, Allgather));
+MNM_REGISTER_GLOBAL("mnm.op.sym._allreduce").set_body(MNM_SYMBOLIC_API(_allreduce, 3, Allreduce));
 MNM_REGISTER_GLOBAL("mnm.op.sym._broadcast").set_body(MNM_SYMBOLIC_API(_broadcast, 2, Broadcast));
 MNM_REGISTER_GLOBAL("mnm.op.sym._contrib_dropout")
     .set_body(MNM_SYMBOLIC_API(_contrib_dropout, 3, Dropout));
@@ -4625,9 +4631,10 @@ Attrs AdvIndexDx(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Allgather(const Array<Value>& values) {
-  MNM_PRELUDE(2, 2, schema::AllgatherArgs);
+  MNM_PRELUDE(2, 3, schema::AllgatherArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
   MNM_REQUIRED(1, value2schema::Int, axis);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, rank_list);
   return Attrs(attrs);
 }
 
@@ -4655,9 +4662,10 @@ Attrs AllocTensor(const Array<Value>& values) {
 
 template <const char* op_name>
 Attrs Allreduce(const Array<Value>& values) {
-  MNM_PRELUDE(1, 2, schema::AllreduceArgs);
+  MNM_PRELUDE(1, 3, schema::AllreduceArgs);
   MNM_REQUIRED(0, value2schema::TupleTensor, x);
   MNM_OPTIONAL(1, value2schema::String, computation);
+  MNM_OPTIONAL(2, value2schema::IntOrTupleInt, rank_list);
   return Attrs(attrs);
 }
 
@@ -5772,6 +5780,9 @@ int Allgather(const std::string& field) {
   if (field == "axis") {
     return 1;
   }
+  if (field == "rank_list") {
+    return 2;
+  }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
 }
@@ -5825,6 +5836,9 @@ int Allreduce(const std::string& field) {
   }
   if (field == "computation") {
     return 1;
+  }
+  if (field == "rank_list") {
+    return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;

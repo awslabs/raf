@@ -65,7 +65,7 @@ class CommunicatorManager {
  public:
   // TODO: support multiple communicators.
   CommunicatorManager() {
-    comm_ = nullptr;
+    comm_world_ = nullptr;
   }
   static CommunicatorManager* Get() {
     static CommunicatorManager* instance = new CommunicatorManager();
@@ -82,9 +82,9 @@ class CommunicatorManager {
     const registry::PackedFunc* pf = registry::Registry::Get(maker_name);
     if (pf == nullptr) default_name = "void";
 
-    if (comm_ == nullptr) {
+    if (comm_world_ == nullptr) {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (comm_ == nullptr) {
+      if (comm_world_ == nullptr) {
         // ok, it is truly a nullptr
         if (name == "") {
           snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
@@ -95,23 +95,24 @@ class CommunicatorManager {
                    name.c_str());
         }
         void* ret = GetPackedFunc(maker_name)();
-        comm_.reset(static_cast<Communicator*>(ret));
-        return comm_.get();
+        comm_world_.reset(static_cast<Communicator*>(ret));
+        return comm_world_.get();
       }
     }
     // otherwise this is not nullptr
-    CHECK_EQ(name, "") << "You have already initialized a communicator [" << comm_->type
+    CHECK_EQ(name, "") << "You have already initialized a communicator [" << comm_world_->type
                        << "], and currently we do not support multiple communicators";
-    return comm_.get();
+    return comm_world_.get();
   }
 
   void Remove() {
     std::lock_guard<std::mutex> lock(mutex_);
-    comm_ = nullptr;
+    comm_world_ = nullptr;
   }
 
  public:
-  std::shared_ptr<Communicator> comm_;
+  std::map<std::vector<int64_t>, std::shared_ptr<Communicator>> comm_;
+  std::shared_ptr<Communicator> comm_world_;
   std::mutex mutex_;
 };
 
