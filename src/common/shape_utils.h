@@ -150,6 +150,15 @@ inline int64_t GetNumel(const DLTensor& dlt) {
   return numel;
 }
 
+inline int64_t GetDimSize(const Expr& expr, const int64_t dim) {
+  auto ttype = expr->checked_type().as<TensorTypeNode>();
+  ICHECK(ttype != nullptr);
+  ICHECK_LT(dim, ttype->shape.size())
+      << "Dim to access must be less than the shape size, but got " << dim << " (dim) and "
+      << ttype->shape.size() << " (shape size)";
+  return ttype->shape[dim].as<IntImmNode>()->value;
+}
+
 }  // namespace shape_utils
 }  // namespace common
 }  // namespace mnm
