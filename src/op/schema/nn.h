@@ -117,7 +117,7 @@ class ConvTransArgs : public ir::AttrsNode<ConvTransArgs> {
   std::vector<int64_t> dilation{1};
   int64_t groups{1};
   std::string layout{"NCHW"};
-  std::string kernel_layout{"OIHW"};
+  std::string kernel_layout{"IOHW"};
   std::string out_layout{"NCHW"};
   MNM_OP_SCHEMA(ConvTransArgs, "mnm.args.conv_trans");
 };

@@ -458,7 +458,7 @@ class ContextAnalyzer : public MixedModeVisitor {
       MixedModeVisitor::VisitExpr(call->args[i]);
     }
     const auto* attrs = call->attrs.as<tvm::relay::AllocStorageAttrs>();
-    Device dev = Device(static_cast<DevType>(attrs->device_type), attrs->device_id);
+    Device dev(attrs->se_scope->ToDevice());
     Unify(DeviceFor(GetRef<Call>(call)), DeviceType(dev));
   }
 

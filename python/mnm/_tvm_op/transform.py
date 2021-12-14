@@ -171,14 +171,15 @@ def compute_resize2d(attrs, inputs, out_type):
     return [
         _topi.image.resize2d(
             inputs[0],
+            (None, None, None, None),
             size,
             layout,
             method,
             coord_trans,
             rounding_method,
-            cubic_alpha,
-            cubic_exclude,
-            out_dtype
+            bicubic_alpha=cubic_alpha,
+            bicubic_exclude=cubic_exclude,
+            out_dtype=out_dtype
         )
     ]
 
@@ -199,14 +200,15 @@ def resize2d_dx_compute(attrs, inputs, out_type):
 
     out = _topi.image.resize2d(
         inputs[0],
+        (None, None, None, None),
         size,
         layout,
         method,
         coord_trans,
         rounding_method,
-        cubic_alpha,
-        cubic_exclude,
-        out_dtype
+        bicubic_alpha=cubic_alpha,
+        bicubic_exclude=cubic_exclude,
+        out_dtype=out_dtype
     )
     grads = _tvm.te.gradient(out, [inputs[0]], head=dy)
     return grads

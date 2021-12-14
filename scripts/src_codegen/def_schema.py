@@ -54,7 +54,7 @@ SCHEMAS = {
             cxx_normalizer="IntTuple"),
         Arg(name="groups", cxx_type="int64_t", cxx_default=1),
         Arg(name="layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
-        Arg(name="kernel_layout", cxx_type="std::string", cxx_default="\"OIHW\"", py_default="\"OIHW\""),
+        Arg(name="kernel_layout", cxx_type="std::string", cxx_default="\"IOHW\"", py_default="\"IOHW\""),
         Arg(name="out_layout", cxx_type="std::string", cxx_default="\"NCHW\"", py_default="\"NCHW\""),
     ],
     "nn.h::pool": [

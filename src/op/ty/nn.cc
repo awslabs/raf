@@ -91,7 +91,7 @@ Type Conv2DTransInfer(const CallValues& value) {
 
   tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
   tvm::Array<tvm::PrimExpr> in_shape = x->shape;
-  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "OIHW");
+  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "IOHW");
   tvm::Array<tvm::PrimExpr> w_shape = w->shape;
 
   in_shape = data_layout_converter.ForwardShape(in_shape);
@@ -129,7 +129,7 @@ Type Conv2DTransInfer(const CallValues& value) {
 
   PrimExpr groups = Integer(args->groups);
   CHECK(TypeCheckCompare(c_in / groups, in, std::equal_to<int>()))
-      << "in nn.cc Unmatched input channel " << c_in << " and weight channel size" << in
+      << "in nn.cc Unmatched input channel " << c_in << " and weight channel size " << in
       << " with group size " << groups;
 
   tvm::tir::BijectiveLayout out_layout_converter(args->out_layout, "NCHW");

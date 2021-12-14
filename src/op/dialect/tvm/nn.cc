@@ -271,7 +271,7 @@ Attrs ConvTransposeDxwSchema2Attrs(const ConvTransposeDxwArgs* args) {
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();
   attrs->data_layout = "NCHW";
-  attrs->kernel_layout = "OIHW";
+  attrs->kernel_layout = "IOHW";
   attrs->out_layout = "NCHW";
 
   return Attrs(attrs);

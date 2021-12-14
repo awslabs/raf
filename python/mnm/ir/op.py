@@ -430,7 +430,7 @@ def conv2d_dx(x_or_w, y, dy, shape, stride, padding, dilation, groups, attrs=Non
     groups = op_utils.to_int(groups)
     return relay.Call(op, [x_or_w, y, dy, shape, stride, padding, dilation, groups], attrs)
 
-def conv2d_transpose(x, w, stride=1, padding=0, output_padding=0, dilation=1, groups=1, layout="NCHW", kernel_layout="OIHW", out_layout="NCHW", attrs=None):
+def conv2d_transpose(x, w, stride=1, padding=0, output_padding=0, dilation=1, groups=1, layout="NCHW", kernel_layout="IOHW", out_layout="NCHW", attrs=None):
     op = GetOp("mnm.op.conv2d_transpose")
     x = op_utils.to_tensor(x)
     w = op_utils.to_tensor(w)
