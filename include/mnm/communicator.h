@@ -14,6 +14,8 @@
 #include "mnm/value.h"
 #include "./connector.h"
 
+typedef std::pair<std::string, std::vector<int64_t>> CommunicatorID;
+
 namespace mnm {
 namespace distributed {
 namespace communicator {
@@ -63,56 +65,33 @@ class Communicator {
 
 class CommunicatorManager {
  public:
-  // TODO: support multiple communicators.
   CommunicatorManager() {
-    comm_world_ = nullptr;
   }
+
   static CommunicatorManager* Get() {
     static CommunicatorManager* instance = new CommunicatorManager();
     return instance;
   }
 
-  Communicator* GetCommunicator(const std::string& name = "") {
-    CHECK_LT(name.size(), 128) << "There is no such communicator: " << name;
-    thread_local char maker_name[128];
-
-    std::string default_name = "nccl";
-    snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
-             default_name.c_str());
-    const registry::PackedFunc* pf = registry::Registry::Get(maker_name);
-    if (pf == nullptr) default_name = "void";
-
-    if (comm_world_ == nullptr) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (comm_world_ == nullptr) {
-        // ok, it is truly a nullptr
-        if (name == "") {
-          snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
-                   default_name.c_str());
-        } else {
-          if (name != "void") CHECK_EQ(name, "nccl") << "Unsupported communicator: " << name;
-          snprintf(maker_name, sizeof(maker_name), "mnm.distributed.communicator._make.%s",
-                   name.c_str());
-        }
-        void* ret = GetPackedFunc(maker_name)();
-        comm_world_.reset(static_cast<Communicator*>(ret));
-        return comm_world_.get();
-      }
+  Communicator* GetCommunicator(const std::string& name = "nccl", const std::vector<int64_t>& rank_list = {}) {
+    std::lock_guard<std::mutex> lock(mutex_); // writing to std::map is not thread-safe
+    auto id = CommunicatorID(name, rank_list);
+    if (comm_.count(id) == 0) {
+      const std::string prefix = "mnm.distributed.communicator._make.";
+      void* comm_handler = GetPackedFunc(prefix + name)(); // will check whether the function exists or not
+      std::shared_ptr<Communicator> comm_ptr; // NOTE: should comm_handler be a unique_ptr to prevent from being used simuatenously?
+      comm_ptr.reset(static_cast<Communicator*>(comm_handler)); 
+      comm_[id] = std::move(comm_ptr);
     }
-    // otherwise this is not nullptr
-    CHECK_EQ(name, "") << "You have already initialized a communicator [" << comm_world_->type
-                       << "], and currently we do not support multiple communicators";
-    return comm_world_.get();
+    return comm_[id].get();
   }
 
   void Remove() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    comm_world_ = nullptr;
+    LOG_ERROR << "CommunicatorManager::Remove is not implemented yet.";
   }
 
  public:
-  std::map<std::vector<int64_t>, std::shared_ptr<Communicator>> comm_;
-  std::shared_ptr<Communicator> comm_world_;
+  std::map<CommunicatorID, std::shared_ptr<Communicator>> comm_;
   std::mutex mutex_;
 };
 

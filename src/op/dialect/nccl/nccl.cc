@@ -58,11 +58,12 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
 
-    /*if (args->rank_list.empty()) {
+    if (args->rank_list.empty()) {
       RequestDistributed(&communicator);
     } else {
-      communicator = CommunicatorManager::Get()->GetCommunicator
-    }*/
+      CHECK_EQ(1, 2) << "wdnmd";
+      // communicator = CommunicatorManager::Get()->GetCommunicator
+    }
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
       size_t size = BytesCompactTensor(*x);
