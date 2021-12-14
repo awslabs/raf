@@ -74,6 +74,8 @@ MNMSequential = _APIS.get("mnm.pass_.MNMSequential", None)
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
 # Defined in ./src/pass/memory_plan.cc
 MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
+# Defined in ./src/pass/memory_schedule.cc
+MemorySchedule = _APIS.get("mnm.pass_.MemorySchedule", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 # Defined in ./src/pass/partition_gradient.cc

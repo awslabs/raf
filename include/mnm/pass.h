@@ -152,6 +152,12 @@ Pass AutoCast();
 Pass Rematerialization();
 
 /*!
+ * \brief A pass that schedules ANF for memory optimization.
+ * \return The created pass.
+ */
+Pass MemorySchedule();
+
+/*!
  * \brief A pass that inlines the Let stmt that assigns a var to another and TupleGetItem that can
  * be simplified.
  * \return The created pass.

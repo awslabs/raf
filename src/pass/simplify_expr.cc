@@ -239,6 +239,9 @@ bool IsExpectedScalar(const Expr& arg, float expected) {
       } else if (DataType(tensor->dtype) == DataType::Int(32)) {
         int32_t value = GetScalarValueData<int32_t>(GetRef<TensorValue>(val_obj));
         is_expected = value == (int32_t)expected;
+      } else if (DataType(tensor->dtype) == DataType::Int(64)) {
+        int64_t value = GetScalarValueData<int64_t>(GetRef<TensorValue>(val_obj));
+        is_expected = value == (int64_t)expected;
       } else {
         LOG(WARNING) << "Unsupported type: " << DataType(tensor->dtype);
       }

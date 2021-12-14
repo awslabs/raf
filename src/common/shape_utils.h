@@ -159,6 +159,31 @@ inline int64_t GetDimSize(const Expr& expr, const int64_t dim) {
   return ttype->shape[dim].as<IntImmNode>()->value;
 }
 
+/*!
+ * \brief Calculate the byte compact size of the given type. If the type is a tuple,
+ * then the total size of summing up all tensors in the tuple will be returned.
+ * Note that size 0 means a tensor with dynamic shape and cannot determine the size.
+ * \param type The type to calculate the size of.
+ * \return The size of the type in bytes.
+ */
+inline int64_t BytesCompactType(const Type& type) {
+  if (auto tuple_type = type.as<TupleTypeNode>()) {
+    int64_t total_size = 0;
+    for (auto field : tuple_type->fields) {
+      auto size = BytesCompactType(field);
+      if (size == 0) {
+        return 0;
+      }
+      total_size += size;
+    }
+    return total_size;
+  } else if (auto ttype = type.as<TensorTypeNode>()) {
+    return BytesCompactTensor(ttype);
+  }
+  LOG(FATAL) << "Unsupported type: " << type->GetTypeKey();
+  throw;
+}
+
 }  // namespace shape_utils
 }  // namespace common
 }  // namespace mnm
