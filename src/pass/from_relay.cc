@@ -133,7 +133,7 @@ struct ConvertEmbedding : RelayPattern {
  public:
   ConvertEmbedding() {
     // First match all take ops with the second input casted or constant.
-    auto cast_or_const = IsOp("cast")({IsWildcard()}) || IsConstant();
+    auto cast_or_const = IsOp("cast")({IsWildcard()}) || IsRelayConstant();
     this->pattern = IsOp("take")({IsWildcard(), cast_or_const});
 
     // Then check if it is from an embedding op.

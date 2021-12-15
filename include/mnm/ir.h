@@ -171,70 +171,6 @@ using tvm::relay::ExprVisitor;
 using tvm::relay::MixedModeMutator;
 using tvm::relay::MixedModeVisitor;
 
-// Relay Patterns
-using tvm::relay::DFPattern;
-using tvm::relay::DFPatternCallback;
-using tvm::relay::DFPatternFunctor;
-using tvm::relay::DFPatternVisitor;
-
-using tvm::relay::AltPattern;
-using tvm::relay::AltPatternNode;
-
-using tvm::relay::AttrPattern;
-using tvm::relay::AttrPatternNode;
-
-using tvm::relay::CallPattern;
-using tvm::relay::CallPatternNode;
-
-using tvm::relay::ConstantPattern;
-using tvm::relay::ConstantPatternNode;
-
-using tvm::relay::DataTypePattern;
-using tvm::relay::DataTypePatternNode;
-
-using tvm::relay::DominatorPattern;
-using tvm::relay::DominatorPatternNode;
-
-using tvm::relay::ExprPattern;
-using tvm::relay::ExprPatternNode;
-
-using tvm::relay::FunctionPattern;
-using tvm::relay::FunctionPatternNode;
-
-using tvm::relay::IfPattern;
-using tvm::relay::IfPatternNode;
-
-using tvm::relay::LetPattern;
-using tvm::relay::LetPatternNode;
-
-using tvm::relay::ShapePattern;
-using tvm::relay::ShapePatternNode;
-
-using tvm::relay::TupleGetItemPattern;
-using tvm::relay::TupleGetItemPatternNode;
-
-using tvm::relay::TuplePattern;
-using tvm::relay::TuplePatternNode;
-
-using tvm::relay::TypePattern;
-using tvm::relay::TypePatternNode;
-
-using tvm::relay::VarPattern;
-using tvm::relay::VarPatternNode;
-
-using tvm::relay::WildcardPattern;
-using tvm::relay::WildcardPatternNode;
-
-// Relay pattern helper function
-using tvm::relay::IsConstant;
-using tvm::relay::IsExpr;
-using tvm::relay::IsOp;
-using tvm::relay::IsTuple;
-using tvm::relay::IsTupleGetItem;
-using tvm::relay::IsVar;
-using tvm::relay::IsWildcard;
-using tvm::relay::MatchPattern;
-
 // Relay attributes
 using tvm::WithAttr;
 
@@ -308,3 +244,4 @@ constexpr const char* kPatternName = "PatternName";
               })
 
 #include "./ir_ext.h"
+#include "./dataflow_pattern.h"

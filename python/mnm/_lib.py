@@ -39,9 +39,9 @@ from tvm.relay.op import OpPattern, register_compute, register_pattern, strategy
 from tvm.relay.op.op import register_injective_schedule, register_broadcast_schedule, \
     register_reduce_schedule
 from tvm.relay.op import op as _reg
-from tvm.relay.dataflow_pattern import DFPattern, is_var, is_constant, is_expr, is_op, is_tuple, \
+from tvm.relay.dataflow_pattern import DFPattern, is_var, is_expr, is_op, is_tuple, \
     is_tuple_get_item, is_if, is_let, wildcard, has_type, has_dtype, has_shape, has_attr, \
-    dominates, match
+    dominates
 from tvm.contrib import random
 
 # pylint: enable=unused-import

@@ -24,14 +24,30 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
             padding=0,
             dilation=1,
             groups=1,
-            bias=True):
+            bias=True,
+            channel_mode="NCHW"):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
         self.groups = groups
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
-        self.w_shape = (out_channels, in_channels // groups, *kernel_size)
+        if channel_mode == "NCHW":
+            self.w_shape = (out_channels, in_channels // groups, *kernel_size)
+            self.channel_configs = {
+                "layout": "NCHW",
+                "kernel_layout": "OIHW",
+                "out_layout": "NCHW"
+            }
+        elif channel_mode == "NHWC":
+            self.channel_configs = {
+                "layout": "NHWC",
+                "kernel_layout": "OHWI",
+                "out_layout": "NHWC"
+            }
+            self.w_shape = (out_channels, *kernel_size, in_channels // groups)
+        else:
+            raise ValueError("Unknown channel mode: " + channel_mode)
         self.b_shape = (out_channels,) if bias else None
         self.b = None
         self.reset()
@@ -51,7 +67,8 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
                        stride=self.stride,
                        padding=self.padding,
                        dilation=self.dilation,
-                       groups=self.groups)
+                       groups=self.groups,
+                       **self.channel_configs)
         if self.b is not None:
             x = sym.bias_add(x, self.b)
         return x

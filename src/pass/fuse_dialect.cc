@@ -161,7 +161,7 @@ Expr FuseDialectPatterns(const Expr& expr, const IRModule& mod) {
     }
     DLOG(INFO) << "Fuse pattern " << pat.name << " for " << pat.dialect;
     DialectPatternRewrite rewrite(mod, dev_type, pat);
-    ret = RewritePatterns({rewrite.MakeCallback()}, ret, mod);
+    ret = MNMRewritePatterns({rewrite.MakeCallback()}, ret, mod);
   }
   return ret;
 }

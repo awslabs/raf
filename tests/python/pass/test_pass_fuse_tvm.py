@@ -338,7 +338,8 @@ def test_fuse_with_dialect():
     class Model(mnm.Model):
         def build(self):
             self.c = rand
-            self.conv1 = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
+            self.conv1 = Conv2d(
+                16, 16, kernel_size=(3, 3), padding=1, bias=False, channel_mode="NHWC")
 
         @mnm.model.trace
         def forward(self, x):
@@ -352,16 +353,16 @@ def test_fuse_with_dialect():
         v_one = mnm.ir.const([1])
         konst1 = mnm.ir.const(1)
         null = mnm.ir.const(None)
-        konst_nchw = mnm.ir.const("NCHW")
-        konst_oihw = mnm.ir.const("OIHW")
+        konst_nhwc = mnm.ir.const("NHWC")
+        konst_ohwi = mnm.ir.const("OHWI")
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.cutlass.conv2d")
         cutlass_add_op = mnm._ffi.op.GetOp("mnm.op.cutlass.add")
         tvm_add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
         relu_op = mnm._ffi.op.GetOp("mnm.op.tvm.relu")
 
         # segment
-        x = mnm.ir.var("p", shape=(1, 16, 64, 64))
-        w = mnm.ir.var("p", shape=(16, 16, 3, 3))
+        x = mnm.ir.var("p", shape=(1, 64, 64, 16))
+        w = mnm.ir.var("p", shape=(16, 3, 3, 16))
         p2 = mnm.ir.var("p", relay.TupleType((relay.TensorType((), "int64"),)))
         p3 = mnm.ir.var("p", relay.TupleType((relay.TensorType((), "int64"),)))
         p4 = mnm.ir.var("p", relay.TupleType((relay.TensorType((), "int64"),)))
@@ -379,7 +380,7 @@ def test_fuse_with_dialect():
         f1 = f1.with_attr("Dialect", "cutlass")
         f1 = f1.with_attr("PatternName", "conv2d_fusion")
 
-        p0 = mnm.ir.var("p", shape=(1, 16, 64, 64))
+        p0 = mnm.ir.var("p", shape=(1, 64, 64, 16))
         p1 = mnm.ir.var("p", shape=(1,))
         p2 = mnm.ir.var("p", relay.TupleType(()))
         p3 = mnm.ir.var("p", relay.TupleType(()))
@@ -389,17 +390,17 @@ def test_fuse_with_dialect():
         f2 = f2.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
         f2 = f2.with_attr("Dialect", "tvm")
 
-        x = mnm.ir.var("p0", shape=(1, 16, 64, 64))
-        w = mnm.ir.var("p1", shape=(16, 16, 3, 3))
+        x = mnm.ir.var("p0", shape=(1, 64, 64, 16))
+        w = mnm.ir.var("p1", shape=(16, 3, 3, 16))
         c = mnm.ir.var("c", shape=(1,))
-        y = relay.Call(f1, [x, w, v_one, v_one, v_one, konst1, konst_nchw,
-                            konst_oihw, konst_nchw, c, null, null])
+        y = relay.Call(f1, [x, w, v_one, v_one, v_one, konst1, konst_nhwc,
+                            konst_ohwi, konst_nhwc, c, null, null])
         out = relay.Call(f2, [y, c, null, null])
 
         return relay.Function([x, c, w], out)
 
     model = Model()
-    m_x, _ = randn((1, 16, 64, 64), device="cpu")
+    m_x, _ = randn((1, 64, 64, 16), device="cpu")
     mod = model._internal(m_x).mod
     with mnm.device("cuda"):
         mod = fuse_module(mod, True)
@@ -538,5 +539,4 @@ def test_fuse_inplace():
 
 
 if __name__ == "__main__":
-    test_fuse_with_dialect()
-    #pytest.main([__file__])
+    pytest.main([__file__])

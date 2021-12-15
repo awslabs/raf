@@ -102,6 +102,12 @@ ToGraphNormalForm = _APIS.get("mnm.pass_.ToGraphNormalForm", None)
 ValidateInplaceUpdate = _APIS.get("mnm.pass_.ValidateInplaceUpdate", None)
 # Defined in ./src/pass/stream_schedule_wavefront.cc
 WavefrontStreamSchedule = _APIS.get("mnm.pass_.WavefrontStreamSchedule", None)
+# Defined in ./src/pass/dataflow_matcher.cc
+dataflow_pattern_match = _APIS.get("mnm.pass_.dataflow_pattern_match", None)
+# Defined in ./src/pass/dataflow_matcher.cc
+dataflow_pattern_partition = _APIS.get("mnm.pass_.dataflow_pattern_partition", None)
+# Defined in ./src/pass/dataflow_matcher.cc
+dataflow_pattern_rewrite = _APIS.get("mnm.pass_.dataflow_pattern_rewrite", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
 # Defined in ./src/pass/from_relay.cc

@@ -1,6 +1,7 @@
 """Define dialect fusion patterns."""
 from .dialect import register_pattern
-from .._lib import is_op, wildcard, has_dtype
+from ..ir.dataflow_pattern import is_op, wildcard, is_constant, has_dtype, has_shape
+from .._core.value import StringValue
 
 MATMUL_OPS = [
     "mnm.op.dense",
@@ -33,10 +34,11 @@ def is_ops(ops):
 
 def n_wildcards(n):
     """Create a list of wildcard patterns."""
-    ret = []
-    for _ in range(n):
-        ret.append(wildcard())
-    return ret
+    return [wildcard() for _ in range(n)]
+
+def n_null_constant(n):
+    """Create a list of wildcard patterns."""
+    return [is_constant(None) for _ in range(n)]
 
 
 def call_binary_ops(ops, dtype=None):
@@ -54,10 +56,12 @@ def _cutlass_matmul_fusion(matmul_ops, dtype=None):
     # matmul
     matmul = call_binary_ops(matmul_ops, dtype)
     # bias
-    scaled_bias = is_op("mnm.op.multiply")(*n_wildcards(2))
-    bias = scaled_bias | wildcard()
+    bias = wildcard()
+    beta = has_shape(()) | has_shape((1,))
+    scaled_bias = is_op("mnm.op.multiply")(beta, bias)
+    bias = scaled_bias | bias
     # pattern: matmul+scaled_bias or matmul+bias
-    with_bias = is_op("mnm.op.add")(matmul, bias, *n_wildcards(2))
+    with_bias = is_op("mnm.op.add")(matmul, bias, *n_null_constant(2))
     # pattern: matmul+(scaled_)bias+act or matmul+act
     with_act = is_ops(act_ops)(with_bias | matmul)
     # We exclude the single matmul op pattern as ther perf of cutlass is worse than cublas
@@ -83,11 +87,14 @@ def _call_conv2d_dxw(dtype=None):
     return is_ops(ops)(x_or_w, y, dy, *n_wildcards(5))
 
 
-def _cutlass_conv2d_fusion(dtype=None):
+def _cutlass_conv2d_fusion():
     act_ops = ["mnm.op.relu"]
-    conv = _call_conv2d(dtype)
+    conv = is_op("mnm.op.conv2d")(*n_wildcards(6),
+                                  is_constant(StringValue("NHWC")),
+                                  is_constant(StringValue("OHWI")),
+                                  is_constant(StringValue("NHWC")))
     # pattern: conv2d+bias
-    with_bias = is_op("mnm.op.add")(conv, *n_wildcards(3))
+    with_bias = is_op("mnm.op.add")(conv, wildcard(), *n_null_constant(2))
     # pattern: conv2d+bias+act || conv2d+act
     with_act = is_ops(act_ops)(with_bias | conv)
     return with_act | with_bias

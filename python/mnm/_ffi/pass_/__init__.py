@@ -52,5 +52,8 @@ from ._internal import ToBasicBlockNormalForm
 from ._internal import ToGraphNormalForm
 from ._internal import ValidateInplaceUpdate
 from ._internal import WavefrontStreamSchedule
+from ._internal import dataflow_pattern_match
+from ._internal import dataflow_pattern_partition
+from ._internal import dataflow_pattern_rewrite
 from ._internal import is_constant
 from ._internal import validate_relay_param_name

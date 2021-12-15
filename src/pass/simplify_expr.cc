@@ -557,14 +557,14 @@ Expr SimplifyExpr(const Expr& expr, const IRModule& mod) {
   composer.AddRewrite<ConcretizeBroadcastToLikeRewrite>();
   composer.AddRewrite<ConcretizeMultiplyRewrite>();
   composer.AddRewrite<ConcretizeAddSubRewrite>();
-  auto ret = mnm::ir::RewritePatterns(composer.MakeCallbacks(), expr, mod);
+  auto ret = mnm::ir::MNMRewritePatterns(composer.MakeCallbacks(), expr, mod);
 
   // Phase 2: Sequence patterns that may need to be applied iteratively.
   composer.Clear();
   composer.AddRewrite<SimplifyMatmulReshapeBiasAct>();
   composer.AddRewrite<SimplifyCast>();
   composer.AddRewrite<SimplifyReshape>();
-  return mnm::ir::RewritePatterns(composer.MakeCallbacks(), ret, mod);
+  return mnm::ir::MNMRewritePatterns(composer.MakeCallbacks(), ret, mod);
 }
 
 }  // namespace simplify_expr
