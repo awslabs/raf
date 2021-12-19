@@ -23,12 +23,6 @@ namespace communicator {
 class NCCLCommunicator : public Communicator {
  public:
   NCCLCommunicator() {
-    Init();
-  }
-  virtual ~NCCLCommunicator() {
-    Finalize();
-  }
-  virtual void Init() {
     GetConnector();
     cudaSetDevice(GetLocalRank());
     if (IsRoot()) {
@@ -37,7 +31,7 @@ class NCCLCommunicator : public Communicator {
     connector_->Broadcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), root_rank);
     NCCL_CALL(ncclCommInitRank(&nccl_comm, GetSize(), nccl_id, GetRank()));
   }
-  virtual void Finalize() {
+  virtual ~NCCLCommunicator() {
     NCCL_CALL(ncclCommDestroy(nccl_comm));
   }
   virtual void* GetCommHandle() {

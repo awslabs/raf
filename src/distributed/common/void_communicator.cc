@@ -13,12 +13,6 @@ namespace communicator {
 class VoidCommunicator : public Communicator {
  public:
   VoidCommunicator() {
-    Init();
-  }
-  virtual ~VoidCommunicator() {
-    Finalize();
-  }
-  virtual void Init() {
     // In this method, you should
     // 1. Get a connector by calling GetConnector()
     // 2. Create a new communicator and store its handle.
@@ -28,7 +22,7 @@ class VoidCommunicator : public Communicator {
     LOG(INFO) << "You have created a VoidCommunicator, which will do nothing and can not be used "
                  "for parallel training.";
   }
-  virtual void Finalize() {
+  virtual ~VoidCommunicator() {
   }
   virtual void* GetCommHandle() {
     return void_comm_handle;

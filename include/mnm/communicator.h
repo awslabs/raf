@@ -51,8 +51,6 @@ class Communicator {
   virtual void* GetCommHandle() = 0;
 
  protected:
-  virtual void Init() = 0;
-  virtual void Finalize() = 0;
   void GetConnector(const std::string& name = "mpi") {
     connector_.reset(ConnectorManager::Get()->GetConnector(name));
   }
