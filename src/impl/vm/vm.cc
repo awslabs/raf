@@ -809,21 +809,21 @@ void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
   OpEnvPtr op_env;
   std::vector<Value> inputs;
   Value output;
-  std::string input_str;
+  std::string op_env_cache_key;
 
-  std::tie(op_env, inputs, output, input_str) = PrepareOpEnv(ctx, instr);
+  std::tie(op_env, inputs, output, op_env_cache_key) = PrepareOpEnv(ctx, instr);
   if (!dryrun_) {  // Skip the execution in dryrun mode
 #ifdef MNM_USE_CUDA
     if (use_cuda_) {
       WITH_CUDA_PROFILER(
           devices_[0],
           utils::GetStreamById(ctx, ctx->current_device_id, ctx->current_stream_id)->data(),
-          op_env->name(), utils::GetStreamName(ctx->current_stream_id), {input_str},
+          op_env->name(), utils::GetStreamName(ctx->current_stream_id), {op_env_cache_key},
           { op_env->Execute(inputs, output); });
     } else
 #endif
     {  // cpu
-      WITH_BASE_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {input_str},
+      WITH_BASE_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {op_env_cache_key},
                          { op_env->Execute(inputs, output); });
     }
   }
@@ -1009,8 +1009,9 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
       os << "(";
       for (auto field : tup->fields) {
         auto t = field.as<TensorValueObj>();
-        CHECK(t != nullptr);
-        utils::TensorRepr(os, t);
+        if (t != nullptr) {
+          utils::TensorRepr(os, t);
+        }
         os << ",";
       }
       os << ")";
@@ -1019,23 +1020,30 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     }
     os << ",";
   }
-  std::string input_str = os.str();
 
   // extract the output
+  os << "|";
   if (instr.invoke_jit.output_size == 1) {
     output = ctx.ReadRegister(instr.invoke_jit.args[num_inputs]);
+    utils::TensorRepr(os, output.as<TensorValueObj>());
   } else {
+    os << "(";
     Array<Value> outs;
     for (Index i = num_inputs; i < instr.invoke_jit.arity; i++) {
-      outs.push_back(ctx.ReadRegister(instr.invoke_jit.args[i]));
+      Value val = ctx.ReadRegister(instr.invoke_jit.args[i]);
+      outs.push_back(val);
+      utils::TensorRepr(os, val.as<TensorValueObj>());
+      os << ",";
     }
+    os << ")";
     output = TupleValue::make(outs);
   }
+  std::string op_env_cache_key = os.str();
 
   // check the OpEnv cache
   std::shared_ptr<OpEnv> op_env;
   auto op_env_cache = op_env_cache_[ctx->func_index]->Get(ctx->pc);
-  if (auto p = op_env_cache->Get(input_str)) {
+  if (auto p = op_env_cache->Get(op_env_cache_key)) {
     // Cache hit. Reuse the OpEnv from the cache.
     op_env = *p;
   } else {
@@ -1075,7 +1083,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     }
 #endif
     // add to cache
-    op_env_cache->Set(input_str, op_env);
+    op_env_cache->Set(op_env_cache_key, op_env);
   }
 
   std::shared_ptr<Requests> requests = op_env->GetRequests();
@@ -1091,7 +1099,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     CHECK_GE(i, 0) << "Invalid input index: " << i;
     inputs.push_back(args[i]);
   }
-  return std::make_tuple(op_env, std::move(inputs), std::move(output), input_str);
+  return std::make_tuple(op_env, std::move(inputs), std::move(output), op_env_cache_key);
 }
 
 tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph,

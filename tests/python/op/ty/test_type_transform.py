@@ -6,7 +6,7 @@ import mnm
 import tvm.topi.testing as npx
 from mnm._ffi.pass_ import AutoDiff, InferType
 from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
-from tvm.relay import TensorType, FuncType, TupleType, IncompleteType, Any
+from tvm.relay import TensorType, FuncType, TupleType, Any
 
 
 # pylint: disable=too-many-locals, import-outside-toplevel, attribute-defined-outside-init
@@ -923,9 +923,9 @@ def test_arange(data, dtype):
     model = Arange(dtype)
     m_mod = model._internal(m_start, m_stop, m_step).mod
     m_mod = InferType()(m_mod)
-    # TODO(@zhen-jia) check the type when runtime infer type is able
-    ret_type = m_mod["main"].checked_type.ret_type
-    assert isinstance(ret_type, IncompleteType)
+    x_ty = TensorType([], dtype=dtype)
+    expected_type = FuncType([x_ty, x_ty, x_ty], TensorType([Any()], dtype=dtype))
+    check_type(m_mod['main'], expected_type)
 
 
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
@@ -968,6 +968,43 @@ def test_full_like(shape, dtype):
     m_func = run_infer_type(m_func)
     ty = TensorType(shape, dtype=dtype)
     desired_type = FuncType([ty], ty)
+    check_type(m_func, desired_type)
+
+
+@pytest.mark.parametrize("data_shape, index_shapes", [
+    ((10, 5), [(1, 4), (3, 1)]),
+    ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])
+])
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+def test_adv_index(data_shape, index_shapes, dtype):
+    # pylint: disable=invalid-name
+    class Index(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, index0, index1):
+            return mnm.adv_index([x, index0, index1])
+
+    m_x, t_x = randn_torch(data_shape, requires_grad=True, dtype=dtype)
+    t_indices = []
+    m_indices = []
+
+    for i, index_shape in enumerate(index_shapes):
+        limit = data_shape[i]
+        index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
+        t_indices.append(torch.tensor(index)) # pylint: disable=not-callable
+        m_indices.append(mnm.array(index))
+    t_out = t_x[tuple(t_indices)]
+    model = Index()
+    m_func = model._internal(m_x, m_indices[0], m_indices[1]).mod['main']
+    m_func = run_infer_type(m_func)
+
+    tx = TensorType(m_x.shape, dtype)
+    tindex0 = TensorType(m_indices[0].shape, "int64")
+    tindex1 = TensorType(m_indices[1].shape, "int64")
+    ty = TensorType(t_out.shape, dtype)
+    desired_type = FuncType([tx, tindex0, tindex1], ty)
     check_type(m_func, desired_type)
 
 

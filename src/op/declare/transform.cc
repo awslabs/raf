@@ -8,6 +8,7 @@
 #include <numeric>
 
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/tensor.h"
 #include "./declare_utils.h"
 #include "../ty/utils.h"
@@ -36,6 +37,8 @@ MNM_OP_DECLARE("mnm.op.arange", [](const CallValues& call) {
     size = CalArangeOutputSize<float>(args);
   } else if (args->dtype == "float64") {
     size = CalArangeOutputSize<double>(args);
+  } else if (args->dtype == "int32") {
+    size = CalArangeOutputSize<int32_t>(args);
   } else if (args->dtype == "int64") {
     size = CalArangeOutputSize<int64_t>(args);
   } else {
@@ -52,27 +55,27 @@ MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
   const auto* args = call->args.as<AdvIndexArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->inputs[0];
-  auto x_shape = x->shape;
-  auto x_dim = x->ndim;
+
+  std::vector<int64_t> oshape;
+  std::vector<int64_t> broadcast_shape;
+  ICHECK_LE(args->inputs.size() - 1, x->ndim) << "too many indices for data!";
+
   const DLTensor* index0 = args->inputs[1];
-  std::vector<int64_t> shape;
-  for (int j = 0; j < index0->ndim; ++j) {
-    shape.push_back(index0->shape[j]);
+  broadcast_shape = std::vector<int64_t>(index0->shape, index0->shape + index0->ndim);
+  for (size_t i = 2; i < args->inputs.size(); ++i) {
+    const DLTensor* indexi = args->inputs[i];
+    broadcast_shape = BroadcastShapeVec(
+        broadcast_shape, std::vector<int64_t>(indexi->shape, indexi->shape + indexi->ndim));
   }
-  if (args->inputs.size() - 1 < x_dim) {
-    for (int j = args->inputs.size() - 1; j < x_dim; ++j) {
-      shape.push_back(x_shape[j]);
-    }
-  } else {
-    for (int i = 2; i < args->inputs.size(); ++i) {
-      const DLTensor* index = args->inputs[i];
-      for (int j = 0; j < index->ndim; ++j) {
-        CHECK(shape[j] == index->shape[j] || shape[j] == 1 || index->shape[j] == 1);
-        shape[j] = shape[j] == 1 ? index->shape[j] : shape[j];
-      }
-    }
+
+  for (const auto& dim : broadcast_shape) {
+    oshape.push_back(dim);
   }
-  call->out = TensorValue::Assemble(x->device, x->dtype, shape);
+  for (size_t i = args->inputs.size() - 1; i < x->ndim; ++i) {
+    oshape.push_back(x->shape[i]);
+  }
+
+  call->out = TensorValue::Assemble(x->device, x->dtype, oshape);
   call->device = x->device;
 });
 
@@ -113,7 +116,7 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   bool reverse = args->reverse;
-  std::vector<int64_t> shape = args->shape;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   int64_t size = 1;
   int tbd = -1;
   for (size_t i = 0; i < shape.size(); ++i) {
@@ -159,7 +162,7 @@ MNM_OP_DECLARE("mnm.op.resize2d", [](const CallValues& call) {
   CHECK(args != nullptr);
 
   DLTensor* x = args->x;
-  std::vector<int64_t> size(args->size);
+  std::vector<int64_t> size = GetShapeVecFromValue(args->size);
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
 
   /**
@@ -295,9 +298,11 @@ MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
   auto dshape = data->shape;
   int64_t num_axis = data->ndim;
 
-  CHECK(!args->begin.empty()) << "strided_slice received invalid begin";
-  CHECK(!args->end.empty()) << "strided_slice received invalid end";
-  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+  std::vector<int64_t> begin = GetShapeVecFromValue(args->begin);
+  std::vector<int64_t> end = GetShapeVecFromValue(args->end);
+  CHECK(!begin.empty()) << "strided_slice received invalid begin";
+  CHECK(!end.empty()) << "strided_slice received invalid end";
+  CHECK_EQ(begin.size(), end.size()) << "begin.size() != end.size()";
 
   // calculate output shape
   std::vector<int64_t> oshape(num_axis);
@@ -305,30 +310,30 @@ MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
   std::vector<int64_t> stride_vec(num_axis, 1);
   if (args->slice_mode == "end") {
     CHECK(!args->strides.empty()) << "strided_slice received invalid strides";
-    CHECK_EQ(args->begin.size(), args->strides.size()) << "begin.size() != strides.size()";
+    CHECK_EQ(begin.size(), args->strides.size()) << "begin.size() != strides.size()";
     for (size_t i = 0; i < args->strides.size(); ++i) {
       stride_vec[i] = args->strides[i];
     }
   }
   const int64_t max_range = std::numeric_limits<int64_t>::max();
   std::vector<int64_t> begin_vec;
-  for (size_t i = 0; i < args->begin.size(); ++i) {
-    begin_vec.push_back(args->begin[i]);
+  for (size_t i = 0; i < begin.size(); ++i) {
+    begin_vec.push_back(begin[i]);
   }
   for (int64_t i = begin_vec.size(); i < num_axis; ++i) {
     begin_vec.push_back(stride_vec[i] > 0 ? 0 : max_range);
   }
 
   std::vector<int64_t> end_vec;
-  for (size_t i = 0; i < args->end.size(); ++i) {
+  for (size_t i = 0; i < end.size(); ++i) {
     if (args->slice_mode == "size") {
-      if (args->end[i] < 0) {
+      if (end[i] < 0) {
         end_vec.push_back(max_range);
       } else {
-        end_vec.push_back(begin_vec[i] + args->end[i]);
+        end_vec.push_back(begin_vec[i] + end[i]);
       }
     } else if (args->slice_mode == "end") {
-      end_vec.push_back(args->end[i]);
+      end_vec.push_back(end[i]);
     } else {
       LOG(FATAL) << "Unsupported slice mode: " << args->slice_mode;
     }
@@ -583,7 +588,7 @@ MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
   DLTensor* y0 = x[0];
 
   int axis = args->axis;
-  CHECK(-y0->ndim <= axis && axis < y0->ndim)
+  CHECK(-y0->ndim <= axis && axis <= y0->ndim)
       << "ValueError: invalid axis = " << axis << " on ndim = " << y0->ndim;
   axis = axis < 0 ? axis + y0->ndim + 1 : axis;
 
@@ -716,8 +721,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
     // Handling second type - tuple values - indices
     std::vector<int64_t> indices;
     for (auto field : tup->fields) {
-      auto int_value = field.as<IntValueObj>();
-      indices.push_back(int_value->value);
+      indices.push_back(GetScalarValueData<int64_t>(field));
     }
     indices.push_back(x->shape[axis]);
     int64_t begin = 0;
@@ -729,6 +733,9 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
                                           /*dtype=*/x->dtype,
                                           /*shape=*/oshape));
     }
+  } else {
+    // TODO: handle tensor value?
+    LOG(FATAL) << "Unsupported value type: " << indices_or_sections->GetTypeKey();
   }
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
   call->device = x->device;
@@ -927,10 +934,10 @@ MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
   const auto* args = call->args.as<FullArgs>();
   CHECK(args != nullptr);
-  const std::vector<int64_t>& shape = args->shape;
+  const std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   CHECK_GE(shape.size(), 1);
   for (int i = 0; i < shape.size(); ++i) {
-    CHECK_GE(shape[i], 1);
+    CHECK_GE(shape[i], 0);
   }
 
   const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
@@ -948,7 +955,7 @@ MNM_OP_DECLARE("mnm.op.full_like", [](const CallValues& call) {
   const std::vector<int64_t> shape = std::vector<int64_t>(data->shape, data->shape + data->ndim);
   CHECK_GE(shape.size(), 1);
   for (int i = 0; i < shape.size(); ++i) {
-    CHECK_GE(shape[i], 1);
+    CHECK_GE(shape[i], 0);
   }
 
   call->device = data->device;

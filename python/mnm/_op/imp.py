@@ -583,7 +583,7 @@ def floor_divide(x1, x2):
 @set_module("mnm")
 def full(fill_value, shape, dtype="int32", device="cpu"):
     fill_value = imp_utils.to_double(fill_value)
-    shape = imp_utils.to_int_tuple(shape)
+    shape = imp_utils.to_any(shape)
     dtype = imp_utils.to_string(dtype)
     device = imp_utils.to_string(device)
     return imp_utils.ret(ffi.full(fill_value, shape, dtype, device))
@@ -923,7 +923,7 @@ def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device=
 
 @set_module("mnm")
 def ones(shape, dtype="int32", device="cpu"):
-    shape = imp_utils.to_int_tuple(shape)
+    shape = imp_utils.to_any(shape)
     dtype = imp_utils.to_string(dtype)
     device = imp_utils.to_string(device)
     return imp_utils.ret(ffi.ones(shape, dtype, device))
@@ -994,14 +994,14 @@ def repeat_dx(x, dy, repeats, axis=None):
 @set_module("mnm")
 def reshape(x, shape, reverse=False):
     x = imp_utils.to_tensor(x)
-    shape = imp_utils.to_int_tuple(shape)
+    shape = imp_utils.to_any(shape)
     reverse = imp_utils.to_bool(reverse)
     return imp_utils.ret(ffi.reshape(x, shape, reverse))
 
 @set_module("mnm")
 def resize2d(x, size, layout="NCHW", method="linear", coordinate_transformation_mode="half_pixel", rounding_method="", cubic_alpha=-0.5, cubic_exclude=0, out_dtype=""):
     x = imp_utils.to_tensor(x)
-    size = imp_utils.to_int_tuple(size)
+    size = imp_utils.to_any(size)
     layout = imp_utils.to_string(layout)
     method = imp_utils.to_string(method)
     coordinate_transformation_mode = imp_utils.to_string(coordinate_transformation_mode)
@@ -1241,8 +1241,8 @@ def stream_sync(x, stream_tag=0):
 @set_module("mnm")
 def strided_slice(x, begin, end, strides=None, slice_mode="end"):
     x = imp_utils.to_tensor(x)
-    begin = imp_utils.to_int_tuple(begin)
-    end = imp_utils.to_int_tuple(end)
+    begin = imp_utils.to_any(begin)
+    end = imp_utils.to_any(end)
     strides = imp_utils.to_int_tuple(strides)
     slice_mode = imp_utils.to_string(slice_mode)
     return imp_utils.ret(ffi.strided_slice(x, begin, end, strides, slice_mode))
@@ -1344,9 +1344,9 @@ def threshold_dx(x, dy, threshold=0.0):
     return imp_utils.ret(ffi.threshold_dx(x, dy, threshold))
 
 @set_module("mnm")
-def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
+def topk(data, k, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
     data = imp_utils.to_tensor(data)
-    k = imp_utils.to_int(k)
+    k = imp_utils.to_any(k)
     axis = imp_utils.to_int(axis)
     ret_type = imp_utils.to_string(ret_type)
     is_ascend = imp_utils.to_bool(is_ascend)
@@ -1433,7 +1433,7 @@ def where(condition, x, y):
 
 @set_module("mnm")
 def zeros(shape, dtype="int32", device="cpu"):
-    shape = imp_utils.to_int_tuple(shape)
+    shape = imp_utils.to_any(shape)
     dtype = imp_utils.to_string(dtype)
     device = imp_utils.to_string(device)
     return imp_utils.ret(ffi.zeros(shape, dtype, device))

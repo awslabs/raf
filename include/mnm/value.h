@@ -306,8 +306,21 @@ class TupleValue final : public Value {
 /* ClosureValue */
 class ClosureValueObj final : public ValueObj {
  public:
+  /*! \brief The set of free variables in the closure.
+   *
+   * These are the captured variables which are required for
+   * evaluation when we call the closure.
+   */
   ir::Map<ir::Var, Value> env;
+  /*! \brief The function which implements the closure.
+   *
+   * \note May reference the variables contained in the env.
+   */
   ir::Function func;
+  /*! \brief variable the closure bind to, used when
+   * the function is a recursive function.
+   */
+  ir::Optional<ir::Var> bind;
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_env", &env);
     v->Visit("_func", &func);
@@ -318,7 +331,8 @@ class ClosureValueObj final : public ValueObj {
 
 class ClosureValue final : public Value {
  public:
-  static ClosureValue make(ir::Map<ir::Var, Value> env, ir::Function func);
+  static ClosureValue make(ir::Map<ir::Var, Value> env, ir::Function func,
+                           ir::Optional<ir::Var> bind = tvm::NullOpt);
   MNM_OBJECT_REF(ClosureValue, Value, ClosureValueObj);
 };
 

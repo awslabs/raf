@@ -582,7 +582,7 @@ def floor_divide(x1, x2, attrs=None):
 def full(fill_value, shape, dtype="int32", device="cpu", attrs=None):
     op = GetOp("mnm.op.full")
     fill_value = op_utils.to_double(fill_value)
-    shape = op_utils.to_int_tuple(shape)
+    shape = op_utils.to_any(shape)
     dtype = op_utils.to_string(dtype)
     device = op_utils.to_string(device)
     return relay.Call(op, [fill_value, shape, dtype, device], attrs)
@@ -922,7 +922,7 @@ def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device=
 
 def ones(shape, dtype="int32", device="cpu", attrs=None):
     op = GetOp("mnm.op.ones")
-    shape = op_utils.to_int_tuple(shape)
+    shape = op_utils.to_any(shape)
     dtype = op_utils.to_string(dtype)
     device = op_utils.to_string(device)
     return relay.Call(op, [shape, dtype, device], attrs)
@@ -993,14 +993,14 @@ def repeat_dx(x, dy, repeats, axis=None, attrs=None):
 def reshape(x, shape, reverse=False, attrs=None):
     op = GetOp("mnm.op.reshape")
     x = op_utils.to_tensor(x)
-    shape = op_utils.to_int_tuple(shape)
+    shape = op_utils.to_any(shape)
     reverse = op_utils.to_bool(reverse)
     return relay.Call(op, [x, shape, reverse], attrs)
 
 def resize2d(x, size, layout="NCHW", method="linear", coordinate_transformation_mode="half_pixel", rounding_method="", cubic_alpha=-0.5, cubic_exclude=0, out_dtype="", attrs=None):
     op = GetOp("mnm.op.resize2d")
     x = op_utils.to_tensor(x)
-    size = op_utils.to_int_tuple(size)
+    size = op_utils.to_any(size)
     layout = op_utils.to_string(layout)
     method = op_utils.to_string(method)
     coordinate_transformation_mode = op_utils.to_string(coordinate_transformation_mode)
@@ -1240,8 +1240,8 @@ def stream_sync(x, stream_tag=0, attrs=None):
 def strided_slice(x, begin, end, strides=None, slice_mode="end", attrs=None):
     op = GetOp("mnm.op.strided_slice")
     x = op_utils.to_tensor(x)
-    begin = op_utils.to_int_tuple(begin)
-    end = op_utils.to_int_tuple(end)
+    begin = op_utils.to_any(begin)
+    end = op_utils.to_any(end)
     strides = op_utils.to_int_tuple(strides)
     slice_mode = op_utils.to_string(slice_mode)
     return relay.Call(op, [x, begin, end, strides, slice_mode], attrs)
@@ -1342,10 +1342,10 @@ def threshold_dx(x, dy, threshold=0.0, attrs=None):
     threshold = op_utils.to_double(threshold)
     return relay.Call(op, [x, dy, threshold], attrs)
 
-def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64", attrs=None):
+def topk(data, k, axis=-1, ret_type="both", is_ascend=False, dtype="int64", attrs=None):
     op = GetOp("mnm.op.topk")
     data = op_utils.to_tensor(data)
-    k = op_utils.to_int(k)
+    k = op_utils.to_any(k)
     axis = op_utils.to_int(axis)
     ret_type = op_utils.to_string(ret_type)
     is_ascend = op_utils.to_bool(is_ascend)
@@ -1432,7 +1432,7 @@ def where(condition, x, y, attrs=None):
 
 def zeros(shape, dtype="int32", device="cpu", attrs=None):
     op = GetOp("mnm.op.zeros")
-    shape = op_utils.to_int_tuple(shape)
+    shape = op_utils.to_any(shape)
     dtype = op_utils.to_string(dtype)
     device = op_utils.to_string(device)
     return relay.Call(op, [shape, dtype, device], attrs)

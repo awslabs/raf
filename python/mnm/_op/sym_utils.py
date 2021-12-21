@@ -24,7 +24,6 @@ def to_any(a):
         tup = (i if isinstance(i, Symbol) else Value.as_const_expr(i) for i in a)
         return Symbol.make_tuple(tup)._Symbol__handle  # pylint: disable=protected-access
 
-
     return to_tensor(a)
 
 

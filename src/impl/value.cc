@@ -117,10 +117,11 @@ TupleValue TupleValue::make(Array<Value> fields) {
   return TupleValue(n);
 }
 
-ClosureValue ClosureValue::make(Map<Var, Value> env, Function func) {
+ClosureValue ClosureValue::make(Map<Var, Value> env, Function func, Optional<Var> bind) {
   ObjectPtr<ClosureValueObj> n = make_object<ClosureValueObj>();
   n->env = std::move(env);
   n->func = std::move(func);
+  n->bind = std::move(bind);
   return ClosureValue(n);
 }
 

@@ -80,9 +80,9 @@ void VMDebugger::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
   OpEnvPtr op_env;
   std::vector<Value> inputs;
   Value output;
-  std::string input_str;
+  std::string op_env_cache_key;
 
-  std::tie(op_env, inputs, output, input_str) = PrepareOpEnv(ctx, instr);
+  std::tie(op_env, inputs, output, op_env_cache_key) = PrepareOpEnv(ctx, instr);
   op_env->Execute(inputs, output);
   ctx->pc++;
 

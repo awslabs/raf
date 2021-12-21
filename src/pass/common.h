@@ -257,6 +257,14 @@ class ValueGetter : public ExprFunctor<Value(const Expr&)> {
     return node->value.defined() ? Downcast<Value>(node->value) : NullValue<Value>();
   }
 
+  Value VisitExpr_(const TupleNode* op) {
+    Array<Value> values;
+    for (auto field : op->fields) {
+      values.push_back(VisitExpr(field));
+    }
+    return TupleValue::make(values);
+  }
+
   Value VisitExpr_(const OpNode* op) {
     return OpValue::make(GetRef<Op>(op));
   }

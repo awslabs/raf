@@ -23,14 +23,13 @@ using mnm::ir::Array;
     return {};                   \
   }
 
-#define MNM_PRELUDE_DISALLOW_NULL(type)                                                       \
-  using namespace mnm::value;                                                                 \
-  using namespace mnm::ir;                                                                    \
-  if (!a.defined()) {                                                                         \
-    LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \""            \
-               << a->GetTypeKey() << "\" is undefined (NULL), but is required to be of type " \
-               << (type);                                                                     \
-    throw;                                                                                    \
+#define MNM_PRELUDE_DISALLOW_NULL(type)                                             \
+  using namespace mnm::value;                                                       \
+  using namespace mnm::ir;                                                          \
+  if (!a.defined()) {                                                               \
+    LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\""             \
+               << " is undefined (NULL), but is required to be of type " << (type); \
+    throw;                                                                          \
   }
 
 inline value::Value ArrayLike(const value::Value& a) {
@@ -85,7 +84,7 @@ inline bool Bool(const value::Value& a) {
     return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
-             << "\" is not an integer";
+             << "\" is not a bool value";
   throw;
 }
 inline double Double(const value::Value& a) {
@@ -97,7 +96,7 @@ inline double Double(const value::Value& a) {
     return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
-             << "\" is double";
+             << "\" is not a double";
   throw;
 }
 inline std::string String(const value::Value& a) {
@@ -106,7 +105,7 @@ inline std::string String(const value::Value& a) {
     return v->value;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
-             << "\" is a string";
+             << "\" is not a string";
   throw;
 }
 

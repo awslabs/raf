@@ -3,6 +3,7 @@
  * \file ./src/op/dialect/tvm/algorithm.cc
  * \brief Algorithm-related operators bridged from TVM.
  */
+#include <mnm/op_utils.h>
 #include <mnm/value.h>
 #include <array>
 #include "./tvm_utils.h"
@@ -83,7 +84,8 @@ std::vector<std::string> TopkSchemaArgNames(const op::CallValues& call) {
 
 Attrs TopkSchema2Attrs(const TopkArgs* args) {
   auto attrs = make_object<TopKAttrs>();
-  attrs->k = IntImm(tvm::runtime::DataType::Int(64), args->k);
+  int64_t k = args->k.defined() ? GetScalarValueData<int64_t>(args->k) : 1;
+  attrs->k = IntImm(tvm::runtime::DataType::Int(64), k);
   attrs->axis = args->axis;
   attrs->ret_type = args->ret_type;
   attrs->is_ascend = args->is_ascend;
@@ -93,7 +95,11 @@ Attrs TopkSchema2Attrs(const TopkArgs* args) {
 
 HashKey TopkHasher(const std::vector<Type>& param_types, const Type& y_type, const TopkArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->k;
+  if (!args->k.defined()) {
+    key << int64_t(1);
+  } else {
+    key << GetScalarValueData<int64_t>(args->k);
+  }
   key << args->axis;
   key << args->ret_type;
   key << args->is_ascend;

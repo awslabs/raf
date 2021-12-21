@@ -16,32 +16,6 @@ using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op::schema;
 
-Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
-  size_t ndim_1 = x1->shape.size();
-  size_t ndim_2 = x2->shape.size();
-  size_t ndim = std::max(ndim_1, ndim_2);
-  Array<PrimExpr> oshape(ndim, 0);
-  for (size_t i = 0; i < ndim; ++i) {
-    PrimExpr lhs = (i < ndim_1) ? x1->shape[ndim_1 - 1 - i] : Integer(1);
-    PrimExpr rhs = (i < ndim_2) ? x2->shape[ndim_2 - 1 - i] : Integer(1);
-
-    if (tvm::tir::is_const_int(lhs, 1)) {
-      oshape.Set(ndim - 1 - i, rhs);
-    } else if (tvm::tir::is_const_int(rhs, 1)) {
-      oshape.Set(ndim - 1 - i, lhs);
-    } else if (lhs.as<AnyNode>()) {
-      oshape.Set(ndim - 1 - i, rhs);
-    } else if (rhs.as<AnyNode>()) {
-      oshape.Set(ndim - 1 - i, lhs);
-    } else if (TypeCheckCompare(lhs, rhs, std::equal_to<int>())) {
-      oshape.Set(ndim - 1 - i, lhs);
-    } else {
-      LOG(FATAL) << "Incompatible broadcast type " << x1 << " and " << x2;
-    }
-  }
-  return oshape;
-}
-
 Type BroadcastInfer(const CallValues& value) {
   const auto* args = value->args.as<BinaryArgs>();
   CHECK(args != nullptr);

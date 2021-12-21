@@ -25,7 +25,7 @@ class TestModel(mnm.Model):
     (1, 4, 6),
 ])
 @pytest.mark.parametrize("axis", [0, 1, -1])
-@pytest.mark.parametrize("dtype", ["int32", "int64", "float32"])
+@pytest.mark.parametrize("dtype", ["int32", "float32"])
 def test_argsort(device, shape, axis, dtype):
     m_x, n_x = randn(shape, device=device)
     model = TestModel(mnm._op.sym.argsort, axis=axis, dtype=dtype)  # pylint: disable=protected-access
@@ -45,7 +45,7 @@ def test_argsort(device, shape, axis, dtype):
     (1, 4, 6),
 ])
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("dtype", ["int32", "int64", "float32"])
+@pytest.mark.parametrize("dtype", ["int32", "float32"])
 def test_sort(device, shape, axis, dtype):
     m_x, n_x = randn(shape, device=device, dtype=dtype)
     m_x.requires_grad = True
@@ -71,8 +71,8 @@ def test_sort(device, shape, axis, dtype):
 
 @pytest.mark.parametrize("device", get_device_list())
 @pytest.mark.parametrize("k", [1, 3])
-@pytest.mark.parametrize("axis", [0, 2, -1])
-@pytest.mark.parametrize("dtype", ["float32", "int32", "int64"])
+@pytest.mark.parametrize("axis", [0, 2])
+@pytest.mark.parametrize("dtype", ["float32", "int32"])
 @pytest.mark.parametrize("ret_type", ["values", "both", "indices"])
 @pytest.mark.parametrize("is_ascend", [True, False])
 @pytest.mark.parametrize("shape", [(5, 5, 5, 5, 5, 5, 5), (224, 224, 3)])

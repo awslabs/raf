@@ -509,7 +509,7 @@ def floor_divide(x1, x2):
 
 def full(fill_value, shape, dtype="int32", device="cpu"):
     fill_value = sym_utils.to_double(fill_value)
-    shape = sym_utils.to_int_tuple(shape)
+    shape = sym_utils.to_any(shape)
     dtype = sym_utils.to_string(dtype)
     device = sym_utils.to_string(device)
     return Symbol.from_expr(ffi.full(fill_value, shape, dtype, device))
@@ -800,7 +800,7 @@ def one_hot(indices, on_value, off_value, depth, axis=-1, dtype="int32", device=
     return Symbol.from_expr(ffi.one_hot(indices, on_value, off_value, depth, axis, dtype, device))
 
 def ones(shape, dtype="int32", device="cpu"):
-    shape = sym_utils.to_int_tuple(shape)
+    shape = sym_utils.to_any(shape)
     dtype = sym_utils.to_string(dtype)
     device = sym_utils.to_string(device)
     return Symbol.from_expr(ffi.ones(shape, dtype, device))
@@ -861,13 +861,13 @@ def repeat_dx(x, dy, repeats, axis=None):
 
 def reshape(x, shape, reverse=False):
     x = sym_utils.to_tensor(x)
-    shape = sym_utils.to_int_tuple(shape)
+    shape = sym_utils.to_any(shape)
     reverse = sym_utils.to_bool(reverse)
     return Symbol.from_expr(ffi.reshape(x, shape, reverse))
 
 def resize2d(x, size, layout="NCHW", method="linear", coordinate_transformation_mode="half_pixel", rounding_method="", cubic_alpha=-0.5, cubic_exclude=0, out_dtype=""):
     x = sym_utils.to_tensor(x)
-    size = sym_utils.to_int_tuple(size)
+    size = sym_utils.to_any(size)
     layout = sym_utils.to_string(layout)
     method = sym_utils.to_string(method)
     coordinate_transformation_mode = sym_utils.to_string(coordinate_transformation_mode)
@@ -1073,8 +1073,8 @@ def stream_sync(x, stream_tag=0):
 
 def strided_slice(x, begin, end, strides=None, slice_mode="end"):
     x = sym_utils.to_tensor(x)
-    begin = sym_utils.to_int_tuple(begin)
-    end = sym_utils.to_int_tuple(end)
+    begin = sym_utils.to_any(begin)
+    end = sym_utils.to_any(end)
     strides = sym_utils.to_int_tuple(strides)
     slice_mode = sym_utils.to_string(slice_mode)
     return Symbol.from_expr(ffi.strided_slice(x, begin, end, strides, slice_mode))
@@ -1162,9 +1162,9 @@ def threshold_dx(x, dy, threshold=0.0):
     threshold = sym_utils.to_double(threshold)
     return Symbol.from_expr(ffi.threshold_dx(x, dy, threshold))
 
-def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
+def topk(data, k, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
     data = sym_utils.to_tensor(data)
-    k = sym_utils.to_int(k)
+    k = sym_utils.to_any(k)
     axis = sym_utils.to_int(axis)
     ret_type = sym_utils.to_string(ret_type)
     is_ascend = sym_utils.to_bool(is_ascend)
@@ -1238,7 +1238,7 @@ def where(condition, x, y):
     return Symbol.from_expr(ffi.where(condition, x, y))
 
 def zeros(shape, dtype="int32", device="cpu"):
-    shape = sym_utils.to_int_tuple(shape)
+    shape = sym_utils.to_any(shape)
     dtype = sym_utils.to_string(dtype)
     device = sym_utils.to_string(device)
     return Symbol.from_expr(ffi.zeros(shape, dtype, device))

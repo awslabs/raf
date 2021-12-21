@@ -14,7 +14,7 @@ namespace op {
 namespace schema {
 class InitOpArgs : public ir::AttrsNode<InitOpArgs> {
  public:
-  std::vector<int64_t> shape;
+  value::Value shape;
   std::string dtype{"int"};
   std::string device{"cpu"};
   MNM_OP_SCHEMA(InitOpArgs, "mnm.args.init_op");

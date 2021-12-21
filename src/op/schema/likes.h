@@ -22,7 +22,7 @@ class CollapseLikeArgs : public ir::AttrsNode<CollapseLikeArgs> {
 class ReshapeArgs : public ir::AttrsNode<ReshapeArgs> {
  public:
   value::BaseTensorValue x;
-  std::vector<int64_t> shape;
+  value::Value shape;
   bool reverse{false};
   MNM_OP_SCHEMA(ReshapeArgs, "mnm.args.reshape");
 };
@@ -30,7 +30,7 @@ class ReshapeArgs : public ir::AttrsNode<ReshapeArgs> {
 class Resize2DArgs : public ir::AttrsNode<Resize2DArgs> {
  public:
   value::BaseTensorValue x;
-  std::vector<int64_t> size;
+  value::Value size;
   std::string layout{"NCHW"};
   std::string method{"linear"};
   std::string coordinate_transformation_mode{"half_pixel"};

@@ -132,14 +132,27 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     return OpValue::make(GetRef<Op>(node));
   }
 
-  Value VisitExpr_(const FunctionNode* node) override {
-    const Function& func = GetRef<Function>(node);
+  Value MakeClosure(const Function& func, Var letrec_name = Var()) {
     Map<Var, Value> captured_mod;
     Array<Var> free_vars = pass::FreeVars(func);
     for (const auto& var : free_vars) {
+      // Evaluate the free var (which could be a function call) if it hasn't
+      // shown up in a let-binding that has invoked the function. This is usually happens
+      // for local recursive function that the free var points to the function itself.
+      if (letrec_name.defined() && letrec_name == var) {
+        continue;
+      }
       captured_mod.Set(var, Eval(var));
     }
+    if (letrec_name.defined()) {
+      return ClosureValue::make(captured_mod, func, letrec_name);
+    }
     return ClosureValue::make(captured_mod, func);
+  }
+
+  Value VisitExpr_(const FunctionNode* node) override {
+    const Function& func = GetRef<Function>(node);
+    return MakeClosure(func);
   }
 
   Value VisitExpr_(const CallNode* node) override {
@@ -176,7 +189,12 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     std::list<SymbolTable::AddVar> add_vars;
     while (body->IsInstance<LetNode>()) {
       Let let = Downcast<Let>(body);
-      add_vars.emplace_back(st, let->var, Eval(let->value));
+      if (auto func = let->value.as<FunctionNode>()) {
+        auto clo = MakeClosure(GetRef<Function>(func), let->var);
+        add_vars.emplace_back(st, let->var, clo);
+      } else {
+        add_vars.emplace_back(st, let->var, Eval(let->value));
+      }
       body = let->body;
     }
     return Eval(body);
@@ -334,6 +352,9 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
     }
     for (auto it = node->env.begin(); it != node->env.end(); ++it) {
       locals.Set((*it).first, (*it).second);
+    }
+    if (node->bind.defined()) {
+      locals.Set(node->bind.value(), call->callee);
     }
     {
       SymbolTable::LocalFrame lf(st, std::move(locals));

@@ -4,6 +4,7 @@
  * \brief Declaration of unary operators
  */
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/tensor.h"
 #include "../schema/init.h"
 
@@ -18,7 +19,7 @@ MNM_OP_DECLARE("mnm.op.zeros", [](const CallValues& call) {
   const auto* args = call->args.as<InitOpArgs>();
   CHECK(args != nullptr);
   std::string dtype = args->dtype;
-  std::vector<int64_t> shape(args->shape);
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   tvm::Device tvm_dev = (*f)(args->device);
   Device device(tvm_dev);
@@ -32,7 +33,7 @@ MNM_OP_DECLARE("mnm.op.ones", [](const CallValues& call) {
   const auto* args = call->args.as<InitOpArgs>();
   CHECK(args != nullptr);
   std::string dtype = args->dtype;
-  std::vector<int64_t> shape(args->shape);
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
   tvm::Device tvm_dev = (*f)(args->device);
   Device device(tvm_dev);

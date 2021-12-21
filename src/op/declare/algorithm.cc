@@ -4,6 +4,7 @@
  * \brief Declaration of algorithm-specific operators
  */
 #include "mnm/op.h"
+#include "mnm/op_utils.h"
 #include "mnm/tensor.h"
 #include "../schema/algorithm.h"
 #include "./declare_utils.h"
@@ -44,7 +45,7 @@ MNM_OP_DECLARE("mnm.op.topk", [](const CallValues& call) {
   const auto* args = call->args.as<TopkArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
-  int k = args->k;
+  int64_t k = args->k.defined() ? GetScalarValueData<int64_t>(args->k) : 1;
   int axis = args->axis;
   CHECK((axis >= -data->ndim) && (axis < data->ndim));
   if (axis < 0) {
