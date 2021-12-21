@@ -460,7 +460,7 @@ If the operator is not supported by any kernel libraries and it cannot be schedu
 Finally, we need to write unit tests for this operator and every of its backend implementations. We first write a unit test for TVM dialect in [tests/python/op/tvm/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/tests/python/op/tvm/test_tvm_nn.py). Note that you should the pytest parameterize to make the test concise while covering most common cases.
 
 ```python
-@pytest.mark.parametrize("device", get_device_list()) # Test all available devices.
+@pytest.mark.parametrize("device", get_testable_devices()) # Test all available devices.
 @pytest.mark.parameterize("backend", ["cudnn", "tvm"]) # Test all dialect ops.
 @pytest.mark.parametrize("dtype", ["float16", "float32"]) # Test supported dtypes.
 @pytest.mark.parametrize("shape", [ # Test some shapes. Please pick just 2-3 representative shapes.

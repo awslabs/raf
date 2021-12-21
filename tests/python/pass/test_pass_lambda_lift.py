@@ -1,11 +1,11 @@
 import pytest
 import tvm
 import mnm
-from mnm.testing import randn, get_device_list
+from mnm.testing import randn, get_testable_devices
 from mnm._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody, InferType
 from tvm import relay
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]

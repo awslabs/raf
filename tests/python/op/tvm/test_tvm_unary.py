@@ -6,7 +6,7 @@ from scipy import special
 import torch
 
 import mnm
-from mnm.testing import get_device_list, randn, randn_torch, run_vm_model, check
+from mnm.testing import get_testable_devices, randn, randn_torch, run_vm_model, check
 
 
 class UnaryModel(mnm.Model):
@@ -37,7 +37,7 @@ def verify_unify_op(m_op, m_arg, device, ref_fwd_out, m_dy=None, ref_grad=None):
     check(m_arg.grad, ref_grad, rtol=1e-3, atol=1e-3)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -68,7 +68,7 @@ def test_common_unary_ops(ops, shape, dtype, device):
     verify_unify_op(m_op, m_x, device, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -119,7 +119,7 @@ def test_unary_fp16_ops_with_grad(ops):
     verify_unify_op(m_op, m_x, device, t_y, m_dy, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -139,7 +139,7 @@ def test_pos_unary_ops_with_grad(ops, shape, dtype, device):
     verify_unify_op(m_op, m_x, device, t_y, m_dy, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (np.log, mnm._op.sym.log),
     (np.sqrt, mnm._op.sym.sqrt),
@@ -160,7 +160,7 @@ def test_pos_unary_ops_without_grad(ops, shape, dtype, device):
 
 
 # TODO(@icemelon9, @yzhliu): shape op doesn't work in the trace, so cannot test in VM.
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_shape(device):
     shape = (3, 6, 9)
     m_x = mnm.array(np.random.randn(*shape).astype('float32'), device=device)

@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 import mnm
-from mnm.testing import run_vm_model, check, get_device_list
+from mnm.testing import run_vm_model, check, get_testable_devices
 
 
 @pytest.mark.parametrize("shape", [(1, ()), (5, (5,))])
@@ -21,7 +21,7 @@ def test_batch_flatten_error(shape):
     [5, 3],
     [5, 2, 2, 2]
 ])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_batch_flatten(shape, device):
     class Model(mnm.model.Model):
         # pylint: disable=no-self-use

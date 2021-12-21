@@ -4,12 +4,12 @@ import torch
 import torchvision
 import pytest
 import mnm
-from mnm.testing import get_device_list, randn, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, check, run_vm_model
 
 import tvm.topi.testing
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("inputs", [
     ((1, 2500, 6), 0, 0, 1),
     ((16, 500, 5), 0.95, -1, 0)
@@ -60,7 +60,7 @@ def test_get_valid_counts(inputs, device):
         check(v_out[2], np_out3, rtol=1e-3, atol=1e-04)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_nms(device):
     # pylint: disable=too-many-locals
     class TestModel(mnm.Model):
@@ -132,7 +132,7 @@ def test_nms(device):
                                     ((4, 4, 16, 16), (32, 5), (7, 7), 0.5, 2)])
 @pytest.mark.parametrize("mode", ["avg", "max"])
 @pytest.mark.parametrize("layout", ["NCHW", "NHWC"])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_roi_align(config, mode, layout, device):
     # pylint: disable=too-many-locals, not-callable
     class TestModel(mnm.Model):

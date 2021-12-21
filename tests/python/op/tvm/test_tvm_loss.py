@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import get_device_list, randn_torch, check, run_vm_model, one_hot_torch
+from mnm.testing import get_testable_devices, randn_torch, check, run_vm_model, one_hot_torch
 
 
 def one_hot(batch_size, num_classes, device="cpu", dtype="float32"):
@@ -47,7 +47,7 @@ def test_smooth_l1_loss(device, shape):
     check(m_pred.grad, t_pred.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("n", [3, 7])
 @pytest.mark.parametrize("c", [2, 6])
 def test_nll_loss(device, n, c):
@@ -107,7 +107,7 @@ def test_cross_entropy(device, n, c):
     (3, 16, 128, 128),
     (3, 16),
 ])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_broadcast_add(shape, device):
     m_a, t_a = randn_torch(shape, device=device, requires_grad=True)
     n = len(shape)

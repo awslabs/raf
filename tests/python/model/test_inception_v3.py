@@ -1,11 +1,11 @@
 # pylint: disable=protected-access
 import pytest
 import mnm
-from mnm.testing import check, run_vm_model, get_device_list, inception
+from mnm.testing import check, run_vm_model, get_testable_devices, inception
 
 
 @pytest.mark.parametrize("block", ["A"])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_block_intpr_forward(block, device):
     (m_model, m_x, m_y), (t_model, t_x, t_y) = inception.get_block_and_input(block, device=device)
     m_loss = m_model(m_x, m_y)
@@ -17,7 +17,7 @@ def test_block_intpr_forward(block, device):
 
 
 @pytest.mark.parametrize("block", ["A"])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fuse", [False, True])
 def test_block_vm_forward(block, device, fuse):
     (m_model, m_x, m_y), (t_model, t_x, t_y) = inception.get_block_and_input(block, device=device)

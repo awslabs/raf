@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
-from mnm.testing import with_seed, get_device_list, check, run_vm_model, \
+from mnm.testing import with_seed, get_testable_devices, check, run_vm_model, \
     one_hot_torch, randn_torch, t2m_param, randn_mxnet
 
 
@@ -144,7 +144,7 @@ class MNMSimpleTest(mnm.Model):
         return y
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_traced_sgd_simple(device):
     # pylint: disable=attribute-defined-outside-init
     shape = (2, 2)
@@ -208,7 +208,7 @@ def test_traced_sgd(config):
 
 
 @with_seed(0)
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_mxnet_model(device):
     net = gluon.nn.HybridSequential()
     with net.name_scope():

@@ -9,7 +9,7 @@ from mnm._core.ir_ext import ExtendedVar
 from mnm.ir import ScopeBuilder
 from mnm.model.nn import BatchNorm
 from mnm.model.trace import trace_mutate_attr
-from mnm.testing import get_device_list, compile_vm_model, run_vm_model, check, randn
+from mnm.testing import get_testable_devices, compile_vm_model, run_vm_model, check, randn
 from tvm import relay
 
 
@@ -135,7 +135,7 @@ def test_bn():
     checkir(variables, alias)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_grad(device):
     class Model(mnm.Model):
         def build(self, shape):

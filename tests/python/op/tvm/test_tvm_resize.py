@@ -2,7 +2,7 @@ import pytest
 from torch.nn.functional import interpolate
 
 import mnm
-from mnm.testing import get_device_list, randn_torch, check, with_seed
+from mnm.testing import get_testable_devices, randn_torch, check, with_seed
 
 @pytest.mark.parametrize("params", [
     {"batchs": 32, "layout": "NCHW", "orig_shape": (32, 32),
@@ -14,7 +14,7 @@ from mnm.testing import get_device_list, randn_torch, check, with_seed
     {"batchs": 32, "layout": "NHWC", "orig_shape": (32, 32),
      "to_shape": 64, "infer_shape": (32, 64, 64, 3)},
 ])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("method", ["nearest_neighbor", "linear", "cubic"])
 @with_seed(0)
 def test_resize2d(device, params, method):

@@ -3,7 +3,7 @@
 import pytest
 import mnm
 from mnm._lib import tvm
-from mnm.testing import get_device_list, randn, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, check, run_vm_model
 
 
 def optimize(mod, device, fusion=False):
@@ -59,7 +59,7 @@ def verify_correctness(model, device, args, fusion):
         check(ref_out, out)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fusion", [False, True])
 def test_memory_plan_basic(device, fusion):
     class Model(mnm.Model):
@@ -95,7 +95,7 @@ def test_memory_plan_basic(device, fusion):
     verify_correctness(model_before, device, args, fusion=fusion)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fusion", [False, True])
 def test_memory_plan_multi_outs(device, fusion):
     class Model(mnm.Model):

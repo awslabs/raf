@@ -2,10 +2,11 @@ import pytest
 import numpy as np
 import mnm
 from mnm._core.executor import VMExecutor
-from mnm.testing import check, compile_vm_model, run_vm_model, get_arr_addr, get_device_list, randn
+from mnm.testing import check, compile_vm_model, run_vm_model, get_arr_addr, randn
+from mnm.testing import get_testable_devices
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
@@ -79,7 +80,7 @@ def test_cuda_graph(shape):
     assert executable.globals[0] == 'main'
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
@@ -114,7 +115,7 @@ def test_tuple(device, shape):
     assert executable.globals[0] == 'main'
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
@@ -143,7 +144,7 @@ def test_memory(device, shape):
     assert get_arr_addr(out) != get_arr_addr(y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]
@@ -171,7 +172,7 @@ def test_simple_fusion(device, shape):
     check_e2e(model, device, [m_x])
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_split_fusion(device):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     shape = [3, 3]

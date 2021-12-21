@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 import mnm
-from mnm.testing import run_vm_model, randn, get_device_list
+from mnm.testing import run_vm_model, randn, get_testable_devices
 
 
 @pytest.mark.parametrize("shape", [
@@ -12,7 +12,7 @@ from mnm.testing import run_vm_model, randn, get_device_list
     [5, 2, 2, 2]
 ])
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_size(shape, axis, device):
     class Model(mnm.model.Model):
         # pylint: disable=no-self-use
@@ -42,7 +42,7 @@ def test_size(shape, axis, device):
     [5, 3, 2],
     [5, 2, 2, 2]
 ])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_numel(shape, device):
     class Model(mnm.model.Model):
         # pylint: disable=no-self-use
@@ -72,7 +72,7 @@ def test_numel(shape, device):
     [5, 3, 2],
     [5, 2, 2, 2]
 ])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_shape_as_tensor(shape, device):
     class Model(mnm.model.Model):
         # pylint: disable=no-self-use

@@ -7,7 +7,7 @@ from tvm import relay
 from mnm._ffi.pass_ import InferType, AutoDiff, FromRelay, LiftBranchBody
 from mnm._ffi.pass_ import LambdaLift, FlattenClosure, InlineBackward
 from mnm.ir import MNMSequential, ScopeBuilder
-from mnm.testing import get_device_list, randn, check, utils
+from mnm.testing import get_testable_devices, randn, check, utils
 
 
 def ad_passes(mod):
@@ -33,7 +33,7 @@ def vm_passes(mod):
     return mod
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_add_to(shape, device):
     class Add(mnm.Model):
@@ -54,7 +54,7 @@ def test_add_to(shape, device):
     check(m_dx, n_dx)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "shape",
     [
@@ -108,7 +108,7 @@ def test_no_grad1(shape, device):
     check(m_dx, n_dx)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_no_grad2(device):
     shape = [3, 2]
     dtype = "float32"
@@ -162,7 +162,7 @@ def test_no_grad2(device):
     assert tvm.ir.structural_equal(m_mod["main"], expected())
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_basic(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -196,7 +196,7 @@ def test_basic(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_concatenate(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -232,7 +232,7 @@ def test_concatenate(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_split(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -271,7 +271,7 @@ def test_split(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_split_unused_output(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -306,7 +306,7 @@ def test_split_unused_output(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_fanout(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -342,7 +342,7 @@ def test_fanout(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_split_concat(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -378,7 +378,7 @@ def test_split_concat(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_split_with_fanout(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -417,7 +417,7 @@ def test_split_with_fanout(device):
     vm_executor(m_x, m_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_concatenate_fanout(device):
     def get_mod():
         mod = tvm.IRModule()
@@ -459,7 +459,7 @@ def test_concatenate_fanout(device):
     vm_executor(m_x, m_y, [m_dy, m_dy])
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_tuple_outputs(device):
     def get_mod():
         mod = tvm.IRModule()

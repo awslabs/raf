@@ -3,6 +3,7 @@
 import logging
 import functools
 import random
+import os
 import sys
 import re
 import numpy as np
@@ -11,15 +12,15 @@ from mnm import distributed as dist
 from .._op.dialect import DialectPreference
 
 def check_type(expr, typ):
-    """Helper function to check expr.checked_type == typ"""
+    """Helper function to check expr.checked_type == type"""
     checked_type = expr.checked_type
     if checked_type != typ:
         raise RuntimeError(f"Type mismatch {checked_type} vs {typ}")
 
 
-def get_device_list():
-    """Helper function to get all available contexts"""
-    ret = ["cpu"]
+def get_testable_devices():
+    """Helper function to get testable devices"""
+    ret = ["cpu"] if "MNM_DISABLE_CPU_TEST" not in os.environ else []
     if mnm.build.with_cuda():
         ret.append("cuda")
     return ret

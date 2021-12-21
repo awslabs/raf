@@ -3,10 +3,10 @@ import numpy as np
 import pytest
 import mxnet as mx
 import mnm
-from mnm.testing import get_device_list, randint, check, run_vm_model
+from mnm.testing import get_testable_devices, randint, check, run_vm_model
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (np.zeros, mnm._op.sym.zeros),
     (np.ones, mnm._op.sym.ones),
@@ -34,7 +34,7 @@ def test_init_ops(ops, shape, dtype, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("indices_shape", [(1, ), (1, 2), (1, 2, 3, 4)])
 @pytest.mark.parametrize("on_value", [1.0, -1.0])
 @pytest.mark.parametrize("off_value", [0.0, 1.0])

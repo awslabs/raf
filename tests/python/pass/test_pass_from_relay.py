@@ -9,7 +9,7 @@ import mnm
 import tvm
 from mnm.frontend import FrameworkModel
 from mnm.ir import AsText, ScopeBuilder
-from mnm.testing import get_device_list, randint, randn, check, utils, randn_torch
+from mnm.testing import get_testable_devices, randint, randn, check, utils, randn_torch
 from mnm._ffi.pass_ import FromRelay, InferType
 from mnm._core.module import IRModule
 from mnm._lib import tvm as _tvm
@@ -801,7 +801,7 @@ def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, paddi
 
 # FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
 @pytest.mark.xfail
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("p", [0.3, 0.7])
 def test_contrib_dropout(device, shape, p):

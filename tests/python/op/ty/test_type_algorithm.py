@@ -1,7 +1,7 @@
 # pylint: disable=protected-access
 import pytest
 import mnm
-from mnm.testing import check_type, run_infer_type, randn, get_device_list
+from mnm.testing import check_type, run_infer_type, randn, get_testable_devices
 from mnm._ffi.pass_ import AutoDiff, InferType
 from tvm.relay import TensorType, FuncType, TupleType
 
@@ -77,7 +77,7 @@ def test_sort(shape, axis, is_ascend, dtype):
     check_type(m_mod['main'], desired_type)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("k", [1, 3])
 @pytest.mark.parametrize("axis", [0, 2, -1])
 @pytest.mark.parametrize("ret_type", ["values", "both", "indices"])

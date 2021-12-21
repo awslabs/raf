@@ -1,6 +1,6 @@
 import pytest
 import mnm
-from mnm.testing import randn
+from mnm.testing import randn, get_testable_devices
 from mnm._lib import relay, tvm
 from mnm._core.device import Device
 from mnm._core.module import IRModule
@@ -8,7 +8,7 @@ from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
 # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
 
 
-@pytest.mark.parametrize("dev", mnm.testing.get_device_list())
+@pytest.mark.parametrize("dev", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]

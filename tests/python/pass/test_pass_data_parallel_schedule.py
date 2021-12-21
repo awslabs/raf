@@ -563,16 +563,17 @@ def test_fifo_schedule(model_class, shape):
 
     mod = MNMSequential([ToGraphNormalForm(), DataParallelSchedule()])(mod)
 
-    print("Actual"+"<<"*20)
-    print(mnm.ir.AsText(mod["main"]))
+    err_msgs = []
+    err_msgs.append("Actual"+"<<"*20)
+    err_msgs.append(mnm.ir.AsText(mod["main"]))
 
     equal_to_any = False
     for expected in model.fifo_expected():
         result = tvm.ir.structural_equal(mod['main'], expected)
         equal_to_any = equal_to_any or result
-        print("Expected Candidate"+"<<"*20)
-        print(mnm.ir.AsText(expected))
-    assert equal_to_any
+        err_msgs.append("Expected Candidate"+"<<"*20)
+        err_msgs.append(mnm.ir.AsText(expected))
+    assert equal_to_any, "\n".join(err_msgs)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ from tvm import relay
 from tvm.ir import PrimType
 from mnm.ir import AsText, ScopeBuilder
 from mnm.frontend.model import FrameworkModel
-from mnm.testing import randn, randn_torch, run_vm_model, check, get_device_list
+from mnm.testing import randn, randn_torch, run_vm_model, check, get_testable_devices
 
 def verify_correctness(model, device, args, ref_outs=None, tol=1e-5):
     # A helper function to verify the correctness
@@ -342,7 +342,7 @@ def test_concatenate(params):
     verify_cast_num(model, args, expected_cast_num)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_mean_dx(device):
     class Model(mnm.Model):
         def build(self):

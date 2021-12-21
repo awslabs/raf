@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
 import mnm
-from mnm.testing import get_device_list, randn, check
+from mnm.testing import get_testable_devices, randn, check
 from mnm._core.ndarray import get_ndarray_handle, ndarray
 from mnm._core.module import IRModule
 from mnm._lib import relay
 from mnm._ffi.model import RunModel
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]

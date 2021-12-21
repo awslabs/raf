@@ -6,7 +6,7 @@ import pytest
 import torch
 import mnm
 import mxnet as mx
-from mnm.testing import get_device_list, randn, randn_torch, check, run_vm_model, to_torch_dev
+from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model, to_torch_dev
 
 
 class TestModel(mnm.Model):
@@ -19,7 +19,7 @@ class TestModel(mnm.Model):
         return self.op(*args, **self.attrs)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     (2, 3, 4),
     (1, 4, 6),
@@ -39,7 +39,7 @@ def test_argsort(device, shape, axis, dtype):
 # pylint: disable=too-many-locals
 # pylint: disable=no-member
 # pylint: disable=consider-using-in
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     (2, 3, 4),
     (1, 4, 6),
@@ -69,7 +69,7 @@ def test_sort(device, shape, axis, dtype):
         check(mx_x.grad, m_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("k", [1, 3])
 @pytest.mark.parametrize("axis", [0, 2])
 @pytest.mark.parametrize("dtype", ["float32", "int32"])
@@ -113,7 +113,7 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
             check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("k", [1, 3])
 @pytest.mark.parametrize("axis", [2, -1])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])

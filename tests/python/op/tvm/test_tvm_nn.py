@@ -4,13 +4,13 @@ import pytest
 import torch
 import torch.nn.functional as F
 import mnm
-from mnm.testing import randint, randn, numpy, get_device_list, randn_torch, with_seed, check, \
+from mnm.testing import randint, randn, numpy, get_testable_devices, randn_torch, with_seed, check, \
     run_vm_model, with_dialect
 from mnm.model.trace import trace_mutate_attr
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("b", [2, 4])
 @pytest.mark.parametrize("n", [2, 4])
@@ -60,7 +60,7 @@ def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpo
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("n", [1, 4])
 @pytest.mark.parametrize("m", [1, 4])
 @pytest.mark.parametrize("k", [1, 4])
@@ -96,7 +96,7 @@ def test_dense(n, m, k, device):
 # TODO: Currently TVM fails to schedule softmax or softmax_dx in certain cases
 @pytest.mark.skip
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3],
@@ -136,7 +136,7 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
 # pylint: disable=no-member
 # pylint: disable=protected-access
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [
     [3, 2],
@@ -168,7 +168,7 @@ def test_log_softmax(device, dtype, shape):
 # pylint: disable=too-many-arguments
 @with_dialect("tvm")
 @with_seed(0)
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     (5, 4, 6, 9),
     (3, 7, 9)
@@ -237,7 +237,7 @@ def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform)
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shapes", [
     ((4, 256, 32, 32), (64, 256, 1, 1)),
@@ -276,7 +276,7 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shapes", [
     ((4, 256, 32, 32), (256, 64, 4, 4)),
@@ -357,7 +357,7 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("xshape", [(3, 3, 4, 4), (8, 3, 32, 32)])
 @pytest.mark.parametrize("axis", [-1, 1])
@@ -433,7 +433,7 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs, ceil)
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("data_shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("out_shape", [(1, 1), (4, 4)])
@@ -506,7 +506,7 @@ def test_pool2d_nhwc(device, dtype, data_shape, kernel, stride, padding, funcs):
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("n", [1, 2, 4])
 @pytest.mark.parametrize("m", [1, 2, 4])
@@ -544,7 +544,7 @@ def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-6])
@@ -572,7 +572,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-6])
@@ -623,7 +623,7 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
 
 
 @with_dialect("tvm")
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("dimension", [
     ((2, 3), (1, 1, 1, 1)),
@@ -652,7 +652,7 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
 
 @with_dialect("tvm")
 @pytest.mark.parametrize("hyperparam", [(0.6, 1.2), (-0.2, 1.2)])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_threshold_with_grad(hyperparam, shape, dtype, device):

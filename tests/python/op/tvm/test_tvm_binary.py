@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 import mnm
-from mnm.testing import get_device_list, randn, randn_torch, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model
 
 
 class BinaryModel(mnm.Model):
@@ -35,7 +35,7 @@ def verify_op(m_op, m_args, device, ref_fwd_out, m_dy=None, ref_grads=None):
         check(m_arg.grad, ref_grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (np.maximum, mnm._op.sym.maximum),
     (np.greater, mnm._op.sym.greater),
@@ -60,7 +60,7 @@ def test_binary_ops_without_grad(ops, shape, dtype, device):
     verify_op(m_op, [m_x1, m_x2], device, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (torch.mul, mnm._op.sym.multiply),
     (torch.div, mnm._op.sym.divide),
@@ -85,7 +85,7 @@ def test_binary_ops_with_grad(ops, shape, dtype, device):
 
 
 #logical_and only allows bool input s
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (np.logical_and, mnm._op.sym.logical_and),
 ])
@@ -103,7 +103,7 @@ def test_binary_bool_ops(ops, shape, dtype, device):
     verify_op(m_op, [m_x1, m_x2], device, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (np.right_shift, mnm._op.sym.right_shift),
     (np.left_shift, mnm._op.sym.left_shift)
@@ -123,7 +123,7 @@ def test_shift_ops_with_grad(ops, shape, dtype, device):
     verify_op(m_op, [m_x1, m_x2], device, n_y, m_dy, [0.])
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("ops", [
     (torch.eq, mnm._op.sym.equal),
     (torch.ne, mnm._op.sym.not_equal),

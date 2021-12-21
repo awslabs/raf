@@ -9,7 +9,7 @@ import pytest
 import torch
 import mxnet as mx
 import mnm
-from mnm.testing import get_device_list, randn, randn_torch, randint, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, randn_torch, randint, check, run_vm_model
 import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 
 
@@ -23,7 +23,7 @@ class TestModel(mnm.Model):
         return self.op(*args, **self.attrs)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [(5, 4, 3), (1, 2)],
     [(6, 5), ()],
@@ -69,7 +69,7 @@ def test_take(shape, axis, device, mode, dtype):
     check(m_x.grad, mx_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("max_length", [3, 4, 5, 6])
 @pytest.mark.parametrize("batch_size", [2, 3, 4])
 @pytest.mark.parametrize("other_feature_dims", [[1, 2], [5, 6]])
@@ -93,7 +93,7 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [[1, 4, 1], [1, 2, 4, 1]],
 ])
@@ -126,7 +126,7 @@ def test_broadcast_to(shape, device, dtype):
 
 
 #pylint: disable=unused-variable
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     (1, 2, 4, 1)
 ])
@@ -149,7 +149,7 @@ def test_repeat(shape, device, axis):
     check(m_x.grad, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [(2, 2), (1, 0)],
     [(2, 2), None],
@@ -180,7 +180,7 @@ def test_transpose(shape, device):
     check(m_x.grad, n_x_grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("shape", [
     [(3, 5), (2, 4), (2, 4)],
@@ -226,7 +226,7 @@ def test_scatter(shape, axis, device):
     (2, 1),
 ])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_swap_axis(shape, dtype, axis, device):# pylint: disable=unused-argument
     # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
     if dtype == "float16" and device == "cpu":
@@ -250,7 +250,7 @@ def test_swap_axis(shape, dtype, axis, device):# pylint: disable=unused-argument
         check(m_x.grad, n_x_grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [[1, 4, 1], [1, 4, 1]],
     [[4, 1, 1], [3, 4, 2, 2]]
@@ -270,7 +270,7 @@ def test_broadcast_to_like(shape, device):
     check(m_x.grad, np.ones(shape[0], dtype="float32") * (n_dy.size / n_x.size))
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[10, 20, 30]])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("indices_or_sections", [
@@ -314,7 +314,7 @@ def test_split(shape, axis, indices_or_sections, device):
     check(m_x.grad, t_x2.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("inputs", [
     {"shape": (3, 3, 3), "seq_length": [1, 2, 3]},
     {"shape": (5, 5, 5), "seq_length": [1, 2, 3, 4, 5]},
@@ -347,7 +347,7 @@ def test_reverse_sequence(inputs, axes, device):
     check(m_x.grad, mx_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
 @pytest.mark.parametrize("axis", [0, 2])
 def test_reverse(shape, axis, device):
@@ -367,7 +367,7 @@ def test_reverse(shape, axis, device):
     check(m_x.grad, n_grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("params", [
     {"shapes": [[1, 4, 1], [2, 4, 1]], "axis": 0},
     {"shapes": [[2, 2, 2], [2, 3, 2], [2, 4, 2]], "axis": -2},
@@ -427,7 +427,7 @@ def test_concatenate(params, device):
         check(m_x.grad, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shapes", [
     [1, 5, 2],
     [6, 3],
@@ -488,7 +488,7 @@ def test_mesh_grid(shapes, device):
 
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("params", [
     {"shapes": [[1, 4, 1], [1, 4, 1]], "axis": 0},
     {"shapes": [[2, 2, 2], [2, 2, 2], [2, 2, 2]], "axis": -1},
@@ -556,7 +556,7 @@ def test_stack(params, device):
         check(m_x.grad, n_dy_slice)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(1, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("a_min", [0.1, 0.3])
 @pytest.mark.parametrize("a_max", [0.7, 0.8])
@@ -589,7 +589,7 @@ def test_clip(shape, a_min, a_max, device, dtype):
     check(m_x.grad, n_grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("params", [
     {"orig_shape": (8, 8, 8, 8), "to_shape": (2, 2048)},
     {"orig_shape": (8, 1000), "to_shape": (2, 2, 2, 1000)},
@@ -612,7 +612,7 @@ def test_reshape(params, device):
     check(m_x.grad, n_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [1, 4, 5, 2],
     [9, 12, 18, 2, 1]])
@@ -641,7 +641,7 @@ def test_expand_dims(device, shape, axis, num_newaxis):
     check(m_x.grad, np.reshape(n_dy, n_x.shape))
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
 @pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
@@ -677,7 +677,7 @@ def test_cast(shape, device, itype, otype):
     check(m_x.grad, n_dy.astype(itype))
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dshape", [[2, 2, 2], [2, 3]])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
@@ -714,7 +714,7 @@ def test_gather(dshape, axis, device, dtype):
     check(torch_x.grad, m_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dshape", [[10, 11, 12], [10, 11, 12, 13]])
 @pytest.mark.parametrize("ishape", [[3, 4, 2], [4, 5, 3]])
 def test_gather_nd(dshape, ishape, device):
@@ -742,7 +742,7 @@ def test_gather_nd(dshape, ishape, device):
     check(m_x.grad, mx_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(1, 3, 1)])
 @pytest.mark.parametrize("axis", [0, 2, (0, 2), None])
 def test_squeeze(shape, axis, device):
@@ -764,7 +764,7 @@ def test_squeeze(shape, axis, device):
     check(m_x.grad, n_dy)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("fill_value", [0, 2, 0.3])
 @pytest.mark.parametrize("shape", [(1, 3, 1), (5, 5, 5, 5, 5, 5)])
@@ -779,7 +779,7 @@ def test_full(shape, dtype, fill_value, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("fill_value", [0, 2, 0.3])
 @pytest.mark.parametrize("shape", [(1, 3, 1), (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)])
@@ -795,7 +795,7 @@ def test_full_like(shape, dtype, fill_value, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("params", [
     ((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2]),
     ((3, 4, 3), [1, 1, 0], [4, 4, 3], [2, 1, 1]),
@@ -821,7 +821,7 @@ def test_strided_slice(device, params, dtype):
     check(test_x, m_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     (1, 4, 1),
     (1, 2, 4, 1)
@@ -854,7 +854,7 @@ def test_where(shape, device, broadcast):
     check(m_x.grad, t_x.grad)
     check(m_y.grad, t_y.grad)
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("data", [
     [1, 10, 2],
@@ -905,7 +905,7 @@ def test_adv_index(data_shape, index_shapes, dtype):
     check(m_x.grad, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     (2, 2),
     (3, 4, 2, 2),
@@ -934,7 +934,7 @@ def test_argwhere(shape, device, dtype):
     check(v_res, t_res)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("num_weight", [10])
 @pytest.mark.parametrize("hiddend_state", [20])
 @pytest.mark.parametrize("seq_length", [32])
@@ -967,7 +967,7 @@ def test_embedding(device, num_weight, hiddend_state, seq_length, dtype):
     check(m_x.grad, mx_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(3, 5)])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])

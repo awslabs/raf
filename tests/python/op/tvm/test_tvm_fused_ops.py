@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 
 import mnm
-from mnm.testing import get_device_list, run_vm_model
+from mnm.testing import get_testable_devices, run_vm_model
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_avg_pool2d_dx_fuse_relu_dx(device):
     # pylint: disable=attribute-defined-outside-init, unnecessary-pass
     class AvgPoolDxReLUDx(mnm.Model):

@@ -5,7 +5,7 @@ import mxnet as mx
 import gluoncv
 import mnm
 from mnm._op import sym
-from mnm.testing import randn_mxnet, one_hot_mxnet, get_device_list, check
+from mnm.testing import randn_mxnet, one_hot_mxnet, get_testable_devices, check
 
 
 param_map_list = []
@@ -18,7 +18,7 @@ def check_params(mx_model, mnm_model):
 @ pytest.mark.parametrize("mx_model",
                           [["resnet18", gluon.model_zoo.vision.resnet18_v1(pretrained=True)],
                            ["resnest14", gluoncv.model_zoo.get_model("resnest14", pretrained=True)]])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_backward_check(device, mx_model):
     if device == "cpu" and mx_model[0] == "resnest14":
         pytest.skip("skip since it contains op pooling which should be refactor to make schedule work")
@@ -56,7 +56,7 @@ def test_backward_check(device, mx_model):
 @pytest.mark.parametrize("mx_model",
                          [["resnet18", gluon.model_zoo.vision.resnet18_v1(pretrained=True)],
                           ["resnest14", gluoncv.model_zoo.get_model("resnest14", pretrained=True)]])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_forward_check(device, mx_model):
     mx_model[1].hybridize(static_alloc=True, static_shape=True)
 

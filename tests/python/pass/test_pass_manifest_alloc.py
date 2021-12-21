@@ -3,10 +3,10 @@ import mnm
 from mnm._lib import tvm
 from mnm._core.module import IRModule
 from mnm._core.device import Device
-from mnm.testing import get_device_list, randn
+from mnm.testing import get_testable_devices, randn
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [
     [3, 3],
     [4, 4]

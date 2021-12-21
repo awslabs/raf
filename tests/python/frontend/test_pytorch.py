@@ -1,5 +1,6 @@
 # pylint:disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
 # pylint:disable=not-callable,abstract-method,too-many-locals,invalid-name,protected-access
+import tempfile
 import pytest
 import torch
 import torch.nn as nn
@@ -269,10 +270,14 @@ def test_save_and_load_model(shape_dict):
     input_shape = list(shape_dict.values())[0][0]
 
     t_model = TorchLeNet(input_shape[2])
-    # Test save model
-    from_pytorch(t_model, shape_dict, "test.pt", "test.hash")
-    # Test load model
-    from_pytorch(t_model, shape_dict, "test.pt", "test.hash")
+    with tempfile.TemporaryDirectory(prefix="mnm_test_") as temp_dir:
+        model_path = temp_dir + "/test.pt"
+        hash_path = temp_dir + "/test.hash"
+
+        # Test save model
+        from_pytorch(t_model, shape_dict, model_path, hash_path)
+        # Test load model
+        from_pytorch(t_model, shape_dict, model_path, hash_path)
 
 
 if __name__ == "__main__":

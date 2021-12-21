@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import torch
 import mnm
-from mnm.testing import get_device_list, randn, randn_torch, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model
 
 
 def randnbool(shape, *, device="cpu", dtype="float32"):
@@ -41,7 +41,7 @@ class ReduceModel(mnm.Model):
         return self.op(x, **self.attrs)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -64,7 +64,7 @@ def test_reduce_ops(ops, shape, dtype, axis, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -88,7 +88,7 @@ def test_reduce_keepdims_ops(ops, shape, dtype, axis, keepdims, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
@@ -110,7 +110,7 @@ def test_all_any_ops(ops, shape, axis, keepdims, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("axis", [1, (0, 1), 0])
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -147,7 +147,7 @@ def test_reduce_op_with_axis_with_grad(ops, shape, dtype, axis, keepdims, exclud
     check(m_x.grad, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize(
@@ -174,7 +174,7 @@ def test_reduce_op_without_axis_with_grad(ops, shape, dtype, device):
     check(m_x.grad, t_x.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_l2norm(device):
     class TestModel(mnm.Model):
         def build(self):

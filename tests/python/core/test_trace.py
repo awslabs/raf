@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 import mnm
-from mnm.testing import randn, get_device_list, check, run_vm_model
+from mnm.testing import randn, get_testable_devices, check, run_vm_model
 from mnm._core.ndarray import ndarray
 from mnm._core.core_utils import get_chained_attr
 from mnm._op import sym
@@ -11,7 +11,7 @@ from mnm.model.trace import trace_mutate_attr
 from tvm import relay
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_tup_inputs(device):
     class MNMTupleTest(mnm.Model):
         def build(self):
