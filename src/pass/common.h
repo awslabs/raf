@@ -186,6 +186,27 @@ class VarSubstitutor : public MixedModeMutator {
     }
     return var;
   }
+
+  Expr VisitExpr_(const LetNode* op) override {
+    auto pre_visit = [this](const LetNode* op) {
+      this->Mutate(op->var);
+      this->Mutate(op->value);
+    };
+    auto post_visit = [this](const LetNode* op) {
+      Var var = Downcast<Var>(this->VisitExpr(op->var));
+      Expr value = this->Mutate(op->value);
+      Expr body = this->Mutate(op->body);
+
+      if (var.same_as(op->var) && value.same_as(op->value) && body.same_as(op->body)) {
+        this->memo_[GetRef<Expr>(op)] = GetRef<Expr>(op);
+      } else {
+        this->memo_[GetRef<Expr>(op)] = Let(var, value, body, op->span);
+      }
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(op)];
+  }
+
   Expr Substitute(const Expr& expr) {
     return this->Mutate(expr);
   }
