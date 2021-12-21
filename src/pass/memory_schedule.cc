@@ -385,6 +385,12 @@ class ANFScheduler4Memory {
     const auto& exprs = ell_->exprs;
     auto size = vars.size();
 
+    // Sanity check to deal with the case that the ANF graph has no let-bindings
+    // (only include a single return expression.)
+    if (size == 0) {
+      return false;
+    }
+
     // Build the linked list of schedule nodes.
     sch_head_ = std::make_shared<ScheduleNode>(Var(), Expr(), nullptr, nullptr);
     std::shared_ptr<ScheduleNode> prev = sch_head_;

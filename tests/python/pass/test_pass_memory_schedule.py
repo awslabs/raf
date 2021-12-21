@@ -7,10 +7,11 @@ from mnm._ffi.pass_ import InferType, MemorySchedule
 from mnm.ir import ScopeBuilder
 
 
-def check_ir(func, expected):
-    mod_text = mnm.ir.AsText(func)
-    expected_text = mnm.ir.AsText(expected)
-    assert mod_text == expected_text, "IR mismatch"
+def check_ir(mod, expected):
+    with mnm.ir.PassContext(config={"mnm.memory_schedule": True}):
+        mod = MemorySchedule()(mod)
+
+    assert tvm.ir.structural_equal(mod["main"], expected["main"]), "IR mismatch"
 
 
 def test_simple():
@@ -63,10 +64,18 @@ def test_simple():
         expected = tvm.IRModule.from_expr(func)
         return InferType()(mod), InferType()(expected)
 
-    mod, expected = get_mod_n_expected()
-    with mnm.ir.PassContext(config={"mnm.memory_schedule": True}):
-        mod = MemorySchedule()(mod)
-    check_ir(mod["main"], expected["main"])
+    check_ir(*get_mod_n_expected())
+
+
+def test_no_let():
+    def get_mod_n_expected():
+        sb = ScopeBuilder()
+        sb.ret(mnm.ir.const(1))
+        func = relay.Function([], sb.get())
+        mod = tvm.IRModule.from_expr(func)
+        return InferType()(mod), InferType()(mod)
+
+    check_ir(*get_mod_n_expected())
 
 
 if __name__ == "__main__":
