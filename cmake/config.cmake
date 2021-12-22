@@ -14,8 +14,12 @@ set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
 ########## MNM Configuration ##########
 # Convention: MNM_USE_LIB could be ON/OFF or a string indicating path to LIB
 
-# MNM_USE_LLVM. Option: [ON/OFF/Path-to-llvm-config-executable]"
-set(MNM_USE_LLVM ON)
+# MNM_USE_LLVM. Option: [Path-to-llvm-config-executable]"
+# Note 1: We do not support "ON" because we enforce LLVM to be linked
+#         statically so that we could hide its symbols to work with PyTorch 1.10+.
+# Note 2: You may need to change llvm-config-8 according to your environment.
+set(MNM_USE_LLVM llvm-config-8)
+set(HIDE_PRIVATE_SYMBOLS ON)
 
 # MNM_USE_GTEST. Option: [ON/OFF]
 set(MNM_USE_GTEST ON)
