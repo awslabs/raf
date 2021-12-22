@@ -26,6 +26,8 @@ ContextAnalysis = _APIS.get("mnm.pass_.ContextAnalysis", None)
 DataParallelSchedule = _APIS.get("mnm.pass_.DataParallelSchedule", None)
 # Defined in ./src/pass/dead_code.cc
 DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
+# Defined in ./src/pass/deduplicate.cc
+Deduplicate = _APIS.get("mnm.pass_.Deduplicate", None)
 # Defined in ./src/pass/dispatch_dialect.cc
 DispatchDialect = _APIS.get("mnm.pass_.DispatchDialect", None)
 # Defined in ./src/pass/type_erase.cc

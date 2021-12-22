@@ -375,6 +375,18 @@ Pass AnnotateDistOps();
  */
 Pass IOSStreamSchedule();
 
+/*!
+ * \brief Deduplicate a GNF IR (merge the same patterns into function calls).
+ * \param forward_steps The additional num of steps to search.
+ * \param consider_type Whether considering the type information.
+ * \param must_dominate Whether the root node of a subgraph must dominate other nodes in the
+ * subgraph.
+ * \param salt An optional hash salt.
+ * \return The created pass.
+ */
+Pass Deduplicate(int forward_steps, bool consider_type, bool must_dominate,
+                 ir::Optional<ir::String> salt);
+
 // Helper functions
 
 /*!

@@ -14,6 +14,7 @@ from ._internal import CanonicalizeOps
 from ._internal import ContextAnalysis
 from ._internal import DataParallelSchedule
 from ._internal import DeadCodeElimination
+from ._internal import Deduplicate
 from ._internal import DispatchDialect
 from ._internal import EraseType
 from ._internal import EstimateGFLOPS
