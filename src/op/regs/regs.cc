@@ -128,6 +128,7 @@ static const char get_valid_counts[] = "mnm.op.get_valid_counts";
 static const char greater[] = "mnm.op.greater";
 static const char greater_equal[] = "mnm.op.greater_equal";
 static const char l2norm[] = "mnm.op.l2norm";
+static const char lans[] = "mnm.op.lans";
 static const char layer_norm[] = "mnm.op.layer_norm";
 static const char layer_norm_dx[] = "mnm.op.layer_norm_dx";
 static const char left_shift[] = "mnm.op.left_shift";
@@ -695,6 +696,22 @@ Attrs InvokeOp(const TVMArgs& values, GradTape* tapes) {
 Attrs L2Norm(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::L2NormArgs, 1);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, x);
+  return Attrs(attrs);
+}
+
+Attrs Lans(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::LansArgs, 11);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, tensor_list);
+  MNM_TAPE(1, ffi2schema::Tensor, step);
+  MNM_POD(2, ffi2schema::Double, learning_rate);
+  MNM_POD(3, ffi2schema::Double, beta1);
+  MNM_POD(4, ffi2schema::Double, beta2);
+  MNM_POD(5, ffi2schema::Double, eps);
+  MNM_POD(6, ffi2schema::Int, bias_correction);
+  MNM_POD(7, ffi2schema::Double, weight_decay);
+  MNM_POD(8, ffi2schema::Int, grad_averaging);
+  MNM_POD(9, ffi2schema::Int, mode);
+  MNM_POD(10, ffi2schema::Bool, normalize_grad);
   return Attrs(attrs);
 }
 
@@ -2174,6 +2191,23 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.greater_equal").set_body([](TVMArgs args, TVMRet
 MNM_REGISTER_GLOBAL("mnm.op.imp.l2norm").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(l2norm, 1, ffi2schema::L2Norm, schema::L2NormArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->x));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.lans").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(lans, 11, ffi2schema::Lans, schema::LansArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->tensor_list));
+  MNM_SET_ENV(vpack->x[1], schema2value::Tensor(schema->step));
+  MNM_SET_ENV(vpack->x[2], schema2value::Double(schema->learning_rate));
+  MNM_SET_ENV(vpack->x[3], schema2value::Double(schema->beta1));
+  MNM_SET_ENV(vpack->x[4], schema2value::Double(schema->beta2));
+  MNM_SET_ENV(vpack->x[5], schema2value::Double(schema->eps));
+  MNM_SET_ENV(vpack->x[6], schema2value::Int(schema->bias_correction));
+  MNM_SET_ENV(vpack->x[7], schema2value::Double(schema->weight_decay));
+  MNM_SET_ENV(vpack->x[8], schema2value::Int(schema->grad_averaging));
+  MNM_SET_ENV(vpack->x[9], schema2value::Int(schema->mode));
+  MNM_SET_ENV(vpack->x[10], schema2value::Bool(schema->normalize_grad));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3698,6 +3732,22 @@ Array<Expr> L2Norm(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> Lans(const TVMArgs& values) {
+  MNM_PRELUDE(11);
+  MNM_ARG(0, ffi2expr::TupleTensor, tensor_list);
+  MNM_ARG(1, ffi2expr::Tensor, step);
+  MNM_ARG(2, ffi2expr::Double, learning_rate);
+  MNM_ARG(3, ffi2expr::Double, beta1);
+  MNM_ARG(4, ffi2expr::Double, beta2);
+  MNM_ARG(5, ffi2expr::Double, eps);
+  MNM_ARG(6, ffi2expr::Int, bias_correction);
+  MNM_ARG(7, ffi2expr::Double, weight_decay);
+  MNM_ARG(8, ffi2expr::Int, grad_averaging);
+  MNM_ARG(9, ffi2expr::Int, mode);
+  MNM_ARG(10, ffi2expr::Bool, normalize_grad);
+  MNM_RET();
+}
+
 Array<Expr> LayerNorm(const TVMArgs& values) {
   MNM_PRELUDE(5);
   MNM_ARG(0, ffi2expr::Tensor, x);
@@ -4407,6 +4457,7 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.greater").set_body(MNM_SYMBOLIC_API(greater, 2, 
 MNM_REGISTER_GLOBAL("mnm.op.sym.greater_equal")
     .set_body(MNM_SYMBOLIC_API(greater_equal, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.l2norm").set_body(MNM_SYMBOLIC_API(l2norm, 1, L2Norm));
+MNM_REGISTER_GLOBAL("mnm.op.sym.lans").set_body(MNM_SYMBOLIC_API(lans, 11, Lans));
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm").set_body(MNM_SYMBOLIC_API(layer_norm, 5, LayerNorm));
 MNM_REGISTER_GLOBAL("mnm.op.sym.layer_norm_dx")
     .set_body(MNM_SYMBOLIC_API(layer_norm_dx, 5, LayerNormDx));
@@ -5067,6 +5118,23 @@ template <const char* op_name>
 Attrs L2Norm(const Array<Value>& values) {
   MNM_PRELUDE(1, 1, schema::L2NormArgs);
   MNM_REQUIRED(0, value2schema::Tensor, x);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs Lans(const Array<Value>& values) {
+  MNM_PRELUDE(11, 11, schema::LansArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, tensor_list);
+  MNM_REQUIRED(1, value2schema::Tensor, step);
+  MNM_REQUIRED(2, value2schema::Double, learning_rate);
+  MNM_REQUIRED(3, value2schema::Double, beta1);
+  MNM_REQUIRED(4, value2schema::Double, beta2);
+  MNM_REQUIRED(5, value2schema::Double, eps);
+  MNM_REQUIRED(6, value2schema::Int, bias_correction);
+  MNM_REQUIRED(7, value2schema::Double, weight_decay);
+  MNM_REQUIRED(8, value2schema::Int, grad_averaging);
+  MNM_REQUIRED(9, value2schema::Int, mode);
+  MNM_REQUIRED(10, value2schema::Bool, normalize_grad);
   return Attrs(attrs);
 }
 
@@ -6536,6 +6604,45 @@ template <const char* op_name>
 int L2Norm(const std::string& field) {
   if (field == "x") {
     return 0;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int Lans(const std::string& field) {
+  if (field == "tensor_list") {
+    return 0;
+  }
+  if (field == "step") {
+    return 1;
+  }
+  if (field == "learning_rate") {
+    return 2;
+  }
+  if (field == "beta1") {
+    return 3;
+  }
+  if (field == "beta2") {
+    return 4;
+  }
+  if (field == "eps") {
+    return 5;
+  }
+  if (field == "bias_correction") {
+    return 6;
+  }
+  if (field == "weight_decay") {
+    return 7;
+  }
+  if (field == "grad_averaging") {
+    return 8;
+  }
+  if (field == "mode") {
+    return 9;
+  }
+  if (field == "normalize_grad") {
+    return 10;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -8021,7 +8128,10 @@ MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.greater_equal", names::greater_equal,
 MNM_BIND_SCHEMA("mnm.op.l2norm", names::l2norm,
                 value2schema::L2Norm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.l2norm", names::l2norm,
-                            schema_field_idx::L2Norm);  // NOLINT(whitespace/line_length)
+                            schema_field_idx::L2Norm);            // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.lans", names::lans, value2schema::Lans);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.lans", names::lans,
+                            schema_field_idx::Lans);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.layer_norm", names::layer_norm,
                 value2schema::LayerNorm);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.layer_norm", names::layer_norm,
@@ -8507,6 +8617,7 @@ MNM_REGISTER_OBJECT_REFLECT(InferTypeArgs);
 MNM_REGISTER_OBJECT_REFLECT(InitOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(InvokeOpArgs);
 MNM_REGISTER_OBJECT_REFLECT(L2NormArgs);
+MNM_REGISTER_OBJECT_REFLECT(LansArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormArgs);
 MNM_REGISTER_OBJECT_REFLECT(LayerNormDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(LocalResponseNormArgs);

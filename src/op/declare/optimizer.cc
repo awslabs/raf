@@ -39,6 +39,21 @@ MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
   call->device = dx->device;
 });
 
+void LansDecl(const CallValues& call) {
+  const auto* args = call->args.as<LansArgs>();
+  CHECK(args != nullptr);
+  CHECK(args->tensor_list.size() % 4 == 0);
+  const DLTensor* x = args->tensor_list[0];
+  call->device = x->device;
+  int ntensors = args->tensor_list.size() / 4;
+  Array<Value> output;
+  for (int i = ntensors; i < args->tensor_list.size(); ++i) {
+    output.push_back(args->tensor_list[i]);
+  }
+  call->out = TupleValue::make(output);
+}
+
+MNM_OP_DECLARE("mnm.op.lans", LansDecl);
 }  // namespace declare
 }  // namespace op
 }  // namespace mnm

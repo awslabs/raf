@@ -114,6 +114,7 @@ OPS = [
     Op(name="get_reduce_axis", schema_name="binary"),
     Op(name="get_kept_dims", schema_name="binary"),
     Op(name="sgd", schema_name="sgd"),
+    Op(name="lans", schema_name="lans"),
     Op(name="shape", schema_name="unary"),
     Op(name="swap_axis", schema_name="swap_axis"),
     Op(name="take", schema_name="take"),

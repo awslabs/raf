@@ -313,7 +313,6 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
       for (int i = 0, n = req->stream.size(); i < n; ++i) {
         req->stream[i].stream->Wait();
       }
-
       // note: Free the workspace of this op.
       WITH_BASE_PROFILER(call->device, op->name, "WorkspaceClear", {}, {
         req->workspace.clear();

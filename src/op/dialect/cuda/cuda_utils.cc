@@ -4,7 +4,6 @@
  * \brief CUDA dialect utils
  */
 #include "mnm/op.h"
-
 namespace mnm {
 namespace op {
 namespace cuda {

@@ -177,6 +177,8 @@ greater_equal = _APIS.get("mnm.op.sym.greater_equal", None)
 # Defined in ./src/op/regs/regs.cc
 l2norm = _APIS.get("mnm.op.sym.l2norm", None)
 # Defined in ./src/op/regs/regs.cc
+lans = _APIS.get("mnm.op.sym.lans", None)
+# Defined in ./src/op/regs/regs.cc
 layer_norm = _APIS.get("mnm.op.sym.layer_norm", None)
 # Defined in ./src/op/regs/regs.cc
 layer_norm_dx = _APIS.get("mnm.op.sym.layer_norm_dx", None)

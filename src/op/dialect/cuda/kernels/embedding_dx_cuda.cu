@@ -7,7 +7,6 @@
 // TODO(@zhen-jia): The code is mostly migrate from pytorch, we should consider the
 //                  copyright when opensource
 #include <stdio.h>
-#include "../../../../common/cuda_utils.h"
 #include "./kernel_util.cuh"
 namespace mnm {
 namespace op {
