@@ -11,3 +11,7 @@ RUN bash /install/ubuntu_install_python.sh cpu
 
 COPY install/ubuntu_install_llvm.sh /install/ubuntu_install_llvm.sh
 RUN bash /install/ubuntu_install_llvm.sh
+
+# To prevent `black` command line errors caused by ASCII encoding
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
