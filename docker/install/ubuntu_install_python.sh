@@ -26,7 +26,7 @@ apt-get install -y python-pip python3-pip
 pip3 install pip --upgrade
 pip3 install cmake
 pip3 install scikit-build==0.11.1
-pip3 install pylint==2.4.3 cpplint
+pip3 install pylint==2.4.3 cpplint black==20.8b1
 pip3 install six numpy pytest cython decorator scipy tornado typed_ast pytest mypy orderedset \
              antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser \
              pydot
