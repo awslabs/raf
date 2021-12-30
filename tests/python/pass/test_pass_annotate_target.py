@@ -15,7 +15,7 @@ def make_compiler_attrs(compiler):
 def test_multiple_ends():
     # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
     @tvm.ir.register_op_attr("mnm.op.relu", "target.test")
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class Model(mnm.Model):
@@ -96,11 +96,11 @@ def test_tuple():
     target = "test_tuple_annotation"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.concatenate", "target." + target)
-    def concatenate(attrs, args): # pylint: disable=unused-argument
+    def concatenate(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class Model(mnm.Model):

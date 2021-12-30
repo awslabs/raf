@@ -8,15 +8,16 @@ MATMUL_OPS = [
     "mnm.op.matmul",
     "mnm.op.matmul_nt",
     "mnm.op.matmul_tn",
-    "mnm.op.matmul_tt"
+    "mnm.op.matmul_tt",
 ]
 
 BATCH_MATMUL_OPS = [
     "mnm.op.batch_matmul",
     "mnm.op.batch_matmul_nt",
     "mnm.op.batch_matmul_tn",
-    "mnm.op.batch_matmul_tt"
+    "mnm.op.batch_matmul_tt",
 ]
+
 
 def is_ops(ops):
     """Create a pattern that match to a list of ops."""
@@ -35,6 +36,7 @@ def is_ops(ops):
 def n_wildcards(n):
     """Create a list of wildcard patterns."""
     return [wildcard() for _ in range(n)]
+
 
 def n_null_constant(n):
     """Create a list of wildcard patterns."""
@@ -89,10 +91,12 @@ def _call_conv2d_dxw(dtype=None):
 
 def _cutlass_conv2d_fusion():
     act_ops = ["mnm.op.relu"]
-    conv = is_op("mnm.op.conv2d")(*n_wildcards(6),
-                                  is_constant(StringValue("NHWC")),
-                                  is_constant(StringValue("OHWI")),
-                                  is_constant(StringValue("NHWC")))
+    conv = is_op("mnm.op.conv2d")(
+        *n_wildcards(6),
+        is_constant(StringValue("NHWC")),
+        is_constant(StringValue("OHWI")),
+        is_constant(StringValue("NHWC"))
+    )
     # pattern: conv2d+bias
     with_bias = is_op("mnm.op.add")(conv, wildcard(), *n_null_constant(2))
     # pattern: conv2d+bias+act || conv2d+act
@@ -103,6 +107,7 @@ def _cutlass_conv2d_fusion():
 def _call_pool2d_dx():
     pool_ops = ["mnm.op.max_pool2d_dx", "mnm.op.avg_pool2d_dx"]
     return is_ops(pool_ops)(*n_wildcards(9))
+
 
 # pool2d_dx
 register_pattern(_call_pool2d_dx(), "cudnn", 50, "pool2d_dx")

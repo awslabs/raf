@@ -1,4 +1,5 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+# pylint: disable=no-self-use
 import ast
 from contextlib import contextmanager
 from inspect import isfunction
@@ -33,7 +34,6 @@ def _convert(expr, debug):
 
 
 class IRBuilder:
-
     def __init__(self, debug: bool):
         self.stmt_block = []
         self.scopes = []
@@ -60,16 +60,20 @@ class IRBuilder:
 
         return lambda sym_tab: relay.Tuple([maker(sym_tab) for maker in makers])
 
-    def sym_slice_index(self, value: Callable[[SymTab], relay.Expr], index: int):  # pylint: disable=no-self-use
+    def sym_slice_index(self, value: Callable[[SymTab], relay.Expr], index: int):
         return lambda sym_tab: relay.TupleGetItem(value(sym_tab), index)
 
-    def sym_slice_strided(self, value: Callable[[SymTab], relay.Expr],  # pylint: disable=no-self-use
-                          lower: int, upper: int, step: int):
+    def sym_slice_strided(
+        self,
+        value: Callable[[SymTab], relay.Expr],
+        lower: int,
+        upper: int,
+        step: int,
+    ):
         def _sym_slice_strided(sym_tab: SymTab):
             content = value(sym_tab)
 
-            return relay.Tuple([relay.TupleGetItem(content, i)
-                                for i in range(lower, upper, step)])
+            return relay.Tuple([relay.TupleGetItem(content, i) for i in range(lower, upper, step)])
 
         return _sym_slice_strided
 
@@ -77,11 +81,13 @@ class IRBuilder:
         if self.debug:
             args = [_convert(arg, debug=True) for arg in args]
             debug_rules = {
-                'unary_op': (1, lambda args: ast.UnaryOp(op=node_t(), operand=args[0])),
-                'bin_op': (2, lambda args: ast.BinOp(left=args[0], op=node_t(), right=args[1])),
-                'bool_op': (2, lambda args: ast.BoolOp(op=node_t(), values=args)),
-                'compare': (2, lambda args: ast.Compare(left=args[0], ops=[node_t()],
-                                                        comparators=[args[1]]))
+                "unary_op": (1, lambda args: ast.UnaryOp(op=node_t(), operand=args[0])),
+                "bin_op": (2, lambda args: ast.BinOp(left=args[0], op=node_t(), right=args[1])),
+                "bool_op": (2, lambda args: ast.BoolOp(op=node_t(), values=args)),
+                "compare": (
+                    2,
+                    lambda args: ast.Compare(left=args[0], ops=[node_t()], comparators=[args[1]]),
+                ),
             }
             assert category in debug_rules.keys(), "{} is not defined".format(category)
             cnt, constructor = debug_rules[category]

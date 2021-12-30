@@ -9,33 +9,32 @@ from mnm._ffi.model import RunModel
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_basic_if(device, shape):
     # pylint: disable=too-many-locals
-    x = relay.var('x')
-    cond_p = relay.var('cond_p')
-    cond_q = relay.var('cond_q')
-    a = relay.var('a')
-    b = relay.var('b')
-    c = relay.var('c')
-    cond = relay.var('cond')
-    ret = relay.var('ret')
+    x = relay.var("x")
+    cond_p = relay.var("cond_p")
+    cond_q = relay.var("cond_q")
+    a = relay.var("a")
+    b = relay.var("b")
+    c = relay.var("c")
+    cond = relay.var("cond")
+    ret = relay.var("ret")
     lets = [
         (a, mnm.ir.op.cos(x)),
         (cond, mnm.ir.op.greater(cond_p, cond_q)),
         (b, mnm.ir.op.subtract(a, x)),
         (c, mnm.ir.op.add(a, x)),
         (ret, relay.If(cond, b, c)),
-        ret
+        ret,
     ]
+
     def assemble(lets):
         if len(lets) == 1:
             return lets[0]
         var, value = lets[0]
         return relay.Let(var, value, assemble(lets[1:]))
+
     body = assemble(lets)
     func = relay.Function([x, cond_p, cond_q], body)
     m_x, n_x = randn(shape, device=device)

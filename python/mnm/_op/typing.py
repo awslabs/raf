@@ -1,13 +1,13 @@
 """Types that used in operator definition/attributes."""
 from typing import NewType, Optional, Tuple, Union
 
-Context = NewType('Context', object)
+Context = NewType("Context", object)
 
-DType = NewType('DType', object)
+DType = NewType("DType", object)
 
-Tensor = NewType('Tensor', object)
+Tensor = NewType("Tensor", object)
 
-ArrayLike = NewType('ArrayLike', object)
+ArrayLike = NewType("ArrayLike", object)
 
 TupleInt = Tuple[int, ...]
 

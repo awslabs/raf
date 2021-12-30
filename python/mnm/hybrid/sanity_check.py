@@ -22,12 +22,12 @@ SUPPORTED = {
     ast.NameConstant: "generic_visit",
     ########## Variables ##########
     ast.Name: "generic_visit",
-    ast.Load: "generic_visit",          # TODO
-    ast.Store: "generic_visit",         # TODO
+    ast.Load: "generic_visit",  # TODO
+    ast.Store: "generic_visit",  # TODO
     # ast.Starred,
     # ast.Del,
     ########## Expressions ##########
-    ast.Expr: "generic_visit",          # TODO
+    ast.Expr: "generic_visit",  # TODO
     ast.UnaryOp: "check_ArithOp",
     ast.BinOp: "check_ArithOp",
     ast.BoolOp: "generic_visit",
@@ -87,7 +87,6 @@ SUPPORTED = {
 
 
 class SanityCheck(NodeVisitor):
-
     def __init__(self):
         super(SanityCheck, self).__init__(strict=True)
         self.n_func_defs = 0
@@ -113,14 +112,12 @@ class SanityCheck(NodeVisitor):
 
     def check_Assign(self, node: ast.Assign):  # pylint: disable=invalid-name
         if len(node.targets) != 1:
-            raise NotImplementedError(
-                "Multi-target assignment is not supported.")
+            raise NotImplementedError("Multi-target assignment is not supported.")
         self.generic_visit(node)
 
     def check_While(self, node: ast.While):  # pylint: disable=invalid-name
         if node.orelse:
-            raise NotImplementedError(
-                "While loop with else branch is not supported.")
+            raise NotImplementedError("While loop with else branch is not supported.")
         self.generic_visit(node)
 
     def check_FunctionDef(self, node: ast.FunctionDef):  # pylint: disable=invalid-name
@@ -142,8 +139,7 @@ class SanityCheck(NodeVisitor):
 
     def check_ArithOp(self, node: ast.UnaryOp):  # pylint: disable=invalid-name
         if type(node.op) not in SUPPORTED_OPS:  # pylint: disable=unidiomatic-typecheck
-            raise NotImplementedError(
-                "{} is not supported.".format(node.op.__class__.__name__))
+            raise NotImplementedError("{} is not supported.".format(node.op.__class__.__name__))
         self.generic_visit(node)
 
     def check_Compare(self, node: ast.Compare):  # pylint: disable=invalid-name
@@ -152,8 +148,7 @@ class SanityCheck(NodeVisitor):
         if len(node.comparators) != 1:
             raise NotImplementedError("Only support comparing 2 values.")
         if type(node.ops[0]) not in SUPPORTED_OPS:  # pylint: disable=unidiomatic-typecheck
-            raise NotImplementedError(
-                "{} is not supported.".format(node.op.__class__.__name__))
+            raise NotImplementedError("{} is not supported.".format(node.op.__class__.__name__))
         self.generic_visit(node)
 
     def check_Return(self, node: ast.Return):  # pylint: disable=invalid-name
@@ -179,11 +174,9 @@ class SanityCheck(NodeVisitor):
         if node.step is not None and not isinstance(node.step, ast.Num):
             raise NotImplementedError("Only constant indexing is supported for now.")
         if not node.lower:
-            raise NotImplementedError(
-                "Please explicitly specify lower bound of a slice")
+            raise NotImplementedError("Please explicitly specify lower bound of a slice")
         if not node.upper:
-            raise NotImplementedError(
-                "Please explicitly specify supprt bound of a slice")
+            raise NotImplementedError("Please explicitly specify supprt bound of a slice")
         self.generic_visit(node)
 
 

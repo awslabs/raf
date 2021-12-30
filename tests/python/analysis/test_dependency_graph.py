@@ -31,7 +31,7 @@ def test_prune_atomic_nodes():
 
     mod = ToGraphNormalForm()(mod)
 
-    expr = mod['main'].body
+    expr = mod["main"].body
     original_graph = GetDependencyGraphNodesEdges(expr, False, False)
     original_num_edges = len(original_graph["edges"])
     assert original_num_edges == 18
@@ -68,7 +68,7 @@ def test_prune_redundant_edges():
 
     mod = ToGraphNormalForm()(mod)
 
-    expr = mod['main'].body
+    expr = mod["main"].body
     graph = GetDependencyGraphNodesEdges(expr, True, False)
     num_edges = len(graph["edges"])
     # Edges:
@@ -89,5 +89,5 @@ def test_prune_redundant_edges():
     assert pruned_num_edges == 3
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main([__file__])

@@ -2,15 +2,18 @@
 import enum
 from library import *
 
+
 class EpilogueFunctorExt(enum.Enum):
     LinearCombinationRelu = enum_auto()
     LinearCombinationGELU = enum_auto()
 
 
-EpilogueFunctorTag.update({
-    EpilogueFunctorExt.LinearCombinationRelu: 'cutlass::epilogue::thread::LinearCombinationRelu',
-    EpilogueFunctorExt.LinearCombinationGELU: 'cutlass::epilogue::thread::LinearCombinationGELU',
-})
+EpilogueFunctorTag.update(
+    {
+        EpilogueFunctorExt.LinearCombinationRelu: "cutlass::epilogue::thread::LinearCombinationRelu",
+        EpilogueFunctorExt.LinearCombinationGELU: "cutlass::epilogue::thread::LinearCombinationGELU",
+    }
+)
 
 EpilogueFunctorNames = {
     EpilogueFunctor.LinearCombination: "",

@@ -26,7 +26,7 @@ def autocast(model, args=None):
 
 
 class CustomTypeHint:
-    """ Temporarily changes the cast type hint(s) of operator(s). """
+    """Temporarily changes the cast type hint(s) of operator(s)."""
 
     def __init__(self, op_map):
         """Saves the required info for RAII pattern usage.

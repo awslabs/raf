@@ -16,22 +16,36 @@ def verify_ir(mod):
 
 
 @pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
-@pytest.mark.parametrize("shapes", [
-    ((4, 256, 32, 32), (64, 256, 1, 1)),
-    ((8, 3, 32, 32), (16, 3, 3, 3)),
-])
+@pytest.mark.parametrize(
+    "shapes",
+    [
+        ((4, 256, 32, 32), (64, 256, 1, 1)),
+        ((8, 3, 32, 32), (16, 3, 3, 3)),
+    ],
+)
 @pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("dilation", [1])
 @pytest.mark.parametrize("padding", [0, 1])
 def test_conv2d_relu(shapes, stride, dilation, padding):
     device, dtype = "cuda", "float32"
+
     class Conv2D(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x, w):
-            y = mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1,
-                           layout="NHWC", kernel_layout="OHWI", out_layout="NHWC")
+            y = mnm.conv2d(
+                x,
+                w,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=1,
+                layout="NHWC",
+                kernel_layout="OHWI",
+                out_layout="NHWC",
+            )
             y = mnm.relu(y)
             return y
 
@@ -44,9 +58,19 @@ def test_conv2d_relu(shapes, stride, dilation, padding):
     mod = model._internal(m_x, m_w).mod
     verify_ir(mod)
     m_y = run_vm_model(model, device, [m_x, m_w])
-    t_model = torch.nn.Conv2d(
-        wshape[3], wshape[0], (wshape[1], wshape[2]),
-        stride=stride, padding=padding, dilation=dilation, bias=False).cuda().float()
+    t_model = (
+        torch.nn.Conv2d(
+            wshape[3],
+            wshape[0],
+            (wshape[1], wshape[2]),
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            bias=False,
+        )
+        .cuda()
+        .float()
+    )
     t_model.weight = torch.nn.Parameter(t_w)
     t_model = t_model.to(memory_format=torch.channels_last)
     t_y = t_model(t_x)

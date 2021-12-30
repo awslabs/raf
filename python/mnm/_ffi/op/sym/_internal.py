@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/op/regs/regs.cc
 _allgather = _APIS.get("mnm.op.sym._allgather", None)
 # Defined in ./src/op/regs/regs.cc

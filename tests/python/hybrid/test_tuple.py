@@ -25,8 +25,8 @@ def tuple3():
 
 def tuple4():
     a = (1, 2, 3)
-    b = a[0: 2]
-    c = b[0: 1]
+    b = a[0:2]
+    c = b[0:1]
     d = c[0]
     return d
 

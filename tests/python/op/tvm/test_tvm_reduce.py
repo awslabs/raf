@@ -15,6 +15,7 @@ def randnbool(shape, *, device="cpu", dtype="float32"):
     m_x = mnm.array(n_x, device=device)
     return m_x, n_x
 
+
 def axis_exclude(input_axis, shape):
     # get the excluded axis which is not in the input axis
     # e.g.: input_axis = [1, 3] with a total of 4 dimension
@@ -49,7 +50,8 @@ class ReduceModel(mnm.Model):
         (np.argmin, mnm._op.sym.argmin),
         (np.amax, mnm._op.sym.max),
         (np.amin, mnm._op.sym.min),
-    ])
+    ],
+)
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("axis", [0, 1])
@@ -71,7 +73,8 @@ def test_reduce_ops(ops, shape, dtype, axis, device):
         (np.sum, mnm._op.sym.sum),
         (np.prod, mnm._op.sym.prod),
         (np.mean, mnm._op.sym.mean),
-    ])
+    ],
+)
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("axis", [1, (0, 1), None])
@@ -94,7 +97,8 @@ def test_reduce_keepdims_ops(ops, shape, dtype, axis, keepdims, device):
     [
         (np.all, mnm._op.sym.all),
         (np.any, mnm._op.sym.any),
-    ])
+    ],
+)
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("axis", [1, (0, 1), None])
 @pytest.mark.parametrize("keepdims", [True, False])
@@ -122,7 +126,8 @@ def test_all_any_ops(ops, shape, axis, keepdims, device):
         (torch.sum, mnm._op.sym.sum),
         (torch.mean, mnm._op.sym.mean),
         (torch.prod, mnm._op.sym.prod),
-    ])
+    ],
+)
 # pylint: disable=too-many-arguments,too-many-locals
 def test_reduce_op_with_axis_with_grad(ops, shape, dtype, axis, keepdims, exclude, device):
     if (not isinstance(axis, int)) and (len(axis) == len(shape) and exclude):
@@ -137,7 +142,7 @@ def test_reduce_op_with_axis_with_grad(ops, shape, dtype, axis, keepdims, exclud
         axis = axis_exclude(axis, shape)
     if (not isinstance(axis, int)) and (ops[0] == torch.prod):
         pytest.skip("torch.prod only support axis argument as int not array of int")
-    t_y = t_op(t_x, axis=axis, keepdim=keepdims) # pylint: disable=no-member
+    t_y = t_op(t_x, axis=axis, keepdim=keepdims)  # pylint: disable=no-member
     check(m_y, t_y)
     check(v_y, t_y)
     # check backward
@@ -156,7 +161,8 @@ def test_reduce_op_with_axis_with_grad(ops, shape, dtype, axis, keepdims, exclud
         (torch.sum, mnm._op.sym.sum),
         (torch.mean, mnm._op.sym.mean),
         (torch.prod, mnm._op.sym.prod),
-    ])
+    ],
+)
 def test_reduce_op_without_axis_with_grad(ops, shape, dtype, device):
     m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True)
     t_op, m_op = ops
@@ -164,7 +170,7 @@ def test_reduce_op_without_axis_with_grad(ops, shape, dtype, device):
     # check forward
     m_y = model(m_x)
     v_y = run_vm_model(model, device, [m_x])
-    t_y = t_op(t_x) # pylint: disable=no-member
+    t_y = t_op(t_x)  # pylint: disable=no-member
     check(m_y, t_y)
     check(v_y, t_y)
     # chack backward

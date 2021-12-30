@@ -55,7 +55,7 @@ def checkir(variables, alias):
 
 def test_bn():
     shape = (2, 3, 4, 5)
-    dtype = 'float32'
+    dtype = "float32"
     data = mnm.array(np.ones(shape), dtype=dtype)
 
     class Test1(mnm.Model):
@@ -256,6 +256,7 @@ def test_chain():
 def test_reduce():
     shape = (4, 4)
     device = "cpu"
+
     class Model(mnm.Model):
         def build(self):
             pass
@@ -273,6 +274,7 @@ def test_reduce():
 def test_reduce_with_list():
     shape = (4, 4)
     device = "cpu"
+
     class Model(mnm.Model):
         def build(self):
             pass
@@ -294,6 +296,7 @@ def test_reduce_with_list():
 def test_allreduce():
     shape = (4, 4)
     device = "cpu"
+
     class Model(mnm.Model):
         def build(self):
             pass
@@ -311,6 +314,7 @@ def test_allreduce():
 def test_allreduce_with_list():
     shape = (4, 4)
     device = "cpu"
+
     class Model(mnm.Model):
         def build(self):
             pass

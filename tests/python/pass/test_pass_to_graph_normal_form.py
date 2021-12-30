@@ -67,6 +67,7 @@ def test_tuple():
 
 def test_diamond():
     konst, _ = randn((1,))
+
     class Model(mnm.Model):
         def build(self):
             self.c = konst

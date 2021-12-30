@@ -33,13 +33,11 @@ class ManifestExt(manifest.Manifest):
         op = convert(operation)
         super().append(op)
 
-    def emit(self, target = GeneratorTarget.Library):
+    def emit(self, target=GeneratorTarget.Library):
 
-        operation_emitters = {
-            GeneratorTarget.Library: EmitOperationKindLibraryExt
-        }
+        operation_emitters = {GeneratorTarget.Library: EmitOperationKindLibraryExt}
 
-        generated_path = os.path.join(self.args.curr_build_dir, 'generated')
+        generated_path = os.path.join(self.args.curr_build_dir, "generated")
 
         # create generated/
         if os.path.exists(generated_path):
@@ -49,36 +47,48 @@ class ManifestExt(manifest.Manifest):
 
         source_files = []
 
-        top_level_path = os.path.join(generated_path, 'initialize_all.cpp')
-        with open(top_level_path, 'w') as top_level_file:
+        top_level_path = os.path.join(generated_path, "initialize_all.cpp")
+        with open(top_level_path, "w") as top_level_file:
 
             if target == GeneratorTarget.Library:
                 source_files.append(top_level_path)
 
             prototypes = []
             for operation_kind, configurations in self.operations.items():
-                prototypes.append(SubstituteTemplate(
-                    "void initialize_all_${operation_kind}_operations(Manifest &manifest);",
-                    {'operation_kind': OperationKindNames[operation_kind]}))
+                prototypes.append(
+                    SubstituteTemplate(
+                        "void initialize_all_${operation_kind}_operations(Manifest &manifest);",
+                        {"operation_kind": OperationKindNames[operation_kind]},
+                    )
+                )
 
-            top_level_file.write(SubstituteTemplate(self.top_level_prologue,
-                {'prototypes': "\n".join(prototypes)}))
+            top_level_file.write(
+                SubstituteTemplate(self.top_level_prologue, {"prototypes": "\n".join(prototypes)})
+            )
 
-            top_level_file.write(SubstituteTemplate(
-                self.top_level_reserve, {'operation_count': str(self.operation_count)}))
+            top_level_file.write(
+                SubstituteTemplate(
+                    self.top_level_reserve, {"operation_count": str(self.operation_count)}
+                )
+            )
 
             # for each operation kind, emit initializer for all configurations
             for operation_kind, configurations in self.operations.items():
-                
-                with operation_emitters[target](generated_path, operation_kind, self.args) as operation_kind_emitter:
+
+                with operation_emitters[target](
+                    generated_path, operation_kind, self.args
+                ) as operation_kind_emitter:
                     for configuration_name, operations in configurations.items():
                         operation_kind_emitter.emit(configuration_name, operations)
 
                     source_files += operation_kind_emitter.source_files
 
-                top_level_file.write(SubstituteTemplate(
-                    "  initialize_all_${operation_kind}_operations(manifest);\n",
-                    {'operation_kind': OperationKindNames[operation_kind]}))
+                top_level_file.write(
+                    SubstituteTemplate(
+                        "  initialize_all_${operation_kind}_operations(manifest);\n",
+                        {"operation_kind": OperationKindNames[operation_kind]},
+                    )
+                )
 
             top_level_file.write(self.top_level_epilogue)
 
@@ -86,18 +96,21 @@ class ManifestExt(manifest.Manifest):
         manifest_path = os.path.join(generated_path, "manifest.cmake")
         with open(manifest_path, "w") as manifest_file:
 
-            target_name = 'cutlass_library_objs'
+            target_name = "cutlass_library_objs"
 
-            target_text = SubstituteTemplate("""cutlass_target_sources(
+            target_text = SubstituteTemplate(
+                """cutlass_target_sources(
   ${target_name}
   BATCH_SOURCES ON
   PRIVATE
-""", { 'target_name': target_name})
+""",
+                {"target_name": target_name},
+            )
 
             manifest_file.write(target_text)
 
             for source_file in source_files:
-                manifest_file.write("    %s\n" % str(source_file.replace('\\', '/')))
+                manifest_file.write("    %s\n" % str(source_file.replace("\\", "/")))
             manifest_file.write(")")
 
 

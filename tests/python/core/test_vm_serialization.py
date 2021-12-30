@@ -23,11 +23,11 @@ def serialize_and_load(exe):
         lib_path = tmp.relpath("lib.so")
         lib.export_library(lib_path)
     code_path = tmp.relpath("code.ro")
-    with open(code_path, 'wb') as fo:
+    with open(code_path, "wb") as fo:
         fo.write(code)
 
     # load from file
-    loaded_code = bytearray(open(code_path, 'rb').read())
+    loaded_code = bytearray(open(code_path, "rb").read())
     loaded_lib = None if lib is None else tvm.runtime.load_module(lib_path)
     return Executable.load_exec(loaded_code, loaded_lib)
 
@@ -47,7 +47,7 @@ def test_simple(fuse):
             return z
 
     shape = (3, 3)
-    device = 'cpu'
+    device = "cpu"
     model = Model()
     model.infer_mode()
     m_x, _ = randn(shape, device=device)
@@ -87,6 +87,7 @@ def test_constant(fuse):
 @pytest.mark.parametrize("fuse", [True, False])
 def test_tuple(fuse):
     rand, _ = randn((1,), device="cpu")
+
     class Model(mnm.Model):
         def build(self):
             self.c = rand
@@ -95,6 +96,7 @@ def test_tuple(fuse):
         def forward(self, x):
             pooled = mnm.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
             return (mnm.add(pooled, self.c), x)
+
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod

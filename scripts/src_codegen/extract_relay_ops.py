@@ -75,11 +75,7 @@ def collect_op():
         if pattern is None:
             skip_reasons.append("No-TOpPattern")
         if skip_reasons:
-            print("[Skip]",
-                  op_name,
-                  ":",
-                  ", ".join(skip_reasons),
-                  file=sys.stderr)
+            print("[Skip]", op_name, ":", ", ".join(skip_reasons), file=sys.stderr)
             continue
         if not attrs:
             attrs = ""

@@ -79,8 +79,7 @@ class TensorValue(BaseTensorValue):
 
     @staticmethod
     def assemble(shape, dtype, device, strides=None, data=None):
-        return ffi.AssembleTensorValue(str2dev(device), dtype, shape, strides,
-                                       data)
+        return ffi.AssembleTensorValue(str2dev(device), dtype, shape, strides, data)
 
     @staticmethod
     def from_tvm(array):

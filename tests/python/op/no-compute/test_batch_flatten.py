@@ -17,10 +17,7 @@ def test_batch_flatten_error(shape):
         mnm.batch_flatten(x)
 
 
-@pytest.mark.parametrize("shape", [
-    [5, 3],
-    [5, 2, 2, 2]
-])
+@pytest.mark.parametrize("shape", [[5, 3], [5, 2, 2, 2]])
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_batch_flatten(shape, device):
     class Model(mnm.model.Model):

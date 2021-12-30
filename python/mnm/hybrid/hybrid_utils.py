@@ -6,6 +6,7 @@ from mnm._lib import _get_global_func, relay
 
 _GET_OP = _get_global_func("ir.GetOp")
 
+
 def _wrap_op(name):
     return lambda *args: relay.Call(op=_GET_OP(name), args=args, attrs=None)
 
@@ -50,19 +51,19 @@ SUPPORTED_OPS = set(py_op for py_op, relay_op in OP_MAKER.items() if relay_op)
 
 
 class NodeVisitor:
-
     def __init__(self, strict=True):
         self.strict = strict
 
     def visit(self, node, *args, **kwargs):
-        method = 'visit_' + node.__class__.__name__
+        method = "visit_" + node.__class__.__name__
         visitor = getattr(self, method, None)
 
         if visitor is None:
             if not self.strict:
                 return self.generic_visit(node, *args, **kwargs)
-            raise NotImplementedError("{} is not supported in {}".format(
-                node.__class__.__name__, self.__class__.__name__))
+            raise NotImplementedError(
+                "{} is not supported in {}".format(node.__class__.__name__, self.__class__.__name__)
+            )
 
         return visitor(node, *args, **kwargs)
 
@@ -79,7 +80,6 @@ class NodeVisitor:
 
 
 class NodeTransformer(NodeVisitor):
-
     def generic_visit(self, node, *args, **kwargs):
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):

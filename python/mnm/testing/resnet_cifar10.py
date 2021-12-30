@@ -33,16 +33,12 @@ def check_params(m_model, t_model, atol=1e-3, rtol=1e-3):
 
 class MNMResNet50(mnm.Model):
     """meta ResNet50"""
+
     # pylint: disable=missing-function-docstring, too-many-instance-attributes
     def build(self, num_blocks, num_classes=10):
         self.num_blocks = num_blocks
         self.in_planes = 64
-        self.conv1 = Conv2d(3,
-                            64,
-                            kernel_size=3,
-                            stride=1,
-                            padding=1,
-                            bias=False)
+        self.conv1 = Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.layer1 = self._make_layer(64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(256, num_blocks[2], stride=2)
@@ -79,18 +75,16 @@ class MNMResNet50(mnm.Model):
 
 class TorchResNet50(nn.Module):
     """torch ResNet50"""
+
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=abstract-method, missing-function-docstring
     def __init__(self, num_blocks, num_classes=10):
         super(TorchResNet50, self).__init__()
         self.num_blocks = num_blocks
         self.inplanes = 64
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=64,
-                               kernel_size=3,
-                               stride=1,
-                               padding=1,
-                               bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False
+        )
         self.layer1 = self._make_layer(64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(256, num_blocks[2], stride=2)
@@ -99,9 +93,7 @@ class TorchResNet50(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight,
-                                        mode='fan_out',
-                                        nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -114,9 +106,9 @@ class TorchResNet50(nn.Module):
             self.inplanes = planes * resnet.TorchBottleneck.expansion
         return nn.Sequential(*layers)
 
-
     def forward(self, x, y_true):  # pylint: disable=arguments-differ
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+
         x = self.conv1(x)
         x = self.layer1(x)
         x = self.layer2(x)

@@ -148,18 +148,20 @@ MNM_REGISTER_OBJECT_REFLECT(ListArgs);
     schema_regs = "\n".join(map(gen_schema_reg, schemas))
     if filename.startswith("./"):
         filename = filename[2:]
-    return FILE.format(FILENAME=filename,
-                       INCLUDES=includes,
-                       OP_NAMES=op_names,
-                       FFI_TO_SCHEMAS=ffi2schemas,
-                       IMPERATIVE_APIS=imperative_apis,
-                       FFI_TO_EXPRS=ffi2exprs,
-                       SYMBOLIC_APIS=symbolic_apis,
-                       VALUE_TO_SCHEMAS=value2schemas,
-                       SCHEMA_FIELD_IDX=schema_field_idx,
-                       F_MNM_SCHEMAS=f_mnm_schemas,
-                       SCHEMA_REGS=schema_regs,
-                       **globals())
+    return FILE.format(
+        FILENAME=filename,
+        INCLUDES=includes,
+        OP_NAMES=op_names,
+        FFI_TO_SCHEMAS=ffi2schemas,
+        IMPERATIVE_APIS=imperative_apis,
+        FFI_TO_EXPRS=ffi2exprs,
+        SYMBOLIC_APIS=symbolic_apis,
+        VALUE_TO_SCHEMAS=value2schemas,
+        SCHEMA_FIELD_IDX=schema_field_idx,
+        F_MNM_SCHEMAS=f_mnm_schemas,
+        SCHEMA_REGS=schema_regs,
+        **globals()
+    )
 
 
 def gen_include(filename):
@@ -240,9 +242,12 @@ Attrs {SCHEMA_NAME}(const TVMArgs& values, GradTape* tapes) {{
   return Attrs(attrs);
 }}
 """.strip()
-    ARG = " " * 2 + """
+    ARG = (
+        " " * 2
+        + """
   MNM_{OPTION}({I}, ffi2schema::{NORM}, {ARG_NAME});
 """.strip()
+    )
     schema_name, schema = _schema
     schema_name = snake_to_pascal(schema_name)
     n_args = len(schema)
@@ -254,8 +259,7 @@ Attrs {SCHEMA_NAME}(const TVMArgs& values, GradTape* tapes) {{
             option = "TAPE"
         else:
             option = "POD"
-        args.append(ARG.format(I=i, NORM=norm,
-                               ARG_NAME=arg_name, OPTION=option))
+        args.append(ARG.format(I=i, NORM=norm, ARG_NAME=arg_name, OPTION=option))
     args = "\n".join(map(add_no_lint, args))
     return FFI_TO_SCHEMA.format(SCHEMA_NAME=schema_name, N_ARGS=n_args, ARGS=args)
 
@@ -336,9 +340,12 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
   *ret = MNM_RET();
 }});
 """.strip()
-    ARG = " " * 2 + """
+    ARG = (
+        " " * 2
+        + """
   MNM_SET_ENV(vpack->x[{I}], schema2value::{NORM}(schema->{ARG_NAME}));
 """.strip()
+    )
     n_args = len(op.schema)
     schema_name = snake_to_pascal(op.schema_name)
     args = []
@@ -347,11 +354,13 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
         arg_name = entry.name
         args.append(ARG.format(I=i, NORM=norm, ARG_NAME=arg_name))
     args = "\n".join(map(add_no_lint, args))
-    return IMPERATIVE_API.format(OP_NAME=op.name,
-                                 OP_VAR=op.name.replace(".", "_"),
-                                 SCHEMA_NAME=schema_name,
-                                 N_ARGS=n_args,
-                                 ARGS=args)
+    return IMPERATIVE_API.format(
+        OP_NAME=op.name,
+        OP_VAR=op.name.replace(".", "_"),
+        SCHEMA_NAME=schema_name,
+        N_ARGS=n_args,
+        ARGS=args,
+    )
 
 
 #### Part 2.1. FFI to Array<Expr> (for each schema) ####
@@ -399,9 +408,12 @@ Array<Expr> {SCHEMA_NAME}(const TVMArgs& values) {{
   MNM_RET();
 }}
 """.strip()
-    ARG = " " * 2 + """
+    ARG = (
+        " " * 2
+        + """
 MNM_ARG({I}, ffi2expr::{NORM}, {ARG_NAME});
 """.strip()
+    )
     schema_name, schema = _schema
     schema_name = snake_to_pascal(schema_name)
     n_args = len(schema)
@@ -450,7 +462,9 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.{OP_NAME}")
 """.strip()
     n_args = len(op.schema)
     schema_name = snake_to_pascal(op.schema_name)
-    return SYMBOLIC_API.format(OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), N_ARGS=n_args, SCHEMA_NAME=schema_name)
+    return SYMBOLIC_API.format(
+        OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), N_ARGS=n_args, SCHEMA_NAME=schema_name
+    )
 
 
 # Part 3.1. Array<Value> to schema (for each schema)
@@ -516,9 +530,12 @@ Attrs {SCHEMA_NAME}(const Array<Value>& values) {{
   return Attrs(attrs);
 }}
 """.strip()
-    ARG = " " * 2 + """
+    ARG = (
+        " " * 2
+        + """
 MNM_{OPTION}({I}, value2schema::{NORM}, {ARG_NAME});
 """.strip()
+    )
     schema_name, schema = _schema
     schema_name = snake_to_pascal(schema_name)
     n_arg_lb = sum(int(entry.cxx_default is None) for entry in schema)
@@ -528,11 +545,11 @@ MNM_{OPTION}({I}, value2schema::{NORM}, {ARG_NAME});
         option = "REQUIRED" if entry.cxx_default is None else "OPTIONAL"
         norm = NORM_CONVERTER[NORM_MAP[entry.cxx_normalizer or entry.cxx_type]]
         arg_name = entry.name
-        args.append(ARG.format(I=i, NORM=norm,
-                               ARG_NAME=arg_name, OPTION=option))
+        args.append(ARG.format(I=i, NORM=norm, ARG_NAME=arg_name, OPTION=option))
     args = "\n".join(map(add_no_lint, args))
-    return VALUE_TO_SCHEMA.format(SCHEMA_NAME=schema_name, ARGS=args,
-                                  N_ARG_LB=n_arg_lb, N_ARG_UB=n_arg_ub)
+    return VALUE_TO_SCHEMA.format(
+        SCHEMA_NAME=schema_name, ARGS=args, N_ARG_LB=n_arg_lb, N_ARG_UB=n_arg_ub
+    )
 
 
 # Part 3.2. Schema field index (for each schema)
@@ -608,7 +625,9 @@ MNM_BIND_SCHEMA("mnm.op.{OP_NAME}", names::{OP_VAR}, value2schema::{SCHEMA_NAME}
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.{OP_NAME}", names::{OP_VAR}, schema_field_idx::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
 """.strip()
     schema_name = snake_to_pascal(op.schema_name)
-    return FMNMSchema.format(OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), SCHEMA_NAME=schema_name)
+    return FMNMSchema.format(
+        OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), SCHEMA_NAME=schema_name
+    )
 
 
 def main(path="./src/op/regs/regs.cc"):

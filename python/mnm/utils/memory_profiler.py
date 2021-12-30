@@ -3,6 +3,7 @@
 from mnm._ffi.memory_profiler import EnableMemoryProfiler, DisableMemoryeProfiler
 from mnm._ffi.memory_profiler import ResetMemoryProfiler, GetMaxMemoryInfo, GetMemoryTrace
 
+
 def start():
     """Enable the profiler in backend to start profiling."""
     EnableMemoryProfiler()
@@ -12,9 +13,11 @@ def stop():
     """Disable the profiler in backend to stop profiling."""
     DisableMemoryeProfiler()
 
+
 def reset():
     """Reset the profiler stats in backend."""
     ResetMemoryProfiler()
+
 
 def get_max_memory_info(device):
     """Get the max memory info in backend.
@@ -31,6 +34,7 @@ def get_max_memory_info(device):
         achieves the mex usage.
     """
     return GetMaxMemoryInfo(device)
+
 
 def get_memory_trace(device):
     """Get the memory trace.

@@ -5,7 +5,9 @@ from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
+
 _topi = _tvm.topi  # pylint: disable=invalid-name, no-member
+
 
 @register_compute("mnm.op.tvm.sum")
 def sum_compute(attrs, inputs, output_type):  # pylint: disable=no-member
@@ -17,13 +19,16 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=no-member
         axes = axis_exclude(axes, x.shape)
     if not keep:
         # TODO(@were): It seems that TVM create view may crash, I cannot directly return [x]
-        return [_tvm.te.compute(x.shape, lambda *args: x(*args))] # pylint: disable=unnecessary-lambda
+        return [
+            _tvm.te.compute(x.shape, lambda *args: x(*args))  # pylint: disable=unnecessary-lambda
+        ]
     if len(keep) == 1:
         axes = None if not axes else axes
         return [_topi.sum(x, axis=axes, keepdims=keep[0])]
     axes = sorted(zip(axes, keep))
-    red_axis = [_tvm.te.reduce_axis((0, x.shape[i]), name="rv%d" % e)
-                for e, (i, _) in enumerate(axes)]
+    red_axis = [
+        _tvm.te.reduce_axis((0, x.shape[i]), name="rv%d" % e) for e, (i, _) in enumerate(axes)
+    ]
     shape = list(x.shape)
     for i, j in axes:
         shape[i] = 1 if j else None
@@ -43,15 +48,15 @@ def sum_compute(attrs, inputs, output_type):  # pylint: disable=no-member
                 idx.append(scan.pop())
         return _tvm.te.sum(x(*idx), axis=red_axis)
 
-    return [_tvm.te.compute(shape=shape,
-                            fcompute=fcompute,
-                            tag="comm_reduce")]
+    return [_tvm.te.compute(shape=shape, fcompute=fcompute, tag="comm_reduce")]
+
 
 @generic_func
 def schedule_sum(attrs, outs, target):
     # pylint: disable=unused-argument
     with target:
         return _topi.generic.schedule_injective(outs)
+
 
 @schedule_sum.register(["cuda", "gpu"])
 def schedule_sum_cuda(attrs, outs, target):
@@ -79,6 +84,7 @@ def schedule_sum_cuda(attrs, outs, target):
 
         return _topi.cuda.schedule_reduce(outs)
 
+
 _reg.register_schedule("mnm.op.tvm.sum", schedule_sum)
 _reg.register_reduce_schedule("mnm.op.tvm.argmax")
 _reg.register_reduce_schedule("mnm.op.tvm.argmin")
@@ -89,6 +95,7 @@ _reg.register_reduce_schedule("mnm.op.tvm.any")
 _reg.register_reduce_schedule("mnm.op.tvm.mean")
 _reg.register_reduce_schedule("mnm.op.tvm.prod")
 
+
 def axis_reverse(input_axis):
     # get the reverse axis to change axis back
     # e.g.: input_axis = [1, 2, 0, 3]
@@ -97,6 +104,7 @@ def axis_reverse(input_axis):
     for i, axis in enumerate(input_axis):
         reverse_axis[axis] = i
     return reverse_axis
+
 
 def axis_exclude(input_axis, shape):
     # get the excluded axis which is not in the input axis
@@ -138,7 +146,8 @@ def prod_dx_compute(attrs, inputs, output_type):
             output_dim.append(1)
             reduce_axis.append(_tvm.te.reduce_axis((0, shape[dim]), name="rv%d" % dim))
 
-    product = _tvm.te.comm_reducer(lambda x, y: x*y, lambda t: _tvm.tir.const(1, dtype=t))
+    product = _tvm.te.comm_reducer(lambda x, y: x * y, lambda t: _tvm.tir.const(1, dtype=t))
+
     def fcompute(*args):
         args = list(args)
         for i, dim in enumerate(axis):
@@ -152,7 +161,9 @@ def prod_dx_compute(attrs, inputs, output_type):
     out = _topi.multiply(factor, dy_reshape)
     return [out]
 
+
 _reg.register_schedule("mnm.op.tvm.prod_dx", schedule_generic)
+
 
 @register_compute("mnm.op.tvm.mean_dx")
 def mean_dx_compute(attrs, inputs, output_type):
@@ -171,8 +182,10 @@ def mean_dx_compute(attrs, inputs, output_type):
             expandshape.append(shape[dim])
         else:
             expandshape.append(1)
+
     def _elem_div(*indices):
         return dy[indices] / shape_mul
+
     out = _tvm.te.compute(dy.shape, _elem_div)
 
     def fbroadcast(*args):
@@ -193,6 +206,7 @@ def mean_dx_compute(attrs, inputs, output_type):
         out_broadcast = _tvm.te.compute(shape, fbroadcast)
 
     return [out_broadcast]
+
 
 _reg.register_injective_schedule("mnm.op.tvm.mean_dx")
 
@@ -217,7 +231,7 @@ def sum_dx_compute(attrs, inputs, output_type):  # pylint: disable=no-member
     def fbroadcast(*args):
         args = list(args)
         for i, dim in enumerate(axes[::-1]):
-            if keepdims[naxes -1 -i]:
+            if keepdims[naxes - 1 - i]:
                 args[dim] = 0
             else:
                 del args[dim]

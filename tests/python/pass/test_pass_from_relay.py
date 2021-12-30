@@ -16,8 +16,15 @@ from mnm._lib import tvm as _tvm
 from mnm._lib import relay as _relay
 
 
-def check_from_relay(model_or_mod, r_func, args, check_model_structure=True,
-                     check_correctness=True, device="cpu", disabled_pass=None):
+def check_from_relay(
+    model_or_mod,
+    r_func,
+    args,
+    check_model_structure=True,
+    check_correctness=True,
+    device="cpu",
+    disabled_pass=None,
+):
     if isinstance(model_or_mod, tvm.IRModule):
         m_mod = model_or_mod
         m_model = FrameworkModel(model_or_mod, model_or_mod, {}, {})
@@ -37,11 +44,15 @@ def check_from_relay(model_or_mod, r_func, args, check_model_structure=True,
         new_func = new_mod["main"]
     except Exception as err:  # pylint: disable=broad-except
         assert False, "Failed to convert the Relay function:\n%s\nReason:\n%s" % (
-            str(r_func), str(err))
+            str(r_func),
+            str(err),
+        )
 
     if check_model_structure:
-        assert _tvm.ir.structural_equal(
-            m_func, new_func), "%s\nvs\n%s\n" % (AsText(m_func), AsText(new_func))
+        assert _tvm.ir.structural_equal(m_func, new_func), "%s\nvs\n%s\n" % (
+            AsText(m_func),
+            AsText(new_func),
+        )
 
     assert InferType()(new_mod), "Type error of the model from Relay"
 
@@ -119,15 +130,35 @@ def test_mnm_module(use_kwargs):
 
     # Check that VM can execute multi-module functions
     args = [m_x] if not use_kwargs else {"y": m_x}
-    m_out = utils.run_vm_model(model, 'cpu', args)
+    m_out = utils.run_vm_model(model, "cpu", args)
     ref_out = np.tanh(n_x)
     check(m_out, ref_out)
 
 
-@pytest.mark.parametrize("op_name", [
-    "copy", "abs", "ceil", "floor", "log", "exp", "cos", "sin", "sign", "round",
-    "relu", "erf", "sqrt", "rsqrt", "atan", "negative", "sigmoid", "tanh", "batch_flatten"
-])
+@pytest.mark.parametrize(
+    "op_name",
+    [
+        "copy",
+        "abs",
+        "ceil",
+        "floor",
+        "log",
+        "exp",
+        "cos",
+        "sin",
+        "sign",
+        "round",
+        "relu",
+        "erf",
+        "sqrt",
+        "rsqrt",
+        "atan",
+        "negative",
+        "sigmoid",
+        "tanh",
+        "batch_flatten",
+    ],
+)
 @pytest.mark.parametrize("shape", [(2, 2)])
 def test_mnm_unary_op(op_name, shape):
     class TestModel(mnm.Model):
@@ -144,19 +175,27 @@ def test_mnm_unary_op(op_name, shape):
     # relay ir
     r_x = _relay.var("x", shape=shape)
     if op_name in ["relu", "batch_flatten"]:
-        r_func = _relay.Function(params=[r_x], body=attrgetter(
-            "nn.%s" % op_name)(_relay)(r_x))
+        r_func = _relay.Function(params=[r_x], body=attrgetter("nn.%s" % op_name)(_relay)(r_x))
     else:
-        r_func = _relay.Function(
-            params=[r_x], body=attrgetter(op_name)(_relay)(r_x))
+        r_func = _relay.Function(params=[r_x], body=attrgetter(op_name)(_relay)(r_x))
 
     check_from_relay(model, r_func, [m_x])
 
 
-@pytest.mark.parametrize("op_name", [
-    "add", "subtract", "divide", "multiply", "power", "floor_divide",
-    "greater", "maximum", "minimum"
-])
+@pytest.mark.parametrize(
+    "op_name",
+    [
+        "add",
+        "subtract",
+        "divide",
+        "multiply",
+        "power",
+        "floor_divide",
+        "greater",
+        "maximum",
+        "minimum",
+    ],
+)
 @pytest.mark.parametrize("shape", [(2, 2)])
 def test_mnm_binary_tensor_op(op_name, shape):
     # meta ir
@@ -175,8 +214,7 @@ def test_mnm_binary_tensor_op(op_name, shape):
     # relay ir
     r_x = _relay.var("x", shape=shape)
     r_y = _relay.var("y", shape=shape)
-    r_func = _relay.Function(
-        params=[r_x, r_y], body=attrgetter(op_name)(_relay)(r_x, r_y))
+    r_func = _relay.Function(params=[r_x, r_y], body=attrgetter(op_name)(_relay)(r_x, r_y))
 
     check_from_relay(model, r_func, [m_x, m_y])
 
@@ -186,7 +224,6 @@ def test_mnm_binary_tensor_op(op_name, shape):
 @pytest.mark.parametrize("repeats", [2])
 @pytest.mark.parametrize("axis", [-1])
 def test_repeat(shape, repeats, axis, dtype):
-
     class Repeat(mnm.Model):
         def build(self, repeats, axis=0):
             self._repeats = repeats
@@ -200,8 +237,7 @@ def test_repeat(shape, repeats, axis, dtype):
     m_x, _ = randn(shape, dtype=dtype)
 
     r_x = _relay.var("x", shape=shape)
-    r_func = _relay.Function(
-        params=[r_x], body=_relay.repeat(r_x, repeats, axis))
+    r_func = _relay.Function(params=[r_x], body=_relay.repeat(r_x, repeats, axis))
 
     check_from_relay(model, r_func, [m_x])
 
@@ -224,16 +260,16 @@ def test_take(shape, axis, dtype, mode):
         def forward(self, x, indices):
             return mnm.take(x, indices=indices, axis=self._axis, mode=self._mode)
 
-    size = reduce(operator.mul, shape[0],
-                  1) if axis is None else shape[0][axis]
+    size = reduce(operator.mul, shape[0], 1) if axis is None else shape[0][axis]
     m_x, _ = randn(shape[0], dtype=dtype)
     m_indices, _ = randint(shape[1], low=0, high=size)
     model = Take(axis, mode)
 
     r_x = _relay.var("x", shape=shape[0])
     r_indices = _relay.var("i", shape=shape[1], dtype="int64")
-    r_func = _relay.Function(params=[r_x, r_indices], body=_relay.take(
-        r_x, r_indices, axis, mode=mode))
+    r_func = _relay.Function(
+        params=[r_x, r_indices], body=_relay.take(r_x, r_indices, axis, mode=mode)
+    )
 
     check_from_relay(model, r_func, [m_x, m_indices])
 
@@ -243,8 +279,7 @@ def test_take(shape, axis, dtype, mode):
 @pytest.mark.parametrize("other_feature_dims", [[3, 4]])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["float32"])
-def test_sequence_mask(max_length, batch_size, other_feature_dims,
-                       axis, dtype):
+def test_sequence_mask(max_length, batch_size, other_feature_dims, axis, dtype):
     class SequenceMask(mnm.Model):
         def build(self, mask_value, axis=0):
             self._axis = axis
@@ -252,11 +287,11 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
 
         @mnm.model.trace
         def forward(self, x, sequence_length):
-            return mnm.sequence_mask(x, sequence_length,
-                                     mask_value=self._mask_value, axis=self._axis)
+            return mnm.sequence_mask(
+                x, sequence_length, mask_value=self._mask_value, axis=self._axis
+            )
 
-    x_shape = [max_length, batch_size] if axis == 0 else [
-        batch_size, max_length]
+    x_shape = [max_length, batch_size] if axis == 0 else [batch_size, max_length]
     x_shape += other_feature_dims
     model = SequenceMask(-10, axis)
 
@@ -265,8 +300,7 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
 
     r_x = _relay.var("x", shape=x_shape)
     r_l = _relay.var("l", shape=[batch_size])
-    r_func = _relay.Function(
-        params=[r_x, r_l], body=_relay.sequence_mask(r_x, r_l, -10, axis))
+    r_func = _relay.Function(params=[r_x, r_l], body=_relay.sequence_mask(r_x, r_l, -10, axis))
 
     check_from_relay(model, r_func, [m_x, m_length])
 
@@ -275,7 +309,6 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims,
 @pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
 @pytest.mark.parametrize("axis", [0, 1])
 def test_reverse(shape, axis, dtype):
-
     class Reverse(mnm.Model):
         def build(self, axis):
             self._axis = axis
@@ -297,7 +330,6 @@ def test_reverse(shape, axis, dtype):
 @pytest.mark.parametrize("inputs", [{"shape": (5, 5, 5), "seq_length": [1, 2, 3, 4, 5]}])
 @pytest.mark.parametrize("axes", [[0, 1]])
 def test_reverse_sequence(inputs, axes, dtype):
-
     class ReverseSequence(mnm.Model):
         def build(self, seq_axis, batch_axis):
             self._seq_axis = seq_axis
@@ -317,7 +349,8 @@ def test_reverse_sequence(inputs, axes, dtype):
     r_x = _relay.var("x", shape=shape)
     r_l = _relay.var("l", shape=(len(inputs["seq_length"]),), dtype="int64")
     r_func = _relay.Function(
-        params=[r_x, r_l], body=_relay.reverse_sequence(r_x, r_l, seq_axis, batch_axis))
+        params=[r_x, r_l], body=_relay.reverse_sequence(r_x, r_l, seq_axis, batch_axis)
+    )
 
     check_from_relay(model, r_func, [m_x, m_seq_length])
 
@@ -325,7 +358,6 @@ def test_reverse_sequence(inputs, axes, dtype):
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 2, 4, 1]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to(shape, dtype):
-
     class BroadcastTo(mnm.Model):
         def build(self, shape=None):
             self._shape = shape
@@ -338,16 +370,15 @@ def test_broadcast_to(shape, dtype):
     m_x, _ = randn(shape[0], dtype=dtype)
 
     r_x = _relay.var("x", shape=shape[0])
-    r_func = _relay.Function(
-        params=[r_x], body=_relay.broadcast_to(r_x, shape[1]))
+    r_func = _relay.Function(params=[r_x], body=_relay.broadcast_to(r_x, shape[1]))
 
     check_from_relay(model, r_func, [m_x])
+
 
 @pytest.mark.xfail(reason="broadcast_to_like with static shape will be simplified to broadcast_to")
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 2, 4, 1]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to_like(shape, dtype):
-
     class BroadcastToLike(mnm.Model):
         def build(self):
             pass
@@ -362,8 +393,7 @@ def test_broadcast_to_like(shape, dtype):
 
     r_x = _relay.var("x", shape=shape[0])
     r_b = _relay.var("b", shape=shape[1])
-    r_func = _relay.Function(
-        params=[r_x, r_b], body=_relay.broadcast_to_like(r_x, r_b))
+    r_func = _relay.Function(params=[r_x, r_b], body=_relay.broadcast_to_like(r_x, r_b))
 
     check_from_relay(model, r_func, [m_x, broadcast_type])
 
@@ -371,7 +401,6 @@ def test_broadcast_to_like(shape, dtype):
 @pytest.mark.parametrize("shape", [[(2, 2), (1, 0)], [(2, 2), None]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_transpose(shape, dtype):
-
     class Transpose(mnm.Model):
         def build(self, axes=None):
             self._axes = axes
@@ -396,7 +425,6 @@ def test_transpose(shape, dtype):
 @pytest.mark.parametrize("indices_or_sections", [(2, 4), 2, (2,)])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_split(shape, axis, indices_or_sections, dtype):
-
     class Split(mnm.Model):
         def build(self, indices_or_sections, axis):
             self._indices_or_sections = indices_or_sections
@@ -411,8 +439,9 @@ def test_split(shape, axis, indices_or_sections, dtype):
     m_x, _ = randn(shape, dtype=dtype)
 
     r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_func = _relay.Function(params=[r_x], body=_relay.split(
-        r_x, indices_or_sections, axis).astuple())
+    r_func = _relay.Function(
+        params=[r_x], body=_relay.split(r_x, indices_or_sections, axis).astuple()
+    )
 
     check_from_relay(model, r_func, [m_x])
 
@@ -421,7 +450,6 @@ def test_split(shape, axis, indices_or_sections, dtype):
 @pytest.mark.parametrize("axis", [-2])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_concatenate(shapes, axis, dtype):
-
     class Concatenate(mnm.Model):
         def build(self, axis):
             self._axis = axis
@@ -433,10 +461,8 @@ def test_concatenate(shapes, axis, dtype):
     args = [randn(shape, dtype=dtype)[0] for shape in shapes]
     model = Concatenate(axis)
 
-    r_vars = [_relay.var("x%d" % idx, shape=shape)
-              for idx, shape in enumerate(shapes)]
-    r_func = _relay.Function(
-        params=r_vars, body=_relay.concatenate(r_vars, axis=axis))
+    r_vars = [_relay.var("x%d" % idx, shape=shape) for idx, shape in enumerate(shapes)]
+    r_func = _relay.Function(params=r_vars, body=_relay.concatenate(r_vars, axis=axis))
 
     check_from_relay(model, r_func, args)
 
@@ -445,7 +471,6 @@ def test_concatenate(shapes, axis, dtype):
 @pytest.mark.parametrize("axis", [-1])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_stack(shapes, axis, dtype):
-
     class Stack(mnm.Model):
         def build(self, axis):
             self._axis = axis
@@ -457,10 +482,8 @@ def test_stack(shapes, axis, dtype):
     args = [randn(shape, dtype=dtype)[0] for shape in shapes]
     model = Stack(axis)
 
-    r_vars = [_relay.var("x%d" % idx, shape=shape, dtype=dtype)
-              for idx, shape in enumerate(shapes)]
-    r_func = _relay.Function(
-        params=r_vars, body=_relay.stack(r_vars, axis=axis))
+    r_vars = [_relay.var("x%d" % idx, shape=shape, dtype=dtype) for idx, shape in enumerate(shapes)]
+    r_func = _relay.Function(params=r_vars, body=_relay.stack(r_vars, axis=axis))
 
     check_from_relay(model, r_func, args)
 
@@ -469,7 +492,6 @@ def test_stack(shapes, axis, dtype):
 @pytest.mark.parametrize("axis", [[0], None])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_squeeze(shape, axis, dtype):
-
     class Squeeze(mnm.Model):
         def build(self, axis):
             self._axis = axis
@@ -492,7 +514,6 @@ def test_squeeze(shape, axis, dtype):
 @pytest.mark.parametrize("a_max", [0.7])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_clip(shape, a_min, a_max, dtype):
-
     class Clip(mnm.Model):
         def build(self):
             pass
@@ -506,8 +527,7 @@ def test_clip(shape, a_min, a_max, dtype):
     m_x, _ = randn(shape, dtype=dtype)
 
     r_var = _relay.var("x", shape=shape, dtype=dtype)
-    r_func = _relay.Function(
-        params=[r_var], body=_relay.clip(r_var, a_min, a_max))
+    r_func = _relay.Function(params=[r_var], body=_relay.clip(r_var, a_min, a_max))
 
     check_from_relay(model, r_func, [m_x])
 
@@ -516,7 +536,6 @@ def test_clip(shape, a_min, a_max, dtype):
 @pytest.mark.parametrize("itype", ["float32"])
 @pytest.mark.parametrize("otype", ["float16"])
 def test_cast_n_cast_like(shape, itype, otype):
-
     class Cast(mnm.Model):
         def build(self, otype=None):
             self._otype = otype
@@ -544,8 +563,7 @@ def test_cast_n_cast_like(shape, itype, otype):
     cast_like_model(m_x, m_x_like)
     r_var = _relay.var("x", shape=shape, dtype=itype)
     r_var2 = _relay.var("y", shape=shape, dtype=otype)
-    r_func = _relay.Function(
-        params=[r_var, r_var2], body=_relay.cast_like(r_var, r_var2))
+    r_func = _relay.Function(params=[r_var, r_var2], body=_relay.cast_like(r_var, r_var2))
     check_from_relay(cast_like_model, r_func, [m_x, m_x_like])
 
 
@@ -567,8 +585,7 @@ def test_gather(dshape, axis, dtype):
 
     r_x = _relay.var("x", shape=dshape, dtype=dtype)
     r_i = _relay.var("i", shape=dshape, dtype="int64")
-    r_func = _relay.Function(
-        params=[r_x, r_i], body=_relay.gather(r_x, axis, r_i))
+    r_func = _relay.Function(params=[r_x, r_i], body=_relay.gather(r_x, axis, r_i))
 
     check_from_relay(model, r_func, [m_x, m_i])
 
@@ -577,7 +594,6 @@ def test_gather(dshape, axis, dtype):
 @pytest.mark.parametrize("dshape", [[10, 11, 12]])
 @pytest.mark.parametrize("ishape", [[3, 2]])
 def test_gather_nd(dshape, dtype, ishape):
-
     class GatherNd(mnm.Model):
         def build(self):
             pass
@@ -587,25 +603,26 @@ def test_gather_nd(dshape, dtype, ishape):
             return mnm.gather_nd(data, indices)
 
     m_x, _ = randn(dshape, dtype=dtype)
-    m_i, _ = randint(ishape, high=dshape[0: ishape[-1]], dtype="int64")
+    m_i, _ = randint(ishape, high=dshape[0 : ishape[-1]], dtype="int64")
     model = GatherNd()
 
     r_x = _relay.var("x", shape=dshape, dtype=dtype)
     r_i = _relay.var("i", shape=ishape, dtype="int64")
-    r_func = _relay.Function(
-        params=[r_x, r_i], body=_relay.gather_nd(r_x, r_i))
+    r_func = _relay.Function(params=[r_x, r_i], body=_relay.gather_nd(r_x, r_i))
 
     check_from_relay(model, r_func, [m_x, m_i])
 
 
-@pytest.mark.parametrize("params", [
-    {"orig_shape": (8, 8, 8, 8), "to_shape": (2, 2048)},
-    {"orig_shape": (3, 3, 3, 3), "to_shape": (0, -1)},
-])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"orig_shape": (8, 8, 8, 8), "to_shape": (2, 2048)},
+        {"orig_shape": (3, 3, 3, 3), "to_shape": (0, -1)},
+    ],
+)
 @pytest.mark.parametrize("reverse", [False])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_reshape(params, reverse, dtype):
-
     class Reshape(mnm.Model):
         def build(self, shape, reverse=False):
             self._shape = shape
@@ -630,7 +647,6 @@ def test_reshape(params, reverse, dtype):
 @pytest.mark.parametrize("axis", [2])
 @pytest.mark.parametrize("num_newaxis", [5])
 def test_expand_dims(shape, dtype, axis, num_newaxis):
-
     class ExpandDims(mnm.Model):
         def build(self, axis, num_newaxis):
             self.axis = axis
@@ -644,8 +660,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     model = ExpandDims(axis, num_newaxis)
 
     r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_func = _relay.Function(
-        params=[r_x], body=_relay.expand_dims(r_x, axis, num_newaxis))
+    r_func = _relay.Function(params=[r_x], body=_relay.expand_dims(r_x, axis, num_newaxis))
 
     check_from_relay(model, r_func, [m_x])
 
@@ -664,10 +679,10 @@ def test_full(shape, val):
 
     model = Full(shape, val)
 
-    r_func = _relay.Function(params=[],
-                             body=_relay.full(_relay.const(val), shape=shape, dtype="int64"))
-    check_from_relay(model, r_func, [], check_model_structure=False,
-                     disabled_pass=["FoldConstant"])
+    r_func = _relay.Function(
+        params=[], body=_relay.full(_relay.const(val), shape=shape, dtype="int64")
+    )
+    check_from_relay(model, r_func, [], check_model_structure=False, disabled_pass=["FoldConstant"])
 
 
 @pytest.mark.parametrize("shape", [[3, 2]])
@@ -709,8 +724,7 @@ def test_strided_slice(dtype, params):
     m_x, _ = randn(shape, dtype=dtype)
 
     r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_func = _relay.Function(
-        params=[r_x], body=_relay.strided_slice(r_x, begin, end, strides))
+    r_func = _relay.Function(params=[r_x], body=_relay.strided_slice(r_x, begin, end, strides))
 
     check_from_relay(model, r_func, [m_x])
 
@@ -733,8 +747,7 @@ def test_where(shape):
     r_c = _relay.var("c", shape=shape, dtype="bool")
     r_x = _relay.var("x", shape=shape)
     r_y = _relay.var("y", shape=shape)
-    r_func = _relay.Function(
-        params=[r_c, r_x, r_y], body=_relay.where(r_c, r_x, r_y))
+    r_func = _relay.Function(params=[r_c, r_x, r_y], body=_relay.where(r_c, r_x, r_y))
 
     check_from_relay(model, r_func, [m_cond, m_x, m_y])
 
@@ -761,12 +774,10 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
     # relay ir
     r_x = _relay.var("x", shape=xshape)
     r_w = _relay.var("w", shape=wshape)
-    r_c = _relay.nn.conv2d(r_x, r_w, strides=stride,
-                           dilation=dilation, padding=padding)
+    r_c = _relay.nn.conv2d(r_x, r_w, strides=stride, dilation=dilation, padding=padding)
     r_func = _relay.Function(params=[r_x, r_w], body=r_c)
 
     check_from_relay(model, r_func, [m_x, m_w])
-
 
 
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
@@ -778,12 +789,19 @@ def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, paddi
     class TestModel(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x, w):
-            return mnm.conv2d_transpose(x, w, stride=stride, padding=padding,
-                                        output_padding=output_padding,
-                                        dilation=dilation,
-                                        groups=1)
+            return mnm.conv2d_transpose(
+                x,
+                w,
+                stride=stride,
+                padding=padding,
+                output_padding=output_padding,
+                dilation=dilation,
+                groups=1,
+            )
+
     model = TestModel()
     stride, output_padding = stride_output_padding
     stride = (stride, stride)
@@ -793,11 +811,12 @@ def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, paddi
     # relay ir
     r_x = _relay.var("x", shape=xshape)
     r_w = _relay.var("w", shape=wshape)
-    r_c = _relay.nn.conv2d_transpose(r_x, r_w, strides=stride, dilation=dilation,
-                                     padding=padding,
-                                     output_padding=output_padding)
+    r_c = _relay.nn.conv2d_transpose(
+        r_x, r_w, strides=stride, dilation=dilation, padding=padding, output_padding=output_padding
+    )
     r_func = _relay.Function(params=[r_x, r_w], body=r_c)
     check_from_relay(model, r_func, [m_x, m_w])
+
 
 # FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
 @pytest.mark.xfail
@@ -833,7 +852,8 @@ def test_contrib_dropout(device, shape, p):
     [
         [mnm._op.sym.max_pool2d, _relay.nn.max_pool2d],
         [mnm._op.sym.avg_pool2d, _relay.nn.avg_pool2d],
-    ])
+    ],
+)
 def test_mnm_pool2d(kernel, stride, padding, funcs):
     mnm_fwd, relay_fwd = funcs
     if padding > kernel // 2:
@@ -865,7 +885,8 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
     [
         [mnm._op.sym.adaptive_max_pool2d, _relay.nn.adaptive_max_pool2d],
         [mnm._op.sym.adaptive_avg_pool2d, _relay.nn.adaptive_avg_pool2d],
-    ])
+    ],
+)
 def test_mnm_adaptive_pool2d(out_shape, layout, funcs):
     mnm_fwd, relay_fwd = funcs
 
@@ -911,7 +932,8 @@ def test_mnm_layer_norm(shape, axis, eps, dtype):
     r_w = _relay.var("w", shape=[shape[axis]], dtype=dtype)
     r_b = _relay.var("b", shape=[shape[axis]], dtype=dtype)
     r_func = _relay.Function(
-        params=[r_x, r_w, r_b], body=_relay.nn.layer_norm(r_x, r_w, r_b, axis, eps))
+        params=[r_x, r_w, r_b], body=_relay.nn.layer_norm(r_x, r_w, r_b, axis, eps)
+    )
 
     check_from_relay(model, r_func, [m_x, m_w, m_b])
 
@@ -946,8 +968,10 @@ def test_mnm_batch_norm_train(shape):
     r_b = _relay.var("b", shape=stats_shape)
     r_m = _relay.var("m", shape=stats_shape)
     r_v = _relay.var("v", shape=stats_shape)
-    r_func = _relay.Function(params=[r_x, r_w, r_b, r_m, r_v], body=_relay.nn.batch_norm(
-        r_x, r_w, r_b, r_m, r_v, epsilon=eps)[0])
+    r_func = _relay.Function(
+        params=[r_x, r_w, r_b, r_m, r_v],
+        body=_relay.nn.batch_norm(r_x, r_w, r_b, r_m, r_v, epsilon=eps)[0],
+    )
 
     check_from_relay(model, r_func, [m_x, m_m, m_v, m_w, m_b])
 
@@ -974,14 +998,13 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
     model = Pad()
 
     r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_func = _relay.Function(params=[r_x], body=_relay.nn.pad(
-        r_x, pad_width, pad_value, pad_mode))
+    r_func = _relay.Function(params=[r_x], body=_relay.nn.pad(r_x, pad_width, pad_value, pad_mode))
 
     check_from_relay(model, r_func, [m_x])
 
+
 @pytest.mark.parametrize("trans", [[False, False], [False, True], [True, False], [True, True]])
 def test_dense_pattern(trans):
-
     class TransposeDense(mnm.Model):
         def build(self, trans):
             self.op_name = "matmul"
@@ -1010,10 +1033,10 @@ def test_dense_pattern(trans):
 
     check_from_relay(model, r_func, [m_x, m_y])
 
-@pytest.mark.parametrize("shape", [(), (1, ), (2, 2), (1, 2, 3), (1, 2, 3, 4)])
+
+@pytest.mark.parametrize("shape", [(), (1,), (2, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float64", "float32"])
 def test_gelu_pattern(shape, dtype):
-
     class TestModel(mnm.Model):
         def build(self):
             pass
@@ -1031,7 +1054,7 @@ def test_gelu_pattern(shape, dtype):
     bias = _relay.var("bias", shape=shape, dtype=dtype)
 
     a0 = _relay.add(r_x, bias)
-    a1 = _relay.multiply(a0, _relay.const(1/2**0.5, dtype))
+    a1 = _relay.multiply(a0, _relay.const(1 / 2 ** 0.5, dtype))
     a2 = _relay.erf(a1)
     a3 = _relay.multiply(a2, _relay.const(0.5, dtype))
     a4 = _relay.add(_relay.const(0.5, dtype), a3)
@@ -1039,6 +1062,7 @@ def test_gelu_pattern(shape, dtype):
     r_func = _relay.Function(params=[r_x, bias], body=r_out)
 
     check_from_relay(model, r_func, [m_x, m_y])
+
 
 def test_embedding_pattern():
     data_shape = (32, 128)
@@ -1061,7 +1085,6 @@ def test_embedding_pattern():
         func = _relay.Function([x, indices, indices2], sb.get())
         return tvm.IRModule.from_expr(func)
 
-
     m_x, _ = randn_torch(data_shape)
     m_i, _ = randint(indices_shape, high=10000)
     m_i2 = mnm.array(0, dtype="int64")
@@ -1070,13 +1093,13 @@ def test_embedding_pattern():
     r_i = _relay.var("i", shape=indices_shape, dtype="int64")
     r_i2 = _relay.var("i2", shape=(), dtype="int64")
     out = _relay.cast(r_i, "int32")
-    out1 = _relay.take(r_x, out) # Should be converted to embedding along with the cast.
+    out1 = _relay.take(r_x, out)  # Should be converted to embedding along with the cast.
 
     ones = np.ones(shape=indices_shape, dtype="int32")
-    out2 = _relay.take(r_x, _relay.const(ones)) # Should be converted to embedding.
+    out2 = _relay.take(r_x, _relay.const(ones))  # Should be converted to embedding.
     out = _relay.add(out1, out2)
 
-    out3 = _relay.take(out, r_i2, axis=1, mode="wrap") # Should be just take.
+    out3 = _relay.take(out, r_i2, axis=1, mode="wrap")  # Should be just take.
     out = _relay.Tuple([out, out3])
     r_func = _relay.Function(params=[r_x, r_i, r_i2], body=out)
 
@@ -1095,6 +1118,7 @@ def test_sum(shape, axis, keep):
         @mnm.model.trace
         def forward(self, x):
             return mnm.sum(x, self.axis, self.keep)
+
     model = Sum(axis, keep)
     m_x, _ = randn(shape)
     r_x = _relay.var("x", shape=shape)
@@ -1106,6 +1130,7 @@ def test_sum(shape, axis, keep):
 @pytest.mark.parametrize("data", [[1, 10, 2], [1, 10, 3]])
 def test_arange(data):
     start, stop, step = data
+
     class Arange(mnm.Model):
         def build(self):
             pass
@@ -1113,6 +1138,7 @@ def test_arange(data):
         @mnm.model.trace
         def forward(self, start, stop, step):
             return mnm.arange(start, stop, step)
+
     model = Arange()
     dtype = "float32"
     m_start = mnm.array(start, dtype=dtype)
@@ -1126,10 +1152,9 @@ def test_arange(data):
     check_from_relay(model, r_func, [m_start, m_stop, m_step], check_model_structure=False)
 
 
-@pytest.mark.parametrize("data_shape, index_shapes", [
-    ((10, 5), [(3, 4), (3, 1)]),
-    ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])
-])
+@pytest.mark.parametrize(
+    "data_shape, index_shapes", [((10, 5), [(3, 4), (3, 1)]), ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])]
+)
 def test_adv_index(data_shape, index_shapes):
     class Index(mnm.Model):
         def build(self):
@@ -1167,13 +1192,13 @@ def test_full_fusion(dtype):
     mod = FromRelay(["FoldConstant", "SimplifyExpr"])(r_mod)
     model = FrameworkModel(mod, mod, {}, {})
 
-    out = utils.run_vm_model(model, 'cpu', [])
+    out = utils.run_vm_model(model, "cpu", [])
     ref = np.ones((5, 5), dtype=dtype) * 2
     assert out.dtype == dtype
     check(ref, out)
 
 
-@pytest.mark.parametrize("shape", [(100, ), (4, 4), (16, 3)])
+@pytest.mark.parametrize("shape", [(100,), (4, 4), (16, 3)])
 def test_threefry_generate(shape):
     class ThreefryGenerate(mnm.Model):
         def build(self, shape):
@@ -1187,8 +1212,7 @@ def test_threefry_generate(shape):
     model = ThreefryGenerate(shape)
 
     r_key = _relay.var("key", shape=(10,), dtype="uint64")
-    r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_generate(
-        r_key, shape))
+    r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_generate(r_key, shape))
 
     check_from_relay(model, r_func, [m_key])
 
@@ -1206,8 +1230,7 @@ def test_threefry_split():
     model = ThreefrySplit()
 
     r_key = _relay.var("key", shape=(10,), dtype="uint64")
-    r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_split(
-        r_key))
+    r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_split(r_key))
 
     check_from_relay(model, r_func, [m_key])
 
@@ -1224,6 +1247,7 @@ def test_mean(shape, axis, keep):
         @mnm.model.trace
         def forward(self, x):
             return mnm.mean(x, self.axis, self.keep)
+
     model = Mean(axis, keep)
     m_x, _ = randn(shape)
     r_x = _relay.var("x", shape=shape)
@@ -1261,8 +1285,15 @@ def test_roi_align():
 
         @mnm.model.trace
         def forward(self, data, rois):
-            return mnm.roi_align(data, rois, self.pooled_size, self.spatial_scale,
-                                 self.sample_ratio, self.layout, self.mode)
+            return mnm.roi_align(
+                data,
+                rois,
+                self.pooled_size,
+                self.spatial_scale,
+                self.sample_ratio,
+                self.layout,
+                self.mode,
+            )
 
     np_data = np.random.uniform(size=(1, 4, 16, 16)).astype("float32")
     np_rois = np.random.uniform(size=(32, 5)).astype("float32")
@@ -1272,8 +1303,10 @@ def test_roi_align():
 
     r_data = _relay.var("data", shape=(1, 4, 16, 16), dtype="float32")
     r_rois = _relay.var("rois", shape=(32, 5), dtype="float32")
-    r_func = _relay.Function(params=[r_data, r_rois], body=_relay.vision.roi_align(
-        r_data, r_rois, (7, 7), 1.0, -1, "NCHW", "avg"))
+    r_func = _relay.Function(
+        params=[r_data, r_rois],
+        body=_relay.vision.roi_align(r_data, r_rois, (7, 7), 1.0, -1, "NCHW", "avg"),
+    )
 
     check_from_relay(model, r_func, [m_data, m_rois])
 
@@ -1299,8 +1332,10 @@ def test_cumsum(shape, axis, exclusive):
     relaty_exclusive = exclusive if exclusive else None
 
     r_data = _relay.var("data", shape=shape, dtype=dtype)
-    r_func = _relay.Function(params=[r_data], body=_relay.cumsum(
-        r_data, axis=axis, dtype=dtype, exclusive=relaty_exclusive))
+    r_func = _relay.Function(
+        params=[r_data],
+        body=_relay.cumsum(r_data, axis=axis, dtype=dtype, exclusive=relaty_exclusive),
+    )
 
     check_from_relay(m_model, r_func, [m_x])
 

@@ -15,21 +15,23 @@ from mnm.frontend.model import FrameworkModel
 _saved_reshape_inputs = dict()
 _extra_aux_params = dict()
 
+
 def _generator():
-    """ Generate unique names - returns a function. """
+    """Generate unique names - returns a function."""
+
     def f():
         f.count += 1
-        return 'aux_param' + str(f.count)
+        return "aux_param" + str(f.count)
+
     f.count = 0
     return f
+
+
 _unique_name = _generator()
 
 
-_activation_map = {
-    "sigmoid": op.sigmoid,
-    "tanh"   : op.tanh,
-    "relu"   : op.relu
-}
+_activation_map = {"sigmoid": op.sigmoid, "tanh": op.tanh, "relu": op.relu}
+
 
 def _mx_conv(inputs, attrs, is_train):
     def _mx_conv2d(inputs, attrs):
@@ -44,6 +46,7 @@ def _mx_conv(inputs, attrs, is_train):
             assert len(inputs) == 3
             res = op.bias_add(res, inputs[2])
         return [res]
+
     kernel_size = attrs.get_int_tuple("kernel")
     if len(kernel_size) == 2:
         return _mx_conv2d(inputs, attrs)
@@ -70,20 +73,24 @@ def _mx_batch_norm(inputs, attrs, is_train):
     new_attrs["eps"] = attrs.get_float("eps", 0.001)
     new_attrs["momentum"] = attrs.get_float("momentum", 0.9)
     if is_train:
-        res = op.batch_norm_train(x=inputs[0],
-                                  w=inputs[1],
-                                  b=inputs[2],
-                                  running_mean=inputs[3],
-                                  running_var=inputs[4],
-                                  **new_attrs)
+        res = op.batch_norm_train(
+            x=inputs[0],
+            w=inputs[1],
+            b=inputs[2],
+            running_mean=inputs[3],
+            running_var=inputs[4],
+            **new_attrs
+        )
         return res
     else:
-        res = op.batch_norm_infer(x=inputs[0],
-                                  w=inputs[1],
-                                  b=inputs[2],
-                                  running_mean=inputs[3],
-                                  running_var=inputs[4],
-                                  **new_attrs)
+        res = op.batch_norm_infer(
+            x=inputs[0],
+            w=inputs[1],
+            b=inputs[2],
+            running_mean=inputs[3],
+            running_var=inputs[4],
+            **new_attrs
+        )
         return [res]
 
 
@@ -94,12 +101,12 @@ def _mx_pooling(inputs, attrs, is_train):
     def _pool2d(new_op, is_avg):
         kernel_size = attrs.get_int_tuple("kernel")
         if len(kernel_size) != 2:
-            raise ValueError('Only 2D kernels are supported for operator Pool2D.')
+            raise ValueError("Only 2D kernels are supported for operator Pool2D.")
         new_attrs = {}
         new_attrs["kernel"] = kernel_size
         new_attrs["stride"] = attrs.get_int_tuple("stride", (1, 1))
         new_attrs["padding"] = attrs.get_int_tuple("pad", (0, 0))
-        new_attrs["ceil_mode"] = (attrs.get_str("pooling_convention", "valid") == "full")
+        new_attrs["ceil_mode"] = attrs.get_str("pooling_convention", "valid") == "full"
         if is_avg:
             new_attrs["include_pad"] = attrs.get_bool("count_include_pad", True)
 
@@ -116,7 +123,6 @@ def _mx_pooling(inputs, attrs, is_train):
             return [op.adaptive_avg_pool2d(inputs[0], shape=(1, 1))]
         return _pool2d(op.avg_pool2d, True)
     raise NotImplementedError
-
 
 
 def _mx_activations(inputs, attrs, is_train):
@@ -141,21 +147,25 @@ def _mx_reshape(inputs, attrs, is_train):
     _saved_reshape_inputs[out] = inputs[0]
     return [out]
 
+
 def _mx_expand_dims(inputs, attrs, is_train):
     axis = attrs.get_int("axis")
     out = op.expand_dims(inputs[0], axis=axis)
     return [out]
+
 
 def _mx_sum(inputs, attrs, is_train):
     axis_list = attrs.get_int_tuple("axis")
     out = op.sum(inputs[0], axis=axis_list)
     return [out]
 
+
 def _mx_swap_axis(inputs, attrs, is_train):
     dim1 = attrs.get_int("dim1")
     dim2 = attrs.get_int("dim2")
     out = op.swap_axis(inputs[0], axis1=dim2, axis2=dim1)
     return [out]
+
 
 def _mx_multiply(inputs, attrs, is_train):
     return [op.multiply(inputs[0], inputs[1])]
@@ -166,6 +176,7 @@ def _mx_softmax(inputs, attrs, is_train):
     out = op.softmax(inputs[0], axis=axis)
     return [out]
 
+
 def _mx_adaptive_avg_pooling(inputs, attrs, is_train):
     output_size = attrs.get_int_tuple("output_size")
     if output_size == (1,):
@@ -174,9 +185,11 @@ def _mx_adaptive_avg_pooling(inputs, attrs, is_train):
     out = op.adaptive_avg_pool2d(inputs[0], shape=output_size)
     return [out]
 
+
 def _mx_flatten(inputs, attrs, is_train):
     out = op.batch_flatten(inputs[0])
     return [out]
+
 
 def _mx_rnn_param_concat(inputs, attrs, _):
     # We don't need to concatenate RNN params because we will unravel the RNN op
@@ -191,7 +204,7 @@ def _mx_rnn_layer(inputs, attrs, is_train):
         return out, [out]
 
     def _gru_cell(data, states, i2h_weight, h2h_weight, i2h_bias, h2h_bias):
-        dtype = 'float32'
+        dtype = "float32"
         i2h = op.bias_add(op.dense(data, i2h_weight), i2h_bias, axis=-1)
         h2h = op.bias_add(op.dense(states[0], h2h_weight), h2h_bias, axis=-1)
         i2h_split = op.split(i2h, indices_or_sections=3, axis=1)
@@ -205,10 +218,10 @@ def _mx_rnn_layer(inputs, attrs, is_train):
         indices = mnm_array(1, dtype=dtype)
         _extra_aux_params[name] = indices
 
-        next_h = op.add(op.multiply(op.subtract(Symbol.make_var(name_hint=name),
-                                                update_gate),
-                                    next_h_tmp),
-                        op.multiply(update_gate, states[0]))
+        next_h = op.add(
+            op.multiply(op.subtract(Symbol.make_var(name_hint=name), update_gate), next_h_tmp),
+            op.multiply(update_gate, states[0]),
+        )
         return next_h, [next_h]
 
     def _lstm_cell(data, states, i2h_weight, h2h_weight, i2h_bias, h2h_bias):
@@ -228,15 +241,14 @@ def _mx_rnn_layer(inputs, attrs, is_train):
     mode = attrs.get_str("mode")
     output_states = attrs.get_bool("state_outputs", False)
     if mode.startswith("rnn"):
-        mode, activation = mode.split('_')
+        mode, activation = mode.split("_")
     assert mode in ["rnn", "gru", "lstm"]
     bidirectional = attrs.get_bool("bidirectional", False)
     direct = 2 if bidirectional else 1
     layout = attrs.get_str("layout", "TNC")
     if layout != "TNC":
-        raise NotImplementedError(
-            "RNN with layout other than TNC is not supported yet")
-    num_states = 2 if mode == 'lstm' else 1
+        raise NotImplementedError("RNN with layout other than TNC is not supported yet")
+    num_states = 2 if mode == "lstm" else 1
     assert len(inputs) == num_states + 2
 
     seq_data = inputs[0]
@@ -280,22 +292,30 @@ def _mx_rnn_layer(inputs, attrs, is_train):
     for c in concat_weight:
         concat_weight_args.append(_saved_reshape_inputs[c])
     for i in range(num_layers):
-        weights.append([concat_weight_args[i*2*direct],
-                        concat_weight_args[i*2*direct + 1]])
-        bias.append([concat_weight_args[(num_layers+i)*2*direct],
-                     concat_weight_args[(num_layers+i)*2*direct + 1]])
+        weights.append([concat_weight_args[i * 2 * direct], concat_weight_args[i * 2 * direct + 1]])
+        bias.append(
+            [
+                concat_weight_args[(num_layers + i) * 2 * direct],
+                concat_weight_args[(num_layers + i) * 2 * direct + 1],
+            ]
+        )
         s = []
         for state in init_states:
             name = _unique_name()
-            indices = mnm_array(i*direct, dtype="int32")
+            indices = mnm_array(i * direct, dtype="int32")
             _extra_aux_params[name] = indices
             s.append(op.take(state, Symbol.make_var(name_hint=name), axis=0))
         states.append(s)
         if bidirectional:
-            back_weights.append([concat_weight_args[i*2*direct + 2],
-                                 concat_weight_args[i*2*direct + 3]])
-            back_bias.append([concat_weight_args[(num_layers+i)*2*direct + 2],
-                              concat_weight_args[(num_layers+i)*2*direct + 3]])
+            back_weights.append(
+                [concat_weight_args[i * 2 * direct + 2], concat_weight_args[i * 2 * direct + 3]]
+            )
+            back_bias.append(
+                [
+                    concat_weight_args[(num_layers + i) * 2 * direct + 2],
+                    concat_weight_args[(num_layers + i) * 2 * direct + 3],
+                ]
+            )
             s = []
             for state in init_states:
                 name = _unique_name()
@@ -311,7 +331,6 @@ def _mx_rnn_layer(inputs, attrs, is_train):
         _extra_aux_params[name] = indices
         xs.append(op.take(seq_data, Symbol.make_var(name_hint=name), axis=0))
 
-
     for l in range(num_layers):
         outputs = []
         back_outputs = []
@@ -320,7 +339,7 @@ def _mx_rnn_layer(inputs, attrs, is_train):
                 out, new_states = _rnn_cell(x, states[l], *weights[l], *bias[l], activation)
             elif mode == "gru":
                 out, new_states = _gru_cell(x, states[l], *weights[l], *bias[l])
-            else: # mode == "lstm"
+            else:  # mode == "lstm"
                 out, new_states = _lstm_cell(x, states[l], *weights[l], *bias[l])
             states[l] = new_states
             outputs.append(out)
@@ -328,13 +347,12 @@ def _mx_rnn_layer(inputs, attrs, is_train):
             for x in reversed(xs):
                 if mode == "rnn":
                     out, new_states = _rnn_cell(
-                        x, back_states[l], *back_weights[l], *back_bias[l], activation)
+                        x, back_states[l], *back_weights[l], *back_bias[l], activation
+                    )
                 elif mode == "gru":
-                    out, new_states = _gru_cell(
-                        x, back_states[l], *back_weights[l], *back_bias[l])
-                else: # mode == "lstm"
-                    out, new_states = _lstm_cell(
-                        x, back_states[l], *back_weights[l], *back_bias[l])
+                    out, new_states = _gru_cell(x, back_states[l], *back_weights[l], *back_bias[l])
+                else:  # mode == "lstm"
+                    out, new_states = _lstm_cell(x, back_states[l], *back_weights[l], *back_bias[l])
                 back_states[l] = new_states
                 back_outputs.append(out)
             back_outputs.reverse()
@@ -358,22 +376,22 @@ def _mx_rnn_layer(inputs, attrs, is_train):
 
 
 _convert_map = {
-    'Activation': _mx_activations,
-    'BatchNorm': _mx_batch_norm,
-    'Convolution': _mx_conv,
-    'FullyConnected': _mx_fully_connected,
-    'Pooling': _mx_pooling,
-    'Reshape': _mx_reshape,
+    "Activation": _mx_activations,
+    "BatchNorm": _mx_batch_norm,
+    "Convolution": _mx_conv,
+    "FullyConnected": _mx_fully_connected,
+    "Pooling": _mx_pooling,
+    "Reshape": _mx_reshape,
     "RNN": _mx_rnn_layer,
-    'elemwise_add': _mx_add,
+    "elemwise_add": _mx_add,
     "_rnn_param_concat": _mx_rnn_param_concat,
-    'expand_dims':_mx_expand_dims,
-    "sum" : _mx_sum,
-    'SwapAxis': _mx_swap_axis,
-    "broadcast_mul" : _mx_multiply,
-    "softmax" : _mx_softmax,
-    "_contrib_AdaptiveAvgPooling2D" : _mx_adaptive_avg_pooling,
-    "Flatten" : _mx_flatten,
+    "expand_dims": _mx_expand_dims,
+    "sum": _mx_sum,
+    "SwapAxis": _mx_swap_axis,
+    "broadcast_mul": _mx_multiply,
+    "softmax": _mx_softmax,
+    "_contrib_AdaptiveAvgPooling2D": _mx_adaptive_avg_pooling,
+    "Flatten": _mx_flatten,
 }
 
 
@@ -409,7 +427,7 @@ def _from_mxnet_impl(symbol, is_train):
         if op_name == "null":
             node_map[nid] = [Symbol.make_var(name_hint=node_name)]
         elif op_name in _convert_map:
-            if op_name in ['_cond', '_foreach', '_while_loop']:  # pylint: disable=no-else-raise
+            if op_name in ["_cond", "_foreach", "_while_loop"]:  # pylint: disable=no-else-raise
                 raise NotImplementedError
             else:
                 res = _convert_map[op_name](children, attrs, is_train)
@@ -421,7 +439,8 @@ def _from_mxnet_impl(symbol, is_train):
             node_map[nid] = res
         else:
             raise NotImplementedError(
-                'Operator {} is not supported in frontend MXNet.'.format(op_name))
+                "Operator {} is not supported in frontend MXNet.".format(op_name)
+            )
 
     outputs = [node_map[e[0]][e[1]] for e in jgraph["heads"]]
     # construct the function body
@@ -435,10 +454,12 @@ def _from_mxnet_impl(symbol, is_train):
     return func
 
 
-def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
-               inputs_name,
-               arg_params=None,
-               aux_params=None):
+def from_mxnet(
+    symbol,  # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
+    inputs_name,
+    arg_params=None,
+    aux_params=None,
+):
     """
     Migrate from TVM.
     """
@@ -487,7 +508,7 @@ def from_mxnet(symbol,  # pylint: disable=too-many-arguments, too-many-locals, t
         if v.name_hint in _extra_aux_params:
             meta_aux_params[v.name_hint] = ndarray(_extra_aux_params[v.name_hint])
 
-    train_mod = mnm_module({relay.GlobalVar('main'): train_func})
-    infer_mod = mnm_module({relay.GlobalVar('main'): infer_func})
+    train_mod = mnm_module({relay.GlobalVar("main"): train_func})
+    infer_mod = mnm_module({relay.GlobalVar("main"): infer_func})
     front_model = FrameworkModel(train_mod, infer_mod, meta_arg_params, meta_aux_params)
     return front_model

@@ -15,11 +15,17 @@ def smooth_l1_loss_compute(attrs, inputs, output_type):  # pylint: disable=unuse
     for i in pred.shape:
         mul *= i
 
-    temp = _tvm.te.compute(pred.shape, lambda *ind: _tvm.tir.if_then_else(delta[ind] >= 1, \
-                        delta[ind] - _tvm.tir.const(0.5), 0.5 * delta[ind] * delta[ind]))
-    loss = _topi.transform.reshape(_topi.sum(temp / mul, axis=tuple(range(0, len(pred.shape)))),
-                                   [1])
+    temp = _tvm.te.compute(
+        pred.shape,
+        lambda *ind: _tvm.tir.if_then_else(
+            delta[ind] >= 1, delta[ind] - _tvm.tir.const(0.5), 0.5 * delta[ind] * delta[ind]
+        ),
+    )
+    loss = _topi.transform.reshape(
+        _topi.sum(temp / mul, axis=tuple(range(0, len(pred.shape)))), [1]
+    )
     return [loss]
+
 
 _reg.register_injective_schedule("mnm.op.tvm.smooth_l1_loss")
 
@@ -32,9 +38,14 @@ def smooth_l1_loss_dpred_compute(attr, inputs, output_type):  # pylint: disable=
     for i in pred.shape:
         mul *= i
 
-    dpred = _tvm.te.compute(pred.shape, lambda *ind: _tvm.tir.if_then_else(delta[ind] >= 1, \
-                            _tvm.tir.if_then_else(pred[ind] > true[ind], _tvm.tir.const(-1), \
-                            _tvm.tir.const(1)), true[ind] - pred[ind]))
+    dpred = _tvm.te.compute(
+        pred.shape,
+        lambda *ind: _tvm.tir.if_then_else(
+            delta[ind] >= 1,
+            _tvm.tir.if_then_else(pred[ind] > true[ind], _tvm.tir.const(-1), _tvm.tir.const(1)),
+            true[ind] - pred[ind],
+        ),
+    )
 
     return [dpred / mul]
 
@@ -50,9 +61,14 @@ def smooth_l1_loss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=
     for i in pred.shape:
         mul *= i
 
-    dtrue = _tvm.te.compute(pred.shape, lambda *ind: _tvm.tir.if_then_else(delta[ind] >= 1, \
-                            _tvm.tir.if_then_else(pred[ind] > true[ind], _tvm.tir.const(1), \
-                            _tvm.tir.const(-1)), - true[ind] + pred[ind]))
+    dtrue = _tvm.te.compute(
+        pred.shape,
+        lambda *ind: _tvm.tir.if_then_else(
+            delta[ind] >= 1,
+            _tvm.tir.if_then_else(pred[ind] > true[ind], _tvm.tir.const(1), _tvm.tir.const(-1)),
+            -true[ind] + pred[ind],
+        ),
+    )
 
     return [dtrue / mul]
 
@@ -64,10 +80,11 @@ _reg.register_broadcast_schedule("mnm.op.tvm.smooth_l1_loss_dtrue")
 def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs
     n, _ = pred.shape
+
     def fcompute(i):  # pylint: disable=unused-argument
         return -pred[i, true[i]] / n
 
-    loss = _tvm.te.compute((n, ), fcompute)
+    loss = _tvm.te.compute((n,), fcompute)
     loss = _topi.sum(loss, axis=[0], keepdims=True)
     return [loss]
 
@@ -79,8 +96,9 @@ _reg.register_injective_schedule("mnm.op.tvm.nll_loss")
 def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
     dy, true, pred = inputs
     n, c = pred.shape
-    dpred = _tvm.te.compute((n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], \
-                             -dy/n, _tvm.tir.const(0)))
+    dpred = _tvm.te.compute(
+        (n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], -dy / n, _tvm.tir.const(0))
+    )
     return [dpred]
 
 
@@ -96,23 +114,25 @@ def nllloss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-
 
 _reg.register_broadcast_schedule("mnm.op.tvm.nll_loss_dtrue")
 
+
 @register_compute("mnm.op.tvm.cross_entropy")
 def cross_entropy_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs
     n, c = pred.shape
-    redn = _tvm.te.reduce_axis((0, n), name='rn')
-    redc = _tvm.te.reduce_axis((0, c), name='rc')
+    redn = _tvm.te.reduce_axis((0, n), name="rn")
+    redc = _tvm.te.reduce_axis((0, c), name="rc")
 
     pred_log_sm = _topi.nn.log_softmax(pred)
 
     def fcompute(x):  # pylint: disable=unused-argument
-        return _tvm.te.sum(-pred_log_sm[redn, redc] * true[redn, redc] / n,
-                           axis=[redc, redn])
+        return _tvm.te.sum(-pred_log_sm[redn, redc] * true[redn, redc] / n, axis=[redc, redn])
 
-    loss = _tvm.te.compute((1, ), fcompute)
+    loss = _tvm.te.compute((1,), fcompute)
     return [loss]
 
+
 _reg.register_broadcast_schedule("mnm.op.tvm.cross_entropy")
+
 
 @register_compute("mnm.op.tvm.cross_entropy_dpred")
 def cross_entropy_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument

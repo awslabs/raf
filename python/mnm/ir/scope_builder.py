@@ -6,12 +6,13 @@ from tvm.relay.scope_builder import ScopeBuilder as RelayScopeBuilder
 from .._core.ir_ext import ExtendedVar, extended_var
 from .._ffi.ir._make import Var as _Var
 
+
 class ScopeBuilder(RelayScopeBuilder):
     """Meta scope builder, which is mostly derived from Relay's scope builder,
     but creates ExtendedVar instead of Var.
     """
 
-    def let(self, var, value, may_share=None): # pylint: disable=arguments-differ
+    def let(self, var, value, may_share=None):  # pylint: disable=arguments-differ
         """Create a new let binding using ExtendedVar.
 
         Parameters

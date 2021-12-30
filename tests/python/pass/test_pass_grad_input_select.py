@@ -7,8 +7,8 @@ from mnm._lib import relay
 from mnm.testing import randn, run_infer_type
 from mnm._core.module import IRModule
 
-def test_conv2d():
 
+def test_conv2d():
     class Model(mnm.Model):
         def build(self):
             self.w, _ = randn((1, 1, 3, 3))

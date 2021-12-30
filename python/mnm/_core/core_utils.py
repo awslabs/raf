@@ -10,26 +10,27 @@ from mnm._lib import _NodeBase as NodeBase  # pylint: disable=unused-import
 from mnm._lib import _register_object as _register_node
 
 DEVICE_TYPE_MAP = {
-    'llvm': 1,
-    'stackvm': 1,
-    'cpu': 1,
-    'c': 1,
-    'gpu': 2,
-    'cuda': 2,
-    'nvptx': 2,
-    'cl': 4,
-    'opencl': 4,
-    'aocl': 5,
-    'aocl_sw_emu': 5,
-    'sdaccel': 6,
-    'vulkan': 7,
-    'metal': 8,
-    'vpi': 9,
-    'rocm': 10,
-    'opengl': 11,
-    'ext_dev': 12,
-    'micro_dev': 13,
+    "llvm": 1,
+    "stackvm": 1,
+    "cpu": 1,
+    "c": 1,
+    "gpu": 2,
+    "cuda": 2,
+    "nvptx": 2,
+    "cl": 4,
+    "opencl": 4,
+    "aocl": 5,
+    "aocl_sw_emu": 5,
+    "sdaccel": 6,
+    "vulkan": 7,
+    "metal": 8,
+    "vpi": 9,
+    "rocm": 10,
+    "opengl": 11,
+    "ext_dev": 12,
+    "micro_dev": 13,
 }
+
 
 def register_node(type_key=None):
     assert isinstance(type_key, str)
@@ -58,11 +59,21 @@ def _get_device_map():
 _STR2DEV = _get_device_map()
 
 
-@tvm._ffi.register_func("mnm._core.core_utils.dev2str") # pylint: disable=protected-access
+@tvm._ffi.register_func("mnm._core.core_utils.dev2str")  # pylint: disable=protected-access
 def dev2str(dev: _DLDevice) -> str:
     mask = [
-        None, "cpu", "cuda", "cpu_pinned", "cl", "aocl", 'sdaccel', 'vulkan',
-        'metal', 'vpi', 'rocm', 'opengl'
+        None,
+        "cpu",
+        "cuda",
+        "cpu_pinned",
+        "cl",
+        "aocl",
+        "sdaccel",
+        "vulkan",
+        "metal",
+        "vpi",
+        "rocm",
+        "opengl",
     ]
     dev_type = int(dev.device_type)
     dev_id = int(dev.device_id)
@@ -71,7 +82,7 @@ def dev2str(dev: _DLDevice) -> str:
     return mask[dev_type] + "(" + str(dev_id) + ")"
 
 
-@tvm._ffi.register_func("mnm._core.core_utils.str2dev") # pylint: disable=protected-access
+@tvm._ffi.register_func("mnm._core.core_utils.str2dev")  # pylint: disable=protected-access
 def str2dev(name: str) -> _DLDevice:
     return _STR2DEV[name]
 
@@ -123,13 +134,15 @@ def get_bound_args(pyfunc, args, kwargs) -> inspect.BoundArguments:
                     assert new_name not in bound_args.arguments
                     bound_args.arguments[new_name] = arg
                     new_params.append(
-                        inspect.Parameter(new_name, inspect.Parameter.POSITIONAL_OR_KEYWORD))
+                        inspect.Parameter(new_name, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+                    )
             elif name == var_keyword_name:
                 for kw_name, kw_arg in bound_args.arguments[name].items():
                     assert kw_name not in bound_args.arguments
                     bound_args.arguments[kw_name] = kw_arg
                     new_params.append(
-                        inspect.Parameter(kw_name, inspect.Parameter.POSITIONAL_OR_KEYWORD))
+                        inspect.Parameter(kw_name, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+                    )
             else:
                 new_params.append(param)
 
@@ -203,10 +216,12 @@ def with_signature(other, fmap):
     fmap: function
     fuse the signature of two functions
     """
+
     def decorator(this):
         @functools.wraps(this)
         def wrapped(*args, **kwargs):
             return this(*args, **kwargs)
+
         s_other = inspect.signature(other)
         s_this = inspect.signature(this)
         p_other = list(s_other.parameters.values())
@@ -214,4 +229,5 @@ def with_signature(other, fmap):
         s_this = s_this.replace(parameters=fmap(p_this, p_other))
         wrapped.__signature__ = s_this
         return wrapped
+
     return decorator

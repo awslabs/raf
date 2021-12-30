@@ -21,11 +21,14 @@ def verify_ir(mod):
 @pytest.mark.parametrize("m", [1, 15])
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
-@pytest.mark.parametrize("epilogue", [
-    [None, None],
-    [mnm._op.sym.relu, torch.nn.functional.relu],
-    [mnm._op.sym.gelu, torch.nn.GELU()]
-])
+@pytest.mark.parametrize(
+    "epilogue",
+    [
+        [None, None],
+        [mnm._op.sym.relu, torch.nn.functional.relu],
+        [mnm._op.sym.gelu, torch.nn.GELU()],
+    ],
+)
 @pytest.mark.parametrize("beta", [None, 0.5, 2.0])
 def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     m_epilogue, t_epilogue = epilogue
@@ -47,7 +50,13 @@ def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     device = "cuda"
     m_x, t_x = randn_torch([m, k], requires_grad=True, device=device)
     m_w, t_w = randn_torch([k, n], requires_grad=True, device=device)
-    m_bias, t_bias = randn_torch([n,], requires_grad=True, device=device)
+    m_bias, t_bias = randn_torch(
+        [
+            n,
+        ],
+        requires_grad=True,
+        device=device,
+    )
     model = TestModel()
     model.to(device=device)
     mod = model._internal(m_x, m_w, m_bias).mod
@@ -81,8 +90,7 @@ def test_dense_add_relu(batch_size, in_features, out_features):
     t_model = torch.nn.Linear(in_features, out_features, bias=True)
     t_model.weight.data[:] = torch.from_numpy(m_w.numpy())
     t_model.bias.data[:] = torch.from_numpy(m_b.numpy())
-    model = TestModel(in_features=in_features,
-                      out_features=out_features)
+    model = TestModel(in_features=in_features, out_features=out_features)
     model.linear.w = m_w
     model.linear.b = m_b
     model.to(device=device)
@@ -101,10 +109,7 @@ def test_dense_add_relu(batch_size, in_features, out_features):
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
-@pytest.mark.parametrize("epilogue", [
-    [None, None],
-    [mnm._op.sym.gelu, torch.nn.GELU()]
-])
+@pytest.mark.parametrize("epilogue", [[None, None], [mnm._op.sym.gelu, torch.nn.GELU()]])
 def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue):
     m_epilogue, t_epilogue = epilogue
 

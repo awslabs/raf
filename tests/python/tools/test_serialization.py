@@ -47,10 +47,7 @@ def test_tuple_ext_constant():
     func_origin = expected()
     mod_origin = IRModule.from_expr(func_origin)
     out_origin = _unwrap(RunModel(mod_origin, []))
-    m = {
-        "a": 1,
-        "b": 2
-    }
+    m = {"a": 1, "b": 2}
 
     json = mnm.ir.save_json((func_origin, m))
 

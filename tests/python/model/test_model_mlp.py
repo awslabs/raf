@@ -41,11 +41,14 @@ class MNMMlp(mnm.Model):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (784, 10, 256, 256),
-    (512, 64, 128, 128),
-    (4, 2, 3, 3),
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        (784, 10, 256, 256),
+        (512, 64, 128, 128),
+        (4, 2, 3, 3),
+    ],
+)
 @pytest.mark.parametrize("is_train", [True, False])
 def test_mlp(config, is_train):
     m_model = MNMMlp(*config)

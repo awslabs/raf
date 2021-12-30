@@ -18,6 +18,7 @@ from mnm.testing import check, get_dist_info, skip_dist_test, run_vm_model
 dctx = dist.get_context()
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 
+
 def run_model(model, args, device, check_result=True):
     """Helper function to run the model using both interpreter and VM, and check if their
     results are the same. Note that some ops (e.g., reduce, send/recv) may only produce
@@ -55,6 +56,7 @@ def test_allreduce_with_tensor(dtype, computation):
         def forward(self, x):
             x = mnm.allreduce(x, computation=computation)
             return x
+
     if computation == "avg" and mnm.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
 
@@ -67,7 +69,7 @@ def test_allreduce_with_tensor(dtype, computation):
         print(f"{rank} - X: ", x)
     model.to(device=device)
     y = model(x)
-    vx = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     vx = mnm.array(vx, device=device)
     run_vm_model(model, device, [vx])
     check(y, vx)
@@ -100,7 +102,7 @@ def test_allreduce_with_tensor_list(computation):
         def build(self):
             pass
 
-        @ mnm.model.trace
+        @mnm.model.trace
         def forward(self, x1, x2):
             x = mnm.allreduce([x1, x2], computation=computation)
             a = x[0]
@@ -121,8 +123,8 @@ def test_allreduce_with_tensor_list(computation):
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
     y = model(x1, x2)
-    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
-    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
     vx1 = mnm.array(vx1, device=device)
     vx2 = mnm.array(vx2, device=device)
     run_vm_model(model, device, [vx1, vx2])
@@ -130,19 +132,25 @@ def test_allreduce_with_tensor_list(computation):
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
-            target_y = np.concatenate([ones * sum(range(1, total_rank + 1)),
-                                       ones * -sum(range(1, total_rank + 1))])
+            target_y = np.concatenate(
+                [ones * sum(range(1, total_rank + 1)), ones * -sum(range(1, total_rank + 1))]
+            )
         elif computation == "prod":
             sign = 1 if total_rank % 2 == 0 else -1
-            target_y = np.concatenate([ones * np.prod(range(1, total_rank + 1)),
-                                       ones * sign * np.prod(range(1, total_rank + 1))])
+            target_y = np.concatenate(
+                [
+                    ones * np.prod(range(1, total_rank + 1)),
+                    ones * sign * np.prod(range(1, total_rank + 1)),
+                ]
+            )
         elif computation == "min":
             target_y = np.concatenate([ones, ones * -total_rank])
         elif computation == "max":
             target_y = np.concatenate([ones * total_rank, ones * -1])
         elif computation == "avg":
-            target_y = np.concatenate([ones * sum(range(1, total_rank + 1)),
-                                       ones * -sum(range(1, total_rank + 1))])
+            target_y = np.concatenate(
+                [ones * sum(range(1, total_rank + 1)), ones * -sum(range(1, total_rank + 1))]
+            )
             target_y = target_y / total_rank
         else:
             assert False, "Invalid computation"
@@ -198,8 +206,8 @@ def test_allgather_with_tensor_list(axis):
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
-    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
-    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
     x1 = mnm.array(x1, device=device)
     x2 = mnm.array(x2, device=device)
     if rank == 0:
@@ -217,8 +225,7 @@ def test_allgather_with_tensor_list(axis):
         check(y, target_y)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True),
-                    reason=SKIP_REASON)
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_reduce_scatter(computation):
     class TestModel(mnm.Model):
@@ -273,8 +280,7 @@ def test_reduce_scatter(computation):
         check(m_out, n_out)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True),
-                    reason=SKIP_REASON)
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 def test_send_recv():
     shape = [2, 2]
     dtype = "float32"
@@ -307,12 +313,12 @@ def test_send_recv():
     device = f"cuda({local_rank})"
     model = TestModel_0() if rank == 0 else TestModel_1()
     n_ones = np.ones(shape=shape, dtype=dtype)
-    n_x = n_ones * (rank+1)
+    n_x = n_ones * (rank + 1)
     m_x = mnm.array(n_x, device=device)
     model.to(device=device)
     out1 = model(m_x)
     out2 = run_vm_model(model, device, [m_x])
-    check(out1[0], out2[0]) # NOTE: out[1] is not set by NCCLSend currently
+    check(out1[0], out2[0])  # NOTE: out[1] is not set by NCCLSend currently
     n_out = n_ones * 3
     check(out1[0], n_out)
 
@@ -387,12 +393,12 @@ def test_reduce_list(computation):
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
-    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
-    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
     x1 = mnm.array(x1, device=device)
     x2 = mnm.array(x2, device=device)
-    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
-    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank-1)
+    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
     vx1 = mnm.array(vx1, device=device)
     vx2 = mnm.array(vx2, device=device)
     run_vm_model(model, device, [vx1, vx2])
@@ -403,19 +409,25 @@ def test_reduce_list(computation):
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
-            target_y = np.concatenate([ones * sum(range(1, total_rank + 1)),
-                                       ones * -sum(range(1, total_rank + 1))])
+            target_y = np.concatenate(
+                [ones * sum(range(1, total_rank + 1)), ones * -sum(range(1, total_rank + 1))]
+            )
         elif computation == "prod":
             sign = 1 if total_rank % 2 == 0 else -1
-            target_y = np.concatenate([ones * np.prod(range(1, total_rank + 1)),
-                                       ones * sign * np.prod(range(1, total_rank + 1))])
+            target_y = np.concatenate(
+                [
+                    ones * np.prod(range(1, total_rank + 1)),
+                    ones * sign * np.prod(range(1, total_rank + 1)),
+                ]
+            )
         elif computation == "min":
             target_y = np.concatenate([ones, ones * -total_rank])
         elif computation == "max":
             target_y = np.concatenate([ones * total_rank, ones * -1])
         elif computation == "avg":
-            target_y = np.concatenate([ones * sum(range(1, total_rank + 1)),
-                                       ones * -sum(range(1, total_rank + 1))])
+            target_y = np.concatenate(
+                [ones * sum(range(1, total_rank + 1)), ones * -sum(range(1, total_rank + 1))]
+            )
             target_y = target_y / total_rank
         else:
             assert False, "Invalid computation"
@@ -443,7 +455,7 @@ def test_broadcast():
     model = TestModel(root=0)
     _, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
-    x = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x = mnm.array(x, device=device)
     print(f"{rank} - X: ", x)
     model.to(device=device)

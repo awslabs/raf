@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name, protected-access, no-self-use
+# pylint: disable=invalid-name, protected-access, no-self-use
 """Scope with certain backends enabled"""
 from __future__ import absolute_import
 

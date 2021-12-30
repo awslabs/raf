@@ -7,10 +7,7 @@ from mnm.testing import get_testable_devices
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_vm(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
@@ -35,7 +32,7 @@ def test_vm(device, shape):
 
     executable = executor.executable
     assert len(executable.globals) == 1
-    assert executable.globals[0] == 'main'
+    assert executable.globals[0] == "main"
 
     # execute 2nd time to reuse the op env
     m_z = executor.vm.run(m_x).numpy()
@@ -43,10 +40,7 @@ def test_vm(device, shape):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_cuda_graph(shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
@@ -77,14 +71,11 @@ def test_cuda_graph(shape):
 
     executable = executor.executable
     assert len(executable.globals) == 1
-    assert executable.globals[0] == 'main'
+    assert executable.globals[0] == "main"
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_tuple(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
@@ -112,20 +103,18 @@ def test_tuple(device, shape):
 
     executable = executor.executable
     assert len(executable.globals) == 1
-    assert executable.globals[0] == 'main'
+    assert executable.globals[0] == "main"
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_memory(device, shape):
     # pylint: disable=protected-access
-    dtype = 'float32'
+    dtype = "float32"
     x = mnm.array(np.random.randn(*shape).astype(dtype), device=device)
     t_1 = mnm.array(np.ones(shape, dtype=dtype) * 3)
     t_2 = mnm.array(np.ones(shape, dtype=dtype) * 4)
+
     class Model(mnm.Model):
         def build(self):
             pass
@@ -145,10 +134,7 @@ def test_memory(device, shape):
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_simple_fusion(device, shape):
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     def check_e2e(model, device, args):
@@ -196,6 +182,7 @@ def test_split_fusion(device):
     model = Model()
     m_x, _ = randn(shape, device=device)
     check_e2e(model, device, [m_x])
+
 
 def test_reshape():
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use

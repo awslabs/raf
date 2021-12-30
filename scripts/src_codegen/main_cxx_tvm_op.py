@@ -57,8 +57,7 @@ def gen_reg(mnm_op_name, relay_op_name):
     REG = """
 MNM_TVM_OP("{MNM_OP_NAME}", "{RELAY_OP_NAME}");
 """.strip()
-    return REG.format(MNM_OP_NAME=mnm_op_name,
-                      RELAY_OP_NAME=relay_op_name)
+    return REG.format(MNM_OP_NAME=mnm_op_name, RELAY_OP_NAME=relay_op_name)
 
 
 def main(path="./src/op/regs/tvm_op_regs.cc"):

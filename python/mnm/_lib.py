@@ -36,15 +36,32 @@ from tvm.ir.transform import PassContext
 from tvm.runtime.ndarray import array as tvm_ndarray
 from tvm.relay import op as _op
 from tvm.relay.op import OpPattern, register_compute, register_pattern, strategy
-from tvm.relay.op.op import register_injective_schedule, register_broadcast_schedule, \
-    register_reduce_schedule
+from tvm.relay.op.op import (
+    register_injective_schedule,
+    register_broadcast_schedule,
+    register_reduce_schedule,
+)
 from tvm.relay.op import op as _reg
-from tvm.relay.dataflow_pattern import DFPattern, is_var, is_expr, is_op, is_tuple, \
-    is_tuple_get_item, is_if, is_let, wildcard, has_type, has_dtype, has_shape, has_attr, \
-    dominates
+from tvm.relay.dataflow_pattern import (
+    DFPattern,
+    is_var,
+    is_expr,
+    is_op,
+    is_tuple,
+    is_tuple_get_item,
+    is_if,
+    is_let,
+    wildcard,
+    has_type,
+    has_dtype,
+    has_shape,
+    has_attr,
+    dominates,
+)
 from tvm.contrib import random
 
 # pylint: enable=unused-import
+
 
 def find_lib_path(name=None, search_path=None):
     """Find dynamic library files.
@@ -68,17 +85,13 @@ def find_lib_path(name=None, search_path=None):
 
     dll_path = []
 
-    if os.environ.get('MNM_LIBRARY_PATH', None):
-        dll_path.append(os.environ['MNM_LIBRARY_PATH'])
+    if os.environ.get("MNM_LIBRARY_PATH", None):
+        dll_path.append(os.environ["MNM_LIBRARY_PATH"])
 
-    if sys.platform.startswith('linux') and os.environ.get(
-            'LD_LIBRARY_PATH', None):
-        dll_path.extend(
-            [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
-    elif sys.platform.startswith('darwin') and os.environ.get(
-            'DYLD_LIBRARY_PATH', None):
-        dll_path.extend(
-            [p.strip() for p in os.environ['DYLD_LIBRARY_PATH'].split(":")])
+    if sys.platform.startswith("linux") and os.environ.get("LD_LIBRARY_PATH", None):
+        dll_path.extend([p.strip() for p in os.environ["LD_LIBRARY_PATH"].split(":")])
+    elif sys.platform.startswith("darwin") and os.environ.get("DYLD_LIBRARY_PATH", None):
+        dll_path.extend([p.strip() for p in os.environ["DYLD_LIBRARY_PATH"].split(":")])
 
     # Package data directory when pip installed
     dll_path.append(package_dir)
@@ -104,21 +117,21 @@ def find_lib_path(name=None, search_path=None):
             name = [name]
         lib_dll_path = [os.path.join(p, n) for n in name for p in dll_path]
     else:
-        if sys.platform.startswith('win32'):
-            lib_dll_path = [os.path.join(p, 'libmnm.dll') for p in dll_path] +\
-                           [os.path.join(p, 'mnm.dll') for p in dll_path]
-        elif sys.platform.startswith('darwin'):
-            lib_dll_path = [os.path.join(p, 'libmnm.dylib') for p in dll_path]
+        if sys.platform.startswith("win32"):
+            lib_dll_path = [os.path.join(p, "libmnm.dll") for p in dll_path] + [
+                os.path.join(p, "mnm.dll") for p in dll_path
+            ]
+        elif sys.platform.startswith("darwin"):
+            lib_dll_path = [os.path.join(p, "libmnm.dylib") for p in dll_path]
         else:
-            lib_dll_path = [os.path.join(p, 'libmnm.so') for p in dll_path]
+            lib_dll_path = [os.path.join(p, "libmnm.so") for p in dll_path]
 
-    lib_found = [
-        p for p in lib_dll_path if os.path.exists(p) and os.path.isfile(p)
-    ]
+    lib_found = [p for p in lib_dll_path if os.path.exists(p) and os.path.isfile(p)]
 
     if not lib_found:
-        message = ('Cannot find the files.\n' + 'List of candidates:\n' +
-                   str('\n'.join(lib_dll_path)))
+        message = (
+            "Cannot find the files.\n" + "List of candidates:\n" + str("\n".join(lib_dll_path))
+        )
         raise RuntimeError(message)
 
     return lib_found
@@ -141,7 +154,7 @@ def _get_apis():
         func = _get_global_func(name)
         func.is_global = True
         func.__name__ = name
-        func.__doc__ = ("TVM PackedFunc %s. " % name)
+        func.__doc__ = "TVM PackedFunc %s. " % name
         apis[name] = func
 
     return apis
@@ -153,7 +166,7 @@ def _init_api_prefix(module_name, prefix):
     for name, func in _APIS.items():
         if not name.startswith(prefix):
             continue
-        name = name[len(prefix) + 1:]
+        name = name[len(prefix) + 1 :]
 
         if "." in name:
             continue
@@ -163,8 +176,8 @@ def _init_api_prefix(module_name, prefix):
 _LIB, _LIB_NAME = _load_lib()
 _APIS = _get_apis()
 
+
 class TensorContainer(ctypes.Structure):
     # pylint: disable=too-few-public-methods
     """Python interface for NDArray::Container in tvm"""
-    _fields_ = [('dltensor', _DLTensor),
-                ("manager_ctx", ctypes.c_void_p)]
+    _fields_ = [("dltensor", _DLTensor), ("manager_ctx", ctypes.c_void_p)]

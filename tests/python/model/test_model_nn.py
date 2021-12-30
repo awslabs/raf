@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import check, randn_torch # pylint: disable=E0401
+from mnm.testing import check, randn_torch  # pylint: disable=E0401
 
 
 # TODO(@were): allow affine=False
@@ -15,12 +15,14 @@ def test_model_batch_norm(num_features, affine, is_train):
     device = "cuda"
     m_x, t_x = randn_torch([8, num_features, 5, 6], device=device)
     m_m, _ = randn_torch([num_features], requires_grad=True, device=device)
-    m_v, _ = randn_torch([num_features], mean=1e-5, requires_grad=True, positive=True,
-                         device=device)
+    m_v, _ = randn_torch(
+        [num_features], mean=1e-5, requires_grad=True, positive=True, device=device
+    )
     if affine:
         m_w, _ = randn_torch([num_features], requires_grad=True, device=device)
-        m_b, _ = randn_torch([num_features], mean=1e-5, requires_grad=True, positive=True,
-                             device=device)
+        m_b, _ = randn_torch(
+            [num_features], mean=1e-5, requires_grad=True, positive=True, device=device
+        )
     model = mnm.model.nn.BatchNorm(num_features=num_features, affine=affine)
     model.running_mean = m_m
     model.running_var = m_v
@@ -65,14 +67,16 @@ def test_model_conv2d(stride, dilation, padding, bias):
     if bias:
         m_b, t_b = randn_torch([16], std=0.001, requires_grad=True, device=device)
         t_b = t_b.unsqueeze(1).unsqueeze(2)
-    model = mnm.model.Conv2d(in_channels=3,
-                             out_channels=16,
-                             kernel_size=3,
-                             stride=stride,
-                             padding=padding,
-                             dilation=dilation,
-                             groups=1,
-                             bias=bias)
+    model = mnm.model.Conv2d(
+        in_channels=3,
+        out_channels=16,
+        kernel_size=3,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+        groups=1,
+        bias=bias,
+    )
     model.w = m_w
     if bias:
         model.b = m_b
@@ -102,9 +106,7 @@ def test_model_dense(batch_size, in_features, out_features, bias):
     if bias:
         t_model.bias.data[:] = torch.from_numpy(m_b.numpy())
     # pylint: enable=no-member
-    model = mnm.model.Linear(in_features=in_features,
-                             out_features=out_features,
-                             bias=bias)
+    model = mnm.model.Linear(in_features=in_features, out_features=out_features, bias=bias)
     model.w = m_w
     if bias:
         model.b = m_b
@@ -131,24 +133,23 @@ def _fake_test_relu():
 
 
 def _fake_test_conv2d():
-    model = mnm.model.Conv2d(in_channels=3,
-                             out_channels=16,
-                             kernel_size=3,
-                             stride=1,
-                             padding=1,
-                             dilation=1,
-                             groups=1,
-                             bias=False)
+    model = mnm.model.Conv2d(
+        in_channels=3,
+        out_channels=16,
+        kernel_size=3,
+        stride=1,
+        padding=1,
+        dilation=1,
+        groups=1,
+        bias=False,
+    )
     m_x, _ = randn_torch([8, 3, 32, 32], device="cpu", requires_grad=True)
     model(m_x)
 
 
 def _fake_test_batch_norm():
     num_features = 128
-    model = mnm.model.BatchNorm(num_features=num_features,
-                                eps=1e-5,
-                                momentum=0.1,
-                                affine=True)
+    model = mnm.model.BatchNorm(num_features=num_features, eps=1e-5, momentum=0.1, affine=True)
     m_x, _ = randn_torch([5, num_features, 3, 3], device="cpu", requires_grad=True)
     model(m_x)
 

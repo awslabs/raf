@@ -11,7 +11,8 @@ from mnm._core.ndarray import ndarray, get_symbol_handle
 
 
 def has_grad(dx):
-    """ Check if dx is NoGradValue """
+    """Check if dx is NoGradValue"""
+
     def simplify(x):
         if isinstance(x, relay.Var):
             return simplify(LookupBoundExpr(x))
@@ -26,6 +27,7 @@ def has_grad(dx):
         dx = ExtractValue(dx)
         return not isinstance(dx, NoGradValue)
     return True
+
 
 def split_ndarray_with_padding(inp, n_part):
     """

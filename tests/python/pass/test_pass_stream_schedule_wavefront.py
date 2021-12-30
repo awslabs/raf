@@ -22,10 +22,10 @@ class ANFBuilder:
         return self.operators[op_name]
 
     def make_tuple(self, fields: List[tvm.relay.Expr]) -> tvm.relay.Var:
-        return self.scope_builder.let('', tvm.relay.Tuple(fields))
+        return self.scope_builder.let("", tvm.relay.Tuple(fields))
 
     def call(self, op_name: str, args: List[tvm.relay.Expr]) -> tvm.relay.Var:
-        return self.scope_builder.let('', tvm.relay.Call(self.get_operator(op_name), args))
+        return self.scope_builder.let("", tvm.relay.Call(self.get_operator(op_name), args))
 
     def set_stream(self, device_id: int, stream_id: int) -> tvm.relay.Var:
         return self.call("set_stream", [mnm.ir.const(device_id), mnm.ir.const(stream_id)])
@@ -65,21 +65,22 @@ def test_wavefront_schedule_three_simple_branches():
 
         @mnm.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)   # op 1
+            p_0 = mnm.atan(x)  # op 1
 
-            p_1 = mnm.atan(x)   # op 2
+            p_1 = mnm.atan(x)  # op 2
             p_1 = mnm.atan(p_1)  # op 3
 
-            p_2 = mnm.atan(x)   # op 4
+            p_2 = mnm.atan(x)  # op 4
             p_2 = mnm.atan(p_2)  # op 5
             p_2 = mnm.atan(p_2)  # op 6
             return mnm.concatenate([p_0, p_1, p_2])  # op 7
+
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": 'wavefront'}):
+    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": "wavefront"}):
         mod = MNMSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
 
     def expected():
@@ -121,7 +122,7 @@ def test_wavefront_schedule_three_simple_branches():
     # We verify the correctness of the pass by structural_equal here, but it does not check the
     # equivalence of meta's extended constant. See issue #700.
     print(mnm.ir.AsText(mod))
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -142,24 +143,25 @@ def test_wavefront_schedule_branch_in_branch():
 
         @mnm.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)    # op 1
+            p_0 = mnm.atan(x)  # op 1
 
-            p_1 = mnm.atan(x)    # op 2
-            p_1 = mnm.atan(p_1)   # op 3
+            p_1 = mnm.atan(x)  # op 2
+            p_1 = mnm.atan(p_1)  # op 3
             p_1a = mnm.atan(p_1)  # op 4
             p_1b = mnm.atan(p_1)  # op 5
-            p_1 = mnm.concatenate([p_1a, p_1b])    # op 6
+            p_1 = mnm.concatenate([p_1a, p_1b])  # op 6
 
-            p_2 = mnm.atan(x)    # op 7
-            p_2 = mnm.atan(p_2)   # op 8
-            p_2 = mnm.atan(p_2)   # op 9
-            return mnm.concatenate([p_0, p_1, p_2])    # op 10
+            p_2 = mnm.atan(x)  # op 7
+            p_2 = mnm.atan(p_2)  # op 8
+            p_2 = mnm.atan(p_2)  # op 9
+            return mnm.concatenate([p_0, p_1, p_2])  # op 10
+
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": 'wavefront'}):
+    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": "wavefront"}):
         mod = MNMSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
 
     def expected():
@@ -212,7 +214,7 @@ def test_wavefront_schedule_branch_in_branch():
         x_19 = sb.concatenate(x_18, 0)
         return tvm.relay.Function([x], sb.ret(x_19))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -236,22 +238,23 @@ def test_wavefront_schedule_stacked_blocks():
 
         @mnm.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)    # op 1
-            p_1 = mnm.atan(x)    # op 2
-            p_2 = mnm.atan(x)    # op 3
+            p_0 = mnm.atan(x)  # op 1
+            p_1 = mnm.atan(x)  # op 2
+            p_2 = mnm.atan(x)  # op 3
             p_2 = mnm.atan(p_2)  # op 4
-            x = mnm.concatenate([p_0, p_1, p_2])    # op 5
-            p_0 = mnm.atan(x)    # op 6
-            p_1 = mnm.atan(x)    # op 7
-            p_2 = mnm.atan(x)    # op 8
+            x = mnm.concatenate([p_0, p_1, p_2])  # op 5
+            p_0 = mnm.atan(x)  # op 6
+            p_1 = mnm.atan(x)  # op 7
+            p_2 = mnm.atan(x)  # op 8
             p_2 = mnm.atan(p_2)  # op 9
-            return mnm.concatenate([p_0, p_1, p_2])    # op 10
+            return mnm.concatenate([p_0, p_1, p_2])  # op 10
+
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": 'wavefront'}):
+    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": "wavefront"}):
         mod = MNMSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
 
     def expected():
@@ -310,8 +313,8 @@ def test_wavefront_schedule_stacked_blocks():
         x_22 = sb.concatenate(x_21, 0)
         return tvm.relay.Function([x], sb.ret(x_22))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main([__file__])

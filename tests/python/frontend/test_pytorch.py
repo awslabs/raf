@@ -11,20 +11,13 @@ from mnm._op import sym
 from mnm.frontend import from_pytorch
 from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model
 
+
 class TorchLeNet(nn.Module):
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchLeNet, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=6,
-                               kernel_size=5,
-                               padding=2,
-                               bias=False)
-        self.conv2 = nn.Conv2d(in_channels=6,
-                               out_channels=16,
-                               kernel_size=5,
-                               bias=False)
-        self.linear1 = nn.Linear(((input_shape // 2 - 4) // 2) ** 2 * 16,
-                                 120)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, bias=False)
+        self.linear1 = nn.Linear(((input_shape // 2 - 4) // 2) ** 2 * 16, 120)
         self.linear2 = nn.Linear(120, 84)
         self.linear3 = nn.Linear(84, num_classes)
 
@@ -119,9 +112,7 @@ def test_lenet(shape_dict, mode):
 class TorchConvBn(nn.Module):
     def __init__(self):
         super(TorchConvBn, self).__init__()
-        self.conv = nn.Conv2d(in_channels=3,
-                              out_channels=6,
-                              kernel_size=5)
+        self.conv = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5)
         self.bn = torch.nn.BatchNorm2d(6)
 
     def forward(self, x):
@@ -193,8 +184,9 @@ def test_conv_bn(shape_dict, mode, fuse):
         m_model.to(device=device)
 
         m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
-        m_loss = run_vm_model(
-            m_trainer, device, [m_dy, m_x, m_ytrue], disable_fusion=not fuse)[0][0]
+        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue], disable_fusion=not fuse)[0][
+            0
+        ]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()

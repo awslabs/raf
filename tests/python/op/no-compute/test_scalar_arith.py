@@ -16,7 +16,7 @@ TYPE_TABLE = {
     (float, bool): float,
     (bool, int): int,
     (bool, float): float,
-    (bool, bool): int
+    (bool, bool): int,
 }
 
 

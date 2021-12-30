@@ -12,7 +12,6 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("learning_rate", [0.01, 0.05])
 @pytest.mark.parametrize("mu", [-1.24, 0.81])
 def test_sgd(shape, dtype, learning_rate, mu):
-
     class Sgd(mnm.Model):
         def build(self, learning_rate, mu):
             self._learning_rate = learning_rate
@@ -27,17 +26,21 @@ def test_sgd(shape, dtype, learning_rate, mu):
     m_x, _ = randn(shape, dtype=dtype)
     m_dx, _ = randn(shape, dtype=dtype)
     m_v, _ = randn(shape, dtype=dtype)
-    m_func = model._internal(m_x, m_dx, m_v).mod['main']
+    m_func = model._internal(m_x, m_dx, m_v).mod["main"]
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=dtype)
     expected_type = FuncType([x_ty, x_ty, x_ty], TupleType([x_ty, x_ty]))
     check_type(m_func, expected_type)
 
+
 @pytest.mark.parametrize("dtype", ["float32"])
-@pytest.mark.parametrize("shape", [
-    [1, 1],
-    [3, 7],
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [1, 1],
+        [3, 7],
+    ],
+)
 def test_nll_loss(shape, dtype):
     class TestModel(mnm.Model):
         def build(self):
@@ -54,28 +57,31 @@ def test_nll_loss(shape, dtype):
     m_pred.requires_grad = True
     m_true.requires_grad = True
     ty_pred = TensorType((n, c), dtype=dtype)
-    ty_true = TensorType((n, ), dtype="int64")
+    ty_true = TensorType((n,), dtype="int64")
     fwd_ty = TensorType((1,), dtype=dtype)
     # forward
     record = model._internal(m_true, m_pred)
     m_mod = record.mod
     m_mod = InferType()(m_mod)
     desired_type = FuncType([ty_true, ty_pred], fwd_ty)
-    check_type(m_mod['main'], desired_type)
+    check_type(m_mod["main"], desired_type)
     # backward
     m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_true, ty_pred]))
     desired_type = FuncType([ty_true, ty_pred], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_mod['main'], desired_type)
+    check_type(m_mod["main"], desired_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32"])
-@pytest.mark.parametrize("shape", [
-    [3],
-    [1, 3],
-    [2, 3, 7],
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3],
+        [1, 3],
+        [2, 3, 7],
+    ],
+)
 @pytest.mark.parametrize("loss_type", ["cross_entropy", "smooth_l1_loss"])
 def test_other_losses(loss_type, shape, dtype):
     class TestModel(mnm.Model):
@@ -102,13 +108,14 @@ def test_other_losses(loss_type, shape, dtype):
     m_mod = record.mod
     m_mod = InferType()(m_mod)
     desired_type = FuncType([ty_pred, ty_pred], fwd_ty)
-    check_type(m_mod['main'], desired_type)
+    check_type(m_mod["main"], desired_type)
     # backward
     m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([fwd_ty], TupleType([ty_pred, ty_pred]))
     desired_type = FuncType([ty_pred, ty_pred], TupleType([fwd_ty, bwd_ty]))
-    check_type(m_mod['main'], desired_type)
+    check_type(m_mod["main"], desired_type)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

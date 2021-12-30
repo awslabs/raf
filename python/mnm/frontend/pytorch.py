@@ -10,6 +10,7 @@ from .._lib import relay
 from .._ffi.pass_ import FromRelay, validate_relay_param_name
 from ..frontend.model import FrameworkModel
 
+
 def trace_model(model, input_type, input_shape):
     """Trace PyTorch model.
 
@@ -29,10 +30,12 @@ def trace_model(model, input_type, input_shape):
     model: ScriptedModel
         PyTorch scripted model.
     """
+
     class TraceWrapper(torch.nn.Module):
         """A wrapper to process the forward output. This is required for object detection
         models which have multiple outputs.
         """
+
         # pylint: disable=missing-function-docstring, abstract-method ,arguments-differ
 
         # Enforce the output order of object detection models.
@@ -57,7 +60,7 @@ def trace_model(model, input_type, input_shape):
 
     if input_type.startswith("float"):
         if input_type.startswith("float16"):
-            device = "cuda" # Some float16 ops are only available on GPU.
+            device = "cuda"  # Some float16 ops are only available on GPU.
         input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)
     else:
         assert input_type.startswith("int64"), "Unsupported input type %s" % input_type
@@ -95,13 +98,14 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
     """
     if len(shape_dict) > 1:
         raise RuntimeError(
-            "Do not support PyTorch model with multiple inputs (%d) yet" % len(shape_dict))
+            "Do not support PyTorch model with multiple inputs (%d) yet" % len(shape_dict)
+        )
     input_name, (input_shape, input_type) = list(shape_dict.items())[0]
     if model_file is not None and hash_file is not None:
-        model_hash = hashlib.md5(str(model).encode(encoding='UTF-8')).hexdigest()
+        model_hash = hashlib.md5(str(model).encode(encoding="UTF-8")).hexdigest()
         if os.path.exists(model_file) and os.path.exists(hash_file):
             try:
-                with open(hash_file, 'r') as hashf:
+                with open(hash_file, "r") as hashf:
                     mhash = hashf.read()
                     if mhash != model_hash:
                         raise RuntimeError("Hash check failed")

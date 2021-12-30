@@ -7,15 +7,17 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 
 # pylint: disable=attribute-defined-outside-init
-@pytest.mark.parametrize("shape", [
-    (1, 4, 6),
-    (3, 5, 6),
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (1, 4, 6),
+        (3, 5, 6),
+    ],
+)
 @pytest.mark.parametrize("axis", [0, 1, -1])
 @pytest.mark.parametrize("is_ascend", [True, False])
 @pytest.mark.parametrize("dtype", ["int32", "int64", "float32"])
 def test_argsort(shape, axis, is_ascend, dtype):
-
     class Argsort(mnm.Model):
         def build(self, axis, is_ascend, dtype):
             self._axis = axis
@@ -24,13 +26,12 @@ def test_argsort(shape, axis, is_ascend, dtype):
 
         @mnm.model.trace
         def forward(self, data):
-            return mnm.argsort(data, axis=self._axis,
-                               is_ascend=self._is_ascend, dtype=self._dtype)
+            return mnm.argsort(data, axis=self._axis, is_ascend=self._is_ascend, dtype=self._dtype)
 
     model = Argsort(axis, is_ascend, dtype)
     # forward
     m_x, _ = randn(shape)
-    m_func = model._internal(m_x).mod['main']
+    m_func = model._internal(m_x).mod["main"]
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=m_x.dtype)
     y_ty = TensorType(shape, dtype=dtype)
@@ -39,15 +40,17 @@ def test_argsort(shape, axis, is_ascend, dtype):
 
 
 # pylint: disable=attribute-defined-outside-init, too-many-locals
-@pytest.mark.parametrize("shape", [
-    (1, 4, 6),
-    (3, 5, 6),
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (1, 4, 6),
+        (3, 5, 6),
+    ],
+)
 @pytest.mark.parametrize("axis", [0, 1, -1])
 @pytest.mark.parametrize("is_ascend", [True, False])
 @pytest.mark.parametrize("dtype", ["int32", "int64", "float32"])
 def test_sort(shape, axis, is_ascend, dtype):
-
     class Sort(mnm.Model):
         def build(self, axis, is_ascend):
             self._axis = axis
@@ -55,8 +58,7 @@ def test_sort(shape, axis, is_ascend, dtype):
 
         @mnm.model.trace
         def forward(self, data):
-            return mnm.sort(data, axis=self._axis,
-                            is_ascend=self._is_ascend)
+            return mnm.sort(data, axis=self._axis, is_ascend=self._is_ascend)
 
     model = Sort(axis, is_ascend)
     # forward
@@ -68,13 +70,13 @@ def test_sort(shape, axis, is_ascend, dtype):
     x_ty = TensorType(shape, dtype=m_x.dtype)
     y_ty = TensorType(shape, dtype=m_x.dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_mod['main'], expected_type)
+    check_type(m_mod["main"], expected_type)
     # backward
     m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
     bwd_ty = FuncType([y_ty], x_ty)
     desired_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_mod['main'], desired_type)
+    check_type(m_mod["main"], desired_type)
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
@@ -101,14 +103,19 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
 
         @mnm.model.trace
         def forward(self, data):
-            return mnm.topk(data, k=self._k, axis=self._axis, ret_type=self._ret_type,
-                            is_ascend=self._is_ascend, dtype=self._dtype)
+            return mnm.topk(
+                data,
+                k=self._k,
+                axis=self._axis,
+                ret_type=self._ret_type,
+                is_ascend=self._is_ascend,
+                dtype=self._dtype,
+            )
 
     m_x, n_x = randn(shape, device=device, dtype=dtype)
     m_x = mnm.array(n_x, dtype=dtype, device=device)
     m_x.requires_grad = True
-    model = Topk(k=k, axis=axis, ret_type=ret_type,
-                 is_ascend=is_ascend, dtype=dtype)
+    model = Topk(k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
     record = model._internal(m_x)
     m_mod = record.mod
     m_mod = InferType()(m_mod)
@@ -126,14 +133,15 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
     else:
         y_ty = TupleType([y_a_ty, y_b_ty])
         expected_type = FuncType([x_ty], y_ty)
-    check_type(m_mod['main'], expected_type)
+    check_type(m_mod["main"], expected_type)
     # check backward
     if ret_type == "both":
         m_mod = AutoDiff(record.requires_grads)(m_mod)
         m_mod = InferType()(m_mod)
         bwd_ty = FuncType([y_ty], x_ty)
         desired_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-        check_type(m_mod['main'], desired_type)
+        check_type(m_mod["main"], desired_type)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -16,8 +16,14 @@ def optimize(mod, device, fusion=False):
     return opt_mod
 
 
-def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expected_out_tensor,
-                     expected_free_memory, expected_size):
+def verify_alloc_num(
+    func,
+    expected_alloc_storage,
+    expected_alloc_tensor,
+    expected_out_tensor,
+    expected_free_memory,
+    expected_size,
+):
     # A helper function to verify alloc_storage and alloc_tensor numbers and total sizes
     alloc_storage = 0
     alloc_tensor = 0
@@ -36,8 +42,9 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
             free_memory += 1
 
     assert (
-        alloc_storage == expected_alloc_storage and alloc_tensor == expected_alloc_tensor and
-        out_tensor == expected_out_tensor
+        alloc_storage == expected_alloc_storage
+        and alloc_tensor == expected_alloc_tensor
+        and out_tensor == expected_out_tensor
     ), "#storage %d, #tensor %d, #out %d" % (alloc_storage, alloc_tensor, out_tensor)
     assert free_memory == expected_free_memory, "#free %d" % free_memory
     assert total_size == expected_size, "Total size %d, but expected %d" % (

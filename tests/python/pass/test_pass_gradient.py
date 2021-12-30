@@ -124,9 +124,7 @@ def test_no_grad2(device):
         ret = relay.var("ret")
         inner_let2 = relay.Let(
             x2,
-            relay.Tuple(
-                [x1, mnm._ffi.ir._make.Constant(mnm._core.value.NoGradValue())]
-            ),
+            relay.Tuple([x1, mnm._ffi.ir._make.Constant(mnm._core.value.NoGradValue())]),
             x2,
         )
         inner_let1 = relay.Let(x1, mnm.ir.op.matmul(dy, y), inner_let2)
@@ -190,9 +188,7 @@ def test_basic(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -226,9 +222,7 @@ def test_concatenate(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((2, 100), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -265,9 +259,7 @@ def test_split(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 102), device=device)
     m_dy, _ = randn((1, 34), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -300,9 +292,7 @@ def test_split_unused_output(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 50), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -336,9 +326,7 @@ def test_fanout(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -372,9 +360,7 @@ def test_split_concat(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -411,9 +397,7 @@ def test_split_with_fanout(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_dy)
 
 
@@ -453,9 +437,7 @@ def test_concatenate_fanout(device):
     m_x, _ = randn((1, 100), device=device)
     m_y, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 200), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, m_y, [m_dy, m_dy])
 
 
@@ -488,9 +470,7 @@ def test_tuple_outputs(device):
     # Run via VM to ensure that the generated mod can be executed
     m_x, _ = randn((1, 100), device=device)
     m_dy, _ = randn((1, 100), device=device)
-    vm_executor = utils.get_vm_executor(
-        mod, "cpu", pass_seq=vm_passes
-    )
+    vm_executor = utils.get_vm_executor(mod, "cpu", pass_seq=vm_passes)
     vm_executor(m_x, [m_dy, m_dy])
 
 
@@ -828,7 +808,7 @@ def test_simplify_sum():
         x = relay.var("x", shape=(10, 100), dtype="float32")
         y = relay.var("y", shape=(1, 100), dtype="float32")
         out = relay.add(x, y)
-        mod['main'] = relay.Function([x, y], out)
+        mod["main"] = relay.Function([x, y], out)
         return mod
 
     tvm_mod = get_mod()
@@ -838,11 +818,8 @@ def test_simplify_sum():
 
     # Ensure that there is only one sum operator
     sum_ops = list()
-    find_sum = lambda x: sum_ops.append(
-        isinstance(x, tvm.relay.Call)
-        and x.op.name == "mnm.op.sum"
-    )
-    tvm.relay.analysis.post_order_visit(mod['main'], find_sum)
+    find_sum = lambda x: sum_ops.append(isinstance(x, tvm.relay.Call) and x.op.name == "mnm.op.sum")
+    tvm.relay.analysis.post_order_visit(mod["main"], find_sum)
     assert len(list(filter(lambda x: x, sum_ops))) == 1
 
 

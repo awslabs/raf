@@ -8,6 +8,7 @@ from mnm.model import BatchNorm, Conv2d, Linear, Sequential
 from .common import check, randn_torch, t2m_param, one_hot_torch
 from .utils import get_param, set_param
 
+
 def _param_map(m_model, t_model):
     """maps from m_model param name to t_model param value, without params for shortcut"""
     assert m_model.num_blocks == t_model.num_blocks
@@ -27,7 +28,7 @@ def _param_map(m_model, t_model):
         "bn3.b",
         "bn3.w",
         "bn3.running_mean",
-        "bn3.running_var"
+        "bn3.running_var",
     ]
     t_bottleneck_names = [
         "conv1.weight",
@@ -44,7 +45,7 @@ def _param_map(m_model, t_model):
         "bn3.bias",
         "bn3.weight",
         "bn3.running_mean",
-        "bn3.running_var"
+        "bn3.running_var",
     ]
     m_downsample_names = ["w", "b", "running_mean", "running_var"]
     t_downsample_names = ["weight", "bias", "running_mean", "running_var"]
@@ -53,19 +54,19 @@ def _param_map(m_model, t_model):
     for i, num in enumerate(num_blocks):
         for j in range(num):
             m_names, t_names = m_bottleneck_names, t_bottleneck_names
-            prefix = f'layer{i + 1}.seq_{j}'
-            cur = [prefix + '.' + name for name in m_names]
+            prefix = f"layer{i + 1}.seq_{j}"
+            cur = [prefix + "." + name for name in m_names]
             names.extend(cur)
-            layer = getattr(t_model, f'layer{i + 1}')
+            layer = getattr(t_model, f"layer{i + 1}")
             layer = layer[j]
             cur = [get_param(layer, name) for name in t_names]
             values.extend(cur)
         m_names, t_names = m_downsample_names, t_downsample_names
-        prefix = f'layer{i + 1}.seq_0.downsample'
+        prefix = f"layer{i + 1}.seq_0.downsample"
         names.append(prefix + ".seq_0.w")
-        cur = [prefix + '.seq_1.' + name for name in m_names]
+        cur = [prefix + ".seq_1." + name for name in m_names]
         names.extend(cur)
-        layer = getattr(t_model, f'layer{i + 1}')
+        layer = getattr(t_model, f"layer{i + 1}")
         layer = layer[0]
         downsample0 = getattr(layer, "downsample")[0]
         downsample1 = getattr(layer, "downsample")[1]
@@ -121,42 +122,41 @@ class TorchBottleneck(nn.Module):
     # pylint: disable=missing-function-docstring, abstract-method
     """torch BottleNeck"""
     expansion = 4
+
     def __init__(self, inplanes, planes, stride):
         super(TorchBottleneck, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes,
-                               planes,
-                               kernel_size=1,
-                               stride=1,
-                               bias=False)
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes,
-                               planes,
-                               kernel_size=3,
-                               stride=stride,
-                               bias=False,
-                               padding=1,
-                               groups=1,
-                               dilation=1)
+        self.conv2 = nn.Conv2d(
+            planes,
+            planes,
+            kernel_size=3,
+            stride=stride,
+            bias=False,
+            padding=1,
+            groups=1,
+            dilation=1,
+        )
         self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes,
-                               planes * self.expansion,
-                               kernel_size=1,
-                               stride=1,
-                               bias=False)
+        self.conv3 = nn.Conv2d(planes, planes * self.expansion, kernel_size=1, stride=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         if stride != 1 or inplanes != planes * TorchBottleneck.expansion:
             self.downsample = nn.Sequential(
-                nn.Conv2d(inplanes,
-                          planes * TorchBottleneck.expansion,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False),
-                nn.BatchNorm2d(planes * TorchBottleneck.expansion))
+                nn.Conv2d(
+                    inplanes,
+                    planes * TorchBottleneck.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(planes * TorchBottleneck.expansion),
+            )
         else:
             self.downsample = None
 
     def forward(self, x):  # pylint: disable=arguments-differ
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+
         identity = x
         out = self.conv1(x)
         out = self.bn1(out)
@@ -175,18 +175,21 @@ class TorchBottleneck(nn.Module):
 
 class TorchResNet50(nn.Module):
     """torch ResNet50"""
+
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=abstract-method, missing-function-docstring
     def __init__(self, num_blocks, num_classes=1000):
         super(TorchResNet50, self).__init__()
         self.num_blocks = num_blocks
         self.inplanes = 64
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=self.inplanes,
-                               kernel_size=7,
-                               stride=2,
-                               padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels=3,
+            out_channels=self.inplanes,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.layer1 = self._make_layer(64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(128, num_blocks[1], stride=2)
@@ -196,9 +199,7 @@ class TorchResNet50(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight,
-                                        mode='fan_out',
-                                        nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -212,6 +213,7 @@ class TorchResNet50(nn.Module):
 
     def forward_infer(self, x):  # pylint: disable=arguments-differ
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+
         x = self.conv1(x)
         x = self.bn1(x)
         x = F.relu(x)
@@ -227,6 +229,7 @@ class TorchResNet50(nn.Module):
 
     def forward(self, x, y_true):
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+
         y = self.forward_infer(x)
         y_pred = F.log_softmax(y, dim=-1)
         loss = F.nll_loss(y_pred, y_true)
@@ -235,39 +238,37 @@ class TorchResNet50(nn.Module):
 
 class MNMBottleneck(mnm.Model):
     """meta BottleNeck"""
+
     # pylint: disable=missing-function-docstring
     expansion = 4
 
     def build(self, inplanes, planes, stride):
-        self.conv1 = Conv2d(inplanes,
-                            planes,
-                            kernel_size=1,
-                            stride=1,
-                            bias=False)
+        self.conv1 = Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False)
         self.bn1 = BatchNorm(planes)
-        self.conv2 = Conv2d(planes,
-                            planes,
-                            kernel_size=3,
-                            stride=stride,
-                            bias=False,
-                            padding=1,
-                            groups=1,
-                            dilation=1)
+        self.conv2 = Conv2d(
+            planes,
+            planes,
+            kernel_size=3,
+            stride=stride,
+            bias=False,
+            padding=1,
+            groups=1,
+            dilation=1,
+        )
         self.bn2 = BatchNorm(planes)
-        self.conv3 = Conv2d(planes,
-                            planes * self.expansion,
-                            kernel_size=1,
-                            stride=1,
-                            bias=False)
+        self.conv3 = Conv2d(planes, planes * self.expansion, kernel_size=1, stride=1, bias=False)
         self.bn3 = BatchNorm(planes * self.expansion)
         if stride != 1 or inplanes != planes * MNMBottleneck.expansion:
             self.downsample = Sequential(
-                Conv2d(inplanes,
-                       planes * MNMBottleneck.expansion,
-                       kernel_size=1,
-                       stride=stride,
-                       bias=False),
-                BatchNorm(planes * MNMBottleneck.expansion))
+                Conv2d(
+                    inplanes,
+                    planes * MNMBottleneck.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                BatchNorm(planes * MNMBottleneck.expansion),
+            )
         else:
             self.downsample = None
 
@@ -290,17 +291,13 @@ class MNMBottleneck(mnm.Model):
 
 class MNMResNet50(mnm.Model):
     """meta ResNet50"""
+
     # pylint: disable=missing-function-docstring, too-many-instance-attributes
 
     def build(self, num_blocks, num_classes=1000):
         self.num_blocks = num_blocks
         self.inplanes = 64
-        self.conv1 = Conv2d(3,
-                            self.inplanes,
-                            kernel_size=7,
-                            stride=2,
-                            padding=3,
-                            bias=False)
+        self.conv1 = Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = BatchNorm(self.inplanes)
         self.layer1 = self._make_layer(64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(128, num_blocks[1], stride=2)
@@ -314,7 +311,6 @@ class MNMResNet50(mnm.Model):
         for _ in range(1, blocks):
             layers.append(MNMBottleneck(self.inplanes, planes, stride=1))
         return Sequential(*layers)
-
 
     @mnm.model.trace
     def forward_infer(self, x):

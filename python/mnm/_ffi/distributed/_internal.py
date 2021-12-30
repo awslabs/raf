@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/distributed/common/dist_context.cc
 AutoDPProfilingEndIter = _APIS.get("mnm.distributed.AutoDPProfilingEndIter", None)
 # Defined in ./src/distributed/common/dist_context.cc

@@ -207,6 +207,7 @@ OPS = [
     Op(name="shape_as_tensor", schema_name="unary"),
 ]
 
+
 def by_name():
     result = dict()
     schemas = def_schema.by_name()

@@ -1,4 +1,3 @@
-
 # pylint: disable=protected-access, attribute-defined-outside-init, too-many-locals
 # pylint: disable=too-many-statements, no-self-use, too-many-arguments
 import numpy as np
@@ -14,6 +13,7 @@ from mnm.testing import run_infer_type, randn
 
 import tvm
 from tvm import relay
+
 
 def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks):
     """Verify the result of rematerialization pass.
@@ -46,14 +46,16 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
             ir_mod = mnm._ffi.pass_.InplaceUpdate()(ir_mod)
             try:
                 ir_mod = mnm._ffi.pass_.Rematerialization()(ir_mod)
-            except Exception as err: # pylint: disable=broad-except
+            except Exception as err:  # pylint: disable=broad-except
                 assert expected_ir is None, "Unexpected rematerialization failure: %s" % str(err)
                 return
 
     if expected_ir is not None:
         expected_ir = run_infer_type(expected_ir)
-        assert tvm.ir.structural_equal(expected_ir, ir_mod["main"]), \
-            "\nExpected:\n%s\nGot\n%s" % (mnm.ir.AsText(expected_ir), mnm.ir.AsText(ir_mod["main"]))
+        assert tvm.ir.structural_equal(expected_ir, ir_mod["main"]), "\nExpected:\n%s\nGot\n%s" % (
+            mnm.ir.AsText(expected_ir),
+            mnm.ir.AsText(ir_mod["main"]),
+        )
 
     # Use CPU to avoid workspace memory.
     device = "cpu"
@@ -61,9 +63,11 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
     for with_remat, expected_peak in zip([False, True], expected_peaks):
         InitPool(Device(device), "page_unit_pool")
         budget = budget_in_mbs if with_remat else 10000
-        with tvm.transform.PassContext(opt_level=3,
-                                       disabled_pass=["FuseTVM", "FuseDialect"],
-                                       config={"mnm.memory_budget": int(budget * 1048576)}):
+        with tvm.transform.PassContext(
+            opt_level=3,
+            disabled_pass=["FuseTVM", "FuseDialect"],
+            config={"mnm.memory_budget": int(budget * 1048576)},
+        ):
             mnm.utils.memory_profiler.reset()
             mnm.utils.memory_profiler.start()
             VMExecutor(mod, device).make_executor()(*args)
@@ -71,13 +75,14 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
 
         ret_map = mnm.utils.memory_profiler.get_max_memory_info(mnm.Device(device))
         peak_memory = ret_map["max_allocated"].value + param_size
-        assert abs(expected_peak - peak_memory) < 0.1, \
+        assert abs(expected_peak - peak_memory) < 0.1, (
             "Incorrect peak memory with remat=%s" % with_remat
+        )
 
 
 @pytest.mark.parametrize("budget_type", ["low", "remat", "high"])
 def test_simple(budget_type):
-    shape = (16, 16, 64, 64) # 4 MBs
+    shape = (16, 16, 64, 64)  # 4 MBs
     data_size, weight_size = np.prod(shape), np.prod((16, 16, 3, 3))
 
     # Determine the budget.
@@ -123,18 +128,34 @@ def test_simple(budget_type):
             return None
 
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
-        conv2d_call = lambda x, w: relay.Call(conv2d_op,
-                                              [x, w, mnm.ir.const([1]), mnm.ir.const([1]),
-                                               mnm.ir.const([1]), mnm.ir.const(1),
-                                               mnm.ir.const("NCHW"), mnm.ir.const("OIHW"),
-                                               mnm.ir.const("NCHW")])
+        conv2d_call = lambda x, w: relay.Call(
+            conv2d_op,
+            [
+                x,
+                w,
+                mnm.ir.const([1]),
+                mnm.ir.const([1]),
+                mnm.ir.const([1]),
+                mnm.ir.const(1),
+                mnm.ir.const("NCHW"),
+                mnm.ir.const("OIHW"),
+                mnm.ir.const("NCHW"),
+            ],
+        )
         conv2d_dx_op = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
-        conv2d_dx_call = lambda x, y, dy: relay.Call(conv2d_dx_op, [x, y, dy,
-                                                                    mnm.ir.const([16, 16, 64, 64]),
-                                                                    mnm.ir.const([1]),
-                                                                    mnm.ir.const([1]),
-                                                                    mnm.ir.const([1]),
-                                                                    mnm.ir.const(1)])
+        conv2d_dx_call = lambda x, y, dy: relay.Call(
+            conv2d_dx_op,
+            [
+                x,
+                y,
+                dy,
+                mnm.ir.const([16, 16, 64, 64]),
+                mnm.ir.const([1]),
+                mnm.ir.const([1]),
+                mnm.ir.const([1]),
+                mnm.ir.const(1),
+            ],
+        )
         softmax_op = mnm._ffi.op.GetOp("mnm.op.softmax")
         softmax_dx_op = mnm._ffi.op.GetOp("mnm.op.softmax_dx")
         minus_one = mnm.ir.const(-1)
@@ -176,20 +197,30 @@ def test_simple(budget_type):
 
     verify_remat(model, [m_x], budget, expected(), (before_peak, budget))
 
+
 def test_closure():
     device = "cpu"
-    shape = (16, 16, 64, 64) # 4 MBs
+    shape = (16, 16, 64, 64)  # 4 MBs
 
     def get_mod(with_remat=False):
         """This function includes a closure and has the peak memory 28.0088 MBs. We set
         the budget to 28 to enforce remating the tensor generated by the closure.
         """
         conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
-        conv2d_call = lambda x, w: relay.Call(conv2d_op,
-                                              [x, w, mnm.ir.const([1]), mnm.ir.const([1]),
-                                               mnm.ir.const([1]), mnm.ir.const(1),
-                                               mnm.ir.const("NCHW"), mnm.ir.const("OIHW"),
-                                               mnm.ir.const("NCHW")])
+        conv2d_call = lambda x, w: relay.Call(
+            conv2d_op,
+            [
+                x,
+                w,
+                mnm.ir.const([1]),
+                mnm.ir.const([1]),
+                mnm.ir.const([1]),
+                mnm.ir.const(1),
+                mnm.ir.const("NCHW"),
+                mnm.ir.const("OIHW"),
+                mnm.ir.const("NCHW"),
+            ],
+        )
         conv2d_dx_op = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
         softmax_op = mnm._ffi.op.GetOp("mnm.op.softmax")
         softmax_dx_op = mnm._ffi.op.GetOp("mnm.op.softmax_dx")
@@ -215,16 +246,28 @@ def test_closure():
 
         a_4 = sb.let("a4", relay.Call(closure, [a_3]))
         a_5 = sb.let("a5", relay.Call(softmax_dx_op, [a_2, a_3, a_4]))
-        z_0 = sb.let("z0", relay.Call(softmax_dx_op, [a_2, a_3, a_5])) # Can only kill a_4.
+        z_0 = sb.let("z0", relay.Call(softmax_dx_op, [a_2, a_3, a_5]))  # Can only kill a_4.
         if with_remat:
             x_0 = sb.let("x_0", relay.Call(closure, [a_3]))
         else:
             x_0 = a_4
         a_6 = sb.let("a6", relay.Call(softmax_dx_op, [a_3, x_0, z_0]))
-        a_7 = sb.let("a7", relay.Call(conv2d_dx_op, [data, weight, a_6,
-                                                     mnm.ir.const([16, 16, 64, 64]),
-                                                     mnm.ir.const([1]), mnm.ir.const([1]),
-                                                     mnm.ir.const([1]), mnm.ir.const(1)]))
+        a_7 = sb.let(
+            "a7",
+            relay.Call(
+                conv2d_dx_op,
+                [
+                    data,
+                    weight,
+                    a_6,
+                    mnm.ir.const([16, 16, 64, 64]),
+                    mnm.ir.const([1]),
+                    mnm.ir.const([1]),
+                    mnm.ir.const([1]),
+                    mnm.ir.const(1),
+                ],
+            ),
+        )
         # Since the memory consumption at a7 is within the budget, we do not force free
         # x_0 at a7, so we can reuse the rematerialized x_0 here.
         if with_remat:
@@ -240,8 +283,9 @@ def test_closure():
     m_x, _ = randn(shape, device=device)
     m_w, _ = randn((16, 16, 3, 3), device=device)
     m_dy, _ = randn(shape, device=device)
-    verify_remat(get_mod(), [m_x, m_w, m_dy], 28, get_mod(with_remat=True)["main"],
-                 (28.0088, 24.0088))
+    verify_remat(
+        get_mod(), [m_x, m_w, m_dy], 28, get_mod(with_remat=True)["main"], (28.0088, 24.0088)
+    )
 
 
 @pytest.mark.parametrize("share", [False, True])
@@ -261,7 +305,7 @@ def test_inplace(share):
             return a_6
 
     device = "cpu"
-    shape = (512, 512) # 1 MB
+    shape = (512, 512)  # 1 MB
     model = Model()
     m_a, _ = randn(shape, device=device)
     m_b, _ = randn(shape, device=device)
@@ -285,7 +329,7 @@ def test_inplace(share):
         a_3 = sb.let("a3", relay.Call(add_op, [a_2, p_2, null, null]))
         a_4 = sb.let("a4", relay.Call(softmax_op, [a_3, minus_one]))
         a_5 = sb.let("a4", relay.Call(softmax_op, [a_4, minus_one]))
-        x_0 = sb.let("x0", relay.Call(add_op, [p_0, p_0, null, null])) # remat
+        x_0 = sb.let("x0", relay.Call(add_op, [p_0, p_0, null, null]))  # remat
         a_6 = sb.let("a4", relay.Call(add_op, [a_5, x_0, a_5, null]))
         sb.ret(a_6)
         return relay.Function([p_0, p_1, p_2], sb.get())
@@ -315,7 +359,7 @@ def test_tuple():
             return a_8
 
     device = "cpu"
-    shape = (512, 512) # 1 MB.
+    shape = (512, 512)  # 1 MB.
     stats_shape = [shape[1]]
     model = Model(stats_shape)
     m_x, _ = randn(shape, device=device, requires_grad=True)
@@ -348,7 +392,7 @@ def test_tuple():
         a_6 = sb.let("a6", relay.Call(add_op, [a_4, a_5, null, null]))
         x_1 = sb.let("x_1", relay.TupleGetItem(a_2, 0))
         a_7 = sb.let("a7", relay.Call(add_op, [x_1, a_6, null, null]))
-        x_2 = sb.let("x_2", relay.Call(relu_op, [p_0])) # remat
+        x_2 = sb.let("x_2", relay.Call(relu_op, [p_0]))  # remat
         a_8 = sb.let("a8", relay.Call(add_op, [x_2, a_7, null, null]))
         a_9 = sb.let("a9", relay.TupleGetItem(a_2, 1), may_share=bn_m)
         a_10 = sb.let("a10", relay.TupleGetItem(a_2, 2), may_share=bn_v)
@@ -366,7 +410,7 @@ def test_tuple():
 
 def test_reshape():
     device = "cpu"
-    shape = (512, 512) # 1 MB.
+    shape = (512, 512)  # 1 MB.
 
     add_op = mnm._ffi.op.GetOp("mnm.op.add")
     relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
@@ -416,9 +460,10 @@ def test_reshape():
     args = [m_x]
     verify_remat(get_mod(), args, 4, expected(), (5, 4))
 
+
 def test_not_call():
     device = "cpu"
-    shape = (512, 512) # 1 MB.
+    shape = (512, 512)  # 1 MB.
     stats_shape = [shape[1]]
 
     class Model(mnm.Model):

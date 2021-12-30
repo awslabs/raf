@@ -20,7 +20,7 @@ from .utils import get_param, set_param
 
 
 class TorchInception3(nn.Module):
-    """ adopted from torchvision.models.inception """
+    """adopted from torchvision.models.inception"""
 
     def __init__(self, num_classes=1000) -> None:
         super(TorchInception3, self).__init__()
@@ -49,7 +49,7 @@ class TorchInception3(nn.Module):
         # initialize parameters
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.Linear)):
-                stddev = m.stddev if hasattr(m, 'stddev') else 0.1
+                stddev = m.stddev if hasattr(m, "stddev") else 0.1
                 x = stats.truncnorm(-2, 2, scale=stddev)
                 values = torch.as_tensor(x.rvs(m.weight.numel()), dtype=m.weight.dtype)
                 values = values.view(m.weight.size())
@@ -87,7 +87,6 @@ class TorchInception3(nn.Module):
 
 
 class TorchInceptionA(nn.Module):
-
     def __init__(self, in_channels, pool_features):
         super(TorchInceptionA, self).__init__()
         self.branch1x1 = TorchBasicConv2d(in_channels, 64, kernel_size=1)
@@ -120,7 +119,6 @@ class TorchInceptionA(nn.Module):
 
 
 class TorchInceptionB(nn.Module):
-
     def __init__(self, in_channels):
         super(TorchInceptionB, self).__init__()
         self.branch3x3 = TorchBasicConv2d(in_channels, 384, kernel_size=3, stride=2)
@@ -144,7 +142,6 @@ class TorchInceptionB(nn.Module):
 
 
 class TorchInceptionC(nn.Module):
-
     def __init__(self, in_channels, channels_7x7):
         super(TorchInceptionC, self).__init__()
         self.branch1x1 = TorchBasicConv2d(in_channels, 192, kernel_size=1)
@@ -184,7 +181,6 @@ class TorchInceptionC(nn.Module):
 
 
 class TorchInceptionD(nn.Module):
-
     def __init__(self, in_channels):
         super(TorchInceptionD, self).__init__()
         self.branch3x3_1 = TorchBasicConv2d(in_channels, 192, kernel_size=1)
@@ -211,7 +207,6 @@ class TorchInceptionD(nn.Module):
 
 
 class TorchInceptionE(nn.Module):
-
     def __init__(self, in_channels):
         super(TorchInceptionE, self).__init__()
         self.branch1x1 = TorchBasicConv2d(in_channels, 320, kernel_size=1)
@@ -320,7 +315,6 @@ class TorchInceptionABCDE(nn.Module):
         return x
 
 
-
 class TorchBasicConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, **kwargs):
         super(TorchBasicConv2d, self).__init__()
@@ -352,7 +346,7 @@ class TorchInceptionBlock(nn.Module):
 
 
 class MNMInception3(mnm.Model):
-    """ adopted from torchvision.models.inception """
+    """adopted from torchvision.models.inception"""
 
     def build(self, num_classes=1000) -> None:
         self.Conv2d_1a_3x3 = MNMBasicConv2d(3, 32, kernel_size=3, stride=2)
@@ -411,7 +405,6 @@ class MNMInception3(mnm.Model):
 
 
 class MNMInceptionA(mnm.Model):
-
     def build(self, in_channels, pool_features):
         self.branch1x1 = MNMBasicConv2d(in_channels, 64, kernel_size=1)
 
@@ -443,7 +436,6 @@ class MNMInceptionA(mnm.Model):
 
 
 class MNMInceptionB(mnm.Model):
-
     def build(self, in_channels):
         self.branch3x3 = MNMBasicConv2d(in_channels, 384, kernel_size=3, stride=2)
 
@@ -466,7 +458,6 @@ class MNMInceptionB(mnm.Model):
 
 
 class MNMInceptionC(mnm.Model):
-
     def build(self, in_channels, channels_7x7):
         self.branch1x1 = MNMBasicConv2d(in_channels, 192, kernel_size=1)
 
@@ -506,7 +497,6 @@ class MNMInceptionC(mnm.Model):
 
 
 class MNMInceptionD(mnm.Model):
-
     def build(self, in_channels):
         self.branch3x3_1 = MNMBasicConv2d(in_channels, 192, kernel_size=1)
         self.branch3x3_2 = MNMBasicConv2d(192, 320, kernel_size=3, stride=2)
@@ -533,7 +523,6 @@ class MNMInceptionD(mnm.Model):
 
 
 class MNMInceptionE(mnm.Model):
-
     def build(self, in_channels):
         self.branch1x1 = MNMBasicConv2d(in_channels, 320, kernel_size=1)
 
@@ -674,8 +663,16 @@ class MNMInceptionBlock(mnm.Model):
 
 
 class MNMMaxPool2d(mnm.Model):
-    def build(self, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True,
-              layout="NCHW"):
+    def build(
+        self,
+        kernel,
+        stride,
+        padding=0,
+        dilation=1,
+        ceil_mode=False,
+        include_pad=True,
+        layout="NCHW",
+    ):
         self.kernel = kernel
         self.stride = stride
         self.padding = padding
@@ -686,13 +683,29 @@ class MNMMaxPool2d(mnm.Model):
 
     @mnm.model.trace
     def forward(self, x):
-        return mnm.max_pool2d(x, self.kernel, self.stride, self.padding, self.dilation,
-                              self.ceil_mode, self.include_pad, self.layout)
+        return mnm.max_pool2d(
+            x,
+            self.kernel,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.ceil_mode,
+            self.include_pad,
+            self.layout,
+        )
 
 
 class MNMAvgPool2d(mnm.Model):
-    def build(self, kernel, stride, padding=0, dilation=1, ceil_mode=False, include_pad=True,
-              layout="NCHW"):
+    def build(
+        self,
+        kernel,
+        stride,
+        padding=0,
+        dilation=1,
+        ceil_mode=False,
+        include_pad=True,
+        layout="NCHW",
+    ):
         self.kernel = kernel
         self.stride = stride
         self.padding = padding
@@ -703,8 +716,16 @@ class MNMAvgPool2d(mnm.Model):
 
     @mnm.model.trace
     def forward(self, x):
-        return mnm.avg_pool2d(x, self.kernel, self.stride, self.padding, self.dilation,
-                              self.ceil_mode, self.include_pad, self.layout)
+        return mnm.avg_pool2d(
+            x,
+            self.kernel,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.ceil_mode,
+            self.include_pad,
+            self.layout,
+        )
 
 
 class MNMAdaptiveAvgPool2d(mnm.Model):
@@ -728,7 +749,7 @@ class MNMReLU(mnm.Model):
 
 
 def torch_named_params(t_module: nn.Module):
-    """ return an OrderDict that maps the parameter and buffer name to torch tensor"""
+    """return an OrderDict that maps the parameter and buffer name to torch tensor"""
     named_params = list(t_module.named_parameters())
     named_buffers = list(t_module.named_buffers())
     return OrderedDict(itertools.chain(named_params, named_buffers))
@@ -736,7 +757,7 @@ def torch_named_params(t_module: nn.Module):
 
 
 def mnm_named_params(m_model: mnm.Model):
-    """ return an OrderDict that maps the parameter name to mnm tensor"""
+    """return an OrderDict that maps the parameter name to mnm tensor"""
     return m_model.state()
 
 
@@ -745,15 +766,12 @@ def param_map(m_model, t_model):
     t_param_dict = torch_named_params(t_model)
     m_param_dict = mnm_named_params(m_model)
     result = OrderedDict()
-    tail_rename_map = {
-        '.b': '.bias',
-        '.w': '.weight'
-    }
+    tail_rename_map = {".b": ".bias", ".w": ".weight"}
     for m_name in m_param_dict:
         assert isinstance(m_name, str)
-        m_name_tail = m_name[m_name.rfind('.'):]
+        m_name_tail = m_name[m_name.rfind(".") :]
         if m_name_tail in tail_rename_map:
-            t_name = m_name[:m_name.rfind('.')] + tail_rename_map[m_name_tail]
+            t_name = m_name[: m_name.rfind(".")] + tail_rename_map[m_name_tail]
         else:
             t_name = m_name
         assert t_name in t_param_dict
@@ -761,7 +779,7 @@ def param_map(m_model, t_model):
         del t_param_dict[t_name]
     # make sure the remaining parameters in torch module is num_batches_tracked in nn.BatchNorm2d.
     for t_name in t_param_dict:
-        assert t_name.endswith('.num_batches_tracked')
+        assert t_name.endswith(".num_batches_tracked")
     return result
 
 
@@ -782,7 +800,7 @@ def init(m_model, t_model, device="cpu"):
         set_param(m_model, m_name, t2m_param(t_w, device=device))
 
 
-def get_input(batch_size=1, device='cuda'):
+def get_input(batch_size=1, device="cuda"):
     """get inception input"""
     m_x, t_x = randn_torch([batch_size, 3, 299, 299], device=device, requires_grad=True)
     m_y, t_y = one_hot_torch(batch_size, num_classes=1000, device=device)
@@ -799,51 +817,67 @@ def get_model():
     return m_model, t_model
 
 
-def get_block_and_input(block_name: str, device='cpu', batch_size=1):
+def get_block_and_input(block_name: str, device="cpu", batch_size=1):
     """
     Get the inception block and its input.
     The input equals to the input of its first occurrence in inception v3.
     """
     block_name = block_name.upper()
     m_block_args = {
-        'A': {'block_class': MNMInceptionA, 'in_channels': 192, 'out_channels': 256,
-              'pool_features': 32},
-        'B': {'block_class': MNMInceptionB, 'in_channels': 288, 'out_channels': 768},
-        'C': {'block_class': MNMInceptionC, 'in_channels': 768, 'out_channels': 768,
-              'channels_7x7': 128},
-        'D': {'block_class': MNMInceptionD, 'in_channels': 768, 'out_channels': 1280},
-        'E': {'block_class': MNMInceptionE, 'in_channels': 1280, 'out_channels': 2048},
-        'AB': {'block_class': MNMInceptionAB, 'out_channels': 768},
-        'CD': {'block_class': MNMInceptionCD, 'out_channels': 1280},
-        'DE': {'block_class': MNMInceptionDE, 'out_channels': 2048},
-        'CDE': {'block_class': MNMInceptionCDE, 'out_channels': 2048},
-        'ABCDE': {'block_class': MNMInceptionABCDE, 'out_channels': 2048},
+        "A": {
+            "block_class": MNMInceptionA,
+            "in_channels": 192,
+            "out_channels": 256,
+            "pool_features": 32,
+        },
+        "B": {"block_class": MNMInceptionB, "in_channels": 288, "out_channels": 768},
+        "C": {
+            "block_class": MNMInceptionC,
+            "in_channels": 768,
+            "out_channels": 768,
+            "channels_7x7": 128,
+        },
+        "D": {"block_class": MNMInceptionD, "in_channels": 768, "out_channels": 1280},
+        "E": {"block_class": MNMInceptionE, "in_channels": 1280, "out_channels": 2048},
+        "AB": {"block_class": MNMInceptionAB, "out_channels": 768},
+        "CD": {"block_class": MNMInceptionCD, "out_channels": 1280},
+        "DE": {"block_class": MNMInceptionDE, "out_channels": 2048},
+        "CDE": {"block_class": MNMInceptionCDE, "out_channels": 2048},
+        "ABCDE": {"block_class": MNMInceptionABCDE, "out_channels": 2048},
     }
     t_block_args = {
-        'A': {'block_class': TorchInceptionA, 'in_channels': 192, 'out_channels': 256,
-              'pool_features': 32},
-        'B': {'block_class': TorchInceptionB, 'in_channels': 288, 'out_channels': 768},
-        'C': {'block_class': TorchInceptionC, 'in_channels': 768, 'out_channels': 768,
-              'channels_7x7': 128},
-        'D': {'block_class': TorchInceptionD, 'in_channels': 768, 'out_channels': 1280},
-        'E': {'block_class': TorchInceptionE, 'in_channels': 1280, 'out_channels': 2048},
-        'AB': {'block_class': TorchInceptionAB, 'out_channels': 768},
-        'CD': {'block_class': TorchInceptionCD, 'out_channels': 1280},
-        'DE': {'block_class': TorchInceptionDE, 'out_channels': 2048},
-        'CDE': {'block_class': TorchInceptionCDE, 'out_channels': 2048},
-        'ABCDE': {'block_class': TorchInceptionABCDE, 'out_channels': 2048},
+        "A": {
+            "block_class": TorchInceptionA,
+            "in_channels": 192,
+            "out_channels": 256,
+            "pool_features": 32,
+        },
+        "B": {"block_class": TorchInceptionB, "in_channels": 288, "out_channels": 768},
+        "C": {
+            "block_class": TorchInceptionC,
+            "in_channels": 768,
+            "out_channels": 768,
+            "channels_7x7": 128,
+        },
+        "D": {"block_class": TorchInceptionD, "in_channels": 768, "out_channels": 1280},
+        "E": {"block_class": TorchInceptionE, "in_channels": 1280, "out_channels": 2048},
+        "AB": {"block_class": TorchInceptionAB, "out_channels": 768},
+        "CD": {"block_class": TorchInceptionCD, "out_channels": 1280},
+        "DE": {"block_class": TorchInceptionDE, "out_channels": 2048},
+        "CDE": {"block_class": TorchInceptionCDE, "out_channels": 2048},
+        "ABCDE": {"block_class": TorchInceptionABCDE, "out_channels": 2048},
     }
     input_shapes = {
-        'A': (batch_size, 192, 35, 35),
-        'B': (batch_size, 288, 35, 35),
-        'C': (batch_size, 768, 17, 17),
-        'D': (batch_size, 768, 17, 17),
-        'E': (batch_size, 1280, 8, 8),
-        'AB': (batch_size, 192, 35, 35),
-        'DE': (batch_size, 768, 17, 17),
-        'CD': (batch_size, 768, 17, 17),
-        'CDE': (batch_size, 768, 17, 17),
-        'ABCDE': (batch_size, 192, 35, 35),
+        "A": (batch_size, 192, 35, 35),
+        "B": (batch_size, 288, 35, 35),
+        "C": (batch_size, 768, 17, 17),
+        "D": (batch_size, 768, 17, 17),
+        "E": (batch_size, 1280, 8, 8),
+        "AB": (batch_size, 192, 35, 35),
+        "DE": (batch_size, 768, 17, 17),
+        "CD": (batch_size, 768, 17, 17),
+        "CDE": (batch_size, 768, 17, 17),
+        "ABCDE": (batch_size, 192, 35, 35),
     }
     m_block = MNMInceptionBlock(**m_block_args[block_name])
     t_block = TorchInceptionBlock(**t_block_args[block_name])

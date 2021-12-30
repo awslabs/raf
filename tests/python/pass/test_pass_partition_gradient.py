@@ -12,6 +12,7 @@ from mnm.model import BatchNorm, Conv2d, Linear
 from mnm.optim.optim import with_autodiff
 from mnm.testing import compile_vm_model, randn, one_hot_torch
 
+
 def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
     record = ad_model._internal(*args)
     mod = record.mod
@@ -80,11 +81,7 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
 def test_basic(mock_get_context, opt_level, batch):
     class Model(mnm.Model):
         def build(self, input_shape=28, num_classes=10):
-            self.conv1 = Conv2d(in_channels=3,
-                                out_channels=6,
-                                kernel_size=5,
-                                padding=2,
-                                bias=False)
+            self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
             self.bn1 = BatchNorm(6)
             self.linear1 = Linear((input_shape // 2) ** 2 * 6, num_classes)
 
@@ -105,12 +102,13 @@ def test_basic(mock_get_context, opt_level, batch):
             return out
 
     # Mock the context to apply AutoDataParallel in with_autodiff.
-    class MockContext():
+    class MockContext:
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = 1
             self.size = 4
             self.rank = 3
+
     mock_get_context.return_value = MockContext()
     if opt_level == 2 and mnm.build.with_nccl() is None:
         pytest.skip("NCCL is not supported")
@@ -127,6 +125,7 @@ def test_basic(mock_get_context, opt_level, batch):
     elif batch == 7:
         # The first axis of all gradients are non-dividable.
         verify_ir(opt_level, ad_model, [m_dy, m_x, m_ytrue], 4, 1, 9, 9)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

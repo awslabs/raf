@@ -6,11 +6,7 @@ import mnm
 from mnm.testing import run_vm_model, randn, get_testable_devices
 
 
-@pytest.mark.parametrize("shape", [
-    [5, 3],
-    [5, 3, 2],
-    [5, 2, 2, 2]
-])
+@pytest.mark.parametrize("shape", [[5, 3], [5, 3, 2], [5, 2, 2, 2]])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_size(shape, axis, device):
@@ -37,11 +33,7 @@ def test_size(shape, axis, device):
         assert (v_y.numpy() == n_y).all()
 
 
-@pytest.mark.parametrize("shape", [
-    [5, 3],
-    [5, 3, 2],
-    [5, 2, 2, 2]
-])
+@pytest.mark.parametrize("shape", [[5, 3], [5, 3, 2], [5, 2, 2, 2]])
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_numel(shape, device):
     class Model(mnm.model.Model):
@@ -67,11 +59,7 @@ def test_numel(shape, device):
         assert (v_y.numpy() == n_y).all()
 
 
-@pytest.mark.parametrize("shape", [
-    [5, 3],
-    [5, 3, 2],
-    [5, 2, 2, 2]
-])
+@pytest.mark.parametrize("shape", [[5, 3], [5, 3, 2], [5, 2, 2, 2]])
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_shape_as_tensor(shape, device):
     class Model(mnm.model.Model):

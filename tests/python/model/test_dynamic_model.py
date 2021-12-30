@@ -11,6 +11,7 @@ def test_dynamic_model(device, fuse):
     class Model(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x):
             y = mnm.argwhere(x)
@@ -35,6 +36,7 @@ def test_dynamic_reshape(device):
     class Model(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x):
             y = mnm.argwhere(x)

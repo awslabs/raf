@@ -1,4 +1,4 @@
-    # pylint: disable=invalid-name,protected-access,too-many-locals
+# pylint: disable=invalid-name,protected-access,too-many-locals
 import pytest
 import numpy as np
 import tvm
@@ -90,10 +90,12 @@ def test_resnet_infer(must_dominate):
 @pytest.mark.parametrize("must_dominate", [True, False])
 def test_resnet_train(must_dominate):
     x = np.random.randn(1, 3, 32, 32)
-    y = np.random.randn(1,)
+    y = np.random.randn(
+        1,
+    )
     dy = np.ones((), "float32")
     m_x = mnm.array(x, dtype="float32")
-    m_y = mnm.array(y, dtype='int64')
+    m_y = mnm.array(y, dtype="int64")
     m_dy = mnm.array(dy)
     model = resnet.MNMResNet50([3, 4, 6, 3])
     model.train_mode()

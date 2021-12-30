@@ -8,7 +8,6 @@ from mnm._lib import Object
 
 @register_node("mnm.distributed.DistContext")
 class DistContext(Object):
-
     def __init__(self):
         self.__init_handle_by_constructor__(_make.DistContext)
 

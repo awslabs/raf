@@ -6,6 +6,7 @@ from mnm._core import ndarray as _nd
 from mnm._core import value as _value
 from mnm._ffi.ir._make import Constant
 
+
 def to_value(value, dtype=None):
     """Convert to value.
 

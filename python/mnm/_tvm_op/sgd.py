@@ -6,6 +6,7 @@ from .._lib import _reg
 
 _topi = _tvm.topi  # pylint: disable=invalid-name,no-member
 
+
 @register_compute("mnm.op.tvm.sgd")
 def sgd_compute(attr, inputs, output_type):
     # pylint: disable=unused-argument, invalid-name

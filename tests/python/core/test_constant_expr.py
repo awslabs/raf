@@ -44,6 +44,7 @@ def test_constant_tensor():
     assert a.strides == tuple(x * a.itemsize for x in b.strides)
     assert str(a.dtype) == str(b.dtype)
 
+
 if __name__ == "__main__":
     test_constant_int()
     test_constant_float()

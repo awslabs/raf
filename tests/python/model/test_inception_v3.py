@@ -28,7 +28,7 @@ def test_block_vm_forward(block, device, fuse):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-def test_inception_v3_intpr_forward(device='cuda'):
+def test_inception_v3_intpr_forward(device="cuda"):
     m_model, t_model = inception.get_model()
     m_model.to(device=device)
     t_model.to(device)
@@ -44,7 +44,7 @@ def test_inception_v3_intpr_forward(device='cuda'):
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("fuse", [False, True])
 def test_vm_forward(fuse):
-    device = 'cuda'
+    device = "cuda"
     m_model, t_model = inception.get_model()
     m_model.to(device=device)
     t_model.to(device)
@@ -53,6 +53,7 @@ def test_vm_forward(fuse):
     t_loss = t_model(*t_in)
     check(m_loss, t_loss, atol=1e-3, rtol=1e-3)
     inception.check_params(m_model, t_model, atol=1e-3, rtol=1e-3)
+
 
 #
 # TODO(yaoyaoding): Add vm backward test after the accuracy issue is resolved.
@@ -64,33 +65,37 @@ def test_vm_forward(fuse):
 @pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("policy", ["wavefront", "asap"])
 def test_block_vm_multi_stream(block_name, policy, fuse):
-    device = 'cuda'
+    device = "cuda"
     (model, x, _), _ = inception.get_block_and_input(block_name=block_name, device=device)
     model.infer_mode()
 
-    y_1 = run_vm_model(model, device, [x], disable_fusion=not fuse,
-                       stream_schedule_policy='sequential')
-    y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse,
-                       stream_schedule_policy=policy)
+    y_1 = run_vm_model(
+        model, device, [x], disable_fusion=not fuse, stream_schedule_policy="sequential"
+    )
+    y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse, stream_schedule_policy=policy)
     check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.skipif(True, reason="Skip to save the CI time")
-@pytest.mark.skipif(mnm.build.with_cuda() and float(mnm.build.with_cuda()) <= 11.2,
-                    reason="Workspace may overlap for cuda <= 11.2.")
+@pytest.mark.skipif(
+    mnm.build.with_cuda() and float(mnm.build.with_cuda()) <= 11.2,
+    reason="Workspace may overlap for cuda <= 11.2.",
+)
 @pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("policy", ["wavefront", "asap", "ios"])
 def test_vm_multi_stream(policy, fuse):
-    device = 'cuda'
+    device = "cuda"
     model, _ = inception.get_model()
     model.to(device=device)
     model.infer_mode()
     (x, _), _ = inception.get_input(batch_size=1, device=device)
     for _ in range(2):
-        y_1 = run_vm_model(model, device, [x], disable_fusion=not fuse,
-                           stream_schedule_policy='sequential')
-        y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse,
-                           stream_schedule_policy=policy)
+        y_1 = run_vm_model(
+            model, device, [x], disable_fusion=not fuse, stream_schedule_policy="sequential"
+        )
+        y_2 = run_vm_model(
+            model, device, [x], disable_fusion=not fuse, stream_schedule_policy=policy
+        )
         check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 

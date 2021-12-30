@@ -9,20 +9,21 @@ from mnm.testing.schedule_verifier import verify_schedule
 def test_ios_schedule_simple_branches():
     class Model(mnm.Model):
         """
-          ┌───────x──────┐
-          │       │      │
-          ▼       ▼      ▼
-         atan    atan   atan
-          │       │      │
-          │       ▼      ▼
-          │      atan   atan
-          │       │      │
-          │       │      ▼
-          └───┐   │     atan
-              │   │   ┌───
-              ▼   ▼   ▼
-             concatenate
+         ┌───────x──────┐
+         │       │      │
+         ▼       ▼      ▼
+        atan    atan   atan
+         │       │      │
+         │       ▼      ▼
+         │      atan   atan
+         │       │      │
+         │       │      ▼
+         └───┐   │     atan
+             │   │   ┌───
+             ▼   ▼   ▼
+            concatenate
         """
+
         def build(self):
             pass
 
@@ -37,19 +38,24 @@ def test_ios_schedule_simple_branches():
             p_2 = mnm.atan(p_2)
             p_2 = mnm.atan(p_2)
             return mnm.concatenate([p_0, p_1, p_2])
+
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(config={"mnm.stream_schedule.ios.block_max_size": 20,
-                                    "mnm.stream_schedule.ios.max_stream_num": 8,
-                                    "mnm.stream_schedule.ios.max_stage_ops": 20,
-                                    "mnm.stream_schedule.ios.search_group_combination": False,
-                                    "mnm.stream_schedule.ios.warmup": 1,
-                                    "mnm.stream_schedule.ios.number": 6,
-                                    "mnm.stream_schedule.ios.repeat": 6,
-                                    "mnm.stream_schedule.ios.verbose": True}):
+    with mnm.ir.PassContext(
+        config={
+            "mnm.stream_schedule.ios.block_max_size": 20,
+            "mnm.stream_schedule.ios.max_stream_num": 8,
+            "mnm.stream_schedule.ios.max_stage_ops": 20,
+            "mnm.stream_schedule.ios.search_group_combination": False,
+            "mnm.stream_schedule.ios.warmup": 1,
+            "mnm.stream_schedule.ios.number": 6,
+            "mnm.stream_schedule.ios.repeat": 6,
+            "mnm.stream_schedule.ios.verbose": True,
+        }
+    ):
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
         mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
@@ -86,6 +92,7 @@ def test_ios_schedule_branch_in_branch():
              ▼   ▼   ▼
             concatenate
         """
+
         def build(self):
             pass
 
@@ -103,19 +110,24 @@ def test_ios_schedule_branch_in_branch():
             p_2 = mnm.atan(p_2)
             p_2 = mnm.atan(p_2)
             return mnm.concatenate([p_0, p_1, p_2])
+
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(config={"mnm.stream_schedule.ios.block_max_size": 20,
-                                    "mnm.stream_schedule.ios.max_stream_num": 8,
-                                    "mnm.stream_schedule.ios.max_stage_ops": 20,
-                                    "mnm.stream_schedule.ios.search_group_combination": False,
-                                    "mnm.stream_schedule.ios.warmup": 1,
-                                    "mnm.stream_schedule.ios.number": 6,
-                                    "mnm.stream_schedule.ios.repeat": 6,
-                                    "mnm.stream_schedule.ios.verbose": True}):
+    with mnm.ir.PassContext(
+        config={
+            "mnm.stream_schedule.ios.block_max_size": 20,
+            "mnm.stream_schedule.ios.max_stream_num": 8,
+            "mnm.stream_schedule.ios.max_stage_ops": 20,
+            "mnm.stream_schedule.ios.search_group_combination": False,
+            "mnm.stream_schedule.ios.warmup": 1,
+            "mnm.stream_schedule.ios.number": 6,
+            "mnm.stream_schedule.ios.repeat": 6,
+            "mnm.stream_schedule.ios.verbose": True,
+        }
+    ):
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
         mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
@@ -153,6 +165,7 @@ def test_ios_schedule_stacked_blocks():
          ▼    ▼    ▼
          concatenate
         """
+
         def build(self):
             pass
 
@@ -168,19 +181,24 @@ def test_ios_schedule_stacked_blocks():
             p_2 = mnm.atan(x)
             p_2 = mnm.atan(p_2)
             return mnm.concatenate([p_0, p_1, p_2])
+
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(config={"mnm.stream_schedule.ios.block_max_size": 20,
-                                    "mnm.stream_schedule.ios.max_stream_num": 8,
-                                    "mnm.stream_schedule.ios.max_stage_ops": 20,
-                                    "mnm.stream_schedule.ios.search_group_combination": False,
-                                    "mnm.stream_schedule.ios.warmup": 1,
-                                    "mnm.stream_schedule.ios.number": 6,
-                                    "mnm.stream_schedule.ios.repeat": 6,
-                                    "mnm.stream_schedule.ios.verbose": True}):
+    with mnm.ir.PassContext(
+        config={
+            "mnm.stream_schedule.ios.block_max_size": 20,
+            "mnm.stream_schedule.ios.max_stream_num": 8,
+            "mnm.stream_schedule.ios.max_stage_ops": 20,
+            "mnm.stream_schedule.ios.search_group_combination": False,
+            "mnm.stream_schedule.ios.warmup": 1,
+            "mnm.stream_schedule.ios.number": 6,
+            "mnm.stream_schedule.ios.repeat": 6,
+            "mnm.stream_schedule.ios.verbose": True,
+        }
+    ):
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
         mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
@@ -194,5 +212,5 @@ def test_ios_schedule_stacked_blocks():
     verify_schedule(mod)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-s'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-s"])

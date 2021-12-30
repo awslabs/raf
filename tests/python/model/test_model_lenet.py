@@ -8,24 +8,17 @@ import mnm
 from mnm.model import Conv2d, Linear
 from mnm.testing import check, one_hot_torch, randn_torch, t2m_param, run_vm_model
 
+
 class TorchLeNet(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchLeNet, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=6,
-                               kernel_size=5,
-                               padding=2,
-                               bias=False)
-        self.conv2 = nn.Conv2d(in_channels=6,
-                               out_channels=16,
-                               kernel_size=5,
-                               bias=False)
-        self.linear1 = nn.Linear(((input_shape // 2 - 4) // 2) ** 2 * 16,
-                                 120)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, bias=False)
+        self.linear1 = nn.Linear(((input_shape // 2 - 4) // 2) ** 2 * 16, 120)
         self.linear2 = nn.Linear(120, 84)
         self.linear3 = nn.Linear(84, num_classes)
 
-    def forward(self, x, y_true): # pylint: disable=arguments-differ
+    def forward(self, x, y_true):  # pylint: disable=arguments-differ
         y_pred = self.forward_infer(x)
         y_pred = F.log_softmax(y_pred, dim=-1)
         loss = F.nll_loss(y_pred, y_true)
@@ -33,31 +26,24 @@ class TorchLeNet(nn.Module):  # pylint: disable=abstract-method
 
     def forward_infer(self, x):
         out = self.conv1(x)
-        out = torch.sigmoid(out) # pylint: disable=no-member
+        out = torch.sigmoid(out)  # pylint: disable=no-member
         out = F.avg_pool2d(out, (2, 2), (2, 2))
         out = self.conv2(out)
-        out = torch.sigmoid(out) # pylint: disable=no-member
+        out = torch.sigmoid(out)  # pylint: disable=no-member
         out = F.avg_pool2d(out, (2, 2), (2, 2))
-        out = torch.flatten(out, 1) # pylint: disable=no-member
+        out = torch.flatten(out, 1)  # pylint: disable=no-member
         out = self.linear1(out)
         out = self.linear2(out)
         out = self.linear3(out)
         return out
 
+
 class MNMLeNet(mnm.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, input_shape=28, num_classes=10):
-        self.conv1 = Conv2d(in_channels=3,
-                            out_channels=6,
-                            kernel_size=5,
-                            padding=2,
-                            bias=False)
-        self.conv2 = Conv2d(in_channels=6,
-                            out_channels=16,
-                            kernel_size=5,
-                            bias=False)
-        self.linear1 = Linear(((input_shape // 2 - 4) // 2) ** 2 * 16,
-                              120)
+        self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
+        self.conv2 = Conv2d(in_channels=6, out_channels=16, kernel_size=5, bias=False)
+        self.linear1 = Linear(((input_shape // 2 - 4) // 2) ** 2 * 16, 120)
         self.linear2 = Linear(120, 84)
         self.linear3 = Linear(84, num_classes)
 
@@ -84,18 +70,22 @@ class MNMLeNet(mnm.Model):
         out = self.linear3(out)
         return out
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (224, 1000),
-    (32, 100),
-    (32, 10),
-    (28, 10),
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        (224, 1000),
+        (32, 100),
+        (32, 10),
+        (28, 10),
+    ],
+)
 def test_lenet(config):
     t_model = TorchLeNet(*config)
-    t_model.to(device='cuda')
+    t_model.to(device="cuda")
     m_model = MNMLeNet(*config)
-    m_model.to(device='cuda')
+    m_model.to(device="cuda")
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.conv2.w = t2m_param(t_model.conv2.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
@@ -132,15 +122,18 @@ def test_lenet(config):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (32, 100),
-    (28, 10),
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        (32, 100),
+        (28, 10),
+    ],
+)
 def test_lenet_amp(config):
     t_model = TorchLeNet(*config)
-    t_model.to(device='cuda')
+    t_model.to(device="cuda")
     m_model = MNMLeNet(*config)
-    m_model.to(device='cuda')
+    m_model.to(device="cuda")
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.conv2.w = t2m_param(t_model.conv2.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)

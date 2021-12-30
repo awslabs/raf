@@ -16,16 +16,17 @@ from .trace import trace, trace_mutate_attr  # pylint: disable=unused-import
 
 class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
     def build(  # pylint: disable=too-many-arguments
-            self,
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride=1,
-            padding=0,
-            dilation=1,
-            groups=1,
-            bias=True,
-            channel_mode="NCHW"):
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        bias=True,
+        channel_mode="NCHW",
+    ):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -34,17 +35,9 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
             kernel_size = (kernel_size, kernel_size)
         if channel_mode == "NCHW":
             self.w_shape = (out_channels, in_channels // groups, *kernel_size)
-            self.channel_configs = {
-                "layout": "NCHW",
-                "kernel_layout": "OIHW",
-                "out_layout": "NCHW"
-            }
+            self.channel_configs = {"layout": "NCHW", "kernel_layout": "OIHW", "out_layout": "NCHW"}
         elif channel_mode == "NHWC":
-            self.channel_configs = {
-                "layout": "NHWC",
-                "kernel_layout": "OHWI",
-                "out_layout": "NHWC"
-            }
+            self.channel_configs = {"layout": "NHWC", "kernel_layout": "OHWI", "out_layout": "NHWC"}
             self.w_shape = (out_channels, *kernel_size, in_channels // groups)
         else:
             raise ValueError("Unknown channel mode: " + channel_mode)
@@ -57,18 +50,25 @@ class Conv2d(Model):  # pylint: disable=too-many-instance-attributes
         if self.b_shape is not None:
             _, fan_in, _, _ = self.w_shape
             bound = 1.0 / math.sqrt(fan_in)
-            self.b = uniform(-bound, bound, self.b_shape, name="b",
-                             device=get_chained_attr(self, ["b", "device"], default="cpu"))
+            self.b = uniform(
+                -bound,
+                bound,
+                self.b_shape,
+                name="b",
+                device=get_chained_attr(self, ["b", "device"], default="cpu"),
+            )
 
     @trace
     def forward(self, x):
-        x = sym.conv2d(x,
-                       self.w,
-                       stride=self.stride,
-                       padding=self.padding,
-                       dilation=self.dilation,
-                       groups=self.groups,
-                       **self.channel_configs)
+        x = sym.conv2d(
+            x,
+            self.w,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            **self.channel_configs
+        )
         if self.b is not None:
             x = sym.bias_add(x, self.b)
         return x
@@ -87,41 +87,54 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
 
     def reset(self):
         n_f = self.num_features
-        self.running_mean = ndarray(np.zeros(n_f, dtype="float32"),
-                                    name="running_mean",
-                                    device=get_chained_attr(self, ["running_mean", "device"],
-                                                            "cpu"))
-        self.running_var = ndarray(np.ones(n_f, dtype="float32"),
-                                   name="running_var",
-                                   device=get_chained_attr(self, ["running_var", "device"], "cpu"))
+        self.running_mean = ndarray(
+            np.zeros(n_f, dtype="float32"),
+            name="running_mean",
+            device=get_chained_attr(self, ["running_mean", "device"], "cpu"),
+        )
+        self.running_var = ndarray(
+            np.ones(n_f, dtype="float32"),
+            name="running_var",
+            device=get_chained_attr(self, ["running_var", "device"], "cpu"),
+        )
         if self.affine:
-            self.w = ndarray(np.ones(n_f, dtype="float32"),
-                             name="w", device=get_chained_attr(self, ["w", "device"], "cpu"))
-            self.b = ndarray(np.zeros(n_f, dtype="float32"),
-                             name="b", device=get_chained_attr(self, ["b", "device"], "cpu"))
+            self.w = ndarray(
+                np.ones(n_f, dtype="float32"),
+                name="w",
+                device=get_chained_attr(self, ["w", "device"], "cpu"),
+            )
+            self.b = ndarray(
+                np.zeros(n_f, dtype="float32"),
+                name="b",
+                device=get_chained_attr(self, ["b", "device"], "cpu"),
+            )
 
     @trace
     def forward(self, x):
-        ret = sym.batch_norm_train(x=x,
-                                   w=self.w,
-                                   b=self.b,
-                                   running_mean=self.running_mean,
-                                   running_var=self.running_var,
-                                   eps=self.eps,
-                                   momentum=self.momentum)
+        ret = sym.batch_norm_train(
+            x=x,
+            w=self.w,
+            b=self.b,
+            running_mean=self.running_mean,
+            running_var=self.running_var,
+            eps=self.eps,
+            momentum=self.momentum,
+        )
         trace_mutate_attr(self, "running_mean", ret[1])
         trace_mutate_attr(self, "running_var", ret[2])
         return ret[0]
 
     @trace
     def forward_infer(self, x):
-        ret = sym.batch_norm_infer(x=x,
-                                   w=self.w,
-                                   b=self.b,
-                                   running_mean=self.running_mean,
-                                   running_var=self.running_var,
-                                   eps=self.eps,
-                                   momentum=self.momentum)
+        ret = sym.batch_norm_infer(
+            x=x,
+            w=self.w,
+            b=self.b,
+            running_mean=self.running_mean,
+            running_var=self.running_var,
+            eps=self.eps,
+            momentum=self.momentum,
+        )
         return ret
 
 
@@ -134,13 +147,21 @@ class Linear(Model):
         self.reset()
 
     def reset(self):
-        self.w = kaiming_uniform((self.out_features, self.in_features), name="w",
-                                 device=get_chained_attr(self, ["w", "device"], "cpu"))
+        self.w = kaiming_uniform(
+            (self.out_features, self.in_features),
+            name="w",
+            device=get_chained_attr(self, ["w", "device"], "cpu"),
+        )
         if self.bias:
             fan_in = self.in_features
             bound = 1.0 / math.sqrt(fan_in)
-            self.b = uniform(-bound, bound, [self.out_features], name="b",
-                             device=get_chained_attr(self, ["b", "device"], "cpu"))
+            self.b = uniform(
+                -bound,
+                bound,
+                [self.out_features],
+                name="b",
+                device=get_chained_attr(self, ["b", "device"], "cpu"),
+            )
 
     @trace
     def forward(self, x):
@@ -155,12 +176,18 @@ class GELU(Model):
         self.reset()
 
     def reset(self):
-        self._inv_sqrt_2 = array(1 / math.sqrt(2),
-                                 name="inv_sqrt_2", dtype="float32",
-                                 device=get_chained_attr(self, ["_inv_sqrt_2", "device"], "cpu"))
-        self._inv_2 = array(1 / 2,
-                            name="_inv_2", dtype="float32",
-                            device=get_chained_attr(self, ["_inv_2", "device"], "cpu"))
+        self._inv_sqrt_2 = array(
+            1 / math.sqrt(2),
+            name="inv_sqrt_2",
+            dtype="float32",
+            device=get_chained_attr(self, ["_inv_sqrt_2", "device"], "cpu"),
+        )
+        self._inv_2 = array(
+            1 / 2,
+            name="_inv_2",
+            dtype="float32",
+            device=get_chained_attr(self, ["_inv_2", "device"], "cpu"),
+        )
 
     @trace
     def forward(self, x):
@@ -169,5 +196,5 @@ class GELU(Model):
             sym.add(
                 self._inv_2,
                 sym.multiply(sym.erf(sym.multiply(x, self._inv_sqrt_2)), self._inv_2),
-            )
+            ),
         )

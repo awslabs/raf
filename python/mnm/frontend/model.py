@@ -14,9 +14,12 @@ from mnm._core.module import IRModule
 def _get_main_func_params(model, args, kwargs, get_handle=True):
     arg_index = 0
     res = []
-    mod = model._FrameworkModel__train_mod \
-        if model._BaseModel__is_train else model._FrameworkModel__infer_mod
-    func = mod['main']
+    mod = (
+        model._FrameworkModel__train_mod
+        if model._BaseModel__is_train
+        else model._FrameworkModel__infer_mod
+    )
+    func = mod["main"]
     for var_node in func.params:
         var_name = var_node.name_hint
         if var_name in model._FrameworkModel__arg_params:
@@ -59,12 +62,14 @@ def annotate_main_func_params(func, args):
     return : relay.Function
         the annotated function
     """
+
     def get_type(arg):
         if isinstance(arg, ndarray):
             return relay.TensorType(shape=arg.shape, dtype=arg.dtype)
         if isinstance(arg, Symbol):
             return arg._Symbol__handle.type_annotation
         raise TypeError("Not supported: ", type(arg))
+
     params = [extended_var(param.name_hint, get_type(arg)) for param, arg in zip(func.params, args)]
     vmap = dict(zip(func.params, params))
     body = Substitute(func.body, vmap)
@@ -88,6 +93,7 @@ class FrameworkModel(BaseModel):
     aux_params : Dict[str, ndarray]
         Auxiliary params, not learnable
     """
+
     # pylint: disable=invalid-name
 
     def __init__(self, train_mod, infer_mod, arg_params, aux_params):
@@ -122,7 +128,7 @@ class FrameworkModel(BaseModel):
         # (function, num_argument)
         mod = InferType()(r.mod)
         self.__recorded = (mod, len(args) + len(kwargs))
-        ret_var = _get_func_output_var(mod['main'])
+        ret_var = _get_func_output_var(mod["main"])
         ret = Symbol.from_expr(ret_var)
         if isinstance(ret_var.checked_type, relay.TupleType):
             ret = ret[0]
@@ -132,11 +138,13 @@ class FrameworkModel(BaseModel):
         if not self.__recorded:
             raise ValueError("Call model.record first to get the output symbols.")
         mod, num_orig_arg = self.__recorded
-        func = mod['main']
+        func = mod["main"]
         ret_var = _get_func_output_var(func)
         if isinstance(ret_var.checked_type, relay.TupleType):
             ret = Symbol.from_expr(ret_var)
-            other = [other,] + [ret[i + 1] for i in range(len(ret_var.checked_type.fields) - 1)]
+            other = [
+                other,
+            ] + [ret[i + 1] for i in range(len(ret_var.checked_type.fields) - 1)]
             other = Symbol.make_tuple(other)
         other = ExtractBinding(other._Symbol__handle, [ret_var])
         new_body = ExprAppend(func.body, other)
@@ -148,8 +156,11 @@ class FrameworkModel(BaseModel):
             if var not in input_params:
                 new_free_vars.append(var)
         # [arguments, parameters]
-        new_params = new_free_vars[0:num_orig_arg] + new_free_vars[len(func.params):] \
-                     + func.params[num_orig_arg:]
+        new_params = (
+            new_free_vars[0:num_orig_arg]
+            + new_free_vars[len(func.params) :]
+            + func.params[num_orig_arg:]
+        )
         new_func = relay.Function(new_params, new_body)
         new_mod = IRModule.from_expr(new_func)
         return FrameworkModel(new_mod, new_mod, self.__arg_params, self.__aux_params)
@@ -176,15 +187,20 @@ class FrameworkModel(BaseModel):
         """
         mod = self.__train_mod if self._BaseModel__is_train else self.__infer_mod
         func_inputs = _get_main_func_params(self, args, kwargs, get_handle=False)
-        mod['main'] = annotate_main_func_params(mod['main'], func_inputs)
+        mod["main"] = annotate_main_func_params(mod["main"], func_inputs)
         requires_grads = [i.requires_grad if isinstance(i, ndarray) else None for i in func_inputs]
         if None in requires_grads:
             requires_grads = []
         named_params = {}
         named_params.update(self.__arg_params)
         named_params.update(self.__aux_params)
-        return _TraceRecord(mod=mod, named_params=named_params, o_struct=None,
-                            mutations=None, requires_grads=requires_grads)
+        return _TraceRecord(
+            mod=mod,
+            named_params=named_params,
+            o_struct=None,
+            mutations=None,
+            requires_grads=requires_grads,
+        )
 
     def _state(self):
         state = {}

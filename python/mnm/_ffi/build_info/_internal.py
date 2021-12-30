@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/impl/build_info.cc
 cmake_build_type = _APIS.get("mnm.build_info.cmake_build_type", None)
 # Defined in ./src/impl/build_info.cc

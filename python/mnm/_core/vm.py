@@ -10,6 +10,7 @@ from . import ndarray as _nd
 from .core_utils import register_node, DEVICE_TYPE_MAP
 from .device import Device
 
+
 class Executable:
     # pylint: disable=too-many-instance-attributes
     """Meta VM executable"""
@@ -109,12 +110,16 @@ class Executable:
         if isinstance(bytecode, (bytes, str)):
             bytecode = bytearray(bytecode)
         elif not isinstance(bytecode, (bytearray, _ByteArray)):
-            raise TypeError("bytecode is expected to be the type of bytearray " +
-                            "or TVMByteArray, but received {}".format(type(bytecode)))
+            raise TypeError(
+                "bytecode is expected to be the type of bytearray "
+                + "or TVMByteArray, but received {}".format(type(bytecode))
+            )
 
         if lib is not None and not isinstance(lib, tvm.runtime.Module):
-            raise TypeError("lib is expected to be the type of tvm.runtime.Module" +
-                            ", but received {}".format(type(lib)))
+            raise TypeError(
+                "lib is expected to be the type of tvm.runtime.Module"
+                + ", but received {}".format(type(lib))
+            )
 
         return Executable(_ffi.vm.Load_Executable(bytecode, lib))
 
@@ -355,12 +360,14 @@ class VMCompiler:
                 device = Device(dev) if isinstance(dev, str) else dev
                 device_map[tvm.tir.IntImm("int32", DEVICE_TYPE_MAP[dev_type])] = device
         else:
-            raise TypeError("device is expected to be str, Device, "
-                            "or dict of str to str/Device, but received %s" % type(device))
+            raise TypeError(
+                "device is expected to be str, Device, "
+                "or dict of str to str/Device, but received %s" % type(device)
+            )
         return device_map
 
 
-def compile(mod, device=None, params=None): #pylint: disable=redefined-builtin
+def compile(mod, device=None, params=None):  # pylint: disable=redefined-builtin
     """Compile the module to VM executable. A helper function for VMCompiler.
 
     Parameters
@@ -427,10 +434,12 @@ class VirtualMachine:
     dryrun: bool
         Whether to create a dryrun VM that skips the op execution.
     """
+
     def __init__(self, exe, device, enable_cuda_graph=False, dryrun=False):
         if not isinstance(exe, Executable):
-            raise TypeError("mod is expected to be the type of Executable, but received {}"
-                            .format(type(exe)))
+            raise TypeError(
+                "mod is expected to be the type of Executable, but received {}".format(type(exe))
+            )
         self.module = _ffi.vm.VirtualMachine(exe.module, enable_cuda_graph, dryrun)
         self._exec = exe
         self._set_devices = self.module["set_devices"]

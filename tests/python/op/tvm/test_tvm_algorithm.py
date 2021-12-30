@@ -1,5 +1,4 @@
-# pylint: disable=no-self-use
-# pylint: disable=wrong-import-order
+# pylint: disable=no-self-use,wrong-import-order,protected-access
 import numpy as np
 import random
 import pytest
@@ -20,15 +19,18 @@ class TestModel(mnm.Model):
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    (2, 3, 4),
-    (1, 4, 6),
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (2, 3, 4),
+        (1, 4, 6),
+    ],
+)
 @pytest.mark.parametrize("axis", [0, 1, -1])
 @pytest.mark.parametrize("dtype", ["int32", "float32"])
 def test_argsort(device, shape, axis, dtype):
     m_x, n_x = randn(shape, device=device)
-    model = TestModel(mnm._op.sym.argsort, axis=axis, dtype=dtype)  # pylint: disable=protected-access
+    model = TestModel(mnm._op.sym.argsort, axis=axis, dtype=dtype)
     m_out = model(m_x)
     v_out = run_vm_model(model, device, [m_x])
     np_out = np.argsort(n_x, axis).astype(dtype)
@@ -40,16 +42,19 @@ def test_argsort(device, shape, axis, dtype):
 # pylint: disable=no-member
 # pylint: disable=consider-using-in
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [
-    (2, 3, 4),
-    (1, 4, 6),
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (2, 3, 4),
+        (1, 4, 6),
+    ],
+)
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["int32", "float32"])
 def test_sort(device, shape, axis, dtype):
     m_x, n_x = randn(shape, device=device, dtype=dtype)
     m_x.requires_grad = True
-    model = TestModel(mnm._op.sym.sort, axis=axis)  # pylint: disable=protected-access
+    model = TestModel(mnm._op.sym.sort, axis=axis)
     m_out = model(m_x)
     v_out = run_vm_model(model, device, [m_x])
     np_out = np.sort(n_x, axis)
@@ -82,7 +87,6 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
     # pylint: disable=no-member
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
-    # pylint: disable=no-self-use
     size = 1
     for i in shape:
         size *= i
@@ -92,8 +96,14 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
     m_x = mnm.array(x, dtype=dtype, device=device)
     n_x = mx.nd.array(x, dtype=dtype)
 
-    model = TestModel(mnm._op.sym.topk, k=k, axis=axis, ret_type=ret_type,  # pylint: disable=protected-access
-                      is_ascend=is_ascend, dtype=dtype)
+    model = TestModel(
+        mnm._op.sym.topk,
+        k=k,
+        axis=axis,
+        ret_type=ret_type,
+        is_ascend=is_ascend,
+        dtype=dtype,
+    )
     m_y = model(m_x)
     v_y = run_vm_model(model, device, [m_x])
     # check forward
@@ -120,15 +130,13 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
 @pytest.mark.parametrize("ret_type", ["both"])
 @pytest.mark.parametrize("is_ascend", [True, False])
 @pytest.mark.parametrize("shape", [(5, 3, 3), (5, 5, 5, 5, 5, 5)])
-def test_topk_dx(shape, k, axis, ret_type, is_ascend, dtype, device): #pylint: disable=R0915
+def test_topk_dx(shape, k, axis, ret_type, is_ascend, dtype, device):  # pylint: disable=R0915
     # pylint: disable=attribute-defined-outside-init
     # pylint: disable=not-callable
     # pylint: disable=no-member
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
-    # pylint: disable=no-self-use
-    # pylint: disable=protected-access
-    if (dtype == "float16" and device == "cpu"):
+    if dtype == "float16" and device == "cpu":
         pytest.skip("""float16 doesn't support in cpu""")
 
     # Generate a set of non-duplicated numbers
@@ -139,15 +147,16 @@ def test_topk_dx(shape, k, axis, ret_type, is_ascend, dtype, device): #pylint: d
     np.random.shuffle(n_x)
     n_x = n_x.reshape(shape).astype(dtype)
 
-    if (dtype == "float16" and size >= 2048):
+    if dtype == "float16" and size >= 2048:
         pytest.skip("""For float16, shape is too big to produce non-duplicated array""")
 
     m_x = mnm.array(n_x, dtype=dtype, device=device)
     m_x.requires_grad = True
     t_x = torch.tensor(n_x, requires_grad=True, device=to_torch_dev(device))
 
-    model = TestModel(mnm._op.sym.topk, k=k, axis=axis, ret_type=ret_type,
-                      is_ascend=is_ascend, dtype=dtype)
+    model = TestModel(
+        mnm._op.sym.topk, k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype
+    )
     m_y = model(m_x)
     m_dy, t_dy = randn_torch(m_y[0].shape, dtype=dtype, device=device, requires_grad=True)
     t_y = torch.topk(t_x, k=k, dim=axis, largest=not is_ascend)
@@ -158,6 +167,7 @@ def test_topk_dx(shape, k, axis, ret_type, is_ascend, dtype, device): #pylint: d
     t_y[0].backward(t_dy)
     m_y[0].backward(m_dy)
     check(t_x.grad, m_x.grad)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

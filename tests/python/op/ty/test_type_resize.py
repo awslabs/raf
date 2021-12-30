@@ -6,20 +6,42 @@ from mnm.testing import check_type, randn
 from tvm.relay import TensorType, FuncType
 
 # pylint: disable=too-many-locals, import-outside-toplevel, attribute-defined-outside-init
-@pytest.mark.parametrize("params", [
-    {"batchs": 32, "layout": "NCHW", "orig_shape": (718, 718),
-     "to_shape": (64, 64), "infer_shape": (32, 3, 64, 64)},
-    {"batchs": 32, "layout": "NCHW", "orig_shape": (32, 32),
-     "to_shape": 400, "infer_shape": (32, 3, 400, 400)},
-    {"batchs": 32, "layout": "NHWC", "orig_shape": (718, 718),
-     "to_shape": (64, 64), "infer_shape": (32, 64, 64, 3)},
-    {"batchs": 32, "layout": "NHWC", "orig_shape": (32, 32),
-     "to_shape": 400, "infer_shape": (32, 400, 400, 3)},
-])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {
+            "batchs": 32,
+            "layout": "NCHW",
+            "orig_shape": (718, 718),
+            "to_shape": (64, 64),
+            "infer_shape": (32, 3, 64, 64),
+        },
+        {
+            "batchs": 32,
+            "layout": "NCHW",
+            "orig_shape": (32, 32),
+            "to_shape": 400,
+            "infer_shape": (32, 3, 400, 400),
+        },
+        {
+            "batchs": 32,
+            "layout": "NHWC",
+            "orig_shape": (718, 718),
+            "to_shape": (64, 64),
+            "infer_shape": (32, 64, 64, 3),
+        },
+        {
+            "batchs": 32,
+            "layout": "NHWC",
+            "orig_shape": (32, 32),
+            "to_shape": 400,
+            "infer_shape": (32, 400, 400, 3),
+        },
+    ],
+)
 @pytest.mark.parametrize("in_dtype", ["float32"])
 @pytest.mark.parametrize("out_dtype", ["float32"])
 def test_resize2d(params, in_dtype, out_dtype):
-
     class Resize2D(mnm.Model):
         def build(self, to_size, layout, out_dtype):
             self._size = to_size
@@ -30,9 +52,13 @@ def test_resize2d(params, in_dtype, out_dtype):
         def forward(self, x):
             return mnm.resize2d(x, self._size, self._layout, out_dtype=self._dtype)
 
-    batchs, layout, orig_shape, to_shape, infer_shape = \
-            params["batchs"], params["layout"], params["orig_shape"], \
-            params["to_shape"], params["infer_shape"]
+    batchs, layout, orig_shape, to_shape, infer_shape = (
+        params["batchs"],
+        params["layout"],
+        params["orig_shape"],
+        params["to_shape"],
+        params["infer_shape"],
+    )
 
     if layout == "NCHW":
         shape = [batchs, 3, orig_shape[0], orig_shape[1]]
@@ -48,7 +74,8 @@ def test_resize2d(params, in_dtype, out_dtype):
     x_ty = TensorType(shape, dtype=in_dtype)
     y_ty = TensorType(infer_shape, dtype=out_dtype)
     expected_type = FuncType([x_ty], y_ty)
-    check_type(m_mod['main'], expected_type)
+    check_type(m_mod["main"], expected_type)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

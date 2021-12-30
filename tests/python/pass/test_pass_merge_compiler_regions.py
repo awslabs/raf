@@ -17,15 +17,15 @@ def test_single_input_output_merge():
     target = "test_single_input_output_merge"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.copy", "target." + target)
-    def copy(attrs, args): # pylint: disable=unused-argument
+    def copy(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.negative", "target." + target)
-    def negative(attrs, args): # pylint: disable=unused-argument
+    def negative(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class Model(mnm.Model):
@@ -86,7 +86,7 @@ def test_single_input_output_merge():
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     mod = model._internal(x).mod
     mod = AnnotateTarget([target])(mod)
-    func = MergeCompilerRegions()(mod)['main']
+    func = MergeCompilerRegions()(mod)["main"]
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)
@@ -114,15 +114,15 @@ def test_diamond_merge():
     target = "test_diamond_merge"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.abs", "target." + target)
-    def abs(attrs, args): # pylint: disable=unused-argument
+    def abs(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.add", "target." + target)
-    def add(attrs, args): # pylint: disable=unused-argument
+    def add(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class MergeableModel(mnm.Model):
@@ -188,7 +188,7 @@ def test_diamond_merge():
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     mod = model._internal(x).mod
     mod = AnnotateTarget([target])(mod)
-    func = MergeCompilerRegions()(mod)['main']
+    func = MergeCompilerRegions()(mod)["main"]
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)
@@ -199,15 +199,15 @@ def test_tuple_merge():
     target = "test_tuple_merge"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.tanh", "target." + target)
-    def tanh(attrs, args): # pylint: disable=unused-argument
+    def tanh(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.concatenate", "target." + target)
-    def concatenate(attrs, args): # pylint: disable=unused-argument
+    def concatenate(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class MergeableModel(mnm.Model):
@@ -272,7 +272,7 @@ def test_tuple_merge():
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     mod = model._internal(x).mod
     mod = AnnotateTarget([target])(mod)
-    func = MergeCompilerRegions()(mod)['main']
+    func = MergeCompilerRegions()(mod)["main"]
     expected_func = expected()
     # check ir structure
     assert tvm.ir.structural_equal(func, expected_func)

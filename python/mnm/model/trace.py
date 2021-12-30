@@ -1,4 +1,4 @@
-# pylint: disable=missing-module-docstring,missing-function-docstring
+# pylint: disable=missing-module-docstring,missing-function-docstring, protected-access
 import functools
 import sys
 from collections import OrderedDict, namedtuple
@@ -20,7 +20,8 @@ _TraceRecord = namedtuple(
         "o_struct",  # Structure of the outputs
         "mutations",  # [model, attr_name]
         "requires_grads",  # If input(s) of function requires gradient
-    ])
+    ],
+)
 
 
 def trace_mutate_attr(obj, attr_name, symbol):
@@ -45,8 +46,7 @@ def trace(pyfunc):
     @functools.wraps(pyfunc)
     def new_pyfunc(*args, **kwargs):
         if len(args) == 0 or not isinstance(args[0], cacher.Cacher):
-            raise ValueError(
-                "Decorator trace should only be applied to a model")
+            raise ValueError("Decorator trace should only be applied to a model")
         if _scope_last_name() == "trace":
             return pyfunc(*args, **kwargs)
         record = _get_trace_record(pyfunc, args, kwargs)
@@ -58,7 +58,6 @@ def trace(pyfunc):
 
 # The logic of running a tracing record
 def _run_trace_record(record, args, kwargs):
-    # pylint: disable=protected-access
     func_inputs = _get_func_inputs(record, args[1:], kwargs)
     result = _unwrap(RunModel(record.mod, func_inputs))
     if not isinstance(result, list):
@@ -72,7 +71,6 @@ def _run_trace_record(record, args, kwargs):
 
 
 def _get_handle_or_origin(arg, get_handle=True):
-    # pylint: disable=protected-access
     if isinstance(arg, ndarray):
         return arg._ndarray__handle if get_handle else arg
     if isinstance(arg, Symbol):
@@ -84,7 +82,6 @@ def _get_handle_or_origin(arg, get_handle=True):
 
 
 def _get_func_inputs(record, args, kwargs, get_handle=True):
-    # pylint: disable=protected-access
     func = record.mod["main"]
     func_inputs = []
     for arg in args:
@@ -103,8 +100,10 @@ def _get_func_inputs(record, args, kwargs, get_handle=True):
         handle = param._ndarray__handle if get_handle else param
         func_inputs.append(handle)
     if len(func_inputs) != len(func.params):
-        raise ValueError("Input size does not match main function params. %d v.s. %d." %
-                         (len(func_inputs), len(func.params)))
+        raise ValueError(
+            "Input size does not match main function params. %d v.s. %d."
+            % (len(func_inputs), len(func.params))
+        )
     return func_inputs
 
 
@@ -144,14 +143,15 @@ def _do_tracing(pyfunc, args, kwargs):
     # Step 3. flatten output to list, and keep record of its original structure
     output, o_struct = _flatten_to_list(output)
     # Step 4. and extra model parameters and finally make the relay.Func
-    func, named_params = _make_func(args[0], named_inputs,
-                                    output + mutate_symbols)
+    func, named_params = _make_func(args[0], named_inputs, output + mutate_symbols)
     mod = IRModule.from_expr(func)
-    return _TraceRecord(mod=mod,
-                        named_params=named_params,
-                        o_struct=o_struct,
-                        mutations=mutations,
-                        requires_grads=[])
+    return _TraceRecord(
+        mod=mod,
+        named_params=named_params,
+        o_struct=o_struct,
+        mutations=mutations,
+        requires_grads=[],
+    )
 
 
 def _symbolize_inputs(pyfunc, args, kwargs):
@@ -162,13 +162,14 @@ def _symbolize_inputs(pyfunc, args, kwargs):
         if isinstance(x, (tuple, list)):
             return relay.TupleType([get_type(i) for i in x])
         raise NotImplementedError("Type is not supported: ", type(x))
+
     bound_args = get_bound_args(pyfunc, args, kwargs)
     named_inputs = OrderedDict()
     for name, value in list(bound_args.arguments.items())[1:]:  # pylint: disable=unused-variable
         if isinstance(value, (tuple, list, ndarray)):
-            bound_args.arguments[name] = \
-                    named_inputs[name] = \
-                    Symbol.make_var(name_hint=name, type_annotation=get_type(value))
+            bound_args.arguments[name] = named_inputs[name] = Symbol.make_var(
+                name_hint=name, type_annotation=get_type(value)
+            )
         elif isinstance(value, Symbol):
             bound_args.arguments[name] = named_inputs[name] = value
         else:
@@ -183,9 +184,10 @@ def _make_func(model, named_inputs, outputs):
     named_params = _get_used_params(model, body, named_inputs)
     # Step 3. construct the function using input vars and model parameters as inputs
     func = relay.Function(
-        [x._Symbol__handle for x in named_inputs.values()] +  # pylint: disable=protected-access
-        [x._ndarray__handle for x in named_params.values()],  # pylint: disable=protected-access
-        body=body)
+        [x._Symbol__handle for x in named_inputs.values()]
+        + [x._ndarray__handle for x in named_params.values()],
+        body=body,
+    )
     # Step 4. replace all variables in func, so that
     # 1) vars have better names
     # 2) get rid of referencing global binding table
@@ -194,11 +196,11 @@ def _make_func(model, named_inputs, outputs):
 
 
 def _construct_func_body(outputs):
-    body = [x._Symbol__handle if isinstance(x, Symbol) else x._ndarray__handle for x in outputs]  # pylint: disable=protected-access
+    body = [x._Symbol__handle if isinstance(x, Symbol) else x._ndarray__handle for x in outputs]
     if len(body) == 1:
         body = body[0]
     else:
-        body = Symbol.make_tuple(body)._Symbol__handle  # pylint: disable=protected-access
+        body = Symbol.make_tuple(body)._Symbol__handle
     return ExtractBinding(body, [])
 
 
@@ -206,29 +208,31 @@ def _get_used_params(model, body, named_inputs):
     free_vars = set(relay.analysis.free_vars(body))
     named_params = OrderedDict()
     for sym in named_inputs.values():
-        handle = sym._Symbol__handle  # pylint: disable=protected-access
+        handle = sym._Symbol__handle
         if handle in free_vars:
             free_vars.remove(handle)
     for name, param in model.state().items():
-        handle = param._ndarray__handle  # pylint: disable=protected-access
+        handle = param._ndarray__handle
         if handle in free_vars:
             named_params[name] = param
             free_vars.remove(handle)
     if free_vars:
-        raise ValueError("To ensure correctness, in tracing mode, "
-                         "please do not use other ndarray/symbols "
-                         "other than model's own")
+        raise ValueError(
+            "To ensure correctness, in tracing mode, "
+            "please do not use other ndarray/symbols "
+            "other than model's own"
+        )
     return named_params
 
 
 def _get_named_vars(named_inputs, named_params):
     named_vars = dict()
     for name, var in named_inputs.items():
-        handle = var._Symbol__handle  # pylint: disable=protected-access
+        handle = var._Symbol__handle
         assert name not in named_vars
         named_vars[name] = handle
     for name, param in named_params.items():
-        handle = param._ndarray__handle  # pylint: disable=protected-access
+        handle = param._ndarray__handle
         if name not in named_vars:
             named_vars[name] = handle
             continue

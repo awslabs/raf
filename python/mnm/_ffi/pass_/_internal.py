@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/pass/stream_schedule_asap.cc
 ASAPStreamSchedule = _APIS.get("mnm.pass_.ASAPStreamSchedule", None)
 # Defined in ./src/pass/annotate_dist_ops.cc

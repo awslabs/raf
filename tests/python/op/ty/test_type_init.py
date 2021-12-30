@@ -6,7 +6,7 @@ from tvm.relay import TensorType, FuncType
 
 
 @pytest.mark.parametrize("op", [mnm._op.sym.zeros, mnm._op.sym.ones])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_init_ops(op, shape, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
@@ -21,14 +21,14 @@ def test_init_ops(op, shape, dtype):
             return self.op(shape=self.shape, dtype=self.dtype)
 
     model = InitOpModel(op, shape, dtype)
-    m_func = model._internal().mod['main']
+    m_func = model._internal().mod["main"]
     m_func = run_infer_type(m_func)
     ty = TensorType(shape, dtype=dtype)
     desired_type = FuncType([], ty)
     check_type(m_func, desired_type)
 
 
-@pytest.mark.parametrize("indices_shape", [(1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("indices_shape", [(1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("depth", [0, 3])
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32"])
 def test_one_hot(indices_shape, depth, dtype):
@@ -46,7 +46,7 @@ def test_one_hot(indices_shape, depth, dtype):
     m_indices, _ = randint(shape=indices_shape, high=10)
     m_on_value = mnm.array(1, dtype="int32")
     m_off_value = mnm.array(0, dtype="int32")
-    m_func = model._internal(m_indices, m_on_value, m_off_value).mod['main']
+    m_func = model._internal(m_indices, m_on_value, m_off_value).mod["main"]
     m_func = run_infer_type(m_func)
     indices_ty = TensorType(indices_shape, dtype="int64")
     value_ty = TensorType((), dtype="int32")

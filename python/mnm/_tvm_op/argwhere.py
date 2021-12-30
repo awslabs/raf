@@ -296,9 +296,9 @@ def compact_nonzero_indices_ir(condition, write_indices, out, out_shape, do_writ
                 do_write_func(out, write_indices[idx], idx)
         with ib.if_scope(idx == 0):
             valid_index = _topi.cast(write_indices[size_1d - 1], dtype="int64")
-            valid_index += _tvm.tir.if_then_else(condition[size_1d - 1] == 0,
-                                                 _tvm.tir.const(0, "int64"),
-                                                 _tvm.tir.const(1, "int64"))
+            valid_index += _tvm.tir.if_then_else(
+                condition[size_1d - 1] == 0, _tvm.tir.const(0, "int64"), _tvm.tir.const(1, "int64")
+            )
             out_shape[0] = valid_index
         with ib.if_scope(idx == 1):
             out_shape[1] = ndim
@@ -342,8 +342,9 @@ def argwhere_common(output_shape, condition, do_write_func):
     out = _te.extern(
         [output_shape, (2,)],
         [condition, write_indices],
-        lambda ins, outs:
-        compact_nonzero_indices_ir(ins[0], ins[1], outs[0], outs[1], do_write_func),
+        lambda ins, outs: compact_nonzero_indices_ir(
+            ins[0], ins[1], outs[0], outs[1], do_write_func
+        ),
         dtype=["int32"],
         in_buffers=[condition_buf, write_indices_buf],
         out_buffers=[out_buf, out_shape_buf],

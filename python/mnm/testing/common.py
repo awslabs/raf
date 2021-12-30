@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name,protected-access, import-outside-toplevel
+# pylint: disable=invalid-name,protected-access, import-outside-toplevel
 """Common utilities for testing"""
 import logging
 import functools
@@ -10,6 +10,7 @@ import numpy as np
 import mnm
 from mnm import distributed as dist
 from .._op.dialect import DialectPreference
+
 
 def check_type(expr, typ):
     """Helper function to check expr.checked_type == type"""
@@ -92,8 +93,9 @@ def randint(shape, *, low=0, high=None, device="cpu", dtype="int64"):
     return m_x, n_x
 
 
-def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
-                positive=False):
+def randn_torch(
+    shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0, positive=False
+):
     """Helper function to generate a pair of mnm and torch arrays"""
     import torch
 
@@ -106,12 +108,15 @@ def randn_torch(shape, *, device="cpu", dtype="float32", requires_grad=False, me
     n_x = x.astype(dtype)
     m_x = mnm.array(n_x, device=device)
     m_x.requires_grad = requires_grad
-    t_x = torch.tensor(n_x, requires_grad=requires_grad, device=to_torch_dev(device))  # pylint: disable=not-callable
+    t_x = torch.tensor(
+        n_x, requires_grad=requires_grad, device=to_torch_dev(device)
+    )  # pylint: disable=not-callable
     return m_x, t_x
 
 
-def randn_mxnet(shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0,
-                positive=False):
+def randn_mxnet(
+    shape, *, device="cpu", dtype="float32", requires_grad=False, mean=0.0, std=1.0, positive=False
+):
     """Helper function to generate a pair of mnm and mxnet arrays"""
     import mxnet as mx
 
@@ -136,7 +141,9 @@ def one_hot_torch(batch_size, num_classes, device="cpu"):
 
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = mnm.array(targets, device=device)
-    t_x = torch.tensor(targets, requires_grad=False, device=to_torch_dev(device))  # pylint: disable=not-callable
+    t_x = torch.tensor(
+        targets, requires_grad=False, device=to_torch_dev(device)
+    )  # pylint: disable=not-callable
     assert list(m_x.shape) == [batch_size]
     assert list(t_x.shape) == [batch_size]
     return m_x, t_x
@@ -156,7 +163,9 @@ def one_hot_mxnet(batch_size, num_classes, device="cpu"):
 
 def t2m_param(param, device="cuda"):
     """Helper function to convert torch parameter to mnm ndarray"""
-    return mnm.ndarray(param.detach().cpu().numpy(), device=device)  # pylint: disable=unexpected-keyword-arg
+    return mnm.ndarray(  # pylint: disable=unexpected-keyword-arg
+        param.detach().cpu().numpy(), device=device
+    )
 
 
 def default_logger():
@@ -165,7 +174,7 @@ def default_logger():
     # getLogger() lookups will return the same logger, but only add the handler once.
     if len(logger.handlers) == 0:
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+        handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
         logger.addHandler(handler)
         if logger.getEffectiveLevel() == logging.NOTSET:
             logger.setLevel(logging.INFO)
@@ -199,6 +208,7 @@ def with_seed(seed=None):
     tests isolation and reproducability of failures.  When a
     test fails, the decorator outputs the seed used.
     """
+
     def test_helper(orig_test):
         @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
@@ -213,10 +223,12 @@ def with_seed(seed=None):
             random.seed(this_test_seed)
             logger = default_logger()
             # 'pytest --logging-level=DEBUG' shows this msg even with an ensuing core dump.
-            pre_test_msg = ('Setting test np/python random seeds, use seed={}'
-                            ' to reproduce.').format(this_test_seed)
-            on_err_test_msg = ('Error seen with seeded test, use seed={}'
-                               ' to reproduce.').format(this_test_seed)
+            pre_test_msg = (
+                "Setting test np/python random seeds, use seed={}" " to reproduce."
+            ).format(this_test_seed)
+            on_err_test_msg = ("Error seen with seeded test, use seed={}" " to reproduce.").format(
+                this_test_seed
+            )
             logger.log(log_level, pre_test_msg)
             try:
                 ret = orig_test(*args, **kwargs)
@@ -229,7 +241,9 @@ def with_seed(seed=None):
                 # Provide test-isolation for any test having this decorator
                 np.random.set_state(post_test_state)
             return ret
+
         return test_new
+
     return test_helper
 
 
@@ -241,14 +255,16 @@ def with_dialect(dialect):
     ----------
     dialect : Union[str, List[str]]
     """
-    def decorator(wrapped):
 
+    def decorator(wrapped):
         @functools.wraps(wrapped)
         def wrapper(*args, **kwargs):
             dialects = [dialect] if isinstance(dialect, str) else dialect
             with DialectPreference(dialects):
                 return wrapped(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

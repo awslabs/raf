@@ -15,23 +15,13 @@ class MNMBottleneck(mnm.Model):
         self.bn1 = BatchNorm(in_planes)
         self.conv1 = Conv2d(in_planes, planes, kernel_size=1, bias=False)
         self.bn2 = BatchNorm(planes)
-        self.conv2 = Conv2d(planes,
-                            planes,
-                            kernel_size=3,
-                            stride=stride,
-                            padding=1,
-                            bias=False)
+        self.conv2 = Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn3 = BatchNorm(planes)
-        self.conv3 = Conv2d(planes,
-                            self.expansion * planes,
-                            kernel_size=1,
-                            bias=False)
+        self.conv3 = Conv2d(planes, self.expansion * planes, kernel_size=1, bias=False)
         if stride != 1 or in_planes != self.expansion * planes:
-            self.shortcut = Conv2d(in_planes,
-                                   self.expansion * planes,
-                                   kernel_size=1,
-                                   stride=stride,
-                                   bias=False)
+            self.shortcut = Conv2d(
+                in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False
+            )
         else:
             self.shortcut = None
 
@@ -52,39 +42,33 @@ class MNMBottleneck(mnm.Model):
 
 
 class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
-    '''Pre-activation version of the original Bottleneck module.'''
+    """Pre-activation version of the original Bottleneck module."""
+
     expansion = 4
 
     def __init__(self, in_planes, planes, stride=1):
         super(TorchPreActBottleneck, self).__init__()
         from torch import nn  # pylint: disable=import-outside-toplevel
+
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes,
-                               planes,
-                               kernel_size=3,
-                               stride=stride,
-                               padding=1,
-                               bias=False)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes,
-                               self.expansion * planes,
-                               kernel_size=1,
-                               bias=False)
+        self.conv3 = nn.Conv2d(planes, self.expansion * planes, kernel_size=1, bias=False)
 
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes,
-                          self.expansion * planes,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False))
+                nn.Conv2d(
+                    in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False
+                )
+            )
 
     def forward(self, x):  # pylint: disable=arguments-differ
         from torch.nn import functional as F  # pylint: disable=import-outside-toplevel
+
         out = F.relu(self.bn1(x))
-        shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else x
+        shortcut = self.shortcut(out) if hasattr(self, "shortcut") else x
         out = self.conv1(out)
         out = self.conv2(F.relu(self.bn2(out)))
         out = self.conv3(F.relu(self.bn3(out)))
@@ -93,16 +77,19 @@ class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    ((64, 64, 1), (16, 64, 32, 32)),
-    ((256, 64, 1), (16, 256, 32, 32)),
-    ((256, 64, 1), (16, 256, 32, 32)),
-    ((256, 128, 2), (16, 256, 32, 32)),
-    ((512, 128, 1), (16, 512, 16, 16)),
-    ((512, 128, 1), (16, 512, 16, 16)),
-    ((512, 128, 1), (16, 512, 16, 16)),
-    ((512, 256, 2), (16, 512, 16, 16)),
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        ((64, 64, 1), (16, 64, 32, 32)),
+        ((256, 64, 1), (16, 256, 32, 32)),
+        ((256, 64, 1), (16, 256, 32, 32)),
+        ((256, 128, 2), (16, 256, 32, 32)),
+        ((512, 128, 1), (16, 512, 16, 16)),
+        ((512, 128, 1), (16, 512, 16, 16)),
+        ((512, 128, 1), (16, 512, 16, 16)),
+        ((512, 256, 2), (16, 512, 16, 16)),
+    ],
+)
 @pytest.mark.parametrize("is_train", [True, False])
 def test_bottleneck(config, is_train):
     # pylint: disable=too-many-locals
@@ -187,9 +174,9 @@ def test_model_invalidate(device):
     m_x, _ = randn((16, 64, 32, 32), requires_grad=True, device=device)
     # mode change
     model.train_mode()
-    train_func = model._internal(m_x).mod['main']
+    train_func = model._internal(m_x).mod["main"]
     model.infer_mode()
-    infer_func = model._internal(m_x).mod['main']
+    infer_func = model._internal(m_x).mod["main"]
     assert not tvm.ir.structural_equal(train_func, infer_func)
     # to
     model.to(device=device, invalidate=True)

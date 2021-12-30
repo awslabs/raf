@@ -17,7 +17,7 @@ from .utils import has_grad, split_ndarray_with_padding
 
 # pylint: disable=too-few-public-methods
 class LANS:
-    """ Optimizer : LANS
+    """Optimizer : LANS
     # References
     - Accelerated Large Batch Optimization of BERT Pretraining in 54 minutes.
       http://arxiv.org/abs/2006.13484
@@ -37,8 +37,19 @@ class LANS:
     weight_decay: Optional[Float]
         Weight decay (L2 penalty). Default: 0.01
     """
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, \
-                 bias_correction=True, grad_averaging=True, mode=True, normalize_grad=True):
+
+    def __init__(
+        self,
+        params,
+        lr=1e-3,
+        betas=(0.9, 0.999),
+        eps=1e-6,
+        weight_decay=0.01,
+        bias_correction=True,
+        grad_averaging=True,
+        mode=True,
+        normalize_grad=True,
+    ):
         self.lr = lr
         self.beta1 = betas[0]
         self.beta2 = betas[1]
@@ -50,11 +61,11 @@ class LANS:
         self.normalize_grad = normalize_grad
         self.params = []
         self._step = 1
-        for i, x in  enumerate(params):
+        for i, x in enumerate(params):
             assert isinstance(x, ndarray), "Only `mnm.ndarray' can be optimized!"
             npa = np.zeros(x.shape, dtype=x.dtype)
-            m_i = ndarray(npa, device=x.device, name=f'lans.{i}.m')
-            v_i = ndarray(npa, device=x.device, name=f'lans.{i}.v')
+            m_i = ndarray(npa, device=x.device, name=f"lans.{i}.m")
+            v_i = ndarray(npa, device=x.device, name=f"lans.{i}.v")
             self.params.append((x, m_i, v_i))
 
     def step(self):
@@ -71,17 +82,35 @@ class LANS:
             x_list.append(x)
             m_list.append(m)
             v_list.append(v)
-        step = array(self._step, dtype='float32', device="cuda", name='step')
+        step = array(self._step, dtype="float32", device="cuda", name="step")
         tensor_list = g_list + x_list + m_list + v_list
-        imp.lans(tensor_list, step, self.lr, self.beta1, self.beta2,
-                 self.eps, self.bias_correction, self.weight_decay,
-                 self.grad_averaging, self.mode, self.normalize_grad)
+        imp.lans(
+            tensor_list,
+            step,
+            self.lr,
+            self.beta1,
+            self.beta2,
+            self.eps,
+            self.bias_correction,
+            self.weight_decay,
+            self.grad_averaging,
+            self.mode,
+            self.normalize_grad,
+        )
         self._step += 1
 
 
-def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_correction=True,
-              grad_averaging=True, mode=True, normalize_grad=True):
-    """ Optimizer : LANS
+def with_lans(
+    lr=1e-3,
+    betas=(0.9, 0.999),
+    eps=1e-6,
+    weight_decay=0.01,
+    bias_correction=True,
+    grad_averaging=True,
+    mode=True,
+    normalize_grad=True,
+):
+    """Optimizer : LANS
     # References
     - Accelerated Large Batch Optimization of BERT Pretraining in 54 minutes.
       http://arxiv.org/abs/2006.13484
@@ -105,6 +134,7 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
     ret : function
         The wrapper which wraps a model with LANS
     """
+
     def decorator(model):
         class LANSWrapper(Model):
             """LANS wrapper model
@@ -113,6 +143,7 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
             ----------
             model: the forward model
             """
+
             # pylint: disable=attribute-defined-outside-init
             def build(self, model):
                 self.model = model
@@ -127,7 +158,7 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
                 self.beta1 = betas[0]
                 self.beta2 = betas[1]
                 self.zero = array(0.0, dtype="float32")
-                self.one = array(1.0, dtype='float32')
+                self.one = array(1.0, dtype="float32")
                 # mutable params: global step, and running averages
                 device = None
                 dctx = dist.get_context()
@@ -146,25 +177,24 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
                         if dctx.zero_opt_level:
                             # Pad and copy a slice of weight.
                             param_np = x.to(device="cpu")
-                            slice_param = split_ndarray_with_padding(param_np,
-                                                                     dctx.size)[dctx.rank]
-                            param_part = ndarray(slice_param, device=x.device,
-                                                 name=f'{name}.lans_w')
-                            setattr(self, f'{name}.lans_w', param_part)
+                            slice_param = split_ndarray_with_padding(param_np, dctx.size)[dctx.rank]
+                            param_part = ndarray(
+                                slice_param, device=x.device, name=f"{name}.lans_w"
+                            )
+                            setattr(self, f"{name}.lans_w", param_part)
                             weight = param_part
                             part_shape = slice_param.shape
                         else:
                             weight = x
 
                         npa = np.zeros(part_shape, dtype=x.dtype)
-                        m_i = array(npa, device=device, name=f'{name}.m')
-                        v_i = array(npa, device=device, name=f'{name}.v')
-                        setattr(self, f'{name}.m', m_i)
-                        setattr(self, f'{name}.v', v_i)
+                        m_i = array(npa, device=device, name=f"{name}.m")
+                        v_i = array(npa, device=device, name=f"{name}.v")
+                        setattr(self, f"{name}.m", m_i)
+                        setattr(self, f"{name}.v", v_i)
                         self.params[x._ndarray__handle] = (name, x, weight, m_i, v_i)
                 assert device is not None
-                self.step = array(0.0, dtype='float32', device=device, name='step')
-
+                self.step = array(0.0, dtype="float32", device=device, name="step")
 
             @trace
             def forward(self, dy, *args, **kwargs):
@@ -175,7 +205,7 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
                 inputs = inputs[1:]  # remove dy
                 # update step
                 next_step = _op.add(self.step, self.one, out=self.step)
-                trace_mutate_attr(self, 'step', next_step)
+                trace_mutate_attr(self, "step", next_step)
                 # apply LANS for each param
                 tensor_list = []
                 g_list = []
@@ -195,11 +225,19 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
                             ntensor += 1
 
                 tensor_list = g_list + x_list + m_list + v_list
-                output_list = _op.lans(tensor_list, next_step, self.lr,
-                                       self.beta1, self.beta2, self.eps,
-                                       self.bias_correction, self.weight_decay,
-                                       self.grad_averaging, self.mode,
-                                       self.normalize_grad)
+                output_list = _op.lans(
+                    tensor_list,
+                    next_step,
+                    self.lr,
+                    self.beta1,
+                    self.beta2,
+                    self.eps,
+                    self.bias_correction,
+                    self.weight_decay,
+                    self.grad_averaging,
+                    self.mode,
+                    self.normalize_grad,
+                )
 
                 out_idx = 0
                 for i, param in enumerate(inputs):
@@ -208,24 +246,26 @@ def with_lans(lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.01, bias_cor
                         name, p, w, m, v = self.params[param]
                         if "float" in w.dtype:
                             new_w = output_list[out_idx]
-                            next_m = output_list[out_idx+ntensor]
-                            next_v = output_list[out_idx+2*ntensor]
-                            param_model = get_chained_attr(self.model, name.split('.')[:-1])
+                            next_m = output_list[out_idx + ntensor]
+                            next_v = output_list[out_idx + 2 * ntensor]
+                            param_model = get_chained_attr(self.model, name.split(".")[:-1])
                             if dctx.zero_opt_level > 0:
                                 new_weight = allgather(new_w, axis=0)
                                 # Slice to remove the zero-padding if needed.
                                 if w.shape[0] * dctx.size > p.shape[0]:
-                                    new_weight = _op.strided_slice(new_weight, [0],
-                                                                   [p.shape[0]], [1])
+                                    new_weight = _op.strided_slice(
+                                        new_weight, [0], [p.shape[0]], [1]
+                                    )
                                 next_w = _op.add(new_weight, self.zero, out=p)
                             else:
                                 next_w = new_w
 
-                            trace_mutate_attr(param_model, name.split('.')[-1], next_w)
-                            trace_mutate_attr(self, f'{name}.m', next_m)
-                            trace_mutate_attr(self, f'{name}.v', next_v)
+                            trace_mutate_attr(param_model, name.split(".")[-1], next_w)
+                            trace_mutate_attr(self, f"{name}.m", next_m)
+                            trace_mutate_attr(self, f"{name}.v", next_v)
                             out_idx += 1
                 return y
 
         return LANSWrapper(model)
+
     return decorator

@@ -78,16 +78,16 @@ def pyfunc2relay(pyfunc, entry: relay.GlobalVar):
     mem = dict(inspect.getmembers(pyfunc))
     # getting AST
     node = ast.parse(inspect.getsource(pyfunc))
-    ast.increment_lineno(node, mem['__code__'].co_firstlineno - 1)
+    ast.increment_lineno(node, mem["__code__"].co_firstlineno - 1)
     # AST -> IR builder
     node = sanity_check(node)
-    invoker_name = find_invoker_name(mem['__globals__'])
+    invoker_name = find_invoker_name(mem["__globals__"])
     node, local_names = to_builder(node, pyfunc, invoker_name)
-    compiled = compile(node, filename="<string>", mode='exec')
+    compiled = compile(node, filename="<string>", mode="exec")
     # IR builder -> AST
     # TODO(@junrushao1994): deal with nonlocals
-    exec(compiled, mem['__globals__'])  # pylint: disable=exec-used
-    node = build_ir(mem['__globals__'][invoker_name], debug=False)
+    exec(compiled, mem["__globals__"])  # pylint: disable=exec-used
+    node = build_ir(mem["__globals__"][invoker_name], debug=False)
     # AST -> CFG
     cfg = ast2cfg(node)
     # CFG -> Relay

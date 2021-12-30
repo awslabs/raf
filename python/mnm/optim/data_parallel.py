@@ -20,6 +20,7 @@ from ..model.trace import _get_func_inputs
 
 def with_data_parallel(model):
     """Enable data parallel and ZeRO to the model according to the configs in dist context."""
+
     class DataParallelWrapper(Model):
         """Data parallel model
 
@@ -28,6 +29,7 @@ def with_data_parallel(model):
         model: Model
             The model with forward, backawrd, and partitioned output gradients.
         """
+
         def build(self, model):
             # pylint: disable=attribute-defined-outside-init, missing-function-docstring
             self.model = model
@@ -50,7 +52,7 @@ def with_data_parallel(model):
             seq = MNMSequential(passes)
             mod = seq(mod)
             inputs = _get_func_inputs(record, args, kwargs)
-            out = inline(mod['main'], inputs)
+            out = inline(mod["main"], inputs)
             y = out[0]
             dxs = out[1]
             return y, dxs

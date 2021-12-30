@@ -41,10 +41,18 @@ def verify_ir(model, args, reconstructor):
     # Make a ground truth.
     record = model._internal(*args)
     truth = record.mod
-    seq = MNMSequential([InferType(), AutoDiff(record.requires_grads),
-                         InferType(), DeadCodeElimination(), InlineBackward(), InferType()])
+    seq = MNMSequential(
+        [
+            InferType(),
+            AutoDiff(record.requires_grads),
+            InferType(),
+            DeadCodeElimination(),
+            InlineBackward(),
+            InferType(),
+        ]
+    )
     truth = seq(truth)
-    assert tvm.ir.structural_equal(mod['main'], truth['main']), mnm.ir.AsText(mod['main'])
+    assert tvm.ir.structural_equal(mod["main"], truth["main"]), mnm.ir.AsText(mod["main"])
 
 
 def test_basic():
@@ -111,19 +119,25 @@ def test_inplace():
         bn_m = extended_var("bn_m", shape=(shape[1],), dtype="float32")
         bn_v = extended_var("bn_v", shape=(shape[1],), dtype="float32")
         bn_w = extended_var("bn_w", shape=(shape[1],), dtype="float32")
-        dy = extended_var("dy", type_annotation=relay.TupleType([
-            relay.TensorType(shape=shape, dtype="float32"),
-            relay.TensorType(shape=(shape[1],), dtype="float32"),
-            relay.TensorType(shape=(shape[1],), dtype="float32")]))
+        dy = extended_var(
+            "dy",
+            type_annotation=relay.TupleType(
+                [
+                    relay.TensorType(shape=shape, dtype="float32"),
+                    relay.TensorType(shape=(shape[1],), dtype="float32"),
+                    relay.TensorType(shape=(shape[1],), dtype="float32"),
+                ]
+            ),
+        )
         f_v = sb.let("v", fwd_var)
         v_1 = sb.let("v1", relay.Call(f_v, [x, bn_b, bn_m, bn_v, bn_w]))
-        v_2 = sb.let("v2", relay.TupleGetItem(v_1, 0)) # Forward output[0]: (y, bn_m, bn_v)
-        v_3 = sb.let("v3", relay.TupleGetItem(v_1, 1)) # Forward output[1]: backward closure
-        v_m = sb.let("vm", relay.TupleGetItem(v_2, 1)) # Forward output[0][1]: bn_m
-        v_v = sb.let("vv", relay.TupleGetItem(v_2, 2)) # Forward output[0][2]: bn_v
+        v_2 = sb.let("v2", relay.TupleGetItem(v_1, 0))  # Forward output[0]: (y, bn_m, bn_v)
+        v_3 = sb.let("v3", relay.TupleGetItem(v_1, 1))  # Forward output[1]: backward closure
+        v_m = sb.let("vm", relay.TupleGetItem(v_2, 1))  # Forward output[0][1]: bn_m
+        v_v = sb.let("vv", relay.TupleGetItem(v_2, 2))  # Forward output[0][2]: bn_v
 
         dy_0 = sb.let("dy_0", relay.TupleGetItem(dy, 0))
-        v_t = sb.let("v_t", relay.Tuple([dy_0, v_m, v_v])) # Backward intput: (dy.0, bn_m, bn_v)
+        v_t = sb.let("v_t", relay.Tuple([dy_0, v_m, v_v]))  # Backward intput: (dy.0, bn_m, bn_v)
         v_4 = sb.let("v4", relay.Call(v_3, [v_t]))
         v_5 = sb.let("v5", relay.TupleGetItem(v_4, 0))
         v_6 = sb.let("v6", relay.TupleGetItem(v_4, 1))
@@ -131,7 +145,7 @@ def test_inplace():
         v_8 = sb.let("v8", relay.TupleGetItem(v_4, 3))
         v_9 = sb.let("v9", relay.TupleGetItem(v_4, 4))
         v_10 = sb.let("v10", relay.Tuple([v_5, v_6, v_7, v_8, v_9]))
-        v_11 = sb.let("v11", relay.Tuple([v_2, v_10])) # Output: (forward output[0], gradients)
+        v_11 = sb.let("v11", relay.Tuple([v_2, v_10]))  # Output: (forward output[0], gradients)
         sb.ret(v_11)
         func = relay.Function([x, bn_b, bn_m, bn_v, bn_w, dy], sb.get())
         mod = IRModule({fwd_var: fwd, bwd_var: bwd, relay.GlobalVar("main"): func})
@@ -168,7 +182,7 @@ def test_no_let():
         mod = InferType()(mod)
         return mod
 
-    assert tvm.ir.structural_equal(mod['main'], expected()["main"]), mnm.ir.AsText(mod['main'])
+    assert tvm.ir.structural_equal(mod["main"], expected()["main"]), mnm.ir.AsText(mod["main"])
 
 
 if __name__ == "__main__":

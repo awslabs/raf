@@ -10,8 +10,7 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
-from mnm.testing import run_vm_model, one_hot_torch, randn_torch, t2m_param, \
-        check, with_seed
+from mnm.testing import run_vm_model, one_hot_torch, randn_torch, t2m_param, check, with_seed
 
 try:
     from apex.optimizers import FusedLANS as LANS
@@ -22,15 +21,11 @@ except ImportError:
 class TorchTest(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchTest, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=6,
-                               kernel_size=5,
-                               padding=2,
-                               bias=False)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
         self.bn1 = nn.BatchNorm2d(6)
         self.linear1 = nn.Linear((input_shape // 2) ** 2 * 6, num_classes)
 
-    def forward(self, x, y_true): # pylint: disable=arguments-differ
+    def forward(self, x, y_true):  # pylint: disable=arguments-differ
         y_pred = self.forward_infer(x)
         y_pred = F.log_softmax(y_pred, dim=-1)
         loss = F.nll_loss(y_pred, y_true)
@@ -38,9 +33,9 @@ class TorchTest(nn.Module):  # pylint: disable=abstract-method
 
     def forward_infer(self, x):
         out = self.bn1(self.conv1(x))
-        out = torch.sigmoid(out) # pylint: disable=no-member
+        out = torch.sigmoid(out)  # pylint: disable=no-member
         out = F.avg_pool2d(out, (2, 2), (2, 2))
-        out = torch.flatten(out, 1) # pylint: disable=no-member
+        out = torch.flatten(out, 1)  # pylint: disable=no-member
         out = self.linear1(out)
         return out
 
@@ -48,14 +43,10 @@ class TorchTest(nn.Module):  # pylint: disable=abstract-method
 class MNMTest(mnm.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, input_shape=28, num_classes=10):
-        self.conv1 = Conv2d(in_channels=3,
-                            out_channels=6,
-                            kernel_size=5,
-                            padding=2,
-                            bias=False)
+        self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
         self.bn1 = BatchNorm(6)
-        self.linear1 = Linear((input_shape // 2) ** 2 * 6,
-                              num_classes)
+        self.linear1 = Linear((input_shape // 2) ** 2 * 6, num_classes)
+
     # pylint: enable=attribute-defined-outside-init
 
     @mnm.model.trace
@@ -81,7 +72,7 @@ class TorchSimpleTest(nn.Module):  # pylint: disable=abstract-method
         self.x = torch.nn.Parameter(torch.randn(*shape))
         self.x.requires_grad = True
 
-    def forward(self): # pylint: disable=arguments-differ
+    def forward(self):  # pylint: disable=arguments-differ
         y = F.relu(self.x)
         return y
 
@@ -102,9 +93,9 @@ class MNMSimpleTest(mnm.Model):
 @pytest.mark.parametrize("config", [(2, 32, 10)])
 def test_lans(config):
     t_model = TorchTest(config[1], config[2])
-    t_model.to(device='cuda')
+    t_model.to(device="cuda")
     m_model = MNMTest(config[1], config[2])
-    m_model.to(device='cuda')
+    m_model.to(device="cuda")
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
     m_model.linear1.b = t2m_param(t_model.linear1.bias)
@@ -146,7 +137,7 @@ def test_lans(config):
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_traced_lans_simple():
     # pylint: disable=attribute-defined-outside-init
-    device = 'cuda'
+    device = "cuda"
     shape = (2, 2)
     batch_size = 4
     t_model = TorchSimpleTest(shape)
@@ -166,11 +157,15 @@ def test_traced_lans_simple():
         t_optimizer.step()
         check(m_model.x, t_model.x, rtol=1e-4, atol=1e-4)
 
+
 @with_seed(0)
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (4, 28, 10),
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        (4, 28, 10),
+    ],
+)
 def test_traced_lans(config):
     # pylint: disable=too-many-locals
     device = "cuda"
@@ -215,7 +210,7 @@ def test_state_partition(mock_get_context):
     """
     # pylint: disable=too-many-locals, protected-access
     # Mock the context to let with_lans generate the desired IR.
-    class MockContext():
+    class MockContext:
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = 2
@@ -245,11 +240,11 @@ def test_state_partition(mock_get_context):
     # Extract all tensor arguments and create a {name -> first axis shape} map.
     param_map = {}
     for name, ttype in re.findall(r"%([^:]+): Tensor\[([^\]]+)\]", func_def[0]):
-        param_map[name] = int(ttype[ttype.find("(") + 1:ttype.find(")")].split(",")[0])
+        param_map[name] = int(ttype[ttype.find("(") + 1 : ttype.find(")")].split(",")[0])
     for name, shape in param_map.items():
         if name.find("sgd_") == -1:
             continue
-        param_name = f"model.{name[:-6]}" # Find the original parameter.
+        param_name = f"model.{name[:-6]}"  # Find the original parameter.
         # The size of sgd status should be 1/4 of the original parameter.
         assert param_name in param_map and math.ceil(param_map[param_name] / 4) == shape
 

@@ -11,7 +11,7 @@ def test_match_constant():
 
 
 def test_no_match_constant():
-    c = mnm.ir.const(1.)
+    c = mnm.ir.const(1.0)
     value = mnm._core.value.IntValue(1)
     pat = mnm.ir.dataflow_pattern.is_constant(value)
     assert not mnm.ir.dataflow_pattern.match(pat, c)
