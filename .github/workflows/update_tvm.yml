@@ -17,7 +17,7 @@ jobs:
       uses: peter-evans/create-pull-request@v3
       with:
         token: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
-        commit-message: [TVM] Update Submodule
+        commit-message: '[TVM] Update Submodule'
         committer: GitHub <noreply@github.com>
         author: SubmoduleUpdaterBot <submodule-updater-bot@users.noreply.github.com>
         branch: update-submodule-tvm
