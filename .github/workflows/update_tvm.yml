@@ -15,7 +15,7 @@ jobs:
         git submodule update --remote 3rdparty/tvm
     - name: Create timestamp
       id: date
-      run: echo "::set-output name=now::$(date +'%Y-%m-%dT%H:%M:%S')"
+      run: echo "::set-output name=now::$(date +'%Y-%m-%d-%H-%M-%S')"
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
       with:
