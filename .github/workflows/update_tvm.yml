@@ -11,9 +11,8 @@ jobs:
         submodules: recursive
     - name: Update TVM to the latest commit
       run: |
-        cd 3rdparty/tvm
-        git config pull.ff only
-        git pull origin main
+        git config submodule.syntastic.update "git pull origin main"
+        git submodule update --remote 3rdparty/tvm
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
       with:
