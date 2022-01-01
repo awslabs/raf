@@ -57,10 +57,10 @@ def test_profiler_with_cuda(i):
         loss.backward()
         profiler.stop()
     data = profiler.get()
-    assert len(data['traceEvents']) >= 0
+    assert len(data["traceEvents"]) >= 0
     op_count = 0
-    for e in data['traceEvents']:
-        if e['name'] == 'mnm.op.matmul':
+    for e in data["traceEvents"]:
+        if e["name"] == "mnm.op.matmul":
             op_count += 1
     assert op_count > 0
 
@@ -71,10 +71,10 @@ def test_profiler_without_cuda(i):
     batch_size = 16
     device = "cpu({})".format(i)
     features = 4
-    x = np.arange(features*batch_size).reshape(batch_size, features)
+    x = np.arange(features * batch_size).reshape(batch_size, features)
     y = np.random.randint(0, features, size=batch_size)
-    m_x = mnm.array(x, dtype="float32", device=device, name='cck-m_x')
-    m_y = mnm.array(y, device=device, name='cck-m_y')
+    m_x = mnm.array(x, dtype="float32", device=device, name="cck-m_x")
+    m_y = mnm.array(y, device=device, name="cck-m_y")
     model = TestNet((0, 1))
     print("### Switch to training mode")
     model.train_mode()
@@ -84,10 +84,10 @@ def test_profiler_without_cuda(i):
         loss.backward()
         profiler.stop()
     data = profiler.get()
-    assert len(data['traceEvents']) >= 0
+    assert len(data["traceEvents"]) >= 0
     op_count = 0
-    for e in data['traceEvents']:
-        if e['name'] == 'mnm.op.transpose':
+    for e in data["traceEvents"]:
+        if e["name"] == "mnm.op.transpose":
             op_count += 1
     assert op_count > 0
 

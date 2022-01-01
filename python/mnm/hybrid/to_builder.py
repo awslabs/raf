@@ -7,7 +7,6 @@ from .hybrid_utils import SUPPORTED_OPS, NodeTransformer, NodeVisitor
 
 
 class LocalNames(NodeVisitor):
-
     def __init__(self):
         super(LocalNames, self).__init__(strict=False)
         self.free_names = set()
@@ -39,7 +38,6 @@ class LocalNames(NodeVisitor):
 
 
 class DeadCodeEliminationLite(NodeTransformer):
-
     def __init__(self):
         super(DeadCodeEliminationLite, self).__init__(strict=False)
 
@@ -65,25 +63,26 @@ class DeadCodeEliminationLite(NodeTransformer):
         return self.visit(node)
 
     def visit_If(self, node: ast.If):  # pylint: disable=invalid-name
-        return ast.If(test=node.test,
-                      body=self._canonicalize(node.body),
-                      orelse=self._canonicalize(node.orelse))
+        return ast.If(
+            test=node.test,
+            body=self._canonicalize(node.body),
+            orelse=self._canonicalize(node.orelse),
+        )
 
     def visit_While(self, node: ast.While):  # pylint: disable=invalid-name
-        return ast.While(test=node.test,
-                         body=self._canonicalize(node.body),
-                         orelse=[])
+        return ast.While(test=node.test, body=self._canonicalize(node.body), orelse=[])
 
     def visit_FunctionDef(self, node: ast.FunctionDef):  # pylint: disable=invalid-name
-        return ast.FunctionDef(name=node.name,
-                               args=node.args,
-                               body=self._canonicalize(node.body),
-                               decorator_list=node.decorator_list,
-                               returns=node.returns)
+        return ast.FunctionDef(
+            name=node.name,
+            args=node.args,
+            body=self._canonicalize(node.body),
+            decorator_list=node.decorator_list,
+            returns=node.returns,
+        )
 
 
 class Unbox(NodeTransformer):
-
     def __init__(self):
         super(Unbox, self).__init__(strict=False)
 
@@ -113,7 +112,7 @@ class Unbox(NodeTransformer):
 
         for stmt in stmts:
             if isinstance(stmt, ast.Assign):
-                (lhs, ), rhs = stmt.targets, stmt.value
+                (lhs,), rhs = stmt.targets, stmt.value
                 new_stmts.extend(self._unbox(lhs, rhs))
             else:
                 new_stmts.append(stmt)
@@ -121,26 +120,27 @@ class Unbox(NodeTransformer):
         return new_stmts
 
     def visit_If(self, node: ast.If):  # pylint: disable=invalid-name
-        return ast.If(test=node.test,
-                      body=self._unbox_basic_block(node.body),
-                      orelse=self._unbox_basic_block(node.orelse))
+        return ast.If(
+            test=node.test,
+            body=self._unbox_basic_block(node.body),
+            orelse=self._unbox_basic_block(node.orelse),
+        )
 
     def visit_While(self, node: ast.While):  # pylint: disable=invalid-name
-        return ast.While(test=node.test,
-                         body=self._unbox_basic_block(node.body),
-                         orelse=[])
+        return ast.While(test=node.test, body=self._unbox_basic_block(node.body), orelse=[])
 
     def visit_FunctionDef(self, node: ast.FunctionDef):  # pylint: disable=invalid-name
-        return ast.FunctionDef(name=node.name,
-                               args=node.args,
-                               body=self._unbox_basic_block(node.body),
-                               decorator_list=node.decorator_list,
-                               returns=node.returns)
+        return ast.FunctionDef(
+            name=node.name,
+            args=node.args,
+            body=self._unbox_basic_block(node.body),
+            decorator_list=node.decorator_list,
+            returns=node.returns,
+        )
 
 
 def _call(name, *args):
-    func = ast.Attribute(value=ast.Name(
-        id='ib', ctx=ast.Load()), attr=name, ctx=ast.Load())
+    func = ast.Attribute(value=ast.Name(id="ib", ctx=ast.Load()), attr=name, ctx=ast.Load())
     call = ast.Call(func=func, args=list(args), keywords=[])
 
     return call
@@ -162,7 +162,6 @@ def _op(category: str, node: ast.AST, *args):
 
 
 class ToBuilder(NodeTransformer):
-
     def __init__(self, local_names: Set[str]):
         super(ToBuilder, self).__init__(strict=True)
         self.name = None
@@ -196,8 +195,7 @@ class ToBuilder(NodeTransformer):
         lhs, rhs = node.targets[0], node.value
 
         if not isinstance(lhs, ast.Name):
-            raise NotImplementedError(
-                "Unsupported lhs: {}".format(lhs.__class__.__name__))
+            raise NotImplementedError("Unsupported lhs: {}".format(lhs.__class__.__name__))
         assert isinstance(lhs.ctx, ast.Store)
         assert lhs.id in self.local_names
         name = ast.Str(s=lhs.id)
@@ -206,7 +204,9 @@ class ToBuilder(NodeTransformer):
 
         return ast.Expr(value=call)
 
-    def visit_Pass(self, node: ast.Pass):  # pylint: disable=invalid-name,no-self-use,unused-argument
+    def visit_Pass(
+        self, node: ast.Pass
+    ):  # pylint: disable=invalid-name,no-self-use,unused-argument
         call = _call("add_pass")
 
         return ast.Expr(value=call)
@@ -217,12 +217,16 @@ class ToBuilder(NodeTransformer):
 
         return ast.Expr(value=call)
 
-    def visit_Break(self, node: ast.Break):  # pylint: disable=invalid-name,no-self-use,unused-argument
+    def visit_Break(
+        self, node: ast.Break
+    ):  # pylint: disable=invalid-name,no-self-use,unused-argument
         call = _call("add_break")
 
         return ast.Expr(value=call)
 
-    def visit_Continue(self, node: ast.Continue):  # pylint: disable=invalid-name,no-self-use,unused-argument
+    def visit_Continue(
+        self, node: ast.Continue
+    ):  # pylint: disable=invalid-name,no-self-use,unused-argument
         call = _call("add_continue")
 
         return ast.Expr(value=call)
@@ -233,8 +237,8 @@ class ToBuilder(NodeTransformer):
         orelse = [self.visit(stmt) for stmt in node.orelse]
         with_if = _with(
             node=_call("add_if", test),
-            body=[_with(_call("add_then"), body=body),
-                  _with(_call("add_else"), body=orelse)])
+            body=[_with(_call("add_then"), body=body), _with(_call("add_else"), body=orelse)],
+        )
 
         return with_if
 
@@ -246,15 +250,17 @@ class ToBuilder(NodeTransformer):
         return _with(_call("add_while", test), body=body)
 
     def visit_FunctionDef(self, node: ast.FunctionDef):  # pylint: disable=invalid-name
-        args = [ast.arg(arg="ib", annotation=None),
-                ast.arg(arg="ast", annotation=None)]
+        args = [ast.arg(arg="ib", annotation=None), ast.arg(arg="ast", annotation=None)]
         arguments = ast.arguments(
-            args=args, vararg=None, kwonlyargs=[], kwarg=None, defaults=[], kw_defaults=[])
-        body = [ast.Expr(value=_call("add_sym", ast.Str(s=name)))
-                for name in self.local_names] + [self.visit(stmt) for stmt in node.body]
+            args=args, vararg=None, kwonlyargs=[], kwarg=None, defaults=[], kw_defaults=[]
+        )
+        body = [ast.Expr(value=_call("add_sym", ast.Str(s=name))) for name in self.local_names] + [
+            self.visit(stmt) for stmt in node.body
+        ]
 
-        return ast.FunctionDef(name=self.name, args=arguments, body=body,
-                               decorator_list=[], returns=None)
+        return ast.FunctionDef(
+            name=self.name, args=arguments, body=body, decorator_list=[], returns=None
+        )
 
     def visit_UnaryOp(self, node: ast.UnaryOp):  # pylint: disable=invalid-name
         operand = self.visit(node.operand)

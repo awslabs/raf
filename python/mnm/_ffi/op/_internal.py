@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/impl/dialect.cc
 AddDialectPattern = _APIS.get("mnm.op.AddDialectPattern", None)
 # Defined in ./src/impl/dialect.cc

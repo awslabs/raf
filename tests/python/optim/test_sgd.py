@@ -13,22 +13,26 @@ import torch.nn.functional as F
 
 import mnm
 from mnm.model import Conv2d, Linear, BatchNorm
-from mnm.testing import with_seed, get_device_list, check, run_vm_model, \
-    one_hot_torch, randn_torch, t2m_param, randn_mxnet
+from mnm.testing import (
+    with_seed,
+    get_testable_devices,
+    check,
+    run_vm_model,
+    one_hot_torch,
+    randn_torch,
+    t2m_param,
+    randn_mxnet,
+)
 
 
 class TorchTest(nn.Module):  # pylint: disable=abstract-method
     def __init__(self, input_shape=28, num_classes=10):
         super(TorchTest, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=6,
-                               kernel_size=5,
-                               padding=2,
-                               bias=True)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=True)
         self.bn1 = nn.BatchNorm2d(6)
         self.linear1 = nn.Linear((input_shape // 2) ** 2 * 6, num_classes)
 
-    def forward(self, x, y_true): # pylint: disable=arguments-differ
+    def forward(self, x, y_true):  # pylint: disable=arguments-differ
         y_pred = self.forward_infer(x)
         y_pred = F.log_softmax(y_pred, dim=-1)
         loss = F.nll_loss(y_pred, y_true)
@@ -36,9 +40,9 @@ class TorchTest(nn.Module):  # pylint: disable=abstract-method
 
     def forward_infer(self, x):
         out = self.bn1(self.conv1(x))
-        out = torch.sigmoid(out) # pylint: disable=no-member
+        out = torch.sigmoid(out)  # pylint: disable=no-member
         out = F.avg_pool2d(out, (2, 2), (2, 2))
-        out = torch.flatten(out, 1) # pylint: disable=no-member
+        out = torch.flatten(out, 1)  # pylint: disable=no-member
         out = self.linear1(out)
         return out
 
@@ -46,14 +50,10 @@ class TorchTest(nn.Module):  # pylint: disable=abstract-method
 class MNMTest(mnm.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, input_shape=28, num_classes=10):
-        self.conv1 = Conv2d(in_channels=3,
-                            out_channels=6,
-                            kernel_size=5,
-                            padding=2,
-                            bias=True)
+        self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=True)
         self.bn1 = BatchNorm(6)
-        self.linear1 = Linear((input_shape // 2) ** 2 * 6,
-                              num_classes)
+        self.linear1 = Linear((input_shape // 2) ** 2 * 6, num_classes)
+
     # pylint: enable=attribute-defined-outside-init
 
     @mnm.model.trace
@@ -79,9 +79,9 @@ class MNMTest(mnm.Model):
 @pytest.mark.parametrize("config", [(10, 32, 10)])
 def test_sgd(config):
     t_model = TorchTest(config[1], config[2])
-    t_model.to(device='cuda')
+    t_model.to(device="cuda")
     m_model = MNMTest(config[1], config[2])
-    m_model.to(device='cuda')
+    m_model.to(device="cuda")
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.conv1.b = t2m_param(t_model.conv1.bias)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
@@ -128,7 +128,7 @@ class TorchSimpleTest(nn.Module):  # pylint: disable=abstract-method
         self.x = torch.nn.Parameter(torch.randn(*shape))
         self.x.requires_grad = True
 
-    def forward(self): # pylint: disable=arguments-differ
+    def forward(self):  # pylint: disable=arguments-differ
         y = F.relu(self.x)
         return y
 
@@ -144,12 +144,12 @@ class MNMSimpleTest(mnm.Model):
         return y
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_traced_sgd_simple(device):
     # pylint: disable=attribute-defined-outside-init
     shape = (2, 2)
     batch_size = 32
-    dtype = 'float32'
+    dtype = "float32"
     t_model = TorchSimpleTest(shape)
     t_model.to(device)
     m_model = MNMSimpleTest(shape)
@@ -208,22 +208,21 @@ def test_traced_sgd(config):
 
 
 @with_seed(0)
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_mxnet_model(device):
     net = gluon.nn.HybridSequential()
     with net.name_scope():
-        net.add(gluon.nn.Dense(128, activation='relu'))
-        net.add(gluon.nn.Dense(64, activation='relu'))
+        net.add(gluon.nn.Dense(128, activation="relu"))
+        net.add(gluon.nn.Dense(64, activation="relu"))
         net.add(gluon.nn.Dense(10))
     net.initialize(mx.init.Xavier(magnitude=2.24))
     mx_trainer = gluon.Trainer(
-        net.collect_params(),
-        'sgd', {'learning_rate': 0.1, 'momentum': 0.01}
+        net.collect_params(), "sgd", {"learning_rate": 0.1, "momentum": 0.01}
     )
     x, mx_x = randn_mxnet((1, 3, 224, 224), requires_grad=True, device=device)
     dy, mx_dy = randn_mxnet((1, 10), device=device)
     net(mx_x)
-    model = mnm.frontend.from_mxnet(net, ['x'])
+    model = mnm.frontend.from_mxnet(net, ["x"])
     model.train_mode()
     model.to(device=device)
     trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(model)
@@ -237,6 +236,7 @@ def test_mxnet_model(device):
     for name, param in net.collect_params().items():
         check(params[name], param.data(), rtol=1e-4, atol=1e-4)
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @patch("mnm.distributed.get_context")
 def test_state_partition(mock_get_context):
@@ -245,7 +245,7 @@ def test_state_partition(mock_get_context):
     """
     # pylint: disable=too-many-locals, protected-access
     # Mock the context to let with_sgd generate the desired IR.
-    class MockContext():
+    class MockContext:
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = 2
@@ -276,11 +276,11 @@ def test_state_partition(mock_get_context):
     # Extract all tensor arguments and create a {name -> first axis shape} map.
     param_map = {}
     for name, ttype in re.findall(r"%([^:]+): Tensor\[([^\]]+)\]", func_def[0]):
-        param_map[name] = int(ttype[ttype.find("(") + 1:ttype.find(")")].split(",")[0])
+        param_map[name] = int(ttype[ttype.find("(") + 1 : ttype.find(")")].split(",")[0])
     for name, shape in param_map.items():
         if name.find("sgd_") == -1:
             continue
-        param_name = f"model.{name[:-6]}" # Find the original parameter.
+        param_name = f"model.{name[:-6]}"  # Find the original parameter.
         # The size of sgd status should be 1/4 of the original parameter.
         assert param_name in param_map and math.ceil(param_map[param_name] / 4) == shape
 

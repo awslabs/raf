@@ -2,12 +2,15 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/op/dialect/cudnn/cudnn_utils.cc
 ConfigGetBenchmark = _APIS.get("mnm.backend.cudnn.ConfigGetBenchmark", None)
 # Defined in ./src/op/dialect/cudnn/cudnn_utils.cc
 ConfigSetBenchmark = _APIS.get("mnm.backend.cudnn.ConfigSetBenchmark", None)
 # Defined in ./src/op/dialect/cudnn/dropout.cc
-GetDropoutReserveSpaceSizeInBytes = _APIS.get("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes", None)
+GetDropoutReserveSpaceSizeInBytes = _APIS.get(
+    "mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes", None
+)
 # Defined in ./src/op/dialect/cudnn/dropout.cc
 GetDropoutState = _APIS.get("mnm.backend.cudnn.GetDropoutState", None)
 # Defined in ./src/op/dialect/cudnn/dropout.cc

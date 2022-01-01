@@ -23,10 +23,13 @@ __all__ = [
 {METHODS}
 """.strip()
     ops = def_op.by_name()
-    methods = "\n\n".join(gen_method(ops[name])
-                        for name in sorted(ops.keys()))
-    op_names = "\n".join(map(lambda x: '    "' + '", "'.join([i.replace(".", "_") for i in x]) + '",',
-                             split_chunks(sorted(ops.keys()), chunk_size=5)))
+    methods = "\n\n".join(gen_method(ops[name]) for name in sorted(ops.keys()))
+    op_names = "\n".join(
+        map(
+            lambda x: '    "' + '", "'.join([i.replace(".", "_") for i in x]) + '",',
+            split_chunks(sorted(ops.keys()), chunk_size=5),
+        )
+    )
     return FILE.format(METHODS=methods, OP_NAMES=op_names)
 
 
@@ -39,17 +42,22 @@ def {FUNC_NAME}({PARAMS_W_DEFAULT}):
     norms = "\n".join(map(gen_norm, op.schema))
     param_w = gen_param_w_default(op.schema)
     param_wo = gen_param_wo_default(op.schema)
-    return METHOD.format(FUNC_NAME=op.name.replace(".", "_"),
-                         OP_NAME=op.name,
-                         NORMS=norms,
-                         PARAMS_W_DEFAULT=param_w,
-                         PARAMS_WO_DEFAULT=param_wo)
+    return METHOD.format(
+        FUNC_NAME=op.name.replace(".", "_"),
+        OP_NAME=op.name,
+        NORMS=norms,
+        PARAMS_W_DEFAULT=param_w,
+        PARAMS_WO_DEFAULT=param_wo,
+    )
 
 
 def gen_norm(entry):
-    NORM = " " * 4 + """
+    NORM = (
+        " " * 4
+        + """
     {NAME} = sym_utils.{NORM}({NAME})
 """.strip()
+    )
     name = entry.name
     norm = NORM_MAP[entry.py_normalizer or (entry.cxx_normalizer or entry.cxx_type)]
     return NORM.format(NAME=name, NORM=norm)
@@ -74,7 +82,7 @@ def gen_param_w_default(schema):
         else:
             raise NotImplementedError(entry)
         result.append(f"{name}={default}")
-    return ", " .join(result)
+    return ", ".join(result)
 
 
 def gen_param_wo_default(schema):

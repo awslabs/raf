@@ -121,8 +121,7 @@ def IntOrTupleIntOrNone(a):  # pylint: disable=invalid-name
         a = tuple(a)
     for item in a:
         if not isinstance(item, int):
-            raise TypeError(
-                "Cannot convert to Optional[Union[int, Tuple[int]]]")
+            raise TypeError("Cannot convert to Optional[Union[int, Tuple[int]]]")
     return a
 
 

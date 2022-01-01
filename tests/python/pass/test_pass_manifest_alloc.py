@@ -3,14 +3,11 @@ import mnm
 from mnm._lib import tvm
 from mnm._core.module import IRModule
 from mnm._core.device import Device
-from mnm.testing import get_device_list, randn
+from mnm.testing import get_testable_devices, randn
 
 
-@pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_memory_alloc(device, shape):
     # pylint: disable=protected-access
     class Model(mnm.Model):
@@ -27,13 +24,13 @@ def test_memory_alloc(device, shape):
     model_before = Model()
     model_before.infer_mode()
     m_x, _ = randn(shape, device=device)
-    func = model_before._internal(m_x).mod['main']
+    func = model_before._internal(m_x).mod["main"]
     mod = IRModule.from_expr(func)
     mod = mnm._ffi.pass_.InferType()(mod)
-    with Device(device if device != 'cpu' else 'llvm'):
+    with Device(device if device != "cpu" else "llvm"):
         mod = mnm._ffi.pass_.ManifestAlloc()(mod)
     mod = mnm._ffi.pass_.InferType()(mod)
-    text = mod['main'].astext()
+    text = mod["main"].astext()
     assert "alloc_storage" in text
     assert "alloc_tensor" in text
     assert "invoke_op" in text
@@ -68,7 +65,9 @@ def test_dynamic_model():
         mod = mnm._ffi.pass_.InferType()(mod)
         mod = mnm._ffi.pass_.ManifestAlloc()(mod)
     text = mnm.ir.AsText(mod["main"])
-    assert '\n'.join(text.splitlines()[:-4]) == """#[version = "0.0.5"]
+    assert (
+        "\n".join(text.splitlines()[:-4])
+        == """#[version = "0.0.5"]
 fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_0 = mnm.op.vm.alloc_storage(int64(32), int64(64), int32(1), int32(0), str"int32");
   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, [4, 2], str"int32", [4, 2]);
@@ -117,6 +116,8 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x4 = %x_32;
   %x4
 }"""
+    )
+
 
 def test_reshape():
     # pylint: disable=protected-access, no-self-use
@@ -137,12 +138,12 @@ def test_reshape():
 
     model = Model()
     m_x, _ = randn(shape, device="cpu")
-    func = model._internal(m_x).mod['main']
+    func = model._internal(m_x).mod["main"]
     mod = IRModule.from_expr(func)
     mod = mnm._ffi.pass_.InferType()(mod)
     with Device("cpu"):
         mod = mnm._ffi.pass_.ManifestAlloc()(mod)
-    text = mod['main'].astext()
+    text = mod["main"].astext()
     assert text.count("vm.set_shape") == 4
     assert "reshape" not in text
     assert "expand_dims" not in text

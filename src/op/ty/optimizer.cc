@@ -35,5 +35,19 @@ Type SgdInfer(const CallValues& value) {
 
 MNM_OP_TYPE("mnm.op.sgd", "Sgd", SgdInfer);
 
+Type LansInfer(const CallValues& value) {
+  const auto* args = value->args.as<LansArgs>();
+  CHECK(args != nullptr);
+  int ntensors = args->tensor_list.size() / 4;
+  CHECK(args->tensor_list.size() % 4 == 0);
+  Array<Type> res;
+  for (int i = ntensors; i < args->tensor_list.size(); ++i) {
+    res.push_back(Downcast<TensorType>(GetType(args->tensor_list[i])));
+  }
+  return TupleType(res);
+}
+
+MNM_OP_TYPE("mnm.op.lans", "Lans", LansInfer);
+
 }  // namespace op
 }  // namespace mnm

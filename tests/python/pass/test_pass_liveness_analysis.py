@@ -7,6 +7,7 @@ from mnm.ir import ScopeBuilder
 from mnm._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc
 from mnm.testing import randn
 
+
 def verify_live_in_set(mod, expected):
     mod = InferType()(mod)
 
@@ -47,12 +48,12 @@ def test_basic():
 
         @mnm.model.trace
         def forward(self, param_0, param_1, param_2, param_3):
-            t_0 = mnm.add(param_0, param_0) # a1
-            t_1 = mnm.add(t_0, param_1) # a2
-            t_2 = mnm.add(t_1, param_2) # a3
-            t_3 = mnm.add(t_2, t_0) # a4
-            t_4 = mnm.add(t_3, param_3) # a5
-            return t_4 # n_1
+            t_0 = mnm.add(param_0, param_0)  # a1
+            t_1 = mnm.add(t_0, param_1)  # a2
+            t_2 = mnm.add(t_1, param_2)  # a3
+            t_3 = mnm.add(t_2, t_0)  # a4
+            t_4 = mnm.add(t_3, param_3)  # a5
+            return t_4  # n_1
 
     device = "cpu"
     shape = (5, 5)
@@ -71,7 +72,7 @@ def test_basic():
         "a3": {"t_0", "t_1", "param_2", "param_3"},
         "a4": {"t_0", "t_2", "param_3"},
         "a5": {"t_3", "param_3"},
-        "n_1": {"t_4"}
+        "n_1": {"t_4"},
     }
 
     mod = model._internal(*args).mod
@@ -85,14 +86,14 @@ def test_multi_outs():
 
         @mnm.model.trace
         def forward(self, param_0, param_1, param_2, param_3, param_4):
-            t_0 = mnm.relu(param_0) # a1
-            res = mnm.batch_norm_train(t_0, param_3, param_4, param_1, param_2, 0.1, 1e-5) # a2
-            t_1 = res[0] # a3
+            t_0 = mnm.relu(param_0)  # a1
+            res = mnm.batch_norm_train(t_0, param_3, param_4, param_1, param_2, 0.1, 1e-5)  # a2
+            t_1 = res[0]  # a3
             t_2 = res[1]
             t_3 = res[2]
-            t_4 = mnm.relu(t_1) # a4
-            t_5 = mnm.relu(t_4) # a5
-            return t_5 # n_1
+            t_4 = mnm.relu(t_1)  # a4
+            t_5 = mnm.relu(t_4)  # a5
+            return t_5  # n_1
 
     model = Model()
     model.infer_mode()
@@ -114,7 +115,7 @@ def test_multi_outs():
         "a3": {"t_1"},
         "a4": {"t_1"},
         "a5": {"t_4"},
-        "n_1": {"t_5"}
+        "n_1": {"t_5"},
     }
 
     mod = model._internal(*args).mod
@@ -128,10 +129,10 @@ def test_tuple_input():
 
         @mnm.model.trace
         def forward(self, tup):
-            x = tup[0] # a1
-            y = tup[1] # a2
-            t_0 = mnm.add(x, y) # a3
-            return t_0 # n_1
+            x = tup[0]  # a1
+            y = tup[1]  # a2
+            t_0 = mnm.add(x, y)  # a3
+            return t_0  # n_1
 
     model = Model()
     model.infer_mode()
@@ -153,6 +154,7 @@ def test_tuple_input():
     mod = model._internal(*args).mod
     verify_live_in_set(mod, expected)
 
+
 def test_unused_tuple():
     class Model(mnm.Model):
         def build(self):
@@ -160,11 +162,11 @@ def test_unused_tuple():
 
         @mnm.model.trace
         def forward(self, tup):
-            x = tup[0] # a1
-            t_0 = mnm.add(x, x) # a2
-            t_1 = mnm.concatenate(tup) # a3
-            ret = (t_0, t_1) # a4
-            return ret # n_1
+            x = tup[0]  # a1
+            t_0 = mnm.add(x, x)  # a2
+            t_1 = mnm.concatenate(tup)  # a3
+            ret = (t_0, t_1)  # a4
+            return ret  # n_1
 
     model = Model()
     model.infer_mode()
@@ -307,10 +309,10 @@ def test_after_manifest_alloc():
 
         @mnm.model.trace
         def forward(self, param_0, param_1, param_2):
-            t_0 = mnm.add(param_0, param_0) # a1
-            t_1 = mnm.add(t_0, param_1) # a2
-            t_2 = mnm.add(t_1, param_2) # a3
-            return t_2 # n_1
+            t_0 = mnm.add(param_0, param_0)  # a1
+            t_1 = mnm.add(t_0, param_1)  # a2
+            t_2 = mnm.add(t_1, param_2)  # a3
+            return t_2  # n_1
 
     device = "cpu"
     shape = (5, 5)
@@ -360,28 +362,28 @@ def test_after_manifest_alloc():
     # pylint: enable=line-too-long
 
     expected = {
-        "x_2": {'param_0', 'param_1', 'param_2'},
-        "x_3": {'param_0', 'param_1', 'param_2', 't_0'},
-        "x_4": {'param_0', 'param_1', 't_1', 'param_2'},
-        "x_5": {'param_0', 'param_1', 't_1', 'param_2'},
-        "x_6": {'param_0', 'param_1', 't_1', 'param_2'},
-        "x_7": {'param_0', 'param_1', 't_1', 'param_2'},
-        "a1": {'param_1', 't_1', 'param_2'},
-        "x_10": {'param_1', 't_1', 'param_2'},
-        "x_11": {'param_1', 't_1', 'param_2', 't_2'},
-        "x_12": {'param_1', 't_1', 'param_2', 't_3'},
-        "x_13": {'param_1', 't_1', 'param_2', 't_3'},
-        "x_14": {'param_1', 't_1', 'param_2', 't_3'},
-        "x_15": {'param_1', 't_1', 'param_2', 't_3'},
-        "a2": {'t_3', 'param_2'},
-        "x_18": {'t_3', 'param_2'},
-        "x_19": {'t_3', 'param_2', 't_4'},
-        "x_20": {'param_2', 't_5', 't_3'},
-        "x_21": {'param_2', 't_5', 't_3'},
-        "x_22": {'param_2', 't_5', 't_3'},
-        "x_23": {'param_2', 't_5', 't_3'},
-        "a3": {'t_5'},
-        "n_4": {'t_5'},
+        "x_2": {"param_0", "param_1", "param_2"},
+        "x_3": {"param_0", "param_1", "param_2", "t_0"},
+        "x_4": {"param_0", "param_1", "t_1", "param_2"},
+        "x_5": {"param_0", "param_1", "t_1", "param_2"},
+        "x_6": {"param_0", "param_1", "t_1", "param_2"},
+        "x_7": {"param_0", "param_1", "t_1", "param_2"},
+        "a1": {"param_1", "t_1", "param_2"},
+        "x_10": {"param_1", "t_1", "param_2"},
+        "x_11": {"param_1", "t_1", "param_2", "t_2"},
+        "x_12": {"param_1", "t_1", "param_2", "t_3"},
+        "x_13": {"param_1", "t_1", "param_2", "t_3"},
+        "x_14": {"param_1", "t_1", "param_2", "t_3"},
+        "x_15": {"param_1", "t_1", "param_2", "t_3"},
+        "a2": {"t_3", "param_2"},
+        "x_18": {"t_3", "param_2"},
+        "x_19": {"t_3", "param_2", "t_4"},
+        "x_20": {"param_2", "t_5", "t_3"},
+        "x_21": {"param_2", "t_5", "t_3"},
+        "x_22": {"param_2", "t_5", "t_3"},
+        "x_23": {"param_2", "t_5", "t_3"},
+        "a3": {"t_5"},
+        "n_4": {"t_5"},
     }
 
     verify_live_in_set(mod, expected)

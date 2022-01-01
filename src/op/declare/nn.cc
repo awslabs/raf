@@ -92,7 +92,7 @@ void Conv2D(const CallValues& call) {
 MNM_OP_DECLARE("mnm.op.conv2d", Conv2D);
 
 void Conv2dTrans(const CallValues& call) {
-  // N.B.: NCHW + OIHW
+  // N.B.: NCHW + IOHW
   const auto* args = call->args.as<ConvTransArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -109,7 +109,7 @@ void Conv2dTrans(const CallValues& call) {
       tvm::Integer(x->shape[2]),
       tvm::Integer(x->shape[3]),
   };
-  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "OIHW");
+  tvm::tir::BijectiveLayout w_layout_converter(args->kernel_layout, "IOHW");
   tvm::Array<tvm::PrimExpr> w_shape{
       tvm::Integer(w->shape[0]),
       tvm::Integer(w->shape[1]),

@@ -12,6 +12,22 @@
 namespace mnm {
 namespace op {
 namespace schema {
+class LansArgs : public ir::AttrsNode<LansArgs> {
+ public:
+  std::vector<value::BaseTensorValue> tensor_list;
+  value::BaseTensorValue step;
+  float learning_rate;
+  float beta1;
+  float beta2;
+  float eps;
+  int bias_correction;
+  float weight_decay;
+  int grad_averaging;
+  int mode;
+  bool normalize_grad;
+  MNM_OP_SCHEMA(LansArgs, "mnm.args.lans");
+};
+
 class SgdArgs : public ir::AttrsNode<SgdArgs> {
  public:
   value::BaseTensorValue x;

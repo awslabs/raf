@@ -17,45 +17,48 @@ _reg.register_injective_schedule("mnm.op.tvm.pad")
 
 _reg.register_strategy("mnm.op.tvm.dense", strategy.dense_strategy)
 
-def compute_matmul_general(attr, inputs, output_type,
-                           transpose_a=False, transpose_b=False):
+
+def compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=False):
     # pylint: disable=unused-argument
     if len(inputs) == 2:
         data, weight = inputs[0], inputs[1]
     else:
         raise ValueError("Invalid input")
-    assert len(data.shape) == 2 and len(weight.shape) == 2, \
-        "only support 2-dim dense"
+    assert len(data.shape) == 2 and len(weight.shape) == 2, "only support 2-dim dense"
     return [_topi.matmul(data, weight, transp_a=transpose_a, transp_b=transpose_b)]
+
 
 @register_compute("mnm.op.tvm.matmul")
 def compute_matmul(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=False)
 
+
 @register_compute("mnm.op.tvm.matmul_tn")
 def compute_matmul_tn(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=True, transpose_b=False)
+
 
 @register_compute("mnm.op.tvm.matmul_nt")
 def compute_matmul_nt(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=True)
 
+
 @register_compute("mnm.op.tvm.matmul_tt")
 def compute_matmul_tt(attr, inputs, output_type):
     return compute_matmul_general(attr, inputs, output_type, transpose_a=True, transpose_b=True)
+
 
 _reg.register_injective_schedule("mnm.op.tvm.matmul")
 _reg.register_injective_schedule("mnm.op.tvm.matmul_tn")
 _reg.register_injective_schedule("mnm.op.tvm.matmul_nt")
 _reg.register_injective_schedule("mnm.op.tvm.matmul_tt")
 
-def compute_batch_matmul_general(attr, inputs, output_type,
-                                 transpose_a=False, transpose_b=False):
+
+def compute_batch_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=False):
     # pylint: disable=unused-argument
     assert len(inputs) == 2, "Expected 2 inputs, but got {}".format(len(inputs))
     data, weight = inputs[0], inputs[1]
-    assert len(data.shape) == 3 and len(weight.shape) == 3, \
-        "only support 3-dim batch matmul"
+    assert len(data.shape) == 3 and len(weight.shape) == 3, "only support 3-dim batch matmul"
 
     # Topi batch matmul currently support NT mode. So, add transposes when it is not NT
     if transpose_a:
@@ -64,20 +67,27 @@ def compute_batch_matmul_general(attr, inputs, output_type,
         weight = _topi.transpose(weight, (0, 2, 1))
     return [_topi.nn.batch_matmul(data, weight)]
 
+
 @register_compute("mnm.op.tvm.batch_matmul")
 def compute_batch_matmul_nn(attr, inputs, output_type):
-    return compute_batch_matmul_general(attr, inputs, output_type,
-                                        transpose_a=False, transpose_b=False)
+    return compute_batch_matmul_general(
+        attr, inputs, output_type, transpose_a=False, transpose_b=False
+    )
+
 
 @register_compute("mnm.op.tvm.batch_matmul_tn")
 def compute_batch_matmul_tn(attr, inputs, output_type):
-    return compute_batch_matmul_general(attr, inputs, output_type,
-                                        transpose_a=True, transpose_b=False)
+    return compute_batch_matmul_general(
+        attr, inputs, output_type, transpose_a=True, transpose_b=False
+    )
+
 
 @register_compute("mnm.op.tvm.batch_matmul_tt")
 def compute_batch_matmul_tt(attr, inputs, output_type):
-    return compute_batch_matmul_general(attr, inputs, output_type,
-                                        transpose_a=True, transpose_b=True)
+    return compute_batch_matmul_general(
+        attr, inputs, output_type, transpose_a=True, transpose_b=True
+    )
+
 
 _reg.register_injective_schedule("mnm.op.tvm.batch_matmul")
 _reg.register_injective_schedule("mnm.op.tvm.batch_matmul_tn")
@@ -87,12 +97,14 @@ _reg.register_strategy("mnm.op.tvm.batch_matmul_nt", strategy.batch_matmul_strat
 
 _reg.register_strategy("mnm.op.tvm.softmax", strategy.softmax_strategy)
 
+
 @register_compute("mnm.op.tvm.softmax_dx")
 def compute_softmax_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument, unused-variable, invalid-name
     x, y, dy = inputs[0], inputs[1], inputs[2]
     axis = attr.axis
     return [(dy - _topi.sum(dy * y, axis, True)) * y]
+
 
 # TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("mnm.op.tvm.softmax_dx")
@@ -114,6 +126,7 @@ _reg.register_schedule("mnm.op.tvm.adaptive_max_pool2d_dx", strategy.schedule_po
 
 _reg.register_strategy("mnm.op.tvm.log_softmax", strategy.log_softmax_strategy)
 
+
 @register_compute("mnm.op.tvm.log_softmax_dx")
 def compute_log_softmax_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument, unused-variable, invalid-name
@@ -123,8 +136,10 @@ def compute_log_softmax_dx(attr, inputs, output_type):
     grad = dy / sm
     return [(grad - _topi.sum(grad * sm, axis, True)) * sm]
 
+
 # TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("mnm.op.tvm.log_softmax_dx")
+
 
 @register_compute("mnm.op.tvm._contrib_dropout")
 def compute_contrib_dropout(attr, inputs, output_type):
@@ -132,45 +147,59 @@ def compute_contrib_dropout(attr, inputs, output_type):
     x = inputs[0]
     p = attr.rate
     if x.dtype != "float32" and x.dtype != "float64":
-        raise TypeError("input array of mnm.dropout is expected to be the type of float32 " +
-                        "or float64, but received {}".format(x.dtype))
-    if p < 0. or p >= 1:
-        raise ValueError('p is out of interval')
+        raise TypeError(
+            "input array of mnm.dropout is expected to be the type of float32 "
+            + "or float64, but received {}".format(x.dtype)
+        )
+    if p < 0.0 or p >= 1:
+        raise ValueError("p is out of interval")
     retain_p = _tvm.tir.const(1 - p, x.dtype)
     mask = random.uniform(0, 1, x.shape)
-    ret = _tvm.te.compute(x.shape, lambda *ix: _tvm.te.if_then_else(
-        mask[ix] <= _tvm.tir.const(p, "float32"),
-        _tvm.tir.const(0, x.dtype),
-        x[ix] / retain_p))
-    mask = _tvm.te.compute(x.shape, lambda *ix: _tvm.te.if_then_else(
-        mask[ix] <= _tvm.tir.const(p, "float32"),
-        _tvm.tir.const(0, "float32"),
-        _tvm.tir.const(1 / (1 - p), "float32")))
+    ret = _tvm.te.compute(
+        x.shape,
+        lambda *ix: _tvm.te.if_then_else(
+            mask[ix] <= _tvm.tir.const(p, "float32"), _tvm.tir.const(0, x.dtype), x[ix] / retain_p
+        ),
+    )
+    mask = _tvm.te.compute(
+        x.shape,
+        lambda *ix: _tvm.te.if_then_else(
+            mask[ix] <= _tvm.tir.const(p, "float32"),
+            _tvm.tir.const(0, "float32"),
+            _tvm.tir.const(1 / (1 - p), "float32"),
+        ),
+    )
     # states and reserve_space are valid in cudnn only
-    states = _topi.full((), dtype="uint8", fill_value=0.)
+    states = _topi.full((), dtype="uint8", fill_value=0.0)
     reserve_space_shape = ()
     if len(output_type.fields[-1].shape) > 0:
         # Reserve_space is not scalar type. It is dispatched from the base op
         from .._ffi.backend.cudnn import GetDropoutReserveSpaceSizeInBytes
+
         if GetDropoutReserveSpaceSizeInBytes:
             x_ty = _tvm.relay.TensorType(x.shape, dtype=x.dtype)
             reserve_space_shape = (GetDropoutReserveSpaceSizeInBytes(x_ty),)
-    reserve_space = _topi.full(reserve_space_shape, dtype="uint8", fill_value=0.)
+    reserve_space = _topi.full(reserve_space_shape, dtype="uint8", fill_value=0.0)
     return [ret, mask, states, reserve_space]
 
+
 _reg.register_injective_schedule("mnm.op.tvm._contrib_dropout")
+
 
 @register_compute("mnm.op.tvm._contrib_dropout_dx")
 def compute_contrib_dropout_dx(attr, inputs, output_type):
     # pylint: disable=invalid-name, unused-argument
     dy = inputs[0]
     mask = inputs[1]
-    assert _topi.utils.get_const_tuple(dy.shape) == _topi.utils.get_const_tuple(mask.shape), \
-        "dy.shape %s != mask.shape %s" % (str(dy.shape), str(mask.shape))
+    assert _topi.utils.get_const_tuple(dy.shape) == _topi.utils.get_const_tuple(
+        mask.shape
+    ), "dy.shape %s != mask.shape %s" % (str(dy.shape), str(mask.shape))
     ret = _tvm.te.compute(dy.shape, lambda *idx: dy[idx] * _tvm.topi.cast(mask[idx], dy.dtype))
     return [ret]
 
+
 _reg.register_injective_schedule("mnm.op.tvm._contrib_dropout_dx")
+
 
 @register_compute("mnm.op.tvm.relu_dx")
 @_tvm.te.tag_scope(tag=_tvm.topi.tag.ELEMWISE)
@@ -187,11 +216,15 @@ def compute_relu_dx(attr, inputs, output_type):
     # if both x and y are given, we use x here
     # Using x: return 0 if x < 0 else dy
     # Using y: return 0 if y == 0 else dy
-    G = _tvm.te.compute(dy.shape, lambda *idx: _tvm.te.if_then_else(
-        data[idx] <= 0, _tvm.tir.const(0, dy.dtype), dy[idx]))
+    G = _tvm.te.compute(
+        dy.shape,
+        lambda *idx: _tvm.te.if_then_else(data[idx] <= 0, _tvm.tir.const(0, dy.dtype), dy[idx]),
+    )
     return [G]
 
+
 _reg.register_injective_schedule("mnm.op.tvm.relu_dx")
+
 
 @register_compute("mnm.op.tvm.threshold")
 def compute_threshold(attr, inputs, output_type):
@@ -199,24 +232,36 @@ def compute_threshold(attr, inputs, output_type):
     x = inputs[0]
     threshold = _tvm.tir.const(attr.threshold, x.dtype)
     value = _tvm.tir.const(attr.value, x.dtype)
-    return [_tvm.te.compute(x.shape,
-                            lambda *idx: _tvm.te.if_then_else(
-                                x[idx] > threshold, x[idx], value),
-                            tag=_tvm.topi.tag.ELEMWISE)]
+    return [
+        _tvm.te.compute(
+            x.shape,
+            lambda *idx: _tvm.te.if_then_else(x[idx] > threshold, x[idx], value),
+            tag=_tvm.topi.tag.ELEMWISE,
+        )
+    ]
+
 
 _reg.register_injective_schedule("mnm.op.tvm.threshold")
+
 
 @register_compute("mnm.op.tvm.threshold_dx")
 def compute_threshold_dx(attr, inputs, output_type):
     # pylint: disable=unused-argument
     x, dy = inputs[0], inputs[1]
     threshold = _tvm.tir.const(attr.threshold, x.dtype)
-    return [_tvm.te.compute(dy.shape,
-                            lambda *idx: _tvm.te.if_then_else(
-                                x[idx] > threshold, dy[idx], _tvm.tir.const(0, dy.dtype)),
-                            tag=_tvm.topi.tag.ELEMWISE)]
+    return [
+        _tvm.te.compute(
+            dy.shape,
+            lambda *idx: _tvm.te.if_then_else(
+                x[idx] > threshold, dy[idx], _tvm.tir.const(0, dy.dtype)
+            ),
+            tag=_tvm.topi.tag.ELEMWISE,
+        )
+    ]
+
 
 _reg.register_injective_schedule("mnm.op.tvm.threshold_dx")
+
 
 @register_compute("mnm.op.tvm.layer_norm")
 def compute_layer_norm(attr, inputs, output_type):
@@ -231,12 +276,14 @@ def compute_layer_norm(attr, inputs, output_type):
     ndim = len(x.shape)
     if axis < 0:
         axis = ndim + axis
+
     def pad(data, target):
         newaxis = []
         for i in range(ndim):
             if i != axis:
                 newaxis.append(i)
         return _topi.expand_like(data, target, newaxis)
+
     count = _tvm.tir.const(1, dtype=x.dtype)
     count *= x.shape[axis]
     reduce_axes = [axis]
@@ -253,11 +300,13 @@ def compute_layer_norm(attr, inputs, output_type):
         out = _topi.add(out, pad(bias, out))
     return [out]
 
+
 @generic_func
 def schedule_generic(attrs, outs, target):
     # pylint: disable=unused-argument
     with target:
         return _topi.generic.schedule_injective(outs)
+
 
 @schedule_generic.register(["cuda", "gpu"])
 def schedule_generic_cuda(attrs, outs, target):
@@ -269,10 +318,14 @@ def schedule_generic_cuda(attrs, outs, target):
         # fuse axes and split into bx and tx then bind
         scheduled_ops = []
         num_thread = 64
+
         def bind_axes(s, out):
-            if (isinstance(out.op, _tvm.te.ComputeOp)
-                    and isinstance(out.op.body[0], _tvm.tir.expr.Reduce)
-                    and len(s[out].iter_var_attrs) == 0 and out.op not in scheduled_ops):
+            if (
+                isinstance(out.op, _tvm.te.ComputeOp)
+                and isinstance(out.op.body[0], _tvm.tir.expr.Reduce)
+                and len(s[out].iter_var_attrs) == 0
+                and out.op not in scheduled_ops
+            ):
                 scheduled_ops.append(out.op)
                 fused = s[out].fuse(*s[out].op.axis)
                 bx, tx = s[out].split(fused, factor=num_thread)
@@ -280,10 +333,13 @@ def schedule_generic_cuda(attrs, outs, target):
                 s[out].bind(tx, _tvm.te.thread_axis("threadIdx.x"))
             for inp in out.op.input_tensors:
                 bind_axes(s, inp)
+
         bind_axes(s, out)
         return s
 
+
 _reg.register_schedule("mnm.op.tvm.layer_norm", schedule_generic)
+
 
 @register_compute("mnm.op.tvm.layer_norm_dx")
 def compute_layer_norm_dx(attr, inputs, output_type):
@@ -312,6 +368,7 @@ def compute_layer_norm_dx(attr, inputs, output_type):
 
     bar_x = _topi.divide(xmu, denominator)
     w = _topi.divide(dy, denominator)
+
     def pad(data, target):
         newaxis = []
         for i in range(ndim):
@@ -332,16 +389,18 @@ def compute_layer_norm_dx(attr, inputs, output_type):
         shape = _topi.utils.get_const_tuple(x.shape)
         reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
         reduce_shape = [shape[i] for i in reduce_axes]
-        dw = _topi.sum(dy * (x  - x_mean) / denominator, axis=reduce_axes)
+        dw = _topi.sum(dy * (x - x_mean) / denominator, axis=reduce_axes)
         db = _topi.sum(dy, axis=reduce_axes)
         return [dx, dw, db]
     return [dx]
+
 
 _reg.register_schedule("mnm.op.tvm.layer_norm_dx", schedule_generic)
 
 _reg.register_strategy("mnm.op.tvm.conv2d", strategy.conv2d_strategy)
 
 _reg.register_strategy("mnm.op.tvm.conv2d_transpose", strategy.conv2d_transpose_strategy)
+
 
 def _get_pad_tuple(padding, kernel):
     """Common code to get the pad option
@@ -390,13 +449,15 @@ def _get_pad_tuple(padding, kernel):
     pad_left = (pad_w + 1) // 2
     return pad_top, pad_left, pad_h - pad_top, pad_w - pad_left
 
+
 def declaration_conv2d_transpose_impl(data, kernel, strides, padding, out_dtype, output_padding):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     """Implementation of conv2d transpose"""
-    data_pad, kernel_transform = \
-        _topi.nn.conv2d_transpose_nchw_preprocess(data, kernel, strides, padding, out_dtype, (0, 0))
+    data_pad, kernel_transform = _topi.nn.conv2d_transpose_nchw_preprocess(
+        data, kernel, strides, padding, out_dtype, (0, 0)
+    )
     batch, in_c, in_h, in_w = data_pad.shape
     out_c, _, filter_h, filter_w = kernel_transform.shape
 
@@ -404,16 +465,20 @@ def declaration_conv2d_transpose_impl(data, kernel, strides, padding, out_dtype,
     out_c = _topi.nn.simplify(out_c)
     out_h = _topi.nn.simplify(in_h - filter_h + 1 + output_padding[0])
     out_w = _topi.nn.simplify(in_w - filter_w + 1 + output_padding[1])
-    dc = _tvm.te.reduce_axis((0, in_c), name='dc')
-    dh = _tvm.te.reduce_axis((0, filter_h), name='dh')
-    dw = _tvm.te.reduce_axis((0, filter_w), name='dw')
+    dc = _tvm.te.reduce_axis((0, in_c), name="dc")
+    dh = _tvm.te.reduce_axis((0, filter_h), name="dh")
+    dw = _tvm.te.reduce_axis((0, filter_w), name="dw")
     Output = _tvm.te.compute(
         (batch, out_c, out_h, out_w),
         lambda b, c, h, w: _tvm.tir.sum(
-            data_pad[b, dc, h+dh, w+dw].astype(out_dtype) *
-            kernel_transform[c, dc, dh, dw].astype(out_dtype),
-            axis=[dc, dh, dw]), tag="conv2d_transpose_nchw")
+            data_pad[b, dc, h + dh, w + dw].astype(out_dtype)
+            * kernel_transform[c, dc, dh, dw].astype(out_dtype),
+            axis=[dc, dh, dw],
+        ),
+        tag="conv2d_transpose_nchw",
+    )
     return Output
+
 
 @register_compute("mnm.op.tvm.conv2d_dx")
 def compute_conv2d_dx(attr, inputs, output_type):
@@ -422,10 +487,12 @@ def compute_conv2d_dx(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
-    strides, padding, dilation, layout = _topi.utils.get_const_tuple(attr.strides), \
-                                         _topi.utils.get_const_tuple(attr.padding), \
-                                         _topi.utils.get_const_tuple(attr.dilation), \
-                                         attr.data_layout
+    strides, padding, dilation, layout = (
+        _topi.utils.get_const_tuple(attr.strides),
+        _topi.utils.get_const_tuple(attr.padding),
+        _topi.utils.get_const_tuple(attr.dilation),
+        attr.data_layout,
+    )
     assert layout == "NCHW"
     assert dilation == (1, 1), "dilation is not supported yet"
     assert attr.groups == 1, "only support groups = 1"
@@ -439,6 +506,7 @@ def compute_conv2d_dx(attr, inputs, output_type):
     grads = _tvm.te.gradient(R, [X], head=dy)
     return grads
 
+
 _reg.register_schedule("mnm.op.tvm.conv2d_dx", schedule_generic)
 
 
@@ -449,10 +517,12 @@ def compute_conv2d_dw(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
-    strides, padding, dilation, layout = _topi.utils.get_const_tuple(attr.strides), \
-                                         _topi.utils.get_const_tuple(attr.padding), \
-                                         _topi.utils.get_const_tuple(attr.dilation), \
-                                         attr.data_layout
+    strides, padding, dilation, layout = (
+        _topi.utils.get_const_tuple(attr.strides),
+        _topi.utils.get_const_tuple(attr.padding),
+        _topi.utils.get_const_tuple(attr.dilation),
+        attr.data_layout,
+    )
     assert layout == "NCHW", "only support NCHW layout"
     assert dilation == (1, 1), "dilation is not supported yet"
     assert attr.groups == 1, "only support groups = 1"
@@ -479,12 +549,13 @@ def compute_conv2d_transpose_dx(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
-    strides, padding, output_padding, dilation, layout =                            \
-                                         _topi.utils.get_const_tuple(attr.strides), \
-                                         _topi.utils.get_const_tuple(attr.padding), \
-                                         _topi.utils.get_const_tuple(attr.output_padding), \
-                                         _topi.utils.get_const_tuple(attr.dilation), \
-                                         attr.data_layout
+    strides, padding, output_padding, dilation, layout = (
+        _topi.utils.get_const_tuple(attr.strides),
+        _topi.utils.get_const_tuple(attr.padding),
+        _topi.utils.get_const_tuple(attr.output_padding),
+        _topi.utils.get_const_tuple(attr.dilation),
+        attr.data_layout,
+    )
     assert layout == "NCHW", "only support NCHW layout"
     assert dilation == (1, 1), "dilation is not supported yet"
     assert attr.groups == 1, "only support groups = 1"
@@ -493,7 +564,9 @@ def compute_conv2d_transpose_dx(attr, inputs, output_type):
         W, dy = inputs[0], inputs[2]
     else:
         W, dy = inputs[0], inputs[1]
-    assert (W.shape[3] > 1 and W.shape[2] > 1), "not support kernel size 1 for now. \
+    assert (
+        W.shape[3] > 1 and W.shape[2] > 1
+    ), "not support kernel size 1 for now. \
                                                 See apache/tvm#8087"
     X = _tvm.te.placeholder(shape=attr.kernel_size, dtype=dy.dtype)
     R = _topi.x86.conv2d_transpose_nchw(X, W, strides, padding, dy.dtype, output_padding)
@@ -503,6 +576,7 @@ def compute_conv2d_transpose_dx(attr, inputs, output_type):
 
 _reg.register_schedule("mnm.op.tvm.conv2d_transpose_dx", schedule_generic)
 
+
 @register_compute("mnm.op.tvm.conv2d_transpose_dw")
 def compute_conv2d_transpose_dw(attr, inputs, output_type):
     # pylint: disable=unused-argument
@@ -510,12 +584,13 @@ def compute_conv2d_transpose_dw(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
-    strides, padding, output_padding, dilation, layout =                            \
-                                         _topi.utils.get_const_tuple(attr.strides), \
-                                         _topi.utils.get_const_tuple(attr.padding), \
-                                         _topi.utils.get_const_tuple(attr.output_padding), \
-                                         _topi.utils.get_const_tuple(attr.dilation), \
-                                         attr.data_layout
+    strides, padding, output_padding, dilation, layout = (
+        _topi.utils.get_const_tuple(attr.strides),
+        _topi.utils.get_const_tuple(attr.padding),
+        _topi.utils.get_const_tuple(attr.output_padding),
+        _topi.utils.get_const_tuple(attr.dilation),
+        attr.data_layout,
+    )
     assert layout == "NCHW", "only support NCHW layout"
     assert dilation == (1, 1), "dilation is not supported yet"
     assert attr.groups == 1, "only support groups = 1"
@@ -532,8 +607,8 @@ def compute_conv2d_transpose_dw(attr, inputs, output_type):
     grads = _tvm.te.gradient(R, [W], head=dy)
     return grads
 
-_reg.register_schedule("mnm.op.tvm.conv2d_transpose_dw", schedule_generic)
 
+_reg.register_schedule("mnm.op.tvm.conv2d_transpose_dw", schedule_generic)
 
 
 def average(data, axis):
@@ -543,8 +618,11 @@ def average(data, axis):
     tot = _topi.sum(data, axis=axis)
     return _topi.divide(tot, size)
 
+
 @register_compute("mnm.op.tvm.batch_norm_train")
-def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
+def batch_norm_train_compute(
+    attrs, inputs, output_type
+):  # pylint: disable=unused-argument, too-many-locals
     x, running_m0, running_v0, w, b = inputs
     momentum, eps = attrs.momentum, attrs.eps
     shape = _topi.utils.get_const_tuple(x.shape)
@@ -554,8 +632,10 @@ def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unu
     reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
     reduce_shape = [shape[i] for i in reduce_axes]
     reduce_size = reduce(operator.mul, reduce_shape, 1)
+
     def pad(data):
         return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
+
     mean = average(x, axis=reduce_axes)
     x_sq = _topi.multiply(x, x)
     sq_mean = average(x_sq, axis=reduce_axes)
@@ -572,18 +652,24 @@ def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=unu
     y = _topi.add(_topi.multiply(x, pad(scale)), pad(shift))
     return [y, running_m, running_v]
 
+
 _reg.register_reduce_schedule("mnm.op.tvm.batch_norm_train")
 
+
 @register_compute("mnm.op.tvm.batch_norm_infer")
-def batch_norm_infer_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
+def batch_norm_infer_compute(
+    attrs, inputs, output_type
+):  # pylint: disable=unused-argument, too-many-locals
     x, running_m, running_v, w, b = inputs
     eps = attrs.eps
     shape = _topi.utils.get_const_tuple(x.shape)
     ndim = len(shape)
     axis = 1
     num_newaxis = ndim - axis - 1
+
     def pad(data):
         return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
+
     var_add_eps = _topi.add(running_v, eps)
     sqrt_var = _topi.sqrt(var_add_eps)
     scale = _topi.divide(w, sqrt_var)
@@ -593,10 +679,14 @@ def batch_norm_infer_compute(attrs, inputs, output_type):  # pylint: disable=unu
     y = _topi.add(_topi.multiply(x, pad(scale)), pad(shift))
     return [y]
 
+
 _reg.register_injective_schedule("mnm.op.tvm.batch_norm_infer")
 
+
 @register_compute("mnm.op.tvm.batch_norm_train_dxwb")
-def batch_norm_train_dxwb_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument, too-many-locals
+def batch_norm_train_dxwb_compute(
+    attrs, inputs, output_type
+):  # pylint: disable=unused-argument, too-many-locals
     dy, x, w, _ = inputs
     eps = attrs.eps
     shape = _topi.utils.get_const_tuple(x.shape)
@@ -606,8 +696,10 @@ def batch_norm_train_dxwb_compute(attrs, inputs, output_type):  # pylint: disabl
     reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
     reduce_shape = [shape[i] for i in reduce_axes]
     reduce_size = reduce(operator.mul, reduce_shape, 1)
+
     def pad(data):
         return _topi.expand_dims(data, axis=1, num_newaxis=num_newaxis)
+
     mean = average(x, axis=reduce_axes)
     x_sq = _topi.multiply(x, x)
     sq_mean = average(x_sq, axis=reduce_axes)
@@ -618,8 +710,10 @@ def batch_norm_train_dxwb_compute(attrs, inputs, output_type):  # pylint: disabl
     sum_dy = _topi.sum(dy, axis=reduce_axes)
     db = sum_dy
     dw = (sum_dy_x - mean * sum_dy) * inv_sqrt_var
-    dx = ((dy - pad(db / reduce_size) - (x - pad(mean)) * pad(dw * inv_sqrt_var) / reduce_size)
-          * pad(w * inv_sqrt_var))
+    dx = (
+        dy - pad(db / reduce_size) - (x - pad(mean)) * pad(dw * inv_sqrt_var) / reduce_size
+    ) * pad(w * inv_sqrt_var)
     return [dx, dw, db]
+
 
 _reg.register_reduce_schedule("mnm.op.tvm.batch_norm_train_dxwb")

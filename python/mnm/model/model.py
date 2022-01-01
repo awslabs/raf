@@ -44,7 +44,11 @@ class Model(BaseModel, cacher.Cacher):
         cacher.enable(self)  # Cache is set up after the model is built
 
     def __call__(self, *args, **kwargs):
-        forward = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
+        forward = (
+            self.__fwd_train
+            if self._BaseModel__is_train  # pylint: disable=no-member
+            else self.__fwd_infer
+        )
         return forward(*args, **kwargs)
 
     def train_mode(self, recursive=True):
@@ -75,14 +79,18 @@ class Model(BaseModel, cacher.Cacher):
             The traced record.
             Get meta module by record.mod, parameters by record.named_params.
         """
-        fwd_func = self.__fwd_train if self._BaseModel__is_train else self.__fwd_infer  # pylint: disable=no-member
+        fwd_func = (
+            self.__fwd_train
+            if self._BaseModel__is_train  # pylint: disable=no-member
+            else self.__fwd_infer
+        )
         pyfunc = fwd_func.__wrapped__
         # TODO(hgt312): varargs and kwargs
         args = [self] + list(args)
 
         record = _get_trace_record(pyfunc, args, kwargs)
         m_mod = record.mod
-        r_func = m_mod['main']
+        r_func = m_mod["main"]
         # already cached
         if len(record.requires_grads) != 0:
             assert len(r_func.params) == len(record.requires_grads)
@@ -155,10 +163,7 @@ def _set_is_train(root_model, *, value, recursive):
             # TODO(@junrushao1994): maybe invalidate param's other parents?
             param.requires_grad = value
 
-    bfs([root_model],
-        on_pop,
-        on_next=_get_attr_models_value,
-        recursive=recursive)
+    bfs([root_model], on_pop, on_next=_get_attr_models_value, recursive=recursive)
 
 
 def _get_param_dict(root_model, *, prefix, recursive):
@@ -174,16 +179,14 @@ def _get_param_dict(root_model, *, prefix, recursive):
         for name, item in _get_attr_models_key_value(model).items():
             model_prefix[item] = prefix + name
 
-    bfs([root_model],
-        on_pop,
-        on_next=_get_attr_models_value,
-        recursive=recursive)
+    bfs([root_model], on_pop, on_next=_get_attr_models_value, recursive=recursive)
     return result
 
 
 def _get_model_dict(root_model, *, prefix, recursive):
     model_prefix = {root_model: prefix}
     result = OrderedDict()
+
     def on_pop(model):
         prefix = model_prefix[model]
         result[prefix] = model
@@ -192,10 +195,7 @@ def _get_model_dict(root_model, *, prefix, recursive):
         for name, item in _get_attr_models_key_value(model).items():
             model_prefix[item] = prefix + name
 
-    bfs([root_model],
-        on_pop,
-        on_next=_get_attr_models_value,
-        recursive=recursive)
+    bfs([root_model], on_pop, on_next=_get_attr_models_value, recursive=recursive)
     return result
 
 

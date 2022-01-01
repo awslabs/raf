@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/impl/value.cc
 BoolValue = _APIS.get("mnm.value._make.BoolValue", None)
 # Defined in ./src/impl/value.cc

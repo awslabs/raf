@@ -13,7 +13,7 @@ from .._lib import tvm
 def get_param(model, name):
     """get parameter from model"""
     if isinstance(name, str):
-        name = name.split('.')
+        name = name.split(".")
     ret = get_chained_attr(model, name)
     if ret is None:
         raise AttributeError(f"No attribute {name}")
@@ -23,7 +23,7 @@ def get_param(model, name):
 def set_param(model, name, value):
     """set the value of a parameter"""
     if isinstance(name, str):
-        name = name.split('.')
+        name = name.split(".")
     assert len(name) > 0
     ins = get_param(model, name[:-1])
     setattr(ins, name[-1], value)
@@ -31,7 +31,7 @@ def set_param(model, name, value):
 
 # TODO: Remove this after all its use cases are migrated to pass manager with proper requirements
 def run_infer_type(expr):
-    """Helper function to infer the type of the given expr """
+    """Helper function to infer the type of the given expr"""
     if isinstance(expr, IRModule):
         return pass_.InferType()(expr)
     mod = IRModule.from_expr(expr)
@@ -71,7 +71,7 @@ def _get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     options.setdefault("pass_seq", None)
 
     config = {"mnm.stream_schedule.policy": options["stream_schedule_policy"]}
-    pass_seq = options['pass_seq']
+    pass_seq = options["pass_seq"]
     disabled_pass = []
     if disable_fusion:
         disabled_pass += ["FuseDialect", "FuseTVM"]
@@ -86,14 +86,15 @@ def _get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
 def get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     """Get VM executor"""
     executor = _get_vm_executor(mod, device, opt_level, disable_fusion, **options)
-    return executor.make_executor(sch_file=options.get('sch_file', None))
+    return executor.make_executor(sch_file=options.get("sch_file", None))
 
 
-def get_vm_profiler(mod, device, opt_level=2, disable_fusion=False, warmup=5, number=10, repeat=10,
-                    **options):
+def get_vm_profiler(
+    mod, device, opt_level=2, disable_fusion=False, warmup=5, number=10, repeat=10, **options
+):
     """Get VM Profiler"""
     executor = _get_vm_executor(mod, device, opt_level, disable_fusion, **options)
-    return executor.make_profiler(warmup, number, repeat, sch_file=options.get('sch_file', None))
+    return executor.make_profiler(warmup, number, repeat, sch_file=options.get("sch_file", None))
 
 
 def run_vm_model(model, device, args, opt_level=2, disable_fusion=False, **options):
@@ -107,8 +108,17 @@ def run_vm_model(model, device, args, opt_level=2, disable_fusion=False, **optio
     return out
 
 
-def profile_vm_model(model, device, args, opt_level=2, disable_fusion=False, warmup=5, number=10,
-                     repeat=10, **options):
+def profile_vm_model(
+    model,
+    device,
+    args,
+    opt_level=2,
+    disable_fusion=False,
+    warmup=5,
+    number=10,
+    repeat=10,
+    **options,
+):
     """Helper function to profile model executed by VM"""
     args, kwargs = ([], args) if isinstance(args, dict) else (args, {})
     record = model._internal(*args, **kwargs)
@@ -132,4 +142,4 @@ def lower_vm_model(model, target_name, args):
     compiler = VMCompiler()
     mod, _ = compiler.optimize(mod, target_name)
     # TODO (janimesh) - Revisit where the output is used
-    return mod['main']
+    return mod["main"]

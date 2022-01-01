@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import pytest
 import torch
 import torch.nn as nn
@@ -12,40 +13,38 @@ class TorchBottleneck(nn.Module):  # pylint: disable=abstract-method
 
     def __init__(self, inplanes, planes, stride):
         super(TorchBottleneck, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes,
-                               planes,
-                               kernel_size=1,
-                               stride=1,
-                               bias=False)
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes,
-                               planes,
-                               kernel_size=3,
-                               stride=stride,
-                               bias=False,
-                               padding=1,
-                               groups=1,
-                               dilation=1)
+        self.conv2 = nn.Conv2d(
+            planes,
+            planes,
+            kernel_size=3,
+            stride=stride,
+            bias=False,
+            padding=1,
+            groups=1,
+            dilation=1,
+        )
         self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes,
-                               planes * self.expansion,
-                               kernel_size=1,
-                               stride=1,
-                               bias=False)
+        self.conv3 = nn.Conv2d(planes, planes * self.expansion, kernel_size=1, stride=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         if stride != 1 or inplanes != planes * TorchBottleneck.expansion:
             self.downsample = nn.Sequential(
-                nn.Conv2d(inplanes,
-                          planes * TorchBottleneck.expansion,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False),
-                nn.BatchNorm2d(planes * TorchBottleneck.expansion))
+                nn.Conv2d(
+                    inplanes,
+                    planes * TorchBottleneck.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(planes * TorchBottleneck.expansion),
+            )
         else:
             self.downsample = None
 
     def forward(self, x):  # pylint: disable=arguments-differ
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+
         identity = x
         out = self.conv1(x)
         out = self.bn1(out)
@@ -68,12 +67,14 @@ class TorchResNet50(nn.Module):
     def __init__(self, layers, num_classes=1000):
         super(TorchResNet50, self).__init__()
         self.inplanes = 64
-        self.conv1 = nn.Conv2d(in_channels=3,
-                               out_channels=self.inplanes,
-                               kernel_size=7,
-                               stride=2,
-                               padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels=3,
+            out_channels=self.inplanes,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.layer1 = self._make_layer(64, layers[0], stride=1)
         self.layer2 = self._make_layer(128, layers[1], stride=2)
@@ -83,9 +84,7 @@ class TorchResNet50(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight,
-                                        mode='fan_out',
-                                        nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -99,6 +98,7 @@ class TorchResNet50(nn.Module):
 
     def forward(self, x, y_true):  # pylint: disable=arguments-differ
         import torch.nn.functional as F  # pylint: disable=import-outside-toplevel
+
         x = self.conv1(x)
         x = self.bn1(x)
         x = F.relu(x)
@@ -120,35 +120,32 @@ class MNMBottleneck(mnm.Model):
 
     # pylint: disable=attribute-defined-outside-init
     def build(self, inplanes, planes, stride):
-        self.conv1 = Conv2d(inplanes,
-                            planes,
-                            kernel_size=1,
-                            stride=1,
-                            bias=False)
+        self.conv1 = Conv2d(inplanes, planes, kernel_size=1, stride=1, bias=False)
         self.bn1 = BatchNorm(planes)
-        self.conv2 = Conv2d(planes,
-                            planes,
-                            kernel_size=3,
-                            stride=stride,
-                            bias=False,
-                            padding=1,
-                            groups=1,
-                            dilation=1)
+        self.conv2 = Conv2d(
+            planes,
+            planes,
+            kernel_size=3,
+            stride=stride,
+            bias=False,
+            padding=1,
+            groups=1,
+            dilation=1,
+        )
         self.bn2 = BatchNorm(planes)
-        self.conv3 = Conv2d(planes,
-                            planes * self.expansion,
-                            kernel_size=1,
-                            stride=1,
-                            bias=False)
+        self.conv3 = Conv2d(planes, planes * self.expansion, kernel_size=1, stride=1, bias=False)
         self.bn3 = BatchNorm(planes * self.expansion)
         if stride != 1 or inplanes != planes * MNMBottleneck.expansion:
             self.downsample = Sequential(
-                Conv2d(inplanes,
-                       planes * MNMBottleneck.expansion,
-                       kernel_size=1,
-                       stride=stride,
-                       bias=False),
-                BatchNorm(planes * MNMBottleneck.expansion))
+                Conv2d(
+                    inplanes,
+                    planes * MNMBottleneck.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                BatchNorm(planes * MNMBottleneck.expansion),
+            )
         else:
             self.downsample = None
 
@@ -177,12 +174,7 @@ class MNMResNet50(mnm.Model):  # pylint: disable=too-many-instance-attributes
 
     def build(self, layers, num_classes=1000):
         self.inplanes = 64
-        self.conv1 = Conv2d(3,
-                            self.inplanes,
-                            kernel_size=7,
-                            stride=2,
-                            padding=3,
-                            bias=False)
+        self.conv1 = Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = BatchNorm(self.inplanes)
         self.layer1 = self._make_layer(64, layers[0], stride=1)
         self.layer2 = self._make_layer(128, layers[1], stride=2)
@@ -221,6 +213,7 @@ class MNMResNet50(mnm.Model):  # pylint: disable=too-many-instance-attributes
         loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
         return loss
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     t_model = TorchResNet50([3, 4, 6, 3])
@@ -250,8 +243,12 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     m_model.layer1.seq_0.downsample.seq_0.w = t2m_param(t_model.layer1[0].downsample[0].weight)
     m_model.layer1.seq_0.downsample.seq_1.w = t2m_param(t_model.layer1[0].downsample[1].weight)
     m_model.layer1.seq_0.downsample.seq_1.b = t2m_param(t_model.layer1[0].downsample[1].bias)
-    m_model.layer1.seq_0.downsample.seq_1.running_mean = t2m_param(t_model.layer1[0].downsample[1].running_mean)
-    m_model.layer1.seq_0.downsample.seq_1.running_var = t2m_param(t_model.layer1[0].downsample[1].running_var)
+    m_model.layer1.seq_0.downsample.seq_1.running_mean = t2m_param(
+        t_model.layer1[0].downsample[1].running_mean
+    )
+    m_model.layer1.seq_0.downsample.seq_1.running_var = t2m_param(
+        t_model.layer1[0].downsample[1].running_var
+    )
     m_model.layer1.seq_1.conv1.w = t2m_param(t_model.layer1[1].conv1.weight)
     m_model.layer1.seq_1.bn1.w = t2m_param(t_model.layer1[1].bn1.weight)
     m_model.layer1.seq_1.bn1.b = t2m_param(t_model.layer1[1].bn1.bias)
@@ -300,8 +297,12 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     m_model.layer2.seq_0.downsample.seq_0.w = t2m_param(t_model.layer2[0].downsample[0].weight)
     m_model.layer2.seq_0.downsample.seq_1.w = t2m_param(t_model.layer2[0].downsample[1].weight)
     m_model.layer2.seq_0.downsample.seq_1.b = t2m_param(t_model.layer2[0].downsample[1].bias)
-    m_model.layer2.seq_0.downsample.seq_1.running_mean = t2m_param(t_model.layer2[0].downsample[1].running_mean)
-    m_model.layer2.seq_0.downsample.seq_1.running_var = t2m_param(t_model.layer2[0].downsample[1].running_var)
+    m_model.layer2.seq_0.downsample.seq_1.running_mean = t2m_param(
+        t_model.layer2[0].downsample[1].running_mean
+    )
+    m_model.layer2.seq_0.downsample.seq_1.running_var = t2m_param(
+        t_model.layer2[0].downsample[1].running_var
+    )
     m_model.layer2.seq_1.conv1.w = t2m_param(t_model.layer2[1].conv1.weight)
     m_model.layer2.seq_1.bn1.w = t2m_param(t_model.layer2[1].bn1.weight)
     m_model.layer2.seq_1.bn1.b = t2m_param(t_model.layer2[1].bn1.bias)
@@ -365,8 +366,12 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     m_model.layer3.seq_0.downsample.seq_0.w = t2m_param(t_model.layer3[0].downsample[0].weight)
     m_model.layer3.seq_0.downsample.seq_1.w = t2m_param(t_model.layer3[0].downsample[1].weight)
     m_model.layer3.seq_0.downsample.seq_1.b = t2m_param(t_model.layer3[0].downsample[1].bias)
-    m_model.layer3.seq_0.downsample.seq_1.running_mean = t2m_param(t_model.layer3[0].downsample[1].running_mean)
-    m_model.layer3.seq_0.downsample.seq_1.running_var = t2m_param(t_model.layer3[0].downsample[1].running_var)
+    m_model.layer3.seq_0.downsample.seq_1.running_mean = t2m_param(
+        t_model.layer3[0].downsample[1].running_mean
+    )
+    m_model.layer3.seq_0.downsample.seq_1.running_var = t2m_param(
+        t_model.layer3[0].downsample[1].running_var
+    )
     m_model.layer3.seq_1.conv1.w = t2m_param(t_model.layer3[1].conv1.weight)
     m_model.layer3.seq_1.bn1.w = t2m_param(t_model.layer3[1].bn1.weight)
     m_model.layer3.seq_1.bn1.b = t2m_param(t_model.layer3[1].bn1.bias)
@@ -460,8 +465,12 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     m_model.layer4.seq_0.downsample.seq_0.w = t2m_param(t_model.layer4[0].downsample[0].weight)
     m_model.layer4.seq_0.downsample.seq_1.w = t2m_param(t_model.layer4[0].downsample[1].weight)
     m_model.layer4.seq_0.downsample.seq_1.b = t2m_param(t_model.layer4[0].downsample[1].bias)
-    m_model.layer4.seq_0.downsample.seq_1.running_mean = t2m_param(t_model.layer4[0].downsample[1].running_mean)
-    m_model.layer4.seq_0.downsample.seq_1.running_var = t2m_param(t_model.layer4[0].downsample[1].running_var)
+    m_model.layer4.seq_0.downsample.seq_1.running_mean = t2m_param(
+        t_model.layer4[0].downsample[1].running_mean
+    )
+    m_model.layer4.seq_0.downsample.seq_1.running_var = t2m_param(
+        t_model.layer4[0].downsample[1].running_var
+    )
     m_model.layer4.seq_1.conv1.w = t2m_param(t_model.layer4[1].conv1.weight)
     m_model.layer4.seq_1.bn1.w = t2m_param(t_model.layer4[1].bn1.weight)
     m_model.layer4.seq_1.bn1.b = t2m_param(t_model.layer4[1].bn1.bias)
@@ -495,7 +504,9 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
 
     m_model.fc1.w = t2m_param(t_model.fc1.weight)
     m_model.fc1.b = t2m_param(t_model.fc1.bias)
-    m_x, t_x = randn_torch([1, 3, 224, 224], requires_grad=True, device="cuda")  # pylint: disable=unused-variable
+    m_x, t_x = randn_torch(
+        [1, 3, 224, 224], requires_grad=True, device="cuda"
+    )  # pylint: disable=unused-variable
     m_y, t_y = one_hot_torch(batch_size=1, num_classes=1000, device="cuda")
     m_x.requires_grad = True
     m_model.train_mode()
@@ -508,110 +519,630 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     check(m_loss, t_loss)
     check(m_model.bn1.running_mean, t_model.bn1.running_mean, atol=1e-3, rtol=1e-3)
     check(m_model.bn1.running_var, t_model.bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.bn1.running_mean, t_model.layer1[0].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.bn1.running_var, t_model.layer1[0].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.bn2.running_mean, t_model.layer1[0].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.bn2.running_var, t_model.layer1[0].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.bn3.running_mean, t_model.layer1[0].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.bn3.running_var, t_model.layer1[0].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.downsample.seq_1.running_mean, t_model.layer1[0].downsample[1].running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_0.downsample.seq_1.running_var, t_model.layer1[0].downsample[1].running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_1.bn1.running_mean, t_model.layer1[1].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_1.bn1.running_var, t_model.layer1[1].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_1.bn2.running_mean, t_model.layer1[1].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_1.bn2.running_var, t_model.layer1[1].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_1.bn3.running_mean, t_model.layer1[1].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_1.bn3.running_var, t_model.layer1[1].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_2.bn1.running_mean, t_model.layer1[2].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_2.bn1.running_var, t_model.layer1[2].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_2.bn2.running_mean, t_model.layer1[2].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_2.bn2.running_var, t_model.layer1[2].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_2.bn3.running_mean, t_model.layer1[2].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer1.seq_2.bn3.running_var, t_model.layer1[2].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.bn1.running_mean, t_model.layer2[0].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.bn1.running_var, t_model.layer2[0].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.bn2.running_mean, t_model.layer2[0].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.bn2.running_var, t_model.layer2[0].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.bn3.running_mean, t_model.layer2[0].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.bn3.running_var, t_model.layer2[0].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.downsample.seq_1.running_mean, t_model.layer2[0].downsample[1].running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_0.downsample.seq_1.running_var, t_model.layer2[0].downsample[1].running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_1.bn1.running_mean, t_model.layer2[1].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_1.bn1.running_var, t_model.layer2[1].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_1.bn2.running_mean, t_model.layer2[1].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_1.bn2.running_var, t_model.layer2[1].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_1.bn3.running_mean, t_model.layer2[1].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_1.bn3.running_var, t_model.layer2[1].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_2.bn1.running_mean, t_model.layer2[2].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_2.bn1.running_var, t_model.layer2[2].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_2.bn2.running_mean, t_model.layer2[2].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_2.bn2.running_var, t_model.layer2[2].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_2.bn3.running_mean, t_model.layer2[2].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_2.bn3.running_var, t_model.layer2[2].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_3.bn1.running_mean, t_model.layer2[3].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_3.bn1.running_var, t_model.layer2[3].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_3.bn2.running_mean, t_model.layer2[3].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_3.bn2.running_var, t_model.layer2[3].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_3.bn3.running_mean, t_model.layer2[3].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer2.seq_3.bn3.running_var, t_model.layer2[3].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.bn1.running_mean, t_model.layer3[0].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.bn1.running_var, t_model.layer3[0].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.bn2.running_mean, t_model.layer3[0].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.bn2.running_var, t_model.layer3[0].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.bn3.running_mean, t_model.layer3[0].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.bn3.running_var, t_model.layer3[0].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.downsample.seq_1.running_mean, t_model.layer3[0].downsample[1].running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_0.downsample.seq_1.running_var, t_model.layer3[0].downsample[1].running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_1.bn1.running_mean, t_model.layer3[1].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_1.bn1.running_var, t_model.layer3[1].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_1.bn2.running_mean, t_model.layer3[1].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_1.bn2.running_var, t_model.layer3[1].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_1.bn3.running_mean, t_model.layer3[1].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_1.bn3.running_var, t_model.layer3[1].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_2.bn1.running_mean, t_model.layer3[2].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_2.bn1.running_var, t_model.layer3[2].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_2.bn2.running_mean, t_model.layer3[2].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_2.bn2.running_var, t_model.layer3[2].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_2.bn3.running_mean, t_model.layer3[2].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_2.bn3.running_var, t_model.layer3[2].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_3.bn1.running_mean, t_model.layer3[3].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_3.bn1.running_var, t_model.layer3[3].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_3.bn2.running_mean, t_model.layer3[3].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_3.bn2.running_var, t_model.layer3[3].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_3.bn3.running_mean, t_model.layer3[3].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_3.bn3.running_var, t_model.layer3[3].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_4.bn1.running_mean, t_model.layer3[4].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_4.bn1.running_var, t_model.layer3[4].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_4.bn2.running_mean, t_model.layer3[4].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_4.bn2.running_var, t_model.layer3[4].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_4.bn3.running_mean, t_model.layer3[4].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_4.bn3.running_var, t_model.layer3[4].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_5.bn1.running_mean, t_model.layer3[5].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_5.bn1.running_var, t_model.layer3[5].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_5.bn2.running_mean, t_model.layer3[5].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_5.bn2.running_var, t_model.layer3[5].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_5.bn3.running_mean, t_model.layer3[5].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer3.seq_5.bn3.running_var, t_model.layer3[5].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.bn1.running_mean, t_model.layer4[0].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.bn1.running_var, t_model.layer4[0].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.bn2.running_mean, t_model.layer4[0].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.bn2.running_var, t_model.layer4[0].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.bn3.running_mean, t_model.layer4[0].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.bn3.running_var, t_model.layer4[0].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.downsample.seq_1.running_mean, t_model.layer4[0].downsample[1].running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_0.downsample.seq_1.running_var, t_model.layer4[0].downsample[1].running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_1.bn1.running_mean, t_model.layer4[1].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_1.bn1.running_var, t_model.layer4[1].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_1.bn2.running_mean, t_model.layer4[1].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_1.bn2.running_var, t_model.layer4[1].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_1.bn3.running_mean, t_model.layer4[1].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_1.bn3.running_var, t_model.layer4[1].bn3.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_2.bn1.running_mean, t_model.layer4[2].bn1.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_2.bn1.running_var, t_model.layer4[2].bn1.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_2.bn2.running_mean, t_model.layer4[2].bn2.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_2.bn2.running_var, t_model.layer4[2].bn2.running_var, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_2.bn3.running_mean, t_model.layer4[2].bn3.running_mean, atol=1e-3, rtol=1e-3)
-    check(m_model.layer4.seq_2.bn3.running_var, t_model.layer4[2].bn3.running_var, atol=1e-3, rtol=1e-3)
+    check(
+        m_model.layer1.seq_0.bn1.running_mean,
+        t_model.layer1[0].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.bn1.running_var,
+        t_model.layer1[0].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.bn2.running_mean,
+        t_model.layer1[0].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.bn2.running_var,
+        t_model.layer1[0].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.bn3.running_mean,
+        t_model.layer1[0].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.bn3.running_var,
+        t_model.layer1[0].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.downsample.seq_1.running_mean,
+        t_model.layer1[0].downsample[1].running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_0.downsample.seq_1.running_var,
+        t_model.layer1[0].downsample[1].running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_1.bn1.running_mean,
+        t_model.layer1[1].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_1.bn1.running_var,
+        t_model.layer1[1].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_1.bn2.running_mean,
+        t_model.layer1[1].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_1.bn2.running_var,
+        t_model.layer1[1].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_1.bn3.running_mean,
+        t_model.layer1[1].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_1.bn3.running_var,
+        t_model.layer1[1].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_2.bn1.running_mean,
+        t_model.layer1[2].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_2.bn1.running_var,
+        t_model.layer1[2].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_2.bn2.running_mean,
+        t_model.layer1[2].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_2.bn2.running_var,
+        t_model.layer1[2].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_2.bn3.running_mean,
+        t_model.layer1[2].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer1.seq_2.bn3.running_var,
+        t_model.layer1[2].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.bn1.running_mean,
+        t_model.layer2[0].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.bn1.running_var,
+        t_model.layer2[0].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.bn2.running_mean,
+        t_model.layer2[0].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.bn2.running_var,
+        t_model.layer2[0].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.bn3.running_mean,
+        t_model.layer2[0].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.bn3.running_var,
+        t_model.layer2[0].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.downsample.seq_1.running_mean,
+        t_model.layer2[0].downsample[1].running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_0.downsample.seq_1.running_var,
+        t_model.layer2[0].downsample[1].running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_1.bn1.running_mean,
+        t_model.layer2[1].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_1.bn1.running_var,
+        t_model.layer2[1].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_1.bn2.running_mean,
+        t_model.layer2[1].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_1.bn2.running_var,
+        t_model.layer2[1].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_1.bn3.running_mean,
+        t_model.layer2[1].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_1.bn3.running_var,
+        t_model.layer2[1].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_2.bn1.running_mean,
+        t_model.layer2[2].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_2.bn1.running_var,
+        t_model.layer2[2].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_2.bn2.running_mean,
+        t_model.layer2[2].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_2.bn2.running_var,
+        t_model.layer2[2].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_2.bn3.running_mean,
+        t_model.layer2[2].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_2.bn3.running_var,
+        t_model.layer2[2].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_3.bn1.running_mean,
+        t_model.layer2[3].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_3.bn1.running_var,
+        t_model.layer2[3].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_3.bn2.running_mean,
+        t_model.layer2[3].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_3.bn2.running_var,
+        t_model.layer2[3].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_3.bn3.running_mean,
+        t_model.layer2[3].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer2.seq_3.bn3.running_var,
+        t_model.layer2[3].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.bn1.running_mean,
+        t_model.layer3[0].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.bn1.running_var,
+        t_model.layer3[0].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.bn2.running_mean,
+        t_model.layer3[0].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.bn2.running_var,
+        t_model.layer3[0].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.bn3.running_mean,
+        t_model.layer3[0].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.bn3.running_var,
+        t_model.layer3[0].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.downsample.seq_1.running_mean,
+        t_model.layer3[0].downsample[1].running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_0.downsample.seq_1.running_var,
+        t_model.layer3[0].downsample[1].running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_1.bn1.running_mean,
+        t_model.layer3[1].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_1.bn1.running_var,
+        t_model.layer3[1].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_1.bn2.running_mean,
+        t_model.layer3[1].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_1.bn2.running_var,
+        t_model.layer3[1].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_1.bn3.running_mean,
+        t_model.layer3[1].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_1.bn3.running_var,
+        t_model.layer3[1].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_2.bn1.running_mean,
+        t_model.layer3[2].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_2.bn1.running_var,
+        t_model.layer3[2].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_2.bn2.running_mean,
+        t_model.layer3[2].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_2.bn2.running_var,
+        t_model.layer3[2].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_2.bn3.running_mean,
+        t_model.layer3[2].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_2.bn3.running_var,
+        t_model.layer3[2].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_3.bn1.running_mean,
+        t_model.layer3[3].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_3.bn1.running_var,
+        t_model.layer3[3].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_3.bn2.running_mean,
+        t_model.layer3[3].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_3.bn2.running_var,
+        t_model.layer3[3].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_3.bn3.running_mean,
+        t_model.layer3[3].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_3.bn3.running_var,
+        t_model.layer3[3].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_4.bn1.running_mean,
+        t_model.layer3[4].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_4.bn1.running_var,
+        t_model.layer3[4].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_4.bn2.running_mean,
+        t_model.layer3[4].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_4.bn2.running_var,
+        t_model.layer3[4].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_4.bn3.running_mean,
+        t_model.layer3[4].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_4.bn3.running_var,
+        t_model.layer3[4].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_5.bn1.running_mean,
+        t_model.layer3[5].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_5.bn1.running_var,
+        t_model.layer3[5].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_5.bn2.running_mean,
+        t_model.layer3[5].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_5.bn2.running_var,
+        t_model.layer3[5].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_5.bn3.running_mean,
+        t_model.layer3[5].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer3.seq_5.bn3.running_var,
+        t_model.layer3[5].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.bn1.running_mean,
+        t_model.layer4[0].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.bn1.running_var,
+        t_model.layer4[0].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.bn2.running_mean,
+        t_model.layer4[0].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.bn2.running_var,
+        t_model.layer4[0].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.bn3.running_mean,
+        t_model.layer4[0].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.bn3.running_var,
+        t_model.layer4[0].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.downsample.seq_1.running_mean,
+        t_model.layer4[0].downsample[1].running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_0.downsample.seq_1.running_var,
+        t_model.layer4[0].downsample[1].running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_1.bn1.running_mean,
+        t_model.layer4[1].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_1.bn1.running_var,
+        t_model.layer4[1].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_1.bn2.running_mean,
+        t_model.layer4[1].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_1.bn2.running_var,
+        t_model.layer4[1].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_1.bn3.running_mean,
+        t_model.layer4[1].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_1.bn3.running_var,
+        t_model.layer4[1].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_2.bn1.running_mean,
+        t_model.layer4[2].bn1.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_2.bn1.running_var,
+        t_model.layer4[2].bn1.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_2.bn2.running_mean,
+        t_model.layer4[2].bn2.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_2.bn2.running_var,
+        t_model.layer4[2].bn2.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_2.bn3.running_mean,
+        t_model.layer4[2].bn3.running_mean,
+        atol=1e-3,
+        rtol=1e-3,
+    )
+    check(
+        m_model.layer4.seq_2.bn3.running_var,
+        t_model.layer4[2].bn3.running_var,
+        atol=1e-3,
+        rtol=1e-3,
+    )
     # pylint: enable=no-member,line-too-long
 
 

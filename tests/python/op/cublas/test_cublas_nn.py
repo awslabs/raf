@@ -4,6 +4,7 @@ import torch
 import mnm
 from mnm.testing import check, randn_torch, run_vm_model, with_seed
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("n", [1, 4])
 @pytest.mark.parametrize("m", [1, 4])
@@ -15,19 +16,21 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
     class TestModel(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = [[mnm.matmul, mnm.matmul_nt],
-                      [mnm.matmul_tn, mnm.matmul_tt]]
+            mnm_op = [[mnm.matmul, mnm.matmul_nt], [mnm.matmul_tn, mnm.matmul_tt]]
             mnm_op = mnm_op[transpose_a][transpose_b]
             return mnm_op(m_a, m_b)
 
     # forward
     model = TestModel()
-    m_a, t_a = randn_torch((n, k) if not transpose_a else (k, n),
-                           dtype=dtype, device="cuda", requires_grad=True)
-    m_b, t_b = randn_torch((k, m) if not transpose_b else (m, k),
-                           dtype=dtype, device="cuda", requires_grad=True)
+    m_a, t_a = randn_torch(
+        (n, k) if not transpose_a else (k, n), dtype=dtype, device="cuda", requires_grad=True
+    )
+    m_b, t_b = randn_torch(
+        (k, m) if not transpose_b else (m, k), dtype=dtype, device="cuda", requires_grad=True
+    )
     m_c = model(m_a, m_b)
     v_c = run_vm_model(model, "cuda", [m_a, m_b])
     t_c = torch.matmul(t_a.T if transpose_a else t_a, t_b.T if transpose_b else t_b)
@@ -55,13 +58,17 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
 def test_batch_matmul(dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments, invalid-name
     device = "cuda"
+
     class TestModel(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = [[mnm.batch_matmul, mnm.batch_matmul_nt],
-                      [mnm.batch_matmul_tn, mnm.batch_matmul_tt]]
+            mnm_op = [
+                [mnm.batch_matmul, mnm.batch_matmul_nt],
+                [mnm.batch_matmul_tn, mnm.batch_matmul_tt],
+            ]
             mnm_op = mnm_op[transpose_a][transpose_b]
             return mnm_op(m_a, m_b)
 
@@ -74,16 +81,24 @@ def test_batch_matmul(dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
 
     # forward
     model = TestModel()
-    m_a, t_a = randn_torch((b1, n, k) if not transpose_a else (b1, k, n),
-                           device=device, dtype=dtype, requires_grad=True)
-    m_b, t_b = randn_torch((b2, k, m) if not transpose_b else (b2, m, k),
-                           device=device, dtype=dtype, requires_grad=True)
+    m_a, t_a = randn_torch(
+        (b1, n, k) if not transpose_a else (b1, k, n),
+        device=device,
+        dtype=dtype,
+        requires_grad=True,
+    )
+    m_b, t_b = randn_torch(
+        (b2, k, m) if not transpose_b else (b2, m, k),
+        device=device,
+        dtype=dtype,
+        requires_grad=True,
+    )
     m_c = model(m_a, m_b)
     v_c = run_vm_model(model, device, [m_a, m_b])
 
     t_at = torch.transpose(t_a, 1, 2) if transpose_a else t_a
     t_bt = torch.transpose(t_b, 1, 2) if transpose_b else t_b
-    t_c = torch.matmul(t_at, t_bt) # pylint: disable=no-member
+    t_c = torch.matmul(t_at, t_bt)  # pylint: disable=no-member
     check(m_c, t_c, rtol=1e-4, atol=1e-4)
     check(v_c, t_c, rtol=1e-4, atol=1e-4)
 

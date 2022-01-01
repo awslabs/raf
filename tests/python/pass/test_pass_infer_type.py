@@ -22,6 +22,7 @@ def assert_has_type(expr, typ):
 def test_mnm_module():
     f1 = relay.GlobalVar("f1")
     main = relay.GlobalVar("main")
+
     def get_tvm_mod():
         x = relay.var("x", shape=(1, 100))
         tanh = relay.tanh(x)
@@ -50,6 +51,7 @@ def test_mnm_module():
 def test_mnm_recursive_function():
     f1 = relay.GlobalVar("f1")
     main = relay.GlobalVar("main")
+
     def get_recursive_mod():
         sb = mnm.ir.ScopeBuilder()
         mod = tvm.IRModule()
@@ -87,6 +89,7 @@ def test_mnm_recursive_function():
 def test_mnm_return_function():
     f = relay.GlobalVar("f")
     main = relay.GlobalVar("main")
+
     def get_tvm_mod():
         tvm_mod = tvm.IRModule()
 
@@ -116,8 +119,7 @@ def test_mnm_return_function():
 def test_model_params():
     class Model(mnm.Model):
         def build(self):
-            self.b = mnm.array(np.arange(4).reshape(
-                [2, 1, 2]), dtype='float32')
+            self.b = mnm.array(np.arange(4).reshape([2, 1, 2]), dtype="float32")
 
         @mnm.model.trace
         def forward(self, a):
@@ -128,7 +130,7 @@ def test_model_params():
 
     model = Model()
     m_a, _ = randn((1, 2, 2))
-    func = model._internal(m_a).mod['main']
+    func = model._internal(m_a).mod["main"]
     func = run_infer_type(func)
     t_1 = relay.TensorType((1, 2, 2))
     t_2 = relay.TensorType((2, 1, 2))
@@ -154,9 +156,9 @@ def test_any():
         a_ty = relay.TensorType(shape_a)
         b_ty = relay.TensorType(shape_b)
         c_ty = relay.TensorType(shape_c)
-        a = Symbol.make_var('a', a_ty)
-        b = Symbol.make_var('b', b_ty)
-        func = model._internal(a, b).mod['main']
+        a = Symbol.make_var("a", a_ty)
+        b = Symbol.make_var("b", b_ty)
+        func = model._internal(a, b).mod["main"]
         func = run_infer_type(func)
         expected_ty = relay.FuncType([a_ty, b_ty], c_ty)
         # alpha_equal does not work for Any
@@ -164,8 +166,7 @@ def test_any():
 
     check_any((relay.Any(), 3, relay.Any()), (2, relay.Any(), 4), (2, 4, 3))
     # broadcast
-    check_any((relay.Any(), 3, relay.Any()),
-              (1, relay.Any(), 4), (relay.Any(), 4, 3))
+    check_any((relay.Any(), 3, relay.Any()), (1, relay.Any(), 4), (relay.Any(), 4, 3))
 
 
 def test_incomplete_call():
@@ -186,9 +187,9 @@ def test_incomplete_call():
     shape_a = (3, 4, 5)
     a_ty = relay.TensorType(shape_a)
     model = Model()
-    a = Symbol.make_var('a', a_ty)
-    b = Symbol.make_var('b')
-    func = model._internal(a, b).mod['main']
+    a = Symbol.make_var("a", a_ty)
+    b = Symbol.make_var("b")
+    func = model._internal(a, b).mod["main"]
     func = run_infer_type(func)
     expected_ty = relay.FuncType([a_ty, inc_ty()], inc_ty())
     # alpha_equal does not work for IncompleteType
@@ -209,12 +210,12 @@ def test_gradient_closure():
         model = Model()
         x_ty = relay.TensorType(shape_x)
         y_ty = relay.TensorType(shape_y)
-        x = Symbol.make_var('a', x_ty)
+        x = Symbol.make_var("a", x_ty)
         mod = model._internal(x).mod
         mod = InferType()(mod)
         mod = AutoDiff([True])(mod)
         mod = InferType()(mod)
-        func = mod['main']
+        func = mod["main"]
         bwd_ty = relay.FuncType([y_ty], x_ty)
         expected_ty = relay.FuncType([x_ty], relay.TupleType([y_ty, bwd_ty]))
         assert_has_type(func, expected_ty)
@@ -268,6 +269,7 @@ def test_shape_op():
 def test_constant_tensor():
     from mnm._ffi.ir.constant import ExtractValue
     from mnm._ffi.value import ToTVM
+
     m_c, n_c = randn((2, 2))
     const_value = mnm._core.value.TensorValue.from_numpy(n_c)
     const_value = mnm._ffi.ir._make.Constant(const_value)
@@ -282,6 +284,7 @@ def test_constant_tensor():
 def test_constant_tensor_tuple():
     from mnm._ffi.ir.constant import ExtractValue
     from mnm._ffi.value import ToTVM
+
     m_c1, n_c1 = randn((2, 2))
     m_c2, n_c2 = randn((3, 3))
     c1_value = mnm._core.value.TensorValue.from_numpy(n_c1)
@@ -295,6 +298,7 @@ def test_constant_tensor_tuple():
     assert str(func.body.checked_type) == str(expected_ty)
     check(m_c1, ToTVM(ExtractValue(func.body)[0]).numpy())
     check(m_c2, ToTVM(ExtractValue(func.body)[1]).numpy())
+
 
 def test_closure_with_const_args1():
     rand, _ = randn((1,), device="cpu")
@@ -328,6 +332,7 @@ def test_closure_with_const_args1():
     # }
     # pylint: enable=line-too-long
     mod = mnm._ffi.pass_.InferType()(mod)
+
 
 def test_closure_with_const_args2():
     # pylint: disable=no-self-use
@@ -390,25 +395,45 @@ def test_multi_functions():
     y = extended_var("x", shape=(3, 3), dtype="float32")
     dy = extended_var("dy", shape=(3, 3), dtype="float32")
     # pylint: disable=bad-continuation
-    body = relay.Let(v, fwd_var,
-        relay.Let(v1, relay.Call(v, [x, y]),
-        relay.Let(v2, relay.TupleGetItem(v1, 0),
-        relay.Let(v3, relay.TupleGetItem(v1, 1),
-        relay.Let(v4, relay.Call(v3, [dy]),
-        relay.Let(v5, relay.TupleGetItem(v4, 0),
-        relay.Let(v6, relay.TupleGetItem(v4, 1),
-        relay.Let(v7, relay.Tuple([v2, v5, v6]),  # forward, dx, dy
-        v7
-    ))))))))
+    body = relay.Let(
+        v,
+        fwd_var,
+        relay.Let(
+            v1,
+            relay.Call(v, [x, y]),
+            relay.Let(
+                v2,
+                relay.TupleGetItem(v1, 0),
+                relay.Let(
+                    v3,
+                    relay.TupleGetItem(v1, 1),
+                    relay.Let(
+                        v4,
+                        relay.Call(v3, [dy]),
+                        relay.Let(
+                            v5,
+                            relay.TupleGetItem(v4, 0),
+                            relay.Let(
+                                v6,
+                                relay.TupleGetItem(v4, 1),
+                                relay.Let(v7, relay.Tuple([v2, v5, v6]), v7),  # forward, dx, dy
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
     # pylint: enable=bad-continuation
     func = relay.Function([x, y, dy], body)
     mod = IRModule({fwd_var: fwd, bwd_var: bwd, relay.GlobalVar("main"): func})
     mod = mnm._ffi.pass_.InferType()(mod)
-    expected_ty = relay.FuncType([relay.TensorType((3, 3)), relay.TensorType((3, 3)),
-                                  relay.TensorType((3, 3))],
-                                 relay.TupleType([relay.TensorType((3, 3)),
-                                                  relay.TensorType((3, 3)),
-                                                  relay.TensorType((3, 3))]))
+    expected_ty = relay.FuncType(
+        [relay.TensorType((3, 3)), relay.TensorType((3, 3)), relay.TensorType((3, 3))],
+        relay.TupleType(
+            [relay.TensorType((3, 3)), relay.TensorType((3, 3)), relay.TensorType((3, 3))]
+        ),
+    )
     assert mod["main"].checked_type == expected_ty
 
 

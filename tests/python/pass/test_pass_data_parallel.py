@@ -10,18 +10,24 @@ from mnm.ir import MNMSequential
 import tvm
 from tvm import relay
 
+
 def one_hot(batch_size, num_classes, device="cuda"):
     targets = np.random.randint(0, num_classes, size=batch_size)
     m_x = mnm.array(targets, device=device)
-    assert list(m_x.shape) == [batch_size, ]
+    assert list(m_x.shape) == [
+        batch_size,
+    ]
     return m_x
 
 
 # pylint: disable=unused-variable
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("config", [
-    (2, 2, 2),
-])
+@pytest.mark.parametrize(
+    "config",
+    [
+        (2, 2, 2),
+    ],
+)
 def test_dp(config):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
@@ -33,6 +39,7 @@ def test_dp(config):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             self.c = const
+
         # pylint: enable=attribute-defined-outside-init
 
         @mnm.model.trace
@@ -50,78 +57,92 @@ def test_dp(config):
         shape = [config[0], config[1]]
 
         # Params
-        x = relay.var('x', relay.TensorType(shape))
-        c = relay.var('c', relay.TensorType(shape))
-        y_true = relay.var('y_true', relay.TensorType([2, ], dtype='int64'))
+        x = relay.var("x", relay.TensorType(shape))
+        c = relay.var("c", relay.TensorType(shape))
+        y_true = relay.var(
+            "y_true",
+            relay.TensorType(
+                [
+                    2,
+                ],
+                dtype="int64",
+            ),
+        )
 
         # Forward IR components
         expr_a1 = mnm.ir.op.matmul(x, c)
-        var_a1 = relay.var('a1')
-
+        var_a1 = relay.var("a1")
 
         expr_a2 = mnm.ir.op.nll_loss(y_true, var_a1)
-        var_a2 = relay.var('a2')
+        var_a2 = relay.var("a2")
 
         # Backward IR components
-        dy = relay.var('dy', relay.TensorType([1, ], dtype='float32'))
-        var_closure = relay.var('closure')
+        dy = relay.var(
+            "dy",
+            relay.TensorType(
+                [
+                    1,
+                ],
+                dtype="float32",
+            ),
+        )
+        var_closure = relay.var("closure")
 
         expr_x1 = mnm.ir.op.nll_loss_dpred(dy, y_true, var_a1)
-        var_x0 = relay.var('x0')
+        var_x0 = relay.var("x0")
 
         expr_x2 = mnm.ir.op.matmul_nt(var_x0, c)
-        var_x1 = relay.var('x1')
+        var_x1 = relay.var("x1")
 
         allreduce_in = relay.var("allreduce_in")
         expr_t = relay.Tuple([var_x1])
 
         expr_x3 = mnm.ir.op.matmul_tn(x, var_x0)
-        var_x2 = relay.var('x2')
+        var_x2 = relay.var("x2")
 
         allreduce_in1 = relay.var("allreduce_in1")
         expr_t1 = relay.Tuple([var_x2])
 
         expr_x4 = mnm.ir.op.zeros_like(y_true)
-        var_x3 = relay.var('x3')
+        var_x3 = relay.var("x3")
 
         allreduce_in2 = relay.var("allreduce_in2")
         expr_t2 = relay.Tuple([var_x3])
 
-
         if nccl_version > 21000:
             expr_g = mnm.ir.op._allreduce(allreduce_in, "avg")
-            var_g = relay.var('g')
+            var_g = relay.var("g")
 
             expr_g1 = mnm.ir.op._allreduce(allreduce_in1, "avg")
-            var_g1 = relay.var('g1')
+            var_g1 = relay.var("g1")
 
             expr_g2 = mnm.ir.op._allreduce(allreduce_in2, "avg")
-            var_g2 = relay.var('g2')
+            var_g2 = relay.var("g2")
         else:
             fdeno = mnm.ir.const(float(dctx.size), dtype="float32")
             ideno = mnm.ir.const(dctx.size, dtype="int64")
 
             expr_g = mnm.ir.op._allreduce(allreduce_in)
-            var_g_sum = relay.var('g_sum')
+            var_g_sum = relay.var("g_sum")
             expr_avg = mnm.ir.op.divide(var_g_sum, fdeno)
-            var_g = relay.var('g')
+            var_g = relay.var("g")
 
             expr_g1 = mnm.ir.op._allreduce(allreduce_in1)
-            var_g1_sum = relay.var('g_sum1')
+            var_g1_sum = relay.var("g_sum1")
             expr_avg1 = mnm.ir.op.divide(var_g1_sum, fdeno)
-            var_g1 = relay.var('g1')
+            var_g1 = relay.var("g1")
 
             expr_g2 = mnm.ir.op._allreduce(allreduce_in2)
-            var_g2_sum = relay.var('g_sum2')
+            var_g2_sum = relay.var("g_sum2")
             expr_avg2 = mnm.ir.op.divide(var_g2_sum, ideno)
-            var_g2 = relay.var('g2')
+            var_g2 = relay.var("g2")
 
         expr_x5 = relay.Tuple([var_g, var_g2, var_g1])
-        var_x5 = relay.var('x5')
+        var_x5 = relay.var("x5")
 
         # Forward IR components
         expr_ret = relay.Tuple([var_a2, var_closure])
-        var_ret = relay.var('ret')
+        var_ret = relay.var("ret")
         if nccl_version >= 21000:
             # Construct Backward IR as a closure
             let8 = relay.Let(var_x5, expr_x5, var_x5)
@@ -174,11 +195,16 @@ def test_dp(config):
 
     record = m_model._internal(m_x, m_y)
     mod_before = record.mod
-    passes = [InferType(), AutoDiff(record.requires_grads), InferType(),
-              AutoDataParallel(), InferType()]
+    passes = [
+        InferType(),
+        AutoDiff(record.requires_grads),
+        InferType(),
+        AutoDataParallel(),
+        InferType(),
+    ]
     seq = MNMSequential(passes)
     mod = seq(mod_before)
-    func_after = mod['main']
+    func_after = mod["main"]
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
     text = func_after.astext()

@@ -4,12 +4,13 @@ from mnm.ir import ScopeBuilder
 from mnm._ffi.pass_ import LambdaLift, FromRelay, FlattenClosure, LiftBranchBody
 from tvm import relay
 
+
 def test_closure():
     def get_mod():
         mod = tvm.IRModule()
 
         x = relay.var("x", shape=(1, 100), dtype="float32")
-        y = relay.var("y", shape=(1, 100), dtype="float32") # captured vars
+        y = relay.var("y", shape=(1, 100), dtype="float32")  # captured vars
         x_tanh = relay.tanh(x)
         y_tanh = relay.tanh(y)
         add = relay.add(x_tanh, y_tanh)
@@ -21,7 +22,7 @@ def test_closure():
 
         z = relay.var("z", shape=(1, 100), dtype="float32")
         body = relay.Call(let, [z])
-        mod['main'] = relay.Function([y, z], body)
+        mod["main"] = relay.Function([y, z], body)
         return mod
 
     tvm_mod = get_mod()
@@ -79,7 +80,7 @@ def test_while_loop():
         let = relay.Let(loop, func, loop)
 
         body = relay.Call(let, [relay.const(0, ti32), y])
-        mod['main'] = relay.Function([y], body)
+        mod["main"] = relay.Function([y], body)
         return mod
 
     tvm_mod = get_recursive_mod()

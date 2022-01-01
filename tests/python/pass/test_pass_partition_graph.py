@@ -17,15 +17,15 @@ def test_diamond():
     target = "test_diamond"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target)
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.abs", "target." + target)
-    def abs(attrs, args): # pylint: disable=unused-argument
+    def abs(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.add", "target." + target)
-    def add(attrs, args): # pylint: disable=unused-argument
+    def add(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class Model(mnm.Model):
@@ -96,8 +96,9 @@ def test_diamond():
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     mod = model._internal(x).mod
-    seq = MNMSequential([AnnotateTarget([target]),
-                         MergeCompilerRegions(), PartitionGraph(), InferType()])
+    seq = MNMSequential(
+        [AnnotateTarget([target]), MergeCompilerRegions(), PartitionGraph(), InferType()]
+    )
     mod = seq(mod)
     func = mod["main"]
     expected_mod = expected()
@@ -114,19 +115,19 @@ def test_tuple():
     target2 = "test_tuple2"
 
     @tvm.ir.register_op_attr("mnm.op.relu", "target." + target1)
-    def relu(attrs, args): # pylint: disable=unused-argument
+    def relu(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.abs", "target." + target1)
-    def abs(attrs, args): # pylint: disable=unused-argument
+    def abs(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.tanh", "target." + target2)
-    def tanh(attrs, args): # pylint: disable=unused-argument
+    def tanh(attrs, args):  # pylint: disable=unused-argument
         return True
 
     @tvm.ir.register_op_attr("mnm.op.concatenate", "target." + target2)
-    def concatenate(attrs, args): # pylint: disable=unused-argument
+    def concatenate(attrs, args):  # pylint: disable=unused-argument
         return True
 
     class Model(mnm.Model):
@@ -236,8 +237,9 @@ def test_tuple():
     model = Model()
     x = mnm.array(np.random.randn(10, 10), dtype="float64")
     mod = model._internal(x).mod
-    seq = MNMSequential([AnnotateTarget([target1, target2]),
-                         MergeCompilerRegions(), PartitionGraph(), InferType()])
+    seq = MNMSequential(
+        [AnnotateTarget([target1, target2]), MergeCompilerRegions(), PartitionGraph(), InferType()]
+    )
     mod = seq(mod)
     func = mod["main"]
     expected_mod = expected()

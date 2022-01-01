@@ -9,23 +9,28 @@ from tvm.relay import TensorType, FuncType, TupleType
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
 @pytest.mark.parametrize("dtype", ["float32"])
-@pytest.mark.parametrize("shape", [
-    [3],
-    [3, 2, 5, 8],
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3],
+        [3, 2, 5, 8],
+    ],
+)
 @pytest.mark.parametrize("axis", range(-5, 5))
 @pytest.mark.parametrize(
     "funcs",
     [
         [mnm._op.sym.softmax, torch.softmax],
         [mnm._op.sym.log_softmax, torch.log_softmax],
-    ])
+    ],
+)
 def test_unary_with_axis(dtype, shape, axis, funcs):
     mnm_fwd, torch_fwd = funcs
 
     class Softmax(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x):
             return mnm_fwd(x, axis=axis)
@@ -37,7 +42,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     t_x.requires_grad = True
     if not -len(shape) <= axis < len(shape):
         with pytest.raises(_TVMError):
-            m_func = model._internal(m_x).mod['main']
+            m_func = model._internal(m_x).mod["main"]
             m_func = run_infer_type(m_func)
         return
     record = model._internal(m_x)
@@ -47,7 +52,7 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
     checked_type = FuncType([x_ty], y_ty)
-    check_type(m_mod['main'], checked_type)
+    check_type(m_mod["main"], checked_type)
     # backward
     _, t_dy = randn_torch(shape, dtype=dtype)
     m_mod = AutoDiff(record.requires_grads)(m_mod)
@@ -57,18 +62,14 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     checked_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_mod['main'], checked_type)
+    check_type(m_mod["main"], checked_type)
 
 
 # pylint: disable=attribute-defined-outside-init
-@pytest.mark.parametrize("shape", [
-    (5, 4, 6, 9),
-    (3, 7, 9)
-])
+@pytest.mark.parametrize("shape", [(5, 4, 6, 9), (3, 7, 9)])
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_batch_norm_train_dxwb(shape, eps, dtype):
-
     class BatchNormTrainDxwb(mnm.Model):
         def build(self, eps):
             self._eps = eps
@@ -83,7 +84,7 @@ def test_batch_norm_train_dxwb(shape, eps, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     m_w, _ = randn((shape[1],), dtype=dtype)
     m_b, _ = randn((shape[1],), dtype=dtype)
-    m_func = model._internal(m_dy, m_x, m_w, m_b).mod['main']
+    m_func = model._internal(m_dy, m_x, m_w, m_b).mod["main"]
     m_func = run_infer_type(m_func)
     x_ty = TensorType(shape, dtype=dtype)
     w_ty = TensorType((shape[1],), dtype=dtype)
@@ -92,10 +93,7 @@ def test_batch_norm_train_dxwb(shape, eps, dtype):
 
 
 # pylint: disable=import-outside-toplevel, attribute-defined-outside-init
-@pytest.mark.parametrize("shape", [
-    (5, 4, 6, 9),
-    (3, 7, 9)
-])
+@pytest.mark.parametrize("shape", [(5, 4, 6, 9), (3, 7, 9)])
 @pytest.mark.parametrize("axis", [0, 1, 2, -1])
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -137,7 +135,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     y_ty = TensorType(mx_y.shape, dtype=dtype)
     dy_ty = TensorType(mx_dy.shape, dtype=dtype)
     checked_type = FuncType([x_ty, scale_ty, bias_ty], y_ty)
-    check_type(m_mod['main'], checked_type)
+    check_type(m_mod["main"], checked_type)
     # check backward
     m_mod = AutoDiff(record.requires_grads)(m_mod)
     m_mod = InferType()(m_mod)
@@ -145,7 +143,7 @@ def test_layer_norm(shape, axis, eps, dtype):
     dx_ty = TensorType(mx_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], TupleType([dx_ty, int_type, int_type]))
     checked_type = FuncType([x_ty, scale_ty, bias_ty], TupleType([x_ty, bwd_ty]))
-    check_type(m_mod['main'], checked_type)
+    check_type(m_mod["main"], checked_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32"])
@@ -155,7 +153,9 @@ def test_layer_norm(shape, axis, eps, dtype):
 @pytest.mark.parametrize("dilation", [1])
 @pytest.mark.parametrize("padding", [0, 1, 2])
 @pytest.mark.parametrize("is_nhwc", [False, True])
-def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # pylint: disable=too-many-arguments
+def test_conv2d(
+    dtype, xshape, wshape, stride, dilation, padding, is_nhwc
+):  # pylint: disable=too-many-arguments
     # N.B.: NCHW + OIHW
     import torch.nn.functional as F
 
@@ -169,8 +169,17 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
             if is_nhwc:
                 x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
                 w = mnm.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
-            ret = mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1,
-                             layout=layout, kernel_layout=kernel_layout, out_layout=layout)
+            ret = mnm.conv2d(
+                x,
+                w,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=1,
+                layout=layout,
+                kernel_layout=kernel_layout,
+                out_layout=layout,
+            )
             if is_nhwc:
                 ret = mnm.transpose(ret, (0, 3, 1, 2))  # NHWC -> NCHW
             return ret
@@ -180,20 +189,36 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
             self._grad_mode = grad_mode
 
         @mnm.model.trace
-        def forward(self, x_or_w, y, dy): # pylint: disable=inconsistent-return-statements
+        def forward(self, x_or_w, y, dy):  # pylint: disable=inconsistent-return-statements
             if self._grad_mode == "dx":
-                return mnm.conv2d_dx(x_or_w, y, dy, shape=xshape,
-                                     stride=stride, padding=padding, dilation=dilation, groups=1)
+                return mnm.conv2d_dx(
+                    x_or_w,
+                    y,
+                    dy,
+                    shape=xshape,
+                    stride=stride,
+                    padding=padding,
+                    dilation=dilation,
+                    groups=1,
+                )
             if self._grad_mode == "dw":
-                return mnm.conv2d_dw(x_or_w, y, dy, shape=wshape,
-                                     stride=stride, padding=padding, dilation=dilation, groups=1)
+                return mnm.conv2d_dw(
+                    x_or_w,
+                    y,
+                    dy,
+                    shape=wshape,
+                    stride=stride,
+                    padding=padding,
+                    dilation=dilation,
+                    groups=1,
+                )
 
     model = Conv2D()
     # forward
     m_x, t_x = randn_torch(xshape, std=0.001, dtype=dtype)
     m_w, t_w = randn_torch(wshape, std=0.01, dtype=dtype)
     m_y = model(m_x, m_w)
-    m_func = model._internal(m_x, m_w).mod['main']
+    m_func = model._internal(m_x, m_w).mod["main"]
     m_func = run_infer_type(m_func)
     t_y = F.conv2d(t_x, t_w, stride=stride, dilation=dilation, padding=padding)
     x_ty = TensorType(xshape, dtype=dtype)
@@ -208,8 +233,8 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
         dw_modle = Conv2DGrad("dw")
         m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype)
         dy_ty = TensorType(t_dy.shape, dtype=dtype)
-        dx_func = dx_modle._internal(m_w, m_y, m_dy).mod['main']
-        dw_func = dw_modle._internal(m_x, m_y, m_dy).mod['main']
+        dx_func = dx_modle._internal(m_w, m_y, m_dy).mod["main"]
+        dw_func = dw_modle._internal(m_x, m_y, m_dy).mod["main"]
         dx_func = run_infer_type(dx_func)
         dw_func = run_infer_type(dw_func)
         dx_checked_type = FuncType([w_ty, y_ty, dy_ty], x_ty)
@@ -230,11 +255,14 @@ def test_conv2d(dtype, xshape, wshape, stride, dilation, padding, is_nhwc): # py
     [
         [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
         [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
-    ])
+    ],
+)
 def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
-    if ((data_shape[2] + 2 * padding - kernel) % stride != 0 and ceil):
-        pytest.skip("""pytorch have different implementation to tvm on one side padding when the
-                    stride can not fully divide the after padding shape on ceilling mode""")
+    if (data_shape[2] + 2 * padding - kernel) % stride != 0 and ceil:
+        pytest.skip(
+            """pytorch have different implementation to tvm on one side padding when the
+                    stride can not fully divide the after padding shape on ceilling mode"""
+        )
     mnm_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
@@ -242,6 +270,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
     class Pool2D(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x):
             return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, ceil_mode=ceil)
@@ -259,7 +288,7 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
     x_ty = TensorType(t_x.shape, dtype=dtype)
     y_ty = TensorType(t_y.shape, dtype=dtype)
     checked_type = FuncType([x_ty], y_ty)
-    check_type(m_mod['main'], checked_type)
+    check_type(m_mod["main"], checked_type)
     # backward
     _, t_dy = randn_torch(m_y.shape, dtype=dtype)
     t_y.backward(t_dy)
@@ -269,13 +298,16 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
     dx_ty = TensorType(t_x.grad.shape, dtype=dtype)
     bwd_ty = FuncType([dy_ty], dx_ty)
     checked_type = FuncType([x_ty], TupleType([y_ty, bwd_ty]))
-    check_type(m_mod['main'], checked_type)
+    check_type(m_mod["main"], checked_type)
 
 
 @pytest.mark.parametrize("dtype", ["float32"])
-@pytest.mark.parametrize("dimension", [
-    ((2, 3), (1, 1, 1, 1)),
-])
+@pytest.mark.parametrize(
+    "dimension",
+    [
+        ((2, 3), (1, 1, 1, 1)),
+    ],
+)
 @pytest.mark.parametrize("pad_value", [0, 2])
 @pytest.mark.parametrize("pad_mode", ["constant"])
 def test_pad(dtype, dimension, pad_value, pad_mode):
@@ -293,7 +325,7 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
 
     m_x, t_x = randn_torch(shape, dtype=dtype)
     model = TestModel()
-    m_func = model._internal(m_x).mod['main']
+    m_func = model._internal(m_x).mod["main"]
     m_func = run_infer_type(m_func)
     t_y = torch.nn.functional.pad(t_x, pad_width, pad_mode, pad_value)
     x_ty = TensorType(t_x.shape, dtype=dtype)

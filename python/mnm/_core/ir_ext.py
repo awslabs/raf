@@ -17,6 +17,7 @@ class ExtendedVar(_tvm.relay.expr.Var):  # pylint: disable=too-many-ancestors
     ----
     Make sure var is actually an extended meta var. This downcast comes with no type check.
     """
+
     def __init__(self, var: _tvm.relay.expr.Var):  # pylint: disable=super-init-not-called
         self.handle = var.handle
         _tvm._ffi.base._LIB.TVMObjectRetain(self.handle)

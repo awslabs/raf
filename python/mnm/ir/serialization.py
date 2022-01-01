@@ -1,5 +1,5 @@
 """IR serialization."""
-from mnm._ffi.ir.serialization import SaveJSON
+from mnm._ffi.ir.serialization import SaveJSON, LoadJSON
 
 
 def save_json(node):
@@ -16,3 +16,19 @@ def save_json(node):
         Saved json string.
     """
     return SaveJSON(node)
+
+
+def load_json(json):
+    """Load json string into object. It takes care of extended IR.
+
+    Parameters
+    ----------
+    json: str
+        Saved json string.
+
+    Returns
+    -------
+    node : Object
+        A loaded TVM object
+    """
+    return LoadJSON(json)

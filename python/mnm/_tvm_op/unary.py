@@ -26,6 +26,7 @@ _reg.register_broadcast_schedule("mnm.op.tvm.negative")
 _reg.register_broadcast_schedule("mnm.op.tvm.sigmoid")
 _reg.register_broadcast_schedule("mnm.op.tvm.tanh")
 
+
 def select_unary_dx_input(attrs, inputs, x_or_y):
     """Select the required input based on the grad_mode to calculate the gradient.
     x_or_y=True selects x; otherwise y.
@@ -44,32 +45,48 @@ def select_unary_dx_input(attrs, inputs, x_or_y):
 def tanh_dx_compute(attrs, inputs, output_type):
     # grad = dy * (1 - tanh(x) * tanh(x)) = dy * (1 - y * y)
     y, dy = select_unary_dx_input(attrs, inputs, False)
-    return [_tvm.te.compute(y.shape, lambda *idx: dy[idx] * (1 - y[idx] * y[idx]),
-                            tag=_tvm.topi.tag.ELEMWISE)]
+    return [
+        _tvm.te.compute(
+            y.shape, lambda *idx: dy[idx] * (1 - y[idx] * y[idx]), tag=_tvm.topi.tag.ELEMWISE
+        )
+    ]
+
 
 _reg.register_broadcast_schedule("mnm.op.tvm.tanh_dx")
 _reg.register_broadcast_schedule("mnm.op.tvm.trunc")
 
+
 @register_compute("mnm.op.tvm.erf_dx")
 def erf_dx_compute(attrs, inputs, output_type):
     x, dy = select_unary_dx_input(attrs, inputs, True)
-    return [_tvm.te.compute(x.shape,
-                            lambda *idx: _tvm.tir.const(2 / math.sqrt(math.pi), dtype=dy.dtype)
-                            * _tvm.te.exp(-x[idx] * x[idx]) * dy[idx],
-                            tag=_tvm.topi.tag.ELEMWISE)]
+    return [
+        _tvm.te.compute(
+            x.shape,
+            lambda *idx: _tvm.tir.const(2 / math.sqrt(math.pi), dtype=dy.dtype)
+            * _tvm.te.exp(-x[idx] * x[idx])
+            * dy[idx],
+            tag=_tvm.topi.tag.ELEMWISE,
+        )
+    ]
+
 
 _reg.register_broadcast_schedule("mnm.op.tvm.erf_dx")
 _reg.register_injective_schedule("mnm.op.tvm.zeros_like")
 _reg.register_injective_schedule("mnm.op.tvm.ones_like")
 
+
 @register_compute("mnm.op.tvm.sqrt_dx")
 def sqrt_dx_compute(attrs, inputs, output_type):
     y, dy = select_unary_dx_input(attrs, inputs, False)
-    return [_tvm.te.compute(y.shape,
-                            lambda *idx: dy[idx] / (y[idx] + y[idx]),
-                            tag=_tvm.topi.tag.ELEMWISE)]
+    return [
+        _tvm.te.compute(
+            y.shape, lambda *idx: dy[idx] / (y[idx] + y[idx]), tag=_tvm.topi.tag.ELEMWISE
+        )
+    ]
+
 
 _reg.register_injective_schedule("mnm.op.tvm.sqrt_dx")
+
 
 @register_compute("mnm.op.tvm.gelu")
 def gelu_compute(attrs, inputs, output_type):
@@ -80,7 +97,9 @@ def gelu_compute(attrs, inputs, output_type):
     const_sqrt_2 = _tvm.tir.const(math.sqrt(2), dtype=data.dtype)
     return [data * (const_point_5 * (const_1 + _tvm.topi.erf(data / const_sqrt_2)))]
 
+
 _reg.register_injective_schedule("mnm.op.tvm.gelu")
+
 
 @register_compute("mnm.op.tvm.gelu_dx")
 def gelu_dx_compute(attrs, inputs, output_type):
@@ -97,5 +116,6 @@ def gelu_dx_compute(attrs, inputs, output_type):
     # pdf = beta * e^(-0.5x^2)
     pdf = const_beta * _tvm.topi.exp(x * x * const_minus_point_5)
     return [dy * (cdf + x * pdf)]
+
 
 _reg.register_injective_schedule("mnm.op.tvm.gelu_dx")

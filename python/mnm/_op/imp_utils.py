@@ -4,8 +4,7 @@ from numbers import Number
 import numpy as np
 
 from mnm._core.ndarray import ndarray
-from mnm._core.value import (BoolValue, FloatValue, IntValue, StringValue,
-                             TensorValue, Value)
+from mnm._core.value import BoolValue, FloatValue, IntValue, StringValue, TensorValue, Value
 from mnm._lib import Array, relay
 
 

@@ -243,7 +243,7 @@ class VMFuncOpEnvCache {
 class VirtualMachine : public tvm::runtime::ModuleNode {
  public:
   VirtualMachine(bool enable_cuda_graph, bool dryrun)
-      : exec_(nullptr), enable_cuda_graph_(enable_cuda_graph), dryrun_(dryrun) {
+      : exec_(nullptr), dryrun_(dryrun), enable_cuda_graph_(enable_cuda_graph) {
 #ifndef MNM_USE_CUDA
     if (enable_cuda_graph) {
       LOG(WARNING) << "Because CUDA is not enabled in Meta, CUDA graph will be disabled in the VM.";

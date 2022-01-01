@@ -4,6 +4,7 @@
  * \brief Typing of init operators
  */
 #include <tvm/relay/type.h>
+#include "mnm/op_utils.h"
 #include "mnm/type.h"
 #include "../schema/init.h"
 #include "../declare/declare_utils.h"
@@ -19,10 +20,7 @@ using namespace schema;
 Type InitOpInfer(const CallValues& value) {
   const auto* args = value->args.as<InitOpArgs>();
   CHECK(args != nullptr);
-  Array<PrimExpr> shape;
-  for (auto& s : args->shape) {
-    shape.push_back(Integer(s));
-  }
+  Array<PrimExpr> shape = GetShapeExprFromValue(args->shape);
   DataType dtype = DataType(ir::String2DLDataType(args->dtype));
   return TensorType(shape, dtype);
 }

@@ -6,6 +6,7 @@ from mnm.testing import run_infer_type, randn
 import tvm
 from tvm import relay
 
+
 def optimize(mod):
     with mnm.device("cuda"):
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
@@ -40,7 +41,7 @@ def test_matmul_fusion(matmul, act, scaled_bias):
     def expected():
         add_op = mnm._ffi.op.GetOp("mnm.op.cutlass.add")
         multiply_op = mnm._ffi.op.GetOp("mnm.op.cutlass.multiply")
-        matmul_op = mnm._ffi.op.GetOp("mnm.op.cutlass."+matmul)
+        matmul_op = mnm._ffi.op.GetOp("mnm.op.cutlass." + matmul)
         null = mnm.ir.const(None)
 
         x = mnm.ir.var("p", shape=xshape)
@@ -97,7 +98,7 @@ def test_matmul_fusion(matmul, act, scaled_bias):
     mod = model._internal(m_x, m_w, m_bias).mod
     mod = optimize(mod)
     func_expected = run_infer_type(expected())
-    assert tvm.ir.structural_equal(mod['main'], func_expected)
+    assert tvm.ir.structural_equal(mod["main"], func_expected)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -131,7 +132,31 @@ def test_matmul_alone():
     mod = model._internal(m_x, m_w).mod
     mod = optimize(mod)
     func_expected = run_infer_type(expected())
-    assert tvm.ir.structural_equal(mod['main'], func_expected)
+    assert tvm.ir.structural_equal(mod["main"], func_expected)
+
+
+@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
+def test_conv2d_relu_fail():
+    # do not fuse conv2d with channel mode NCHW
+    device, dtype = "cuda", "float32"
+
+    class Conv2D(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x, w):
+            y = mnm.conv2d(x, w, stride=3, padding=1, dilation=1, groups=1)
+            y = mnm.relu(y)
+            return y
+
+    xshape, wshape = (4, 256, 32, 32), (64, 256, 1, 1)
+    m_x, _ = randn(xshape, device=device, dtype=dtype)
+    m_w, _ = randn(wshape, device=device, dtype=dtype)
+    model = Conv2D()
+    mod = model._internal(m_x, m_w).mod
+    mod = optimize(mod)
+    assert mnm.ir.AsText(mod).count("cutlass") == 0
 
 
 if __name__ == "__main__":

@@ -14,21 +14,26 @@ from .._lib import tvm
 
 
 def calc_dy(dy, record):
-    """ relay function returns output + mutation. In backward, mutation needs empty gradient. """
+    """relay function returns output + mutation. In backward, mutation needs empty gradient."""
     # pylint: disable=protected-access
     mod = InferType()(record.mod)
     ret_var = _get_func_output_var(mod["main"])
     dout = [get_symbol_handle(dy)]
     if isinstance(ret_var.checked_type, tvm.relay.TupleType):
-        dout.extend([Value.as_const_expr(NoGradValue())
-                     for i in range(len(ret_var.checked_type.fields) - 1)])
+        dout.extend(
+            [
+                Value.as_const_expr(NoGradValue())
+                for i in range(len(ret_var.checked_type.fields) - 1)
+            ]
+        )
     return Symbol.make_tuple(dout) if len(dout) > 1 else dy
 
 
 def inline(func, inputs):
-    """ inline execution func(*inputs) """
+    """inline execution func(*inputs)"""
     assert len(func.params) == len(inputs)
     vmap = dict(zip(func.params, inputs))
+
     def evaluate(body):
         if isinstance(body, tvm.relay.Var):
             return vmap[body]
@@ -42,11 +47,13 @@ def inline(func, inputs):
                 may_share = vmap[may_share]
             return evaluate(body.body)
         raise NotImplementedError("Not supported type: ", type(body))
+
     return Symbol.from_expr(evaluate(func.body))
 
 
 def with_autodiff(model):
     """create a new model by apply autodiff to the input"""
+
     class AutoDiffWrapper(Model):
         """AutoDiff model
 
@@ -54,6 +61,7 @@ def with_autodiff(model):
         ----------
         model: the forward model
         """
+
         def build(self, model):
             # pylint: disable=attribute-defined-outside-init, missing-function-docstring
             self.model = model
@@ -73,7 +81,7 @@ def with_autodiff(model):
             mod = seq(mod)
             inputs = _get_func_inputs(record, args, kwargs)
             inputs = inputs + [get_symbol_handle(dy)]
-            out = inline(mod['main'], inputs)
+            out = inline(mod["main"], inputs)
             y = out[0]
             dxs = out[1]
             return y, dxs

@@ -51,9 +51,12 @@ class {CLASS_NAME} : public ir::AttrsNode<{CLASS_NAME}> {{
 
 
 def gen_arg(entry):
-    ARG = " " * 2 + """
+    ARG = (
+        " " * 2
+        + """
   {TYPE} {NAME}{DEFAULT};
 """.strip()
+    )
     typ = entry.cxx_type
     name = entry.name
     default = entry.cxx_default
@@ -63,7 +66,7 @@ def gen_arg(entry):
         default = str(default).lower()
     elif isinstance(default, (Number, str)):
         if entry.cxx_normalizer == "IntArray" and len(default) > 2:
-            value = default[1:-1].split(',')
+            value = default[1:-1].split(",")
             re = "ir::Array<value::IntValue> {"
             for i in value:
                 re += "value::IntValue::make(" + i + ")"

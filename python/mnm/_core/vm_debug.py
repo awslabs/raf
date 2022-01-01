@@ -7,6 +7,7 @@ from . import vm
 
 class VMDebugger(vm.VirtualMachine):
     """VM debugger to debug the intermediate results."""
+
     def __init__(self, exe, device):
         self.module = _ffi.vm.VMDebugger(exe.module)
         self._exec = exe
@@ -33,6 +34,7 @@ class VMDebugger(vm.VirtualMachine):
         """Reset the states."""
         self._reset()
 
+
 class VMDebugExecutor(executor.VMExecutor):
     """
     An implementation of the executor interface for the Meta VmDryRunner and VmDebugger.
@@ -45,6 +47,7 @@ class VMDebugExecutor(executor.VMExecutor):
     device : str
         The runtime device to run the code on.
     """
+
     def __init__(self, mod, device):
         super(VMDebugExecutor, self).__init__(mod, device)
         self.vm = VMDebugger(self.executable, self.device)

@@ -5,6 +5,7 @@ from .core_utils import register_node, DEVICE_TYPE_MAP
 from .._lib import Object
 from .._ffi import device as ffi
 
+
 @register_node("mnm.device.Device")
 class Device(Object):
     """Construct a Device object.
@@ -15,6 +16,7 @@ class Device(Object):
         The device string such as "cpu", "cuda", or the device string with ID,
         such as "cuda(1)".
     """
+
     def __init__(self, device_str):
         tokens = re.search(r"(\w+).?(\d?)", device_str)
         if not tokens or len(tokens.groups()) != 2:
@@ -24,8 +26,10 @@ class Device(Object):
         device_type_str = tokens.groups()[0]
 
         if device_type_str not in DEVICE_TYPE_MAP:
-            raise ValueError("Unrecognized device type: %s. Supported types:\n%s" %
-                             (device_type_str, ",".join(DEVICE_TYPE_MAP.keys())))
+            raise ValueError(
+                "Unrecognized device type: %s. Supported types:\n%s"
+                % (device_type_str, ",".join(DEVICE_TYPE_MAP.keys()))
+            )
         device_type = DEVICE_TYPE_MAP[device_type_str]
 
         # Process device ID.
@@ -72,13 +76,16 @@ class Device(Object):
         dev = ffi.DeviceCurrent(allow_none)
         return dev if dev.device_type != 0 or dev.device_id != -1 else None
 
+
 def device(device_str):
     """Create a device."""
     return Device(device_str)
 
+
 def cpu(device_id=0):
     """Create a CPU device object."""
     return Device(f"cpu({device_id})")
+
 
 def cuda(device_id=0):
     """Create a CPU device object."""

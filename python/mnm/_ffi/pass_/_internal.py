@@ -2,6 +2,7 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Auto generated. Do not touch."""
 from mnm._lib import _APIS
+
 # Defined in ./src/pass/stream_schedule_asap.cc
 ASAPStreamSchedule = _APIS.get("mnm.pass_.ASAPStreamSchedule", None)
 # Defined in ./src/pass/annotate_dist_ops.cc
@@ -26,6 +27,8 @@ ContextAnalysis = _APIS.get("mnm.pass_.ContextAnalysis", None)
 DataParallelSchedule = _APIS.get("mnm.pass_.DataParallelSchedule", None)
 # Defined in ./src/pass/dead_code.cc
 DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
+# Defined in ./src/pass/deduplicate.cc
+Deduplicate = _APIS.get("mnm.pass_.Deduplicate", None)
 # Defined in ./src/pass/dispatch_dialect.cc
 DispatchDialect = _APIS.get("mnm.pass_.DispatchDialect", None)
 # Defined in ./src/pass/type_erase.cc
@@ -74,6 +77,8 @@ MNMSequential = _APIS.get("mnm.pass_.MNMSequential", None)
 ManifestAlloc = _APIS.get("mnm.pass_.ManifestAlloc", None)
 # Defined in ./src/pass/memory_plan.cc
 MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
+# Defined in ./src/pass/memory_schedule.cc
+MemorySchedule = _APIS.get("mnm.pass_.MemorySchedule", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
 # Defined in ./src/pass/partition_gradient.cc
@@ -100,6 +105,12 @@ ToGraphNormalForm = _APIS.get("mnm.pass_.ToGraphNormalForm", None)
 ValidateInplaceUpdate = _APIS.get("mnm.pass_.ValidateInplaceUpdate", None)
 # Defined in ./src/pass/stream_schedule_wavefront.cc
 WavefrontStreamSchedule = _APIS.get("mnm.pass_.WavefrontStreamSchedule", None)
+# Defined in ./src/pass/dataflow_matcher.cc
+dataflow_pattern_match = _APIS.get("mnm.pass_.dataflow_pattern_match", None)
+# Defined in ./src/pass/dataflow_matcher.cc
+dataflow_pattern_partition = _APIS.get("mnm.pass_.dataflow_pattern_partition", None)
+# Defined in ./src/pass/dataflow_matcher.cc
+dataflow_pattern_rewrite = _APIS.get("mnm.pass_.dataflow_pattern_rewrite", None)
 # Defined in ./src/pass/fold_const.cc
 is_constant = _APIS.get("mnm.pass_.is_constant", None)
 # Defined in ./src/pass/from_relay.cc

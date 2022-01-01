@@ -38,9 +38,11 @@ def test_single_device():
     assert Device("cpu") == Device("cpu(0)")
     assert Device("cpu") != Device("cpu(1)")
 
+
 def test_helpers():
     assert device.cpu() == Device("cpu")
     assert device.cuda(1) == Device("cuda(1)")
+
 
 def test_scope():
     assert Device.current() is None

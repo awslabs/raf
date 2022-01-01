@@ -25,6 +25,7 @@ def allgather(x, axis):
     ret: Tensor | [Tensor]
         Concatenation results
     """
+
     def swap_axis(x):
         return x if axis == 0 else sym.swap_axis(x, axis1=0, axis2=axis)
 
@@ -124,7 +125,7 @@ def broadcast(x, root):
 
 
 def send(x, peer, token=None):
-    """ Send x to peer.
+    """Send x to peer.
     This operation is blocking for GPU.
 
     Parameters
@@ -147,7 +148,7 @@ def send(x, peer, token=None):
 
 
 def recv(peer, shape, dtype, token=None):
-    """ Receive a tensor from peer
+    """Receive a tensor from peer
     This operation is blocking for GPU.
 
     Parameters

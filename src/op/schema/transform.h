@@ -92,7 +92,7 @@ class ExpandDimsArgs : public ir::AttrsNode<ExpandDimsArgs> {
 class FullArgs : public ir::AttrsNode<FullArgs> {
  public:
   double fill_value;
-  std::vector<int64_t> shape;
+  value::Value shape;
   std::string dtype{"int"};
   std::string device{"cpu"};
   MNM_OP_SCHEMA(FullArgs, "mnm.args.full");
@@ -174,8 +174,8 @@ class SizeArgs : public ir::AttrsNode<SizeArgs> {
 class StridedSliceArgs : public ir::AttrsNode<StridedSliceArgs> {
  public:
   value::BaseTensorValue x;
-  std::vector<int64_t> begin;
-  std::vector<int64_t> end;
+  value::Value begin;
+  value::Value end;
   std::vector<int64_t> strides{};
   std::string slice_mode{"end"};
   MNM_OP_SCHEMA(StridedSliceArgs, "mnm.args.strided_slice");

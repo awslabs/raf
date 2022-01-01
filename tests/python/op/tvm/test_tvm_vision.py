@@ -4,16 +4,15 @@ import torch
 import torchvision
 import pytest
 import mnm
-from mnm.testing import get_device_list, randn, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, check, run_vm_model
 
 import tvm.topi.testing
 
 
-@pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("inputs", [
-    ((1, 2500, 6), 0, 0, 1),
-    ((16, 500, 5), 0.95, -1, 0)
-]) # pylint: disable=too-many-locals
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize(
+    "inputs", [((1, 2500, 6), 0, 0, 1), ((16, 500, 5), 0.95, -1, 0)]
+)  # pylint: disable=too-many-locals
 def test_get_valid_counts(inputs, device):
     class TestModel(mnm.Model):
         def build(self):
@@ -60,7 +59,7 @@ def test_get_valid_counts(inputs, device):
         check(v_out[2], np_out3, rtol=1e-3, atol=1e-04)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_nms(device):
     # pylint: disable=too-many-locals
     class TestModel(mnm.Model):
@@ -72,46 +71,79 @@ def test_nms(device):
         @mnm.model.trace
         def forward(self, data, valid_count, indices, max_output_size, iou_threshold):
             # pylint: disable=too-many-arguments
-            return mnm.non_max_suppression(data, valid_count, indices, max_output_size,
-                                           iou_threshold, force_suppress=self._force_suppress,
-                                           top_k=self._top_k, return_indices=self._return_indices)
+            return mnm.non_max_suppression(
+                data,
+                valid_count,
+                indices,
+                max_output_size,
+                iou_threshold,
+                force_suppress=self._force_suppress,
+                top_k=self._top_k,
+                return_indices=self._return_indices,
+            )
 
-    def verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold, np_result,
-                   dshape, np_indices_result, force_suppress=False, top_k=2):
+    def verify_nms(
+        m_data,
+        m_valid_count,
+        m_indices,
+        m_max_output_size,
+        m_iou_threshold,
+        np_result,
+        dshape,
+        np_indices_result,
+        force_suppress=False,
+        top_k=2,
+    ):
         # pylint: disable=too-many-arguments
         model = TestModel(force_suppress, top_k, False)
         m_out = model(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold)
-        v_out = run_vm_model(model, device, [
-            m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold])
+        v_out = run_vm_model(
+            model, device, [m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold]
+        )
         check(m_out, np_result, rtol=1e-5, atol=1e-07)
         check(v_out, np_result, rtol=1e-5, atol=1e-07)
-        if device == 'cpu':
+        if device == "cpu":
             model = TestModel(force_suppress, top_k, True)
             m_out = model(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold)
-            v_out = run_vm_model(model, device, [
-                m_data, m_valid_count, m_indices, m_max_output_size,
-                m_iou_threshold])
-            assert m_out[0].shape == (dshape[0], dshape[1]) and \
-                   m_out[0].dtype == "int32"
+            v_out = run_vm_model(
+                model,
+                device,
+                [m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold],
+            )
+            assert m_out[0].shape == (dshape[0], dshape[1]) and m_out[0].dtype == "int32"
             assert m_out[1].shape == (dshape[0], 1) and m_out[1].dtype == "int32"
-            assert v_out[0].shape == (dshape[0], dshape[1]) and \
-                   v_out[0].dtype == "int32"
+            assert v_out[0].shape == (dshape[0], dshape[1]) and v_out[0].dtype == "int32"
             assert v_out[1].shape == (dshape[0], 1) and v_out[1].dtype == "int32"
             check(m_out[0], np_indices_result, rtol=1e-5, atol=1e-07)
             check(v_out[0], np_indices_result, rtol=1e-5, atol=1e-07)
 
-
-    np_data = np.array([[[0, 0.8, 1, 20, 25, 45], [1, 0.7, 30, 60, 50, 80],
-                         [0, 0.4, 4, 21, 19, 40], [2, 0.9, 35, 61, 52, 79],
-                         [1, 0.5, 100, 60, 70, 110]]]).astype("float32")
+    np_data = np.array(
+        [
+            [
+                [0, 0.8, 1, 20, 25, 45],
+                [1, 0.7, 30, 60, 50, 80],
+                [0, 0.4, 4, 21, 19, 40],
+                [2, 0.9, 35, 61, 52, 79],
+                [1, 0.5, 100, 60, 70, 110],
+            ]
+        ]
+    ).astype("float32")
     np_valid_count = np.array([4]).astype("int32")
     np_indices = np.array([[0, 1, 3, 4, -1]]).astype("int32")
     np_max_output_size = np.array(-1).astype("int32")
     np_iou_threshold = np.array(0.5).astype("float32")
 
-    np_result = np.array([[[2, 0.9, 35, 61, 52, 79], [0, 0.8, 1, 20, 25, 45],
-                           [-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1],
-                           [-1, -1, -1, -1, -1, -1]]])
+    np_result = np.array(
+        [
+            [
+                [2, 0.9, 35, 61, 52, 79],
+                [0, 0.8, 1, 20, 25, 45],
+                [-1, -1, -1, -1, -1, -1],
+                [-1, -1, -1, -1, -1, -1],
+                [-1, -1, -1, -1, -1, -1],
+            ]
+        ]
+    )
     np_indices_result = np.array([[4, 0, -1, -1, -1]])
     num_anchors = 5
     dshape = (1, num_anchors, 6)
@@ -122,21 +154,42 @@ def test_nms(device):
     m_max_output_size = mnm.array(np_max_output_size, device=device)
     m_iou_threshold = mnm.array(np_iou_threshold, device=device)
 
-    verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold, np_result,
-               dshape, np_indices_result, force_suppress=True)
-    verify_nms(m_data, m_valid_count, m_indices, m_max_output_size, m_iou_threshold, np_result,
-               dshape, np_indices_result)
+    verify_nms(
+        m_data,
+        m_valid_count,
+        m_indices,
+        m_max_output_size,
+        m_iou_threshold,
+        np_result,
+        dshape,
+        np_indices_result,
+        force_suppress=True,
+    )
+    verify_nms(
+        m_data,
+        m_valid_count,
+        m_indices,
+        m_max_output_size,
+        m_iou_threshold,
+        np_result,
+        dshape,
+        np_indices_result,
+    )
 
 
-@pytest.mark.parametrize("config", [((1, 4, 16, 16), (32, 5), (7, 7), 1.0, -1),
-                                    ((4, 4, 16, 16), (32, 5), (7, 7), 0.5, 2)])
+@pytest.mark.parametrize(
+    "config",
+    [((1, 4, 16, 16), (32, 5), (7, 7), 1.0, -1), ((4, 4, 16, 16), (32, 5), (7, 7), 0.5, 2)],
+)
 @pytest.mark.parametrize("mode", ["avg", "max"])
 @pytest.mark.parametrize("layout", ["NCHW", "NHWC"])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_roi_align(config, mode, layout, device):
     # pylint: disable=too-many-locals, not-callable
     class TestModel(mnm.Model):
-        def build(self, pooled_size, spatial_scale, sample_ratio, layout, mode):  # pylint: disable=too-many-arguments
+        def build(
+            self, pooled_size, spatial_scale, sample_ratio, layout, mode
+        ):  # pylint: disable=too-many-arguments
             self.pooled_size = pooled_size
             self.spatial_scale = spatial_scale
             self.sample_ratio = sample_ratio
@@ -145,17 +198,18 @@ def test_roi_align(config, mode, layout, device):
 
         @mnm.model.trace
         def forward(self, data, rois):
-            return mnm.roi_align(data, rois, self.pooled_size, self.spatial_scale,
-                                 self.sample_ratio, self.layout, self.mode)
+            return mnm.roi_align(
+                data,
+                rois,
+                self.pooled_size,
+                self.spatial_scale,
+                self.sample_ratio,
+                self.layout,
+                self.mode,
+            )
 
     def verify_roi_align(
-            data_shape,
-            rois_shape,
-            pooled_size,
-            spatial_scale,
-            sample_ratio,
-            mode,
-            layout
+        data_shape, rois_shape, pooled_size, spatial_scale, sample_ratio, mode, layout
     ):  # pylint: disable=too-many-arguments
         if layout == "NCHW":
             _, _, in_size, _ = data_shape
@@ -194,7 +248,8 @@ def test_roi_align(config, mode, layout, device):
             t_rois = torch.tensor(np_rois)
             t_data.requires_grad = True
             t_y = torchvision.ops.roi_align(
-                t_data, t_rois, pooled_size, spatial_scale, sample_ratio)
+                t_data, t_rois, pooled_size, spatial_scale, sample_ratio
+            )
             t_y.backward(torch.tensor(np_dy))
             check(m_data.grad, t_data.grad)
 

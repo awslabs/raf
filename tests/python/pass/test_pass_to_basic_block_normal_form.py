@@ -40,6 +40,7 @@ def test_no_bind_tuple():
 
 def test_no_bind_diamond():
     konst, _ = randn((1,))
+
     class Model(mnm.Model):
         def build(self):
             self.c = konst
@@ -127,8 +128,8 @@ def test_if():
 def test_top_level_nested_if():
     cond_t = mnm.ir.const(True)
     cond_f = mnm.ir.const(False)
-    one = mnm.ir.const(1., dtype="float32")
-    three = mnm.ir.const(3., dtype="float32")
+    one = mnm.ir.const(1.0, dtype="float32")
+    three = mnm.ir.const(3.0, dtype="float32")
 
     def nested_if():
         """
@@ -156,8 +157,7 @@ def test_top_level_nested_if():
         z = mnm.ir.var("z", shape=(), dtype="float32")
         y2 = mnm.ir.op.add(y, y)
         z2 = mnm.ir.op.add(z, z)
-        true_branch = relay.If(cond_t, mnm.ir.op.add(z2, y2),
-                               mnm.ir.op.add(three, y2))
+        true_branch = relay.If(cond_t, mnm.ir.op.add(z2, y2), mnm.ir.op.add(three, y2))
         false_branch = relay.If(cond_f, z2, one)
         body = relay.If(x, true_branch, false_branch)
         return relay.Function([x, y, z], body)
@@ -188,8 +188,7 @@ def test_top_level_nested_if():
         z = mnm.ir.var("z", shape=(), dtype="float32")
         y2 = relay.var("y2")
         z2 = relay.var("z2")
-        true_branch = relay.If(cond_t, mnm.ir.op.add(z2, y2),
-                               mnm.ir.op.add(three, y2))
+        true_branch = relay.If(cond_t, mnm.ir.op.add(z2, y2), mnm.ir.op.add(three, y2))
         true_branch = relay.Let(y2, mnm.ir.op.add(y, y), true_branch)
         false_branch = relay.If(cond_f, z2, one)
         body = relay.If(x, true_branch, false_branch)
@@ -209,9 +208,9 @@ def test_top_level_nested_if():
 def test_nested_if():
     cond_t = mnm.ir.const(True)
     cond_f = mnm.ir.const(False)
-    one = mnm.ir.const(1., dtype="float32")
-    two = mnm.ir.const(2., dtype="float32")
-    three = mnm.ir.const(3., dtype="float32")
+    one = mnm.ir.const(1.0, dtype="float32")
+    two = mnm.ir.const(2.0, dtype="float32")
+    three = mnm.ir.const(3.0, dtype="float32")
 
     def nested_if():
         """

@@ -7,6 +7,7 @@ from mnm.testing import run_infer_type, randn, with_dialect
 import tvm
 from tvm import relay
 
+
 def optimize(mod, device="cuda"):
     with mnm.device(device):
         mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
@@ -78,8 +79,7 @@ def test_conv2d():
         x = mnm.ir.var("x", shape=(1, 16, 64, 64))
         c = mnm.ir.var("c", shape=(1,))
         w = mnm.ir.var("conv.w", shape=(16, 16, 3, 3))
-        y = relay.Call(conv2d_op, [x, w, vec_one, vec_one, vec_one, one, nchw,
-                                   oihw, nchw])
+        y = relay.Call(conv2d_op, [x, w, vec_one, vec_one, vec_one, one, nchw, oihw, nchw])
         y = relay.Call(add_op, [y, c, null, null])
         return relay.Function([x, c, w], y)
 
@@ -88,7 +88,7 @@ def test_conv2d():
     mod = model._internal(m_x).mod
     mod = optimize(mod)
     func_expected = run_infer_type(expected())
-    assert tvm.ir.structural_equal(mod['main'], func_expected)
+    assert tvm.ir.structural_equal(mod["main"], func_expected)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
@@ -119,8 +119,7 @@ def test_dialect_pref():
         x = mnm.ir.var("x", shape=(1, 16, 64, 64))
         c = mnm.ir.var("c", shape=(1,))
         w = mnm.ir.var("conv.w", shape=(16, 16, 3, 3))
-        y = relay.Call(conv2d_op, [x, w, vec_one, vec_one, vec_one, one, nchw,
-                                   oihw, nchw])
+        y = relay.Call(conv2d_op, [x, w, vec_one, vec_one, vec_one, one, nchw, oihw, nchw])
         y = relay.Call(add_op, [y, c, null, null])
         return relay.Function([x, c, w], y)
 
@@ -129,7 +128,7 @@ def test_dialect_pref():
     mod = model._internal(m_x).mod
     mod = optimize(mod)
     func_expected = run_infer_type(expected())
-    assert tvm.ir.structural_equal(mod['main'], func_expected)
+    assert tvm.ir.structural_equal(mod["main"], func_expected)
 
 
 if __name__ == "__main__":

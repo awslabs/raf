@@ -452,8 +452,7 @@ Attrs SplitSchema2Attrs(const SplitArgs* args) {
   } else if (const auto* tup = indices_or_sections.as<TupleValueObj>()) {
     std::vector<int64_t> indices;
     for (auto field : tup->fields) {
-      auto int_value = field.as<IntValueObj>();
-      indices.push_back(int_value->value);
+      indices.push_back(GetScalarValueData<int64_t>(field));
     }
     attrs->indices_or_sections = mnm::common::shape_utils::StdVector2Array(indices);
   }
@@ -812,9 +811,12 @@ std::vector<std::string> ReshapeSchemaArgNames(const op::CallValues& call) {
 
 Attrs ReshapeSchema2Attrs(const ReshapeArgs* args) {
   auto attrs = make_object<ReshapeAttrs>();
-  for (auto dim : args->shape) {
-    attrs->newshape.push_back(dim);
+  std::vector<int64_t> shape_vec = GetShapeVecFromValue(args->shape);
+  Array<Integer> newshape;
+  for (size_t i = 0; i < shape_vec.size(); ++i) {
+    newshape.push_back(shape_vec[i]);
   }
+  attrs->newshape = newshape;
   // FIXME(comaniac): attrs->reverse has been removed on Relay side so we get rid of
   // that attribute here. It might be an issue with reshape(shape, reverse=True).
   CHECK(!args->reverse);
@@ -824,7 +826,8 @@ Attrs ReshapeSchema2Attrs(const ReshapeArgs* args) {
 HashKey ReshapeHasher(const std::vector<Type>& param_types, const Type& y_type,
                       const ReshapeArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->shape;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
+  key << shape;
   key << args->reverse;
   return key;
 }
@@ -853,7 +856,7 @@ Attrs Resize2DSchema2Attrs(const Resize2DArgs* args) {
   DataType out_dtype(String2DLDataType(args->out_dtype));
   attrs->out_dtype = out_dtype;
 
-  std::vector<int64_t> size(args->size);
+  std::vector<int64_t> size = GetShapeVecFromValue(args->size);
   CHECK(size.size() > 0);
   if (size.size() == 1) size.push_back(size[0]);
 
@@ -866,7 +869,7 @@ Attrs Resize2DSchema2Attrs(const Resize2DArgs* args) {
 template <typename T>
 HashKey ResizeHasher(const std::vector<Type>& param_types, const Type& y_type, const T* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->size;
+  key << GetShapeVecFromValue(args->size);
   key << args->layout;
   key << args->method;
   key << args->coordinate_transformation_mode;
@@ -964,10 +967,11 @@ std::vector<std::string> FullSchemaArgNames(const op::CallValues& call) {
 
 Attrs FullSchema2Attrs(const FullArgs* args) {
   auto attrs = make_object<FullAttrs>();
+  std::vector<int64_t> shape_vec = GetShapeVecFromValue(args->shape);
   std::vector<Integer> shape;
-  shape.reserve(args->shape.size());
-  for (size_t i = 0; i < args->shape.size(); ++i) {
-    shape.emplace_back(args->shape[i]);
+  shape.reserve(shape_vec.size());
+  for (size_t i = 0; i < shape_vec.size(); ++i) {
+    shape.emplace_back(shape_vec[i]);
   }
 
   attrs->shape = Array<Integer>(shape.begin(), shape.end());
@@ -978,7 +982,7 @@ Attrs FullSchema2Attrs(const FullArgs* args) {
 
 HashKey FullHasher(const std::vector<Type>& param_types, const Type& y_type, const FullArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->shape;
+  key << GetShapeVecFromValue(args->shape);
   key << ir::String2DLDataType(args->dtype);
   key << args->device;
   key << args->fill_value;
@@ -1022,12 +1026,14 @@ std::vector<std::string> StridedSliceSchemaArgNames(const op::CallValues& call) 
 
 Attrs StridedSliceSchema2Attrs(const StridedSliceArgs* args) {
   auto attrs = make_object<StridedSliceAttrs>();
-  CHECK_EQ(args->begin.size(), args->end.size());
-  CHECK_EQ(args->begin.size(), args->strides.size());
+  std::vector<int64_t> begin_imms = GetShapeVecFromValue(args->begin);
+  std::vector<int64_t> end_imms = GetShapeVecFromValue(args->end);
+  CHECK_EQ(begin_imms.size(), end_imms.size());
+  CHECK_EQ(begin_imms.size(), args->strides.size());
   std::vector<Integer> begin, end, strides;
-  for (int i = 0; i < args->begin.size(); ++i) {
-    begin.emplace_back(args->begin[i]);
-    end.emplace_back(args->end[i]);
+  for (int i = 0; i < begin_imms.size(); ++i) {
+    begin.emplace_back(begin_imms[i]);
+    end.emplace_back(end_imms[i]);
     strides.emplace_back(args->strides[i]);
   }
   attrs->begin = Array<Integer>(begin.begin(), begin.end());
@@ -1040,8 +1046,8 @@ Attrs StridedSliceSchema2Attrs(const StridedSliceArgs* args) {
 HashKey StridedSliceHasher(const std::vector<Type>& param_types, const Type& y_type,
                            const StridedSliceArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->begin;
-  key << args->end;
+  key << GetShapeVecFromValue(args->begin);
+  key << GetShapeVecFromValue(args->end);
   key << args->strides;
   key << args->slice_mode;
   return key;

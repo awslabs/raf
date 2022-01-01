@@ -239,6 +239,9 @@ bool IsExpectedScalar(const Expr& arg, float expected) {
       } else if (DataType(tensor->dtype) == DataType::Int(32)) {
         int32_t value = GetScalarValueData<int32_t>(GetRef<TensorValue>(val_obj));
         is_expected = value == (int32_t)expected;
+      } else if (DataType(tensor->dtype) == DataType::Int(64)) {
+        int64_t value = GetScalarValueData<int64_t>(GetRef<TensorValue>(val_obj));
+        is_expected = value == (int64_t)expected;
       } else {
         LOG(WARNING) << "Unsupported type: " << DataType(tensor->dtype);
       }
@@ -554,14 +557,14 @@ Expr SimplifyExpr(const Expr& expr, const IRModule& mod) {
   composer.AddRewrite<ConcretizeBroadcastToLikeRewrite>();
   composer.AddRewrite<ConcretizeMultiplyRewrite>();
   composer.AddRewrite<ConcretizeAddSubRewrite>();
-  auto ret = mnm::ir::RewritePatterns(composer.MakeCallbacks(), expr, mod);
+  auto ret = mnm::ir::MNMRewritePatterns(composer.MakeCallbacks(), expr, mod);
 
   // Phase 2: Sequence patterns that may need to be applied iteratively.
   composer.Clear();
   composer.AddRewrite<SimplifyMatmulReshapeBiasAct>();
   composer.AddRewrite<SimplifyCast>();
   composer.AddRewrite<SimplifyReshape>();
-  return mnm::ir::RewritePatterns(composer.MakeCallbacks(), ret, mod);
+  return mnm::ir::MNMRewritePatterns(composer.MakeCallbacks(), ret, mod);
 }
 
 }  // namespace simplify_expr

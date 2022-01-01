@@ -16,7 +16,7 @@ from .utils import has_grad, split_ndarray_with_padding
 
 # pylint: disable=too-few-public-methods
 class SGD:
-    """ Optimizer : stochastic gradient descent
+    """Optimizer : stochastic gradient descent
 
     Parameters:
     -----------
@@ -29,6 +29,7 @@ class SGD:
     momentum: float (optional)
         momentum factor
     """
+
     def __init__(self, params, learning_rate, momentum=0):
         if learning_rate < 0.0:
             raise ValueError("Invalid learning rate: {}".format(learning_rate))
@@ -40,7 +41,7 @@ class SGD:
         for i, x in enumerate(params):
             assert isinstance(x, ndarray), "Only `mnm.ndarray' can be optimized!"
             npa = np.zeros(x.shape, dtype=x.dtype)
-            v_i = ndarray(npa, device=x.device, name=f'sgd.{i}.v')
+            v_i = ndarray(npa, device=x.device, name=f"sgd.{i}.v")
             self.params.append((x, v_i))
 
     def step(self):
@@ -54,7 +55,7 @@ class SGD:
 
 
 def with_sgd(learning_rate=0.1, momentum=0.01):
-    """ Optimizer : stochastic gradient descent
+    """Optimizer : stochastic gradient descent
 
     Parameters:
     -----------
@@ -68,6 +69,7 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
     ret : function
         The wrapper which wraps a model with sgd
     """
+
     def decorator(model):
         class SGDWrapper(Model):
             """sgd wrapper model
@@ -76,13 +78,14 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
             ----------
             model: the forward model
             """
+
             # pylint: disable=attribute-defined-outside-init, protected-access, too-many-locals
             # pylint: disable=missing-function-docstring
             def build(self, model):
                 self.model = model
                 self.ad_model = with_data_parallel(with_autodiff(model))
-                self.learning_rate = array(learning_rate, dtype='float32')
-                self.momentum = array(momentum, dtype='float32')
+                self.learning_rate = array(learning_rate, dtype="float32")
+                self.momentum = array(momentum, dtype="float32")
 
                 # TODO(issue 758): Remove this and in-place update parameters.
                 self.zero = array(0, dtype="float32")
@@ -103,15 +106,18 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                             # Pad and copy a slice of weight to be the SGD statues.
                             param_np = param.to(device="cpu")
                             slice_param = split_ndarray_with_padding(param_np, dctx.size)[dctx.rank]
-                            v_w = ndarray(slice_param, device=param.device, name=f'{name}.sgd_w')
-                            setattr(self, f'{name}.sgd_w', v_w)
+                            v_w = ndarray(slice_param, device=param.device, name=f"{name}.sgd_w")
+                            setattr(self, f"{name}.sgd_w", v_w)
                             part_shape = slice_param.shape
                         else:
                             v_w = param
 
-                        v_i = ndarray(np.zeros(part_shape, dtype=param.dtype), device=param.device,
-                                      name=f'{name}.sgd_v')
-                        setattr(self, f'{name}.sgd_v', v_i)
+                        v_i = ndarray(
+                            np.zeros(part_shape, dtype=param.dtype),
+                            device=param.device,
+                            name=f"{name}.sgd_v",
+                        )
+                        setattr(self, f"{name}.sgd_v", v_i)
                         self.params[param._ndarray__handle] = (name, param, v_w, v_i)
 
             @trace
@@ -131,8 +137,9 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
 
                         # Inplace update SGD variant and weight.
                         new_sgd_v = add(multiply(self.momentum, sgd_v), dxi, out=sgd_v)
-                        new_sgd_w = subtract(sgd_w, multiply(self.learning_rate, new_sgd_v),
-                                             out=sgd_w)
+                        new_sgd_w = subtract(
+                            sgd_w, multiply(self.learning_rate, new_sgd_v), out=sgd_w
+                        )
 
                         # If the SGD status is partitioned, use all-gather to sync
                         # the updated weights.
@@ -146,8 +153,10 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                             new_weight = new_sgd_w
 
                         # Put the updated weight to the model output to avoid being dead code.
-                        param_model = get_chained_attr(self.model, name.split('.')[:-1])
-                        trace_mutate_attr(param_model, name.split('.')[-1], new_weight)
+                        param_model = get_chained_attr(self.model, name.split(".")[:-1])
+                        trace_mutate_attr(param_model, name.split(".")[-1], new_weight)
                 return y
+
         return SGDWrapper(model)
+
     return decorator

@@ -3,15 +3,18 @@ import numpy as np
 import pytest
 import mxnet as mx
 import mnm
-from mnm.testing import get_device_list, randint, check, run_vm_model
+from mnm.testing import get_testable_devices, randint, check, run_vm_model
 
 
-@pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("ops", [
-    (np.zeros, mnm._op.sym.zeros),
-    (np.ones, mnm._op.sym.ones),
-])
-@pytest.mark.parametrize("shape", [(), (1, ), (1, 2, 3, 4)])
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize(
+    "ops",
+    [
+        (np.zeros, mnm._op.sym.zeros),
+        (np.ones, mnm._op.sym.ones),
+    ],
+)
+@pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_init_ops(ops, shape, dtype, device):
     class InitOpModel(mnm.Model):
@@ -34,8 +37,8 @@ def test_init_ops(ops, shape, dtype, device):
     check(v_y, n_y)
 
 
-@pytest.mark.parametrize("device", get_device_list())
-@pytest.mark.parametrize("indices_shape", [(1, ), (1, 2), (1, 2, 3, 4)])
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("indices_shape", [(1,), (1, 2), (1, 2, 3, 4)])
 @pytest.mark.parametrize("on_value", [1.0, -1.0])
 @pytest.mark.parametrize("off_value", [0.0, 1.0])
 @pytest.mark.parametrize("depth", [0, 1, 3])
@@ -50,8 +53,9 @@ def test_one_hot(indices_shape, on_value, off_value, depth, dtype, device):
 
         @mnm.model.trace
         def forward(self, shape, on_value, off_value):
-            return mnm.one_hot(shape, on_value, off_value, depth=self.depth,
-                               dtype=self.dtype, device=self.device)
+            return mnm.one_hot(
+                shape, on_value, off_value, depth=self.depth, dtype=self.dtype, device=self.device
+            )
 
     model = OneHot(depth, dtype, device)
     m_indices, n_indices = randint(shape=indices_shape, high=10, device=device)
@@ -59,8 +63,9 @@ def test_one_hot(indices_shape, on_value, off_value, depth, dtype, device):
     m_on_value = mnm.array(on_value, device=device)
     m_off_value = mnm.array(off_value, device=device)
     m_y = model(m_indices, m_on_value, m_off_value)
-    mx_y = mx.nd.one_hot(mx_indices, depth=depth, on_value=on_value,
-                         off_value=off_value, dtype=dtype)
+    mx_y = mx.nd.one_hot(
+        mx_indices, depth=depth, on_value=on_value, off_value=off_value, dtype=dtype
+    )
     check(m_y, mx_y)
     v_y = run_vm_model(model, device, [m_indices, m_on_value, m_off_value])
     check(v_y, mx_y)

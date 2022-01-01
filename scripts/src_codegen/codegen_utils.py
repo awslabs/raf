@@ -52,7 +52,7 @@ def write_to_file(path, content):
 def split_chunks(list_, chunk_size):
     list_ = list(list_)
     for i in range(0, len(list_), chunk_size):
-        yield list_[i: i + chunk_size]
+        yield list_[i : i + chunk_size]
 
 
 NORM_MAP = {

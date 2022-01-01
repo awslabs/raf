@@ -14,6 +14,7 @@ from ._internal import CanonicalizeOps
 from ._internal import ContextAnalysis
 from ._internal import DataParallelSchedule
 from ._internal import DeadCodeElimination
+from ._internal import Deduplicate
 from ._internal import DispatchDialect
 from ._internal import EraseType
 from ._internal import EstimateGFLOPS
@@ -38,6 +39,7 @@ from ._internal import LivenessAnalysis
 from ._internal import MNMSequential
 from ._internal import ManifestAlloc
 from ._internal import MemoryPlan
+from ._internal import MemorySchedule
 from ._internal import MergeCompilerRegions
 from ._internal import PartitionGradient
 from ._internal import PartitionGraph
@@ -51,5 +53,8 @@ from ._internal import ToBasicBlockNormalForm
 from ._internal import ToGraphNormalForm
 from ._internal import ValidateInplaceUpdate
 from ._internal import WavefrontStreamSchedule
+from ._internal import dataflow_pattern_match
+from ._internal import dataflow_pattern_partition
+from ._internal import dataflow_pattern_rewrite
 from ._internal import is_constant
 from ._internal import validate_relay_param_name

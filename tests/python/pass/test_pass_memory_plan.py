@@ -3,7 +3,7 @@
 import pytest
 import mnm
 from mnm._lib import tvm
-from mnm.testing import get_device_list, randn, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, check, run_vm_model
 
 
 def optimize(mod, device, fusion=False):
@@ -16,8 +16,14 @@ def optimize(mod, device, fusion=False):
     return opt_mod
 
 
-def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expected_out_tensor,
-                     expected_free_memory, expected_size):
+def verify_alloc_num(
+    func,
+    expected_alloc_storage,
+    expected_alloc_tensor,
+    expected_out_tensor,
+    expected_free_memory,
+    expected_size,
+):
     # A helper function to verify alloc_storage and alloc_tensor numbers and total sizes
     alloc_storage = 0
     alloc_tensor = 0
@@ -36,8 +42,9 @@ def verify_alloc_num(func, expected_alloc_storage, expected_alloc_tensor, expect
             free_memory += 1
 
     assert (
-        alloc_storage == expected_alloc_storage and alloc_tensor == expected_alloc_tensor and
-        out_tensor == expected_out_tensor
+        alloc_storage == expected_alloc_storage
+        and alloc_tensor == expected_alloc_tensor
+        and out_tensor == expected_out_tensor
     ), "#storage %d, #tensor %d, #out %d" % (alloc_storage, alloc_tensor, out_tensor)
     assert free_memory == expected_free_memory, "#free %d" % free_memory
     assert total_size == expected_size, "Total size %d, but expected %d" % (
@@ -59,7 +66,7 @@ def verify_correctness(model, device, args, fusion):
         check(ref_out, out)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fusion", [False, True])
 def test_memory_plan_basic(device, fusion):
     class Model(mnm.Model):
@@ -95,7 +102,7 @@ def test_memory_plan_basic(device, fusion):
     verify_correctness(model_before, device, args, fusion=fusion)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fusion", [False, True])
 def test_memory_plan_multi_outs(device, fusion):
     class Model(mnm.Model):

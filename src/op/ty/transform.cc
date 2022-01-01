@@ -4,6 +4,7 @@
  * \brief Typing of transform operators
  */
 #include "mnm/type.h"
+#include "mnm/op_utils.h"
 #include "../schema/ufunc.h"
 #include "../schema/nn.h"
 #include "../schema/likes.h"
@@ -22,6 +23,8 @@ using declare::NormalizeAxis;
 
 Type ArangeInfer(const CallValues& value) {
   const auto* args = value->args.as<ArangeArgs>();
+  ICHECK(args != nullptr);
+  auto out_type = DataType(ir::String2DLDataType(args->dtype));
   if (args->start->IsInstance<TensorValueObj>() && args->stop->IsInstance<TensorValueObj>() &&
       args->step->IsInstance<TensorValueObj>()) {
     TensorType x = Downcast<TensorType>(GetType(args->start));
@@ -30,6 +33,8 @@ Type ArangeInfer(const CallValues& value) {
       size = CalArangeOutputSize<float>(args);
     } else if (args->dtype == "float64") {
       size = CalArangeOutputSize<double>(args);
+    } else if (args->dtype == "int32") {
+      size = CalArangeOutputSize<int32_t>(args);
     } else if (args->dtype == "int64") {
       size = CalArangeOutputSize<int64_t>(args);
     } else {
@@ -38,7 +43,7 @@ Type ArangeInfer(const CallValues& value) {
     auto out_type = DataType(String2DLDataType(args->dtype));
     return TensorType({PrimExpr(size)}, out_type);
   } else {
-    return IncompleteType(tvm::kType);
+    return TensorType({tvm::tir::Any()}, out_type);
   }
 }
 
@@ -47,33 +52,27 @@ MNM_OP_TYPE("mnm.op.arange", "Arange", ArangeInfer);
 Type AdvIndexInfer(const CallValues& value) {
   const auto* args = value->args.as<AdvIndexArgs>();
   CHECK(args != nullptr);
-  TensorType x = Downcast<TensorType>(GetType(args->inputs[0]));
-  auto x_shape = x->shape;
-  auto x_dim = x->shape.size();
-  TensorType index0 = Downcast<TensorType>(GetType(args->inputs[1]));
-  std::vector<int64_t> shape;
-  for (int j = 0; j < index0->shape.size(); ++j) {
-    shape.push_back(index0->shape[j].as<IntImmNode>()->value);
-  }
-  if (args->inputs.size() - 1 < x_dim) {
-    for (int j = args->inputs.size() - 1; j < x_dim; ++j) {
-      shape.push_back(x_shape[j].as<IntImmNode>()->value);
-    }
 
-  } else {
-    for (int i = 2; i < args->inputs.size(); ++i) {
-      TensorType index = Downcast<TensorType>(GetType(args->inputs[i]));
-      for (int j = 0; j < index->shape.size(); ++j) {
-        shape[j] = shape[j] == 1 ? index->shape[j].as<IntImmNode>()->value : shape[j];
-      }
-    }
+  auto data = Downcast<TensorType>(GetType(args->inputs[0]));
+
+  Array<IndexExpr> oshape;
+  Array<IndexExpr> broadcast_shape;
+
+  ICHECK_LE(args->inputs.size() - 1, data->shape.size()) << "too many indices for data!";
+
+  broadcast_shape = Downcast<TensorType>(GetType(args->inputs[1]))->shape;
+  for (size_t i = 2; i < args->inputs.size(); ++i) {
+    broadcast_shape = BroadcastShape(TensorType(broadcast_shape, data->dtype),
+                                     Downcast<TensorType>(GetType(args->inputs[i])));
   }
-  Array<tvm::PrimExpr> oshape;
-  for (int i = 0; i < shape.size(); ++i) {
-    int32_t s = shape[i];
-    oshape.push_back(PrimExpr(s));
+
+  for (const auto& dim : broadcast_shape) {
+    oshape.push_back(dim);
   }
-  return TensorType(oshape, x->dtype);
+  for (size_t i = args->inputs.size() - 1; i < data->shape.size(); ++i) {
+    oshape.push_back(data->shape[i]);
+  }
+  return TensorType(oshape, data->dtype);
 }
 
 MNM_OP_TYPE("mnm.op.adv_index", "AdvIndex", AdvIndexInfer);
@@ -173,9 +172,29 @@ Type ReshapeInfer(const CallValues& value) {
   CHECK(args != nullptr);
   TensorType x = Downcast<TensorType>(GetType(args->x));
   int ndim = x->shape.size();
-  Array<PrimExpr> shape;
-  for (auto& s : args->shape) {
-    shape.push_back(Integer(s));
+  Array<PrimExpr> shape = GetShapeExprFromValue(args->shape);
+  bool found_any = std::any_of(shape.begin(), shape.end(),
+                               [](PrimExpr expr) { return expr->IsInstance<tvm::tir::AnyNode>(); });
+  if (found_any) {
+    Array<PrimExpr> newshape;
+    for (size_t i = 0; i < shape.size(); ++i) {
+      auto dim = shape[i];
+      if (auto* imm = dim.as<IntImmNode>()) {
+        int32_t val = imm->value;
+        if (val == -1) {
+          newshape.push_back(tvm::tir::Any());
+        } else if (val == 0) {
+          ICHECK_LT(i, ndim);
+          newshape.push_back(x->shape[i]);
+        } else {
+          ICHECK_GE(val, 1);
+          newshape.push_back(tvm::tir::Any());
+        }
+      } else if (auto* imm = dim.as<tvm::tir::AnyNode>()) {
+        newshape.push_back(dim);
+      }
+    }
+    return TensorType(newshape, x->dtype);
   }
   bool reverse = args->reverse;
   PrimExpr size = 1;
@@ -348,8 +367,7 @@ Type SplitInfer(const CallValues& value) {
     // Handling second type - tuple values - indices
     Array<PrimExpr> indices;
     for (auto field : tup->fields) {
-      auto int_value = field.as<IntValueObj>();
-      indices.push_back(Integer(int_value->value));
+      indices.push_back(GetIntExprFromValue(field));
     }
     indices.push_back(x->shape[axis]);
     PrimExpr begin(0);
@@ -359,6 +377,9 @@ Type SplitInfer(const CallValues& value) {
       begin = indices[i];
       ret.push_back(TensorType(oshape, x->dtype));
     }
+  } else {
+    // TODO: handle tensor value?
+    LOG(FATAL) << "Unsupported value type: " << indices_or_sections->GetTypeKey();
   }
   return TupleType(ret);
 }
@@ -648,9 +669,22 @@ Type StridedSliceInfer(const CallValues& value) {
   auto dshape = data->shape;
   int64_t num_axis = dshape.size();
 
-  CHECK(!args->begin.empty()) << "strided_slice received invalid begin";
-  CHECK(!args->end.empty()) << "strided_slice received invalid end";
-  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+  Array<PrimExpr> begin = GetShapeExprFromValue(args->begin);
+  Array<PrimExpr> end = GetShapeExprFromValue(args->end);
+  auto is_any = [](PrimExpr expr) { return expr->IsInstance<tvm::tir::AnyNode>(); };
+  bool found_any_begin = std::any_of(begin.begin(), begin.end(), is_any);
+  bool found_any_end = std::any_of(end.begin(), end.end(), is_any);
+  if (found_any_begin || found_any_end) {
+    Array<PrimExpr> oshape;
+    for (int64_t i = 0; i < num_axis; ++i) {
+      oshape.push_back(tvm::tir::Any());
+    }
+    return TensorType(oshape, data->dtype);
+  }
+
+  CHECK(!begin.empty()) << "strided_slice received invalid begin";
+  CHECK(!end.empty()) << "strided_slice received invalid end";
+  CHECK_EQ(begin.size(), end.size()) << "begin.size() != end.size()";
 
   // calculate output shape
   std::vector<PrimExpr> oshape(num_axis);
@@ -658,30 +692,32 @@ Type StridedSliceInfer(const CallValues& value) {
   std::vector<int64_t> stride_vec(num_axis, 1);
   if (args->slice_mode == "end") {
     CHECK(!args->strides.empty()) << "strided_slice received invalid strides";
-    CHECK_EQ(args->begin.size(), args->strides.size()) << "begin.size() != strides.size()";
+    CHECK_EQ(begin.size(), args->strides.size()) << "begin.size() != strides.size()";
     for (size_t i = 0; i < args->strides.size(); ++i) {
       stride_vec[i] = args->strides[i];
     }
   }
   const int64_t max_range = std::numeric_limits<int64_t>::max();
   std::vector<int64_t> begin_vec;
-  for (size_t i = 0; i < args->begin.size(); ++i) {
-    begin_vec.push_back(args->begin[i]);
+  for (size_t i = 0; i < begin.size(); ++i) {
+    auto* imm = begin[i].as<IntImmNode>();
+    begin_vec.push_back(imm->value);
   }
   for (int64_t i = begin_vec.size(); i < num_axis; ++i) {
     begin_vec.push_back(stride_vec[i] > 0 ? 0 : max_range);
   }
 
   std::vector<int64_t> end_vec;
-  for (size_t i = 0; i < args->end.size(); ++i) {
+  for (size_t i = 0; i < end.size(); ++i) {
+    auto* imm = end[i].as<IntImmNode>();
     if (args->slice_mode == "size") {
-      if (args->end[i] < 0) {
+      if (imm->value < 0) {
         end_vec.push_back(max_range);
       } else {
-        end_vec.push_back(begin_vec[i] + args->end[i]);
+        end_vec.push_back(begin_vec[i] + imm->value);
       }
     } else if (args->slice_mode == "end") {
-      end_vec.push_back(args->end[i]);
+      end_vec.push_back(imm->value);
     } else {
       LOG(FATAL) << "Unsupported slice mode: " << args->slice_mode;
     }
@@ -706,7 +742,11 @@ Type StridedSliceInfer(const CallValues& value) {
     // can get complicated and not very helpful.
     auto dim_size_expr = dshape[i];
     const auto* dim_size_int = dim_size_expr.as<IntImmNode>();
-    CHECK(dim_size_int) << "Symbolic data shape is not supported yet.";
+    if (dim_size_int == nullptr) {
+      // TODO: try infer it
+      oshape[i] = tvm::tir::Any();
+      continue;
+    }
     int64_t dim_size = dim_size_int->value;
 
     begin_v = (begin_v < 0) ? dim_size + begin_v : begin_v;
@@ -787,12 +827,7 @@ MNM_OP_TYPE("mnm.op.squeeze", "Squeeze", SqueezeInfer);
 Type FullInfer(const CallValues& value) {
   const auto* args = value->args.as<FullArgs>();
   CHECK(args != nullptr);
-  Array<tvm::PrimExpr> shape;
-  for (int i = 0; i < args->shape.size(); ++i) {
-    CHECK_GE(args->shape[i], 1);
-    shape.push_back((int32_t)args->shape[i]);
-  }
-
+  Array<tvm::PrimExpr> shape = GetShapeExprFromValue(args->shape);
   return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
 }
 
@@ -826,7 +861,7 @@ Type Resize2DInfer(const CallValues& value) {
   CHECK(args != nullptr);
 
   TensorType x = Downcast<TensorType>(GetType(args->x));
-  std::vector<int64_t> size(args->size);
+  Array<PrimExpr> size = GetShapeExprFromValue(args->size);
   Array<PrimExpr> shape(x->shape);
 
   CHECK(size.size() > 0);
@@ -834,11 +869,11 @@ Type Resize2DInfer(const CallValues& value) {
 
   // setup the output tensor shape
   if (args->layout == "NCHW") {
-    shape.Set(2, Integer(size[0]));
-    shape.Set(3, Integer(size[1]));
+    shape.Set(2, size[0]);
+    shape.Set(3, size[1]);
   } else if (args->layout == "NHWC") {
-    shape.Set(1, Integer(size[0]));
-    shape.Set(2, Integer(size[1]));
+    shape.Set(1, size[0]);
+    shape.Set(2, size[1]);
   } else {
     LOG(FATAL) << "NotImplementedError: we only support NCHW and NHWC layout.";
     throw;

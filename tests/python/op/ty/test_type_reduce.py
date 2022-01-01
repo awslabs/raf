@@ -8,18 +8,24 @@ from tvm.relay import TensorType, FuncType
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
-@pytest.mark.parametrize("op", [
-    (sym.argmax, torch.argmax, False),
-    (sym.argmin, torch.argmin, False),
-    (sym.max, torch.max, True),
-    (sym.min, torch.min, True),
-    (sym.prod, torch.prod, True),
-    (sym.sum, torch.sum, True),
-])
-@pytest.mark.parametrize("shape", [
-    [3],
-    [3, 2, 5, 8, 4, 7],
-])
+@pytest.mark.parametrize(
+    "op",
+    [
+        (sym.argmax, torch.argmax, False),
+        (sym.argmin, torch.argmin, False),
+        (sym.max, torch.max, True),
+        (sym.min, torch.min, True),
+        (sym.prod, torch.prod, True),
+        (sym.sum, torch.sum, True),
+    ],
+)
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3],
+        [3, 2, 5, 8, 4, 7],
+    ],
+)
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce(op, shape, keepdims, dtype):
@@ -30,6 +36,7 @@ def test_reduce(op, shape, keepdims, dtype):
     class Reduce(mnm.Model):
         def build(self):
             pass
+
         # pylint: disable=no-self-use
         @mnm.model.trace
         def forward(self, x):
@@ -37,10 +44,10 @@ def test_reduce(op, shape, keepdims, dtype):
 
     model = Reduce()
 
-    #forward
+    # forward
     m_x, t_x = randn_torch(shape, dtype=dtype)
 
-    m_func = model._internal(m_x).mod['main']
+    m_func = model._internal(m_x).mod["main"]
     m_func = run_infer_type(m_func)
 
     t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)
@@ -60,13 +67,19 @@ def test_reduce(op, shape, keepdims, dtype):
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
-@pytest.mark.parametrize("op", [
-    (sym.mean, torch.mean),
-])
-@pytest.mark.parametrize("shape", [
-    [3],
-    [3, 2, 5, 8, 4, 7],
-])
+@pytest.mark.parametrize(
+    "op",
+    [
+        (sym.mean, torch.mean),
+    ],
+)
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3],
+        [3, 2, 5, 8, 4, 7],
+    ],
+)
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce_with_backward(op, shape, keepdims, dtype):
@@ -77,6 +90,7 @@ def test_reduce_with_backward(op, shape, keepdims, dtype):
     class Reduce(mnm.Model):
         def build(self):
             pass
+
         # pylint: disable=no-self-use
         @mnm.model.trace
         def forward(self, x):
@@ -84,15 +98,15 @@ def test_reduce_with_backward(op, shape, keepdims, dtype):
 
     model = Reduce()
 
-    #forward
+    # forward
     m_x, t_x = randn_torch(shape, dtype=dtype)
 
     m_record = model._internal(m_x)
-    m_func = m_record.mod['main']
+    m_func = m_record.mod["main"]
     m_func = run_infer_type(m_func)
 
     # backward
-    m_record.mod['main'] = m_func
+    m_record.mod["main"] = m_func
     m_mod = mnm._ffi.pass_.AutoDiff([])(m_record.mod)
     run_infer_type(m_mod)
 
@@ -107,14 +121,20 @@ def test_reduce_with_backward(op, shape, keepdims, dtype):
 
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
-@pytest.mark.parametrize("op", [
-    (sym.argmax, torch.all, False),
-    (sym.argmin, torch.any, False),
-])
-@pytest.mark.parametrize("shape", [
-    [3],
-    [3, 2, 5, 8, 4, 7],
-])
+@pytest.mark.parametrize(
+    "op",
+    [
+        (sym.argmax, torch.all, False),
+        (sym.argmin, torch.any, False),
+    ],
+)
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3],
+        [3, 2, 5, 8, 4, 7],
+    ],
+)
 @pytest.mark.parametrize("dtype", ["uint8", "bool"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce_all_any(op, shape, keepdims, dtype):
@@ -125,6 +145,7 @@ def test_reduce_all_any(op, shape, keepdims, dtype):
     class Reduce(mnm.Model):
         def build(self):
             pass
+
         # pylint: disable=no-self-use
         @mnm.model.trace
         def forward(self, x):
@@ -132,10 +153,10 @@ def test_reduce_all_any(op, shape, keepdims, dtype):
 
     model = Reduce()
 
-    #forward
+    # forward
     m_x, t_x = randn_torch(shape, dtype=dtype, requires_grad=False)
 
-    m_func = model._internal(m_x).mod['main']
+    m_func = model._internal(m_x).mod["main"]
     m_func = run_infer_type(m_func)
 
     t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)

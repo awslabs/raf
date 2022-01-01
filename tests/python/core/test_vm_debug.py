@@ -6,10 +6,10 @@ from mnm._core.device import Device
 from mnm._core.executor import VMExecutor
 from mnm._core.vm_debug import VMDebugExecutor
 from mnm._ffi.memory_pool import InitPool
-from mnm.testing import get_device_list, randn, with_seed
+from mnm.testing import get_testable_devices, randn, with_seed
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 @with_seed(0)
 def test_vm_debugger(device, shape):
@@ -48,13 +48,15 @@ def test_vm_debugger(device, shape):
     check(outs[1], ref_z)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("pool_name", ["no_pool", "page_unit_pool"])
 def test_vm_memory_profiler(device, pool_name):
     # pylint: disable=protected-access
     if device == "cuda" and pool_name == "page_unit_pool" and float(mnm.build.with_cuda()) >= 11.3:
-        pytest.skip("Skip this because VM will use cudaAllocAsync to allocate memory. The "
-                    "underlying cuda memory pool is not compatible with meta page_unit_pool")
+        pytest.skip(
+            "Skip this because VM will use cudaAllocAsync to allocate memory. The "
+            "underlying cuda memory pool is not compatible with meta page_unit_pool"
+        )
 
     class Model(mnm.Model):
         # pylint: disable=attribute-defined-outside-init,no-self-use

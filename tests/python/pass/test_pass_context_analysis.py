@@ -1,18 +1,16 @@
 import pytest
 import mnm
-from mnm.testing import randn
+from mnm.testing import randn, get_testable_devices
 from mnm._lib import relay, tvm
 from mnm._core.device import Device
 from mnm._core.module import IRModule
 from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
+
 # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
 
 
-@pytest.mark.parametrize("dev", mnm.testing.get_device_list())
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-    [4, 4]
-])
+@pytest.mark.parametrize("dev", get_testable_devices())
+@pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_basic(dev, shape):
     # pylint: disable=protected-access
     # Create a symbolic model and run it
@@ -30,7 +28,7 @@ def test_basic(dev, shape):
     m_x, _ = randn(shape, device=dev)
     m_y, _ = randn(shape, device=dev)
     _ = model(m_x, m_y)
-    func = model._internal().mod['main']
+    func = model._internal().mod["main"]
 
     # Create a Meta module and set the func as main
     mod = IRModule.from_expr(func)
@@ -77,9 +75,12 @@ def test_device_copy():
 
 
 @pytest.mark.skip(reason="Enable the test when vm dialects have type inference.")
-@pytest.mark.parametrize("shape", [
-    [3, 3],
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3, 3],
+    ],
+)
 def test_memory_alloc(shape):
     if not mnm.build.with_cuda():
         return
@@ -101,7 +102,7 @@ def test_memory_alloc(shape):
     model_before = Model()
     model_before.infer_mode()
     m_x, _ = randn(shape, device=dev)
-    func = model_before._internal(m_x).mod['main']
+    func = model_before._internal(m_x).mod["main"]
     mod = IRModule.from_expr(func)
     mod = InferType()(mod)
     with Device(dev):

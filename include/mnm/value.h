@@ -115,7 +115,16 @@ class IntValueObj : public ScalarValueObj {
     v->Visit("dtype", &dtype);
     v->Visit("value", &value);
   }
+  bool SEqualReduce(const IntValueObj* other, tvm::SEqualReducer equal) const {
+    return equal(dtype, other->dtype) && equal(value, other->value);
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    hash_reduce(dtype);
+    hash_reduce(value);
+  }
   static constexpr const char* _type_key = "mnm.value.IntValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(IntValueObj, ScalarValueObj);
 };
 
@@ -133,7 +142,16 @@ class FloatValueObj : public ScalarValueObj {
     v->Visit("dtype", &dtype);
     v->Visit("value", &value);
   }
+  bool SEqualReduce(const FloatValueObj* other, tvm::SEqualReducer equal) const {
+    return equal(dtype, other->dtype) && equal(value, other->value);
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    hash_reduce(dtype);
+    hash_reduce(value);
+  }
   static constexpr const char* _type_key = "mnm.value.FloatValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(FloatValueObj, ScalarValueObj);
 };
 
@@ -151,7 +169,16 @@ class BoolValueObj : public ScalarValueObj {
     v->Visit("dtype", &dtype);
     v->Visit("value", &value);
   }
+  bool SEqualReduce(const BoolValueObj* other, tvm::SEqualReducer equal) const {
+    return equal(dtype, other->dtype) && equal(value, other->value);
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    hash_reduce(dtype);
+    hash_reduce(value);
+  }
   static constexpr const char* _type_key = "mnm.value.BoolValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(BoolValueObj, ScalarValueObj);
 };
 
@@ -182,7 +209,18 @@ class TensorValueObj final : public BaseTensorValueObj {
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_tensor", &tensor);
   }
+  bool SEqualReduce(const TensorValueObj* other, tvm::SEqualReducer equal) const {
+    // TODO(@hgt312): pointer equal now
+    return this == other;
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    // TODO(@hgt312): pointer equal now
+    const void* ptr = reinterpret_cast<const void*>(this);
+    hash_reduce->SHashReduceHashedValue(std::hash<const void*>()(ptr));
+  }
   static constexpr const char* _type_key = "mnm.value.TensorValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(TensorValueObj, BaseTensorValueObj);
 };
 
@@ -210,7 +248,16 @@ class TensorTypeValueObj final : public BaseTensorValueObj {
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_type", &type);
   }
+  bool SEqualReduce(const TensorTypeValueObj* other, tvm::SEqualReducer equal) const {
+    return equal(type->shape, other->type->shape) && equal(type->dtype, other->type->dtype);
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    hash_reduce(type->shape);
+    hash_reduce(type->dtype);
+  }
   static constexpr const char* _type_key = "mnm.value.TensorTypeValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(TensorTypeValueObj, BaseTensorValueObj);
 };
 
@@ -227,7 +274,26 @@ class TupleValueObj final : public ValueObj {
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_fields", &fields);
   }
+  bool SEqualReduce(const TupleValueObj* other, tvm::SEqualReducer equal) const {
+    // Treat empty tuple as a constant node instead of a graph node.
+    if (fields.size() == other->fields.size() && fields.size() == 0) {
+      return true;
+    } else {
+      equal->MarkGraphNode();
+      return equal(fields, other->fields);
+    }
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    if (fields.size() != 0) {
+      hash_reduce->MarkGraphNode();
+      for (size_t i = 0; i < fields.size(); ++i) {
+        hash_reduce(fields[i]);
+      }
+    }
+  }
   static constexpr const char* _type_key = "mnm.value.TupleValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(TupleValueObj, ValueObj);
 };
 
@@ -240,8 +306,21 @@ class TupleValue final : public Value {
 /* ClosureValue */
 class ClosureValueObj final : public ValueObj {
  public:
+  /*! \brief The set of free variables in the closure.
+   *
+   * These are the captured variables which are required for
+   * evaluation when we call the closure.
+   */
   ir::Map<ir::Var, Value> env;
+  /*! \brief The function which implements the closure.
+   *
+   * \note May reference the variables contained in the env.
+   */
   ir::Function func;
+  /*! \brief variable the closure bind to, used when
+   * the function is a recursive function.
+   */
+  ir::Optional<ir::Var> bind;
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("_env", &env);
     v->Visit("_func", &func);
@@ -252,7 +331,8 @@ class ClosureValueObj final : public ValueObj {
 
 class ClosureValue final : public Value {
  public:
-  static ClosureValue make(ir::Map<ir::Var, Value> env, ir::Function func);
+  static ClosureValue make(ir::Map<ir::Var, Value> env, ir::Function func,
+                           ir::Optional<ir::Var> bind = tvm::NullOpt);
   MNM_OBJECT_REF(ClosureValue, Value, ClosureValueObj);
 };
 
@@ -314,7 +394,15 @@ class StringValueObj : public ValueObj {
   void VisitAttrs(tvm::AttrVisitor* v) {
     v->Visit("value", &value);
   }
+  bool SEqualReduce(const StringValueObj* other, tvm::SEqualReducer equal) const {
+    return equal(value, other->value);
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+    hash_reduce(value);
+  }
   static constexpr const char* _type_key = "mnm.value.StringValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(StringValueObj, ValueObj);
 };
 
@@ -329,7 +417,14 @@ class NoGradValueObj : public ValueObj {
  public:
   void VisitAttrs(tvm::AttrVisitor* v) {
   }
+  bool SEqualReduce(const NoGradValueObj* other, tvm::SEqualReducer equal) const {
+    return true;
+  }
+  void SHashReduce(tvm::SHashReducer hash_reduce) const {
+  }
   static constexpr const char* _type_key = "mnm.value.NoGradValue";
+  static constexpr const bool _type_has_method_sequal_reduce = true;
+  static constexpr const bool _type_has_method_shash_reduce = true;
   MNM_FINAL_OBJECT(NoGradValueObj, ValueObj);
 };
 

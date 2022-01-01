@@ -143,9 +143,9 @@ struct Conv2dTransposeDxwAttrs : public tvm::AttrsNode<Conv2dTransposeDxwAttrs> 
             "dimensions respectively. Convolution is applied on the 'H' and"
             "'W' dimensions.");
     TVM_ATTR_FIELD(kernel_layout)
-        .set_default("OIHW")
+        .set_default("IOHW")
         .describe(
-            "Dimension ordering of weight. Can be 'OIHW', 'OIHW16o16i', etc."
+            "Dimension ordering of weight. Can be 'IOHW', 'IOHW16o16i', etc."
             "'O', 'I', 'H', 'W' stands for num_filter, input_channel, height, and width"
             "dimensions respectively.");
     TVM_ATTR_FIELD(out_layout)

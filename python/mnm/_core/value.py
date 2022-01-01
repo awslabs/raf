@@ -79,8 +79,7 @@ class TensorValue(BaseTensorValue):
 
     @staticmethod
     def assemble(shape, dtype, device, strides=None, data=None):
-        return ffi.AssembleTensorValue(str2dev(device), dtype, shape, strides,
-                                       data)
+        return ffi.AssembleTensorValue(str2dev(device), dtype, shape, strides, data)
 
     @staticmethod
     def from_tvm(array):
@@ -151,13 +150,13 @@ class TupleValue(Value):
 
 @register_node("mnm.value.ClosureValue")
 class ClosureValue(Value):
-    def __init__(self, env, func):
+    def __init__(self, env, func, bind=None):
         assert isinstance(env, dict)
         assert isinstance(func, _relay.Function)
         for (key, value) in env.items():
             assert isinstance(key, _relay.Var)
             assert isinstance(value, Value)
-        self.__init_handle_by_constructor__(_make.ClosureValue, env, func)
+        self.__init_handle_by_constructor__(_make.ClosureValue, env, func, bind)
 
 
 @register_node("mnm.value.NoGradValue")

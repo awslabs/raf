@@ -4,6 +4,7 @@
  * \brief Typing of algorithm operators
  */
 #include <tvm/relay/type.h>
+#include "mnm/op_utils.h"
 #include "mnm/type.h"
 #include "../schema/algorithm.h"
 #include "./utils.h"
@@ -38,7 +39,7 @@ Type TopkInfer(const CallValues& value) {
   const auto* args = value->args.as<TopkArgs>();
   CHECK(args != nullptr);
   TensorType data = Downcast<TensorType>(GetType(args->data));
-  int k = args->k;
+  PrimExpr k = args->k.defined() ? GetIntExprFromValue(args->k) : 1;
   int axis = args->axis;
   if (axis < 0) {
     axis += (int)(data->shape).size();

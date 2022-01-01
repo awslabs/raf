@@ -137,18 +137,25 @@ class TypeInferencer : public ExprMutator {
       ret->checked_type_ = InferClosure(ret);
     } else if (const OpNode* opn = ret->op.as<OpNode>()) {
       ret->checked_type_ = InferPrimitive(ret, opn);
-    } else if (const VarNode* var_node = ret->op.as<VarNode>()) {
-      // The var node can be a result of the output type of a func call. A var node
-      // here is valid if it points to a function. Check that the type is a FuncType
-      // and the args of the Call match the type of the FuncType. If yes, return the
-      // FuncType's ret_type.
-      VisitPrimitiveClosureFromCallerArgs(var_node, call->args);
-      const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
-      CHECK(fty_node);
-      for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
-        ret->args[i]->checked_type_ = Unify(fty_node->arg_types[i], ret->args[i]->checked_type());
+    } else if (ret->op.as<VarNode>() || ret->op.as<LetNode>()) {
+      // handle recursive func call when op is a var node
+      if (op->checked_type()->IsInstance<IncompleteTypeNode>()) {
+        ret->checked_type_ = IncompleteType(kType);
+      } else {
+        // The var node can be a result of the output type of a func call. A var node
+        // here is valid if it points to a function. Check that the type is a FuncType
+        // and the args of the Call match the type of the FuncType. If yes, return the
+        // FuncType's ret_type.
+        if (const auto* var_node = ret->op.as<VarNode>()) {
+          VisitPrimitiveClosureFromCallerArgs(var_node, call->args);
+        }
+        const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
+        CHECK(fty_node);
+        for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
+          ret->args[i]->checked_type_ = Unify(fty_node->arg_types[i], ret->args[i]->checked_type());
+        }
+        ret->checked_type_ = fty_node->ret_type;
       }
-      ret->checked_type_ = fty_node->ret_type;
     } else if (const auto* ftn = op->checked_type().as<FuncTypeNode>()) {
       ret->checked_type_ = ftn->ret_type;
     } else {

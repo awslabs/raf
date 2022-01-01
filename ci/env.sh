@@ -8,5 +8,11 @@ export PYTHONPATH=$MNM_HOME/python/
 export PYTHONPATH=$MNM_HOME/3rdparty/tvm/python:$PYTHONPATH
 export TVM_LIBRARY_PATH=$MNM_HOME/build/lib/
 export TVM_FFI=cython
-export CUDA_HOME=/usr/local/cuda-10.2/targets/x86_64-linux
-export CUDNN_HOME=/usr
+
+if [[ -z ${CUDA_HOME+x} ]]; then
+  export CUDA_HOME=/usr/local/cuda/targets/x86_64-linux  
+fi
+echo "CUDA_HOME: $CUDA_HOME"
+echo "NVCC Version: `nvcc --version`"
+export CUDNN_HOME=$CUDA_HOME
+

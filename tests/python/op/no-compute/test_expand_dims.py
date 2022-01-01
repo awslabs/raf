@@ -4,11 +4,14 @@ import numpy as np
 import mnm
 
 
-@pytest.mark.parametrize("shape", [
-    [5, 3],
-    [5, 3, 2],
-    [5, 2, 2, 2],
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [5, 3],
+        [5, 3, 2],
+        [5, 2, 2, 2],
+    ],
+)
 @pytest.mark.parametrize("axis", [0, 1, -1])
 @pytest.mark.parametrize("num_newaxis", [1, 2, 3])
 def test_batch_flatten(shape, axis, num_newaxis):

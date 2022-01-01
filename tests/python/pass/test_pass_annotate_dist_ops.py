@@ -12,6 +12,7 @@ from mnm.testing import randn
 from mnm._core.ir_ext import extended_var
 from mnm.ir import ScopeBuilder
 
+
 class ANFBuilder:
     def __init__(self):
         self.scope_builder = ScopeBuilder()
@@ -26,13 +27,13 @@ class ANFBuilder:
         return mnm.ir.const(value)
 
     def make_tuple(self, fields):
-        return self.scope_builder.let('', tvm.relay.Tuple(fields))
+        return self.scope_builder.let("", tvm.relay.Tuple(fields))
 
     def get_tuple_item(self, tup, index):
-        return self.scope_builder.let('', tvm.relay.TupleGetItem(tup, index))
+        return self.scope_builder.let("", tvm.relay.TupleGetItem(tup, index))
 
     def call(self, op_name: str, args: List[tvm.relay.Expr]) -> tvm.relay.Var:
-        return self.scope_builder.let('', tvm.relay.Call(self.get_operator(op_name), args))
+        return self.scope_builder.let("", tvm.relay.Call(self.get_operator(op_name), args))
 
     def set_stream(self, device_id: int, stream_id: int):
         device_id = mnm.ir.const(device_id)
@@ -53,15 +54,15 @@ class ANFBuilder:
         self.scope_builder.ret(body)
         return self.scope_builder.get()
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape,comp_stream,comm_stream", [
-    [(64, 128), 1, 5]
-])
+@pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_single_allreduce(shape, comp_stream, comm_stream):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
 
     with Device("cuda(0)"):
+
         class Model(mnm.Model):
             # mul -> allreduce -> mul
             def build(self):
@@ -111,18 +112,19 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
             builder.wait_event(2, comp_stream)
             x_3 = builder.call("atan", [x_2])
             return tvm.relay.Function([x], builder.ret(x_3))
-    assert tvm.ir.structural_equal(mod['main'], expected())
+
+    assert tvm.ir.structural_equal(mod["main"], expected())
     dctx.enable_data_parallel = False
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape,comp_stream,comm_stream", [
-    [(64, 128), 1, 5]
-])
+@pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_parallel_allreduce(shape, comp_stream, comm_stream):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
 
     with Device("cuda(0)"):
+
         class Model(mnm.Model):
             #    /-> atan -> allreduce -> atan -\
             # atan                               concat
@@ -210,18 +212,18 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
             x_8 = builder.call("concatenate", [x_8i, mnm.ir.const(0)])
             return tvm.relay.Function([x], builder.ret(x_8))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
     dctx.enable_data_parallel = False
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape,comp_stream,comm_stream", [
-    [(64, 128), 1, 5]
-])
+@pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
 
     with Device("cuda(0)"):
+
         def construct_model_func():
             # order in ANF is shown in parenthesis, synchronization (2)->(6) is not needed
             # atan (1) -> atan (3) -> allreduce (4) -> mul (5) -> concat (6)
@@ -296,18 +298,18 @@ def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
             x_6 = builder.call("concatenate", [x_6i, mnm.ir.const(0)])
             return tvm.relay.Function([x], builder.ret(x_6))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
     dctx.enable_data_parallel = False
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape,comp_stream,comm_stream", [
-    [(64, 128), 1, 5]
-])
+@pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
 
     with Device("cuda(0)"):
+
         def construct_model_func():
             # order in ANF is shown in parenthesis, synchronization (1)->(4) is not needed
             # atan (1) -> atan (2) -> allreduce (3) -> atan (5) -> concat (6)
@@ -378,18 +380,18 @@ def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
             x_6 = builder.call("concatenate", [x_6i, mnm.ir.const(0)])
             return tvm.relay.Function([x], builder.ret(x_6))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
     dctx.enable_data_parallel = False
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape,comp_stream,comm_stream", [
-    [(64, 128), 1, 5]
-])
+@pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_multi_input_allreduce(shape, comp_stream, comm_stream):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
 
     with Device("cuda(0)"):
+
         class Model(mnm.Model):
             # x -> atan -->allreduce -> mul
             #    \         /
@@ -451,18 +453,18 @@ def test_multi_input_allreduce(shape, comp_stream, comm_stream):
 
             return tvm.relay.Function([x], builder.ret(x_5))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
     dctx.enable_data_parallel = False
 
+
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape,comp_stream,comm_stream", [
-    [(64, 128), 1, 5]
-])
+@pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_multi_user_allreduce(shape, comp_stream, comm_stream):
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
 
     with Device("cuda(0)"):
+
         class Model(mnm.Model):
             # atan --> allreduce -> atan ---> mul
             #                   \-> atan --/
@@ -522,7 +524,7 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
 
             return tvm.relay.Function([x], builder.ret(x_5))
 
-    assert tvm.ir.structural_equal(mod['main'], expected())
+    assert tvm.ir.structural_equal(mod["main"], expected())
     dctx.enable_data_parallel = False
 
 

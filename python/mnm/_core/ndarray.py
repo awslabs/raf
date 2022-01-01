@@ -4,8 +4,15 @@ import ctypes
 
 from mnm._core.core_utils import dev2str, set_module, str2dev
 from mnm._core.value import TensorValue
-from mnm._ffi.binding import (BindNDArray, BindSymbol, RebindNDArray, LookupBoundValue,
-                              SetRequiresGrad, Backward, LookupGrad)
+from mnm._ffi.binding import (
+    BindNDArray,
+    BindSymbol,
+    RebindNDArray,
+    LookupBoundValue,
+    SetRequiresGrad,
+    Backward,
+    LookupGrad,
+)
 from mnm._ffi.tensor import MarkNumpy
 from mnm._ffi.value import ToTVM
 from mnm._lib import _register_func, relay, tvm_ndarray
@@ -13,18 +20,19 @@ from mnm._lib import TensorContainer as _DLManagedTensor
 
 
 @set_module("mnm")
-class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
+class ndarray:  # pylint: disable=invalid-name,too-many-instance-attributes
     def __init__(  # pylint: disable=too-many-arguments
-            self,
-            shape,
-            dtype=float,
-            *,
-            buffer=None,
-            offset=0,
-            strides=None,
-            order=None,
-            device=None,
-            name=""):
+        self,
+        shape,
+        dtype=float,
+        *,
+        buffer=None,
+        offset=0,
+        strides=None,
+        order=None,
+        device=None,
+        name=""
+    ):
         arg_0 = shape
         if isinstance(arg_0, relay.Var):
             self.__handle = arg_0
@@ -32,30 +40,31 @@ class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
             self.__handle = arg_0.__handle  # pylint: disable=protected-access
         else:
             import numpy as np  # pylint: disable=import-outside-toplevel
+
             if isinstance(arg_0, np.ndarray):
                 npa = arg_0
             else:
-                npa = np.ndarray(shape=shape,
-                                 dtype=dtype,
-                                 buffer=buffer,
-                                 offset=offset,
-                                 strides=strides,
-                                 order=order)
+                npa = np.ndarray(
+                    shape=shape,
+                    dtype=dtype,
+                    buffer=buffer,
+                    offset=offset,
+                    strides=strides,
+                    order=order,
+                )
             # NDArray is treated as relay.Constant
-            self.__handle = BindNDArray(
-                _np_to_tensor_value(npa, device=device), None, name)
+            self.__handle = BindNDArray(_np_to_tensor_value(npa, device=device), None, name)
         self.__requires_grad = False
 
     def __setitem__(self, key, value):
         if isinstance(key, slice):
             if key == slice(None, None, None):
                 import numpy as np  # pylint: disable=import-outside-toplevel
+
                 assert isinstance(value, np.ndarray)
                 assert value.shape == self.shape
-                value = _np_to_tensor_value(value.astype(self.dtype),
-                                            device=self.device)
-                self.__handle = BindNDArray(
-                    value, None, self.__handle.name_hint)
+                value = _np_to_tensor_value(value.astype(self.dtype), device=self.device)
+                self.__handle = BindNDArray(value, None, self.__handle.name_hint)
                 return
         raise NotImplementedError
 
@@ -177,7 +186,7 @@ class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
         Backward(self.__handle, gradient)
 
     def update(self, value):
-        RebindNDArray(self.__handle, value.__value, None) # pylint: disable=protected-access
+        RebindNDArray(self.__handle, value.__value, None)  # pylint: disable=protected-access
         # call custom setters to update value
         self.__handle = self.__handle
         self.requires_grad = self.requires_grad
@@ -185,26 +194,31 @@ class ndarray: # pylint: disable=invalid-name,too-many-instance-attributes
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         from mnm._op.imp import subtract  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return subtract(self, other)
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
         from mnm._op.imp import add  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return add(self, other)
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         from mnm._op.imp import multiply  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return multiply(self, other)
 
     def __div__(self, other):
         """x.__div__(y) <=> x / y"""
         from mnm._op.imp import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return divide(self, other)
 
     def __truediv__(self, other):
         """x.__div__(y) <=> x / y"""
         from mnm._op.imp import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return divide(self, other)
 
     @property
@@ -267,6 +281,7 @@ class Symbol:
             if isinstance(symbol, relay.Expr):
                 return symbol
             raise TypeError("Cannot convert to relay expr")
+
         symbol_handles = [as_relay_expr(symbol) for symbol in symbols]
         expr = relay.Tuple(symbol_handles)
         return Symbol.from_expr(BindSymbol(expr, name_hint, None))
@@ -277,32 +292,36 @@ class Symbol:
             ret = Symbol()
             ret.__handle = BindSymbol(expr, name_hint, None)
             return ret
-        raise NotImplementedError(
-            "Only constant integers are supported for now.")
+        raise NotImplementedError("Only constant integers are supported for now.")
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         from mnm._op.sym import subtract  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return subtract(self, other)
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
         from mnm._op.sym import add  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return add(self, other)
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         from mnm._op.sym import multiply  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return multiply(self, other)
 
     def __div__(self, other):
         """x.__div__(y) <=> x / y"""
         from mnm._op.sym import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return divide(self, other)
 
     def __truediv__(self, other):
         """x.__div__(y) <=> x / y"""
         from mnm._op.sym import divide  # pylint: disable=import-outside-toplevel,cyclic-import
+
         return divide(self, other)
 
 
@@ -314,11 +333,9 @@ def _np_to_tensor_value(npa, device=None):
         strides = [x // obj.itemsize for x in obj.strides]
         data = obj.ctypes.data_as(ctypes.c_void_p)
         assert len(shape) == len(strides)
-        return TensorValue.assemble(device=device,
-                                    dtype=dtype,
-                                    shape=shape,
-                                    strides=strides,
-                                    data=data)
+        return TensorValue.assemble(
+            device=device, dtype=dtype, shape=shape, strides=strides, data=data
+        )
 
     def _manager_ctx(obj):
         pyobj = ctypes.py_object(obj)
@@ -336,22 +353,19 @@ def _np_to_tensor_value(npa, device=None):
 
 @set_module("mnm")
 def array(
-        object,  # pylint: disable=too-many-arguments,redefined-builtin
-        dtype=None,
-        *,
-        copy=True,
-        order='K',
-        subok=False,
-        ndmin=0,
-        device=None,
-        name=""):
+    object,  # pylint: disable=too-many-arguments,redefined-builtin
+    dtype=None,
+    *,
+    copy=True,
+    order="K",
+    subok=False,
+    ndmin=0,
+    device=None,
+    name=""
+):
     import numpy as np  # pylint: disable=import-outside-toplevel
-    npa = np.array(object,
-                   dtype=dtype,
-                   copy=copy,
-                   order=order,
-                   subok=subok,
-                   ndmin=ndmin)
+
+    npa = np.array(object, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin)
     return ndarray(BindNDArray(_np_to_tensor_value(npa, device=device), None, name))
 
 

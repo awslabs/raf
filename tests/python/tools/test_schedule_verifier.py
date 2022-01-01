@@ -22,10 +22,10 @@ class ANFBuilder:
         return self.operators[op_name]
 
     def make_tuple(self, fields: List[tvm.relay.Expr]) -> tvm.relay.Var:
-        return self.scope_builder.let('', tvm.relay.Tuple(fields))
+        return self.scope_builder.let("", tvm.relay.Tuple(fields))
 
     def call(self, op_name: str, args: List[tvm.relay.Expr]) -> tvm.relay.Var:
-        return self.scope_builder.let('', tvm.relay.Call(self.get_operator(op_name), args))
+        return self.scope_builder.let("", tvm.relay.Call(self.get_operator(op_name), args))
 
     def set_stream(self, device_id: int, stream_id: int) -> tvm.relay.Var:
         return self.call("set_stream", [mnm.ir.const(device_id), mnm.ir.const(stream_id)])
@@ -75,6 +75,7 @@ def test_simple_branches_event(removed_events):
         x_13 = sb.make_tuple([x_10, x_7, x_3])
         x_14 = sb.concatenate(x_13, 0)
         return tvm.relay.Function([x], sb.ret(x_14))
+
     func = scheduled_func()
     # Please uncomment the following line to draw the scheduled dataflow graph
     # draw_dataflow_graph(func, f"./graphs/simple_branches_remove_events_{removed_events}.png",

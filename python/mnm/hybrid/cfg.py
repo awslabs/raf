@@ -12,7 +12,6 @@ Finger = Union[Tuple[()], Tuple[ast.AST], Tuple[ast.AST, ast.AST]]
 
 
 class FingerFinder(NodeVisitor):
-
     def __init__(self):
         super(FingerFinder, self).__init__()
         self.finger = None
@@ -26,46 +25,61 @@ class FingerFinder(NodeVisitor):
             return continue_point
         return unbound_constant_expr()
 
-    def visit_Return(self, node: ast.Return, _stmts, _break_point, _continue_point):  # pylint: disable=invalid-name
+    def visit_Return(
+        self, node: ast.Return, _stmts, _break_point, _continue_point
+    ):  # pylint: disable=invalid-name
         self.finger[node] = tuple()
         return node
 
-    def visit_While(self, node: ast.While, stmts, break_point, continue_point):  # pylint: disable=invalid-name
+    def visit_While(
+        self, node: ast.While, stmts, break_point, continue_point
+    ):  # pylint: disable=invalid-name
         self.finger[node] = None
         left = self.visit_stmts(node.body, stmts[0], node)
         right = self.visit_stmts(stmts, break_point, continue_point)
         self.finger[node] = (left, right)
         return node
 
-    def visit_If(self, node: ast.If, stmts, break_point, continue_point):  # pylint: disable=invalid-name
+    def visit_If(
+        self, node: ast.If, stmts, break_point, continue_point
+    ):  # pylint: disable=invalid-name
         self.finger[node] = None
         left = self.visit_stmts(node.body + stmts, break_point, continue_point)
-        right = self.visit_stmts(
-            node.orelse + stmts, break_point, continue_point)
+        right = self.visit_stmts(node.orelse + stmts, break_point, continue_point)
         self.finger[node] = (left, right)
         return node
 
-    def visit_Module(self, node: ast.Module, _stmts, break_point, continue_point):  # pylint: disable=invalid-name
+    def visit_Module(
+        self, node: ast.Module, _stmts, break_point, continue_point
+    ):  # pylint: disable=invalid-name
         return self.visit_stmts(node.body, break_point, continue_point)
 
-    def visit_Assign(self, node: ast.Assign, stmts, break_point, continue_point):  # pylint: disable=invalid-name
+    def visit_Assign(
+        self, node: ast.Assign, stmts, break_point, continue_point
+    ):  # pylint: disable=invalid-name
         self.finger[node] = []
         value = self.visit_stmts(stmts, break_point, continue_point)
         if value:
-            self.finger[node] = (value, )
+            self.finger[node] = (value,)
         return node
 
-    def visit_Break(self, _node: ast.Break, _stmts, break_point, _continue_point):  # pylint: disable=invalid-name,no-self-use
+    def visit_Break(
+        self, _node: ast.Break, _stmts, break_point, _continue_point
+    ):  # pylint: disable=invalid-name,no-self-use
         return break_point
 
-    def visit_Continue(self, _node: ast.Continue, _stmts, _break_point, continue_point):  # pylint: disable=invalid-name,no-self-use
+    def visit_Continue(
+        self, _node: ast.Continue, _stmts, _break_point, continue_point
+    ):  # pylint: disable=invalid-name,no-self-use
         return continue_point
 
-    def visit_Pass(self, node: ast.Pass, stmts, break_point, continue_point):  # pylint: disable=invalid-name
+    def visit_Pass(
+        self, node: ast.Pass, stmts, break_point, continue_point
+    ):  # pylint: disable=invalid-name
         self.finger[node] = None
         value = self.visit_stmts(stmts, break_point, continue_point)
         if value:
-            self.finger[node] = (value, )
+            self.finger[node] = (value,)
         return node
 
     def run(self, node: ast.AST) -> Tuple[ast.AST, Dict[ast.AST, Finger]]:
@@ -132,7 +146,7 @@ class CFG:
             jumps = []
             for succ in bb.jumps:
                 while not succ.stmts:
-                    succ, = succ.jumps
+                    (succ,) = succ.jumps
                 jumps.append(succ)
             bb.jumps = jumps
 
@@ -146,7 +160,7 @@ class CFG:
             if bb in del_bbs:
                 continue
             while len(bb.jumps) == 1:
-                succ, = bb.jumps
+                (succ,) = bb.jumps
                 if succ is self.entry or in_degree.get(succ, 0) != 1:
                     break
                 bb.stmts.extend(succ.stmts)
@@ -179,10 +193,10 @@ class CFG:
                 assert len(bb.stmts) >= 1
                 # non-mergable
                 if len(bb.jumps) == 1:
-                    succ, = bb.jumps
+                    (succ,) = bb.jumps
                     assert succ is self.entry or in_degree.get(succ, 0) != 1
                 # let-list
-                for stmt in bb.stmts[: -1]:
+                for stmt in bb.stmts[:-1]:
                     assert isinstance(stmt, ast.Assign)
                 # jump kind
                 stmt = bb.stmts[-1]
@@ -195,8 +209,7 @@ class CFG:
                 else:
                     raise AssertionError
             except AssertionError:
-                raise AssertionError(
-                    "{}\nError on BB {}".format(self, self.bb2idx[bb]))
+                raise AssertionError("{}\nError on BB {}".format(self, self.bb2idx[bb]))
 
 
 def ast2cfg(node: ast.AST) -> "CFG":

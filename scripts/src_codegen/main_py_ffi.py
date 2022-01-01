@@ -45,8 +45,10 @@ from ._internal import {NAME}
     DIR = """
 from . import {NAME}
 """.strip()
-    internals = "\n".join(INTERNAL.format(NAME=api.name.split(".")[-1])
-                          for api in sorted(apis, key=lambda api: api.name))
+    internals = "\n".join(
+        INTERNAL.format(NAME=api.name.split(".")[-1])
+        for api in sorted(apis, key=lambda api: api.name)
+    )
     dirs = "\n".join(DIR.format(NAME=dir) for dir in sorted(dirs))
     return FILE.format(INTERNALS=internals, DIRS=dirs)
 
@@ -58,8 +60,7 @@ def main(path_prefix="./python/mnm/_ffi/"):
         prefix = ".".join(api.name.split(".")[1:-1])
         api_files[prefix].append(api)
     # generate code
-    srcs = {prefix: gen_internal_file(apis)
-            for prefix, apis in api_files.items()}
+    srcs = {prefix: gen_internal_file(apis) for prefix, apis in api_files.items()}
     # generate _internal.py
     if os.path.exists(path_prefix):
         shutil.rmtree(path_prefix)
@@ -74,7 +75,7 @@ def main(path_prefix="./python/mnm/_ffi/"):
         # path of __init__.py
         path = os.path.join(prefix, "__init__.py")
         # some dirty reverse engineering
-        prefix = prefix[len(path_prefix):]
+        prefix = prefix[len(path_prefix) :]
         if prefix.startswith("/"):
             prefix = prefix[1:]
         if prefix.endswith("/"):

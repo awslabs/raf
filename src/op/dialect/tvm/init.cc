@@ -27,12 +27,12 @@ std::vector<std::string> InitOpSchemaArgNames(const op::CallValues& call) {
 
 Attrs InitOpSchema2Attrs(const InitOpArgs* args) {
   auto attrs = make_object<InitOpAttrs>();
-  std::vector<IndexExpr> shape;
-  shape.reserve(args->shape.size());
-  for (size_t i = 0; i < args->shape.size(); ++i) {
-    shape.emplace_back(IntImm(ir::DataType::Int(32), args->shape[i]));
+  std::vector<int64_t> shape_vec = GetShapeVecFromValue(args->shape);
+  Array<Integer> shape;
+  for (size_t i = 0; i < shape_vec.size(); ++i) {
+    shape.push_back(shape_vec[i]);
   }
-  attrs->shape = Array<Integer>(shape.begin(), shape.end());
+  attrs->shape = shape;
   attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
   return Attrs(attrs);
 }
@@ -40,7 +40,8 @@ Attrs InitOpSchema2Attrs(const InitOpArgs* args) {
 HashKey InitOpHasher(const std::vector<Type>& param_types, const Type& y_type,
                      const InitOpArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->shape;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
+  key << shape;
   key << ir::String2DLDataType(args->dtype);
   key << args->device;
   return key;

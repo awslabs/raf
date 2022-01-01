@@ -43,12 +43,9 @@ class MNMSequential(Pass):
         if not isinstance(required, (list, tuple)):
             raise TypeError("Required is expected to be the type of list/tuple.")
 
-        self.__init_handle_by_constructor__(
-            pass_.MNMSequential, passes, opt_level, name, required
-        )
+        self.__init_handle_by_constructor__(pass_.MNMSequential, passes, opt_level, name, required)
 
 
 @register_node("mnm.pass_.MNMFunctionPass")
 class MNMFunctionPass(Pass):
-    """A pass that works on each tvm.relay.Function in a module.
-    """
+    """A pass that works on each tvm.relay.Function in a module."""

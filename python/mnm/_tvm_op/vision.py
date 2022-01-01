@@ -20,8 +20,13 @@ def roi_align_dx_compute(attrs, inputs, output_type):
     data = inputs[0]
     rois = inputs[1]
     dy = inputs[2]
-    pooled_size, spatial_scale, sample_ratio, layout, mode = \
-        attrs.pooled_size, attrs.spatial_scale, attrs.sample_ratio, attrs.layout, attrs.mode
+    pooled_size, spatial_scale, sample_ratio, layout, mode = (
+        attrs.pooled_size,
+        attrs.spatial_scale,
+        attrs.sample_ratio,
+        attrs.layout,
+        attrs.mode,
+    )
     pooled_size = _topi.utils.get_const_tuple(pooled_size)
     mode = bytes(mode, encoding="utf-8")
     if layout == "NCHW":
@@ -30,5 +35,6 @@ def roi_align_dx_compute(attrs, inputs, output_type):
         R = _topi.vision.roi_align_nhwc(data, rois, pooled_size, spatial_scale, mode, sample_ratio)
     grads = _tvm.te.gradient(R, [data], head=dy)
     return grads
+
 
 _reg.register_schedule("mnm.op.tvm.roi_align_dx", schedule_generic)

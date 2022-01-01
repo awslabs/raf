@@ -17,8 +17,14 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
     The dataflow graph drawer.
     """
 
-    def __init__(self, expr, always_draw_exprs=None, graph_label="", draw_atomic_nodes=False,
-                 draw_control_nodes=False):
+    def __init__(
+        self,
+        expr,
+        always_draw_exprs=None,
+        graph_label="",
+        draw_atomic_nodes=False,
+        draw_control_nodes=False,
+    ):
         """
         Init the dataflow graph drawer
 
@@ -46,7 +52,7 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         # whether to draw control nodes
         self.draw_control_nodes = draw_control_nodes
         # the pydot graph object
-        self.graph = pydot.Dot(graph_type='digraph', label=graph_label)
+        self.graph = pydot.Dot(graph_type="digraph", label=graph_label)
 
         # stream-related members:
         # mapping from event id to the expr captured by the event
@@ -163,13 +169,13 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
             def visit_call(self, call):
                 op = call.op
                 if isinstance(op, tvm.ir.Op):
-                    self.callees.append(op.name.split('.')[-1])
+                    self.callees.append(op.name.split(".")[-1])
                 elif isinstance(op, tvm.relay.Function):
                     self.callees.extend(FusedOpCalleeVisitor(op).get_callee_names())
                 tvm.relay.ExprVisitor.visit_call(self, call)
 
         callee_names = FusedOpCalleeVisitor(func).get_callee_names()
-        return 'fused_' + '_'.join(callee_names)
+        return "fused_" + "_".join(callee_names)
 
     def add_node(self, e, label, control_node=False, stream=None):
         """
@@ -187,23 +193,30 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
             Add the node to the specified stream. None for the current stream (default).
         """
         if self.need_draw(e):
-            node_style = {
-                'shape': 'box',
-                'style': '"rounded,filled"'
-            }
+            node_style = {"shape": "box", "style": '"rounded,filled"'}
             colors = [
-                "beige", "azure", "burlywood", "coral1", "darkgoldenrod",
-                "darkgreen", "darkorchid2", "firebrick1", "gold1", "antiquewhite", "aquamarine",
-                "chartreuse1", "crimson",
+                "beige",
+                "azure",
+                "burlywood",
+                "coral1",
+                "darkgoldenrod",
+                "darkgreen",
+                "darkorchid2",
+                "firebrick1",
+                "gold1",
+                "antiquewhite",
+                "aquamarine",
+                "chartreuse1",
+                "crimson",
             ]
             if stream is None:
                 stream = self.current_stream
-            node_style['fillcolor'] = colors[stream % len(colors)]
+            node_style["fillcolor"] = colors[stream % len(colors)]
             if e in self.always_draw_exprs:
-                node_style['fillcolor'] = 'white'
+                node_style["fillcolor"] = "white"
             if control_node:
-                node_style['shape'] = 'diamond'
-                node_style['fillcolor'] = 'white'
+                node_style["shape"] = "diamond"
+                node_style["fillcolor"] = "white"
             node = pydot.Node(name=str(len(self.memo_map)), label=label, **node_style)
             self.stream_exprs[stream].append(e)
             self.graph.add_node(node)
@@ -253,12 +266,12 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         if u_node and v_node:
             edge_style = {}
             if control_edge:
-                edge_style['style'] = 'dashed'
+                edge_style["style"] = "dashed"
             self.graph.add_edge(pydot.Edge(u_node, v_node, **edge_style))
 
     def visit_function(self, e):
         attrs = e.attrs
-        if attrs and 'Primitive' in attrs and attrs['Primitive'] == 1:
+        if attrs and "Primitive" in attrs and attrs["Primitive"] == 1:
             self.add_node(e, self.get_fused_op_name(e))
             return self.memo_map[e]
         raise NotImplementedError("Does not support a graph with non-primitive functions")
@@ -275,8 +288,12 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         op = call.op
 
         # deal with the schedule-related op specially
-        schedule_ops = ["mnm.op.set_stream", "mnm.op.add_event", "mnm.op.wait_event",
-                        "mnm.op.stream_barrier"]
+        schedule_ops = [
+            "mnm.op.set_stream",
+            "mnm.op.add_event",
+            "mnm.op.wait_event",
+            "mnm.op.stream_barrier",
+        ]
         if isinstance(op, tvm.ir.Op) and op.name in schedule_ops:
             if op.name == "mnm.op.set_stream":
                 self.current_stream = ExtractValue(call.args[1]).value
@@ -286,12 +303,13 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
             else:
                 if self.draw_control_nodes:
                     if op.name == "mnm.op.stream_barrier":
-                        self.add_node(call, 'Barrier', True)
+                        self.add_node(call, "Barrier", True)
                         self.stream_exprs[self.current_stream].pop()
                         for stream_id in self.stream_exprs:
                             if len(self.stream_exprs[stream_id]) > 0:
-                                self.add_edge(self.stream_exprs[stream_id][-1], call,
-                                              control_edge=True)
+                                self.add_edge(
+                                    self.stream_exprs[stream_id][-1], call, control_edge=True
+                                )
                             self.stream_barrier[stream_id] = call
                         self.previous_barrier = call
                     else:
@@ -300,8 +318,12 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
                         if stream_id == -1:
                             stream_id = self.current_stream
                         if op.name == "mnm.op.add_event":
-                            self.add_node(call, f"Event({event_id}, {stream_id})",
-                                          control_node=True, stream=stream_id)
+                            self.add_node(
+                                call,
+                                f"Event({event_id}, {stream_id})",
+                                control_node=True,
+                                stream=stream_id,
+                            )
                             if len(self.stream_exprs[stream_id]) > 1:
                                 prev_expr = self.stream_exprs[stream_id][-2]
                                 self.add_edge(prev_expr, call, control_edge=True)
@@ -320,25 +342,29 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
                         # are executed in a single stream, while all computation ops are executed
                         # in another. when we encounter a collective op, we should have at least
                         # encountered a computation op and a wait_event op
-                        all_stream_ids = (set(self.stream_exprs.keys())
-                                          .union(self.stream_wait_events.keys())
-                                          .union(self.stream_barrier.keys()))
+                        all_stream_ids = (
+                            set(self.stream_exprs.keys())
+                            .union(self.stream_wait_events.keys())
+                            .union(self.stream_barrier.keys())
+                        )
                         if not (len(all_stream_ids) == 2 and len(self.stream_exprs) == 1):
                             # the two-stream assumption does not hold, or the scheduling
                             # ops are not used properly
-                            print("[WARNING] Cannot find valid communication stream. \
-                                  Drawing communication ops on the default stream.")
+                            print(
+                                "[WARNING] Cannot find valid communication stream. \
+                                  Drawing communication ops on the default stream."
+                            )
                             self.communication_stream = 0
                         else:
                             self.communication_stream = list(
                                 all_stream_ids - set(self.stream_exprs.keys())
-                                )[0]
+                            )[0]
                     stream = self.communication_stream
                     self.add_node(call, f'Call({op.name.split(".")[-1]})', stream=stream)
                 else:
                     self.add_node(call, f'Call({op.name.split(".")[-1]})')
             else:
-                self.add_node(call, f'Call({self.get_fused_op_name(op)})')
+                self.add_node(call, f"Call({self.get_fused_op_name(op)})")
             self.wait_events_and_barrier(call, stream=stream)
             self.add_edge(op, call)
             for arg in call.args:
@@ -347,7 +373,7 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         return self.memo_map[call]
 
     def visit_var(self, var):
-        last_name = var.name_hint.split('.')[-1]
+        last_name = var.name_hint.split(".")[-1]
         self.add_node(var, f"Var({last_name})")
         return self.memo_map[var]
 
@@ -372,16 +398,16 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         return self.memo_map[global_var]
 
     def visit_op(self, op):
-        last_name = op.name.split('.')[-1]
+        last_name = op.name.split(".")[-1]
         self.add_node(op, f"Op({last_name})")
         return self.memo_map[op]
 
     def visit_constant(self, const):
         value = ExtractValue(const)
         if self.is_scalar_value(value):
-            label = f'Scalar({str(value)})'
+            label = f"Scalar({str(value)})"
         else:
-            label = 'Constant'
+            label = "Constant"
         self.add_node(const, label)
         return self.memo_map[const]
 
@@ -407,12 +433,14 @@ class DataflowGraphDrawer(tvm.relay.ExprFunctor):
         raise NotImplementedError()
 
 
-def draw_dataflow_graph(mod_or_func_or_expr,
-                        out_file_name="./graph.png",
-                        graph_label='Dataflow Graph',
-                        num_inputs=1,
-                        draw_atomic_nodes=False,
-                        draw_control_nodes=False):
+def draw_dataflow_graph(
+    mod_or_func_or_expr,
+    out_file_name="./graph.png",
+    graph_label="Dataflow Graph",
+    num_inputs=1,
+    draw_atomic_nodes=False,
+    draw_control_nodes=False,
+):
     """
     Draw the dataflow graph of given module, relay function or expression. When a module is given,
     the 'main' function is drawn. The input expr or function can be either GNF, BBNF, or ANF. If
@@ -445,8 +473,8 @@ def draw_dataflow_graph(mod_or_func_or_expr,
         solid line and the control dependency are drawn in dashed line. Default: False.
     """
     if isinstance(mod_or_func_or_expr, tvm.ir.IRModule):
-        expr = mod_or_func_or_expr['main'].body
-        always_draw_exprs = mod_or_func_or_expr['main'].params[:num_inputs]
+        expr = mod_or_func_or_expr["main"].body
+        always_draw_exprs = mod_or_func_or_expr["main"].params[:num_inputs]
     elif isinstance(mod_or_func_or_expr, tvm.relay.Function):
         expr = mod_or_func_or_expr.body
         always_draw_exprs = mod_or_func_or_expr.params[:num_inputs]
@@ -454,17 +482,21 @@ def draw_dataflow_graph(mod_or_func_or_expr,
         expr = mod_or_func_or_expr
         always_draw_exprs = []
     else:
-        raise ValueError("Expect tvm.ir.IRModule, tvm.relay.Function, or tvm.relay.Expr, "
-                         f"but {type(mod_or_func_or_expr)} got.")
+        raise ValueError(
+            "Expect tvm.ir.IRModule, tvm.relay.Function, or tvm.relay.Expr, "
+            f"but {type(mod_or_func_or_expr)} got."
+        )
 
-    drawer = DataflowGraphDrawer(expr,
-                                 always_draw_exprs=always_draw_exprs,
-                                 graph_label=graph_label,
-                                 draw_atomic_nodes=draw_atomic_nodes,
-                                 draw_control_nodes=draw_control_nodes)
+    drawer = DataflowGraphDrawer(
+        expr,
+        always_draw_exprs=always_draw_exprs,
+        graph_label=graph_label,
+        draw_atomic_nodes=draw_atomic_nodes,
+        draw_control_nodes=draw_control_nodes,
+    )
     dgraph = drawer.draw()
 
     dirname = os.path.dirname(out_file_name)
     if dirname != "":
         os.makedirs(dirname, exist_ok=True)
-    dgraph.write(out_file_name, format='png')
+    dgraph.write(out_file_name, format="png")

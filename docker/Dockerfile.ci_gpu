@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu18.04
 
 # Base scripts
 RUN apt-get update --fix-missing
@@ -18,3 +18,7 @@ ENV C_INCLUDE_PATH=/usr/local/cuda/include:${C_INCLUDE_PATH}
 ENV CPLUS_INCLUDE_PATH=/usr/local/cuda/include:${CPLUS_INCLUDE_PATH}
 ENV LIBRARY_PATH=/usr/local/cuda/lib64:${LIBRARY_PATH}
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+
+# To prevent `black` command line errors caused by ASCII encoding
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8

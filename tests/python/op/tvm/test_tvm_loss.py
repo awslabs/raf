@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 
 import mnm
-from mnm.testing import get_device_list, randn_torch, check, run_vm_model, one_hot_torch
+from mnm.testing import get_testable_devices, randn_torch, check, run_vm_model, one_hot_torch
 
 
 def one_hot(batch_size, num_classes, device="cpu", dtype="float32"):
@@ -18,11 +18,14 @@ def one_hot(batch_size, num_classes, device="cpu", dtype="float32"):
     return m_x, t_x
 
 
-@pytest.mark.parametrize("device", ['cpu'])
-@pytest.mark.parametrize("shape", [
-    [3],
-    [1, 2],
-])
+@pytest.mark.parametrize("device", ["cpu"])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [3],
+        [1, 2],
+    ],
+)
 def test_smooth_l1_loss(device, shape):
     class TestModel(mnm.Model):
         def build(self):
@@ -47,7 +50,7 @@ def test_smooth_l1_loss(device, shape):
     check(m_pred.grad, t_pred.grad)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("n", [3, 7])
 @pytest.mark.parametrize("c", [2, 6])
 def test_nll_loss(device, n, c):
@@ -75,7 +78,7 @@ def test_nll_loss(device, n, c):
     check(m_pred.grad, t_pred.grad)
 
 
-@pytest.mark.parametrize("device", ['cpu'])
+@pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("n", [3, 5, 7])
 @pytest.mark.parametrize("c", [2, 4, 6])
 def test_cross_entropy(device, n, c):
@@ -103,11 +106,14 @@ def test_cross_entropy(device, n, c):
 
 
 # TODO(@icemelon9): enable vm test in the future
-@pytest.mark.parametrize("shape", [
-    (3, 16, 128, 128),
-    (3, 16),
-])
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (3, 16, 128, 128),
+        (3, 16),
+    ],
+)
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_broadcast_add(shape, device):
     m_a, t_a = randn_torch(shape, device=device, requires_grad=True)
     n = len(shape)
@@ -132,14 +138,14 @@ def test_broadcast_add(shape, device):
 # TODO(@icemelon9): enable vm test in the future
 @pytest.mark.parametrize("shape", [[4, 4]])
 def test_sgd(shape):
-    x0 = np.random.randn(*shape).astype('float32')
-    dx = np.random.randn(*shape).astype('float32')
-    v0 = np.random.randn(*shape).astype('float32')
+    x0 = np.random.randn(*shape).astype("float32")
+    dx = np.random.randn(*shape).astype("float32")
+    v0 = np.random.randn(*shape).astype("float32")
     mu = np.random.randn(1)[0]  # pylint: disable=invalid-name
     learning_rate = 0.01
 
-    n_v1 = (mu * v0 + dx)
-    n_x1 = (x0 - learning_rate * n_v1)
+    n_v1 = mu * v0 + dx
+    n_x1 = x0 - learning_rate * n_v1
 
     x0 = mnm.array(x0)
     dx = mnm.array(dx)

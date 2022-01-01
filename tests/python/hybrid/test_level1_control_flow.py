@@ -2,6 +2,7 @@ from mnm import hybrid
 
 # pylint: disable=all
 
+
 @hybrid
 def program_0(x1):
     g1 = -1

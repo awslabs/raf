@@ -1,16 +1,17 @@
 import numpy as np
 import pytest
 import mnm
-from mnm.testing import get_device_list, check, run_vm_model
+from mnm.testing import get_testable_devices, check, run_vm_model
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fuse", [True, False])
 def test_dynamic_model(device, fuse):
     # pylint: disable=no-self-use
     class Model(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x):
             y = mnm.argwhere(x)
@@ -29,12 +30,13 @@ def test_dynamic_model(device, fuse):
     check(v_res, expected)
 
 
-@pytest.mark.parametrize("device", get_device_list())
+@pytest.mark.parametrize("device", get_testable_devices())
 def test_dynamic_reshape(device):
     # pylint: disable=no-self-use
     class Model(mnm.Model):
         def build(self):
             pass
+
         @mnm.model.trace
         def forward(self, x):
             y = mnm.argwhere(x)

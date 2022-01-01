@@ -1,28 +1,31 @@
 # pylint: disable=protected-access
 import pytest
+import numpy as np
 import torch
 
 import mnm
-from mnm.testing import check, randn_torch, run_vm_model, resnet
+from mnm.testing import check, randn_torch, run_vm_model, resnet, with_seed
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-def test_r50_v1_imagenet():
-    device = "cuda"
-    m_model, t_model = resnet.get_model([3, 4, 6, 3])
-    m_model.to(device=device)
-    t_model.to(device)
-    m_in, t_in = resnet.get_input(batch_size=1, device=device)
-    m_loss = m_model(*m_in)
-    t_loss = t_model(*t_in)
-    m_loss.backward()
-    t_loss.backward()
-    check(m_loss, t_loss)
-    resnet.check_params(m_model, t_model)
+def test_interpreter_fp32():
+    x = np.random.randn(1, 3, 32, 32)
+    y = np.random.randn(
+        1,
+    )
+    m_x = mnm.array(x, dtype="float32", device="cuda")
+    m_y = mnm.array(y, dtype="int64", device="cuda")
+    model = resnet.MNMResNet50([3, 4, 6, 3])
+    model.to(device="cuda")
+    model.train_mode()
+    model(m_x, m_y)
+    model.infer_mode()
+    model(m_x)
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("fuse", [False, True])
+@with_seed(0)
 def test_vm_forward(fuse):
     device = "cuda"
     layers = [3, 4, 6, 3]
@@ -38,6 +41,7 @@ def test_vm_forward(fuse):
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("fuse", [False, True])
+@with_seed(0)
 def test_vm_backward(fuse):
     device = "cuda"
     layers = [1, 1, 1, 1]
@@ -58,19 +62,20 @@ def test_vm_backward(fuse):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("fuse", [False, True])
+@pytest.mark.parametrize("fuse", [True])
 @pytest.mark.parametrize("policy", ["wavefront", "asap", "ios"])
+@with_seed(0)
 def test_vm_multi_stream(policy, fuse):
-    device = 'cuda'
+    device = "cuda"
     layers = [3, 4, 6, 3]
     model, _ = resnet.get_model(layers)
     model.to(device=device)
     model.infer_mode()
     (x, _), _ = resnet.get_input(batch_size=1, device=device)
-    y_1 = run_vm_model(model, device, [x], disable_fusion=not fuse,
-                       stream_schedule_policy='sequential')
-    y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse,
-                       stream_schedule_policy=policy)
+    y_1 = run_vm_model(
+        model, device, [x], disable_fusion=not fuse, stream_schedule_policy="sequential"
+    )
+    y_2 = run_vm_model(model, device, [x], disable_fusion=not fuse, stream_schedule_policy=policy)
     check(y_1, y_2, rtol=1e-5, atol=1e-5)
 
 

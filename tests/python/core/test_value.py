@@ -1,7 +1,6 @@
 import numpy as np
 
-from mnm._core.value import (BoolValue, FloatValue, IntValue, StringValue,
-                             TensorValue, TupleValue)
+from mnm._core.value import BoolValue, FloatValue, IntValue, StringValue, TensorValue, TupleValue
 
 
 def test_int_value():
@@ -38,7 +37,7 @@ def test_string_value():
 
 def test_nested():
     d_0 = TensorValue.assemble((), "float32", "cpu")
-    d_1 = TensorValue.assemble((3, ), "float64", "cpu")
+    d_1 = TensorValue.assemble((3,), "float64", "cpu")
     d_2 = TensorValue.assemble((3, 2), "float16", "cpu")
     d_3 = TensorValue.assemble((3, 2, 6), "float32", "cpu")
     v_0 = TupleValue([d_0, d_1, d_2, d_3])
@@ -72,10 +71,10 @@ def test_assemble_0d():
 
 
 def test_assemble_1d():
-    data = TensorValue.assemble((3, ), "float32", "cpu")
+    data = TensorValue.assemble((3,), "float32", "cpu")
     assert data.ndim == 1
-    assert data.shape == (3, )
-    assert data.strides == (1, )
+    assert data.shape == (3,)
+    assert data.strides == (1,)
 
 
 def test_assemble_2d():
@@ -93,9 +92,9 @@ def test_assemble_3d():
 
 
 def test_assemble_null_1d():
-    data = TensorValue.assemble((0, ), "float32", "cpu")
+    data = TensorValue.assemble((0,), "float32", "cpu")
     assert data.ndim == 1
-    assert data.shape == (0, )
+    assert data.shape == (0,)
 
 
 def test_assemble_null_3d():

@@ -32,7 +32,7 @@ class SortArgs : public ir::AttrsNode<SortArgs> {
 class TopkArgs : public ir::AttrsNode<TopkArgs> {
  public:
   value::BaseTensorValue data;
-  int k{1};
+  value::Value k;
   int axis{-1};
   std::string ret_type{"both"};
   bool is_ascend{false};

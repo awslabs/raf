@@ -14,12 +14,12 @@ STREAM_OPS = {
     "set_stream": tvm.ir.op.Op.get("mnm.op.set_stream"),
     "add_event": tvm.ir.op.Op.get("mnm.op.add_event"),
     "wait_event": tvm.ir.op.Op.get("mnm.op.wait_event"),
-    "stream_barrier": tvm.ir.op.Op.get("mnm.op.stream_barrier")
+    "stream_barrier": tvm.ir.op.Op.get("mnm.op.stream_barrier"),
 }
 
 
 class ExecutionOrderError(Exception):
-    """ ANF execution order error. """
+    """ANF execution order error."""
 
     def __init__(self, expr_a, expr_b):
         msg = f"{expr_a} must be executed before {expr_b}, but their execution may overlap."
@@ -60,6 +60,7 @@ def flatten_a_normal_form(e):
         sub-expressions are valid sub-expression. A valid sub-expression is valid if it is Var,
         GlobalVar, Constant, Op, or primitive Function.
         """
+
         # pylint: disable=missing-function-docstring
 
         def __init__(self):
@@ -82,12 +83,13 @@ def flatten_a_normal_form(e):
             ret : bool
                 Whether the given expr is a valid sub_expr
             """
-            if isinstance(expr,
-                          (tvm.relay.Var, tvm.relay.GlobalVar, tvm.relay.Constant, tvm.ir.Op)):
+            if isinstance(
+                expr, (tvm.relay.Var, tvm.relay.GlobalVar, tvm.relay.Constant, tvm.ir.Op)
+            ):
                 return True
             if isinstance(expr, tvm.relay.Function):
                 attrs = expr.attrs
-                if attrs and 'Primitive' in attrs and attrs['Primitive'] == 1:
+                if attrs and "Primitive" in attrs and attrs["Primitive"] == 1:
                     return True
             return False
 
@@ -365,13 +367,15 @@ def verify_schedule(mod_or_func_or_expr: Union[tvm.IRModule, tvm.relay.Function,
         control graph.
     """
     if isinstance(mod_or_func_or_expr, tvm.ir.IRModule):
-        expr = mod_or_func_or_expr['main'].body
+        expr = mod_or_func_or_expr["main"].body
     elif isinstance(mod_or_func_or_expr, tvm.relay.Function):
         expr = mod_or_func_or_expr.body
     elif isinstance(mod_or_func_or_expr, tvm.relay.Expr):
         expr = mod_or_func_or_expr
     else:
-        raise ValueError("Expect tvm.ir.IRModule, tvm.relay.Function, or tvm.relay.Expr, "
-                         f"but got {type(mod_or_func_or_expr)}.")
+        raise ValueError(
+            "Expect tvm.ir.IRModule, tvm.relay.Function, or tvm.relay.Expr, "
+            f"but got {type(mod_or_func_or_expr)}."
+        )
 
     verify_expr_schedule(expr)

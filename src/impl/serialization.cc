@@ -14,7 +14,7 @@ namespace serialization {
 
 using namespace value;
 
-class IRRewrite4Loader : public ir::ExprMutator {
+class IRRewrite4Saver : public ir::ExprMutator {
  public:
   ir::Expr VisitExpr(const ir::Expr& expr) override {
     auto ret = ir::ExprMutator::VisitExpr(expr);
@@ -46,31 +46,69 @@ class IRRewrite4Loader : public ir::ExprMutator {
   }
 };
 
-std::string SaveJSON(const ir::IRModule& mod) {
-  ir::IRModule inst = ir::IRModule();
-  for (auto kv : mod->functions) {
-    ir::Expr func = IRRewrite4Loader()(kv.second);
-    // inst->Add cannot be used, which runs InferType automatically
-    // However, InferType cannot visit serialization::ConstantNode
-    inst->AddUnchecked(kv.first, Downcast<ir::Function>(func));
+class IRRewrite4Loader : public ir::ExprMutator {
+ public:
+  ir::Expr VisitExpr(const ir::Expr& expr) override {
+    auto ret = ir::ExprMutator::VisitExpr(expr);
+    ret->checked_type_ = expr->checked_type_;
+    return ret;
   }
-  return tvm::SaveJSON(inst);
-}
 
-std::string SaveJSON(const ir::Expr& expr) {
-  auto e = IRRewrite4Loader().VisitExpr(expr);
-  return tvm::SaveJSON(e);
+  Expr VisitExpr_(const LetNode* op) override {
+    auto pre_visit = [this](const LetNode* op) {
+      this->VisitExpr(op->var);
+      this->VisitExpr(op->value);
+    };
+    auto post_visit = [this](const LetNode* op) {
+      Var var = Downcast<Var>(this->VisitExpr(op->var));
+      Expr value = this->VisitExpr(op->value);
+      Expr body = this->VisitExpr(op->body);
+      this->memo_[GetRef<Expr>(op)] = Let(var, value, body);
+    };
+    ExpandANormalForm(op, pre_visit, post_visit);
+    return memo_[GetRef<Expr>(op)];
+  }
+
+  ir::Expr VisitExpr_(const VarNode* _node) override {
+    return MakeVar(_node->vid->name_hint, _node->type_annotation);
+  }
+};
+
+template <typename T>
+ir::ObjectRef Normalize(const ir::ObjectRef& n) {
+  if (const ir::IRModuleNode* mod = n.as<ir::IRModuleNode>()) {
+    ir::IRModule updated_mod = ir::IRModule();
+    for (auto kv : mod->functions) {
+      ir::Expr func = T()(kv.second);
+      // updated_mod->Add cannot be used, which runs InferType automatically
+      // However, InferType cannot visit serialization::ConstantNode
+      updated_mod->AddUnchecked(kv.first, Downcast<ir::Function>(func));
+    }
+    return updated_mod;
+  } else if (const ExprNode* e = n.as<ExprNode>()) {
+    return T().VisitExpr(GetRef<ir::Expr>(e));
+  } else if (const ir::ArrayNode* a = n.as<ir::ArrayNode>()) {
+    Array<ir::ObjectRef, ir::ObjectRef> updated_array;
+    for (const auto& x : *a) {
+      updated_array.push_back(Normalize<T>(x));
+    }
+    return updated_array;
+  } else if (const ir::MapNode* m = n.as<ir::MapNode>()) {
+    Map<ir::ObjectRef, ir::ObjectRef> updated_map;
+    for (const auto& kv : *m) {
+      updated_map.Set(kv.first, Normalize<T>(kv.second));
+    }
+    return updated_map;
+  }
+  return n;
 }
 
 std::string SaveJSON(const ir::ObjectRef& n) {
-  if (const ir::IRModuleNode* m = n.as<ir::IRModuleNode>()) {
-    return SaveJSON(ir::GetRef<ir::IRModule>(m));
-  } else if (const ir::FunctionNode* f = n.as<ir::FunctionNode>()) {
-    return SaveJSON(ir::GetRef<ir::Function>(f));
-  } else if (const ir::ExprNode* e = n.as<ir::ExprNode>()) {
-    return SaveJSON(ir::GetRef<ir::Expr>(e));
-  }
-  return tvm::SaveJSON(n);
+  return tvm::SaveJSON(Normalize<IRRewrite4Saver>(n));
+}
+
+ir::ObjectRef LoadJSON(const std::string& n) {
+  return Normalize<IRRewrite4Loader>(tvm::LoadJSON(n));
 }
 
 ir::ObjectPtr<ir::Object> CreateConstantNode(const std::string& s) {
@@ -106,13 +144,13 @@ void SerializeValue(dmlc::Stream* strm, const Value& value) {
     }
   } else if (auto op = value.as<OpValueObj>()) {
     strm->Write(static_cast<uint8_t>(kOpValue));
-    strm->Write(SaveJSON(op->op));
+    strm->Write(serialization::SaveJSON(op->op));
   } else if (auto clo = value.as<ClosureValueObj>()) {
     strm->Write(static_cast<uint8_t>(kClosureValue));
-    strm->Write(SaveJSON((clo->func)));
+    strm->Write(serialization::SaveJSON((clo->func)));
     strm->Write(static_cast<uint64_t>(clo->env.size()));
     for (auto it : clo->env) {
-      strm->Write(SaveJSON(it.first));
+      strm->Write(serialization::SaveJSON(it.first));
       SerializeValue(strm, it.second);
     }
   } else if (value.as<NoGradValueObj>()) {
@@ -208,7 +246,14 @@ MNM_REGISTER_GLOBAL("mnm.ir.serialization.SaveJSON")
     .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
       CHECK(args.size() == 1);
       ir::ObjectRef obj = args[0].operator ir::ObjectRef();
-      *ret = SaveJSON(obj);
+      *ret = serialization::SaveJSON(obj);
+    });
+
+MNM_REGISTER_GLOBAL("mnm.ir.serialization.LoadJSON")
+    .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
+      CHECK(args.size() == 1);
+      auto obj = args[0].operator ir::String();
+      *ret = serialization::LoadJSON(obj);
     });
 
 }  // namespace serialization

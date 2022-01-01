@@ -234,6 +234,7 @@ static void GetOutputPadHW(const std::vector<int64_t>& padding, int64_t* pad_h, 
     throw;
   }
 }
+
 inline void GetAdaptivePoolKernel(int64_t ind, int64_t outd, int64_t* kernel_size, int64_t* stride,
                                   int64_t* padding) {
   CHECK_EQ(ind % outd, 0) << "Not supported: input dimension = " << ind
@@ -290,6 +291,78 @@ inline bool IsCollectiveOp(const Expr& op) {
 
 inline size_t GetSizeInBytes(const DLDataType& dtype) {
   return (dtype.bits + 7) / 8;
+}
+
+inline std::vector<int64_t> GetShapeVecFromValue(const Value& value) {
+  ICHECK(value.defined());
+  std::vector<int64_t> shape;
+  if (const auto* scalar = value.as<IntValueObj>()) {
+    shape.push_back(scalar->value);
+  } else if (const auto* tup = value.as<TupleValueObj>()) {
+    for (auto field : tup->fields) {
+      shape.push_back(GetScalarValueData<int64_t>(field));
+    }
+  } else if (const auto* tv = value.as<TensorValueObj>()) {
+    DLTensor* tensor = GetRef<TensorValue>(tv);
+    ICHECK_EQ(tensor->ndim, 1U);
+    ICHECK_EQ(tensor->dtype.code, 0U);
+    ICHECK_EQ(tensor->dtype.bits, 32U);
+    const int32_t* int_ptr = reinterpret_cast<int32_t*>(tensor->data);
+    for (size_t i = 0; i < tensor->shape[0]; ++i) {
+      shape.push_back(int_ptr[i]);
+    }
+  } else {
+    LOG(FATAL) << "Unsupported value type " << value;
+  }
+  return shape;
+}
+
+inline Array<tvm::PrimExpr> GetShapeExprFromValue(const Value& value) {
+  ICHECK(value.defined());
+  Array<tvm::PrimExpr> shape;
+  if (auto ttv = value.as<TensorTypeValueObj>()) {
+    auto ndim = ttv->type->shape.size();
+    for (size_t i = 0; i < ndim; ++i) {
+      shape.push_back(Any());
+    }
+  } else {
+    std::vector<int64_t> shape_vec = GetShapeVecFromValue(value);
+    for (auto i : shape_vec) {
+      shape.push_back(tvm::Integer(i));
+    }
+  }
+  return shape;
+}
+
+inline tvm::PrimExpr GetIntExprFromValue(const Value& value) {
+  ICHECK(value.defined());
+  if (auto tv = value.as<TensorTypeValueObj>()) {
+    return Any();
+  }
+  return tvm::Integer(GetScalarValueData<int64_t>(value));
+}
+
+inline std::vector<int64_t> BroadcastShapeVec(const std::vector<int64_t>& x1,
+                                              const std::vector<int64_t>& x2) {
+  size_t ndim_1 = x1.size();
+  size_t ndim_2 = x2.size();
+  size_t ndim = std::max(ndim_1, ndim_2);
+  std::vector<int64_t> oshape(ndim);
+  for (size_t i = 0; i < ndim; ++i) {
+    int64_t lhs = (i < ndim_1) ? x1[ndim_1 - 1 - i] : 1;
+    int64_t rhs = (i < ndim_2) ? x2[ndim_2 - 1 - i] : 1;
+
+    if (lhs == 1) {
+      oshape[ndim - 1 - i] = rhs;
+    } else if (rhs == 1) {
+      oshape[ndim - 1 - i] = lhs;
+    } else if (lhs == rhs) {
+      oshape[ndim - 1 - i] = lhs;
+    } else {
+      LOG(FATAL) << "Cannot broadcast " << lhs << " and " << rhs;
+    }
+  }
+  return oshape;
 }
 
 }  // namespace op

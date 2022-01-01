@@ -9,6 +9,7 @@ from mnm._ffi.pass_ import EstimateGFLOPS
 from mnm.ir import ScopeBuilder
 from mnm.testing import run_infer_type
 
+
 def verify_flops(mod, expected_map):
     with Device("cpu"):
         ret = EstimateGFLOPS(run_infer_type(mod))
@@ -16,8 +17,8 @@ def verify_flops(mod, expected_map):
 
     for var_name, expected_flops in expected_map.items():
         assert var_name in ret, "Missing %s" % var_name
-        assert abs(expected_flops / 1e9 - ret[var_name]) <= 1e-2, \
-            "%s GFLOPS mismatch" % var_name
+        assert abs(expected_flops / 1e9 - ret[var_name]) <= 1e-2, "%s GFLOPS mismatch" % var_name
+
 
 def test_conv2d():
     shape = (16, 16, 64, 64)
@@ -36,6 +37,7 @@ def test_conv2d():
 
     # 2 * (N * CI * CO * H * W * kh * kw)
     verify_flops(get_mod(), {"a1": 2 * 16 * 16 * 16 * 64 * 64 * 3 * 3})
+
 
 def test_unary():
     shape = (10, 5)
@@ -72,6 +74,7 @@ def test_fusion():
         return tvm.IRModule.from_expr(func)
 
     verify_flops(get_mod(), {"a1": 10 * 5 * 2})
+
 
 def test_multi_func():
     shape = (10, 5)

@@ -93,7 +93,5 @@ Var TryGetMayShare(Expr var);
 
 std::string AsText(const ObjectRef& node, bool show_meta_data = false);
 
-Expr RewritePatterns(Array<DFPatternCallback> callbacks, Expr expr, IRModule mod = IRModule());
-
 }  // namespace ir
 }  // namespace mnm

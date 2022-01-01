@@ -39,11 +39,11 @@ bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
   DFPattern with_epilogue = epilogue({pat});
   pat = with_epilogue || pat;
 
-  if (!MatchPattern(pat, expr)) {
+  if (!MNMMatchPattern(pat, expr)) {
     return false;
   }
 
-  // RewritePatterns serves as a visitor here: it does not rewrite, instead information
+  // MNMRewritePatterns serves as a visitor here: it does not rewrite, instead information
   // is recorded for later process.
   TypedPackedFunc<Expr(const Expr&, const Expr&, const Map<DFPattern, Array<Expr>>&)> func(
       [&](const Expr& pre, const Expr& post, const Map<DFPattern, Array<Expr>>& node_map) {
@@ -63,7 +63,7 @@ bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
         return post;
       });
   DFPatternCallback cb(pat, func.operator PackedFunc(), false);
-  RewritePatterns({cb}, expr);
+  MNMRewritePatterns({cb}, expr);
   return true;
 }
 

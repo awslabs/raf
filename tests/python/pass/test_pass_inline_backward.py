@@ -42,9 +42,14 @@ def test_basic():
     m_y.requires_grad = True
     record = model._internal(m_x, m_y)
     mod = record.mod
-    seq = MNMSequential([mnm._ffi.pass_.InferType(),
-                         mnm._ffi.pass_.AutoDiff(record.requires_grads),
-                         mnm._ffi.pass_.InlineBackward(), mnm._ffi.pass_.InferType()])
+    seq = MNMSequential(
+        [
+            mnm._ffi.pass_.InferType(),
+            mnm._ffi.pass_.AutoDiff(record.requires_grads),
+            mnm._ffi.pass_.InlineBackward(),
+            mnm._ffi.pass_.InferType(),
+        ]
+    )
     mod = seq(mod)
     inlined_func = mod["main"]
     assert tvm.ir.structural_equal(inlined_func, expected(shape))
