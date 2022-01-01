@@ -162,7 +162,7 @@ def test_allreduce_with_tensor_list(computation):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-@pytest.mark.parametrize("rank_list", [[0, 1]])
+@pytest.mark.parametrize("rank_list", [[0], [0, 1], [0, 1, 2]])
 def test_allreduce_with_subcomm(dtype, rank_list):
     print("Testing allreduce with a single tensor as input.")
 
@@ -184,30 +184,17 @@ def test_allreduce_with_subcomm(dtype, rank_list):
         print(f"{rank} - X: ", x)
     model.to(device=device)
     y = model(x)
-    print("rank%d: " % rank, y)
-    # vx = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
-    # vx = mnm.array(vx, device=device)
-    # run_vm_model(model, device, [vx])
-    # check(y, vx)
-    # if rank == 0:
-    #     ones = np.ones(shape=(4, 4), dtype=dtype)
-    #     if computation == "sum":
-    #         target_y = ones * sum(range(1, total_rank + 1))
-    #     elif computation == "prod":
-    #         target_y = ones * np.prod(range(1, total_rank + 1))
-    #     elif computation == "min":
-    #         target_y = ones * min(1, total_rank)
-    #     elif computation == "max":
-    #         target_y = ones * max(1, total_rank)
-    #     elif computation == "avg":
-    #         target_y = ones * sum(range(1, total_rank + 1))
-    #         target_y = target_y / total_rank
-    #     else:
-    #         assert False, "Invalid computation"
-    #     print(f"{rank} - Y: ", y)
-    #     print(f"{rank} - T: ", target_y)
-    #     check(y, target_y)
-
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    vx = mnm.array(vx, device=device)
+    run_vm_model(model, device, [vx])
+    check(y, vx)
+    if rank in rank_list:
+        ones = np.ones(shape=(4, 4), dtype=dtype)
+        target_y = ones * sum(np.array(rank_list) + 1)
+        if rank == 0:
+            print(f"{rank} - Y: ", y)
+            print(f"{rank} - T: ", target_y)
+        check(y, target_y)
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
@@ -516,7 +503,7 @@ def test_broadcast():
 
 
 if __name__ == "__main__":
-    test_allreduce_with_subcomm("float32", [0, 1])
-    # exit_code = pytest.main([__file__])
-    # dist.RemoveCommunicator()
-    # sys.exit(exit_code)
+    # test_allreduce_with_subcomm("float32", [0, 1])
+    exit_code = pytest.main([__file__])
+    dist.RemoveCommunicator()
+    sys.exit(exit_code)
