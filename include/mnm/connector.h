@@ -40,56 +40,31 @@ class Connector {
 
 class ConnectorManager {
  public:
-  // TODO: support multiple connectors.
   ConnectorManager() {
-    conn_ = nullptr;
   }
   static ConnectorManager* Get() {
     static ConnectorManager* instance = new ConnectorManager();
     return instance;
   }
 
-  Connector* GetConnector(const std::string& name) {
-    CHECK_LT(name.size(), 128) << "There is no such connector: " << name;
-    thread_local char maker_name[128];
-
-    std::string default_name = "mpi";
-    snprintf(maker_name, sizeof(maker_name), "mnm.distributed.connector._make.%s",
-             default_name.c_str());
-    const registry::PackedFunc* pf = registry::Registry::Get(maker_name);
-    if (pf == nullptr) default_name = "void";
-
-    if (conn_ == nullptr) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (conn_ == nullptr) {
-        // ok, it is truly a nullptr
-        if (name == "") {
-          snprintf(maker_name, sizeof(maker_name), "mnm.distributed.connector._make.%s",
-                   default_name.c_str());
-        } else {
-          if (name != "void") CHECK_EQ(name, "mpi") << "Unsupported connector: " << name;
-          snprintf(maker_name, sizeof(maker_name), "mnm.distributed.connector._make.%s",
-                   name.c_str());
-        }
-        void* ret = GetPackedFunc(maker_name)();
-        conn_.reset(static_cast<Connector*>(ret));
-        return conn_.get();
-      }
+  Connector* GetConnector(const std::string& name = "mpi") {
+    if (conn_.count(name) == 0) {
+      const std::string prefix = "mnm.distributed.connector._make.";
+      void* conn_handler =
+          GetPackedFunc(prefix + name)();   // will check whether the function exists or not
+      std::shared_ptr<Connector> conn_ptr;  // NOTE: should we return a shared_ptr<Conn>?
+      conn_ptr.reset(static_cast<Connector*>(conn_handler));
+      conn_[name] = std::move(conn_ptr);
     }
-    // otherwise this is not nullptr
-    CHECK_EQ(name, "") << "You have already initialized a connector [" << conn_->type
-                       << "], and currently we do not support multiple connectors";
-    return conn_.get();
+    return conn_[name].get();
   }
 
   void Remove() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    conn_ = nullptr;
+    LOG_ERROR << "ConnectorManager::Remove is not implemented yet.";
   }
 
  public:
-  std::shared_ptr<Connector> conn_;
-  std::mutex mutex_;
+  std::map<std::string, std::shared_ptr<Connector>> conn_;
 };
 
 }  // namespace connector

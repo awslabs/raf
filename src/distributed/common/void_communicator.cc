@@ -12,7 +12,7 @@ namespace communicator {
 
 class VoidCommunicator : public Communicator {
  public:
-  VoidCommunicator() {
+  VoidCommunicator(const std::vector<int64_t>& rank_list = {}) {
     // In this method, you should
     // 1. Get a connector by calling GetConnector()
     // 2. Create a new communicator and store its handle.
@@ -27,7 +27,7 @@ class VoidCommunicator : public Communicator {
   virtual void* GetCommHandle() {
     return void_comm_handle;
   }
-  static void* make() {
+  static void* make(value::TupleValue obj) {
     return new VoidCommunicator();
   }
 

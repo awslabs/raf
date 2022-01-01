@@ -3,11 +3,11 @@
 from .._op import sym
 from .context import get_context
 
-def allreduce(x, computation="sum"):
+def allreduce(x, computation="sum", rank_list=None):
     """General allreduce operators, take tensor or list of tensors as input."""
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._allreduce(x, computation)
+    return sym._allreduce(x, computation, rank_list)
 
 
 def allgather(x, axis):

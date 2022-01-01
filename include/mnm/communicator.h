@@ -12,6 +12,7 @@
 #include "dmlc/logging.h"
 #include "mnm/registry.h"
 #include "mnm/value.h"
+#include "mnm/op_utils.h"
 #include "./connector.h"
 
 typedef std::pair<std::string, std::vector<int64_t>> CommunicatorID;
@@ -26,7 +27,7 @@ using registry::GetPackedFunc;
 
 class Communicator {
  public:
-  Communicator() {
+  Communicator(const std::vector<int64_t>& rank_list = {}) {
   }
   virtual ~Communicator() {
   }
@@ -71,14 +72,15 @@ class CommunicatorManager {
     return instance;
   }
 
-  Communicator* GetCommunicator(const std::string& name = "nccl", const std::vector<int64_t>& rank_list = {}) {
-    std::lock_guard<std::mutex> lock(mutex_); // writing to std::map is not thread-safe
+  Communicator* GetCommunicator(const std::string& name = "nccl",
+                                const std::vector<int64_t>& rank_list = {}) {
     auto id = CommunicatorID(name, rank_list);
     if (comm_.count(id) == 0) {
       const std::string prefix = "mnm.distributed.communicator._make.";
-      void* comm_handler = GetPackedFunc(prefix + name)(); // will check whether the function exists or not
-      std::shared_ptr<Communicator> comm_ptr; // NOTE: should comm_handler be a unique_ptr to prevent from being used simuatenously?
-      comm_ptr.reset(static_cast<Communicator*>(comm_handler)); 
+      void* comm_handler = GetPackedFunc(prefix + name)(
+          op::ArrayToIntTuple(rank_list));     // will check whether the function exists or not
+      std::shared_ptr<Communicator> comm_ptr;  // NOTE: should we return a shared_ptr<Comm>?
+      comm_ptr.reset(static_cast<Communicator*>(comm_handler));
       comm_[id] = std::move(comm_ptr);
     }
     return comm_[id].get();
@@ -90,7 +92,6 @@ class CommunicatorManager {
 
  public:
   std::map<CommunicatorID, std::shared_ptr<Communicator>> comm_;
-  std::mutex mutex_;
 };
 
 }  // namespace communicator

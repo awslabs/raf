@@ -38,7 +38,6 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
     auto& tv = args->x;
-    
 
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
@@ -61,9 +60,9 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     if (args->rank_list.empty()) {
       RequestDistributed(&communicator);
     } else {
-      CHECK_EQ(1, 2) << "wdnmd";
-      // communicator = CommunicatorManager::Get()->GetCommunicator
+      communicator = CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list);
     }
+
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
       size_t size = BytesCompactTensor(*x);
