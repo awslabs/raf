@@ -32,34 +32,29 @@ class Communicator {
   virtual ~Communicator() {
   }
   int GetLocalSize() {
-    return connector_->local_size;
+    return local_size;
   }
   int GetLocalRank() {
-    return connector_->local_rank;
+    return local_rank;
   }
   int GetSize() {
-    return connector_->size;
+    return size;
   }
   int GetRank() {
-    return connector_->rank;
+    return rank;
   }
   int GetRootRank() {
     return root_rank;
   }
-  bool IsRoot() {
-    return GetRank() == GetRootRank();
-  }
   virtual void* GetCommHandle() = 0;
-
- protected:
-  void GetConnector(const std::string& name = "mpi") {
-    connector_.reset(ConnectorManager::Get()->GetConnector(name));
-  }
 
  public:
   std::string type;
   int root_rank = 0;
-  std::shared_ptr<Connector> connector_;
+  int local_size = 0;
+  int local_rank = 0;
+  int size = 1;
+  int rank = 0;
 };
 
 class CommunicatorManager {

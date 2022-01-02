@@ -196,6 +196,7 @@ def test_allreduce_with_subcomm(dtype, rank_list):
             print(f"{rank} - T: ", target_y)
         check(y, target_y)
 
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
 def test_allgather(axis):
@@ -258,6 +259,37 @@ def test_allgather_with_tensor_list(axis):
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("rank_list", [[0], [0, 1], [0, 1, 2]])
+def test_allgather_with_subcomm(axis, rank_list):
+    class TestModel(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            x = mnm.allgather(x, axis=axis, rank_list=rank_list)
+            return x
+
+    model = TestModel()
+    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x = mnm.array(x, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", x)
+    model.to(device=device)
+    y = run_model(model, [x], device)
+    print("rank%s= " % rank, y)
+
+    # if rank == 0:
+    #     target_y = np.concatenate([x.numpy() * (r + 1) for r in range(total_rank)], axis=axis)
+    #     print(f"{rank} - Y: ", y)
+    #     print(f"{rank} - T: ", target_y)
+    #     check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
@@ -504,6 +536,7 @@ def test_broadcast():
 
 if __name__ == "__main__":
     # test_allreduce_with_subcomm("float32", [0, 1])
-    exit_code = pytest.main([__file__])
-    dist.RemoveCommunicator()
-    sys.exit(exit_code)
+    test_allgather_with_subcomm(0, [0, 1])
+    # exit_code = pytest.main([__file__])
+    # dist.RemoveCommunicator()
+    # sys.exit(exit_code)

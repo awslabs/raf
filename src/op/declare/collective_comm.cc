@@ -80,7 +80,7 @@ void AllGather(const CallValues& call) {
   ir::Array<Value> ret;
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  shape[args->axis] *= CommunicatorManager::Get()->GetCommunicator()->GetSize();
+  shape[args->axis] *= CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list)->GetSize();
   call->device = x->device;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
                                     /*dtype=*/x->dtype,

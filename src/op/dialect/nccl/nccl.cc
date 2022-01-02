@@ -61,6 +61,7 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       RequestDistributed(&communicator);
     } else {
       communicator = CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list);
+      // Should unify the way of getting a communicator
     }
 
     for (int i = 0; i < tv.size(); ++i) {
@@ -149,9 +150,15 @@ class NCCLAllGather : public mnm::op::OpEnv {
   explicit NCCLAllGather(const CallValues& cv) {
     auto op = ir::Op::Get("mnm.op._allgather");
     auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto args = cv->args.as<mnm::op::schema::AllgatherArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator);
+    
+    if (args->rank_list.empty()) {
+      RequestDistributed(&communicator);
+    } else {
+      communicator = CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list);
+    }
   }
 
  public:

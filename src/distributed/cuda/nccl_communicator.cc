@@ -26,30 +26,41 @@ namespace communicator {
 class NCCLCommunicator : public Communicator {
  public:
   NCCLCommunicator(const std::vector<int64_t>& rank_list = {}) {
-    GetConnector();
-    cudaSetDevice(GetLocalRank());
+    auto mpi = ConnectorManager::Get()->GetConnector("mpi");
     ncclUniqueId nccl_id;
     NCCL_CALL(ncclGetUniqueId(&nccl_id));
+    mpi->Broadcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), root_rank);
+
     if (rank_list.empty()) {
-      connector_->Broadcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), root_rank);
+      this->local_size = mpi->local_size;
+      this->local_rank = mpi->local_rank;
+      this->size = mpi->size;
+      this->rank = mpi->rank;
+      this->root_rank = 0;
+      cudaSetDevice(GetLocalRank());
       NCCL_CALL(ncclCommInitRank(&nccl_comm, GetSize(), nccl_id, GetRank()));
     } else {
-      auto world_size = GetSize();
-      auto world_rank = GetRank();
       int size = rank_list.size();
       int rank;
-      CHECK_LE(size, world_size);
+      CHECK_LE(size, mpi->size);
       for (rank = 0; rank < size; ++rank) {
-        if (rank_list[rank] == world_rank) break;
+        if (rank_list[rank] == mpi->rank) break;
       }
-      connector_->Broadcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), rank_list[0]);
+      this->local_rank = 0;
+      this->local_size = 0; // TODO: implement this
+      this->root_rank = rank_list[0];
+
       if (rank < size) {
+        this->rank = rank;
+        this->size = size;
         NCCL_CALL(ncclCommInitRank(&nccl_comm, size, nccl_id, rank));
       } else {
+        this->rank = 0;
+        this->size = 1;
         NCCL_CALL(ncclGetUniqueId(&nccl_id));
         NCCL_CALL(ncclCommInitRank(&nccl_comm, 1, nccl_id, 0));
         // ALL the nodes including the irrelevant ones MUST join the process of creating this
-        // sub-communicator the irrelevant nodes should not use this communicator though
+        // sub-communicator. The irrelevant nodes should not use this communicator though
       }
     }
   }

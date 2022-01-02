@@ -17,7 +17,6 @@ class VoidCommunicator : public Communicator {
     // 1. Get a connector by calling GetConnector()
     // 2. Create a new communicator and store its handle.
     // 3. Initialize the new communicator.
-    GetConnector("void");
 
     LOG(INFO) << "You have created a VoidCommunicator, which will do nothing and can not be used "
                  "for parallel training.";
