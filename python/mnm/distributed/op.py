@@ -19,7 +19,13 @@ def allgather(x, axis, rank_list=None):
         The tensor(s) to be concatenated across replicas
     axis : int
         The axis over which concatenation is to be performed
-    
+    rank_list: [int]
+        The list of ranks to communicate. If the rank list leaves empty,
+        all the nodes will perform the calculation. Note that this operator
+        should be invoked by all machines at the first time, including the nodes
+        that is not in the rank list since creating a new sub-communicator will
+        invoke MPI_Bcast(MPI_COMM_WORLD) for now.
+
 
     Returns
     -------
@@ -40,7 +46,7 @@ def allgather(x, axis, rank_list=None):
             size = 1
     else:
         size = dctx.size
-    
+
     if not is_list:
         x = [x]
     l = len(x)

@@ -153,7 +153,7 @@ class NCCLAllGather : public mnm::op::OpEnv {
     auto args = cv->args.as<mnm::op::schema::AllgatherArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    
+
     if (args->rank_list.empty()) {
       RequestDistributed(&communicator);
     } else {

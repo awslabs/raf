@@ -162,7 +162,7 @@ def test_allreduce_with_tensor_list(computation):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-@pytest.mark.parametrize("rank_list", [[0], [0, 1], [0, 1, 2]])
+@pytest.mark.parametrize("rank_list", [[0], [1, 2]])
 def test_allreduce_with_subcomm(dtype, rank_list):
     print("Testing allreduce with a single tensor as input.")
 
@@ -263,33 +263,39 @@ def test_allgather_with_tensor_list(axis):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("rank_list", [[0], [0, 1], [0, 1, 2]])
+@pytest.mark.parametrize("rank_list", [[0, 1], [1, 2, 3]])
 def test_allgather_with_subcomm(axis, rank_list):
+    print("Testing allgather with a list of tensors as input.")
+
     class TestModel(mnm.Model):
         def build(self):
             pass
 
         @mnm.model.trace
-        def forward(self, x):
-            x = mnm.allgather(x, axis=axis, rank_list=rank_list)
-            return x
+        def forward(self, x1, x2):
+            x = mnm.allgather([x1, x2], axis=axis, rank_list=rank_list)
+            return mnm.concatenate(x)
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
-    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    x = mnm.array(x, device=device)
+    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
+    x1 = mnm.array(x1, device=device)
+    x2 = mnm.array(x2, device=device)
     if rank == 0:
-        print(f"{rank} - X: ", x)
+        print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
-    y = run_model(model, [x], device)
-    print("rank%s= " % rank, y)
-
-    # if rank == 0:
-    #     target_y = np.concatenate([x.numpy() * (r + 1) for r in range(total_rank)], axis=axis)
-    #     print(f"{rank} - Y: ", y)
-    #     print(f"{rank} - T: ", target_y)
-    #     check(y, target_y)
+    y = run_model(model, [x1, x2], device)
+    if rank in rank_list:
+        x1 = np.ones(shape=(4, 4), dtype="float32")
+        x2 = np.ones(shape=(4, 4), dtype="float32") * -1
+        target_y1 = np.concatenate([x1 * (r + 1) for r in rank_list], axis=axis)
+        target_y2 = np.concatenate([x2 * (r + 1) for r in rank_list], axis=axis)
+        target_y = np.concatenate([target_y1, target_y2])
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+        check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
@@ -535,8 +541,6 @@ def test_broadcast():
 
 
 if __name__ == "__main__":
-    # test_allreduce_with_subcomm("float32", [0, 1])
-    test_allgather_with_subcomm(0, [0, 1])
-    # exit_code = pytest.main([__file__])
-    # dist.RemoveCommunicator()
-    # sys.exit(exit_code)
+    exit_code = pytest.main([__file__])
+    dist.RemoveCommunicator()
+    sys.exit(exit_code)

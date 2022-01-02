@@ -47,7 +47,7 @@ class NCCLCommunicator : public Communicator {
         if (rank_list[rank] == mpi->rank) break;
       }
       this->local_rank = 0;
-      this->local_size = 0; // TODO: implement this
+      this->local_size = 0;  // TODO: implement this
       this->root_rank = rank_list[0];
 
       if (rank < size) {
