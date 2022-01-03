@@ -59,7 +59,7 @@ class ConnectorManager {
   }
 
   void Remove() {
-    LOG_ERROR << "ConnectorManager::Remove is not implemented yet.";
+    conn_.clear();
   }
 
  public:

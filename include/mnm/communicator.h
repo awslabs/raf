@@ -136,7 +136,7 @@ class CommunicatorManager {
   }
 
   void Remove() {
-    LOG_ERROR << "CommunicatorManager::Remove is not implemented yet.";
+    comm_.clear();
   }
 
  public:
