@@ -6,6 +6,8 @@
 
 #include <mpi.h>
 #include "mnm/connector.h"
+#include <string>
+#include <functional>
 
 #define MPI_CALL(cmd)                                                         \
   do {                                                                        \
@@ -20,18 +22,11 @@ namespace distributed {
 namespace connector {
 
 static uint64_t GetHostID() {
-  char data[1024];
-  uint64_t posix_hostid =
-      gethostid();  // Prevent confusion if all the nodes share the same hostname
-  snprintf(data, 17, "%016lx", posix_hostid);
-  gethostname(&data[16], 1000);
-
-  // Bernstein hash
-  uint64_t result = 5381;
-  for (int i = 0; data[i] != '\0'; i++) {
-    result = ((result << 5) + result) + data[i];
-  }
-  return result;
+  auto hostid = std::to_string(gethostid()); // Prevent confusion if all the nodes share the same hostname
+  char hostname[1024];
+  gethostname(hostname, 1024);
+  size_t hash = std::hash<std::string>{}(std::string(hostname) + hostid);
+  return hash;
 }
 
 class MPIConnector : public Connector {
