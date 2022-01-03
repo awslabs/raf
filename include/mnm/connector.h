@@ -25,13 +25,12 @@ class Connector {
   }
   virtual ~Connector() {
   }
-  virtual void Init() = 0;
   virtual void Broadcast(void* buffer, int count, int root) = 0;
   virtual void Barrier() = 0;
-  virtual void Finalize() = 0;
 
  public:
   std::string type;
+  std::vector<uint64_t> host_ids;
   int local_size = 0;
   int local_rank = 0;
   int size = 1;

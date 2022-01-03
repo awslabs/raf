@@ -13,20 +13,12 @@ namespace connector {
 class VoidConnector : public Connector {
  public:
   VoidConnector() {
-    Init();
-  }
-  virtual ~VoidConnector() {
-    Finalize();
-  }
-  virtual void Init() {
     LOG(INFO) << "You have created a VoidConnector, which will do nothing and can not be used for "
                  "parallel training.";
   }
   virtual void Broadcast(void* buffer, int count, int root) {
   }
   virtual void Barrier() {
-  }
-  virtual void Finalize() {
   }
 
  public:
