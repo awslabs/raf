@@ -22,7 +22,8 @@ namespace distributed {
 namespace connector {
 
 static uint64_t GetHostID() {
-  auto hostid = std::to_string(gethostid()); // Prevent confusion if all the nodes share the same hostname
+  auto hostid =
+      std::to_string(gethostid());  // Prevent confusion if all the nodes share the same hostname
   char hostname[1024];
   gethostname(hostname, 1024);
   size_t hash = std::hash<std::string>{}(std::string(hostname) + hostid);
