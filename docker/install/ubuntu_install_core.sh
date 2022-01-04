@@ -24,8 +24,14 @@ set -o pipefail
 apt-get update && apt-get install -y --no-install-recommends \
         git make cmake wget unzip libtinfo-dev libz-dev \
         libcurl4-openssl-dev libopenblas-dev g++ sudo \
-        doxygen graphviz libprotobuf-dev protobuf-compiler \
+        doxygen graphviz libprotobuf-dev protobuf-compiler curl \
         clang-format-10 ssh openmpi-bin openmpi-doc libopenmpi-dev
+
+# upgrade git to 2.18+
+apt install -y -q software-properties-common
+add-apt-repository -y ppa:git-core/ppa
+apt update
+apt install git -y -q
 
 # install ccache 4.0 to cache CUDA kernels
 pushd .

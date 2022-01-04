@@ -31,20 +31,26 @@ for file in $changed_files; do
     CHANGE_IN_SKIP_DIR=0
     for dir in $SKIP_DIRS; do
         if grep -q "$dir" <<< "$file"; then
+            echo "[Skip] $file"
             CHANGE_IN_SKIP_DIR=1
             break
         fi
     done
     if [ ${CHANGE_IN_SKIP_DIR} -eq 0 ]; then
+        echo "[Non-Skip] $file...break"
         CHANGE_IN_OTHER_DIR=1
         break
     fi
 done
 
-if [ ${FOUND_CHANGED_FILES} -eq 0 -o ${CHANGE_IN_OTHER_DIR} -eq 0 ]; then
-    # Skip testing if no files changed or if change is in a non-skip dir
+echo "Change? ${FOUND_CHANGED_FILES}, Non-skip? ${CHANGE_IN_OTHER_DIR}"
+if [ ${FOUND_CHANGED_FILES} -eq 0 -o ${CHANGE_IN_OTHER_DIR} -eq 1 ]; then
+    # Cannot skip testing if
+    # 1) No file change against main branch. This happens when merging to main.
+    # 2) One or more changes are in non-skip dirs.
+    exit 0
+else
+    # Skip testing if all changes are in skip dirs
     echo "Rest tests can be skipped"
     exit 1
-else
-    exit 0
 fi
