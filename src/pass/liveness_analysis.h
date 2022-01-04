@@ -105,6 +105,23 @@ class LivenessAnalyzer {
     return ret;
   }
 
+  /*! \brief Check if the variable is alive given the live dummy var set. */
+  bool IsAlive(const Var& var, const VSet& live_vars) {
+    if (live_vars.count(var)) {
+      return true;
+    }
+    // deal with the live dummy vars.
+    for (Var v : GetTensorVars(var)) {
+      if (v == var) {
+        continue;
+      }
+      if (live_vars.count(v) || IsAlive(v, live_vars)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /*! \brief Union-find Forest: Get root in Union-find Forest */
   Var Find(const Var& x) {
     CHECK(union_find_forest_.find(x) != union_find_forest_.end());

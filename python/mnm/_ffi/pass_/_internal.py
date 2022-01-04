@@ -81,6 +81,8 @@ MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
 MemorySchedule = _APIS.get("mnm.pass_.MemorySchedule", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
+# Defined in ./src/pass/anf_partition.cc
+PartitionANF = _APIS.get("mnm.pass_.PartitionANF", None)
 # Defined in ./src/pass/partition_gradient.cc
 PartitionGradient = _APIS.get("mnm.pass_.PartitionGradient", None)
 # Defined in ./src/pass/partition_graph.cc
