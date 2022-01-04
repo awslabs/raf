@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
 ci_cpu = "metaprojdev/meta:ci_cpu-v0.17"
 ci_gpu = "metaprojdev/meta:ci_gpu-v0.19"
 
@@ -53,10 +55,38 @@ def unpack_lib(name, libs) {
      """
 }
 
+def cancel_previous_build() {
+  // cancel previous build if it is not on main.
+  if (env.BRANCH_NAME != "main") {
+    def buildNumber = env.BUILD_NUMBER as int
+    // Milestone API allows us to cancel previous build
+    // with the same milestone number
+    if (buildNumber > 1) milestone(buildNumber - 1)
+    milestone(buildNumber)
+  }
+}
+
+def run_node_if_not_skipped(node_type, node_name, is_skipped, Closure closure) {
+  if (is_skipped == 0) {
+    node(node_type) {
+      closure.call()
+    }
+  } else {
+    Utils.markStageSkippedForConditional(node_name)
+  }
+}
+
+cancel_previous_build()
+
 stage("Lint") {
   timeout(time: max_time, unit: 'MINUTES') {
     node('linux-cpu') {
       init_git_unix()
+      skip_test = sh (
+        returnStatus: true,
+        script: "${docker_run} ${ci_cpu} ./scripts/lint/git-skip-testing.sh",
+        label: "Check if only the docs are changed",
+      )
       sh "${docker_run} ${ci_cpu} ./ci/task_lint.sh"
     }
   }
@@ -64,7 +94,7 @@ stage("Lint") {
 
 stage('Build') {
   parallel 'BUILD: GPU': {
-    node('linux-gpu') {
+    run_node_if_not_skipped('linux-gpu', 'BUILD: GPU', skip_test) {
       init_git_unix()
       sh """
          mkdir -p build
@@ -86,7 +116,7 @@ stage('Build') {
     }
   },
   'BUILD: CPU': {
-    node('linux-cpu') {
+    run_node_if_not_skipped('linux-cpu', 'BUILD: CPU', skip_test) {
       init_git_unix()
       sh """
          mkdir -p build
@@ -107,7 +137,7 @@ stage('Build') {
 
 stage('Unit Test') {
   parallel 'python3: GPU': {
-    node('linux-gpu') {
+    run_node_if_not_skipped('linux-gpu', 'python3: GPU', skip_test) {
       init_git_unix()
       unpack_lib('gpu', mnm_multilib_cutlass)
       timeout(time: max_time, unit: 'MINUTES') {
@@ -117,7 +147,7 @@ stage('Unit Test') {
     }
   },
   'python3: CPU': {
-    node('linux-cpu') {
+    run_node_if_not_skipped('linux-cpu', 'python3: CPU', skip_test) {
       init_git_unix()
       unpack_lib('cpu', mnm_multilib)
       timeout(time: max_time, unit: 'MINUTES') {
@@ -126,7 +156,7 @@ stage('Unit Test') {
     }
   },
   'python3: multi-GPU': {
-    node('linux-gpu-4x') {
+    run_node_if_not_skipped('linux-gpu-4x', 'python3: multi-GPU', skip_test) {
       init_git_unix()
       unpack_lib('gpu', mnm_multilib_cutlass)
       timeout(time: max_time, unit: 'MINUTES') {
