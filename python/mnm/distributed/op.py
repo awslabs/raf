@@ -3,6 +3,7 @@
 from .._op import sym
 from .context import get_context
 
+
 def allreduce(x, computation="sum", rank_list=None):
     """General allreduce operators, take tensor or list of tensors as input."""
     if not isinstance(x, (tuple, list)):

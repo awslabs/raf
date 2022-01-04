@@ -160,6 +160,7 @@ def test_allreduce_with_tensor_list(computation):
         vy = np.concatenate([vx1.numpy(), vx2.numpy()])
         check(vy, target_y)
 
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("rank_list", [[0], [1, 2]])
@@ -184,7 +185,7 @@ def test_allreduce_with_subcomm(dtype, rank_list):
         print(f"{rank} - X: ", x)
     model.to(device=device)
     y = model(x)
-    vx = np.ones(shape=(4, 4), dtype="float32") * (rank+1)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     vx = mnm.array(vx, device=device)
     run_vm_model(model, device, [vx])
     check(y, vx)
