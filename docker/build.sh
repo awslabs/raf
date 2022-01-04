@@ -7,7 +7,7 @@
 #                    <COMMAND>
 #
 # CONTAINER_TYPE: Type of the docker container used the run the build: e.g.,
-#                 (cpu | gpu)
+#                 (ci_cpu | ci_gpu)
 #
 # DOCKERFILE_PATH: (Optional) Path to the Dockerfile used for docker build.  If
 #                  this optional value is not supplied (via the --dockerfile

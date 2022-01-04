@@ -1,7 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-ci_cpu = "metaprojdev/meta:ci_cpu-v0.17"
-ci_gpu = "metaprojdev/meta:ci_gpu-v0.19"
+ci_cpu = "metaprojdev/meta:ci_cpu-v0.18"
+ci_gpu = "metaprojdev/meta:ci_gpu-v0.20"
 
 docker_run = 'docker/bash.sh'
 max_time = 120

@@ -24,6 +24,18 @@ set -o pipefail
 apt-get update && apt-get install -y --no-install-recommends \
         git make cmake wget unzip libtinfo-dev libz-dev \
         libcurl4-openssl-dev libopenblas-dev g++ sudo \
-        doxygen graphviz libprotobuf-dev protobuf-compiler ccache \
+        doxygen graphviz libprotobuf-dev protobuf-compiler \
         clang-format-10 ssh openmpi-bin openmpi-doc libopenmpi-dev
+
+# install ccache 4.0 to cache CUDA kernels
+pushd .
+cd /tmp
+wget https://github.com/ccache/ccache/releases/download/v4.0/ccache-4.0.tar.gz
+tar -xzf ccache-4.0.tar.gz
+cd ccache-4.0
+mkdir build; cd build
+cmake -DZSTD_FROM_INTERNET=ON -DCMAKE_BUILD_TYPE=Release ..
+make -j
+make install
+popd
 
