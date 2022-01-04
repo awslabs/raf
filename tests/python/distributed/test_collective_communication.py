@@ -177,7 +177,7 @@ def test_allreduce_with_subcomm(dtype, rank_list):
             return x
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    _, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype=dtype) * (rank + 1)
     x = mnm.array(x, device=device)
@@ -278,7 +278,7 @@ def test_allgather_with_subcomm(axis, rank_list):
             return mnm.concatenate(x)
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    _, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
