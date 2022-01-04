@@ -245,9 +245,9 @@ def with_lans(
                     if param in self.params and has_grad(dxi):
                         name, p, w, m, v = self.params[param]
                         if "float" in w.dtype:
-                            new_w = output_list[out_idx]
-                            next_m = output_list[out_idx + ntensor]
-                            next_v = output_list[out_idx + 2 * ntensor]
+                            new_w = output_list[out_idx + ntensor]
+                            next_m = output_list[out_idx + 2 * ntensor]
+                            next_v = output_list[out_idx + 3 * ntensor]
                             param_model = get_chained_attr(self.model, name.split(".")[:-1])
                             if dctx.zero_opt_level > 0:
                                 new_weight = allgather(new_w, axis=0)
