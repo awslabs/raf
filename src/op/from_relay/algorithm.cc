@@ -15,7 +15,6 @@ MNM_OP_FROM_RELAY(
     [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
       Array<Expr> mnm_args = args;
       const auto* relay_attrs = attrs.as<TopKAttrs>();
-      mnm_args.push_back(args[0]);
       mnm_args.push_back(MakeConstant(IntValue::make(DataType::Int(64), relay_attrs->k.value())));
       mnm_args.push_back(MakeConstant(IntValue::make(DataType::Int(64), relay_attrs->axis)));
       mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->ret_type)));

@@ -219,6 +219,32 @@ def test_mnm_binary_tensor_op(op_name, shape):
     check_from_relay(model, r_func, [m_x, m_y])
 
 
+@pytest.mark.parametrize("shape", [[3, 2, 4]])
+@pytest.mark.parametrize("k", [1, 3])
+@pytest.mark.parametrize("axis", [0, 2])
+@pytest.mark.parametrize("dtype", ["float32", "int32"])
+@pytest.mark.parametrize("ret_type", ["values", "both", "indices"])
+@pytest.mark.parametrize("is_ascend", [True, False])
+def test_topk(shape, k, axis, dtype, ret_type, is_ascend):
+    class Topk(mnm.Model):
+        def build(self, **kwargs):
+            self._attrs = kwargs
+
+        @mnm.model.trace
+        def forward(self, x):
+            return mnm.topk(x, **self._attrs)
+
+    model = Topk(k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
+    m_x, _ = randn(shape, dtype=dtype)
+
+    r_var = _relay.var("x", shape=shape, dtype=dtype)
+    r_body = _relay.topk(r_var, k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
+    if ret_type == "both":
+        r_body = r_body.astuple()
+    r_func = _relay.Function(params=[r_var], body=r_body)
+    check_from_relay(model, r_func, [m_x])
+
+
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [(3, 4, 2, 2)])
 @pytest.mark.parametrize("repeats", [2])
