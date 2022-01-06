@@ -45,7 +45,7 @@ Expr Fill::VisitExpr(const Expr& e, const Var& v) {
   }
   auto ret = memo.at(e);
   // if no include_set is specified, every expression should be atomic.
-  if (include_set_ == nullptr) ICHECK(IsAtomic(ret));
+  if (include_set_ == nullptr) ICHECK(IsAtomic(ret)) << ret->GetTypeKey();
   return ret;
 }
 
@@ -65,7 +65,18 @@ Expr Fill::Compound(const Expr& orig, const Expr& now, const Var& v) {
   if (!v.defined() && not_included) {
     return now;
   } else {
-    return GetScope(orig)->let_list->Push(var, now);
+    auto let_list = GetScope(orig)->let_list;
+    if (auto let = now.as<LetNode>()) {
+      // If the expression is a Let, then we inline the expression LetList directly.
+      Expr ret, body;
+      do {
+        ret = let_list->Push(let->var, let->value);
+        body = let->body;
+        let = body.as<LetNode>();
+      } while (let);
+      return ret;
+    }
+    return let_list->Push(var, now);
   }
 }
 
