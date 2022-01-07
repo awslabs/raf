@@ -88,6 +88,36 @@ def test_cast():
     assert "mnm.op.cast" not in text, text
 
 
+@pytest.mark.parametrize("t_endpoints", ["float32", "int32", "uint64", "bool"])
+@pytest.mark.parametrize("t_middle", ["float32", "int32", "uint64", "bool"])
+def test_cast_across_type(t_endpoints, t_middle):
+    device = "cpu"
+    shape = (10, 5)
+
+    cast_level_map = {"bool": 4, "uint64": 3, "int32": 2, "float32": 1}
+    should_simplify = cast_level_map[t_endpoints] >= cast_level_map[t_middle]
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self, x):
+            x = mnm.cast(x, t_middle)
+            x = mnm.cast(x, t_endpoints)
+            return x
+
+    model = Model()
+    m_x, _ = randn(shape, device=device, dtype=t_endpoints)
+    mod = model._internal(m_x).mod
+    mod = simplify(mod)
+    text = mnm.ir.AsText(mod["main"])
+    if should_simplify:
+        assert "mnm.op.cast" not in text, text
+    else:
+        assert "mnm.op.cast" in text, text
+
+
 def test_reshape():
     device = "cpu"
     shape = (10, 5)
@@ -113,10 +143,12 @@ def test_reshape():
 
 @pytest.mark.parametrize("ndim", [2, 3])
 @pytest.mark.parametrize("act", [False, True])
-def test_matmul_reshape_bias(ndim, act):
+@pytest.mark.parametrize("shape_compatible", [False, True])
+def test_matmul_reshape_bias(ndim, act, shape_compatible):
     device = "cpu"
     xshape = (10, 10) if ndim == 2 else (1, 10, 10)
-    bshape = (10,)
+    b2shape = (2, 5, 10)
+    bshape = (10,) if shape_compatible else (2, 5, 10)
     matmul_op = getattr(mnm._op.sym, "matmul" if ndim == 2 else "batch_matmul")
 
     class Model(mnm.Model):
@@ -126,7 +158,7 @@ def test_matmul_reshape_bias(ndim, act):
         @mnm.model.trace
         def forward(self, x, w, b):
             y = matmul_op(x, w)
-            y = mnm.reshape(y, (2, 5, 10))
+            y = mnm.reshape(y, b2shape)
             y = mnm.add(y, b)
             y = mnm.gelu(y) if act else y
             return y
@@ -149,10 +181,13 @@ def test_matmul_reshape_bias(ndim, act):
         w = extended_var("w", shape=xshape, dtype="float32")
         b = extended_var("b", shape=bshape, dtype="float32")
         y = relay.Call(matmul_op, [x, w])
+        if not shape_compatible:
+            y = relay.Call(reshape_op, [y, mnm.ir.const(b2shape), mnm.ir.const(False)])
         y = relay.Call(add_op, [y, b, null, null])
         if act:
             y = relay.Call(gelu_op, [y])
-        y = relay.Call(reshape_op, [y, mnm.ir.const((2, 5, 10)), mnm.ir.const(False)])
+        if shape_compatible:
+            y = relay.Call(reshape_op, [y, mnm.ir.const(b2shape), mnm.ir.const(False)])
         mod = tvm.IRModule.from_expr(relay.Function([x, w, b], y))
         return InferType()(mod)["main"]
 
