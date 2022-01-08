@@ -343,7 +343,14 @@ Pass DataParallelSchedule();
  * ensure correctness. This pass must be run if AutoDataParallel is enabled.
  * \return The created pass.
  */
-Pass AnnotateDistOps();
+Pass EnforceSync();
+
+/*!
+ * \brief This pass works in ANF and adds neccessary memory copy ops before and after
+ * multi-input collectives ops to pipeline memory copies.
+ * \return The created pass.
+ */
+Pass AnnotateCollectiveOps();
 
 /*!
  * \brief This pass implements IOS (Inter-Operator-Scheduler) stream schedule policy. It transforms

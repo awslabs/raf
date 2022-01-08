@@ -4,6 +4,8 @@
  * \brief CUDA dialect utils
  */
 #include "mnm/op.h"
+#include "../../../common/shape_utils.h"
+
 namespace mnm {
 namespace op {
 namespace cuda {

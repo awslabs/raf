@@ -126,6 +126,8 @@ cross_entropy_dtrue = _APIS.get("mnm.op.imp.cross_entropy_dtrue", None)
 # Defined in ./src/op/regs/regs.cc
 cumsum = _APIS.get("mnm.op.imp.cumsum", None)
 # Defined in ./src/op/regs/regs.cc
+defuse_tensor = _APIS.get("mnm.op.imp.defuse_tensor", None)
+# Defined in ./src/op/regs/regs.cc
 dense = _APIS.get("mnm.op.imp.dense", None)
 # Defined in ./src/op/regs/regs.cc
 device_copy = _APIS.get("mnm.op.imp.device_copy", None)
@@ -153,6 +155,8 @@ floor_divide = _APIS.get("mnm.op.imp.floor_divide", None)
 full = _APIS.get("mnm.op.imp.full", None)
 # Defined in ./src/op/regs/regs.cc
 full_like = _APIS.get("mnm.op.imp.full_like", None)
+# Defined in ./src/op/regs/regs.cc
+fuse_tensor = _APIS.get("mnm.op.imp.fuse_tensor", None)
 # Defined in ./src/op/regs/regs.cc
 gather = _APIS.get("mnm.op.imp.gather", None)
 # Defined in ./src/op/regs/regs.cc

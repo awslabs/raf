@@ -289,6 +289,39 @@ inline bool IsCollectiveOp(const Expr& op) {
   return false;
 }
 
+using OpSet = std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual>;
+
+inline bool IsInOpSet(const Expr& op, const OpSet& op_set) {
+  if (auto op_node = op.as<OpNode>()) {
+    Op op_ = GetRef<Op>(op_node);
+    Op op_n = IsDialectOp(op_) ? GetBaseOp(op_) : op_;
+    return op_set.find(op_n) != op_set.end();
+  }
+  return false;
+}
+
+inline bool IsMemcpyOp(const Expr& op) {
+  static OpSet memcpy_ops = {
+      Op::Get("mnm.op.fuse_tensor"),
+      Op::Get("mnm.op.defuse_tensor"),
+  };
+  return IsInOpSet(op, memcpy_ops);
+}
+
+inline bool IsFuseTensorOp(const Expr& op) {
+  static OpSet fuse_tensor_ops = {
+      Op::Get("mnm.op.fuse_tensor"),
+  };
+  return IsInOpSet(op, fuse_tensor_ops);
+}
+
+inline bool IsDefuseTensorOp(const Expr& op) {
+  static OpSet defuse_tensor_ops = {
+      Op::Get("mnm.op.defuse_tensor"),
+  };
+  return IsInOpSet(op, defuse_tensor_ops);
+}
+
 inline size_t GetSizeInBytes(const DLDataType& dtype) {
   return (dtype.bits + 7) / 8;
 }

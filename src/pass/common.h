@@ -35,6 +35,11 @@ struct ExplicitLetList {
     return body;
   }
 
+  void Push(Var var, Expr expr) {
+    vars.push_back(var);
+    exprs.push_back(expr);
+  }
+
   static std::unique_ptr<ExplicitLetList> make(const Expr& node) {
     std::unique_ptr<ExplicitLetList> ell = std::make_unique<ExplicitLetList>();
     Maker(ell.get()).VisitExpr(node);

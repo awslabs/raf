@@ -853,18 +853,18 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   bool enable_stream_schedule = true;
   if ((*it).second.device_type() == DevType::kCUDA()) {
     if (DistContext::Global()->enable_data_parallel) {
-      // The current design of AnnotateDistOps assumes ops are executed on two CUDA streams:
-      // all computation ops are executed on one stream, and all communication collectives
-      // are executed on another dedicated stream. This ensures that no two collectives
-      // can execute concurrently, and we can enforce strictly identical order of the collectives
-      // across different devices. (There is a potential problem if NCCL collectives are executed
-      // in parallel, see e.g. https://github.com/NVIDIA/nccl/issues/522,
-      // https://github.com/NVIDIA/nccl/issues/195). Thus currently AnnotateDistOps and the
-      // multi-stream passes are mutually exclusive.
-      // TODO: make AnnotateDistOps and multi-stream scheduling compatible
-      enable_stream_schedule = false;
+      // The current design of EnforceSync assumes ops are executed on multiple CUDA streams:
+      // all computation ops are executed on a computation stream, and all communication collectives
+      // are executed on another communication stream. Memory copy ops added in
+      // AnnotateCollectiveOps are executed on fuse and defuse stream. This ensures that no two
+      // collectives and memory copies can execute concurrently, and we can enforce strictly
+      // identical order of the operators across different devices. (There is a potential problem if
+      // NCCL collectives are executed in parallel, see e.g.
+      // https://github.com/NVIDIA/nccl/issues/522, https://github.com/NVIDIA/nccl/issues/195). Thus
+      // currently distributeed learning and the multi-stream passes are mutually exclusive.
       pass_seqs.push_back(pass::DataParallelSchedule());
-      pass_seqs.push_back(pass::AnnotateDistOps());
+      pass_seqs.push_back(pass::AnnotateCollectiveOps());
+      pass_seqs.push_back(pass::EnforceSync());
     } else {
       auto policy_name =
           pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");

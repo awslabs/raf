@@ -150,6 +150,30 @@ inline int64_t GetNumel(const DLTensor& dlt) {
   return numel;
 }
 
+inline int64_t GetSizeFromType(ir::Type ty) {
+  if (auto tuple_type = ty.as<TupleTypeNode>()) {
+    int64_t total_size = 0;
+    for (auto field : tuple_type->fields) {
+      auto size = GetSizeFromType(field);
+      if (size == 0) {
+        return 0;
+      }
+      total_size += size;
+    }
+    return total_size;
+  } else if (auto ttype = ty.as<TensorTypeNode>()) {
+    int64_t size = 1;
+    for (auto axis : ttype->shape) {
+      auto node = axis.as<ir::IntImmNode>();
+      CHECK(node != nullptr) << "Axis " << axis << " is not IntImmNode";
+      size *= (int64_t)node->value;
+    }
+    return size;
+  }
+  LOG(FATAL) << "Unsupported type: " << ty->GetTypeKey();
+  throw;
+}
+
 inline int64_t GetDimSize(const Expr& expr, const int64_t dim) {
   auto ttype = expr->checked_type().as<TensorTypeNode>();
   ICHECK(ttype != nullptr);

@@ -68,6 +68,7 @@ __all__ = [
     "cross_entropy_dpred",
     "cross_entropy_dtrue",
     "cumsum",
+    "defuse_tensor",
     "dense",
     "device_copy",
     "divide",
@@ -82,6 +83,7 @@ __all__ = [
     "floor_divide",
     "full",
     "full_like",
+    "fuse_tensor",
     "gather",
     "gather_dx",
     "gather_nd",
@@ -791,6 +793,15 @@ def cumsum(x, axis, dtype="float32", exclusive=False, attrs=None):
     return relay.Call(op, [x, axis, dtype, exclusive], attrs)
 
 
+def defuse_tensor(data, sizes, shapes, shape_indices, attrs=None):
+    op = GetOp("mnm.op.defuse_tensor")
+    data = op_utils.to_tensor(data)
+    sizes = op_utils.to_int_tuple(sizes)
+    shapes = op_utils.to_int_tuple(shapes)
+    shape_indices = op_utils.to_int_tuple(shape_indices)
+    return relay.Call(op, [data, sizes, shapes, shape_indices], attrs)
+
+
 def dense(x1, x2, attrs=None):
     op = GetOp("mnm.op.dense")
     x1 = op_utils.to_any(x1)
@@ -890,6 +901,12 @@ def full_like(data, fill_value, attrs=None):
     data = op_utils.to_tensor(data)
     fill_value = op_utils.to_double(fill_value)
     return relay.Call(op, [data, fill_value], attrs)
+
+
+def fuse_tensor(data, attrs=None):
+    op = GetOp("mnm.op.fuse_tensor")
+    data = op_utils.to_tensor_tuple(data)
+    return relay.Call(op, [data], attrs)
 
 
 def gather(data, axis, indices, attrs=None):

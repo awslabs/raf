@@ -69,6 +69,7 @@ __all__ = [
     "cross_entropy_dpred",
     "cross_entropy_dtrue",
     "cumsum",
+    "defuse_tensor",
     "dense",
     "device_copy",
     "divide",
@@ -83,6 +84,7 @@ __all__ = [
     "floor_divide",
     "full",
     "full_like",
+    "fuse_tensor",
     "gather",
     "gather_dx",
     "gather_nd",
@@ -715,6 +717,14 @@ def cumsum(x, axis, dtype="float32", exclusive=False):
     return Symbol.from_expr(ffi.cumsum(x, axis, dtype, exclusive))
 
 
+def defuse_tensor(data, sizes, shapes, shape_indices):
+    data = sym_utils.to_tensor(data)
+    sizes = sym_utils.to_int_tuple(sizes)
+    shapes = sym_utils.to_int_tuple(shapes)
+    shape_indices = sym_utils.to_int_tuple(shape_indices)
+    return Symbol.from_expr(ffi.defuse_tensor(data, sizes, shapes, shape_indices))
+
+
 def dense(x1, x2):
     x1 = sym_utils.to_any(x1)
     x2 = sym_utils.to_any(x2)
@@ -800,6 +810,11 @@ def full_like(data, fill_value):
     data = sym_utils.to_tensor(data)
     fill_value = sym_utils.to_double(fill_value)
     return Symbol.from_expr(ffi.full_like(data, fill_value))
+
+
+def fuse_tensor(data):
+    data = sym_utils.to_tensor_tuple(data)
+    return Symbol.from_expr(ffi.fuse_tensor(data))
 
 
 def gather(data, axis, indices):
