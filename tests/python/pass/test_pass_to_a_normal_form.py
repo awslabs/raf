@@ -129,13 +129,12 @@ def test_may_share():
         return func
 
     func = before()
-    print(mnm.ir.AsText(func))
     mod = mnm.ir.IRModule()
     mod["main"] = func
     mod_after = mnm._ffi.pass_.ToGraphNormalForm()(mod)
     mod_after = mnm._ffi.pass_.ToANormalForm()(mod)
     func_after = run_infer_type(mod_after)["main"]
-    assert tvm.ir.structural_equal(func_after, run_infer_type(mod)["main"])
+    assert tvm.ir.structural_equal(func_after, run_infer_type(before()))
 
 
 def test_if():
