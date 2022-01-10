@@ -9,6 +9,7 @@ on:
 
 jobs:
   update-tvm-n-send-PR:
+    if: github.repository == 'meta-project/meta'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
