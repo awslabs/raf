@@ -74,6 +74,14 @@ inline bool AllowJitFailure() {
       .value();
 }
 
+/*!
+ * \brief Modify the configs of the current PassContext to enable auto-scheduler for TVM ops.
+ */
+inline void ForceEnableAutoScheduler() {
+  tvm::relay::transform::PassContext::Current()->config.Set("relay.backend.use_auto_scheduler",
+                                                            tvm::Bool(true));
+}
+
 using FMNMLower = registry::TypedPackedFunc<ir::Function(const CallValues& call)>;
 using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
 using FMNMArgIndices =
@@ -92,6 +100,7 @@ using FMNMArgIndices =
   inline RType FUNC##CacheCompile(TVMOpEnv* env, const op::CallValues& call,                       \
                                   MetaCache<RType>* cache,                                         \
                                   std::function<RType(const ir::Function&)> f_post_lower) {        \
+    mnm::op::tvm_dialect::ForceEnableAutoScheduler();                                              \
     static const auto op = Op::Get(MNM_DIALECT_OP_NAME(tvm, OP));                                  \
     const auto* schema = call->args.as<SCHEMA>();                                                  \
     CHECK(schema != nullptr);                                                                      \

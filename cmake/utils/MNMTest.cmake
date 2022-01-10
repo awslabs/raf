@@ -5,6 +5,11 @@ macro(mnm_test TESTNAME)
       ${MNM_INCLUDE_DIRS}
       ${gtest_SOURCE_DIR}/include
   )
+  if (${MNM_USE_CUDA} STREQUAL "OFF")
+    set(CUDART_LIB "")
+  else()
+    set(CUDART_LIB "cudart")
+  endif()
   target_link_libraries(${TESTNAME}
     PRIVATE
       gtest
@@ -12,7 +17,9 @@ macro(mnm_test TESTNAME)
       gtest_main
       mnm
       ${MNM_LINK_LIBS}
+      ${CUDART_LIB}
   )
+  target_compile_options(${TESTNAME} PRIVATE ${MNM_CXX_FLAGS})
   target_compile_features(${TESTNAME} PRIVATE cxx_std_14)
   set_target_properties(${TESTNAME} PROPERTIES
     CXX_STANDARD 14
