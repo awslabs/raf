@@ -35,8 +35,8 @@ struct ScheduleNode {
   const Expr expr;
   /*! \brief Size in MBs. */
   float size = 0;
-  /*! \brief Whether this var is in-place updated. */
-  bool is_inplace = false;
+  /*! \brief If not nullptr, this var shares the memory of another var. */
+  std::shared_ptr<ScheduleNode> may_share = nullptr;
   /*! \brief A set of schedule nodes that are needed to generate this var. */
   std::unordered_set<std::shared_ptr<ScheduleNode>> def_set;
   /*! \brief A set of schedule nodes that use this var. */
@@ -53,18 +53,23 @@ struct ScheduleNode {
   std::shared_ptr<ScheduleNode> prev = nullptr, next = nullptr;
 
   ScheduleNode(const Var var, const Expr expr, std::shared_ptr<ScheduleNode> prev,
-               std::shared_ptr<ScheduleNode> next)
-      : var(var), expr(expr), prev(prev), next(next) {
+               const StdMap<std::shared_ptr<ScheduleNode>>& schedule_map)
+      : var(var), expr(expr), prev(prev) {
     if (!var.defined()) {
       // Do nothing for dummy node.
       return;
     }
     if (auto ext_var = var.as<ExtendedVarNode>()) {
-      is_inplace = ext_var->may_share.defined();
+      if (ext_var->may_share.defined()) {
+        CHECK_GT(schedule_map.count(ext_var->may_share), 0U);
+        may_share = schedule_map.at(ext_var->may_share);
+      }
     }
     size = BytesCompactType(var->checked_type()) / kMegaBytes;
   }
 };
+
+using ScheduleNodePtr = std::shared_ptr<ScheduleNode>;
 
 /*!
  * \brief Schedule ANF IR to reduce memory footprint.
@@ -130,7 +135,7 @@ class ANFScheduler4Memory {
     int changed = 1;
     for (size_t iter = 0; iter < 5 && changed > 0; ++iter) {
       changed = 0;
-      std::shared_ptr<ScheduleNode> curr_node = nullptr;
+      ScheduleNodePtr curr_node = nullptr;
 
       // Forward pass that moves the let-binding vars to the left (up).
       curr_node = sch_head_->next;
@@ -188,8 +193,10 @@ class ANFScheduler4Memory {
       auto curr_node = sch_head_->next;
       Var curr_let;
       while (curr_node != sch_tail_) {
+        if (curr_node->expr.defined()) {  // Parameter nodes do not have expressions.
+          ll->Push(curr_node->var, curr_node->expr);
+        }
         curr_let = curr_node->var;
-        ll->Push(curr_node->var, curr_node->expr);
         curr_node = curr_node->next;
       }
       return curr_let;
@@ -202,18 +209,13 @@ class ANFScheduler4Memory {
 
   StdMap<std::pair<VSet, VSet>> BuildDefUseMap(const Function& func);
 
-  bool MoveScheduleNode(std::shared_ptr<ScheduleNode> node,
-                        std::shared_ptr<ScheduleNode> target_node, bool to_right) {
+  bool MoveScheduleNode(ScheduleNodePtr node, ScheduleNodePtr target_node, bool to_right) {
     CHECK(node != nullptr && target_node != nullptr);
     if ((!to_right && node == target_node->prev) || (to_right && node == target_node->next)) {
       DLOG(INFO) << "  No need to move";
       return false;
     }
-    if (node->is_inplace) {
-      DLOG(INFO) << "  Inplace node, do not move for now";
-      return false;
-    }
-    DLOG(INFO) << "  Move" << node->var->name_hint() << " to " << (to_right ? "right" : "left")
+    DLOG(INFO) << "  Move " << node->var->name_hint() << " to " << (to_right ? "right" : "left")
                << " of " << target_node->var->name_hint();
 
     // Remove the node from the current position.
@@ -222,7 +224,7 @@ class ANFScheduler4Memory {
 
     // Find the schedule node pointers of the target position and invalid corresponding
     // cached first-use and last-def.
-    std::shared_ptr<ScheduleNode> new_prev, new_next;
+    ScheduleNodePtr new_prev, new_next;
     if (to_right) {
       new_prev = target_node;
       new_next = target_node->next;
@@ -255,7 +257,7 @@ class ANFScheduler4Memory {
    * \return The last schedule node that defines the given node, or nullptr if the given node
    * only uses parameters.
    */
-  std::shared_ptr<ScheduleNode> GetLastDef(std::shared_ptr<ScheduleNode> node) {
+  ScheduleNodePtr GetLastDef(ScheduleNodePtr node) {
     if (node->last_def != nullptr) {
       // Cached last-def.
       return node->last_def;
@@ -267,7 +269,7 @@ class ANFScheduler4Memory {
 
     // Start from an arbitrary def node and go right until the target node.
     // By that time, the last found def node is the last def of the target node.
-    std::shared_ptr<ScheduleNode> last_def = nullptr;
+    ScheduleNodePtr last_def = nullptr;
     auto curr_node = *(node->def_set.begin());
     last_def = curr_node;
     while (curr_node != sch_tail_ && curr_node != node) {
@@ -286,7 +288,7 @@ class ANFScheduler4Memory {
    * \return The first schedule node that uses the given node, or nullptr if the given node
    * is never used (dead code or output node).
    */
-  std::shared_ptr<ScheduleNode> GetFirstUse(std::shared_ptr<ScheduleNode> node) {
+  ScheduleNodePtr GetFirstUse(ScheduleNodePtr node) {
     if (node->first_use != nullptr) {
       return node->first_use;
     }
@@ -297,7 +299,7 @@ class ANFScheduler4Memory {
 
     // Start from an arbitrary use node and go left until the target node.
     // By that time, the last found use node is the first use of the target node.
-    std::shared_ptr<ScheduleNode> first_use = nullptr;
+    ScheduleNodePtr first_use = nullptr;
     auto curr_node = *(node->use_set.begin());
     first_use = curr_node;
     while (curr_node != sch_head_ && curr_node != node) {
@@ -316,7 +318,7 @@ class ANFScheduler4Memory {
    * \return The last schedule node that uses the given node, or nullptr if the given node
    * is never used (dead code or output node).
    */
-  std::shared_ptr<ScheduleNode> GetLastUse(std::shared_ptr<ScheduleNode> node) {
+  ScheduleNodePtr GetLastUse(ScheduleNodePtr node) {
     if (node->last_use != nullptr) {
       return node->last_use;
     }
@@ -327,7 +329,7 @@ class ANFScheduler4Memory {
 
     // Start from an arbitrary use node and go right until the end or all use nodes are visited.
     // By that time, the last found use node is the last use of the target node.
-    std::shared_ptr<ScheduleNode> last_use = nullptr;
+    ScheduleNodePtr last_use = nullptr;
     auto curr_node = *(node->use_set.begin());
     last_use = curr_node;
     int visited = 0;  // The arbitrary selected use node will be visited again so start from 0.
@@ -349,10 +351,10 @@ class ANFScheduler4Memory {
    * \param node The node to be evaluated.
    * \return The increased memory size after executing the given node.
    */
-  float CalcIncMemSize(std::shared_ptr<ScheduleNode> node) {
+  float CalcIncMemSize(ScheduleNodePtr node) {
     CHECK_NE(node->size, 0);
 
-    float out_size = (node->is_inplace) ? 0 : node->size;
+    float out_size = (node->may_share != nullptr) ? 0 : node->size;
     float inc_size = 0;
     if (auto call = node->expr.as<CallNode>()) {
       float free_size = 0;
@@ -392,11 +394,25 @@ class ANFScheduler4Memory {
     }
 
     // Build the linked list of schedule nodes.
-    sch_head_ = std::make_shared<ScheduleNode>(Var(), Expr(), nullptr, nullptr);
-    std::shared_ptr<ScheduleNode> prev = sch_head_;
+    sch_head_ = std::make_shared<ScheduleNode>(Var(), Expr(), nullptr, var_sch_map_);
+    ScheduleNodePtr prev = sch_head_;
+
+    // Add input parameters to the linked list. Note that their orders do not matter.
+    for (auto param : func_->params) {
+      auto curr = std::make_shared<ScheduleNode>(param, Expr(), prev, var_sch_map_);
+      if (curr->size == 0) {
+        LOG(WARNING) << "Cannot schedule " << param->name_hint() << " due to dynamic size";
+        return false;
+      }
+      var_sch_map_[param] = curr;
+      prev->next = curr;
+      prev = curr;
+    }
+
+    // Add let-binding vars to the linked list in order.
     for (size_t i = 0; i < size; ++i) {
       auto var = vars[i];
-      auto curr = std::make_shared<ScheduleNode>(var, exprs[i], prev, nullptr);
+      auto curr = std::make_shared<ScheduleNode>(var, exprs[i], prev, var_sch_map_);
       if (curr->size == 0) {
         LOG(WARNING) << "Cannot schedule " << var->name_hint() << " due to dynamic size";
         return false;
@@ -405,35 +421,79 @@ class ANFScheduler4Memory {
       prev->next = curr;
       prev = curr;
     }
-    sch_tail_ = std::make_shared<ScheduleNode>(Var(), Expr(), prev, nullptr);
+    sch_tail_ = std::make_shared<ScheduleNode>(Var(), Expr(), prev, var_sch_map_);
     prev->next = sch_tail_;
+
+    // In the case of "let %a (share: %p) = ...", this map maps from
+    // SchNode(%b) to {SchNode(%a), is_defined}. "is_defined" is used later to indicate
+    // whether the var in Use(%p) should be added to the def or use set of SchNode(%b).
+    std::unordered_map<ScheduleNodePtr, std::pair<ScheduleNodePtr, bool>> inplace_map;
 
     // Build the def-use map.
     auto def_use_map = BuildDefUseMap(func_);
     for (const auto& kv : def_use_map) {
       auto var = kv.first;
-      if (var_sch_map_.count(var) == 0) {
-        // This variable is a parameter. Skip it.
-        continue;
-      }
       auto sch_node = var_sch_map_[var];
+
+      if (sch_node->may_share != nullptr) {
+        inplace_map[sch_node->may_share] = {sch_node, false};
+      }
+
+      // Build def set.
       for (const auto& dep_var : kv.second.first) {
-        if (var_sch_map_.count(dep_var) == 0) {
-          // This variable is a parameter. Skip it.
-          continue;
-        }
         CHECK_GT(var_sch_map_.count(dep_var), 0);
         sch_node->def_set.insert(var_sch_map_[dep_var]);
       }
+
+      // Build use set.
       for (const auto& dep_var : kv.second.second) {
-        if (var_sch_map_.count(dep_var) == 0) {
-          // This variable is a parameter. Skip it.
-          continue;
-        }
         CHECK_GT(var_sch_map_.count(dep_var), 0);
         sch_node->use_set.insert(var_sch_map_[dep_var]);
       }
     }
+
+    // Consider in-place updates in def-use maps.
+    auto curr_node = sch_head_->next;
+    while (curr_node != sch_tail_) {
+      for (auto def_node : curr_node->def_set) {
+        if (inplace_map.count(def_node)) {
+          // If the current node needs a param that is shared memory with the other var,
+          // Taking the following case as an example:
+          //   let %a10 = op(%in, %weight);
+          //   ...
+          //   let %a15(share: %weight) = op(%a1);
+          //   ..
+          //   let %a20 = op(..., %weight);
+          //   let %a21 = op(%a15);
+          // In this case, we need to limit the schedule range of %a15 to [%a10, %a20]:
+          //   def(%a15)={%a1, %a10}, and use(%a15)={%a20,%a21}.
+          // We also need to limit the schedule range of the one that uses %weight:
+          //   use(%10)={%a15}, def(%a20)={%weight, %a15}.
+          if (inplace_map[def_node].first == curr_node) {
+            continue;
+          }
+          if (!inplace_map[def_node].second) {
+            // curr_node is %a10, inplace_map[def_node] is %a15.
+            inplace_map[def_node].first->def_set.insert(curr_node);
+            curr_node->use_set.insert(inplace_map[def_node].first);
+          } else {
+            // curr_node is %a20, inplace_map[def_node] is %a15.
+            inplace_map[def_node].first->use_set.insert(curr_node);
+            curr_node->def_set.insert(inplace_map[def_node].first);
+          }
+        }
+      }
+
+      // curr_node is %a15 in the above example. Mark "is_defined" as true means
+      // the rest use of its shared var should be added to its use set.
+      if (curr_node->may_share != nullptr) {
+        CHECK_GT(inplace_map.count(curr_node->may_share), 0U);
+        inplace_map[curr_node->may_share].second = true;
+      }
+
+      curr_node = curr_node->next;
+    }
+
     DLOG(INFO) << "Schedule Info:" << std::endl << DumpSchedule(true);
     return true;
   }
@@ -443,9 +503,9 @@ class ANFScheduler4Memory {
   /*! \brief The let list. */
   std::unique_ptr<ExplicitLetList> ell_{nullptr};
   /*! \brief The dummy head/tail node of the schedule linked list. */
-  std::shared_ptr<ScheduleNode> sch_head_ = nullptr, sch_tail_ = nullptr;
+  ScheduleNodePtr sch_head_ = nullptr, sch_tail_ = nullptr;
   /*! \brief Mapping from var to its schedule node pointer. */
-  StdMap<std::shared_ptr<ScheduleNode>> var_sch_map_;
+  StdMap<ScheduleNodePtr> var_sch_map_;
 };
 
 /*!
