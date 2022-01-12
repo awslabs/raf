@@ -159,5 +159,60 @@ def test_conv2d_relu_fail():
     assert mnm.ir.AsText(mod).count("cutlass") == 0
 
 
+@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
+def test_duplicate():
+    class Model(mnm.Model):
+        def build(self):
+            self.const1, _ = randn((1,), device="cpu")
+            self.const2, _ = randn((1,), device="cpu")
+
+        @mnm.model.trace
+        def forward(self, data, weight1, weight2):
+            out = mnm.dense(data, weight1)
+            out = mnm.add(out, self.const1)
+            out = mnm.dense(out, weight2)
+            out = mnm.add(out, self.const2)
+            return out
+
+    def expected():
+        dense_op = mnm._ffi.op.GetOp("mnm.op.cutlass.dense")
+        add_op = mnm._ffi.op.GetOp("mnm.op.cutlass.add")
+        null = mnm.ir.const(None)
+
+        p_0 = mnm.ir.var("p", shape=(10, 10))
+        p_1 = mnm.ir.var("p1", shape=(10, 10))
+        p_2 = mnm.ir.var("p2", shape=(1,))
+        p_3 = mnm.ir.var("p3", relay.TupleType(()))
+        p_4 = mnm.ir.var("p4", relay.TupleType(()))
+
+        # Fused function (should only have one used by both calls)
+        out = relay.Call(dense_op, [p_0, p_1])
+        out = relay.Call(add_op, [out, p_2, p_3, p_4])
+        func = relay.Function([p_0, p_1, p_2, p_3, p_4], out)
+        func = func.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        func = func.with_attr("Dialect", "cutlass")
+        func = func.with_attr("PatternName", "matmul_fusion")
+
+        # Main function
+        data = mnm.ir.var("data", shape=(10, 10))
+        weight1 = mnm.ir.var("weight1", shape=(10, 10))
+        weight2 = mnm.ir.var("weight2", shape=(10, 10))
+        const1 = mnm.ir.var("const1", shape=(1,))
+        const2 = mnm.ir.var("const2", shape=(1,))
+
+        out = relay.Call(func, [data, weight1, const1, null, null])
+        out = relay.Call(func, [out, weight2, const2, null, null])
+        return relay.Function([data, weight1, weight2, const1, const2], out)
+
+    m_x, _ = randn((10, 10), device="cpu")
+    m_w1, _ = randn((10, 10), device="cpu")
+    m_w2, _ = randn((10, 10), device="cpu")
+    model = Model()
+    mod = model._internal(m_x, m_w1, m_w2).mod
+    mod = optimize(mod)
+    func_expected = run_infer_type(expected())
+    assert tvm.ir.structural_equal(mod["main"], func_expected)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

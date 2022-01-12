@@ -449,6 +449,8 @@ class FuseMutator : private ExprMutator {
   std::unordered_map<Expr, std::pair<Expr, Expr>, ObjectPtrHash, ObjectPtrEqual> let_binding_;
   /*! \brief A set of variables that are inlined into fused operators. */
   std::unordered_set<Expr, ObjectPtrHash, ObjectPtrEqual> let_inlined_;
+  /*! \brief A cache of already created fused functions. */
+  std::unordered_map<std::string, Function> func_cache_;
 
   // Skip primitive function.
   Expr VisitExpr_(const FunctionNode* fn_node) {
@@ -592,6 +594,14 @@ class FuseMutator : private ExprMutator {
     func = Downcast<Function>(DispatchToTVMOps().Mutate(func));
     func = WithAttr(std::move(func), attr::kPrimitive, Integer(visitor.has_call));
     func = WithAttr(std::move(func), attr::kDialect, String("tvm"));
+
+    // If the identical function has been created before, reuse it.
+    std::string func_cache_key = mnm::ir::AsText(func);
+    if (func_cache_.count(func_cache_key)) {
+      func = func_cache_.at(func_cache_key);
+    } else {
+      func_cache_[func_cache_key] = func;
+    }
     return Call(func, ginfo.arguments, Attrs());
   }
 

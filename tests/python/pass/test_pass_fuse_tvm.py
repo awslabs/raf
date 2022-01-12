@@ -654,5 +654,62 @@ def test_may_share():
     assert tvm.ir.structural_equal(mod_after["main"], func_expected)
 
 
+def test_deduplicate():
+    shape = (5, 2)
+
+    def before():
+        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        mul_op = mnm._ffi.op.GetOp("mnm.op.multiply")
+
+        data_1 = mnm.ir.var("data1", shape=shape, dtype="float32")
+        data_2 = mnm.ir.var("data2", shape=shape, dtype="float32")
+        data_3 = mnm.ir.var("data3", shape=shape, dtype="float32")
+
+        const_1 = mnm.ir.const(0.2, dtype="float32")
+        const_2 = mnm.ir.const(0.2, dtype="float32")
+        null = mnm.ir.const(None)
+
+        # Use in-place update to prevent them from being fused to a single op.
+        sb = ScopeBuilder()
+        a_1 = sb.let("a1", relay.Call(mul_op, [const_1, data_1]))
+        a_2 = sb.let("a2", relay.Call(add_op, [a_1, data_2, data_2, null]))
+        a_3 = sb.let("a3", relay.Call(mul_op, [const_2, a_2]))
+        a_4 = sb.let("a4", relay.Call(add_op, [a_3, data_3, data_3, null]))
+
+        sb.ret(a_4)
+        func = relay.Function([data_1, data_2, data_3], sb.get())
+        mod = tvm.IRModule.from_expr(func)
+        return mod
+
+    def expected():
+        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
+        mul_op = mnm._ffi.op.GetOp("mnm.op.tvm.multiply")
+
+        # Fused function (should be reused)
+        const_m = mnm.ir.const(0.2, dtype="float32")
+        p_0 = mnm.ir.var("p0", shape=shape, dtype="float32")
+        p_1 = mnm.ir.var("p1", shape=shape, dtype="float32")
+        p_2 = mnm.ir.var("p2", relay.TupleType(()))
+        out = relay.Call(mul_op, [const_m, p_0])
+        out = relay.Call(add_op, [out, p_1, p_1, p_2])
+        func = relay.Function([p_0, p_1, p_2], out)
+        func = func.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
+        func = func.with_attr("Dialect", "tvm")
+
+        # Main function
+        data_1 = mnm.ir.var("data1", shape=shape, dtype="float32")
+        data_2 = mnm.ir.var("data2", shape=shape, dtype="float32")
+        data_3 = mnm.ir.var("data3", shape=shape, dtype="float32")
+        null = mnm.ir.const(None)
+
+        out = relay.Call(func, [data_1, data_2, null])
+        out = relay.Call(func, [out, data_3, null])
+        return relay.Function([data_1, data_2, data_3], out)
+
+    mod_after = fuse_module(before())
+    func_expected = run_infer_type(expected())
+    assert tvm.ir.structural_equal(mod_after["main"], func_expected)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

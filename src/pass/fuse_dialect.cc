@@ -3,6 +3,8 @@
  * \file src/pass/fuse_dialect.cc
  * \brief Fuse the operators using registered dialect fusion patterns.
  */
+#include <string>
+#include <unordered_map>
 #include <vector>
 #include "mnm/device.h"
 #include "mnm/op.h"
@@ -39,17 +41,21 @@ class CallPatternExtractor : public DFPatternVisitor {
 class FuseMutator : public ExprMutator {
  public:
   FuseMutator(const IRModule& mod, DevType dev_type, const std::string dialect,
-              const ExprSet& call_set, const std::string& pattern_name)
+              const ExprSet& call_set, const std::string& pattern_name,
+              std::unordered_map<std::string, Function>& cache)
       : mod_(mod),
         dev_type_(dev_type),
         dialect_(dialect),
         call_set_(call_set),
-        pattern_name_(pattern_name) {
+        pattern_name_(pattern_name),
+        func_cache_(cache) {
     single_call_ = (call_set.size() == 1);
   }
 
+  /*! \brief Rewrite the matched expression to a fused function. */
   Expr Rewrite(Expr expr) {
     auto body = Mutate(expr);
+
     Expr ret;
     if (single_call_) {
       // No need to create a fused function for a single call
@@ -60,6 +66,14 @@ class FuseMutator : public ExprMutator {
       func = WithAttr(std::move(func), attr::kDialect, String(dialect_));
       if (!pattern_name_.empty()) {
         func = WithAttr(std::move(func), attr::kPatternName, String(pattern_name_));
+      }
+
+      // If the identical function has been created before, reuse it.
+      std::string func_cache_key = mnm::ir::AsText(func);
+      if (func_cache_.count(func_cache_key)) {
+        func = func_cache_.at(func_cache_key);
+      } else {
+        func_cache_[func_cache_key] = func;
       }
       ret = Call(func, fused_func_args_, Attrs());
     }
@@ -75,7 +89,7 @@ class FuseMutator : public ExprMutator {
     Array<Expr> new_args;
 
     if (single_call_) {
-      // Single call, no need to lift args into function params
+      // No need to lift args into function params for a single call
       new_args = call->args;
     } else {
       for (auto arg : call->args) {
@@ -100,14 +114,24 @@ class FuseMutator : public ExprMutator {
   }
 
  private:
+  /*! \brief The working module. */
   const IRModule& mod_;
+  /*! \brief The target device type. */
   DevType dev_type_;
+  /*! \brief The matched dialect name. */
   std::string dialect_;
+  /*! \brief The matched pattern name. */
   std::string pattern_name_;
+  /*! \brief A set of matched call nodes. */
   ExprSet call_set_;
+  /*! \brief Whether the matched pattern contains just a single call node. */
   bool single_call_;
+  /*! \brief A list of fused function parameters. */
   Array<Var> fused_func_params_;
+  /*! \brief A list of fused function caller arguments. */
   Array<Expr> fused_func_args_;
+  /*! \brief A cache of already created fused functions. */
+  std::unordered_map<std::string, Function>& func_cache_;
 };
 
 class DialectPatternRewrite {
@@ -117,8 +141,7 @@ class DialectPatternRewrite {
     call_patterns_ = CallPatternExtractor().Extract(pattern_.pattern);
   }
 
-  Expr Callback(const Expr& pre, const Expr& post,
-                const Map<DFPattern, Array<Expr>>& node_map) const {
+  Expr Callback(const Expr& pre, const Expr& post, const Map<DFPattern, Array<Expr>>& node_map) {
     ExprSet call_set;
     for (auto call_pat : call_patterns_) {
       auto it = node_map.find(call_pat);
@@ -126,11 +149,11 @@ class DialectPatternRewrite {
         call_set.insert((*it).second[0]);
       }
     }
-    FuseMutator mutator(mod_, dev_type_, pattern_.dialect, call_set, pattern_.name);
+    FuseMutator mutator(mod_, dev_type_, pattern_.dialect, call_set, pattern_.name, func_cache_);
     return mutator.Rewrite(post);
   }
 
-  DFPatternCallback MakeCallback() const {
+  DFPatternCallback MakeCallback() {
     auto func = [this](TVMArgs args, TVMRetValue* rv) {
       Expr pre = args[0];
       Expr post = args[1];
@@ -141,10 +164,16 @@ class DialectPatternRewrite {
   }
 
  private:
+  /*! \brief The working module. */
   const IRModule& mod_;
+  /*! \brief The target device type. */
   DevType dev_type_;
+  /*! \brief The pattern to be matched. */
   DialectFusePattern pattern_;
+  /*! \brief A list of variant call patterns extracted from the pattern. */
   std::vector<DFPattern> call_patterns_;
+  /*! \brief A cache of already created fused functions. */
+  std::unordered_map<std::string, Function> func_cache_;
 };
 
 Expr FuseDialectPatterns(const Expr& expr, const IRModule& mod) {
