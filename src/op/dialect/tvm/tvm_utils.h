@@ -6,17 +6,21 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <dmlc/filesystem.h>
+#include <tvm/node/serialization.h>
 #include "dlpack/dlpack.h"
 #include "tvm/relay/transform.h"
 #include "tvm/ir/expr.h"
 #include "tvm/runtime/c_runtime_api.h"
 #include "relay/backend/te_compiler.h"
 #include "relay/backend/te_compiler_cache.h"
+#include "mnm/cache.h"
 #include "mnm/ir.h"
 #include "mnm/value.h"
 #include "mnm/registry.h"
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
+#include "mnm/serialization.h"
 
 namespace mnm {
 namespace op {
@@ -46,6 +50,103 @@ class TVMOpEnv : public op::OpEnv {
   }
   void Execute(const op::CallValues& call) override;
   void Execute(const std::vector<Value>& inputs, Value outputs) override;
+};
+
+/*! \brief The persist cache entry of TVM modules. */
+class TVMModuleCacheEntry {
+ public:
+  explicit TVMModuleCacheEntry() {
+  }
+
+  TVMModuleCacheEntry(tvm::runtime::Module& mod, std::string func_name)
+      : mod_(mod), func_name_(func_name) {
+  }
+
+  static TVMModuleCacheEntry Load(const std::string path) {
+    static auto f_load = registry::GetPackedFunc("mnm._tvm_op.utils.load_module");
+    tvm::runtime::Module mod = f_load(path + "/" + MOD_SO_FILE);
+
+    std::ifstream ifs(path + "/" + FUNC_NAME_FILE);
+    std::string func_name;
+    ifs >> func_name;
+
+    return TVMModuleCacheEntry(mod, func_name);
+  }
+
+  registry::PackedFunc GetFunction() {
+    return mod_->GetFunction(func_name_);
+  }
+
+  bool Save(const std::string& path) {
+    static auto f_export = registry::GetPackedFunc("mnm._tvm_op.utils.export_library");
+    auto bin_path = path + "/" + MOD_SO_FILE;
+    bool success = f_export(mod_, bin_path);
+    if (!success) {
+      return false;
+    }
+
+    std::ofstream ofs(path + "/" + FUNC_NAME_FILE);
+    ofs << func_name_;
+    return true;
+  }
+
+ private:
+  /*! \brief The persist TVM module name. */
+  static constexpr const char* MOD_SO_FILE = "tvm_module.so";
+  /*! \brief The persist function name file. */
+  static constexpr const char* FUNC_NAME_FILE = "func_name.txt";
+  /*! \brief The built module to be used and persist. */
+  tvm::runtime::Module mod_;
+  /*! \brief The corresponding function name. */
+  std::string func_name_;
+};
+
+class RelayFuncCacheEntry {
+ public:
+  explicit RelayFuncCacheEntry() {
+  }
+
+  RelayFuncCacheEntry(const ir::Function& func) : func_(func) {
+  }
+
+  ir::Function GetFunction() {
+    return func_;
+  }
+
+  static RelayFuncCacheEntry Load(const std::string path) {
+    std::ifstream ifs(path + "/" + FUNC_FILE, std::ios::in);
+    if (!ifs.is_open()) {
+      LOG(FATAL) << "Function JSON file does not exist: " << path + "/" + FUNC_FILE;
+      throw;
+    }
+
+    std::string func_json;
+    ifs.seekg(0, std::ios::end);
+    size_t size = static_cast<size_t>(ifs.tellg());
+    ifs.seekg(0, std::ios::beg);
+    func_json.resize(size);
+    ifs.read(&func_json[0], size);
+    ifs.close();
+    auto func = Downcast<Function>(tvm::LoadJSON(func_json));
+    return RelayFuncCacheEntry(func);
+  }
+
+  bool Save(const std::string& path) {
+    auto json_str = ir::serialization::SaveJSON(func_);
+    std::ofstream ofs(path + "/" + FUNC_FILE, std::ios::out);
+    if (!ofs.is_open()) {
+      return false;
+    }
+    ofs << json_str;
+    ofs.close();
+    return true;
+  }
+
+ private:
+  /*! \brief The persist function file name. */
+  static constexpr const char* FUNC_FILE = "func.json";
+  /*! \brief The cached function. */
+  ir::Function func_;
 };
 
 template <class Unused>
@@ -87,18 +188,19 @@ using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
 using FMNMArgIndices =
     registry::TypedPackedFunc<ir::Array<tvm::IntImm>(const op::CallValues& call)>;
 
+extern MetaPersistCache<TVMModuleCacheEntry> CacheBuildCpu;
+extern MetaPersistCache<TVMModuleCacheEntry> CacheBuildCuda;
+extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
+
 }  // namespace tvm_dialect
 }  // namespace op
 }  // namespace mnm
 
 #define MNM_TVM_PLEVEL(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH,        \
                        OP_PATTERN, PLEVEL)                                                         \
-  MetaCache<registry::PackedFunc> FUNC##CacheBuildCpu;                                             \
-  MetaCache<registry::PackedFunc> FUNC##CacheBuildCuda;                                            \
-  MetaCache<ir::Function> FUNC##CacheLoweredFunc;                                                  \
   template <typename RType>                                                                        \
-  inline RType FUNC##CacheCompile(TVMOpEnv* env, const op::CallValues& call,                       \
-                                  MetaCache<RType>* cache,                                         \
+  inline RType FUNC##CacheCompile(TVMOpEnv* env, const op::CallValues call,                        \
+                                  MetaPersistCache<RType>* cache,                                  \
                                   std::function<RType(const ir::Function&)> f_post_lower) {        \
     mnm::op::tvm_dialect::ForceEnableAutoScheduler();                                              \
     static const auto op = Op::Get(MNM_DIALECT_OP_NAME(tvm, OP));                                  \
@@ -119,8 +221,9 @@ using FMNMArgIndices =
     } else {                                                                                       \
       ret_type = GetTupleType(env->outputs);                                                       \
     }                                                                                              \
-    RType ret{nullptr};                                                                            \
-    HashKey key = HASH(param_types, ret_type, schema);                                             \
+    RType ret;                                                                                     \
+    HashKey key;                                                                                   \
+    key << #OP << HASH(param_types, ret_type, schema);                                             \
     if (const auto* compiled = cache->Get(key.byte_vector)) {                                      \
       ret = *compiled;                                                                             \
     } else {                                                                                       \
@@ -130,7 +233,7 @@ using FMNMArgIndices =
     }                                                                                              \
     return ret;                                                                                    \
   }                                                                                                \
-  OpEnv* FUNC##Build(const op::CallValues& call) {                                                 \
+  OpEnv* FUNC##Build(const op::CallValues call) {                                                  \
     tvm::relay::tec::TECompiler te_compiler;                                                       \
     const auto& dev = call->device;                                                                \
     static const auto base_op = Op::Get(MNM_BASE_OP_NAME(OP));                                     \
@@ -142,40 +245,45 @@ using FMNMArgIndices =
       env->arg_indices.push_back(idx);                                                             \
     }                                                                                              \
     /* Determine cache */                                                                          \
-    MetaCache<registry::PackedFunc>* cache;                                                        \
+    MetaPersistCache<TVMModuleCacheEntry>* cache;                                                  \
     if (dev.device_type() == DevType::kCPU()) {                                                    \
-      cache = &FUNC##CacheBuildCpu;                                                                \
+      cache = &CacheBuildCpu;                                                                      \
     } else if (dev.device_type() == DevType::kCUDA()) {                                            \
-      cache = &FUNC##CacheBuildCuda;                                                               \
+      cache = &CacheBuildCuda;                                                                     \
     } else {                                                                                       \
       LOG(FATAL) << "NotImplementedError: device is not supported " << dev.device_type().c_str();  \
       throw;                                                                                       \
     }                                                                                              \
     tvm::Target target = dev.tvm_target();                                                         \
     env->env_name = TruncateName(GetUniqueName(MNM_DIALECT_OP_NAME(tvm, OP)));                     \
-    std::function<registry::PackedFunc(const ir::Function&)> f_post_lower(                         \
+    std::function<TVMModuleCacheEntry(const ir::Function&)> f_post_lower(                          \
         [&](const ir::Function& f) {                                                               \
           te_compiler->Clear();                                                                    \
-          return te_compiler->JIT(tvm::relay::tec::CCacheKey(f, target));                          \
+          auto key = tvm::relay::tec::CCacheKey(f, target);                                        \
+          auto cached_func = te_compiler->Lower(key, [](String name) { return name; });            \
+          auto mod = tvm::build(cached_func->funcs, key->target, Target(nullptr));                 \
+          return TVMModuleCacheEntry(mod, cached_func->prim_fn_var->name_hint);                    \
         });                                                                                        \
     try {                                                                                          \
-      env->f = FUNC##CacheCompile(env, call, cache, f_post_lower);                                 \
+      auto module_cache_entry = FUNC##CacheCompile(env, call, cache, f_post_lower);                \
+      env->f = module_cache_entry.GetFunction();                                                   \
     } catch (const dmlc::Error& e) {                                                               \
       /* Invalid implementation. Return nullptr to let dispatcher select the next one */           \
       if (!AllowJitFailure()) {                                                                    \
-        DLOG(ERROR) << "Failed to JIT " << env->env_name << ": " << e.what();                      \
+        dispatch_error_msgs.push_back(e.what());                                                   \
+        DLOG(WARNING) << "Failed to JIT " << env->env_name << ": " << e.what();                    \
         return nullptr;                                                                            \
       }                                                                                            \
     }                                                                                              \
     return env;                                                                                    \
   }                                                                                                \
-  Attrs FUNC##Attr(const op::CallValues& call) {                                                   \
+  Attrs FUNC##Attr(const op::CallValues call) {                                                    \
     static const auto op = Op::Get(MNM_BASE_OP_NAME(OP));                                          \
     const auto* schema = call->args.as<SCHEMA>();                                                  \
     CHECK(schema != nullptr);                                                                      \
     return SCHEMA2ATTRS(schema);                                                                   \
   }                                                                                                \
-  Array<tvm::IntImm> FUNC##ArgIndices(const op::CallValues& call) {                                \
+  Array<tvm::IntImm> FUNC##ArgIndices(const op::CallValues call) {                                 \
     static const auto op = Op::Get(MNM_BASE_OP_NAME(OP));                                          \
     static const auto fschema_index =                                                              \
         op::GetOpAttr<op::FMNMSchemaFieldIndex>(op, "FMNMSchemaFieldIndex");                       \
@@ -185,13 +293,13 @@ using FMNMArgIndices =
     }                                                                                              \
     return Array<tvm::IntImm>(ret);                                                                \
   }                                                                                                \
-  ir::Function FUNC##Lower(const op::CallValues& call) {                                           \
-    static const std::function<ir::Function(const ir::Function&)> identity(                        \
-        [](const ir::Function& f) { return f; });                                                  \
-    MetaCache<ir::Function>* cache;                                                                \
-    cache = &FUNC##CacheLoweredFunc;                                                               \
+  ir::Function FUNC##Lower(const op::CallValues call) {                                            \
+    static const std::function<RelayFuncCacheEntry(const ir::Function&)> identity(                 \
+        [](const ir::Function& f) { return RelayFuncCacheEntry(f); });                             \
+    MetaPersistCache<RelayFuncCacheEntry>* cache;                                                  \
+    cache = &CacheLoweredFunc;                                                                     \
     auto env = std::make_unique<TVMOpEnv>();                                                       \
-    return FUNC##CacheCompile(env.get(), call, cache, identity);                                   \
+    return FUNC##CacheCompile(env.get(), call, cache, identity).GetFunction();                     \
   }                                                                                                \
   MNM_REGISTER_DIALECT_OP(tvm, OP, PLEVEL)                                                         \
       .set_attr<::mnm::op::TOpPattern>("TOpPattern", OP_PATTERN)                                   \
@@ -200,6 +308,6 @@ using FMNMArgIndices =
       .set_attr<::mnm::op::tvm_dialect::FMNMArgIndices>("FMNMArgIndices", FUNC##ArgIndices);       \
   MNM_OP_ENV_MAKER(MNM_DIALECT_OP_NAME(tvm, OP), FUNC##Build);
 
-#define MNM_TVM(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN)  \
-  MNM_TVM_PLEVEL(FUNC, OP, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN, \
+#define MNM_TVM(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN)  \
+  MNM_TVM_PLEVEL(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN, \
                  10)

@@ -17,6 +17,7 @@
 #include "mnm/value.h"
 #include "mnm/op.h"
 #include "mnm/op_utils.h"
+#include "mnm/cache.h"
 #include "mnm/memory_pool.h"
 #include "mnm/stream_pool.h"
 #include "mnm/event_pool.h"

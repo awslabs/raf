@@ -16,7 +16,7 @@ using namespace mnm::ir;
 using namespace mnm::op_profiler;
 
 #ifdef MNM_USE_CUDA
-TEST(PluginProfilerGPU, TestNoCall) {
+TEST(OpProfilerGPU, TestNoCall) {
   Device dev{DevType::kCUDA(), 0};
 
   CUDAOpProfiler* profiler = CUDAOpProfiler::Make(dev);
@@ -35,7 +35,7 @@ TEST(PluginProfilerGPU, TestNoCall) {
 
 // We rely on the internal dispatch mechanism to dispatch ops to dialects
 
-TEST(PluginProfilerGPU, TestOp) {
+TEST(OpProfilerGPU, TestOp) {
   Device dev{DevType::kCUDA(), 0};
 
   CUDAOpProfiler* profiler = CUDAOpProfiler::Make(dev);
@@ -46,22 +46,31 @@ TEST(PluginProfilerGPU, TestOp) {
   in_shape0.push_back(32);
   Var arg0("arg0", TensorType(in_shape0, DataType::Float(32)));
   arg0->checked_type_ = TensorType(in_shape0, DataType::Float(32));
+
   Array<PrimExpr> in_shape1;
   in_shape1.push_back(32);
   in_shape1.push_back(32);
   Var arg1("arg1", TensorType(in_shape1, DataType::Float(32)));
   arg1->checked_type_ = TensorType(in_shape1, DataType::Float(32));
+
   Array<Expr> args;
   args.push_back(arg0);
   args.push_back(arg1);
+
   auto fake_call = Call(op, args);
   Array<PrimExpr> ret_shape;
   ret_shape.push_back(32);
   ret_shape.push_back(32);
   fake_call->checked_type_ = TensorType(ret_shape, DataType::Float(32));
+
   float latency = profiler->ProfileOp(fake_call);
   LOG(INFO) << "Latency is: " << latency;
   ASSERT_GT(latency, 0.0f);
+
+  // The returned latency should be exactly the same as the previous one due to cache hit.
+  float latency2 = profiler->ProfileOp(fake_call);
+  LOG(INFO) << "Latency is: " << latency2;
+  ASSERT_FLOAT_EQ(latency, latency2);
 }
 #endif
 

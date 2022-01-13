@@ -18,6 +18,10 @@ using namespace mnm::registry;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 
+MetaPersistCache<TVMModuleCacheEntry> CacheBuildCpu("tvm_cpu");
+MetaPersistCache<TVMModuleCacheEntry> CacheBuildCuda("tvm_cuda");
+MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc("tvm_lower");
+
 void GetDLTensor(const Value& v, std::vector<DLTensor>* tensors) {
   if (v->IsInstance<TensorValueObj>()) {
     DLTensor* t = v;
@@ -119,6 +123,28 @@ void TVMOpEnv::Execute(const std::vector<Value>& inputs, Value output) {
 
   f.CallPacked(targs, &rv);
 }
+
+PackedMetricMap DumpTVMCacheMetric(const std::string& cache_name) {
+  static std::unordered_map<std::string, MetaCacheMetric*> name_to_cache = {
+      {"tvm_cpu", &CacheBuildCpu},
+      {"tvm_cuda", &CacheBuildCuda},
+      {"tvm_lower", &CacheLoweredFunc},
+  };
+
+  PackedMetricMap ret;
+  if (name_to_cache.count(cache_name) == 0) {
+    LOG(WARNING) << "Cannot find cache " << cache_name << " for dumping metric";
+    return ret;
+  }
+
+  auto metrics = name_to_cache[cache_name]->GetMetric();
+  for (const auto& it : metrics) {
+    ret.Set(it.first, it.second);
+  }
+  return ret;
+}
+
+MNM_REGISTER_GLOBAL("mnm.cache.DumpTVMCacheMetric").set_body_typed(DumpTVMCacheMetric);
 
 MNM_REGISTER_DIALECT("tvm").set_enable(DevType::kCPU()).set_enable(DevType::kCUDA());
 TVM_REGISTER_PASS_CONFIG_OPTION("mnm.tvm.allow_jit_failure", tvm::Bool);

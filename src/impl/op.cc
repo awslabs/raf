@@ -28,6 +28,8 @@ using namespace mnm::value;
 using executor::Executor;
 using requests::Requests;
 
+std::vector<std::string> dispatch_error_msgs;
+
 CallValues CallValues::make(value::Value callee, ir::Attrs args) {
   ObjectPtr<CallValuesNode> n = make_object<CallValuesNode>();
   n->callee = std::move(callee);
@@ -121,6 +123,7 @@ std::shared_ptr<OpEnv> OpEnvMaker::Make(const std::string& op_name, const CallVa
 // Implementation : helper functions
 
 std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
+  dispatch_error_msgs.clear();
   Op op = Downcast<OpValue>(call->callee)->op;
   std::string skip_dialect = "";
   // Try dispatch directly
@@ -151,7 +154,14 @@ std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
       return env;
     }
   }
-  LOG(FATAL) << "Cannot find a valid dispatch for op " << op->name;
+
+  std::stringstream ss;
+  ss << "Cannot find a valid dispatch for op " << op->name << ":";
+  for (auto msg : dispatch_error_msgs) {
+    ss << "\n" << msg;
+  }
+  LOG(FATAL) << ss.str();
+  dispatch_error_msgs.clear();
   return nullptr;
 }
 

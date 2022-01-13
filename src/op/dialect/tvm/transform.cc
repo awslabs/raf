@@ -5,6 +5,7 @@
  */
 #include <vector>
 #include <mnm/op_utils.h>
+#include <mnm/cache.h>
 #include <mnm/value.h>
 #include "./tvm_utils.h"
 #include "./tvm_attrs.h"

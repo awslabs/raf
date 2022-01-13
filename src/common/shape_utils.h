@@ -6,6 +6,8 @@
 #pragma once
 #include <vector>
 #include "mnm/ir.h"
+#include "mnm/op.h"
+#include "mnm/value.h"
 
 namespace mnm {
 namespace common {

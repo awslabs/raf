@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include "mnm/cache.h"
 #include "op.h"
 #include "op_utils.h"
 #include <unordered_map>
@@ -22,8 +23,7 @@ namespace op_profiler {
 using namespace mnm::op;
 using namespace mnm::value;
 
-// Using the address of the Expr as key for now
-using LatencyMapT = std::unordered_map<std::uintptr_t, float>;
+using LatencyMapT = std::unordered_map<std::string, float>;
 
 /*! \brief Abstract base class for a profiler to profile per-op latency during compilation. */
 class OpProfiler {
@@ -50,7 +50,8 @@ class OpProfiler {
   /*! \brief The target device. */
   Device device_;
 
-  /*! \brief A cache to store the latency of profiled ops in microseconds. */
+  /*! \brief A cache to store the latency of profiled ops in microseconds. Cache key is
+   * the byte string hash of a call node. */
   LatencyMapT latency_cache_;
 
   /*! \brief The number of times to warmup the op. */
@@ -60,6 +61,35 @@ class OpProfiler {
   int32_t profile_exec_tripcount_;
 
  private:
+  /*!
+   * \brief Generate a byte string hash for the given call node using its op as well as
+   * argument and return types.
+   *
+   * \param call The call node to be hashed.
+   * \return The hashed key in a string.
+   */
+  std::string HashCall(const Call& call) {
+    HashKey key;
+
+    // Hash op name. Note that we directly use the object address as the key
+    // because all fused op closures have the same name at this stage.
+    if (auto op_node = call->op.as<OpNode>()) {
+      key << op_node->name;
+    } else if (auto fn_node = call->op.as<FunctionNode>()) {
+      key << ObjectPtrHash()(GetRef<Function>(fn_node));
+    } else {
+      LOG(FATAL) << "OpProfiler does not deal with " << call->op->GetTypeKey();
+      throw;
+    }
+
+    // Hash argument and return types.
+    for (auto arg : call->args) {
+      key << mnm::ir::AsText(arg->checked_type(), false);
+    }
+    key << mnm::ir::AsText(call->checked_type(), false);
+    return std::string(key.byte_vector.begin(), key.byte_vector.end());
+  }
+
   /*!
    * \brief The function that actually executes the op on the device.
    * \param op_env Pointer to the OpEnv for this op.

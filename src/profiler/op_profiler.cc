@@ -19,29 +19,19 @@ using namespace mnm::value;
 float OpProfiler::ProfileOp(const Expr& op) {
   if (auto call_node = op.as<CallNode>()) {
     auto call = GetRef<Call>(call_node);
-    CallValues call_values = CreateDummyCallValues(call, device_);
 
-    /*
-     * Currently using the address of the call node as the key, because a good
-     * key is currently not available:
-     * - The key must not have collision, i.e. must contain the following:
-     *   1. The name and dialect of the op -> TVM fused ops do not seem to have
-     *      unique names?
-     *   2. The shapes and data types of input arguments and output;
-     *   3. Any other attributes unique to the call -> only available for TVM
-     *      dialect.
-     * - One possible option is to use the op name + dialect + shapes + data
-     *   types for non-TVM ops, and use the built-in hash functions for TVM
-     *   ops (suppose fused ops can be distinguished properly). This requires us
-     *   to figure out the op type and use the corresponding hash function at
-     *   run time. Consider implementing it later.
-     */
-    auto key = reinterpret_cast<std::uintptr_t>(call.get());
-    if (latency_cache_.count(key)) {
+    auto key = HashCall(call);
+
+    // Directly return the profiled latency if cache hit.
+    if (latency_cache_.count(key) > 0) {
       return latency_cache_[key];
     }
 
-    // Create dummy input and dummy output for the call node
+    // JIT the op.
+    CallValues call_values = CreateDummyCallValues(call, device_);
+    OpEnvPtr op_env = Dispatch(call_values);
+
+    // Create dummy input and dummy output for profiling.
     std::vector<Value> dummy_inputs;
     for (auto arg : call_node->args) {
       if (auto const_node = arg.as<RelayConstantNode>()) {
@@ -53,7 +43,6 @@ float OpProfiler::ProfileOp(const Expr& op) {
       }
     }
     auto dummy_output = CreateDummyValueFromType(op->checked_type(), device_);
-    OpEnvPtr op_env = Dispatch(call_values);
     std::vector<value::Value> actual_dummy_inputs;
     for (int k : op_env->arg_indices) {
       actual_dummy_inputs.push_back(dummy_inputs[k]);
@@ -62,7 +51,7 @@ float OpProfiler::ProfileOp(const Expr& op) {
     // Profile the op
     float cost = RunOp_(op_env, actual_dummy_inputs, dummy_output);
 
-    // Add the profiled cost to the cache and return
+    // Add the profiled cost to the cache.
     latency_cache_[key] = cost;
     return cost;
   }
