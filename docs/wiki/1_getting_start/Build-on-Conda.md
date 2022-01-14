@@ -1,6 +1,6 @@
 (Document work-in-progress)
 
-In MNM, we recommend using [conda](https://conda.io/) as working environment, as it provides fine-grained version control for rich amount of packages, without asking for root permission.
+This article introduces the way of using [conda](https://conda.io/) as working environment, as it provides fine-grained version control for rich amount of packages, without asking for root permission.
 
 ```bash
 # Create an environment called mnm-dev

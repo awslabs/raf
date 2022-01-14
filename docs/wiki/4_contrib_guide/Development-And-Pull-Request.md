@@ -1,6 +1,6 @@
-Project MNM follows the standard Git and GitHub workflow for every commit, no matter huge improvement or a small patch. This tutorial serves as an introduction to this model of contribution.
+# Developmenet and Pull Request
 
-> Note: Technically, Git and GitHub are different. Git is a distributed version control system that remembers the code history; and GitHub is web service hosting a Git server like your housekeeper (I hope). In this article, however, we do not have to distinguish them clearly, because our project is hosted on GitHub.
+This tutorial introduces the developmenet flow and the way of filing a pull request to let your contribution be a part of Meta.
 
 ## Step 0. 🍽 Fork me @ GitHub
 The very initial step is to click the the "Fork" button on the upper right corner of [MNM](http://github.com/dmlc/mnm)'s GitHub homepage like below:
@@ -17,7 +17,8 @@ git clone git@github.com:YourAccount/meta.git --recursive
 # SSH
 git clone https://github.com/YourAccount/meta.git --recursive
 ```
-**Create a new branch.** To avoid possible mess-ups, it is suggested to work on a new branch, instead of master. You may create a new branch using the following commands.
+
+**Create a new branch.** To avoid possible mess-ups, it is suggested to work on a new branch, instead of `main`. You may create a new branch using the following commands.
 ```bash
 # Create a branch on your local machine
 git checkout -b AwesomeName
@@ -27,7 +28,7 @@ git push --set-upstream origin AwesomeName
 # You may run `git remote -v` to list all remote servers Git knows.
 ```
 
-**Upload your code.** In case a disaster happened and destroyed everything, you might be interested in incrementally doing the coding, and letting Git and GitHub remembers your change. The following commands will help:
+**Commit your code.** In case a disaster happened and destroyed everything, you might be interested in incrementally doing the coding, and letting Git and GitHub remembers your change. The following commands will help:
 
 ```bash
 # Add files to git stash
@@ -64,10 +65,10 @@ git remote add upstream https://github.com/meta-project/meta
 # Fetch the latest information from all remotes
 git fetch --all
 # And...Do the rebase.
-git rebase upstream/master
+git rebase upstream/main
 ```
 
-**Rebasing process.** Then Git will replay your commits on top of `upstream/master`, and ask you to manually resolve conflicts on each of your commit. This is tedious but you have to edit each of the files it reports as conflicted.
+**Rebasing process.** Then Git will replay your commits on top of `upstream/main`, and ask you to manually resolve conflicts on each of your commit. This is tedious but you have to edit each of the files it reports as conflicted.
 
 ```bash
 # Git will tell where conflict happens
@@ -104,3 +105,4 @@ git push -f
 - TVM has a nice tutorial on certain topics: https://docs.tvm.ai/contribute/git_howto.html
 - GitHub itself collects resources for beginners: https://try.github.io
 - Google and Stack Overflow are often super helpful!
+
