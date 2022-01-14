@@ -94,7 +94,7 @@ def main(root_path):
                 curr_dir = curr_dir[(order, name)]
 
             order, name = canonicalize_name(md_file_path.name)
-            curr_dir[(order, name)] = md_file_path
+            curr_dir[(order, name)] = md_file_path.relative_to(root_path)
 
         readme_file.write("\n\n## Table of Contents\n")
         write_contents(readme_file, contents)
