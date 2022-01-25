@@ -67,6 +67,12 @@ class Tensor : public tvm::runtime::NDArray {
 
   DLManagedTensor* ToDLPack() const;
 
+  void CopyTo(const Tensor& other) const;
+
+  void CopyTo(DLTensor* other) const;
+
+  NDArray CopyTo(const Device& dev) const;
+
  public:
   using TSuper::operator->;
 

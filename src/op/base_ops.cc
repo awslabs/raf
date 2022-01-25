@@ -3,15 +3,19 @@
  * \file src/impl/base_ops.cc
  * \brief Implementation of some OpEnvs registered on base ops.
  */
+#include "./schema/memory.h"
 #include "./schema/transform.h"
 #include "./schema/ufunc.h"
 #include "mnm/op.h"
 #include "mnm/device_api.h"
+#include "mnm/value.h"
+#include "mnm/stream_pool.h"
 
 namespace mnm {
 namespace op {
 
 using namespace mnm::ir;
+using namespace mnm::tensor;
 using namespace mnm::value;
 
 void SizeImpl(const DLTensor* x, const Value& axis, Value& out) {
@@ -155,6 +159,43 @@ class ShapeAsTensorOpEnv : public mnm::op::OpEnv {
 };
 
 MNM_OP_ENV_MAKER("mnm.op.shape_as_tensor", ShapeAsTensorOpEnv::make);
+
+class DeviceCopyOpEnv : public mnm::op::OpEnv {
+ public:
+  explicit DeviceCopyOpEnv(const CallValues& cv) {
+    static auto fschema_index =
+        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    static const std::string op_name = "mnm.op.device_copy";
+    static const auto op = ir::Op::Get(op_name);
+    this->arg_indices = {fschema_index[op]("data")};
+    env_name_ = TruncateName(GetUniqueName(op_name));
+  }
+
+  std::string name() const override {
+    return env_name_;
+  }
+
+  void Execute(const CallValues& cv) override {
+    // Note that "CopyTo" is able to use the current stream (if set) to perform the async copy.
+    const auto* args = cv->args.as<op::schema::DeviceCopyArgs>();
+    ICHECK(args != nullptr);
+    CopyTo(args->data, cv->out);
+  }
+
+  void Execute(const std::vector<Value>& inputs, Value output) override {
+    CHECK_EQ(inputs.size(), 1U);
+    CopyTo(inputs[0], output);
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new DeviceCopyOpEnv(cv);
+  }
+
+ private:
+  std::string env_name_;
+};
+
+MNM_OP_ENV_MAKER("mnm.op.device_copy", DeviceCopyOpEnv::make);
 
 }  // namespace op
 }  // namespace mnm

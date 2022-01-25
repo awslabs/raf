@@ -24,8 +24,8 @@ class DefuseTensorArgs : public ir::AttrsNode<DefuseTensorArgs> {
 class DeviceCopyArgs : public ir::AttrsNode<DeviceCopyArgs> {
  public:
   value::BaseTensorValue data;
-  int src_dev_type{0};
-  int dst_dev_type{0};
+  std::string src_device{"cpu"};
+  std::string dst_device{"cpu"};
   MNM_OP_SCHEMA(DeviceCopyArgs, "mnm.args.device_copy");
 };
 

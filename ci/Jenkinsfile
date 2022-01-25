@@ -88,6 +88,7 @@ stage("Lint") {
         label: "Check if only the docs are changed",
       )
       sh "${docker_run} ${ci_cpu} ./ci/task_lint.sh"
+      sh "${docker_run} ${ci_cpu} ./ci/task_check_autogen.sh"
     }
   }
 }

@@ -23,14 +23,17 @@ MNM_OP_DECLARE("mnm.op.device_copy", [](const CallValues& call) {
   CHECK(args != nullptr);
   DLTensor* data = args->data;
   std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
-  CHECK_EQ(static_cast<int>(data->device.device_type), args->src_dev_type);
-  DLDevice out_ctx;
-  out_ctx.device_type = static_cast<DLDeviceType>(args->dst_dev_type);
-  out_ctx.device_id = 0;
-  call->out = TensorValue::Assemble(/*dev=*/out_ctx,
+
+  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  auto data_device = Device((tvm::Device)(*str2dev)(data->device));
+  auto src_device = Device((tvm::Device)(*str2dev)(args->src_device));
+  auto dst_device = Device((tvm::Device)(*str2dev)(args->dst_device));
+  CHECK(data_device == src_device);
+
+  call->out = TensorValue::Assemble(/*dev=*/dst_device,
                                     /*dtype=*/data->dtype,
                                     /*shape=*/shape);
-  call->device = data->device;
+  call->device = dst_device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
 MNM_OP_DECLARE("mnm.op.fuse_tensor", [](const CallValues& call) {

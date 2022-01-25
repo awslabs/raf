@@ -17,6 +17,7 @@ DEVICE_TYPE_MAP = {
     "gpu": 2,
     "cuda": 2,
     "nvptx": 2,
+    "cuda_host": 3,
     "cl": 4,
     "opencl": 4,
     "aocl": 5,

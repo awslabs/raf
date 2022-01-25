@@ -9,6 +9,9 @@
 #include <tvm/ir/type_functor.h>
 #include "mnm/ir.h"
 #include "mnm/value.h"
+#include "../op/schema/init.h"
+#include "../op/schema/memory.h"
+#include "../op/schema/transform.h"
 
 using tvm::kType;
 using tvm::TypeFunctor;
@@ -311,6 +314,45 @@ inline Value GetValue(Type type) {
 
 inline Value GetValue(Expr expr) {
   return ValueGetter()(expr);
+}
+
+/*!
+ * \brief Return the device that the given call node should be on.
+ * Note that if the op is *_like(t) (e.g., zeros_like) and t.device != current_device,
+ * then this function will return a wrong device (i.e., current_device).
+ * However, it should be fine for now as we do not support heterogeneous execution.
+ */
+inline Device GetOutputDevice(const Call& call) {
+#define GET_DEVICE_FROM_SCHEMA(BASE_OP, OP, ARGS, ARG_NAME, DEVICE_ATTR_NAME) \
+  {                                                                           \
+    static auto target_op = Op::Get(OP);                                      \
+    if (BASE_OP == target_op) {                                               \
+      Array<Value> arg_values;                                                \
+      for (const auto& arg : ARGS) {                                          \
+        arg_values.push_back(GetValue(arg));                                  \
+      }                                                                       \
+      auto schema_args = fschema[BASE_OP](arg_values).as<ARG_NAME>();         \
+      CHECK(schema_args != nullptr);                                          \
+      return Device((tvm::Device)(*str2dev)(schema_args->DEVICE_ATTR_NAME));  \
+    }                                                                         \
+  }
+
+  Device device = Device::Current();
+  if (auto op_node = call->op.as<OpNode>()) {
+    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+    static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+
+    Op op = GetRef<Op>(op_node);
+    Op base_op = op::IsDialectOp(op) ? op::GetBaseOp(op) : op;
+    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.zeros", call->args, op::schema::InitOpArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.ones", call->args, op::schema::InitOpArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.full", call->args, op::schema::FullArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.arange", call->args, op::schema::ArangeArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.one_hot", call->args, op::schema::OneHotArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.device_copy", call->args, op::schema::DeviceCopyArgs,
+                           dst_device);
+  }
+  return device;
 }
 
 };  // namespace pass

@@ -336,6 +336,29 @@ Value CopyTo(Value src, const Device& dev) {
   return src;
 }
 
+void CopyTo(Value src, Value dst) {
+  if (!src.defined()) {
+    return;
+  }
+
+  if (src.as<TensorValueObj>()) {
+    CHECK(dst.as<TensorValueObj>());
+    auto in_tensor = Downcast<TensorValue>(src)->tensor;
+    auto out_tensor = Downcast<TensorValue>(dst)->tensor;
+    in_tensor.CopyTo(out_tensor);
+  } else if (src.as<TupleValueObj>()) {
+    CHECK(dst.as<TupleValueObj>());
+    std::vector<Value> ret;
+    TupleValue in_tuple = Downcast<TupleValue>(src);
+    TupleValue out_tuple = Downcast<TupleValue>(dst);
+    for (size_t i = 0; i < in_tuple->fields.size(); ++i) {
+      CopyTo(in_tuple->fields[i], out_tuple->fields[i]);
+    }
+  } else {
+    LOG(FATAL) << "Unrecognized value: " << src->GetTypeKey();
+  }
+}
+
 Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
   if (auto tensor_type = type.as<tvm::TensorTypeNode>()) {
     std::vector<int64_t> shape;

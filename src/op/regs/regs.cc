@@ -566,8 +566,8 @@ Attrs DefuseTensor(const TVMArgs& values, GradTape* tapes) {
 Attrs DeviceCopy(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::DeviceCopyArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, data);
-  MNM_POD(1, ffi2schema::Int, src_dev_type);
-  MNM_POD(2, ffi2schema::Int, dst_dev_type);
+  MNM_POD(1, ffi2schema::String, src_device);
+  MNM_POD(2, ffi2schema::String, dst_device);
   return Attrs(attrs);
 }
 
@@ -2003,8 +2003,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.device_copy").set_body([](TVMArgs args, TVMRetVa
   MNM_PRELUDE(device_copy, 3, ffi2schema::DeviceCopy,
               schema::DeviceCopyArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
-  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->src_dev_type));
-  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->dst_dev_type));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->src_device));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dst_device));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3633,8 +3633,8 @@ Array<Expr> DefuseTensor(const TVMArgs& values) {
 Array<Expr> DeviceCopy(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, data);
-  MNM_ARG(1, ffi2expr::Int, src_dev_type);
-  MNM_ARG(2, ffi2expr::Int, dst_dev_type);
+  MNM_ARG(1, ffi2expr::String, src_device);
+  MNM_ARG(2, ffi2expr::String, dst_device);
   MNM_RET();
 }
 
@@ -5024,8 +5024,8 @@ template <const char* op_name>
 Attrs DeviceCopy(const Array<Value>& values) {
   MNM_PRELUDE(1, 3, schema::DeviceCopyArgs);
   MNM_REQUIRED(0, value2schema::Tensor, data);
-  MNM_OPTIONAL(1, value2schema::Int, src_dev_type);
-  MNM_OPTIONAL(2, value2schema::Int, dst_dev_type);
+  MNM_OPTIONAL(1, value2schema::String, src_device);
+  MNM_OPTIONAL(2, value2schema::String, dst_device);
   return Attrs(attrs);
 }
 
@@ -6434,10 +6434,10 @@ int DeviceCopy(const std::string& field) {
   if (field == "data") {
     return 0;
   }
-  if (field == "src_dev_type") {
+  if (field == "src_device") {
     return 1;
   }
-  if (field == "dst_dev_type") {
+  if (field == "dst_device") {
     return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;

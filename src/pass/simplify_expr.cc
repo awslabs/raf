@@ -142,11 +142,16 @@ class ConcretizeLikeRewrite : public DFPatternRewrite {
 
 /*!
  * \brief Converts `*_like` unary operators to their explicit shape equivalent
- * (e.g. `zeros_like(x)` to `zeros(x.shape, x.dtype)`), when the target information is concrete.
+ * (e.g. `zeros_like(x)` to `zeros(x.shape, x.dtype, device)`), when the target information
+ * is known.
+ * Note that the simplified *_like op becomes an init op and needs to specify the target device.
+ * Hoever, the target device is not included in the type system, so we assume the target device
+ * is the current device.
  */
 class ConcretizeUnaryLikeRewrite : public ConcretizeLikeRewrite {
  public:
-  ConcretizeUnaryLikeRewrite(const std::string op_like, const std::string op) : op_(Op::Get(op)) {
+  ConcretizeUnaryLikeRewrite(const std::string op_like, const std::string op)
+      : op_(Op::Get(op)), device_(std::string(Device::Current(false).c_str())) {
     like_pat_ = IsWildcard();
     pattern_ = IsExpr(Op::Get(op_like))({like_pat_});
   }
@@ -154,12 +159,14 @@ class ConcretizeUnaryLikeRewrite : public ConcretizeLikeRewrite {
   Expr Concretize(const Map<DFPattern, Array<Expr>>& node_map, Array<Integer> shape,
                   DataType dtype) const override {
     return Call(op_, {MakeConstant(ArrayToIntTuple(shape)),
-                      MakeConstant(StringValue::make(DLDataType2String(dtype)))});
+                      MakeConstant(StringValue::make(DLDataType2String(dtype))),
+                      MakeConstant(StringValue::make(device_))});
   }
 
  protected:
   DFPattern like_pat_;
   const Op op_;
+  const std::string device_;
 };
 
 class ConcretizeZerosLikeRewrite : public ConcretizeUnaryLikeRewrite {

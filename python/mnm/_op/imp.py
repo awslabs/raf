@@ -795,11 +795,11 @@ def dense(x1, x2):
 
 
 @set_module("mnm")
-def device_copy(data, src_dev_type=0, dst_dev_type=0):
+def device_copy(data, src_device="cpu", dst_device="cpu"):
     data = imp_utils.to_tensor(data)
-    src_dev_type = imp_utils.to_int(src_dev_type)
-    dst_dev_type = imp_utils.to_int(dst_dev_type)
-    return imp_utils.ret(ffi.device_copy(data, src_dev_type, dst_dev_type))
+    src_device = imp_utils.to_string(src_device)
+    dst_device = imp_utils.to_string(dst_device)
+    return imp_utils.ret(ffi.device_copy(data, src_device, dst_device))
 
 
 @set_module("mnm")

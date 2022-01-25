@@ -7,3 +7,5 @@ from mnm._lib import _APIS
 cpu = _APIS.get("mnm.device_api._make.cpu", None)
 # Defined in ./src/device_api/cuda/cuda.cc
 cuda = _APIS.get("mnm.device_api._make.cuda", None)
+# Defined in ./src/device_api/cuda/cuda_host.cc
+cuda_host = _APIS.get("mnm.device_api._make.cuda_host", None)

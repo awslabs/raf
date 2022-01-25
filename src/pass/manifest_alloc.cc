@@ -13,6 +13,7 @@
 #include "mnm/ir_ext.h"
 #include "mnm/value.h"
 #include "mnm/pass.h"
+#include "./common.h"
 #include "./let_list.h"
 #include "../common/shape_utils.h"
 #include "tvm/relay/attrs/memory.h"
@@ -175,11 +176,14 @@ class ManifestAllocMutator : public ExprMutator {
           new_args.push_back(VisitExpr(arg));
         }
 
+        // Determine the device for output tensor allocation.
+        auto device = GetOutputDevice(call);
+
         std::vector<Expr> outs;
         if (tvm::relay::IsDynamic(ret_type)) {
-          outs = DynamicInvoke(scope, bind_var, call->op, new_args, out_types);
+          outs = DynamicInvoke(scope, bind_var, call->op, new_args, out_types, device);
         } else {
-          outs = StaticInvoke(scope, bind_var, call->op, new_args, out_types);
+          outs = StaticInvoke(scope, bind_var, call->op, new_args, out_types, device);
         }
 
         // if op uses upper bound shape, reshapes its results
@@ -234,39 +238,37 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr MakeAllocationCommon(LetList* scope, const TensorTypeNode* type, const Expr& shape,
-                            const Expr& size) {
+                            const Expr& size, const Device& device) {
     Expr alignment = ComputeAlignment(type->dtype);
     auto dtype = type->dtype;
-    auto device = Device::Current();
-    int device_type = kDLCPU;
-    int device_id = 0;
-    // Note that the device type here follows DLDevice type (i.e., tvm::Target device type).
+
+    Device target_device(DevType::kCPU(), 0);
     if (device.device_type() != DevType::kUnknown()) {
-      device_type = device.tvm_target()->kind->device_type;
-      device_id = device.device_id();
+      target_device = device;
     }
     auto storage = scope->Push(MakeAllocStorage(Array<Expr>{size, alignment},
-                                                static_cast<int>(device_type), device_id, dtype));
+                                                static_cast<int>(target_device.device_type()),
+                                                target_device.device_id(), dtype));
     auto tensor = scope->Push(MakeAllocTensor(Array<Expr>{storage, shape}, shape, dtype));
     return tensor;
   }
 
-  Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type) {
+  Expr MakeStaticAllocation(LetList* scope, const TensorTypeNode* type, const Device& device) {
     Expr shape = MakeConstant(type->shape);
     Expr size = MakeConstant(ScalarValue::make(BytesCompactTensor(type)));
-    return MakeAllocationCommon(scope, type, shape, size);
+    return MakeAllocationCommon(scope, type, shape, size, device);
   }
 
-  Expr MakeDynamicAllocation(LetList* scope, const TensorTypeNode* type,
-                             const Expr& out_type_expr) {
+  Expr MakeDynamicAllocation(LetList* scope, const TensorTypeNode* type, const Expr& out_type_expr,
+                             const Device& device) {
     Expr shape = scope->Push(TupleGetItem(out_type_expr, 0));
     Expr size = scope->Push(TupleGetItem(out_type_expr, 1));
-    return MakeAllocationCommon(scope, type, shape, size);
+    return MakeAllocationCommon(scope, type, shape, size, device);
   }
 
   std::vector<Expr> DynamicInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                   const Array<Expr>& new_args,
-                                  const std::vector<TensorType>& out_types) {
+                                  const std::vector<TensorType>& out_types, const Device& device) {
     auto ins = scope->Push(Tuple(new_args));
     auto op_var = scope->Push(op);
     auto infer_type = Call(Op::Get("mnm.op.vm.infer_type"), Array<Expr>{op_var, ins});
@@ -283,15 +285,15 @@ class ManifestAllocMutator : public ExprMutator {
           outs.push_back(share[i]);
         } else {
           Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i + 1));
-          outs.push_back(
-              MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr));
+          outs.push_back(MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(),
+                                               out_type_expr, device));
         }
       }
     } else {
       for (size_t i = 0; i < out_types.size(); i++) {
         Expr out_type_expr = scope->Push(TupleGetItem(out_type_exprs, i + 1));
         outs.push_back(
-            MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr));
+            MakeDynamicAllocation(scope, out_types[i].as<TensorTypeNode>(), out_type_expr, device));
       }
     }
     Call invoke_op;
@@ -310,7 +312,7 @@ class ManifestAllocMutator : public ExprMutator {
 
   std::vector<Expr> StaticInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                  const Array<Expr>& new_args,
-                                 const std::vector<TensorType>& out_types) {
+                                 const std::vector<TensorType>& out_types, const Device& device) {
     std::vector<Expr> outs;
     auto it = inplace_.var_share_map.find(bind_var);
     if (it != inplace_.var_share_map.end()) {
@@ -322,12 +324,12 @@ class ManifestAllocMutator : public ExprMutator {
         if (share[i].defined()) {
           outs.push_back(share[i]);
         } else {
-          outs.push_back(MakeStaticAllocation(scope, out_types[i].as<TensorTypeNode>()));
+          outs.push_back(MakeStaticAllocation(scope, out_types[i].as<TensorTypeNode>(), device));
         }
       }
     } else {
       for (size_t i = 0; i < out_types.size(); i++) {
-        outs.push_back(MakeStaticAllocation(scope, out_types[i].as<TensorTypeNode>()));
+        outs.push_back(MakeStaticAllocation(scope, out_types[i].as<TensorTypeNode>(), device));
       }
     }
     auto invoke = Call(Op::Get("mnm.op.vm.invoke_op"),

@@ -96,14 +96,6 @@ inline TupleValue ArrayToIntTuple(const std::vector<int64_t>& arr) {
   return TupleValue::make(std::move(ret));
 }
 
-inline bool IsReshapeOp(const Op& op) {
-  static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
-      Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze"),
-      Op::Get("mnm.op.batch_flatten")};
-  auto op_ = IsDialectOp(op) ? GetBaseOp(op) : op;
-  return reshape_ops.find(op_) != reshape_ops.end();
-}
-
 inline bool IsCollectiveOp(const Expr& op) {
   if (auto op_node = op.as<OpNode>()) {
     return op::GetOpAttrOrDefault<TMNMCollective>(GetRef<Op>(op_node), "TMNMCollective", false);
@@ -120,6 +112,13 @@ inline bool IsInOpSet(const Expr& op, const OpSet& op_set) {
     return op_set.find(op_n) != op_set.end();
   }
   return false;
+}
+
+inline bool IsReshapeOp(const Op& op) {
+  static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
+      Op::Get("mnm.op.reshape"), Op::Get("mnm.op.expand_dims"), Op::Get("mnm.op.squeeze"),
+      Op::Get("mnm.op.batch_flatten")};
+  return IsInOpSet(op, reshape_ops);
 }
 
 inline bool IsMemcpyOp(const Expr& op) {

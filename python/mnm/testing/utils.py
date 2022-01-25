@@ -68,10 +68,14 @@ def _get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     """Get VM executor"""
     # pylint: disable=protected-access
     options.setdefault("stream_schedule_policy", "sequential")
+    options.setdefault("anf_only", False)
     options.setdefault("sch_file", None)
     options.setdefault("pass_seq", None)
 
-    config = {"mnm.stream_schedule.policy": options["stream_schedule_policy"]}
+    config = {
+        "mnm.stream_schedule.policy": options["stream_schedule_policy"],
+        "mnm.vm.optimize.anf_only": options["anf_only"],
+    }
     pass_seq = options["pass_seq"]
     disabled_pass = []
     if disable_fusion:

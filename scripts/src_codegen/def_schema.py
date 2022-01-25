@@ -780,9 +780,18 @@ SCHEMAS = {
     ],
     "memory.h::device_copy": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
-        # TODO(zhiics) Maybe we should use Device directly?
-        Arg(name="src_dev_type", cxx_type="int", cxx_default=0),
-        Arg(name="dst_dev_type", cxx_type="int", cxx_default=0),
+        Arg(
+            name="src_device",
+            cxx_type="std::string",
+            cxx_default='"cpu"',
+            py_default='"cpu"',
+        ),
+        Arg(
+            name="dst_device",
+            cxx_type="std::string",
+            cxx_default='"cpu"',
+            py_default='"cpu"',
+        ),
     ],
     "memory.h::fuse_tensor": [
         Arg(

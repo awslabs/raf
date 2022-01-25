@@ -23,10 +23,11 @@ using registry::PerDeviceStore;
 static std::unordered_map<int, std::string> default_strategies = {
     {DevType(DevType::kCPU()), "page_unit_pool"},
 #if CUDA_VERSION >= 11030
-    {DevType(DevType::kCUDA()), "no_pool"}
+    {DevType(DevType::kCUDA()), "no_pool"},
 #else
-    {DevType(DevType::kCUDA()), "page_unit_pool"}
+    {DevType(DevType::kCUDA()), "page_unit_pool"},
 #endif
+    {DevType(DevType::kCUDAHost()), "page_unit_pool"},
 };
 
 class MemoryPoolManager {

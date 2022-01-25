@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use, protected-access, attribute-defined-outside-init
 import pytest
 import mnm
 from mnm._lib import tvm
@@ -9,14 +10,12 @@ from mnm.testing import get_testable_devices, randn
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_memory_alloc(device, shape):
-    # pylint: disable=protected-access
     class Model(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use
+        def forward(self, x):
             y = mnm.add(x, x)
             z = mnm.add(x, y)
             return z
@@ -37,14 +36,12 @@ def test_memory_alloc(device, shape):
 
 
 def test_dynamic_model():
-    # pylint: disable=protected-access
     class Model(mnm.Model):
-        # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
         @mnm.model.trace
-        def forward(self, x):  # pylint: disable=no-self-use
+        def forward(self, x):
             y = mnm.argwhere(x)
             y = mnm.argwhere(y)
             y = mnm.split(y, 2)
@@ -120,7 +117,6 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
 
 
 def test_reshape():
-    # pylint: disable=protected-access, no-self-use
     shape = [3, 4, 5]
 
     class Model(mnm.Model):
@@ -148,6 +144,31 @@ def test_reshape():
     assert "reshape" not in text
     assert "expand_dims" not in text
     assert "squeeze" not in text
+
+
+def test_device():
+    shape = [5, 5]
+
+    class Model(mnm.Model):
+        def build(self):
+            pass
+
+        @mnm.model.trace
+        def forward(self):
+            return mnm.zeros(shape, device="cuda(1)")
+
+    model = Model()
+    func = model._internal().mod["main"]
+    mod = IRModule.from_expr(func)
+    mod = mnm._ffi.pass_.InferType()(mod)
+    with Device("cpu"):
+        mod = mnm._ffi.pass_.ManifestAlloc()(mod)
+    text = mnm.ir.AsText(mod["main"])
+
+    # ManifestAlloc should allocate the tensor on the specific device
+    # for init ops and memory related ops. In this case, we expect int32(2) and int32(1),
+    # which mean cuda(1).
+    assert 'mnm.op.vm.alloc_storage(int64(100), int64(64), int32(2), int32(1), str"int32")' in text
 
 
 if __name__ == "__main__":

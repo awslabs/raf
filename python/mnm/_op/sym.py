@@ -731,11 +731,11 @@ def dense(x1, x2):
     return Symbol.from_expr(ffi.dense(x1, x2))
 
 
-def device_copy(data, src_dev_type=0, dst_dev_type=0):
+def device_copy(data, src_device="cpu", dst_device="cpu"):
     data = sym_utils.to_tensor(data)
-    src_dev_type = sym_utils.to_int(src_dev_type)
-    dst_dev_type = sym_utils.to_int(dst_dev_type)
-    return Symbol.from_expr(ffi.device_copy(data, src_dev_type, dst_dev_type))
+    src_device = sym_utils.to_string(src_device)
+    dst_device = sym_utils.to_string(dst_device)
+    return Symbol.from_expr(ffi.device_copy(data, src_device, dst_device))
 
 
 def divide(x1, x2):

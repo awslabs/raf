@@ -7,6 +7,7 @@
 #include "mnm/op.h"
 #include "mnm/device_api.h"
 #include "mnm/registry.h"
+#include "mnm/profiler.h"
 #include "../../common/cuda_utils.h"
 
 #include "../../op/dialect/cudnn/cudnn_utils.h"
@@ -104,6 +105,51 @@ class CUDADeviceAPI final : public DeviceAPI {
   }
 #endif
 
+  void CopyDataFromTo(DLTensor* from, DLTensor* to, void* stream) final {
+    size_t nbytes = tvm::runtime::GetDataSize(*from);
+    ICHECK_EQ(nbytes, tvm::runtime::GetDataSize(*to));
+    ICHECK(tvm::runtime::IsContiguous(*from) && tvm::runtime::IsContiguous(*to))
+        << "CopyDataFromTo only support contiguous array for now";
+
+    cudaStream_t cu_stream = static_cast<cudaStream_t>(stream);
+    auto from_data_ptr = static_cast<const char*>(from->data) + from->byte_offset;
+    auto to_data_ptr = static_cast<char*>(to->data) + to->byte_offset;
+
+    auto from_dev_type =
+        (from->device.device_type == kDLCUDAHost) ? kDLCPU : from->device.device_type;
+    auto to_dev_type = (to->device.device_type == kDLCUDAHost) ? kDLCPU : to->device.device_type;
+
+    // In case there is a copy from host memory to host memory.
+    if (to_dev_type == kDLCPU && from_dev_type == kDLCPU) {
+      memcpy(to_data_ptr, from_data_ptr, nbytes);
+      return;
+    }
+
+    auto curr_device_id = device_id_;
+    if (from_dev_type == kDLCUDA && to_dev_type == kDLCUDA) {
+      // GPU to another GPU.
+      SetDevice(from->device.device_id);
+      if (from->device.device_id == to->device.device_id) {
+        HandleCopy(from_data_ptr, to_data_ptr, nbytes, cudaMemcpyDeviceToDevice, cu_stream);
+      } else {
+        cudaMemcpyPeerAsync(to_data_ptr, to->device.device_id, from_data_ptr,
+                            from->device.device_id, nbytes, cu_stream);
+      }
+    } else if (from_dev_type == kDLCUDA && to_dev_type == kDLCPU) {
+      // GPU to CPU.
+      SetDevice(from->device.device_id);
+      HandleCopy(from_data_ptr, to_data_ptr, nbytes, cudaMemcpyDeviceToHost, cu_stream);
+    } else if (from_dev_type == kDLCPU && to_dev_type == kDLCUDA) {
+      // CPU to GPU.
+      SetDevice(to->device.device_id);
+      HandleCopy(from_data_ptr, to_data_ptr, nbytes, cudaMemcpyHostToDevice, cu_stream);
+    } else {
+      LOG(FATAL) << "expect copy from/to GPU or between GPU";
+    }
+
+    SetDevice(curr_device_id);
+  }
+
   void* CreateStream(const Device& dev) override {
     CHECK_EQ(dev.device_type(), DevType::kCUDA());
     CUDA_CALL(cudaSetDevice(dev.device_id()));
@@ -182,6 +228,17 @@ class CUDADeviceAPI final : public DeviceAPI {
   }
 
  private:
+  static void HandleCopy(const void* from, void* to, size_t size, cudaMemcpyKind kind,
+                         cudaStream_t cu_stream) {
+    if (cu_stream != nullptr) {
+      // Note that async happens only for the CUDA-CUDA and CUDA-CUDAHost (pinned CPU memory).
+      // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#asynchronous-concurrent-execution
+      CUDA_CALL(cudaMemcpyAsync(to, from, size, kind, cu_stream));
+    } else {
+      CUDA_CALL(cudaMemcpy(to, from, size, kind));
+    }
+  }
+
   int device_id_;
   // using cuda default stream if stream is not set explicitly
   void* stream_ = nullptr;
