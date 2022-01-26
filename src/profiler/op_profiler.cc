@@ -7,6 +7,7 @@
 #include "mnm/op_profiler.h"
 #include "mnm/ir.h"
 #include "../op/dialect/tvm/tvm_utils.h"
+#include "../requests.h"
 #include <chrono>
 
 namespace mnm {
@@ -14,6 +15,40 @@ namespace op_profiler {
 
 using namespace mnm::op;
 using namespace mnm::value;
+
+OpProfiler* OpProfiler::Get(const Device& device, int32_t warmup_tripcount,
+                            int32_t exec_tripcount) {
+  if (device.device_type() == DevType::kCPU()) {
+    return CPUOpProfiler::Get(device, warmup_tripcount, exec_tripcount);
+  } else if (device.device_type() == DevType::kCUDA()) {
+#ifdef MNM_USE_CUDA
+    return CUDAOpProfiler::Get(device, warmup_tripcount, exec_tripcount);
+#else
+    LOG(FATAL) << "CUDA is not enabled";
+#endif
+  }
+}
+
+inline void AllocWorkspace(const OpEnvPtr op_env) {
+  std::shared_ptr<requests::Requests> requests = op_env->GetRequests();
+  for (size_t i = 0; i < requests->workspace.size(); i++) {
+    requests::Requests::WorkspaceRequest& entry = requests->workspace[i];
+    auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
+    entry.memory = buf;
+    *entry.dest = buf->data;
+  }
+}
+
+inline void FreeWorkspace(const OpEnvPtr op_env) {
+  std::shared_ptr<requests::Requests> requests = op_env->GetRequests();
+  for (size_t i = 0; i < requests->workspace.size(); ++i) {
+    requests::Requests::WorkspaceRequest& entry = requests->workspace[i];
+    if (entry.nbytes > 0 && entry.memory != nullptr) {
+      *entry.dest = nullptr;
+      entry.memory.reset();
+    }
+  }
+}
 
 // Profile one op and return its latency in microseconds on the target device.
 float OpProfiler::ProfileOp(const Expr& op) {
@@ -48,8 +83,14 @@ float OpProfiler::ProfileOp(const Expr& op) {
       actual_dummy_inputs.push_back(dummy_inputs[k]);
     }
 
+    // Allocate workspace memory.
+    AllocWorkspace(op_env);
+
     // Profile the op
     float cost = RunOp_(op_env, actual_dummy_inputs, dummy_output);
+
+    // Free workspace memory.
+    FreeWorkspace(op_env);
 
     // Add the profiled cost to the cache.
     latency_cache_[key] = cost;
@@ -61,9 +102,8 @@ float OpProfiler::ProfileOp(const Expr& op) {
 }
 
 // Create a static CPUOpProfiler for the target CPU device and return a pointer to it.
-CPUOpProfiler* CPUOpProfiler::Make(const Device& device, int32_t warmup_tripcount,
-                                   int32_t exec_tripcount) {
-  LOG(FATAL) << "CPUOpProfiler is currently under development and testing!";
+CPUOpProfiler* CPUOpProfiler::Get(const Device& device, int32_t warmup_tripcount,
+                                  int32_t exec_tripcount) {
   static CPUOpProfiler cpu_profiler = CPUOpProfiler(device, warmup_tripcount, exec_tripcount);
   return &cpu_profiler;
 }
@@ -92,8 +132,8 @@ float CPUOpProfiler::RunOp_(const OpEnvPtr& op_env, const std::vector<value::Val
 
 #ifdef MNM_USE_CUDA
 // Create a static CPUOpProfiler for the target CUDA device and return a pointer to it.
-CUDAOpProfiler* CUDAOpProfiler::Make(const Device& device, int32_t warmup_tripcount,
-                                     int32_t exec_tripcount) {
+CUDAOpProfiler* CUDAOpProfiler::Get(const Device& device, int32_t warmup_tripcount,
+                                    int32_t exec_tripcount) {
   static CUDAOpProfiler cuda_profiler = CUDAOpProfiler(device, warmup_tripcount, exec_tripcount);
   return &cuda_profiler;
 }
@@ -122,5 +162,28 @@ float CUDAOpProfiler::RunOp_(const OpEnvPtr& op_env, const std::vector<value::Va
   return elapsed_time / profile_exec_tripcount_ * 1000.0f;
 }
 #endif
+
+MNM_REGISTER_GLOBAL("mnm.op_profiler.Profile")
+    .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
+      CHECK_GE(args.size(), 2U) << "Expected (expr, device, <warmup>, <exec>)";
+      Expr expr = args[0];
+      Device device = args[1];
+      int warmup_tripcount = (args.size() >= 3) ? args[2] : 10;
+      int exec_tripcount = (args.size() == 4) ? args[3] : 10;
+      auto profiler = OpProfiler::Get(device, warmup_tripcount, exec_tripcount);
+      float lat = profiler->ProfileOp(expr);
+      *ret = lat;
+    });
+
+MNM_REGISTER_GLOBAL("mnm.op_profiler.ResetCache").set_body_typed([](const Device& device) {
+  auto profiler = OpProfiler::Get(device);
+  return profiler->Reset();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op_profiler.GetCacheSize").set_body_typed([](const Device& device) {
+  auto profiler = OpProfiler::Get(device);
+  return profiler->GetLatencyCacheSize();
+});
+
 }  // namespace op_profiler
 }  // namespace mnm

@@ -28,6 +28,16 @@ using LatencyMapT = std::unordered_map<std::string, float>;
 /*! \brief Abstract base class for a profiler to profile per-op latency during compilation. */
 class OpProfiler {
  public:
+  /*!
+   * \brief Dispatch to op profiler according to the given device type.
+   * \param device The target device.
+   * \param warmup_tripcount The number of warmup iterations. Default 10.
+   * \param exec_tripcount The number of execution iterations. Default 10.
+   * \return The op profiler pointer.
+   */
+  static OpProfiler* Get(const Device& device, int32_t warmup_tripcount = 10,
+                         int32_t exec_tripcount = 10);
+
   virtual ~OpProfiler() {
   }
 
@@ -39,6 +49,20 @@ class OpProfiler {
    * device.
    */
   virtual float ProfileOp(const Expr& op);
+
+  /*!
+   * \brief Get the current size of latency cache.
+   */
+  int GetLatencyCacheSize() {
+    return latency_cache_.size();
+  }
+
+  /*!
+   * \brief Reset the latency cache.
+   */
+  void Reset() {
+    latency_cache_.clear();
+  }
 
  protected:
   OpProfiler(const Device& device, int32_t warmup_tripcount, int32_t exec_tripcount)
@@ -102,11 +126,11 @@ class OpProfiler {
 };
 
 /*! \brief A profiler to profile per-op latency on CPU during compilation. */
-class CPUOpProfiler : private OpProfiler {
+class CPUOpProfiler : public OpProfiler {
  public:
   /*! \brief Create a static CPUOpProfiler for the target CPU device and return a pointer to it. */
-  static CPUOpProfiler* Make(const Device& device, int32_t warmup_tripcount = 10,
-                             int32_t exec_tripcount = 10);
+  static CPUOpProfiler* Get(const Device& device, int32_t warmup_tripcount = 10,
+                            int32_t exec_tripcount = 10);
 
   virtual ~CPUOpProfiler() {
   }
@@ -141,12 +165,12 @@ class CPUOpProfiler : private OpProfiler {
 
 #ifdef MNM_USE_CUDA
 /*! \brief A profiler to profile per-op latency on a CUDA device during compilation. */
-class CUDAOpProfiler : private OpProfiler {
+class CUDAOpProfiler : public OpProfiler {
  public:
   /*! \brief Create a static CUDAOpProfiler for the target CUDA device and return a pointer to it.
    */
-  static CUDAOpProfiler* Make(const Device& device, int32_t warmup_tripcount = 10,
-                              int32_t exec_tripcount = 10);
+  static CUDAOpProfiler* Get(const Device& device, int32_t warmup_tripcount = 10,
+                             int32_t exec_tripcount = 10);
 
   /*!
    * \brief Profile one op and return its latency in microseconds.

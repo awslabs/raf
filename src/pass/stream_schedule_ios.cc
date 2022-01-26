@@ -328,6 +328,11 @@ class IOSCostModel {
               op_env->Execute(inputs_[j][k], outputs_[j][k]);
             }
           }
+
+          // recover to the default stream
+          tvm::runtime::DeviceAPI::Get(device_)->SetStream(device_, nullptr);
+          mnm::op::cudnn::SetStream(nullptr);
+          mnm::op::cublas::SetStream(nullptr);
         }
         if (i + 1 < num_stream_) {
           CUDA_CALL(cudaEventRecord(stage_barriers_[i], nullptr));

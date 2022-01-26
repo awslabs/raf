@@ -16,7 +16,7 @@ def optimize(mod):
     return mod
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize("matmul", ["matmul", "dense", "batch_matmul_tt"])
 @pytest.mark.parametrize("act", [None, "relu", "gelu"])
 @pytest.mark.parametrize("scaled_bias", [False, True])
