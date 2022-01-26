@@ -5,7 +5,6 @@ from .base import Op, Tensor
 
 
 class MatmulArgs:
-
     @staticmethod
     def f(x1: Tensor, x2: Tensor) -> Tensor:
         pass
@@ -17,8 +16,8 @@ class MatmulArgs:
         Op("matmul_tt"),
     ]
 
-class BatchMatmulArgs:
 
+class BatchMatmulArgs:
     @staticmethod
     def f(x1: Tensor, x2: Tensor) -> Tensor:
         pass

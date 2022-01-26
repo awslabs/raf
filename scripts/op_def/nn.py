@@ -1,8 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,unused-argument,invalid-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """NN-specific operators and their argument data structures."""
-from .base import (IntOrTupleInt, IntOrTupleIntOrNone, Op, Tensor, Tuple,
-                   TupleInt)
+from .base import IntOrTupleInt, IntOrTupleIntOrNone, Op, Tensor, Tuple, TupleInt
 
 
 class ConvArgs:
@@ -14,13 +13,14 @@ class ConvArgs:
     ]
 
     @staticmethod
-    def f(x: Tensor,
-          w: Tensor,
-          stride: IntOrTupleInt = 1,
-          padding: IntOrTupleInt = 0,
-          dilation: IntOrTupleInt = 1,
-          group: int = 1,
-          ) -> Tensor:
+    def f(
+        x: Tensor,
+        w: Tensor,
+        stride: IntOrTupleInt = 1,
+        padding: IntOrTupleInt = 0,
+        dilation: IntOrTupleInt = 1,
+        group: int = 1,
+    ) -> Tensor:
         ...
 
 
@@ -36,15 +36,16 @@ class ConvDxDwArgs:
     ]
 
     @staticmethod
-    def f(y: Tensor,
-          dy: Tensor,
-          x_or_w: Tensor,
-          shape: TupleInt,
-          stride: IntOrTupleInt = 1,
-          padding: IntOrTupleInt = 0,
-          dilation: IntOrTupleInt = 1,
-          groups: int = 1,
-          ) -> Tensor:
+    def f(
+        y: Tensor,
+        dy: Tensor,
+        x_or_w: Tensor,
+        shape: TupleInt,
+        stride: IntOrTupleInt = 1,
+        padding: IntOrTupleInt = 0,
+        dilation: IntOrTupleInt = 1,
+        groups: int = 1,
+    ) -> Tensor:
         ...
 
 
@@ -60,14 +61,15 @@ class PoolArgs:
     ]
 
     @staticmethod
-    def f(x: Tensor,
-          kernel: IntOrTupleInt,
-          stride: IntOrTupleIntOrNone = None,
-          padding: IntOrTupleInt = 0,
-          dilation: IntOrTupleInt = 1,
-          ceil_mode: bool = False,
-          include_pad: bool = True,
-          ) -> Tensor:
+    def f(
+        x: Tensor,
+        kernel: IntOrTupleInt,
+        stride: IntOrTupleIntOrNone = None,
+        padding: IntOrTupleInt = 0,
+        dilation: IntOrTupleInt = 1,
+        ceil_mode: bool = False,
+        include_pad: bool = True,
+    ) -> Tensor:
         ...
 
 
@@ -83,16 +85,17 @@ class PoolDxArgs:
     ]
 
     @staticmethod
-    def f(y: Tensor,
-          dy: Tensor,
-          x: Tensor,
-          kernel: IntOrTupleInt,
-          stride: IntOrTupleIntOrNone = None,
-          padding: IntOrTupleInt = 0,
-          dilation: IntOrTupleInt = 1,
-          ceil_mode: bool = False,
-          include_pad: bool = True,
-          ) -> Tensor:
+    def f(
+        y: Tensor,
+        dy: Tensor,
+        x: Tensor,
+        kernel: IntOrTupleInt,
+        stride: IntOrTupleIntOrNone = None,
+        padding: IntOrTupleInt = 0,
+        dilation: IntOrTupleInt = 1,
+        ceil_mode: bool = False,
+        include_pad: bool = True,
+    ) -> Tensor:
         ...
 
 
@@ -104,9 +107,10 @@ class SoftmaxArgs:
     ]
 
     @staticmethod
-    def f(x: Tensor,
-          axis: IntOrTupleInt = -1,
-          ) -> Tensor:
+    def f(
+        x: Tensor,
+        axis: IntOrTupleInt = -1,
+    ) -> Tensor:
         ...
 
 
@@ -118,11 +122,12 @@ class SoftmaxDxArgs:
     ]
 
     @staticmethod
-    def f(y: Tensor,
-          dy: Tensor,
-          x: Tensor,
-          axis: IntOrTupleInt = -1,
-          ) -> Tensor:
+    def f(
+        y: Tensor,
+        dy: Tensor,
+        x: Tensor,
+        axis: IntOrTupleInt = -1,
+    ) -> Tensor:
         ...
 
 
@@ -133,14 +138,15 @@ class BatchNormTrainArgs:
     ]
 
     @staticmethod
-    def f(x: Tensor,
-          running_mean: Tensor,
-          running_var: Tensor,
-          w: Tensor,
-          b: Tensor,
-          momentum: float = 0.1,
-          epsilon: float = 1e-5,
-          ) -> Tuple[Tensor, Tensor, Tensor]:
+    def f(
+        x: Tensor,
+        running_mean: Tensor,
+        running_var: Tensor,
+        w: Tensor,
+        b: Tensor,
+        momentum: float = 0.1,
+        epsilon: float = 1e-5,
+    ) -> Tuple[Tensor, Tensor, Tensor]:
         ...
 
 
@@ -151,14 +157,15 @@ class BatchNormInferArgs:
     ]
 
     @staticmethod
-    def f(x: Tensor,
-          running_mean: Tensor,
-          running_var: Tensor,
-          w: Tensor,
-          b: Tensor,
-          momentum: float = 0.1,
-          epsilon: float = 1e-5,
-          ) -> Tensor:
+    def f(
+        x: Tensor,
+        running_mean: Tensor,
+        running_var: Tensor,
+        w: Tensor,
+        b: Tensor,
+        momentum: float = 0.1,
+        epsilon: float = 1e-5,
+    ) -> Tensor:
         ...
 
 
@@ -169,11 +176,12 @@ class BatchNormDxwbArgs:
     ]
 
     @staticmethod
-    def f(y: Tensor,
-          dy: Tensor,
-          x: Tensor,
-          w: Tensor,
-          b: Tensor,
-          epsilon: float = 1e-5,
-          ) -> Tuple[Tensor, Tensor, Tensor]:
+    def f(
+        y: Tensor,
+        dy: Tensor,
+        x: Tensor,
+        w: Tensor,
+        b: Tensor,
+        epsilon: float = 1e-5,
+    ) -> Tuple[Tensor, Tensor, Tensor]:
         ...

@@ -880,7 +880,7 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
     args.push_back(ctx.ReadRegister(instr.infer_type.args[i]));
   }
   // infer type
-  const Value& callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
+  const Value& callee = ctx.ReadRegister(instr.infer_type.op_reg);
   Type ret_type;
   Array<Value> ret_tup;
   if (const auto* opv = callee.as<OpValueObj>()) {
@@ -898,7 +898,7 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
     for (size_t i = 0; i < args.size(); ++i) {
       new_func->params[i]->checked_type_ = GetType(args[i]);
     }
-    new_func = Downcast<Function>(pass::InferType(new_func));
+    new_func = Downcast<Function>(pass::InferTypeWithValues(new_func, args));
     ret_tup.push_back(ClosureValue::make({}, new_func));
     FuncType fty = Downcast<FuncType>(new_func->checked_type());
     ret_type = fty->ret_type;

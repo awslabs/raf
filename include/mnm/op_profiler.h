@@ -76,7 +76,7 @@ class OpProfiler {
     if (auto op_node = call->op.as<OpNode>()) {
       key << op_node->name;
     } else if (auto fn_node = call->op.as<FunctionNode>()) {
-      key << ObjectPtrHash()(GetRef<Function>(fn_node));
+      key << uint64_t(ObjectPtrHash()(GetRef<Function>(fn_node)));
     } else {
       LOG(FATAL) << "OpProfiler does not deal with " << call->op->GetTypeKey();
       throw;

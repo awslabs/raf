@@ -5,7 +5,6 @@ from .base import Any, Op, Tensor
 
 
 class TensorAttrsArgs:
-
     @staticmethod
     def f(x: Tensor) -> Any:
         ...
@@ -19,11 +18,11 @@ class TensorAttrsArgs:
 
 
 class BroadcastRelationsArgs:
-
     @staticmethod
-    def f(source: Tensor,
-          target: Tensor,
-          ) -> Any:
+    def f(
+        source: Tensor,
+        target: Tensor,
+    ) -> Any:
         ...
 
     __ops__ = [

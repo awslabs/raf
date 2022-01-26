@@ -570,6 +570,19 @@ Expr InferType(Expr func) {
   return type_infer::TypeInferencer(mod).VisitExpr(func);
 }
 
+Expr InferTypeWithValues(const Expr& func, const Array<Value>& values) {
+  auto mod = GlobalModule();
+  auto ti = type_infer::TypeInferencer(mod);
+  Array<Expr> args;
+  for (const auto& v : values) {
+    // It's safe to wrap the values with `MakeConstant`, as the type functions
+    // need to access the real data in values, and there is no write operation.
+    args.push_back(MakeConstant(v));
+  }
+  ti.UpdateFuncParamVarMap(func.as<FunctionNode>(), args);
+  return ti.VisitExpr(func);
+}
+
 Expr InferTypeWithModule(const Expr& expr, const IRModule& m) {
   IRModule mod(m->functions, m->type_definitions, m->Imports());
   int idx = 0;

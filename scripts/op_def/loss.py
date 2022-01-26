@@ -19,7 +19,8 @@ class LossArgs:
     ]
 
     @staticmethod
-    def f(y_true: Tensor,
-          y_pred: Tensor,
-          ) -> Tensor:
+    def f(
+        y_true: Tensor,
+        y_pred: Tensor,
+    ) -> Tensor:
         ...

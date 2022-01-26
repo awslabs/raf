@@ -21,12 +21,13 @@ class SgdArgs:
     #   x' = x - v'
 
     @staticmethod
-    def f(x: Tensor,
-          g: Tensor,
-          v: Tensor,
-          mu: float,
-          lr: float,
-          ) -> Tuple[Tensor, Tensor]:
+    def f(
+        x: Tensor,
+        g: Tensor,
+        v: Tensor,
+        mu: float,
+        lr: float,
+    ) -> Tuple[Tensor, Tensor]:
         ...
 
     __ops__ = [

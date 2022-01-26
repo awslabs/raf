@@ -5,7 +5,6 @@ from .base import Op, Tensor, TupleInt
 
 
 class BatchFlattenArgs:
-
     @staticmethod
     def f(x: Tensor) -> Tensor:
         ...
@@ -32,9 +31,10 @@ class ReshapeArgs:
     #   x' = x - v'
 
     @staticmethod
-    def f(x: Tensor,
-          shape: TupleInt,
-          ) -> Tensor:
+    def f(
+        x: Tensor,
+        shape: TupleInt,
+    ) -> Tensor:
         ...
 
     __ops__ = [
