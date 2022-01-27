@@ -8,4 +8,6 @@ GetCacheSize = _APIS.get("mnm.op_profiler.GetCacheSize", None)
 # Defined in ./src/profiler/op_profiler.cc
 Profile = _APIS.get("mnm.op_profiler.Profile", None)
 # Defined in ./src/profiler/op_profiler.cc
+ProfileGroup = _APIS.get("mnm.op_profiler.ProfileGroup", None)
+# Defined in ./src/profiler/op_profiler.cc
 ResetCache = _APIS.get("mnm.op_profiler.ResetCache", None)

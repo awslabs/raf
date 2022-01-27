@@ -12,6 +12,7 @@
 #include "mnm/pass.h"
 #include "mnm/analysis.h"
 #include "mnm/op.h"
+#include "mnm/op_profiler.h"
 #include "mnm/op_utils.h"
 #include "mnm/profiler.h"
 #include "./stream_schedule.h"
@@ -96,27 +97,13 @@ class IOSCostModel {
    * \param number The number of executions as a repeat.
    * \param repeat The number of repeat times.
    */
-  IOSCostModel(Device device, int num_stream, int warmup, int number, int repeat) {
+  IOSCostModel(Device device, int warmup, int number, int repeat) {
+    CHECK_EQ(device.device_type(), DevType::kCUDA()) << "IOS cost model only supports CUDA.";
     this->device_ = device;
-    this->num_stream_ = num_stream;
     this->warmup_ = warmup;
     this->number_ = number;
     this->repeat_ = repeat;
-
-    CHECK_EQ(device.device_type(), DevType::kCUDA()) << "IOS cost model only supports CUDA.";
-    CUDA_CALL(cudaSetDevice(device.device_id()));
-    cuda_streams_.resize(num_stream);
-    for (int i = 0; i < num_stream; i++) {
-      CUDA_CALL(cudaStreamCreate(&cuda_streams_[i]));
-    }
-    CUDA_CALL(cudaEventCreate(&start_event_));
-    CUDA_CALL(cudaEventCreate(&end_event_));
-    for (int i = 0; i < number; i++) {
-      // Init barrier events
-      cudaEvent_t stage_event;
-      CUDA_CALL(cudaEventCreateWithFlags(&stage_event, cudaEventDisableTiming));
-      stage_barriers_.push_back(stage_event);
-    }
+    this->profiler_ = op_profiler::OpProfiler::Get(device);
   }
 
   /*!
@@ -125,230 +112,16 @@ class IOSCostModel {
    * \return The latency of the stage.
    */
   std::vector<float> StageLatency(const std::vector<std::vector<Expr>>& groups) {
-    std::stringstream ss;
-    InitOpEnvs(groups);
-    AllocStreamWorkspaces();
-    std::vector<float> results = MeasureLatency();
-    ReleaseRecourses();
-    return results;
-  }
-
-  ~IOSCostModel() {
-    for (int i = 0; i < num_stream_; i++) {
-      CUDA_CALL(cudaStreamDestroy(cuda_streams_[i]));
-    }
-    CUDA_CALL(cudaEventDestroy(start_event_));
-    CUDA_CALL(cudaEventDestroy(end_event_));
-    for (int i = 0; i < number_; i++) {
-      CUDA_CALL(cudaEventDestroy(stage_barriers_[i]));
-    }
-  }
-
- private:
-  /*!
-   * \brief Initialize the OpEnvs for given groups.
-   * \param groups The independent groups.
-   */
-  void InitOpEnvs(const std::vector<std::vector<Expr>>& groups) {
-    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
-
-    // Get the dummy output value of each expr
-    for (auto& group : groups) {
-      for (const Expr& expr : group) {
-        Type type = expr->checked_type();
-        expr_output_[expr] = value::CreateDummyValueFromType(type, device_);
+    std::vector<Expr> flat_group;
+    std::vector<int> stream_ids;
+    for (size_t i = 0; i < groups.size(); i++) {
+      auto group = groups[i];
+      for (auto& expr : group) {
+        flat_group.push_back(expr);
+        stream_ids.push_back(i);  // The i-th group is assigned to the i-th stream.
       }
     }
-
-    // Assign the inputs and output for each expr
-    inputs_.resize(groups.size());
-    outputs_.resize(groups.size());
-    for (int i = 0; i < groups.size(); i++) {
-      auto& group = groups[i];
-      inputs_[i].resize(group.size());
-      outputs_[i].resize(group.size());
-      for (int j = 0; j < group.size(); j++) {
-        const Expr& expr = group[j];
-        if (auto call_node = expr.as<CallNode>()) {
-          inputs_[i][j].resize(call_node->args.size());
-          for (int k = 0; k < call_node->args.size(); k++) {
-            const Expr& arg_expr = call_node->args[k];
-            if (auto relay_const_node = arg_expr.as<RelayConstantNode>()) {
-              const auto* node = static_cast<const ConstantNode*>(relay_const_node);
-              CHECK_NOTNULL(node);
-              inputs_[i][j][k] = Downcast<Value>(node->value);
-            } else {
-              if (expr_output_.count(arg_expr)) {
-                inputs_[i][j][k] = expr_output_[arg_expr];
-              } else {
-                // this input comes from previous stages, use a dummy constant value
-                inputs_[i][j][k] =
-                    value::CreateDummyValueFromType(arg_expr->checked_type(), device_);
-              }
-            }
-          }
-        }
-        outputs_[i][j] = expr_output_[expr];
-      }
-    }
-
-    // Init EnvOps
-    op_envs_.resize(groups.size());
-    for (int i = 0; i < groups.size(); i++) {
-      op_envs_[i].resize(groups[i].size());
-      for (int j = 0; j < groups[i].size(); j++) {
-        Expr expr = groups[i][j];
-        if (auto call_node = expr.as<CallNode>()) {
-          HashKey key = GetHashKey(GetRef<Call>(call_node));
-          if (!op_env_cache_.Has(key.byte_vector)) {
-            Call call = GetRef<Call>(call_node);
-            CallValues call_values = CreateDummyCallValues(call, device_);
-            op_env_cache_.Set(key.byte_vector, Dispatch(call_values));
-          }
-          op_envs_[i][j] = *op_env_cache_.Get(key.byte_vector);
-
-          std::vector<Value> inputs;
-          for (int k : op_envs_[i][j]->arg_indices) {
-            CHECK_GE(k, 0) << "Invalid input index: " << i;
-            inputs.push_back(inputs_[i][j][k]);
-          }
-          inputs_[i][j] = inputs;
-        } else {
-          // For Tuple and TupleGetItem, there is not corresponding op env
-          op_envs_[i][j].reset();
-        }
-      }
-    }
-  }
-
-  /*!
-   * \brief Get the hash key for the call. We use it as the key in the OpEnv cache. We use the
-   * address of the call expression as the hash key because it is unique and will not change during
-   * the scheduling.
-   * \param call The call expression.
-   * \return The hash key.
-   */
-  static inline HashKey GetHashKey(const Expr& call) {
-    // The expr is consist in IOS searching, we use its address to differentiate different calls.
-    // Because the model is static during scheduling, we can use the expr alone as the key
-    HashKey key;
-    key << reinterpret_cast<std::uintptr_t>(call.get());
-    return key;
-  }
-
-  /*! * \brief Allocate the stream workspace for each stream. */
-  void AllocStreamWorkspaces() {
-    // Calculate the maximum workspace required by operators on each stream
-    std::vector<std::vector<int64_t>> stream_workspace_sizes(cuda_streams_.size());
-    for (int i = 0; i < op_envs_.size(); i++) {
-      for (int j = 0; j < op_envs_[i].size(); j++) {
-        if (!op_envs_[i][j]) {
-          continue;
-        }
-        std::shared_ptr<Requests> requests = op_envs_[i][j]->GetRequests();
-        if (stream_workspace_sizes[i].size() < requests->workspace.size()) {
-          stream_workspace_sizes[i].resize(requests->workspace.size(), 0);
-        }
-        for (int k = 0; k < requests->workspace.size(); k++) {
-          auto& request = requests->workspace[k];
-          stream_workspace_sizes[i][k] = std::max(stream_workspace_sizes[i][k], request.nbytes);
-        }
-      }
-    }
-
-    // Allocate workspace for each stream
-    stream_workspaces_.resize(cuda_streams_.size());
-    for (int i = 0; i < stream_workspace_sizes.size(); i++) {
-      stream_workspaces_[i].resize(stream_workspace_sizes[i].size());
-      for (int k = 0; k < stream_workspace_sizes[i].size(); k++) {
-        stream_workspaces_[i][k] =
-            memory_pool::Memory::Alloc(device_, stream_workspace_sizes[i][k]);
-      }
-    }
-
-    // Assign the workspace to operator workspace request
-    for (int i = 0; i < op_envs_.size(); i++) {
-      for (int j = 0; j < op_envs_[i].size(); j++) {
-        if (!op_envs_[i][j]) {
-          continue;
-        }
-        std::shared_ptr<Requests> requests = op_envs_[i][j]->GetRequests();
-        for (int k = 0; k < requests->workspace.size(); k++) {
-          auto& request = requests->workspace[k];
-          request.memory = stream_workspaces_[i][k];
-          *request.dest = stream_workspaces_[i][k]->data;
-        }
-      }
-    }
-  }
-
-  /*! * \brief Release recourses allocated for the measurement of a stage. */
-  void ReleaseRecourses() {
-    inputs_.clear();
-    outputs_.clear();
-    // Release the workspace memory hold by OpEnv
-    for (int i = 0; i < op_envs_.size(); i++) {
-      for (int j = 0; j < op_envs_[i].size(); j++) {
-        if (!op_envs_[i][j]) {
-          continue;
-        }
-        std::shared_ptr<Requests> requests = op_envs_[i][j]->GetRequests();
-        for (auto& request : op_envs_[i][j]->GetRequests()->workspace) {
-          *request.dest = nullptr;
-          request.memory.reset();
-        }
-      }
-    }
-    stream_workspaces_.clear();
-    op_envs_.clear();
-    expr_output_.clear();
-  }
-
-  /*!
-   * \brief Measure the latency of OpEnvs.
-   * \return A vector with `repeat` number of latencies.
-   */
-  std::vector<float> MeasureLatency() {
-    std::vector<float> results;
-    for (int t = 0; t < warmup_ + repeat_; t++) {
-      CUDA_CALL(cudaDeviceSynchronize());
-      CUDA_CALL(cudaEventRecord(start_event_, nullptr));
-
-      for (int i = 0; i < number_; i++) {
-        for (int j = 0; j < op_envs_.size(); j++) {
-          // set stream for subsequent op env execution
-          tvm::runtime::DeviceAPI::Get(device_)->SetStream(device_, cuda_streams_[j]);
-          mnm::op::cudnn::SetStream(cuda_streams_[j]);
-          mnm::op::cublas::SetStream(cuda_streams_[j]);
-
-          // issue kernels on current stream
-          for (int k = 0; k < op_envs_[j].size(); k++) {
-            auto op_env = op_envs_[j][k];
-            if (op_env) {
-              op_env->Execute(inputs_[j][k], outputs_[j][k]);
-            }
-          }
-
-          // recover to the default stream
-          tvm::runtime::DeviceAPI::Get(device_)->SetStream(device_, nullptr);
-          mnm::op::cudnn::SetStream(nullptr);
-          mnm::op::cublas::SetStream(nullptr);
-        }
-        if (i + 1 < num_stream_) {
-          CUDA_CALL(cudaEventRecord(stage_barriers_[i], nullptr));
-        }
-      }
-
-      CUDA_CALL(cudaEventRecord(end_event_, nullptr));
-      CUDA_CALL(cudaDeviceSynchronize());
-      float elapsed_time;
-      CUDA_CALL(cudaEventElapsedTime(&elapsed_time, start_event_, end_event_));
-
-      if (t >= warmup_) {
-        results.push_back(elapsed_time / float(number_));
-      }
-    }
-    return results;
+    return profiler_->ProfileOpGroup(flat_group, stream_ids, warmup_, number_, repeat_);
   }
 
  private:
@@ -356,45 +129,19 @@ class IOSCostModel {
 
   /*! \brief Target device to profile on. */
   Device device_;
-  /*! \brief Maximum number of cuda stream to support. */
-  int num_stream_;
   /*! \brief Number of warmups. */
   int warmup_;
   /*! \brief The number of executions as a repeat.*/
   int number_;
   /*! \brief The number of repeat times. */
   int repeat_;
-
-  /*The following data will live with the cost model. */
-
-  /*! \brief The cuda streams. */
-  std::vector<cudaStream_t> cuda_streams_;
-  /*! \brief The start cuda event. */
-  cudaEvent_t start_event_;
-  /*! \brief The end cuda event. */
-  cudaEvent_t end_event_;
-  /*! \brief The cuda events used to synchronize with the repeated stage when `number` > 1. */
-  std::vector<cudaEvent_t> stage_barriers_;
-  /*! \brief The OpEnv cache. */
-  OpEnvCache op_env_cache_;
-
-  /*The following data will live with for each profile. */
-
-  /*! \brief The mapping from expr to its pre-allocated output value. */
-  std::unordered_map<Expr, Value, ObjectPtrHash, ObjectPtrEqual> expr_output_;
-  /*! \brief The OpEnv for each call expression. */
-  std::vector<std::vector<std::shared_ptr<OpEnv>>> op_envs_;
-  /*! \brief The inputs for each OpEnv. */
-  std::vector<std::vector<std::vector<Value>>> inputs_;
-  /*! \brief The output for each OpEnv. */
-  std::vector<std::vector<Value>> outputs_;
-  /*! \brief The workspace for each cuda stream. */
-  std::vector<std::vector<std::shared_ptr<Memory>>> stream_workspaces_;
+  /*! \brief The op profiler. */
+  op_profiler::OpProfiler* profiler_;
 };
 #else
 class IOSCostModel {
  public:
-  IOSCostModel(Device device, int num_stream, int warmup, int number, int repeat) {
+  IOSCostModel(Device device, int warmup, int number, int repeat) {
     LOG(FATAL) << "Please build with CUDA enabled to use IOS schedule.";
   }
   std::vector<float> StageLatency(const std::vector<std::vector<Expr>>& groups) {
@@ -448,7 +195,7 @@ class IOSScheduler : public StreamSchedulerBase {
                         int max_stage_ops = 10, bool search_group_combination = true,
                         Array<Array<Op>> schedule_units = {}, int warmup = 2, int number = 5,
                         int repeat = 5, bool verbose = false)
-      : cost_model_(device, max_stream_num, warmup, number, repeat), verbose_(this, verbose) {
+      : cost_model_(device, warmup, number, repeat), verbose_(this, verbose) {
     CHECK_GE(max_stream_num, 1) << "Stream number must be greater or equal to 1, but got "
                                 << max_stream_num;
     CHECK_LE(max_block_size, 64) << "Only support maximum block size less or equal to 64, but got "

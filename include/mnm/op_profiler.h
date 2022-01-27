@@ -23,7 +23,26 @@ namespace op_profiler {
 using namespace mnm::op;
 using namespace mnm::value;
 
-using LatencyMapT = std::unordered_map<std::string, float>;
+using LatencyMapT = std::unordered_map<std::string, std::vector<float>>;
+
+/*! \brief A class to JIT op, create dummy input data, and allocate memory buffers for profiling. */
+class OpWithData {
+ public:
+  OpEnvPtr op_env = nullptr;
+  int stream_id = -1;
+  std::vector<Value> inputs;
+  Value output;
+
+  OpWithData(const Device device, const Expr& op, const int stream_id = -1);
+
+  ~OpWithData();
+
+  bool profilable() const {
+    return op_env != nullptr;
+  }
+};
+
+using OpWithDataPtr = std::shared_ptr<OpWithData>;
 
 /*! \brief Abstract base class for a profiler to profile per-op latency during compilation. */
 class OpProfiler {
@@ -31,12 +50,9 @@ class OpProfiler {
   /*!
    * \brief Dispatch to op profiler according to the given device type.
    * \param device The target device.
-   * \param warmup_tripcount The number of warmup iterations. Default 10.
-   * \param exec_tripcount The number of execution iterations. Default 10.
    * \return The op profiler pointer.
    */
-  static OpProfiler* Get(const Device& device, int32_t warmup_tripcount = 10,
-                         int32_t exec_tripcount = 10);
+  static OpProfiler* Get(const Device& device);
 
   virtual ~OpProfiler() {
   }
@@ -44,11 +60,30 @@ class OpProfiler {
   /*!
    * \brief Profile one op and return its latency in microseconds.
    * \param op The op to be profiled.
-   * \return The latency in microseconds from profiling. If cache hits, the
-   * latency is retrieved from the cache and no execution is performed on the
-   * device.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
+   * \return The latency in microseconds. If cache hits, the latency is retrieved
+   * from the cache and no execution is performed on the device.
    */
-  virtual float ProfileOp(const Expr& op);
+  std::vector<float> ProfileOp(const Expr& op, int32_t warmup = 10, int32_t exec_number = 10,
+                               int32_t repeat = 1);
+
+  /*!
+   * \brief Profile a group of ops and return the total latency in microseconds.
+   * If stream_ids are presented, each op will be launched on the corresponding stream,
+   * which enables async execution.
+   * \param ops The ops to be profiled.
+   * \param stream_ids The stream id for each op, or default stream if empty.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
+   * \return The latency in microseconds. If cache hits, the latency is retrieved
+   * from the cache and no execution is performed on the device.
+   */
+  std::vector<float> ProfileOpGroup(const std::vector<Expr>& ops,
+                                    const std::vector<int>& stream_ids = {}, int32_t warmup = 10,
+                                    int32_t exec_number = 10, int32_t repeat = 1);
 
   /*!
    * \brief Get the current size of latency cache.
@@ -65,24 +100,14 @@ class OpProfiler {
   }
 
  protected:
-  OpProfiler(const Device& device, int32_t warmup_tripcount, int32_t exec_tripcount)
-      : device_(device),
-        profile_warmup_tripcount_(warmup_tripcount),
-        profile_exec_tripcount_(exec_tripcount) {
+  OpProfiler(const Device& device) : device_(device) {
   }
 
   /*! \brief The target device. */
   Device device_;
-
   /*! \brief A cache to store the latency of profiled ops in microseconds. Cache key is
    * the byte string hash of a call node. */
   LatencyMapT latency_cache_;
-
-  /*! \brief The number of times to warmup the op. */
-  int32_t profile_warmup_tripcount_;
-
-  /*! \brief The number of times to actually execute the op. */
-  int32_t profile_exec_tripcount_;
 
  private:
   /*!
@@ -90,9 +115,9 @@ class OpProfiler {
    * argument and return types.
    *
    * \param call The call node to be hashed.
-   * \return The hashed key in a string.
+   * \return The hashed key.
    */
-  std::string HashCall(const Call& call) {
+  HashKey HashCall(const Call& call) {
     HashKey key;
 
     // Hash op name. Note that we directly use the object address as the key
@@ -111,106 +136,159 @@ class OpProfiler {
       key << mnm::ir::AsText(arg->checked_type(), false);
     }
     key << mnm::ir::AsText(call->checked_type(), false);
+    return key;
+  }
+
+  /*!
+   * \brief Generate a byte string hash for the given group node using their op, arguments,
+   * return types and stream ids.
+   *
+   * \param ops The group to be hashed.
+   * \param stream_ids The stream IDs.
+   * \return The hashed key.
+   */
+  HashKey HashGroup(const std::vector<Expr>& ops, const std::vector<int> stream_ids = {}) {
+    HashKey key;
+    std::vector<int> processed_stream_ids = stream_ids;
+
+    if (processed_stream_ids.empty()) {
+      for (auto op : ops) {
+        processed_stream_ids.push_back(-1);
+      }
+    }
+    CHECK_EQ(processed_stream_ids.size(), ops.size())
+        << "The length of stream_ids does not match ops";
+
+    for (size_t i = 0; i < ops.size(); ++i) {
+      auto op = ops[i];
+      if (auto call_node = op.as<CallNode>()) {
+        key << HashCall(GetRef<Call>(call_node));
+      } else {
+        // For non-call nodes, we simply hash their type.
+        key << mnm::ir::AsText(op->checked_type(), false);
+      }
+      key << stream_ids[i];
+    }
+    return key;
+  }
+
+  inline std::string HashKeyToStr(const HashKey& key) {
     return std::string(key.byte_vector.begin(), key.byte_vector.end());
   }
 
   /*!
    * \brief The function that actually executes the op on the device.
-   * \param op_env Pointer to the OpEnv for this op.
-   * \param dummy_inputs A vector of dummy inputs for this op.
-   * \param dummy_output Space reserved for the dummy output of this op.
+   * \param op_with_data The executable op with data.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
    * \return The measured execution time of this op in microseconds.
    */
-  virtual float RunOp_(const OpEnvPtr& op_env, const std::vector<value::Value>& dummy_inputs,
-                       const Value& dummy_output) = 0;
+  virtual std::vector<float> RunOp(const OpWithDataPtr& op_with_data, int32_t warmup = 10,
+                                   int32_t exec_number = 10, int32_t repeat = 1) = 0;
+
+  /*!
+   * \brief The function that actually executes a op group on the device.
+   * \param op_with_datas The executable op with data.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
+   * \return The measured execution time of executing an entire group in microseconds.
+   */
+  virtual std::vector<float> RunOpGroup(const std::vector<OpWithDataPtr>& op_with_datas,
+                                        int32_t warmup = 10, int32_t exec_number = 10,
+                                        int32_t repeat = 1) = 0;
 };
 
 /*! \brief A profiler to profile per-op latency on CPU during compilation. */
 class CPUOpProfiler : public OpProfiler {
  public:
-  /*! \brief Create a static CPUOpProfiler for the target CPU device and return a pointer to it. */
-  static CPUOpProfiler* Get(const Device& device, int32_t warmup_tripcount = 10,
-                            int32_t exec_tripcount = 10);
+  CPUOpProfiler(const Device& device) : OpProfiler(device) {
+    CHECK_EQ(device.device_type(), DevType::kCPU()) << "CPUOpProfiler only supports CPU devices!";
+  }
 
   virtual ~CPUOpProfiler() {
   }
 
-  /*!
-   * \brief Profile one op and return its latency in microseconds.
-   * \param op The op to be profiled.
-   * \return The latency in microseconds from profiling. If cache hits, the
-   * latency is retrieved from the cache and no execution is performed on the
-   * device.
-   */
-  virtual float ProfileOp(const Expr& op) {
-    return OpProfiler::ProfileOp(op);
-  }
-
  private:
-  CPUOpProfiler(const Device& device, int32_t warmup_tripcount, int32_t exec_tripcount)
-      : OpProfiler(device, warmup_tripcount, exec_tripcount) {
-    CHECK_EQ(device.device_type(), DevType::kCPU()) << "CPUOpProfiler only supports CPU devices!";
-  }
-
   /*!
-   * \brief Execute the op on the target CPU device.
-   * \param op_env Pointer to the OpEnv for this op.
-   * \param dummy_inputs A vector of dummy inputs for this op.
-   * \param dummy_output Space reserved for the dummy output of this op.
+   * \brief The function that actually executes the op on the device.
+   * \param op_with_data The executable op with data.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
    * \return The measured execution time of this op in microseconds.
    */
-  virtual float RunOp_(const OpEnvPtr& op_env, const std::vector<value::Value>& dummy_inputs,
-                       const Value& dummy_output);
+  virtual std::vector<float> RunOp(const OpWithDataPtr& op_with_data, int32_t warmup = 10,
+                                   int32_t exec_number = 10, int32_t repeat = 1);
+
+  /*!
+   * \brief The function that actually executes a op group on the device.
+   * \param op_with_datas The executable op with data.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
+   * \return The measured execution time of executing an entire group in microseconds.
+   */
+  virtual std::vector<float> RunOpGroup(const std::vector<OpWithDataPtr>& op_with_datas,
+                                        int32_t warmup = 10, int32_t exec_number = 10,
+                                        int32_t repeat = 1);
 };
 
 #ifdef MNM_USE_CUDA
 /*! \brief A profiler to profile per-op latency on a CUDA device during compilation. */
 class CUDAOpProfiler : public OpProfiler {
  public:
-  /*! \brief Create a static CUDAOpProfiler for the target CUDA device and return a pointer to it.
-   */
-  static CUDAOpProfiler* Get(const Device& device, int32_t warmup_tripcount = 10,
-                             int32_t exec_tripcount = 10);
-
-  /*!
-   * \brief Profile one op and return its latency in microseconds.
-   * \param op The op to be profiled.
-   * \return The latency in microseconds from profiling. If cache hits, the
-   * latency is retrieved from the cache and no execution is performed on the
-   * device.
-   */
-  virtual float ProfileOp(const Expr& op) {
-    return OpProfiler::ProfileOp(op);
-  }
-
-  virtual ~CUDAOpProfiler() {
-    CUDA_CALL(cudaEventDestroy(start_event_));
-    CUDA_CALL(cudaEventDestroy(end_event_));
-  }
-
- private:
-  CUDAOpProfiler(const Device& device, int32_t warmup_tripcount, int32_t exec_tripcount)
-      : OpProfiler(device, warmup_tripcount, exec_tripcount) {
+  CUDAOpProfiler(const Device& device) : OpProfiler(device) {
     CHECK_EQ(device.device_type(), DevType::kCUDA())
         << "CUDAOpProfiler only supports CUDA devices!";
+    cuda_api_ = tvm::runtime::DeviceAPI::Get(device_);
     CUDA_CALL(cudaSetDevice(device.device_id()));
     CUDA_CALL(cudaEventCreate(&start_event_));
     CUDA_CALL(cudaEventCreate(&end_event_));
   }
 
+  virtual ~CUDAOpProfiler() {
+    CUDA_CALL(cudaEventDestroy(start_event_));
+    CUDA_CALL(cudaEventDestroy(end_event_));
+    for (auto id_n_stream : streams_) {
+      if (id_n_stream.second != nullptr) {
+        CUDA_CALL(cudaStreamDestroy(id_n_stream.second));
+      }
+    }
+  }
+
+ private:
   /*!
-   * \brief Execute the op on the target CPU device.
-   * \param op_env Pointer to the OpEnv for this op.
-   * \param dummy_inputs A vector of dummy inputs for this op.
-   * \param dummy_output Space reserved for the dummy output of this op.
+   * \brief The function that actually executes the op on the device.
+   * \param op_with_data The executable op with data.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
    * \return The measured execution time of this op in microseconds.
    */
-  virtual float RunOp_(const OpEnvPtr& op_env, const std::vector<value::Value>& dummy_inputs,
-                       const Value& dummy_output);
+  virtual std::vector<float> RunOp(const OpWithDataPtr& op_with_data, int32_t warmup = 10,
+                                   int32_t exec_number = 10, int32_t repeat = 1);
+
+  /*!
+   * \brief The function that actually executes a op group on the device.
+   * \param op_with_datas The executable op with data.
+   * \param warmup The number of warmup iterations. Default 10.
+   * \param exec_number The number of execution iterations. Default 10.
+   * \param repeat The number of repeat iterations. Default 1.
+   * \return The measured execution time of executing an entire group in microseconds.
+   */
+  virtual std::vector<float> RunOpGroup(const std::vector<OpWithDataPtr>& op_with_datas,
+                                        int32_t warmup = 10, int32_t exec_number = 10,
+                                        int32_t repeat = 1);
 
   /*! \brief CUDA events to time the execution of ops. */
   cudaEvent_t start_event_;
   cudaEvent_t end_event_;
+  /*! \brief Stream ID to CUDA stream. */
+  std::unordered_map<int, cudaStream_t> streams_;
+  /*! \brief CUDA device API. */
+  tvm::runtime::DeviceAPI* cuda_api_;
 };
 #endif
 
