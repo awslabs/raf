@@ -79,12 +79,12 @@ class LambdaLifter : public ExprMutator {
       if (auto func = op->value.as<FunctionNode>()) {
         if (!func->HasNonzeroAttr(tvm::relay::attr::kPrimitive)) {
           is_lambda = true;
-          letrec_.push_back(op->var);
+          curr_lambda_lets_.push_back(op->var);
         }
       }
       auto value = VisitExpr(op->value);
       if (is_lambda) {
-        letrec_.pop_back();
+        curr_lambda_lets_.pop_back();
       }
     };
     auto post_visit = [this](const LetNode* op) {
@@ -101,8 +101,10 @@ class LambdaLifter : public ExprMutator {
   Expr VisitExpr_(const CallNode* call_node) final {
     auto call = Downcast<Call>(ExprMutator::VisitExpr_(call_node));
     if (auto var_node = call_node->op.as<VarNode>()) {
+      // If this is calling a lambda function, which should have been lifted,
+      // then we update the callee to the global var of the lifted function.
       auto var = GetRef<Var>(var_node);
-      if (!letrec_.empty() && var == letrec_.back()) {
+      if (!curr_lambda_lets_.empty() && var == curr_lambda_lets_.back()) {
         auto it = lambda_map_.find(var);
         CHECK(it != lambda_map_.end());
         return Call(it->second, call->args, call_node->attrs, call_node->type_args);
@@ -126,7 +128,7 @@ class LambdaLifter : public ExprMutator {
     Array<Var> captured_vars;
     bool recursive = false;
     for (const auto& var : free_vars) {
-      if (!letrec_.empty() && var == letrec_.back()) {
+      if (!curr_lambda_lets_.empty() && var == curr_lambda_lets_.back()) {
         recursive = true;
         continue;
       }
@@ -138,39 +140,33 @@ class LambdaLifter : public ExprMutator {
         for (auto fv : captured_vars) {
           fvs.push_back(fv);
         }
-        lambda_map_.emplace(letrec_.back(), Call(global, fvs));
+        lambda_map_.emplace(curr_lambda_lets_.back(), Call(global, fvs));
       } else {
-        lambda_map_.emplace(letrec_.back(), global);
+        lambda_map_.emplace(curr_lambda_lets_.back(), global);
       }
     }
     auto body = Downcast<Function>(ExprMutator::VisitExpr_(func_node));
 
-    // When performing this optimization there are two cases.
-    //
-    // The first case in which we have no free variables
-    // we can just lift the function into the global
-    // environment without needing to allocate a closure.
-    //
-    // The second case requires that we generate a special
-    // function which makes a distinction between allocating
-    // a closure, and then the code for the closure.
-    //
-    // We represent a closure allocation by lifting the
-    // closure to a global function which takes its
-    // captured arguments and then directly returns
-    // the function representing the closure's code.
-    //
-    // When we generate code later on a call to the "outer"
-    // function marked as a closure is used to emit allocation
-    // code for the closure's environment.
-    //
-    // The "inner" function should be used to generate the
-    // code for the closure.
-
+    // Lift the closure to be a global function.
     Function lifted_func;
     if (captured_vars.size() == 0) {
+      // The function is self-contained. We can just lift it without allocating a closure.
       lifted_func = Function(body->params, body->body, {}, {});
     } else {
+      // The function has free variables, meaning that the function body uses variables
+      // other then the function arguments, so we allocate a closure to preserve the semantics.
+      // Example:
+      // def @lifted_name17350894363744824019(%y, Closure=1) {
+      //   fn (%x: Tensor[(1, 100), float32]) {
+      //     ... %x ... %y ...
+      //   }
+      // }
+      // def @main(%x, %y) {
+      //   let %a1 = @lifted_name17350894363744824019(%y);
+      //   let %a2 = %a1(%x);
+      //   %a2
+      // }
+      // To flat the above function, apply FlattenClosure after this pass.
       lifted_func = CreateGlobalFunc(captured_vars, body, func->func_type_annotation());
       lifted_func = MarkClosure(lifted_func);
     }
@@ -190,8 +186,7 @@ class LambdaLifter : public ExprMutator {
     if (captured_vars.size() == 0) {
       return std::move(global);
     } else {
-      // If we need to allocate a closure,
-      // we pass the variables in its environment here.
+      // If we need to allocate a closure, we pass the variables in its environment here.
       Array<Expr> fvs;
       for (auto fv : captured_vars) {
         fvs.push_back(fv);
@@ -214,10 +209,12 @@ class LambdaLifter : public ExprMutator {
   }
 
  private:
-  // initialized in constructor
+  /*! \brief The working module. */
   ir::IRModule module_;
+  /*! \brief Mapping from the let-binding var of a closure to its lifted global var. */
   std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual> lambda_map_;
-  std::vector<Var> letrec_;
+  /*! \brief A list of current visiting lambda vars. Recursion happens when list size > 1. */
+  std::vector<Var> curr_lambda_lets_;
 };
 
 }  // namespace lambda_lift

@@ -20,64 +20,69 @@ namespace mnm {
 namespace pass {
 /*
   Lambda lifting pass lifts the closures into the global variables, but as of now it keeps the
-  closures inside the lifted function. For example,
+  closures inside the lifted function if the closure uses variables other than the arguments.
+  In the following example, the closure uses %y, which does not in its argument list.
+
   ###############
   Original module
   ###############
   def @main(%y: Tensor[(1, 100), float32], %z: Tensor[(1, 100), float32]) {
-    let %a1 = let %a2 = fn (%x: Tensor[(1, 100), float32]) {
-      let %a3 = mnm.op.tanh(%x);
-      let %a4 = mnm.op.tanh(%y);
-      let %a5 = mnm.op.add(%a3, %a4, -114514, -114514);
-      %a5
+    let %a1 = fn (%x: Tensor[(1, 100), float32]) {
+      let %a2 = mnm.op.tanh(%x);
+      let %a3 = mnm.op.tanh(%y);
+      let %a4 = mnm.op.add(%a3, %a4, nullptr, nullptr);
+      %a4
     };
-    %a2; <-- a2 is the closure
-    let %a6 = %a1(%z);
+    let %a5 = %a1; <-- This may be caused by Relay ToANF pass to avoid nested let bindings
+    let %a6 = %a5(%z);
     %a6
   }
-
 
   ####################
   After Lambda lifting
   ####################
   def @main(%y: Tensor[(1, 100), float32], %z: Tensor[(1, 100), float32]) {
     let %a1 = @lifted_name17350894363744824019(%y);
-    let %a6 = %a1(%z);
+    let %a5 = %a1;
+    let %a6 = %a5(%z);
     %a6
   }
 
-  --> Lambda is lifted to global var, but it has the closure inside
+  // Lambda is lifted, but the closure is preserved to keep the semantic of using %y.
   def @lifted_name17350894363744824019(%y, Closure=1) {
-  fn (%x: Tensor[(1, 100), float32]) {
-      let %a3 = mnm.op.tanh(%x);
-      let %a4 = mnm.op.tanh(%y);
-      let %a5 = mnm.op.add(%a3, %a4, -114514, -114514);
-      %a5
-    }
+    fn (%x: Tensor[(1, 100), float32]) {
+        let %a2 = mnm.op.tanh(%x);
+        let %a3 = mnm.op.tanh(%y);
+        let %a4 = mnm.op.add(%a2, %a3, nullptr, nullptr);
+        %a5
+      }
   }
 
-  This pass flattens the closure such that the lifted closure just has the func body. This also
-  changes the call sites.
+  This pass flats the closure such that the lifted closure just has the func body.
   #####################
   After Flatten Closure
   #####################
+  // Now we only need one caller with all required arguments.
   def @main(%y: Tensor[(1, 100), float32], %z: Tensor[(1, 100), float32]) {
     let %a6 = @lifted_name17350894363744824019(%z, %y);
     %a6
   }
 
+  // The lifted function is flattened to have only the func body.
   def @lifted_name17350894363744824019(%x: Tensor[(1, 100), float32], %y) {
     let %a3 = mnm.op.tanh(%x);
     let %a4 = mnm.op.tanh(%y);
     let %a5 = mnm.op.add(%a3, %a4, -114514, -114514);
     %a5
   }
-
 */
 namespace flatten_closure {
 
 using namespace mnm::ir;
 using namespace mnm::op;
+
+template <typename T>
+using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
 
 class ClosureFlattener : public MixedModeMutator {
  public:
@@ -128,12 +133,25 @@ class ClosureFlattener : public MixedModeMutator {
   }
 
   Expr VisitExpr_(const LetNode* let_node) final {
+    // We target to the following pattern:
+    //   let %a1 = @lifted_name(%y); // Calling global var with captured vars.
+    //   let %a2 = %a1;              // It is possible to have redundant let.
+    //   let %a3 = %a2(%x);          // Calling the lifted function with arguments.
+    // And transform them to:
+    //   let %x1 = @lifted_name(%y, %x); // The lifted function should have been flatten.
     auto var = let_node->var;
     auto value = Mutate(let_node->value);
-    if (auto call_node = value.as<CallNode>()) {
+    if (auto var_node = value.as<VarNode>()) {
+      auto local_var = GetRef<Var>(var_node);
+      if (var_to_closure_captured_vars_.count(local_var) > 0) {
+        // In this case, var is redundant (i.e., %a2) so we map %a2 -> %a1 and remove this binding.
+        var_to_closure_captured_vars_[var] = var_to_closure_captured_vars_[local_var];
+        var_to_closure_lifted_gvar_[var] = var_to_closure_lifted_gvar_[local_var];
+        return Mutate(let_node->body);
+      }
+    } else if (auto call_node = value.as<CallNode>()) {
       if (auto gvar_node = call_node->op.as<GlobalVarNode>()) {
-        // Check if the value is actually a global var call which is lifted gvar
-        // If yes, save the let var and captured var to replace the call site later on
+        // Save the let var and captured var to replace the call site later on.
         auto gvar = GetRef<GlobalVar>(gvar_node);
         auto global_func = module_->Lookup(gvar);
         if (lifted_gvars_.count(gvar)) {
@@ -164,10 +182,11 @@ class ClosureFlattener : public MixedModeMutator {
  private:
   // initialized in constructor
   IRModule module_;
-  /* \brief The mapping from let var to the lifted gvar extracted from the value binding */
-  std::unordered_map<Var, GlobalVar, ObjectPtrHash, ObjectPtrEqual> var_to_closure_lifted_gvar_;
-  /* \brief The mapping from let var to the captured variable used in the lifted gvar call */
-  std::unordered_map<Var, Array<Expr>, ObjectPtrHash, ObjectPtrEqual> var_to_closure_captured_vars_;
+  /*! \brief The mapping from let var to the lifted gvar extracted from the value binding */
+  StdMap<GlobalVar> var_to_closure_lifted_gvar_;
+  /*! \brief The mapping from let var to the captured variable used in the lifted gvar call */
+  StdMap<Array<Expr>> var_to_closure_captured_vars_;
+  /*! \brief The set of lifted global vars. */
   std::unordered_set<GlobalVar, ObjectPtrHash, ObjectPtrEqual> lifted_gvars_;
 };
 
