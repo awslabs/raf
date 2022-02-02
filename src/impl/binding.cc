@@ -259,10 +259,9 @@ Var LookupGrad(Var var) {
   return tape.defined() ? tape->grad : NullValue<Var>();
 }
 
-TensorValue MakeOnes(Device to_dev) {
+TensorValue MakeOnes(Device to_dev, DType dtype) {
   static float a[1] = {1.0};
   static int64_t b[1] = {1};
-  DType dtype = DType(DTypeCode::kFloat(), 32, 1);
   DLTensor tensor;
   tensor.data = a;
   tensor.device = Device(DevType::kCPU(), 0);
@@ -277,9 +276,11 @@ TensorValue MakeOnes(Device to_dev) {
 }
 
 void Backward(Var var, Var dy_var) {
-  Device y_dev = Downcast<TensorValue>(LookupBoundValue(var))->tensor->device;
+  auto y_tensor = Downcast<TensorValue>(LookupBoundValue(var))->tensor;
+  Device y_dev = y_tensor->device;
+  DType y_dtype = y_tensor->dtype;
   Value dy = dy_var.defined() ? Downcast<NDArrayBinding>(LookupBinding(dy_var.operator->()))->value
-                              : MakeOnes(y_dev);
+                              : MakeOnes(y_dev, y_dtype);
   GradTape tape = Downcast<NDArrayBinding>(LookupBinding(var.operator->()))->tape;
   if (!tape.defined()) {
     return;

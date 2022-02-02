@@ -1,4 +1,5 @@
 """SGD optimizer."""
+# pylint: disable=too-many-statements,too-many-instance-attributes
 import numpy as np
 
 from mnm._core.core_utils import get_chained_attr
@@ -6,7 +7,7 @@ from mnm._core.ndarray import ndarray, array
 from mnm.model import trace, Model, trace_mutate_attr
 from mnm.model.trace import _get_func_inputs
 from mnm._op import imp
-from mnm._op.sym import multiply, add, subtract, strided_slice
+from mnm._op.sym import multiply, add, subtract, strided_slice, cast
 from .. import distributed as dist
 from .data_parallel import with_data_parallel
 from ..distributed.op import allgather
@@ -70,13 +71,28 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
         The wrapper which wraps a model with sgd
     """
 
+    def get_model_dtype(model):
+        """A helper function to determine the parameter dtype by referring to
+        the first floating type parameter.
+
+        Parameters
+        ----------
+        model: Model
+            The model to be evaluated.
+        """
+        for param in model.state().values():
+            if "float" in param.dtype:
+                return param.dtype
+        return "float32"
+
     def decorator(model):
         class SGDWrapper(Model):
             """sgd wrapper model
 
             Parameters
             ----------
-            model: the forward model
+            model: Model
+                The forward model
             """
 
             # pylint: disable=attribute-defined-outside-init, protected-access, too-many-locals
@@ -87,8 +103,17 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 self.learning_rate = array(learning_rate, dtype="float32")
                 self.momentum = array(momentum, dtype="float32")
 
+                # Determine the parameter dtype by referring to the first floating type parameter.
+                self.dtype = get_model_dtype(self.model)
+
+                # Whether we have SGD weight buffers that are differernt from model parameters.
+                # In the case of training a float32 model on single device, the SGD weights
+                # are always identical to the model parameters, so we don't need to create
+                # additional buffers in SGD status.
+                self.has_sgd_w = False
+
                 # TODO(issue 758): Remove this and in-place update parameters.
-                self.zero = array(0, dtype="float32")
+                self.zero = array(0, dtype=self.dtype)
 
                 dctx = dist.get_context()
                 self.params = {}
@@ -98,22 +123,47 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                     if param.requires_grad is True:
                         assert isinstance(param, ndarray), "Only `mnm.ndarray` can be optimized!"
 
-                        # If optimizer status partitioning is enable, then the first axis of
-                        # variant and weight is partitioned to 1/n. Accordingly, we have to
-                        # also keep a param.w (size 1/n) locally.
-                        part_shape = param.shape
-                        if dctx.zero_opt_level:
-                            # Pad and copy a slice of weight to be the SGD statues.
-                            param_np = param.to(device="cpu")
-                            slice_param = split_ndarray_with_padding(param_np, dctx.size)[dctx.rank]
-                            v_w = ndarray(slice_param, device=param.device, name=f"{name}.sgd_w")
-                            setattr(self, f"{name}.sgd_w", v_w)
-                            part_shape = slice_param.shape
-                        else:
-                            v_w = param
+                        # By default we directly use the model parameter as the SGD weight.
+                        v_w = param
 
+                        status_shape = param.shape
+                        if dctx.zero_opt_level:
+                            # If optimizer status partitioning is enable, then the first axis of
+                            # variant and weight is partitioned to 1/n. Accordingly, we have to
+                            # also keep a param.w (size 1/n) locally.
+
+                            # Pad and copy a slice of weight to be the SGD statues.
+                            param_nd = param.to(device="cpu")
+                            if "float" in param.dtype and param.dtype != "float32":
+                                param_nd = param_nd.to(dtype="float32")
+                            slice_param = split_ndarray_with_padding(param_nd, dctx.size)[dctx.rank]
+                            v_w = ndarray(
+                                slice_param,
+                                device=param.device,
+                                name=f"{name}.sgd_w",
+                                dtype="float32",
+                            )
+                            self.has_sgd_w = True
+
+                            # The SGD status shape of this parameter is now 1/n.
+                            status_shape = slice_param.shape
+                        elif "float" in param.dtype and param.dtype != "float32":
+                            # Maintain float32 weights for accuracy.
+                            v_w = ndarray(
+                                param.to(dtype="float32"),
+                                device=param.device,
+                                name=f"{name}.sgd_w",
+                                dtype="float32",
+                            )
+                            self.has_sgd_w = True
+
+                        # Maintain a weight copy if it is differernt as the model parameter.
+                        if self.has_sgd_w:
+                            setattr(self, f"{name}.sgd_w", v_w)
+
+                        # Initialize variants according to the status shape.
                         v_i = ndarray(
-                            np.zeros(part_shape, dtype=param.dtype),
+                            np.zeros(status_shape, dtype="float32"),
                             device=param.device,
                             name=f"{name}.sgd_v",
                         )
@@ -135,22 +185,32 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         if "float" not in sgd_w.dtype:
                             continue
 
-                        # Inplace update SGD variant and weight.
+                        # Cast gradient to float32 if necessary.
+                        if self.dtype != "float32":
+                            dxi = cast(dxi, "float32")
+
+                        # Inplace update the local SGD variant and weight (float32).
                         new_sgd_v = add(multiply(self.momentum, sgd_v), dxi, out=sgd_v)
                         new_sgd_w = subtract(
                             sgd_w, multiply(self.learning_rate, new_sgd_v), out=sgd_w
                         )
 
+                        # Cast the updated SGD weight to the model parameter dtype.
+                        if self.dtype != "float32":
+                            new_sgd_w = cast(new_sgd_w, self.dtype)
+
                         # If the SGD status is partitioned, use all-gather to sync
                         # the updated weights.
                         if dctx.zero_opt_level > 0:
-                            new_weight = allgather(new_sgd_w, axis=0)
+                            new_sgd_w = allgather(new_sgd_w, axis=0)
                             # Slice to remove the zero-padding if needed.
                             if sgd_w.shape[0] * dctx.size > weight.shape[0]:
-                                new_weight = strided_slice(new_weight, [0], [weight.shape[0]], [1])
-                            new_weight = add(new_weight, self.zero, out=weight)
-                        else:
-                            new_weight = new_sgd_w
+                                new_sgd_w = strided_slice(new_sgd_w, [0], [weight.shape[0]], [1])
+
+                        # Update the model parameter.
+                        new_weight = (
+                            add(new_sgd_w, self.zero, out=weight) if self.has_sgd_w else new_sgd_w
+                        )
 
                         # Put the updated weight to the model output to avoid being dead code.
                         param_model = get_chained_attr(self.model, name.split(".")[:-1])
