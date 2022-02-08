@@ -135,6 +135,19 @@ def with_lans(
         The wrapper which wraps a model with LANS
     """
 
+    def get_model_dtype(model):
+        """A helper function to determine the parameter dtype by referring to
+        the first floating type parameter.
+        Parameters
+        ----------
+        model: Model
+            The model to be evaluated.
+        """
+        for param in model.state().values():
+            if "float" in param.dtype:
+                return param.dtype
+        return "float32"
+
     def decorator(model):
         class LANSWrapper(Model):
             """LANS wrapper model
@@ -157,42 +170,56 @@ def with_lans(
                 self.grad_averaging = grad_averaging
                 self.beta1 = betas[0]
                 self.beta2 = betas[1]
-                self.zero = array(0.0, dtype="float32")
+                # Determine the parameter dtype by referring to the first floating type parameter.
+                self.dtype = get_model_dtype(self.model)
+                self.zero = array(0.0, dtype=self.dtype)
                 self.one = array(1.0, dtype="float32")
                 # mutable params: global step, and running averages
                 device = None
                 dctx = dist.get_context()
                 self.params = {}
-                for name, x in self.model.state().items():
-                    if x.requires_grad is True:
+                for name, param in self.model.state().items():
+                    if param.requires_grad is True:
                         if device is None:
-                            device = x.device
+                            device = param.device
                         else:
-                            assert device == x.device
-                        assert isinstance(x, ndarray), "Only `mnm.ndarray` can be optimized!"
+                            assert device == param.device
+                        assert isinstance(param, ndarray), "Only `mnm.ndarray` can be optimized!"
                         # If optimizer status partitioning is enable, then the first axis of
                         # variant and weight is partitioned to 1/n. Accordingly, we have to
                         # also keep a param.w (size 1/n) locally.
-                        part_shape = x.shape
+                        part_shape = param.shape
                         if dctx.zero_opt_level:
                             # Pad and copy a slice of weight.
-                            param_np = x.to(device="cpu")
-                            slice_param = split_ndarray_with_padding(param_np, dctx.size)[dctx.rank]
+                            param_nd = param.to(device="cpu")
+                            if "float" in param.dtype and param.dtype != "float32":
+                                param_nd = param_nd.to(dtype="float32")
+                            slice_param = split_ndarray_with_padding(param_nd, dctx.size)[dctx.rank]
                             param_part = ndarray(
-                                slice_param, device=x.device, name=f"{name}.lans_w"
+                                slice_param,
+                                device=param.device,
+                                name=f"{name}.lans_w",
+                                dtype="float32",
                             )
-                            setattr(self, f"{name}.lans_w", param_part)
                             weight = param_part
+                            setattr(self, f"{name}.lans_w", weight)
                             part_shape = slice_param.shape
+                        elif "float" in param.dtype and param.dtype != "float32":
+                            weight = ndarray(
+                                param.to(dtype="float32"),
+                                device=param.device,
+                                name=f"{name}.lans_w",
+                                dtype="float32",
+                            )
+                            setattr(self, f"{name}.lans_w", weight)
                         else:
-                            weight = x
-
-                        npa = np.zeros(part_shape, dtype=x.dtype)
+                            weight = param
+                        npa = np.zeros(part_shape, dtype="float32")
                         m_i = array(npa, device=device, name=f"{name}.m")
                         v_i = array(npa, device=device, name=f"{name}.v")
                         setattr(self, f"{name}.m", m_i)
                         setattr(self, f"{name}.v", v_i)
-                        self.params[x._ndarray__handle] = (name, x, weight, m_i, v_i)
+                        self.params[param._ndarray__handle] = (name, param, weight, m_i, v_i)
                 assert device is not None
                 self.step = array(0.0, dtype="float32", device=device, name="step")
 
@@ -217,12 +244,17 @@ def with_lans(
                     dxi = dxs[i] if len(inputs) > 1 else dxs
                     if param in self.params and has_grad(dxi):
                         name, p, w, m, v = self.params[param]
-                        if "float" in w.dtype:
-                            g_list.append(dxi)
-                            x_list.append(w)
-                            m_list.append(m)
-                            v_list.append(v)
-                            ntensor += 1
+                        if "float" not in w.dtype:
+                            continue
+
+                        if self.dtype != "float32":
+                            dxi = _op.cast(dxi, "float32")
+
+                        g_list.append(dxi)
+                        x_list.append(w)
+                        m_list.append(m)
+                        v_list.append(v)
+                        ntensor += 1
 
                 tensor_list = g_list + x_list + m_list + v_list
                 output_list = _op.lans(
@@ -246,6 +278,9 @@ def with_lans(
                         name, p, w, m, v = self.params[param]
                         if "float" in w.dtype:
                             new_w = output_list[out_idx + ntensor]
+                            if self.dtype != "float32":
+                                new_w = _op.cast(new_w, self.dtype)
+
                             next_m = output_list[out_idx + 2 * ntensor]
                             next_v = output_list[out_idx + 3 * ntensor]
                             param_model = get_chained_attr(self.model, name.split(".")[:-1])
@@ -258,6 +293,8 @@ def with_lans(
                                     )
                                 next_w = _op.add(new_weight, self.zero, out=p)
                             else:
+                                # LANS inplace upates the weight
+                                # So the new  weight is just the input weight
                                 next_w = new_w
 
                             trace_mutate_attr(param_model, name.split(".")[-1], next_w)
