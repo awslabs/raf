@@ -121,12 +121,20 @@ class CommunicatorManager {
     return instance;
   }
 
-  Communicator* GetCommunicator(const std::string& name = "nccl",
+  Communicator* GetCommunicator(const std::string& name = "",
                                 const std::vector<int64_t>& rank_list = {}) {
     auto id = CommunicatorID(name, rank_list);
+
     if (comm_.count(id) == 0) {
       const std::string prefix = "mnm.distributed.communicator._make.";
-      void* comm_handler = GetPackedFunc(prefix + name)(
+      auto func_name = prefix + (!name.empty() ? name :
+#ifdef MNM_USE_NCCL
+                                               "nccl"
+#else
+                                               "void"
+#endif
+                                );
+      void* comm_handler = GetPackedFunc(func_name)(
           op::ArrayToIntTuple(rank_list));     // will check whether the function exists or not
       std::shared_ptr<Communicator> comm_ptr;  // NOTE: should we return a shared_ptr<Comm>?
       comm_ptr.reset(static_cast<Communicator*>(comm_handler));
