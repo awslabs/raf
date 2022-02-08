@@ -1,9 +1,15 @@
 name: Update Submodule TVM
 on:
+  schedule:
+    # Note that cron uses UTC times and weeks start from Sunday (0).
+    # Run every Monday at 5am (PST).
+    - cron:  '0 13 * * 1'
+
   workflow_dispatch:
 
 jobs:
   update-tvm-n-send-PR:
+    if: github.repository == 'meta-project/meta'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -32,4 +38,8 @@ jobs:
           
           Please check the CI results before merge it.
           If one or more tests failed, please commit necessary changes to this branch (update-submodule-tvm-${{ steps.date.outputs.now }}).
+          
+          If there are more than one PRs like this, please keep the latest one and manually close others.
+          
+          cc @meta-project/meta-committer
         draft: false

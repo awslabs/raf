@@ -69,6 +69,7 @@ __all__ = [
     "cross_entropy_dpred",
     "cross_entropy_dtrue",
     "cumsum",
+    "defuse_tensor",
     "dense",
     "device_copy",
     "divide",
@@ -83,6 +84,7 @@ __all__ = [
     "floor_divide",
     "full",
     "full_like",
+    "fuse_tensor",
     "gather",
     "gather_dx",
     "gather_nd",
@@ -779,6 +781,15 @@ def cumsum(x, axis, dtype="float32", exclusive=False):
 
 
 @set_module("mnm")
+def defuse_tensor(data, sizes, shapes, shape_indices):
+    data = imp_utils.to_tensor(data)
+    sizes = imp_utils.to_int_tuple(sizes)
+    shapes = imp_utils.to_int_tuple(shapes)
+    shape_indices = imp_utils.to_int_tuple(shape_indices)
+    return imp_utils.ret(ffi.defuse_tensor(data, sizes, shapes, shape_indices))
+
+
+@set_module("mnm")
 def dense(x1, x2):
     x1 = imp_utils.to_any(x1)
     x2 = imp_utils.to_any(x2)
@@ -786,11 +797,11 @@ def dense(x1, x2):
 
 
 @set_module("mnm")
-def device_copy(data, src_dev_type=0, dst_dev_type=0):
+def device_copy(data, src_device="cpu", dst_device="cpu"):
     data = imp_utils.to_tensor(data)
-    src_dev_type = imp_utils.to_int(src_dev_type)
-    dst_dev_type = imp_utils.to_int(dst_dev_type)
-    return imp_utils.ret(ffi.device_copy(data, src_dev_type, dst_dev_type))
+    src_device = imp_utils.to_string(src_device)
+    dst_device = imp_utils.to_string(dst_device)
+    return imp_utils.ret(ffi.device_copy(data, src_device, dst_device))
 
 
 @set_module("mnm")
@@ -877,6 +888,12 @@ def full_like(data, fill_value):
     data = imp_utils.to_tensor(data)
     fill_value = imp_utils.to_double(fill_value)
     return imp_utils.ret(ffi.full_like(data, fill_value))
+
+
+@set_module("mnm")
+def fuse_tensor(data):
+    data = imp_utils.to_tensor_tuple(data)
+    return imp_utils.ret(ffi.fuse_tensor(data))
 
 
 @set_module("mnm")

@@ -63,6 +63,7 @@ from ._internal import cross_entropy
 from ._internal import cross_entropy_dpred
 from ._internal import cross_entropy_dtrue
 from ._internal import cumsum
+from ._internal import defuse_tensor
 from ._internal import dense
 from ._internal import device_copy
 from ._internal import divide
@@ -77,6 +78,7 @@ from ._internal import floor
 from ._internal import floor_divide
 from ._internal import full
 from ._internal import full_like
+from ._internal import fuse_tensor
 from ._internal import gather
 from ._internal import gather_dx
 from ._internal import gather_nd

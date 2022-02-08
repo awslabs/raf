@@ -4,3 +4,4 @@
 from __future__ import absolute_import
 from ._internal import cpu
 from ._internal import cuda
+from ._internal import cuda_host

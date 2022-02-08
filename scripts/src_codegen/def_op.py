@@ -153,6 +153,8 @@ OPS = [
     Op(name="_contrib_dropout_dx", schema_name="dropout_dx"),
     Op(name="non_max_suppression", schema_name="non_max_suppression"),
     Op(name="stream_sync", schema_name="stream"),
+    Op(name="fuse_tensor", schema_name="fuse_tensor"),
+    Op(name="defuse_tensor", schema_name="defuse_tensor"),
     Op(name="cast", schema_name="cast"),
     Op(name="cast_like", schema_name="cast_like"),
     Op(name="gather", schema_name="gather"),

@@ -14,6 +14,12 @@
 #include "mnm/value.h"
 #include "../common/shape_utils.h"
 
+#ifdef MNM_USE_CUDA
+#include "../../src/common/cuda_utils.h"
+#include "../../src/op/dialect/cudnn/cudnn_utils.h"
+#include "../../src/op/dialect/cublas/cublas_utils.h"
+#endif
+
 namespace mnm {
 namespace value {
 
@@ -330,6 +336,29 @@ Value CopyTo(Value src, const Device& dev) {
   return src;
 }
 
+void CopyTo(Value src, Value dst) {
+  if (!src.defined()) {
+    return;
+  }
+
+  if (src.as<TensorValueObj>()) {
+    CHECK(dst.as<TensorValueObj>());
+    auto in_tensor = Downcast<TensorValue>(src)->tensor;
+    auto out_tensor = Downcast<TensorValue>(dst)->tensor;
+    in_tensor.CopyTo(out_tensor);
+  } else if (src.as<TupleValueObj>()) {
+    CHECK(dst.as<TupleValueObj>());
+    std::vector<Value> ret;
+    TupleValue in_tuple = Downcast<TupleValue>(src);
+    TupleValue out_tuple = Downcast<TupleValue>(dst);
+    for (size_t i = 0; i < in_tuple->fields.size(); ++i) {
+      CopyTo(in_tuple->fields[i], out_tuple->fields[i]);
+    }
+  } else {
+    LOG(FATAL) << "Unrecognized value: " << src->GetTypeKey();
+  }
+}
+
 Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
   if (auto tensor_type = type.as<tvm::TensorTypeNode>()) {
     std::vector<int64_t> shape;
@@ -344,6 +373,18 @@ Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
     }
     std::shared_ptr<memory_pool::Memory> memory = memory_pool::Memory::Alloc(device, nbytes);
     DLDataType data_type = tensor_type->dtype;
+
+    // Set integer values to zeros to avoid memory errors in certain ops
+    // E.g., mnm.op.tvm.nll_loss would have CUDA memory errors because the class
+    // index is out of range
+    if ((data_type.code == kDLInt) || (data_type.code == kDLUInt)) {
+#ifdef MNM_USE_CUDA
+      if (device.device_type() == DevType::kCUDA())
+        CUDA_CALL(cudaMemset(memory->data, 0, nbytes));
+      else
+#endif
+        memset(memory->data, 0, nbytes);
+    }
     return TensorValue::Assemble(device, data_type, shape, {}, memory->data, memory);
   } else if (auto tuple_type = type.as<tvm::TupleTypeNode>()) {
     tvm::Array<Value> fields;

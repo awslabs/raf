@@ -5,7 +5,6 @@ from .base import Op, ArrayLike
 
 
 class UnaryArgs:
-
     @staticmethod
     def f(x: ArrayLike) -> ArrayLike:
         ...
@@ -27,12 +26,12 @@ class UnaryArgs:
 
 
 class UnaryDxArgs:
-
     @staticmethod
-    def f(y: ArrayLike,
-          dy: ArrayLike,
-          x: ArrayLike,
-          ) -> ArrayLike:
+    def f(
+        y: ArrayLike,
+        dy: ArrayLike,
+        x: ArrayLike,
+    ) -> ArrayLike:
         ...
 
     __ops__ = [
@@ -43,11 +42,11 @@ class UnaryDxArgs:
 
 
 class BinaryArgs:
-
     @staticmethod
-    def f(x1: ArrayLike,
-          x2: ArrayLike,
-          ) -> ArrayLike:
+    def f(
+        x1: ArrayLike,
+        x2: ArrayLike,
+    ) -> ArrayLike:
         ...
 
     __ops__ = [
@@ -63,5 +62,6 @@ class BinaryArgs:
         Op("equal"),
         Op("not_equal"),
     ]
+
 
 # TODO(@junrushao1994): implement `ufunc`s

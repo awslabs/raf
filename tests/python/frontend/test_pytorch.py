@@ -1,5 +1,6 @@
 # pylint:disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
 # pylint:disable=not-callable,abstract-method,too-many-locals,invalid-name,protected-access
+# pylint: disable=too-many-statements
 import tempfile
 import pytest
 import torch
@@ -9,7 +10,7 @@ import torch.nn.functional as F
 import mnm
 from mnm._op import sym
 from mnm.frontend import from_pytorch
-from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model
+from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model, with_seed
 
 
 class TorchLeNet(nn.Module):
@@ -36,15 +37,21 @@ class TorchLeNet(nn.Module):
 
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
+@pytest.mark.parametrize(
+    "shape_dict",
+    [{"input0": ((32, 3, 28, 28), "float32")}, {"input0": ((32, 3, 28, 28), "float16")}],
+)
 @pytest.mark.parametrize("mode", ["forward", "backward", "sgd"])
+@with_seed(0)
 def test_lenet(shape_dict, mode):
     device = "cuda"
-    input_shape = list(shape_dict.values())[0][0]
+    input_shape, dtype = list(shape_dict.values())[0]
     batch_size = input_shape[0]
 
     # Prepare two models.
     t_model = TorchLeNet(input_shape[2])
+    if dtype == "float16":
+        t_model = t_model.half()
     m_model = from_pytorch(t_model, shape_dict)
 
     # Set the target device.
@@ -52,18 +59,19 @@ def test_lenet(shape_dict, mode):
     m_model.to(device=device)
 
     # Prepare data.
-    m_x, t_x = randn_torch(input_shape, device=device)
+    m_x, t_x = randn_torch(input_shape, device=device, dtype=dtype)
 
     if mode == "forward":
         m_model.infer_mode()
         t_model.eval()
         m_y = m_model(m_x)
         t_y = t_model(t_x)
-        check(m_y, t_y, rtol=1e-4, atol=1e-4)
+        tol = 1e-4 if dtype == "float32" else 1e-3
+        check(m_y, t_y, rtol=tol, atol=tol)
         return
 
     m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
-    m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
+    m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False, dtype=dtype)
 
     # append loss function
     out = m_model.record(m_x)
@@ -83,11 +91,13 @@ def test_lenet(shape_dict, mode):
         t_ypred = torch.log_softmax(t_y, dim=-1)
         t_loss = F.nll_loss(t_ypred, t_ytrue)
 
-        check(m_loss, t_loss)
+        tol = 1e-5 if dtype == "float32" else 1e-2
+        check(m_loss, t_loss, rtol=tol, atol=tol)
 
         m_loss.backward()
         t_loss.backward()
-        check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
+        tol = 1e-4 if dtype == "float32" else 1e-2
+        check(m_loss, t_loss, rtol=tol, atol=tol)
     else:
         assert mode == "sgd"
 
@@ -106,7 +116,8 @@ def test_lenet(shape_dict, mode):
         t_loss = F.nll_loss(t_ypred, t_ytrue)
         t_loss.backward(t_dy)
         t_trainer.step()
-        check(m_loss, t_loss)
+        tol = 1e-5 if dtype == "float32" else 1e-2
+        check(m_loss, t_loss, rtol=tol, atol=tol)
 
 
 class TorchConvBn(nn.Module):
@@ -126,6 +137,7 @@ class TorchConvBn(nn.Module):
 @pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
 @pytest.mark.parametrize("mode", ["backward", "sgd"])
 @pytest.mark.parametrize("fuse", [False, True])
+@with_seed(0)
 def test_conv_bn(shape_dict, mode, fuse):
     # Fix https://github.com/meta-project/meta/issues/463
     device = "cuda"
@@ -172,7 +184,7 @@ def test_conv_bn(shape_dict, mode, fuse):
         t_ypred = torch.log_softmax(t_y, dim=-1)
         t_loss = F.nll_loss(t_ypred, t_ytrue)
 
-        check(m_loss, t_loss)
+        check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
 
         m_loss.backward()
         t_loss.backward()
@@ -202,6 +214,7 @@ def test_conv_bn(shape_dict, mode, fuse):
 
 @pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
+@with_seed(0)
 def test_batch_norm_train(shape_dict):
     device = "cuda"
     input_shape = list(shape_dict.values())[0][0]

@@ -30,7 +30,7 @@ TVM_REGISTER_NODE_TYPE(LayerNormAttrs);
 TVM_REGISTER_NODE_TYPE(BatchNormAttrs);
 TVM_REGISTER_NODE_TYPE(PadAttrs);
 TVM_REGISTER_NODE_TYPE(ThresholdAttrs);
-TVM_REGISTER_NODE_TYPE(ThresholdDxAttr);
+TVM_REGISTER_NODE_TYPE(ThresholdDxAttrs);
 
 // optimizer attrs
 TVM_REGISTER_NODE_TYPE(SgdAttrs);

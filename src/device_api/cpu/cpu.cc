@@ -56,6 +56,17 @@ class CPUDeviceAPI final : public DeviceAPI {
     throw;
   }
 
+  void CopyDataFromTo(DLTensor* from, DLTensor* to, void* stream) {
+    size_t nbytes = tvm::runtime::GetDataSize(*from);
+    ICHECK_EQ(nbytes, tvm::runtime::GetDataSize(*to));
+    ICHECK(tvm::runtime::IsContiguous(*from) && tvm::runtime::IsContiguous(*to))
+        << "CopyDataFromTo only support contiguous array for now";
+
+    auto from_data_ptr = static_cast<const char*>(from->data) + from->byte_offset;
+    auto to_data_ptr = static_cast<char*>(to->data) + to->byte_offset;
+    memcpy(to_data_ptr, from_data_ptr, nbytes);
+  }
+
   void* CreateStream(const Device&) override {
     throw;
   }
@@ -69,7 +80,7 @@ class CPUDeviceAPI final : public DeviceAPI {
   }
 
   void* GetStream() override {
-    throw;
+    return nullptr;
   }
 
   void* CreateEvent(const Device& dev, uint32_t flags) override {

@@ -54,22 +54,48 @@ def trace_model(model, input_type, input_shape):
                 return out.to_tuple()
             return out
 
-    model = TraceWrapper(model)
-    model.eval()
-    device = "cpu"
+        @property
+        def dtype(self):
+            for param in model.parameters():
+                if param.dtype.is_floating_point:
+                    return param.dtype
+            return torch.float32
 
-    if input_type.startswith("float"):
-        if input_type.startswith("float16"):
-            device = "cuda"  # Some float16 ops are only available on GPU.
-        input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)
-    else:
-        assert input_type.startswith("int64"), "Unsupported input type %s" % input_type
-        input_data = torch.randint(10000, input_shape)
+    def inner(model, input_type, input_shape):
+        """Wrap the tracing process so that we could empty PyTorch CUDA cache afterward."""
+        model = TraceWrapper(model)
+        model.eval()
 
-    with torch.no_grad():
-        model.to(device=device)
-        model(input_data)
-        scripted_model = torch.jit.trace(model, input_data).eval()
+        # By default we trace the model on CPU.
+        device = "cpu"
+
+        # Some float16 ops are only available on GPU.
+        if model.dtype != torch.float32:
+            if not torch.cuda.is_available():
+                raise RuntimeError("Trace PyTorch model with dtype %s requires GPU" % model.dtype)
+            device = "cuda"
+
+        if input_type.startswith("float"):
+            input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)
+        else:
+            assert input_type.startswith("int64"), "Unsupported input type %s" % input_type
+            input_data = torch.randint(10000, input_shape, device=device)
+
+        with torch.no_grad():
+            model.to(device=device)
+            model(input_data)
+            scripted_model = torch.jit.trace(model, input_data).eval()
+
+        if device == "cuda":
+            model.to(device="cpu")
+            scripted_model = scripted_model.to(device="cpu")
+
+        return scripted_model
+
+    scripted_model = inner(model, input_type, input_shape)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
 
     return scripted_model
 

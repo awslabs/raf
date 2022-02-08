@@ -5,6 +5,7 @@ from mnm.model.trace import _get_func_inputs
 from mnm._core.executor import VMExecutor
 from mnm._core.vm import VMCompiler
 from mnm._core.core_utils import get_chained_attr
+from .common import check
 from .._core.module import IRModule
 from .._ffi import pass_
 from .._lib import tvm
@@ -67,10 +68,14 @@ def _get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     """Get VM executor"""
     # pylint: disable=protected-access
     options.setdefault("stream_schedule_policy", "sequential")
+    options.setdefault("anf_only", False)
     options.setdefault("sch_file", None)
     options.setdefault("pass_seq", None)
 
-    config = {"mnm.stream_schedule.policy": options["stream_schedule_policy"]}
+    config = {
+        "mnm.stream_schedule.policy": options["stream_schedule_policy"],
+        "mnm.vm.optimize.anf_only": options["anf_only"],
+    }
     pass_seq = options["pass_seq"]
     disabled_pass = []
     if disable_fusion:
@@ -143,3 +148,26 @@ def lower_vm_model(model, target_name, args):
     mod, _ = compiler.optimize(mod, target_name)
     # TODO (janimesh) - Revisit where the output is used
     return mod["main"]
+
+
+def run_model(model, args, device, check_result=True):
+    """Helper function to run the model using both interpreter and VM, and check if their
+    results are the same. Note that some ops (e.g., reduce, send/recv) may only produce
+    valid results at the target device. In this case, check_result should be skipped on
+    other devices.
+    """
+    out1 = model(*args)
+    ret = out1
+    out2 = run_vm_model(model, device, args)
+    if check_result:
+        if not isinstance(out1, (tuple, tvm.ir.container.Array, mnm._core.value.TupleValue)):
+            out1 = [out1]
+            out2 = [out2]
+        for o1, o2 in zip(out1, out2):
+            try:
+                check(o1, o2)
+            except AssertionError as e:
+                raise AssertionError(
+                    "Inconsistent results between interpreter and VM at %s" % device
+                ) from e
+    return ret

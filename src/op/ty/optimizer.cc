@@ -41,7 +41,7 @@ Type LansInfer(const CallValues& value) {
   int ntensors = args->tensor_list.size() / 4;
   CHECK(args->tensor_list.size() % 4 == 0);
   Array<Type> res;
-  for (int i = ntensors; i < args->tensor_list.size(); ++i) {
+  for (int i = 0; i < args->tensor_list.size(); ++i) {
     res.push_back(Downcast<TensorType>(GetType(args->tensor_list[i])));
   }
   return TupleType(res);

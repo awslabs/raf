@@ -15,10 +15,11 @@ class ReductionArgs:
     # keepdims = tuple[int]: keep specific reduction dims
 
     @staticmethod
-    def f(x: ArrayLike,
-          axis: IntOrTupleIntOrNone = None,
-          keepdims: BoolOrTupleInt = False,
-          ) -> ArrayLike:
+    def f(
+        x: ArrayLike,
+        axis: IntOrTupleIntOrNone = None,
+        keepdims: BoolOrTupleInt = False,
+    ) -> ArrayLike:
         ...
 
     __ops__ = [

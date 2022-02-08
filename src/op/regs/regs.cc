@@ -102,6 +102,7 @@ static const char cross_entropy[] = "mnm.op.cross_entropy";
 static const char cross_entropy_dpred[] = "mnm.op.cross_entropy_dpred";
 static const char cross_entropy_dtrue[] = "mnm.op.cross_entropy_dtrue";
 static const char cumsum[] = "mnm.op.cumsum";
+static const char defuse_tensor[] = "mnm.op.defuse_tensor";
 static const char dense[] = "mnm.op.dense";
 static const char device_copy[] = "mnm.op.device_copy";
 static const char divide[] = "mnm.op.divide";
@@ -116,6 +117,7 @@ static const char floor[] = "mnm.op.floor";
 static const char floor_divide[] = "mnm.op.floor_divide";
 static const char full[] = "mnm.op.full";
 static const char full_like[] = "mnm.op.full_like";
+static const char fuse_tensor[] = "mnm.op.fuse_tensor";
 static const char gather[] = "mnm.op.gather";
 static const char gather_dx[] = "mnm.op.gather_dx";
 static const char gather_nd[] = "mnm.op.gather_nd";
@@ -554,11 +556,20 @@ Attrs Cumsum(const TVMArgs& values, GradTape* tapes) {
   return Attrs(attrs);
 }
 
+Attrs DefuseTensor(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::DefuseTensorArgs, 4);  // NOLINT(whitespace/line_length)
+  MNM_TAPE(0, ffi2schema::Tensor, data);
+  MNM_POD(1, ffi2schema::IntOrTupleInt, sizes);
+  MNM_POD(2, ffi2schema::IntOrTupleInt, shapes);
+  MNM_POD(3, ffi2schema::IntOrTupleInt, shape_indices);
+  return Attrs(attrs);
+}
+
 Attrs DeviceCopy(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::DeviceCopyArgs, 3);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, data);
-  MNM_POD(1, ffi2schema::Int, src_dev_type);
-  MNM_POD(2, ffi2schema::Int, dst_dev_type);
+  MNM_POD(1, ffi2schema::String, src_device);
+  MNM_POD(2, ffi2schema::String, dst_device);
   return Attrs(attrs);
 }
 
@@ -628,6 +639,12 @@ Attrs FullLike(const TVMArgs& values, GradTape* tapes) {
   MNM_PRELUDE(schema::FullLikeArgs, 2);  // NOLINT(whitespace/line_length)
   MNM_TAPE(0, ffi2schema::Tensor, data);
   MNM_POD(1, ffi2schema::Double, fill_value);
+  return Attrs(attrs);
+}
+
+Attrs FuseTensor(const TVMArgs& values, GradTape* tapes) {
+  MNM_PRELUDE(schema::FuseTensorArgs, 1);  // NOLINT(whitespace/line_length)
+  MNM_POD(0, ffi2schema::TupleTensor, data);
   return Attrs(attrs);
 }
 
@@ -1967,6 +1984,17 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.cumsum").set_body([](TVMArgs args, TVMRetValue* 
   *ret = MNM_RET();
 });
 
+MNM_REGISTER_GLOBAL("mnm.op.imp.defuse_tensor").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(defuse_tensor, 4, ffi2schema::DefuseTensor,
+              schema::DefuseTensorArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
+  MNM_SET_ENV(vpack->x[1], schema2value::IntOrTupleInt(schema->sizes));
+  MNM_SET_ENV(vpack->x[2], schema2value::IntOrTupleInt(schema->shapes));
+  MNM_SET_ENV(vpack->x[3], schema2value::IntOrTupleInt(schema->shape_indices));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
 MNM_REGISTER_GLOBAL("mnm.op.imp.dense").set_body([](TVMArgs args, TVMRetValue* ret) {
   MNM_PRELUDE(dense, 2, ffi2schema::Binary, schema::BinaryArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::ArrayLike(schema->x1));
@@ -1979,8 +2007,8 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.device_copy").set_body([](TVMArgs args, TVMRetVa
   MNM_PRELUDE(device_copy, 3, ffi2schema::DeviceCopy,
               schema::DeviceCopyArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
-  MNM_SET_ENV(vpack->x[1], schema2value::Int(schema->src_dev_type));
-  MNM_SET_ENV(vpack->x[2], schema2value::Int(schema->dst_dev_type));
+  MNM_SET_ENV(vpack->x[1], schema2value::String(schema->src_device));
+  MNM_SET_ENV(vpack->x[2], schema2value::String(schema->dst_device));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -2085,6 +2113,14 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.full_like").set_body([](TVMArgs args, TVMRetValu
               schema::FullLikeArgs);  // NOLINT(whitespace/line_length)
   MNM_SET_ENV(vpack->x[0], schema2value::Tensor(schema->data));
   MNM_SET_ENV(vpack->x[1], schema2value::Double(schema->fill_value));
+  MNM_SET_ENV(vpack->y, value);
+  *ret = MNM_RET();
+});
+
+MNM_REGISTER_GLOBAL("mnm.op.imp.fuse_tensor").set_body([](TVMArgs args, TVMRetValue* ret) {
+  MNM_PRELUDE(fuse_tensor, 1, ffi2schema::FuseTensor,
+              schema::FuseTensorArgs);  // NOLINT(whitespace/line_length)
+  MNM_SET_ENV(vpack->x[0], schema2value::TupleTensor(schema->data));
   MNM_SET_ENV(vpack->y, value);
   *ret = MNM_RET();
 });
@@ -3591,11 +3627,20 @@ Array<Expr> Cumsum(const TVMArgs& values) {
   MNM_RET();
 }
 
+Array<Expr> DefuseTensor(const TVMArgs& values) {
+  MNM_PRELUDE(4);
+  MNM_ARG(0, ffi2expr::Tensor, data);
+  MNM_ARG(1, ffi2expr::IntOrTupleInt, sizes);
+  MNM_ARG(2, ffi2expr::IntOrTupleInt, shapes);
+  MNM_ARG(3, ffi2expr::IntOrTupleInt, shape_indices);
+  MNM_RET();
+}
+
 Array<Expr> DeviceCopy(const TVMArgs& values) {
   MNM_PRELUDE(3);
   MNM_ARG(0, ffi2expr::Tensor, data);
-  MNM_ARG(1, ffi2expr::Int, src_dev_type);
-  MNM_ARG(2, ffi2expr::Int, dst_dev_type);
+  MNM_ARG(1, ffi2expr::String, src_device);
+  MNM_ARG(2, ffi2expr::String, dst_device);
   MNM_RET();
 }
 
@@ -3665,6 +3710,12 @@ Array<Expr> FullLike(const TVMArgs& values) {
   MNM_PRELUDE(2);
   MNM_ARG(0, ffi2expr::Tensor, data);
   MNM_ARG(1, ffi2expr::Double, fill_value);
+  MNM_RET();
+}
+
+Array<Expr> FuseTensor(const TVMArgs& values) {
+  MNM_PRELUDE(1);
+  MNM_ARG(0, ffi2expr::TupleTensor, data);
   MNM_RET();
 }
 
@@ -4429,6 +4480,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dpred")
 MNM_REGISTER_GLOBAL("mnm.op.sym.cross_entropy_dtrue")
     .set_body(MNM_SYMBOLIC_API(cross_entropy_dtrue, 2, Loss));
 MNM_REGISTER_GLOBAL("mnm.op.sym.cumsum").set_body(MNM_SYMBOLIC_API(cumsum, 4, Cumsum));
+MNM_REGISTER_GLOBAL("mnm.op.sym.defuse_tensor")
+    .set_body(MNM_SYMBOLIC_API(defuse_tensor, 4, DefuseTensor));
 MNM_REGISTER_GLOBAL("mnm.op.sym.dense").set_body(MNM_SYMBOLIC_API(dense, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.device_copy")
     .set_body(MNM_SYMBOLIC_API(device_copy, 3, DeviceCopy));
@@ -4446,6 +4499,8 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.floor").set_body(MNM_SYMBOLIC_API(floor, 1, Unar
 MNM_REGISTER_GLOBAL("mnm.op.sym.floor_divide").set_body(MNM_SYMBOLIC_API(floor_divide, 2, Binary));
 MNM_REGISTER_GLOBAL("mnm.op.sym.full").set_body(MNM_SYMBOLIC_API(full, 4, Full));
 MNM_REGISTER_GLOBAL("mnm.op.sym.full_like").set_body(MNM_SYMBOLIC_API(full_like, 2, FullLike));
+MNM_REGISTER_GLOBAL("mnm.op.sym.fuse_tensor")
+    .set_body(MNM_SYMBOLIC_API(fuse_tensor, 1, FuseTensor));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather").set_body(MNM_SYMBOLIC_API(gather, 3, Gather));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather_dx").set_body(MNM_SYMBOLIC_API(gather_dx, 4, GatherDx));
 MNM_REGISTER_GLOBAL("mnm.op.sym.gather_nd").set_body(MNM_SYMBOLIC_API(gather_nd, 2, GatherNd));
@@ -4964,11 +5019,21 @@ Attrs Cumsum(const Array<Value>& values) {
 }
 
 template <const char* op_name>
+Attrs DefuseTensor(const Array<Value>& values) {
+  MNM_PRELUDE(4, 4, schema::DefuseTensorArgs);
+  MNM_REQUIRED(0, value2schema::Tensor, data);
+  MNM_REQUIRED(1, value2schema::IntOrTupleInt, sizes);
+  MNM_REQUIRED(2, value2schema::IntOrTupleInt, shapes);
+  MNM_REQUIRED(3, value2schema::IntOrTupleInt, shape_indices);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
 Attrs DeviceCopy(const Array<Value>& values) {
   MNM_PRELUDE(1, 3, schema::DeviceCopyArgs);
   MNM_REQUIRED(0, value2schema::Tensor, data);
-  MNM_OPTIONAL(1, value2schema::Int, src_dev_type);
-  MNM_OPTIONAL(2, value2schema::Int, dst_dev_type);
+  MNM_OPTIONAL(1, value2schema::String, src_device);
+  MNM_OPTIONAL(2, value2schema::String, dst_device);
   return Attrs(attrs);
 }
 
@@ -5047,6 +5112,13 @@ Attrs FullLike(const Array<Value>& values) {
   MNM_PRELUDE(2, 2, schema::FullLikeArgs);
   MNM_REQUIRED(0, value2schema::Tensor, data);
   MNM_REQUIRED(1, value2schema::Double, fill_value);
+  return Attrs(attrs);
+}
+
+template <const char* op_name>
+Attrs FuseTensor(const Array<Value>& values) {
+  MNM_PRELUDE(1, 1, schema::FuseTensorArgs);
+  MNM_REQUIRED(0, value2schema::TupleTensor, data);
   return Attrs(attrs);
 }
 
@@ -6354,14 +6426,32 @@ int Cumsum(const std::string& field) {
 }
 
 template <const char* op_name>
+int DefuseTensor(const std::string& field) {
+  if (field == "data") {
+    return 0;
+  }
+  if (field == "sizes") {
+    return 1;
+  }
+  if (field == "shapes") {
+    return 2;
+  }
+  if (field == "shape_indices") {
+    return 3;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
 int DeviceCopy(const std::string& field) {
   if (field == "data") {
     return 0;
   }
-  if (field == "src_dev_type") {
+  if (field == "src_device") {
     return 1;
   }
-  if (field == "dst_dev_type") {
+  if (field == "dst_device") {
     return 2;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
@@ -6489,6 +6579,15 @@ int FullLike(const std::string& field) {
   }
   if (field == "fill_value") {
     return 1;
+  }
+  LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
+  return -1;
+}
+
+template <const char* op_name>
+int FuseTensor(const std::string& field) {
+  if (field == "data") {
+    return 0;
   }
   LOG(WARNING) << "Cannot find " << field << " in the schema of op " << op_name;
   return -1;
@@ -8043,6 +8142,10 @@ MNM_BIND_SCHEMA("mnm.op.cumsum", names::cumsum,
                 value2schema::Cumsum);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.cumsum", names::cumsum,
                             schema_field_idx::Cumsum);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.defuse_tensor", names::defuse_tensor,
+                value2schema::DefuseTensor);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.defuse_tensor", names::defuse_tensor,
+                            schema_field_idx::DefuseTensor);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.dense", names::dense,
                 value2schema::Binary);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.dense", names::dense,
@@ -8096,6 +8199,10 @@ MNM_BIND_SCHEMA("mnm.op.full_like", names::full_like,
                 value2schema::FullLike);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.full_like", names::full_like,
                             schema_field_idx::FullLike);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA("mnm.op.fuse_tensor", names::fuse_tensor,
+                value2schema::FuseTensor);  // NOLINT(whitespace/line_length)
+MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.fuse_tensor", names::fuse_tensor,
+                            schema_field_idx::FuseTensor);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA("mnm.op.gather", names::gather,
                 value2schema::Gather);  // NOLINT(whitespace/line_length)
 MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.gather", names::gather,
@@ -8612,6 +8719,7 @@ MNM_REGISTER_OBJECT_REFLECT(ConvDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvTransArgs);
 MNM_REGISTER_OBJECT_REFLECT(ConvTransposeDxwArgs);
 MNM_REGISTER_OBJECT_REFLECT(CumsumArgs);
+MNM_REGISTER_OBJECT_REFLECT(DefuseTensorArgs);
 MNM_REGISTER_OBJECT_REFLECT(DeviceCopyArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutArgs);
 MNM_REGISTER_OBJECT_REFLECT(DropoutDxArgs);
@@ -8622,6 +8730,7 @@ MNM_REGISTER_OBJECT_REFLECT(ExpandDimsArgs);
 MNM_REGISTER_OBJECT_REFLECT(FreeArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullArgs);
 MNM_REGISTER_OBJECT_REFLECT(FullLikeArgs);
+MNM_REGISTER_OBJECT_REFLECT(FuseTensorArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherDxArgs);
 MNM_REGISTER_OBJECT_REFLECT(GatherNdArgs);

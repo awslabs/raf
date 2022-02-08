@@ -5,8 +5,8 @@ from mnm._lib import _APIS
 
 # Defined in ./src/pass/stream_schedule_asap.cc
 ASAPStreamSchedule = _APIS.get("mnm.pass_.ASAPStreamSchedule", None)
-# Defined in ./src/pass/annotate_dist_ops.cc
-AnnotateDistOps = _APIS.get("mnm.pass_.AnnotateDistOps", None)
+# Defined in ./src/pass/annotate_collective_ops.cc
+AnnotateCollectiveOps = _APIS.get("mnm.pass_.AnnotateCollectiveOps", None)
 # Defined in ./src/pass/annotate_target.cc
 AnnotateTarget = _APIS.get("mnm.pass_.AnnotateTarget", None)
 # Defined in ./src/pass/assign_device.cc
@@ -31,6 +31,8 @@ DeadCodeElimination = _APIS.get("mnm.pass_.DeadCodeElimination", None)
 Deduplicate = _APIS.get("mnm.pass_.Deduplicate", None)
 # Defined in ./src/pass/dispatch_dialect.cc
 DispatchDialect = _APIS.get("mnm.pass_.DispatchDialect", None)
+# Defined in ./src/pass/enforce_sync.cc
+EnforceSync = _APIS.get("mnm.pass_.EnforceSync", None)
 # Defined in ./src/pass/type_erase.cc
 EraseType = _APIS.get("mnm.pass_.EraseType", None)
 # Defined in ./src/pass/estimate_flops.cc
@@ -81,6 +83,8 @@ MemoryPlan = _APIS.get("mnm.pass_.MemoryPlan", None)
 MemorySchedule = _APIS.get("mnm.pass_.MemorySchedule", None)
 # Defined in ./src/pass/merge_compiler_regions.cc
 MergeCompilerRegions = _APIS.get("mnm.pass_.MergeCompilerRegions", None)
+# Defined in ./src/pass/anf_partition.cc
+PartitionANF = _APIS.get("mnm.pass_.PartitionANF", None)
 # Defined in ./src/pass/partition_gradient.cc
 PartitionGradient = _APIS.get("mnm.pass_.PartitionGradient", None)
 # Defined in ./src/pass/partition_graph.cc

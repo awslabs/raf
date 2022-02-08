@@ -19,3 +19,4 @@ python3 -m pylint python/mnm scripts/op_def --rcfile=./scripts/lint/pylintrc
 
 echo "Running pylint on tests/python"
 python3 -m pylint tests/python --rcfile=./scripts/lint/pytestlintrc
+

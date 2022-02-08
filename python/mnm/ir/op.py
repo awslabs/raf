@@ -68,6 +68,7 @@ __all__ = [
     "cross_entropy_dpred",
     "cross_entropy_dtrue",
     "cumsum",
+    "defuse_tensor",
     "dense",
     "device_copy",
     "divide",
@@ -82,6 +83,7 @@ __all__ = [
     "floor_divide",
     "full",
     "full_like",
+    "fuse_tensor",
     "gather",
     "gather_dx",
     "gather_nd",
@@ -793,6 +795,15 @@ def cumsum(x, axis, dtype="float32", exclusive=False, attrs=None):
     return relay.Call(op, [x, axis, dtype, exclusive], attrs)
 
 
+def defuse_tensor(data, sizes, shapes, shape_indices, attrs=None):
+    op = GetOp("mnm.op.defuse_tensor")
+    data = op_utils.to_tensor(data)
+    sizes = op_utils.to_int_tuple(sizes)
+    shapes = op_utils.to_int_tuple(shapes)
+    shape_indices = op_utils.to_int_tuple(shape_indices)
+    return relay.Call(op, [data, sizes, shapes, shape_indices], attrs)
+
+
 def dense(x1, x2, attrs=None):
     op = GetOp("mnm.op.dense")
     x1 = op_utils.to_any(x1)
@@ -800,12 +811,12 @@ def dense(x1, x2, attrs=None):
     return relay.Call(op, [x1, x2], attrs)
 
 
-def device_copy(data, src_dev_type=0, dst_dev_type=0, attrs=None):
+def device_copy(data, src_device="cpu", dst_device="cpu", attrs=None):
     op = GetOp("mnm.op.device_copy")
     data = op_utils.to_tensor(data)
-    src_dev_type = op_utils.to_int(src_dev_type)
-    dst_dev_type = op_utils.to_int(dst_dev_type)
-    return relay.Call(op, [data, src_dev_type, dst_dev_type], attrs)
+    src_device = op_utils.to_string(src_device)
+    dst_device = op_utils.to_string(dst_device)
+    return relay.Call(op, [data, src_device, dst_device], attrs)
 
 
 def divide(x1, x2, attrs=None):
@@ -892,6 +903,12 @@ def full_like(data, fill_value, attrs=None):
     data = op_utils.to_tensor(data)
     fill_value = op_utils.to_double(fill_value)
     return relay.Call(op, [data, fill_value], attrs)
+
+
+def fuse_tensor(data, attrs=None):
+    op = GetOp("mnm.op.fuse_tensor")
+    data = op_utils.to_tensor_tuple(data)
+    return relay.Call(op, [data], attrs)
 
 
 def gather(data, axis, indices, attrs=None):

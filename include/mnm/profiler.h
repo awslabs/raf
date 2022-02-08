@@ -247,5 +247,31 @@ inline void ProfilerHelper::collect() {
   Profiler::Get()->AddNewProfileStat(categories_, name_, start_time_, end_time_, args);
 }
 
+/*!
+ * \brief A helper class and macro to profile the execution time of a scope (e.g., function).
+ * This is used for debugging purpose. For example:
+ * void some_func() {
+ *   MNM_TIMED("some_func")
+ *   // do something;
+ * }
+ * The profiled time is then the life time of the created TimeSection object, and will be
+ * logged to stderr.
+ */
+class TimedSection {
+ public:
+  explicit TimedSection(std::string name) : name_(name), start_(ProfileStat::NowInMicrosec()) {
+  }
+
+  ~TimedSection() {
+    uint64_t now = ProfileStat::NowInMicrosec();
+    LOG(WARNING) << "Timed " << name_ << ": " << (now - start_) << " ms";
+  }
+
+ private:
+  std::string name_;
+  uint64_t start_;
+};
+#define MNM_TIMED(name) mnm::profiler::TimedSection timed_section(name);
+
 }  // namespace profiler
 }  // namespace mnm

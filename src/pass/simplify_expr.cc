@@ -25,6 +25,7 @@
 #include "mnm/op_utils.h"
 #include "mnm/pass.h"
 #include "mnm/value.h"
+#include "../op/ty/utils.h"
 
 namespace mnm {
 namespace pass {
@@ -141,11 +142,16 @@ class ConcretizeLikeRewrite : public DFPatternRewrite {
 
 /*!
  * \brief Converts `*_like` unary operators to their explicit shape equivalent
- * (e.g. `zeros_like(x)` to `zeros(x.shape, x.dtype)`), when the target information is concrete.
+ * (e.g. `zeros_like(x)` to `zeros(x.shape, x.dtype, device)`), when the target information
+ * is known.
+ * Note that the simplified *_like op becomes an init op and needs to specify the target device.
+ * Hoever, the target device is not included in the type system, so we assume the target device
+ * is the current device.
  */
 class ConcretizeUnaryLikeRewrite : public ConcretizeLikeRewrite {
  public:
-  ConcretizeUnaryLikeRewrite(const std::string op_like, const std::string op) : op_(Op::Get(op)) {
+  ConcretizeUnaryLikeRewrite(const std::string op_like, const std::string op)
+      : op_(Op::Get(op)), device_(std::string(Device::Current(false).c_str())) {
     like_pat_ = IsWildcard();
     pattern_ = IsExpr(Op::Get(op_like))({like_pat_});
   }
@@ -153,12 +159,14 @@ class ConcretizeUnaryLikeRewrite : public ConcretizeLikeRewrite {
   Expr Concretize(const Map<DFPattern, Array<Expr>>& node_map, Array<Integer> shape,
                   DataType dtype) const override {
     return Call(op_, {MakeConstant(ArrayToIntTuple(shape)),
-                      MakeConstant(StringValue::make(DLDataType2String(dtype)))});
+                      MakeConstant(StringValue::make(DLDataType2String(dtype))),
+                      MakeConstant(StringValue::make(device_))});
   }
 
  protected:
   DFPattern like_pat_;
   const Op op_;
+  const std::string device_;
 };
 
 class ConcretizeZerosLikeRewrite : public ConcretizeUnaryLikeRewrite {
@@ -354,6 +362,44 @@ class ConcretizeAddSubRewrite : public DFPatternRewrite {
   DFPattern in1_pat_, in2_pat_, out_pat_, op_pat_;
 };
 
+/*!
+ * \brief Check whether the cast from lhs to rhs is reversible. A cast is reversible
+ * if lhs can be casted to rhs and then casted back without significant truncation
+ */
+bool IsCastReversible(const DataType& lhs, const DataType& rhs) {
+  /*! Reversible cast map:
+   *        Bool  UInt  Int  Float (to)
+   * Bool    Y     Y     Y     Y
+   * UInt    N     Y     Y     Y
+   * Int     N     N     Y     Y
+   * Float   N     N     N     Y
+   * (from)
+   */
+  auto cast_level = [](const DataType& type) {
+    if (type.is_bool()) {
+      return 4;
+    }
+    if (type.is_uint()) {
+      return 3;
+    }
+    if (type.is_int()) {
+      return 2;
+    }
+    if (type.is_float() || type.is_bfloat16()) {
+      return 1;
+    }
+    return -1;
+  };
+  int lhs_level = cast_level(lhs);
+  int rhs_level = cast_level(rhs);
+  if (lhs_level == -1 || rhs_level == -1) {
+    // handle or custom data type, don't simplify
+    return false;
+  }
+  // type with higher cast level can be reversibly cast to type with lower level
+  return lhs_level >= rhs_level;
+}
+
 /*! \brief Simplify useless cast ops. */
 class SimplifyCast : public DFPatternRewrite {
  public:
@@ -372,7 +418,11 @@ class SimplifyCast : public DFPatternRewrite {
     auto arg = Downcast<Call>(pre)->args[0];
     if (auto prev_node = arg.as<CallNode>()) {
       if (prev_node->op->IsInstance<OpNode>() && Downcast<Op>(prev_node->op) == cast_op) {
-        arg = prev_node->args[0];
+        // ignore the situation where the cast of arg to intermediate type is not reversible
+        auto intermediate_dtype = arg->checked_type().as<TensorTypeNode>()->dtype;
+        if (IsCastReversible(out_ty->dtype, intermediate_dtype)) {
+          arg = prev_node->args[0];
+        }
       }
     }
     const TensorTypeNode* data_ty = arg->checked_type().as<TensorTypeNode>();
@@ -429,10 +479,27 @@ class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
       return false;
     }
 
-    auto shape1 = ttype1->shape.back().as<ir::IntImmNode>();
-    auto shape2 = ttype2->shape.back().as<ir::IntImmNode>();
-    if (shape1 != nullptr && shape2 != nullptr) {
-      return shape1->value == shape2->value;
+    // We need to check if bias_add inputs are still broadcastable after moving reshape.
+    static const Op& reshape_op = Op::Get("mnm.op.reshape");
+    auto reshape_call_node = call->args[0].as<CallNode>();
+    auto other_arg_ttype = ttype2;
+    if (reshape_call_node == nullptr || reshape_call_node->op != reshape_op) {
+      // We may need to also check second argument since we have commutative matching
+      reshape_call_node = call.as<CallNode>()->args[1].as<CallNode>();
+      other_arg_ttype = ttype1;
+      CHECK(reshape_call_node != nullptr && reshape_call_node->op == reshape_op)
+          << "Expected an add call with a reshape call as argument, but got "
+          << mnm::ir::AsText(call);
+    }
+
+    if (auto reshape_arg_ttype = reshape_call_node->args[0]->checked_type().as<TensorTypeNode>()) {
+      try {
+        // try broadcast reshape_arg and other_arg
+        BroadcastShape(GetRef<TensorType>(reshape_arg_ttype), GetRef<TensorType>(other_arg_ttype));
+        return true;
+      } catch (const dmlc::Error& e) {
+        // shape not compatible, don't modify
+      }
     }
     return false;
   }

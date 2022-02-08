@@ -7,6 +7,7 @@ from . import analysis
 from . import backend
 from . import binding
 from . import build_info
+from . import cache
 from . import device
 from . import device_api
 from . import distributed
@@ -16,6 +17,7 @@ from . import memory_pool
 from . import memory_profiler
 from . import model
 from . import op
+from . import op_profiler
 from . import pass_
 from . import profiler
 from . import tensor

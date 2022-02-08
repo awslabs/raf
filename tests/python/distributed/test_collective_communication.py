@@ -10,36 +10,12 @@ import pytest
 import numpy as np
 
 import mnm
-import tvm
 from mnm import distributed as dist
 from mnm._core.ndarray import Symbol
-from mnm.testing import check, get_dist_info, skip_dist_test, run_vm_model
+from mnm.testing import check, get_dist_info, skip_dist_test, run_vm_model, run_model
 
 dctx = dist.get_context()
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
-
-
-def run_model(model, args, device, check_result=True):
-    """Helper function to run the model using both interpreter and VM, and check if their
-    results are the same. Note that some ops (e.g., reduce, send/recv) may only produce
-    valid results at the target device. In this case, check_result should be skipped on
-    other devices.
-    """
-    out1 = model(*args)
-    ret = out1
-    out2 = run_vm_model(model, device, args)
-    if check_result:
-        if not isinstance(out1, (tuple, tvm.ir.container.Array, mnm._core.value.TupleValue)):
-            out1 = [out1]
-            out2 = [out2]
-        for o1, o2 in zip(out1, out2):
-            try:
-                check(o1, o2)
-            except AssertionError as e:
-                raise AssertionError(
-                    "Inconsistent results between interpreter and VM at %s" % device
-                ) from e
-    return ret
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)

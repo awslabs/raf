@@ -46,19 +46,27 @@ class GNFConverter : public MixedModeMutator {
   Expr VisitExpr_(const LetNode* ln) final {
     Expr body = GetRef<Let>(ln);
     std::vector<std::pair<Var, Expr>> scopes;
+
     // Iteratively visit let nodes to avoid stack overflow.
     while (body->IsInstance<LetNode>()) {
       Let let = Downcast<Let>(body);
+      auto var = let->var;
       auto new_value = VisitExpr(let->value);
-      if (new_value->IsInstance<RefCreateNode>() || new_value->IsInstance<RefReadNode>() ||
-          new_value->IsInstance<RefWriteNode>()) {
-        // Keep the Let for ref-related nodes as the order affects the correctness
-        // auto new_body = VisitExpr(let->body);
-        scopes.emplace_back(let->var, new_value);
+
+      // Check whether the let-binding var has shared memory (similar to ref-related ndoes).
+      bool has_may_share = false;
+      if (auto extended_var = var.as<ExtendedVarNode>()) {
+        has_may_share = extended_var->may_share.defined();
+      }
+
+      if (has_may_share || new_value->IsInstance<RefCreateNode>() ||
+          new_value->IsInstance<RefReadNode>() || new_value->IsInstance<RefWriteNode>()) {
+        // Keep the Let for ref-related nodes as the order affects the correctness.
+        scopes.emplace_back(var, new_value);
         body = let->body;
       } else {
-        new_value = WrapRec(let->var, new_value);
-        let_map_.emplace(let->var.get(), new_value);
+        new_value = WrapRec(var, new_value);
+        let_map_.emplace(var.get(), new_value);
         scopes.emplace_back(Var(), Expr());
         body = let->body;
       }

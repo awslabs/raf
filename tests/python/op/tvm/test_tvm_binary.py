@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 import mnm
-from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model
+from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model, with_seed
 
 
 class BinaryModel(mnm.Model):
@@ -36,6 +36,7 @@ def verify_op(m_op, m_args, device, ref_fwd_out, m_dy=None, ref_grads=None):
         check(m_arg.grad, ref_grad)
 
 
+@with_seed(0)
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",

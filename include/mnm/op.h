@@ -28,6 +28,8 @@ class Requests;
 namespace mnm {
 namespace op {
 
+extern std::vector<std::string> dispatch_error_msgs;
+
 class CallValuesNode : public ir::Object {
  public:
   mutable value::Value callee;

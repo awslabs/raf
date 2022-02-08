@@ -501,6 +501,13 @@ T GetScalarValueData(const Value& value) {
 Value CopyTo(Value src, const Device& dev);
 
 /*!
+ * \brief Copy a value to another value.
+ * \param src Value to be copyed.
+ * \param dst The destination.
+ */
+void CopyTo(Value src, Value dst);
+
+/*!
  * \brief Create a dummy value according to type.
  * \param type The tensor or tuple type.
  * \param device The device to allocate memory from when creating a tensor.

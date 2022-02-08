@@ -17,23 +17,14 @@ def test_no_bind_tuple():
             zz = mnm.split(z, 2)
             return zz[0]
 
-    def expected():
-        x = relay.var("x", shape=(10, 20))
-        y = relay.var("y", shape=(10, 1))
-        z = mnm.ir.op.add(x, y)
-        z = mnm.ir.op.split(z, 2, 0)
-        z = relay.TupleGetItem(z, 0)
-        f = relay.Function([x, y], z)
-        return f
-
     model = Model()
     m_x, _ = randn((10, 20))
     m_y, _ = randn((10, 1))
     mod = model._internal(m_x, m_y).mod
-    mod_after = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod_after)
-    func_after = run_infer_type(mod_after)["main"]
-    func_expected = run_infer_type(expected())
+    mod_w_gnf = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod_w_bbnf = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod_w_gnf)
+    func_after = run_infer_type(mod_w_bbnf)["main"]
+    func_expected = run_infer_type(mod_w_gnf)["main"]
     assert tvm.ir.structural_equal(func_after, func_expected)
     relay.analysis.check_basic_block_normal_form(func_after)
 
@@ -51,23 +42,14 @@ def test_no_bind_diamond():
             z2 = mnm.multiply(x, self.c)
             return mnm.relu(mnm.add(z1, z2))
 
-    def expected():
-        x = relay.var("x", shape=(10, 20))
-        y = relay.var("y", shape=(10, 1))
-        c = relay.var("c", shape=(1,))
-        z1 = mnm.ir.op.add(x, y)
-        z2 = mnm.ir.op.multiply(x, c)
-        z = mnm.ir.op.add(z1, z2)
-        z = mnm.ir.op.relu(z)
-        f = relay.Function([x, y, c], z)
-        return f
-
     model = Model()
     m_x, _ = randn((10, 20))
     m_y, _ = randn((10, 1))
     mod = model._internal(m_x, m_y).mod
-    func_after = run_infer_type(mnm._ffi.pass_.ToGraphNormalForm()(mod))["main"]
-    func_expected = run_infer_type(expected())
+    mod_w_gnf = mnm._ffi.pass_.ToGraphNormalForm()(mod)
+    mod_w_bbnf = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod_w_gnf)
+    func_after = run_infer_type(mnm._ffi.pass_.ToGraphNormalForm()(mod_w_bbnf))["main"]
+    func_expected = run_infer_type(mod_w_gnf)["main"]
     assert tvm.ir.structural_equal(func_after, func_expected)
     relay.analysis.check_basic_block_normal_form(func_after)
 
@@ -274,6 +256,28 @@ def test_nested_if():
     func_after = run_infer_type(mod_after)["main"]
     func_expected = run_infer_type(expected())
     assert tvm.ir.structural_equal(func_after, func_expected)
+    relay.analysis.check_basic_block_normal_form(func_after)
+
+
+def test_may_share():
+    shape = (10, 10)
+    null = mnm.ir.const(None)
+
+    def before():
+        in0 = mnm.ir.var("in0", shape=shape)
+        in1 = mnm.ir.var("in1", shape=shape)
+        a_1 = mnm.ir.op.add(in0, in1, null, null)
+        v_0 = mnm.ir.var("a2", may_share=in0)
+        a_2 = relay.Let(v_0, mnm.ir.op.relu(a_1), v_0)
+        func = relay.Function([in0, in1], a_2)
+        return func
+
+    func = before()
+    mod = mnm.ir.IRModule()
+    mod["main"] = func
+    mod_after = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
+    func_after = run_infer_type(mod_after)["main"]
+    assert tvm.ir.structural_equal(func_after, run_infer_type(mod)["main"])
     relay.analysis.check_basic_block_normal_form(func_after)
 
 

@@ -10,6 +10,7 @@
 #include "tvm/relay/dataflow_matcher.h"
 #include "tvm/relay/transform.h"
 #include "mnm/ir.h"
+#include "mnm/value.h"
 #include "mnm/ir_ext.h"
 #include "mnm/pass_manager.h"
 
@@ -343,7 +344,14 @@ Pass DataParallelSchedule();
  * ensure correctness. This pass must be run if AutoDataParallel is enabled.
  * \return The created pass.
  */
-Pass AnnotateDistOps();
+Pass EnforceSync();
+
+/*!
+ * \brief This pass works in ANF and adds neccessary memory copy ops before and after
+ * multi-input collectives ops to pipeline memory copies.
+ * \return The created pass.
+ */
+Pass AnnotateCollectiveOps();
 
 /*!
  * \brief This pass implements IOS (Inter-Operator-Scheduler) stream schedule policy. It transforms
@@ -402,8 +410,15 @@ ir::Expr BindParam(ir::Function func, ir::Array<ir::Expr> args);
  * \param expr The expression.
  * \return The expression with checked types.
  */
-
 ir::Expr InferType(ir::Expr expr);
+
+/*!
+ * \brief Infer the type of a given func by using values.
+ * \param expr The func.
+ * \param value The values.
+ * \return The func with checked types.
+ */
+ir::Expr InferTypeWithValues(const ir::Expr& func, const ir::Array<value::Value>& values);
 
 /*!
  * \brief Infer the type of a given expression and IR module.

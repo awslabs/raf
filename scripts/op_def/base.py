@@ -75,21 +75,21 @@ NO_DEFAULT = _NoDefaultType()
 # Context: nullable
 #     str
 #     DLContext
-Context = NewType('Context', object)
+Context = NewType("Context", object)
 
 # DType: nullable
 #     str
 #     DLDataType
-DType = NewType('DType', object)
+DType = NewType("DType", object)
 
 # Tensor: nullable
 #     ndarray
-Tensor = NewType('Tensor', object)
+Tensor = NewType("Tensor", object)
 
 # ArrayLike: nullable
 #     scalar
 #     ndarray
-ArrayLike = NewType('ArrayLike', object)
+ArrayLike = NewType("ArrayLike", object)
 
 # TupleInt: not nullable
 #     tuple of integers

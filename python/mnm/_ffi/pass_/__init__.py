@@ -3,7 +3,7 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 from __future__ import absolute_import
 from ._internal import ASAPStreamSchedule
-from ._internal import AnnotateDistOps
+from ._internal import AnnotateCollectiveOps
 from ._internal import AnnotateTarget
 from ._internal import AssignDevice
 from ._internal import AutoCast
@@ -16,6 +16,7 @@ from ._internal import DataParallelSchedule
 from ._internal import DeadCodeElimination
 from ._internal import Deduplicate
 from ._internal import DispatchDialect
+from ._internal import EnforceSync
 from ._internal import EraseType
 from ._internal import EstimateGFLOPS
 from ._internal import ExprAppend
@@ -41,6 +42,7 @@ from ._internal import ManifestAlloc
 from ._internal import MemoryPlan
 from ._internal import MemorySchedule
 from ._internal import MergeCompilerRegions
+from ._internal import PartitionANF
 from ._internal import PartitionGradient
 from ._internal import PartitionGraph
 from ._internal import PrintIR

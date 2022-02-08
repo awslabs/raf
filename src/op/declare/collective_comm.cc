@@ -135,7 +135,9 @@ void Broadcast(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._broadcast", Broadcast).set_attr<TOpPattern>("TOpPattern", kOpaque);
+MNM_OP_DECLARE("mnm.op._broadcast", Broadcast)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TMNMCollective>("TMNMCollective", true);
 
 void Send(const CallValues& call) {
   const auto* args = call->args.as<SendArgs>();

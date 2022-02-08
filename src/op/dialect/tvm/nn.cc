@@ -839,7 +839,7 @@ std::vector<std::string> ThresholdDxSchemaArgNames(const op::CallValues& call) {
 }
 
 Attrs ThresholdDxSchema2Attrs(const ThresholdDxArgs* args) {
-  auto attrs = make_object<ThresholdDxAttr>();
+  auto attrs = make_object<ThresholdDxAttrs>();
   attrs->threshold = args->threshold;
   return Attrs(attrs);
 }

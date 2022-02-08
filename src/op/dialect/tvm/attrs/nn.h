@@ -221,10 +221,10 @@ struct ThresholdAttrs : public tvm::AttrsNode<ThresholdAttrs> {
 };
 
 /*! \brief Attributes used in threshold_dx operator */
-struct ThresholdDxAttr : public tvm::AttrsNode<ThresholdDxAttr> {
+struct ThresholdDxAttrs : public tvm::AttrsNode<ThresholdDxAttrs> {
   double threshold;
 
-  TVM_DECLARE_ATTRS(ThresholdDxAttr, "relay.attrs.ThresholdDxAttr") {
+  TVM_DECLARE_ATTRS(ThresholdDxAttrs, "relay.attrs.ThresholdDxAttrs") {
     TVM_ATTR_FIELD(threshold).set_default(0.0).describe("The value to threshold at");
   }
 };

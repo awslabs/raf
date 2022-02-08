@@ -7,11 +7,11 @@
 
 #include <stack>
 #include "mnm/op.h"
+#include "mnm/cache.h"
 #include "mnm/ir.h"
 #include "mnm/type.h"
 #include "mnm/value.h"
 #include "mnm/pass.h"
-#include "mnm/op_utils.h"
 #include "./let_list.h"
 #include "./common.h"
 

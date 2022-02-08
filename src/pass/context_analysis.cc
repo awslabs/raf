@@ -48,8 +48,7 @@ using namespace mnm::ir;
 using namespace mnm::op::schema;
 using namespace mnm::value;
 
-using PackedAnalysisResultMap = Map<Expr, Array<Integer>>;
-using AnalysisResultMap = std::unordered_map<Expr, Device, tvm::ObjectHash, tvm::ObjectEqual>;
+using AnalysisResultMap = Map<Expr, Device>;
 
 namespace context_analysis {
 
@@ -144,11 +143,11 @@ DeviceDomainPtr Join(const DeviceDomainPtr& lhs, const DeviceDomainPtr& rhs) {
 class ContextAnalyzer : public MixedModeVisitor {
  public:
   ContextAnalyzer(const IRModule& mod, const GlobalVar& current_func,
-                  const Device& default_context)
+                  const Device& default_device)
       : MixedModeVisitor(9),  // the number of repeated visits a node can perform
         mod_(mod),
         current_func_(current_func),
-        default_context_(default_context) {
+        default_device_(default_device) {
   }
 
   // Create an empty domain.
@@ -350,9 +349,9 @@ class ContextAnalyzer : public MixedModeVisitor {
     for (const auto& it : expr_to_device_) {
       auto device = Lookup(it.second);
       if (device->IsEmptyDomain()) {
-        ret[it.first] = default_context_;
+        ret.Set(it.first, default_device_);
       } else {
-        ret[it.first] = device->device_;
+        ret.Set(it.first, device->device_);
       }
     }
 
@@ -407,10 +406,11 @@ class ContextAnalyzer : public MixedModeVisitor {
     return false;
   }
 
-  inline int64_t ToScalar(const ObjectRef& val) {
-    const auto* int_val = val.as<IntValueObj>();
-    CHECK(int_val != nullptr);
-    return int_val->value;
+  inline Device ToDevice(const ObjectRef& val) {
+    const auto* str_val = val.as<StringValueObj>();
+    CHECK(str_val != nullptr);
+    const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+    return Device((tvm::Device)(*str2dev)(str_val->value));
   }
 
   // Process device copy call node
@@ -435,10 +435,10 @@ class ContextAnalyzer : public MixedModeVisitor {
       const ConstantNode* src_const = call->args[1].as<ConstantNode>();
       const ConstantNode* dst_const = call->args[2].as<ConstantNode>();
       CHECK(src_const != nullptr && dst_const != nullptr);
-      int src_type = static_cast<int>(ToScalar(src_const->value));
-      int dst_type = static_cast<int>(ToScalar(dst_const->value));
-      src_dev_type = static_cast<DevType>(src_type);
-      dst_dev_type = static_cast<DevType>(dst_type);
+      auto src_device = ToDevice(src_const->value);
+      auto dst_device = ToDevice(dst_const->value);
+      src_dev_type = src_device->device_type;
+      dst_dev_type = dst_device->device_type;
     }
 
     //  Device copy op only has one input which is now annotated with the
@@ -458,7 +458,7 @@ class ContextAnalyzer : public MixedModeVisitor {
       MixedModeVisitor::VisitExpr(call->args[i]);
     }
     const auto* attrs = call->attrs.as<tvm::relay::AllocStorageAttrs>();
-    Device dev(attrs->se_scope->ToDevice());
+    Device dev(attrs->virtual_device->ToDevice());
     Unify(DeviceFor(GetRef<Call>(call)), DeviceType(dev));
   }
 
@@ -603,7 +603,7 @@ class ContextAnalyzer : public MixedModeVisitor {
   /* \brief The current function that is being analyzed. */
   GlobalVar current_func_;
   /* \brief The default device that could be attached to an expression. */
-  Device default_context_;
+  Device default_device_;
   /* \brief The IR node to device domain mapping. */
   std::unordered_map<Expr, DeviceDomainPtr, tvm::ObjectHash, tvm::ObjectEqual> expr_to_device_;
   /* \brief The domain map for union-find. */
@@ -618,30 +618,15 @@ class ContextAnalyzer : public MixedModeVisitor {
 
 }  // namespace context_analysis
 
-AnalysisResultMap ContextAnalysis(const IRModule& mod, const DLDevice& default_context) {
+AnalysisResultMap ContextAnalysis(const IRModule& mod, const Device& default_device) {
   auto entry = mod->GetGlobalVar("main");
-  auto ca = context_analysis::ContextAnalyzer(mod, entry, default_context);
+  auto ca = context_analysis::ContextAnalyzer(mod, entry, default_device);
   auto expr = mod->Lookup(entry);
   ca.VisitExpr(expr);
   return ca.Results();
 }
 
-// Unpack the device type and deivce id fields in DLDevice for PackedFunc calls
-// as DLDevice is not in the object system.
-PackedAnalysisResultMap ContextAnalysisPacked(const IRModule& mod,
-                                              const DLDevice& default_context) {
-  PackedAnalysisResultMap ret;
-  auto res = ContextAnalysis(mod, default_context);
-  for (const auto& it : res) {
-    Device dev = it.second;
-    Integer dev_ty = static_cast<int>(dev.operator tvm::Device().device_type);
-    Integer dev_id = it.second.device_id();
-    ret.Set(it.first, {dev_ty, dev_id});
-  }
-  return ret;
-}
-
-MNM_REGISTER_GLOBAL("mnm.pass_.ContextAnalysis").set_body_typed(ContextAnalysisPacked);
+MNM_REGISTER_GLOBAL("mnm.pass_.ContextAnalysis").set_body_typed(ContextAnalysis);
 
 }  // namespace pass
 }  // namespace mnm

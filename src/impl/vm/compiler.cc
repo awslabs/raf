@@ -837,55 +837,59 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InlineLet());
   pass_seqs.push_back(pass::DeadCodeElimination());
 
-  // optimization passes that work on BBNF
-  pass_seqs.push_back(pass::ToGraphNormalForm());
-  pass_seqs.push_back(pass::ToBasicBlockNormalForm());
-  pass_seqs.push_back(pass::SimplifyExpr());
-  pass_seqs.push_back(pass::InferType());
-  pass_seqs.push_back(pass::FuseDialect());
-  pass_seqs.push_back(pass::FuseTVM());
-  pass_seqs.push_back(pass::DispatchDialect());
-  // We need to erase the type after dialect dispatching because dialect ops may have different
-  // output type than the base ops.
-  pass_seqs.push_back(pass::EraseType());
-
-  // optimization passes that transform BBNF into ANF
   bool enable_stream_schedule = true;
-  if ((*it).second.device_type() == DevType::kCUDA()) {
-    if (DistContext::Global()->enable_data_parallel) {
-      // The current design of AnnotateDistOps assumes ops are executed on two CUDA streams:
-      // all computation ops are executed on one stream, and all communication collectives
-      // are executed on another dedicated stream. This ensures that no two collectives
-      // can execute concurrently, and we can enforce strictly identical order of the collectives
-      // across different devices. (There is a potential problem if NCCL collectives are executed
-      // in parallel, see e.g. https://github.com/NVIDIA/nccl/issues/522,
-      // https://github.com/NVIDIA/nccl/issues/195). Thus currently AnnotateDistOps and the
-      // multi-stream passes are mutually exclusive.
-      // TODO: make AnnotateDistOps and multi-stream scheduling compatible
-      enable_stream_schedule = false;
-      pass_seqs.push_back(pass::DataParallelSchedule());
-      pass_seqs.push_back(pass::AnnotateDistOps());
-    } else {
-      auto policy_name =
-          pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
-      if (policy_name == "sequential") {
-        enable_stream_schedule = false;
-        pass_seqs.push_back(pass::ToANormalForm());
-      } else if (policy_name == "wavefront") {
-        pass_seqs.push_back(pass::WavefrontStreamSchedule());
-      } else if (policy_name == "asap") {
-        pass_seqs.push_back(pass::ASAPStreamSchedule());
-      } else if (policy_name == "ios") {
-        pass_seqs.push_back(pass::InferType());
-        pass_seqs.push_back(pass::IOSStreamSchedule());
+  if (!pass_ctx->GetConfig("mnm.vm.optimize.anf_only", Bool(false)).value()) {
+    // optimization passes that work on BBNF
+    pass_seqs.push_back(pass::ToGraphNormalForm());
+    pass_seqs.push_back(pass::ToBasicBlockNormalForm());
+    pass_seqs.push_back(pass::SimplifyExpr());
+    pass_seqs.push_back(pass::InferType());
+    pass_seqs.push_back(pass::FuseDialect());
+    pass_seqs.push_back(pass::FuseTVM());
+    pass_seqs.push_back(pass::DispatchDialect());
+    // We need to erase the type after dialect dispatching because dialect ops may have different
+    // output type than the base ops.
+    pass_seqs.push_back(pass::EraseType());
+
+    // optimization passes that transform BBNF into ANF
+    if ((*it).second.device_type() == DevType::kCUDA()) {
+      if (DistContext::Global()->enable_data_parallel) {
+        // The current design of EnforceSync assumes ops are executed on multiple CUDA streams:
+        // all computation ops are executed on a computation stream, and all communication
+        // collectives are executed on another communication stream. Memory copy ops added in
+        // AnnotateCollectiveOps are executed on fuse and defuse stream. This ensures that no two
+        // collectives and memory copies can execute concurrently, and we can enforce strictly
+        // identical order of the operators across different devices. (There is a potential problem
+        // if NCCL collectives are executed in parallel, see e.g.
+        // https://github.com/NVIDIA/nccl/issues/522, https://github.com/NVIDIA/nccl/issues/195).
+        // Thus currently distributed learning and the multi-stream passes are mutually exclusive.
+        pass_seqs.push_back(pass::DataParallelSchedule());
+        pass_seqs.push_back(pass::AnnotateCollectiveOps());
+        pass_seqs.push_back(pass::EnforceSync());
       } else {
-        LOG(FATAL) << "Cannot recognize schedule policy: " << policy_name << ", candidates are \n"
-                   << "  sequential, wavefront, asap, and ios" << std::endl;
+        auto policy_name =
+            pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
+        if (policy_name == "sequential") {
+          enable_stream_schedule = false;
+          pass_seqs.push_back(pass::ToANormalForm());
+        } else if (policy_name == "wavefront") {
+          pass_seqs.push_back(pass::WavefrontStreamSchedule());
+        } else if (policy_name == "asap") {
+          pass_seqs.push_back(pass::ASAPStreamSchedule());
+        } else if (policy_name == "ios") {
+          pass_seqs.push_back(pass::InferType());
+          pass_seqs.push_back(pass::IOSStreamSchedule());
+        } else {
+          LOG(FATAL) << "Cannot recognize schedule policy: " << policy_name << ", candidates are \n"
+                     << "  sequential, wavefront, asap, and ios" << std::endl;
+        }
       }
+    } else {
+      enable_stream_schedule = false;
+      pass_seqs.push_back(pass::ToANormalForm());
     }
   } else {
     enable_stream_schedule = false;
-    pass_seqs.push_back(pass::ToANormalForm());
   }
 
   // optimization passes that work on ANF
@@ -967,6 +971,8 @@ PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Obje
     return PackedFunc([sptr_to_self, name](TVMArgs args, TVMRetValue* rv) {});
   }
 }
+
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.vm.optimize.anf_only", Bool);
 
 MNM_REGISTER_GLOBAL("mnm.vm.VMCompiler").set_body_typed(CreateVMCompiler);
 
