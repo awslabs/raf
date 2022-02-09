@@ -12,6 +12,11 @@ RUN bash /install/ubuntu_install_python.sh gpu
 COPY install/ubuntu_install_llvm.sh /install/ubuntu_install_llvm.sh
 RUN bash /install/ubuntu_install_llvm.sh
 
+# AWS Batch setup
+COPY batch/entry.sh /batch/entry.sh
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
+RUN pip3 install --upgrade awscli
+
 # Environment variables
 ENV PATH=/usr/local/cuda/bin:${PATH}
 ENV C_INCLUDE_PATH=/usr/local/cuda/include:${C_INCLUDE_PATH}

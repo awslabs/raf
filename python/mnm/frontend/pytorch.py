@@ -5,6 +5,7 @@ import os
 import hashlib
 import torch
 
+from mnm import distributed as dist
 from .._core.ndarray import ndarray
 from .._lib import relay
 from .._ffi.pass_ import FromRelay, validate_relay_param_name
@@ -73,7 +74,8 @@ def trace_model(model, input_type, input_shape):
         if model.dtype != torch.float32:
             if not torch.cuda.is_available():
                 raise RuntimeError("Trace PyTorch model with dtype %s requires GPU" % model.dtype)
-            device = "cuda"
+            dctx = dist.get_context()
+            device = "cuda:" + str(dctx.local_rank)
 
         if input_type.startswith("float"):
             input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)
@@ -86,7 +88,7 @@ def trace_model(model, input_type, input_shape):
             model(input_data)
             scripted_model = torch.jit.trace(model, input_data).eval()
 
-        if device == "cuda":
+        if device.startswith("cuda"):
             model.to(device="cpu")
             scripted_model = scripted_model.to(device="cpu")
 
