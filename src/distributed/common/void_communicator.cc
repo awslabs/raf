@@ -5,6 +5,7 @@
  */
 
 #include "mnm/communicator.h"
+#include "mnm/connector.h"
 
 namespace mnm {
 namespace distributed {
@@ -43,6 +44,7 @@ MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.void")
 
 void RemoveCommunicator() {
   CommunicatorManager::Get()->Remove();
+  ConnectorManager::Get()->Remove();
 }
 
 MNM_REGISTER_GLOBAL("mnm.distributed.RemoveCommunicator").set_body_typed(RemoveCommunicator);
