@@ -279,7 +279,7 @@ def main():
         jobName=job_name,
         jobQueue=job_queue,
         jobDefinition=job_def,
-        timeout=int(args.timeout) * 60,
+        timeout={"attemptDurationSeconds": int(args.timeout) * 60},
         containerOverrides={
             "command": [
                 "bash",
