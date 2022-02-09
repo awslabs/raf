@@ -63,7 +63,6 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            r = mnm.ir.const([])
             x_2 = builder.call("_allreduce", [x_2, mnm.ir.const("sum"), mnm.ir.const([])])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
