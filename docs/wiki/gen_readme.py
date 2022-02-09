@@ -29,7 +29,7 @@ def canonicalize_name(name):
 
 def write_contents(filep, contents, level=0):
     """A helper function to write recursive contents to the file."""
-    for (_, name), val in sorted(contents.items(), key=lambda c: c[0][0]):
+    for (_, name), val in sorted(contents.items(), key=lambda c: c[0]):
         filep.write(" " * (level * 4))
 
         if isinstance(val, dict):

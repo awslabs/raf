@@ -1,0 +1,206 @@
+name: CI-UnitTest
+
+on:
+  # This workflow includes AWS credential to run jobs on AWS batch.
+  # Thus, this workflow cannot checkout PRs and can only be triggered by CI-Lint.
+  workflow_run:
+    workflows: ["CI-Lint"]
+    types:
+      - completed
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check_status:
+    runs-on: ubuntu-latest
+    outputs:
+      cpu_image: "metaprojdev/meta:ci_cpu-v0.18"
+      gpu_image: "metaprojdev/meta:ci_gpu-v0.20"
+      skip_ci: ${{ steps.job_info.outputs.skip_ci }}
+      ref: ${{ steps.job_info.outputs.ref }}
+      repo: ${{ steps.job_info.outputs.repo }}
+      pr: ${{ steps.pr_job_info.outputs.pr }}
+      sha: ${{ steps.pr_job_info.outputs.sha }}
+      job_tag: ${{ steps.gen_tag.outputs.tag }}
+    steps:
+      # The workflow triggered by workflow run will not show its status
+      # in Github by default, so we have to use this action to enable it.
+      # Note that when this action is used, "name" in job is unavailable:
+      # https://github.com/haya14busa/action-workflow_run-status/issues/158
+      - uses: haya14busa/action-workflow_run-status@v1
+      - name: Whether linting was failed
+        if: ${{ github.event.workflow_run.conclusion != 'success' }}
+        run: exit 1
+      - name: Download artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ci_lint.yml
+          run_id: ${{ github.event.workflow_run.id }}
+      - name: Parse common job info
+        id: job_info
+        run: |
+          skip_ci=$(head -n 1 artifact/skip.txt)
+          echo "::set-output name=skip_ci::${skip_ci}"
+          ref=$(head -n 1 artifact/ref.txt)
+          echo "::set-output name=ref::${ref}"
+          repo=$(head -n 1 artifact/repo.txt)
+          echo "::set-output name=repo::${repo}"
+      - name: Parse PR job info
+        id: pr_job_info
+        continue-on-error: true
+        # Note that pr and sha only available for pull request, and will be empty for push events.
+        run: |
+          pr=$(head -n 1 artifact/pr.txt)
+          echo "::set-output name=pr::${pr}"
+          sha=$(head -n 1 artifact/sha.txt)
+          echo "::set-output name=sha::${sha}"
+      - name: Generate tag
+        id: gen_tag
+        # This tag is PR-unique so it can be used to connect jobs for the same PR.
+        # For example, we use it to share ccache caches and cancel previous runs.
+        run: |
+          tag=${{ steps.job_info.outputs.repo }}/${{ steps.pr_job_info.outputs.pr }}
+          echo "::set-output name=tag::${tag}"
+
+  test_on_cpu:
+    needs: [check_status]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: haya14busa/action-workflow_run-status@v1
+      - name: List environments
+        run: |
+          echo "Job tag: ${{ needs.check_status.outputs.job_tag }}"
+          echo "Skip CI? ${{ needs.check_status.outputs.skip_ci }}"
+          echo "REF: ${{ needs.check_status.outputs.ref }}"
+          echo "REPO: ${{ needs.check_status.outputs.repo }}"
+          echo "PR: ${{ needs.check_status.outputs.pr }}"
+          echo "SHA: ${{ needs.check_status.outputs.sha }}"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_BATCH_ACCESS_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_BATCH_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Checkout repository
+        # No need to checkout submodules because we only need the script.
+        uses: actions/checkout@v2
+      - name: Test
+        run: |
+          # env vars are unavailable in job.if so we have to implement it here.
+          if [ "${{ needs.check_status.outputs.skip_ci }}" == "1" ]; then
+            echo "Skip CPU tests"
+            exit 0
+          fi
+          echo "Running tests on CPU"
+          python3 -m pip install argparse boto3
+          python3 ./ci/batch/submit-job.py \
+            --platform CPU \
+            --image ${{ needs.check_status.outputs.cpu_image }} \
+            --name ci-cpu-${{ needs.check_status.outputs.job_tag }} \
+            --job-queue ci-cpu-queue \
+            --job-def-cfg ./ci/batch/job-def-cfg.json \
+            --entry-script /batch/entry.sh \
+            --source-ref ${{ needs.check_status.outputs.ref }} \
+            --repo ${{ needs.check_status.outputs.repo }} \
+            --wait \
+            --command "bash ./ci/batch/cli.sh config_cmake CPU;
+              bash ./ci/batch/backup-ccache.sh download CPU ${{ needs.check_status.outputs.job_tag }};
+              bash ./ci/batch/cli.sh compile build;
+              bash ./ci/batch/backup-ccache.sh upload CPU ${{ needs.check_status.outputs.job_tag }};
+              bash ./ci/batch/cli.sh unit_test CPU"
+
+  test_on_gpu:
+    needs: [check_status]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: haya14busa/action-workflow_run-status@v1
+      - name: List environments
+        run: |
+          echo "Job tag: ${{ needs.check_status.outputs.job_tag }}"
+          echo "Skip CI? ${{ needs.check_status.outputs.skip_ci }}"
+          echo "REF: ${{ needs.check_status.outputs.ref }}"
+          echo "REPO: ${{ needs.check_status.outputs.repo }}"
+          echo "PR: ${{ needs.check_status.outputs.pr }}"
+          echo "SHA: ${{ needs.check_status.outputs.sha }}"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_BATCH_ACCESS_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_BATCH_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Checkout repository
+        # No need to checkout submodules because we only need the script.
+        uses: actions/checkout@v2
+      - name: Test
+        run: |
+          # env vars are unavailable in job.if so we have to implement it here.
+          if [ "${{ needs.check_status.outputs.skip_ci }}" == "1" ]; then
+            echo "Skip GPU tests"
+            exit 0
+          fi
+          echo "Running tests on GPU"
+          python3 -m pip install argparse boto3
+          python3 ./ci/batch/submit-job.py \
+            --platform GPU \
+            --image ${{ needs.check_status.outputs.gpu_image }} \
+            --name ci-gpu-${{ needs.check_status.outputs.job_tag }} \
+            --job-queue ci-gpu-queue \
+            --job-def-cfg ./ci/batch/job-def-cfg.json \
+            --entry-script /batch/entry.sh \
+            --source-ref ${{ needs.check_status.outputs.ref }} \
+            --repo ${{ needs.check_status.outputs.repo }} \
+            --wait \
+            --command "bash ./ci/batch/cli.sh config_cmake GPU 75;
+              bash ./ci/batch/backup-ccache.sh download GPU ${{ needs.check_status.outputs.job_tag }};
+              bash ./ci/batch/cli.sh compile build;
+              bash ./ci/batch/backup-ccache.sh upload GPU ${{ needs.check_status.outputs.job_tag }};
+              bash ./ci/batch/cli.sh unit_test GPU"
+
+  test_on_multi_gpu:
+    needs: [check_status]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: haya14busa/action-workflow_run-status@v1
+      - name: List environments
+        run: |
+          echo "Job tag: ${{ needs.check_status.outputs.job_tag }}"
+          echo "Skip CI? ${{ needs.check_status.outputs.skip_ci }}"
+          echo "REF: ${{ needs.check_status.outputs.ref }}"
+          echo "REPO: ${{ needs.check_status.outputs.repo }}"
+          echo "PR: ${{ needs.check_status.outputs.pr }}"
+          echo "SHA: ${{ needs.check_status.outputs.sha }}"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_BATCH_ACCESS_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_BATCH_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Checkout repository
+        # No need to checkout submodules because we only need the script.
+        uses: actions/checkout@v2
+      - name: Test
+        run: |
+          # env vars are unavailable in job.if so we have to implement it here.
+          if [ "${{ needs.check_status.outputs.skip_ci }}" == "1" ]; then
+            echo "Skip multi-GPU tests"
+            exit 0
+          fi
+          echo "Running tests on Multiply GPUs"
+          python3 -m pip install argparse boto3
+          python3 ./ci/batch/submit-job.py \
+            --platform multi-GPU \
+            --image ${{ needs.check_status.outputs.gpu_image }} \
+            --name ci-multi-gpu-${{ needs.check_status.outputs.job_tag }} \
+            --job-queue ci-gpu-queue \
+            --job-def-cfg ./ci/batch/job-def-cfg.json \
+            --entry-script /batch/entry.sh \
+            --source-ref ${{ needs.check_status.outputs.ref }} \
+            --repo ${{ needs.check_status.outputs.repo }} \
+            --wait \
+            --command "bash ./ci/batch/cli.sh config_cmake GPU 75;
+              bash ./ci/batch/backup-ccache.sh download multi-GPU ${{ needs.check_status.outputs.job_tag }};
+              bash ./ci/batch/cli.sh compile build;
+              bash ./ci/batch/backup-ccache.sh upload multi-GPU ${{ needs.check_status.outputs.job_tag }};
+              bash ./ci/batch/cli.sh unit_test multi-GPU"
