@@ -66,8 +66,8 @@ class TwoBranchModel(mnm.Model):
             let %v2 = mnm.op.atan(%v);
             let %v3 = (%v1,);
             let %v4 = (%v2,);
-            let %v5 = mnm.op._allreduce(%v3, str"sum");
-            let %v6 = mnm.op._allreduce(%v4, str"sum");
+            let %v5 = mnm.op._allreduce(%v3, str"sum", TupleValue([]));
+            let %v6 = mnm.op._allreduce(%v4, str"sum", TupleValue([]));
             let %v7 = mnm.op.multiply(%v5, %c);
             let %v8 = mnm.op.multiply(%v6, %c);
             let %v9 = (%v7, %v8);
@@ -87,9 +87,9 @@ class TwoBranchModel(mnm.Model):
         x_2b = builder.make_tuple((x_1b,))
 
         x_2a1 = builder.const("sum")
-        x_3a = builder.call("_allreduce", [x_2a, x_2a1])
+        x_3a = builder.call("_allreduce", [x_2a, x_2a1, builder.const([])])
         x_2a2 = builder.const("sum")
-        x_3b = builder.call("_allreduce", [x_2b, x_2a2])
+        x_3b = builder.call("_allreduce", [x_2b, x_2a2, builder.const([])])
 
         x_4a = builder.call("multiply", [x_3a, c])
         x_4b = builder.call("multiply", [x_3b, c])
@@ -135,10 +135,10 @@ class UnbalancedModel(mnm.Model):
             let %v3 = mnm.op.atan(%v1);
             let %v4 = (%v2,);
             let %v5 = mnm.op.atan(%v3);
-            let %v6 = mnm.op._allreduce(%v4, str"sum");
+            let %v6 = mnm.op._allreduce(%v4, str"sum", TupleValue([]));
             let %v7 = mnm.op.atan(%v5);
             let %v8 = (%v7,);
-            let %v9 = mnm.op._allreduce(%v8, str"sum");
+            let %v9 = mnm.op._allreduce(%v8, str"sum", TupleValue([]));
             let %v10 = mnm.op.multiply(%v6, %c);
             let %v11 = mnm.op.multiply(%v9, %c);
             let %v12 = (%v11, %v10);
@@ -162,13 +162,13 @@ class UnbalancedModel(mnm.Model):
 
             x_3a = builder.call("atan", [x_2a])
             x_2b1 = builder.const("sum")
-            x_3b = builder.call("_allreduce", [x_2b, x_2b1])
+            x_3b = builder.call("_allreduce", [x_2b, x_2b1, builder.const([])])
 
             x_4a = builder.call("atan", [x_3a])
             # branch b is delayed since mul depdends on allreduce
             x_5a = builder.make_tuple((x_4a,))
             x_5a1 = builder.const("sum")
-            x_6a = builder.call("_allreduce", [x_5a, x_5a1])
+            x_6a = builder.call("_allreduce", [x_5a, x_5a1, builder.const([])])
 
             # now launch update ops, branch b first
             x_4b = builder.call("multiply", [x_3b, c])
@@ -194,14 +194,14 @@ class UnbalancedModel(mnm.Model):
             x_2a = builder.call("atan", [x_1a])
 
             x_2b1 = builder.const("sum")
-            x_3b = builder.call("_allreduce", [x_2b, x_2b1])
+            x_3b = builder.call("_allreduce", [x_2b, x_2b1, builder.const([])])
             x_3a = builder.call("atan", [x_2a])
 
             # branch b is delayed since mul depdends on allreduce
             x_4a = builder.call("atan", [x_3a])
             x_5a = builder.make_tuple((x_4a,))
             x_5a1 = builder.const("sum")
-            x_6a = builder.call("_allreduce", [x_5a, x_5a1])
+            x_6a = builder.call("_allreduce", [x_5a, x_5a1, builder.const([])])
 
             # now launch update ops, branch b first
             x_4b = builder.call("multiply", [x_3b, c])
@@ -241,7 +241,7 @@ class ExampleModel(mnm.Model):
             let %v = mnm.op.atan(%x);
             let %v1 = (%v,);
             let %v2 = mnm.op.atan(%v);
-            let %v3 = mnm.op._allreduce(%v1, str"sum");
+            let %v3 = mnm.op._allreduce(%v1, str"sum", TupleValue([]));
             let %v4 = mnm.op.atan(%v2);
             let %v5 = mnm.op.atan(%v3);
             let %v6 = mnm.op.multiply(%v5, %v4);
@@ -259,7 +259,7 @@ class ExampleModel(mnm.Model):
             a1_b = builder.call("atan", [a0])
 
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const([])])
             a2_b = builder.call("atan", [a1_b])
 
             a2_a = builder.call("atan", [a1_a])
@@ -278,7 +278,7 @@ class ExampleModel(mnm.Model):
 
             a2_b = builder.call("atan", [a1_b])
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const([])])
 
             a2_a = builder.call("atan", [a1_a])
 
@@ -316,7 +316,7 @@ class DelayedSuccessorModel(mnm.Model):
             let %x_0 = mnm.op.atan(%x);
             let %x_1 = (%x_0,);
             let %x_2 = mnm.op.atan(%x_0);
-            let %x_3 = mnm.op._allreduce(%x_1, str"sum");
+            let %x_3 = mnm.op._allreduce(%x_1, str"sum", TupleValue([]));
             let %x_4 = mnm.op.atan(%x_2);
             let %x_5 = mnm.op.atan(%x_4);
             let %x_6 = mnm.op.atan(%x_5);
@@ -338,7 +338,7 @@ class DelayedSuccessorModel(mnm.Model):
             a1_b = builder.call("atan", [a0])
 
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const([])])
             a2_b = builder.call("atan", [a1_b])
 
             a3_b = builder.call("atan", [a2_b])
@@ -362,7 +362,7 @@ class DelayedSuccessorModel(mnm.Model):
 
             a2_b = builder.call("atan", [a1_b])
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const([])])
 
             a3_b = builder.call("atan", [a2_b])
             a4_b = builder.call("atan", [a3_b])
@@ -502,14 +502,14 @@ class CascadingCollectiveModel(mnm.Model):
             let %v = mnm.op.multiply(%x, %c);
             let %v1 = (%v,);
             let %v2 = mnm.op.atan(%v);
-            let %v3 = mnm.op._allreduce(%v1, str"sum");
+            let %v3 = mnm.op._allreduce(%v1, str"sum", TupleValue([]));
             let %v4 = mnm.op.atan(%v2);
             let %v5 = mnm.op.atan(%v4);
             let %v6 = mnm.op.relu(%v3);
             let %v7 = mnm.op.multiply(%v6, %v5);
             let %v8 = (%v7,);
             let %v9 = mnm.op.atan(%v7);
-            let %v10 = mnm.op._allreduce(%v8, str"sum");
+            let %v10 = mnm.op._allreduce(%v8, str"sum", TupleValue([]));
             let %v11 = mnm.op.atan(%v9);
             let %v12 = mnm.op.atan(%v11);
             let %v13 = mnm.op.relu(%v10);
@@ -525,7 +525,7 @@ class CascadingCollectiveModel(mnm.Model):
             a1_b = builder.call("atan", [a0])
 
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const([])])
             a2_b = builder.call("atan", [a1_b])
 
             # a2_a is delayed after a3_b
@@ -542,7 +542,7 @@ class CascadingCollectiveModel(mnm.Model):
 
             a2_b = builder.call("atan", [a1_b])
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const([])])
 
             # a2_a is delayed after a3_b
             a3_b = builder.call("atan", [a2_b])

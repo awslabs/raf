@@ -266,14 +266,15 @@ struct DataParallel {
         // we should add a allreduce op after it.
         static Op op_allreduce = Op::Get("mnm.op._allreduce");
         auto input_var = mnm::ir::MakeVar("allreduce_in", {});
+        auto rank_list = MakeConstant(TupleValue::make(Array<Value>({})));
 
 #if defined MNM_USE_NCCL && NCCL_VERSION_CODE >= 21000
         bp_ell->vars[p2 - 1] = input_var;
         bp_ell->exprs[p2 - 1] = Tuple({bp_ell->vars[i]});
         // Here we name the var as 'g'(global gradient), to help us identify it easier.
         bp_ell->vars[p2] = mnm::ir::MakeVar("g", {});
-        bp_ell->exprs[p2] =
-            Call(op_allreduce, {bp_ell->vars[p2 - 1], MakeConstant(StringValue::make("avg"))});
+        bp_ell->exprs[p2] = Call(op_allreduce, {bp_ell->vars[p2 - 1],
+                                                MakeConstant(StringValue::make("avg")), rank_list});
         var_var_map.insert({bp_ell->vars[i], bp_ell->vars[p2]});
         p2 -= 2;
 #else
@@ -282,7 +283,8 @@ struct DataParallel {
         bp_ell->exprs[p2 - 2] = Tuple({bp_ell->vars[i]});
         bp_ell->vars[p2 - 1] = mnm::ir::MakeVar("g_sum", {});
         bp_ell->exprs[p2 - 1] =
-            Call(op_allreduce, {bp_ell->vars[p2 - 2], MakeConstant(StringValue::make("sum"))});
+            Call(op_allreduce,
+                 {bp_ell->vars[p2 - 2], MakeConstant(StringValue::make("sum")), rank_list});
         bp_ell->vars[p2] = mnm::ir::MakeVar("g", {});
         auto tt = bp_ell->vars[i]->checked_type().as<TensorTypeNode>();
         if (tt->dtype.code() == kDLFloat) {

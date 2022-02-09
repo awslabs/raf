@@ -47,7 +47,7 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
                 let %set_stream_comp1 = mnm.op.set_stream(int64(0), int64(1));
                 let %wait_for_comp = mnm.op.wait_event(int64(1), int64(4));
-                let %a3 = mnm.op._allreduce(%a2, str"sum");
+                let %a3 = mnm.op._allreduce(%a2, str"sum", TupleValue([]));
                 let %add_event_comm = mnm.op.add_event(int64(2), int64(4));
                 let %set_stream_comp2 = mnm.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = mnm.op.wait_event(int64(2), int64(1));
@@ -63,7 +63,8 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_2 = builder.call("_allreduce", [x_2, mnm.ir.const("sum")])
+            r = mnm.ir.const([])
+            x_2 = builder.call("_allreduce", [x_2, mnm.ir.const("sum"), mnm.ir.const([])])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(2, comp_stream)
@@ -117,7 +118,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
                 let %set_stream_comm = mnm.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp = mnm.op.wait_event(int64(1), int64(4));
-                let %a4 = mnm.op._allreduce(%a3, str"sum");
+                let %a4 = mnm.op._allreduce(%a3, str"sum", TupleValue([]));
                 let %add_event_comm = mnm.op.add_event(int64(3), int64(4));
                 let %set_stream_comp1 = mnm.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = mnm.op.wait_event(int64(3), int64(1));
@@ -127,7 +128,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp1 = mnm.op.add_event(int64(2), int64(1));
                 let %set_stream_comm1 = mnm.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp1 = mnm.op.wait_event(int64(2), int64(4));
-                let %a8 = mnm.op._allreduce(%a7, str"sum");
+                let %a8 = mnm.op._allreduce(%a7, str"sum", TupleValue([]));
                 let %add_event_comm1 = mnm.op.add_event(int64(4), int64(4));
                 let %set_stream_comp2 = mnm.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm1 = mnm.op.wait_event(int64(4), int64(1));
@@ -148,7 +149,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_3i, mnm.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_3i, mnm.ir.const("sum"), mnm.ir.const([])])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(2, comp_stream)
@@ -159,7 +160,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(3, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(3, comm_stream)
-            x_6 = builder.call("_allreduce", [x_6i, mnm.ir.const("sum")])
+            x_6 = builder.call("_allreduce", [x_6i, mnm.ir.const("sum"), mnm.ir.const([])])
             builder.add_event(4, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(4, comp_stream)
@@ -380,7 +381,7 @@ def test_multi_input_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_2, mnm.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_2, mnm.ir.const("sum"), mnm.ir.const([])])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(2, comp_stream)
@@ -432,7 +433,7 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
                 let %set_stream_comm = mnm.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp = mnm.op.wait_event(int64(1), int64(4));
-                let %a3 = mnm.op._allreduce(%a2, str"sum");
+                let %a3 = mnm.op._allreduce(%a2, str"sum", TupleValue([]));
                 let %add_event_comm = mnm.op.add_event(int64(2), int64(4));
                 let %set_stream_comp1 = mnm.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = mnm.op.wait_event(int64(2), int64(1));
@@ -451,7 +452,7 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_2, mnm.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_2, mnm.ir.const("sum"), mnm.ir.const([])])
             builder.add_event(4, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(4, comp_stream)
