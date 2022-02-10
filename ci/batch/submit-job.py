@@ -302,7 +302,6 @@ def main():
     tprint("Submitted job %s: %s (ID: %s) to the queue %s" % (job_def, job_name, job_id, job_queue))
 
     running = False
-    status_set = set()
     start_timestamp = 0
     log_stream_name = None
     while wait:
@@ -336,9 +335,8 @@ def main():
                     fetch_cloud_watch_logs(aws_cloudwatch_logs, log_stream_name, start_timestamp)
                     + 1
                 )
-        elif status not in status_set:
-            status_set.add(status)
-            tprint("[%s (%s)] Moved to status %s" % (job_name, job_id, status))
+        else:
+            tprint("[%s (%s)] Now at status %s" % (job_name, job_id, status))
         sys.stdout.flush()
 
 

@@ -15,7 +15,8 @@ defaults:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    if: github.repository == 'meta-project/meta'
+    runs-on: self-hosted
     container:
         image: metaprojdev/meta:ci_cpu-v0.18
     steps:
