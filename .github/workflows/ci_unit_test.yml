@@ -14,7 +14,7 @@ defaults:
 
 jobs:
   check_status:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       cpu_image: "metaprojdev/meta:ci_cpu-v0.18"
       gpu_image: "metaprojdev/meta:ci_gpu-v0.20"
@@ -66,7 +66,7 @@ jobs:
 
   test_on_cpu:
     needs: [check_status]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -113,7 +113,7 @@ jobs:
 
   test_on_gpu:
     needs: [check_status]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -160,7 +160,7 @@ jobs:
 
   test_on_multi_gpu:
     needs: [check_status]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
