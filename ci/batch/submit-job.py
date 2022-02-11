@@ -304,8 +304,8 @@ def main():
     running = False
     start_timestamp = 0
     log_stream_name = None
+    print_period = 30  # The period to print the job status in seconds.
     while wait:
-        time.sleep(10)
         response = aws_batch.describe_jobs(jobs=[job_id])
         status = response["jobs"][0]["status"]
         if status == "SUCCEEDED" or status == "FAILED":
@@ -324,6 +324,7 @@ def main():
             tprint("[%s (%s)] %s %s" % (job_name, job_id, status, reason))
             sys.exit(status == "FAILED")
         elif status == "RUNNING":
+            print_period = 10  # Shorten the period to print the job status when it starts running.
             log_stream_name = response["jobs"][0]["container"]["logStreamName"]
             if not running:
                 running = True
@@ -338,6 +339,7 @@ def main():
         else:
             tprint("[%s (%s)] Now at status %s" % (job_name, job_id, status))
         sys.stdout.flush()
+        time.sleep(print_period)
 
 
 if __name__ == "__main__":
