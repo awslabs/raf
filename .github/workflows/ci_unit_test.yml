@@ -105,10 +105,8 @@ jobs:
             --source-ref ${{ needs.check_status.outputs.ref }} \
             --repo ${{ needs.check_status.outputs.repo }} \
             --wait \
-            --command "bash ./ci/batch/cli.sh config_cmake CPU;
-              bash ./ci/batch/backup-ccache.sh download CPU ${{ needs.check_status.outputs.job_tag }};
-              bash ./ci/batch/cli.sh compile build;
-              bash ./ci/batch/backup-ccache.sh upload CPU ${{ needs.check_status.outputs.job_tag }};
+            --command "bash ./ci/batch/cli.sh config_cmake CPU &&
+              bash ./ci/batch/cli.sh compile build CPU ${{ needs.check_status.outputs.job_tag }} &&
               bash ./ci/batch/cli.sh unit_test CPU"
 
   test_on_gpu:
@@ -152,10 +150,8 @@ jobs:
             --source-ref ${{ needs.check_status.outputs.ref }} \
             --repo ${{ needs.check_status.outputs.repo }} \
             --wait \
-            --command "bash ./ci/batch/cli.sh config_cmake GPU 75;
-              bash ./ci/batch/backup-ccache.sh download GPU ${{ needs.check_status.outputs.job_tag }};
-              bash ./ci/batch/cli.sh compile build;
-              bash ./ci/batch/backup-ccache.sh upload GPU ${{ needs.check_status.outputs.job_tag }};
+            --command "bash ./ci/batch/cli.sh config_cmake GPU 75 &&
+              bash ./ci/batch/cli.sh compile build GPU ${{ needs.check_status.outputs.job_tag }} &&
               bash ./ci/batch/cli.sh unit_test GPU"
 
   test_on_multi_gpu:
@@ -199,8 +195,6 @@ jobs:
             --source-ref ${{ needs.check_status.outputs.ref }} \
             --repo ${{ needs.check_status.outputs.repo }} \
             --wait \
-            --command "bash ./ci/batch/cli.sh config_cmake GPU 75;
-              bash ./ci/batch/backup-ccache.sh download multi-GPU ${{ needs.check_status.outputs.job_tag }};
-              bash ./ci/batch/cli.sh compile build;
-              bash ./ci/batch/backup-ccache.sh upload multi-GPU ${{ needs.check_status.outputs.job_tag }};
+            --command "bash ./ci/batch/cli.sh config_cmake GPU 75 &&
+              bash ./ci/batch/cli.sh compile build multi-GPU ${{ needs.check_status.outputs.job_tag }} &&
               bash ./ci/batch/cli.sh unit_test multi-GPU"
