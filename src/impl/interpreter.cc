@@ -28,6 +28,7 @@ namespace interpreter {
 using namespace mnm::ir;
 using namespace mnm::value;
 using namespace mnm::op;
+using namespace mnm::distributed::communicator;
 using binding::BindingEntry;
 using binding::BindNDArray;
 using binding::DeTuple;
@@ -385,7 +386,8 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
   void RequestDistributed(Requests* req, int index) override {
     Requests::DistributedRequest& entry = req->distributed[index];
-    *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
+    *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+    // TODO: forcing type conversion here is dirty
   }
 
  private:

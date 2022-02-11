@@ -8,6 +8,7 @@
 #include <thread>
 #include "mnm/op_utils.h"
 #include "mnm/dist_context.h"
+#include "mnm/nccl_communicator.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
@@ -24,7 +25,7 @@ MNM_REGISTER_DIALECT("nccl").set_enable(DevType::kCUDA());
 
 class NCCLAllReduce : public mnm::op::OpEnv {
   void* stream;
-  void* communicator;
+  Communicator communicator;
   void* fused_data;
   size_t total_size = 0;
   std::vector<size_t> tuple_sizes;
@@ -58,9 +59,11 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     }
 
     if (args->rank_list.empty()) {
-      RequestDistributed(&communicator);
+      // RequestDistributed(&communicator);
+      // TODO: fix this
+      communicator = Communicator::Get("nccl");
     } else {
-      communicator = CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list);
+      communicator = Communicator::Get("nccl", args->rank_list);
       // Should unify the way of getting a communicator
     }
 
@@ -95,7 +98,7 @@ class NCCLAllReduce : public mnm::op::OpEnv {
     // using namespace std::this_thread;
     // using namespace std::chrono;
     // sleep_until(system_clock::now() + nanoseconds(200));
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(communicator)->nccl_comm;
 
     // Fuse Tensor
     auto tv = Downcast<value::TupleValue>(inputs[0]);
@@ -147,7 +150,7 @@ MNM_OP_ENV_MAKER("mnm.op.nccl._allreduce", NCCLAllReduce::make);
 
 class NCCLAllGather : public mnm::op::OpEnv {
   void* stream;
-  void* communicator;
+  Communicator communicator;
   explicit NCCLAllGather(const CallValues& cv) {
     auto op = ir::Op::Get("mnm.op._allgather");
     auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
@@ -156,9 +159,11 @@ class NCCLAllGather : public mnm::op::OpEnv {
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
 
     if (args->rank_list.empty()) {
-      RequestDistributed(&communicator);
+      // RequestDistributed(&communicator);
+      // TODO: fix this
+      communicator = Communicator::Get("nccl");
     } else {
-      communicator = CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list);
+      communicator = Communicator::Get("nccl", args->rank_list);
     }
   }
 
@@ -176,7 +181,7 @@ class NCCLAllGather : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(communicator)->nccl_comm;
     DLTensor* x = inputs[0];
     DLTensor* out = output;
     int64_t size = 1;
@@ -248,7 +253,8 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     size_t offset = 0;
     DLTensor* out = output;
     DType dtype;
@@ -324,7 +330,8 @@ class NCCLBroadcast : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     auto tv = Downcast<value::TupleValue>(inputs[0]);
     size_t dtype_size = 0;
     if (tv->fields.size() == 1) {
@@ -402,7 +409,8 @@ class NCCLSend : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     const DLTensor* x = inputs[0];
     NCCL_CALL(ncclSend(x->data, BytesCompactTensor(*x) / (x->dtype.bits / 8), DType(x->dtype), peer,
                        (ncclComm_t)nccl_comm, (cudaStream_t)stream));
@@ -446,7 +454,8 @@ class NCCLRecv : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     DLTensor* out = output;
     NCCL_CALL(ncclRecv(out->data, BytesCompactTensor(*out) / (out->dtype.bits / 8),
                        DType(out->dtype), peer, (ncclComm_t)nccl_comm, (cudaStream_t)stream));
@@ -523,7 +532,8 @@ class NCCLReduce : public mnm::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
-    void* nccl_comm = reinterpret_cast<Communicator*>(communicator)->GetCommHandle();
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     auto input_x = Downcast<value::TupleValue>(inputs[0]);
     size_t dtype_size = 0;
     if (input_x->fields.size() == 1) {

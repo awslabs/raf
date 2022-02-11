@@ -81,7 +81,7 @@ void AllGather(const CallValues& call) {
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   shape[args->axis] *=
-      CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list)->GetSize();
+      Communicator::Get("nccl", args->rank_list)->size;
   call->device = x->device;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
                                     /*dtype=*/x->dtype,
@@ -156,7 +156,7 @@ MNM_OP_DECLARE("mnm.op._send", Send)
 void Recv(const CallValues& call) {
   const auto* args = call->args.as<RecvArgs>();
   CHECK(args != nullptr);
-  Device dev(DevType::kCUDA(), CommunicatorManager::Get()->GetCommunicator()->GetRank());
+  Device dev(DevType::kCUDA(), Communicator::Get()->rank);
   call->device = dev;
   call->out = TensorValue::Assemble(/*ctx=*/dev,
                                     /*dtype=*/ir::String2DLDataType(args->dtype),

@@ -1,89 +1,55 @@
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2022 by Contributors
  * \file src/distributed/nccl_communicator.cc
- * \brief Communicator of NCCL
+ * \brief NCCL Communicator
  */
 
-#include <algorithm>
-#include <nccl.h>
-#include "mnm/communicator.h"
-#include "mnm/op_utils.h"
-#include "mnm/value.h"
-
-#define NCCL_CALL(cmd)                                                                            \
-  do {                                                                                            \
-    ncclResult_t e = cmd;                                                                         \
-    if (e != ncclSuccess) {                                                                       \
-      LOG(INFO) << "Failed: NCCL error " << __FILE__ << ":" << __LINE__ << ncclGetErrorString(e); \
-      exit(EXIT_FAILURE);                                                                         \
-    }                                                                                             \
-  } while (0)
+#include "mnm/nccl_communicator.h"
 
 namespace mnm {
 namespace distributed {
 namespace communicator {
 
-class NCCLCommunicator : public Communicator {
- public:
-  NCCLCommunicator(const std::vector<int64_t>& rank_list = {}) {
-    auto mpi = ConnectorManager::Get()->GetConnector("mpi");
-    ncclUniqueId nccl_id;
-    NCCL_CALL(ncclGetUniqueId(&nccl_id));
-    mpi->Broadcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), root_rank);
+NCCLCommunicator NCCLCommunicator::make(value::TupleValue rank_list)  {
+  auto mpi = Communicator::Get("mpi"); // Must init MPI first
+  auto obj = make_object<NCCLCommunicatorObj>();
 
-    auto attrs = GetDistAttrs(rank_list);
-    local_size = attrs.local_size;
-    local_rank = attrs.local_rank;
-    size = attrs.size;
-    rank = attrs.rank;
+  ncclUniqueId nccl_id;
+  NCCL_CALL(ncclGetUniqueId(&nccl_id));
 
-    if (rank_list.empty()) {
-      root_rank = 0;
-      cudaSetDevice(GetLocalRank());
-      NCCL_CALL(ncclCommInitRank(&nccl_comm, GetSize(), nccl_id, GetRank()));
-    } else {
-      root_rank = rank_list[0];
-
-      if (rank == -1) {
-        // ALL the nodes including the irrelevant ones MUST join the process of creating this
-        // sub-communicator. This rank is not in rank_list. So, let it run as standalone mode.
-        size = 1;
-        rank = 0;
-        NCCL_CALL(ncclGetUniqueId(&nccl_id));
-      }
-      NCCL_CALL(ncclCommInitRank(&nccl_comm, size, nccl_id, rank));
-    }
-  }
-  virtual ~NCCLCommunicator() {
-    NCCL_CALL(ncclCommDestroy(nccl_comm));
-  }
-  virtual void* GetCommHandle() {
-    return nccl_comm;
-  }
-  static void* make(value::TupleValue obj) {
-    std::vector<int64_t> rank_list;
-    for (auto i : obj->fields) {
-      auto val = Downcast<value::IntValue>(i);
-      rank_list.push_back(val->value);
-    }
-    return new NCCLCommunicator(rank_list);
+  if (rank_list->fields.empty()) {
+    // Create Global Communicator
+    obj->local_size = mpi->local_size;
+    obj->local_rank = mpi->local_rank;
+    obj->size = mpi->size;
+    obj->rank = mpi->rank;
+    obj->world_size = mpi->world_size;
+    obj->world_rank = mpi->world_rank;
+    obj->root_rank = mpi->root_rank;
+    obj->host_ids = mpi->host_ids;
+    obj->parent_comm = mpi;
+    cudaSetDevice(obj->local_rank);
+    MPI_CALL(MPI_Bcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), MPI_BYTE, obj->root_rank, MPI_COMM_WORLD));
+    NCCL_CALL(ncclCommInitRank(&obj->nccl_comm, obj->size, nccl_id, obj->rank));
+  } else {
+    // Create Sub-communicator
+    // ALL the nodes including the irrelevant ones MUST join the process of creating this
+    // sub-communicator. When this rank is not in rank_list, it will run in standalone mode.
+    InitSubCommunicator(NCCLCommunicator(obj), rank_list, mpi);
+    obj->parent_comm = mpi;
+    MPI_CALL(MPI_Bcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), MPI_BYTE, obj->root_rank, MPI_COMM_WORLD));
+    NCCL_CALL(ncclCommInitRank(&obj->nccl_comm, obj->size, nccl_id, obj->rank));
   }
 
- public:
-  std::string type = "NCCL";
+  return NCCLCommunicator(obj);
+}
 
- private:
-  ncclComm_t nccl_comm;
-};
+NCCLCommunicator::~NCCLCommunicator() {
+  NCCL_CALL(ncclCommDestroy(operator->()->nccl_comm));
+}
 
 MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.nccl")
     .set_body_typed(NCCLCommunicator::make);
-
-void Synchronize() {
-  cudaDeviceSynchronize();
-}
-
-MNM_REGISTER_GLOBAL("mnm.distributed.Synchronize").set_body_typed(Synchronize);
 
 }  // namespace communicator
 }  // namespace distributed

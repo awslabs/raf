@@ -56,6 +56,7 @@ using namespace mnm::registry;
 using namespace mnm::requests;
 using namespace mnm::device_api;
 using namespace mnm::stream_pool;
+using namespace mnm::distributed::communicator;
 
 namespace utils {
 inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id, Index event_id) {
@@ -1068,7 +1069,8 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     // prepare distributed requests
     for (size_t i = 0; i < requests->distributed.size(); i++) {
       Requests::DistributedRequest& entry = requests->distributed[i];
-      *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
+      *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+      // TODO: forcing type conversion here is dirty
     }
 #ifdef MNM_USE_CUDA
     // prepare cuda stream requests

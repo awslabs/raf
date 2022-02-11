@@ -22,15 +22,6 @@
 #include "mnm/communicator.h"
 #include "mnm/stream_pool.h"
 #include "../../../common/shape_utils.h"
-
-#define NCCL_CALL(cmd)                                                                             \
-  do {                                                                                             \
-    ncclResult_t e = cmd;                                                                          \
-    if (e != ncclSuccess) {                                                                        \
-      LOG(FATAL) << "Failed: NCCL error " << __FILE__ << ":" << __LINE__ << ncclGetErrorString(e); \
-    }                                                                                              \
-  } while (0)
-
 namespace mnm {
 
 template <>
