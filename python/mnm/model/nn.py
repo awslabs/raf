@@ -103,11 +103,13 @@ class BatchNorm(Model):  # pylint: disable=too-many-instance-attributes
                 name="w",
                 device=get_chained_attr(self, ["w", "device"], "cpu"),
             )
+            self.w.requires_grad = True
             self.b = ndarray(
                 np.zeros(n_f, dtype="float32"),
                 name="b",
                 device=get_chained_attr(self, ["b", "device"], "cpu"),
             )
+            self.b.requires_grad = True
 
     @trace
     def forward(self, x):

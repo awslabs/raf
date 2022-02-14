@@ -97,7 +97,10 @@ def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-
     dy, true, pred = inputs
     n, c = pred.shape
     dpred = _tvm.te.compute(
-        (n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], -dy / n, _tvm.tir.const(0))
+        (n, c),
+        lambda x, y: _tvm.tir.if_then_else(
+            y == true[x], -dy / n if len(dy.shape) == 0 else -dy[0] / n, _tvm.tir.const(0)
+        ),
     )
     return [dpred]
 
