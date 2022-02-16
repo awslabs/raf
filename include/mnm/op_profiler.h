@@ -23,7 +23,8 @@ namespace op_profiler {
 using namespace mnm::op;
 using namespace mnm::value;
 
-using LatencyMapT = std::unordered_map<std::string, std::vector<float>>;
+using LatencyAndWorkspaceMapT =
+    std::unordered_map<std::string, std::pair<std::vector<float>, int64_t>>;
 
 /*! \brief A class to JIT op, create dummy input data, and allocate memory buffers for profiling. */
 class OpWithData {
@@ -32,6 +33,7 @@ class OpWithData {
   int stream_id = -1;
   std::vector<Value> inputs;
   Value output;
+  int64_t workspace_size = 0;  // Workspace memory size in bytes.
 
   OpWithData(const Device device, const Expr& op, const int stream_id = -1);
 
@@ -58,45 +60,49 @@ class OpProfiler {
   }
 
   /*!
-   * \brief Profile one op and return its latency in microseconds.
+   * \brief Profile one op and return (1) its latency in microseconds, and (2) the workspace size in
+   * bytes.
    * \param op The op to be profiled.
    * \param warmup The number of warmup iterations. Default 10.
    * \param exec_number The number of execution iterations. Default 10.
    * \param repeat The number of repeat iterations. Default 1.
-   * \return The latency in microseconds. If cache hits, the latency is retrieved
-   * from the cache and no execution is performed on the device.
+   * \return A tuple containing (1) the latency in microseconds, and
+   * (2) workspace size of the op in bytes. If cache hits, the latency and
+   * workspace size are retrieved from the cache and no execution is performed on the device.
    */
-  std::vector<float> ProfileOp(const Expr& op, int32_t warmup = 10, int32_t exec_number = 10,
-                               int32_t repeat = 1);
+  std::pair<std::vector<float>, float> ProfileOp(const Expr& op, int32_t warmup = 10,
+                                                 int32_t exec_number = 10, int32_t repeat = 1);
 
   /*!
-   * \brief Profile a group of ops and return the total latency in microseconds.
-   * If stream_ids are presented, each op will be launched on the corresponding stream,
-   * which enables async execution.
+   * \brief Profile a group of ops and return (1) the total latency in microseconds, and (2) the
+   * total workspace size of this group of ops in bytes. If stream_ids are presented, each op will
+   * be launched on the corresponding stream, which enables async execution.
    * \param ops The ops to be profiled.
    * \param stream_ids The stream id for each op, or default stream if empty.
    * \param warmup The number of warmup iterations. Default 10.
    * \param exec_number The number of execution iterations. Default 10.
    * \param repeat The number of repeat iterations. Default 1.
-   * \return The latency in microseconds. If cache hits, the latency is retrieved
-   * from the cache and no execution is performed on the device.
+   * \return A tuple containing (1) the latency in microseconds, and (2) the sum of workspace sizes
+   * of all ops in bytes. If cache hits, the latency and workspace size are retrieved from the cache
+   * and no execution is performed on the device.
    */
-  std::vector<float> ProfileOpGroup(const std::vector<Expr>& ops,
-                                    const std::vector<int>& stream_ids = {}, int32_t warmup = 10,
-                                    int32_t exec_number = 10, int32_t repeat = 1);
+  std::pair<std::vector<float>, float> ProfileOpGroup(const std::vector<Expr>& ops,
+                                                      const std::vector<int>& stream_ids = {},
+                                                      int32_t warmup = 10, int32_t exec_number = 10,
+                                                      int32_t repeat = 1);
 
   /*!
    * \brief Get the current size of latency cache.
    */
   int GetLatencyCacheSize() {
-    return latency_cache_.size();
+    return latency_and_workspace_size_cache_.size();
   }
 
   /*!
    * \brief Reset the latency cache.
    */
   void Reset() {
-    latency_cache_.clear();
+    latency_and_workspace_size_cache_.clear();
   }
 
  protected:
@@ -107,7 +113,7 @@ class OpProfiler {
   Device device_;
   /*! \brief A cache to store the latency of profiled ops in microseconds. Cache key is
    * the byte string hash of a call node. */
-  LatencyMapT latency_cache_;
+  LatencyAndWorkspaceMapT latency_and_workspace_size_cache_;
 
  private:
   /*!

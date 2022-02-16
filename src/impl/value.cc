@@ -235,6 +235,25 @@ Value::operator DLTensor*() const {
   if (const auto* tensor_value = this->as<TensorValueObj>()) {
     const DLTensor* dl_tensor_ref = tensor_value->tensor.operator->();
     return const_cast<DLTensor*>(dl_tensor_ref);
+  } else if (const auto* tensor_t_value = this->as<TensorTypeValueObj>()) {
+    // In this case, create a TensorValueObject out of it
+    TensorType ty = tensor_t_value->type;
+    auto ty_node = ty.as<TensorTypeNode>();
+    CHECK(ty_node);
+    std::vector<int64_t> shape;
+    for (auto i : ty_node->shape) {
+      if (auto dim_shape = i.as<ir::IntImmNode>())
+        shape.push_back(dim_shape->value);
+      else
+        LOG(FATAL) << "Cannot convert to TensorValue due to dynamic shape!";
+    }
+    DLDataType dtype = ty_node->dtype;
+    // In this case we create a tensor based on the given type, so the target device
+    // must be available.
+    Tensor t = Tensor::make(Device::Current(), dtype, shape);
+    TensorValue tv = TensorValue::make(t);
+    const DLTensor* dl_tensor_ref = tv->tensor.operator->();
+    return const_cast<DLTensor*>(dl_tensor_ref);
   }
   LOG(FATAL) << "InternalError: cannot convert to TensorValue";
   throw;

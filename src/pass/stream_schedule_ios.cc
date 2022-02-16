@@ -121,7 +121,8 @@ class IOSCostModel {
         stream_ids.push_back(i);  // The i-th group is assigned to the i-th stream.
       }
     }
-    return profiler_->ProfileOpGroup(flat_group, stream_ids, warmup_, number_, repeat_);
+    auto prof_res = profiler_->ProfileOpGroup(flat_group, stream_ids, warmup_, number_, repeat_);
+    return prof_res.first;
   }
 
  private:
