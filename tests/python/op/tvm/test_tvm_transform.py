@@ -902,8 +902,7 @@ def test_arange(data, device, dtype):
     "data_shape, index_shapes",
     [
         ((10, 5), [(3, 4), (3, 1)]),
-        # TODO(@hgt312): use this commented after tvm's adv_index fixed
-        # ((10, 5), [(1, 4), (3, 1)]),
+        ((10, 5), [(1, 4), (3, 1)]),
         ((10, 5, 4), [(1, 2, 3), (1, 2, 3)]),
     ],
 )

@@ -137,7 +137,7 @@ class ManifestAllocMutator : public ExprMutator {
       static auto upper_bound_map = Op::GetAttrMap<Op>("TMNMUpperBoundOp");
       if (op && upper_bound_map.count(GetRef<Op>(op))) {
         call = Call(upper_bound_map[GetRef<Op>(op)], node->args);
-        call = Downcast<Call>(InferType(call));
+        call = Downcast<Call>(pass::InferType(call));
         op = call->op.as<OpNode>();
         use_upper_bound = true;
       }

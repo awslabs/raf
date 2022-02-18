@@ -744,7 +744,7 @@ Pass Deduplicate(int forward_steps, bool consider_type, bool must_dominate,
     }
     Function updated_func = Function(f->params, post, f->ret_type, f->type_params);
     if (consider_type) {
-      updated_func = Downcast<Function>(InferType(updated_func));
+      updated_func = Downcast<Function>(pass::InferType(updated_func));
     }
     return updated_func;
   };

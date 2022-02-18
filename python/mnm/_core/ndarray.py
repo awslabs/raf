@@ -30,7 +30,7 @@ class ndarray:  # pylint: disable=invalid-name,too-many-instance-attributes
         offset=0,
         strides=None,
         order=None,
-        device=None,
+        device="cpu",
         name=""
     ):
         arg_0 = shape
@@ -325,7 +325,7 @@ class Symbol:
         return divide(self, other)
 
 
-def _np_to_tensor_value(npa, device=None):
+def _np_to_tensor_value(npa, device="cpu"):
     def _tensor_value(obj):
         device = "cpu"
         dtype = str(obj.dtype)
@@ -360,7 +360,7 @@ def array(
     order="K",
     subok=False,
     ndmin=0,
-    device=None,
+    device="cpu",
     name=""
 ):
     import numpy as np  # pylint: disable=import-outside-toplevel
