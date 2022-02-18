@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file annotate_collective_ops.cc
  * \brief Add memory copy ops to pipeline memory copies in multi-tensor collective ops.
  */

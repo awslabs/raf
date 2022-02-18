@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file enforce_sync.cc
  * \brief Enforce synchronization between ops in multiple streams.
  */

@@ -102,7 +102,7 @@ compile_commands.json
 .idea/
 cmake-build-debug/
 
-#others	
+#others
 .sudo_as_admin_successful
 
 # Library files

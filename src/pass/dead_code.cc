@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file src/pass/dead_code.cc
  * \brief  Remove code that does not effect the program result.
  *
