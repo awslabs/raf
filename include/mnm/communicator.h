@@ -13,7 +13,6 @@
 #include "mnm/registry.h"
 #include "mnm/value.h"
 #include "mnm/op_utils.h"
-#include "./connector.h"
 
 typedef std::pair<std::string, std::vector<int64_t>> CommunicatorID;
 
@@ -21,108 +20,93 @@ namespace mnm {
 namespace distributed {
 namespace communicator {
 
-using connector::Connector;
-using connector::ConnectorManager;
 using registry::GetPackedFunc;
+using namespace mnm::value;
 
-struct DistAttrs {
+// #ifdef MNM_USE_MPI
+#include <mpi.h>
+#define MPI_CALL(cmd)                                                         \
+  do {                                                                        \
+    int e = cmd;                                                              \
+    if (e != MPI_SUCCESS) {                                                   \
+      LOG(FATAL) << "Failed: MPI error " << __FILE__ << ":" << __LINE__ << e; \
+    }                                                                         \
+  } while (0)
+// #endif
+
+#ifdef MNM_USE_NCCL
+#define NCCL_CALL(cmd)                                                                            \
+  do {                                                                                            \
+    ncclResult_t e = cmd;                                                                         \
+    if (e != ncclSuccess) {                                                                       \
+      LOG(INFO) << "Failed: NCCL error " << __FILE__ << ":" << __LINE__ << ncclGetErrorString(e); \
+      exit(EXIT_FAILURE);                                                                         \
+    }                                                                                             \
+  } while (0)
+#endif
+
+class CommunicatorObj : public Object {
+ public:
   int local_size;
   int local_rank;
   int size;
   int rank;
   int world_size;
   int world_rank;
+  int root_rank;
+  std::vector<uint64_t> host_ids;
+
+  void VisitAttrs(tvm::AttrVisitor* v) {
+    v->Visit("local_size", &local_size);
+    v->Visit("local_rank", &local_rank);
+    v->Visit("size", &size);
+    v->Visit("rank", &rank);
+    v->Visit("world_size", &world_size);
+    v->Visit("world_rank", &world_rank);
+    v->Visit("root_rank", &root_rank);
+  }
+
+  virtual ~CommunicatorObj() = default;
+
+  static constexpr const char* _type_key = "mnm.distributed.Communicator";
+  MNM_BASE_OBJECT(CommunicatorObj, Object);
 };
 
-class Communicator {
+class Communicator : public ObjectRef {
  public:
-  Communicator(const std::vector<int64_t>& rank_list = {}) {
-  }
-  virtual ~Communicator() {
-  }
-  int GetLocalSize() {
-    return local_size;
-  }
-  int GetLocalRank() {
-    return local_rank;
-  }
-  int GetSize() {
-    return size;
-  }
-  int GetRank() {
-    return rank;
-  }
-  int GetRootRank() {
-    return root_rank;
-  }
-  static DistAttrs GetDistAttrs(const std::vector<int64_t>& rank_list = {}) {
-    auto mpi = ConnectorManager::Get()->GetConnector("mpi");
-    if (rank_list.empty()) {
-      DistAttrs ret = {.local_size = mpi->local_size,
-                       .local_rank = mpi->local_rank,
-                       .size = mpi->size,
-                       .rank = mpi->rank,
-                       .world_size = mpi->size,
-                       .world_rank = mpi->rank};
-      return ret;
-    } else {
-      int size = rank_list.size();
-      int rank;
-      int local_size = 0;
-      int local_rank = 0;
-      std::vector<int> host_ids;
-      CHECK_LE(size, mpi->size);
-      for (rank = 0; rank < size; ++rank) {
-        if (rank_list[rank] == mpi->rank) break;
-      }
-      if (rank == size) {
-        // This rank is not in rank_list
-        rank = -1;
-        size = -1;
-      }
-      for (auto i : rank_list) {
-        host_ids.push_back(mpi->host_ids[i]);
-      }
-      for (int p = 0; p < size; ++p) {
-        if (p == rank) break;
-        if (host_ids[p] == host_ids[rank]) local_rank++;
-      }
-      for (int p = 0; p < size; ++p) {
-        if (host_ids[p] == host_ids[rank]) local_size++;
-      }
-      DistAttrs ret = {.local_size = local_size,
-                       .local_rank = local_rank,
-                       .size = size,
-                       .rank = rank,
-                       .world_size = mpi->size,
-                       .world_rank = mpi->rank};
-      return ret;
-    }
-  }
+  static Communicator Get(const std::string& name = "", const std::vector<int64_t>& rank_list = {});
+  static void InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list,
+                                  const Communicator global_comm);
+  static uint64_t GetHostID();
 
-  virtual void* GetCommHandle() = 0;
-
- public:
-  std::string type;
-  int root_rank = 0;
-  int local_size = 0;
-  int local_rank = 0;
-  int size = 1;
-  int rank = 0;
+  MNM_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
 };
 
-class CommunicatorManager {
+class VoidCommunicatorObj final : public CommunicatorObj {
  public:
-  CommunicatorManager() {
+  static constexpr const char* _type_key = "mnm.distributed.VoidCommunicator";
+  virtual ~VoidCommunicatorObj() = default;
+  MNM_FINAL_OBJECT(VoidCommunicatorObj, CommunicatorObj);
+};
+
+class VoidCommunicator final : public Communicator {
+ public:
+  static VoidCommunicator make(TupleValue rank_list);
+  MNM_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
+};
+
+class CommunicatorPool {
+ public:
+  CommunicatorPool() {
   }
 
-  static CommunicatorManager* Get() {
-    static CommunicatorManager* instance = new CommunicatorManager();
+  static CommunicatorPool* Get() {
+    static CommunicatorPool* instance = new CommunicatorPool();
     return instance;
   }
 
-  Communicator* GetCommunicator(const std::string& name = "",
-                                const std::vector<int64_t>& rank_list = {}) {
+  Communicator GetCommunicator(const std::string& name = "",
+                               const std::vector<int64_t>& rank_list = {}) {
 #ifdef MNM_USE_NCCL
     auto default_name = "nccl";
 #else
@@ -132,15 +116,12 @@ class CommunicatorManager {
     auto id = CommunicatorID(comm_name, rank_list);
 
     if (comm_.count(id) == 0) {
-      const std::string prefix = "mnm.distributed.communicator._make.";
-      auto func_name = prefix + comm_name;
-      void* comm_handler = GetPackedFunc(func_name)(
-          op::ArrayToIntTuple(rank_list));     // will check whether the function exists or not
-      std::shared_ptr<Communicator> comm_ptr;  // NOTE: should we return a shared_ptr<Comm>?
-      comm_ptr.reset(static_cast<Communicator*>(comm_handler));
-      comm_[id] = std::move(comm_ptr);
+        const std::string prefix = "mnm.distributed.communicator._make.";
+        auto func_name = prefix + comm_name;
+        Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
+        comm_[id] = std::move(comm);
     }
-    return comm_[id].get();
+    return comm_[id];
   }
 
   void Remove() {
@@ -148,7 +129,7 @@ class CommunicatorManager {
   }
 
  public:
-  std::map<CommunicatorID, std::shared_ptr<Communicator>> comm_;
+  std::map<CommunicatorID, Communicator> comm_;
 };
 
 }  // namespace communicator

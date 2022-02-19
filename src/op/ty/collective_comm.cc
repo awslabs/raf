@@ -77,7 +77,7 @@ MNM_OP_TYPE("mnm.op._recv", "NCCLRecv", RecvInfer);
 Type AllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<AllgatherArgs>();
   CHECK(args != nullptr);
-  auto size = CommunicatorManager::Get()->GetCommunicator("nccl", args->rank_list)->GetSize();
+  auto size = Communicator::Get("nccl", args->rank_list)->size;
   auto ttype = GetType(args->x).as<TensorTypeNode>();
   auto shape = ttype->shape;
   auto new_size = shape[args->axis].as<IntImmNode>()->value * size;
