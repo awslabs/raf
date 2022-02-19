@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file memory_op_utils.cc
  * \brief Utilities for memory copy and collective ops.
  */

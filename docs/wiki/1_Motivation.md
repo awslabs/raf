@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 **Meta framework.** Because, first, it is not a single framework, but meta by nature. With TVM Relay frontend importers, we are able to absort any TensorFlow model, ONNX model, into our core intermediate representation, and mix it with each other - as a researcher, just imagine that you are able to define the tedious part of your network in Keras, like backbones in vision, and we allow you to focus on manipulating the awesome part of your neural network using our numpy-like API.
 
 **Compiler native.** Second, it is said that it is boring to develop another one because all frontends are converging. True. While we converge to Numpy + Gluon/Keras, we are the first compiler-native framework, which is the key feature that makes us the most outstanding. We are the missing frontend of TVM/Relay stack for intelligent compiler. Once you implement your model using our framework, our JIT is in charge of fusing operators, finding the best data layout for training.

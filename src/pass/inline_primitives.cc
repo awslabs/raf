@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file inline_primitives.cc
  * \brief Ensure that primitives only appear in the call position.
  */

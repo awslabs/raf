@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file data_parallel_schedule.cc
  * \brief Schedules ops during data parallel training.
  */

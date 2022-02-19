@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=missing-function-docstring, undefined-loop-variable, unused-argument
 """Compute definition and schedules for data transform operators"""
 from mnm._tvm_op.nn import schedule_generic
@@ -253,13 +270,31 @@ _reg.register_injective_schedule("mnm.op.tvm.adv_index")
 
 @register_compute("mnm.op.tvm.adv_index_dx")
 def adv_index_dx_compute(attrs, inputs, output_type):
+    # pylint: disable=too-many-locals
+    def _get_broadcast_shape(shape1, shape2):
+        if shape1 == shape2:
+            return shape1
+        length1 = len(shape1)
+        length2 = len(shape2)
+        if length1 > length2:
+            shape = list(shape1)
+        else:
+            shape = list(shape2)
+        i = max(length1, length2) - 1
+        for a, b in zip(shape1[::-1], shape2[::-1]):
+            if a != 1 and b != 1 and a != b:
+                raise ValueError("shape1=%s is not broadcastable to shape2=%s" % (shape1, shape2))
+            shape[i] = b if a == 1 else a
+            i -= 1
+        return list(shape)
+
     dy = inputs[0]
     data = inputs[1]
     indices = inputs[2:]
     idim = len(indices)
     bshape = list(indices[0].shape)
     for ind in indices[1:]:
-        bshape = max(bshape, list(ind.shape))
+        bshape = _get_broadcast_shape(bshape, list(ind.shape))
 
     for i, ind in enumerate(indices):
         if list(ind.shape) != bshape:

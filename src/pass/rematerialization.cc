@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2021 by Contributors
  * \file rematerialization.cc
  * \brief Perform rematerialization to reduce peak memory footrpint.
  */
@@ -7,7 +25,7 @@
 #include "mnm/op.h"
 #include "mnm/ir.h"
 #include "mnm/pass.h"
-
+#include "mnm/op_profiler.h"
 #include "./common.h"
 #include "./estimate_flops.h"
 #include "./let_list.h"
@@ -46,13 +64,14 @@ constexpr float kGigaBytes = 1073741824;
 /*! \brief A data structure of required information for a tensor. */
 struct TensorInfo {
  public:
-  TensorInfo(size_t idx, const Var& let_var, const Var& liveness_var, int64_t size, float gflops,
-             size_t tuple_field_idx = -1)
+  TensorInfo(size_t idx, const Var& let_var, const Var& liveness_var, int64_t size,
+             float compute_cost, int64_t workspace_size, size_t tuple_field_idx = -1)
       : index(idx),
         let_var(let_var),
         liveness_var(liveness_var),
         size(size),
-        gflops(gflops),
+        compute_cost(compute_cost),
+        workspace_size(workspace_size),
         tuple_field_idx(tuple_field_idx) {
   }
 
@@ -75,19 +94,48 @@ struct TensorInfo {
   /*! \brief A set of liveness vars that this tensor shares the storage with.
    * If this set is not empty, then this tensor cannot be remeterialized. */
   VSet share_storage;
-  /*! \brief The use count of this tensor. */
-  size_t use_count = 0;
-  /*! \brief Computation GFLOPS of this tensor. -1 means recomputing this tensor is invalid. */
-  float gflops = -1;
+  /*! \brief Computation cost of this tensor. -1 means recomputing this tensor is invalid. */
+  float compute_cost = -1;
+  /*! \brief Workspace memory size of this tensor in bytes. -1 means recomputing this tensor is
+   * invalid. */
+  int64_t workspace_size = -1;
   /*! \brief Only TensorInfos can change this status since TensorInfos has to maintain the live
    * tensor list. */
   bool IsDead() {
     return is_dead_;
   }
+  // Function interface to protect use count from being arbitrarily set.
+  // Can also perform some checking if necessary.
+
+  /*! \brief Get the current use count of this tensor info. */
+  inline int64_t GetUseCount() {
+    return use_count_;
+  }
+
+  /*! \brief Set the use count of this tensor info. The input must be non-negative. */
+  inline int64_t SetUseCount(int64_t value) {
+    CHECK_GE(value, 0U) << "Use count of a tensor must be non-negative!";
+    use_count_ = value;
+    return use_count_;
+  }
+
+  /*! \brief Increment the use count of this tensor info by 1. */
+  inline int64_t IncUseCount() {
+    use_count_ += 1;
+    return use_count_;
+  }
+
+  /*! \brief Decrement the use count of this tensor info by 1. */
+  inline int64_t DecUseCount() {
+    use_count_ -= 1;
+    return use_count_;
+  }
 
  private:
   /*! \brief Whether this tensor has been marked as dead and should be rematerialized later. */
   bool is_dead_ = false;
+  /*! \brief The use count of this tensor. */
+  int64_t use_count_ = 0;
 
   friend class TensorInfos;
 };
@@ -96,7 +144,7 @@ struct TensorInfo {
 class TensorInfos {
  public:
   void CreateTensorInfo(const Var& let_var, const Array<Var>& liveness_vars, bool is_param = false,
-                        float gflops = -1) {
+                        float compute_cost = -1, int64_t workspace_size = -1) {
     auto sizes = liveness_analysis::CalcBytesCompactSizes(let_var->checked_type());
     CHECK_EQ(liveness_vars.size(), sizes.size());
     const auto* extended_var = static_cast<const ExtendedVarNode*>(let_var.operator->());
@@ -110,8 +158,9 @@ class TensorInfos {
       // If the tensor info has been created, then this let-binding var does not create
       // a new tensor (e.g., let %a = %b;).
       if (liveness_var_to_info_.count(liveness_var) == 0) {
-        liveness_var_to_info_[liveness_var] = std::make_shared<TensorInfo>(
-            tensor_idx_++, let_var, liveness_var, size, gflops, (is_tuple) ? i : -1);
+        liveness_var_to_info_[liveness_var] =
+            std::make_shared<TensorInfo>(tensor_idx_++, let_var, liveness_var, size, compute_cost,
+                                         workspace_size, (is_tuple) ? i : -1);
       }
       auto tensor_info = liveness_var_to_info_[liveness_var];
       tensor_info->is_param = is_param;
@@ -163,7 +212,7 @@ class TensorInfos {
     live_tensors_.erase(tensor_info);
   }
 
-  /*! \brief Get the tesnor info given a let binding var. */
+  /*! \brief Get the tensor info given a let binding var. */
   std::vector<std::shared_ptr<TensorInfo>> GetTensorInfoFromLetVar(const Var& var) {
     CHECK_GT(let_var_to_infos_.count(var), 0U) << "Cannot find the tensor info of given " << var;
     return let_var_to_infos_[var];
@@ -188,11 +237,36 @@ class TensorInfos {
          << ((tensor_info->tuple_field_idx != -1)
                  ? " (tuple." + std::to_string(tensor_info->tuple_field_idx) + ")"
                  : "")
-         << ", GFLOPS: " << tensor_info->gflops << ", LetVar: " << tensor_info->let_var->name_hint()
+         << ", GFLOPS: " << tensor_info->compute_cost
+         << ", LetVar: " << tensor_info->let_var->name_hint()
          << ", Size(MBs): " << tensor_info->size / 1048576.0
-         << ", UseCount: " << tensor_info->use_count << std::endl;
+         << ", Workspace Size(MBs): " << tensor_info->workspace_size / 1048576.0
+         << ", UseCount: " << tensor_info->GetUseCount() << std::endl;
     }
     return os.str();
+  }
+
+  /*! \brief Verify that all use counts are maintained properly at the end. All tensors should have
+   *  use counts of zero when this pass finishes.
+   */
+  void VerifyUseCountTracking() {
+    LOG(INFO) << "Verifying the correctness of use count tracking... ";
+    std::stringstream ss;
+    for (auto pair : liveness_var_to_info_) {
+      auto liveness_var = pair.first;
+      auto tensor_info = pair.second;
+      int64_t remaining_use_count = tensor_info->GetUseCount();
+      if (remaining_use_count) {
+        ss << "Tensor " << tensor_info->let_var->name_hint() << "(" << liveness_var->name_hint()
+           << ") has a remaining use count of " << remaining_use_count << " at the end of the pass!"
+           << std::endl;
+      }
+    }
+    if (ss.rdbuf()->in_avail()) {
+      LOG(FATAL) << "InternalError: One or more tensors have incorrect use count: " << std::endl
+                 << ss.str();
+      throw;
+    }
   }
 
  private:
@@ -218,12 +292,14 @@ class TensorInfos {
  *    3.2. Rematerialize the arguments that were marked as dead previouly and update the current
  *         memory consumption.
  *    3.3. If the total memory consumption exceeds the given budget, estimate the rematerialization
- *         cost of each live-in tensors, excluding input parameters and call node arguments.
- *    3.4. Mark the tensor with the lowest cost as dead, meaning that later call nodes that use
- *         this tensor need to rematerialize it.
+ *         cost of each live-in tensors, excluding input parameters, call node arguments, and
+ *         tensors that are just rematerialized.
+ *    3.4. Mark the tensor with the lowest cost as dead, meaning that later call nodes that use this
+ *         tensor need to rematerialize it. The use counts of this tensor's arguments will be
+ *         incremented so that the rematerialization cost estimator is aware of the additional uses.
  *    3.5. Repeat 3.3 - 3.4 until the total memory consumption is lower than the budget. If the
- *         memory still exceeds the budget but no more tensors can be marked as dead, then error
- *         out to let users adjust the budget.
+ *         memory still exceeds the budget but no more tensors can be marked as dead, then error out
+ *         to let users adjust the budget.
  * Assumptions:
  * 1. Memory plan will be applied later to insert "free" properly to reflect the rematerialization.
  *    If memory plan is not applied, then rematerialization simply brings latency overheads.
@@ -233,11 +309,12 @@ class TensorInfos {
 class Rematerializer : public ExprMutator {
  public:
   explicit Rematerializer(liveness_analysis::LivenessAnalyzer* analyzer, const Device& device,
-                          const Function& func, const IRModule& mod, const int64_t budget)
+                          const Function& func, const IRModule& mod, const int64_t budget,
+                          op_profiler::OpProfiler* profiler)
       : analyzer_(analyzer),
         func_(func),
         budget_(budget),
-        tensor_infos_(AnalyzeTensors(device, func, mod, analyzer)) {
+        tensor_infos_(AnalyzeTensors(device, func, mod, analyzer, profiler)) {
     scopes_.emplace_back(new LetList);
     VERBOSE_LOG << "Tensor infos:\n" << tensor_infos_.DebugDump();
   }
@@ -299,8 +376,10 @@ class Rematerializer : public ExprMutator {
             // so we do not need to allocate it again.
             tensor_infos_.MarkAsLive(tensor_info);
             curr_mem_trace_ += tensor_info->size;
+            // Also need to add in the workspace size
+            curr_mem_trace_ += tensor_info->workspace_size;
             VERBOSE_LOG << "|-Alloc: " << tensor_info->liveness_var->name_hint() << " for "
-                        << tensor_info->size / kMegaBytes << " MBs";
+                        << (tensor_info->size + tensor_info->workspace_size) / kMegaBytes << " MBs";
           }
         }
       } else {
@@ -312,6 +391,18 @@ class Rematerializer : public ExprMutator {
       }
 
       auto new_value = VisitExpr(node->value);
+
+      // Remove the workspace size from the current memory trace after visiting
+      // this let node, since they will be freed immediately after execution
+      if (!extended_var->may_share.defined()) {
+        for (auto tensor_info : tensor_infos) {
+          if (tensor_info->let_var.same_as(curr_let_)) {
+            curr_mem_trace_ -= tensor_info->workspace_size;
+          }
+        }
+      }
+
+      // Proceed to the next node
       scope->Push(node->var, new_value);
       let_vars_.emplace(node->var, new_value);
       body = node->body;
@@ -330,11 +421,16 @@ class Rematerializer : public ExprMutator {
 
     // Release end of life tensors. Note that input parameters cannot be released.
     if (!curr_live_in_vars_.empty()) {
+      VSet vars_to_remove;
       for (auto liveness_var : curr_live_in_vars_) {
         auto tensor_info = tensor_infos_.GetTensorInfoFromLivenessVar(liveness_var);
-        if (!tensor_info->is_param && live_in_vars.find(liveness_var) == live_in_vars.end() &&
-            !tensor_info->IsDead()) {
+        // Liveness analysis is unaware of our rematerialization decision before we actually
+        // rematerialize the tensor. The use_count is maintained by this pass. A tensor
+        // actually reaches its end of life only when its use count decreases to 0.
+        if ((!tensor_info->is_param) && (live_in_vars.find(liveness_var) == live_in_vars.end()) &&
+            (tensor_info->GetUseCount() <= 0) && (!tensor_info->IsDead())) {
           tensor_infos_.MarkAsDead(tensor_info);
+          vars_to_remove.insert(liveness_var);
 
           // If this tensor shares storage with other tensors which are still alive, then
           // we mark this tensor as dead without removing its size from current memory usage.
@@ -352,10 +448,18 @@ class Rematerializer : public ExprMutator {
           }
         }
       }
+      // Remove the dead tensors from the current live set
+      for (auto dead_var : vars_to_remove) {
+        curr_live_in_vars_.erase(dead_var);
+      }
     }
-    curr_live_in_vars_ = live_in_vars;
+    // Add the new live vars from liveness analysis into the current live set
+    for (auto live_var : live_in_vars) {
+      curr_live_in_vars_.insert(live_var);
+    }
 
     // Process arguments and rematerialize mark-as-dead tensors.
+    newly_remat_tensors_.clear();
     Array<Expr> new_args;
     for (auto arg : node->args) {
       if (auto var_node = arg.as<VarNode>()) {
@@ -363,7 +467,7 @@ class Rematerializer : public ExprMutator {
 
         // Remove the current node from the use count of its arguments.
         for (auto tensor_info : tensor_infos_.GetTensorInfoFromLetVar(arg_var)) {
-          tensor_info->use_count--;
+          tensor_info->DecUseCount();
         }
 
         // Remeterialize mark-as-dead arguments.
@@ -381,8 +485,11 @@ class Rematerializer : public ExprMutator {
       std::vector<std::pair<std::shared_ptr<TensorInfo>, float>> candidate_n_scores;
       for (const auto tensor_info : tensor_infos_.GetLiveTensorInfos()) {
         // Skip argument and output tensors.
+        // Conservatively, we choose not to free tensors that are just rematerialized, because they
+        // are dead before rematerialization and we cannot free their memory twice.
         if (tensor_info->let_var == curr_let_ ||
-            std::find(new_args.begin(), new_args.end(), tensor_info->let_var) != new_args.end()) {
+            std::find(new_args.begin(), new_args.end(), tensor_info->let_var) != new_args.end() ||
+            newly_remat_tensors_.find(tensor_info->let_var) != newly_remat_tensors_.end()) {
           continue;
         }
 
@@ -419,6 +526,48 @@ class Rematerializer : public ExprMutator {
         curr_mem_trace_ -= cand_tensor_info->size;
         VERBOSE_LOG << "| |-" << cand_tensor_info->liveness_var->name_hint() << " with "
                     << cand_tensor_info->size / kMegaBytes << " MBs";
+        // Remove this tensor from the current live set
+        auto liveness_var = cand_tensor_info->liveness_var;
+        curr_live_in_vars_.erase(liveness_var);
+
+        // When deciding to rematerialize a tensor, increment the use count of its direct
+        // producers if they are still live. In this case, these tensors won't be considered
+        // "dead" before the rematerialization takes place. This helps in the following case:
+        /*
+          x = expensive_compute()
+          y = cheap_compute(x)
+          ...
+          # memory budget exceeded, decide to rematerialize y because it is cheap to compute
+          # notice that x is still live at this point, so the cost function won't include
+          # the cost of computing x
+          free(y)
+          ...
+          # lifetime of x ends here, x gets killed
+          free(x)
+          ...
+          # y is rematerialized here, but because x is already killed, it must be rematerialized too
+          x' = expensive_compute()
+          y' = cheap_compute(x')
+          ...
+        */
+        // TODO: to properly track the use count of all tensors over here, we actually need to
+        // recursively increment the use count of all affected tensors. Left for future work.
+        auto cand_let_var = cand_tensor_info->let_var;
+        auto cand_call_node = let_vars_[cand_let_var].as<CallNode>();
+        CHECK(cand_call_node != nullptr)
+            << "Tensor " << cand_let_var
+            << " is not generated by a call node: " << mnm::ir::AsText(cand_let_var);
+        for (auto arg : cand_call_node->args) {
+          if (auto var_node = arg.as<VarNode>()) {
+            auto arg_var = GetRef<Var>(var_node);
+            for (auto tensor_info : tensor_infos_.GetTensorInfoFromLetVar(arg_var)) {
+              int64_t new_use_count = tensor_info->IncUseCount();
+              VERBOSE_LOG << "Increment use count of " << arg_var->name_hint() << "("
+                          << tensor_info->liveness_var->name_hint() << ")"
+                          << " to reflect remat decision, now use count is " << new_use_count;
+            }
+          }
+        }
       }
       VERBOSE_LOG << "|-CurrMem: " << curr_mem_trace_ / kMegaBytes << " MBs";
     }
@@ -438,7 +587,8 @@ class Rematerializer : public ExprMutator {
   class TensorAnalyzer;
 
   TensorInfos AnalyzeTensors(const Device& device, const Function& func, const IRModule& mod,
-                             liveness_analysis::LivenessAnalyzer* analyzer);
+                             liveness_analysis::LivenessAnalyzer* analyzer,
+                             op_profiler::OpProfiler* profiler);
 
   /*!
    * \brief Generate TupleGetItem or reshape to match the given type.
@@ -531,8 +681,16 @@ class Rematerializer : public ExprMutator {
     bool all_alive = true;
     size_t total_size = 0;
     for (auto tensor_info : tensor_infos) {
-      all_alive = all_alive && (!tensor_info->IsDead());
-      total_size += tensor_info->size;
+      // If the tensor is already live, then its size should be already
+      // included in curr_memory_trace_. Only when its dead should we increment
+      // the size.
+      bool tensor_is_alive = !tensor_info->IsDead();
+      if (!tensor_is_alive) {
+        total_size += tensor_info->size;
+        // To be more conservative we can add the workspace size too
+        total_size += tensor_info->workspace_size;
+      }
+      all_alive = all_alive && tensor_is_alive;
     }
     if (all_alive) {
       return CorrectType(scope, var);
@@ -543,6 +701,7 @@ class Rematerializer : public ExprMutator {
     for (auto arg : call_node->args) {
       if (auto var_node = arg.as<VarNode>()) {
         auto arg_var = GetRef<Var>(var_node);
+        // TODO: we should do use count tracking here.
         new_args.push_back(Rematerialize(scope, arg_var, curr_depth + 1));
       } else {
         new_args.push_back(arg);
@@ -564,6 +723,13 @@ class Rematerializer : public ExprMutator {
     VERBOSE_LOG << "|-Remat: " << latest_let_var->name_hint() << " as " << remat_var->name_hint()
                 << " with " << total_size / kMegaBytes << " MBs (depth " << curr_depth << ")";
     curr_mem_trace_ += total_size;
+    // The tensor is revived, it's now live again, add to live set
+    for (auto tensor_info : tensor_infos) {
+      auto liveness_var = tensor_info->liveness_var;
+      curr_live_in_vars_.insert(liveness_var);
+    }
+    // Add the newly-rematerialized tensor to the set
+    newly_remat_tensors_.insert(remat_var);
     return CorrectType(scope, var);
   }
 
@@ -614,7 +780,7 @@ class Rematerializer : public ExprMutator {
     auto remat_call = Downcast<Call>(expr);
 
     // Do not rematerialize tensors with an invalid cost.
-    float cost = tensor_info->gflops;
+    float cost = tensor_info->compute_cost;
     if (cost == -1) {
       return -1;
     }
@@ -647,7 +813,7 @@ class Rematerializer : public ExprMutator {
     }
 
     cost += 0.1;  // Avoid 0 cost.
-    return (cost * (tensor_info->use_count + 1)) / (tensor_info->size / kGigaBytes);
+    return (cost * (tensor_info->GetUseCount() + 1)) / (tensor_info->size / kGigaBytes);
   }
 
   /*! \brief the function to be muatated. */
@@ -672,6 +838,8 @@ class Rematerializer : public ExprMutator {
   int64_t peak_memory_ = 0;
   /*! \brief The number of cloned recompute ops. */
   int64_t n_recompute_ops_ = 0;
+  /*! \brief A set of rematerialized tensors before each call. */
+  VSet newly_remat_tensors_;
 };
 
 /*!
@@ -681,22 +849,13 @@ class Rematerializer : public ExprMutator {
 class Rematerializer::TensorAnalyzer : public ExprVisitor {
  public:
   TensorAnalyzer(const Device& device, const Function& func, const IRModule& mod,
-                 liveness_analysis::LivenessAnalyzer* analyzer)
-      : func_(func), analyzer_(analyzer), ell_(ExplicitLetList::make(func)) {
+                 liveness_analysis::LivenessAnalyzer* analyzer, op_profiler::OpProfiler* profiler)
+      : func_(func), analyzer_(analyzer), ell_(ExplicitLetList::make(func)), profiler_(profiler) {
     CHECK(analyzer_->IsSuccess());
     op_flops_estimater_.Run(device, func, mod);
   }
 
-  /*! \brief A debug function to dump the estimated FLOPS of each let var that binds to a call
-   * expression*/
-  std::string DebugDumpEstimatedGFLOPS() {
-    std::ostringstream os;
-    auto node = func_->body.as<LetNode>();
-    do {
-      os << node->var << ": " << op_flops_estimater_.GetFLOPS(node->var) << std::endl;
-      node = node->body.as<LetNode>();
-    } while (node);
-    return os.str();
+  ~TensorAnalyzer() {
   }
 
   /*! \brief Visit each let statement and return the analyzed information of each tensor. */
@@ -731,11 +890,25 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
         }
         liveness_vars.Set(i, real_liveness_var);
       }
-      float gflops = op_flops_estimater_.GetFLOPS(curr_let_);
-      tensor_infos_.CreateTensorInfo(curr_let_, liveness_vars, false, gflops);
 
-      // Visit the expression to analyze the use count.
+      // Visit the expression to analyze the use count
       ExprVisitor::VisitExpr(exprs[i]);
+
+      float compute_cost = 0.0f;
+      int64_t ws_size = 0;
+      if (profiler_) {
+        // Try to profile the op
+        auto exec_time_and_ws_size = profiler_->ProfileOp(exprs[i]);
+        // Default is to repeat once, so we take the first element
+        compute_cost = exec_time_and_ws_size.first[0];
+        ws_size = exec_time_and_ws_size.second;
+      } else {
+        // Use FLOPS estimator instead, the workspace size won't be tracked in this case
+        compute_cost = op_flops_estimater_.GetFLOPS(curr_let_);
+      }
+
+      // Create the tensor info for this op
+      tensor_infos_.CreateTensorInfo(curr_let_, liveness_vars, false, compute_cost, ws_size);
     }
 
     return tensor_infos_;
@@ -745,7 +918,7 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
     for (auto arg : node->args) {
       if (auto var_node = arg.as<VarNode>()) {
         for (auto tensor_info : tensor_infos_.GetTensorInfoFromLetVar(GetRef<Var>(var_node))) {
-          tensor_info->use_count++;
+          tensor_info->IncUseCount();
         }
       }
     }
@@ -764,29 +937,34 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
   liveness_analysis::LivenessAnalyzer* analyzer_;
   /*! \brief The analyzed tensor infos. */
   TensorInfos tensor_infos_;
+  /*! \brief The profiler used in rematerialization. */
+  op_profiler::OpProfiler* profiler_;
 };
 
 TensorInfos Rematerializer::AnalyzeTensors(const Device& device, const Function& func,
                                            const IRModule& mod,
-                                           liveness_analysis::LivenessAnalyzer* analyzer) {
-  return TensorAnalyzer(device, func, mod, analyzer).Run();
+                                           liveness_analysis::LivenessAnalyzer* analyzer,
+                                           op_profiler::OpProfiler* profiler) {
+  return TensorAnalyzer(device, func, mod, analyzer, profiler).Run();
 }
 
 }  // namespace rematerialization
 
 TVM_REGISTER_PASS_CONFIG_OPTION("mnm.memory_budget", IntImm);
+TVM_REGISTER_PASS_CONFIG_OPTION("mnm.remat.use_gflops_cost", IntImm);
 
 Pass Rematerialization() {
   PassContext pass_ctx = PassContext::Current();
   Integer memory_budget =
       pass_ctx->GetConfig("mnm.memory_budget", Integer(static_cast<int>(0))).value();
+  // Turn profiler on by default. With caching it is pretty fast now.
+  bool use_profiler = !(pass_ctx->GetConfig("mnm.remat.use_gflops_cost", Bool(false)).value());
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    // We use budget 0 to diable this pass because it is guarantee to fail.
+    // We use budget 0 to diable this pass because it is guaranteed to fail.
     if (memory_budget == 0) {
       return f;
     }
-
     auto device = Device::Current();
     if (device.device_type() == DevType::kUnknown() && device.device_id() == -1) {
       LOG(WARNING) << "Target device is undefined. Skip rematerialization.";
@@ -795,14 +973,24 @@ Pass Rematerialization() {
 
     VERBOSE_LOG << "Memory budget for rematerialization: "
                 << (float)memory_budget / rematerialization::kMegaBytes << " MBs";
+
     auto analyzer = liveness_analysis::LivenessAnalyzer(f);
     analyzer.Run();
     if (!analyzer.IsSuccess()) {
       LOG(WARNING) << "Rematerialization is disabled because liveness analysis was failed";
       return f;
     }
+
+    op_profiler::OpProfiler* profiler = nullptr;
+    if (use_profiler) {
+      LOG(INFO)
+          << "Using profiler-based cost estimation for rematerialization. This may take a while. ";
+      profiler = op_profiler::OpProfiler::Get(device);
+    } else {
+      LOG(INFO) << "Using GFLOPS-based cost estimation. ";
+    }
     return Downcast<Function>(
-        rematerialization::Rematerializer(&analyzer, device, f, m, memory_budget).Run());
+        rematerialization::Rematerializer(&analyzer, device, f, m, memory_budget, profiler).Run());
   };
 
   Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "RematerializationHelper", {});

@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2022 by Contributors
  * \file src/profiler/op_profiler.cc
  * \brief A simple profiler with caching to profile ops during compilation
  */
@@ -60,12 +78,14 @@ OpWithData::OpWithData(const Device device, const Expr& op, const int stream_id)
   }
 
   // Allocate the workspace.
+  workspace_size = 0;
   std::shared_ptr<requests::Requests> requests = op_env->GetRequests();
   for (size_t i = 0; i < requests->workspace.size(); i++) {
     requests::Requests::WorkspaceRequest& entry = requests->workspace[i];
     auto buf = memory_pool::Memory::Alloc(entry.device, entry.nbytes);
     entry.memory = buf;
     *entry.dest = buf->data;
+    workspace_size += entry.nbytes;
   }
 }
 
@@ -88,56 +108,66 @@ OpWithData::~OpWithData() {
   inputs.clear();
 }
 
-std::vector<float> OpProfiler::ProfileOpGroup(const std::vector<Expr>& ops,
-                                              const std::vector<int>& stream_ids, int32_t warmup,
-                                              int32_t exec_number, int32_t repeat) {
+std::pair<std::vector<float>, float> OpProfiler::ProfileOpGroup(const std::vector<Expr>& ops,
+                                                                const std::vector<int>& stream_ids,
+                                                                int32_t warmup, int32_t exec_number,
+                                                                int32_t repeat) {
   // Check cache and skip profiling if hit.
   auto key = HashKeyToStr(HashGroup(ops, stream_ids) << warmup << exec_number << repeat);
 
   // Directly return the profiled latency if cache hit.
-  if (latency_cache_.count(key) > 0) {
-    return latency_cache_[key];
+  if (latency_and_workspace_size_cache_.count(key) > 0) {
+    return latency_and_workspace_size_cache_[key];
   }
 
   // Prepare ops for profiling.
   std::vector<OpWithDataPtr> ops_with_data;
+  int64_t total_workspace_size = 0;
   for (size_t i = 0; i < ops.size(); ++i) {
     auto op = ops[i];
     auto stream_id = stream_ids.empty() ? -1 : stream_ids[i];
-    ops_with_data.push_back(std::make_shared<OpWithData>(device_, op, stream_id));
+    auto single_op_with_data = std::make_shared<OpWithData>(device_, op, stream_id);
+    ops_with_data.push_back(single_op_with_data);
+    // Currently using the sum of the workspace sizes of all ops as workspace size
+    // Might need refactoring
+    total_workspace_size += single_op_with_data->workspace_size;
   }
 
   // Profiling.
   std::vector<float> cost = RunOpGroup(ops_with_data, warmup, exec_number, repeat);
 
   // Add the result to the cache.
-  latency_cache_[key] = std::move(cost);
-  return latency_cache_[key];
+  latency_and_workspace_size_cache_[key] =
+      std::move(std::make_pair(std::move(cost), total_workspace_size));
+  return latency_and_workspace_size_cache_[key];
 }
 
 // Profile one op and return its latency in microseconds on the target device.
-std::vector<float> OpProfiler::ProfileOp(const Expr& op, int32_t warmup, int32_t exec_number,
-                                         int32_t repeat) {
+std::pair<std::vector<float>, float> OpProfiler::ProfileOp(const Expr& op, int32_t warmup,
+                                                           int32_t exec_number, int32_t repeat) {
   if (auto call_node = op.as<CallNode>()) {
     auto call = GetRef<Call>(call_node);
     auto key = HashKeyToStr(HashCall(call) << warmup << exec_number << repeat);
 
     // Directly return the profiled latency if cache hit.
-    if (latency_cache_.count(key) > 0) {
-      return latency_cache_[key];
+    if (latency_and_workspace_size_cache_.count(key) > 0) {
+      return latency_and_workspace_size_cache_[key];
     }
 
     // Profile the op
     OpWithDataPtr op_with_data = std::make_shared<OpWithData>(device_, op);
     std::vector<float> cost = RunOp(op_with_data, warmup, exec_number, repeat);
+    int64_t workspace_size = op_with_data->workspace_size;
 
     // Add the profiled cost to the cache.
-    latency_cache_[key] = std::move(cost);
-    return latency_cache_[key];
+    latency_and_workspace_size_cache_[key] =
+        std::move(std::make_pair(std::move(cost), workspace_size));
+    return latency_and_workspace_size_cache_[key];
   }
 
-  // Non-call ops (e.g., tuple) do not invoke compute kernel and have zero cost.
-  return std::vector<float>(repeat, 0.0);
+  // Non-call ops (e.g., tuple) do not invoke compute kernel, have zero cost, and do not have
+  // workspace size
+  return std::make_pair(std::vector<float>(repeat, 0.0), 0.0f);
 }
 
 std::vector<float> CPUOpProfiler::RunOp(const OpWithDataPtr& op_with_data, int32_t warmup,
@@ -313,10 +343,13 @@ MNM_REGISTER_GLOBAL("mnm.op_profiler.Profile")
       int repeat = (args.size() == 5) ? args[4] : 1;
       auto profiler = OpProfiler::Get(device);
 
-      Array<FloatImm> results;
-      for (auto lat : profiler->ProfileOp(expr, warmup, exec_number, repeat)) {
-        results.push_back(FloatImm(DataType::Float(32), lat));
-      }
+      Map<String, ObjectRef> results;
+      Array<FloatImm> lat_results;
+      auto lat_and_workspace_size = profiler->ProfileOp(expr, warmup, exec_number, repeat);
+      for (float lat : lat_and_workspace_size.first)
+        lat_results.push_back(FloatImm(DataType::Float(32), lat));
+      results.Set("latency", lat_results);
+      results.Set("workspace_size", FloatImm(DataType::Float(32), lat_and_workspace_size.second));
       *ret = results;
     });
 
@@ -332,14 +365,17 @@ MNM_REGISTER_GLOBAL("mnm.op_profiler.ProfileGroup")
       int repeat = (args.size() == 6) ? args[5] : 1;
       auto profiler = OpProfiler::Get(device);
 
-      auto results = profiler->ProfileOpGroup(
+      Map<String, ObjectRef> results;
+      Array<FloatImm> lat_results;
+      auto lat_and_workspace_size = profiler->ProfileOpGroup(
           std::vector<Expr>(exprs.begin(), exprs.end()),
           std::vector<int>(stream_ids.begin(), stream_ids.end()), warmup, exec_number, repeat);
-      Array<FloatImm> packed_results;
-      for (auto lat : results) {
-        packed_results.push_back(FloatImm(DataType::Float(32), lat));
+      for (auto lat : lat_and_workspace_size.first) {
+        lat_results.push_back(FloatImm(DataType::Float(32), lat));
       }
-      *ret = packed_results;
+      results.Set("latency", lat_results);
+      results.Set("workspace_size", FloatImm(DataType::Float(32), lat_and_workspace_size.second));
+      *ret = results;
     });
 
 MNM_REGISTER_GLOBAL("mnm.op_profiler.ResetCache").set_body_typed([](const Device& device) {

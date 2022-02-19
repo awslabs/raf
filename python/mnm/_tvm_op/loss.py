@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=missing-function-docstring
 """Compute definition and schedules for loss functions."""
 from .._lib import register_compute
@@ -97,7 +114,10 @@ def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-
     dy, true, pred = inputs
     n, c = pred.shape
     dpred = _tvm.te.compute(
-        (n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], -dy / n, _tvm.tir.const(0))
+        (n, c),
+        lambda x, y: _tvm.tir.if_then_else(
+            y == true[x], -dy / n if len(dy.shape) == 0 else -dy[0] / n, _tvm.tir.const(0)
+        ),
     )
     return [dpred]
 

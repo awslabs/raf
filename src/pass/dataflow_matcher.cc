@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2021 by Contributors
  * \file dataflow_matcher.cc
  * \brief The auxiliary data structure for dataflow matcher.
  */
