@@ -134,10 +134,10 @@ class CommunicatorPool {
     auto id = CommunicatorID(comm_name, rank_list);
 
     if (comm_.count(id) == 0) {
-        const std::string prefix = "mnm.distributed.communicator._make.";
-        auto func_name = prefix + comm_name;
-        Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
-        comm_[id] = std::move(comm);
+      const std::string prefix = "mnm.distributed.communicator._make.";
+      auto func_name = prefix + comm_name;
+      Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
+      comm_[id] = std::move(comm);
     }
     return comm_[id];
   }
