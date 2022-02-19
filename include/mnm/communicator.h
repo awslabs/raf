@@ -41,7 +41,7 @@ namespace communicator {
 using registry::GetPackedFunc;
 using namespace mnm::value;
 
-// #ifdef MNM_USE_MPI
+#ifdef MNM_USE_MPI
 #include <mpi.h>
 #define MPI_CALL(cmd)                                                         \
   do {                                                                        \
@@ -50,7 +50,7 @@ using namespace mnm::value;
       LOG(FATAL) << "Failed: MPI error " << __FILE__ << ":" << __LINE__ << e; \
     }                                                                         \
   } while (0)
-// #endif
+#endif
 
 #ifdef MNM_USE_NCCL
 #define NCCL_CALL(cmd)                                                                            \

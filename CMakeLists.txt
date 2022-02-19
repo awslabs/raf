@@ -183,6 +183,10 @@ else ()
   )
 endif()
 
+if (${MNM_USE_MPI} STREQUAL "ON")
+  set(MNM_CXX_FLAGS ${MNM_CXX_FLAGS} -DMNM_USE_MPI)
+endif()
+
 set(MNM_SOURCE_FILES
   ${MNM_CXX_SOURCE_FILES}
   ${MNM_CUDA_SOURCE_FILES}

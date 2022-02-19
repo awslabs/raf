@@ -53,8 +53,12 @@ std::string UseLLVM() {
   return MNM_USE_LLVM;
 }
 
-std::string UseMPI() {
-  return MNM_USE_MPI;
+bool UseMPI() {
+#ifdef MNM_USE_MPI
+  return true;
+#else
+  return false;
+#endif
 }
 
 bool UseNCCL() {
