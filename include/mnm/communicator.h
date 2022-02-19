@@ -66,6 +66,8 @@ class CommunicatorObj : public Object {
     v->Visit("root_rank", &root_rank);
   }
 
+  virtual ~CommunicatorObj() = default;
+
   static constexpr const char* _type_key = "mnm.distributed.Communicator";
   MNM_BASE_OBJECT(CommunicatorObj, Object);
 };
@@ -73,7 +75,8 @@ class CommunicatorObj : public Object {
 class Communicator : public ObjectRef {
  public:
   static Communicator Get(const std::string& name = "", const std::vector<int64_t>& rank_list = {});
-  static void InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list, const Communicator global_comm);
+  static void InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list,
+                                  const Communicator global_comm);
   static uint64_t GetHostID();
 
   MNM_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
@@ -82,10 +85,11 @@ class Communicator : public ObjectRef {
 class VoidCommunicatorObj final : public CommunicatorObj {
  public:
   static constexpr const char* _type_key = "mnm.distributed.VoidCommunicator";
+  virtual ~VoidCommunicatorObj() = default;
   MNM_FINAL_OBJECT(VoidCommunicatorObj, CommunicatorObj);
 };
 
-class VoidCommunicator : Communicator {
+class VoidCommunicator final : public Communicator {
  public:
   static VoidCommunicator make(TupleValue rank_list);
   MNM_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
@@ -112,10 +116,10 @@ class CommunicatorPool {
     auto id = CommunicatorID(comm_name, rank_list);
 
     if (comm_.count(id) == 0) {
-      const std::string prefix = "mnm.distributed.communicator._make.";
-      auto func_name = prefix + comm_name;
-      Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
-      comm_[id] = std::move(comm);
+        const std::string prefix = "mnm.distributed.communicator._make.";
+        auto func_name = prefix + comm_name;
+        Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
+        comm_[id] = std::move(comm);
     }
     return comm_[id];
   }

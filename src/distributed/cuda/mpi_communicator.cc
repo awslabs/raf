@@ -10,8 +10,13 @@ namespace mnm {
 namespace distributed {
 namespace communicator {
 
+MPICommunicatorObj::~MPICommunicatorObj() {
+  MPI_CALL(MPI_Finalize());
+}
+
 MPICommunicator MPICommunicator::make(TupleValue rank_list) {
-  CHECK(rank_list->fields.empty()) << "MPICommunicator doesn't support creating a sub-communicator yet.";
+  CHECK(rank_list->fields.empty())
+      << "MPICommunicator doesn't support creating a sub-communicator yet.";
   auto obj = make_object<MPICommunicatorObj>();
 
   int initialized = 0;
@@ -28,8 +33,8 @@ MPICommunicator MPICommunicator::make(TupleValue rank_list) {
   obj->host_ids[rank] = GetHostID();
   // Allgather the hostIDs of nodes.
   MPI_CALL(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &obj->host_ids[0], sizeof(uint64_t),
-                          MPI_BYTE, MPI_COMM_WORLD));
-  
+                         MPI_BYTE, MPI_COMM_WORLD));
+
   int local_rank = 0, local_size = 0;
   // Get local rank
   for (int p = 0; p < size; ++p) {
@@ -50,12 +55,8 @@ MPICommunicator MPICommunicator::make(TupleValue rank_list) {
   return MPICommunicator(obj);
 }
 
-MPICommunicator::~MPICommunicator() {
-  MPI_CALL(MPI_Finalize());
-}
-
 MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.mpi").set_body_typed(MPICommunicator::make);
 
-}  // namespace connector
+}  // namespace communicator
 }  // namespace distributed
 }  // namespace mnm

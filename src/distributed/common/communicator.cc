@@ -1,7 +1,7 @@
 /*!
  * Copyright (c) 2022 by Contributors
  * \file src/distributed/communicator.cc
- * \brief Implementation of Communicator 
+ * \brief Implementation of Communicator
  */
 
 #include "mnm/communicator.h"
@@ -14,7 +14,8 @@ Communicator Communicator::Get(const std::string& name, const std::vector<int64_
   return CommunicatorPool::Get()->GetCommunicator(name, rank_list);
 }
 
-void Communicator::InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list, const Communicator global_comm) {
+void Communicator::InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list,
+                                       const Communicator global_comm) {
   std::vector<int64_t> rank_list_;
   for (auto i : rank_list->fields) {
     auto val = Downcast<value::IntValue>(i);
@@ -64,7 +65,7 @@ void Communicator::InitSubCommunicator(Communicator sub_comm, const TupleValue r
 uint64_t Communicator::GetHostID() {
   // Prevent confusion if all the nodes share the same hostname
   auto hostid = std::to_string(gethostid());
-  
+
   char hostname[1024];
   gethostname(hostname, 1024);
   size_t hash = std::hash<std::string>{}(std::string(hostname) + hostid);
@@ -72,18 +73,30 @@ uint64_t Communicator::GetHostID() {
 }
 
 VoidCommunicator VoidCommunicator::make(TupleValue rank_list) {
-  CHECK(rank_list->fields.empty()) << "VoidCommunicator doesn't support creating a sub-communicator yet.";
   auto obj = make_object<VoidCommunicatorObj>();
-  obj->local_size = 1;
-  obj->local_rank = 0;
-  obj->size = 1;
-  obj->rank = 0;
-  obj->world_size = 1;
-  obj->world_rank = 0;
-  obj->root_rank = 0;
-  obj->host_ids.push_back(GetHostID());
+
+  if (rank_list->fields.empty()) {
+    obj->local_size = 1;
+    obj->local_rank = 0;
+    obj->size = 1;
+    obj->rank = 0;
+    obj->world_size = 1;
+    obj->world_rank = 0;
+    obj->root_rank = 0;
+    obj->host_ids.push_back(GetHostID());
+  } else {
+    InitSubCommunicator(VoidCommunicator(obj), rank_list, Communicator::Get("void"));
+  }
+
   return VoidCommunicator(obj);
 }
+
+MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.void")
+    .set_body_typed(VoidCommunicator::make);
+
+MNM_REGISTER_GLOBAL("mnm.distributed.RemoveCommunicator").set_body_typed([]() {
+  CommunicatorPool::Get()->Remove();
+});
 
 }  // namespace communicator
 }  // namespace distributed
