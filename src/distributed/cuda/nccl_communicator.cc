@@ -19,7 +19,7 @@
 
 /*!
  * \file src/distributed/nccl_communicator.cc
- * \brief NCCL Communicator
+ * \brief NCCL Communicator.
  */
 
 #include "mnm/nccl_communicator.h"

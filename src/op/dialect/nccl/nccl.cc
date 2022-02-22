@@ -76,14 +76,8 @@ class NCCLAllReduce : public mnm::op::OpEnv {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
 
-    if (args->rank_list.empty()) {
-      // RequestDistributed(&communicator);
-      // TODO: fix this
-      communicator = Communicator::Get("nccl");
-    } else {
-      communicator = Communicator::Get("nccl", args->rank_list);
-      // Should unify the way of getting a communicator
-    }
+    // RequestDistributed(&communicator);
+    communicator = Communicator::Get("nccl", args->rank_list);
 
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
@@ -175,14 +169,8 @@ class NCCLAllGather : public mnm::op::OpEnv {
     auto args = cv->args.as<mnm::op::schema::AllgatherArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-
-    if (args->rank_list.empty()) {
-      // RequestDistributed(&communicator);
-      // TODO: fix this
-      communicator = Communicator::Get("nccl");
-    } else {
-      communicator = Communicator::Get("nccl", args->rank_list);
-    }
+    // RequestDistributed(&communicator);
+    communicator = Communicator::Get("nccl", args->rank_list);
   }
 
  public:

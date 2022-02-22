@@ -18,8 +18,8 @@
  */
 
 /*!
- * \file src/distributed/nccl_communicator.cc
- * \brief NCCL Communicator
+ * \file nccl_communicator.h
+ * \brief NCCL Communicator.
  */
 #pragma once
 #include <algorithm>

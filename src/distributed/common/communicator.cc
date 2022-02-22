@@ -19,7 +19,7 @@
 
 /*!
  * \file src/distributed/communicator.cc
- * \brief Implementation of Communicator
+ * \brief Implementation of Communicator.
  */
 
 #include "mnm/communicator.h"

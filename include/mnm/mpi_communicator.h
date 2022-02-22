@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file src/distributed/mpi_communicator.cc
+ * \file mpi_communicator.h
  * \brief MPI Communicator.
  */
 #pragma once
