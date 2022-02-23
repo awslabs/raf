@@ -1,0 +1,7 @@
+src/op/schema/
+src/op/regs/regs.cc
+src/op/regs/tvm_op_regs.cc
+python/mnm/_op/sym.py
+python/mnm/_op/imp.py
+python/mnm/ir/op.py
+python/mnm/_ffi
