@@ -148,12 +148,9 @@ Type Conv2DDxwInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvDxwArgs>();
   CHECK(args != nullptr);
   TensorType dy = Downcast<TensorType>(GetType(args->dy));
-  Array<PrimExpr> res;
   if (args->shape.defined()) {
-    for (auto value : args->shape.value()) {
-      res.push_back(Integer(value->value));
-    }
-    return TensorType(res, dy->dtype);
+    Array<PrimExpr> shape = GetShapeExprFromValue(args->shape);
+    return TensorType(shape, dy->dtype);
   } else {
     return IncompleteType(tvm::kType);
   }
@@ -166,12 +163,9 @@ Type Conv2DTransposeDxwInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvTransposeDxwArgs>();
   CHECK(args != nullptr);
   TensorType dy = Downcast<TensorType>(GetType(args->dy));
-  Array<PrimExpr> res;
   if (args->shape.defined()) {
-    for (auto value : args->shape.value()) {
-      res.push_back(Integer(value->value));
-    }
-    return TensorType(res, dy->dtype);
+    Array<PrimExpr> shape = GetShapeExprFromValue(args->shape);
+    return TensorType(shape, dy->dtype);
   } else {
     return IncompleteType(tvm::kType);
   }

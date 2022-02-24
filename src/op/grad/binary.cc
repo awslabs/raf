@@ -26,17 +26,7 @@ Array<Expr> AddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   CHECK_GE(call->args.size(), 2);
   const Expr& x1 = call->args[0];
   const Expr& x2 = call->args[1];
-
-  auto f = [&dy](const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dy, x});
-    Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep, MakeConstant(BoolValue::make(false))});
-  };
-
-  return {f(x1), f(x2)};
+  return {GetCollapseSumLike(dy, x1), GetCollapseSumLike(dy, x2)};
 }
 
 RAF_OP_GRAD("raf.op.add", AddGrad);
@@ -48,15 +38,6 @@ Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   const Expr& x1 = call->args[0];
   const Expr& x2 = call->args[1];
 
-  auto f = [&dy](const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dy, x});
-    Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep, MakeConstant(BoolValue::make(false))});
-  };
-
   auto fs = [&dy](const Expr& x) {
     static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
     static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
@@ -67,7 +48,7 @@ Array<Expr> SubGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
     Call value = Call(sum, {dy, axes, keep, MakeConstant(BoolValue::make(false))});
     return Call(neg, {value});
   };
-  return {f(x1), fs(x2)};
+  return {GetCollapseSumLike(dy, x1), fs(x2)};
 }
 RAF_OP_GRAD("raf.op.subtract", SubGrad);
 
@@ -112,17 +93,8 @@ Array<Expr> MulGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   CHECK_GE(call->args.size(), 2);
   const Expr& x1 = call->args[0];
   const Expr& x2 = call->args[1];
-
-  auto f = [](const Expr& dx, const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dx, x});
-    Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
-  };
-
-  return {f(Call(op_multiply, {dy, x2}), x1), f(Call(op_multiply, {dy, x1}), x2)};
+  return {GetCollapseSumLike(Call(op_multiply, {dy, x2}), x1),
+          GetCollapseSumLike(Call(op_multiply, {dy, x1}), x2)};
 }
 
 RAF_OP_GRAD("raf.op.multiply", MulGrad);
@@ -143,16 +115,8 @@ Array<Expr> PowGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   Call x1_log = Call(op_log, {x1});
   Call dx2 = Call(op_multiply, {y1, x1_log});
 
-  auto f = [](const Expr& dx, const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dx, x});
-    Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
-  };
-
-  return {f(Call(op_multiply, {dy, dx1}), x1), f(Call(op_multiply, {dy, dx2}), x2)};
+  return {GetCollapseSumLike(Call(op_multiply, {dy, dx1}), x1),
+          GetCollapseSumLike(Call(op_multiply, {dy, dx2}), x2)};
 }
 
 RAF_OP_GRAD("raf.op.power", PowGrad);
@@ -171,16 +135,7 @@ Array<Expr> DivGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   dx2 = Call(op_multiply, {dx2, Call(op_divide, {x1, x2})});
   dx2 = Call(op_divide, {dx2, x2});
 
-  auto f = [](const Expr& dx, const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dx, x});
-    Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
-  };
-
-  return {f(dx1, x1), f(dx2, x2)};
+  return {GetCollapseSumLike(dx1, x1), GetCollapseSumLike(dx2, x2)};
 }
 
 RAF_OP_GRAD("raf.op.divide", DivGrad);

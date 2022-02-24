@@ -129,6 +129,7 @@ _reg.register_injective_schedule("raf.op.tvm.full_like")
 _reg.register_injective_schedule("raf.op.tvm.batch_flatten")
 _reg.register_injective_schedule("raf.op.tvm.arange")
 _reg.register_injective_schedule("raf.op.tvm.strided_slice")
+_reg.register_reduce_schedule("raf.op.tvm.collapse_sum_like")
 
 
 @register_compute("raf.op.tvm.take_dx")

@@ -18,16 +18,9 @@ namespace grad {
 using namespace raf::ir;
 using namespace raf::value;
 
-Expr Shape(const Expr& expr) {
-  static auto op_shape = Op::Get("raf.op.shape");
-  return Call(op_shape, {expr});
-}
-
 Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                         const Expr& dy) {
   using namespace raf::value;
-  static auto reshape = Op::Get("raf.op.reshape");
-  static auto shape = Op::Get("raf.op.shape");
   static auto sum = Op::Get("raf.op.sum");
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
@@ -35,7 +28,7 @@ Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, cons
   const Expr& axis = call->args[2];
   Expr keep_dims = MakeConstant(ScalarValue::make((int64_t)0));
   Expr exclude = MakeConstant(ScalarValue::make(true));
-  return {Call(reshape, {dy, Call(shape, {x})}), Call(sum, {dy, axis, keep_dims, exclude})};
+  return {GetReshapeLike(dy, x), Call(sum, {dy, axis, keep_dims, exclude})};
 }
 
 RAF_OP_GRAD("raf.op.bias_add", BiasAddGrad);
@@ -133,8 +126,8 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const
   }
   // dx: w, y, dy, shape(x), stride, padding, dilation, groups
   // dw: x, y, dy, shape(w), stride, padding, dilation, groups
-  return {Call(op_dx, {w, y, dy, Shape(x), stride, padding, dilation, groups}),
-          Call(op_dw, {x, y, dy, Shape(w), stride, padding, dilation, groups})};
+  return {Call(op_dx, {w, y, dy, GetShape(x), stride, padding, dilation, groups}),
+          Call(op_dw, {x, y, dy, GetShape(w), stride, padding, dilation, groups})};
 }
 
 RAF_OP_GRAD("raf.op.conv2d", Conv2dGrad);
@@ -161,8 +154,8 @@ Array<Expr> Conv2dTransGrad(const Expr& orig_call, const Array<Expr> orig_args, 
   }
   // dx: w, y, dy, shape(x), stride, padding, dilation, groups
   // dw: x, y, dy, shape(w), stride, padding, dilation, groups
-  return {Call(op_dx, {w, y, dy, Shape(x), stride, padding, output_padding, dilation, groups}),
-          Call(op_dw, {x, y, dy, Shape(w), stride, padding, output_padding, dilation, groups})};
+  return {Call(op_dx, {w, y, dy, GetShape(x), stride, padding, output_padding, dilation, groups}),
+          Call(op_dw, {x, y, dy, GetShape(w), stride, padding, output_padding, dilation, groups})};
 }
 
 RAF_OP_GRAD("raf.op.conv2d_transpose", Conv2dTransGrad);

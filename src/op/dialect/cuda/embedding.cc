@@ -8,6 +8,7 @@
  * \brief embedding_dx cuda backend
  */
 #include "raf/op.h"
+#include "raf/op_utils.h"
 #include "raf/device_api.h"
 #include "../../schema/nn.h"
 #include "./kernels/kernel_util.cuh"
@@ -27,8 +28,9 @@ class EmbeddingDxImpl : public raf::op::OpEnv {
     static auto op = ir::Op::Get("raf.op.embedding_dx");
     auto args = cv->args.as<op::schema::EmbeddingDxArgs>();
     n_out_elements_ = 1;
-    for (int i = 0; i < args->num_weight.size(); ++i) {
-      n_out_elements_ *= args->num_weight[i];
+    std::vector<int64_t> num_weight = GetShapeVecFromValue(args->num_weight);
+    for (int i = 0; i < num_weight.size(); ++i) {
+      n_out_elements_ *= num_weight[i];
     }
     this->arg_indices = {
         fschema_index[op]("dy"),

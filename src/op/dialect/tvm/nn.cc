@@ -193,10 +193,9 @@ Attrs ConvDxwSchema2Attrs(const ConvDxwArgs* args) {
     attrs->dilation.push_back(IntImm(tvm::runtime::DataType::Int(64), dilation[i]));
   }
   // FIXME: (workaround) we use kernel size to store the shape of X (for dx) or W (for dw)
-  CHECK(args->shape.defined());
-  auto shape = args->shape.value();
+  auto shape = GetShapeExprFromValue(args->shape);
   for (int i = 0; i < shape.size(); ++i) {
-    attrs->kernel_size.push_back(IntImm(tvm::runtime::DataType::Int(32), shape[i]->value));
+    attrs->kernel_size.push_back(shape[i]);
   }
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();
@@ -267,10 +266,9 @@ Attrs ConvTransposeDxwSchema2Attrs(const ConvTransposeDxwArgs* args) {
     attrs->dilation.push_back(IntImm(tvm::runtime::DataType::Int(64), dilation[i]));
   }
   // FIXME: (workaround) we use kernel size to store the shape of X (for dx) or W (for dw)
-  CHECK(args->shape.defined());
-  auto shape = args->shape.value();
+  auto shape = GetShapeExprFromValue(args->shape);
   for (int i = 0; i < shape.size(); ++i) {
-    attrs->kernel_size.push_back(IntImm(tvm::runtime::DataType::Int(32), shape[i]->value));
+    attrs->kernel_size.push_back(shape[i]);
   }
   attrs->groups = args->groups;
   attrs->channels = NullValue<tvm::relay::IndexExpr>();

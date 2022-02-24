@@ -358,7 +358,7 @@ def test_mean_dx(device):
 
         @raf.model.trace
         def forward(self, x):
-            return raf._op.sym.mean_dx(x)
+            return raf._op.sym.mean_dx(x, ())
 
     m_x, _ = randn((), dtype="float32", device=device)
     model = Model()

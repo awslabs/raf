@@ -3,9 +3,19 @@
 
 import numpy as np
 import pytest
+import torch
+
 import raf
 from tvm import relay
-from raf.testing import get_testable_devices, check, run_vm_model, get_vm_executor, resnet
+from raf.testing import (
+    randn_torch,
+    get_testable_devices,
+    check,
+    run_vm_model,
+    get_vm_executor,
+    resnet,
+    mlp,
+)
 from raf._core.ndarray import Symbol
 from raf.model.trace import _get_func_inputs
 
@@ -64,10 +74,9 @@ def test_dynamic_reshape(device):
 
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("fuse", [True, False])
-def test_resnet(device, fuse):
+def test_resnet_forward(device, fuse):
     # pylint: disable=invalid-name, protected-access
     m_model, _ = resnet.get_model([1, 1, 1, 1], False)
-    m_model.infer_mode()
     m_model.to(device=device)
 
     x_ty = relay.TensorType((relay.Any(), 3, 224, 224))
@@ -83,6 +92,75 @@ def test_resnet(device, fuse):
     v_res = vm(*inputs)
     m_res = m_model(m_x)
     check(m_res, v_res)
+
+
+@pytest.mark.parametrize("device", ["cpu"])
+@pytest.mark.parametrize("fuse", [True, False])
+def test_resnet_backward(device, fuse):
+    # pylint: disable=invalid-name, protected-access, too-many-locals
+    m_model, t_model = resnet.get_model([1, 1, 1, 1])
+    m_model.to(device=device)
+    t_model.to(device=device)
+    m_optimizer = raf.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+    t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
+
+    x_ty = relay.TensorType((relay.Any(), 3, 224, 224))
+    x = Symbol.make_var("x", x_ty)
+    yhat_ty = relay.TensorType((relay.Any(),))
+    yhat = Symbol.make_var("yhat", yhat_ty)
+    dy_ty = relay.TensorType(())
+    dy = Symbol.make_var("dy", dy_ty)
+    record = m_optimizer._internal(dy, x, yhat)
+    mod = record.mod
+
+    m_dy, t_dy = randn_torch((), device=device, requires_grad=True)
+    m_in, t_in = resnet.get_input(batch_size=1, device=device)
+    vm = get_vm_executor(mod, device, 2, not fuse)
+    inputs = _get_func_inputs(record, (m_dy, *m_in), {}, get_handle=False)
+    m_loss = vm(*inputs)[0][0]
+
+    t_optimizer.zero_grad()
+    t_loss = t_model(*t_in)
+    t_loss.backward(t_dy)
+    t_optimizer.step()
+
+    check(m_loss, t_loss, atol=1e-3, rtol=1e-3)
+    resnet.check_params(m_model, t_model, atol=1e-2, rtol=1e-2)
+
+
+@pytest.mark.parametrize("config", [(784, 10, 256, 256)])
+@pytest.mark.parametrize("device", ["cpu"])
+@pytest.mark.parametrize("fuse", [True, False])
+def test_mlp(config, device, fuse):
+    # pylint: disable=invalid-name, protected-access, too-many-locals
+    m_model, t_model = mlp.get_model(config)
+    m_model.to(device=device)
+    t_model.to(device=device)
+    m_optimizer = raf.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+    t_optimizer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
+
+    x_ty = relay.TensorType((relay.Any(), config[0]))
+    x = Symbol.make_var("x", x_ty)
+    yhat_ty = relay.TensorType((relay.Any(),))
+    yhat = Symbol.make_var("yhat", yhat_ty)
+    dy_ty = relay.TensorType(())
+    dy = Symbol.make_var("dy", dy_ty)
+    record = m_optimizer._internal(dy, x, yhat)
+    mod = record.mod
+
+    m_dy, t_dy = randn_torch((), device=device, requires_grad=True)
+    m_in, t_in = mlp.get_input(config, batch_size=1, device=device)
+    vm = get_vm_executor(mod, device, 2, not fuse)
+    inputs = _get_func_inputs(record, (m_dy, *m_in), {}, get_handle=False)
+    m_loss = vm(*inputs)[0]
+
+    t_optimizer.zero_grad()
+    t_loss = t_model(*t_in)
+    t_loss.backward(t_dy)
+    t_optimizer.step()
+
+    check(m_loss, t_loss, atol=1e-4, rtol=1e-4)
+    mlp.check_params(m_model, t_model)
 
 
 if __name__ == "__main__":

@@ -113,12 +113,26 @@ Type TransposeInfer(const CallValues& value) {
 RAF_OP_TYPE("raf.op.transpose", "Transpose", TransposeInfer);
 
 Type TransposeDxInfer(const CallValues& value) {
-  const auto* args = value->args.as<TransposeDxArgs>();
+  const auto* args = value->args.as<TransposeArgs>();
   CHECK(args != nullptr);
-  TensorType dy = Downcast<TensorType>(GetType(args->dy));
+  std::vector<int64_t> axes(args->axes.size(), -1);
+  TensorType dy = Downcast<TensorType>(GetType(args->x));
+  size_t ndim = dy->shape.size();
+
   Array<tvm::PrimExpr> oshape;
-  for (auto dim : args->primal_shape) {
-    oshape.push_back(IntImm(DataType::Int(32), dim));
+  if (axes.size() != 0) {
+    for (size_t i = 0; i < ndim; ++i) {
+      axes[args->axes[i]] = i;
+    }
+    CHECK_EQ(axes.size(), ndim);
+    for (size_t i = 0; i < ndim; ++i) {
+      int64_t axis = axes[i] < 0 ? axes[i] + ndim : axes[i];
+      oshape.push_back(dy->shape[axis]);
+    }
+  } else {
+    for (size_t i = 0; i < ndim; ++i) {
+      oshape.push_back(dy->shape[ndim - i - 1]);
+    }
   }
   return TensorType(oshape, dy->dtype);
 }
@@ -308,10 +322,7 @@ Type EmbeddingDxInfer(const CallValues& value) {
   const auto* args = value->args.as<EmbeddingDxArgs>();
   CHECK(args != nullptr);
   TensorType dy = Downcast<TensorType>(GetType(args->dy));
-  std::vector<PrimExpr> shape;
-  for (auto val : args->num_weight) {
-    shape.push_back(Integer(val));
-  }
+  auto shape = GetShapeExprFromValue(args->num_weight);
   return TensorType(shape, dy->dtype);
 }
 
@@ -459,10 +470,11 @@ Type CastInfer(const CallValues& value) {
 RAF_OP_TYPE("raf.op.cast", "Cast", CastInfer);
 
 Type CastLikeInfer(const CallValues& value) {
-  const auto* args = value->args.as<CastLikeArgs>();
+  const auto* args = value->args.as<BinaryLikeArgs>();
   CHECK(args != nullptr);
-  TensorType dtype_like = Downcast<TensorType>(GetType(args->dtype_like));
-  return dtype_like;
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  TensorType like_type = Downcast<TensorType>(GetType(args->like_type));
+  return TensorType(x->shape, like_type->dtype);
 }
 
 RAF_OP_TYPE("raf.op.cast_like", "CastLike", CastLikeInfer);
@@ -533,7 +545,7 @@ Type ReverseSequenceInfer(const CallValues& value) {
 RAF_OP_TYPE("raf.op.reverse_sequence", "ReverseSequence", ReverseSequenceInfer);
 
 Type BroadcastToInfer(const CallValues& value) {
-  const auto* args = value->args.as<BroadcastToArgs>();
+  const auto* args = value->args.as<BinaryToArgs>();
   CHECK(args != nullptr);
   std::vector<int64_t> shape = args->shape;
   Array<PrimExpr> oshape;
@@ -546,14 +558,19 @@ Type BroadcastToInfer(const CallValues& value) {
 
 RAF_OP_TYPE("raf.op.broadcast_to", "BroadcastTo", BroadcastToInfer);
 
-Type BroadcastToLikeInfer(const CallValues& value) {
-  const auto* args = value->args.as<BroadcastToLikeArgs>();
+Type BinaryShapeLikeInfer(const CallValues& value) {
+  const auto* args = value->args.as<BinaryLikeArgs>();
   CHECK(args != nullptr);
-  TensorType broadcast_type = Downcast<TensorType>(GetType(args->broadcast_type));
-  return broadcast_type;
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  TensorType like_type = Downcast<TensorType>(GetType(args->like_type));
+  return TensorType(like_type->shape, x->dtype);
 }
 
-RAF_OP_TYPE("raf.op.broadcast_to_like", "BroadcastToLike", BroadcastToLikeInfer);
+RAF_OP_TYPE("raf.op.broadcast_to_like", "BroadcastToLike", BinaryShapeLikeInfer);
+
+RAF_OP_TYPE("raf.op.collapse_sum_like", "CollapseSumLike", BinaryShapeLikeInfer);
+
+RAF_OP_TYPE("raf.op.reshape_like", "ReshapeLike", BinaryShapeLikeInfer);
 
 Type RepeatInfer(const CallValues& value) {
   const auto* args = value->args.as<RepeatArgs>();
@@ -782,10 +799,7 @@ Type StridedSliceDxInfer(const CallValues& value) {
   const auto* args = value->args.as<StridedSliceDxArgs>();
   CHECK(args != nullptr);
   TensorType dy = Downcast<TensorType>(GetType(args->dy));
-  Array<tvm::PrimExpr> oshape;
-  for (auto dim : args->primal_shape) {
-    oshape.push_back(IntImm(DataType::Int(32), dim));
-  }
+  Array<tvm::PrimExpr> oshape = GetShapeExprFromValue(args->shape);
   return TensorType(oshape, dy->dtype);
 }
 

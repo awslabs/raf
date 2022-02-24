@@ -116,6 +116,8 @@ class TypeInferencer : public ExprMutator {
     // can be either types or tensor values, depends on whether
     // they have already been evaluated/constant-folded.
     // Therefore it is essential to deal with both cases in their declare functions.
+
+    // TODO(@hgt312): refactor concatenate_dx be a base op and only use types
     static std::unordered_set<std::string> shape_list{
         "raf.op.shape", "raf.op.get_reduce_axis", "raf.op.get_kept_dims", "raf.op.concatenate_dx"};
     if (opn && shape_list.count(opn->name)) {

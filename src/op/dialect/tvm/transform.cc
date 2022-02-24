@@ -248,23 +248,15 @@ std::vector<std::string> EmbeddingDxSchemaArgNames(const op::CallValues& call) {
 
 Attrs EmbeddingDxSchema2Attrs(const EmbeddingDxArgs* args) {
   auto attrs = make_object<DimAttrs>();
-  for (auto v : args->num_weight) {
+  auto num_weight = GetShapeVecFromValue(args->num_weight);
+  for (auto v : num_weight) {
     attrs->dims.push_back(Integer(v));
   }
   return Attrs(attrs);
 }
 
-HashKey EmbeddingDxHasher(const std::vector<Type>& param_types, const Type& y_type,
-                          const EmbeddingDxArgs* args) {
-  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  for (auto v : args->num_weight) {
-    key << v;
-  }
-  return key;
-}
-
 RAF_TVM(embedding_dx, EmbeddingDx, EmbeddingDxArgs, EmbeddingDxSchema2Args,
-        EmbeddingDxSchemaArgNames, EmbeddingDxSchema2Attrs, EmbeddingDxHasher, kOpaque);
+        EmbeddingDxSchemaArgNames, EmbeddingDxSchema2Attrs, GenericHasher, kOpaque);
 
 std::vector<Value> SequenceMaskSchema2Args(const SequenceMaskArgs* args) {
   return {args->x, args->sequence_length};
@@ -343,27 +335,16 @@ RAF_TVM(reverse_sequence, ReverseSequence, ReverseSequenceArgs, ReverseSequenceS
         ReverseSequenceSchemaArgNames, ReverseSequenceSchema2Attrs, ReverseSequenceHasher,
         kInjective);
 
-std::vector<Value> BroadcastToSchema2Args(const BroadcastToArgs* args) {
+std::vector<Value> BinaryToSchema2Args(const BinaryToArgs* args) {
   return {args->x};
 }
 
-std::vector<std::string> BroadcastToSchemaArgNames(const op::CallValues& call) {
+std::vector<std::string> BinaryToSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
-Attrs BroadcastToSchema2Attrs(const BroadcastToArgs* args) {
-  auto attrs = make_object<InitOpAttrs>();
-  std::vector<IndexExpr> shape;
-  shape.reserve(args->shape.size());
-  for (size_t i = 0; i < args->shape.size(); ++i) {
-    shape.emplace_back(IntImm(ir::DataType::Int(32), args->shape[i]));
-  }
-  attrs->shape = Array<Integer>(shape.begin(), shape.end());
-  return Attrs(attrs);
-}
-
-RAF_TVM(broadcast_to, BroadcastTo, BroadcastToArgs, BroadcastToSchema2Args,
-        BroadcastToSchemaArgNames, BroadcastToSchema2Attrs, GenericHasher, kBroadcast);
+RAF_TVM(broadcast_to, BroadcastTo, BinaryToArgs, BinaryToSchema2Args, BinaryToSchemaArgNames,
+        GenericAttrs, GenericHasher, kBroadcast);
 
 std::vector<Value> TransposeSchema2Args(const TransposeArgs* args) {
   return {args->x};
@@ -394,50 +375,19 @@ HashKey TransposeHasher(const std::vector<Type>& param_types, const Type& y_type
 RAF_TVM(transpose, Transpose, TransposeArgs, TransposeSchema2Args, TransposeSchemaArgNames,
         TransposeSchema2Attrs, TransposeHasher, kInjective);
 
-std::vector<Value> TransposeDxSchema2Args(const TransposeDxArgs* args) {
-  return {args->dy};
+RAF_TVM(transpose_dx, TransposeDx, TransposeArgs, TransposeSchema2Args, TransposeSchemaArgNames,
+        TransposeSchema2Attrs, TransposeHasher, kInjective);
+
+std::vector<Value> BinaryLikeSchema2Args(const BinaryLikeArgs* args) {
+  return {args->x, args->like_type};
 }
 
-std::vector<std::string> TransposeDxSchemaArgNames(const op::CallValues& call) {
-  return {"dy"};
+std::vector<std::string> BinaryLikeSchemaArgNames(const op::CallValues& call) {
+  return {"x", "like_type"};
 }
 
-Attrs TransposeDxSchema2Attrs(const TransposeDxArgs* args) {
-  auto attrs = make_object<TransposeAttrs>();
-  std::vector<Integer> axes;
-  axes.reserve(args->axes.size());
-  for (size_t i = 0; i < args->axes.size(); ++i) {
-    axes.emplace_back(args->axes[i]);
-  }
-  attrs->axes = Array<Integer>(axes.begin(), axes.end());
-  return Attrs(attrs);
-}
-
-HashKey TransposeDxHasher(const std::vector<Type>& param_types, const Type& y_type,
-                          const TransposeDxArgs* args) {
-  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->axes;
-  return key;
-}
-
-RAF_TVM(transpose_dx, TransposeDx, TransposeDxArgs, TransposeDxSchema2Args,
-        TransposeDxSchemaArgNames, TransposeDxSchema2Attrs, TransposeDxHasher, kInjective);
-
-std::vector<Value> BroadcastToLikeSchema2Args(const BroadcastToLikeArgs* args) {
-  return {args->x, args->broadcast_type};
-}
-
-std::vector<std::string> BroadcastToLikeSchemaArgNames(const op::CallValues& call) {
-  return {"x", "broadcast_type"};
-}
-
-Attrs BroadcastToLikeSchema2Attrs(const BroadcastToLikeArgs* args) {
-  auto attrs = make_object<InitOpAttrs>();
-  return Attrs(attrs);
-}
-
-RAF_TVM(broadcast_to_like, BroadcastToLike, BroadcastToLikeArgs, BroadcastToLikeSchema2Args,
-        BroadcastToLikeSchemaArgNames, BroadcastToLikeSchema2Attrs, GenericHasher, kBroadcast);
+RAF_TVM(broadcast_to_like, BroadcastToLike, BinaryLikeArgs, BinaryLikeSchema2Args,
+        BinaryLikeSchemaArgNames, GenericAttrs, GenericHasher, kBroadcast);
 
 std::vector<Value> SplitSchema2Args(const SplitArgs* args) {
   return {args->x};
@@ -689,15 +639,7 @@ HashKey CastHasher(const std::vector<Type>& param_types, const Type& y_type, con
 RAF_TVM(cast, Cast, CastArgs, CastSchema2Args, CastSchemaArgNames, CastSchema2Attrs, CastHasher,
         kElemWise);
 
-std::vector<Value> CastLikeSchema2Args(const CastLikeArgs* args) {
-  return {args->data, args->dtype_like};
-}
-
-std::vector<std::string> CastLikeSchemaArgNames(const op::CallValues& call) {
-  return {"data", "dtype_like"};
-}
-
-RAF_TVM(cast_like, CastLike, CastLikeArgs, CastLikeSchema2Args, CastLikeSchemaArgNames,
+RAF_TVM(cast_like, CastLike, BinaryLikeArgs, BinaryLikeSchema2Args, BinaryLikeSchemaArgNames,
         GenericAttrs, GenericHasher, kElemWise);
 
 std::vector<Value> GatherSchema2Args(const GatherArgs* args) {
@@ -1079,8 +1021,9 @@ Attrs StridedSliceDxSchema2Attrs(const StridedSliceDxArgs* args) {
     end.emplace_back(args->end[i]);
     strides.emplace_back(args->strides[i]);
   }
-  for (int i = 0; i < args->primal_shape.size(); ++i) {
-    primal_shape.emplace_back(args->primal_shape[i]);
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
+  for (int i = 0; i < shape.size(); ++i) {
+    primal_shape.emplace_back(shape[i]);
   }
   attrs->primal_shape = Array<Integer>(primal_shape.begin(), primal_shape.end());
   attrs->begin = Array<Integer>(begin.begin(), begin.end());
@@ -1194,6 +1137,9 @@ HashKey CumsumHasher(const std::vector<Type>& param_types, const Type& ret_type,
 
 RAF_TVM(cumsum, Cumsum, CumsumArgs, CumsumSchema2Args, CumsumSchemaArgNames, CumsumSchema2Attrs,
         CumsumHasher, kOpaque);
+
+RAF_TVM(collapse_sum_like, CollapseSumLike, BinaryLikeArgs, BinaryLikeSchema2Args,
+        BinaryLikeSchemaArgNames, GenericAttrs, GenericHasher, kCommReduce);
 
 }  // namespace tvm_dialect
 }  // namespace op
