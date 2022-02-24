@@ -167,7 +167,7 @@ AWS Batch has to be properly configured to make the above flow working as expect
         "type": "container",
         "parameters": {},
         "containerProperties": {
-            "image": "metaprojdev/meta:ci_gpu-v0.20",
+            "image": "metaprojdev/raf:ci_gpu-v0.20",
             "command": [],
             "jobRoleArn": ***,
             "executionRoleArn": ***,
@@ -210,7 +210,7 @@ AWS Batch has to be properly configured to make the above flow working as expect
         "type": "container",
         "parameters": {},
         "containerProperties": {
-            "image": "metaprojdev/meta:ci_cpu-v0.18",
+            "image": "metaprojdev/raf:ci_cpu-v0.18",
             "command": [],
             "jobRoleArn": ***,
             "executionRoleArn": ***,
@@ -249,7 +249,7 @@ AWS Batch has to be properly configured to make the above flow working as expect
         "type": "container",
         "parameters": {},
         "containerProperties": {
-            "image": "metaprojdev/meta:ci_gpu-v0.20",
+            "image": "metaprojdev/raf:ci_gpu-v0.20",
             "command": [],
             "jobRoleArn": ***,
             "executionRoleArn": ***,

@@ -13,7 +13,7 @@ SOURCE_REF=$1
 REPO=$2
 COMMAND=$3
 SAVE_OUTPUT=$4
-REMOTE_FOLDER=$5 # e.g., s3://ci-meta/pr-7
+REMOTE_FOLDER=$5 # e.g., s3://ci-raf/pr-7
 
 echo "Job Info"
 echo "-------------------------------------"

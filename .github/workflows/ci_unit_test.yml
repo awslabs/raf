@@ -20,8 +20,8 @@ jobs:
     if: github.repository == 'meta-project/meta'
     runs-on: self-hosted
     outputs:
-      cpu_image: "metaprojdev/meta:ci_cpu-v0.18"
-      gpu_image: "metaprojdev/meta:ci_gpu-v0.20"
+      cpu_image: "metaprojdev/raf:ci_cpu-v0.18"
+      gpu_image: "metaprojdev/raf:ci_gpu-v0.20"
       skip_ci: ${{ steps.job_info.outputs.skip_ci }}
       ref: ${{ steps.job_info.outputs.ref }}
       repo: ${{ steps.job_info.outputs.repo }}
