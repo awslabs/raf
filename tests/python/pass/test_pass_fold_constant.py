@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-import mnm
-from mnm.testing import get_testable_devices, randn, check
+import raf
+from raf.testing import get_testable_devices, randn, check
 import tvm
 
 
@@ -12,15 +12,15 @@ import tvm
 def test_fold_const_model(device, shape):
     const, _ = randn(shape, device=device)
 
-    class ModelWithConst(mnm.Model):
+    class ModelWithConst(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             self.c = const
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.add(self.c, self.c)
-            return mnm.add(x, y)
+            y = raf.add(self.c, self.c)
+            return raf.add(x, y)
 
     model = ModelWithConst()
     m_x, _ = randn(shape, device=device, requires_grad=True)
@@ -30,7 +30,7 @@ def test_fold_const_model(device, shape):
     m_dx = m_x.grad
     n_dx = 1 * n_dy
     check(m_dx, n_dx)
-    check(m_y, mnm.add(mnm.add(const, const), m_x).numpy())
+    check(m_y, raf.add(raf.add(const, const), m_x).numpy())
 
 
 @pytest.mark.parametrize("device", get_testable_devices()[1:])
@@ -39,27 +39,27 @@ def test_fold_const_ir(device, shape):
     # pylint: disable=protected-access
     const, _ = randn(shape, device=device)
 
-    class ModelWithConst(mnm.Model):
+    class ModelWithConst(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             self.c = const
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.matmul(self.c, self.c)
-            z = mnm.matmul(x, y)
-            return mnm.matmul(x, z)
+            y = raf.matmul(self.c, self.c)
+            z = raf.matmul(x, y)
+            return raf.matmul(x, z)
 
     def expected():
         x = tvm.relay.var("x", tvm.relay.TensorType(shape))
         c = tvm.relay.var("c", tvm.relay.TensorType(shape))
         # we are only interested in the structure
-        t_value = mnm._core.value.TensorValue.from_numpy(const.numpy())
-        const_var = mnm._ffi.ir._make.Constant(t_value)
-        closure2 = mnm.ir.op.matmul(x, const_var)
+        t_value = raf._core.value.TensorValue.from_numpy(const.numpy())
+        const_var = raf._ffi.ir._make.Constant(t_value)
+        closure2 = raf.ir.op.matmul(x, const_var)
         var_a2 = tvm.relay.var("a2")
         var_a3 = tvm.relay.var("a3")
-        closure3 = mnm.ir.op.matmul(x, var_a2)
+        closure3 = raf.ir.op.matmul(x, var_a2)
         let3 = tvm.relay.Let(var_a3, closure3, var_a3)
         let2 = tvm.relay.Let(var_a2, closure2, let3)
         return tvm.relay.Function([x, c], let2)
@@ -72,11 +72,11 @@ def test_fold_const_ir(device, shape):
 
     # bind parameters
     args = [m_x._ndarray__handle, model_before.c._ndarray__handle]
-    func_bound = mnm._ffi.pass_.BindParam(func_before, args)
+    func_bound = raf._ffi.pass_.BindParam(func_before, args)
 
     # fold constant
-    mod = mnm._core.module.IRModule.from_expr(func_bound)
-    func_folded = mnm._ffi.pass_.FoldConstant()(mod)["main"]
+    mod = raf._core.module.IRModule.from_expr(func_bound)
+    func_folded = raf._ffi.pass_.FoldConstant()(mod)["main"]
 
     func_expected = expected()
 

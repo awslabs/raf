@@ -9,7 +9,7 @@
  */
 #include "./tvm_attrs.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
@@ -41,4 +41,4 @@ TVM_REGISTER_NODE_TYPE(SgdAttrs);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

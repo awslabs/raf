@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-import mnm
-from mnm.testing import randn, get_testable_devices
-from mnm._lib import relay, tvm
-from mnm._core.core_utils import DEVICE_TYPE_MAP
-from mnm._core.device import Device
-from mnm._core.module import IRModule
-from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
+import raf
+from raf.testing import randn, get_testable_devices
+from raf._lib import relay, tvm
+from raf._core.core_utils import DEVICE_TYPE_MAP
+from raf._core.device import Device
+from raf._core.module import IRModule
+from raf._ffi.pass_ import ContextAnalysis, FromRelay, InferType
 
 # pylint: disable=invalid-name, no-self-use, redefined-builtin, too-many-locals, unused-variable
 
@@ -18,14 +18,14 @@ from mnm._ffi.pass_ import ContextAnalysis, FromRelay, InferType
 def test_basic(dev, shape):
     # pylint: disable=protected-access
     # Create a symbolic model and run it
-    class Add(mnm.Model):
+    class Add(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):  # pylint: disable=no-self-use
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     # Get a Relay func
     model = Add()
@@ -34,7 +34,7 @@ def test_basic(dev, shape):
     _ = model(m_x, m_y)
     func = model._internal().mod["main"]
 
-    # Create a Meta module and set the func as main
+    # Create a RAF module and set the func as main
     mod = IRModule.from_expr(func)
     # Propagate types.
     mod = InferType()(mod)
@@ -48,7 +48,7 @@ def test_basic(dev, shape):
 
 
 def test_device_copy():
-    if not mnm.build.with_cuda():
+    if not raf.build.with_cuda():
         return
 
     x = relay.var("x", shape=(2, 3))
@@ -58,7 +58,7 @@ def test_device_copy():
     out = x1 + y1
     func = relay.Function([x, y], out)
     mod = tvm.IRModule.from_expr(func)
-    # Create a Meta module and set the func as main
+    # Create a RAF module and set the func as main
     mod = FromRelay()(mod)
     mod = InferType()(mod)
     ca = ContextAnalysis(mod, Device("cpu"))
@@ -85,21 +85,21 @@ def test_device_copy():
     ],
 )
 def test_memory_alloc(shape):
-    if not mnm.build.with_cuda():
+    if not raf.build.with_cuda():
         return
 
     dev = "cuda"
     # pylint: disable=protected-access
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.add(x, x)
-            z = mnm.add(x, y)
+            y = raf.add(x, x)
+            z = raf.add(x, y)
             return z
 
     model_before = Model()
@@ -109,7 +109,7 @@ def test_memory_alloc(shape):
     mod = IRModule.from_expr(func)
     mod = InferType()(mod)
     with Device(dev):
-        mod = mnm._ffi.pass_.ManifestAlloc(mod)
+        mod = raf._ffi.pass_.ManifestAlloc(mod)
     mod = InferType()(mod)
     ContextAnalysis(mod, Device("cpu"))
     # TODO(zhiics) Check device info of different nodes.

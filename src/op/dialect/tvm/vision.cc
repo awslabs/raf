@@ -8,7 +8,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <tvm/relay/attrs/vision.h>
-#include <mnm/value.h>
+#include <raf/value.h>
 #include <array>
 #include "./tvm_utils.h"
 #include "./tvm_attrs.h"
@@ -17,13 +17,13 @@
 #include "../../schema/vision.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
 using namespace ::tvm::relay;
 
 std::vector<Value> GetValidCountSchema2Args(const GetValidCountsArgs* args) {
@@ -52,7 +52,7 @@ HashKey GetValidCountsHasher(const std::vector<Type>& param_types, const Type& y
   return key;
 }
 
-MNM_TVM(get_valid_counts, GetValidCounts, GetValidCountsArgs, GetValidCountSchema2Args,
+RAF_TVM(get_valid_counts, GetValidCounts, GetValidCountsArgs, GetValidCountSchema2Args,
         GetValidCountSchemaArgNames, GetValidCountsSchema2Attrs, GetValidCountsHasher, kOpaque);
 
 std::vector<Value> NonMaxSuppressionSchema2Args(const NonMaxSuppressionArgs* args) {
@@ -89,7 +89,7 @@ HashKey NonMaxSuppressionHasher(const std::vector<Type>& param_types, const Type
   return key;
 }
 
-MNM_TVM(non_max_suppression, NonMaxSuppression, NonMaxSuppressionArgs, NonMaxSuppressionSchema2Args,
+RAF_TVM(non_max_suppression, NonMaxSuppression, NonMaxSuppressionArgs, NonMaxSuppressionSchema2Args,
         NonMaxSuppressionSchemaArgNames, NonMaxSuppressionSchema2Attrs, NonMaxSuppressionHasher,
         kOpaque);
 
@@ -125,7 +125,7 @@ HashKey RoiAlignHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(roi_align, RoiAlign, RoiAlignArgs, RoiAlignSchema2Args, RoiAlignSchemaArgNames,
+RAF_TVM(roi_align, RoiAlign, RoiAlignArgs, RoiAlignSchema2Args, RoiAlignSchemaArgNames,
         RoiAlignSchema2Attrs, RoiAlignHasher, kOutEWiseFusable);
 
 std::vector<Value> RoiAlignDxSchema2Args(const RoiAlignDxArgs* args) {
@@ -160,9 +160,9 @@ HashKey RoiAlignDxHasher(const std::vector<Type>& param_types, const Type& y_typ
   return key;
 }
 
-MNM_TVM(roi_align_dx, RoiAlignDx, RoiAlignDxArgs, RoiAlignDxSchema2Args, RoiAlignDxSchemaArgNames,
+RAF_TVM(roi_align_dx, RoiAlignDx, RoiAlignDxArgs, RoiAlignDxSchema2Args, RoiAlignDxSchemaArgNames,
         RoiAlignDxSchema2Attrs, RoiAlignDxHasher, kOutEWiseFusable);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -7,17 +7,17 @@
  * \file src/op/declare/unary.cc
  * \brief Declaration of unary operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/likes.h"
 #include <numeric>
 #include <algorithm>
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
 void Sum(const CallValues& call) {
   const auto* args = call->args.as<SumArgs>();
@@ -82,7 +82,7 @@ void Sum(const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-MNM_OP_DECLARE("mnm.op.sum", Sum);
+RAF_OP_DECLARE("raf.op.sum", Sum);
 
 void SumDx(const CallValues& call) {
   // the shape of the output of reduce_dx op is same as input x
@@ -95,7 +95,7 @@ void SumDx(const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
 }
-MNM_OP_DECLARE("mnm.op.sum_dx", SumDx);
+RAF_OP_DECLARE("raf.op.sum_dx", SumDx);
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

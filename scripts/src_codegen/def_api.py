@@ -18,7 +18,7 @@ def get(path_prefix="./src/"):
                 for lineno, line in enumerate(i_f, 1):
                     line = line.strip()
 
-                    if not line.startswith('MNM_REGISTER_GLOBAL("mnm.'):
+                    if not line.startswith('RAF_REGISTER_GLOBAL("raf.'):
                         continue
                     name = line[line.index('("') + 2 : line.index('")')]
                     apis.append(API(name=name, path=path, lineno=lineno))

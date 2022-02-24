@@ -8,15 +8,15 @@
  * \brief Typing of optimizer operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/optimizer.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 
 Type SgdInfer(const CallValues& value) {
@@ -37,7 +37,7 @@ Type SgdInfer(const CallValues& value) {
   return TupleType(res);
 }
 
-MNM_OP_TYPE("mnm.op.sgd", "Sgd", SgdInfer);
+RAF_OP_TYPE("raf.op.sgd", "Sgd", SgdInfer);
 
 Type LansInfer(const CallValues& value) {
   const auto* args = value->args.as<LansArgs>();
@@ -51,7 +51,7 @@ Type LansInfer(const CallValues& value) {
   return TupleType(res);
 }
 
-MNM_OP_TYPE("mnm.op.lans", "Lans", LansInfer);
+RAF_OP_TYPE("raf.op.lans", "Lans", LansInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

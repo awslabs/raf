@@ -10,7 +10,7 @@
 #include "./cutlass_utils.h"
 #include "./conv_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
@@ -160,4 +160,4 @@ const Operation* find_conv2d_operation(ConvOperationFunctionalMapExt::const_iter
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

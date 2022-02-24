@@ -5,10 +5,10 @@
 import numpy as np
 import pytest
 import torch
-import mnm
+import raf
 import tvm.topi.testing as npx
-from mnm._ffi.pass_ import AutoDiff, InferType
-from mnm.testing import check_type, run_infer_type, randn, randn_torch, randint
+from raf._ffi.pass_ import AutoDiff, InferType
+from raf.testing import check_type, run_infer_type, randn, randn_torch, randint
 from tvm.relay import TensorType, FuncType, TupleType, Any
 
 
@@ -26,13 +26,13 @@ def test_take(shape, axis, dtype):
     from functools import reduce
     import operator
 
-    class Take(mnm.Model):
+    class Take(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, indices):
-            return mnm.take(x, indices=indices, axis=self._axis)
+            return raf.take(x, indices=indices, axis=self._axis)
 
     size = reduce(operator.mul, shape[0], 1) if axis is None else shape[0][axis]
     m_x, n_x = randn(shape[0], dtype=dtype)
@@ -65,14 +65,14 @@ def test_take(shape, axis, dtype):
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_sequence_mask(max_length, batch_size, other_feature_dims, axis, dtype):
-    class SequenceMask(mnm.Model):
+    class SequenceMask(raf.Model):
         def build(self, mask_value, axis=0):
             self._axis = axis
             self._mask_value = mask_value
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, sequence_length):
-            return mnm.sequence_mask(
+            return raf.sequence_mask(
                 x, sequence_length, mask_value=self._mask_value, axis=self._axis
             )
 
@@ -96,13 +96,13 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims, axis, dtype):
 @pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
 @pytest.mark.parametrize("axis", [0, 2])
 def test_reverse(shape, axis, dtype):
-    class Reverse(mnm.Model):
+    class Reverse(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.reverse(x, self._axis)
+            return raf.reverse(x, self._axis)
 
     m_x, n_x = randn(shape, dtype=dtype)
     m_x.requires_grad = True
@@ -135,17 +135,17 @@ def test_reverse(shape, axis, dtype):
 )
 @pytest.mark.parametrize("axes", [[0, 1]])
 def test_reverse_sequence(inputs, axes, dtype):
-    class ReverseSequence(mnm.Model):
+    class ReverseSequence(raf.Model):
         def build(self, seq_axis, batch_axis):
             self._seq_axis = seq_axis
             self._batch_axis = batch_axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, seq_length):
-            return mnm.reverse_sequence(x, seq_length, self._seq_axis, self._batch_axis)
+            return raf.reverse_sequence(x, seq_length, self._seq_axis, self._batch_axis)
 
     shape = inputs["shape"]
-    m_seq_length = mnm.array(inputs["seq_length"], dtype="int64")
+    m_seq_length = raf.array(inputs["seq_length"], dtype="int64")
     seq_axis = axes[0]
     batch_axis = axes[1]
     m_x, _ = randn(shape, dtype=dtype)
@@ -172,13 +172,13 @@ def test_reverse_sequence(inputs, axes, dtype):
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 4, 1]], [[4, 1, 1], [3, 4, 2, 2]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to(shape, dtype):
-    class BroadcastTo(mnm.Model):
+    class BroadcastTo(raf.Model):
         def build(self, shape=None):
             self._shape = shape
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.broadcast_to(x, self._shape)
+            return raf.broadcast_to(x, self._shape)
 
     model = BroadcastTo(shape[1])
     m_x = randn_torch(shape[0], requires_grad=True, dtype=dtype)[0]
@@ -202,13 +202,13 @@ def test_broadcast_to(shape, dtype):
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 4, 1]], [[4, 1, 1], [3, 4, 2, 2]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to_like(shape, dtype):
-    class BroadcastToLike(mnm.Model):
+    class BroadcastToLike(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, broadcast_type):  # pylint: disable=no-self-use
-            return mnm.broadcast_to_like(x, broadcast_type)
+            return raf.broadcast_to_like(x, broadcast_type)
 
     model = BroadcastToLike()
     m_x, _ = randn(shape[0], dtype=dtype)
@@ -233,14 +233,14 @@ def test_broadcast_to_like(shape, dtype):
 @pytest.mark.parametrize("repeats", [0, 1, 2])
 @pytest.mark.parametrize("axis", [-1, 0, 2])
 def test_repeat(shape, repeats, axis, dtype):
-    class Repeat(mnm.Model):
+    class Repeat(raf.Model):
         def build(self, repeats, axis=0):
             self._repeats = repeats
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.repeat(x, repeats=self._repeats, axis=self._axis)
+            return raf.repeat(x, repeats=self._repeats, axis=self._axis)
 
     model = Repeat(repeats, axis)
     # forward
@@ -275,37 +275,37 @@ def test_repeat(shape, repeats, axis, dtype):
     ],
 )
 def test_stack(params, dtype):
-    class Stack1(mnm.Model):
+    class Stack1(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a):
-            return mnm.stack([a], axis=self._axis)
+            return raf.stack([a], axis=self._axis)
 
-    class Stack2(mnm.Model):
+    class Stack2(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b):
-            return mnm.stack([a, b], axis=self._axis)
+            return raf.stack([a, b], axis=self._axis)
 
-    class Stack3(mnm.Model):
+    class Stack3(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c):
-            return mnm.stack([a, b, c], axis=self._axis)
+            return raf.stack([a, b, c], axis=self._axis)
 
-    class Stack4(mnm.Model):
+    class Stack4(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c, d):
-            return mnm.stack([a, b, c, d], axis=self._axis)
+            return raf.stack([a, b, c, d], axis=self._axis)
 
     stack = [None, Stack1, Stack2, Stack3, Stack4]
     shapes, axis = params["shapes"], params["axis"]
@@ -331,14 +331,14 @@ def test_stack(params, dtype):
 @pytest.mark.parametrize("indices_or_sections", [(2, 4), (1, 4), 2, (2,)])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_split(shape, axis, indices_or_sections, dtype):
-    class Split(mnm.Model):
+    class Split(raf.Model):
         def build(self, indices_or_sections, axis):
             self._indices_or_sections = indices_or_sections
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            ret = mnm.split(x, self._indices_or_sections, self._axis)
+            ret = raf.split(x, self._indices_or_sections, self._axis)
             return ret
 
     m_x, n_x = randn(shape, dtype=dtype)
@@ -369,13 +369,13 @@ def test_split(shape, axis, indices_or_sections, dtype):
 )
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_transpose(shape, dtype):
-    class Transpose(mnm.Model):
+    class Transpose(raf.Model):
         def build(self, axes=None):
             self._axes = axes
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            ret = mnm.transpose(x, self._axes)
+            ret = raf.transpose(x, self._axes)
             return ret
 
     axes = shape[1]
@@ -426,14 +426,14 @@ def test_transpose(shape, dtype):
 )
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_swap_axis(shape, dtype, axis):
-    class SwapAxis(mnm.Model):
+    class SwapAxis(raf.Model):
         def build(self, axes=None):
             self._axes1 = axes[0]
             self._axes2 = axes[1]
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            ret = mnm.swap_axis(x, self._axes1, self._axes2)
+            ret = raf.swap_axis(x, self._axes1, self._axes2)
             return ret
 
     if max(axis) < len(shape):
@@ -479,13 +479,13 @@ def test_swap_axis(shape, dtype, axis):
     ],
 )  # pylint: disable-msg=too-many-locals, not-callable
 def test_scatter(shape, axis, dtype_int, dtype):
-    class Scatter(mnm.Model):
+    class Scatter(raf.Model):
         def build(self):
             self.axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, idx, src):
-            ret = mnm.scatter(x, self.axis, idx, src)
+            ret = raf.scatter(x, self.axis, idx, src)
             return ret
 
     m_x, t_x = randn_torch(shape[0], requires_grad=True, dtype=dtype)
@@ -498,7 +498,7 @@ def test_scatter(shape, axis, dtype_int, dtype):
     chose_index = np.broadcast_to(random_index, tuple(index_shape + [shape[1][axis]]))
     chose_index = np.swapaxes(chose_index, axis, len(shape[1]) - 1)
     t_idx = torch.tensor(chose_index, dtype=dtype_int[1])
-    m_idx = mnm.array(chose_index, dtype=dtype_int[0])
+    m_idx = raf.array(chose_index, dtype=dtype_int[0])
     m_src, t_src = randn_torch(shape[2], dtype=dtype)
     m_x.requires_grad = True
     t_x.requires_grad = True
@@ -523,13 +523,13 @@ def test_scatter(shape, axis, dtype_int, dtype):
 @pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
 def test_cast(shape, itype, otype):
-    class Cast(mnm.Model):
+    class Cast(raf.Model):
         def build(self, otype=None):
             self._otype = otype
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.cast(data, self._otype)
+            return raf.cast(data, self._otype)
 
     m_x, n_x = randn(shape, dtype=itype)
     m_x.requires_grad = True
@@ -557,13 +557,13 @@ def test_cast(shape, itype, otype):
 @pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
 def test_cast_like(shape, itype, otype):
-    class CastLike(mnm.Model):
+    class CastLike(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, dtype_like):  # pylint: disable=no-self-use
-            return mnm.cast_like(data, dtype_like)
+            return raf.cast_like(data, dtype_like)
 
     m_x, _ = randn(shape, dtype=itype)
     m_dtype_like, _ = randn(shape, dtype=otype)
@@ -587,37 +587,37 @@ def test_cast_like(shape, itype, otype):
 )
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_concatenate(params, dtype):
-    class Concatenate1(mnm.Model):
+    class Concatenate1(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a):
-            return mnm.concatenate([a], axis=self._axis)
+            return raf.concatenate([a], axis=self._axis)
 
-    class Concatenate2(mnm.Model):
+    class Concatenate2(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b):
-            return mnm.concatenate([a, b], axis=self._axis)
+            return raf.concatenate([a, b], axis=self._axis)
 
-    class Concatenate3(mnm.Model):
+    class Concatenate3(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c):
-            return mnm.concatenate([a, b, c], axis=self._axis)
+            return raf.concatenate([a, b, c], axis=self._axis)
 
-    class Concatenate4(mnm.Model):
+    class Concatenate4(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c, d):
-            return mnm.concatenate([a, b, c, d], axis=self._axis)
+            return raf.concatenate([a, b, c, d], axis=self._axis)
 
     concat = [None, Concatenate1, Concatenate2, Concatenate3, Concatenate4]
     # forward
@@ -656,29 +656,29 @@ def test_concatenate(params, dtype):
 )
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_mesh_grid(shapes, dtype):
-    class MeshGrid2(mnm.Model):
+    class MeshGrid2(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b):
-            return mnm.mesh_grid([a, b])
+            return raf.mesh_grid([a, b])
 
-    class MeshGrid3(mnm.Model):
+    class MeshGrid3(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c):
-            return mnm.mesh_grid([a, b, c])
+            return raf.mesh_grid([a, b, c])
 
-    class MeshGrid4(mnm.Model):
+    class MeshGrid4(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c, d):
-            return mnm.mesh_grid([a, b, c, d])
+            return raf.mesh_grid([a, b, c, d])
 
     # one input is trivial case
     meshgrid = [None, None, MeshGrid2, MeshGrid3, MeshGrid4]
@@ -713,13 +713,13 @@ def test_mesh_grid(shapes, dtype):
 @pytest.mark.parametrize("a_max", [0.6, 0.7, 0.8])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_clip(shape, a_min, a_max, dtype):
-    class Clip(mnm.Model):
+    class Clip(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.clip(x, a_min, a_max)
+            return raf.clip(x, a_min, a_max)
 
     m_x, n_x = randn(shape, dtype=dtype)
     m_x.requires_grad = True
@@ -779,14 +779,14 @@ def test_clip(shape, a_min, a_max, dtype):
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_reshape(params, reverse, dtype):
-    class Reshape(mnm.Model):
+    class Reshape(raf.Model):
         def build(self, shape, reverse=False):
             self._shape = shape
             self._reverse = reverse
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.reshape(x, shape=self._shape, reverse=self._reverse)
+            return raf.reshape(x, shape=self._shape, reverse=self._reverse)
 
     orig_shape, to_shape, infer_shape, reverse_infer_shape = (
         params["orig_shape"],
@@ -822,14 +822,14 @@ def test_reshape(params, reverse, dtype):
 @pytest.mark.parametrize("axis", [0, 1, 2, 3])
 @pytest.mark.parametrize("num_newaxis", [0, 1, 2, 5])
 def test_expand_dims(shape, dtype, axis, num_newaxis):
-    class ExpandDims(mnm.Model):
+    class ExpandDims(raf.Model):
         def build(self, axis, num_newaxis):
             self.axis = axis
             self.num_newaxis = num_newaxis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.expand_dims(x, axis=self.axis, num_newaxis=self.num_newaxis)
+            return raf.expand_dims(x, axis=self.axis, num_newaxis=self.num_newaxis)
 
     m_x, n_x = randn(shape, dtype=dtype)
     m_x.requires_grad = True
@@ -865,19 +865,19 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
 @pytest.mark.parametrize("ishape", [[3], [3, 2], [4, 5, 3]])
 def test_gather_nd(dtype, i_dtype, dshape, ishape):
     # pylint: disable=no-self-use
-    class GatherNd(mnm.Model):
+    class GatherNd(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, indices):
-            return mnm.gather_nd(data, indices)
+            return raf.gather_nd(data, indices)
 
     model = GatherNd()
     m_x, _ = randn(dshape, dtype=dtype)
     m_x.requires_grad = True
     m_i = randint(ishape, high=dshape[0 : ishape[-1]], dtype=i_dtype)[0]
-    m_i = mnm.transpose(m_i, axes=[len(ishape) - 1] + list(range(len(ishape) - 1)))
+    m_i = raf.transpose(m_i, axes=[len(ishape) - 1] + list(range(len(ishape) - 1)))
     ty_data = TensorType(dshape, dtype=dtype)
     ty_indices = TensorType(m_i.shape, dtype=i_dtype)
     assert ishape[-1] <= len(dshape)
@@ -913,15 +913,15 @@ def test_gather_nd(dtype, i_dtype, dshape, ishape):
     ],
 )
 def test_strided_slice(dtype, params):
-    class StridedSlice(mnm.Model):
+    class StridedSlice(raf.Model):
         def build(self, begin, end, strides):
             self.begin = begin
             self.end = end
             self.strides = strides
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.strided_slice(data, self.begin, self.end, self.strides)
+            return raf.strided_slice(data, self.begin, self.end, self.strides)
 
     shape, begin, end, strides = params
     model = StridedSlice(begin, end, strides)
@@ -948,18 +948,18 @@ def test_strided_slice(dtype, params):
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("data", [[1, 10, 2], [1, 10, 1]])
 def test_arange(data, dtype):
-    class Arange(mnm.Model):
+    class Arange(raf.Model):
         def build(self, dtype):
             self.dtype = dtype
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, start, stop, step):
-            return mnm.arange(start, stop, step, self.dtype)
+            return raf.arange(start, stop, step, self.dtype)
 
     start, stop, step = data
-    m_start = mnm.array(start, dtype=dtype)
-    m_stop = mnm.array(stop, dtype=dtype)
-    m_step = mnm.array(step, dtype=dtype)
+    m_start = raf.array(start, dtype=dtype)
+    m_stop = raf.array(stop, dtype=dtype)
+    m_step = raf.array(step, dtype=dtype)
     model = Arange(dtype)
     m_mod = model._internal(m_start, m_stop, m_step).mod
     m_mod = InferType()(m_mod)
@@ -972,14 +972,14 @@ def test_arange(data, dtype):
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_full(shape, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
-    class FullModel(mnm.Model):
+    class FullModel(raf.Model):
         def build(self, shape, dtype):
             self.shape = shape
             self.dtype = dtype
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self):
-            return mnm.full(fill_value=0, shape=self.shape, dtype=self.dtype)
+            return raf.full(fill_value=0, shape=self.shape, dtype=self.dtype)
 
     model = FullModel(shape, dtype)
     m_func = model._internal().mod["main"]
@@ -993,13 +993,13 @@ def test_full(shape, dtype):
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_full_like(shape, dtype):
     # pylint: disable=invalid-name, attribute-defined-outside-init
-    class FullLikeModel(mnm.Model):
+    class FullLikeModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.full_like(data, fill_value=0)
+            return raf.full_like(data, fill_value=0)
 
     m_x, _ = randn(shape, dtype=dtype)
     model = FullLikeModel()
@@ -1016,13 +1016,13 @@ def test_full_like(shape, dtype):
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
 def test_adv_index(data_shape, index_shapes, dtype):
     # pylint: disable=invalid-name
-    class Index(mnm.Model):
+    class Index(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, index0, index1):
-            return mnm.adv_index([x, index0, index1])
+            return raf.adv_index([x, index0, index1])
 
     m_x, t_x = randn_torch(data_shape, requires_grad=True, dtype=dtype)
     t_indices = []
@@ -1032,7 +1032,7 @@ def test_adv_index(data_shape, index_shapes, dtype):
         limit = data_shape[i]
         index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
         t_indices.append(torch.tensor(index))  # pylint: disable=not-callable
-        m_indices.append(mnm.array(index))
+        m_indices.append(raf.array(index))
     t_out = t_x[tuple(t_indices)]
     model = Index()
     m_func = model._internal(m_x, m_indices[0], m_indices[1]).mod["main"]
@@ -1058,13 +1058,13 @@ def test_adv_index(data_shape, index_shapes, dtype):
     ],
 )
 def test_argwhere(shape, dtype):
-    class Argwhere(mnm.Model):
+    class Argwhere(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.argwhere(x)
+            return raf.argwhere(x)
 
     m_x, _ = randn(shape, dtype=dtype)
     m_x.requires_grad = True

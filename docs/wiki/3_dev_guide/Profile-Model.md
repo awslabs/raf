@@ -7,17 +7,17 @@ A simple profiler for meta.
 
 ## Start Profiling
 
-call `mnm.utils.profiler.start()` when you want to profile.
+call `raf.utils.profiler.start()` when you want to profile.
 The execution before this calling will not be profiled.
 
 ## Stop Profiling
 
-call `mnm.utils.profiler.stop()` when you want to stop profiling.
+call `raf.utils.profiler.stop()` when you want to stop profiling.
 The execution after this calling will not be profiled.
 
 ## Get Results
 
-call `mnm.utils.profiler.get()` when you want to collect all the profiling results. The profiling results will be stored in memory in json format. If you want to store the results into disk dirtectly without storing in memory first, you can call `mnm.utils.profiler.dump(filename:str)`.
+call `raf.utils.profiler.get()` when you want to collect all the profiling results. The profiling results will be stored in memory in json format. If you want to store the results into disk dirtectly without storing in memory first, you can call `raf.utils.profiler.dump(filename:str)`.
 
 ## Visualize Profling
 
@@ -34,7 +34,7 @@ We profiled the interpreting of the PrimitiveOpEnv, including resources request/
 
 ## Execution on gpu
 
-We profiled the execution of `mnm.op.matmul*` using cudaEvent.
+We profiled the execution of `raf.op.matmul*` using cudaEvent.
 
 # More Profiling Contents
 
@@ -44,7 +44,7 @@ If you want profile more content in the backend, you can add your own profiling 
 
 ### Step1: include
 
-Add `#include "mnm/profiler.h"` before using it.
+Add `#include "raf/profiler.h"` before using it.
 
 ### Step2: Wrap the code snippet with Profiler macros
 
@@ -71,7 +71,7 @@ WITH_BASE_PROFILER(call->dev, op->name, "MemoryRequest",
 
 ### Example
 
-`mnm/src/impl/interpreter.cc`
+`raf/src/impl/interpreter.cc`
 
 ## Add profile of gpu execution
 
@@ -79,7 +79,7 @@ we use `ProfilerCudaHelper` instead of `ProfileHelper`.
 
 ### Step1 include
 
-Add `#include "mnm/src/profiler/cuda/cuda_profiler.h"` before using it.
+Add `#include "raf/src/profiler/cuda/cuda_profiler.h"` before using it.
 
 ### Step2 Wrap the code snippet with Cuda Profiler macros
 
@@ -88,4 +88,4 @@ The usage is same to WITH_BASE_PROFILER.
 
 ### Example
 
-`mnm/src/op/dispatch/cublas/matmul.cc`
+`raf/src/op/dispatch/cublas/matmul.cc`

@@ -16,27 +16,27 @@
 #include "cutlass_ext/library/operation_table_ext.h"
 #include "cutlass_ext/library/singleton_ext.h"
 
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/device_api.h"
-#include "mnm/memory_pool.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/device_api.h"
+#include "raf/memory_pool.h"
 
 #include "../../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
 using namespace ::cutlass;
 using namespace ::cutlass::library;
-using namespace mnm::ir;
+using namespace raf::ir;
 
 struct TunableConfig;
 
-class CutlassOpEnv : public mnm::op::OpEnv {
+class CutlassOpEnv : public raf::op::OpEnv {
  public:
   explicit CutlassOpEnv(const CallValues& call);
 
@@ -152,7 +152,7 @@ inline cudaStream_t GetStream() {
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 
 #define CUTLASS_CALL(func)                                                                     \
   do {                                                                                         \

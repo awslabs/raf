@@ -3,8 +3,8 @@
 
 import pytest
 import tvm
-from mnm._ffi.pass_ import FromRelay, InferType, LiftBranchBody
-from mnm.ir import ScopeBuilder
+from raf._ffi.pass_ import FromRelay, InferType, LiftBranchBody
+from raf.ir import ScopeBuilder
 from tvm import relay
 
 
@@ -35,7 +35,7 @@ def test_basic_if():
     assert len(mod.get_global_vars()) == 3
 
 
-def test_mnm_recursive_function():
+def test_raf_recursive_function():
     f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
     main = relay.GlobalVar("main")
 

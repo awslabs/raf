@@ -4,9 +4,9 @@
 # pylint: disable=protected-access, no-self-use, attribute-defined-outside-init, invalid-name
 # pylint: disable=unused-variable, too-many-arguments
 import pytest
-import mnm
-from mnm._lib import tvm
-from mnm.testing import get_testable_devices, randn, check, run_vm_model
+import raf
+from raf._lib import tvm
+from raf.testing import get_testable_devices, randn, check, run_vm_model
 
 
 def optimize(mod, device, fusion=False):
@@ -15,7 +15,7 @@ def optimize(mod, device, fusion=False):
     if not fusion:
         disabled_pass = ["FuseDialect", "FuseTVM"]
     with tvm.transform.PassContext(opt_level=3, disabled_pass=disabled_pass):
-        opt_mod, _ = mnm._core.vm.VMCompiler().optimize(mod, device=device_name, params={})
+        opt_mod, _ = raf._core.vm.VMCompiler().optimize(mod, device=device_name, params={})
     return opt_mod
 
 
@@ -33,15 +33,15 @@ def verify_alloc_num(
     out_tensor = 0
     free_memory = 0
     total_size = 0
-    for line in mnm.ir.AsText(func).split("\n"):
-        if line.find("mnm.op.vm.alloc_storage") != -1:
+    for line in raf.ir.AsText(func).split("\n"):
+        if line.find("raf.op.vm.alloc_storage") != -1:
             alloc_storage += 1
             total_size += int(line[line.find("int64(") + 6 : line.find(")")])
-        elif line.find("mnm.op.vm.alloc_tensor") != -1:
+        elif line.find("raf.op.vm.alloc_tensor") != -1:
             if line.find("bool(1)") != -1:
                 out_tensor += 1
             alloc_tensor += 1
-        elif line.find("mnm.op.vm.free") != -1:
+        elif line.find("raf.op.vm.free") != -1:
             free_memory += 1
 
     assert (
@@ -72,17 +72,17 @@ def verify_correctness(model, device, args, fusion):
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fusion", [False, True])
 def test_memory_plan_basic(device, fusion):
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c, d):
-            t0 = mnm.add(a, a)
-            t1 = mnm.add(t0, b)
-            t2 = mnm.add(t1, c)
-            t3 = mnm.add(t2, t0)
-            t4 = mnm.add(t3, d)
+            t0 = raf.add(a, a)
+            t1 = raf.add(t0, b)
+            t2 = raf.add(t1, c)
+            t3 = raf.add(t2, t0)
+            t4 = raf.add(t3, d)
             return t4
 
     shape = (5, 5)
@@ -108,19 +108,19 @@ def test_memory_plan_basic(device, fusion):
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fusion", [False, True])
 def test_memory_plan_multi_outs(device, fusion):
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_w, m_b, m_m, m_v):
-            t0 = mnm.relu(m_x)
-            res = mnm.batch_norm_train(t0, m_m, m_v, m_w, m_b, 0.1, 1e-5)
+            t0 = raf.relu(m_x)
+            res = raf.batch_norm_train(t0, m_m, m_v, m_w, m_b, 0.1, 1e-5)
             t1 = res[0]
             t2 = res[1]
             t3 = res[2]
-            t4 = mnm.relu(t1)
-            t5 = mnm.relu(t4)
+            t4 = raf.relu(t1)
+            t5 = raf.relu(t4)
             return t5
 
     model_before = Model()
@@ -147,15 +147,15 @@ def test_memory_plan_multi_outs(device, fusion):
 def test_set_shape():
     shape = [3, 4, 5]
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.relu(x)
-            y = mnm.reshape(y, (12, 5))
-            y = mnm.relu(y)
+            y = raf.relu(x)
+            y = raf.reshape(y, (12, 5))
+            y = raf.relu(y)
             return y
 
     model = Model()

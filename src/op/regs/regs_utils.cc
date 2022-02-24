@@ -7,18 +7,18 @@
  * \file src/op/regs/regs_utils.cc
  * \brief Helpers for operator registry
  */
-#include "mnm/tensor.h"
-#include "mnm/value.h"
-#include "mnm/binding.h"
+#include "raf/tensor.h"
+#include "raf/value.h"
+#include "raf/binding.h"
 #include "./regs_utils.h"
 #include "../schema/list_args.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 using binding::BindNDArray;
 using binding::GradTape;
 using registry::TVMArgValue;
@@ -40,4 +40,4 @@ void CollectVars(const Expr& expr, std::vector<const ExprNode*>* vars) {
 
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

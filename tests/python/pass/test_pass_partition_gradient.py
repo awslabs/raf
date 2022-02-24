@@ -8,12 +8,12 @@ import re
 from unittest.mock import patch
 import pytest
 
-import mnm
-from mnm._ffi.pass_ import PartitionGradient, InferType
-from mnm.frontend.model import FrameworkModel
-from mnm.model import BatchNorm, Conv2d, Linear
-from mnm.optim.optim import with_autodiff
-from mnm.testing import compile_vm_model, randn, one_hot_torch
+import raf
+from raf._ffi.pass_ import PartitionGradient, InferType
+from raf.frontend.model import FrameworkModel
+from raf.model import BatchNorm, Conv2d, Linear
+from raf.optim.optim import with_autodiff
+from raf.testing import compile_vm_model, randn, one_hot_torch
 
 
 def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
@@ -22,38 +22,38 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
     mod = InferType()(mod)
     mod = PartitionGradient(opt_level, rank_size, rank)(mod)
     mod = InferType()(mod)
-    text = mnm.ir.AsText(mod)
-    assert text.count("mnm.op.pad") == n_pad
-    assert text.count("mnm.op.split") == n_grad
-    nccl_version = mnm.build.with_nccl()
+    text = raf.ir.AsText(mod)
+    assert text.count("raf.op.pad") == n_pad
+    assert text.count("raf.op.split") == n_grad
+    nccl_version = raf.build.with_nccl()
 
     if opt_level == 1:
         # Gradients will be sliced as follows in ZeRO-1. Assuming rank_size=4 and rank=3:
-        # let %x_1 = mnm.op.split(%a0, 4);
+        # let %x_1 = raf.op.split(%a0, 4);
         # let %x_2 = %x_1.3;
         # ...
         # let %a10 = (..., %x_2, ...);
         slice_grad_regex = fr"let %x_(\d+) = %x_\d+\.{rank};"
     elif opt_level == 2:
         # ZeRO-2 uses reduce_scatter to slice gradients.
-        assert text.count("mnm.op._reduce_scatter") == n_grad, text
+        assert text.count("raf.op._reduce_scatter") == n_grad, text
 
         # Gradients will be sliced as follows in ZeRO-2:
         # # if NCCL version is >= 2.10
-        # let %x_1 = mnm.op.split(%a0, 4);
-        # let %x_2 = mnm.op._recuce_scatter(%x_1, avg);
+        # let %x_1 = raf.op.split(%a0, 4);
+        # let %x_2 = raf.op._recuce_scatter(%x_1, avg);
         # ...
         # let %a10 = (..., %x_2, ...);
         # # else NCCL version is < 2.10
-        # let %x_1 = mnm.op.split(%a0, 4);
-        # let %x_2 = mnm.op._recuce_scatter(%x_1, sum);
-        # let %x_3 = mnm.op.divide(%x_2, ...)
+        # let %x_1 = raf.op.split(%a0, 4);
+        # let %x_2 = raf.op._recuce_scatter(%x_1, sum);
+        # let %x_3 = raf.op.divide(%x_2, ...)
         # ...
         # let %a10 = (..., %x_3, ...);
         if nccl_version >= 21000:
-            slice_grad_regex = fr"let %x_(\d+) = mnm.op._reduce_scatter.+"
+            slice_grad_regex = fr"let %x_(\d+) = raf.op._reduce_scatter.+"
         else:
-            slice_grad_regex = fr"let %x_(\d+) = mnm.op.divide.+"
+            slice_grad_regex = fr"let %x_(\d+) = raf.op.divide.+"
     else:
         assert False, "Unsupported opt_level %d" % opt_level
 
@@ -73,34 +73,34 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
                 break
     assert verify_grad_tuple
 
-    if mnm.build.with_cuda():
+    if raf.build.with_cuda():
         model = FrameworkModel(mod, mod, ad_model.state(), {})
         compile_vm_model(model, "cuda", [arg.to(device="cuda") for arg in args])
 
 
-@patch("mnm.distributed.get_context")
+@patch("raf.distributed.get_context")
 @pytest.mark.parametrize("opt_level", [1, 2])
 @pytest.mark.parametrize("batch", [7, 8])
 def test_basic(mock_get_context, opt_level, batch):
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self, input_shape=28, num_classes=10):
             self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
             self.bn1 = BatchNorm(6)
             self.linear1 = Linear((input_shape // 2) ** 2 * 6, num_classes)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y_true):
             y_pred = self.forward_infer(x)
-            y_pred = mnm.log_softmax(y_pred)
-            loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
+            y_pred = raf.log_softmax(y_pred)
+            loss = raf.nll_loss(y_true=y_true, y_pred=y_pred)
             return loss
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward_infer(self, x):
             out = self.bn1(self.conv1(x))
-            out = mnm.sigmoid(out)
-            out = mnm.avg_pool2d(out, (2, 2), (2, 2))
-            out = mnm.batch_flatten(out)
+            out = raf.sigmoid(out)
+            out = raf.avg_pool2d(out, (2, 2), (2, 2))
+            out = raf.batch_flatten(out)
             out = self.linear1(out)
             return out
 
@@ -113,7 +113,7 @@ def test_basic(mock_get_context, opt_level, batch):
             self.rank = 3
 
     mock_get_context.return_value = MockContext()
-    if opt_level == 2 and mnm.build.with_nccl() is None:
+    if opt_level == 2 and raf.build.with_nccl() is None:
         pytest.skip("NCCL is not supported")
 
     model = Model()

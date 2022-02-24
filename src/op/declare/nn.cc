@@ -8,23 +8,23 @@
  * \brief Declaration of nn-specific operators
  */
 #include <tvm/tir/data_layout.h>
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/tensor.h"
-#include "mnm/device.h"
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/tensor.h"
+#include "raf/device.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
 #include "../schema/nn.h"
 #include "../ty/utils.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
 
 void Conv2D(const CallValues& call) {
   // N.B.: NCHW + OIHW
@@ -35,8 +35,8 @@ void Conv2D(const CallValues& call) {
   CHECK_EQ(x->ndim, 4);
   CHECK_EQ(w->ndim, 4);
   // TODO(@junrushao1994): deduce ctx here
-  std::vector<int64_t> stride = mnm::op::Pad<2>(args->stride);
-  std::vector<int64_t> dilation = mnm::op::Pad<2>(args->dilation);
+  std::vector<int64_t> stride = raf::op::Pad<2>(args->stride);
+  std::vector<int64_t> dilation = raf::op::Pad<2>(args->dilation);
 
   tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
   tvm::Array<tvm::PrimExpr> in_shape{
@@ -93,7 +93,7 @@ void Conv2D(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d", Conv2D);
+RAF_OP_DECLARE("raf.op.conv2d", Conv2D);
 
 void Conv2dTrans(const CallValues& call) {
   // N.B.: NCHW + IOHW
@@ -103,8 +103,8 @@ void Conv2dTrans(const CallValues& call) {
   const DLTensor* w = args->w;
   CHECK_EQ(x->ndim, 4);
   CHECK_EQ(w->ndim, 4);
-  std::vector<int64_t> stride = mnm::op::Pad<2>(args->stride);
-  std::vector<int64_t> dilation = mnm::op::Pad<2>(args->dilation);
+  std::vector<int64_t> stride = raf::op::Pad<2>(args->stride);
+  std::vector<int64_t> dilation = raf::op::Pad<2>(args->dilation);
 
   tvm::tir::BijectiveLayout data_layout_converter(args->layout, "NCHW");
   tvm::Array<tvm::PrimExpr> in_shape{
@@ -172,7 +172,7 @@ void Conv2dTrans(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_transpose", Conv2dTrans);
+RAF_OP_DECLARE("raf.op.conv2d_transpose", Conv2dTrans);
 
 void Pool2D(const CallValues& call) {
   // NCHW
@@ -180,9 +180,9 @@ void Pool2D(const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   CHECK_EQ(x->ndim, 4);
-  std::vector<int64_t> kernel = mnm::op::Pad<2>(args->kernel);
-  std::vector<int64_t> stride = args->stride.empty() ? kernel : mnm::op::Pad<2>(args->stride);
-  std::vector<int64_t> dilation = mnm::op::Pad<2>(args->dilation);
+  std::vector<int64_t> kernel = raf::op::Pad<2>(args->kernel);
+  std::vector<int64_t> stride = args->stride.empty() ? kernel : raf::op::Pad<2>(args->stride);
+  std::vector<int64_t> dilation = raf::op::Pad<2>(args->dilation);
   tvm::tir::BijectiveLayout layout_converter(args->layout, "NCHW");
   tvm::Array<tvm::PrimExpr> ishape{tvm::Integer(x->shape[0]), tvm::Integer(x->shape[1]),
                                    tvm::Integer(x->shape[2]), tvm::Integer(x->shape[3])};
@@ -224,8 +224,8 @@ void Pool2D(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.max_pool2d", Pool2D);
-MNM_OP_DECLARE("mnm.op.avg_pool2d", Pool2D);
+RAF_OP_DECLARE("raf.op.max_pool2d", Pool2D);
+RAF_OP_DECLARE("raf.op.avg_pool2d", Pool2D);
 
 void AdaptivePool2D(const CallValues& call) {
   const auto* args = call->args.as<AdaptivePoolArgs>();
@@ -254,8 +254,8 @@ void AdaptivePool2D(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d", AdaptivePool2D);
-MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d", AdaptivePool2D);
+RAF_OP_DECLARE("raf.op.adaptive_max_pool2d", AdaptivePool2D);
+RAF_OP_DECLARE("raf.op.adaptive_avg_pool2d", AdaptivePool2D);
 
 void Softmax(const CallValues& call) {
   const auto* args = call->args.as<SoftmaxArgs>();
@@ -269,10 +269,10 @@ void Softmax(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.softmax", Softmax);
-MNM_OP_DECLARE("mnm.op.log_softmax", Softmax);
+RAF_OP_DECLARE("raf.op.softmax", Softmax);
+RAF_OP_DECLARE("raf.op.log_softmax", Softmax);
 
-MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.batch_norm_train", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -290,9 +290,9 @@ MNM_OP_DECLARE("mnm.op.batch_norm_train", [](const CallValues& call) {
   running_var = running_var.CreateView(running_var_shape);
   call->out = TupleValue::make(tvm::Array<Value>({y, running_mean, running_var}));
   call->device = x->device;
-}).set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{1, 1}, {2, 2}});
+}).set_attr<TRAFInplaceUpdate>("TRAFInplaceUpdate", {{1, 1}, {2, 2}});
 
-MNM_OP_DECLARE("mnm.op.batch_norm_infer", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.batch_norm_infer", [](const CallValues& call) {
   // FIXME(@were): please fix this: bn-infer should only output y
   const auto* args = call->args.as<BatchNormArgs>();
   CHECK(args != nullptr);
@@ -316,8 +316,8 @@ void Conv2dDxw(const CallValues& call) {
   call->device = x_or_w->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_dx", Conv2dDxw);
-MNM_OP_DECLARE("mnm.op.conv2d_dw", Conv2dDxw);
+RAF_OP_DECLARE("raf.op.conv2d_dx", Conv2dDxw);
+RAF_OP_DECLARE("raf.op.conv2d_dw", Conv2dDxw);
 
 void Conv2dTransposeDxw(const CallValues& call) {
   const auto* args = call->args.as<ConvTransposeDxwArgs>();
@@ -330,17 +330,17 @@ void Conv2dTransposeDxw(const CallValues& call) {
   call->device = x_or_w->device;
 }
 
-MNM_OP_DECLARE("mnm.op.conv2d_transpose_dx", Conv2dTransposeDxw);
-MNM_OP_DECLARE("mnm.op.conv2d_transpose_dw", Conv2dTransposeDxw);
+RAF_OP_DECLARE("raf.op.conv2d_transpose_dx", Conv2dTransposeDxw);
+RAF_OP_DECLARE("raf.op.conv2d_transpose_dw", Conv2dTransposeDxw);
 
-MNM_OP_DECLARE("mnm.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
-MNM_OP_DECLARE("mnm.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
-MNM_OP_DECLARE("mnm.op.adaptive_max_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
-MNM_OP_DECLARE("mnm.op.adaptive_avg_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
-MNM_OP_DECLARE("mnm.op.softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
-MNM_OP_DECLARE("mnm.op.log_softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
+RAF_OP_DECLARE("raf.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
+RAF_OP_DECLARE("raf.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
+RAF_OP_DECLARE("raf.op.adaptive_max_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
+RAF_OP_DECLARE("raf.op.adaptive_avg_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
+RAF_OP_DECLARE("raf.op.softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
+RAF_OP_DECLARE("raf.op.log_softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
 
-MNM_OP_DECLARE("mnm.op.batch_norm_train_dxwb", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.batch_norm_train_dxwb", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormTrainDxwbArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -373,7 +373,7 @@ void BiasAdd(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.bias_add", BiasAdd);
+RAF_OP_DECLARE("raf.op.bias_add", BiasAdd);
 
 template <bool include_mask, bool include_reserve_space>
 void ContribDropout(const CallValues& call) {
@@ -384,9 +384,9 @@ void ContribDropout(const CallValues& call) {
   std::vector<int64_t> states_shape;
   std::vector<int64_t> reserve_space_shape;
   // The CUDNN compute generates reserve_space for backward usage.
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
   const tvm::runtime::PackedFunc* pf =
-      tvm::runtime::Registry::Get("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes");
+      tvm::runtime::Registry::Get("raf.backend.cudnn.GetDropoutReserveSpaceSizeInBytes");
   if (include_reserve_space && pf) {
     Integer reserve_space_size_in_bytes = (*pf)(GetType(args->x));
     reserve_space_shape.push_back(reserve_space_size_in_bytes->value);
@@ -424,9 +424,9 @@ void ContribDropout(const CallValues& call) {
 static const auto ContribDropoutBase = ContribDropout<true, true>;
 static const auto ContribDropoutTVM = ContribDropout<true, false>;
 static const auto ContribDropoutCudnn = ContribDropout<false, true>;
-MNM_OP_DECLARE("mnm.op._contrib_dropout", ContribDropoutBase);
-MNM_OP_DECLARE("mnm.op.tvm._contrib_dropout", ContribDropoutTVM);
-MNM_OP_DECLARE("mnm.op.cudnn._contrib_dropout", ContribDropoutCudnn);
+RAF_OP_DECLARE("raf.op._contrib_dropout", ContribDropoutBase);
+RAF_OP_DECLARE("raf.op.tvm._contrib_dropout", ContribDropoutTVM);
+RAF_OP_DECLARE("raf.op.cudnn._contrib_dropout", ContribDropoutCudnn);
 
 void DropoutDx(const CallValues& call) {
   const auto* args = call->args.as<DropoutDxArgs>();
@@ -439,7 +439,7 @@ void DropoutDx(const CallValues& call) {
   call->device = dy->device;
 }
 
-MNM_OP_DECLARE("mnm.op._contrib_dropout_dx", DropoutDx);
+RAF_OP_DECLARE("raf.op._contrib_dropout_dx", DropoutDx);
 
 void LayerNorm(const CallValues& call) {
   const auto* args = call->args.as<LayerNormArgs>();
@@ -451,7 +451,7 @@ void LayerNorm(const CallValues& call) {
                                     /*shape=*/shape);
   call->device = x->device;
 }
-MNM_OP_DECLARE("mnm.op.layer_norm", LayerNorm);
+RAF_OP_DECLARE("raf.op.layer_norm", LayerNorm);
 
 void LayerNormDx(const CallValues& call) {
   const auto* args = call->args.as<LayerNormDxArgs>();
@@ -478,7 +478,7 @@ void LayerNormDx(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.layer_norm_dx", LayerNormDx);
+RAF_OP_DECLARE("raf.op.layer_norm_dx", LayerNormDx);
 
 void Threshold(const CallValues& call) {
   const auto* args = call->args.as<ThresholdArgs>();
@@ -499,7 +499,7 @@ void Threshold(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op.threshold", Threshold);
+RAF_OP_DECLARE("raf.op.threshold", Threshold);
 
 void ThresholdDx(const CallValues& call) {
   const auto* args = call->args.as<ThresholdDxArgs>();
@@ -512,7 +512,7 @@ void ThresholdDx(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.threshold_dx", ThresholdDx);
+RAF_OP_DECLARE("raf.op.threshold_dx", ThresholdDx);
 
 void Pad(const CallValues& call) {
   const auto* args = call->args.as<PadArgs>();
@@ -545,8 +545,8 @@ void Pad(const CallValues& call) {
                                     /*shape=*/oshape);
   call->device = data->device;
 }
-MNM_OP_DECLARE("mnm.op.pad", Pad);
+RAF_OP_DECLARE("raf.op.pad", Pad);
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

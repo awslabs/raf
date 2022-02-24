@@ -7,17 +7,17 @@
  * \file src/op/declare/random.cc
  * \brief Declaration of random operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/random.h"
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.threefry_generate", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.threefry_generate", [](const CallValues& call) {
   const auto* args = call->args.as<ThreefryGenerateArgs>();
   CHECK(args != nullptr);
   DLTensor* key = args->key;
@@ -36,7 +36,7 @@ MNM_OP_DECLARE("mnm.op.threefry_generate", [](const CallValues& call) {
   call->device = key->device;
 });
 
-MNM_OP_DECLARE("mnm.op.threefry_split", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.threefry_split", [](const CallValues& call) {
   const auto* args = call->args.as<ThreefrySplitArgs>();
   CHECK(args != nullptr);
   DLTensor* key = args->key;
@@ -56,4 +56,4 @@ MNM_OP_DECLARE("mnm.op.threefry_split", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -9,11 +9,11 @@
  */
 #include "estimate_flops.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace estimate_flops {
 
-using namespace mnm::op;
+using namespace raf::op;
 
 template <typename T>
 using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
@@ -77,7 +77,7 @@ void FLOPSEstimater::VisitExpr_(const CallNode* call) {
     // Wrap a single op to a Relay function.
     std::vector<Var> params;
     for (int i = 0, n = param_types.size(); i < n; ++i) {
-      auto var = mnm::ir::MakeVar("", param_types[i]);
+      auto var = raf::ir::MakeVar("", param_types[i]);
       var->checked_type_ = param_types[i];
       params.push_back(var);
     }
@@ -123,7 +123,7 @@ PackedFLOPSMap EstimateGFLOPSPacked(const IRModule& mod) {
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.EstimateGFLOPS").set_body_typed(EstimateGFLOPSPacked);
+RAF_REGISTER_GLOBAL("raf.pass_.EstimateGFLOPS").set_body_typed(EstimateGFLOPSPacked);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

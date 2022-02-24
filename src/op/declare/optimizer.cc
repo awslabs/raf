@@ -7,19 +7,19 @@
  * \file src/op/declare/nn.cc
  * \brief Declaration of nn-specific operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/optimizer.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.sgd", [](const CallValues& call) {
   const auto* args = call->args.as<SgdArgs>();
   CHECK(args != nullptr);
   const DLTensor* x0 = args->x;
@@ -57,9 +57,9 @@ void LansDecl(const CallValues& call) {
   call->out = TupleValue::make(output);
 }
 
-MNM_OP_DECLARE("mnm.op.lans", LansDecl)
+RAF_OP_DECLARE("raf.op.lans", LansDecl)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{0, 0}});
+    .set_attr<TRAFInplaceUpdate>("TRAFInplaceUpdate", {{0, 0}});
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

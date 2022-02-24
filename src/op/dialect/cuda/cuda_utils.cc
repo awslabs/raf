@@ -7,15 +7,15 @@
  * \file src/op/dialect/cuda/cuda_utils.cc
  * \brief CUDA dialect utils
  */
-#include "mnm/op.h"
+#include "raf/op.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cuda {
 
-MNM_REGISTER_DIALECT("cuda").set_enable(DevType::kCUDA());
+RAF_REGISTER_DIALECT("cuda").set_enable(DevType::kCUDA());
 
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

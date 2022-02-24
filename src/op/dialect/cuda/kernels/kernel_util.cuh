@@ -13,7 +13,7 @@
 #include <vector>
 #include "../../../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cuda {
 
@@ -35,5 +35,5 @@ void multi_tensor_lans_cuda(int chunk_size, std::vector<T*> tensor_lists, const 
 
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 

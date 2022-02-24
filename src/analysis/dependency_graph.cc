@@ -10,12 +10,12 @@
  * graph (DAG) and can be used to analyze the expr.
  */
 #include "support/arena.h"
-#include "mnm/analysis.h"
-#include "mnm/registry.h"
+#include "raf/analysis.h"
+#include "raf/registry.h"
 
 #include "./dependency_graph.h"
 
-namespace mnm {
+namespace raf {
 namespace analysis {
 namespace dependency_graph {
 
@@ -325,8 +325,8 @@ Map<String, ObjectRef> GetDependencyGraphNodesEdges(Expr e, bool prune_atomic_no
   return {{"nodes", nodes}, {"edges", edges}};
 }
 
-MNM_REGISTER_GLOBAL("mnm.analysis.GetDependencyGraphNodesEdges")
+RAF_REGISTER_GLOBAL("raf.analysis.GetDependencyGraphNodesEdges")
     .set_body_typed(GetDependencyGraphNodesEdges);
 
 }  // namespace analysis
-}  // namespace mnm
+}  // namespace raf

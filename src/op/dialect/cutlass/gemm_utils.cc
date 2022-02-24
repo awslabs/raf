@@ -11,7 +11,7 @@
 #include "./cutlass_utils.h"
 #include "./gemm_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
@@ -219,4 +219,4 @@ Operation const* find_gemm_operation(GemmOperationFunctionalMapExt::const_iterat
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -5,14 +5,14 @@
 
 #include <gtest/gtest.h>
 
-#include <mnm/device.h>
-#include <mnm/memory_pool.h>
+#include <raf/device.h>
+#include <raf/memory_pool.h>
 
-using mnm::Device;
-using mnm::DevType;
-using mnm::kDefaultMemoryAlignment;
-using mnm::memory_pool::Memory;
-using mnm::memory_pool::MemoryPool;
+using raf::Device;
+using raf::DevType;
+using raf::kDefaultMemoryAlignment;
+using raf::memory_pool::Memory;
+using raf::memory_pool::MemoryPool;
 
 TEST(NoPool, CPU) {
   Device dev{DevType::kCPU(), 0};

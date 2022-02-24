@@ -8,21 +8,21 @@
  * \brief Convert A-normal form to dataflow graph.
  */
 #include <unordered_map>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/binding.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/binding.h"
+#include "raf/pass.h"
 #include "support/arena.h"
 #include "tvm/relay/expr.h"
 #include "tvm/relay/op_attr_types.h"
 #include "./let_list.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace to_graph_normal_form {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 using namespace tvm::support;
 
 class UseVarVisitor : public ExprVisitor {
@@ -107,10 +107,10 @@ Pass ToGraphNormalForm() {
                                                                              PassContext pc) {
     return Downcast<Function>(to_graph_normal_form::GNFConverter().Mutate(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "ToGraphNormalForm", {});
+  return CreateRAFFunctionPass(pass_func, 1, "ToGraphNormalForm", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ToGraphNormalForm").set_body_typed(ToGraphNormalForm);
+RAF_REGISTER_GLOBAL("raf.pass_.ToGraphNormalForm").set_body_typed(ToGraphNormalForm);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

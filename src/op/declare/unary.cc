@@ -7,23 +7,23 @@
  * \file src/op/declare/unary.cc
  * \brief Declaration of unary operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/ufunc.h"
 #include "../ty/utils.h"
 #include <cmath>
 #include "math.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 using tvm::Array;
 using tvm::Downcast;
 
-#define MNM_SWITCH_SCALAR(var, value, body)                     \
+#define RAF_SWITCH_SCALAR(var, value, body)                     \
   do {                                                          \
     if (const auto* var = (value).as<IntValueObj>()) {          \
       body;                                                     \
@@ -34,14 +34,14 @@ using tvm::Downcast;
     }                                                           \
   } while (0)
 
-#define MNM_UNARY_SCALAR(op, x)                 \
-  MNM_SWITCH_SCALAR(v, x, {                     \
+#define RAF_UNARY_SCALAR(op, x)                 \
+  RAF_SWITCH_SCALAR(v, x, {                     \
     call->callee = ir::NullValue<OpValue>();    \
     call->out = ScalarValue::make(op v->value); \
     return;                                     \
   })
 
-#define MNM_UNARY_TENSOR(x)                     \
+#define RAF_UNARY_TENSOR(x)                     \
   if (x->IsInstance<TensorValueObj>()) {        \
     const TensorValue& tv = MakeUnaryTensor(x); \
     call->out = tv;                             \
@@ -55,34 +55,34 @@ TensorValue MakeUnaryTensor(DLTensor* x) {
   return TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-MNM_OP_DECLARE("mnm.op.negative", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.negative", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  MNM_UNARY_SCALAR(-, args->x);
-  MNM_UNARY_TENSOR(args->x)
+  RAF_UNARY_SCALAR(-, args->x);
+  RAF_UNARY_TENSOR(args->x)
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.rsqrt", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.rsqrt", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  MNM_SWITCH_SCALAR(v, args->x, {
+  RAF_SWITCH_SCALAR(v, args->x, {
     call->callee = ir::NullValue<OpValue>();
     double a = v->value;
     double result = 1.0 / sqrt(a);
     call->out = ScalarValue::make(result);
     return;
   });
-  MNM_UNARY_TENSOR(args->x);
+  RAF_UNARY_TENSOR(args->x);
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.logical_not", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.logical_not", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  MNM_UNARY_SCALAR(!, args->x);
+  RAF_UNARY_SCALAR(!, args->x);
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
@@ -104,38 +104,38 @@ void Unary(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op.relu", Unary);
-MNM_OP_DECLARE("mnm.op.gelu", Unary);
-MNM_OP_DECLARE("mnm.op.tanh", Unary);
-MNM_OP_DECLARE("mnm.op.sigmoid", Unary);
-MNM_OP_DECLARE("mnm.op.copy", Unary);
-MNM_OP_DECLARE("mnm.op.abs", Unary);
-MNM_OP_DECLARE("mnm.op.ceil", Unary);
-MNM_OP_DECLARE("mnm.op.floor", Unary);
-MNM_OP_DECLARE("mnm.op.log", Unary);
-MNM_OP_DECLARE("mnm.op.log2", Unary);
-MNM_OP_DECLARE("mnm.op.exp", Unary);
-MNM_OP_DECLARE("mnm.op.cos", Unary);
-MNM_OP_DECLARE("mnm.op.sin", Unary);
-MNM_OP_DECLARE("mnm.op.sign", Unary);
-MNM_OP_DECLARE("mnm.op.round", Unary);
-MNM_OP_DECLARE("mnm.op.erf", Unary);
-MNM_OP_DECLARE("mnm.op.sqrt", Unary);
-MNM_OP_DECLARE("mnm.op.atan", Unary);
-MNM_OP_DECLARE("mnm.op.zeros_like", Unary);
-MNM_OP_DECLARE("mnm.op.ones_like", Unary);
+RAF_OP_DECLARE("raf.op.relu", Unary);
+RAF_OP_DECLARE("raf.op.gelu", Unary);
+RAF_OP_DECLARE("raf.op.tanh", Unary);
+RAF_OP_DECLARE("raf.op.sigmoid", Unary);
+RAF_OP_DECLARE("raf.op.copy", Unary);
+RAF_OP_DECLARE("raf.op.abs", Unary);
+RAF_OP_DECLARE("raf.op.ceil", Unary);
+RAF_OP_DECLARE("raf.op.floor", Unary);
+RAF_OP_DECLARE("raf.op.log", Unary);
+RAF_OP_DECLARE("raf.op.log2", Unary);
+RAF_OP_DECLARE("raf.op.exp", Unary);
+RAF_OP_DECLARE("raf.op.cos", Unary);
+RAF_OP_DECLARE("raf.op.sin", Unary);
+RAF_OP_DECLARE("raf.op.sign", Unary);
+RAF_OP_DECLARE("raf.op.round", Unary);
+RAF_OP_DECLARE("raf.op.erf", Unary);
+RAF_OP_DECLARE("raf.op.sqrt", Unary);
+RAF_OP_DECLARE("raf.op.atan", Unary);
+RAF_OP_DECLARE("raf.op.zeros_like", Unary);
+RAF_OP_DECLARE("raf.op.ones_like", Unary);
 
-MNM_OP_DECLARE("mnm.op.trunc", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.trunc", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
-  MNM_SWITCH_SCALAR(v, args->x, {
+  RAF_SWITCH_SCALAR(v, args->x, {
     call->callee = ir::NullValue<OpValue>();
     double a = v->value;
     double result = trunc(a);
     call->out = ScalarValue::make(result);
     return;
   });
-  MNM_UNARY_TENSOR(args->x);
+  RAF_UNARY_TENSOR(args->x);
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
@@ -158,13 +158,13 @@ void UnaryDx(const CallValues& call) {
   call->device = source->device;
 }
 
-MNM_OP_DECLARE("mnm.op.relu_dx", UnaryDx);
-MNM_OP_DECLARE("mnm.op.gelu_dx", UnaryDx);
-MNM_OP_DECLARE("mnm.op.tanh_dx", UnaryDx);
+RAF_OP_DECLARE("raf.op.relu_dx", UnaryDx);
+RAF_OP_DECLARE("raf.op.gelu_dx", UnaryDx);
+RAF_OP_DECLARE("raf.op.tanh_dx", UnaryDx);
 // TODO(@yzhliu, @icemelon9): We don't have tvm impl for sigmoid_dx. So currently don't fuse it.
-MNM_OP_DECLARE("mnm.op.sigmoid_dx", UnaryDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
-MNM_OP_DECLARE("mnm.op.erf_dx", UnaryDx);
-MNM_OP_DECLARE("mnm.op.sqrt_dx", UnaryDx);
+RAF_OP_DECLARE("raf.op.sigmoid_dx", UnaryDx).set_attr<TOpPattern>("TOpPattern", kOpaque);
+RAF_OP_DECLARE("raf.op.erf_dx", UnaryDx);
+RAF_OP_DECLARE("raf.op.sqrt_dx", UnaryDx);
 
 void Shape(const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
@@ -183,9 +183,9 @@ void Shape(const CallValues& call) {
 }
 
 // TODO(@icemelon9): Currently use opaque for shape related op.
-MNM_OP_DECLARE("mnm.op.shape", Shape).set_attr<TOpPattern>("TOpPattern", kOpaque);
+RAF_OP_DECLARE("raf.op.shape", Shape).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
-MNM_OP_DECLARE("mnm.op.ndarray_size", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.ndarray_size", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
 
@@ -203,7 +203,7 @@ MNM_OP_DECLARE("mnm.op.ndarray_size", [](const CallValues& call) {
   call->callee = ir::NullValue<OpValue>();
 });
 
-MNM_OP_DECLARE("mnm.op.numel", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.numel", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
 
@@ -215,7 +215,7 @@ MNM_OP_DECLARE("mnm.op.numel", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.shape_as_tensor", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.shape_as_tensor", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
 
@@ -229,4 +229,4 @@ MNM_OP_DECLARE("mnm.op.shape_as_tensor", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

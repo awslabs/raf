@@ -17,10 +17,10 @@
 #include <string>
 #include "tvm/relay/type.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 /*!
  * \brief LetList allow you to transform expression into variables, so you can copy them around.
@@ -61,7 +61,7 @@ class LetList {
    */
   Var Push(Expr expr, Type ty) {
     std::string fullname = "x_" + std::to_string(label_++);
-    return Push(mnm::ir::MakeVar(fullname, ty), expr);
+    return Push(raf::ir::MakeVar(fullname, ty), expr);
   }
 
   /*!
@@ -86,7 +86,7 @@ class LetList {
     CHECK(!used_);
     Expr ret = body;
     for (auto rit = lets_.rbegin(); rit != lets_.rend(); ++rit) {
-      ret = mnm::ir::Let(std::get<0>(*rit), std::get<1>(*rit), ret);
+      ret = raf::ir::Let(std::get<0>(*rit), std::get<1>(*rit), ret);
     }
     used_ = true;
     return ret;
@@ -130,4 +130,4 @@ class LetList {
 };
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

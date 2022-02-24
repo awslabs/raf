@@ -3,9 +3,9 @@
 
 # pylint: disable=protected-access
 import pytest
-import mnm
-from mnm.testing import check_type, run_infer_type, randn, get_testable_devices
-from mnm._ffi.pass_ import AutoDiff, InferType
+import raf
+from raf.testing import check_type, run_infer_type, randn, get_testable_devices
+from raf._ffi.pass_ import AutoDiff, InferType
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -21,15 +21,15 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("is_ascend", [True, False])
 @pytest.mark.parametrize("dtype", ["int32", "int64", "float32"])
 def test_argsort(shape, axis, is_ascend, dtype):
-    class Argsort(mnm.Model):
+    class Argsort(raf.Model):
         def build(self, axis, is_ascend, dtype):
             self._axis = axis
             self._is_ascend = is_ascend
             self._dtype = dtype
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.argsort(data, axis=self._axis, is_ascend=self._is_ascend, dtype=self._dtype)
+            return raf.argsort(data, axis=self._axis, is_ascend=self._is_ascend, dtype=self._dtype)
 
     model = Argsort(axis, is_ascend, dtype)
     # forward
@@ -54,14 +54,14 @@ def test_argsort(shape, axis, is_ascend, dtype):
 @pytest.mark.parametrize("is_ascend", [True, False])
 @pytest.mark.parametrize("dtype", ["int32", "int64", "float32"])
 def test_sort(shape, axis, is_ascend, dtype):
-    class Sort(mnm.Model):
+    class Sort(raf.Model):
         def build(self, axis, is_ascend):
             self._axis = axis
             self._is_ascend = is_ascend
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.sort(data, axis=self._axis, is_ascend=self._is_ascend)
+            return raf.sort(data, axis=self._axis, is_ascend=self._is_ascend)
 
     model = Sort(axis, is_ascend)
     # forward
@@ -96,7 +96,7 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
-    class Topk(mnm.Model):
+    class Topk(raf.Model):
         def build(self, k, axis, ret_type, is_ascend, dtype):
             self._axis = axis
             self._k = k
@@ -104,9 +104,9 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
             self._is_ascend = is_ascend
             self._dtype = dtype
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.topk(
+            return raf.topk(
                 data,
                 k=self._k,
                 axis=self._axis,
@@ -116,7 +116,7 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
             )
 
     m_x, n_x = randn(shape, device=device, dtype=dtype)
-    m_x = mnm.array(n_x, dtype=dtype, device=device)
+    m_x = raf.array(n_x, dtype=dtype, device=device)
     m_x.requires_grad = True
     model = Topk(k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
     record = model._internal(m_x)

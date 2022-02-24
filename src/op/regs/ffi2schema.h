@@ -5,28 +5,28 @@
 
 /*!
  * \file src/op/regs/ffi2schema.h
- * \brief Converters from TVM FFI to MNM operator schema
+ * \brief Converters from TVM FFI to RAF operator schema
  */
 #pragma once
 #include <string>
 #include <vector>
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/binding.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/binding.h"
 #include "./regs_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace ffi2schema {
 
-#define MNM_PRELUDE()         \
-  using namespace mnm::ir;    \
-  using namespace mnm::value; \
+#define RAF_PRELUDE()         \
+  using namespace raf::ir;    \
+  using namespace raf::value; \
   int type_code = a.type_code();
 
 inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape* tape) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMNullptr) {
     return {};
   }
@@ -66,7 +66,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
 
 inline ir::Optional<value::Value> OptionalArrayLike(const registry::TVMArgValue& a,
                                                     binding::GradTape* tape) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMNullptr) {
     return tvm::NullOpt;
   }
@@ -74,7 +74,7 @@ inline ir::Optional<value::Value> OptionalArrayLike(const registry::TVMArgValue&
 }
 
 inline value::BaseTensorValue Tensor(const registry::TVMArgValue& a, binding::GradTape* tape) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMObjectHandle && a.IsObjectRef<Var>()) {
     using binding::NDArrayBindingObj;
     auto* bound = binding::LookupBinding(a.AsObjectRef<Var>().operator->()).as<NDArrayBindingObj>();
@@ -88,7 +88,7 @@ inline value::BaseTensorValue Tensor(const registry::TVMArgValue& a, binding::Gr
 
 inline ir::Optional<value::BaseTensorValue> OptionalTensor(const registry::TVMArgValue& a,
                                                            binding::GradTape* tape) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMNullptr) {
     return tvm::NullOpt;
   }
@@ -104,7 +104,7 @@ inline ir::Optional<value::BaseTensorValue> OptionalTensor(const registry::TVMAr
 }
 
 inline int64_t Int(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
     return a.operator int64_t();
   }
@@ -113,7 +113,7 @@ inline int64_t Int(const registry::TVMArgValue& a) {
   throw;
 }
 inline bool Bool(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
     int64_t v = a;
     if (v == 0 || v == 1) {
@@ -128,7 +128,7 @@ inline bool Bool(const registry::TVMArgValue& a) {
   throw;
 }
 inline double Double(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLFloat) {
     return a.operator double();
   }
@@ -137,7 +137,7 @@ inline double Double(const registry::TVMArgValue& a) {
   throw;
 }
 inline std::string String(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMStr) {
     return a.operator std::string();
   }
@@ -147,7 +147,7 @@ inline std::string String(const registry::TVMArgValue& a) {
 }
 
 inline std::vector<int64_t> TupleInt(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
@@ -171,7 +171,7 @@ inline std::vector<int64_t> TupleInt(const registry::TVMArgValue& a) {
 }
 
 inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
     return {a.operator int64_t()};
   }
@@ -198,7 +198,7 @@ inline std::vector<int64_t> IntOrTupleInt(const registry::TVMArgValue& a) {
 }
 
 inline ir::Optional<ir::Array<value::IntValue>> IntArray(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
     return ir::Array<value::IntValue>{
         value::IntValue::make(DataType::Int(64), a.operator int64_t())};
@@ -226,7 +226,7 @@ inline ir::Optional<ir::Array<value::IntValue>> IntArray(const registry::TVMArgV
 }
 
 inline std::vector<value::BaseTensorValue> TupleTensor(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
@@ -251,9 +251,9 @@ inline std::vector<value::BaseTensorValue> TupleTensor(const registry::TVMArgVal
   throw;
 }
 
-#undef MNM_PRELUDE
+#undef RAF_PRELUDE
 
 }  // namespace ffi2schema
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

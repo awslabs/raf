@@ -7,28 +7,28 @@
  * \file canonicalize_ops.cc
  * \brief Canonicalize Ops
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/pass.h"
-#include "mnm/executor.h"
-#include "mnm/binding.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/pass.h"
+#include "raf/executor.h"
+#include "raf/binding.h"
 #include "../op/schema/nn.h"
 #include "../op/schema/transform.h"
 #include "./let_list.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace canonicalize_ops {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::op::schema;
+using namespace raf::value;
 
 inline Expr ExpandBiasToMatchAxis(Expr bias, int target_ndim, const Array<Integer>& axes,
                                   LetList* ll) {
-  static const Op& expand_dims = Op::Get("mnm.op.expand_dims");
+  static const Op& expand_dims = Op::Get("raf.op.expand_dims");
   for (int64_t i = axes.size(); i != 0; --i) {
     if (i == axes.size()) {
       int64_t num_pad_axis = target_ndim - axes[i - 1]->value - 1;
@@ -49,13 +49,13 @@ inline Expr ExpandBiasToMatchAxis(Expr bias, int target_ndim, const Array<Intege
 }
 
 inline Expr Add(Expr lhs, Expr rhs) {
-  static const Op& op = Op::Get("mnm.op.add");
+  static const Op& op = Op::Get("raf.op.add");
   return Call(op, {lhs, rhs, MakeNull(), MakeNull()}, Attrs(), {});
 }
 
 class BiasAddSimplifier : public ExprMutator {
  public:
-  BiasAddSimplifier() : bias_add_op_(Op::Get("mnm.op.bias_add")) {
+  BiasAddSimplifier() : bias_add_op_(Op::Get("raf.op.bias_add")) {
   }
 
   Expr VisitExpr_(const LetNode* op) override {
@@ -102,10 +102,10 @@ Pass CanonicalizeOps() {
     auto simplifier = canonicalize_ops::BiasAddSimplifier();
     return Downcast<Function>(simplifier(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "CanonicalizeOps", {});
+  return CreateRAFFunctionPass(pass_func, 1, "CanonicalizeOps", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.CanonicalizeOps").set_body_typed(CanonicalizeOps);
+RAF_REGISTER_GLOBAL("raf.pass_.CanonicalizeOps").set_body_typed(CanonicalizeOps);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

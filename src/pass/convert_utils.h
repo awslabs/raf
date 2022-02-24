@@ -13,7 +13,7 @@
 #include "relay/transforms/pass_utils.h"
 #include "tvm/relay/transform.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
 using tvm::relay::DependencyGraph;
@@ -22,7 +22,7 @@ using tvm::relay::IsAtomic;
 using tvm::relay::NodeScopeMap;
 using tvm::relay::Scope;
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 // TODO(@icemelon9): Inherit from Relay Fill after changing it in the upstream
 class Fill : ExprFunctor<Expr(const Expr&, const Var&)> {
@@ -76,4 +76,4 @@ class Fill : ExprFunctor<Expr(const Expr&, const Var&)> {
 };
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

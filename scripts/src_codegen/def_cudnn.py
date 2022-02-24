@@ -142,8 +142,8 @@ class CUDNNTensor(ShapeWrapper):
         return res
 
 
-class MNMTensor(object):
-    """MNMTensor is the tensor that doesn't require CUDNN tensor descriptors."""
+class RAFTensor(object):
+    """RAFTensor is the tensor that doesn't require CUDNN tensor descriptors."""
 
     def __init__(self, api_arg, tensor):
         assert isinstance(api_arg, (str, list, tuple))
@@ -457,13 +457,13 @@ class AssignStatement(object):
 
 class CUDNNDispatch(object):
     fmt = """
-class {CLASSNAME} : public mnm::op::OpEnv {{
+class {CLASSNAME} : public raf::op::OpEnv {{
   {ATTRS}
   explicit {CLASSNAME}(const CallValues &cv) {{
     {ARG_INDICES}
     {CASTS}
     {CONSTRUCTOR}
-    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("mnm.op.{OP}"));
+    env_name = tvmjit::TruncateName(tvmjit::GetUniqueName("raf.op.{OP}"));
   }}
  public:
   ~{CLASSNAME}() {{
@@ -483,7 +483,7 @@ class {CLASSNAME} : public mnm::op::OpEnv {{
     return new {CLASSNAME}(cv);
   }}
 }};
-MNM_OP_DISPATCH_PLEVEL("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn", {PLEVEL});
+RAF_OP_DISPATCH_PLEVEL("raf.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "generated_cudnn", {PLEVEL});
 """.strip()
 
     def __init__(self, op, api, arg_type, normalizers, args, output=["DLTensor *"], plevel=10):
@@ -507,10 +507,10 @@ MNM_OP_DISPATCH_PLEVEL("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "gene
         for arg in self.normalizers:
             if isinstance(arg, (CUDNNOutputTensor, CUDNNOutputFilter)):
                 continue
-            if isinstance(arg, (ShapeWrapper, MNMTensor)):
+            if isinstance(arg, (ShapeWrapper, RAFTensor)):
                 schema_fields.append(f'fschema_index[op]("{arg.field_name()}"),')
         arg_indices = """
-    auto op = Op::Get("mnm.op.{OP}");
+    auto op = Op::Get("raf.op.{OP}");
     this->arg_indices = {{
       {FIELDS}
     }};""".strip().format(
@@ -522,7 +522,7 @@ MNM_OP_DISPATCH_PLEVEL("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "gene
         if len(self.output) != 1:
             output_cast = "TupleValue tv = Downcast<TupleValue>(cv->out);\n    "
         casts = """
-    auto args = cv->args.as<mnm::op::schema::{TYPE}>();
+    auto args = cv->args.as<raf::op::schema::{TYPE}>();
     (void) args;
     {CASTS}
 """.strip().format(
@@ -544,7 +544,7 @@ MNM_OP_DISPATCH_PLEVEL("mnm.op.{OP}", {CLASSNAME}::make, DevType::kCUDA(), "gene
                     )
                 else:
                     vm_casts.append(f"DLTensor* {arg.cast_ptr} = Downcast<TensorValue>(output);")
-            elif isinstance(arg, (ShapeWrapper, MNMTensor)):
+            elif isinstance(arg, (ShapeWrapper, RAFTensor)):
                 vm_casts.append(
                     f"DLTensor* {arg.cast_ptr} = Downcast<TensorValue>(inputs[{num_inputs}]);"
                 )
@@ -693,7 +693,7 @@ def dispatch_pooling_dx(op, dims, mode):
 
 def dispatch_batchnorm_dxwb(op):
     x = CUDNNTensor("xDesc", "x", "args->x", [0, 1, 2, 3, "<last>"])
-    w = MNMTensor("bnScale", "args->w")
+    w = RAFTensor("bnScale", "args->w")
     dy = CUDNNTensor("dyDesc", "dy", "args->dy", [0, 1, 2, 3, "<last>"])
     dx = CUDNNOutputTensor("dxDesc", "dx", "tv->fields[0]", [0, 1, 2, 3, "<last>"])
     dw = CUDNNOutputTensor(
@@ -726,9 +726,9 @@ def dispatch_batchnorm_dxwb(op):
 def dispatch_batchnorm(op, api):
     x = CUDNNTensor("xDesc", "x", "args->x", [0, 1, 2, 3, "<last>"])
     w = CUDNNTensor("bnScaleBiasMeanVarDesc", "bnScale", "args->w", [0, 0, 1, "<last>"])
-    b = MNMTensor("bnBias", "args->b")
-    running_mean = MNMTensor(["estimatedMean", "resultRunningMean"], "args->running_mean")
-    running_var = MNMTensor(["estimatedVariance", "resultRunningVariance"], "args->running_var")
+    b = RAFTensor("bnBias", "args->b")
+    running_mean = RAFTensor(["estimatedMean", "resultRunningMean"], "args->running_mean")
+    running_var = RAFTensor(["estimatedVariance", "resultRunningVariance"], "args->running_var")
     epsilon = AssignStatement("double", "epsilon", "args->eps", True)
     momentum = AssignStatement("double", "exponentialAverageFactor", "args->momentum", True)
     if op.endswith("_train"):

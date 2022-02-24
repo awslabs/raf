@@ -10,13 +10,13 @@
 #include "./cuda_profiler.h"
 #include "../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace profiler {
 
 std::shared_ptr<device_api::DeviceAPI> CudaProfilerHelper::cuda_api =
     device_api::DeviceAPI::Get(DevType::kCUDA());
 
-CudaProfilerHelper::CudaProfilerHelper(int dev_id, mnm::DevType dev_type, void* stream,
+CudaProfilerHelper::CudaProfilerHelper(int dev_id, raf::DevType dev_type, void* stream,
                                        std::string name, std::string categories,
                                        std::vector<std::string> args)
     : ProfilerHelper(dev_id, dev_type, std::move(name), std::move(categories), std::move(args)),
@@ -89,7 +89,7 @@ void CollectCudaProfile() {
   CudaProfiler::Get()->CollectCudaStat();
 }
 
-MNM_REGISTER_GLOBAL("mnm.profiler.CollectCudaProfile").set_body_typed(CollectCudaProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.CollectCudaProfile").set_body_typed(CollectCudaProfile);
 
 }  // namespace profiler
-}  // namespace mnm
+}  // namespace raf

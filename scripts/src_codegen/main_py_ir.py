@@ -14,8 +14,8 @@ def gen_file():
 # pylint: disable=too-many-arguments,redefined-builtin,redefined-outer-name
 # pylint: disable=missing-class-docstring,missing-function-docstring
 \"\"\"Auto generated. Do not touch.\"\"\"
-from mnm._ffi.op import GetOp
-from mnm._lib import relay
+from raf._ffi.op import GetOp
+from raf._lib import relay
 from . import op_utils
 
 __all__ = [
@@ -38,7 +38,7 @@ __all__ = [
 def gen_method(op):
     METHOD = """
 def {FUNC_NAME}({PARAMS_W_DEFAULT}{SEP}attrs=None):
-    op = GetOp(\"mnm.op.{OP_NAME}\")
+    op = GetOp(\"raf.op.{OP_NAME}\")
 {NORMS}
     return relay.Call(op, [{PARAMS_WO_DEFAULT}], attrs)
 """.strip()
@@ -93,7 +93,7 @@ def gen_param_wo_default(schema):
     return ", ".join(arg.name for arg in schema)
 
 
-def main(path="./python/mnm/ir/op.py"):
+def main(path="./python/raf/ir/op.py"):
     result = gen_file()
     write_to_file(path, result)
 

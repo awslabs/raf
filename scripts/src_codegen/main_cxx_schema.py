@@ -18,15 +18,15 @@ def gen_file(schemas, filename):
 #pragma once
 #include <vector>
 #include <string>
-#include "mnm/op.h"
-#include "mnm/value.h"
-namespace mnm {{
+#include "raf/op.h"
+#include "raf/value.h"
+namespace raf {{
 namespace op {{
 namespace schema {{
 {CLASSES}
 }}  // namespace schema
 }}  // namespace op
-}}  // namespace mnm
+}}  // namespace raf
 """.strip()
     result = []
     for name in sorted(schemas.keys()):
@@ -43,11 +43,11 @@ def gen_class(name, schema):
 class {CLASS_NAME} : public ir::AttrsNode<{CLASS_NAME}> {{
  public:
 {ARGS}
-  MNM_OP_SCHEMA({CLASS_NAME}, "{SCHEMA_NAME}");
+  RAF_OP_SCHEMA({CLASS_NAME}, "{SCHEMA_NAME}");
 }};
 """.strip()
     class_name = snake_to_pascal(name) + "Args"
-    schema_name = "mnm.args." + name
+    schema_name = "raf.args." + name
     args = "\n".join(gen_arg(entry) for entry in schema)
     return CLASS.format(CLASS_NAME=class_name, SCHEMA_NAME=schema_name, ARGS=args)
 

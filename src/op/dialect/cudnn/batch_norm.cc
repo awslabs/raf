@@ -9,19 +9,19 @@
  */
 #include "../../schema/nn.h"
 #include "./cudnn_utils.h"
-#include "mnm/ir.h"
-#include "mnm/op_utils.h"
+#include "raf/ir.h"
+#include "raf/op_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cudnn {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 
-static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
-class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : public mnm::op::OpEnv {
+class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t bnScaleBiasMeanVarDesc;
   cudnnTensorDescriptor_t yDesc;
@@ -30,13 +30,13 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
 
   explicit BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference(
       const CallValues& cv) {
-    auto op = Op::Get("mnm.op.batch_norm_infer");
+    auto op = Op::Get("raf.op.batch_norm_infer");
     this->arg_indices = {
         fschema_index[op]("x"),           fschema_index[op]("running_mean"),
         fschema_index[op]("running_var"), fschema_index[op]("w"),
         fschema_index[op]("b"),
     };
-    auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
+    auto args = cv->args.as<raf::op::schema::BatchNormArgs>();
     DLTensor* x = args->x;
     DLTensor* w = args->w;
     DLTensor* out = cv->out;
@@ -58,11 +58,11 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.batch_norm_infer"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.batch_norm_infer"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
+    auto args = cv->args.as<raf::op::schema::BatchNormArgs>();
     DLTensor* x = args->x;
     DLTensor* w = args->w;
     DLTensor* out = cv->out;
@@ -96,11 +96,11 @@ class BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference : publi
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_infer, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.batch_norm_infer",
+RAF_REGISTER_DIALECT_OP(cudnn, batch_norm_infer, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.batch_norm_infer",
                  BatchNormInferImplementedByCUDNNBatchNormalizationForwardInference::make);
 
-class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public mnm::op::OpEnv {
+class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t bnScaleBiasMeanVarDesc;
   cudnnTensorDescriptor_t yDesc;
@@ -108,13 +108,13 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
   double exponentialAverageFactor;
 
   explicit BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.batch_norm_train");
+    auto op = Op::Get("raf.op.batch_norm_train");
     this->arg_indices = {
         fschema_index[op]("x"),           fschema_index[op]("running_mean"),
         fschema_index[op]("running_var"), fschema_index[op]("w"),
         fschema_index[op]("b"),
     };
-    auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
+    auto args = cv->args.as<raf::op::schema::BatchNormArgs>();
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* w = args->w;
@@ -137,11 +137,11 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.batch_norm_train"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.batch_norm_train"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::BatchNormArgs>();
+    auto args = cv->args.as<raf::op::schema::BatchNormArgs>();
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* w = args->w;
@@ -177,11 +177,11 @@ class BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining : public
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_train, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.batch_norm_train",
+RAF_REGISTER_DIALECT_OP(cudnn, batch_norm_train, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.batch_norm_train",
                  BatchNormTrainImplementedByCUDNNBatchNormalizationForwardTraining::make);
 
-class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mnm::op::OpEnv {
+class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t dyDesc;
   cudnnTensorDescriptor_t dxDesc;
@@ -189,13 +189,13 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
   double epsilon;
 
   explicit BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.batch_norm_train_dxwb");
+    auto op = Op::Get("raf.op.batch_norm_train_dxwb");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("w"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::BatchNormTrainDxwbArgs>();
+    auto args = cv->args.as<raf::op::schema::BatchNormTrainDxwbArgs>();
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* dy = args->dy;
@@ -221,11 +221,11 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.batch_norm_train_dxwb"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.batch_norm_train_dxwb"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::BatchNormTrainDxwbArgs>();
+    auto args = cv->args.as<raf::op::schema::BatchNormTrainDxwbArgs>();
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* dy = args->dy;
@@ -261,10 +261,10 @@ class BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward : public mn
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, batch_norm_train_dxwb, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.batch_norm_train_dxwb",
+RAF_REGISTER_DIALECT_OP(cudnn, batch_norm_train_dxwb, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.batch_norm_train_dxwb",
                  BatchNormTrainDxwbImplementedByCUDNNBatchNormalizationBackward::make);
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

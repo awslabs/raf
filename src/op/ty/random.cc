@@ -8,16 +8,16 @@
  * \brief Typing of random operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/random.h"
 #include "../declare/declare_utils.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 
 Type ThreefryGenerateInfer(const CallValues& value) {
@@ -33,7 +33,7 @@ Type ThreefryGenerateInfer(const CallValues& value) {
   return TupleType({new_key, random_array});
 }
 
-MNM_OP_TYPE("mnm.op.threefry_generate", "ThreefryGenerate", ThreefryGenerateInfer);
+RAF_OP_TYPE("raf.op.threefry_generate", "ThreefryGenerate", ThreefryGenerateInfer);
 
 Type ThreefrySplitInfer(const CallValues& value) {
   const auto* args = value->args.as<ThreefrySplitArgs>();
@@ -44,7 +44,7 @@ Type ThreefrySplitInfer(const CallValues& value) {
   return TupleType({new_key, new_subkey});
 }
 
-MNM_OP_TYPE("mnm.op.threefry_split", "ThreefrySplit", ThreefrySplitInfer);
+RAF_OP_TYPE("raf.op.threefry_split", "ThreefrySplit", ThreefrySplitInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

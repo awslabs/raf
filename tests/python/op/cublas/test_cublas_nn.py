@@ -4,27 +4,27 @@
 # pylint: disable=too-many-locals,too-many-arguments,protected-access,no-self-use, line-too-long, superfluous-parens
 import pytest
 import torch
-import mnm
-from mnm.testing import check, randn_torch, run_vm_model, with_seed
+import raf
+from raf.testing import check, randn_torch, run_vm_model, with_seed
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("n", [1, 4])
 @pytest.mark.parametrize("m", [1, 4])
 @pytest.mark.parametrize("k", [1, 4])
 @pytest.mark.parametrize("transpose_a", [True, False])
 @pytest.mark.parametrize("transpose_b", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
-    class TestModel(mnm.Model):
+def test_raf_matmul(n, k, m, transpose_a, transpose_b, dtype):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = [[mnm.matmul, mnm.matmul_nt], [mnm.matmul_tn, mnm.matmul_tt]]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
+            raf_op = [[raf.matmul, raf.matmul_nt], [raf.matmul_tn, raf.matmul_tt]]
+            raf_op = raf_op[transpose_a][transpose_b]
+            return raf_op(m_a, m_b)
 
     # forward
     model = TestModel()
@@ -48,7 +48,7 @@ def test_mnm_matmul(n, k, m, transpose_a, transpose_b, dtype):
     check(m_b.grad, t_b.grad)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("b", [2, 4])
 @pytest.mark.parametrize("n", [2, 4])
@@ -62,18 +62,18 @@ def test_batch_matmul(dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments, invalid-name
     device = "cuda"
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = [
-                [mnm.batch_matmul, mnm.batch_matmul_nt],
-                [mnm.batch_matmul_tn, mnm.batch_matmul_tt],
+            raf_op = [
+                [raf.batch_matmul, raf.batch_matmul_nt],
+                [raf.batch_matmul_tn, raf.batch_matmul_tt],
             ]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
+            raf_op = raf_op[transpose_a][transpose_b]
+            return raf_op(m_a, m_b)
 
     b1 = b
     b2 = b

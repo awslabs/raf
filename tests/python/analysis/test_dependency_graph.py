@@ -3,29 +3,29 @@
 
 # pylint: disable=no-self-use, protected-access
 import pytest
-import mnm
-from mnm.testing import randn
-from mnm._ffi.pass_ import ToGraphNormalForm
-from mnm._ffi.analysis import GetDependencyGraphNodesEdges
+import raf
+from raf.testing import randn
+from raf._ffi.pass_ import ToGraphNormalForm
+from raf._ffi.analysis import GetDependencyGraphNodesEdges
 
 
 def test_prune_atomic_nodes():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)  # atan 1
+            p_0 = raf.atan(x)  # atan 1
 
-            p_1 = mnm.atan(x)  # atan 2
-            p_1 = mnm.atan(p_1)  # atan 3
+            p_1 = raf.atan(x)  # atan 2
+            p_1 = raf.atan(p_1)  # atan 3
 
-            p_2 = mnm.atan(x)  # atan 4
-            p_2 = mnm.atan(p_2)  # atan 5
-            p_2 = mnm.atan(p_2)  # atan 6
+            p_2 = raf.atan(x)  # atan 4
+            p_2 = raf.atan(p_2)  # atan 5
+            p_2 = raf.atan(p_2)  # atan 6
             tup = [p_0, p_1, p_2]  # tup
-            return mnm.concatenate(tup)  # concat
+            return raf.concatenate(tup)  # concat
 
     model = Model()
     input_shape = [2, 2]
@@ -53,16 +53,16 @@ def test_prune_atomic_nodes():
 
 
 def test_prune_redundant_edges():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.atan(x)  # atan 0
-            z = mnm.atan(y)  # atan 1
+            y = raf.atan(x)  # atan 0
+            z = raf.atan(y)  # atan 1
             tup = [y, z]  # tup
-            return mnm.concatenate(tup)  # concat
+            return raf.concatenate(tup)  # concat
 
     model = Model()
     input_shape = [2, 2]

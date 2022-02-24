@@ -5,14 +5,14 @@
 
 /*!
  * \file src/impl/serialization.cc
- * \brief MNM serialization underlying implementation
+ * \brief RAF serialization underlying implementation
  */
 #include <tvm/node/serialization.h>
-#include "mnm/pass.h"
-#include "mnm/registry.h"
-#include "mnm/serialization.h"
+#include "raf/pass.h"
+#include "raf/registry.h"
+#include "raf/serialization.h"
 
-namespace mnm {
+namespace raf {
 namespace ir {
 namespace serialization {
 
@@ -240,20 +240,20 @@ Value DeserializeValue(dmlc::Stream* strm) {
   }
 }
 
-MNM_REGISTER_OBJECT_REFLECT(ConstantNode)
+RAF_REGISTER_OBJECT_REFLECT(ConstantNode)
     .set_creator(CreateConstantNode)
     .set_repr_bytes([](const ir::Object* n) -> std::string {
       return tvm::SaveJSON(static_cast<const ConstantNode*>(n)->value);
     });
 
-MNM_REGISTER_GLOBAL("mnm.ir.serialization.SaveJSON")
+RAF_REGISTER_GLOBAL("raf.ir.serialization.SaveJSON")
     .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
       CHECK(args.size() == 1);
       ir::ObjectRef obj = args[0].operator ir::ObjectRef();
       *ret = serialization::SaveJSON(obj);
     });
 
-MNM_REGISTER_GLOBAL("mnm.ir.serialization.LoadJSON")
+RAF_REGISTER_GLOBAL("raf.ir.serialization.LoadJSON")
     .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
       CHECK(args.size() == 1);
       auto obj = args[0].operator ir::String();
@@ -262,4 +262,4 @@ MNM_REGISTER_GLOBAL("mnm.ir.serialization.LoadJSON")
 
 }  // namespace serialization
 }  // namespace ir
-}  // namespace mnm
+}  // namespace raf

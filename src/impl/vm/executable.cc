@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/vm.cc
- * \brief The Meta virtual machine executable.
+ * \brief The RAF virtual machine executable.
  */
 
 #include <dmlc/memory_io.h>
@@ -18,16 +18,16 @@
 #include <sstream>
 #include <vector>
 
-#include "mnm/serialization.h"
-#include "mnm/vm/vm.h"
+#include "raf/serialization.h"
+#include "raf/vm/vm.h"
 #include "./serialize_util.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
-using namespace mnm::ir;
-using namespace mnm::registry;
+using namespace raf::ir;
+using namespace raf::registry;
 
 #define STREAM_CHECK(val, section)                                         \
   CHECK(val) << "Invalid VM file format in the " << section << " section." \
@@ -126,12 +126,12 @@ std::string Executable::GetBytecode() const {
 
 std::string Executable::Stats() const {
   std::ostringstream oss;
-  oss << "Meta VM executable statistics:" << std::endl;
+  oss << "RAF VM executable statistics:" << std::endl;
 
   // Get the number of constants and the shape of each of them.
   oss << "  Constant shapes (# " << constants.size() << "): [";
   for (const auto& it : constants) {
-    // TODO(vinx13): print Meta constant info
+    // TODO(vinx13): print RAF constant info
   }
   if (!constants.empty()) oss.seekp(-2, oss.cur);
   oss << "]" << std::endl;
@@ -796,14 +796,14 @@ void Executable::LoadCodeSection(dmlc::Stream* strm) {
   }
 }
 
-MNM_REGISTER_GLOBAL("mnm.vm.GetNumOfGlobals").set_body([](TVMArgs args, TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.GetNumOfGlobals").set_body([](TVMArgs args, TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec);
   *rv = static_cast<int>(exec->global_map.size());
 });
 
-MNM_REGISTER_GLOBAL("mnm.vm.GetGlobalFields").set_body([](TVMArgs args, TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.GetGlobalFields").set_body([](TVMArgs args, TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec);
@@ -818,14 +818,14 @@ MNM_REGISTER_GLOBAL("mnm.vm.GetGlobalFields").set_body([](TVMArgs args, TVMRetVa
   *rv = globals[idx].first;
 });
 
-MNM_REGISTER_GLOBAL("mnm.vm.GetNumOfPrimitives").set_body([](TVMArgs args, TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.GetNumOfPrimitives").set_body([](TVMArgs args, TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec);
   *rv = static_cast<int>(exec->primitive_map.size());
 });
 
-MNM_REGISTER_GLOBAL("mnm.vm.GetPrimitiveFields").set_body([](TVMArgs args, TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.GetPrimitiveFields").set_body([](TVMArgs args, TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec);
@@ -841,11 +841,11 @@ MNM_REGISTER_GLOBAL("mnm.vm.GetPrimitiveFields").set_body([](TVMArgs args, TVMRe
   }
 });
 
-MNM_REGISTER_GLOBAL("mnm.vm.Load_Executable")
+RAF_REGISTER_GLOBAL("raf.vm.Load_Executable")
     .set_body_typed([](std::string code, tvm::runtime::Module lib) {
       return Executable::Load(code, lib);
     });
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

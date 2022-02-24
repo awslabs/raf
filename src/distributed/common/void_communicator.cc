@@ -8,9 +8,9 @@
  * \brief A void Communicator used as a template
  */
 
-#include "mnm/communicator.h"
+#include "raf/communicator.h"
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 namespace communicator {
 
@@ -49,15 +49,15 @@ class VoidCommunicator : public Communicator {
   void* void_comm_handle;  // a handle of communicator, e.g. nccl_comm
 };
 
-MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.void")
+RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.void")
     .set_body_typed(VoidCommunicator::make);
 
 void RemoveCommunicator() {
   CommunicatorManager::Get()->Remove();
 }
 
-MNM_REGISTER_GLOBAL("mnm.distributed.RemoveCommunicator").set_body_typed(RemoveCommunicator);
+RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed(RemoveCommunicator);
 
 }  // namespace communicator
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

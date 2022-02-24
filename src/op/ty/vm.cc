@@ -7,19 +7,19 @@
  * \file src/op/ty/vm.cc
  * \brief Typing of vm dialect operators
  */
-#include "mnm/type.h"
-#include "mnm/value.h"
-#include "mnm/ir_ext.h"
+#include "raf/type.h"
+#include "raf/value.h"
+#include "raf/ir_ext.h"
 #include "../schema/vm.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace type {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using namespace schema;
-using namespace mnm::value;
+using namespace raf::value;
 
 Type AllocStorageInfer(const CallValues& value) {
   const auto* args = value->args.as<AllocStorageArgs>();
@@ -31,7 +31,7 @@ Type AllocStorageInfer(const CallValues& value) {
   return TensorType::Scalar(dtype);
 }
 
-MNM_OP_TYPE("mnm.op.vm.alloc_storage", "AllocStorage", AllocStorageInfer);
+RAF_OP_TYPE("raf.op.vm.alloc_storage", "AllocStorage", AllocStorageInfer);
 
 Type AllocTensorInfer(const CallValues& value) {
   const auto* args = value->args.as<AllocTensorArgs>();
@@ -50,7 +50,7 @@ Type AllocTensorInfer(const CallValues& value) {
   return TensorType(out_shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.vm.alloc_tensor", "AllocTensor", AllocTensorInfer);
+RAF_OP_TYPE("raf.op.vm.alloc_tensor", "AllocTensor", AllocTensorInfer);
 
 Type EmptyTypeInfer(const CallValues& value) {
   // The return value of certain ops are implicitly written into the output tensor
@@ -59,11 +59,11 @@ Type EmptyTypeInfer(const CallValues& value) {
   return TupleType::Empty();
 }
 
-MNM_OP_TYPE("mnm.op.vm.free", "Free", EmptyTypeInfer);
-MNM_OP_TYPE("mnm.op.vm.invoke_op", "InvokeOp", EmptyTypeInfer);
+RAF_OP_TYPE("raf.op.vm.free", "Free", EmptyTypeInfer);
+RAF_OP_TYPE("raf.op.vm.invoke_op", "InvokeOp", EmptyTypeInfer);
 
 Type InferTypeInfer(const CallValues& value) {
-  static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+  static auto fschema = Op::GetAttrMap<op::FRAFSchema>("FRAFSchema");
   const auto* args = value->args.as<InferTypeArgs>();
   CHECK(args != nullptr);
   Type ret_type;
@@ -78,7 +78,7 @@ Type InferTypeInfer(const CallValues& value) {
     TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
     ret_type = ti->func(call_values);
   }
-  // use fake type for mnm values
+  // use fake type for raf values
   Array<Type> ret_tup;
   static auto fake_type = TensorType::Scalar(DataType::Int(64));
   if (ret_type->IsInstance<TensorTypeNode>()) {
@@ -91,7 +91,7 @@ Type InferTypeInfer(const CallValues& value) {
   return TupleType(ret_tup);
 }
 
-MNM_OP_TYPE("mnm.op.vm.infer_type", "InferType", InferTypeInfer);
+RAF_OP_TYPE("raf.op.vm.infer_type", "InferType", InferTypeInfer);
 
 Type SetShapeInfer(const CallValues& value) {
   const auto* args = value->args.as<SetShapeArgs>();
@@ -111,8 +111,8 @@ Type SetShapeInfer(const CallValues& value) {
   return TensorType::Scalar(DataType::Int(64));
 }
 
-MNM_OP_TYPE("mnm.op.vm.set_shape", "SetShape", SetShapeInfer);
+RAF_OP_TYPE("raf.op.vm.set_shape", "SetShape", SetShapeInfer);
 
 }  // namespace type
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -5,30 +5,30 @@
 
 /*!
  * \file src/impl/op.cc
- * \brief MNM operator interface underlying implementation
+ * \brief RAF operator interface underlying implementation
  */
 #include <tvm/runtime/device_api.h>
 #include "dmlc/registry.h"
-#include "mnm/executor.h"
-#include "mnm/ir.h"
-#include "mnm/op.h"
-#include "mnm/dialect.h"
-#include "mnm/registry.h"
-#include "mnm/pass.h"
-#include "mnm/value.h"
-#include "mnm/device_api.h"
+#include "raf/executor.h"
+#include "raf/ir.h"
+#include "raf/op.h"
+#include "raf/dialect.h"
+#include "raf/registry.h"
+#include "raf/pass.h"
+#include "raf/value.h"
+#include "raf/device_api.h"
 #include "../requests.h"
 #include "../op/schema/list_args.h"
 
 namespace dmlc {
-DMLC_REGISTRY_ENABLE(::mnm::op::OpEnvMaker);
+DMLC_REGISTRY_ENABLE(::raf::op::OpEnvMaker);
 }  // namespace dmlc
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using executor::Executor;
 using requests::Requests;
 
@@ -92,7 +92,7 @@ std::shared_ptr<Requests> OpEnv::GetRequests() const {
 }
 
 void OpEnv::SetStreamForAllBackends(Device device, void* stream) {
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
   device_api::DeviceAPI::Get(DevType::kCUDA())->SetStream(device, stream);
 #endif
 }
@@ -178,7 +178,7 @@ std::shared_ptr<OpEnv> DispatchFusedOp(const CallValues& call) {
   ICHECK(dialect.defined()) << "Fused function doesn't have dialect attribute: "
                             << ir::AsText(func);
   std::ostringstream os;
-  os << "mnm.op." << dialect.value() << "._fused_op";
+  os << "raf.op." << dialect.value() << "._fused_op";
   return OpEnvMaker::Make(os.str(), call);
 }
 
@@ -221,7 +221,7 @@ CallValues CreateDummyCallValues(Call call, Device device) {
     auto op = GetRef<Op>(op_node);
     CHECK_NOTNULL(op_node);
     call_values->callee = OpValue::make(GetRef<Op>(op_node));
-    call_values->args = GetOpAttr<FMNMSchema>(op, "FMNMSchema")(inputs);
+    call_values->args = GetOpAttr<FRAFSchema>(op, "FRAFSchema")(inputs);
   }
   call_values->device = device;
   call_values->out = output;
@@ -273,7 +273,7 @@ Op GetOp(const std::string& op_name) {
   return Op::Get(op_name);
 }
 
-MNM_REGISTER_GLOBAL("mnm.op.GetOp").set_body_typed(GetOp);
+RAF_REGISTER_GLOBAL("raf.op.GetOp").set_body_typed(GetOp);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

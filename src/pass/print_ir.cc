@@ -7,10 +7,10 @@
  * \file print_ir.cc
  * \brief Printing out the IR to LOG(INFO) in a sequential pass.
  */
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
 Pass PrintIR(const std::string& header, bool show_meta_data) {
@@ -21,7 +21,7 @@ Pass PrintIR(const std::string& header, bool show_meta_data) {
   return CreateModulePass(pass_func, 0, "PrintIR", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.PrintIR").set_body_typed(PrintIR);
+RAF_REGISTER_GLOBAL("raf.pass_.PrintIR").set_body_typed(PrintIR);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

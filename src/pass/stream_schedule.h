@@ -8,10 +8,10 @@
  * \brief Base class of all stream scheduler.
  */
 #pragma once
-#include "mnm/ir.h"
+#include "raf/ir.h"
 #include "./let_list.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace stream_schedule {
 
@@ -66,7 +66,7 @@ class StreamSchedulerBase : public ExprMutator {
 
  protected:
   Expr AnnotateSetStream(int64_t device_id, int64_t stream_id) {
-    static Op op = Op::Get("mnm.op.set_stream");
+    static Op op = Op::Get("raf.op.set_stream");
     Expr device_id_e = MakeConstant(value::ScalarValue::make(device_id));
     Expr stream_id_e = MakeConstant(value::ScalarValue::make(stream_id));
     Array<Expr> args({device_id_e, stream_id_e});
@@ -74,21 +74,21 @@ class StreamSchedulerBase : public ExprMutator {
   }
 
   Expr AnnotateAddEvent(int64_t event_id) {
-    static Op op = Op::Get("mnm.op.add_event");
+    static Op op = Op::Get("raf.op.add_event");
     Expr event_id_e = MakeConstant(value::ScalarValue::make(event_id));
     Array<Expr> args({event_id_e});
     return let_list_.Push(Call(op, args));
   }
 
   Expr AnnotateWaitEvent(int64_t event_id) {
-    static Op op = Op::Get("mnm.op.wait_event");
+    static Op op = Op::Get("raf.op.wait_event");
     Expr event_id_e = MakeConstant(value::ScalarValue::make(event_id));
     Array<Expr> args({event_id_e});
     return let_list_.Push(Call(op, args));
   }
 
   Expr AnnotateStreamBarrier() {
-    static Op op = Op::Get("mnm.op.stream_barrier");
+    static Op op = Op::Get("raf.op.stream_barrier");
     return let_list_.Push(Call(op, {}));
   }
 
@@ -97,4 +97,4 @@ class StreamSchedulerBase : public ExprMutator {
 
 }  // namespace stream_schedule
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

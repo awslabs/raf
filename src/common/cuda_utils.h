@@ -13,7 +13,7 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
-#include "mnm/device.h"
+#include "raf/device.h"
 
 #define CUDA_CALL(func)                                           \
   do {                                                            \
@@ -82,7 +82,7 @@ inline std::shared_ptr<void> shared_addr(cudaDataType_t dt, float value) {
   throw;
 }
 
-namespace mnm {
+namespace raf {
 
 template <>
 inline DType::operator cudaDataType_t() const {
@@ -103,4 +103,4 @@ inline DType::operator cudaDataType_t() const {
   throw;
 }
 
-}  // namespace mnm
+}  // namespace raf

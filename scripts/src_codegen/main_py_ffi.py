@@ -14,7 +14,7 @@ def gen_internal_file(apis):
 # pylint: disable=invalid-name,redefined-builtin,line-too-long
 # pylint: disable=missing-class-docstring,missing-function-docstring
 \"\"\"Auto generated. Do not touch.\"\"\"
-from mnm._lib import _APIS
+from raf._lib import _APIS
 {APIs}
 """.strip()
     apis = "\n".join(map(gen_api, sorted(apis, key=lambda api: api.name)))
@@ -56,7 +56,7 @@ from . import {NAME}
     return FILE.format(INTERNALS=internals, DIRS=dirs)
 
 
-def main(path_prefix="./python/mnm/_ffi/"):
+def main(path_prefix="./python/raf/_ffi/"):
     api_files = defaultdict(list)
     # collect apis to their corresponding bins
     for api in def_api.get():

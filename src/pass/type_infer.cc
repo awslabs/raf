@@ -11,26 +11,26 @@
 #include <tvm/ir/module.h>
 #include <tvm/ir/type_functor.h>
 #include <tvm/tir/op.h>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/pass_manager.h"
-#include "mnm/binding.h"
-#include "mnm/type.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/pass_manager.h"
+#include "raf/binding.h"
+#include "raf/type.h"
 #include "./common.h"
 #include "../op/ty/utils.h"
 #include "tvm/node/structural_equal.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace type_infer {
 
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::op;
+using namespace raf::value;
 
 Type Unify(const Type& src, const Type& dst);
 
-#define MNM_NODE_NOT_IMPL(NodeType)                     \
+#define RAF_NODE_NOT_IMPL(NodeType)                     \
   Expr VisitExpr_(const NodeType* node) override {      \
     LOG(FATAL) << "NotImplementedError: " << #NodeType; \
     throw;                                              \
@@ -38,9 +38,9 @@ Type Unify(const Type& src, const Type& dst);
 
 class TypeInferencer : public ExprMutator {
  public:
-  MNM_NODE_NOT_IMPL(RefReadNode)
-  MNM_NODE_NOT_IMPL(RefWriteNode)
-  MNM_NODE_NOT_IMPL(RefCreateNode)
+  RAF_NODE_NOT_IMPL(RefReadNode)
+  RAF_NODE_NOT_IMPL(RefWriteNode)
+  RAF_NODE_NOT_IMPL(RefCreateNode)
 
  public:
   TypeInferencer(IRModule& mod) : mod_(mod) {
@@ -81,13 +81,13 @@ class TypeInferencer : public ExprMutator {
         arg_values.push_back(GetValue(arg));
       }
     }
-    call_values->args = GetOpAttr<op::FMNMSchema>(GetRef<Op>(op), "FMNMSchema")(arg_values);
+    call_values->args = GetOpAttr<op::FRAFSchema>(GetRef<Op>(op), "FRAFSchema")(arg_values);
     call_values->callee = OpValue::make(GetRef<Op>(op));
     return call_values;
   }
 
   Expr VisitExpr_(const CallNode* call) override {
-    static const Op& invoke_op = Op::Get("mnm.op.vm.invoke_op");
+    static const Op& invoke_op = Op::Get("raf.op.vm.invoke_op");
     const OpNode* opn = call->op.as<OpNode>();
 
     if (opn && GetRef<Op>(opn) == invoke_op) {
@@ -109,7 +109,7 @@ class TypeInferencer : public ExprMutator {
       args.push_back(VisitExpr(arg));
     }
 
-    static const auto declare_op = Op::GetAttrMap<op::FMNMDeclare>("FMNMDeclare");
+    static const auto declare_op = Op::GetAttrMap<op::FRAFDeclare>("FRAFDeclare");
     // We do constant-folding for shape-related operators by invoking their declare function,
     // because they produce shape information which is required by type inference.
     // The arguments (SchemaToValue(args)) passed to declare function
@@ -117,7 +117,7 @@ class TypeInferencer : public ExprMutator {
     // they have already been evaluated/constant-folded.
     // Therefore it is essential to deal with both cases in their declare functions.
     static std::unordered_set<std::string> shape_list{
-        "mnm.op.shape", "mnm.op.get_reduce_axis", "mnm.op.get_kept_dims", "mnm.op.concatenate_dx"};
+        "raf.op.shape", "raf.op.get_reduce_axis", "raf.op.get_kept_dims", "raf.op.concatenate_dx"};
     if (opn && shape_list.count(opn->name)) {
       CallValues call_values = SchemaToValue(args, opn);
       declare_op[GetRef<Op>(opn)](call_values);
@@ -187,7 +187,7 @@ class TypeInferencer : public ExprMutator {
       return ti->func(call_values);
     } catch (const dmlc::Error& e) {
       LOG(FATAL) << "Failed to infer type of the following primitive: " << std::endl
-                 << mnm::ir::AsText(call) << std::endl
+                 << raf::ir::AsText(call) << std::endl
                  << std::endl
                  << e.what();
     }
@@ -615,7 +615,7 @@ Expr InferTypeWithModule(const Expr& expr, const IRModule& m) {
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InferType").set_body_typed([]() { return InferType(); });
+RAF_REGISTER_GLOBAL("raf.pass_.InferType").set_body_typed([]() { return InferType(); });
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

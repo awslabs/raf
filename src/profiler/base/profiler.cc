@@ -5,12 +5,12 @@
 
 /*!
  * \file src/profiler/base/profiler.cc
- * \brief MNM profiler, a simple implementation
+ * \brief RAF profiler, a simple implementation
  */
-#include "mnm/registry.h"
-#include "mnm/profiler.h"
+#include "raf/registry.h"
+#include "raf/profiler.h"
 
-namespace mnm {
+namespace raf {
 namespace profiler {
 
 Profiler::Profiler() {
@@ -139,10 +139,10 @@ std::string GetProfile() {
   return Profiler::Get()->GetProfile();
 }
 
-MNM_REGISTER_GLOBAL("mnm.profiler.EnableProfiler").set_body_typed(EnableProfiler);
-MNM_REGISTER_GLOBAL("mnm.profiler.DisableProfiler").set_body_typed(DisableProfiler);
-MNM_REGISTER_GLOBAL("mnm.profiler.CollectBaseProfile").set_body_typed(CollectBaseProfile);
-MNM_REGISTER_GLOBAL("mnm.profiler.GetProfile").set_body_typed(GetProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.EnableProfiler").set_body_typed(EnableProfiler);
+RAF_REGISTER_GLOBAL("raf.profiler.DisableProfiler").set_body_typed(DisableProfiler);
+RAF_REGISTER_GLOBAL("raf.profiler.CollectBaseProfile").set_body_typed(CollectBaseProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.GetProfile").set_body_typed(GetProfile);
 
 }  // namespace profiler
-}  // namespace mnm
+}  // namespace raf

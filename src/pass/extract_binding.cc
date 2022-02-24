@@ -7,18 +7,18 @@
  * \file extract_binding.cc
  * \brief Extracting a relay body from frontend defined binding
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/binding.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/binding.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace extract_binding {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::binding;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::binding;
 
 class Extractor final : public ExprVisitor {
  public:
@@ -147,7 +147,7 @@ Expr ExtractBinding(const Var& var, const Array<Var>& ignore) {
   return Extractor(ignore).Run(var);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ExtractBinding").set_body_typed(ExtractBinding);
+RAF_REGISTER_GLOBAL("raf.pass_.ExtractBinding").set_body_typed(ExtractBinding);
 }  // namespace extract_binding
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

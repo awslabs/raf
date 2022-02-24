@@ -8,10 +8,10 @@
  * \brief Helper functions for gradients
  */
 #pragma once
-#include "mnm/ir.h"
-#include "mnm/op.h"
+#include "raf/ir.h"
+#include "raf/op.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace grad {
 
@@ -25,4 +25,4 @@ ir::Array<ir::Expr> NoGrads(const ir::Expr& orig_call, const ir::Array<ir::Expr>
 
 }  // namespace grad
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -5,31 +5,31 @@
 
 /*!
  * \file src/op/regs/value2schema.h
- * \brief Converters from values to MNM operator schemas
+ * \brief Converters from values to RAF operator schemas
  */
 #pragma once
 #include <string>
 #include <vector>
-#include "mnm/value.h"
+#include "raf/value.h"
 #include "./regs_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace value2schema {
 
-using mnm::ir::Array;
+using raf::ir::Array;
 
-#define MNM_PRELUDE_ALLOW_NULL() \
-  using namespace mnm::value;    \
-  using namespace mnm::ir;       \
+#define RAF_PRELUDE_ALLOW_NULL() \
+  using namespace raf::value;    \
+  using namespace raf::ir;       \
   if (!a.defined()) {            \
     return {};                   \
   }
 
-#define MNM_PRELUDE_DISALLOW_NULL(type)                                             \
-  using namespace mnm::value;                                                       \
-  using namespace mnm::ir;                                                          \
+#define RAF_PRELUDE_DISALLOW_NULL(type)                                             \
+  using namespace raf::value;                                                       \
+  using namespace raf::ir;                                                          \
   if (!a.defined()) {                                                               \
     LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\""             \
                << " is undefined (NULL), but is required to be of type " << (type); \
@@ -37,7 +37,7 @@ using mnm::ir::Array;
   }
 
 inline value::Value ArrayLike(const value::Value& a) {
-  MNM_PRELUDE_ALLOW_NULL();
+  RAF_PRELUDE_ALLOW_NULL();
   if (a->IsInstance<IntValueObj>() || a->IsInstance<FloatValueObj>() ||
       a->IsInstance<BoolValueObj>() || a->IsInstance<BaseTensorValueObj>() ||
       a->IsInstance<TupleValueObj>() || a->IsInstance<VoidValueObj>() ||
@@ -57,7 +57,7 @@ inline ir::Optional<value::Value> OptionalArrayLike(const value::Value& a) {
 }
 
 inline value::BaseTensorValue Tensor(const value::Value& a) {
-  MNM_PRELUDE_ALLOW_NULL();
+  RAF_PRELUDE_ALLOW_NULL();
   if (const auto* v = a.as<BaseTensorValueObj>()) {
     return GetRef<BaseTensorValue>(v);
   }
@@ -74,7 +74,7 @@ inline ir::Optional<value::BaseTensorValue> OptionalTensor(const value::Value& a
 }
 
 inline int64_t Int(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("an integer");
+  RAF_PRELUDE_DISALLOW_NULL("an integer");
   if (const auto* v = a.as<IntValueObj>()) {
     return v->value;
   }
@@ -83,7 +83,7 @@ inline int64_t Int(const value::Value& a) {
   throw;
 }
 inline bool Bool(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("boolean");
+  RAF_PRELUDE_DISALLOW_NULL("boolean");
   if (const auto* v = a.as<BoolValueObj>()) {
     return v->value;
   }
@@ -92,7 +92,7 @@ inline bool Bool(const value::Value& a) {
   throw;
 }
 inline double Double(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("double");
+  RAF_PRELUDE_DISALLOW_NULL("double");
   if (const auto* v = a.as<FloatValueObj>()) {
     return v->value;
   }
@@ -104,7 +104,7 @@ inline double Double(const value::Value& a) {
   throw;
 }
 inline std::string String(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("string");
+  RAF_PRELUDE_DISALLOW_NULL("string");
   if (const auto* v = a.as<StringValueObj>()) {
     return v->value;
   }
@@ -114,7 +114,7 @@ inline std::string String(const value::Value& a) {
 }
 
 inline std::vector<int64_t> TupleInt(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("tuple of integers");
+  RAF_PRELUDE_DISALLOW_NULL("tuple of integers");
   if (const auto* v = a.as<TupleValueObj>()) {
     std::vector<int64_t> ret;
     ret.reserve(v->fields.size());
@@ -136,7 +136,7 @@ inline std::vector<int64_t> TupleInt(const value::Value& a) {
 }
 
 inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("an integer or tuple of integers");
+  RAF_PRELUDE_DISALLOW_NULL("an integer or tuple of integers");
   if (const auto* v = a.as<IntValueObj>()) {
     return {v->value};
   }
@@ -161,7 +161,7 @@ inline std::vector<int64_t> IntOrTupleInt(const value::Value& a) {
 }
 
 inline ir::Optional<Array<value::IntValue>> IntArray(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("array of integers");
+  RAF_PRELUDE_DISALLOW_NULL("array of integers");
   if (const auto* v = a.as<IntValueObj>()) {
     return Array<value::IntValue>{value::IntValue::make(v->dtype, v->value)};
   }
@@ -188,7 +188,7 @@ inline ir::Optional<Array<value::IntValue>> IntArray(const value::Value& a) {
 }
 
 inline std::vector<value::BaseTensorValue> TupleTensor(const value::Value& a) {
-  MNM_PRELUDE_DISALLOW_NULL("tuple of tensors");
+  RAF_PRELUDE_DISALLOW_NULL("tuple of tensors");
   if (const auto* v = a.as<TupleValueObj>()) {
     std::vector<BaseTensorValue> ret;
     ret.reserve(v->fields.size());
@@ -209,10 +209,10 @@ inline std::vector<value::BaseTensorValue> TupleTensor(const value::Value& a) {
   throw;
 }
 
-#undef MNM_PRELUDE_DISALLOW_NULL
-#undef MNM_PRELUDE_ALLOW_NULL
+#undef RAF_PRELUDE_DISALLOW_NULL
+#undef RAF_PRELUDE_ALLOW_NULL
 
 }  // namespace value2schema
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

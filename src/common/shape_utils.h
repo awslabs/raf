@@ -9,11 +9,11 @@
  */
 #pragma once
 #include <vector>
-#include "mnm/ir.h"
-#include "mnm/op.h"
-#include "mnm/value.h"
+#include "raf/ir.h"
+#include "raf/op.h"
+#include "raf/value.h"
 
-namespace mnm {
+namespace raf {
 namespace common {
 namespace shape_utils {
 
@@ -216,4 +216,4 @@ inline int64_t BytesCompactType(const Type& type) {
 
 }  // namespace shape_utils
 }  // namespace common
-}  // namespace mnm
+}  // namespace raf

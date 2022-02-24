@@ -10,19 +10,19 @@
 #include <sstream>
 
 #include "cutlass/library/singleton.h"
-#include "mnm/memory_pool.h"
-#include "mnm/value.h"
+#include "raf/memory_pool.h"
+#include "raf/value.h"
 
 #include "./cutlass_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 
-MNM_REGISTER_DIALECT("cutlass").set_enable(DevType::kCUDA());
+RAF_REGISTER_DIALECT("cutlass").set_enable(DevType::kCUDA());
 
 CutlassOpEnv::CutlassOpEnv(const CallValues& call) : device_(call->device) {
   CUDA_CALL(cudaGetDeviceProperties(&device_prop_, device_.device_id()));
@@ -111,13 +111,13 @@ DType GetAccumulationDType(DType dtype) {
 }
 
 // Register auxilary ops
-MNM_REGISTER_DIALECT_OP(cutlass, add, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, subtract, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, multiply, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, divide, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, relu, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, gelu, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, add, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, subtract, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, multiply, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, divide, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, relu, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, gelu, 0);
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

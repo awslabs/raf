@@ -11,16 +11,16 @@
 
 #include <dlpack/dlpack.h>
 
-#include <mnm/device.h>
-#include <mnm/tensor.h>
+#include <raf/device.h>
+#include <raf/tensor.h>
 
-using mnm::Device;
-using mnm::DevType;
-using mnm::DType;
-using mnm::DTypeCode;
-using mnm::tensor::Tensor;
+using raf::Device;
+using raf::DevType;
+using raf::DType;
+using raf::DTypeCode;
+using raf::tensor::Tensor;
 
-class MNMTester {
+class RAFTester {
  public:
   static int use_count(const Tensor& tensor) {
     return tensor.use_count();
@@ -46,8 +46,8 @@ TEST(Tensor, make_no_strides_no_data) {
   const int ndim = 3;
   Device dev(DevType::kCPU(), 0);        // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
-  std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
-  std::vector<int64_t> strides = MNMTester::CalcStrides(shape);
+  std::vector<int64_t> shape = RAFTester::RandomShape(ndim);
+  std::vector<int64_t> strides = RAFTester::CalcStrides(shape);
   // call make
   Tensor tensor = Tensor::make(dev, dtype, shape);
   // check ndim
@@ -68,7 +68,7 @@ TEST(Tensor, make_no_strides_no_data) {
   // check byte_offset
   ASSERT_EQ(tensor->byte_offset, 0);
   // check use_count
-  ASSERT_EQ(MNMTester::use_count(tensor), 1);
+  ASSERT_EQ(RAFTester::use_count(tensor), 1);
 }
 
 TEST(Tensor, make_no_strides) {
@@ -76,8 +76,8 @@ TEST(Tensor, make_no_strides) {
   void* data = (void*)0x0001;
   Device dev(DevType::kCPU(), 0);        // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
-  std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
-  std::vector<int64_t> strides = MNMTester::CalcStrides(shape);
+  std::vector<int64_t> shape = RAFTester::RandomShape(ndim);
+  std::vector<int64_t> strides = RAFTester::CalcStrides(shape);
   // call make
   Tensor tensor = Tensor::make(dev, dtype, shape, {}, data);
   // check ndim
@@ -98,7 +98,7 @@ TEST(Tensor, make_no_strides) {
   // check byte_offset
   ASSERT_EQ(tensor->byte_offset, 0);
   // check use_count
-  ASSERT_EQ(MNMTester::use_count(tensor), 1);
+  ASSERT_EQ(RAFTester::use_count(tensor), 1);
 }
 
 TEST(Tensor, make_given_all_fields) {
@@ -106,8 +106,8 @@ TEST(Tensor, make_given_all_fields) {
   void* data = (void*)0x0001;
   Device dev(DevType::kCPU(), 0);        // cpu(0)
   DType dtype(DTypeCode::kFloat(), 16);  // float16
-  std::vector<int64_t> shape = MNMTester::RandomShape(ndim);
-  std::vector<int64_t> strides = MNMTester::RandomShape(ndim);
+  std::vector<int64_t> shape = RAFTester::RandomShape(ndim);
+  std::vector<int64_t> strides = RAFTester::RandomShape(ndim);
   // call make
   Tensor tensor = Tensor::make(dev, dtype, shape, strides, data);
   // check ndim
@@ -128,7 +128,7 @@ TEST(Tensor, make_given_all_fields) {
   // check byte_offset
   ASSERT_EQ(tensor->byte_offset, 0);
   // check use_count
-  ASSERT_EQ(MNMTester::use_count(tensor), 1);
+  ASSERT_EQ(RAFTester::use_count(tensor), 1);
 }
 
 int main(int argc, char** argv) {

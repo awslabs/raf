@@ -9,11 +9,11 @@
  */
 #include <atomic>
 #include <tvm/relay/transform.h>
-#include "mnm/device_api.h"
-#include "mnm/memory_pool.h"
-#include "mnm/registry.h"
+#include "raf/device_api.h"
+#include "raf/memory_pool.h"
+#include "raf/registry.h"
 
-namespace mnm {
+namespace raf {
 namespace memory_pool {
 namespace page_unit_pool {
 
@@ -209,7 +209,7 @@ class PageUnitPool : public MemoryPool {
  public:
   static void* make(const Device& dev) {
     int64_t max_pool_limit = 0;
-    if (const char* val = getenv("MNM_MEMORY_POOL_SIZE_LIMIT")) {
+    if (const char* val = getenv("RAF_MEMORY_POOL_SIZE_LIMIT")) {
       max_pool_limit = atol(val);
     }
     return new PageUnitPool(dev, max_pool_limit);
@@ -229,10 +229,10 @@ class PageUnitPool : public MemoryPool {
   std::unordered_map<int64_t, std::list<std::shared_ptr<Memory>>> _pool;
 };
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.page_unit_pool").set_body_typed([](const Device& dev) {
+RAF_REGISTER_GLOBAL("raf.memory_pool._make.page_unit_pool").set_body_typed([](const Device& dev) {
   return PageUnitPool::make(dev);
 });
 
 }  // namespace page_unit_pool
 }  // namespace memory_pool
-}  // namespace mnm
+}  // namespace raf

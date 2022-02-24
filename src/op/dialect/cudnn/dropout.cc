@@ -7,22 +7,22 @@
  * \file src/op/dialect/cudnn/dropout.cc
  * \brief cuDNN dropout operators.
  */
-#include "mnm/ir.h"
-#include "mnm/registry.h"
-#include "mnm/op_utils.h"
-#include "mnm/device.h"
-#include "mnm/device_api.h"
+#include "raf/ir.h"
+#include "raf/registry.h"
+#include "raf/op_utils.h"
+#include "raf/device.h"
+#include "raf/device_api.h"
 #include "../../../common/cuda_utils.h"
 #include "../../schema/nn.h"
 #include "./cudnn_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cudnn {
 
-using namespace mnm::ir;
-using namespace mnm::memory_pool;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::memory_pool;
+using namespace raf::value;
 
 int64_t GetDropoutStateSizeInBytes() {
   size_t stateSizeInBytes;
@@ -55,15 +55,15 @@ TensorValue GetDropoutState(double dropout, int64_t seed) {
   return state;
 }
 
-MNM_REGISTER_GLOBAL("mnm.backend.cudnn.GetDropoutStateSizeInBytes")
+RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutStateSizeInBytes")
     .set_body_typed(GetDropoutStateSizeInBytes);
-MNM_REGISTER_GLOBAL("mnm.backend.cudnn.GetDropoutState").set_body_typed(GetDropoutState);
-MNM_REGISTER_GLOBAL("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")
+RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState").set_body_typed(GetDropoutState);
+RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")
     .set_body_typed(GetDropoutReserveSpaceSizeInBytes);
 
-static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
-class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
+class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
   cudnnDropoutDescriptor_t dropoutDesc;
   cudnnTensorDescriptor_t xdesc;
   cudnnTensorDescriptor_t ydesc;
@@ -72,12 +72,12 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
   size_t reserveSpaceSizeInBytes;
 
   explicit DropoutImplementedByCUDNNDropoutForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op._contrib_dropout");
+    auto op = Op::Get("raf.op._contrib_dropout");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("in_states"),
     };
-    auto args = cv->args.as<mnm::op::schema::DropoutArgs>();
+    auto args = cv->args.as<raf::op::schema::DropoutArgs>();
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* out = tv->fields[0];
@@ -101,11 +101,11 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn._contrib_dropout"));
+    return TruncateName(GetUniqueName("raf.op.cudnn._contrib_dropout"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::DropoutArgs>();
+    auto args = cv->args.as<raf::op::schema::DropoutArgs>();
     CHECK(args != nullptr);
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
@@ -134,10 +134,10 @@ class DropoutImplementedByCUDNNDropoutForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, _contrib_dropout, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn._contrib_dropout", DropoutImplementedByCUDNNDropoutForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, _contrib_dropout, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn._contrib_dropout", DropoutImplementedByCUDNNDropoutForward::make);
 
-class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
+class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
   cudnnDropoutDescriptor_t dropoutDesc;
   cudnnTensorDescriptor_t dxdesc;
   cudnnTensorDescriptor_t dydesc;
@@ -148,7 +148,7 @@ class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
 
   explicit DropoutImplementedByCUDNNDropoutBackward(const CallValues& cv) {
     this->arg_indices = {/*dy=*/0, /*reserve_space=*/1};
-    auto args = cv->args.as<mnm::op::schema::DropoutDxArgs>();
+    auto args = cv->args.as<raf::op::schema::DropoutDxArgs>();
     DLTensor* dx = cv->out;
     DLTensor* dy = args->dy;
     DLTensor* reserve_space = args->reserve_space;
@@ -172,11 +172,11 @@ class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn._contrib_dropout_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn._contrib_dropout_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::DropoutDxArgs>();
+    auto args = cv->args.as<raf::op::schema::DropoutDxArgs>();
     CHECK(args != nullptr);
     DLTensor* dx = cv->out;
     DLTensor* dy = args->dy;
@@ -203,10 +203,10 @@ class DropoutImplementedByCUDNNDropoutBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, _contrib_dropout_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn._contrib_dropout_dx",
+RAF_REGISTER_DIALECT_OP(cudnn, _contrib_dropout_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn._contrib_dropout_dx",
                  DropoutImplementedByCUDNNDropoutBackward::make);
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

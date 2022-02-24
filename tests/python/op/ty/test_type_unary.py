@@ -3,10 +3,10 @@
 
 # pylint: disable=protected-access
 import pytest
-import mnm
-from mnm._ffi.pass_ import AutoDiff, InferType
-from mnm._op import sym
-from mnm.testing import check_type, randn
+import raf
+from raf._ffi.pass_ import AutoDiff, InferType
+from raf._op import sym
+from raf.testing import check_type, randn
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -51,12 +51,12 @@ from tvm.relay import TensorType, FuncType, TupleType
 def test_unary(op, shape, dtype):
     op, backward = op
 
-    class Unary(mnm.Model):
+    class Unary(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             return op(x)
 

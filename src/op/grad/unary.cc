@@ -9,15 +9,15 @@
  */
 #include "./grad_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace grad {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
-MNM_OP_GRAD("mnm.op.numel", NoGrads<1>);
-MNM_OP_GRAD("mnm.op.shape_as_tensor", NoGrads<1>);
+RAF_OP_GRAD("raf.op.numel", NoGrads<1>);
+RAF_OP_GRAD("raf.op.shape_as_tensor", NoGrads<1>);
 
 }  // namespace grad
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

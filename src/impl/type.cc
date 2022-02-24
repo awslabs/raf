@@ -8,14 +8,14 @@
  * \brief Type system
  */
 #include "tvm/runtime/memory.h"
-#include "mnm/type.h"
+#include "raf/type.h"
 
-namespace mnm {
+namespace raf {
 namespace ir {
 
 OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
                   tvm::runtime::TypedPackedFunc<tvm::relay::Type(const op::CallValues& value)> fn) {
-  auto func_name = std::string("mnm.type.type_inference.") + fn_name;
+  auto func_name = std::string("raf.type.type_inference.") + fn_name;
   TypeInferenceFn env_fn;
 
   if (tvm::runtime::Registry::Get(func_name)) {
@@ -57,7 +57,7 @@ TypeInference::TypeInference(TypeInferenceFn func) {
   data_ = std::move(n);
 }
 
-MNM_REGISTER_OBJECT_REFLECT(TypeInferenceNode);
+RAF_REGISTER_OBJECT_REFLECT(TypeInferenceNode);
 
 }  // namespace ir
-}  // namespace mnm
+}  // namespace raf

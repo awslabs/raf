@@ -12,13 +12,13 @@
  * ZeRO-2: Replace the allreduce inserted by AutoDataParallel with reduce_scatter to obtain only
  *         a partition of gradients.
  */
-#include "mnm/pass.h"
+#include "raf/pass.h"
 
 #include "./common.h"
 #include "./let_list.h"
 #include "../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace partition_gradient {
 
@@ -126,7 +126,7 @@ class GradientPartitioner : public ExprMutator {
  private:
   /*! \brief Check whether a given expression is a call expression with all_reduce. */
   inline bool IsAllReduceCall(const Expr& expr) {
-    static const Op& allreduce_op = Op::Get("mnm.op._allreduce");
+    static const Op& allreduce_op = Op::Get("raf.op._allreduce");
     if (!expr->IsInstance<CallNode>()) {
       return false;
     }
@@ -144,7 +144,7 @@ class GradientPartitioner : public ExprMutator {
     Expr divide_expr = Expr();
 
     if (expr->IsInstance<CallNode>()) {
-      static const Op& divide_op = Op::Get("mnm.op.divide");
+      static const Op& divide_op = Op::Get("raf.op.divide");
       auto call_node = expr.as<CallNode>();
       auto node = call_node->op.as<OpNode>();
       if (IsAllReduceCall(expr)) {
@@ -165,7 +165,7 @@ class GradientPartitioner : public ExprMutator {
     CHECK(expr->IsInstance<CallNode>());
     auto call = Downcast<Call>(expr);
     CHECK_GE(call->args.size(), n)
-        << "Expected at least " << n << " argument, but got " << mnm::ir::AsText(expr);
+        << "Expected at least " << n << " argument, but got " << raf::ir::AsText(expr);
     return call->args[n];
   }
 
@@ -174,7 +174,7 @@ class GradientPartitioner : public ExprMutator {
    * This helper function analyzes the tensor size and generates the pad call if needed.
    * */
   inline Var GenPadCall(LetList* scope, const Var& var) {
-    static const Op& pad_op = Op::Get("mnm.op.pad");
+    static const Op& pad_op = Op::Get("raf.op.pad");
 
     // Extract the length of the first dimension.
     auto ttype = var->checked_type().as<TensorTypeNode>();
@@ -226,8 +226,8 @@ class GradientPartitioner : public ExprMutator {
    * let %5 = divide(%4, ...)
    */
   Var SliceGrad(LetList* scope, const Var& var, const Expr& value, int opt_level) {
-    static const Op& split_op = Op::Get("mnm.op.split");
-    static const Op& reduce_scatter_op = Op::Get("mnm.op._reduce_scatter");
+    static const Op& split_op = Op::Get("raf.op.split");
+    static const Op& reduce_scatter_op = Op::Get("raf.op._reduce_scatter");
     Expr allreduce_expr, divide_expr;
     std::tie(allreduce_expr, divide_expr) = GetAllReduceExpr(value);
     if (opt_level_ > 1 && !allreduce_expr.defined()) {
@@ -298,12 +298,12 @@ Pass PartitionGradient(int opt_level, int n_part, int rank) {
                                                                              PassContext pc) {
     return partition_gradient::GradientPartitioner(opt_level, n_part, f).Partition(rank);
   };
-  auto partition_gradient = CreateMNMFunctionPass(pass_func, 0, "PartitionGradientFunc", {});
-  return MNMSequential({partition_gradient, EraseType(), DeadCodeElimination()},
+  auto partition_gradient = CreateRAFFunctionPass(pass_func, 0, "PartitionGradientFunc", {});
+  return RAFSequential({partition_gradient, EraseType(), DeadCodeElimination()},
                        "PartitionGradient");
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.PartitionGradient").set_body_typed(PartitionGradient);
+RAF_REGISTER_GLOBAL("raf.pass_.PartitionGradient").set_body_typed(PartitionGradient);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

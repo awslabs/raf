@@ -40,16 +40,16 @@ def gen_file(filename):
 #include "../schema/list_args.h"
 {INCLUDES}
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::registry;
-using namespace mnm::binding;
-using mnm::op::FMNMSchema;
-using mnm::op::FMNMSchemaFieldIndex;
-using mnm::executor::interpreter::InvokePrimitive;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::registry;
+using namespace raf::binding;
+using raf::op::FRAFSchema;
+using raf::op::FRAFSchemaFieldIndex;
+using raf::executor::interpreter::InvokePrimitive;
 
 // Part 0. Op names
-namespace mnm {{
+namespace raf {{
 namespace op {{
 namespace regs {{
 namespace names {{
@@ -57,7 +57,7 @@ namespace names {{
 }}  // namespace names
 }}  // namespace regs
 }}  // namespace op
-}}  // namespace mnm
+}}  // namespace raf
 
 // Part 1.1. FFI to schema (for each schema)
 {FFI_TO_SCHEMA_PRELUDE}
@@ -101,24 +101,24 @@ namespace names {{
 
 {SCHEMA_FIELD_IDX_EPILOG}
 
-// Part 3.3. FMNMSchema API, uses Part 3.1 and Part 3.2
-{F_MNM_SCHEMA_PRELUDE}
+// Part 3.3. FRAFSchema API, uses Part 3.1 and Part 3.2
+{F_RAF_SCHEMA_PRELUDE}
 
-{F_MNM_SCHEMAS}
+{F_RAF_SCHEMAS}
 
-{F_MNM_SCHEMA_EPILOG}
+{F_RAF_SCHEMA_EPILOG}
 
 // The last part: registering schemas
-namespace mnm {{
+namespace raf {{
 namespace op {{
 namespace schema {{
 namespace {{
-MNM_REGISTER_OBJECT_REFLECT(ListArgs);
+RAF_REGISTER_OBJECT_REFLECT(ListArgs);
 {SCHEMA_REGS}
 }}  // namespace
 }}  // namespace schema
 }}  // namespace op
-}}  // namespace mnm
+}}  // namespace raf
 """.strip()
     schema_headers = def_schema.by_file()
     ops = def_op.by_name()
@@ -144,8 +144,8 @@ MNM_REGISTER_OBJECT_REFLECT(ListArgs);
     value2schemas = "\n\n".join(map(gen_value_to_schema, schemas))
     # Part 3.2. Schema field index (for each schema)
     schema_field_idx = "\n\n".join(map(gen_schema_field_idx, schemas))
-    # Part 3.2. FMNMSchema API, uses "Part 3.1. Array<Value> to schema"
-    f_mnm_schemas = "\n".join(map(gen_f_mnm_schema, ops))
+    # Part 3.2. FRAFSchema API, uses "Part 3.1. Array<Value> to schema"
+    f_raf_schemas = "\n".join(map(gen_f_raf_schema, ops))
     # The last part: registering schemas
     schema_regs = "\n".join(map(gen_schema_reg, schemas))
     if filename.startswith("./"):
@@ -160,7 +160,7 @@ MNM_REGISTER_OBJECT_REFLECT(ListArgs);
         SYMBOLIC_APIS=symbolic_apis,
         VALUE_TO_SCHEMAS=value2schemas,
         SCHEMA_FIELD_IDX=schema_field_idx,
-        F_MNM_SCHEMAS=f_mnm_schemas,
+        F_RAF_SCHEMAS=f_raf_schemas,
         SCHEMA_REGS=schema_regs,
         **globals()
     )
@@ -175,14 +175,14 @@ def gen_include(filename):
 
 def gen_op_name(op):
     OP_NAME = """
-static const char {OP_VAR}[] = "mnm.op.{OP_NAME}";
+static const char {OP_VAR}[] = "raf.op.{OP_NAME}";
 """.strip()
     return OP_NAME.format(OP_VAR=op.name.replace(".", "_"), OP_NAME=op.name)
 
 
 def gen_schema_reg(_schema):
     SCHEMA_REG = """
-MNM_REGISTER_OBJECT_REFLECT({CLASS_NAME});
+RAF_REGISTER_OBJECT_REFLECT({CLASS_NAME});
 """.strip()
     name, _ = _schema
     class_name = snake_to_pascal(name) + "Args"
@@ -199,26 +199,26 @@ def add_no_lint(line):
 
 
 FFI_TO_SCHEMA_PRELUDE = """
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace ffi2schema {
 
-#define MNM_TAPE(i, norm, name)               \\
+#define RAF_TAPE(i, norm, name)               \\
   try {                                       \\
     attrs->name = norm(values[i], tapes + i); \\
   } catch (const dmlc::Error& e) {            \\
     FillError(e, "{arg}", #name);             \\
   }
 
-#define MNM_POD(i, norm, name)     \\
+#define RAF_POD(i, norm, name)     \\
   try {                            \\
     attrs->name = norm(values[i]); \\
   } catch (const dmlc::Error& e) { \\
     FillError(e, "{arg}", #name);  \\
   }
 
-#define MNM_PRELUDE(obj, n)                                                                \\
+#define RAF_PRELUDE(obj, n)                                                                \\
   const int size = values.size();                                                          \\
   CHECK_EQ(size, n) << "TypeError: Mismatched number of arguments for operator \\"{op}\\": " \\
                     << "Expected " << n << ", but get " << size;                           \\
@@ -226,20 +226,20 @@ namespace ffi2schema {
 """.strip()
 
 FFI_TO_SCHEMA_EPILOG = """
-#undef MNM_PRELUDE
-#undef MNM_POD
-#undef MNM_TAPE
+#undef RAF_PRELUDE
+#undef RAF_POD
+#undef RAF_TAPE
 }  // namespace ffi2schema
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
 def gen_ffi_to_schema(_schema):
     FFI_TO_SCHEMA = """
 Attrs {SCHEMA_NAME}(const TVMArgs& values, GradTape* tapes) {{
-  MNM_PRELUDE(schema::{SCHEMA_NAME}Args, {N_ARGS});  // NOLINT(whitespace/line_length)
+  RAF_PRELUDE(schema::{SCHEMA_NAME}Args, {N_ARGS});  // NOLINT(whitespace/line_length)
 {ARGS}
   return Attrs(attrs);
 }}
@@ -247,7 +247,7 @@ Attrs {SCHEMA_NAME}(const TVMArgs& values, GradTape* tapes) {{
     ARG = (
         " " * 2
         + """
-  MNM_{OPTION}({I}, ffi2schema::{NORM}, {ARG_NAME});
+  RAF_{OPTION}({I}, ffi2schema::{NORM}, {ARG_NAME});
 """.strip()
     )
     schema_name, schema = _schema
@@ -269,12 +269,12 @@ Attrs {SCHEMA_NAME}(const TVMArgs& values, GradTape* tapes) {{
 ##### Part 1.2. Imperative API, uses "Part 1.1. FFI to schema" ####
 
 IMPERATIVE_API_PRELUDE = """
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace imperative {
 
-#define MNM_PRELUDE(op, n_args, func, obj)                                                     \\
+#define RAF_PRELUDE(op, n_args, func, obj)                                                     \\
   const auto* opack = OpPack<names::op, n_args>::Get();                                        \\
   const auto* vpack = VarPack::Get();                                                          \\
   std::array<GradTape, n_args> prev_tapes;                                                     \\
@@ -305,7 +305,7 @@ namespace imperative {
   const auto *schema = _schema.as<obj>();                                                      \\
   Map<Var, Value> env;
 
-#define MNM_SET_ENV(var, value)                                                        \\
+#define RAF_SET_ENV(var, value)                                                        \\
   {                                                                                    \\
     const auto &_v = (var);                                                            \\
     if (std::binary_search(used_vars.begin(), used_vars.end(), _v.operator->())) {     \\
@@ -313,7 +313,7 @@ namespace imperative {
     }                                                                                  \\
   }
 
-#define MNM_RET()                                                                      \\
+#define RAF_RET()                                                                      \\
   DeStruct(std::move(value),                                                           \\
            ClosureValue::make(/*env=*/std::move(env),                                  \\
                               /*func=*/Function({vpack->dy}, body, {}, {})),           \\
@@ -321,31 +321,31 @@ namespace imperative {
 """.strip()
 
 IMPERATIVE_API_EPILOG = """
-#undef MNM_RET
-#undef MNM_SET_ENV
-#undef MNM_PRELUDE
+#undef RAF_RET
+#undef RAF_SET_ENV
+#undef RAF_PRELUDE
 
 }  // namespace imperative
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
 def gen_imperative_api(op):
     IMPERATIVE_API = """
-MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
+RAF_REGISTER_GLOBAL("raf.op.imp.{OP_NAME}")
 .set_body([](TVMArgs args, TVMRetValue* ret) {{
-  MNM_PRELUDE({OP_VAR}, {N_ARGS}, ffi2schema::{SCHEMA_NAME}, schema::{SCHEMA_NAME}Args);  // NOLINT(whitespace/line_length)
+  RAF_PRELUDE({OP_VAR}, {N_ARGS}, ffi2schema::{SCHEMA_NAME}, schema::{SCHEMA_NAME}Args);  // NOLINT(whitespace/line_length)
 {ARGS}
-  MNM_SET_ENV(vpack->y, value);
-  *ret = MNM_RET();
+  RAF_SET_ENV(vpack->y, value);
+  *ret = RAF_RET();
 }});
 """.strip()
     ARG = (
         " " * 2
         + """
-  MNM_SET_ENV(vpack->x[{I}], schema2value::{NORM}(schema->{ARG_NAME}));
+  RAF_SET_ENV(vpack->x[{I}], schema2value::{NORM}(schema->{ARG_NAME}));
 """.strip()
     )
     n_args = len(op.schema)
@@ -369,51 +369,51 @@ MNM_REGISTER_GLOBAL("mnm.op.imp.{OP_NAME}")
 
 
 FFI_TO_EXPR_PRELUDE = """
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace ffi2expr {
 
-#define MNM_PRELUDE(n)                                                                     \\
+#define RAF_PRELUDE(n)                                                                     \\
   const int size = values.size();                                                          \\
   CHECK_EQ(size, n) << "TypeError: Mismatched number of arguments for operator \\"{op}\\": " \\
                     << "Expected " << n << ", but get " << size;                           \\
   std::vector<Expr> result;
 
-#define MNM_ARG(i, norm, name)                \\
+#define RAF_ARG(i, norm, name)                \\
   try {                                       \\
     result.push_back(norm(values[i]));        \\
   } catch (const dmlc::Error& e) {            \\
     FillError(e, "{arg}", #name);             \\
   }
 
-#define MNM_RET() return Array<Expr>(result);
+#define RAF_RET() return Array<Expr>(result);
 """.strip()
 
 FFI_TO_EXPR_EPILOG = """
-#undef MNM_RET
-#undef MNM_ARG
-#undef MNM_PRELUDE
+#undef RAF_RET
+#undef RAF_ARG
+#undef RAF_PRELUDE
 
 }  // namespace ffi2expr
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
 def gen_ffi_to_expr(_schema):
     FFI_TO_EXPR = """
 Array<Expr> {SCHEMA_NAME}(const TVMArgs& values) {{
-  MNM_PRELUDE({N_ARGS});
+  RAF_PRELUDE({N_ARGS});
 {ARGS}
-  MNM_RET();
+  RAF_RET();
 }}
 """.strip()
     ARG = (
         " " * 2
         + """
-MNM_ARG({I}, ffi2expr::{NORM}, {ARG_NAME});
+RAF_ARG({I}, ffi2expr::{NORM}, {ARG_NAME});
 """.strip()
     )
     schema_name, schema = _schema
@@ -431,12 +431,12 @@ MNM_ARG({I}, ffi2expr::{NORM}, {ARG_NAME});
 # Part 2.2. Symbolic API, uses "Part 2.1. FFI to Array<Expr>"
 
 SYMBOLIC_API_PRELUDE = """
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace symbolic {
 
-#define MNM_SYMBOLIC_API(op_name, n_args, schema)                               \\
+#define RAF_SYMBOLIC_API(op_name, n_args, schema)                               \\
   [](TVMArgs args, TVMRetValue* ret) {                                          \\
     auto *pack = regs::OpPack<names::op_name, n_args>::Get();                   \\
     try {                                                                       \\
@@ -448,19 +448,19 @@ namespace symbolic {
 """.strip()
 
 SYMBOLIC_API_EPILOG = """
-#undef MNM_SYMBOLIC_API
+#undef RAF_SYMBOLIC_API
 
 }  // namespace symbolic
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
 def gen_symbolic_api(op):
     SYMBOLIC_API = """
-MNM_REGISTER_GLOBAL("mnm.op.sym.{OP_NAME}")
-.set_body(MNM_SYMBOLIC_API({OP_VAR}, {N_ARGS}, {SCHEMA_NAME}));
+RAF_REGISTER_GLOBAL("raf.op.sym.{OP_NAME}")
+.set_body(RAF_SYMBOLIC_API({OP_VAR}, {N_ARGS}, {SCHEMA_NAME}));
 """.strip()
     n_args = len(op.schema)
     schema_name = snake_to_pascal(op.schema_name)
@@ -473,12 +473,12 @@ MNM_REGISTER_GLOBAL("mnm.op.sym.{OP_NAME}")
 
 
 VALUE_TO_SCHEMA_PRELUDE = """
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace value2schema {
 
-#define MNM_PRELUDE(lb, ub, schema)                                             \\
+#define RAF_PRELUDE(lb, ub, schema)                                             \\
   const int size = values.size();                                               \\
   CHECK(size >= lb) << "TypeError: Too few arguments for operator \\"{op}\\". "   \\
                     << "Expected at least " << lb << ", but get " << size;      \\
@@ -486,7 +486,7 @@ namespace value2schema {
                     << "Expected at most " << ub << ", but get " << size;       \\
   auto attrs = make_object<schema>();
 
-#define MNM_REQUIRED(i, norm, name)       \\
+#define RAF_REQUIRED(i, norm, name)       \\
   try {                                   \\
     attrs->name = norm(values[i]);        \\
   } catch (const dmlc::Error& e) {        \\
@@ -497,7 +497,7 @@ namespace value2schema {
     }                                     \\
   }
 
-#define MNM_OPTIONAL(i, norm, name)       \\
+#define RAF_OPTIONAL(i, norm, name)       \\
   if (size > i) {                         \\
     try {                                 \\
       attrs->name = norm(values[i]);      \\
@@ -512,14 +512,14 @@ namespace value2schema {
 """.strip()
 
 VALUE_TO_SCHEMA_EPILOG = """
-#undef MNM_OPTIONAL
-#undef MNM_REQUIRED
-#undef MNM_PRELUDE
+#undef RAF_OPTIONAL
+#undef RAF_REQUIRED
+#undef RAF_PRELUDE
 
 }  // namespace value2schema
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
@@ -527,7 +527,7 @@ def gen_value_to_schema(_schema):
     VALUE_TO_SCHEMA = """
 template <const char* op_name>
 Attrs {SCHEMA_NAME}(const Array<Value>& values) {{
-  MNM_PRELUDE({N_ARG_LB}, {N_ARG_UB}, schema::{SCHEMA_NAME}Args);
+  RAF_PRELUDE({N_ARG_LB}, {N_ARG_UB}, schema::{SCHEMA_NAME}Args);
 {ARGS}
   return Attrs(attrs);
 }}
@@ -535,7 +535,7 @@ Attrs {SCHEMA_NAME}(const Array<Value>& values) {{
     ARG = (
         " " * 2
         + """
-MNM_{OPTION}({I}, value2schema::{NORM}, {ARG_NAME});
+RAF_{OPTION}({I}, value2schema::{NORM}, {ARG_NAME});
 """.strip()
     )
     schema_name, schema = _schema
@@ -558,7 +558,7 @@ MNM_{OPTION}({I}, value2schema::{NORM}, {ARG_NAME});
 
 
 SCHEMA_FIELD_IDX_PRELUDE = """
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace schema_field_idx {
@@ -568,7 +568,7 @@ SCHEMA_FIELD_IDX_EPILOG = """
 }  // namespace schema_field_idx
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
@@ -595,39 +595,39 @@ int {SCHEMA_NAME}(const std::string& field) {{
     return VALUE_TO_SCHEMA.format(SCHEMA_NAME=schema_name, ARGS=args)
 
 
-# Part 3.3. FMNMSchema API, uses Part 3.1 and Part 3.2
+# Part 3.3. FRAFSchema API, uses Part 3.1 and Part 3.2
 
-F_MNM_SCHEMA_PRELUDE = """
-namespace mnm {
+F_RAF_SCHEMA_PRELUDE = """
+namespace raf {
 namespace op {
 namespace regs {
-namespace f_mnm_schema {
+namespace f_raf_schema {
 
-#define MNM_BIND_SCHEMA(op_str, op_name, schema) \\
-  MNM_REGISTER_OP(op_str).set_attr<FMNMSchema>("FMNMSchema", schema<op_name>);
+#define RAF_BIND_SCHEMA(op_str, op_name, schema) \\
+  RAF_REGISTER_OP(op_str).set_attr<FRAFSchema>("FRAFSchema", schema<op_name>);
 
-#define MNM_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \\
-  MNM_REGISTER_OP(op_str).set_attr<FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex", schema<op_name>);
+#define RAF_BIND_SCHEMA_FIELD_INDEX(op_str, op_name, schema) \\
+  RAF_REGISTER_OP(op_str).set_attr<FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex", schema<op_name>);
 """.strip()
 
-F_MNM_SCHEMA_EPILOG = """
-#undef MNM_BIND_SCHEMA
-#undef MNM_BIND_SCHEMA_FIELD_INDEX
+F_RAF_SCHEMA_EPILOG = """
+#undef RAF_BIND_SCHEMA
+#undef RAF_BIND_SCHEMA_FIELD_INDEX
 
-}  // namespace f_mnm_schema
+}  // namespace f_raf_schema
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 """.strip()
 
 
-def gen_f_mnm_schema(op):
-    FMNMSchema = """
-MNM_BIND_SCHEMA("mnm.op.{OP_NAME}", names::{OP_VAR}, value2schema::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
-MNM_BIND_SCHEMA_FIELD_INDEX("mnm.op.{OP_NAME}", names::{OP_VAR}, schema_field_idx::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
+def gen_f_raf_schema(op):
+    FRAFSchema = """
+RAF_BIND_SCHEMA("raf.op.{OP_NAME}", names::{OP_VAR}, value2schema::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
+RAF_BIND_SCHEMA_FIELD_INDEX("raf.op.{OP_NAME}", names::{OP_VAR}, schema_field_idx::{SCHEMA_NAME});  // NOLINT(whitespace/line_length)
 """.strip()
     schema_name = snake_to_pascal(op.schema_name)
-    return FMNMSchema.format(
+    return FRAFSchema.format(
         OP_NAME=op.name, OP_VAR=op.name.replace(".", "_"), SCHEMA_NAME=schema_name
     )
 

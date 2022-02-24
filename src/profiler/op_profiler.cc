@@ -8,17 +8,17 @@
  * \brief A simple profiler with caching to profile ops during compilation
  */
 
-#include "mnm/op_profiler.h"
-#include "mnm/ir.h"
+#include "raf/op_profiler.h"
+#include "raf/ir.h"
 #include "../op/dialect/tvm/tvm_utils.h"
 #include "../requests.h"
 #include <chrono>
 
-namespace mnm {
+namespace raf {
 namespace op_profiler {
 
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::op;
+using namespace raf::value;
 
 OpProfiler* OpProfiler::Get(const Device& device) {
   CHECK_EQ(device.device_id(), 0) << "Multi-device profiling is not supported yet";
@@ -26,7 +26,7 @@ OpProfiler* OpProfiler::Get(const Device& device) {
     static CPUOpProfiler profiler = CPUOpProfiler(device);
     return &profiler;
   } else if (device.device_type() == DevType::kCUDA()) {
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
     static CUDAOpProfiler profiler = CUDAOpProfiler(device);
     return &profiler;
 #else
@@ -217,7 +217,7 @@ std::vector<float> CPUOpProfiler::RunOpGroup(const std::vector<OpWithDataPtr>& o
   return elapsed_times;
 }
 
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 // Run the op on the CUDA device, return the profiled execution time in microseconds
 std::vector<float> CUDAOpProfiler::RunOp(const OpWithDataPtr& op_with_data, int32_t warmup,
                                          int32_t exec_number, int32_t repeat) {
@@ -276,8 +276,8 @@ std::vector<float> CUDAOpProfiler::RunOpGroup(const std::vector<OpWithDataPtr>& 
       // Set stream.
       auto curr_stream = streams_[op_with_data->stream_id];
       cuda_api_->SetStream(device_, curr_stream);
-      mnm::op::cudnn::SetStream(curr_stream);
-      mnm::op::cublas::SetStream(curr_stream);
+      raf::op::cudnn::SetStream(curr_stream);
+      raf::op::cublas::SetStream(curr_stream);
 
       // Issue kernel.
       op_with_data->op_env->Execute(op_with_data->inputs, op_with_data->output);
@@ -297,8 +297,8 @@ std::vector<float> CUDAOpProfiler::RunOpGroup(const std::vector<OpWithDataPtr>& 
         // Set stream.
         auto curr_stream = streams_[op_with_data->stream_id];
         cuda_api_->SetStream(device_, curr_stream);
-        mnm::op::cudnn::SetStream(curr_stream);
-        mnm::op::cublas::SetStream(curr_stream);
+        raf::op::cudnn::SetStream(curr_stream);
+        raf::op::cublas::SetStream(curr_stream);
 
         // Issue kernel.
         op_with_data->op_env->Execute(op_with_data->inputs, op_with_data->output);
@@ -313,13 +313,13 @@ std::vector<float> CUDAOpProfiler::RunOpGroup(const std::vector<OpWithDataPtr>& 
   }
 
   cuda_api_->SetStream(device_, nullptr);
-  mnm::op::cudnn::SetStream(nullptr);
-  mnm::op::cublas::SetStream(nullptr);
+  raf::op::cudnn::SetStream(nullptr);
+  raf::op::cublas::SetStream(nullptr);
   return elapsed_times;
 }
 #endif
 
-MNM_REGISTER_GLOBAL("mnm.op_profiler.Profile")
+RAF_REGISTER_GLOBAL("raf.op_profiler.Profile")
     .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
       CHECK_GE(args.size(), 2U) << "Expected (expr, device, <warmup>, <exec>, <repeat>)";
       Expr expr = args[0];
@@ -339,7 +339,7 @@ MNM_REGISTER_GLOBAL("mnm.op_profiler.Profile")
       *ret = results;
     });
 
-MNM_REGISTER_GLOBAL("mnm.op_profiler.ProfileGroup")
+RAF_REGISTER_GLOBAL("raf.op_profiler.ProfileGroup")
     .set_body([](tvm::runtime::TVMArgs args, tvm::runtime::TVMRetValue* ret) {
       CHECK_GE(args.size(), 2U)
           << "Expected (exprs, device, <stream_ids>, <warmup>, <exec>, <repeat>)";
@@ -364,15 +364,15 @@ MNM_REGISTER_GLOBAL("mnm.op_profiler.ProfileGroup")
       *ret = results;
     });
 
-MNM_REGISTER_GLOBAL("mnm.op_profiler.ResetCache").set_body_typed([](const Device& device) {
+RAF_REGISTER_GLOBAL("raf.op_profiler.ResetCache").set_body_typed([](const Device& device) {
   auto profiler = OpProfiler::Get(device);
   return profiler->Reset();
 });
 
-MNM_REGISTER_GLOBAL("mnm.op_profiler.GetCacheSize").set_body_typed([](const Device& device) {
+RAF_REGISTER_GLOBAL("raf.op_profiler.GetCacheSize").set_body_typed([](const Device& device) {
   auto profiler = OpProfiler::Get(device);
   return profiler->GetLatencyCacheSize();
 });
 
 }  // namespace op_profiler
-}  // namespace mnm
+}  // namespace raf

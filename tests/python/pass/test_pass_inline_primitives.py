@@ -3,9 +3,9 @@
 
 # pylint: disable=invalid-name,protected-access,no-self-use
 import pytest
-import mnm
-from mnm._ffi import pass_
-from mnm.testing import randn
+import raf
+from raf._ffi import pass_
+from raf.testing import randn
 from tvm import relay
 
 
@@ -37,13 +37,13 @@ def optimize(mod):
 
 
 def test_simple():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.relu(x + x)
+            return raf.relu(x + x)
 
     model = Model()
     m_x, _ = randn((3, 4))

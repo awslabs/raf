@@ -5,52 +5,52 @@
 import pytest
 import numpy as np
 
-import mnm
+import raf
 
 
 @pytest.mark.parametrize(
     "view_op",
     [
-        (mnm._op.sym.batch_flatten, None),
-        (mnm._op.sym.reshape, ((4, 64),)),
-        (mnm._op.sym.expand_dims, (0, 1)),
+        (raf._op.sym.batch_flatten, None),
+        (raf._op.sym.reshape, ((4, 64),)),
+        (raf._op.sym.expand_dims, (0, 1)),
     ],
 )
 def test_output_view(view_op):
-    class TestOp(mnm.Model):
+    class TestOp(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             op, args = view_op
             ret = op(x, *args) if args else op(x)
             return ret
 
-    class TestOutputView(mnm.Model):
+    class TestOutputView(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.add(x, x)
+            y = raf.add(x, x)
             op, args = view_op
             ret = op(y, *args) if args else op(y)
             return ret
 
-    class TestOutputViewGPU(mnm.Model):
+    class TestOutputViewGPU(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.max_pool2d(x, 1, 1)
+            y = raf.max_pool2d(x, 1, 1)
             op, args = view_op
             ret = op(y, *args) if args else op(y)
             return ret
 
     x = np.random.randn(4, 4, 4, 4).astype("float32")
-    x = mnm.array(x)
+    x = raf.array(x)
     model1 = TestOp()
     model2 = TestOutputView()
     y1 = model1(x)
@@ -59,7 +59,7 @@ def test_output_view(view_op):
     np.testing.assert_equal(y2.numpy().flatten(), x.numpy().flatten() * 2)
     np.testing.assert_equal(y1.numpy() * 2, y2.numpy())
 
-    if mnm.build.with_cuda():
+    if raf.build.with_cuda():
         x = x.to(device="cuda")
         model3 = TestOutputViewGPU()
         y1 = model1(x)

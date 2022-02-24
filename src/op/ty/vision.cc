@@ -8,17 +8,17 @@
  * \brief Typing of vision operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/vision.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace type {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
 
 Type GetValidCountsInfer(const CallValues& value) {
   const auto* args = value->args.as<GetValidCountsArgs>();
@@ -36,7 +36,7 @@ Type GetValidCountsInfer(const CallValues& value) {
   return TupleType(ret);
 }
 
-MNM_OP_TYPE("mnm.op.get_valid_counts", "GetValidCounts", GetValidCountsInfer);
+RAF_OP_TYPE("raf.op.get_valid_counts", "GetValidCounts", GetValidCountsInfer);
 
 Type NonMaxSuppressionInfer(const CallValues& value) {
   const auto* args = value->args.as<NonMaxSuppressionArgs>();
@@ -58,7 +58,7 @@ Type NonMaxSuppressionInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.non_max_suppression", "NonMaxSuppression", NonMaxSuppressionInfer);
+RAF_OP_TYPE("raf.op.non_max_suppression", "NonMaxSuppression", NonMaxSuppressionInfer);
 
 Type RoiAlignInfer(const CallValues& value) {
   const auto* args = value->args.as<RoiAlignArgs>();
@@ -84,7 +84,7 @@ Type RoiAlignInfer(const CallValues& value) {
   return TensorType(oshape, data->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.roi_align", "RoiAlign", RoiAlignInfer);
+RAF_OP_TYPE("raf.op.roi_align", "RoiAlign", RoiAlignInfer);
 
 Type RoiAlignDxInfer(const CallValues& value) {
   const auto* args = value->args.as<RoiAlignDxArgs>();
@@ -92,8 +92,8 @@ Type RoiAlignDxInfer(const CallValues& value) {
   return Downcast<TensorType>(GetType(args->data));
 }
 
-MNM_OP_TYPE("mnm.op.roi_align_dx", "RoiAlignDx", RoiAlignDxInfer);
+RAF_OP_TYPE("raf.op.roi_align_dx", "RoiAlignDx", RoiAlignDxInfer);
 
 }  // namespace type
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

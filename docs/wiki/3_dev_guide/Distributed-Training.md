@@ -3,7 +3,7 @@
 
 # Distribution Mechanism
 
-This article explains the distribution mechanism in Meta.
+This article explains the distribution mechanism in RAF.
 For the tutorial of distributed training, please see [here](../2_user_guide/Distributed-Training.md)
 
 ## Resources for Collective Communication Operators
@@ -29,8 +29,8 @@ distributed op:
 
 ```python
 pyhton3
->>> import mnm
->>> dir(mnm.distributed.op)
+>>> import raf
+>>> dir(raf.distributed.op)
 ```
 
 Here we use `AllReduce` as an example to show how to use collective communication operators `AllReduce` takes an `ndarray` or list of `ndarray` as input, and return the aggregated data.
@@ -41,8 +41,8 @@ Before you use the operator, you must get a distributed context, from which you 
 
 ``` python
 import numpy as np
-import mnm
-from mnm import distributed as dist
+import raf
+from raf import distributed as dist
 
 dctx = dist.get_context()
 root_rank = dctx.root_rank     # The root rank.
@@ -58,9 +58,9 @@ Then you can use allreduce operators.
 
 ``` python
 x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-x = mnm.array(x, device=device)
+x = raf.array(x, device=device)
 print("Before allreduce: ", x)
-x = mnm.allreduce(x) # or: x = mnm.allreduce([x])
+x = raf.allreduce(x) # or: x = raf.allreduce([x])
 print("After allreduce : ", x)
 ```
 

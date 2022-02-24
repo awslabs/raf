@@ -10,17 +10,17 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace fuse_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 using tvm::TVMArgs;
 using tvm::TVMRetValue;
 using ExprSet = std::unordered_set<Expr, ObjectPtrHash, ObjectPtrEqual>;
@@ -73,7 +73,7 @@ class FuseMutator : public ExprMutator {
       }
 
       // If the identical function has been created before, reuse it.
-      std::string func_cache_key = mnm::ir::AsText(func);
+      std::string func_cache_key = raf::ir::AsText(func);
       if (func_cache_.count(func_cache_key)) {
         func = func_cache_.at(func_cache_key);
       } else {
@@ -194,7 +194,7 @@ Expr FuseDialectPatterns(const Expr& expr, const IRModule& mod) {
     }
     DLOG(INFO) << "Fuse pattern " << pat.name << " for " << pat.dialect;
     DialectPatternRewrite rewrite(mod, dev_type, pat);
-    ret = MNMRewritePatterns({rewrite.MakeCallback()}, ret, mod);
+    ret = RAFRewritePatterns({rewrite.MakeCallback()}, ret, mod);
   }
   return ret;
 }
@@ -206,10 +206,10 @@ Pass FuseDialect() {
                                                                              PassContext pc) {
     return Downcast<Function>(fuse_dialect::FuseDialectPatterns(f, m));
   };
-  return CreateMNMFunctionPass(pass_func, 2, "FuseDialect", {"InferType"});
+  return CreateRAFFunctionPass(pass_func, 2, "FuseDialect", {"InferType"});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FuseDialect").set_body_typed(FuseDialect);
+RAF_REGISTER_GLOBAL("raf.pass_.FuseDialect").set_body_typed(FuseDialect);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

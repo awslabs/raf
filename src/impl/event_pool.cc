@@ -5,17 +5,17 @@
 
 /*!
  * \file src/impl/event_pool.cc
- * \brief MNM event pool underlying implementation
+ * \brief RAF event pool underlying implementation
  */
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
-#include "mnm/event_pool.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
+#include "raf/event_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace event_pool {
 
 using device_api::DeviceAPI;
@@ -90,4 +90,4 @@ std::shared_ptr<EventPool> EventPool::Get(const Device& dev) {
 Event::~Event() = default;
 
 }  // namespace event_pool
-}  // namespace mnm
+}  // namespace raf

@@ -4,8 +4,8 @@
 import pytest
 from torch.nn.functional import interpolate
 
-import mnm
-from mnm.testing import get_testable_devices, randn_torch, check, with_seed
+import raf
+from raf.testing import get_testable_devices, randn_torch, check, with_seed
 
 
 @pytest.mark.parametrize(
@@ -61,7 +61,7 @@ def test_resize2d(device, params, method):
         m_x, _ = randn_torch(
             (batchs, orig_shape[0], orig_shape[1], 3), dtype=in_dtype, device=device
         )
-        m_y = mnm.resize2d(m_x, to_shape, layout, out_dtype=out_dtype)
+        m_y = raf.resize2d(m_x, to_shape, layout, out_dtype=out_dtype)
     elif layout == "NCHW":
         # test forward
         m_x, t_x = randn_torch(
@@ -78,7 +78,7 @@ def test_resize2d(device, params, method):
         elif method == "cubic":
             coord_trans_mode = "half_pixel"
             torch_mode = "bicubic"
-        m_y = mnm.resize2d(
+        m_y = raf.resize2d(
             m_x,
             to_shape,
             layout,

@@ -9,10 +9,10 @@
  */
 #include "./graph_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 std::string IndexedForwardGraph::Node::DebugDump() const {
   std::ostringstream os;
@@ -114,9 +114,9 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     ICHECK(graph_.node_map.count(call));
     Node* node = graph_.node_map.at(call);
     static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
-    static auto finplace = Op::GetAttrMap<TMNMInplaceUpdate>("TMNMInplaceUpdate");
-    static auto add_op = Op::Get("mnm.op.add");
-    static auto subtract_op = Op::Get("mnm.op.subtract");
+    static auto finplace = Op::GetAttrMap<TRAFInplaceUpdate>("TRAFInplaceUpdate");
+    static auto add_op = Op::Get("raf.op.add");
+    static auto subtract_op = Op::Get("raf.op.subtract");
 
     // Now we set the pattern of this call.
     //
@@ -357,4 +357,4 @@ DominatorTree::Node* DominatorTree::GetNode(Arena* arena, IndexedForwardGraph::N
 }
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

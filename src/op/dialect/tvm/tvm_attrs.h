@@ -17,16 +17,16 @@
 #include <tvm/relay/attrs/random.h>
 #include <tvm/relay/attrs/reduce.h>
 #include <tvm/relay/attrs/transform.h>
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/op.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/op.h"
 #include "./attrs/nn.h"
 #include "./attrs/optimizer.h"
 #include "./attrs/reduce.h"
 #include "./attrs/transform.h"
 #include "./attrs/unary.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
@@ -81,4 +81,4 @@ tvm::Attrs GenericAttrs(const T* args) {
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -4,21 +4,21 @@
 # pylint: disable=invalid-name,protected-access,too-many-locals,attribute-defined-outside-init
 import numpy as np
 import pytest
-import mnm
+import raf
 import tvm
 from tvm import relay
-from mnm._ffi.pass_ import InferType, AutoDiff, FromRelay, LiftBranchBody
-from mnm._ffi.pass_ import LambdaLift, FlattenClosure, InlineBackward
-from mnm.ir import MNMSequential, ScopeBuilder
-from mnm.model import BatchNorm
-from mnm.model.trace import _get_func_inputs
-from mnm.testing import get_testable_devices, randn, check, utils, one_hot_torch
+from raf._ffi.pass_ import InferType, AutoDiff, FromRelay, LiftBranchBody
+from raf._ffi.pass_ import LambdaLift, FlattenClosure, InlineBackward
+from raf.ir import RAFSequential, ScopeBuilder
+from raf.model import BatchNorm
+from raf.model.trace import _get_func_inputs
+from raf.testing import get_testable_devices, randn, check, utils, one_hot_torch
 
 
 def ad_passes(mod, requires_grads=None):
     if requires_grads is None:
         requires_grads = []
-    seq = MNMSequential(
+    seq = RAFSequential(
         [
             InferType(),
             LambdaLift(),
@@ -45,13 +45,13 @@ def vm_passes(mod, requires_grads=None):
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_add_to(shape, device):
-    class Add(mnm.Model):
+    class Add(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            return mnm.add(x, x)
+            return raf.add(x, x)
 
     model = Add()
     m_x, _ = randn(shape, device=device, requires_grad=True)
@@ -66,15 +66,15 @@ def test_add_to(shape, device):
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("planes", [16])
 def test_batch_norm(device, planes):
-    class BatchNormLoss(mnm.Model):
+    class BatchNormLoss(raf.Model):
         def build(self, planes):
             self.bn = BatchNorm(planes)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y_true):
             out = self.bn(x)
-            y_pred = mnm.batch_flatten(out)
-            loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
+            y_pred = raf.batch_flatten(out)
+            loss = raf.nll_loss(y_true=y_true, y_pred=y_pred)
             return loss
 
     model = BatchNormLoss(planes)
@@ -112,7 +112,7 @@ def test_batch_norm(device, planes):
     assert ad_mod["main"].ret_type == ret_type
 
     # Run via VM to ensure that the generated mod can be executed
-    m_dy_0 = mnm.array(np.array([1.0], dtype="float32"), device=device)
+    m_dy_0 = raf.array(np.array([1.0], dtype="float32"), device=device)
     m_dy_1, _ = randn((planes,), device=device)
     m_dy_2, _ = randn((planes,), device=device)
     inputs = _get_func_inputs(record, [], {"x": m_x, "y_true": m_ytrue}, get_handle=False)
@@ -134,27 +134,27 @@ def test_batch_norm(device, planes):
     ],
 )
 def test_no_grad1(shape, device):
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y, z):  # pylint: disable=no-self-use
-            indices = mnm.add(y, z)
-            indices = mnm.subtract(indices, z)
-            indices = mnm.add(indices, z)
-            return mnm.take(x, indices, axis=0)
+            indices = raf.add(y, z)
+            indices = raf.subtract(indices, z)
+            indices = raf.add(indices, z)
+            return raf.take(x, indices, axis=0)
 
     model = Model()
     m_x, n_x = randn(shape, device=device, requires_grad=True)
-    m_y = mnm.array(
+    m_y = raf.array(
         [
             1,
         ],
         dtype="int64",
         device=device,
     )
-    m_z = mnm.array(
+    m_z = raf.array(
         [
             1,
         ],
@@ -191,26 +191,26 @@ def test_no_grad2(device):
         ret = relay.var("ret")
         inner_let2 = relay.Let(
             x2,
-            relay.Tuple([x1, mnm._ffi.ir._make.Constant(mnm._core.value.NoGradValue())]),
+            relay.Tuple([x1, raf._ffi.ir._make.Constant(raf._core.value.NoGradValue())]),
             x2,
         )
-        inner_let1 = relay.Let(x1, mnm.ir.op.matmul(dy, y), inner_let2)
+        inner_let1 = relay.Let(x1, raf.ir.op.matmul(dy, y), inner_let2)
         let3 = relay.Let(ret, relay.Tuple([a1, closure]), ret)
         let2 = relay.Let(closure, relay.Function([dy], body=inner_let1), let3)
-        let1 = relay.Let(a1, mnm.ir.op.matmul_nt(x, y), let2)
+        let1 = relay.Let(a1, raf.ir.op.matmul_nt(x, y), let2)
         func = relay.Function([x, y], let1)
         mod = tvm.IRModule()
         mod["main"] = func
         mod = InferType()(mod)
         return mod["main"]
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):  # pylint: disable=no-self-use
-            return mnm.matmul_nt(x, y)
+            return raf.matmul_nt(x, y)
 
     model = Model()
     # forward
@@ -880,12 +880,12 @@ def test_simplify_sum():
 
     tvm_mod = get_mod()
     mod = FromRelay()(tvm_mod)
-    seq = MNMSequential([InferType(), AutoDiff([])])
+    seq = RAFSequential([InferType(), AutoDiff([])])
     mod = seq(mod)
 
     # Ensure that there is only one sum operator
     sum_ops = list()
-    find_sum = lambda x: sum_ops.append(isinstance(x, tvm.relay.Call) and x.op.name == "mnm.op.sum")
+    find_sum = lambda x: sum_ops.append(isinstance(x, tvm.relay.Call) and x.op.name == "raf.op.sum")
     tvm.relay.analysis.post_order_visit(mod["main"], find_sum)
     assert len(list(filter(lambda x: x, sum_ops))) == 1
 

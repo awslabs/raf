@@ -9,7 +9,7 @@
  */
 
 #include <mpi.h>
-#include "mnm/connector.h"
+#include "raf/connector.h"
 
 #define MPI_CALL(cmd)                                                         \
   do {                                                                        \
@@ -19,7 +19,7 @@
     }                                                                         \
   } while (0)
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 namespace connector {
 
@@ -98,8 +98,8 @@ class MPIConnector : public Connector {
   std::string type = "MPI";
 };
 
-MNM_REGISTER_GLOBAL("mnm.distributed.connector._make.mpi").set_body_typed(MPIConnector::make);
+RAF_REGISTER_GLOBAL("raf.distributed.connector._make.mpi").set_body_typed(MPIConnector::make);
 
 }  // namespace connector
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

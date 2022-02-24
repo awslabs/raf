@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Provides:
-#   - MNM_CXX_SANITIZER_FLAGS
-#   - MNM_CUDA_SANITIZER_FLAGS
-#   - mnm_target_add_sanitizer: macro, mutate the target
+#   - RAF_CXX_SANITIZER_FLAGS
+#   - RAF_CUDA_SANITIZER_FLAGS
+#   - raf_target_add_sanitizer: macro, mutate the target
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckFortranCompilerFlag)
@@ -36,7 +36,7 @@ set(_UBSAN_POSSIBLE_FLAGS
   "-g -Xcompiler -g -Xcompiler -fsanitize=undefined"
 )
 
-macro(_mnm_sanitizer_flags lang sanitizer)
+macro(_raf_sanitizer_flags lang sanitizer)
   # Provides:
   #   - ${lang}_SUPPORT_${sanitizer}
   #   - ${lang}_{sanitizer}_FLAGS
@@ -68,29 +68,29 @@ macro(_mnm_sanitizer_flags lang sanitizer)
   endif ()
 endmacro()
 
-macro(mnm_target_add_sanitizer target)
-  if (NOT ${MNM_USE_SANITIZER} STREQUAL "OFF")
+macro(raf_target_add_sanitizer target)
+  if (NOT ${RAF_USE_SANITIZER} STREQUAL "OFF")
     set_property(TARGET ${target} APPEND PROPERTY
-      COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:CUDA>:SHELL:${MNM_CUDA_SANITIZER_FLAGS}>)
+      COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:CUDA>:SHELL:${RAF_CUDA_SANITIZER_FLAGS}>)
     set_property(TARGET ${target} APPEND PROPERTY
-      COMPILE_OPTIONS $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:SHELL:${MNM_CXX_SANITIZER_FLAGS}>)
-    target_link_options(${target} PUBLIC $<$<BOOL:TRUE>:SHELL:${MNM_CXX_SANITIZER_FLAGS}>)
+      COMPILE_OPTIONS $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:SHELL:${RAF_CXX_SANITIZER_FLAGS}>)
+    target_link_options(${target} PUBLIC $<$<BOOL:TRUE>:SHELL:${RAF_CXX_SANITIZER_FLAGS}>)
   endif()
 endmacro()
 
-set(MNM_CXX_SANITIZER_FLAGS "")
-set(MNM_CUDA_SANITIZER_FLAGS "")
-if (${MNM_USE_SANITIZER} STREQUAL "OFF")
+set(RAF_CXX_SANITIZER_FLAGS "")
+set(RAF_CUDA_SANITIZER_FLAGS "")
+if (${RAF_USE_SANITIZER} STREQUAL "OFF")
   message (STATUS "Build without sanitizer")
-elseif (${MNM_USE_SANITIZER} IN_LIST _SANITIZERS)
-  _mnm_sanitizer_flags(CXX ${MNM_USE_SANITIZER})
-  set(MNM_CXX_SANITIZER_FLAGS ${CXX_${MNM_USE_SANITIZER}_FLAGS})
-  message(STATUS "Found MNM_CXX_SANITIZER_FLAGS = ${MNM_CXX_SANITIZER_FLAGS}")
-  if (NOT ${MNM_USE_CUDA} STREQUAL "OFF")
-    _mnm_sanitizer_flags(CUDA ${MNM_USE_SANITIZER})
-    set(MNM_CUDA_SANITIZER_FLAGS ${CUDA_${MNM_USE_SANITIZER}_FLAGS})
-    message(STATUS "Found MNM_CUDA_SANITIZER_FLAGS = ${MNM_CUDA_SANITIZER_FLAGS}")
+elseif (${RAF_USE_SANITIZER} IN_LIST _SANITIZERS)
+  _raf_sanitizer_flags(CXX ${RAF_USE_SANITIZER})
+  set(RAF_CXX_SANITIZER_FLAGS ${CXX_${RAF_USE_SANITIZER}_FLAGS})
+  message(STATUS "Found RAF_CXX_SANITIZER_FLAGS = ${RAF_CXX_SANITIZER_FLAGS}")
+  if (NOT ${RAF_USE_CUDA} STREQUAL "OFF")
+    _raf_sanitizer_flags(CUDA ${RAF_USE_SANITIZER})
+    set(RAF_CUDA_SANITIZER_FLAGS ${CUDA_${RAF_USE_SANITIZER}_FLAGS})
+    message(STATUS "Found RAF_CUDA_SANITIZER_FLAGS = ${RAF_CUDA_SANITIZER_FLAGS}")
   endif()
 else ()
-  message(FATAL_ERROR "Cannot recognize sanitizer: ${MNM_USE_SANITIZER}")
+  message(FATAL_ERROR "Cannot recognize sanitizer: ${RAF_USE_SANITIZER}")
 endif ()

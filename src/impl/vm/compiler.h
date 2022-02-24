@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/compiler.h
- * \brief The Meta virtual machine compiler.
+ * \brief The RAF virtual machine compiler.
  */
 #pragma once
 #include <tvm/ir/error.h>
@@ -17,20 +17,20 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "mnm/device.h"
-#include "mnm/ir.h"
-#include "mnm/registry.h"
-#include "mnm/vm/bytecode.h"
-#include "mnm/vm/executable.h"
-#include "mnm/vm/vm.h"
+#include "raf/device.h"
+#include "raf/ir.h"
+#include "raf/registry.h"
+#include "raf/vm/bytecode.h"
+#include "raf/vm/executable.h"
+#include "raf/vm/vm.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
-using namespace mnm::ir;
-using namespace mnm::registry;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::registry;
+using namespace raf::value;
 
 template <typename T, typename U>
 using NodeMap = std::unordered_map<T, U, ObjectPtrHash, ObjectPtrEqual>;
@@ -105,4 +105,4 @@ class VMCompiler : public tvm::runtime::ModuleNode {
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

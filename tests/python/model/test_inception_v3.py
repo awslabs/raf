@@ -3,8 +3,8 @@
 
 # pylint: disable=protected-access
 import pytest
-import mnm
-from mnm.testing import check, run_vm_model, get_testable_devices, inception
+import raf
+from raf.testing import check, run_vm_model, get_testable_devices, inception
 
 
 @pytest.mark.parametrize("block", ["A"])
@@ -30,7 +30,7 @@ def test_block_vm_forward(block, device, fuse):
     inception.check_params(m_model, t_model, rtol=1e-3, atol=1e-3)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_inception_v3_intpr_forward(device="cuda"):
     m_model, t_model = inception.get_model()
     m_model.to(device=device)
@@ -44,7 +44,7 @@ def test_inception_v3_intpr_forward(device="cuda"):
     inception.check_params(m_model, t_model, rtol=1e-3, atol=1e-3)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("fuse", [False, True])
 def test_vm_forward(fuse):
     device = "cuda"
@@ -63,7 +63,7 @@ def test_vm_forward(fuse):
 #
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("block_name", ["c"])
 @pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("policy", ["wavefront", "asap"])
@@ -81,7 +81,7 @@ def test_block_vm_multi_stream(block_name, policy, fuse):
 
 @pytest.mark.skipif(True, reason="Skip to save the CI time")
 @pytest.mark.skipif(
-    mnm.build.with_cuda() and float(mnm.build.with_cuda()) <= 11.2,
+    raf.build.with_cuda() and float(raf.build.with_cuda()) <= 11.2,
     reason="Workspace may overlap for cuda <= 11.2.",
 )
 @pytest.mark.parametrize("fuse", [False, True])

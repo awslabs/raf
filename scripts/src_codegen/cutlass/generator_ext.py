@@ -14,7 +14,7 @@ from library_ext import *
 
 
 def GenerateSM50_Simt_Epilogue(manifest, args):
-    """Extention to meta/3rdparty/cutlass/tools/library/scripts/generator.py::GenerateSM50_Simt"""
+    """Extention to raf/3rdparty/cutlass/tools/library/scripts/generator.py::GenerateSM50_Simt"""
     layouts = [
         (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.ColumnMajor),
         (LayoutType.ColumnMajor, LayoutType.RowMajor, LayoutType.ColumnMajor),
@@ -208,7 +208,7 @@ def GenerateSM70(manifest, args):
 
 
 def GenerateSM80_Simt_f32_Epilogue(manifest, args):
-    """Extention to meta/3rdparty/cutlass/tools/library/scripts/generator.py::GenerateSM80_Simt"""
+    """Extention to raf/3rdparty/cutlass/tools/library/scripts/generator.py::GenerateSM80_Simt"""
     layouts = [
         (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.ColumnMajor),
         (LayoutType.ColumnMajor, LayoutType.RowMajor, LayoutType.ColumnMajor),

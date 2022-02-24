@@ -10,11 +10,11 @@ set -e
 # Usage: push.sh <CONTAINER_TYPE> <VERSION> <PASSWORD>
 #
 # CONTAINER_TYPE: It can be ci_cpu or ci_gpu.
-#                 The image named "mnm.<CONTAINER_TYPE>:latest" will be pushed.
+#                 The image named "raf.<CONTAINER_TYPE>:latest" will be pushed.
 #
 # VERSION: The pushed version. The format should be like v0.12.
 #
-# PASSWORD: The Meta docker hub account password.
+# PASSWORD: The RAF docker hub account password.
 #
 DOCKER_HUB_ACCOUNT=metaprojdev
 
@@ -30,7 +30,7 @@ shift 1
 PASSWORD="$1"
 shift 1
 
-LOCAL_IMAGE_NAME=mnm.${CONTAINER_TYPE}:latest
+LOCAL_IMAGE_NAME=raf.${CONTAINER_TYPE}:latest
 REMOTE_IMAGE_NAME=${DOCKER_HUB_ACCOUNT}/meta:${CONTAINER_TYPE}-${VERSION}
 
 echo "Login docker hub"

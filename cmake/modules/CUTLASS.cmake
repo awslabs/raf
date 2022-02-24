@@ -3,11 +3,11 @@
 
 ##############################################################################
 # Provide:
-#  - MNM_CUTLASS_LIBRARY
+#  - RAF_CUTLASS_LIBRARY
 message("########## Configuring CUTLASS ##########")
 
 # meta customized kernels
-function(mnm_customized_cutlass_kernels)
+function(raf_customized_cutlass_kernels)
   find_package(Python3 3.5 COMPONENTS Interpreter REQUIRED)
   include(${PROJECT_SOURCE_DIR}/3rdparty/cutlass/CUDA.cmake)
   set(CUTLASS_GENERATOR_CUDA_COMPILER_VERSION ${CMAKE_CUDA_COMPILER_VERSION})
@@ -60,12 +60,12 @@ function(mnm_customized_cutlass_kernels)
   )
 endfunction()
 
-if (${MNM_USE_CUTLASS} STREQUAL "OFF")
+if (${RAF_USE_CUTLASS} STREQUAL "OFF")
   message(STATUS "Build without CUTLASS support")
-  set(MNM_CUTLASS_LIBRARY "")
+  set(RAF_CUTLASS_LIBRARY "")
 else()
-  set(CUTLASS_NVCC_ARCHS ${MNM_CUDA_ARCH} CACHE STRING "The SM architectures requested.")
-  if (${MNM_USE_CUDA} STREQUAL "OFF")
+  set(CUTLASS_NVCC_ARCHS ${RAF_CUDA_ARCH} CACHE STRING "The SM architectures requested.")
+  if (${RAF_USE_CUDA} STREQUAL "OFF")
     message(FATAL_ERROR "Cannot enable CUTLASS without using CUDA.")
   endif()
 
@@ -79,14 +79,14 @@ else()
   add_subdirectory(${PROJECT_SOURCE_DIR}/3rdparty/cutlass/)
   message(STATUS "Set CUTLASS_NVCC_ARCHS=${CUTLASS_NVCC_ARCHS}")
   unset(CUTLASS_LIBRARY_KERNELS)
-  mnm_customized_cutlass_kernels()
+  raf_customized_cutlass_kernels()
 
   set_target_properties(cutlass_lib PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
-  set(MNM_CUTLASS_LIBRARY "cutlass_lib")
+  set(RAF_CUTLASS_LIBRARY "cutlass_lib")
 endif()
 
 message("########## Done Configuring CUTLASS ##########")

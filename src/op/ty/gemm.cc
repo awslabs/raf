@@ -8,15 +8,15 @@
  * \brief Typing of gemm operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/ufunc.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using schema::BinaryArgs;
 
 template <bool transpose_a, bool transpose_b>
@@ -71,15 +71,15 @@ Type BatchMatmulInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.matmul", "Matmul", (MatmulInfer<false, false>));
-MNM_OP_TYPE("mnm.op.matmul_nt", "MatmulNT", (MatmulInfer<false, true>));
-MNM_OP_TYPE("mnm.op.matmul_tn", "MatmulTN", (MatmulInfer<true, false>));
-MNM_OP_TYPE("mnm.op.matmul_tt", "MatmulTT", (MatmulInfer<true, true>));
-MNM_OP_TYPE("mnm.op.dense", "DenseInfer", (MatmulInfer<false, true>));
-MNM_OP_TYPE("mnm.op.batch_matmul", "BatchMatmulNN", (BatchMatmulInfer<false, false>));
-MNM_OP_TYPE("mnm.op.batch_matmul_nt", "BatchMatmulNT", (BatchMatmulInfer<false, true>));
-MNM_OP_TYPE("mnm.op.batch_matmul_tn", "BatchMatmulTN", (BatchMatmulInfer<true, false>));
-MNM_OP_TYPE("mnm.op.batch_matmul_tt", "BatchMatmulTT", (BatchMatmulInfer<true, true>));
+RAF_OP_TYPE("raf.op.matmul", "Matmul", (MatmulInfer<false, false>));
+RAF_OP_TYPE("raf.op.matmul_nt", "MatmulNT", (MatmulInfer<false, true>));
+RAF_OP_TYPE("raf.op.matmul_tn", "MatmulTN", (MatmulInfer<true, false>));
+RAF_OP_TYPE("raf.op.matmul_tt", "MatmulTT", (MatmulInfer<true, true>));
+RAF_OP_TYPE("raf.op.dense", "DenseInfer", (MatmulInfer<false, true>));
+RAF_OP_TYPE("raf.op.batch_matmul", "BatchMatmulNN", (BatchMatmulInfer<false, false>));
+RAF_OP_TYPE("raf.op.batch_matmul_nt", "BatchMatmulNT", (BatchMatmulInfer<false, true>));
+RAF_OP_TYPE("raf.op.batch_matmul_tn", "BatchMatmulTN", (BatchMatmulInfer<true, false>));
+RAF_OP_TYPE("raf.op.batch_matmul_tt", "BatchMatmulTT", (BatchMatmulInfer<true, true>));
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

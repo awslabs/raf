@@ -12,9 +12,9 @@ def gen_file(filename):
  * \\file {FILENAME}
  * \\brief Register TVM ops.
  */
-#include "mnm/ir.h"
-#include "mnm/op.h"
-namespace mnm {{
+#include "raf/ir.h"
+#include "raf/op.h"
+namespace raf {{
 namespace op {{
 namespace {{
 using ir::Array;
@@ -26,8 +26,8 @@ using tvm::te::Schedule;
 using tvm::te::Tensor;
 using tvm::relay::FTVMCompute;
 using tvm::relay::FTVMSchedule;
-#define MNM_TVM_OP(MNM_OP, OP)                                                                  \\
-  MNM_REGISTER_OP(MNM_OP)                                                                       \\
+#define RAF_TVM_OP(RAF_OP, OP)                                                                  \\
+  RAF_REGISTER_OP(RAF_OP)                                                                       \\
       .set_attr<FTVMCompute>("FTVMCompute",                                                     \\
                              [](const Attrs& attrs, const Array<Tensor>& inputs,                \\
                                 const Type& out_type) -> Array<Tensor> {{                        \\
@@ -45,21 +45,21 @@ using tvm::relay::FTVMSchedule;
 {REGS}
 }}  // namespace
 }}  // namespace op
-}}  // namespace mnm
+}}  // namespace raf
 """.strip()
     regs = []
-    for mnm_op_name in sorted(topi.OP_MAP.keys()):
-        relay_op_name, _, _ = topi.OP_MAP[mnm_op_name]
-        regs.append(gen_reg(mnm_op_name, relay_op_name))
+    for raf_op_name in sorted(topi.OP_MAP.keys()):
+        relay_op_name, _, _ = topi.OP_MAP[raf_op_name]
+        regs.append(gen_reg(raf_op_name, relay_op_name))
     regs = "\n".join(regs)
     return FILE.format(REGS=regs, FILENAME=filename)
 
 
-def gen_reg(mnm_op_name, relay_op_name):
+def gen_reg(raf_op_name, relay_op_name):
     REG = """
-MNM_TVM_OP("{MNM_OP_NAME}", "{RELAY_OP_NAME}");
+RAF_TVM_OP("{RAF_OP_NAME}", "{RELAY_OP_NAME}");
 """.strip()
-    return REG.format(MNM_OP_NAME=mnm_op_name, RELAY_OP_NAME=relay_op_name)
+    return REG.format(RAF_OP_NAME=raf_op_name, RELAY_OP_NAME=relay_op_name)
 
 
 def main(path="./src/op/regs/tvm_op_regs.cc"):

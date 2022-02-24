@@ -11,17 +11,17 @@
 #include <unordered_map>
 #include <tvm/node/structural_equal.h>
 #include <tvm/node/structural_hash.h>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/binding.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/binding.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace inline_let {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 class LetInliner : public ExprMutator {
  public:
@@ -93,10 +93,10 @@ Pass InlineLet() {
                                                                              PassContext pc) {
     return Downcast<Function>(inline_let::LetInliner().VisitExpr(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "InlineLet", {});
+  return CreateRAFFunctionPass(pass_func, 1, "InlineLet", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InlineLet").set_body_typed(InlineLet);
+RAF_REGISTER_GLOBAL("raf.pass_.InlineLet").set_body_typed(InlineLet);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

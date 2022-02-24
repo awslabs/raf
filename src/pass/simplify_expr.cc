@@ -9,20 +9,20 @@
  * \file simplify_expr.cc
  * \brief Simplifies the commonly seen patterns.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/op_utils.h"
-#include "mnm/pass.h"
-#include "mnm/value.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/op_utils.h"
+#include "raf/pass.h"
+#include "raf/value.h"
 #include "../op/ty/utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace simplify_expr {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
 
 using tvm::TVMArgs;
 using tvm::TVMRetValue;
@@ -160,13 +160,13 @@ class ConcretizeUnaryLikeRewrite : public ConcretizeLikeRewrite {
 
 class ConcretizeZerosLikeRewrite : public ConcretizeUnaryLikeRewrite {
  public:
-  ConcretizeZerosLikeRewrite() : ConcretizeUnaryLikeRewrite("mnm.op.zeros_like", "mnm.op.zeros") {
+  ConcretizeZerosLikeRewrite() : ConcretizeUnaryLikeRewrite("raf.op.zeros_like", "raf.op.zeros") {
   }
 };
 
 class ConcretizeOnesLikeRewrite : public ConcretizeUnaryLikeRewrite {
  public:
-  ConcretizeOnesLikeRewrite() : ConcretizeUnaryLikeRewrite("mnm.op.ones_like", "mnm.op.ones") {
+  ConcretizeOnesLikeRewrite() : ConcretizeUnaryLikeRewrite("raf.op.ones_like", "raf.op.ones") {
   }
 };
 
@@ -189,12 +189,12 @@ class ConcretizeBinaryLikeRewrite : public ConcretizeLikeRewrite {
 
 class ConcretizeCastLikeRewrite : public ConcretizeBinaryLikeRewrite {
  public:
-  ConcretizeCastLikeRewrite() : ConcretizeBinaryLikeRewrite(Op::Get("mnm.op.cast_like")) {
+  ConcretizeCastLikeRewrite() : ConcretizeBinaryLikeRewrite(Op::Get("raf.op.cast_like")) {
   }
 
   Expr Concretize(const Map<DFPattern, Array<Expr>>& node_map, Array<Integer> shape,
                   DataType dtype) const override {
-    static auto op = Op::Get("mnm.op.cast");
+    static auto op = Op::Get("raf.op.cast");
     return Call(
         op, {node_map[data_pat_][0], MakeConstant(StringValue::make(DLDataType2String(dtype)))});
   }
@@ -203,12 +203,12 @@ class ConcretizeCastLikeRewrite : public ConcretizeBinaryLikeRewrite {
 class ConcretizeBroadcastToLikeRewrite : public ConcretizeBinaryLikeRewrite {
  public:
   ConcretizeBroadcastToLikeRewrite()
-      : ConcretizeBinaryLikeRewrite(Op::Get("mnm.op.broadcast_to_like")) {
+      : ConcretizeBinaryLikeRewrite(Op::Get("raf.op.broadcast_to_like")) {
   }
 
   Expr Concretize(const Map<DFPattern, Array<Expr>>& node_map, Array<Integer> shape,
                   DataType dtype) const override {
-    static auto op = Op::Get("mnm.op.broadcast_to");
+    static auto op = Op::Get("raf.op.broadcast_to");
     return Call(op, {node_map[data_pat_][0], MakeConstant(ArrayToIntTuple(shape))});
   }
 };
@@ -263,7 +263,7 @@ class ConcretizeMultiplyRewrite : public DFPatternRewrite {
   ConcretizeMultiplyRewrite() {
     in1_pat_ = IsWildcard();
     in2_pat_ = IsWildcard();
-    pattern_ = IsOp("mnm.op.multiply")({in1_pat_, in2_pat_});
+    pattern_ = IsOp("raf.op.multiply")({in1_pat_, in2_pat_});
   }
 
   Expr Callback(const Expr& pre, const Expr& post,
@@ -282,7 +282,7 @@ class ConcretizeMultiplyRewrite : public DFPatternRewrite {
     bool is_1st_zero = IsExpectedScalar(node_map[in1_pat_][0], 0);
     bool is_2nd_zero = IsExpectedScalar(node_map[in2_pat_][0], 0);
     if (is_1st_zero || is_2nd_zero) {
-      static auto op = Op::Get("mnm.op.zeros");
+      static auto op = Op::Get("raf.op.zeros");
       auto call = Downcast<Call>(pre);
       auto non_zero_in = (is_1st_zero) ? call->args[1] : call->args[0];
       const TensorTypeNode* ttype_node = non_zero_in->checked_type().as<TensorTypeNode>();
@@ -321,7 +321,7 @@ class ConcretizeAddSubRewrite : public DFPatternRewrite {
     in1_pat_ = IsWildcard();
     in2_pat_ = IsWildcard();
     out_pat_ = IsWildcard();
-    op_pat_ = IsOp("mnm.op.add") || IsOp("mnm.op.subtract");
+    op_pat_ = IsOp("raf.op.add") || IsOp("raf.op.subtract");
     pattern_ = op_pat_({in1_pat_, in2_pat_, out_pat_, IsWildcard()});
   }
 
@@ -333,7 +333,7 @@ class ConcretizeAddSubRewrite : public DFPatternRewrite {
     }
 
     Op op = Downcast<Op>(node_map[op_pat_][0]);
-    static auto add_op = Op::Get("mnm.op.add");
+    static auto add_op = Op::Get("raf.op.add");
 
     // Remove 0+x, x+0, and x-0. Note that 0-x cannot be simplified.
     if (op == add_op && IsExpectedScalar(node_map[in1_pat_][0], 0)) {
@@ -394,13 +394,13 @@ class SimplifyCast : public DFPatternRewrite {
  public:
   SimplifyCast() {
     data_pat_ = IsWildcard();
-    pattern_ = IsOp("mnm.op.cast")({data_pat_, IsWildcard()});
-    pattern_ = IsOp("mnm.op.cast")({pattern_, IsWildcard()}) || pattern_;
+    pattern_ = IsOp("raf.op.cast")({data_pat_, IsWildcard()});
+    pattern_ = IsOp("raf.op.cast")({pattern_, IsWildcard()}) || pattern_;
   }
 
   Expr Callback(const Expr& pre, const Expr& post,
                 const Map<DFPattern, Array<Expr>>& node_map) const override {
-    static auto cast_op = Op::Get("mnm.op.cast");
+    static auto cast_op = Op::Get("raf.op.cast");
     const TensorTypeNode* out_ty = pre->checked_type().as<TensorTypeNode>();
 
     // Find the data node to get its type, because node_map[data_pat_] does not have checked type.
@@ -432,14 +432,14 @@ class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
     data_pat_ = IsWildcard();
     weight_pat_ = IsWildcard();
     bias_pat_ = IsWildcard();
-    matmul_op_ = IsOp("mnm.op.dense") || IsOp("mnm.op.matmul") || IsOp("mnm.op.matmul_nt") ||
-                 IsOp("mnm.op.matmul_tn") || IsOp("mnm.op.matmul_tt") ||
-                 IsOp("mnm.op.batch_matmul") || IsOp("mnm.op.batch_matmul_nt") ||
-                 IsOp("mnm.op.batch_matmul_tn") || IsOp("mnm.op.batch_matmul_tt");
+    matmul_op_ = IsOp("raf.op.dense") || IsOp("raf.op.matmul") || IsOp("raf.op.matmul_nt") ||
+                 IsOp("raf.op.matmul_tn") || IsOp("raf.op.matmul_tt") ||
+                 IsOp("raf.op.batch_matmul") || IsOp("raf.op.batch_matmul_nt") ||
+                 IsOp("raf.op.batch_matmul_tn") || IsOp("raf.op.batch_matmul_tt");
     pattern_ = matmul_op_({data_pat_, weight_pat_});
-    pattern_ = IsOp("mnm.op.reshape")({pattern_, IsWildcard(), IsWildcard()});
-    pattern_ = IsOp("mnm.op.add")({pattern_, bias_pat_, IsWildcard(), IsWildcard()});
-    act_op_ = IsOp("mnm.op.relu") || IsOp("mnm.op.gelu");
+    pattern_ = IsOp("raf.op.reshape")({pattern_, IsWildcard(), IsWildcard()});
+    pattern_ = IsOp("raf.op.add")({pattern_, bias_pat_, IsWildcard(), IsWildcard()});
+    act_op_ = IsOp("raf.op.relu") || IsOp("raf.op.gelu");
     pattern_ = pattern_ || act_op_({pattern_});
   }
 
@@ -451,9 +451,9 @@ class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
     if (call_node->args.size() < 2) {
       call_node = call_node->args[0].as<CallNode>();
     }
-    static const Op& add_op = Op::Get("mnm.op.add");
+    static const Op& add_op = Op::Get("raf.op.add");
     CHECK_EQ(call_node->op, add_op)
-        << "Expected an add call, but got " << mnm::ir::AsText(GetRef<Call>(call_node));
+        << "Expected an add call, but got " << raf::ir::AsText(GetRef<Call>(call_node));
     return GetRef<Call>(call_node);
   }
 
@@ -469,7 +469,7 @@ class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
     }
 
     // We need to check if bias_add inputs are still broadcastable after moving reshape.
-    static const Op& reshape_op = Op::Get("mnm.op.reshape");
+    static const Op& reshape_op = Op::Get("raf.op.reshape");
     auto reshape_call_node = call->args[0].as<CallNode>();
     auto other_arg_ttype = ttype2;
     if (reshape_call_node == nullptr || reshape_call_node->op != reshape_op) {
@@ -478,7 +478,7 @@ class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
       other_arg_ttype = ttype1;
       CHECK(reshape_call_node != nullptr && reshape_call_node->op == reshape_op)
           << "Expected an add call with a reshape call as argument, but got "
-          << mnm::ir::AsText(call);
+          << raf::ir::AsText(call);
     }
 
     if (auto reshape_arg_ttype = reshape_call_node->args[0]->checked_type().as<TensorTypeNode>()) {
@@ -495,8 +495,8 @@ class SimplifyMatmulReshapeBiasAct : public DFPatternRewrite {
 
   Expr Callback(const Expr& pre, const Expr& post,
                 const Map<DFPattern, Array<Expr>>& node_map) const override {
-    static auto reshape_op = Op::Get("mnm.op.reshape");
-    static auto add_op = Op::Get("mnm.op.add");
+    static auto reshape_op = Op::Get("raf.op.reshape");
+    static auto add_op = Op::Get("raf.op.add");
 
     if (!Check(pre, post, node_map)) {
       return post;
@@ -537,13 +537,13 @@ class SimplifyReshape : public DFPatternRewrite {
  public:
   SimplifyReshape() {
     data_pat_ = IsWildcard();
-    pattern_ = IsOp("mnm.op.reshape")({data_pat_, IsWildcard(), IsWildcard()});
-    pattern_ = IsOp("mnm.op.reshape")({pattern_, IsWildcard(), IsWildcard()}) || pattern_;
+    pattern_ = IsOp("raf.op.reshape")({data_pat_, IsWildcard(), IsWildcard()});
+    pattern_ = IsOp("raf.op.reshape")({pattern_, IsWildcard(), IsWildcard()}) || pattern_;
   }
 
   Expr Callback(const Expr& pre, const Expr& post,
                 const Map<DFPattern, Array<Expr>>& node_map) const override {
-    static auto reshape_op = Op::Get("mnm.op.reshape");
+    static auto reshape_op = Op::Get("raf.op.reshape");
     const CallNode* call = pre.as<CallNode>();
     auto data = node_map[data_pat_][0];
     const TensorTypeNode* out_ty = pre->checked_type().as<TensorTypeNode>();
@@ -588,7 +588,7 @@ class SimplifyReshape : public DFPatternRewrite {
       }
 
       if (need_reshape) {
-        static auto op = Op::Get("mnm.op.reshape");
+        static auto op = Op::Get("raf.op.reshape");
         auto ret = Call(op, {data, MakeConstant(ArrayToIntTuple(new_shape)), call->args[2]});
         ret->checked_type_ = GetRef<TensorType>(out_ty);
         return ret;
@@ -613,14 +613,14 @@ Expr SimplifyExpr(const Expr& expr, const IRModule& mod) {
   composer.AddRewrite<ConcretizeBroadcastToLikeRewrite>();
   composer.AddRewrite<ConcretizeMultiplyRewrite>();
   composer.AddRewrite<ConcretizeAddSubRewrite>();
-  auto ret = mnm::ir::MNMRewritePatterns(composer.MakeCallbacks(), expr, mod);
+  auto ret = raf::ir::RAFRewritePatterns(composer.MakeCallbacks(), expr, mod);
 
   // Phase 2: Sequence patterns that may need to be applied iteratively.
   composer.Clear();
   composer.AddRewrite<SimplifyMatmulReshapeBiasAct>();
   composer.AddRewrite<SimplifyCast>();
   composer.AddRewrite<SimplifyReshape>();
-  return mnm::ir::MNMRewritePatterns(composer.MakeCallbacks(), ret, mod);
+  return raf::ir::RAFRewritePatterns(composer.MakeCallbacks(), ret, mod);
 }
 
 }  // namespace simplify_expr
@@ -630,10 +630,10 @@ Pass SimplifyExpr() {
                                                                              PassContext pc) {
     return Downcast<Function>(simplify_expr::SimplifyExpr(f, m));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "SimplifyExpr", {"InferType"});
+  return CreateRAFFunctionPass(pass_func, 0, "SimplifyExpr", {"InferType"});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.SimplifyExpr").set_body_typed(SimplifyExpr);
+RAF_REGISTER_GLOBAL("raf.pass_.SimplifyExpr").set_body_typed(SimplifyExpr);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

@@ -8,25 +8,25 @@
  * \brief Gradient operator input selection pass
  */
 #include <sstream>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include <string>
 #include <vector>
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace arg_select {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 // Init a map to set which argument should be skipped (set to Null) for which op
-MNM_OP_GRAD_SKIP_INPUTS("mnm.op.relu_dx", "x");
-MNM_OP_GRAD_SKIP_INPUTS("mnm.op.gelu_dx", "y");
-MNM_OP_GRAD_SKIP_INPUTS("mnm.op.sqrt_dx", "x");
-MNM_OP_GRAD_SKIP_INPUTS("mnm.op.conv2d_dx", "y");
-MNM_OP_GRAD_SKIP_INPUTS("mnm.op.conv2d_dw", "y");
+RAF_OP_GRAD_SKIP_INPUTS("raf.op.relu_dx", "x");
+RAF_OP_GRAD_SKIP_INPUTS("raf.op.gelu_dx", "y");
+RAF_OP_GRAD_SKIP_INPUTS("raf.op.sqrt_dx", "x");
+RAF_OP_GRAD_SKIP_INPUTS("raf.op.conv2d_dx", "y");
+RAF_OP_GRAD_SKIP_INPUTS("raf.op.conv2d_dw", "y");
 
 class GradientOp : public ExprMutator {
  public:
@@ -35,7 +35,7 @@ class GradientOp : public ExprMutator {
     if (callee->IsInstance<OpNode>()) {
       const Op& op = Downcast<Op>(node->op);
       auto skip_arg_map = Op::GetAttrMap<std::string>("GradientInputSkip");
-      auto fschema_index = Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+      auto fschema_index = Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
       if (skip_arg_map.count(op)) {
         Array<Expr> args;
         std::set<int> skip_index_set{};
@@ -79,7 +79,7 @@ Pass GradInputSelect() {
       0, "GradientInputSelection", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.GradientInputSelection").set_body_typed(GradInputSelect);
+RAF_REGISTER_GLOBAL("raf.pass_.GradientInputSelection").set_body_typed(GradInputSelect);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

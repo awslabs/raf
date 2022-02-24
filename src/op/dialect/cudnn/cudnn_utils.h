@@ -14,11 +14,11 @@
 #include <vector>
 #include <functional>
 #include <numeric>
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/enum_base.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/enum_base.h"
+#include "raf/ir.h"
+#include "raf/value.h"
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 #include "../tvm/tvm_utils.h"
@@ -29,7 +29,7 @@
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   } while (false)
 
-namespace mnm {
+namespace raf {
 
 template <>
 inline DType::operator cudnnDataType_t() const {
@@ -400,4 +400,4 @@ inline size_t ComputeStorageInBytes(const ir::TensorType& type) {
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

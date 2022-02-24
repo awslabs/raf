@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/vm_debugger.cc
- * \brief The implementation for Meta virtual machine debugger.
+ * \brief The implementation for RAF virtual machine debugger.
  */
 #include <memory>
 #include <numeric>
@@ -14,11 +14,11 @@
 #include <vector>
 
 #include "tvm/relay/transform.h"
-#include "mnm/device_api.h"
-#include "mnm/memory_pool.h"
+#include "raf/device_api.h"
+#include "raf/memory_pool.h"
 #include "./vm_debugger.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
@@ -124,7 +124,7 @@ tvm::runtime::Module CreateVMDebugger(const Executable* exec) {
   return tvm::runtime::Module(vm);
 }
 
-MNM_REGISTER_GLOBAL("mnm.vm.VMDebugger").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.VMDebugger").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec) << "The virtual machine executable has not been defined yet.";
@@ -133,4 +133,4 @@ MNM_REGISTER_GLOBAL("mnm.vm.VMDebugger").set_body([](tvm::TVMArgs args, tvm::TVM
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

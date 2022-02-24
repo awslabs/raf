@@ -16,7 +16,7 @@
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
@@ -70,4 +70,4 @@ registry::PackedFunc TimeEvaluator(registry::PackedFunc pf, Device dev, int numb
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

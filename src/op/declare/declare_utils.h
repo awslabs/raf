@@ -10,7 +10,7 @@
 #pragma once
 #include "dmlc/logging.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 inline int NormalizeAxis(int axis, int ndim) {
@@ -21,7 +21,7 @@ inline int NormalizeAxis(int axis, int ndim) {
 
 template <typename T>
 inline void DeclareGeneralDx(const CallValues& call) {
-  using namespace mnm::value;
+  using namespace raf::value;
   const auto* args = call->args.as<T>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -34,4 +34,4 @@ inline void DeclareGeneralDx(const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

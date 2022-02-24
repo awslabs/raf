@@ -3,25 +3,25 @@
 
 import pytest
 import numpy as np
-import mnm
-from mnm._core.executor import VMExecutor
-from mnm.testing import check, compile_vm_model, run_vm_model, get_arr_addr, randn
-from mnm.testing import get_testable_devices
+import raf
+from raf._core.executor import VMExecutor
+from raf.testing import check, compile_vm_model, run_vm_model, get_arr_addr, randn
+from raf.testing import get_testable_devices
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_vm(device, shape):
     # pylint: disable=protected-access
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.add(x, x)
-            z = mnm.add(x, y)
+            y = raf.add(x, x)
+            z = raf.add(x, y)
             return z
 
     model = Model()
@@ -42,19 +42,19 @@ def test_vm(device, shape):
     np.testing.assert_allclose(m_z, ref_z, rtol=1e-5, atol=1e-5)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_cuda_graph(shape):
     # pylint: disable=protected-access
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.add(x, x)
-            z = mnm.add(x, y)
+            y = raf.add(x, x)
+            z = raf.add(x, y)
             return z
 
     dev = "cuda"
@@ -81,15 +81,15 @@ def test_cuda_graph(shape):
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_tuple(device, shape):
     # pylint: disable=protected-access
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.add(x, x)
-            z = mnm.add(x, y)
+            y = raf.add(x, x)
+            z = raf.add(x, y)
             return y, z
 
     model = Model()
@@ -114,17 +114,17 @@ def test_tuple(device, shape):
 def test_memory(device, shape):
     # pylint: disable=protected-access
     dtype = "float32"
-    x = mnm.array(np.random.randn(*shape).astype(dtype), device=device)
-    t_1 = mnm.array(np.ones(shape, dtype=dtype) * 3)
-    t_2 = mnm.array(np.ones(shape, dtype=dtype) * 4)
+    x = raf.array(np.random.randn(*shape).astype(dtype), device=device)
+    t_1 = raf.array(np.ones(shape, dtype=dtype) * 3)
+    t_2 = raf.array(np.ones(shape, dtype=dtype) * 4)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.relu(x)
+            y = raf.relu(x)
             return y
 
     model = Model()
@@ -132,7 +132,7 @@ def test_memory(device, shape):
     mod = model._internal(*args).mod
     executor = VMExecutor(mod, device)
     y = executor.make_executor()(*args)
-    out = mnm.add(t_1, t_2)
+    out = raf.add(t_1, t_2)
     assert get_arr_addr(out) != get_arr_addr(y)
 
 
@@ -145,14 +145,14 @@ def test_simple_fusion(device, shape):
         out_after = run_vm_model(model, device, args)
         check(out_before, out_after)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.add(x, x)
-            z = mnm.relu(y)
+            y = raf.add(x, x)
+            z = raf.relu(y)
             return z
 
     model = Model()
@@ -171,15 +171,15 @@ def test_split_fusion(device):
         out_after = run_vm_model(model, device, args)
         check(out_before, out_after)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.split(x, indices_or_sections=3, axis=0)
+            y = raf.split(x, indices_or_sections=3, axis=0)
             y = y[0]
-            z = mnm.relu(y)
+            z = raf.relu(y)
             return z
 
     model = Model()
@@ -191,23 +191,23 @@ def test_reshape():
     # pylint: disable=protected-access, attribute-defined-outside-init, no-self-use
     shape = [3, 4, 5]
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.reshape(x, (12, 5))
-            y = mnm.expand_dims(y, axis=1)
-            y = mnm.relu(y)
+            y = raf.reshape(x, (12, 5))
+            y = raf.expand_dims(y, axis=1)
+            y = raf.relu(y)
             y = y + y
-            y = mnm.reshape(y, (3, 4, 5))
+            y = raf.reshape(y, (3, 4, 5))
             return y
 
     model = Model()
     device = "cpu"
     m_x, _ = randn(shape, device=device)
-    with mnm.ir.PassContext(disabled_pass=["FuseTVM", "FuseDialect"]):
+    with raf.ir.PassContext(disabled_pass=["FuseTVM", "FuseDialect"]):
         # Disable fusion pass to prevent them from being fused.
         bytecode = compile_vm_model(model, device, [m_x])
     assert bytecode.count("set_shape") == 3

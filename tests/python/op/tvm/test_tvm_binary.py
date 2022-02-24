@@ -6,15 +6,15 @@
 import numpy as np
 import pytest
 import torch
-import mnm
-from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model, with_seed
+import raf
+from raf.testing import get_testable_devices, randn, randn_torch, check, run_vm_model, with_seed
 
 
-class BinaryModel(mnm.Model):
+class BinaryModel(raf.Model):
     def build(self, op):
         self.op = op
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x1, x2):
         return self.op(x1, x2)
 
@@ -44,10 +44,10 @@ def verify_op(m_op, m_args, device, ref_fwd_out, m_dy=None, ref_grads=None):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.maximum, mnm._op.sym.maximum),
-        (np.greater, mnm._op.sym.greater),
-        (np.minimum, mnm._op.sym.minimum),
-        (np.floor_divide, mnm._op.sym.floor_divide),
+        (np.maximum, raf._op.sym.maximum),
+        (np.greater, raf._op.sym.greater),
+        (np.minimum, raf._op.sym.minimum),
+        (np.floor_divide, raf._op.sym.floor_divide),
     ],
 )
 @pytest.mark.parametrize("shape", [[(), (1, 2)], [(3, 3), (1, 1)]])
@@ -69,11 +69,11 @@ def test_binary_ops_without_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.mul, mnm._op.sym.multiply),
-        (torch.div, mnm._op.sym.divide),
-        (torch.pow, mnm._op.sym.power),
-        (torch.add, mnm._op.sym.add),
-        (torch.sub, mnm._op.sym.subtract),
+        (torch.mul, raf._op.sym.multiply),
+        (torch.div, raf._op.sym.divide),
+        (torch.pow, raf._op.sym.power),
+        (torch.add, raf._op.sym.add),
+        (torch.sub, raf._op.sym.subtract),
     ],
 )
 @pytest.mark.parametrize("shape", [[(), (1, 2)], [(3, 3), (1, 1)]])
@@ -94,7 +94,7 @@ def test_binary_ops_with_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.logical_and, mnm._op.sym.logical_and),
+        (np.logical_and, raf._op.sym.logical_and),
     ],
 )
 @pytest.mark.parametrize(
@@ -116,7 +116,7 @@ def test_binary_bool_ops(ops, shape, dtype, device):
 
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
-    "ops", [(np.right_shift, mnm._op.sym.right_shift), (np.left_shift, mnm._op.sym.left_shift)]
+    "ops", [(np.right_shift, raf._op.sym.right_shift), (np.left_shift, raf._op.sym.left_shift)]
 )
 @pytest.mark.parametrize("shape", [[(), (1, 2)], [(3, 3), (1, 1)]])
 @pytest.mark.parametrize("dtype", ["uint16", "uint8", "uint32"])
@@ -134,12 +134,12 @@ def test_shift_ops_with_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.eq, mnm._op.sym.equal),
-        (torch.ne, mnm._op.sym.not_equal),
-        (torch.lt, mnm._op.sym.less),
-        (torch.le, mnm._op.sym.less_equal),
-        (torch.gt, mnm._op.sym.greater),
-        (torch.ge, mnm._op.sym.greater_equal),
+        (torch.eq, raf._op.sym.equal),
+        (torch.ne, raf._op.sym.not_equal),
+        (torch.lt, raf._op.sym.less),
+        (torch.le, raf._op.sym.less_equal),
+        (torch.gt, raf._op.sym.greater),
+        (torch.ge, raf._op.sym.greater_equal),
     ],
 )
 @pytest.mark.parametrize("shape", [[(), (1, 2)], [(3, 3), (1, 1)]])

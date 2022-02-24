@@ -11,7 +11,7 @@
  */
 #include <stdio.h>
 #include "./kernel_util.cuh"
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cuda {
 
@@ -149,4 +149,4 @@ void embedding_dense_backward_cuda(const scalar_t* grad, accscalar_t* output,
 
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

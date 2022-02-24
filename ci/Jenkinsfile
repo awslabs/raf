@@ -8,11 +8,11 @@ ci_gpu = "metaprojdev/meta:ci_gpu-v0.20"
 docker_run = 'docker/bash.sh'
 max_time = 120
 
-mnm_multilib = "build/config.cmake, " +
+raf_multilib = "build/config.cmake, " +
                "build/lib/libtvm.so, " +
-               "build/lib/libmnm.so"
+               "build/lib/libraf.so"
 
-mnm_multilib_cutlass = mnm_multilib + ", " +
+raf_multilib_cutlass = raf_multilib + ", " +
                        "build/lib/libcutlass.so"
 
 def init_git_unix() {
@@ -103,19 +103,19 @@ stage('Build') {
          mkdir -p build
          cd build
          cp ../cmake/config.cmake .
-         echo "set(MNM_USE_LLVM llvm-config-8)" >> config.cmake
-         echo "set(MNM_USE_GTEST ON)" >> config.cmake
-         echo "set(MNM_USE_CUDA ON)" >> config.cmake
-         echo "set(MNM_CUDA_ARCH 75)" >> config.cmake
-         echo "set(MNM_USE_CUDNN ON)" >> config.cmake
-         echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
-         echo "set(MNM_USE_MPI ON)" >> config.cmake
-         echo "set(MNM_USE_NCCL ON)" >> config.cmake
-         echo "set(MNM_USE_CUTLASS ON)" >> config.cmake
+         echo "set(RAF_USE_LLVM llvm-config-8)" >> config.cmake
+         echo "set(RAF_USE_GTEST ON)" >> config.cmake
+         echo "set(RAF_USE_CUDA ON)" >> config.cmake
+         echo "set(RAF_CUDA_ARCH 75)" >> config.cmake
+         echo "set(RAF_USE_CUDNN ON)" >> config.cmake
+         echo "set(RAF_USE_CUBLAS ON)" >> config.cmake
+         echo "set(RAF_USE_MPI ON)" >> config.cmake
+         echo "set(RAF_USE_NCCL ON)" >> config.cmake
+         echo "set(RAF_USE_CUTLASS ON)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_gpu, 'build')
-      pack_lib('gpu', mnm_multilib_cutlass)
+      pack_lib('gpu', raf_multilib_cutlass)
     }
   },
   'BUILD: CPU': {
@@ -125,15 +125,15 @@ stage('Build') {
          mkdir -p build
          cd build
          cp ../cmake/config.cmake .
-         echo "set(MNM_USE_LLVM llvm-config-8)" >> config.cmake
-         echo "set(MNM_USE_GTEST ON)" >> config.cmake
-         echo "set(MNM_USE_CUDA OFF)" >> config.cmake
-         echo "set(MNM_USE_CUDNN OFF)" >> config.cmake
-         echo "set(MNM_USE_CUBLAS OFF)" >> config.cmake
+         echo "set(RAF_USE_LLVM llvm-config-8)" >> config.cmake
+         echo "set(RAF_USE_GTEST ON)" >> config.cmake
+         echo "set(RAF_USE_CUDA OFF)" >> config.cmake
+         echo "set(RAF_USE_CUDNN OFF)" >> config.cmake
+         echo "set(RAF_USE_CUBLAS OFF)" >> config.cmake
          echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
          """
       make(ci_cpu, 'build')
-      pack_lib('cpu', mnm_multilib)
+      pack_lib('cpu', raf_multilib)
     }
   }
 }
@@ -142,18 +142,18 @@ stage('Unit Test') {
   parallel 'python3: GPU': {
     run_node_if_not_skipped('linux-gpu', 'python3: GPU', skip_test) {
       init_git_unix()
-      unpack_lib('gpu', mnm_multilib_cutlass)
+      unpack_lib('gpu', raf_multilib_cutlass)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_gpu} nvidia-smi -L"
         sh "${docker_run} ${ci_gpu} ./scripts/src_codegen/run_all.sh"
-        sh "${docker_run} ${ci_gpu} MNM_DISABLE_CPU_TEST=1 ./ci/task_python_unittest.sh"
+        sh "${docker_run} ${ci_gpu} RAF_DISABLE_CPU_TEST=1 ./ci/task_python_unittest.sh"
       }
     }
   },
   'python3: CPU': {
     run_node_if_not_skipped('linux-cpu', 'python3: CPU', skip_test) {
       init_git_unix()
-      unpack_lib('cpu', mnm_multilib)
+      unpack_lib('cpu', raf_multilib)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_cpu} ./scripts/src_codegen/run_all.sh"
         sh "${docker_run} ${ci_cpu} ./ci/task_python_unittest.sh"
@@ -163,7 +163,7 @@ stage('Unit Test') {
   'python3: multi-GPU': {
     run_node_if_not_skipped('linux-gpu-4x', 'python3: multi-GPU', skip_test) {
       init_git_unix()
-      unpack_lib('gpu', mnm_multilib_cutlass)
+      unpack_lib('gpu', raf_multilib_cutlass)
       timeout(time: max_time, unit: 'MINUTES') {
         sh "${docker_run} ${ci_gpu} nvidia-smi -L"
         sh "${docker_run} ${ci_gpu} ./scripts/src_codegen/run_all.sh"

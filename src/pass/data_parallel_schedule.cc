@@ -10,25 +10,25 @@
 #include <queue>
 #include <unordered_set>
 #include <relay/transforms/pass_utils.h>
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/dist_context.h"
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/dist_context.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
 #include "./common.h"
 #include "let_list.h"
 #include "stream_schedule.h"
-#include "mnm/stream_pool.h"
+#include "raf/stream_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace data_parallel_schedule {
 
-using namespace mnm::ir;
-using mnm::distributed::DistContext;
-using namespace mnm::analysis;
+using namespace raf::ir;
+using raf::distributed::DistContext;
+using namespace raf::analysis;
 using op::IsCollectiveOp;
 using stream_pool::StreamTagEnum;
 using tvm::OpAttrMap;
@@ -189,10 +189,10 @@ Pass DataParallelSchedule() {
     return Downcast<Function>(
         tvm::relay::TransformF(data_parallel_schedule::FIFOScheduleTransform, f));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "DataParallelSchedule", {});
+  return CreateRAFFunctionPass(pass_func, 0, "DataParallelSchedule", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.DataParallelSchedule").set_body_typed(DataParallelSchedule);
+RAF_REGISTER_GLOBAL("raf.pass_.DataParallelSchedule").set_body_typed(DataParallelSchedule);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

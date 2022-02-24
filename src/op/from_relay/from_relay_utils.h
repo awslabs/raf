@@ -5,40 +5,40 @@
 
 /*!
  * \file ./src/op/from_relay/from_relay_utils.h
- * \brief Utility methods for Relay to Meta op conversion.
+ * \brief Utility methods for Relay to RAF op conversion.
  */
 #pragma once
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/tensor.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace from_relay {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::tensor;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::tensor;
 using namespace ::tvm::relay;
 
 using VarValueMap = Map<Var, Expr>;
 
-#define MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME, RELAY_2_MNM_ARGS)                 \
+#define RAF_OP_FROM_RELAY(RELAY_OP_NAME, RAF_OP_NAME, RELAY_2_RAF_ARGS)                 \
   RELAY_REGISTER_OP(RELAY_OP_NAME)                                                      \
-      .set_attr<op::FMNMFromRelay>(                                                     \
-          "FMNMFromRelay",                                                              \
+      .set_attr<op::FRAFFromRelay>(                                                     \
+          "FRAFFromRelay",                                                              \
           [](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) { \
-            static const Op& op = Op::Get(MNM_OP_NAME);                                 \
-            Array<Expr> mnm_args = RELAY_2_MNM_ARGS(attrs, args, val_map);              \
-            return Call(op, mnm_args);                                                  \
+            static const Op& op = Op::Get(RAF_OP_NAME);                                 \
+            Array<Expr> raf_args = RELAY_2_RAF_ARGS(attrs, args, val_map);              \
+            return Call(op, raf_args);                                                  \
           })
 
-#define MNM_OP_MUTATION_FROM_RELAY(RELAY_OP_NAME, MNM_OP_MUTATION) \
+#define RAF_OP_MUTATION_FROM_RELAY(RELAY_OP_NAME, RAF_OP_MUTATION) \
   RELAY_REGISTER_OP(RELAY_OP_NAME)                                 \
-      .set_attr<op::FMNMMutationFromRelay>("FMNMMutationFromRelay", MNM_OP_MUTATION)
+      .set_attr<op::FRAFMutationFromRelay>("FRAFMutationFromRelay", RAF_OP_MUTATION)
 
-#define MNM_GENERIC_ATTR_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME)                                 \
-  MNM_OP_FROM_RELAY(RELAY_OP_NAME, MNM_OP_NAME,                                                    \
+#define RAF_GENERIC_ATTR_OP_FROM_RELAY(RELAY_OP_NAME, RAF_OP_NAME)                                 \
+  RAF_OP_FROM_RELAY(RELAY_OP_NAME, RAF_OP_NAME,                                                    \
                     [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) { \
                       return args;                                                                 \
                     })
@@ -53,4 +53,4 @@ const ConstantNode* GetKonstFromValueMap(const Expr& expr, const VarValueMap& va
 
 }  // namespace from_relay
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

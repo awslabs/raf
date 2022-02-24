@@ -9,16 +9,16 @@
  */
 #include "./grad_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace grad {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 Array<Expr> MeanGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
                      const Expr& dy) {
-  static auto mean_dx = Op::Get("mnm.op.mean_dx");
-  static auto shape = Op::Get("mnm.op.shape");
+  static auto mean_dx = Op::Get("raf.op.mean_dx");
+  static auto shape = Op::Get("raf.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 3);
   const Expr& axis = call->args[1];
@@ -28,11 +28,11 @@ Array<Expr> MeanGrad(const Expr& orig_call, const Array<Expr> orig_args, const E
   return {Call(mean_dx, {dy, axis, x_shape, keepdims, exclude})};
 }
 
-MNM_OP_GRAD("mnm.op.mean", MeanGrad);
+RAF_OP_GRAD("raf.op.mean", MeanGrad);
 
 Array<Expr> SumGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
                     const Expr& dy) {
-  static auto sum_dx = Op::Get("mnm.op.sum_dx");
+  static auto sum_dx = Op::Get("raf.op.sum_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 3);
   const Expr& x = call->args[0];
@@ -42,11 +42,11 @@ Array<Expr> SumGrad(const Expr& orig_call, const Array<Expr> orig_args, const Ex
   return {Call(sum_dx, {x, dy, axis, keepdims, exclude})};
 }
 
-MNM_OP_GRAD("mnm.op.sum", SumGrad);
+RAF_OP_GRAD("raf.op.sum", SumGrad);
 
 Array<Expr> ProdGrad(const Expr& orig_call, const Array<Expr> orig_args, const Expr& y,
                      const Expr& dy) {
-  static auto prod_dx = Op::Get("mnm.op.prod_dx");
+  static auto prod_dx = Op::Get("raf.op.prod_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 3);
   const Expr& x = call->args[0];
@@ -56,8 +56,8 @@ Array<Expr> ProdGrad(const Expr& orig_call, const Array<Expr> orig_args, const E
   return {Call(prod_dx, {x, dy, axis, keepdims, exclude})};
 }
 
-MNM_OP_GRAD("mnm.op.prod", ProdGrad);
+RAF_OP_GRAD("raf.op.prod", ProdGrad);
 
 }  // namespace grad
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

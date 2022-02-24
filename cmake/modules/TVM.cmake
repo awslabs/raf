@@ -3,8 +3,8 @@
 
 # Set options for 3rdparty/tvm
 message("########## Configuring TVM ##########")
-set(USE_LLVM "${MNM_USE_LLVM} --link-static" CACHE STRING "USE_LLVM for building tvm" FORCE)
-set(USE_CUDA "${MNM_USE_CUDA}" CACHE STRING "USE_CUDA for building tvm" FORCE)
+set(USE_LLVM "${RAF_USE_LLVM} --link-static" CACHE STRING "USE_LLVM for building tvm" FORCE)
+set(USE_CUDA "${RAF_USE_CUDA}" CACHE STRING "USE_CUDA for building tvm" FORCE)
 set(USE_SORT ON)
 set(OpenGL_GL_PREFERENCE "GLVND")
 # Introduce targets from tvm

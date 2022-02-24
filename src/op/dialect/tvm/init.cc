@@ -7,19 +7,19 @@
  * \file ./src/op/dialect/tvm/init.cc
  * \brief Init operators bridged from TVM.
  */
-#include "mnm/value.h"
+#include "raf/value.h"
 #include "./tvm_utils.h"
 #include "./tvm_attrs.h"
 #include "../../schema/init.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::tensor;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::tensor;
+using namespace raf::op::schema;
 
 std::vector<Value> InitOpSchema2Args(const InitOpArgs* args) {
   return {};
@@ -51,9 +51,9 @@ HashKey InitOpHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(zeros, Zeros, InitOpArgs, InitOpSchema2Args, InitOpSchemaArgNames, InitOpSchema2Attrs,
+RAF_TVM(zeros, Zeros, InitOpArgs, InitOpSchema2Args, InitOpSchemaArgNames, InitOpSchema2Attrs,
         InitOpHasher, kElemWise);
-MNM_TVM(ones, Ones, InitOpArgs, InitOpSchema2Args, InitOpSchemaArgNames, InitOpSchema2Attrs,
+RAF_TVM(ones, Ones, InitOpArgs, InitOpSchema2Args, InitOpSchemaArgNames, InitOpSchema2Attrs,
         InitOpHasher, kElemWise);
 
 std::vector<Value> OneHotSchema2Args(const OneHotArgs* args) {
@@ -82,9 +82,9 @@ HashKey OneHotHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(one_hot, OneHot, OneHotArgs, OneHotSchema2Args, OneHotSchemaArgNames, OneHotSchema2Attrs,
+RAF_TVM(one_hot, OneHot, OneHotArgs, OneHotSchema2Args, OneHotSchemaArgNames, OneHotSchema2Attrs,
         OneHotHasher, kOutEWiseFusable);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

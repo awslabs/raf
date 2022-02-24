@@ -15,8 +15,8 @@ def gen_file():
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=protected-access, too-many-lines
 \"\"\"Auto generated. Do not touch.\"\"\"
-import mnm._ffi.op.imp as ffi
-from mnm._core.core_utils import set_module
+import raf._ffi.op.imp as ffi
+from raf._core.core_utils import set_module
 from . import imp_utils
 
 __all__ = [
@@ -38,7 +38,7 @@ __all__ = [
 
 def gen_method(op):
     METHOD = """
-@set_module("mnm")
+@set_module("raf")
 def {FUNC_NAME}({PARAMS_W_DEFAULT}):
 {NORMS}
     return imp_utils.ret(ffi.{OP_NAME}({PARAMS_WO_DEFAULT}))
@@ -93,7 +93,7 @@ def gen_param_wo_default(schema):
     return ", ".join(arg.name for arg in schema)
 
 
-def main(path="./python/mnm/_op/imp.py"):
+def main(path="./python/raf/_op/imp.py"):
     result = gen_file()
     write_to_file(path, result)
 

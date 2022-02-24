@@ -10,17 +10,17 @@
  * this pass.
  */
 #include <vector>
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace dispatch_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 class DispatchMutator : public MixedModeMutator {
  public:
@@ -67,10 +67,10 @@ Pass DispatchDialect() {
                                                                              PassContext pc) {
     return Downcast<Function>(dispatch_dialect::Dispatch(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "DispatchDialect", {});
+  return CreateRAFFunctionPass(pass_func, 1, "DispatchDialect", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.DispatchDialect").set_body_typed(DispatchDialect);
+RAF_REGISTER_GLOBAL("raf.pass_.DispatchDialect").set_body_typed(DispatchDialect);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

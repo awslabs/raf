@@ -9,29 +9,29 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-import mnm
-from mnm.testing import randint, randn_torch, run_vm_model, check, numpy, with_seed, with_dialect
-from mnm._core.ndarray import ndarray
+import raf
+from raf.testing import randint, randn_torch, run_vm_model, check, numpy, with_seed, with_dialect
+from raf._core.ndarray import ndarray
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("xshape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("wshape", [(16, 3, 3, 3)])
 @pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("dilation", [1, 2, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
+def test_raf_conv2d(xshape, wshape, stride, dilation, padding, dtype):
     # N.B.: NCHW + OIHW
     # forward
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+            return raf.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
 
     model = TestModel()
     # forward
@@ -53,7 +53,7 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "shape",
     [
@@ -65,21 +65,21 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding, dtype):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.relu, torch.relu],
-        [mnm._op.sym.tanh, torch.tanh],
-        [mnm._op.sym.sigmoid, torch.sigmoid],
+        [raf._op.sym.relu, torch.relu],
+        [raf._op.sym.tanh, torch.tanh],
+        [raf._op.sym.sigmoid, torch.sigmoid],
     ],
 )
-def test_mnm_unary(shape, funcs):
-    mnm_fwd, torch_fwd = funcs
+def test_raf_unary(shape, funcs):
+    raf_fwd, torch_fwd = funcs
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x)
+            return raf_fwd(x)
 
     model = TestModel()
     # forward
@@ -97,7 +97,7 @@ def test_mnm_unary(shape, funcs):
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "shape",
     [
@@ -109,20 +109,20 @@ def test_mnm_unary(shape, funcs):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.softmax, torch.softmax],
-        [mnm._op.sym.log_softmax, torch.log_softmax],
+        [raf._op.sym.softmax, torch.softmax],
+        [raf._op.sym.log_softmax, torch.log_softmax],
     ],
 )
-def test_mnm_softmax(shape, axis, funcs):
-    mnm_fwd, torch_fwd = funcs
+def test_raf_softmax(shape, axis, funcs):
+    raf_fwd, torch_fwd = funcs
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, axis=axis)
+            return raf_fwd(x, axis=axis)
 
     model = TestModel()
     # forward
@@ -144,29 +144,29 @@ def test_mnm_softmax(shape, axis, funcs):
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("kernel", [1, 3])
 @pytest.mark.parametrize("stride", [1, 3])
 @pytest.mark.parametrize("padding", [0, 1])
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
-        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+        [raf._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [raf._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
     ],
 )
-def test_mnm_pool2d(kernel, stride, padding, funcs):
-    mnm_fwd, torch_fwd = funcs
+def test_raf_pool2d(kernel, stride, padding, funcs):
+    raf_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding)
+            return raf_fwd(x, kernel=kernel, stride=stride, padding=padding)
 
     model = TestModel()
     # forward
@@ -184,13 +184,13 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-6])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @with_seed(0)
-def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
+def test_raf_batch_norm_infer(shape, momentum, eps, dtype):
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, dtype=dtype, device="cuda")
     m_m, t_m = randn_torch(stats_shape, device="cuda")
@@ -198,13 +198,13 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
     m_w, t_w = randn_torch(stats_shape, device="cuda")
     m_b, t_b = randn_torch(stats_shape, device="cuda")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_m, m_v, m_w, m_b):
-            return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            return raf.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
 
     model = TestModel()
     m_y = model(m_x, m_m, m_v, m_w, m_b)
@@ -215,13 +215,13 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, dtype):
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-6])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @with_seed(0)
-def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
+def test_raf_batch_norm_train(shape, momentum, eps, dtype):
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, dtype=dtype, device="cuda", requires_grad=True)
     m_mean, t_mean = randn_torch(stats_shape, device="cuda")
@@ -231,13 +231,13 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     np_mean = m_mean.numpy()
     np_var = m_var.numpy()
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_m, m_v, m_w, m_b):
-            result = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            result = raf.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
             return result[0]
 
     # forward
@@ -247,8 +247,8 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
     check(m_mean, t_mean, rtol=1e-4, atol=1e-4)
     check(m_var, t_var, rtol=1e-4, atol=1e-4)
-    m_mean = mnm.array(np_mean, device="cuda")
-    m_var = mnm.array(np_var, device="cuda")
+    m_mean = raf.array(np_mean, device="cuda")
+    m_var = raf.array(np_var, device="cuda")
     v_y = run_vm_model(model, "cuda", [m_x, m_mean, m_var, m_w, m_b])
     check(v_y, t_y, rtol=1e-5, atol=1e-5)
     check(m_mean, t_mean, rtol=1e-5, atol=1e-5)
@@ -266,9 +266,9 @@ def test_mnm_batch_norm_train(shape, momentum, eps, dtype):
 
 
 @with_dialect(["cudnn", "tvm"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("dropout", [0.4, 0.6])
-def test_mnm_dropout(dropout):
+def test_raf_dropout(dropout):
     def check_dropout(x, y, dx=None, dy=None):
         x, y = x.numpy(), y.numpy()
         mask = y != 0
@@ -281,16 +281,16 @@ def test_mnm_dropout(dropout):
             expected = mask / (1 - dropout) * dy
             check(expected, dx)
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             self.dropout = dropout
             self.dropout_state = ndarray.from_tensor_value(
-                mnm._ffi.backend.cudnn.GetDropoutState(dropout, random.getrandbits(63))
+                raf._ffi.backend.cudnn.GetDropoutState(dropout, random.getrandbits(63))
             ).to(device="cuda")
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm._contrib_dropout(x, dropout, self.dropout_state)
+            return raf._contrib_dropout(x, dropout, self.dropout_state)
 
     shape, dtype = [1024, 1024], "float32"
     x, _ = randint(shape, low=10, high=20, dtype=dtype, device="cuda")

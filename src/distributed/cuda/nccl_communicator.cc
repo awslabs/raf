@@ -9,7 +9,7 @@
  */
 
 #include <nccl.h>
-#include "mnm/communicator.h"
+#include "raf/communicator.h"
 
 #define NCCL_CALL(cmd)                                                                            \
   do {                                                                                            \
@@ -20,7 +20,7 @@
     }                                                                                             \
   } while (0)
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 namespace communicator {
 
@@ -59,15 +59,15 @@ class NCCLCommunicator : public Communicator {
   ncclComm_t nccl_comm;
 };
 
-MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.nccl")
+RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.nccl")
     .set_body_typed(NCCLCommunicator::make);
 
 void Synchronize() {
   cudaDeviceSynchronize();
 }
 
-MNM_REGISTER_GLOBAL("mnm.distributed.Synchronize").set_body_typed(Synchronize);
+RAF_REGISTER_GLOBAL("raf.distributed.Synchronize").set_body_typed(Synchronize);
 
 }  // namespace communicator
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

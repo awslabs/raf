@@ -7,11 +7,11 @@ from typing import Dict, List
 import pytest
 import tvm
 import tvm.relay
-import mnm
-from mnm.testing.schedule_verifier import verify_schedule, ExecutionOrderError
-from mnm._core.ir_ext import extended_var
-from mnm.ir import ScopeBuilder
-from mnm.utils.visualizer import draw_dataflow_graph
+import raf
+from raf.testing.schedule_verifier import verify_schedule, ExecutionOrderError
+from raf._core.ir_ext import extended_var
+from raf.ir import ScopeBuilder
+from raf.utils.visualizer import draw_dataflow_graph
 
 
 class ANFBuilder:
@@ -21,7 +21,7 @@ class ANFBuilder:
 
     def get_operator(self, op_name: str) -> tvm.ir.Op:
         if op_name not in self.operators:
-            self.operators[op_name] = tvm.relay.op.get(f"mnm.op.{op_name}")
+            self.operators[op_name] = tvm.relay.op.get(f"raf.op.{op_name}")
         return self.operators[op_name]
 
     def make_tuple(self, fields: List[tvm.relay.Expr]) -> tvm.relay.Var:
@@ -31,13 +31,13 @@ class ANFBuilder:
         return self.scope_builder.let("", tvm.relay.Call(self.get_operator(op_name), args))
 
     def set_stream(self, device_id: int, stream_id: int) -> tvm.relay.Var:
-        return self.call("set_stream", [mnm.ir.const(device_id), mnm.ir.const(stream_id)])
+        return self.call("set_stream", [raf.ir.const(device_id), raf.ir.const(stream_id)])
 
     def add_event(self, event_id: int) -> tvm.relay.Var:
-        return self.call("add_event", [mnm.ir.const(event_id)])
+        return self.call("add_event", [raf.ir.const(event_id)])
 
     def wait_event(self, event_id: int) -> tvm.relay.Var:
-        return self.call("wait_event", [mnm.ir.const(event_id)])
+        return self.call("wait_event", [raf.ir.const(event_id)])
 
     def stream_barrier(self) -> tvm.relay.Var:
         return self.call("stream_barrier", [])
@@ -46,7 +46,7 @@ class ANFBuilder:
         return self.call("atan", [x])
 
     def concatenate(self, x: tvm.ir.RelayExpr, axis: int) -> tvm.relay.Var:
-        return self.call("concatenate", [x, mnm.ir.const(axis)])
+        return self.call("concatenate", [x, raf.ir.const(axis)])
 
     def ret(self, body: tvm.relay.Expr) -> tvm.relay.Expr:
         self.scope_builder.ret(body)

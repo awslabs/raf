@@ -7,28 +7,28 @@
  * \file src/op/grad/nn.cc
  * \brief Declaration of gradients
  */
-#include <mnm/value.h>
-#include <mnm/op_utils.h>
+#include <raf/value.h>
+#include <raf/op_utils.h>
 #include "./grad_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace grad {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 
 Expr Shape(const Expr& expr) {
-  static auto op_shape = Op::Get("mnm.op.shape");
+  static auto op_shape = Op::Get("raf.op.shape");
   return Call(op_shape, {expr});
 }
 
 Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                         const Expr& dy) {
-  using namespace mnm::value;
-  static auto reshape = Op::Get("mnm.op.reshape");
-  static auto shape = Op::Get("mnm.op.shape");
-  static auto sum = Op::Get("mnm.op.sum");
+  using namespace raf::value;
+  static auto reshape = Op::Get("raf.op.reshape");
+  static auto shape = Op::Get("raf.op.shape");
+  static auto sum = Op::Get("raf.op.sum");
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
   const Expr& bias = call->args[1];
@@ -38,11 +38,11 @@ Array<Expr> BiasAddGrad(const Expr& orig_call, const Array<Expr> orig_args, cons
   return {Call(reshape, {dy, Call(shape, {x})}), Call(sum, {dy, axis, keep_dims, exclude})};
 }
 
-MNM_OP_GRAD("mnm.op.bias_add", BiasAddGrad);
+RAF_OP_GRAD("raf.op.bias_add", BiasAddGrad);
 
 Array<Expr> ContribDropoutGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                                const Expr& dout) {
-  const static auto dropout_dx = Op::Get("mnm.op._contrib_dropout_dx");
+  const static auto dropout_dx = Op::Get("raf.op._contrib_dropout_dx");
   const Expr& dy = AsTupleExpr(dout, 2)[0];
   const Expr& mask = TupleGetItem(y, 1);
   const Expr& reserve_space = TupleGetItem(y, 3);
@@ -50,7 +50,7 @@ Array<Expr> ContribDropoutGrad(const Expr& orig_call, const Array<Expr> orig_arg
   return {Call(dropout_dx, {dy, mask, reserve_space, p})};
 }
 
-MNM_OP_GRAD("mnm.op._contrib_dropout", ContribDropoutGrad);
+RAF_OP_GRAD("raf.op._contrib_dropout", ContribDropoutGrad);
 
 template <const char* GradOp>
 Array<Expr> PoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
@@ -74,13 +74,13 @@ Array<Expr> PoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   return {Call(op_dx, {x, y, dy, kernel, stride, padding, dilation, ceil_mode, include_pad})};
 }
 
-const char MAX_POOL2D_DX[] = "mnm.op.max_pool2d_dx";
+const char MAX_POOL2D_DX[] = "raf.op.max_pool2d_dx";
 auto MaxPool2dGrad = PoolGrad<MAX_POOL2D_DX>;
-MNM_OP_GRAD("mnm.op.max_pool2d", MaxPool2dGrad);
+RAF_OP_GRAD("raf.op.max_pool2d", MaxPool2dGrad);
 
-const char AVG_POOL2D_DX[] = "mnm.op.avg_pool2d_dx";
+const char AVG_POOL2D_DX[] = "raf.op.avg_pool2d_dx";
 auto AvgPool2dGrad = PoolGrad<AVG_POOL2D_DX>;
-MNM_OP_GRAD("mnm.op.avg_pool2d", AvgPool2dGrad);
+RAF_OP_GRAD("raf.op.avg_pool2d", AvgPool2dGrad);
 
 template <const char* GradOp>
 Array<Expr> AdaptivePoolGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
@@ -99,13 +99,13 @@ Array<Expr> AdaptivePoolGrad(const Expr& orig_call, const Array<Expr> orig_args,
   return {Call(op_dx, {x, y, dy, shape})};
 }
 
-const char ADAPTIVE_MAX_POOL2D_DX[] = "mnm.op.adaptive_max_pool2d_dx";
+const char ADAPTIVE_MAX_POOL2D_DX[] = "raf.op.adaptive_max_pool2d_dx";
 auto AdaptiveMaxPool2dGrad = AdaptivePoolGrad<ADAPTIVE_MAX_POOL2D_DX>;
-MNM_OP_GRAD("mnm.op.adaptive_max_pool2d", AdaptiveMaxPool2dGrad);
+RAF_OP_GRAD("raf.op.adaptive_max_pool2d", AdaptiveMaxPool2dGrad);
 
-const char ADAPTIVE_AVG_POOL2D_DX[] = "mnm.op.adaptive_avg_pool2d_dx";
+const char ADAPTIVE_AVG_POOL2D_DX[] = "raf.op.adaptive_avg_pool2d_dx";
 auto AdaptiveAvgPool2dGrad = AdaptivePoolGrad<ADAPTIVE_AVG_POOL2D_DX>;
-MNM_OP_GRAD("mnm.op.adaptive_avg_pool2d", AdaptiveAvgPool2dGrad);
+RAF_OP_GRAD("raf.op.adaptive_avg_pool2d", AdaptiveAvgPool2dGrad);
 
 Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                        const Expr& dy) {
@@ -113,8 +113,8 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const
   //    x, w, stride, padding, dilation, groups
   // schema for conv2d_grad is:
   //    x_or_w, y, dy, shape, stride, padding, dilation, groups
-  static auto op_dx = Op::Get("mnm.op.conv2d_dx");
-  static auto op_dw = Op::Get("mnm.op.conv2d_dw");
+  static auto op_dx = Op::Get("raf.op.conv2d_dx");
+  static auto op_dw = Op::Get("raf.op.conv2d_dw");
   const CallNode* call = orig_call.as<CallNode>();
   // TODO(@junrushao1994): this piece of code is particularly suitable for auto-gen
   CHECK_GE(call->args.size(), 6);
@@ -137,12 +137,12 @@ Array<Expr> Conv2dGrad(const Expr& orig_call, const Array<Expr> orig_args, const
           Call(op_dw, {x, y, dy, Shape(w), stride, padding, dilation, groups})};
 }
 
-MNM_OP_GRAD("mnm.op.conv2d", Conv2dGrad);
+RAF_OP_GRAD("raf.op.conv2d", Conv2dGrad);
 
 Array<Expr> Conv2dTransGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                             const Expr& dy) {
-  static auto op_dx = Op::Get("mnm.op.conv2d_transpose_dx");
-  static auto op_dw = Op::Get("mnm.op.conv2d_transpose_dw");
+  static auto op_dx = Op::Get("raf.op.conv2d_transpose_dx");
+  static auto op_dw = Op::Get("raf.op.conv2d_transpose_dw");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 7);
   const Expr& x = call->args[0];
@@ -165,7 +165,7 @@ Array<Expr> Conv2dTransGrad(const Expr& orig_call, const Array<Expr> orig_args, 
           Call(op_dw, {x, y, dy, Shape(w), stride, padding, output_padding, dilation, groups})};
 }
 
-MNM_OP_GRAD("mnm.op.conv2d_transpose", Conv2dTransGrad);
+RAF_OP_GRAD("raf.op.conv2d_transpose", Conv2dTransGrad);
 
 template <const char* GradOp>
 Array<Expr> UnaryGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
@@ -186,11 +186,11 @@ Array<Expr> UnaryGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 
 Array<Expr> RsqrtGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
-  static auto op_sqrt = Op::Get("mnm.op.sqrt");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
-  static auto op_divide = Op::Get("mnm.op.divide");
-  static auto op_negative = Op::Get("mnm.op.negative");
-  static auto op_add = Op::Get("mnm.op.add");
+  static auto op_sqrt = Op::Get("raf.op.sqrt");
+  static auto op_multiply = Op::Get("raf.op.multiply");
+  static auto op_divide = Op::Get("raf.op.divide");
+  static auto op_negative = Op::Get("raf.op.negative");
+  static auto op_add = Op::Get("raf.op.add");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
@@ -205,7 +205,7 @@ Array<Expr> RsqrtGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
   Call dx = Call(op_multiply, {neg_half, rsqrt_x_pow_3});
   return {Call(op_multiply, {dy, dx})};
 }
-MNM_OP_GRAD("mnm.op.rsqrt", RsqrtGrad);
+RAF_OP_GRAD("raf.op.rsqrt", RsqrtGrad);
 
 Array<Expr> TruncGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
@@ -215,25 +215,25 @@ Array<Expr> TruncGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 
   Call grads;
   if (x->checked_type_.defined()) {
-    static auto op_zeros = Op::Get("mnm.op.zeros");
+    static auto op_zeros = Op::Get("raf.op.zeros");
     auto ttype = x->checked_type().as<TensorTypeNode>();
     auto shape = MakeConstant(ArrayToIntTuple(ttype->shape));
     auto dtype = MakeConstant(StringValue::make(tvm::runtime::DLDataType2String(ttype->dtype)));
     grads = Call(op_zeros, {shape, dtype});
   } else {
-    static auto op_zeros_like = Op::Get("mnm.op.zeros_like");
+    static auto op_zeros_like = Op::Get("raf.op.zeros_like");
     grads = Call(op_zeros_like, {x});
   }
   return {grads};
 }
-MNM_OP_GRAD("mnm.op.trunc", TruncGrad);
+RAF_OP_GRAD("raf.op.trunc", TruncGrad);
 
 Array<Expr> LogGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
   // give zero gradient for any gradient
-  static auto op_div = Op::Get("mnm.op.divide");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
-  static auto op_ones = Op::Get("mnm.op.ones_like");
+  static auto op_div = Op::Get("raf.op.divide");
+  static auto op_multiply = Op::Get("raf.op.multiply");
+  static auto op_ones = Op::Get("raf.op.ones_like");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
@@ -242,16 +242,16 @@ Array<Expr> LogGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   Call result = Call(op_multiply, {dy, one_by_x});
   return {result};
 }
-MNM_OP_GRAD("mnm.op.log", LogGrad);
+RAF_OP_GRAD("raf.op.log", LogGrad);
 
 Array<Expr> Log2Grad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
   // give zero gradient for any gradient
-  static auto op_div = Op::Get("mnm.op.divide");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
-  static auto op_ones = Op::Get("mnm.op.ones_like");
-  static auto op_add = Op::Get("mnm.op.add");
-  static auto op_log = Op::Get("mnm.op.log");
+  static auto op_div = Op::Get("raf.op.divide");
+  static auto op_multiply = Op::Get("raf.op.multiply");
+  static auto op_ones = Op::Get("raf.op.ones_like");
+  static auto op_add = Op::Get("raf.op.add");
+  static auto op_log = Op::Get("raf.op.log");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
@@ -262,13 +262,13 @@ Array<Expr> Log2Grad(const Expr& orig_call, const Array<Expr> orig_args, const V
   Call dx = Call(op_div, {ones, log_two_x});
   return {Call(op_multiply, {dy, dx})};
 }
-MNM_OP_GRAD("mnm.op.log2", Log2Grad);
+RAF_OP_GRAD("raf.op.log2", Log2Grad);
 
 Array<Expr> CosGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
-  static auto op_sin = Op::Get("mnm.op.sin");
-  static auto op_negative = Op::Get("mnm.op.negative");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_sin = Op::Get("raf.op.sin");
+  static auto op_negative = Op::Get("raf.op.negative");
+  static auto op_multiply = Op::Get("raf.op.multiply");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
@@ -276,37 +276,37 @@ Array<Expr> CosGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   Call dx = Call(op_negative, {sin_x});
   return {Call(op_multiply, {dy, dx})};
 }
-MNM_OP_GRAD("mnm.op.cos", CosGrad);
+RAF_OP_GRAD("raf.op.cos", CosGrad);
 
 Array<Expr> SinGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
-  static auto op_cos = Op::Get("mnm.op.cos");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_cos = Op::Get("raf.op.cos");
+  static auto op_multiply = Op::Get("raf.op.multiply");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
   Call dx = Call(op_cos, {x});
   return {Call(op_multiply, {dy, dx})};
 }
-MNM_OP_GRAD("mnm.op.sin", SinGrad);
+RAF_OP_GRAD("raf.op.sin", SinGrad);
 
 Array<Expr> ExpGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                     const Expr& dy) {
-  static auto op_exp = Op::Get("mnm.op.exp");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
+  static auto op_exp = Op::Get("raf.op.exp");
+  static auto op_multiply = Op::Get("raf.op.multiply");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
   Call dx = Call(op_exp, {x});
   return {Call(op_multiply, {dy, dx})};
 }
-MNM_OP_GRAD("mnm.op.exp", ExpGrad);
+RAF_OP_GRAD("raf.op.exp", ExpGrad);
 
 Array<Expr> AtanGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
-  static auto op_divide = Op::Get("mnm.op.divide");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
-  static auto op_add = Op::Get("mnm.op.add");
+  static auto op_divide = Op::Get("raf.op.divide");
+  static auto op_multiply = Op::Get("raf.op.multiply");
+  static auto op_add = Op::Get("raf.op.add");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
@@ -316,31 +316,31 @@ Array<Expr> AtanGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   Call dx = Call(op_divide, {one, denominator});
   return {Call(op_multiply, {dy, dx})};
 }
-MNM_OP_GRAD("mnm.op.atan", AtanGrad);
+RAF_OP_GRAD("raf.op.atan", AtanGrad);
 
-const char RELU_DX[] = "mnm.op.relu_dx";
+const char RELU_DX[] = "raf.op.relu_dx";
 auto ReluGrad = UnaryGrad<RELU_DX>;
-MNM_OP_GRAD("mnm.op.relu", ReluGrad);
+RAF_OP_GRAD("raf.op.relu", ReluGrad);
 
-const char GELU_DX[] = "mnm.op.gelu_dx";
+const char GELU_DX[] = "raf.op.gelu_dx";
 auto GeluGrad = UnaryGrad<GELU_DX>;
-MNM_OP_GRAD("mnm.op.gelu", GeluGrad);
+RAF_OP_GRAD("raf.op.gelu", GeluGrad);
 
-const char TANH_DX[] = "mnm.op.tanh_dx";
+const char TANH_DX[] = "raf.op.tanh_dx";
 auto TanhGrad = UnaryGrad<TANH_DX>;
-MNM_OP_GRAD("mnm.op.tanh", TanhGrad);
+RAF_OP_GRAD("raf.op.tanh", TanhGrad);
 
-const char SIGMOID_DX[] = "mnm.op.sigmoid_dx";
+const char SIGMOID_DX[] = "raf.op.sigmoid_dx";
 auto SigmoidGrad = UnaryGrad<SIGMOID_DX>;
-MNM_OP_GRAD("mnm.op.sigmoid", SigmoidGrad);
+RAF_OP_GRAD("raf.op.sigmoid", SigmoidGrad);
 
-const char ERF_DX[] = "mnm.op.erf_dx";
+const char ERF_DX[] = "raf.op.erf_dx";
 auto ErfGrad = UnaryGrad<ERF_DX>;
-MNM_OP_GRAD("mnm.op.erf", ErfGrad);
+RAF_OP_GRAD("raf.op.erf", ErfGrad);
 
-const char SQRT_DX[] = "mnm.op.sqrt_dx";
+const char SQRT_DX[] = "raf.op.sqrt_dx";
 auto SqrtGrad = UnaryGrad<SQRT_DX>;
-MNM_OP_GRAD("mnm.op.sqrt", SqrtGrad);
+RAF_OP_GRAD("raf.op.sqrt", SqrtGrad);
 
 Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var& y, const Expr& dymv,
                                const Array<Expr>& igrads) {
@@ -348,7 +348,7 @@ Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var& y, const Expr& 
   //    x, running_mean,running_var, w, b, momentum, eps
   // schema for batch_norm_train_dxwb is:
   //    dy, x, w, b, eps
-  static auto op_dxwb = Op::Get("mnm.op.batch_norm_train_dxwb");
+  static auto op_dxwb = Op::Get("raf.op.batch_norm_train_dxwb");
   const Expr& dy = AsTupleExpr(dymv, 3)[0];
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
@@ -362,7 +362,7 @@ Array<Expr> BatchNormTrainGrad(const Expr& orig_call, const Var& y, const Expr& 
   };
 }
 
-MNM_OP_FUSED_GRAD("mnm.op.batch_norm_train", BatchNormTrainGrad);
+RAF_OP_FUSED_GRAD("raf.op.batch_norm_train", BatchNormTrainGrad);
 
 template <const char* GradOp>
 Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
@@ -374,18 +374,18 @@ Array<Expr> SoftmaxGradImpl(const Expr& orig_call, const Array<Expr> orig_args, 
   return {Call(op_dx, {x, y, dy, axis})};
 }
 
-const char SOFTMAX_DX[] = "mnm.op.softmax_dx";
+const char SOFTMAX_DX[] = "raf.op.softmax_dx";
 auto SoftmaxGrad = SoftmaxGradImpl<SOFTMAX_DX>;
-MNM_OP_GRAD("mnm.op.softmax", SoftmaxGrad);
+RAF_OP_GRAD("raf.op.softmax", SoftmaxGrad);
 
 Array<Expr> LogSoftmaxGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                            const Expr& dy) {
-  using namespace mnm::value;
-  static auto op_softmax = Op::Get("mnm.op.softmax");
-  static auto op_sum = Op::Get("mnm.op.sum");
-  static auto op_multiply = Op::Get("mnm.op.multiply");
-  static auto op_subtract = Op::Get("mnm.op.subtract");
-  static auto op_divide = Op::Get("mnm.op.divide");
+  using namespace raf::value;
+  static auto op_softmax = Op::Get("raf.op.softmax");
+  static auto op_sum = Op::Get("raf.op.sum");
+  static auto op_multiply = Op::Get("raf.op.multiply");
+  static auto op_subtract = Op::Get("raf.op.subtract");
+  static auto op_divide = Op::Get("raf.op.divide");
   const CallNode* call = orig_call.as<CallNode>();
   const Expr& x = call->args[0];
   const Expr& axis = call->args[1];
@@ -397,11 +397,11 @@ Array<Expr> LogSoftmaxGrad(const Expr& orig_call, const Array<Expr> orig_args, c
   return {e_3};
 }
 
-MNM_OP_GRAD("mnm.op.log_softmax", LogSoftmaxGrad);
+RAF_OP_GRAD("raf.op.log_softmax", LogSoftmaxGrad);
 
 Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                           const Expr& dy) {
-  static auto op_dx = Op::Get("mnm.op.layer_norm_dx");
+  static auto op_dx = Op::Get("raf.op.layer_norm_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& x = call->args[0];
@@ -421,11 +421,11 @@ Array<Expr> LayerNormGrad(const Expr& orig_call, const Array<Expr> orig_args, co
   };
 }
 
-MNM_OP_GRAD("mnm.op.layer_norm", LayerNormGrad);
+RAF_OP_GRAD("raf.op.layer_norm", LayerNormGrad);
 
 Array<Expr> ThresholdGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                           const Expr& dy) {
-  static auto op_dx = Op::Get("mnm.op.threshold_dx");
+  static auto op_dx = Op::Get("raf.op.threshold_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& x = call->args[0];
@@ -433,8 +433,8 @@ Array<Expr> ThresholdGrad(const Expr& orig_call, const Array<Expr> orig_args, co
   return {Call(op_dx, {x, dy, threshold})};
 }
 
-MNM_OP_GRAD("mnm.op.threshold", ThresholdGrad);
+RAF_OP_GRAD("raf.op.threshold", ThresholdGrad);
 
 }  // namespace grad
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

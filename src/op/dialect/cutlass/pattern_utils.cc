@@ -9,11 +9,11 @@
  */
 #include "./pattern_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 DFPattern IsOps(std::vector<std::string> ops) {
   CHECK_GE(ops.size(), 1U);
@@ -29,8 +29,8 @@ EpilogueKindExt GetEpilogueKind(const Op& op) {
     return EpilogueKindExt::kLinearCombination;
   }
   const static std::unordered_map<Op, EpilogueKindExt, ObjectPtrHash, ObjectPtrEqual> epilogue_map =
-      {{Op::Get("mnm.op.cutlass.relu"), EpilogueKindExt::kLinearCombinationRelu},
-       {Op::Get("mnm.op.cutlass.gelu"), EpilogueKindExt::kLinearCombinationGelu}};
+      {{Op::Get("raf.op.cutlass.relu"), EpilogueKindExt::kLinearCombinationRelu},
+       {Op::Get("raf.op.cutlass.gelu"), EpilogueKindExt::kLinearCombinationGelu}};
   auto it = epilogue_map.find(op);
   if (it == epilogue_map.end()) {
     LOG(FATAL) << "Unknown epilogue op: " << op->name;
@@ -40,4 +40,4 @@ EpilogueKindExt GetEpilogueKind(const Op& op) {
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

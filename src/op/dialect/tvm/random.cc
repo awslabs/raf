@@ -8,19 +8,19 @@
  * \brief Random operators bridged from TVM.
  */
 #include <vector>
-#include "mnm/value.h"
+#include "raf/value.h"
 #include "./tvm_attrs.h"
 #include "./tvm_utils.h"
 #include "../../schema/random.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::tensor;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::tensor;
+using namespace raf::op::schema;
 
 std::vector<Value> ThreefryGenerateSchema2Args(const ThreefryGenerateArgs* args) {
   return {args->key};
@@ -48,7 +48,7 @@ HashKey ThreefryGenerateHasher(const std::vector<Type>& param_types, const Type&
   return key;
 }
 
-MNM_TVM(threefry_generate, ThreefryGenerate, ThreefryGenerateArgs, ThreefryGenerateSchema2Args,
+RAF_TVM(threefry_generate, ThreefryGenerate, ThreefryGenerateArgs, ThreefryGenerateSchema2Args,
         ThreefryGenerateSchemaArgNames, ThreefryGenerateSchema2Attrs, ThreefryGenerateHasher,
         kOpaque);
 
@@ -60,9 +60,9 @@ std::vector<std::string> ThreefrySplitSchemaArgNames(const op::CallValues& call)
   return {"key"};
 }
 
-MNM_TVM(threefry_split, ThreefrySplit, ThreefrySplitArgs, ThreefrySplitSchema2Args,
+RAF_TVM(threefry_split, ThreefrySplit, ThreefrySplitArgs, ThreefrySplitSchema2Args,
         ThreefrySplitSchemaArgNames, GenericAttrs, GenericHasher, kOpaque);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

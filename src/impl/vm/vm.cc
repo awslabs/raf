@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/vm.cc
- * \brief The Meta virtual machine.
+ * \brief The RAF virtual machine.
  */
 
 #include <dmlc/memory_io.h>
@@ -21,45 +21,45 @@
 #include <stdexcept>
 #include <vector>
 
-#include "mnm/communicator.h"
-#include "mnm/memory_pool.h"
-#include "mnm/ir.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/value.h"
-#include "mnm/type.h"
-#include "mnm/pass.h"
-#include "mnm/vm/bytecode.h"
-#include "mnm/vm/vm.h"
-#include "mnm/device_api.h"
-#include "mnm/profiler.h"
-#include "mnm/memory_profiler.h"
-#include "mnm/stream_pool.h"
+#include "raf/communicator.h"
+#include "raf/memory_pool.h"
+#include "raf/ir.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/value.h"
+#include "raf/type.h"
+#include "raf/pass.h"
+#include "raf/vm/bytecode.h"
+#include "raf/vm/vm.h"
+#include "raf/device_api.h"
+#include "raf/profiler.h"
+#include "raf/memory_profiler.h"
+#include "raf/stream_pool.h"
 #include "../../requests.h"
 #include "../../op/ty/utils.h"
 #include "../../common/shape_utils.h"
 
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
 
 #include "../../profiler/cuda/cuda_profiler.h"
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 #include "../../common/cuda_utils.h"
 #include "../../op/dialect/cudnn/cudnn_utils.h"
 #include "../../op/dialect/cublas/cublas_utils.h"
 #endif
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op;
-using namespace mnm::registry;
-using namespace mnm::requests;
-using namespace mnm::device_api;
-using namespace mnm::stream_pool;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op;
+using namespace raf::registry;
+using namespace raf::requests;
+using namespace raf::device_api;
+using namespace raf::stream_pool;
 
 namespace utils {
 inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id, Index event_id) {
@@ -140,7 +140,7 @@ void TensorRepr(std::ostringstream& os, const TensorValueObj* tensor) {
 }
 }  // namespace utils
 
-MNM_REGISTER_OBJECT_REFLECT(VMContextObj);
+RAF_REGISTER_OBJECT_REFLECT(VMContextObj);
 
 VMContext VMContext::make(const Executable* exec) {
   auto ptr = make_object<VMContextObj>();
@@ -245,7 +245,7 @@ void VMFuncOpEnvCache::Clear() {
   cache_map_.clear();
 }
 
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 class VirtualMachine::CudaGraphImpl {
  public:
   CudaGraphImpl(Device dev) : device_(dev) {
@@ -269,7 +269,7 @@ class VirtualMachine::CudaGraphImpl {
 
   void BeginCapture() {
     stream_for_graph_ = static_cast<cudaStream_t>(
-        mnm::device_api::DeviceAPI::Get(device_.device_type())->CreateStream(device_));
+        raf::device_api::DeviceAPI::Get(device_.device_type())->CreateStream(device_));
 
     OpEnv::SetStreamForAllBackends(device_, stream_for_graph_);
     CUDA_CALL(cudaStreamBeginCapture(stream_for_graph_, cudaStreamCaptureModeRelaxed));
@@ -380,7 +380,7 @@ VMContext VirtualMachine::PrepareVMContext(const std::string& func_name,
     }
     return ctx;
   };
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
   if (enable_cuda_graph_) {
     std::lock_guard<std::mutex> lock(cuda_graph_mutex_);
     // Check if there is another context using the CUDA graph
@@ -417,7 +417,7 @@ Value VirtualMachine::Run(VMContext ctx) {
     ctx.PushFrame(ctx->entry_func_index, ctx->inputs, -1);
     RunLoop(ctx);
   };
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
   if (enable_cuda_graph_) {
     CHECK(ctx.get() == cuda_graph_ctx_.get()) << "Wrong VMContext provided for CUDA graph.";
     if (!cuda_graph_impl_) {
@@ -455,12 +455,12 @@ Array<FloatValue> VirtualMachine::Profile(VMContext ctx, int warmup, int number,
   }
   for (int i = 0; i < repeat; i++) {
     api->WaitDevice(device);
-    auto beg = mnm::profiler::ProfileStat::NowInMicrosec();
+    auto beg = raf::profiler::ProfileStat::NowInMicrosec();
     for (int j = 0; j < number; ++j) {
       Run(ctx);
     }
     api->WaitDevice(device);
-    auto end = mnm::profiler::ProfileStat::NowInMicrosec();
+    auto end = raf::profiler::ProfileStat::NowInMicrosec();
     auto latency = static_cast<float>(static_cast<double>(end - beg) / number / 1000.0);
     results.push_back(FloatValue::make(DataType::Float(32), latency));
   }
@@ -518,7 +518,7 @@ void VirtualMachine::RunLoop(VMContext& ctx) {
   CHECK(this->exec_);
   CHECK_GT(ctx->frames.size(), 0) << "The call stack is empty";
   CHECK(ctx->code);
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
   if (use_cuda_ && profiler::Profiler::Get()->IsProfiling(1)) {
     profiler::CudaProfiler::Get()->start();
   }
@@ -817,7 +817,7 @@ void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
 
   std::tie(op_env, inputs, output, op_env_cache_key) = PrepareOpEnv(ctx, instr);
   if (!dryrun_) {  // Skip the execution in dryrun mode
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
     if (use_cuda_) {
       WITH_CUDA_PROFILER(
           devices_[0],
@@ -888,7 +888,7 @@ void VirtualMachine::HandleInferType(VMContext& ctx, const Instruction& instr) {
   Type ret_type;
   Array<Value> ret_tup;
   if (const auto* opv = callee.as<OpValueObj>()) {
-    auto fschema = GetOpAttr<FMNMSchema>(opv->op, "FMNMSchema");
+    auto fschema = GetOpAttr<FRAFSchema>(opv->op, "FRAFSchema");
     auto call_values = CallValues::make(callee, fschema(args));
     auto fty = Downcast<FuncType>(opv->op->checked_type());
     TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
@@ -1058,7 +1058,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     const auto* closure = callee.as<ClosureValueObj>();
     call_values->callee = callee;
     if (op) {
-      call_values->args = GetOpAttr<FMNMSchema>(op->op, "FMNMSchema")(args);
+      call_values->args = GetOpAttr<FRAFSchema>(op->op, "FRAFSchema")(args);
     } else {
       call_values->args = MakeListArgs(args);
     }
@@ -1074,7 +1074,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
       Requests::DistributedRequest& entry = requests->distributed[i];
       *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
     }
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
     // prepare cuda stream requests
     for (size_t i = 0; i < requests->stream.size(); i++) {
       Requests::StreamRequest& entry = requests->stream[i];
@@ -1113,7 +1113,7 @@ tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cu
   return tvm::runtime::Module(vm);
 }
 
-MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   bool enable_cuda_graph = args[1];
   bool dryrun = args[2];
@@ -1124,4 +1124,4 @@ MNM_REGISTER_GLOBAL("mnm.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm:
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

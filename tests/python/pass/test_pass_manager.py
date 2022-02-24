@@ -12,9 +12,9 @@ from tvm import relay
 from tvm.ir.transform import ModulePass, PassContext
 from tvm.ir.transform import module_pass
 from tvm.relay.transform import function_pass, FunctionPass
-from mnm._ffi import pass_
-from mnm._ffi.pass_ import FromRelay
-from mnm.ir import MNMSequential
+from raf._ffi import pass_
+from raf._ffi.pass_ import FromRelay
+from raf.ir import RAFSequential
 
 
 def get_var_func():
@@ -149,7 +149,7 @@ def test_sequential_pass():
     mod = tvm.IRModule({v_sub: sub, v_log: log})
     tvm_mod = FromRelay()(mod)
     passes = [pass_.InferType(), pass_.InferType()]
-    sequential = MNMSequential(passes=passes, opt_level=1, name="seq")
+    sequential = RAFSequential(passes=passes, opt_level=1, name="seq")
     with PassContext():
         ret_mod = sequential(tvm_mod)
 

@@ -11,9 +11,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import mnm
-from mnm.model import Conv2d, Linear, BatchNorm
-from mnm.testing import run_vm_model, one_hot_torch, randn_torch, t2m_param, check, with_seed
+import raf
+from raf.model import Conv2d, Linear, BatchNorm
+from raf.testing import run_vm_model, one_hot_torch, randn_torch, t2m_param, check, with_seed
 
 try:
     from apex.optimizers import FusedLANS as LANS
@@ -43,7 +43,7 @@ class TorchTest(nn.Module):  # pylint: disable=abstract-method
         return out
 
 
-class MNMTest(mnm.Model):
+class RAFTest(raf.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, input_shape=28, num_classes=10):
         self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
@@ -52,19 +52,19 @@ class MNMTest(mnm.Model):
 
     # pylint: enable=attribute-defined-outside-init
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x, y_true):
         y_pred = self.forward_infer(x)
-        y_pred = mnm.log_softmax(y_pred)
-        loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
+        y_pred = raf.log_softmax(y_pred)
+        loss = raf.nll_loss(y_true=y_true, y_pred=y_pred)
         return loss
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward_infer(self, x):
         out = self.bn1(self.conv1(x))
-        out = mnm.sigmoid(out)
-        out = mnm.avg_pool2d(out, (2, 2), (2, 2))
-        out = mnm.batch_flatten(out)
+        out = raf.sigmoid(out)
+        out = raf.avg_pool2d(out, (2, 2), (2, 2))
+        out = raf.batch_flatten(out)
         out = self.linear1(out)
         return out
 
@@ -80,24 +80,24 @@ class TorchSimpleTest(nn.Module):  # pylint: disable=abstract-method
         return y
 
 
-class MNMSimpleTest(mnm.Model):
+class RAFSimpleTest(raf.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, shape):
-        self.x = mnm.array(np.random.randn(*shape).astype("float32"))
+        self.x = raf.array(np.random.randn(*shape).astype("float32"))
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self):
-        y = mnm.relu(self.x)
+        y = raf.relu(self.x)
         return y
 
 
 @with_seed(0)
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("config", [(2, 32, 10)])
 def test_lans(config):
     t_model = TorchTest(config[1], config[2])
     t_model.to(device="cuda")
-    m_model = MNMTest(config[1], config[2])
+    m_model = RAFTest(config[1], config[2])
     m_model.to(device="cuda")
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.linear1.w = t2m_param(t_model.linear1.weight)
@@ -108,7 +108,7 @@ def test_lans(config):
     m_model.bn1.running_var = t2m_param(t_model.bn1.running_var)
 
     m_param_dict = m_model.state()
-    m_optimizer = mnm.optim.LANS(m_param_dict.values())
+    m_optimizer = raf.optim.LANS(m_param_dict.values())
     t_optimizer = LANS(t_model.parameters())
     batch_size = config[0]
     m_model.train_mode()
@@ -137,7 +137,7 @@ def test_lans(config):
         check(m_model.bn1.b, t_model.bn1.bias, rtol=1e-3, atol=1e-3)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_traced_lans_simple():
     # pylint: disable=attribute-defined-outside-init
     device = "cuda"
@@ -147,10 +147,10 @@ def test_traced_lans_simple():
     t_model.train()
     t_model.to(device)
     t_optimizer = LANS(t_model.parameters())
-    m_model = MNMSimpleTest(shape)
+    m_model = RAFSimpleTest(shape)
     m_model.x = t2m_param(t_model.x, device=device)
     m_model.train_mode()
-    m_optimizer = mnm.optim.lans.with_lans()(m_model)
+    m_optimizer = raf.optim.lans.with_lans()(m_model)
     for i in range(batch_size):
         m_dy, t_dy = randn_torch(shape, device=device, requires_grad=False)
         m_loss = run_vm_model(m_optimizer, device, [m_dy])
@@ -162,7 +162,7 @@ def test_traced_lans_simple():
 
 
 @with_seed(0)
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "config",
     [
@@ -175,7 +175,7 @@ def test_traced_lans(config):
     batch_size = config[0]
     t_model = TorchTest(config[1], config[2])
     t_model.to(device=device)
-    m_model = MNMTest(config[1], config[2])
+    m_model = RAFTest(config[1], config[2])
     m_model.to(device=device)
     m_model.conv1.w = t2m_param(t_model.conv1.weight, device=device)
     m_model.linear1.w = t2m_param(t_model.linear1.weight, device=device)
@@ -187,7 +187,7 @@ def test_traced_lans(config):
 
     m_model.train_mode()
     t_model.train()
-    m_optimizer = mnm.optim.lans.with_lans()(m_model)
+    m_optimizer = raf.optim.lans.with_lans()(m_model)
     t_optimizer = LANS(t_model.parameters())
     for i in range(batch_size):
         m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
@@ -205,8 +205,8 @@ def test_traced_lans(config):
         check(m_model.bn1.b, t_model.bn1.bias, rtol=1e-3, atol=1e-3)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
-@patch("mnm.distributed.get_context")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
+@patch("raf.distributed.get_context")
 def test_state_partition(mock_get_context):
     """Note that this test only verifies the IR with LANS without checking the correctness.
     Accordingly, this test does not require multiple devices.
@@ -224,9 +224,9 @@ def test_state_partition(mock_get_context):
 
     shape, n_classes = 28, 10
     batch_size = 7
-    m_model = MNMTest(shape, 10)
+    m_model = RAFTest(shape, 10)
     m_model.train_mode()
-    m_optimizer = mnm.optim.lans.with_lans()(m_model)
+    m_optimizer = raf.optim.lans.with_lans()(m_model)
 
     device = "cuda"
     m_x, _ = randn_torch([batch_size, 3, shape, shape], requires_grad=True, device=device)
@@ -236,7 +236,7 @@ def test_state_partition(mock_get_context):
 
     record = m_optimizer._internal(*args)
     mod = record.mod
-    text = mnm.ir.AsText(mod)
+    text = raf.ir.AsText(mod)
     # Verify main function arguments.
     func_def = [line for line in text.split("\n") if line.startswith("def @main")]
     assert len(func_def) == 1
@@ -253,9 +253,9 @@ def test_state_partition(mock_get_context):
 
     # Verify IR. This model has 7 parameters and 9 gradients
     # (gradients for input data and ytrure are useless).
-    assert text.count("mnm.op._reduce_scatter") == 9, text
-    assert text.count("mnm.op._allgather") == 7, text
-    assert text.count("mnm.op.strided_slice") == 7, text
+    assert text.count("raf.op._reduce_scatter") == 9, text
+    assert text.count("raf.op._allgather") == 7, text
+    assert text.count("raf.op.strided_slice") == 7, text
 
 
 if __name__ == "__main__":

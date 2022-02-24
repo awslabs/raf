@@ -7,11 +7,11 @@
  * \file src/profiler/memory_profiler.cc
  * \brief Memory profiler implementation
  */
-#include "mnm/registry.h"
-#include "mnm/memory_profiler.h"
-#include "mnm/memory_pool.h"
+#include "raf/registry.h"
+#include "raf/memory_profiler.h"
+#include "raf/memory_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace memory_profiler {
 
 MemoryProfiler::~MemoryProfiler() {
@@ -108,13 +108,13 @@ std::string GetMemoryTrace(const Device& device) {
   return MemoryProfiler::Get()->GetMemoryTrace(device);
 }
 
-MNM_REGISTER_GLOBAL("mnm.memory_profiler.EnableMemoryProfiler")
+RAF_REGISTER_GLOBAL("raf.memory_profiler.EnableMemoryProfiler")
     .set_body_typed(EnableMemoryProfiler);
-MNM_REGISTER_GLOBAL("mnm.memory_profiler.DisableMemoryeProfiler")
+RAF_REGISTER_GLOBAL("raf.memory_profiler.DisableMemoryeProfiler")
     .set_body_typed(DisableMemoryProfiler);
-MNM_REGISTER_GLOBAL("mnm.memory_profiler.ResetMemoryProfiler").set_body_typed(ResetMemoryProfiler);
-MNM_REGISTER_GLOBAL("mnm.memory_profiler.GetMaxMemoryInfo").set_body_typed(GetMaxMemoryInfo);
-MNM_REGISTER_GLOBAL("mnm.memory_profiler.GetMemoryTrace").set_body_typed(GetMemoryTrace);
+RAF_REGISTER_GLOBAL("raf.memory_profiler.ResetMemoryProfiler").set_body_typed(ResetMemoryProfiler);
+RAF_REGISTER_GLOBAL("raf.memory_profiler.GetMaxMemoryInfo").set_body_typed(GetMaxMemoryInfo);
+RAF_REGISTER_GLOBAL("raf.memory_profiler.GetMemoryTrace").set_body_typed(GetMemoryTrace);
 
 }  // namespace memory_profiler
-}  // namespace mnm
+}  // namespace raf

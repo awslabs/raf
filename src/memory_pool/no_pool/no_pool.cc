@@ -8,12 +8,12 @@
  * \brief No memory pool
  */
 #include <atomic>
-#include "mnm/device.h"
-#include "mnm/device_api.h"
-#include "mnm/memory_pool.h"
-#include "mnm/registry.h"
+#include "raf/device.h"
+#include "raf/device_api.h"
+#include "raf/memory_pool.h"
+#include "raf/registry.h"
 
-namespace mnm {
+namespace raf {
 namespace memory_pool {
 namespace no_pool {
 
@@ -120,10 +120,10 @@ class NoPool final : public MemoryPool {
   std::shared_ptr<DeviceAPI> api;
 };
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool._make.no_pool").set_body_typed([](const Device& dev) {
+RAF_REGISTER_GLOBAL("raf.memory_pool._make.no_pool").set_body_typed([](const Device& dev) {
   return NoPool::make(dev);
 });
 
 }  // namespace no_pool
 }  // namespace memory_pool
-}  // namespace mnm
+}  // namespace raf

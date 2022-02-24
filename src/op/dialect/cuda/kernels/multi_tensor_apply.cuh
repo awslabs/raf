@@ -12,7 +12,7 @@
 //                  copyright when opensource
 
 #include <vector>
-namespace mnm{
+namespace raf{
 namespace op {
 namespace cuda {
 
@@ -92,5 +92,5 @@ void multi_tensor_apply(int block_size, int chunk_size, const std::vector<T*>& t
 }
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 

@@ -7,15 +7,15 @@
  * \file inline_primitives.cc
  * \brief Ensure that primitives only appear in the call position.
  */
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace inline_primitives {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 /* This pass will eliminate primitives which have been lifted by the ANF
  * transform inlining them directly into call sites.
@@ -141,10 +141,10 @@ Pass InlinePrimitives() {
   };
   auto inline_pass = CreateModulePass(pass_func, 0, "Inline", {});
   // Eliminate dead code for each function after inlining.
-  return MNMSequential({inline_pass, DeadCodeElimination()}, "InlinePrimitives");
+  return RAFSequential({inline_pass, DeadCodeElimination()}, "InlinePrimitives");
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InlinePrimitives").set_body_typed(InlinePrimitives);
+RAF_REGISTER_GLOBAL("raf.pass_.InlinePrimitives").set_body_typed(InlinePrimitives);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

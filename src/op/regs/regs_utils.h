@@ -11,14 +11,14 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/registry.h"
-#include "mnm/value.h"
-#include "mnm/binding.h"
-#include "mnm/executor.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/registry.h"
+#include "raf/value.h"
+#include "raf/binding.h"
+#include "raf/executor.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 
@@ -83,9 +83,9 @@ void CollectVars(const ir::Expr& expr, std::vector<const ir::ExprNode*>* vars);
 
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 
@@ -146,4 +146,4 @@ struct OpPack {
 
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

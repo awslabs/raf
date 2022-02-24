@@ -3,24 +3,24 @@
 
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements
 import pytest
-import mnm
-from mnm._ffi.pass_ import AutoDiff, GradientInputSelection, InferType
-from mnm._lib import tvm
-from mnm._lib import relay
-from mnm.testing import randn, run_infer_type
-from mnm._core.module import IRModule
+import raf
+from raf._ffi.pass_ import AutoDiff, GradientInputSelection, InferType
+from raf._lib import tvm
+from raf._lib import relay
+from raf.testing import randn, run_infer_type
+from raf._core.module import IRModule
 
 
 def test_conv2d():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.w, _ = randn((1, 1, 3, 3))
             self.w.requires_grad = True
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.conv2d(x, self.w)
-            z = mnm.relu(y)
+            y = raf.conv2d(x, self.w)
+            z = raf.relu(y)
             return z
 
     def expected():
@@ -40,16 +40,16 @@ def test_conv2d():
         v1 = relay.var("a2")
 
         let4 = relay.Let(x4, relay.Tuple((x2, x3)), x4)
-        let3 = relay.Let(x3, mnm.ir.op.conv2d_dw(x, None, x1, (1, 1, 3, 3), 1, 0, 1, 1), let4)
-        let2 = relay.Let(x2, mnm.ir.op.conv2d_dx(w, None, x1, (1, 1, 224, 224), 1, 0, 1, 1), let3)
-        let1 = relay.Let(x1, mnm.ir.op.relu_dx(None, v1, dy), let2)
+        let3 = relay.Let(x3, raf.ir.op.conv2d_dw(x, None, x1, (1, 1, 3, 3), 1, 0, 1, 1), let4)
+        let2 = relay.Let(x2, raf.ir.op.conv2d_dx(w, None, x1, (1, 1, 224, 224), 1, 0, 1, 1), let3)
+        let1 = relay.Let(x1, raf.ir.op.relu_dx(None, v1, dy), let2)
 
         let_ret = relay.Let(ret, relay.Tuple((v1, closure)), ret)
         let_closure = relay.Let(closure, relay.Function([dy], let1), let_ret)
 
         # forward pass
-        letv1 = relay.Let(v1, mnm.ir.op.relu(v), let_closure)
-        letv = relay.Let(v, mnm.ir.op.conv2d(x, w), letv1)
+        letv1 = relay.Let(v1, raf.ir.op.relu(v), let_closure)
+        letv = relay.Let(v, raf.ir.op.conv2d(x, w), letv1)
 
         f = relay.Function([x, w], letv)
         return f
@@ -74,7 +74,7 @@ def test_multi_func():
         f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
         a1 = relay.var("a1")  # pylint: disable=invalid-name
         x = relay.var("x", shape=(1, 100))
-        let = relay.Let(a1, mnm.ir.op.tanh(x), a1)
+        let = relay.Let(a1, raf.ir.op.tanh(x), a1)
         f1_out = relay.Function([x], let)
         mod = IRModule({f1: f1_out})
 

@@ -10,17 +10,17 @@
 #include <tvm/node/structural_equal.h>
 #include <tvm/node/structural_hash.h>
 #include <sstream>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace lambda_lift {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 inline std::string GenerateName(const Function& func) {
   size_t hash = tvm::StructuralHash()(func);
@@ -60,7 +60,7 @@ Expr ANFNormalizer(const Let& let) {
   //    let %a13 = %gvar(%a, %b);
   if (auto value_call_node = let_node->value.as<CallNode>()) {
     if (auto op_call_node = value_call_node->op.as<CallNode>()) {
-      mnm::ir::Var gvar = ir::MakeVar("gvar", {});
+      raf::ir::Var gvar = ir::MakeVar("gvar", {});
       auto new_let = Let(
           gvar, GetRef<Call>(op_call_node),
           Let(let_node->var,
@@ -231,7 +231,7 @@ Pass LambdaLift() {
       0, "LambdaLift", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.LambdaLift").set_body_typed(LambdaLift);
+RAF_REGISTER_GLOBAL("raf.pass_.LambdaLift").set_body_typed(LambdaLift);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

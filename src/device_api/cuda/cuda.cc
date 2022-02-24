@@ -8,17 +8,17 @@
  * \brief CUDA device API
  */
 #include <tvm/runtime/device_api.h>
-#include "mnm/op.h"
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
-#include "mnm/profiler.h"
+#include "raf/op.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
+#include "raf/profiler.h"
 #include "../../common/cuda_utils.h"
 
 #include "../../op/dialect/cudnn/cudnn_utils.h"
 #include "../../op/dialect/cublas/cublas_utils.h"
 #include "../../op/dialect/cutlass/cutlass_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace device_api {
 namespace cuda {
 
@@ -171,8 +171,8 @@ class CUDADeviceAPI final : public DeviceAPI {
   void SetStream(const Device& dev, void* stream) override {
     stream_ = stream;
     tvm::runtime::DeviceAPI::Get(dev)->SetStream(dev, stream);
-    mnm::op::cudnn::SetStream(static_cast<cudaStream_t>(stream));
-    mnm::op::cublas::SetStream(static_cast<cudaStream_t>(stream));
+    raf::op::cudnn::SetStream(static_cast<cudaStream_t>(stream));
+    raf::op::cublas::SetStream(static_cast<cudaStream_t>(stream));
   }
 
   void* GetStream() override {
@@ -248,8 +248,8 @@ class CUDADeviceAPI final : public DeviceAPI {
   void* stream_ = nullptr;
 };
 
-MNM_REGISTER_GLOBAL("mnm.device_api._make.cuda").set_body_typed(CUDADeviceAPI::make);
+RAF_REGISTER_GLOBAL("raf.device_api._make.cuda").set_body_typed(CUDADeviceAPI::make);
 
 }  // namespace cuda
 }  // namespace device_api
-}  // namespace mnm
+}  // namespace raf

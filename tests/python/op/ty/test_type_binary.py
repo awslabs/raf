@@ -3,10 +3,10 @@
 
 # pylint: disable=protected-access
 import pytest
-import mnm
-from mnm._op import sym
-from mnm._ffi.pass_ import AutoDiff, InferType
-from mnm.testing import check_type, run_infer_type, randn
+import raf
+from raf._op import sym
+from raf._ffi.pass_ import AutoDiff, InferType
+from raf.testing import check_type, run_infer_type, randn
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -34,12 +34,12 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("dtype", ["float32", "uint32", "int32", "int64", "uint8", "int16"])
 def test_binary(op, shape, dtype):
     # pylint: disable=too-many-locals
-    class Binary(mnm.Model):
+    class Binary(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
             return op(x, y)
 
@@ -85,12 +85,12 @@ def test_binary(op, shape, dtype):
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_logiacal(op, shape, dtype):
     # pylint: disable=too-many-locals
-    class Binary(mnm.Model):
+    class Binary(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
             return op(x, y)
 

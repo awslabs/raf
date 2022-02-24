@@ -12,7 +12,7 @@
 #include "dmlc/thread_local.h"
 #include "./cublas_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cublas {
 
@@ -27,9 +27,9 @@ CUBlasThreadEntry* CUBlasThreadEntry::ThreadLocal() {
   return CUBlasThreadStore::Get();
 }
 
-MNM_REGISTER_DIALECT("cublas").set_enable(DevType::kCUDA());
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.cublas.allow_tf32", tvm::Bool);
+RAF_REGISTER_DIALECT("cublas").set_enable(DevType::kCUDA());
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.cublas.allow_tf32", tvm::Bool);
 
 }  // namespace cublas
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

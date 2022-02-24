@@ -3,14 +3,14 @@
 
 # pylint: disable=no-self-use, protected-access, unused-variable, too-many-locals, too-many-statements
 import pytest
-import mnm
-from mnm.testing import randn
-from mnm.testing.schedule_verifier import verify_schedule
+import raf
+from raf.testing import randn
+from raf.testing.schedule_verifier import verify_schedule
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_ios_schedule_simple_branches():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         """
          ┌───────x──────┐
          │       │      │
@@ -30,51 +30,51 @@ def test_ios_schedule_simple_branches():
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)
+            p_0 = raf.atan(x)
 
-            p_1 = mnm.atan(x)
-            p_1 = mnm.atan(p_1)
+            p_1 = raf.atan(x)
+            p_1 = raf.atan(p_1)
 
-            p_2 = mnm.atan(x)
-            p_2 = mnm.atan(p_2)
-            p_2 = mnm.atan(p_2)
-            return mnm.concatenate([p_0, p_1, p_2])
+            p_2 = raf.atan(x)
+            p_2 = raf.atan(p_2)
+            p_2 = raf.atan(p_2)
+            return raf.concatenate([p_0, p_1, p_2])
 
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(
+    with raf.ir.PassContext(
         config={
-            "mnm.stream_schedule.ios.block_max_size": 20,
-            "mnm.stream_schedule.ios.max_stream_num": 8,
-            "mnm.stream_schedule.ios.max_stage_ops": 20,
-            "mnm.stream_schedule.ios.search_group_combination": False,
-            "mnm.stream_schedule.ios.warmup": 1,
-            "mnm.stream_schedule.ios.number": 6,
-            "mnm.stream_schedule.ios.repeat": 6,
-            "mnm.stream_schedule.ios.verbose": True,
+            "raf.stream_schedule.ios.block_max_size": 20,
+            "raf.stream_schedule.ios.max_stream_num": 8,
+            "raf.stream_schedule.ios.max_stage_ops": 20,
+            "raf.stream_schedule.ios.search_group_combination": False,
+            "raf.stream_schedule.ios.warmup": 1,
+            "raf.stream_schedule.ios.number": 6,
+            "raf.stream_schedule.ios.repeat": 6,
+            "raf.stream_schedule.ios.verbose": True,
         }
     ):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseDialect()(mod)
-        mod = mnm._ffi.pass_.FuseTVM()(mod)
-        mod = mnm._ffi.pass_.DispatchDialect()(mod)
-        mod = mnm._ffi.pass_.EraseType()(mod)
-        mod = mnm._ffi.pass_.InferType()(mod)
-        mod = mnm._ffi.pass_.IOSStreamSchedule()(mod)
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseDialect()(mod)
+        mod = raf._ffi.pass_.FuseTVM()(mod)
+        mod = raf._ffi.pass_.DispatchDialect()(mod)
+        mod = raf._ffi.pass_.EraseType()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
+        mod = raf._ffi.pass_.IOSStreamSchedule()(mod)
     verify_schedule(mod)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_ios_schedule_branch_in_branch():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         """
          ┌───────x──────┐
          │       │      │
@@ -99,54 +99,54 @@ def test_ios_schedule_branch_in_branch():
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)
+            p_0 = raf.atan(x)
 
-            p_1 = mnm.atan(x)
-            p_1 = mnm.atan(p_1)
-            p_1a = mnm.atan(p_1)
-            p_1b = mnm.atan(p_1)
-            p_1 = mnm.concatenate([p_1a, p_1b])
+            p_1 = raf.atan(x)
+            p_1 = raf.atan(p_1)
+            p_1a = raf.atan(p_1)
+            p_1b = raf.atan(p_1)
+            p_1 = raf.concatenate([p_1a, p_1b])
 
-            p_2 = mnm.atan(x)
-            p_2 = mnm.atan(p_2)
-            p_2 = mnm.atan(p_2)
-            return mnm.concatenate([p_0, p_1, p_2])
+            p_2 = raf.atan(x)
+            p_2 = raf.atan(p_2)
+            p_2 = raf.atan(p_2)
+            return raf.concatenate([p_0, p_1, p_2])
 
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(
+    with raf.ir.PassContext(
         config={
-            "mnm.stream_schedule.ios.block_max_size": 20,
-            "mnm.stream_schedule.ios.max_stream_num": 8,
-            "mnm.stream_schedule.ios.max_stage_ops": 20,
-            "mnm.stream_schedule.ios.search_group_combination": False,
-            "mnm.stream_schedule.ios.warmup": 1,
-            "mnm.stream_schedule.ios.number": 6,
-            "mnm.stream_schedule.ios.repeat": 6,
-            "mnm.stream_schedule.ios.verbose": True,
+            "raf.stream_schedule.ios.block_max_size": 20,
+            "raf.stream_schedule.ios.max_stream_num": 8,
+            "raf.stream_schedule.ios.max_stage_ops": 20,
+            "raf.stream_schedule.ios.search_group_combination": False,
+            "raf.stream_schedule.ios.warmup": 1,
+            "raf.stream_schedule.ios.number": 6,
+            "raf.stream_schedule.ios.repeat": 6,
+            "raf.stream_schedule.ios.verbose": True,
         }
     ):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseDialect()(mod)
-        mod = mnm._ffi.pass_.FuseTVM()(mod)
-        mod = mnm._ffi.pass_.DispatchDialect()(mod)
-        mod = mnm._ffi.pass_.EraseType()(mod)
-        mod = mnm._ffi.pass_.InferType()(mod)
-        mod = mnm._ffi.pass_.IOSStreamSchedule()(mod)
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseDialect()(mod)
+        mod = raf._ffi.pass_.FuseTVM()(mod)
+        mod = raf._ffi.pass_.DispatchDialect()(mod)
+        mod = raf._ffi.pass_.EraseType()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
+        mod = raf._ffi.pass_.IOSStreamSchedule()(mod)
     verify_schedule(mod)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_ios_schedule_stacked_blocks():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         """
          ┌────x────┐
          │    │    │
@@ -172,46 +172,46 @@ def test_ios_schedule_stacked_blocks():
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)
-            p_1 = mnm.atan(x)
-            p_2 = mnm.atan(x)
-            p_2 = mnm.atan(p_2)
-            x = mnm.concatenate([p_0, p_1, p_2])
-            p_0 = mnm.atan(x)
-            p_1 = mnm.atan(x)
-            p_2 = mnm.atan(x)
-            p_2 = mnm.atan(p_2)
-            return mnm.concatenate([p_0, p_1, p_2])
+            p_0 = raf.atan(x)
+            p_1 = raf.atan(x)
+            p_2 = raf.atan(x)
+            p_2 = raf.atan(p_2)
+            x = raf.concatenate([p_0, p_1, p_2])
+            p_0 = raf.atan(x)
+            p_1 = raf.atan(x)
+            p_2 = raf.atan(x)
+            p_2 = raf.atan(p_2)
+            return raf.concatenate([p_0, p_1, p_2])
 
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(
+    with raf.ir.PassContext(
         config={
-            "mnm.stream_schedule.ios.block_max_size": 20,
-            "mnm.stream_schedule.ios.max_stream_num": 8,
-            "mnm.stream_schedule.ios.max_stage_ops": 20,
-            "mnm.stream_schedule.ios.search_group_combination": False,
-            "mnm.stream_schedule.ios.warmup": 1,
-            "mnm.stream_schedule.ios.number": 6,
-            "mnm.stream_schedule.ios.repeat": 6,
-            "mnm.stream_schedule.ios.verbose": True,
+            "raf.stream_schedule.ios.block_max_size": 20,
+            "raf.stream_schedule.ios.max_stream_num": 8,
+            "raf.stream_schedule.ios.max_stage_ops": 20,
+            "raf.stream_schedule.ios.search_group_combination": False,
+            "raf.stream_schedule.ios.warmup": 1,
+            "raf.stream_schedule.ios.number": 6,
+            "raf.stream_schedule.ios.repeat": 6,
+            "raf.stream_schedule.ios.verbose": True,
         }
     ):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseDialect()(mod)
-        mod = mnm._ffi.pass_.FuseTVM()(mod)
-        mod = mnm._ffi.pass_.DispatchDialect()(mod)
-        mod = mnm._ffi.pass_.EraseType()(mod)
-        mod = mnm._ffi.pass_.InferType()(mod)
-        mod = mnm._ffi.pass_.IOSStreamSchedule()(mod)
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseDialect()(mod)
+        mod = raf._ffi.pass_.FuseTVM()(mod)
+        mod = raf._ffi.pass_.DispatchDialect()(mod)
+        mod = raf._ffi.pass_.EraseType()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
+        mod = raf._ffi.pass_.IOSStreamSchedule()(mod)
     verify_schedule(mod)
 
 

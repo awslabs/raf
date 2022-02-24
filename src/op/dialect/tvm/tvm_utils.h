@@ -18,19 +18,19 @@
 #include "tvm/runtime/c_runtime_api.h"
 #include "relay/backend/te_compiler.h"
 #include "relay/backend/te_compiler_cache.h"
-#include "mnm/cache.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/serialization.h"
+#include "raf/cache.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/serialization.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::value;
+using namespace raf::value;
 
 void GetDLTensor(const Value& v, std::vector<DLTensor>* tensors);
 ir::Type GetTensorType(const DLTensor& dlt);
@@ -67,7 +67,7 @@ class TVMModuleCacheEntry {
   }
 
   static TVMModuleCacheEntry Load(const std::string path) {
-    static auto f_load = registry::GetPackedFunc("mnm._tvm_op.utils.load_module");
+    static auto f_load = registry::GetPackedFunc("raf._tvm_op.utils.load_module");
     tvm::runtime::Module mod = f_load(path + "/" + MOD_SO_FILE);
 
     std::ifstream ifs(path + "/" + FUNC_NAME_FILE);
@@ -82,7 +82,7 @@ class TVMModuleCacheEntry {
   }
 
   bool Save(const std::string& path) {
-    static auto f_export = registry::GetPackedFunc("mnm._tvm_op.utils.export_library");
+    static auto f_export = registry::GetPackedFunc("raf._tvm_op.utils.export_library");
     auto bin_path = path + "/" + MOD_SO_FILE;
     bool success = f_export(mod_, bin_path);
     if (!success) {
@@ -175,7 +175,7 @@ HashKey GenericHasher(const std::vector<ir::Type>& param_types, const ir::Type& 
  */
 inline bool AllowJitFailure() {
   return tvm::relay::transform::PassContext::Current()
-      ->GetConfig<tvm::Bool>("mnm.tvm.allow_jit_failure", tvm::Bool(false))
+      ->GetConfig<tvm::Bool>("raf.tvm.allow_jit_failure", tvm::Bool(false))
       .value();
 }
 
@@ -187,9 +187,9 @@ inline void ForceEnableAutoScheduler() {
                                                             tvm::Bool(true));
 }
 
-using FMNMLower = registry::TypedPackedFunc<ir::Function(const CallValues& call)>;
-using FMNMAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
-using FMNMArgIndices =
+using FRAFLower = registry::TypedPackedFunc<ir::Function(const CallValues& call)>;
+using FRAFAttr = registry::TypedPackedFunc<ir::Attrs(const CallValues& call)>;
+using FRAFArgIndices =
     registry::TypedPackedFunc<ir::Array<tvm::IntImm>(const op::CallValues& call)>;
 
 extern MetaPersistCache<TVMModuleCacheEntry> CacheBuildCpu;
@@ -198,16 +198,16 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 
-#define MNM_TVM_PLEVEL(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH,        \
+#define RAF_TVM_PLEVEL(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH,        \
                        OP_PATTERN, PLEVEL)                                                         \
   template <typename RType>                                                                        \
   inline RType FUNC##CacheCompile(TVMOpEnv* env, const op::CallValues call,                        \
                                   MetaPersistCache<RType>* cache,                                  \
                                   std::function<RType(const ir::Function&)> f_post_lower) {        \
-    mnm::op::tvm_dialect::ForceEnableAutoScheduler();                                              \
-    static const auto op = Op::Get(MNM_DIALECT_OP_NAME(tvm, OP));                                  \
+    raf::op::tvm_dialect::ForceEnableAutoScheduler();                                              \
+    static const auto op = Op::Get(RAF_DIALECT_OP_NAME(tvm, OP));                                  \
     const auto* schema = call->args.as<SCHEMA>();                                                  \
     CHECK(schema != nullptr);                                                                      \
     Attrs attrs = SCHEMA2ATTRS(schema);                                                            \
@@ -240,9 +240,9 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
   OpEnv* FUNC##Build(const op::CallValues call) {                                                  \
     tvm::relay::tec::TECompiler te_compiler;                                                       \
     const auto& dev = call->device;                                                                \
-    static const auto base_op = Op::Get(MNM_BASE_OP_NAME(OP));                                     \
+    static const auto base_op = Op::Get(RAF_BASE_OP_NAME(OP));                                     \
     auto env = new TVMOpEnv();                                                                     \
-    auto fschema_index = op::GetOpAttr<op::FMNMSchemaFieldIndex>(base_op, "FMNMSchemaFieldIndex"); \
+    auto fschema_index = op::GetOpAttr<op::FRAFSchemaFieldIndex>(base_op, "FRAFSchemaFieldIndex"); \
     for (auto field : SCHEMA_ARG_NAMES(call)) {                                                    \
       int idx = fschema_index(field);                                                              \
       CHECK_GE(idx, 0) << "Cannot find " << field << " in the schema for OP";                      \
@@ -259,7 +259,7 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
       throw;                                                                                       \
     }                                                                                              \
     tvm::Target target = dev.tvm_target();                                                         \
-    env->env_name = TruncateName(GetUniqueName(MNM_DIALECT_OP_NAME(tvm, OP)));                     \
+    env->env_name = TruncateName(GetUniqueName(RAF_DIALECT_OP_NAME(tvm, OP)));                     \
     std::function<TVMModuleCacheEntry(const ir::Function&)> f_post_lower(                          \
         [&](const ir::Function& f) {                                                               \
           te_compiler->Clear();                                                                    \
@@ -282,15 +282,15 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
     return env;                                                                                    \
   }                                                                                                \
   Attrs FUNC##Attr(const op::CallValues call) {                                                    \
-    static const auto op = Op::Get(MNM_BASE_OP_NAME(OP));                                          \
+    static const auto op = Op::Get(RAF_BASE_OP_NAME(OP));                                          \
     const auto* schema = call->args.as<SCHEMA>();                                                  \
     CHECK(schema != nullptr);                                                                      \
     return SCHEMA2ATTRS(schema);                                                                   \
   }                                                                                                \
   Array<tvm::IntImm> FUNC##ArgIndices(const op::CallValues call) {                                 \
-    static const auto op = Op::Get(MNM_BASE_OP_NAME(OP));                                          \
+    static const auto op = Op::Get(RAF_BASE_OP_NAME(OP));                                          \
     static const auto fschema_index =                                                              \
-        op::GetOpAttr<op::FMNMSchemaFieldIndex>(op, "FMNMSchemaFieldIndex");                       \
+        op::GetOpAttr<op::FRAFSchemaFieldIndex>(op, "FRAFSchemaFieldIndex");                       \
     std::vector<tvm::IntImm> ret;                                                                  \
     for (const auto& field : SCHEMA_ARG_NAMES(call)) {                                             \
       ret.push_back(tvm::IntImm(DataType::Int(32), fschema_index(field)));                         \
@@ -305,13 +305,13 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
     auto env = std::make_unique<TVMOpEnv>();                                                       \
     return FUNC##CacheCompile(env.get(), call, cache, identity).GetFunction();                     \
   }                                                                                                \
-  MNM_REGISTER_DIALECT_OP(tvm, OP, PLEVEL)                                                         \
-      .set_attr<::mnm::op::TOpPattern>("TOpPattern", OP_PATTERN)                                   \
-      .set_attr<::mnm::op::tvm_dialect::FMNMLower>("FMNMLower", FUNC##Lower)                       \
-      .set_attr<::mnm::op::tvm_dialect::FMNMAttr>("FMNMAttr", FUNC##Attr)                          \
-      .set_attr<::mnm::op::tvm_dialect::FMNMArgIndices>("FMNMArgIndices", FUNC##ArgIndices);       \
-  MNM_OP_ENV_MAKER(MNM_DIALECT_OP_NAME(tvm, OP), FUNC##Build);
+  RAF_REGISTER_DIALECT_OP(tvm, OP, PLEVEL)                                                         \
+      .set_attr<::raf::op::TOpPattern>("TOpPattern", OP_PATTERN)                                   \
+      .set_attr<::raf::op::tvm_dialect::FRAFLower>("FRAFLower", FUNC##Lower)                       \
+      .set_attr<::raf::op::tvm_dialect::FRAFAttr>("FRAFAttr", FUNC##Attr)                          \
+      .set_attr<::raf::op::tvm_dialect::FRAFArgIndices>("FRAFArgIndices", FUNC##ArgIndices);       \
+  RAF_OP_ENV_MAKER(RAF_DIALECT_OP_NAME(tvm, OP), FUNC##Build);
 
-#define MNM_TVM(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN)  \
-  MNM_TVM_PLEVEL(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN, \
+#define RAF_TVM(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN)  \
+  RAF_TVM_PLEVEL(OP, FUNC, SCHEMA, SCHEMA2ARGS, SCHEMA_ARG_NAMES, SCHEMA2ATTRS, HASH, OP_PATTERN, \
                  10)

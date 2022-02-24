@@ -3,8 +3,8 @@
 
 import pytest
 import tvm
-from mnm.ir import ScopeBuilder
-from mnm._ffi.pass_ import LambdaLift, FromRelay, FlattenClosure, LiftBranchBody
+from raf.ir import ScopeBuilder
+from raf._ffi.pass_ import LambdaLift, FromRelay, FlattenClosure, LiftBranchBody
 from tvm import relay
 
 

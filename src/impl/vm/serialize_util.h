@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/serilize_util.h
- * \brief Definitions of helpers for serializing and deserializing a Meta VM.
+ * \brief Definitions of helpers for serializing and deserializing a RAF VM.
  */
 
 #pragma once
@@ -16,9 +16,9 @@
 #include <string>
 #include <vector>
 
-#include "mnm/vm/vm.h"
+#include "raf/vm/vm.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
@@ -143,4 +143,4 @@ struct VMInstructionSerializer {
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

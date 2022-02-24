@@ -5,11 +5,11 @@
 
 /*!
  * \file src/impl/registry.cc
- * \brief MNM registry underlying implementation
+ * \brief RAF registry underlying implementation
  */
-#include "mnm/registry.h"
+#include "raf/registry.h"
 
-namespace mnm {
+namespace raf {
 namespace registry {
 
 const PackedFunc& GetPackedFunc(const std::string& name) {
@@ -19,4 +19,4 @@ const PackedFunc& GetPackedFunc(const std::string& name) {
 }
 
 }  // namespace registry
-}  // namespace mnm
+}  // namespace raf

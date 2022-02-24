@@ -9,18 +9,18 @@
  */
 #include <tvm/relay/type.h>
 #include <numeric>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/likes.h"
 #include "../schema/reduce.h"
 #include "./utils.h"
 #include <iostream>
 #include <algorithm>
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using schema::ProdDxArgs;
 using schema::ReduceArgs;
 using schema::SumArgs;
@@ -86,14 +86,14 @@ Type SumInfer(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.sum", "Sum", SumInfer);
+RAF_OP_TYPE("raf.op.sum", "Sum", SumInfer);
 
 Type SumDxInfer(const CallValues& value) {
   const auto* args = value->args.as<SumDxArgs>();
   CHECK(args != nullptr);
   return GetType(args->x);
 }
-MNM_OP_TYPE("mnm.op.sum_dx", "SumDx", SumDxInfer);
+RAF_OP_TYPE("raf.op.sum_dx", "SumDx", SumDxInfer);
 
 Array<PrimExpr> GenerateReduceShape(const ReduceArgs* args, tvm::TensorType x) {
   Array<PrimExpr> shape;
@@ -175,16 +175,16 @@ Type MeanDxInfer(const CallValues& value) {
   return TensorType(oshape, dy->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.argmax", "Argmax", ReduceOutIntDType);
-MNM_OP_TYPE("mnm.op.argmin", "Argmin", ReduceOutIntDType);
-MNM_OP_TYPE("mnm.op.max", "Max", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.min", "Min", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.all", "All", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.any", "Any", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.prod", "Prod", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.mean", "Mean", ReduceOutSameDType);
-MNM_OP_TYPE("mnm.op.prod_dx", "ProdDx", ProdDxDType);
-MNM_OP_TYPE("mnm.op.mean_dx", "MeanDx", MeanDxInfer);
+RAF_OP_TYPE("raf.op.argmax", "Argmax", ReduceOutIntDType);
+RAF_OP_TYPE("raf.op.argmin", "Argmin", ReduceOutIntDType);
+RAF_OP_TYPE("raf.op.max", "Max", ReduceOutSameDType);
+RAF_OP_TYPE("raf.op.min", "Min", ReduceOutSameDType);
+RAF_OP_TYPE("raf.op.all", "All", ReduceOutSameDType);
+RAF_OP_TYPE("raf.op.any", "Any", ReduceOutSameDType);
+RAF_OP_TYPE("raf.op.prod", "Prod", ReduceOutSameDType);
+RAF_OP_TYPE("raf.op.mean", "Mean", ReduceOutSameDType);
+RAF_OP_TYPE("raf.op.prod_dx", "ProdDx", ProdDxDType);
+RAF_OP_TYPE("raf.op.mean_dx", "MeanDx", MeanDxInfer);
 
 Type L2NormDType(const CallValues& value) {
   const auto* args = value->args.as<schema::L2NormArgs>();
@@ -194,6 +194,6 @@ Type L2NormDType(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.l2norm", "L2norm", L2NormDType);
+RAF_OP_TYPE("raf.op.l2norm", "L2norm", L2NormDType);
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

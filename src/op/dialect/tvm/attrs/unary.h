@@ -10,7 +10,7 @@
 #pragma once
 #include <tvm/ir/attrs.h>
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
@@ -25,4 +25,4 @@ struct UnaryDxAttr : public tvm::AttrsNode<UnaryDxAttr> {
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

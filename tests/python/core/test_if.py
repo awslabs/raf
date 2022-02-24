@@ -3,12 +3,12 @@
 
 import numpy as np
 import pytest
-import mnm
-from mnm.testing import get_testable_devices, randn, check
-from mnm._core.ndarray import get_ndarray_handle, ndarray
-from mnm._core.module import IRModule
-from mnm._lib import relay
-from mnm._ffi.model import RunModel
+import raf
+from raf.testing import get_testable_devices, randn, check
+from raf._core.ndarray import get_ndarray_handle, ndarray
+from raf._core.module import IRModule
+from raf._lib import relay
+from raf._ffi.model import RunModel
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
@@ -24,10 +24,10 @@ def test_basic_if(device, shape):
     cond = relay.var("cond")
     ret = relay.var("ret")
     lets = [
-        (a, mnm.ir.op.cos(x)),
-        (cond, mnm.ir.op.greater(cond_p, cond_q)),
-        (b, mnm.ir.op.subtract(a, x)),
-        (c, mnm.ir.op.add(a, x)),
+        (a, raf.ir.op.cos(x)),
+        (cond, raf.ir.op.greater(cond_p, cond_q)),
+        (b, raf.ir.op.subtract(a, x)),
+        (c, raf.ir.op.add(a, x)),
         (ret, relay.If(cond, b, c)),
         ret,
     ]
@@ -52,7 +52,7 @@ def test_basic_if(device, shape):
         n_y = np.cos(n_x) + n_x
     else:
         n_y = np.cos(n_x) - n_x
-    check(m_y, mnm.array(n_y, device=device))
+    check(m_y, raf.array(n_y, device=device))
 
 
 if __name__ == "__main__":

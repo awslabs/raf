@@ -10,15 +10,15 @@
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
 #include <tvm/ir/env_func.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/ufunc.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using schema::UnaryArgs;
 using schema::UnaryDxArgs;
 using schema::UnaryUfuncArgs;
@@ -30,27 +30,27 @@ Type UnaryInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.log", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.log2", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.cos", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.sin", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.sign", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.round", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.relu", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.gelu", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.tanh", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.sigmoid", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.copy", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.abs", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.ceil", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.floor", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.exp", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.erf", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.sqrt", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.rsqrt", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.atan", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.trunc", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.ndarray_size", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.log", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.log2", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.cos", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.sin", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.sign", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.round", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.relu", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.gelu", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.tanh", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.sigmoid", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.copy", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.abs", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.ceil", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.floor", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.exp", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.erf", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.sqrt", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.rsqrt", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.atan", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.trunc", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.ndarray_size", "Identity", UnaryInfer);
 
 Type UnaryDxInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryDxArgs>();
@@ -64,12 +64,12 @@ Type UnaryDxInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.relu_dx", "IdentityDx", UnaryDxInfer);
-MNM_OP_TYPE("mnm.op.gelu_dx", "IdentityDx", UnaryDxInfer);
-MNM_OP_TYPE("mnm.op.tanh_dx", "IdentityDx", UnaryDxInfer);
-MNM_OP_TYPE("mnm.op.sigmoid_dx", "IdentityDx", UnaryDxInfer);
-MNM_OP_TYPE("mnm.op.erf_dx", "IdentityDx", UnaryDxInfer);
-MNM_OP_TYPE("mnm.op.sqrt_dx", "IdentityDx", UnaryDxInfer);
+RAF_OP_TYPE("raf.op.relu_dx", "IdentityDx", UnaryDxInfer);
+RAF_OP_TYPE("raf.op.gelu_dx", "IdentityDx", UnaryDxInfer);
+RAF_OP_TYPE("raf.op.tanh_dx", "IdentityDx", UnaryDxInfer);
+RAF_OP_TYPE("raf.op.sigmoid_dx", "IdentityDx", UnaryDxInfer);
+RAF_OP_TYPE("raf.op.erf_dx", "IdentityDx", UnaryDxInfer);
+RAF_OP_TYPE("raf.op.sqrt_dx", "IdentityDx", UnaryDxInfer);
 
 Type UnaryUfuncInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryUfuncArgs>();
@@ -78,8 +78,8 @@ Type UnaryUfuncInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.negative", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.logical_not", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.negative", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.logical_not", "Identity", UnaryInfer);
 
 Type UnaryShapeInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
@@ -89,9 +89,9 @@ Type UnaryShapeInfer(const CallValues& value) {
   return TensorType(shape, tvm::runtime::DataType::UInt(32));
 }
 
-MNM_OP_TYPE("mnm.op.shape", "Shape", UnaryShapeInfer);
-MNM_OP_TYPE("mnm.op.zeros_like", "Identity", UnaryInfer);
-MNM_OP_TYPE("mnm.op.ones_like", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.shape", "Shape", UnaryShapeInfer);
+RAF_OP_TYPE("raf.op.zeros_like", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.ones_like", "Identity", UnaryInfer);
 
 Type NumelInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
@@ -100,7 +100,7 @@ Type NumelInfer(const CallValues& value) {
   return TensorType({}, tvm::runtime::DataType::Int(32));
 }
 
-MNM_OP_TYPE("mnm.op.numel", "Numel", NumelInfer);
+RAF_OP_TYPE("raf.op.numel", "Numel", NumelInfer);
 
 Type ShapeAsTensorInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
@@ -110,7 +110,7 @@ Type ShapeAsTensorInfer(const CallValues& value) {
   return TensorType(shape, tvm::runtime::DataType::Int(32));
 }
 
-MNM_OP_TYPE("mnm.op.shape_as_tensor", "ShapeAsTensor", ShapeAsTensorInfer);
+RAF_OP_TYPE("raf.op.shape_as_tensor", "ShapeAsTensor", ShapeAsTensorInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

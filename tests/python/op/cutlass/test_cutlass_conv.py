@@ -6,19 +6,19 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-import mnm
-from mnm.testing import randn_torch, run_vm_model, check, DialectChecker
+import raf
+from raf.testing import randn_torch, run_vm_model, check, DialectChecker
 
 
 def verify_ir(mod):
-    with mnm.device("cuda"):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseDialect()(mod)
+    with raf.device("cuda"):
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseDialect()(mod)
         DialectChecker("cutlass").visit(mod["main"])
 
 
-@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
+@pytest.mark.skipif(not raf.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize(
     "shapes",
     [
@@ -32,13 +32,13 @@ def verify_ir(mod):
 def test_conv2d_relu(shapes, stride, dilation, padding):
     device, dtype = "cuda", "float32"
 
-    class Conv2D(mnm.Model):
+    class Conv2D(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            y = mnm.conv2d(
+            y = raf.conv2d(
                 x,
                 w,
                 stride=stride,
@@ -49,14 +49,14 @@ def test_conv2d_relu(shapes, stride, dilation, padding):
                 kernel_layout="OHWI",
                 out_layout="NHWC",
             )
-            y = mnm.relu(y)
+            y = raf.relu(y)
             return y
 
     xshape, wshape = shapes
     m_x, t_x = randn_torch(xshape, device=device, dtype=dtype)
     m_w, t_w = randn_torch(wshape, device=device, dtype=dtype)
-    m_x = mnm.transpose(m_x, (0, 2, 3, 1))
-    m_w = mnm.transpose(m_w, (0, 2, 3, 1))
+    m_x = raf.transpose(m_x, (0, 2, 3, 1))
+    m_w = raf.transpose(m_w, (0, 2, 3, 1))
     model = Conv2D()
     mod = model._internal(m_x, m_w).mod
     verify_ir(mod)

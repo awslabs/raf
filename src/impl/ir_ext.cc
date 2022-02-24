@@ -5,18 +5,18 @@
 
 /*!
  * \file src/impl/ir_ext.cc
- * \brief MNM extension to TVM/Relay IR.
+ * \brief RAF extension to TVM/Relay IR.
  */
 #include <printer/text_printer.h>
-#include "mnm/ir_ext.h"
-#include "mnm/registry.h"
-#include "mnm/pass.h"
-#include "mnm/value.h"
+#include "raf/ir_ext.h"
+#include "raf/registry.h"
+#include "raf/pass.h"
+#include "raf/value.h"
 
-namespace mnm {
+namespace raf {
 namespace ir {
 
-using namespace mnm::value;
+using namespace raf::value;
 
 IRModule GlobalModule() {
   static IRModule inst = IRModule();
@@ -26,8 +26,8 @@ IRModule GlobalModule() {
 tvm::runtime::NDArray MakeFakeTensor() {
   static int64_t a[1] = {-114514};
   static int64_t b[1] = {1};
-  Device dev = mnm::Device(mnm::DevType::kCPU(), 0);
-  DType dtype = mnm::DType(mnm::DTypeCode::kInt(), 64, 1);
+  Device dev = raf::Device(raf::DevType::kCPU(), 0);
+  DType dtype = raf::DType(raf::DTypeCode::kInt(), 64, 1);
   DLTensor tensor;
   tensor.data = a;
   tensor.device = dev;
@@ -135,17 +135,17 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.ir.AsText").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   ObjectRef value = args[0];
   bool show_meta_data = args.size() == 2 ? args[1] : false;
   *rv = AsText(value, show_meta_data);
 });
 
-MNM_REGISTER_GLOBAL("mnm.ir._make.Constant").set_body_typed(MakeConstant);
-MNM_REGISTER_GLOBAL("mnm.ir._make.Var").set_body_typed(MakeVar);
-MNM_REGISTER_GLOBAL("mnm.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
-MNM_REGISTER_GLOBAL("mnm.ir.variable.GetMayShare").set_body_typed(GetMayShare);
-MNM_REGISTER_GLOBAL("mnm.ir.module.Global").set_body_typed(GlobalModule);
+RAF_REGISTER_GLOBAL("raf.ir._make.Constant").set_body_typed(MakeConstant);
+RAF_REGISTER_GLOBAL("raf.ir._make.Var").set_body_typed(MakeVar);
+RAF_REGISTER_GLOBAL("raf.ir.constant.ExtractValue").set_body_typed(ConstantExtractValue);
+RAF_REGISTER_GLOBAL("raf.ir.variable.GetMayShare").set_body_typed(GetMayShare);
+RAF_REGISTER_GLOBAL("raf.ir.module.Global").set_body_typed(GlobalModule);
 
 }  // namespace ir
-}  // namespace mnm
+}  // namespace raf

@@ -14,7 +14,7 @@
 #define BLOCK_SIZE 512
 #define ILP 4
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cuda {
 
@@ -451,5 +451,5 @@ void multi_tensor_lans_cuda(int chunk_size, std::vector<T*> tensor_lists, const 
 
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
 

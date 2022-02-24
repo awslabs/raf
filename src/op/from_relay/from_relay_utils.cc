@@ -5,15 +5,15 @@
 
 /*!
  * \file ./src/op/from_relay/from_relay_utils.cc
- * \brief Utility methods for Relay to Meta op conversion.
+ * \brief Utility methods for Relay to RAF op conversion.
  */
 #include "./from_relay_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace from_relay {
 
-using namespace mnm::value;
+using namespace raf::value;
 
 const ConstantNode* GetKonstFromValueMap(const Expr& expr, const VarValueMap& val_map) {
   ICHECK(expr->IsInstance<VarNode>()) << "Assume ANF!";
@@ -26,4 +26,4 @@ const ConstantNode* GetKonstFromValueMap(const Expr& expr, const VarValueMap& va
 
 }  // namespace from_relay
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

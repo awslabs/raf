@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import torchvision
 import pytest
-import mnm
-from mnm.testing import get_testable_devices, randn, check, run_vm_model
+import raf
+from raf.testing import get_testable_devices, randn, check, run_vm_model
 
 import tvm.topi.testing
 
@@ -17,20 +17,20 @@ import tvm.topi.testing
     "inputs", [((1, 2500, 6), 0, 0, 1), ((16, 500, 5), 0.95, -1, 0)]
 )  # pylint: disable=too-many-locals
 def test_get_valid_counts(inputs, device):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return mnm.get_valid_counts(x, y, id_index, score_index)
+            return raf.get_valid_counts(x, y, id_index, score_index)
 
     dtype = "float32"
     m_x, np_data = randn(inputs[0], device=device)
     batch_size, num_anchor, elem_length = inputs[0]
     score_threshold, id_index, score_index = inputs[1], inputs[2], inputs[3]
     np_s = np.array(score_threshold).astype("float32")
-    m_s = mnm.array(np_s, device=device)
+    m_s = raf.array(np_s, device=device)
     np_out1 = np.zeros(shape=(batch_size,))
     np_out2 = np.zeros(shape=inputs[0]).astype(dtype)
     np_out3 = np.zeros(shape=(batch_size, num_anchor))
@@ -65,16 +65,16 @@ def test_get_valid_counts(inputs, device):
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_nms(device):
     # pylint: disable=too-many-locals
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self, force_suppress, top_k, return_indices):
             self._force_suppress = force_suppress
             self._top_k = top_k
             self._return_indices = return_indices
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, valid_count, indices, max_output_size, iou_threshold):
             # pylint: disable=too-many-arguments
-            return mnm.non_max_suppression(
+            return raf.non_max_suppression(
                 data,
                 valid_count,
                 indices,
@@ -151,11 +151,11 @@ def test_nms(device):
     num_anchors = 5
     dshape = (1, num_anchors, 6)
 
-    m_data = mnm.array(np_data, device=device)
-    m_valid_count = mnm.array(np_valid_count, device=device)
-    m_indices = mnm.array(np_indices, device=device)
-    m_max_output_size = mnm.array(np_max_output_size, device=device)
-    m_iou_threshold = mnm.array(np_iou_threshold, device=device)
+    m_data = raf.array(np_data, device=device)
+    m_valid_count = raf.array(np_valid_count, device=device)
+    m_indices = raf.array(np_indices, device=device)
+    m_max_output_size = raf.array(np_max_output_size, device=device)
+    m_iou_threshold = raf.array(np_iou_threshold, device=device)
 
     verify_nms(
         m_data,
@@ -189,7 +189,7 @@ def test_nms(device):
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_roi_align(config, mode, layout, device):
     # pylint: disable=too-many-locals, not-callable
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(
             self, pooled_size, spatial_scale, sample_ratio, layout, mode
         ):  # pylint: disable=too-many-arguments
@@ -199,9 +199,9 @@ def test_roi_align(config, mode, layout, device):
             self.layout = layout
             self.mode = mode
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, rois):
-            return mnm.roi_align(
+            return raf.roi_align(
                 data,
                 rois,
                 self.pooled_size,
@@ -233,8 +233,8 @@ def test_roi_align(config, mode, layout, device):
         )
 
         # forward
-        m_data = mnm.array(np_data, device=device)
-        m_rois = mnm.array(np_rois, device=device)
+        m_data = raf.array(np_data, device=device)
+        m_rois = raf.array(np_rois, device=device)
         m_data.requires_grad = True
 
         model = TestModel(pooled_size, spatial_scale, sample_ratio, layout, mode)
@@ -245,7 +245,7 @@ def test_roi_align(config, mode, layout, device):
 
         # backward
         np_dy = np.ones(m_out.shape, dtype="float32")
-        m_out.backward(mnm.array(np_dy, device=device))
+        m_out.backward(raf.array(np_dy, device=device))
         if layout == "NCHW" and mode == "avg":
             t_data = torch.tensor(np_data)
             t_rois = torch.tensor(np_rois)

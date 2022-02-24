@@ -3,35 +3,35 @@
 
 import numpy as np
 import pytest
-import mnm
+import raf
 from tvm import relay
-from mnm.testing import get_testable_devices, check, run_vm_model, get_vm_executor, resnet
-from mnm._core.ndarray import Symbol
-from mnm.model.trace import _get_func_inputs
+from raf.testing import get_testable_devices, check, run_vm_model, get_vm_executor, resnet
+from raf._core.ndarray import Symbol
+from raf.model.trace import _get_func_inputs
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("fuse", [True, False])
 def test_simple(device, fuse):
     # pylint: disable=no-self-use
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.argwhere(x)
-            y = mnm.split(y, 2)
-            y = mnm.add(y[0], y[1])
-            y = mnm.abs(y)
+            y = raf.argwhere(x)
+            y = raf.split(y, 2)
+            y = raf.add(y[0], y[1])
+            y = raf.abs(y)
             return y
 
     model = Model()
     n_x = np.ones((2, 2)).astype("float32")
-    m_x = mnm.array(n_x, device=device)
+    m_x = raf.array(n_x, device=device)
     m_res = model(m_x)
     v_res = run_vm_model(model, device, [m_x], disable_fusion=not fuse)
-    expected = mnm.array([[1, 0], [1, 2]], dtype="int32")
+    expected = raf.array([[1, 0], [1, 2]], dtype="int32")
     check(m_res, expected)
     check(v_res, expected)
 
@@ -39,25 +39,25 @@ def test_simple(device, fuse):
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_dynamic_reshape(device):
     # pylint: disable=no-self-use
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.argwhere(x)
-            y = mnm.split(y, 2)
-            y = mnm.add(y[0], y[1])
-            y = mnm.abs(y)
-            y = mnm.expand_dims(y, 0)
+            y = raf.argwhere(x)
+            y = raf.split(y, 2)
+            y = raf.add(y[0], y[1])
+            y = raf.abs(y)
+            y = raf.expand_dims(y, 0)
             return y
 
     model = Model()
     n_x = np.ones((2, 2)).astype("float32")
-    m_x = mnm.array(n_x, device=device)
+    m_x = raf.array(n_x, device=device)
     m_res = model(m_x)
     v_res = run_vm_model(model, device, [m_x])
-    expected = mnm.array([[[1, 0], [1, 2]]], dtype="int32")
+    expected = raf.array([[[1, 0], [1, 2]]], dtype="int32")
     check(m_res, expected)
     check(v_res, expected)
 

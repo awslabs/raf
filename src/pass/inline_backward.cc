@@ -7,17 +7,17 @@
  * \file inline_backward.cc
  * \brief inlining backward graph in the forward pass
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/binding.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/binding.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace inline_backward {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 class InlineBackwardFunc : public ExprVisitor {
  public:
@@ -107,10 +107,10 @@ Pass InlineBackward() {
                                                                              PassContext pc) {
     return inline_backward::InlineBackwardFunc().Inline(f);
   };
-  return CreateMNMFunctionPass(pass_func, 1, "InlineBackward", {});
+  return CreateRAFFunctionPass(pass_func, 1, "InlineBackward", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InlineBackward").set_body_typed(InlineBackward);
+RAF_REGISTER_GLOBAL("raf.pass_.InlineBackward").set_body_typed(InlineBackward);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

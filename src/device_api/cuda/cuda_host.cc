@@ -8,11 +8,11 @@
  * \brief CUDA host (CPU pinned memory) device API.
  */
 #include <tvm/runtime/device_api.h>
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
 #include "../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace device_api {
 namespace cuda_host {
 
@@ -109,8 +109,8 @@ class CUDAHostDeviceAPI final : public DeviceAPI {
   }
 };
 
-MNM_REGISTER_GLOBAL("mnm.device_api._make.cuda_host").set_body_typed(CUDAHostDeviceAPI::make);
+RAF_REGISTER_GLOBAL("raf.device_api._make.cuda_host").set_body_typed(CUDAHostDeviceAPI::make);
 
 }  // namespace cuda_host
 }  // namespace device_api
-}  // namespace mnm
+}  // namespace raf

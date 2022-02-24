@@ -10,17 +10,17 @@
  * functions have same number of free vars. This ensures that AD will the same return type for
  * igrads on both branches.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace lift_branch_body {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 class BranchBodyLift : public MixedModeMutator {
  public:
@@ -66,7 +66,7 @@ class BranchBodyLift : public MixedModeMutator {
       // Lambda lift and then apply LiftBranchBody
       CHECK(closure_vars_.count(fv.get()) == 0)
           << "There are closure calls in the branch bodies. Apply LambdaLift pass";
-      func_params.push_back(mnm::ir::Var(fv));
+      func_params.push_back(raf::ir::Var(fv));
     }
 
     // Create new functions for the true and false branches.
@@ -125,7 +125,7 @@ Pass LiftBranchBody() {
       0, "LiftBranchBody", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.LiftBranchBody").set_body_typed(LiftBranchBody);
+RAF_REGISTER_GLOBAL("raf.pass_.LiftBranchBody").set_body_typed(LiftBranchBody);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

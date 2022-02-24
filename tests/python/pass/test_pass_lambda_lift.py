@@ -3,9 +3,9 @@
 
 import pytest
 import tvm
-import mnm
-from mnm.testing import randn, get_testable_devices
-from mnm._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody, InferType
+import raf
+from raf.testing import randn, get_testable_devices
+from raf._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody, InferType
 from tvm import relay
 
 
@@ -14,14 +14,14 @@ from tvm import relay
 def test_basic(device, shape):
     # pylint: disable=protected-access
     # Create a symbolic model and run it
-    class Add(mnm.Model):
+    class Add(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):  # pylint: disable=no-self-use
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     # Get a Relay func
     model = Add()
@@ -34,7 +34,7 @@ def test_basic(device, shape):
     # The backward function will be lifted
     mod = AutoDiff(record.requires_grads)(InferType()(mod))
 
-    # Call Lambda lift pass on the Meta module
+    # Call Lambda lift pass on the RAF module
     lifted_mod = LambdaLift()(mod)
 
     assert len(lifted_mod.functions) == 2
@@ -61,7 +61,7 @@ def test_while_loop():
     """
 
     def get_recursive_mod():
-        sb = mnm.ir.ScopeBuilder()
+        sb = raf.ir.ScopeBuilder()
         mod = tvm.IRModule()
 
         loop = relay.var("loop")

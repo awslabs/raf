@@ -10,14 +10,14 @@
 #pragma once
 
 #include <support/arena.h>
-#include "mnm/ir.h"
-#include "mnm/op.h"
+#include "raf/ir.h"
+#include "raf/op.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 using namespace tvm::support;
 
 /*!
@@ -149,4 +149,4 @@ class DominatorTree {
 };
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

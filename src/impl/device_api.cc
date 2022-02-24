@@ -7,10 +7,10 @@
  * \file src/impl/device_api.cc
  * \brief Device api manager
  */
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
 
-namespace mnm {
+namespace raf {
 namespace device_api {
 
 using registry::GetPackedFunc;
@@ -25,7 +25,7 @@ class DeviceAPIManager {
 
   static DeviceAPI* CreateDeviceAPI(DevType device_type) {
     thread_local char creator_name[128];
-    snprintf(creator_name, sizeof(creator_name), "mnm.device_api._make.%s", device_type.c_str());
+    snprintf(creator_name, sizeof(creator_name), "raf.device_api._make.%s", device_type.c_str());
     void* ret = GetPackedFunc(creator_name)();
     return static_cast<DeviceAPI*>(ret);
   }
@@ -47,4 +47,4 @@ std::shared_ptr<DeviceAPI> DeviceAPI::Get(DevType device_type) {
 }
 
 }  // namespace device_api
-}  // namespace mnm
+}  // namespace raf

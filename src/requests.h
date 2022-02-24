@@ -10,11 +10,11 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include "mnm/device.h"
-#include "mnm/memory_pool.h"
-#include "mnm/stream_pool.h"
+#include "raf/device.h"
+#include "raf/memory_pool.h"
+#include "raf/stream_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace requests {
 
 class Requests {
@@ -53,4 +53,4 @@ class Requests {
 };
 
 }  // namespace requests
-}  // namespace mnm
+}  // namespace raf

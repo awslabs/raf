@@ -3,9 +3,9 @@
 
 import pytest
 import tvm
-from mnm._core import device
-from mnm._core.device import Device
-from mnm._core.core_utils import DEVICE_TYPE_MAP
+from raf._core import device
+from raf._core.device import Device
+from raf._core.core_utils import DEVICE_TYPE_MAP
 
 
 def verify_device(dev_str):

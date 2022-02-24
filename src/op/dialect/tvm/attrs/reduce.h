@@ -9,13 +9,13 @@
  */
 #pragma once
 #include <tvm/ir/attrs.h>
-#include "mnm/ir.h"
+#include "raf/ir.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 struct SumAttrs : public tvm::AttrsNode<SumAttrs> {
   Array<Integer> axis;
@@ -47,4 +47,4 @@ struct MeanDxAttrs : public tvm::AttrsNode<MeanDxAttrs> {
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

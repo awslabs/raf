@@ -7,22 +7,22 @@
  * \file ./src/op/dialect/cutlass/gemm.h
  * \brief Implementation of cutlass gemm dispatch
  */
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "tvm/relay/dataflow_pattern.h"
 #include "./gemm_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 
 /*! \brief OpEnv for the following pattern:
  * epilogue_op_(alpha * matmul_like_ops(a_, b_) + beta * bias_),
@@ -37,7 +37,7 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cutlass.matmul"));
+    return TruncateName(GetUniqueName("raf.op.cutlass.matmul"));
   }
 
   bool Pattern(const CallValues& cv);
@@ -75,4 +75,4 @@ class CutlassMatmulOpEnv : public CutlassGemmOpEnv {
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

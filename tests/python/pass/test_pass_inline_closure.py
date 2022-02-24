@@ -4,14 +4,14 @@
 # pylint: disable=attribute-defined-outside-init,protected-access,too-many-statements
 # pylint: disable=no-self-use, too-many-locals
 import pytest
-import mnm
-from mnm.testing import randn
-from mnm._core.module import IRModule
-from mnm._core.ir_ext import extended_var
-from mnm._ffi.pass_ import InlineClosure, InferType, AutoDiff, LambdaLift
-from mnm._ffi.pass_ import DeadCodeElimination, InlineBackward
-from mnm.ir import MNMSequential, ScopeBuilder
-from mnm.model.nn import BatchNorm
+import raf
+from raf.testing import randn
+from raf._core.module import IRModule
+from raf._core.ir_ext import extended_var
+from raf._ffi.pass_ import InlineClosure, InferType, AutoDiff, LambdaLift
+from raf._ffi.pass_ import DeadCodeElimination, InlineBackward
+from raf.ir import RAFSequential, ScopeBuilder
+from raf.model.nn import BatchNorm
 from tvm import relay
 import tvm
 
@@ -22,10 +22,10 @@ def verify_ir(model, args, reconstructor):
     mod = record.mod
 
     # Run AutoDiff to get nested functions, and the backward function will be lifted later.
-    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
     mod = AutoDiff(record.requires_grads)(mod)
 
-    # Call Lambda lift pass on the Meta module
+    # Call Lambda lift pass on the RAF module
     lifted_mod = LambdaLift()(mod)
 
     # Extract forward and backward closures to reconstruct the main function.
@@ -38,13 +38,13 @@ def verify_ir(model, args, reconstructor):
             bwd_var, bwd = var, func
 
     mod = reconstructor(fwd, bwd, fwd_var, bwd_var)
-    seq = MNMSequential([InferType(), InlineClosure(), DeadCodeElimination(), InferType()])
+    seq = RAFSequential([InferType(), InlineClosure(), DeadCodeElimination(), InferType()])
     mod = seq(mod)
 
     # Make a ground truth.
     record = model._internal(*args)
     truth = record.mod
-    seq = MNMSequential(
+    seq = RAFSequential(
         [
             InferType(),
             AutoDiff(record.requires_grads),
@@ -55,17 +55,17 @@ def verify_ir(model, args, reconstructor):
         ]
     )
     truth = seq(truth)
-    assert tvm.ir.structural_equal(mod["main"], truth["main"]), mnm.ir.AsText(mod["main"])
+    assert tvm.ir.structural_equal(mod["main"], truth["main"]), raf.ir.AsText(mod["main"])
 
 
 def test_basic():
-    class Add(mnm.Model):
+    class Add(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     # Get a Relay func
     shape = [3, 3]
@@ -98,14 +98,14 @@ def test_basic():
 def test_inplace():
     """Test a model with batch_norm which has inplace updated parameters."""
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self, num_features, eps=1e-5, momentum=0.1, affine=True):
             self.batch_norm = BatchNorm(num_features, eps, momentum, affine)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             x = self.batch_norm(x)
-            x = mnm.relu(x)
+            x = raf.relu(x)
             return x
 
     # Get a Relay func
@@ -173,7 +173,7 @@ def test_no_let():
     sb.ret(v_0)
     func2 = relay.Function([y], sb.get())
     mod = IRModule({fun_var: func1, relay.GlobalVar("main"): func2})
-    seq = MNMSequential([InferType(), InlineClosure(), DeadCodeElimination(), InferType()])
+    seq = RAFSequential([InferType(), InlineClosure(), DeadCodeElimination(), InferType()])
     mod = seq(mod)
 
     def expected():
@@ -185,7 +185,7 @@ def test_no_let():
         mod = InferType()(mod)
         return mod
 
-    assert tvm.ir.structural_equal(mod["main"], expected()["main"]), mnm.ir.AsText(mod["main"])
+    assert tvm.ir.structural_equal(mod["main"], expected()["main"]), raf.ir.AsText(mod["main"])
 
 
 if __name__ == "__main__":

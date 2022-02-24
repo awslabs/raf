@@ -15,8 +15,8 @@ def gen_file():
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=protected-access, too-many-lines
 \"\"\"Auto generated. Do not touch.\"\"\"
-import mnm._ffi.op.sym as ffi
-from mnm._core.ndarray import Symbol
+import raf._ffi.op.sym as ffi
+from raf._core.ndarray import Symbol
 from . import sym_utils
 
 __all__ = [
@@ -92,7 +92,7 @@ def gen_param_wo_default(schema):
     return ", ".join(arg.name for arg in schema)
 
 
-def main(path="./python/mnm/_op/sym.py"):
+def main(path="./python/raf/_op/sym.py"):
     result = gen_file()
     write_to_file(path, result)
 

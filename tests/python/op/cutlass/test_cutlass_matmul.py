@@ -7,20 +7,20 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-import mnm
-from mnm.testing import randn_torch, run_vm_model, check, DialectChecker
-from mnm.model.nn import Linear
+import raf
+from raf.testing import randn_torch, run_vm_model, check, DialectChecker
+from raf.model.nn import Linear
 
 
 def verify_ir(mod):
-    with mnm.device("cuda"):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseDialect()(mod)
+    with raf.device("cuda"):
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseDialect()(mod)
         DialectChecker("cutlass").visit(mod["main"])
 
 
-@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
+@pytest.mark.skipif(not raf.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize("m", [1, 15])
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
@@ -28,25 +28,25 @@ def verify_ir(mod):
     "epilogue",
     [
         [None, None],
-        [mnm._op.sym.relu, torch.nn.functional.relu],
-        [mnm._op.sym.gelu, torch.nn.GELU()],
+        [raf._op.sym.relu, torch.nn.functional.relu],
+        [raf._op.sym.gelu, torch.nn.GELU()],
     ],
 )
 @pytest.mark.parametrize("beta", [None, 0.5, 2.0])
 def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     m_epilogue, t_epilogue = epilogue
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             self.epilogue = m_epilogue
             if beta:
-                self.beta = mnm.array(beta, dtype="float32")
+                self.beta = raf.array(beta, dtype="float32")
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w, bias):  # pylint: disable=no-self-use
-            x = mnm.matmul(x, w)
-            scaled_bias = mnm.multiply(self.beta, bias) if beta else bias
-            x = mnm.add(x, scaled_bias)
+            x = raf.matmul(x, w)
+            scaled_bias = raf.multiply(self.beta, bias) if beta else bias
+            x = raf.add(x, scaled_bias)
             x = self.epilogue(x) if self.epilogue else x
             return x
 
@@ -71,19 +71,19 @@ def test_matmul_add_epilogue(m, n, k, epilogue, beta):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
-@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
+@pytest.mark.skipif(not raf.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize("batch_size", [1, 15])
 @pytest.mark.parametrize("in_features", [16, 32])
 @pytest.mark.parametrize("out_features", [16, 32])
 def test_dense_add_relu(batch_size, in_features, out_features):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self, in_features, out_features):
             self.linear = Linear(in_features, out_features, bias=True)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
             x = self.linear(x)
-            x = mnm.relu(x)
+            x = raf.relu(x)
             return x
 
     device = "cuda"
@@ -105,25 +105,25 @@ def test_dense_add_relu(batch_size, in_features, out_features):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
-@pytest.mark.skipif(not mnm.build.with_cutlass(), reason="CUTLASS is not enabled")
+@pytest.mark.skipif(not raf.build.with_cutlass(), reason="CUTLASS is not enabled")
 @pytest.mark.parametrize("batch_size1", [1, 15])
 @pytest.mark.parametrize("batch_size2", [1, 15])
 @pytest.mark.parametrize("m", [2, 12])
 @pytest.mark.parametrize("n", [16, 32])
 @pytest.mark.parametrize("k", [16, 32])
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
-@pytest.mark.parametrize("epilogue", [[None, None], [mnm._op.sym.gelu, torch.nn.GELU()]])
+@pytest.mark.parametrize("epilogue", [[None, None], [raf._op.sym.gelu, torch.nn.GELU()]])
 def test_batch_matmul_nt_add(batch_size1, batch_size2, m, n, k, dtype, epilogue):
     m_epilogue, t_epilogue = epilogue
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             self.epilogue = m_epilogue
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w, bias):  # pylint: disable=no-self-use
-            x = mnm.batch_matmul_nt(x, w)
-            x = mnm.add(x, bias)
+            x = raf.batch_matmul_nt(x, w)
+            x = raf.add(x, bias)
             x = self.epilogue(x) if self.epilogue else x
             return x
 

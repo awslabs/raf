@@ -3,9 +3,9 @@
 
 # pylint: disable=protected-access
 import pytest
-import mnm
-from mnm._ffi.pass_ import AutoDiff, InferType
-from mnm.testing import check_type, randn, randn_torch
+import raf
+from raf._ffi.pass_ import AutoDiff, InferType
+from raf.testing import check_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -19,13 +19,13 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_dense(shape, dtype):
     # pylint: disable=no-member, too-many-locals
-    class Dense(mnm.Model):
+    class Dense(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):  # pylint: disable=no-self-use
-            return mnm.dense(m_a, m_b)
+            return raf.dense(m_a, m_b)
 
     # initialize
     model = Dense()
@@ -64,15 +64,15 @@ def test_dense(shape, dtype):
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_matmul(shape, dtype, transpose_a, transpose_b):
     # pylint: disable=no-member, too-many-locals
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):  # pylint: disable=no-self-use
-            mnm_op = [[mnm.matmul, mnm.matmul_nt], [mnm.matmul_tn, mnm.matmul_tt]]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
+            raf_op = [[raf.matmul, raf.matmul_nt], [raf.matmul_tn, raf.matmul_tt]]
+            raf_op = raf_op[transpose_a][transpose_b]
+            return raf_op(m_a, m_b)
 
     # initialize
     model = TestModel()
@@ -110,18 +110,18 @@ def test_matmul(shape, dtype, transpose_a, transpose_b):
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_batch_matmul(shape, dtype, transpose_a, transpose_b):
     # pylint: disable=no-member, too-many-locals
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):  # pylint: disable=no-self-use
-            mnm_op = [
-                [mnm.batch_matmul, mnm.batch_matmul_nt],
-                [mnm.batch_matmul_tn, mnm.batch_matmul_tt],
+            raf_op = [
+                [raf.batch_matmul, raf.batch_matmul_nt],
+                [raf.batch_matmul_tn, raf.batch_matmul_tt],
             ]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
+            raf_op = raf_op[transpose_a][transpose_b]
+            return raf_op(m_a, m_b)
 
     # initialize
     model = TestModel()

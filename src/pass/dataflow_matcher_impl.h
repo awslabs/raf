@@ -9,41 +9,41 @@
  */
 
 #include <relay/ir/dataflow_matcher_impl.h>
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
-class MNMDFPatternMatcher : public tvm::relay::DFPatternMatcher {
+class RAFDFPatternMatcher : public tvm::relay::DFPatternMatcher {
  public:
-  explicit MNMDFPatternMatcher(const Expr& root_expr) : DFPatternMatcher(root_expr) {
+  explicit RAFDFPatternMatcher(const Expr& root_expr) : DFPatternMatcher(root_expr) {
   }
 
  protected:
-  // override this to match meta ops and their dialects, not tvm ops
+  // override this to match raf ops and their dialects, not tvm ops
   bool VisitDFPattern_(const CallPatternNode* op, const Expr& expr) override;
-  // override this to match meta values in meta constant nodes
+  // override this to match raf values in raf constant nodes
   bool VisitDFPattern_(const RelayConstantPatternNode* op, const Expr& expr) override;
-  // override these three to use meta infertype
+  // override these three to use raf infertype
   bool VisitDFPattern_(const TypePatternNode* op, const Expr& expr) override;
   bool VisitDFPattern_(const ShapePatternNode* op, const Expr& expr) override;
   bool VisitDFPattern_(const DataTypePatternNode* op, const Expr& expr) override;
 };
 
-class MNMPatternGrouper : public tvm::relay::PatternGrouper {
+class RAFPatternGrouper : public tvm::relay::PatternGrouper {
  public:
   const std::unordered_map<int, Group>& GroupMatches(const DFPattern& pattern, const Expr& pre);
 };
 
-class MNMPatternRewriter : protected tvm::relay::PatternRewriter {
+class RAFPatternRewriter : protected tvm::relay::PatternRewriter {
  public:
-  MNMPatternRewriter(IRModule mod) : PatternRewriter(mod) {
+  RAFPatternRewriter(IRModule mod) : PatternRewriter(mod) {
   }
   Expr Rewrite(const Array<DFPatternCallback>& callbacks, const Expr& pre) override;
 };
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

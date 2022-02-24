@@ -15,4 +15,4 @@ git checkout --recurse-submodules .
 
 # build
 mkdir -p $BUILD_DIR
-cd $BUILD_DIR && cmake .. && make $MAKE_FLAGS && make mnm-cpptest $MAKE_FLAGS && cd ..
+cd $BUILD_DIR && cmake .. && make $MAKE_FLAGS && make raf-cpptest $MAKE_FLAGS && cd ..

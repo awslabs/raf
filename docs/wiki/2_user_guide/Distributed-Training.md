@@ -4,7 +4,7 @@
 # Distributed Training
 
 This tutorial introduces how to train your model with multiple GPUs.
-To enable distributed training, you need to turn `MNM_USE_CUDA`, `MNM_USE_MPI`, and `MNM_USE_NCCL` on in `${MNM_HOME}/build/config.cmake` before cmake.
+To enable distributed training, you need to turn `RAF_USE_CUDA`, `RAF_USE_MPI`, and `RAF_USE_NCCL` on in `${RAF_HOME}/build/config.cmake` before cmake.
 
 For implementation details of collective communication operators, data parallel and ZeRO optimizations, please see []().
 
@@ -13,8 +13,8 @@ For implementation details of collective communication operators, data parallel 
 To enable distributed training, you need to set the corresponding flags in the distributed context. For example:
 
 ```python
-import mnm
-from mnm import distributed as dist
+import raf
+from raf import distributed as dist
 dctx = dist.get_context()
 dctx.enable_data_parallel = True
 ```

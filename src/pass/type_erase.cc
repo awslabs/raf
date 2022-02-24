@@ -8,17 +8,17 @@
  * \brief The type erase pass erases the checked type and function return type.
  */
 
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/pass_manager.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/pass_manager.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace type_erase {
 
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::op;
+using namespace raf::value;
 
 class TypeEraser : public ExprMutator {
  public:
@@ -40,10 +40,10 @@ Pass EraseType() {
                                                                              PassContext pc) {
     return Downcast<Function>(type_erase::TypeEraser().Mutate(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "EraseType", {});
+  return CreateRAFFunctionPass(pass_func, 1, "EraseType", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.EraseType").set_body_typed([]() { return EraseType(); });
+RAF_REGISTER_GLOBAL("raf.pass_.EraseType").set_body_typed([]() { return EraseType(); });
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

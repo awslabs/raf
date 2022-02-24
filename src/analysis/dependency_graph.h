@@ -9,7 +9,7 @@
  */
 #pragma once
 
-namespace mnm {
+namespace raf {
 namespace analysis {
 namespace dependency_graph {
 
@@ -56,4 +56,4 @@ Node* CreateNewNode(Arena* arena);
 
 }  // namespace dependency_graph
 }  // namespace analysis
-}  // namespace mnm
+}  // namespace raf

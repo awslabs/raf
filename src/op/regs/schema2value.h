@@ -5,22 +5,22 @@
 
 /*!
  * \file src/op/regs/schema2value.h
- * \brief Converters from MNM operator schemas to values
+ * \brief Converters from RAF operator schemas to values
  */
 #pragma once
 #include <string>
 #include <vector>
 #include <utility>
-#include "mnm/value.h"
+#include "raf/value.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace schema2value {
 
-#define MNM_PRELUDE()         \
-  using namespace mnm::value; \
-  using namespace mnm::ir;
+#define RAF_PRELUDE()         \
+  using namespace raf::value; \
+  using namespace raf::ir;
 
 inline value::Value ArrayLike(const value::Value& a) {
   return a;
@@ -47,27 +47,27 @@ inline value::Value OptionalTensor(const ir::Optional<value::BaseTensorValue> a)
 }
 
 inline value::Value Int(int64_t a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   return IntValue::make(DataType::Int(64), a);
 }
 
 inline value::Value Bool(bool a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   return BoolValue::make(a);
 }
 
 inline value::Value Double(double a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   return FloatValue::make(DataType::Float(64), a);
 }
 
 inline value::Value String(const std::string& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   return StringValue::make(a);
 }
 
 inline value::Value TupleInt(const std::vector<int64_t>& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   Array<Value> ret;
   for (const auto i : a) {
     ret.push_back(IntValue::make(DataType::Int(64), i));
@@ -80,7 +80,7 @@ inline value::Value IntOrTupleInt(const std::vector<int64_t>& a) {
 }
 
 inline value::Value IntArray(const ir::Optional<ir::Array<value::IntValue>> a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   Array<Value> ret;
   for (const auto i : a.value()) {
     ret.push_back(IntValue::make(i->dtype, i->value));
@@ -89,7 +89,7 @@ inline value::Value IntArray(const ir::Optional<ir::Array<value::IntValue>> a) {
 }
 
 inline value::Value TupleTensor(const std::vector<value::BaseTensorValue>& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   Array<Value> ret;
   for (const auto i : a) {
     ret.push_back(i);
@@ -97,9 +97,9 @@ inline value::Value TupleTensor(const std::vector<value::BaseTensorValue>& a) {
   return TupleValue::make(std::move(ret));
 }
 
-#undef MNM_PRELUDE
+#undef RAF_PRELUDE
 
 }  // namespace schema2value
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

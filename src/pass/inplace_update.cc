@@ -8,19 +8,19 @@
  * \brief Annotate the may_share field in the ExtendedVar to share the memory between inputs and
  * outputs and check the validity of memory sharing.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "./let_list.h"
 #include "./common.h"
 #include "./liveness_analysis.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace inplace_update {
 
-using namespace mnm::op;
+using namespace raf::op;
 
 /*! \brief Extract the mapping from the parmeters of fused func to call arg expr. */
 class ExtractCallArgs : public MixedModeVisitor {
@@ -41,7 +41,7 @@ class ExtractCallArgs : public MixedModeVisitor {
 
 /*!
  * \brief InplaceUpdateMutator marks may_share in the variable for ops that have attr
- * TMNMInplaceUpdate so that inputs and outputs may share the memory and perform inplace update.
+ * TRAFInplaceUpdate so that inputs and outputs may share the memory and perform inplace update.
  * When binary op `add` and `subtract` has inplace arg set to be true, this pass will also mark the
  * output tensor to share the memory with the 1st input tensor.
  *
@@ -131,9 +131,9 @@ class InplaceUpdateMutator : public MixedModeMutator {
   }
 
   Expr Rewrite_(const CallNode* pre, const Expr& post) final {
-    static auto finplace = Op::GetAttrMap<op::TMNMInplaceUpdate>("TMNMInplaceUpdate");
-    static auto add_op = Op::Get("mnm.op.add");
-    static auto subtract_op = Op::Get("mnm.op.subtract");
+    static auto finplace = Op::GetAttrMap<op::TRAFInplaceUpdate>("TRAFInplaceUpdate");
+    static auto add_op = Op::Get("raf.op.add");
+    static auto subtract_op = Op::Get("raf.op.subtract");
     auto call = Downcast<Call>(post);
     auto op = Mutate(call->op);
     if (op.as<OpNode>()) {
@@ -250,9 +250,9 @@ class InplaceUpdateMutator : public MixedModeMutator {
    * also shares another var, forming a share chain. In this case, we need to use
    * the up-to-date shared var. For example:
    *
-   * let %x1 = mnm.op.add(%x, %x, nullptr, nullptr);
-   * let %x2(share: %x1) = mnm.op.add(%x1, %x, %x1, nullptr);
-   * let %x3(share: %x2) = mnm.op.add(%x2, %x, %x2, nullptr);
+   * let %x1 = raf.op.add(%x, %x, nullptr, nullptr);
+   * let %x2(share: %x1) = raf.op.add(%x1, %x, %x1, nullptr);
+   * let %x3(share: %x2) = raf.op.add(%x2, %x, %x2, nullptr);
    *
    * In %x3, its shared var should be the new created %x2(share: %x1) instead of
    * the original %x2(share: nullptr).
@@ -285,7 +285,7 @@ class InplaceUpdateMutator : public MixedModeMutator {
  *    memory sharing determined by VM / interpreter, like %a = (%x0, %x1, %x2).
  *    where %a shares memory with %x0, %x1, %x2. It exists before the introduction
  *    of effect ir. 2) memory sharing newly introduced by effect ir, like
- *    %b = mnm.add(%a, 1). This pass is to tell whether there is a chance
+ *    %b = raf.add(%a, 1). This pass is to tell whether there is a chance
  *    to make %b and %a in the above example share memory.
  *    Typical liveness analysis does not handle mandatory memory sharing as is
  *    denoted by 1).
@@ -461,7 +461,7 @@ class InplaceSimplifer : public ExprMutator {
 
  private:
   bool IsInplaceAddZero(const Call& call) {
-    static auto add_op = Op::Get("mnm.op.add");
+    static auto add_op = Op::Get("raf.op.add");
 
     if (!call->op->IsInstance<OpNode>()) {
       return false;
@@ -512,7 +512,7 @@ Pass InplaceUpdate() {
     auto func = Function(f->params, body, f->ret_type, f->type_params, f->attrs);
     return inplace_update::InplaceSimplifer().Run(func);
   };
-  return CreateMNMFunctionPass(pass_func, 1, "InplaceUpdate", {"InferType"});
+  return CreateRAFFunctionPass(pass_func, 1, "InplaceUpdate", {"InferType"});
 }
 
 Pass ValidateInplaceUpdate(bool enforce_inplace_update) {
@@ -524,11 +524,11 @@ Pass ValidateInplaceUpdate(bool enforce_inplace_update) {
         inplace_update::InplaceUpdateValidator(f->body, analyzer, enforce_inplace_update).Run();
     return Function(f->params, body, f->ret_type, f->type_params, f->attrs);
   };
-  return CreateMNMFunctionPass(pass_func, 1, "ValidateInplaceUpdate", {});
+  return CreateRAFFunctionPass(pass_func, 1, "ValidateInplaceUpdate", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InplaceUpdate").set_body_typed(InplaceUpdate);
-MNM_REGISTER_GLOBAL("mnm.pass_.ValidateInplaceUpdate").set_body_typed(ValidateInplaceUpdate);
+RAF_REGISTER_GLOBAL("raf.pass_.InplaceUpdate").set_body_typed(InplaceUpdate);
+RAF_REGISTER_GLOBAL("raf.pass_.ValidateInplaceUpdate").set_body_typed(ValidateInplaceUpdate);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

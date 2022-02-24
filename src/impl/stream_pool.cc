@@ -5,16 +5,16 @@
 
 /*!
  * \file src/impl/stream_pool.cc
- * \brief MNM stream pool underlying implementation
+ * \brief RAF stream pool underlying implementation
  */
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
-#include "mnm/stream_pool.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
+#include "raf/stream_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace stream_pool {
 
 using device_api::DeviceAPI;
@@ -115,4 +115,4 @@ std::shared_ptr<Stream> Stream::Get(const Device& dev, int tag_index, int index)
 }
 
 }  // namespace stream_pool
-}  // namespace mnm
+}  // namespace raf

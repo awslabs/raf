@@ -5,8 +5,8 @@
 import numpy as np
 import pytest
 import torch
-import mnm
-from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model
+import raf
+from raf.testing import get_testable_devices, randn, randn_torch, check, run_vm_model
 
 
 def randnbool(shape, *, device="cpu", dtype="float32"):
@@ -15,7 +15,7 @@ def randnbool(shape, *, device="cpu", dtype="float32"):
         x = np.array(x)
     assert list(x.shape) == list(shape)
     n_x = x.astype(dtype)
-    m_x = mnm.array(n_x, device=device)
+    m_x = raf.array(n_x, device=device)
     return m_x, n_x
 
 
@@ -35,12 +35,12 @@ def axis_exclude(input_axis, shape):
     return exclude_axis
 
 
-class ReduceModel(mnm.Model):
+class ReduceModel(raf.Model):
     def build(self, op, **kwargs):
         self.op = op
         self.attrs = kwargs
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
         return self.op(x, **self.attrs)
 
@@ -49,10 +49,10 @@ class ReduceModel(mnm.Model):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.argmax, mnm._op.sym.argmax),
-        (np.argmin, mnm._op.sym.argmin),
-        (np.amax, mnm._op.sym.max),
-        (np.amin, mnm._op.sym.min),
+        (np.argmax, raf._op.sym.argmax),
+        (np.argmin, raf._op.sym.argmin),
+        (np.amax, raf._op.sym.max),
+        (np.amin, raf._op.sym.min),
     ],
 )
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
@@ -73,9 +73,9 @@ def test_reduce_ops(ops, shape, dtype, axis, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.sum, mnm._op.sym.sum),
-        (np.prod, mnm._op.sym.prod),
-        (np.mean, mnm._op.sym.mean),
+        (np.sum, raf._op.sym.sum),
+        (np.prod, raf._op.sym.prod),
+        (np.mean, raf._op.sym.mean),
     ],
 )
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
@@ -98,8 +98,8 @@ def test_reduce_keepdims_ops(ops, shape, dtype, axis, keepdims, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.all, mnm._op.sym.all),
-        (np.any, mnm._op.sym.any),
+        (np.all, raf._op.sym.all),
+        (np.any, raf._op.sym.any),
     ],
 )
 @pytest.mark.parametrize("shape", [(2, 3), (1, 2, 3, 4)])
@@ -126,9 +126,9 @@ def test_all_any_ops(ops, shape, axis, keepdims, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.sum, mnm._op.sym.sum),
-        (torch.mean, mnm._op.sym.mean),
-        (torch.prod, mnm._op.sym.prod),
+        (torch.sum, raf._op.sym.sum),
+        (torch.mean, raf._op.sym.mean),
+        (torch.prod, raf._op.sym.prod),
     ],
 )
 # pylint: disable=too-many-arguments,too-many-locals
@@ -161,9 +161,9 @@ def test_reduce_op_with_axis_with_grad(ops, shape, dtype, axis, keepdims, exclud
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.sum, mnm._op.sym.sum),
-        (torch.mean, mnm._op.sym.mean),
-        (torch.prod, mnm._op.sym.prod),
+        (torch.sum, raf._op.sym.sum),
+        (torch.mean, raf._op.sym.mean),
+        (torch.prod, raf._op.sym.prod),
     ],
 )
 def test_reduce_op_without_axis_with_grad(ops, shape, dtype, device):
@@ -185,13 +185,13 @@ def test_reduce_op_without_axis_with_grad(ops, shape, dtype, device):
 
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_l2norm(device):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm._op.sym.l2norm(x)
+            return raf._op.sym.l2norm(x)
 
     model = TestModel()
     shape = [2, 3, 4]

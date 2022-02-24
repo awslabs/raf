@@ -8,17 +8,17 @@
  * \brief Deduplicate the same structure in a GNF IR.
  */
 
-#include "mnm/ir.h"
-#include "mnm/registry.h"
-#include "mnm/pass.h"
+#include "raf/ir.h"
+#include "raf/registry.h"
+#include "raf/pass.h"
 
 #include "../3rdparty/tvm/src/relay/ir/indexed_graph.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace deduplicate {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 using DataflowGraph = tvm::relay::IndexedGraph<Expr>;
 using Node = DataflowGraph::Node;
@@ -189,9 +189,9 @@ std::pair<std::vector<Nodes>, DomMasks> EnumerateValidSubgraph(const DataflowGra
       } else if (const OpNode* opnode = call->op.as<OpNode>()) {
         // TODO(@hgt312): let's revisit this part after having new inplace mechanism
         // Do not merge call nodes with inplace op
-        static auto finplace = Op::GetAttrMap<op::TMNMInplaceUpdate>("TMNMInplaceUpdate");
-        static auto add_op = Op::Get("mnm.op.add");
-        static auto subtract_op = Op::Get("mnm.op.subtract");
+        static auto finplace = Op::GetAttrMap<op::TRAFInplaceUpdate>("TRAFInplaceUpdate");
+        static auto add_op = Op::Get("raf.op.add");
+        static auto subtract_op = Op::Get("raf.op.subtract");
         auto op = GetRef<Op>(opnode);
         if (op::IsDialectOp(op)) {
           op = op::GetBaseOp(op);
@@ -688,16 +688,16 @@ Expr MergeOneFunction(const Expr& expr, int forward_steps, bool consider_type, b
  * For example:
  *   Original:
  *   fn (%x) {
- *     %0 = mnm.op.relu(%x);
- *     %1 = mnm.op.relu(%0);
- *     %2 = mnm.op.relu(%1);
- *     mnm.op.relu(%2)
+ *     %0 = raf.op.relu(%x);
+ *     %1 = raf.op.relu(%0);
+ *     %2 = raf.op.relu(%1);
+ *     raf.op.relu(%2)
  *   }
  *   Deduplicated:
  *   fn (%x) {
  *     %1 = fn (%v_0) {
- *       %0 = mnm.op.relu(%v_0);
- *       mnm.op.relu(%0)
+ *       %0 = raf.op.relu(%v_0);
+ *       raf.op.relu(%0)
  *     };
  *     %2 = %1(%x);
  *     %1(%2)
@@ -752,10 +752,10 @@ Pass Deduplicate(int forward_steps, bool consider_type, bool must_dominate,
     }
     return updated_func;
   };
-  return CreateMNMFunctionPass(pass_func, 0, "Deduplicate", {});
+  return CreateRAFFunctionPass(pass_func, 0, "Deduplicate", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.Deduplicate").set_body_typed(Deduplicate);
+RAF_REGISTER_GLOBAL("raf.pass_.Deduplicate").set_body_typed(Deduplicate);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

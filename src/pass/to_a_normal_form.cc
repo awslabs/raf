@@ -9,15 +9,15 @@
  */
 #include <vector>
 #include <unordered_map>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
 #include "./convert_utils.h"
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using mnm::analysis::CreateDependencyGraph;
+using raf::analysis::CreateDependencyGraph;
 using tvm::relay::CalcScope;
 
 Expr Fill::ToANormalForm(const Expr& e, const DependencyGraph& dg, NodeScopeMap* node_scope) {
@@ -216,7 +216,7 @@ Pass ToANormalForm() {
   return CreateModulePass(pass_func, 1, "ToANormalForm", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ToANormalForm").set_body_typed(ToANormalForm);
+RAF_REGISTER_GLOBAL("raf.pass_.ToANormalForm").set_body_typed(ToANormalForm);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

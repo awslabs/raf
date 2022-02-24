@@ -8,7 +8,7 @@
  * \brief cuBLAS L2 Norm operator
  */
 #include <cublas.h>
-#include "mnm/op.h"
+#include "raf/op.h"
 
 #include "./cublas_utils.h"
 #include "../../schema/reduce.h"
@@ -16,18 +16,18 @@
 #include "../../../common/shape_utils.h"
 #include "../../../profiler/cuda/cuda_profiler.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cublas {
 namespace manual {
 
-using namespace mnm::value;
+using namespace raf::value;
 
-class L2NormImpl : public mnm::op::OpEnv {
+class L2NormImpl : public raf::op::OpEnv {
  public:
   explicit L2NormImpl(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op.l2norm");
-    static auto fschema_index = op::GetOpAttr<op::FMNMSchemaFieldIndex>(op, "FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op.l2norm");
+    static auto fschema_index = op::GetOpAttr<op::FRAFSchemaFieldIndex>(op, "FRAFSchemaFieldIndex");
     auto args = cv->args.as<op::schema::L2NormArgs>();
     CHECK(args != nullptr);
     DLTensor* x = ir::Downcast<TensorValue>(args->x);
@@ -41,7 +41,7 @@ class L2NormImpl : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cublas.l2norm"));
+    return TruncateName(GetUniqueName("raf.op.cublas.l2norm"));
   }
 
   void Execute(const CallValues& cv) override {
@@ -82,10 +82,10 @@ class L2NormImpl : public mnm::op::OpEnv {
   int n_elements_;
 };
 
-MNM_REGISTER_DIALECT_OP(cublas, l2norm, 15);
-MNM_OP_ENV_MAKER("mnm.op.cublas.l2norm", L2NormImpl::make);
+RAF_REGISTER_DIALECT_OP(cublas, l2norm, 15);
+RAF_OP_ENV_MAKER("raf.op.cublas.l2norm", L2NormImpl::make);
 
 }  // namespace manual
 }  // namespace cublas
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

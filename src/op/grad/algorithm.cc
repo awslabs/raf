@@ -8,14 +8,14 @@
  * \brief Declaration of gradients
  */
 #include "./grad_utils.h"
-#include "mnm/pass.h"
-#include "mnm/ir.h"
+#include "raf/pass.h"
+#include "raf/ir.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace grad {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 /*
 To elabrate the computation of sort grad:
@@ -48,8 +48,8 @@ Then we can adopt gather op to get the results.
 */
 Array<Expr> SortGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
-  static auto op_argsort = Op::Get("mnm.op.argsort");
-  static auto op_gather = Op::Get("mnm.op.gather");
+  static auto op_argsort = Op::Get("raf.op.argsort");
+  static auto op_gather = Op::Get("raf.op.gather");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& data = call->args[0];
@@ -61,12 +61,12 @@ Array<Expr> SortGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   return {Call(op_gather, {dy, axis, y2x})};
 }
 
-MNM_OP_GRAD("mnm.op.sort", SortGrad);
+RAF_OP_GRAD("raf.op.sort", SortGrad);
 
 Array<Expr> TopkGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
-  static auto op_topk = Op::Get("mnm.op.topk");
-  static auto op_gather_dx = Op::Get("mnm.op.gather_dx");
+  static auto op_topk = Op::Get("raf.op.topk");
+  static auto op_gather_dx = Op::Get("raf.op.gather_dx");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& data = call->args[0];
@@ -96,8 +96,8 @@ Array<Expr> TopkGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
   return {result};
 }
 
-MNM_OP_GRAD("mnm.op.topk", TopkGrad);
+RAF_OP_GRAD("raf.op.topk", TopkGrad);
 
 }  // namespace grad
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

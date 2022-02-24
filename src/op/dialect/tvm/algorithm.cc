@@ -7,8 +7,8 @@
  * \file ./src/op/dialect/tvm/algorithm.cc
  * \brief Algorithm-related operators bridged from TVM.
  */
-#include <mnm/op_utils.h>
-#include <mnm/value.h>
+#include <raf/op_utils.h>
+#include <raf/value.h>
 #include <array>
 #include "./tvm_utils.h"
 #include "./tvm_attrs.h"
@@ -17,13 +17,13 @@
 #include "../../schema/algorithm.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
 
 std::vector<Value> ArgsortSchema2Args(const ArgsortArgs* args) {
   return {args->data};
@@ -50,7 +50,7 @@ HashKey ArgsortHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(argsort, Argsort, ArgsortArgs, ArgsortSchema2Args, ArgsortSchemaArgNames,
+RAF_TVM(argsort, Argsort, ArgsortArgs, ArgsortSchema2Args, ArgsortSchemaArgNames,
         ArgsortSchema2Attrs, ArgsortHasher, kOpaque);
 
 std::vector<Value> SortSchema2Args(const SortArgs* args) {
@@ -75,7 +75,7 @@ HashKey SortHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVM(sort, Sort, SortArgs, SortSchema2Args, SortSchemaArgNames, SortSchema2Attrs, SortHasher,
+RAF_TVM(sort, Sort, SortArgs, SortSchema2Args, SortSchemaArgNames, SortSchema2Attrs, SortHasher,
         kOpaque);
 
 std::vector<Value> TopkSchema2Args(const TopkArgs* args) {
@@ -111,9 +111,9 @@ HashKey TopkHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVM(topk, Topk, TopkArgs, TopkSchema2Args, TopkSchemaArgNames, TopkSchema2Attrs, TopkHasher,
+RAF_TVM(topk, Topk, TopkArgs, TopkSchema2Args, TopkSchemaArgNames, TopkSchema2Attrs, TopkHasher,
         kOpaque);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -9,25 +9,25 @@
  */
 #include <limits>
 
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "tvm/relay/dataflow_pattern.h"
 #include "./timer.h"
 #include "./gemm.h"
 #include "./conv.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using mnm::registry::TypedPackedFunc;
+using namespace raf::ir;
+using namespace raf::value;
+using raf::registry::TypedPackedFunc;
 
 OpEnv* Tune(const op::CallValues& call, OpEnv* op_env) {
   CutlassOpEnv* env = static_cast<CutlassOpEnv*>(op_env);
@@ -89,8 +89,8 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   return env;
 }
 
-MNM_OP_ENV_MAKER("mnm.op.cutlass._fused_op", FusedFuncBuild);
+RAF_OP_ENV_MAKER("raf.op.cutlass._fused_op", FusedFuncBuild);
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

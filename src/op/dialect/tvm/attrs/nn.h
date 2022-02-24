@@ -9,13 +9,13 @@
  */
 #pragma once
 #include <tvm/ir/attrs.h>
-#include <mnm/ir.h>
+#include <raf/ir.h>
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 /*! \brief Attributes used in conv2d_dxw operator */
 struct Conv2dDxwAttrs : public tvm::AttrsNode<Conv2dDxwAttrs> {
@@ -199,7 +199,7 @@ struct PadAttrs : public tvm::AttrsNode<PadAttrs> {
   Array<Array<Integer>> pad_width;
   std::string pad_mode;
 
-  TVM_DECLARE_ATTRS(PadAttrs, "mnm.attrs.PadAttrs") {
+  TVM_DECLARE_ATTRS(PadAttrs, "raf.attrs.PadAttrs") {
     TVM_ATTR_FIELD(pad_value).set_default(0.0).describe(
         "The value used for padding when mode is 'constant'.");
     TVM_ATTR_FIELD(pad_width).describe(
@@ -218,7 +218,7 @@ struct PadAttrs : public tvm::AttrsNode<PadAttrs> {
 struct ThresholdAttrs : public tvm::AttrsNode<ThresholdAttrs> {
   double threshold;
   double value;
-  TVM_DECLARE_ATTRS(ThresholdAttrs, "mnm.attrs.ThresholdAttrs") {
+  TVM_DECLARE_ATTRS(ThresholdAttrs, "raf.attrs.ThresholdAttrs") {
     TVM_ATTR_FIELD(threshold).set_default(0.0).describe("The value to threshold at");
     TVM_ATTR_FIELD(value).set_default(0.0).describe("The value to replace with");
   }
@@ -235,4 +235,4 @@ struct ThresholdDxAttrs : public tvm::AttrsNode<ThresholdDxAttrs> {
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

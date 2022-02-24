@@ -9,17 +9,17 @@
  */
 
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/memory.h"
 #include "./utils.h"
 #include "../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using namespace schema;
-using namespace mnm::common::shape_utils;
+using namespace raf::common::shape_utils;
 
 Type DeviceCopyInfer(const CallValues& value) {
   const auto* args = value->args.as<DeviceCopyArgs>();
@@ -27,7 +27,7 @@ Type DeviceCopyInfer(const CallValues& value) {
   return GetType(args->data);
 }
 
-MNM_OP_TYPE("mnm.op.device_copy", "Memory", DeviceCopyInfer);
+RAF_OP_TYPE("raf.op.device_copy", "Memory", DeviceCopyInfer);
 
 Type FuseTensorInfer(const CallValues& value) {
   const auto* args = value->args.as<FuseTensorArgs>();
@@ -40,7 +40,7 @@ Type FuseTensorInfer(const CallValues& value) {
   return TensorType({Integer(total_size)}, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.fuse_tensor", "FuseTensor", FuseTensorInfer);
+RAF_OP_TYPE("raf.op.fuse_tensor", "FuseTensor", FuseTensorInfer);
 
 Type DefuseTensorInfer(const CallValues& value) {
   const auto* args = value->args.as<DefuseTensorArgs>();
@@ -62,7 +62,7 @@ Type DefuseTensorInfer(const CallValues& value) {
   return TupleType(tuple_types);
 }
 
-MNM_OP_TYPE("mnm.op.defuse_tensor", "DefuseTensor", DefuseTensorInfer);
+RAF_OP_TYPE("raf.op.defuse_tensor", "DefuseTensor", DefuseTensorInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -5,29 +5,29 @@
 import numpy as np
 import pytest
 import mxnet as mx
-import mnm
-from mnm.testing import get_testable_devices, randint, check, run_vm_model
+import raf
+from raf.testing import get_testable_devices, randint, check, run_vm_model
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.zeros, mnm._op.sym.zeros),
-        (np.ones, mnm._op.sym.ones),
+        (np.zeros, raf._op.sym.zeros),
+        (np.ones, raf._op.sym.ones),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32", "bool"])
 def test_init_ops(ops, shape, dtype, device):
-    class InitOpModel(mnm.Model):
+    class InitOpModel(raf.Model):
         def build(self, op, shape, dtype, device):
             self._op = op
             self._shape = shape
             self._dtype = dtype
             self._device = device
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self):
             return self._op(shape=self._shape, dtype=self._dtype, device=self._device)
 
@@ -48,23 +48,23 @@ def test_init_ops(ops, shape, dtype, device):
 @pytest.mark.parametrize("dtype", ["float32", "int64", "int32"])
 def test_one_hot(indices_shape, on_value, off_value, depth, dtype, device):
     # pylint: disable=no-member, too-many-arguments, too-many-locals
-    class OneHot(mnm.Model):
+    class OneHot(raf.Model):
         def build(self, depth, dtype, device):
             self.depth = depth
             self.dtype = dtype
             self.device = device
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, shape, on_value, off_value):
-            return mnm.one_hot(
+            return raf.one_hot(
                 shape, on_value, off_value, depth=self.depth, dtype=self.dtype, device=self.device
             )
 
     model = OneHot(depth, dtype, device)
     m_indices, n_indices = randint(shape=indices_shape, high=10, device=device)
     mx_indices = mx.nd.array(n_indices)
-    m_on_value = mnm.array(on_value, device=device)
-    m_off_value = mnm.array(off_value, device=device)
+    m_on_value = raf.array(on_value, device=device)
+    m_off_value = raf.array(off_value, device=device)
     m_y = model(m_indices, m_on_value, m_off_value)
     mx_y = mx.nd.one_hot(
         mx_indices, depth=depth, on_value=on_value, off_value=off_value, dtype=dtype

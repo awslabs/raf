@@ -12,16 +12,16 @@
 #include <tvm/tir/data_layout.h>
 #include <tvm/ir/env_func.h>
 #include <vector>
-#include "mnm/type.h"
-#include "mnm/op_utils.h"
+#include "raf/type.h"
+#include "raf/op_utils.h"
 #include "../schema/nn.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 
 Type Conv2DInfer(const CallValues& value) {
@@ -79,7 +79,7 @@ Type Conv2DInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.conv2d", "Conv2d", Conv2DInfer);
+RAF_OP_TYPE("raf.op.conv2d", "Conv2d", Conv2DInfer);
 
 Type Conv2DTransInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvTransArgs>();
@@ -142,7 +142,7 @@ Type Conv2DTransInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.conv2d_transpose", "Conv2dTans", Conv2DTransInfer);
+RAF_OP_TYPE("raf.op.conv2d_transpose", "Conv2dTans", Conv2DTransInfer);
 
 Type Conv2DDxwInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvDxwArgs>();
@@ -159,8 +159,8 @@ Type Conv2DDxwInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.conv2d_dw", "Conv2dDxw", Conv2DDxwInfer);
-MNM_OP_TYPE("mnm.op.conv2d_dx", "Conv2dDxw", Conv2DDxwInfer);
+RAF_OP_TYPE("raf.op.conv2d_dw", "Conv2dDxw", Conv2DDxwInfer);
+RAF_OP_TYPE("raf.op.conv2d_dx", "Conv2dDxw", Conv2DDxwInfer);
 
 Type Conv2DTransposeDxwInfer(const CallValues& value) {
   const auto* args = value->args.as<ConvTransposeDxwArgs>();
@@ -177,8 +177,8 @@ Type Conv2DTransposeDxwInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.conv2d_transpose_dw", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
-MNM_OP_TYPE("mnm.op.conv2d_transpose_dx", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
+RAF_OP_TYPE("raf.op.conv2d_transpose_dw", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
+RAF_OP_TYPE("raf.op.conv2d_transpose_dx", "Conv2dTransposeDxw", Conv2DTransposeDxwInfer);
 
 Type Pool2DInfer(const CallValues& value) {
   const auto* args = value->args.as<PoolArgs>();
@@ -217,8 +217,8 @@ Type Pool2DInfer(const CallValues& value) {
   return TensorType(layout_converter.BackwardShape(oshape), x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.max_pool2d", "Pool2D", Pool2DInfer);
-MNM_OP_TYPE("mnm.op.avg_pool2d", "Pool2D", Pool2DInfer);
+RAF_OP_TYPE("raf.op.max_pool2d", "Pool2D", Pool2DInfer);
+RAF_OP_TYPE("raf.op.avg_pool2d", "Pool2D", Pool2DInfer);
 
 Type AdaptivePool2DInfer(const CallValues& value) {
   const auto* args = value->args.as<AdaptivePoolArgs>();
@@ -230,14 +230,14 @@ Type AdaptivePool2DInfer(const CallValues& value) {
   return TensorType(data_layout_converter.BackwardShape(oshape), x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.adaptive_max_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
-MNM_OP_TYPE("mnm.op.adaptive_avg_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
+RAF_OP_TYPE("raf.op.adaptive_max_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
+RAF_OP_TYPE("raf.op.adaptive_avg_pool2d", "AdaptivePool2D", AdaptivePool2DInfer);
 
-MNM_OP_TYPE("mnm.op.max_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
-MNM_OP_TYPE("mnm.op.avg_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
-MNM_OP_TYPE("mnm.op.adaptive_max_pool2d_dx", "AdaptivePool2DDx",
+RAF_OP_TYPE("raf.op.max_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
+RAF_OP_TYPE("raf.op.avg_pool2d_dx", "Pool2DDx", GeneralDxInfer<PoolDxArgs>);
+RAF_OP_TYPE("raf.op.adaptive_max_pool2d_dx", "AdaptivePool2DDx",
             GeneralDxInfer<AdaptivePoolDxArgs>);
-MNM_OP_TYPE("mnm.op.adaptive_avg_pool2d_dx", "AdaptivePool2DDx",
+RAF_OP_TYPE("raf.op.adaptive_avg_pool2d_dx", "AdaptivePool2DDx",
             GeneralDxInfer<AdaptivePoolDxArgs>);
 
 Type BatchNormInferInfer(const CallValues& value) {
@@ -246,7 +246,7 @@ Type BatchNormInferInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.batch_norm_infer", "BatchNormInfer", BatchNormInferInfer);
+RAF_OP_TYPE("raf.op.batch_norm_infer", "BatchNormInfer", BatchNormInferInfer);
 
 Type BatchNormTrainInfer(const CallValues& value) {
   const auto* args = value->args.as<BatchNormArgs>();
@@ -257,7 +257,7 @@ Type BatchNormTrainInfer(const CallValues& value) {
   return TupleType({x, running_mean, running_var});
 }
 
-MNM_OP_TYPE("mnm.op.batch_norm_train", "BatchNormTrain", BatchNormTrainInfer);
+RAF_OP_TYPE("raf.op.batch_norm_train", "BatchNormTrain", BatchNormTrainInfer);
 
 template <typename T>
 Type GeneralAxisInfer(const CallValues& value) {
@@ -271,10 +271,10 @@ Type GeneralAxisInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.softmax", "Softmax", GeneralAxisInfer<SoftmaxArgs>);
-MNM_OP_TYPE("mnm.op.log_softmax", "LogSoftmax", GeneralAxisInfer<SoftmaxArgs>);
-MNM_OP_TYPE("mnm.op.softmax_dx", "SoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
-MNM_OP_TYPE("mnm.op.log_softmax_dx", "LogSoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
+RAF_OP_TYPE("raf.op.softmax", "Softmax", GeneralAxisInfer<SoftmaxArgs>);
+RAF_OP_TYPE("raf.op.log_softmax", "LogSoftmax", GeneralAxisInfer<SoftmaxArgs>);
+RAF_OP_TYPE("raf.op.softmax_dx", "SoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
+RAF_OP_TYPE("raf.op.log_softmax_dx", "LogSoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
 
 Type BatchNormTrainDxwbInfer(const CallValues& value) {
   const auto* args = value->args.as<BatchNormTrainDxwbArgs>();
@@ -289,23 +289,23 @@ Type BatchNormTrainDxwbInfer(const CallValues& value) {
   return TupleType(res);
 }
 
-MNM_OP_TYPE("mnm.op.batch_norm_train_dxwb", "BatchNormTrainDxwb", BatchNormTrainDxwbInfer);
+RAF_OP_TYPE("raf.op.batch_norm_train_dxwb", "BatchNormTrainDxwb", BatchNormTrainDxwbInfer);
 
 Type BiasAddInfer(const CallValues& value) {
   const auto* args = value->args.as<BiasAddArgs>();
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.bias_add", "BiasAdd", BiasAddInfer);
+RAF_OP_TYPE("raf.op.bias_add", "BiasAdd", BiasAddInfer);
 
 template <bool include_mask, bool include_reserve_space>
 Type ContribDropoutInfer(const CallValues& value) {
   const auto* args = value->args.as<DropoutArgs>();
   TensorType x_ty = Downcast<TensorType>(GetType(args->x));
   TensorType reserve_space({}, DataType::UInt(8));
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
   const tvm::runtime::PackedFunc* pf =
-      tvm::runtime::Registry::Get("mnm.backend.cudnn.GetDropoutReserveSpaceSizeInBytes");
+      tvm::runtime::Registry::Get("raf.backend.cudnn.GetDropoutReserveSpaceSizeInBytes");
   if (include_reserve_space && pf) {
     Integer reserve_space_size_in_bytes = (*pf)(GetType(args->x));
     Array<PrimExpr> reserve_space_shape = {reserve_space_size_in_bytes};
@@ -329,18 +329,18 @@ Type ContribDropoutInfer(const CallValues& value) {
 static const auto ContribDropoutBase = ContribDropoutInfer<true, true>;
 static const auto ContribDropoutTVM = ContribDropoutInfer<true, false>;
 static const auto ContribDropoutCudnn = ContribDropoutInfer<false, true>;
-MNM_OP_TYPE("mnm.op._contrib_dropout", "ContribDropout", ContribDropoutBase);
-MNM_OP_TYPE("mnm.op.tvm._contrib_dropout", "ContribDropoutTVM", ContribDropoutTVM);
-MNM_OP_TYPE("mnm.op.cudnn._contrib_dropout", "ContribDropoutCudnn", ContribDropoutCudnn);
+RAF_OP_TYPE("raf.op._contrib_dropout", "ContribDropout", ContribDropoutBase);
+RAF_OP_TYPE("raf.op.tvm._contrib_dropout", "ContribDropoutTVM", ContribDropoutTVM);
+RAF_OP_TYPE("raf.op.cudnn._contrib_dropout", "ContribDropoutCudnn", ContribDropoutCudnn);
 
 Type ContribDropoutDxInfer(const CallValues& value) {
   const auto* args = value->args.as<DropoutDxArgs>();
   return GetType(args->dy);
 }
 
-MNM_OP_TYPE("mnm.op._contrib_dropout_dx", "ContribDropoutDx", ContribDropoutDxInfer);
+RAF_OP_TYPE("raf.op._contrib_dropout_dx", "ContribDropoutDx", ContribDropoutDxInfer);
 
-MNM_OP_TYPE("mnm.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
+RAF_OP_TYPE("raf.op.layer_norm", "LayerNorm", GeneralAxisInfer<LayerNormArgs>);
 
 Type LayerNormDxbInfer(const CallValues& value) {
   const auto* args = value->args.as<LayerNormDxArgs>();
@@ -358,7 +358,7 @@ Type LayerNormDxbInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.layer_norm_dx", "LayerNormDx", LayerNormDxbInfer);
+RAF_OP_TYPE("raf.op.layer_norm_dx", "LayerNormDx", LayerNormDxbInfer);
 
 Type ThresholdInfer(const CallValues& value) {
   const auto* args = value->args.as<ThresholdArgs>();
@@ -366,7 +366,7 @@ Type ThresholdInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.threshold", "Threshold", ThresholdInfer);
+RAF_OP_TYPE("raf.op.threshold", "Threshold", ThresholdInfer);
 
 Type ThresholdDxInfer(const CallValues& value) {
   const auto* args = value->args.as<ThresholdDxArgs>();
@@ -374,7 +374,7 @@ Type ThresholdDxInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.threshold_dx", "ThresholdDx", ThresholdDxInfer);
+RAF_OP_TYPE("raf.op.threshold_dx", "ThresholdDx", ThresholdDxInfer);
 
 Type PadInfer(const CallValues& value) {
   const auto* args = value->args.as<PadArgs>();
@@ -405,7 +405,7 @@ Type PadInfer(const CallValues& value) {
   return TensorType(oshape, data->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.pad", "Pad", PadInfer);
+RAF_OP_TYPE("raf.op.pad", "Pad", PadInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

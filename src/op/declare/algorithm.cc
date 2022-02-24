@@ -7,20 +7,20 @@
  * \file src/op/declare/vision.cc
  * \brief Declaration of algorithm-specific operators
  */
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/tensor.h"
 #include "../schema/algorithm.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.argsort", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.argsort", [](const CallValues& call) {
   const auto* args = call->args.as<ArgsortArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -33,7 +33,7 @@ MNM_OP_DECLARE("mnm.op.argsort", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.sort", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.sort", [](const CallValues& call) {
   const auto* args = call->args.as<SortArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -45,7 +45,7 @@ MNM_OP_DECLARE("mnm.op.sort", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.topk", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.topk", [](const CallValues& call) {
   const auto* args = call->args.as<TopkArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -87,4 +87,4 @@ MNM_OP_DECLARE("mnm.op.topk", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

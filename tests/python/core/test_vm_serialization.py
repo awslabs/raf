@@ -4,11 +4,11 @@
 # pylint: disable=invalid-name,protected-access,attribute-defined-outside-init
 import pytest
 import numpy as np
-import mnm
-from mnm._core.device import Device
-from mnm._core.vm import Executable, VirtualMachine
-from mnm._core.executor import VMExecutor
-from mnm.testing import check, randn
+import raf
+from raf._core.device import Device
+from raf._core.vm import Executable, VirtualMachine
+from raf._core.executor import VMExecutor
+from raf.testing import check, randn
 import tvm
 from tvm import relay
 
@@ -38,15 +38,15 @@ def serialize_and_load(exe):
 @pytest.mark.parametrize("fuse", [True, False])
 def test_simple(fuse):
     # pylint: disable=protected-access
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            y = mnm.add(x, x)
-            z = mnm.add(x, y)
+            y = raf.add(x, x)
+            z = raf.add(x, y)
             return z
 
     shape = (3, 3)
@@ -56,7 +56,7 @@ def test_simple(fuse):
     m_x, _ = randn(shape, device=device)
     mod = model._internal(m_x).mod
     opt_level = 3 if fuse else 1
-    with mnm.ir.PassContext(opt_level=opt_level):
+    with raf.ir.PassContext(opt_level=opt_level):
         executor = VMExecutor(mod, device)
     ref_z = executor.make_executor()(m_x).numpy()
 
@@ -68,16 +68,16 @@ def test_simple(fuse):
 @pytest.mark.parametrize("fuse", [True, False])
 def test_constant(fuse):
     shape = (3, 5)
-    konst1 = mnm.ir.const(np.random.randn(1, 5).astype("float32"))
-    x = mnm.ir.var("x", shape=shape)
-    y = mnm.ir.op.add(x, konst1)
-    y = mnm.ir.op.add(y, konst1)
-    mod = mnm.ir.IRModule()
+    konst1 = raf.ir.const(np.random.randn(1, 5).astype("float32"))
+    x = raf.ir.var("x", shape=shape)
+    y = raf.ir.op.add(x, konst1)
+    y = raf.ir.op.add(y, konst1)
+    mod = raf.ir.IRModule()
     mod["main"] = relay.Function([x], y)
-    mod = mnm._ffi.pass_.ToANormalForm()(mod)
+    mod = raf._ffi.pass_.ToANormalForm()(mod)
 
     opt_level = 3 if fuse else 1
-    with mnm.ir.PassContext(opt_level=opt_level):
+    with raf.ir.PassContext(opt_level=opt_level):
         executor = VMExecutor(mod, "cpu")
     m_x, _ = randn(shape)
     ref_y = executor.make_executor()(m_x)
@@ -91,20 +91,20 @@ def test_constant(fuse):
 def test_tuple(fuse):
     rand, _ = randn((1,), device="cpu")
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.c = rand
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            pooled = mnm.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
-            return (mnm.add(pooled, self.c), x)
+            pooled = raf.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
+            return (raf.add(pooled, self.c), x)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
     opt_level = 3 if fuse else 1
-    with mnm.ir.PassContext(opt_level=opt_level):
+    with raf.ir.PassContext(opt_level=opt_level):
         executor = VMExecutor(mod, "cpu")
     ref_out = executor.make_executor()(m_x, rand)
 

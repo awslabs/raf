@@ -9,15 +9,15 @@
  */
 #pragma once
 #include <vector>
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "./let_list.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace liveness_analysis {
 
@@ -56,8 +56,8 @@ namespace liveness_analysis {
  * [1] https://www.cs.cmu.edu/~rjsimmon/15411-f15/lec/04-liveness.pdf
  */
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 using tvm::TypeFunctor;
 using VSet = std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual>;
 
@@ -503,4 +503,4 @@ void DumpLivenessStat(const MapVSet& live_in);
 
 }  // namespace liveness_analysis
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

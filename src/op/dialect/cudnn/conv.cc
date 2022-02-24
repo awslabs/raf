@@ -11,20 +11,20 @@
 #include "../../schema/nn.h"
 #include "../3rdparty/tvm/src/runtime/file_utils.h"
 #include "./cudnn_utils.h"
-#include "mnm/ir.h"
-#include "mnm/memory_pool.h"
-#include "mnm/op_utils.h"
+#include "raf/ir.h"
+#include "raf/memory_pool.h"
+#include "raf/op_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cudnn {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::memory_pool;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::memory_pool;
 using dmlc::BeginPtr;
 
-static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
 template <typename T>
 class CuDNNConvAlgoCacheEntry {
@@ -270,7 +270,7 @@ cudnnConvolutionBwdFilterAlgoPerf_t FindcudnnConvolutionBwdFilterAlgoPerf_tExWra
   return res[0];
 }
 
-class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
+class Conv2DImplementedByCUDNNConvolutionForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnFilterDescriptor_t wDesc;
   cudnnTensorDescriptor_t yDesc;
@@ -280,12 +280,12 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   void* workSpace;
 
   explicit Conv2DImplementedByCUDNNConvolutionForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.conv2d");
+    auto op = Op::Get("raf.op.conv2d");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("w"),
     };
-    auto args = cv->args.as<mnm::op::schema::ConvArgs>();
+    auto args = cv->args.as<raf::op::schema::ConvArgs>();
     DLTensor* x = args->x;
     DLTensor* w = args->w;
     DLTensor* out = cv->out;
@@ -332,11 +332,11 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.conv2d"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.conv2d"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::ConvArgs>();
+    auto args = cv->args.as<raf::op::schema::ConvArgs>();
     (void)args;
     DLTensor* x = args->x;
     (void)x;
@@ -367,10 +367,10 @@ class Conv2DImplementedByCUDNNConvolutionForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, conv2d, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.conv2d", Conv2DImplementedByCUDNNConvolutionForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, conv2d, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.conv2d", Conv2DImplementedByCUDNNConvolutionForward::make);
 
-class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEnv {
+class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnFilterDescriptor_t dwDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -380,12 +380,12 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
   void* workSpace;
 
   explicit Conv2DDwImplementedByCUDNNConvolutionBackwardFilter(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.conv2d_dw");
+    auto op = Op::Get("raf.op.conv2d_dw");
     this->arg_indices = {
         fschema_index[op]("x_or_w"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::ConvDxwArgs>();
+    auto args = cv->args.as<raf::op::schema::ConvDxwArgs>();
     (void)args;
     DLTensor* x_or_w = args->x_or_w;
     (void)x_or_w;
@@ -436,11 +436,11 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.conv2d_dw"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.conv2d_dw"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::ConvDxwArgs>();
+    auto args = cv->args.as<raf::op::schema::ConvDxwArgs>();
     DLTensor* x_or_w = args->x_or_w;
     DLTensor* out = cv->out;
     DLTensor* dy = args->dy;
@@ -466,11 +466,11 @@ class Conv2DDwImplementedByCUDNNConvolutionBackwardFilter : public mnm::op::OpEn
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, conv2d_dw, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.conv2d_dw",
+RAF_REGISTER_DIALECT_OP(cudnn, conv2d_dw, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.conv2d_dw",
                  Conv2DDwImplementedByCUDNNConvolutionBackwardFilter::make);
 
-class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv {
+class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public raf::op::OpEnv {
   cudnnTensorDescriptor_t dxDesc;
   cudnnFilterDescriptor_t wDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -480,12 +480,12 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
   void* workSpace;
 
   explicit Conv2DDxImplementedByCUDNNConvolutionBackwardData(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.conv2d_dx");
+    auto op = Op::Get("raf.op.conv2d_dx");
     this->arg_indices = {
         fschema_index[op]("x_or_w"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::ConvDxwArgs>();
+    auto args = cv->args.as<raf::op::schema::ConvDxwArgs>();
     DLTensor* out = cv->out;
     DLTensor* x_or_w = args->x_or_w;
     DLTensor* dy = args->dy;
@@ -531,11 +531,11 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.conv2d_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.conv2d_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::ConvDxwArgs>();
+    auto args = cv->args.as<raf::op::schema::ConvDxwArgs>();
     DLTensor* out = cv->out;
     DLTensor* x_or_w = args->x_or_w;
     DLTensor* dy = args->dy;
@@ -561,9 +561,9 @@ class Conv2DDxImplementedByCUDNNConvolutionBackwardData : public mnm::op::OpEnv 
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, conv2d_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.conv2d_dx", Conv2DDxImplementedByCUDNNConvolutionBackwardData::make);
+RAF_REGISTER_DIALECT_OP(cudnn, conv2d_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.conv2d_dx", Conv2DDxImplementedByCUDNNConvolutionBackwardData::make);
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

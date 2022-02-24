@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/compiler.cc
- * \brief The Meta virtual machine compiler.
+ * \brief The RAF virtual machine compiler.
  */
 #include <tvm/ir/module.h>
 #include <tvm/ir/type_functor.h>
@@ -14,12 +14,12 @@
 #include <tvm/relay/transform.h>
 #include <tvm/relay/analysis.h>
 #include <tvm/relay/attrs/memory.h>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/binding.h"
-#include "mnm/type.h"
-#include "mnm/pass.h"
-#include "mnm/dist_context.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/binding.h"
+#include "raf/type.h"
+#include "raf/pass.h"
+#include "raf/dist_context.h"
 #include "./compiler.h"
 
 namespace tvm {
@@ -30,16 +30,16 @@ bool IsClosure(const Function& func);
 }  // namespace relay
 }  // namespace tvm
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
-using mnm::distributed::DistContext;
+using raf::distributed::DistContext;
 using tvm::relay::Shape;
 
 /*!
@@ -397,17 +397,17 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
     if (op.as<OpNode>()) {
       OpMatch<void> matcher;
       matcher
-          .Match("mnm.op.vm.invoke_op",
+          .Match("raf.op.vm.invoke_op",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 3);
                    EmitInvokeOp(args[0], args[1], args[2]);
                  })
-          .Match("mnm.op.vm.infer_type",
+          .Match("raf.op.vm.infer_type",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 2);
                    EmitInferType(args[0], args[1], NewRegister());
                  })
-          .Match("mnm.op.vm.alloc_tensor",
+          .Match("raf.op.vm.alloc_tensor",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    bool own = true;
                    if (args.size() == 5) {
@@ -454,7 +454,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                                                       NewRegister(), own));
                    }
                  })
-          .Match("mnm.op.vm.alloc_storage",
+          .Match("raf.op.vm.alloc_storage",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 5);
                    // Compute the size of the allocation.
@@ -489,7 +489,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
                                                   device_id, NewRegister()));
                  })
-          .Match("mnm.op.vm.free",
+          .Match("raf.op.vm.free",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 1);
 
@@ -497,7 +497,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    auto memory_register = last_register_;
                    Emit(Instruction::Free(memory_register));
                  })
-          .Match("mnm.op.vm.set_shape",
+          .Match("raf.op.vm.set_shape",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 2);
                    this->VisitExpr(args[0]);
@@ -508,7 +508,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    Emit(Instruction::SetShape(data_reg, shape_reg, NewRegister()));
                  })
           .Match(
-              "mnm.op.set_stream",
+              "raf.op.set_stream",
               [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                 CHECK_EQ(args.size(), 2);
                 this->VisitExpr(args[0]);
@@ -529,7 +529,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                 Index stream_id = stream_id_expr.as<ConstantNode>()->value.as<IntValueObj>()->value;
                 Emit(Instruction::CudaSetStream(device_id, stream_id));
               })
-          .Match("mnm.op.add_event",
+          .Match("raf.op.add_event",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK(args.size() == 1 || args.size() == 2);
                    Expr event_id_expr;
@@ -555,7 +555,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    }
                    Emit(Instruction::CudaAddEvent(event_id, stream_id));
                  })
-          .Match("mnm.op.wait_event",
+          .Match("raf.op.wait_event",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK(args.size() == 1 || args.size() == 2);
                    Expr event_id_expr;
@@ -581,7 +581,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    }
                    Emit(Instruction::CudaWaitEvent(event_id, stream_id));
                  })
-          .Match("mnm.op.stream_barrier",
+          .Match("raf.op.stream_barrier",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
                    CHECK_EQ(args.size(), 0);
                    Emit(Instruction::CudaStreamBarrier());
@@ -842,7 +842,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::DeadCodeElimination());
 
   bool enable_stream_schedule = true;
-  if (!pass_ctx->GetConfig("mnm.vm.optimize.anf_only", Bool(false)).value()) {
+  if (!pass_ctx->GetConfig("raf.vm.optimize.anf_only", Bool(false)).value()) {
     // optimization passes that work on BBNF
     pass_seqs.push_back(pass::ToGraphNormalForm());
     pass_seqs.push_back(pass::ToBasicBlockNormalForm());
@@ -872,7 +872,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
         pass_seqs.push_back(pass::EnforceSync());
       } else {
         auto policy_name =
-            pass_ctx->GetConfig<tvm::String>("mnm.stream_schedule.policy", "sequential");
+            pass_ctx->GetConfig<tvm::String>("raf.stream_schedule.policy", "sequential");
         if (policy_name == "sequential") {
           enable_stream_schedule = false;
           pass_seqs.push_back(pass::ToANormalForm());
@@ -916,7 +916,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::ManifestAlloc());
   pass_seqs.push_back(pass::MemoryPlan());
 
-  pass::MNMSequential seq(pass_seqs);
+  pass::RAFSequential seq(pass_seqs);
   return seq(mod);
 }
 
@@ -976,10 +976,10 @@ PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Obje
   }
 }
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.vm.optimize.anf_only", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.vm.optimize.anf_only", Bool);
 
-MNM_REGISTER_GLOBAL("mnm.vm.VMCompiler").set_body_typed(CreateVMCompiler);
+RAF_REGISTER_GLOBAL("raf.vm.VMCompiler").set_body_typed(CreateVMCompiler);
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

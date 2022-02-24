@@ -8,17 +8,17 @@
  * \brief Typing of init operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/op_utils.h"
-#include "mnm/type.h"
+#include "raf/op_utils.h"
+#include "raf/type.h"
 #include "../schema/init.h"
 #include "../declare/declare_utils.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 
 Type InitOpInfer(const CallValues& value) {
@@ -29,8 +29,8 @@ Type InitOpInfer(const CallValues& value) {
   return TensorType(shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.zeros", "Zeros", InitOpInfer);
-MNM_OP_TYPE("mnm.op.ones", "Ones", InitOpInfer);
+RAF_OP_TYPE("raf.op.zeros", "Zeros", InitOpInfer);
+RAF_OP_TYPE("raf.op.ones", "Ones", InitOpInfer);
 
 Type OneHotInfer(const CallValues& value) {
   const auto* args = value->args.as<OneHotArgs>();
@@ -43,7 +43,7 @@ Type OneHotInfer(const CallValues& value) {
   return TensorType(shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.one_hot", "OneHot", OneHotInfer);
+RAF_OP_TYPE("raf.op.one_hot", "OneHot", OneHotInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

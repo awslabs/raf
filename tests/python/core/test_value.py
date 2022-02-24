@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from mnm._core.value import BoolValue, FloatValue, IntValue, StringValue, TensorValue, TupleValue
+from raf._core.value import BoolValue, FloatValue, IntValue, StringValue, TensorValue, TupleValue
 
 
 def test_int_value():

@@ -9,18 +9,18 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
-#include "mnm/dist_context.h"
-#include "mnm/type.h"
+#include "raf/dist_context.h"
+#include "raf/type.h"
 #include "../schema/communication.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
-using mnm::distributed::DistContext;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
+using raf::distributed::DistContext;
 
 template <typename T>
 Type IdentityType(const CallValues& value) {
@@ -35,9 +35,9 @@ Type IdentityType(const CallValues& value) {
   return TupleType(x);
 }
 
-MNM_OP_TYPE("mnm.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
-MNM_OP_TYPE("mnm.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
-MNM_OP_TYPE("mnm.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
+RAF_OP_TYPE("raf.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
+RAF_OP_TYPE("raf.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
+RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 
 Type ReduceScatterInfer(const CallValues& value) {
   static auto* structural_equal = tvm::runtime::Registry::Get("node.StructuralEqual");
@@ -53,7 +53,7 @@ Type ReduceScatterInfer(const CallValues& value) {
   return ty;
 }
 
-MNM_OP_TYPE("mnm.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
+RAF_OP_TYPE("raf.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
 
 Type SendInfer(const CallValues& value) {
   const auto* args = value->args.as<SendArgs>();
@@ -62,7 +62,7 @@ Type SendInfer(const CallValues& value) {
   return TensorType({}, ty->dtype);
 }
 
-MNM_OP_TYPE("mnm.op._send", "NCCLSend", SendInfer);
+RAF_OP_TYPE("raf.op._send", "NCCLSend", SendInfer);
 
 Type RecvInfer(const CallValues& value) {
   const auto* args = value->args.as<RecvArgs>();
@@ -75,7 +75,7 @@ Type RecvInfer(const CallValues& value) {
   return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
 }
 
-MNM_OP_TYPE("mnm.op._recv", "NCCLRecv", RecvInfer);
+RAF_OP_TYPE("raf.op._recv", "NCCLRecv", RecvInfer);
 
 Type AllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<AllgatherArgs>();
@@ -88,7 +88,7 @@ Type AllGatherInfer(const CallValues& value) {
   return TensorType(shape, DataType(ttype->dtype));
 }
 
-MNM_OP_TYPE("mnm.op._allgather", "NCCLAllGather", AllGatherInfer);
+RAF_OP_TYPE("raf.op._allgather", "NCCLAllGather", AllGatherInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -8,19 +8,19 @@
  * \brief Schedule ANF IR to reduce memory footprint.
  */
 #include <tvm/ir/type_functor.h>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 
 #include "./common.h"
 #include "./let_list.h"
 #include "../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace memory_schedule {
 
-using namespace mnm::op;
+using namespace raf::op;
 using common::shape_utils::BytesCompactType;
 
 template <typename T>
@@ -587,25 +587,25 @@ StdMap<std::pair<VSet, VSet>> ANFScheduler4Memory::BuildDefUseMap(const Function
 
 }  // namespace memory_schedule
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.memory_schedule", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.memory_schedule", Bool);
 
 Pass MemorySchedule() {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
     PassContext pass_ctx = PassContext::Current();
-    bool enable = pass_ctx->GetConfig("mnm.memory_schedule", Bool(false)).value();
+    bool enable = pass_ctx->GetConfig("raf.memory_schedule", Bool(false)).value();
     if (enable) {
       return Downcast<Function>(memory_schedule::ANFScheduler4Memory(f).Run());
     }
     return f;
   };
 
-  Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "MemoryScheduleHelper", {});
+  Pass func_pass = CreateRAFFunctionPass(pass_func, 2, "MemoryScheduleHelper", {});
   PassInfo pass_info(2, "MemorySchedule", {});
-  return MNMSequential({InferType(), func_pass}, pass_info);
+  return RAFSequential({InferType(), func_pass}, pass_info);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.MemorySchedule").set_body_typed(MemorySchedule);
+RAF_REGISTER_GLOBAL("raf.pass_.MemorySchedule").set_body_typed(MemorySchedule);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

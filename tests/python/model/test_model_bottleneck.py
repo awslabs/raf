@@ -4,13 +4,13 @@
 import pytest
 import torch
 
-import mnm
-from mnm.model import Conv2d, BatchNorm
-from mnm.testing import check, randn, randn_torch, t2m_param, get_testable_devices
-from mnm._lib import tvm
+import raf
+from raf.model import Conv2d, BatchNorm
+from raf.testing import check, randn, randn_torch, t2m_param, get_testable_devices
+from raf._lib import tvm
 
 
-class MNMBottleneck(mnm.Model):
+class RAFBottleneck(raf.Model):
     expansion = 4
 
     # pylint: disable=attribute-defined-outside-init
@@ -30,17 +30,17 @@ class MNMBottleneck(mnm.Model):
 
     # pylint: enable=attribute-defined-outside-init
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        out = mnm.relu(self.bn1(x))
+        out = raf.relu(self.bn1(x))
         if self.shortcut is None:
             shortcut = x
         else:
             shortcut = self.shortcut(out)
         out = self.conv1(out)
-        out = self.conv2(mnm.relu(self.bn2(out)))
-        out = self.conv3(mnm.relu(self.bn3(out)))
-        out = mnm.add(out, shortcut)
+        out = self.conv2(raf.relu(self.bn2(out)))
+        out = self.conv3(raf.relu(self.bn3(out)))
+        out = raf.add(out, shortcut)
         return out
 
 
@@ -79,7 +79,7 @@ class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
         return out
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "config",
     [
@@ -96,7 +96,7 @@ class TorchPreActBottleneck(torch.nn.Module):  # pylint: disable=abstract-method
 @pytest.mark.parametrize("is_train", [True, False])
 def test_bottleneck(config, is_train):
     # pylint: disable=too-many-locals
-    m_block = MNMBottleneck(*config[0])
+    m_block = RAFBottleneck(*config[0])
     t_block = TorchPreActBottleneck(*config[0])
     t_block.to("cuda")
     m_block.to(device="cuda")
@@ -172,7 +172,7 @@ def test_bottleneck(config, is_train):
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_model_invalidate(device):
     # pylint: disable=protected-access,no-member
-    model = MNMBottleneck(64, 64, 1)
+    model = RAFBottleneck(64, 64, 1)
     model.to(device=device)
     m_x, _ = randn((16, 64, 32, 32), requires_grad=True, device=device)
     # mode change

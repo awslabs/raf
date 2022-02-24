@@ -8,24 +8,24 @@
  * \brief Typing of annotation operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
-#include "../schema/annotation.h"
+#include "raf/type.h"
+#include "../schema/ufunc.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using namespace schema;
 
 Type CompilerInfer(const CallValues& value) {
-  const auto* args = value->args.as<CompilerArgs>();
+  const auto* args = value->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.compiler_begin", "Compiler", CompilerInfer);
-MNM_OP_TYPE("mnm.op.compiler_end", "Compiler", CompilerInfer);
+RAF_OP_TYPE("raf.op.compiler_begin", "Compiler", CompilerInfer);
+RAF_OP_TYPE("raf.op.compiler_end", "Compiler", CompilerInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

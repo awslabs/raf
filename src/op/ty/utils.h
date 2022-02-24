@@ -12,11 +12,11 @@
 #include <tvm/ir/attrs.h>
 #include <tvm/ir/env_func.h>
 #include <tvm/tir/expr.h>
-#include "mnm/op.h"
+#include "raf/op.h"
 #include "../schema/transform.h"
 #include "../schema/ufunc.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
 /*! \brief Get the type of value.
@@ -129,4 +129,4 @@ inline Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2
 }
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

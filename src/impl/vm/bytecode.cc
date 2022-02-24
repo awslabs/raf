@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/bytecode.cc
- * \brief Byte code of the Meta virtual machine.
+ * \brief Byte code of the RAF virtual machine.
  */
 
 #include <dmlc/memory_io.h>
@@ -18,9 +18,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include "mnm/vm/vm.h"
+#include "raf/vm/vm.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
@@ -755,4 +755,4 @@ std::ostream& operator<<(std::ostream& os, const VMFunction& vm_func) {
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

@@ -3,14 +3,14 @@
 
 # pylint: disable=protected-access
 import pytest
-import mnm
+import raf
 import tvm
 from tvm import relay
 
-from mnm._core.device import Device
-from mnm._ffi.pass_ import EstimateGFLOPS
-from mnm.ir import ScopeBuilder
-from mnm.testing import run_infer_type
+from raf._core.device import Device
+from raf._ffi.pass_ import EstimateGFLOPS
+from raf.ir import ScopeBuilder
+from raf.testing import run_infer_type
 
 
 def verify_flops(mod, expected_map):
@@ -27,10 +27,10 @@ def test_conv2d():
     shape = (16, 16, 64, 64)
 
     def get_mod():
-        conv2d_call = lambda x, w: mnm.ir.op.conv2d(x, w, 1, 1)
+        conv2d_call = lambda x, w: raf.ir.op.conv2d(x, w, 1, 1)
 
-        data = mnm.ir.var("x", shape=shape)
-        weight = mnm.ir.var("w", shape=(16, 16, 3, 3))
+        data = raf.ir.var("x", shape=shape)
+        weight = raf.ir.var("w", shape=(16, 16, 3, 3))
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", conv2d_call(data, weight))
@@ -46,11 +46,11 @@ def test_unary():
     shape = (10, 5)
 
     def get_mod():
-        data = mnm.ir.var("x", shape=shape)
+        data = raf.ir.var("x", shape=shape)
 
         sb = ScopeBuilder()
-        a_1 = sb.let("a1", mnm.ir.op.relu(data))
-        a_2 = sb.let("a2", mnm.ir.op.relu(a_1))
+        a_1 = sb.let("a1", raf.ir.op.relu(data))
+        a_2 = sb.let("a2", raf.ir.op.relu(a_1))
         sb.ret(a_2)
         func = relay.Function([data], sb.get())
         return tvm.IRModule.from_expr(func)
@@ -62,11 +62,11 @@ def test_fusion():
     shape = (10, 5)
 
     def get_mod():
-        data = mnm.ir.var("x", shape=shape)
+        data = raf.ir.var("x", shape=shape)
 
-        p_0 = mnm.ir.var("p0", shape=shape)
-        out = mnm.ir.op.relu(p_0)
-        out = mnm.ir.op.relu(out)
+        p_0 = raf.ir.var("p0", shape=shape)
+        out = raf.ir.op.relu(p_0)
+        out = raf.ir.op.relu(out)
         closure = relay.Function([p_0], out)
         closure = closure.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
 
@@ -84,9 +84,9 @@ def test_multi_func():
 
     def get_mod():
         sb = ScopeBuilder()
-        data = mnm.ir.var("x", shape=shape)
-        a_1 = sb.let("a1", mnm.ir.op.relu(data))
-        a_2 = sb.let("a2", mnm.ir.op.relu(a_1))
+        data = raf.ir.var("x", shape=shape)
+        a_1 = sb.let("a1", raf.ir.op.relu(data))
+        a_2 = sb.let("a2", raf.ir.op.relu(a_1))
         sb.ret(a_2)
 
         mod = tvm.IRModule()
@@ -94,7 +94,7 @@ def test_multi_func():
         mod[func_1] = relay.Function([data], sb.get())
 
         sb = ScopeBuilder()
-        data = mnm.ir.var("x", shape=shape)
+        data = raf.ir.var("x", shape=shape)
         b_1 = sb.let("b1", relay.Call(func_1, [data]))
         sb.ret(b_1)
         mod[relay.GlobalVar("main")] = relay.Function([data], sb.get())

@@ -14,18 +14,18 @@
  * partition_graph must subsequently be called to lift these regions out
  * as external functions.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./common.h"
 #include "../op/dialect/tvm/tvm_attrs.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace merge_compiler_regions {
 
-using namespace mnm::ir;
-using mnm::op::tvm_dialect::CompilerAttrs;
+using namespace raf::ir;
+using raf::op::tvm_dialect::CompilerAttrs;
 
 static const Op& begin_op = CompilerBeginOp();
 static const Op& end_op = CompilerEndOp();
@@ -85,10 +85,10 @@ Pass MergeCompilerRegions() {
                                                                              PassContext pc) {
     return Downcast<Function>(merge_compiler_regions::MergeCompilerRegions(f));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "MergeCompilerRegions", {});
+  return CreateRAFFunctionPass(pass_func, 0, "MergeCompilerRegions", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.MergeCompilerRegions").set_body_typed(MergeCompilerRegions);
+RAF_REGISTER_GLOBAL("raf.pass_.MergeCompilerRegions").set_body_typed(MergeCompilerRegions);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

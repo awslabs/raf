@@ -9,11 +9,11 @@
  */
 #include "./grad_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace grad {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 Array<Expr> AsTupleExpr(const Expr& expr, int numel) {
   if (const auto* tuple = expr.as<TupleNode>()) {
@@ -32,4 +32,4 @@ Array<Expr> AsTupleExpr(const Expr& expr, int numel) {
 
 }  // namespace grad
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

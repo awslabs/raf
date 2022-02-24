@@ -5,13 +5,13 @@
 import pytest
 import numpy as np
 
-import mnm
-from mnm.testing import check, with_dialect
-from mnm.testing.utils import run_model
+import raf
+from raf.testing import check, with_dialect
+from raf.testing.utils import run_model
 
 
 @with_dialect(["tvm", "cuda"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape", [(64, 128), (128, 256)])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 def test_tensor_fusion_and_defusion(shape, dtype):
@@ -22,19 +22,19 @@ def test_tensor_fusion_and_defusion(shape, dtype):
     tuple_shape = shape + shape
     shape_indices = [len(shape), 2 * len(shape)]
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             x_1 = [x, x]
-            x_2 = mnm.fuse_tensor(x_1)
-            x_3 = mnm.defuse_tensor(x_2, sizes, tuple_shape, shape_indices)
+            x_2 = raf.fuse_tensor(x_1)
+            x_3 = raf.defuse_tensor(x_2, sizes, tuple_shape, shape_indices)
             return x_3[0]
 
     x = np.ones(shape, dtype=dtype)
-    x = mnm.array(x, device="cuda(0)")
+    x = raf.array(x, device="cuda(0)")
     model = Model()
     device = f"cuda(0)"
     y_c = run_model(model, [x], device)

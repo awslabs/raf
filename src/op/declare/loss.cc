@@ -7,19 +7,19 @@
  * \file src/op/declare/loss.cc
  * \brief Declaration of loss-specific operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/loss.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.smooth_l1_loss", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.smooth_l1_loss", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -32,7 +32,7 @@ MNM_OP_DECLARE("mnm.op.smooth_l1_loss", [](const CallValues& call) {
   call->device = true_->device;
 });
 
-MNM_OP_DECLARE("mnm.op.smooth_l1_loss_dpred", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.smooth_l1_loss_dpred", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -42,7 +42,7 @@ MNM_OP_DECLARE("mnm.op.smooth_l1_loss_dpred", [](const CallValues& call) {
   call->device = pred->device;
 });
 
-MNM_OP_DECLARE("mnm.op.smooth_l1_loss_dtrue", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.smooth_l1_loss_dtrue", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -52,7 +52,7 @@ MNM_OP_DECLARE("mnm.op.smooth_l1_loss_dtrue", [](const CallValues& call) {
   call->device = true_->device;
 });
 
-MNM_OP_DECLARE("mnm.op.nll_loss", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.nll_loss", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -65,7 +65,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss", [](const CallValues& call) {
   call->device = pred->device;
 });
 
-MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.nll_loss_dpred", [](const CallValues& call) {
   const auto* args = call->args.as<LossDtpArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -77,7 +77,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss_dpred", [](const CallValues& call) {
   call->device = pred->device;
 });
 
-MNM_OP_DECLARE("mnm.op.nll_loss_dtrue", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.nll_loss_dtrue", [](const CallValues& call) {
   const auto* args = call->args.as<LossDtpArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -91,7 +91,7 @@ MNM_OP_DECLARE("mnm.op.nll_loss_dtrue", [](const CallValues& call) {
   call->device = true_->device;
 });
 
-MNM_OP_DECLARE("mnm.op.cross_entropy", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.cross_entropy", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -106,7 +106,7 @@ MNM_OP_DECLARE("mnm.op.cross_entropy", [](const CallValues& call) {
   call->device = true_->device;
 });
 
-MNM_OP_DECLARE("mnm.op.cross_entropy_dpred", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.cross_entropy_dpred", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -120,7 +120,7 @@ MNM_OP_DECLARE("mnm.op.cross_entropy_dpred", [](const CallValues& call) {
   call->device = pred->device;
 });
 
-MNM_OP_DECLARE("mnm.op.cross_entropy_dtrue", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.cross_entropy_dtrue", [](const CallValues& call) {
   const auto* args = call->args.as<LossArgs>();
   CHECK(args != nullptr);
   const DLTensor* pred = args->y_pred;
@@ -136,4 +136,4 @@ MNM_OP_DECLARE("mnm.op.cross_entropy_dtrue", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -12,12 +12,12 @@
 #include <tvm/runtime/object.h>
 #include <tvm/node/repr_printer.h>
 
-#include "mnm/device.h"
-#include "mnm/registry.h"
+#include "raf/device.h"
+#include "raf/registry.h"
 
-namespace mnm {
+namespace raf {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using tvm::ReprPrinter;
 
 struct DeviceThreadLocalEntry {
@@ -88,17 +88,17 @@ static void ExitScope(Device device) {
   device.ExitWithScope();
 };
 
-MNM_REGISTER_GLOBAL("mnm.device.Device").set_body_typed(Device::make);
-MNM_REGISTER_GLOBAL("mnm.device.GetTVMTarget").set_body_typed(GetTVMTarget);
-MNM_REGISTER_GLOBAL("mnm.device.DeviceEnterScope").set_body_typed(EnterScope);
-MNM_REGISTER_GLOBAL("mnm.device.DeviceExitScope").set_body_typed(ExitScope);
-MNM_REGISTER_GLOBAL("mnm.device.DeviceCurrent").set_body_typed(Device::Current);
+RAF_REGISTER_GLOBAL("raf.device.Device").set_body_typed(Device::make);
+RAF_REGISTER_GLOBAL("raf.device.GetTVMTarget").set_body_typed(GetTVMTarget);
+RAF_REGISTER_GLOBAL("raf.device.DeviceEnterScope").set_body_typed(EnterScope);
+RAF_REGISTER_GLOBAL("raf.device.DeviceExitScope").set_body_typed(ExitScope);
+RAF_REGISTER_GLOBAL("raf.device.DeviceCurrent").set_body_typed(Device::Current);
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<DeviceObj>([](const ObjectRef& ref, ReprPrinter* p) {
       auto* node = static_cast<const DeviceObj*>(ref.get());
       p->stream << "Device(" << GetRef<Device>(node).c_str() << ")";
     });
 
-MNM_REGISTER_OBJECT_REFLECT(DeviceObj);
+RAF_REGISTER_OBJECT_REFLECT(DeviceObj);
 
-}  // namespace mnm
+}  // namespace raf

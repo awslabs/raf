@@ -10,14 +10,14 @@
 #pragma once
 
 #include <tvm/ir/type_functor.h>
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/pass.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/pass.h"
 
 #include "./common.h"
 #include "../op/dialect/tvm/tvm_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace estimate_flops {
 
@@ -66,4 +66,4 @@ class FLOPSEstimater : public ExprVisitor {
 
 }  // namespace estimate_flops
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

@@ -8,13 +8,13 @@
  * \brief Implementation of cutlass convolution dispatch
  */
 #include "cutlass/library/operation_table.h"
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
-#include "mnm/op_utils.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
+#include "raf/op_utils.h"
 #include "tvm/ir/type_functor.h"
 #include "tvm/relay/dataflow_pattern.h"
 
@@ -26,16 +26,16 @@
 #include "../../../common/shape_utils.h"
 #include "../../regs/value2schema.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
-using mnm::op::regs::value2schema::TupleInt;
-using mnm::registry::PackedFunc;
-using mnm::registry::TypedPackedFunc;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
+using raf::op::regs::value2schema::TupleInt;
+using raf::registry::PackedFunc;
+using raf::registry::TypedPackedFunc;
 
 /*! \brief OpEnv for the following pattern:
  * epilogue_op_(alpha * conv2d(a_, b_) + beta * bias_),
@@ -48,7 +48,7 @@ class CutlassConv2dOpEnv : public CutlassConvOpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cutlass.conv2d"));
+    return TruncateName(GetUniqueName("raf.op.cutlass.conv2d"));
   }
 
   bool Pattern(const CallValues& cv);
@@ -88,4 +88,4 @@ class CutlassConv2dOpEnv : public CutlassConvOpEnv {
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

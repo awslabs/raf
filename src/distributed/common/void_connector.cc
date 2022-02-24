@@ -8,9 +8,9 @@
  * \brief A void Connector used as a template
  */
 
-#include "mnm/connector.h"
+#include "raf/connector.h"
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 namespace connector {
 
@@ -42,8 +42,8 @@ class VoidConnector : public Connector {
   std::string type = "VOID";
 };
 
-MNM_REGISTER_GLOBAL("mnm.distributed.connector._make.void").set_body_typed(VoidConnector::make);
+RAF_REGISTER_GLOBAL("raf.distributed.connector._make.void").set_body_typed(VoidConnector::make);
 
 }  // namespace connector
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

@@ -17,14 +17,14 @@
 #include <vector>
 #include <functional>
 #include <numeric>
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/enum_base.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/tensor.h"
-#include "mnm/communicator.h"
-#include "mnm/stream_pool.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/enum_base.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/tensor.h"
+#include "raf/communicator.h"
+#include "raf/stream_pool.h"
 #include "../../../common/shape_utils.h"
 
 #define NCCL_CALL(cmd)                                                                             \
@@ -35,7 +35,7 @@
     }                                                                                              \
   } while (0)
 
-namespace mnm {
+namespace raf {
 
 template <>
 inline DType::operator ncclDataType_t() const {
@@ -55,4 +55,4 @@ inline DType::operator ncclDataType_t() const {
   throw;
 }
 
-}  // namespace mnm
+}  // namespace raf

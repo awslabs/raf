@@ -8,14 +8,14 @@
  * \brief Typing utils
  */
 #include "./utils.h"
-#include "mnm/value_functor.h"
-#include "mnm/pass.h"
+#include "raf/value_functor.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 
 class ValueTyper : public ValueFunctor<Type(const Value&)> {
   Type VisitValue_(const IntValueObj* value) override {
@@ -85,4 +85,4 @@ bool TypeCheck(const PrimExpr& cond) {
 }
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

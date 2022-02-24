@@ -5,32 +5,32 @@
 
 /*!
  * \file from_relay.cc
- * \brief Build meta ir from Relay
+ * \brief Build raf ir from Relay
  */
 #include <map>
 #include <tvm/relay/transform.h>
 #include <tvm/support/with.h>
 #include <relay/transforms/pattern_utils.h>
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./let_list.h"
 #include "../op/dialect/tvm/tvm_attrs.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace from_relay {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::tvm_dialect;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::tvm_dialect;
 using tvm::TVMArgs;
 using tvm::TVMRetValue;
 
 struct RelayPattern {
  public:
-  /*! \brief The converter to convert the matched Relay composite function to a Meta call.
+  /*! \brief The converter to convert the matched Relay composite function to a RAF call.
    *  \param func The composite function to be converted.
    *  \param args The argument array of the converted op.
    * \param scope The current scope of letlist.
@@ -69,7 +69,7 @@ struct ConvertDense : RelayPattern {
       if (trans_call && Downcast<Op>(trans_call->op) == op_transpose) {
         auto attrs = GetRef<Call>(trans_call)->attrs.as<TransposeAttrs>();
         if (attrs->axes.defined()) {
-          auto axes = mnm::op::ArrayToInt(attrs->axes);
+          auto axes = raf::op::ArrayToInt(attrs->axes);
           for (size_t j = 0; j < 2; ++j) {  // Support negative axis
             axes[j] += (axes[j] < 0) ? 2 : 0;
           }
@@ -81,7 +81,7 @@ struct ConvertDense : RelayPattern {
     }
 
     // Dispatch to the proper matmul based on the transposes
-    std::string op_name = "mnm.op.matmul";
+    std::string op_name = "raf.op.matmul";
     if (transposes[0] || transposes[1]) {
       op_name += '_';
       op_name += (transposes[0]) ? 't' : 'n';
@@ -119,7 +119,7 @@ struct CompositeGelu : RelayPattern {
   }
 
   Expr convert(Function func, Array<Expr> args, LetList* scope) {
-    static const Op& op = Op::Get("mnm.op.gelu");
+    static const Op& op = Op::Get("raf.op.gelu");
     return Call(op, args);
   }
 
@@ -168,10 +168,10 @@ struct ConvertEmbedding : RelayPattern {
   }
 
   Expr convert(Function func, Array<Expr> args, LetList* scope) {
-    LOG(WARNING) << "Converted a relay.take(data, indices, axis=0, mode=clip) to mnm.embedding, "
+    LOG(WARNING) << "Converted a relay.take(data, indices, axis=0, mode=clip) to raf.embedding, "
                  << "which requires all values in indices within the range; otherwise it will "
                  << "encounter memory error on GPUs";
-    static const Op& op = Op::Get("mnm.op.embedding");
+    static const Op& op = Op::Get("raf.op.embedding");
 
     // The second argument is a constant and has been embedded into the composite function.
     // In this case, we retrieve the second argument from the function body and make sure its
@@ -183,7 +183,7 @@ struct ConvertEmbedding : RelayPattern {
       auto ttype = Downcast<TensorValue>(const_arg->value)->tensor;
       CHECK(ttype->dtype.code == kDLInt);
       if (ttype->dtype.bits != 64) {
-        static const Op& cast_op = Op::Get("mnm.op.cast");
+        static const Op& cast_op = Op::Get("raf.op.cast");
         auto cast_var =
             scope->Push(Call(cast_op, {const_expr, MakeConstant(StringValue::make("int64"))}));
         args.push_back(cast_var);
@@ -200,7 +200,7 @@ static const std::unordered_map<String, std::shared_ptr<RelayPattern>> composite
     {String("gelu"), std::shared_ptr<RelayPattern>(new CompositeGelu)},
     {String("embedding"), std::shared_ptr<RelayPattern>(new ConvertEmbedding)}};
 
-// We set the parameters to be Meta model attributes, so their names
+// We set the parameters to be RAF model attributes, so their names
 // have to be valid variable names in Python.
 String ValidateRelayParamName(const String var_name) {
   auto name_str = std::string(var_name->data);
@@ -219,12 +219,12 @@ struct FromRelayMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const RelayConstantNode* node) final {
-    // check if it is a Meta Constant
+    // check if it is a RAF Constant
     static const auto fake_tensor = MakeConstant(NullValue<Value>());
     if (node->data->data == fake_tensor->data->data) {
       return GetRef<Expr>(node);
     }
-    static const auto& from_tvm = registry::GetPackedFunc("mnm.value.FromTVM");
+    static const auto& from_tvm = registry::GetPackedFunc("raf.value.FromTVM");
     auto tv = from_tvm(node->data);
     return MakeConstant(tv);
   }
@@ -236,7 +236,7 @@ struct FromRelayMutator : public ExprMutator {
     do {
       const Var& var = node->var;
       CHECK_EQ(var_map_.count(var), 0) << "IR is malformed: cannot bind the same var twice";
-      Var new_var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
+      Var new_var = raf::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation);
       var_map_.Set(var, new_var);
       curr_let_var_ = new_var;
       auto new_value = this->Mutate(node->value);
@@ -272,7 +272,7 @@ struct FromRelayMutator : public ExprMutator {
       return Call(node->op, args, node->attrs);
     }
 
-    // If this node is calling a composite op, convert it to a Meta op using pattern converter
+    // If this node is calling a composite op, convert it to a RAF op using pattern converter
     bool is_composite_op = true;
 
     // Try to trace back to find the composite function
@@ -288,7 +288,7 @@ struct FromRelayMutator : public ExprMutator {
         break;
       }
     }
-    // Convert the composite function call with the Meta op
+    // Convert the composite function call with the RAF op
     if (is_composite_op) {
       if (auto func = curr_op.as<FunctionNode>()) {
         if (auto comp_name = func->GetAttr<String>(attr::kComposite)) {
@@ -307,9 +307,9 @@ struct FromRelayMutator : public ExprMutator {
       }
     }
 
-    // This node is calling a single op so convert it to a Meta op using the op converter
-    static auto fmap = Op::GetAttrMap<op::FMNMFromRelay>("FMNMFromRelay");
-    static auto fmutation = Op::GetAttrMap<op::FMNMMutationFromRelay>("FMNMMutationFromRelay");
+    // This node is calling a single op so convert it to a RAF op using the op converter
+    static auto fmap = Op::GetAttrMap<op::FRAFFromRelay>("FRAFFromRelay");
+    static auto fmutation = Op::GetAttrMap<op::FRAFMutationFromRelay>("FRAFMutationFromRelay");
     if (node->op.as<OpNode>() == nullptr) {
       tvm::Array<Expr> call_args;
       for (auto arg : node->args) {
@@ -355,7 +355,7 @@ struct FromRelayMutator : public ExprMutator {
     Array<Var> params;
     for (auto param : node->params) {
       auto name_hint = ValidateRelayParamName(param->name_hint());
-      Var new_param = mnm::ir::MakeVar(name_hint, param->type_annotation);
+      Var new_param = raf::ir::MakeVar(name_hint, param->type_annotation);
       params.push_back(new_param);
       var_map_.Set(param, new_param);
     }
@@ -378,11 +378,11 @@ struct FromRelayMutator : public ExprMutator {
     auto scope = scopes_.back().get();
     Array<Expr> res{ret};
     for (const auto& kv : mutation_) {
-      Var var = mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}, kv.first);
+      Var var = raf::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}, kv.first);
       scope->Push(var, kv.second);
       res.push_back(var);
     }
-    return scope->Push(mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}), Tuple(res));
+    return scope->Push(raf::ir::MakeVar("a" + std::to_string(++num_bound_var_), {}), Tuple(res));
   }
 
   /*!
@@ -406,9 +406,9 @@ struct FromRelayMutator : public ExprMutator {
   std::vector<std::unique_ptr<LetList>> scopes_;
   /*! \brief The counter of bound variables. */
   int num_bound_var_ = 0;
-  /*! \brief Map from var in Relay graph to the converted Meta graph. */
+  /*! \brief Map from var in Relay graph to the converted RAF graph. */
   Map<Var, Var> var_map_;
-  /*! \brief Map from var in Relay graph to the converted Meta graph value. */
+  /*! \brief Map from var in Relay graph to the converted RAF graph value. */
   Map<Var, Expr> var_value_map_;
   /*! \brief Map from unsupported op name to the appearance. */
   std::unordered_map<String, int> unsupported_ops_;
@@ -424,7 +424,7 @@ struct FromRelayMutator : public ExprMutator {
 
 Function PartitionPatterns(Function func) {
   Function ret = func;
-  for (auto name_n_pattern : mnm::pass::from_relay::composite_patterns) {
+  for (auto name_n_pattern : raf::pass::from_relay::composite_patterns) {
     auto pattern = name_n_pattern.second;
     Map<String, ObjectRef> attrs;
     attrs.Set("Composite", name_n_pattern.first);
@@ -461,10 +461,10 @@ Pass FromRelay(Array<String> disabled_pass) {
       if (auto* n = it.second.as<FunctionNode>()) {
         Function func = GetRef<Function>(n);
 
-        // Partition Meta-specific Relay simplify patterns
+        // Partition RAF-specific Relay simplify patterns
         auto updated_func = PartitionPatterns(func);
 
-        // Transform to ANF and convert Relay ops to Meta ops
+        // Transform to ANF and convert Relay ops to RAF ops
         auto anf_expr = Downcast<Function>(tvm::relay::transform::ToANormalForm(updated_func));
         auto mutator = from_relay::FromRelayMutator();
         updated_func = Downcast<Function>(mutator.Mutate(anf_expr));
@@ -492,7 +492,7 @@ Pass FromRelay(Array<String> disabled_pass) {
   return CreateModulePass(pass_func, 2, "FromRelay", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FromRelay").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.pass_.FromRelay").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   Array<String> disabled_pass;
   if (args.size() == 1) {
     disabled_pass = args[0];
@@ -500,7 +500,7 @@ MNM_REGISTER_GLOBAL("mnm.pass_.FromRelay").set_body([](tvm::TVMArgs args, tvm::T
   *rv = FromRelay(disabled_pass);
 });
 
-MNM_REGISTER_GLOBAL("mnm.pass_.validate_relay_param_name")
+RAF_REGISTER_GLOBAL("raf.pass_.validate_relay_param_name")
     .set_body_typed(from_relay::ValidateRelayParamName);
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

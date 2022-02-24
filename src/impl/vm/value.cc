@@ -8,9 +8,9 @@
  * \brief The implementation for vm values.
  */
 
-#include "mnm/vm/value.h"
+#include "raf/vm/value.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
@@ -27,8 +27,8 @@ StorageValue StorageValue::make(std::shared_ptr<memory_pool::Memory> buffer) {
   return StorageValue(node);
 }
 
-MNM_REGISTER_OBJECT_REFLECT(VMClosureValueObj);
+RAF_REGISTER_OBJECT_REFLECT(VMClosureValueObj);
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

@@ -9,12 +9,12 @@
  */
 #include "./timer.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::registry;
-using namespace mnm::value;
+using namespace raf::registry;
+using namespace raf::value;
 
 tvm::runtime::Module MakeCutlassModule(PackedFunc pf) {
   ObjectPtr<CutlassModuleNode> n = tvm::runtime::make_object<CutlassModuleNode>(pf);
@@ -42,4 +42,4 @@ PackedFunc TimeEvaluator(PackedFunc pf, Device dev, int number, int repeat, int 
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -26,8 +26,8 @@ WHILTE_LIST = {
     "nn.bias_add",
 }
 
-MNM_OP_NAME = {
-    "nn.bias_add": "mnm.op.bias_add",
+RAF_OP_NAME = {
+    "nn.bias_add": "raf.op.bias_add",
 }
 
 
@@ -45,7 +45,7 @@ def collect_op():
     get_op = tvm.get_global_func("relay.op._GetOp")
 
     def is_black_listed(op_name):
-        if op_name.startswith("mnm."):
+        if op_name.startswith("raf."):
             return True
         if op_name in WHILTE_LIST:
             assert op_name not in BLACK_LIST
@@ -91,11 +91,11 @@ def main():
     ops = collect_op()
     print("OP_MAP = {")
     for op_name, attrs, pattern in ops:
-        if op_name in MNM_OP_NAME:
-            mnm_op_name = MNM_OP_NAME[op_name]
+        if op_name in RAF_OP_NAME:
+            raf_op_name = RAF_OP_NAME[op_name]
         else:
-            mnm_op_name = "mnm.op." + op_name
-        print(f'    "{mnm_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
+            raf_op_name = "raf.op." + op_name
+        print(f'    "{raf_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
     print("}")
 
 

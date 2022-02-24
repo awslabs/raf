@@ -12,11 +12,11 @@
 #include "./tvm_attrs.h"
 #include "../../schema/optimizer.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using schema::SgdArgs;
 
 std::vector<Value> SgdSchema2Args(const SgdArgs* args) {
@@ -41,9 +41,9 @@ HashKey SgdHasher(const std::vector<Type>& param_types, const Type& y_type, cons
   return key;
 }
 
-MNM_TVM(sgd, OptimizerSgd, SgdArgs, SgdSchema2Args, SgdSchemaArgNames, SgdSchema2Attrs, SgdHasher,
+RAF_TVM(sgd, OptimizerSgd, SgdArgs, SgdSchema2Args, SgdSchemaArgNames, SgdSchema2Attrs, SgdHasher,
         kInjective);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -1,7 +1,7 @@
 <!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!--- SPDX-License-Identifier: Apache-2.0  -->
 
-This article introduces how to build MNM using CMake.
+This article introduces how to build RAF using CMake.
 
 ## Step 1. Install dependencies
 
@@ -53,7 +53,7 @@ sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev           \
 
 </details>
 
-**(Optional) CUDA.** Meta currently recommend to use CUDA 11.3. 
+**(Optional) CUDA.** RAF currently recommend to use CUDA 11.3. 
 It is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-11.3.0-download-archive) with CUDA driver 465+.
 The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network). 
 Then the CUDA paths need to be specified. 
@@ -86,7 +86,7 @@ Like cuDNN, NVIDIA requires account registration to download NCCL. The detailed 
 A `.deb` file can be used for installation, specified by the CUDA version, the CPU architecture, and the OS.
 The local installer allows local installation after downloading, and the network installer is much smaller but requires network connection for installation.
 
-**(Optional) MPI** Meta uses MPI to do multi-process launch. 
+**(Optional) MPI** RAF uses MPI to do multi-process launch. 
 Any MPI implementation (e.g., OpenMPI, MPICH) is OK to serve this purpose.
 The following command is used to install MPICH.
 
@@ -98,17 +98,17 @@ sudo apt-get install mpich
 
 </details>
 
-## Step 2. Build MNM libraries
+## Step 2. Build RAF libraries
 
-Below we introduce an environment variable that indicates where MNM is.
+Below we introduce an environment variable that indicates where RAF is.
 
 <details>
 
 ```bash
 # Create the build directory
 git clone https://github.com/meta-project/meta --recursive && cd meta
-export MNM_HOME=$(pwd)
-mkdir $MNM_HOME/build && cd $MNM_HOME/build
+export RAF_HOME=$(pwd)
+mkdir $RAF_HOME/build && cd $RAF_HOME/build
 # Configuration file for CMake
 cp ../cmake/config.cmake .
 # Edit the configuration file
@@ -121,20 +121,20 @@ make -j$(nproc)
 
 </details>
 
-**Customize build.** By editing the configuration file `config.cmake`, one can easily customize the process of MNM build. Instructions are directly put inside the configuration file for convenience. For example, one may switch the cuDNN version by setting the `MNM_USE_CUDNN` or even by passing environment variables.
+**Customize build.** By editing the configuration file `config.cmake`, one can easily customize the process of RAF build. Instructions are directly put inside the configuration file for convenience. For example, one may switch the cuDNN version by setting the `RAF_USE_CUDNN` or even by passing environment variables.
 
-## Step 3. Run MNM
+## Step 3. Run RAF
 
-Here we come to the not-that-good part: to run MNM, one should properly set the environment variables.
+Here we come to the not-that-good part: to run RAF, one should properly set the environment variables.
 Again, the `export` commands can be put in `.bashrc` for auto loading (see bonus below).
 
 <details>
 
 ```bash
-export PYTHONPATH=$MNM_HOME/python/:$MNM_HOME/3rdparty/tvm/topi/python:$MNM_HOME/3rdparty/tvm/python
-export TVM_LIBRARY_PATH=$MNM_HOME/build/lib
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 # The following commands can verify if the environments are set up correctly.
-python -c "import mnm"
+python -c "import raf"
 ```
 
 </details>
@@ -153,9 +153,9 @@ vim $HOME/.bashrc
 # If using zsh
 vim $HOME/.zshrc
 # Adding the export commands to the end of those RC files
-export MNM_HOME=PATH-TO-MNM
-export PYTHONPATH=$MNM_HOME/python/:$MNM_HOME/3rdparty/tvm/topi/python:$MNM_HOME/3rdparty/tvm/python
-export TVM_LIBRARY_PATH=$MNM_HOME/build/lib
+export RAF_HOME=PATH-TO-RAF
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 ```
 
 </details>

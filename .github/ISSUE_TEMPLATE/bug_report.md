@@ -17,7 +17,7 @@ assignees: ''
 
 ### Environment
 
-Any environment details, such as: Operating System, Meta version, etc
+Any environment details, such as: Operating System, RAF version, etc
 
 ## To Reproduce
 (If you developed your own code, please provide a short script that reproduces the error. For existing examples, please provide link.)

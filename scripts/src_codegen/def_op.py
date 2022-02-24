@@ -191,7 +191,7 @@ OPS = [
     Op(name="stream_barrier", schema_name="stream_barrier"),
     # Communication ops
     # Using underscore before the op name is because these ops won't be directly used in the
-    # frontend and the wrapper ops are defined in python/mnm/distributed/op.py
+    # frontend and the wrapper ops are defined in python/raf/distributed/op.py
     Op(name="_allreduce", schema_name="allreduce"),
     Op(name="_allgather", schema_name="allgather"),
     Op(name="_reduce", schema_name="comm_reduce"),

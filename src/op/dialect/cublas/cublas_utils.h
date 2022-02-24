@@ -9,10 +9,10 @@
  */
 #pragma once
 #include <cublas_v2.h>
-#include "mnm/device.h"
-#include "mnm/enum_base.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/device.h"
+#include "raf/enum_base.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "../../../common/cuda_utils.h"
 
 #define CUBLAS_CALL(func)                                                        \
@@ -21,7 +21,7 @@
     CHECK_EQ(e, CUBLAS_STATUS_SUCCESS) << "cublas: " << cublasGetErrorString(e); \
   } while (false)
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cublas {
 
@@ -54,7 +54,7 @@ inline const char* cublasGetErrorString(cublasStatus_t status) {
 inline void CUBLASTryEnableTensorCore(cublasHandle_t hdl) {
 #if CUDA_VERSION >= 11000
   bool allow_tf32 = pass::PassContext::Current()
-                        ->GetConfig<tvm::Bool>("mnm.cublas.allow_tf32", tvm::Bool(true))
+                        ->GetConfig<tvm::Bool>("raf.cublas.allow_tf32", tvm::Bool(true))
                         .value();
   if (allow_tf32) {
     CUBLAS_CALL(cublasSetMathMode(hdl, CUBLAS_TF32_TENSOR_OP_MATH));
@@ -77,4 +77,4 @@ inline void SetStream(cudaStream_t stream) {
 
 }  // namespace cublas
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

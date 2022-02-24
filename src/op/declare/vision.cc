@@ -7,19 +7,19 @@
  * \file src/op/declare/vision.cc
  * \brief Declaration of vision-specific operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/vision.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.get_valid_counts", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.get_valid_counts", [](const CallValues& call) {
   const auto* args = call->args.as<GetValidCountsArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -37,7 +37,7 @@ MNM_OP_DECLARE("mnm.op.get_valid_counts", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.non_max_suppression", [](const CallValues& call) {
   const auto* args = call->args.as<NonMaxSuppressionArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -61,8 +61,8 @@ MNM_OP_DECLARE("mnm.op.non_max_suppression", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE(
-    "mnm.op.roi_align", ([](const CallValues& call) {
+RAF_OP_DECLARE(
+    "raf.op.roi_align", ([](const CallValues& call) {
       const auto* args = call->args.as<RoiAlignArgs>();
       CHECK(args != nullptr);
       DLTensor* data = args->data;
@@ -83,7 +83,7 @@ MNM_OP_DECLARE(
                                         /*shape=*/oshape);
     }));
 
-MNM_OP_DECLARE("mnm.op.roi_align_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.roi_align_dx", [](const CallValues& call) {
   const auto* args = call->args.as<RoiAlignDxArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -96,4 +96,4 @@ MNM_OP_DECLARE("mnm.op.roi_align_dx", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -8,16 +8,16 @@
  * \brief Typing of algorithm operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/op_utils.h"
-#include "mnm/type.h"
+#include "raf/op_utils.h"
+#include "raf/type.h"
 #include "../schema/algorithm.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 
 Type ArgsortInfer(const CallValues& value) {
@@ -28,7 +28,7 @@ Type ArgsortInfer(const CallValues& value) {
   return TensorType(data->shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.argsort", "Argsort", ArgsortInfer);
+RAF_OP_TYPE("raf.op.argsort", "Argsort", ArgsortInfer);
 
 Type SortInfer(const CallValues& value) {
   const auto* args = value->args.as<SortArgs>();
@@ -37,7 +37,7 @@ Type SortInfer(const CallValues& value) {
   return data;
 }
 
-MNM_OP_TYPE("mnm.op.sort", "Sort", SortInfer);
+RAF_OP_TYPE("raf.op.sort", "Sort", SortInfer);
 
 Type TopkInfer(const CallValues& value) {
   const auto* args = value->args.as<TopkArgs>();
@@ -70,7 +70,7 @@ Type TopkInfer(const CallValues& value) {
   return TensorType(oshape, dtype_b);
 }
 
-MNM_OP_TYPE("mnm.op.topk", "TopK", TopkInfer);
+RAF_OP_TYPE("raf.op.topk", "TopK", TopkInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

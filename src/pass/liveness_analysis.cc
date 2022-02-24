@@ -9,15 +9,15 @@
  */
 #include "liveness_analysis.h"
 #include <vector>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "./let_list.h"
 #include "./common.h"
 #include "../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
 using PackedLiveInMap = Map<Var, Array<Var>>;
@@ -434,7 +434,7 @@ PackedLiveInMap LivenessAnalysisPacked(const IRModule& mod) {
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.LivenessAnalysis").set_body_typed(LivenessAnalysisPacked);
+RAF_REGISTER_GLOBAL("raf.pass_.LivenessAnalysis").set_body_typed(LivenessAnalysisPacked);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

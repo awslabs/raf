@@ -8,10 +8,10 @@
  * \brief CPU device API
  */
 #include <thread>
-#include "mnm/device_api.h"
-#include "mnm/registry.h"
+#include "raf/device_api.h"
+#include "raf/registry.h"
 
-namespace mnm {
+namespace raf {
 namespace device_api {
 namespace cpu {
 
@@ -128,8 +128,8 @@ class CPUDeviceAPI final : public DeviceAPI {
   }
 };
 
-MNM_REGISTER_GLOBAL("mnm.device_api._make.cpu").set_body_typed(CPUDeviceAPI::make);
+RAF_REGISTER_GLOBAL("raf.device_api._make.cpu").set_body_typed(CPUDeviceAPI::make);
 
 }  // namespace cpu
 }  // namespace device_api
-}  // namespace mnm
+}  // namespace raf

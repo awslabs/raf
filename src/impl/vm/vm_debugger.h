@@ -5,7 +5,7 @@
 
 /*!
  * \file src/impl/vm/vm_debugguer.h
- * \brief The Meta virtual machine debugger.
+ * \brief The RAF virtual machine debugger.
  */
 #pragma once
 
@@ -14,9 +14,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "mnm/vm/vm.h"
+#include "raf/vm/vm.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
@@ -45,4 +45,4 @@ class VMDebugger : public VirtualMachine {
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

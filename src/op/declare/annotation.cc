@@ -7,19 +7,19 @@
  * \file src/op/declare/annotation.cc
  * \brief Declaration of annotation operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
-#include "../schema/annotation.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
+#include "../schema/ufunc.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.compiler_begin", [](const CallValues& call) {
-  const auto* args = call->args.as<CompilerArgs>();
+RAF_OP_DECLARE("raf.op.compiler_begin", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   call->out = TensorValue::Assemble(/*dev=*/x->device,
@@ -28,8 +28,8 @@ MNM_OP_DECLARE("mnm.op.compiler_begin", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
-  const auto* args = call->args.as<CompilerArgs>();
+RAF_OP_DECLARE("raf.op.compiler_end", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
   call->out = TensorValue::Assemble(/*dev=*/x->device,
@@ -40,4 +40,4 @@ MNM_OP_DECLARE("mnm.op.compiler_end", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

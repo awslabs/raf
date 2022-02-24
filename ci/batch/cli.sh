@@ -4,7 +4,7 @@
 
 # The CLI scripts for running CI tasks. This is supposed to be used by
 # automated CI so it assumes
-#   1. The script is run in the Meta folder.
+#   1. The script is run in the RAF folder.
 #   2. The repo has been wekll-configured.
 # Example usages:
 #   bash batch-cli.sh config_cmake GPU
@@ -21,23 +21,23 @@ function config_cmake() {
     mkdir -p build
     cd build
     cp ../cmake/config.cmake .
-    echo "set(MNM_USE_LLVM llvm-config-8)" >> config.cmake
-    echo "set(MNM_USE_GTEST ON)" >> config.cmake
+    echo "set(RAF_USE_LLVM llvm-config-8)" >> config.cmake
+    echo "set(RAF_USE_GTEST ON)" >> config.cmake
     echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
 
     if [[ $PLATFORM == "CPU" ]]; then
-        echo "set(MNM_USE_CUDA OFF)" >> config.cmake
-        echo "set(MNM_USE_CUDNN OFF)" >> config.cmake
-        echo "set(MNM_USE_CUBLAS OFF)" >> config.cmake
+        echo "set(RAF_USE_CUDA OFF)" >> config.cmake
+        echo "set(RAF_USE_CUDNN OFF)" >> config.cmake
+        echo "set(RAF_USE_CUBLAS OFF)" >> config.cmake
     elif [[ $PLATFORM == "GPU" ]]; then
         CUDA_ARCH=$2 # 75 (T4), 70 (V100), etc
-        echo "set(MNM_USE_CUDA ON)" >> config.cmake
-        echo "set(MNM_CUDA_ARCH $CUDA_ARCH)" >> config.cmake
-        echo "set(MNM_USE_CUDNN ON)" >> config.cmake
-        echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
-        echo "set(MNM_USE_MPI ON)" >> config.cmake
-        echo "set(MNM_USE_NCCL ON)" >> config.cmake
-        echo "set(MNM_USE_CUTLASS ON)" >> config.cmake
+        echo "set(RAF_USE_CUDA ON)" >> config.cmake
+        echo "set(RAF_CUDA_ARCH $CUDA_ARCH)" >> config.cmake
+        echo "set(RAF_USE_CUDNN ON)" >> config.cmake
+        echo "set(RAF_USE_CUBLAS ON)" >> config.cmake
+        echo "set(RAF_USE_MPI ON)" >> config.cmake
+        echo "set(RAF_USE_NCCL ON)" >> config.cmake
+        echo "set(RAF_USE_CUTLASS ON)" >> config.cmake
     else
         echo "Unrecognized platform: $PLATFORM"
         return 1

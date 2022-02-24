@@ -4,21 +4,21 @@
 # pylint: disable=protected-access
 import pytest
 import tvm
-import mnm
+import raf
 from tvm import relay
-from mnm.testing import check, randn
-from mnm._core.ir_ext import extended_var, ExtendedVar
-from mnm._core.module import IRModule
-from mnm._ffi.model import RunModel
-from mnm.model.trace import _unwrap
+from raf.testing import check, randn
+from raf._core.ir_ext import extended_var, ExtendedVar
+from raf._core.module import IRModule
+from raf._ffi.model import RunModel
+from raf.model.trace import _unwrap
 
 
 def test_ext_constant():
     def expected():
         x_const, _ = randn((1, 3, 8, 8), device="cpu")
-        x_value = mnm._core.value.TensorValue.from_numpy(x_const.numpy())
-        x = mnm._ffi.ir._make.Constant(x_value)
-        pooled = mnm.ir.op.max_pool2d(x, 3, 1, 0)
+        x_value = raf._core.value.TensorValue.from_numpy(x_const.numpy())
+        x = raf._ffi.ir._make.Constant(x_value)
+        pooled = raf.ir.op.max_pool2d(x, 3, 1, 0)
         ovar = extended_var("out")
         let = relay.Let(ovar, pooled, ovar)
         return relay.Function([], let)
@@ -27,7 +27,7 @@ def test_ext_constant():
     mod_origin = IRModule.from_expr(func_origin)
     out_origin = _unwrap(RunModel(mod_origin, []))
 
-    json = mnm.ir.save_json(func_origin)
+    json = raf.ir.save_json(func_origin)
 
     func_loaded = tvm.ir.load_json(json)
     mod_loaded = IRModule.from_expr(func_loaded)
@@ -40,9 +40,9 @@ def test_ext_constant():
 def test_tuple_ext_constant():
     def expected():
         x_const, _ = randn((1, 3, 8, 8), device="cpu")
-        x_value = mnm._core.value.TensorValue.from_numpy(x_const.numpy())
-        x = mnm._ffi.ir._make.Constant(x_value)
-        pooled = mnm.ir.op.max_pool2d(x, 3, 1, 0)
+        x_value = raf._core.value.TensorValue.from_numpy(x_const.numpy())
+        x = raf._ffi.ir._make.Constant(x_value)
+        pooled = raf.ir.op.max_pool2d(x, 3, 1, 0)
         ovar = extended_var("out")
         let = relay.Let(ovar, pooled, ovar)
         return relay.Function([], let)
@@ -52,7 +52,7 @@ def test_tuple_ext_constant():
     out_origin = _unwrap(RunModel(mod_origin, []))
     m = {"a": 1, "b": 2}
 
-    json = mnm.ir.save_json((func_origin, m))
+    json = raf.ir.save_json((func_origin, m))
 
     loaded = tvm.ir.load_json(json)
     assert len(loaded) == 2
@@ -70,10 +70,10 @@ def test_tuple_ext_constant():
 
 def test_large_grpah():
     def expected():
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
+        add_op = raf._ffi.op.GetOp("raf.op.add")
         x_const, _ = randn((1, 3, 8, 8), device="cpu")
-        x_value = mnm._core.value.TensorValue.from_numpy(x_const.numpy())
-        x = mnm._ffi.ir._make.Constant(x_value)
+        x_value = raf._core.value.TensorValue.from_numpy(x_const.numpy())
+        x = raf._ffi.ir._make.Constant(x_value)
         size = int(1e5)
         var = [extended_var("var_" + str(i)) for i in range(size)]
         body = var[-1]
@@ -82,7 +82,7 @@ def test_large_grpah():
         return relay.Function([var[0]], body)
 
     func_origin = expected()
-    json = mnm.ir.save_json(func_origin)
+    json = raf.ir.save_json(func_origin)
     tvm.ir.load_json(json)
 
 
@@ -90,19 +90,19 @@ def test_extended_var():
     # FIXME: serialization does not preserve may_share
     def expected():
         x = extended_var("x")
-        y = mnm.ir.op.relu(x)
+        y = raf.ir.op.relu(x)
         ovar = extended_var("out", may_share=x)
         let = relay.Let(ovar, y, ovar)
         return relay.Function([x], let)
 
     func_origin = expected()
 
-    json = mnm.ir.save_json(func_origin)
+    json = raf.ir.save_json(func_origin)
 
-    func_loaded = mnm.ir.load_json(json)
+    func_loaded = raf.ir.load_json(json)
 
     # ensure AsText does not segfault
-    _ = mnm.ir.AsText(func_loaded)
+    _ = raf.ir.AsText(func_loaded)
     assert tvm.ir.structural_equal(func_loaded, func_origin)
     assert ExtendedVar(func_loaded.body.var).may_share is None
 

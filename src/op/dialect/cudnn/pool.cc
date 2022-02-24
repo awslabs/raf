@@ -9,30 +9,30 @@
  */
 #include "../../schema/nn.h"
 #include "./cudnn_utils.h"
-#include "mnm/ir.h"
-#include "mnm/op_utils.h"
+#include "raf/ir.h"
+#include "raf/op_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cudnn {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 using dmlc::BeginPtr;
 
-static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
-class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
+class AvgPool2DImplementedByCUDNNPoolingForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnPoolingDescriptor_t poolingDesc;
 
   explicit AvgPool2DImplementedByCUDNNPoolingForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.avg_pool2d");
+    auto op = Op::Get("raf.op.avg_pool2d");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::PoolArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     auto xDesc_tt = SquashTensorShape(x, {});
@@ -59,11 +59,11 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.avg_pool2d"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.avg_pool2d"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::PoolArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
@@ -85,23 +85,23 @@ class AvgPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, avg_pool2d, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.avg_pool2d", AvgPool2DImplementedByCUDNNPoolingForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, avg_pool2d, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.avg_pool2d", AvgPool2DImplementedByCUDNNPoolingForward::make);
 
-class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
+class AvgPool2DDxImplementedByCUDNNPoolingBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
   cudnnTensorDescriptor_t dxDesc;
   cudnnPoolingDescriptor_t poolingDesc;
   explicit AvgPool2DDxImplementedByCUDNNPoolingBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.avg_pool2d_dx");
+    auto op = Op::Get("raf.op.avg_pool2d_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::PoolDxArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -136,11 +136,11 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.avg_pool2d_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.avg_pool2d_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::PoolDxArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -168,20 +168,20 @@ class AvgPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, avg_pool2d_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.avg_pool2d_dx", AvgPool2DDxImplementedByCUDNNPoolingBackward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, avg_pool2d_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.avg_pool2d_dx", AvgPool2DDxImplementedByCUDNNPoolingBackward::make);
 
-class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
+class MaxPool2DImplementedByCUDNNPoolingForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnPoolingDescriptor_t poolingDesc;
 
   explicit MaxPool2DImplementedByCUDNNPoolingForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.max_pool2d");
+    auto op = Op::Get("raf.op.max_pool2d");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::PoolArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     auto xDesc_tt = SquashTensorShape(x, {});
@@ -205,11 +205,11 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.max_pool2d"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.max_pool2d"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::PoolArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnPoolingForward(CUDNNThreadEntry::ThreadLocal()->handle, poolingDesc,
@@ -231,10 +231,10 @@ class MaxPool2DImplementedByCUDNNPoolingForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, max_pool2d, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.max_pool2d", MaxPool2DImplementedByCUDNNPoolingForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, max_pool2d, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.max_pool2d", MaxPool2DImplementedByCUDNNPoolingForward::make);
 
-class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
+class MaxPool2DDxImplementedByCUDNNPoolingBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -242,13 +242,13 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   cudnnPoolingDescriptor_t poolingDesc;
 
   explicit MaxPool2DDxImplementedByCUDNNPoolingBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.max_pool2d_dx");
+    auto op = Op::Get("raf.op.max_pool2d_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::PoolDxArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -280,11 +280,11 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.max_pool2d_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.max_pool2d_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::PoolDxArgs>();
+    auto args = cv->args.as<raf::op::schema::PoolDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -312,9 +312,9 @@ class MaxPool2DDxImplementedByCUDNNPoolingBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, max_pool2d_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.max_pool2d_dx", MaxPool2DDxImplementedByCUDNNPoolingBackward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, max_pool2d_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.max_pool2d_dx", MaxPool2DDxImplementedByCUDNNPoolingBackward::make);
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

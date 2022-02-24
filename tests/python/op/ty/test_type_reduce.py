@@ -4,9 +4,9 @@
 import pytest
 import torch
 import numpy as np
-import mnm
-from mnm._op import sym
-from mnm.testing import check_type, run_infer_type, randn_torch
+import raf
+from raf._op import sym
+from raf.testing import check_type, run_infer_type, randn_torch
 from tvm.relay import TensorType, FuncType
 
 
@@ -32,18 +32,18 @@ from tvm.relay import TensorType, FuncType
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce(op, shape, keepdims, dtype):
-    mnm_fwd, torch_fwd, same = op
+    raf_fwd, torch_fwd, same = op
 
     axis = int(np.random.randint(-len(shape), len(shape), ()))
 
-    class Reduce(mnm.Model):
+    class Reduce(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, axis=axis, keepdims=keepdims)
+            return raf_fwd(x, axis=axis, keepdims=keepdims)
 
     model = Reduce()
 
@@ -86,18 +86,18 @@ def test_reduce(op, shape, keepdims, dtype):
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce_with_backward(op, shape, keepdims, dtype):
-    mnm_fwd, torch_fwd = op
+    raf_fwd, torch_fwd = op
 
     axis = int(np.random.randint(-len(shape), len(shape), ()))
 
-    class Reduce(mnm.Model):
+    class Reduce(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, axis=axis, keepdims=keepdims)
+            return raf_fwd(x, axis=axis, keepdims=keepdims)
 
     model = Reduce()
 
@@ -110,7 +110,7 @@ def test_reduce_with_backward(op, shape, keepdims, dtype):
 
     # backward
     m_record.mod["main"] = m_func
-    m_mod = mnm._ffi.pass_.AutoDiff([])(m_record.mod)
+    m_mod = raf._ffi.pass_.AutoDiff([])(m_record.mod)
     run_infer_type(m_mod)
 
     t_y = torch_fwd(t_x, dim=axis, keepdim=keepdims)
@@ -141,18 +141,18 @@ def test_reduce_with_backward(op, shape, keepdims, dtype):
 @pytest.mark.parametrize("dtype", ["uint8", "bool"])
 @pytest.mark.parametrize("keepdims", [True, False])
 def test_reduce_all_any(op, shape, keepdims, dtype):
-    mnm_fwd, torch_fwd, same = op
+    raf_fwd, torch_fwd, same = op
 
     axis = int(np.random.randint(-len(shape), len(shape), ()))
 
-    class Reduce(mnm.Model):
+    class Reduce(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, axis=axis, keepdims=keepdims)
+            return raf_fwd(x, axis=axis, keepdims=keepdims)
 
     model = Reduce()
 
