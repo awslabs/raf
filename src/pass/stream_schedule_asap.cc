@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,15 +8,15 @@
  * \brief ASAP (As Soon As Possible) stream scheduler.
  */
 #include <relay/transforms/pass_utils.h>
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
 #include "./stream_schedule.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace asap_stream_schedule {
 
-using namespace mnm::analysis;
+using namespace raf::analysis;
 using stream_schedule::StreamSchedulerBase;
 using Node = DependencyGraph::Node;
 
@@ -41,7 +27,7 @@ class ASAPScheduler : public StreamSchedulerBase {
    * follows briefly:
    *
    * 1. Construct the dependency graph, pruning the atomic nodes and redundant edges. Refer
-   *    mnm::analysis::CreateDependencyGraph for the definition of atomic nodes and redundant edges.
+   *    raf::analysis::CreateDependencyGraph for the definition of atomic nodes and redundant edges.
    *
    * 2. Classify all dependency edges in the dependency graph into two categories: heavy edge and
    *    light edge. Each node can have at most one heavy edge points to it and at most one heavy
@@ -307,11 +293,11 @@ Pass ASAPStreamSchedule() {
         auto transform = asap_stream_schedule::ASAPStreamSchedule;
         return Downcast<Function>(tvm::relay::TransformF(transform, f));
       };
-  return CreateMNMFunctionPass(pass_func, 1, "ASAPStreamSchedule", {});
+  return CreateRAFFunctionPass(pass_func, 1, "ASAPStreamSchedule", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ASAPStreamSchedule").set_body_typed(ASAPStreamSchedule);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.policy", tvm::String);
+RAF_REGISTER_GLOBAL("raf.pass_.ASAPStreamSchedule").set_body_typed(ASAPStreamSchedule);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.policy", tvm::String);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

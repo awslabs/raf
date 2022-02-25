@@ -1,34 +1,20 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/impl/tensor.cc
- * \brief MNM Tensor underlying implementation
+ * \brief RAF Tensor underlying implementation
  */
 
-#include <mnm/registry.h>
-#include <mnm/tensor.h>
+#include <raf/registry.h>
+#include <raf/tensor.h>
 #include <vector>
-#include "mnm/device_api.h"
+#include "raf/device_api.h"
 #include "../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace tensor {
 
 using common::shape_utils::GetShape;
@@ -55,7 +41,7 @@ class Tensor::TensorContainer : public ir::NDArray::Container {
   }
 
   static constexpr const uint32_t _type_index = tvm::TypeIndex::kDynamic;
-  static constexpr const char* _type_key = "mnm.tensor.Tensor";
+  static constexpr const char* _type_key = "raf.tensor.Tensor";
   TVM_DECLARE_FINAL_OBJECT_INFO(TensorContainer, ir::NDArray::Container);
 };
 
@@ -67,7 +53,7 @@ class Tensor::Impl {
       // View of other tensors
       static_cast<TSuper::Container*>(ptr->manager_ctx)->DecRef();
     } else {
-      // Memory is not owned by MNM tensor, so do nothing
+      // Memory is not owned by RAF tensor, so do nothing
     }
     delete ptr;
   }
@@ -75,7 +61,7 @@ class Tensor::Impl {
   static void NumpyArrayDeleter(ir::Object* super_ptr) {
     TensorContainer* ptr = static_cast<TensorContainer*>(super_ptr);
     CHECK(ptr->manager_ctx != nullptr);
-    static const auto& deleter = registry::GetPackedFunc("mnm._numpy_array_deleter");
+    static const auto& deleter = registry::GetPackedFunc("raf._numpy_array_deleter");
     deleter(ptr->manager_ctx);
     delete ptr;
   }
@@ -239,7 +225,7 @@ DLManagedTensor* Tensor::ToDLPack() const {
 
 TVM_REGISTER_OBJECT_TYPE(Tensor::TensorContainer);
 
-MNM_REGISTER_GLOBAL("mnm.tensor.MarkNumpy").set_body_typed(Tensor::Impl::MarkNumpy);
+RAF_REGISTER_GLOBAL("raf.tensor.MarkNumpy").set_body_typed(Tensor::Impl::MarkNumpy);
 
 }  // namespace tensor
-}  // namespace mnm
+}  // namespace raf

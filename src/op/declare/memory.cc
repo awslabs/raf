@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,27 +8,27 @@
  * \brief Declaration of memory-related operators.
  */
 #include <string>
-#include "mnm/op.h"
-#include "mnm/tensor.h"
-#include "mnm/op_utils.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
+#include "raf/op_utils.h"
 #include "../schema/memory.h"
 #include "../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
-using namespace mnm::common::shape_utils;
+using namespace raf::op::schema;
+using namespace raf::value;
+using namespace raf::common::shape_utils;
 
-MNM_OP_DECLARE("mnm.op.device_copy", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.device_copy", [](const CallValues& call) {
   const auto* args = call->args.as<DeviceCopyArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
   std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
 
-  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  const auto* str2dev = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
   auto data_device = Device((tvm::Device)(*str2dev)(data->device));
   auto src_device = Device((tvm::Device)(*str2dev)(args->src_device));
   auto dst_device = Device((tvm::Device)(*str2dev)(args->dst_device));
@@ -54,7 +40,7 @@ MNM_OP_DECLARE("mnm.op.device_copy", [](const CallValues& call) {
   call->device = dst_device;
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
-MNM_OP_DECLARE("mnm.op.fuse_tensor", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.fuse_tensor", [](const CallValues& call) {
   const auto* args = call->args.as<FuseTensorArgs>();
   CHECK(args != nullptr);
   auto& tv = args->data;
@@ -76,7 +62,7 @@ MNM_OP_DECLARE("mnm.op.fuse_tensor", [](const CallValues& call) {
   }
 }).set_attr<TOpPattern>("TOpPattern", kOpaque);
 
-MNM_OP_DECLARE("mnm.op.defuse_tensor", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.defuse_tensor", [](const CallValues& call) {
   const auto* args = call->args.as<DefuseTensorArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->data;
@@ -109,4 +95,4 @@ MNM_OP_DECLARE("mnm.op.defuse_tensor", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,14 +8,14 @@
  * \brief Type system
  */
 #include "tvm/runtime/memory.h"
-#include "mnm/type.h"
+#include "raf/type.h"
 
-namespace mnm {
+namespace raf {
 namespace ir {
 
 OpType MakeOpType(const std::string& op_name, const std::string& fn_name,
                   tvm::runtime::TypedPackedFunc<tvm::relay::Type(const op::CallValues& value)> fn) {
-  auto func_name = std::string("mnm.type.type_inference.") + fn_name;
+  auto func_name = std::string("raf.type.type_inference.") + fn_name;
   TypeInferenceFn env_fn;
 
   if (tvm::runtime::Registry::Get(func_name)) {
@@ -71,7 +57,7 @@ TypeInference::TypeInference(TypeInferenceFn func) {
   data_ = std::move(n);
 }
 
-MNM_REGISTER_OBJECT_REFLECT(TypeInferenceNode);
+RAF_REGISTER_OBJECT_REFLECT(TypeInferenceNode);
 
 }  // namespace ir
-}  // namespace mnm
+}  // namespace raf

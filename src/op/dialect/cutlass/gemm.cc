@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,12 +9,12 @@
  */
 #include "./gemm.h"
 
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "tvm/relay/dataflow_pattern.h"
 #include "./cutlass_utils.h"
@@ -38,23 +24,23 @@
 #include "../../schema/nn.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using mnm::registry::PackedFunc;
-using mnm::registry::TypedPackedFunc;
+using namespace raf::ir;
+using namespace raf::value;
+using raf::registry::PackedFunc;
+using raf::registry::TypedPackedFunc;
 
 std::tuple<bool, bool> GetTranspose(const Op& op) {
   const static std::vector<Op> transpose_a_ops = {
-      Op::Get("mnm.op.cutlass.matmul_tn"), Op::Get("mnm.op.cutlass.matmul_tt"),
-      Op::Get("mnm.op.cutlass.batch_matmul_tn"), Op::Get("mnm.op.cutlass.batch_matmul_tt")};
+      Op::Get("raf.op.cutlass.matmul_tn"), Op::Get("raf.op.cutlass.matmul_tt"),
+      Op::Get("raf.op.cutlass.batch_matmul_tn"), Op::Get("raf.op.cutlass.batch_matmul_tt")};
   const static std::vector<Op> transpose_b_ops = {
-      Op::Get("mnm.op.cutlass.dense"), Op::Get("mnm.op.cutlass.matmul_nt"),
-      Op::Get("mnm.op.cutlass.matmul_tt"), Op::Get("mnm.op.cutlass.batch_matmul_nt"),
-      Op::Get("mnm.op.cutlass.batch_matmul_tt")};
+      Op::Get("raf.op.cutlass.dense"), Op::Get("raf.op.cutlass.matmul_nt"),
+      Op::Get("raf.op.cutlass.matmul_tt"), Op::Get("raf.op.cutlass.batch_matmul_nt"),
+      Op::Get("raf.op.cutlass.batch_matmul_tt")};
   bool transpose_a =
       std::find(transpose_a_ops.begin(), transpose_a_ops.end(), op) != transpose_a_ops.end();
   bool transpose_b =
@@ -64,14 +50,14 @@ std::tuple<bool, bool> GetTranspose(const Op& op) {
 
 bool IsBatch(const Op& op) {
   const static std::vector<Op> batched_ops = {
-      Op::Get("mnm.op.cutlass.batch_matmul"), Op::Get("mnm.op.cutlass.batch_matmul_nt"),
-      Op::Get("mnm.op.cutlass.batch_matmul_tn"), Op::Get("mnm.op.cutlass.batch_matmul_tt")};
+      Op::Get("raf.op.cutlass.batch_matmul"), Op::Get("raf.op.cutlass.batch_matmul_nt"),
+      Op::Get("raf.op.cutlass.batch_matmul_tn"), Op::Get("raf.op.cutlass.batch_matmul_tt")};
   return std::find(batched_ops.begin(), batched_ops.end(), op) != batched_ops.end();
 }
 
 // Generates gelu(pat).
 DFPattern GELU(DFPattern pat) {
-  auto erf = IsOp("mnm.op.erf");
+  auto erf = IsOp("raf.op.erf");
   auto inv_sqrt_2 = IsVar("");
   auto inv_2 = IsVar("");
   return Multiply()(pat, Add()(inv_2, Multiply()(erf({Multiply()(pat, inv_sqrt_2)}), inv_2)));
@@ -80,13 +66,13 @@ DFPattern GELU(DFPattern pat) {
 bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   Expr expr = Downcast<ClosureValue>(cv->callee)->func->body;
   const static std::vector<std::string> matmul_ops = {
-      "mnm.op.cutlass.dense",           "mnm.op.cutlass.matmul",
-      "mnm.op.cutlass.matmul_nt",       "mnm.op.cutlass.matmul_tn",
-      "mnm.op.cutlass.matmul_tt",       "mnm.op.cutlass.batch_matmul",
-      "mnm.op.cutlass.batch_matmul_nt", "mnm.op.cutlass.batch_matmul_tn",
-      "mnm.op.cutlass.batch_matmul_tt"};
-  const static std::vector<std::string> epilogue_ops = {"mnm.op.cutlass.relu",
-                                                        "mnm.op.cutlass.gelu"};
+      "raf.op.cutlass.dense",           "raf.op.cutlass.matmul",
+      "raf.op.cutlass.matmul_nt",       "raf.op.cutlass.matmul_tn",
+      "raf.op.cutlass.matmul_tt",       "raf.op.cutlass.batch_matmul",
+      "raf.op.cutlass.batch_matmul_nt", "raf.op.cutlass.batch_matmul_tn",
+      "raf.op.cutlass.batch_matmul_tt"};
+  const static std::vector<std::string> epilogue_ops = {"raf.op.cutlass.relu",
+                                                        "raf.op.cutlass.gelu"};
   auto matmul = IsOps(matmul_ops);
   auto epilogue = IsOps(epilogue_ops);
   auto x1 = IsVar("");
@@ -100,12 +86,12 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
   DFPattern with_epilogue = epilogue({pat});
   pat = with_epilogue || pat;
 
-  if (!MNMMatchPattern(pat, expr)) {
+  if (!RAFMatchPattern(pat, expr)) {
     LOG(INFO) << "Failed to match the pattern";
     return false;
   }
 
-  // MNMRewritePatterns serves as a visitor here: it does not rewrite, instead information
+  // RAFRewritePatterns serves as a visitor here: it does not rewrite, instead information
   // is recorded for later process.
   TypedPackedFunc<Expr(const Expr&, const Expr&, const Map<DFPattern, Array<Expr>>&)> func(
       [&](const Expr& pre, const Expr& post, const Map<DFPattern, Array<Expr>>& node_map) {
@@ -123,7 +109,7 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
         return post;
       });
   DFPatternCallback cb(pat, func.operator PackedFunc(), false);
-  MNMRewritePatterns({cb}, expr);
+  RAFRewritePatterns({cb}, expr);
   return true;
 }
 
@@ -207,16 +193,16 @@ void CutlassMatmulOpEnv::Execute(const std::vector<Value>& inputs, Value output)
 }
 
 // TODO(@hzfan): Using plevel 0 due to lack of OpEnvMaker
-MNM_REGISTER_DIALECT_OP(cutlass, matmul, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, matmul_nt, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, matmul_tn, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, matmul_tt, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, dense, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul_nt, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul_tn, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, batch_matmul_tt, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, matmul, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, matmul_nt, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, matmul_tn, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, matmul_tt, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, dense, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, batch_matmul, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, batch_matmul_nt, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, batch_matmul_tn, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, batch_matmul_tt, 0);
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

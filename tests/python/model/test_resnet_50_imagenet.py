@@ -1,28 +1,14 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=too-many-lines
 import pytest
 import torch
 import torch.nn as nn
 
-import mnm
-from mnm.model import BatchNorm, Conv2d, Linear, Sequential
-from mnm.testing import check, one_hot_torch, randn_torch, t2m_param
+import raf
+from raf.model import BatchNorm, Conv2d, Linear, Sequential
+from raf.testing import check, one_hot_torch, randn_torch, t2m_param
 
 
 class TorchBottleneck(nn.Module):  # pylint: disable=abstract-method
@@ -132,7 +118,7 @@ class TorchResNet50(nn.Module):
         return loss
 
 
-class MNMBottleneck(mnm.Model):
+class RAFBottleneck(raf.Model):
     expansion = 4
 
     # pylint: disable=attribute-defined-outside-init
@@ -152,16 +138,16 @@ class MNMBottleneck(mnm.Model):
         self.bn2 = BatchNorm(planes)
         self.conv3 = Conv2d(planes, planes * self.expansion, kernel_size=1, stride=1, bias=False)
         self.bn3 = BatchNorm(planes * self.expansion)
-        if stride != 1 or inplanes != planes * MNMBottleneck.expansion:
+        if stride != 1 or inplanes != planes * RAFBottleneck.expansion:
             self.downsample = Sequential(
                 Conv2d(
                     inplanes,
-                    planes * MNMBottleneck.expansion,
+                    planes * RAFBottleneck.expansion,
                     kernel_size=1,
                     stride=stride,
                     bias=False,
                 ),
-                BatchNorm(planes * MNMBottleneck.expansion),
+                BatchNorm(planes * RAFBottleneck.expansion),
             )
         else:
             self.downsample = None
@@ -172,20 +158,20 @@ class MNMBottleneck(mnm.Model):
         identity = x
         out = self.conv1(x)
         out = self.bn1(out)
-        out = mnm.relu(out)
+        out = raf.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
-        out = mnm.relu(out)
+        out = raf.relu(out)
         out = self.conv3(out)
         out = self.bn3(out)
         if self.downsample is not None:
             identity = self.downsample(x)
-        out = mnm.add(out, identity)
-        out = mnm.relu(out)
+        out = raf.add(out, identity)
+        out = raf.relu(out)
         return out
 
 
-class MNMResNet50(mnm.Model):  # pylint: disable=too-many-instance-attributes
+class RAFResNet50(raf.Model):  # pylint: disable=too-many-instance-attributes
 
     # pylint: disable=attribute-defined-outside-init
 
@@ -197,45 +183,45 @@ class MNMResNet50(mnm.Model):  # pylint: disable=too-many-instance-attributes
         self.layer2 = self._make_layer(128, layers[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], stride=2)
         self.layer4 = self._make_layer(512, layers[3], stride=2)
-        self.fc1 = Linear(512 * MNMBottleneck.expansion, num_classes)
+        self.fc1 = Linear(512 * RAFBottleneck.expansion, num_classes)
 
     def _make_layer(self, planes, blocks, stride):
-        layers = [MNMBottleneck(self.inplanes, planes, stride)]
-        self.inplanes = planes * MNMBottleneck.expansion
+        layers = [RAFBottleneck(self.inplanes, planes, stride)]
+        self.inplanes = planes * RAFBottleneck.expansion
         for _ in range(1, blocks):
-            layers.append(MNMBottleneck(self.inplanes, planes, stride=1))
+            layers.append(RAFBottleneck(self.inplanes, planes, stride=1))
         return Sequential(*layers)
 
     # pylint: enable=attribute-defined-outside-init
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward_infer(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
-        x = mnm.relu(x)
-        x = mnm.max_pool2d(x, kernel=3, stride=2, padding=1)
+        x = raf.relu(x)
+        x = raf.max_pool2d(x, kernel=3, stride=2, padding=1)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        x = mnm.avg_pool2d(x, kernel=7, stride=7)
-        x = mnm.batch_flatten(x)
+        x = raf.avg_pool2d(x, kernel=7, stride=7)
+        x = raf.batch_flatten(x)
         x = self.fc1(x)
         return x
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x, y_true):
         y_pred = self.forward_infer(x)
-        y_pred = mnm.log_softmax(y_pred)
-        loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
+        y_pred = raf.log_softmax(y_pred)
+        loss = raf.nll_loss(y_true=y_true, y_pred=y_pred)
         return loss
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     t_model = TorchResNet50([3, 4, 6, 3])
     t_model.to(device="cuda")
-    m_model = MNMResNet50([3, 4, 6, 3])
+    m_model = RAFResNet50([3, 4, 6, 3])
     # pylint: disable=no-member,line-too-long
     m_model.conv1.w = t2m_param(t_model.conv1.weight)
     m_model.bn1.w = t2m_param(t_model.bn1.weight)

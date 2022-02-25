@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,29 +9,29 @@
  */
 #include "../../schema/nn.h"
 #include "./cudnn_utils.h"
-#include "mnm/ir.h"
-#include "mnm/op_utils.h"
+#include "raf/ir.h"
+#include "raf/op_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cudnn {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 
-static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
-class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
+class LogSoftmaxImplementedByCUDNNSoftmaxForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnSoftmaxMode_t mode;
 
   explicit LogSoftmaxImplementedByCUDNNSoftmaxForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.log_softmax");
+    auto op = Op::Get("raf.op.log_softmax");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxArgs>();
     (void)args;
     DLTensor* x = args->x;
     (void)x;
@@ -68,11 +54,11 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.log_softmax"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.log_softmax"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_LOG, mode,
@@ -94,10 +80,10 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, log_softmax, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.log_softmax", LogSoftmaxImplementedByCUDNNSoftmaxForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, log_softmax, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.log_softmax", LogSoftmaxImplementedByCUDNNSoftmaxForward::make);
 
-class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
+class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -105,13 +91,13 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   cudnnSoftmaxMode_t mode;
 
   explicit LogSoftmaxDxImplementedByCUDNNSoftmaxBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.log_softmax_dx");
+    auto op = Op::Get("raf.op.log_softmax_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::SoftmaxDxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -139,11 +125,11 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.log_softmax_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.log_softmax_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::SoftmaxDxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -171,21 +157,21 @@ class LogSoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, log_softmax_dx, 7);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.log_softmax_dx",
+RAF_REGISTER_DIALECT_OP(cudnn, log_softmax_dx, 7);
+RAF_OP_ENV_MAKER("raf.op.cudnn.log_softmax_dx",
                  LogSoftmaxDxImplementedByCUDNNSoftmaxBackward::make);
 
-class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
+class SoftmaxImplementedByCUDNNSoftmaxForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnSoftmaxMode_t mode;
 
   explicit SoftmaxImplementedByCUDNNSoftmaxForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.softmax");
+    auto op = Op::Get("raf.op.softmax");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     int axis = (args->axis + x->ndim) % x->ndim;
@@ -205,11 +191,11 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.softmax"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.softmax"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::SoftmaxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnSoftmaxForward(CUDNNThreadEntry::ThreadLocal()->handle, CUDNN_SOFTMAX_ACCURATE,
@@ -231,10 +217,10 @@ class SoftmaxImplementedByCUDNNSoftmaxForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, softmax, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, softmax, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.softmax", SoftmaxImplementedByCUDNNSoftmaxForward::make);
 
-class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
+class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -242,13 +228,13 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   cudnnSoftmaxMode_t mode;
 
   explicit SoftmaxDxImplementedByCUDNNSoftmaxBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.softmax_dx");
+    auto op = Op::Get("raf.op.softmax_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::SoftmaxDxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -276,11 +262,11 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.softmax_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.softmax_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::SoftmaxDxArgs>();
+    auto args = cv->args.as<raf::op::schema::SoftmaxDxArgs>();
     DLTensor* x = args->x;
     DLTensor* y = args->y;
     DLTensor* dy = args->dy;
@@ -308,9 +294,9 @@ class SoftmaxDxImplementedByCUDNNSoftmaxBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, softmax_dx, 7);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.softmax_dx", SoftmaxDxImplementedByCUDNNSoftmaxBackward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, softmax_dx, 7);
+RAF_OP_ENV_MAKER("raf.op.cudnn.softmax_dx", SoftmaxDxImplementedByCUDNNSoftmaxBackward::make);
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

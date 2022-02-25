@@ -1,28 +1,14 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/ty/transform.cc
  * \brief Typing of transform operators
  */
-#include "mnm/type.h"
-#include "mnm/op_utils.h"
+#include "raf/type.h"
+#include "raf/op_utils.h"
 #include "../schema/ufunc.h"
 #include "../schema/nn.h"
 #include "../schema/likes.h"
@@ -31,11 +17,11 @@
 #include "../../common/shape_utils.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 using declare::NormalizeAxis;
 
@@ -65,7 +51,7 @@ Type ArangeInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.arange", "Arange", ArangeInfer);
+RAF_OP_TYPE("raf.op.arange", "Arange", ArangeInfer);
 
 Type AdvIndexInfer(const CallValues& value) {
   const auto* args = value->args.as<AdvIndexArgs>();
@@ -93,7 +79,7 @@ Type AdvIndexInfer(const CallValues& value) {
   return TensorType(oshape, data->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.adv_index", "AdvIndex", AdvIndexInfer);
+RAF_OP_TYPE("raf.op.adv_index", "AdvIndex", AdvIndexInfer);
 
 Type AdvIndexDxInfer(const CallValues& value) {
   const auto* args = value->args.as<AdvIndexDxArgs>();
@@ -102,7 +88,7 @@ Type AdvIndexDxInfer(const CallValues& value) {
   return TupleType({x});
 }
 
-MNM_OP_TYPE("mnm.op.adv_index_dx", "AdvIndexDx", AdvIndexDxInfer);
+RAF_OP_TYPE("raf.op.adv_index_dx", "AdvIndexDx", AdvIndexDxInfer);
 
 Type TransposeInfer(const CallValues& value) {
   const auto* args = value->args.as<TransposeArgs>();
@@ -124,7 +110,7 @@ Type TransposeInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.transpose", "Transpose", TransposeInfer);
+RAF_OP_TYPE("raf.op.transpose", "Transpose", TransposeInfer);
 
 Type TransposeDxInfer(const CallValues& value) {
   const auto* args = value->args.as<TransposeDxArgs>();
@@ -137,7 +123,7 @@ Type TransposeDxInfer(const CallValues& value) {
   return TensorType(oshape, dy->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.transpose_dx", "TransposeDx", TransposeDxInfer);
+RAF_OP_TYPE("raf.op.transpose_dx", "TransposeDx", TransposeDxInfer);
 
 Type RepeatDxInfer(const CallValues& value) {
   const auto* args = value->args.as<RepeatDxArgs>();
@@ -146,7 +132,7 @@ Type RepeatDxInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.repeat_dx", "RepeatDx", RepeatDxInfer);
+RAF_OP_TYPE("raf.op.repeat_dx", "RepeatDx", RepeatDxInfer);
 
 Type SwapAxisInfer(const CallValues& value) {
   const auto* args = value->args.as<SwapAxisArgs>();
@@ -168,7 +154,7 @@ Type SwapAxisInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.swap_axis", "SwapAxis", SwapAxisInfer);
+RAF_OP_TYPE("raf.op.swap_axis", "SwapAxis", SwapAxisInfer);
 
 Type BatchFlattenInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryArgs>();
@@ -183,7 +169,7 @@ Type BatchFlattenInfer(const CallValues& value) {
   return TensorType(Array<PrimExpr>{x->shape[0], flat}, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.batch_flatten", "BatchFlatten", BatchFlattenInfer);
+RAF_OP_TYPE("raf.op.batch_flatten", "BatchFlatten", BatchFlattenInfer);
 
 Type ReshapeInfer(const CallValues& value) {
   const auto* args = value->args.as<ReshapeArgs>();
@@ -256,7 +242,7 @@ Type ReshapeInfer(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.reshape", "Reshape", ReshapeInfer);
+RAF_OP_TYPE("raf.op.reshape", "Reshape", ReshapeInfer);
 
 Type TakeInfer(const CallValues& value) {
   const auto* args = value->args.as<TakeArgs>();
@@ -288,7 +274,7 @@ Type TakeInfer(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.take", "Take", TakeInfer);
+RAF_OP_TYPE("raf.op.take", "Take", TakeInfer);
 
 Type EmbeddingInfer(const CallValues& value) {
   const auto* args = value->args.as<EmbeddingArgs>();
@@ -307,7 +293,7 @@ Type EmbeddingInfer(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.embedding", "Embedding", EmbeddingInfer);
+RAF_OP_TYPE("raf.op.embedding", "Embedding", EmbeddingInfer);
 
 Type TakeDxInfer(const CallValues& value) {
   const auto* args = value->args.as<TakeDxArgs>();
@@ -316,7 +302,7 @@ Type TakeDxInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.take_dx", "TakeDx", TakeDxInfer);
+RAF_OP_TYPE("raf.op.take_dx", "TakeDx", TakeDxInfer);
 
 Type EmbeddingDxInfer(const CallValues& value) {
   const auto* args = value->args.as<EmbeddingDxArgs>();
@@ -329,7 +315,7 @@ Type EmbeddingDxInfer(const CallValues& value) {
   return TensorType(shape, dy->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.embedding_dx", "EmbeddingDx", EmbeddingDxInfer);
+RAF_OP_TYPE("raf.op.embedding_dx", "EmbeddingDx", EmbeddingDxInfer);
 
 Type ConcatenateInfer(const CallValues& value) {
   const auto* args = value->args.as<ConcatenateArgs>();
@@ -355,7 +341,7 @@ Type ConcatenateInfer(const CallValues& value) {
   return TensorType(shape, y0->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.concatenate", "Concatenate", ConcatenateInfer);
+RAF_OP_TYPE("raf.op.concatenate", "Concatenate", ConcatenateInfer);
 
 Type SplitInfer(const CallValues& value) {
   const auto* args = value->args.as<SplitArgs>();
@@ -402,7 +388,7 @@ Type SplitInfer(const CallValues& value) {
   return TupleType(ret);
 }
 
-MNM_OP_TYPE("mnm.op.split", "Split", SplitInfer);
+RAF_OP_TYPE("raf.op.split", "Split", SplitInfer);
 
 Type MeshGridInfer(const CallValues& value) {
   const auto* args = value->args.as<MeshGridArgs>();
@@ -425,7 +411,7 @@ Type MeshGridInfer(const CallValues& value) {
   return TupleType(ret);
 }
 
-MNM_OP_TYPE("mnm.op.mesh_grid", "MeshGrid", MeshGridInfer);
+RAF_OP_TYPE("raf.op.mesh_grid", "MeshGrid", MeshGridInfer);
 
 Type ClipInfer(const CallValues& value) {
   const auto* args = value->args.as<ClipArgs>();
@@ -434,7 +420,7 @@ Type ClipInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.clip", "Clip", ClipInfer);
+RAF_OP_TYPE("raf.op.clip", "Clip", ClipInfer);
 
 Type ClipDxInfer(const CallValues& value) {
   const auto* args = value->args.as<ClipDxArgs>();
@@ -442,7 +428,7 @@ Type ClipDxInfer(const CallValues& value) {
   TensorType x = Downcast<TensorType>(GetType(args->x));
   return x;
 }
-MNM_OP_TYPE("mnm.op.clip_dx", "ClipDx", ClipDxInfer);
+RAF_OP_TYPE("raf.op.clip_dx", "ClipDx", ClipDxInfer);
 
 Type ScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ScatterArgs>();
@@ -451,7 +437,7 @@ Type ScatterInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.scatter", "Scatter", ScatterInfer);
+RAF_OP_TYPE("raf.op.scatter", "Scatter", ScatterInfer);
 
 Type ScatterDxInfer(const CallValues& value) {
   const auto* args = value->args.as<ScatterDxArgs>();
@@ -460,7 +446,7 @@ Type ScatterDxInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.scatter_dx", "ScatterDx", ScatterDxInfer);
+RAF_OP_TYPE("raf.op.scatter_dx", "ScatterDx", ScatterDxInfer);
 
 Type CastInfer(const CallValues& value) {
   const auto* args = value->args.as<CastArgs>();
@@ -470,7 +456,7 @@ Type CastInfer(const CallValues& value) {
   return TensorType(data->shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.cast", "Cast", CastInfer);
+RAF_OP_TYPE("raf.op.cast", "Cast", CastInfer);
 
 Type CastLikeInfer(const CallValues& value) {
   const auto* args = value->args.as<CastLikeArgs>();
@@ -479,7 +465,7 @@ Type CastLikeInfer(const CallValues& value) {
   return dtype_like;
 }
 
-MNM_OP_TYPE("mnm.op.cast_like", "CastLike", CastLikeInfer);
+RAF_OP_TYPE("raf.op.cast_like", "CastLike", CastLikeInfer);
 
 Type ExpandDimsInfer(const CallValues& value) {
   const auto* args = value->args.as<ExpandDimsArgs>();
@@ -504,7 +490,7 @@ Type ExpandDimsInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.expand_dims", "ExpandDims", ExpandDimsInfer);
+RAF_OP_TYPE("raf.op.expand_dims", "ExpandDims", ExpandDimsInfer);
 
 Type SequenceMaskInfer(const CallValues& value) {
   const auto* args = value->args.as<SequenceMaskArgs>();
@@ -517,7 +503,7 @@ Type SequenceMaskInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.sequence_mask", "SequenceMask", SequenceMaskInfer);
+RAF_OP_TYPE("raf.op.sequence_mask", "SequenceMask", SequenceMaskInfer);
 
 Type ReverseInfer(const CallValues& value) {
   const auto* args = value->args.as<ReverseArgs>();
@@ -530,7 +516,7 @@ Type ReverseInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.reverse", "Reverse", ReverseInfer);
+RAF_OP_TYPE("raf.op.reverse", "Reverse", ReverseInfer);
 
 Type ReverseSequenceInfer(const CallValues& value) {
   const auto* args = value->args.as<ReverseSequenceArgs>();
@@ -544,7 +530,7 @@ Type ReverseSequenceInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.reverse_sequence", "ReverseSequence", ReverseSequenceInfer);
+RAF_OP_TYPE("raf.op.reverse_sequence", "ReverseSequence", ReverseSequenceInfer);
 
 Type BroadcastToInfer(const CallValues& value) {
   const auto* args = value->args.as<BroadcastToArgs>();
@@ -558,7 +544,7 @@ Type BroadcastToInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.broadcast_to", "BroadcastTo", BroadcastToInfer);
+RAF_OP_TYPE("raf.op.broadcast_to", "BroadcastTo", BroadcastToInfer);
 
 Type BroadcastToLikeInfer(const CallValues& value) {
   const auto* args = value->args.as<BroadcastToLikeArgs>();
@@ -567,7 +553,7 @@ Type BroadcastToLikeInfer(const CallValues& value) {
   return broadcast_type;
 }
 
-MNM_OP_TYPE("mnm.op.broadcast_to_like", "BroadcastToLike", BroadcastToLikeInfer);
+RAF_OP_TYPE("raf.op.broadcast_to_like", "BroadcastToLike", BroadcastToLikeInfer);
 
 Type RepeatInfer(const CallValues& value) {
   const auto* args = value->args.as<RepeatArgs>();
@@ -583,7 +569,7 @@ Type RepeatInfer(const CallValues& value) {
   return TensorType(shape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.repeat", "Repeat", RepeatInfer);
+RAF_OP_TYPE("raf.op.repeat", "Repeat", RepeatInfer);
 
 Type StackInfer(const CallValues& value) {
   const auto* args = value->args.as<StackArgs>();
@@ -617,7 +603,7 @@ Type StackInfer(const CallValues& value) {
   return TensorType(shape, y0->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.stack", "Stack", StackInfer);
+RAF_OP_TYPE("raf.op.stack", "Stack", StackInfer);
 
 Type GatherInfer(const CallValues& value) {
   const auto* args = value->args.as<GatherArgs>();
@@ -635,7 +621,7 @@ Type GatherInfer(const CallValues& value) {
   return TensorType(oshape, data->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.gather", "Gather", GatherInfer);
+RAF_OP_TYPE("raf.op.gather", "Gather", GatherInfer);
 
 Type GatherDxInfer(const CallValues& value) {
   const auto* args = value->args.as<GatherDxArgs>();
@@ -644,7 +630,7 @@ Type GatherDxInfer(const CallValues& value) {
   return data;
 }
 
-MNM_OP_TYPE("mnm.op.gather_dx", "GatherDx", GatherDxInfer);
+RAF_OP_TYPE("raf.op.gather_dx", "GatherDx", GatherDxInfer);
 
 Type GatherNdInfer(const CallValues& value) {
   const auto* args = value->args.as<GatherNdArgs>();
@@ -668,7 +654,7 @@ Type GatherNdInfer(const CallValues& value) {
   return TensorType(oshape, data->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.gather_nd", "GatherNd", GatherNdInfer);
+RAF_OP_TYPE("raf.op.gather_nd", "GatherNd", GatherNdInfer);
 
 Type GatherNdDxInfer(const CallValues& value) {
   const auto* args = value->args.as<GatherNdDxArgs>();
@@ -677,7 +663,7 @@ Type GatherNdDxInfer(const CallValues& value) {
   return data;
 }
 
-MNM_OP_TYPE("mnm.op.gather_nd_dx", "GatherNdDx", GatherNdDxInfer);
+RAF_OP_TYPE("raf.op.gather_nd_dx", "GatherNdDx", GatherNdDxInfer);
 
 Type StridedSliceInfer(const CallValues& value) {
   const auto* args = value->args.as<StridedSliceArgs>();
@@ -803,8 +789,8 @@ Type StridedSliceDxInfer(const CallValues& value) {
   return TensorType(oshape, dy->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.strided_slice", "StridedSlice", StridedSliceInfer);
-MNM_OP_TYPE("mnm.op.strided_slice_dx", "StridedSliceDx", StridedSliceDxInfer);
+RAF_OP_TYPE("raf.op.strided_slice", "StridedSlice", StridedSliceInfer);
+RAF_OP_TYPE("raf.op.strided_slice_dx", "StridedSliceDx", StridedSliceDxInfer);
 
 Type SqueezeInfer(const CallValues& value) {
   const auto* args = value->args.as<SqueezeArgs>();
@@ -840,7 +826,7 @@ Type SqueezeInfer(const CallValues& value) {
   return TensorType(oshape, xtype->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.squeeze", "Squeeze", SqueezeInfer);
+RAF_OP_TYPE("raf.op.squeeze", "Squeeze", SqueezeInfer);
 
 Type FullInfer(const CallValues& value) {
   const auto* args = value->args.as<FullArgs>();
@@ -849,7 +835,7 @@ Type FullInfer(const CallValues& value) {
   return TensorType(shape, DataType(ir::String2DLDataType(args->dtype)));
 }
 
-MNM_OP_TYPE("mnm.op.full", "Full", FullInfer);
+RAF_OP_TYPE("raf.op.full", "Full", FullInfer);
 
 Type FullLikeInfer(const CallValues& value) {
   const auto* args = value->args.as<FullLikeArgs>();
@@ -857,7 +843,7 @@ Type FullLikeInfer(const CallValues& value) {
   return GetType(args->data);
 }
 
-MNM_OP_TYPE("mnm.op.full_like", "FullLike", FullLikeInfer);
+RAF_OP_TYPE("raf.op.full_like", "FullLike", FullLikeInfer);
 
 Type WhereInfer(const CallValues& value) {
   const auto* args = value->args.as<WhereArgs>();
@@ -872,7 +858,7 @@ Type WhereInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.where", "Where", WhereInfer);
+RAF_OP_TYPE("raf.op.where", "Where", WhereInfer);
 
 Type Resize2DInfer(const CallValues& value) {
   const auto* args = value->args.as<Resize2DArgs>();
@@ -903,7 +889,7 @@ Type Resize2DInfer(const CallValues& value) {
   return TensorType(shape, out_dtype);
 }
 
-MNM_OP_TYPE("mnm.op.resize2d", "Resize2D", Resize2DInfer);
+RAF_OP_TYPE("raf.op.resize2d", "Resize2D", Resize2DInfer);
 
 Type Resize2DDxInfer(const CallValues& value) {
   const auto* args = value->args.as<Resize2DDxArgs>();
@@ -913,7 +899,7 @@ Type Resize2DDxInfer(const CallValues& value) {
   return x;
 }
 
-MNM_OP_TYPE("mnm.op.resize2d_dx", "Resize2DDx", Resize2DDxInfer);
+RAF_OP_TYPE("raf.op.resize2d_dx", "Resize2DDx", Resize2DDxInfer);
 
 Type ArgwhereInfer(const CallValues& value) {
   const auto* args = value->args.as<ArgwhereArgs>();
@@ -926,7 +912,7 @@ Type ArgwhereInfer(const CallValues& value) {
   return TensorType(shape, DataType::Int(32));
 }
 
-MNM_OP_TYPE("mnm.op.argwhere", "Argwhere", ArgwhereInfer);
+RAF_OP_TYPE("raf.op.argwhere", "Argwhere", ArgwhereInfer);
 
 Type UpperBoundArgwhereInfer(const CallValues& value) {
   const auto* args = value->args.as<ArgwhereArgs>();
@@ -943,7 +929,7 @@ Type UpperBoundArgwhereInfer(const CallValues& value) {
   return TupleType({data_type, shape_type});
 }
 
-MNM_OP_TYPE("mnm.op.upper_bound.argwhere", "UpperBoundArgwhere", UpperBoundArgwhereInfer);
+RAF_OP_TYPE("raf.op.upper_bound.argwhere", "UpperBoundArgwhere", UpperBoundArgwhereInfer);
 
 Type CumsumInfer(const CallValues& value) {
   const auto* args = value->args.as<CumsumArgs>();
@@ -951,7 +937,7 @@ Type CumsumInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.cumsum", "Cumsum", CumsumInfer);
+RAF_OP_TYPE("raf.op.cumsum", "Cumsum", CumsumInfer);
 
 Type SizeInfer(const CallValues& value) {
   const auto* args = value->args.as<SizeArgs>();
@@ -968,7 +954,7 @@ Type SizeInfer(const CallValues& value) {
   return TupleType(out_types);
 }
 
-MNM_OP_TYPE("mnm.op.size", "Size", SizeInfer);
+RAF_OP_TYPE("raf.op.size", "Size", SizeInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

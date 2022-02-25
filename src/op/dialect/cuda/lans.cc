@@ -1,48 +1,34 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/dialect/cuda/lans.cc
  * \brief LANS cuda backend
  */
-#include "mnm/op.h"
-#include "mnm/device_api.h"
+#include "raf/op.h"
+#include "raf/device_api.h"
 #include "../../schema/optimizer.h"
 //#include "./kernels/multi_tensor_apply.cuh"
 #include "./kernels/kernel_util.cuh"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cuda {
 
-using namespace mnm::value;
+using namespace raf::value;
 using device_api::DeviceAPI;
 #define CHUNK_SIZE 65536
 #define FLOAT_BYTES 4
 #define HALF_BYTES 2
 
-class LansImpl : public mnm::op::OpEnv {
+class LansImpl : public raf::op::OpEnv {
  public:
   explicit LansImpl(const CallValues& cv) {
     static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    static auto lans_op = ir::Op::Get("mnm.op.lans");
+        ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    static auto lans_op = ir::Op::Get("raf.op.lans");
     auto args = cv->args.as<op::schema::LansArgs>();
     this->arg_indices = {
         fschema_index[lans_op]("tensor_list"),
@@ -162,7 +148,7 @@ class LansImpl : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cuda.lans"));
+    return TruncateName(GetUniqueName("raf.op.cuda.lans"));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -190,9 +176,9 @@ class LansImpl : public mnm::op::OpEnv {
   void* q_tensor_buf_;
 };
 
-MNM_REGISTER_DIALECT_OP(cuda, lans, 20);
-MNM_OP_ENV_MAKER("mnm.op.cuda.lans", LansImpl::make);
+RAF_REGISTER_DIALECT_OP(cuda, lans, 20);
+RAF_OP_ENV_MAKER("raf.op.cuda.lans", LansImpl::make);
 
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

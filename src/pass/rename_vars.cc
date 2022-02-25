@@ -1,35 +1,21 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file extract_binding.cc
  * \brief Extracting a relay body from frontend defined binding
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/binding.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/binding.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace rename_vars {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 struct RenameVarsMutator : public ExprMutator {
  public:
@@ -37,7 +23,7 @@ struct RenameVarsMutator : public ExprMutator {
     for (const auto& iter : named_vars) {
       const auto* var = iter.second.as<ExtendedVarNode>();
       var_map_.Set(iter.second,
-                   mnm::ir::MakeVar(iter.first, iter.second->type_annotation, var->may_share));
+                   raf::ir::MakeVar(iter.first, iter.second->type_annotation, var->may_share));
     }
   }
 
@@ -52,7 +38,7 @@ struct RenameVarsMutator : public ExprMutator {
       const auto* vn = var.as<ExtendedVarNode>();
       Var may_share = vn->may_share;
       Var new_var =
-          mnm::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation,
+          raf::ir::MakeVar("a" + std::to_string(++num_bound_var_), var->type_annotation,
                            may_share.defined() ? Downcast<Var>(var_map_.at(may_share)) : may_share);
       var_map_.Set(var, new_var);
       this->Mutate(node->value);
@@ -84,7 +70,7 @@ Expr RenameVars(Expr expr, Map<String, Var> named_vars) {
   return RenameVarsMutator(named_vars).Mutate(expr);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.RenameVars").set_body_typed(RenameVars);
+RAF_REGISTER_GLOBAL("raf.pass_.RenameVars").set_body_typed(RenameVars);
 }  // namespace rename_vars
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

@@ -1,25 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/impl/vm/vm_debugger.cc
- * \brief The implementation for Meta virtual machine debugger.
+ * \brief The implementation for RAF virtual machine debugger.
  */
 #include <memory>
 #include <numeric>
@@ -28,11 +14,11 @@
 #include <vector>
 
 #include "tvm/relay/transform.h"
-#include "mnm/device_api.h"
-#include "mnm/memory_pool.h"
+#include "raf/device_api.h"
+#include "raf/memory_pool.h"
 #include "./vm_debugger.h"
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace vm {
 
@@ -138,7 +124,7 @@ tvm::runtime::Module CreateVMDebugger(const Executable* exec) {
   return tvm::runtime::Module(vm);
 }
 
-MNM_REGISTER_GLOBAL("mnm.vm.VMDebugger").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
+RAF_REGISTER_GLOBAL("raf.vm.VMDebugger").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec) << "The virtual machine executable has not been defined yet.";
@@ -147,4 +133,4 @@ MNM_REGISTER_GLOBAL("mnm.vm.VMDebugger").set_body([](tvm::TVMArgs args, tvm::TVM
 
 }  // namespace vm
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

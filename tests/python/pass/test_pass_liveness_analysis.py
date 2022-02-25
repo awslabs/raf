@@ -1,28 +1,14 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=invalid-name, no-self-use, too-many-locals, unused-variable, protected-access
 # pylint: disable=too-many-arguments
 import pytest
-import mnm
-from mnm._lib import tvm, relay
-from mnm.ir import ScopeBuilder
-from mnm._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc
-from mnm.testing import randn
+import raf
+from raf._lib import tvm, relay
+from raf.ir import ScopeBuilder
+from raf._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc
+from raf.testing import randn
 
 
 def verify_live_in_set(mod, expected):
@@ -44,7 +30,7 @@ def verify_live_in_set(mod, expected):
                     missed[key].append(var)
 
     if missed or not expected:
-        print("IR:\n%s" % mnm.ir.AsText(mod))
+        print("IR:\n%s" % raf.ir.AsText(mod))
         print("Live in sets:")
         for key, var_list in ret.items():
             print("%s: %s" % (key, ",".join(var_list)))
@@ -59,17 +45,17 @@ def verify_live_in_set(mod, expected):
 
 
 def test_basic():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, param_0, param_1, param_2, param_3):
-            t_0 = mnm.add(param_0, param_0)  # a1
-            t_1 = mnm.add(t_0, param_1)  # a2
-            t_2 = mnm.add(t_1, param_2)  # a3
-            t_3 = mnm.add(t_2, t_0)  # a4
-            t_4 = mnm.add(t_3, param_3)  # a5
+            t_0 = raf.add(param_0, param_0)  # a1
+            t_1 = raf.add(t_0, param_1)  # a2
+            t_2 = raf.add(t_1, param_2)  # a3
+            t_3 = raf.add(t_2, t_0)  # a4
+            t_4 = raf.add(t_3, param_3)  # a5
             return t_4  # n_1
 
     device = "cpu"
@@ -97,19 +83,19 @@ def test_basic():
 
 
 def test_multi_outs():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, param_0, param_1, param_2, param_3, param_4):
-            t_0 = mnm.relu(param_0)  # a1
-            res = mnm.batch_norm_train(t_0, param_3, param_4, param_1, param_2, 0.1, 1e-5)  # a2
+            t_0 = raf.relu(param_0)  # a1
+            res = raf.batch_norm_train(t_0, param_3, param_4, param_1, param_2, 0.1, 1e-5)  # a2
             t_1 = res[0]  # a3
             t_2 = res[1]
             t_3 = res[2]
-            t_4 = mnm.relu(t_1)  # a4
-            t_5 = mnm.relu(t_4)  # a5
+            t_4 = raf.relu(t_1)  # a4
+            t_5 = raf.relu(t_4)  # a5
             return t_5  # n_1
 
     model = Model()
@@ -140,15 +126,15 @@ def test_multi_outs():
 
 
 def test_tuple_input():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, tup):
             x = tup[0]  # a1
             y = tup[1]  # a2
-            t_0 = mnm.add(x, y)  # a3
+            t_0 = raf.add(x, y)  # a3
             return t_0  # n_1
 
     model = Model()
@@ -173,15 +159,15 @@ def test_tuple_input():
 
 
 def test_unused_tuple():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, tup):
             x = tup[0]  # a1
-            t_0 = mnm.add(x, x)  # a2
-            t_1 = mnm.concatenate(tup)  # a3
+            t_0 = raf.add(x, x)  # a2
+            t_1 = raf.concatenate(tup)  # a3
             ret = (t_0, t_1)  # a4
             return ret  # n_1
 
@@ -210,10 +196,10 @@ def test_unused_tuple():
 
 def test_direct_assign():
     sb = ScopeBuilder()
-    p0 = mnm.ir.var("p0", shape=(10, 10))
-    a_1 = sb.let("a1", mnm.ir.op.relu(p0))
+    p0 = raf.ir.var("p0", shape=(10, 10))
+    a_1 = sb.let("a1", raf.ir.op.relu(p0))
     a_2 = sb.let("a2", a_1)
-    a_3 = sb.let("a3", mnm.ir.op.relu(a_2))
+    a_3 = sb.let("a3", raf.ir.op.relu(a_2))
     sb.ret(a_3)
     mod = tvm.IRModule.from_expr(relay.Function([p0], sb.get()))
 
@@ -230,15 +216,15 @@ def test_direct_assign():
 def test_reshape():
     shape = (10, 10)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            t_0 = mnm.relu(x)
-            t_1 = mnm.reshape(t_0, (shape[0] * shape[1],))
-            t_2 = mnm.relu(t_1)
+            t_0 = raf.relu(x)
+            t_1 = raf.reshape(t_0, (shape[0] * shape[1],))
+            t_2 = raf.relu(t_1)
             return t_2
 
     model = Model()
@@ -262,8 +248,8 @@ def test_reshape():
 
 def test_manifest_alloc_compatible():
     def test_func():
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        null = mnm.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        null = raf.ir.const(None)
 
         x = relay.var("x", shape=(5, 5))
         y = relay.var("y", shape=(5, 5))
@@ -277,23 +263,23 @@ def test_manifest_alloc_compatible():
         a7 = relay.var("a7")
 
         let7 = relay.Let(a7, a1, a7)
-        let6 = relay.Let(a6, mnm.ir.op.vm_invoke_op(a2, a4, a5), let7)
+        let6 = relay.Let(a6, raf.ir.op.vm_invoke_op(a2, a4, a5), let7)
         let5 = relay.Let(a5, relay.Tuple((a1,)), let6)
         # Test both binded and non-binded constants
         let4 = relay.Let(a4, relay.Tuple((x, y, a3, null)), let5)
         let3 = relay.Let(a3, null, let4)
         let2 = relay.Let(a2, add_op, let3)
-        let1 = relay.Let(a1, mnm.ir.op.vm_alloc_tensor(a0, [5, 5], "float32", [5, 5]), let2)
-        let0 = relay.Let(a0, mnm.ir.op.vm_alloc_storage(100, 64, 1, 0), let1)
+        let1 = relay.Let(a1, raf.ir.op.vm_alloc_tensor(a0, [5, 5], "float32", [5, 5]), let2)
+        let0 = relay.Let(a0, raf.ir.op.vm_alloc_storage(100, 64, 1, 0), let1)
         # pylint: disable=line-too-long
         # fn (%x: Tensor[(5, 5), float32], %y: Tensor[(5, 5), float32]) {
-        #   let %a0 = mnm.op.vm.alloc_storage(int64(100), int64(64), int64(1), int64(0), str"float32");
-        #   let %a1 = mnm.op.vm.alloc_tensor(%a0, TupleValue([int64(5), int64(5)]), str"float32", TupleValue([int64(5), int64(5)]));
-        #   let %a2 = mnm.op.add;
+        #   let %a0 = raf.op.vm.alloc_storage(int64(100), int64(64), int64(1), int64(0), str"float32");
+        #   let %a1 = raf.op.vm.alloc_tensor(%a0, TupleValue([int64(5), int64(5)]), str"float32", TupleValue([int64(5), int64(5)]));
+        #   let %a2 = raf.op.add;
         #   let %a3 = nullptr;
         #   let %a4 = (%x, %y, %a3, nullptr);
         #   let %a5 = (%a1,);
-        #   let %a6 = mnm.op.vm.invoke_op(%a2, %a4, %a5);
+        #   let %a6 = raf.op.vm.invoke_op(%a2, %a4, %a5);
         #   let %a7 = %a1;
         #   %a7
         # }
@@ -320,15 +306,15 @@ def test_manifest_alloc_compatible():
 
 
 def test_after_manifest_alloc():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, param_0, param_1, param_2):
-            t_0 = mnm.add(param_0, param_0)  # a1
-            t_1 = mnm.add(t_0, param_1)  # a2
-            t_2 = mnm.add(t_1, param_2)  # a3
+            t_0 = raf.add(param_0, param_0)  # a1
+            t_1 = raf.add(t_0, param_1)  # a2
+            t_2 = raf.add(t_1, param_2)  # a3
             return t_2  # n_1
 
     device = "cpu"
@@ -349,30 +335,30 @@ def test_after_manifest_alloc():
     #           %param_2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
     #   let %x_0 = nullptr /* ty=() */;
     #   let %x_1 = nullptr /* ty=() */;
-    #   let %x_2 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_3 = mnm.op.vm.alloc_tensor(%x_2, [5, 5], str"float32", [5, 5]);
-    #   let %x_4 = mnm.op.add;
+    #   let %x_2 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_3 = raf.op.vm.alloc_tensor(%x_2, [5, 5], str"float32", [5, 5]);
+    #   let %x_4 = raf.op.add;
     #   let %x_5 = (%param_0, %param_0, %x_0, %x_1);
     #   let %x_6 = (%x_3,);
-    #   let %x_7 = mnm.op.vm.invoke_op(%x_4, %x_5, %x_6);
+    #   let %x_7 = raf.op.vm.invoke_op(%x_4, %x_5, %x_6);
     #   let %a1 = %x_3;
     #   let %x_8 = nullptr /* ty=() */;
     #   let %x_9 = nullptr /* ty=() */;
-    #   let %x_10 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_11 = mnm.op.vm.alloc_tensor(%x_10, [5, 5], str"float32", [5, 5]);
-    #   let %x_12 = mnm.op.add;
+    #   let %x_10 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_11 = raf.op.vm.alloc_tensor(%x_10, [5, 5], str"float32", [5, 5]);
+    #   let %x_12 = raf.op.add;
     #   let %x_13 = (%a1, %param_1, %x_8, %x_9);
     #   let %x_14 = (%x_11,);
-    #   let %x_15 = mnm.op.vm.invoke_op(%x_12, %x_13, %x_14);
+    #   let %x_15 = raf.op.vm.invoke_op(%x_12, %x_13, %x_14);
     #   let %a2 = %x_11;
     #   let %x_16 = nullptr /* ty=() */;
     #   let %x_17 = nullptr /* ty=() */;
-    #   let %x_18 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_19 = mnm.op.vm.alloc_tensor(%x_18, [5, 5], str"float32", [5, 5]);
-    #   let %x_20 = mnm.op.add;
+    #   let %x_18 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_19 = raf.op.vm.alloc_tensor(%x_18, [5, 5], str"float32", [5, 5]);
+    #   let %x_20 = raf.op.add;
     #   let %x_21 = (%a2, %param_2, %x_16, %x_17);
     #   let %x_22 = (%x_19,);
-    #   let %x_23 = mnm.op.vm.invoke_op(%x_20, %x_21, %x_22);
+    #   let %x_23 = raf.op.vm.invoke_op(%x_20, %x_21, %x_22);
     #   let %a3 = %x_19;
     #   %a3
     # }
@@ -406,17 +392,17 @@ def test_after_manifest_alloc():
     verify_live_in_set(mod, expected)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_fuse_closure():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, p0, p1, p2):
-            t_0 = mnm.matmul(p0, p1)
-            t_1 = mnm.multiply(t_0, p2)
-            t_2 = mnm.relu(t_1)
+            t_0 = raf.matmul(p0, p1)
+            t_1 = raf.multiply(t_0, p2)
+            t_2 = raf.relu(t_1)
             return t_2
 
     model = Model()
@@ -430,21 +416,21 @@ def test_fuse_closure():
     args = [m_p0, m_p1, m_p2]
 
     mod = model._internal(*args).mod
-    with mnm.device("cuda"):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.FuseDialect()(mod)
-        mod = mnm._ffi.pass_.FuseTVM()(mod)
-        mod = mnm._ffi.pass_.ToANormalForm()(mod)
-        mod = mnm._ffi.pass_.InlinePrimitives()(mod)
+    with raf.device("cuda"):
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseDialect()(mod)
+        mod = raf._ffi.pass_.FuseTVM()(mod)
+        mod = raf._ffi.pass_.ToANormalForm()(mod)
+        mod = raf._ffi.pass_.InlinePrimitives()(mod)
     # fn (%p0: Tensor[(5, 5), float32],
     #     %p1: Tensor[(5, 5), float32],
     #     %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x1 = mnm.op.cublas.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x1 = raf.op.cublas.matmul(%p0, %p1) /* ty=Tensor[(5, 5), float32] */;
     #   %1 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32],
     #            Primitive=1, Dialect="tvm") -> Tensor[(5, 5), float32] {
-    #     %0 = mnm.op.tvm.multiply(%p01, %p11);
-    #     mnm.op.tvm.relu(%0)
+    #     %0 = raf.op.tvm.multiply(%p01, %p11);
+    #     raf.op.tvm.relu(%0)
     #   };
     #   let %x3 = %1(%x1, %p2);
     #   %x3
@@ -462,24 +448,24 @@ def test_fuse_closure():
     # def @main(%p0: Tensor[(5, 5), float32],
     #           %p1: Tensor[(5, 5), float32],
     #           %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x_0 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_1 = mnm.op.vm.alloc_tensor(%x_0, [5, 5], str"float32",[5, 5]);
-    #   let %x_2 = mnm.op.cublas.matmul;
+    #   let %x_0 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_1 = raf.op.vm.alloc_tensor(%x_0, [5, 5], str"float32",[5, 5]);
+    #   let %x_2 = raf.op.cublas.matmul;
     #   let %x_3 = (%p0, %p1);
     #   let %x_4 = (%x_1,);
-    #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
+    #   let %x_5 = raf.op.vm.invoke_op(%x_2, %x_3, %x_4);
     #   let %x1 = %x_1;
-    #   let %x_6 = mnm.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_7 = mnm.op.vm.alloc_tensor(%x_6, [5, 5], str"float32",[5, 5]);
+    #   let %x_6 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
+    #   let %x_7 = raf.op.vm.alloc_tensor(%x_6, [5, 5], str"float32",[5, 5]);
     #   let %x_8 = fn (%p01: Tensor[(5, 5), float32],
     #                  %p11: Tensor[(5, 5), float32], Primitive=1, Dialect="tvm")
     #              -> Tensor[(5, 5), float32] {
-    #     %0 = mnm.op.tvm.add(%p01, %p11, nullptr /* ty=() */, nullptr /* ty=() */);
-    #     mnm.op.tvm.relu(%0)
+    #     %0 = raf.op.tvm.add(%p01, %p11, nullptr /* ty=() */, nullptr /* ty=() */);
+    #     raf.op.tvm.relu(%0)
     #   };
     #   let %x_9 = (%x1, %p2);
     #   let %x_10 = (%x_7,);
-    #   let %x_11 = mnm.op.vm.invoke_op(%x_8, %x_9, %x_10);
+    #   let %x_11 = raf.op.vm.invoke_op(%x_8, %x_9, %x_10);
     #   let %x3 = %x_7;
     #   %x3
     # }

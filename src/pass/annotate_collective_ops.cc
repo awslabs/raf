@@ -1,47 +1,33 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file annotate_collective_ops.cc
  * \brief Add memory copy ops to pipeline memory copies in multi-tensor collective ops.
  */
-#include "mnm/device.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/dist_context.h"
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
+#include "raf/device.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/dist_context.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
 #include "./common.h"
-#include "mnm/stream_pool.h"
+#include "raf/stream_pool.h"
 #include "memory_op_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace annotate_collective_ops {
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
-using namespace mnm::op::schema;
-using namespace mnm::analysis;
-using namespace mnm::pass::memory_op_utils;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
+using namespace raf::op::schema;
+using namespace raf::analysis;
+using namespace raf::pass::memory_op_utils;
 
 template <typename T>
 using ExprMap = std::unordered_map<Expr, T, ObjectPtrHash, ObjectPtrEqual>;
@@ -132,13 +118,13 @@ class CollectiveOpAnnotator : ExprVisitor {
         Var orig_value_var = GetRef<Var>(orig_value.as<CallNode>()->args[0].as<VarNode>());
         std::string fused_name_hint = "fused_";
         fused_name_hint += std::string(orig_value_var->name_hint());
-        Var fused_orig_value_var = mnm::ir::MakeVar(fused_name_hint, {});
+        Var fused_orig_value_var = raf::ir::MakeVar(fused_name_hint, {});
         Expr fuse_tensor_value = CreateFuseTensorOp(orig_value_var);
         ell_->Push(fused_orig_value_var, fuse_tensor_value);
 
         std::string fused_tuple_name_hint = "fused_tuple_";
         fused_tuple_name_hint += std::string(orig_value_var->name_hint());
-        Var fused_tuple_orig_value_var = mnm::ir::MakeVar(fused_tuple_name_hint, {});
+        Var fused_tuple_orig_value_var = raf::ir::MakeVar(fused_tuple_name_hint, {});
         ell_->Push(fused_tuple_orig_value_var, Tuple({fused_orig_value_var}));
 
         Array<Expr> args;
@@ -153,7 +139,7 @@ class CollectiveOpAnnotator : ExprVisitor {
       // add var and expr being visited, which may have been substituted
       if (analyzer_.defuse_tensor_after_op.count(orig_value_idx)) {
         std::string to_defuse_name_hint = std::string(orig_var->name_hint()) + "_to_defuse";
-        substituted_var = mnm::ir::MakeVar(to_defuse_name_hint, {});
+        substituted_var = raf::ir::MakeVar(to_defuse_name_hint, {});
         is_orig_var_substituted = true;
       }
       ell_->Push(is_orig_var_substituted ? substituted_var : orig_var,
@@ -187,13 +173,13 @@ class CollectiveOpAnnotator : ExprVisitor {
 
  protected:
   Expr CreateFuseTensorOp(Expr arg) {
-    static Op op = Op::Get("mnm.op.fuse_tensor");
+    static Op op = Op::Get("raf.op.fuse_tensor");
     Array<Expr> args({arg});
     return Call(op, args);
   }
 
   Expr CreateDefuseTensorOp(Expr arg, const DefuseTensorArgs& args) {
-    static Op op = Op::Get("mnm.op.defuse_tensor");
+    static Op op = Op::Get("raf.op.defuse_tensor");
     Expr sizes = MakeConstant(ArrayToIntTuple(std::get<0>(args)));
     Expr shapes = MakeConstant(ArrayToIntTuple(std::get<1>(args)));
     Expr shape_indices = MakeConstant(ArrayToIntTuple(std::get<2>(args)));
@@ -210,22 +196,22 @@ class CollectiveOpAnnotator : ExprVisitor {
 
 }  // namespace annotate_collective_ops
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.annotate_collective_ops.use_memory_copy_ops", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.annotate_collective_ops.use_memory_copy_ops", Bool);
 
 Pass AnnotateCollectiveOps() {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
     bool use_memory_copy_ops = static_cast<bool>(
-        pc->GetConfig("mnm.annotate_collective_ops.use_memory_copy_ops", Bool(false)).value());
+        pc->GetConfig("raf.annotate_collective_ops.use_memory_copy_ops", Bool(false)).value());
     return annotate_collective_ops::CollectiveOpAnnotator(f.operator->(), use_memory_copy_ops)
         .Run();
   };
-  auto func_pass = CreateMNMFunctionPass(pass_func, 0, "AnnotateCollectiveOps", {});
+  auto func_pass = CreateRAFFunctionPass(pass_func, 0, "AnnotateCollectiveOps", {});
   PassInfo pass_info(0, "AnnotateCollectiveOps", {});
-  return MNMSequential({InferType(), func_pass, EraseType()}, pass_info);
+  return RAFSequential({InferType(), func_pass, EraseType()}, pass_info);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AnnotateCollectiveOps").set_body_typed(AnnotateCollectiveOps);
+RAF_REGISTER_GLOBAL("raf.pass_.AnnotateCollectiveOps").set_body_typed(AnnotateCollectiveOps);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

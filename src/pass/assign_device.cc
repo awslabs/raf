@@ -1,47 +1,33 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file assign_device.cc
  * \brief Assign the target device to init and constant ops.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
+#include "raf/op.h"
+#include "raf/ir.h"
 
-#include "mnm/pass.h"
+#include "raf/pass.h"
 #include "tvm/relay/expr.h"
 #include "tvm/relay/op_attr_types.h"
 #include "../op/schema/init.h"
 #include "../op/schema/transform.h"
 #include "../op/schema/nn.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace assign_device {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-mnm::Device GetDeviceFromConstExpr(const Expr& expr) {
-  static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+raf::Device GetDeviceFromConstExpr(const Expr& expr) {
+  static auto* str2dev = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
   auto device_name_node = expr.as<ir::ConstantNode>();
   CHECK(device_name_node);
   auto device_name_string_obj = device_name_node->value.as<StringValueObj>();
@@ -67,7 +53,7 @@ Expr AssignDeviceHelper(const CallNode* node, const Array<Expr> args, std::strin
   Array<Expr> new_args;
 
   // Get the device of the current node. If not specified, the default is always CPU.
-  const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  const auto* str2dev = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
   Device call_device;
   if (device_arg_idx >= args.size()) {
     call_device = Device(static_cast<tvm::Device>((*str2dev)("cpu")));
@@ -149,11 +135,11 @@ Expr AssignDeviceArangeOp(const CallNode* node, const Array<Expr> args,
 typedef Expr (*AssignDeviceOpFuncType)(const CallNode* node, const Array<Expr> args,
                                        std::string target_device);
 std::unordered_map<String, AssignDeviceOpFuncType> fmap = {
-    {"mnm.op.full", &AssignDeviceFullOp},
-    {"mnm.op.one_hot", &AssignDeviceOneHotOp},
-    {"mnm.op.zeros", &AssignDeviceInitOp},
-    {"mnm.op.ones", &AssignDeviceInitOp},
-    {"mnm.op.arange", &AssignDeviceArangeOp}};
+    {"raf.op.full", &AssignDeviceFullOp},
+    {"raf.op.one_hot", &AssignDeviceOneHotOp},
+    {"raf.op.zeros", &AssignDeviceInitOp},
+    {"raf.op.ones", &AssignDeviceInitOp},
+    {"raf.op.arange", &AssignDeviceArangeOp}};
 
 class DeviceAssigner : public ExprMutator {
  public:
@@ -166,7 +152,7 @@ class DeviceAssigner : public ExprMutator {
     if (value.as<TensorValueObj>()) {
       DLTensor* dlt = value;
 
-      const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+      const auto* str2dev = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
       tvm::Device target_tvm_ctx = (*str2dev)(device_str_);
       Device target_device = Device(target_tvm_ctx);
 
@@ -222,10 +208,10 @@ Pass AssignDevice(std::string device) {
     auto assigner = assign_device::DeviceAssigner(device);
     return Downcast<Function>(assigner.Mutate(f));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "AssignDevice", {});
+  return CreateRAFFunctionPass(pass_func, 0, "AssignDevice", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AssignDevice").set_body_typed(AssignDevice);
+RAF_REGISTER_GLOBAL("raf.pass_.AssignDevice").set_body_typed(AssignDevice);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

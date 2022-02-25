@@ -1,38 +1,24 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/regs/regs_utils.cc
  * \brief Helpers for operator registry
  */
-#include "mnm/tensor.h"
-#include "mnm/value.h"
-#include "mnm/binding.h"
+#include "raf/tensor.h"
+#include "raf/value.h"
+#include "raf/binding.h"
 #include "./regs_utils.h"
 #include "../schema/list_args.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 using binding::BindNDArray;
 using binding::GradTape;
 using registry::TVMArgValue;
@@ -54,4 +40,4 @@ void CollectVars(const Expr& expr, std::vector<const ExprNode*>* vars) {
 
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

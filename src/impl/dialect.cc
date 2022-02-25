@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -25,29 +11,29 @@
 #include <dmlc/registry.h>
 #include <dmlc/thread_local.h>
 
-#include "mnm/executor.h"
-#include "mnm/ir.h"
-#include "mnm/op.h"
-#include "mnm/dialect.h"
-#include "mnm/dialect.h"
-#include "mnm/registry.h"
-#include "mnm/value.h"
+#include "raf/executor.h"
+#include "raf/ir.h"
+#include "raf/op.h"
+#include "raf/dialect.h"
+#include "raf/dialect.h"
+#include "raf/registry.h"
+#include "raf/value.h"
 #include "../requests.h"
 #include "../op/schema/list_args.h"
 
 namespace dmlc {
-DMLC_REGISTRY_ENABLE(::mnm::op::Dialect);
-DMLC_REGISTRY_ENABLE(::mnm::op::OpDialect);
+DMLC_REGISTRY_ENABLE(::raf::op::Dialect);
+DMLC_REGISTRY_ENABLE(::raf::op::OpDialect);
 }  // namespace dmlc
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 // Implementation: DialectPreference
 
-MNM_REGISTER_OBJECT_REFLECT(DialectPreferenceObj);
+RAF_REGISTER_OBJECT_REFLECT(DialectPreferenceObj);
 
 struct DialectPrefThreadLocalEntry {
   /*! \brief The dialect scope stack */
@@ -255,7 +241,7 @@ DialectFusePattern::PatternList* DialectFusePattern::Get() {
 // Implementation: helper functions
 
 std::string GetDialect(const Op& op) {
-  static auto fdialect = Op::GetAttrMap<TMNMDialect>("TMNMDialect");
+  static auto fdialect = Op::GetAttrMap<TRAFDialect>("TRAFDialect");
   if (fdialect.count(op)) {
     return fdialect[op];
   }
@@ -263,14 +249,14 @@ std::string GetDialect(const Op& op) {
 }
 
 bool IsDialectOp(const Op& op) {
-  static auto fdialect = Op::GetAttrMap<TMNMDialect>("TMNMDialect");
+  static auto fdialect = Op::GetAttrMap<TRAFDialect>("TRAFDialect");
   return fdialect.count(op) > 0;
 }
 
 ir::Op GetBaseOp(const ir::Op& dialect_op) {
-  static auto fbase_op = Op::GetAttrMap<TMNMBaseOp>("TMNMBaseOp");
+  static auto fbase_op = Op::GetAttrMap<TRAFBaseOp>("TRAFBaseOp");
   CHECK(fbase_op.count(dialect_op))
-      << "Dialect op " << dialect_op->name << " does not have attribute TMNMBaseOp";
+      << "Dialect op " << dialect_op->name << " does not have attribute TRAFBaseOp";
   return Op::Get(fbase_op[dialect_op]);
 }
 
@@ -286,18 +272,18 @@ Array<String> GetAllDialects() {
   return dialects;
 }
 
-MNM_REGISTER_GLOBAL("mnm.op.DialectPreference").set_body_typed([](Array<String> dialects) {
+RAF_REGISTER_GLOBAL("raf.op.DialectPreference").set_body_typed([](Array<String> dialects) {
   return DialectPreference(dialects);
 });
-MNM_REGISTER_GLOBAL("mnm.op.DialectPrefEnterScope").set_body_typed([](DialectPreference pref) {
+RAF_REGISTER_GLOBAL("raf.op.DialectPrefEnterScope").set_body_typed([](DialectPreference pref) {
   pref.EnterWithScope();
 });
-MNM_REGISTER_GLOBAL("mnm.op.DialectPrefExitScope").set_body_typed([](DialectPreference pref) {
+RAF_REGISTER_GLOBAL("raf.op.DialectPrefExitScope").set_body_typed([](DialectPreference pref) {
   pref.ExitWithScope();
 });
-MNM_REGISTER_GLOBAL("mnm.op.AddDialectPattern").set_body_typed(DialectFusePattern::AddPattern);
-MNM_REGISTER_GLOBAL("mnm.op.DialectEnabled").set_body_typed(DialectEnabled);
-MNM_REGISTER_GLOBAL("mnm.op.GetAllDialects").set_body_typed(GetAllDialects);
+RAF_REGISTER_GLOBAL("raf.op.AddDialectPattern").set_body_typed(DialectFusePattern::AddPattern);
+RAF_REGISTER_GLOBAL("raf.op.DialectEnabled").set_body_typed(DialectEnabled);
+RAF_REGISTER_GLOBAL("raf.op.GetAllDialects").set_body_typed(GetAllDialects);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

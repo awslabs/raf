@@ -1,23 +1,9 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!--- SPDX-License-Identifier: Apache-2.0  -->
 
 Author: [Zihao Ye](https://github.com/yzh119/)
 
-This article introduces how to build MNM using CMake on macOS.
+This article introduces how to build RAF using CMake on macOS.
 
 ## Step 1. Install dependencies
 
@@ -43,17 +29,17 @@ brew install llvm
 
 </details>
 
-## Step 2. Build MNM libraries
+## Step 2. Build RAF libraries
 
-Below we introduce an environment variable that indicates where MNM is.
+Below we introduce an environment variable that indicates where RAF is.
 
 <details>
 
 ```bash
 # Create the build directory
 git clone https://github.com/meta-project/meta --recursive && cd meta
-export MNM_HOME=$(pwd)
-mkdir $MNM_HOME/build && cd $MNM_HOME/build
+export RAF_HOME=$(pwd)
+mkdir $RAF_HOME/build && cd $RAF_HOME/build
 # Configuration file for CMake
 cp ../cmake/config.cmake .
 # Edit the configuration file
@@ -66,19 +52,19 @@ make -j$(nproc)
 
 </details>
 
-**Customize build.** By editing the configuration file `config.cmake`, one can easily customize the process of MNM build. Instructions are directly put inside the configuration file for convenience. 
+**Customize build.** By editing the configuration file `config.cmake`, one can easily customize the process of RAF build. Instructions are directly put inside the configuration file for convenience. 
 
-## Step 3. Run MNM
+## Step 3. Run RAF
 
-Here we come to the not-that-good part: to run MNM, one should properly set the environment variables.
+Here we come to the not-that-good part: to run RAF, one should properly set the environment variables.
 
 <details>
 
 ```bash
-export PYTHONPATH=$MNM_HOME/python/:$MNM_HOME/3rdparty/tvm/topi/python:$MNM_HOME/3rdparty/tvm/python
-export TVM_LIBRARY_PATH=$MNM_HOME/build/lib
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 # The following commands can verify if the environments are set up correctly.
-python -c "import mnm"
+python -c "import raf"
 ```
 
 </details>
@@ -97,9 +83,9 @@ vim $HOME/.bashrc
 # If using zsh
 vim $HOME/.zshrc
 # Adding the export commands to the end of those RC files
-export MNM_HOME=PATH-TO-MNM
-export PYTHONPATH=$MNM_HOME/python/:$MNM_HOME/3rdparty/tvm/topi/python:$MNM_HOME/3rdparty/tvm/python
-export TVM_LIBRARY_PATH=$MNM_HOME/build/lib
+export RAF_HOME=PATH-TO-RAF
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 ```
 
 </details>

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -26,19 +12,19 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include "mnm/registry.h"
-#include "mnm/profiler.h"
-#include "mnm/event_pool.h"
+#include "raf/registry.h"
+#include "raf/profiler.h"
+#include "raf/event_pool.h"
 
-#if MNM_USE_CUDA
+#if RAF_USE_CUDA
 
 #define WITH_CUDA_PROFILER_LEVEL(LEVEL, CTX, STREAM, NAME, CAT, ARGS, CODE_SNIPPET)         \
   {                                                                                         \
-    bool _profiling = mnm::profiler::Profiler::Get()->IsProfiling(LEVEL);                   \
+    bool _profiling = raf::profiler::Profiler::Get()->IsProfiling(LEVEL);                   \
     if (_profiling) {                                                                       \
-      auto& _pool = mnm::profiler::CudaProfiler::Get()->HelperPool();                       \
+      auto& _pool = raf::profiler::CudaProfiler::Get()->HelperPool();                       \
       auto _phelper_index = _pool.size();                                                   \
-      _pool.push_back(mnm::profiler::CudaProfilerHelper(CTX.device_id(), CTX.device_type(), \
+      _pool.push_back(raf::profiler::CudaProfilerHelper(CTX.device_id(), CTX.device_type(), \
                                                         STREAM, NAME, CAT, ARGS));          \
       _pool[_phelper_index].start();                                                        \
       CODE_SNIPPET                                                                          \
@@ -60,14 +46,14 @@
 
 #endif
 
-namespace mnm {
+namespace raf {
 namespace profiler {
 
-using mnm::event_pool::Event;
+using raf::event_pool::Event;
 
 class CudaProfilerHelper : public ProfilerHelper {
  public:
-  CudaProfilerHelper(int dev_id, mnm::DevType dev_type, void* stream, std::string name,
+  CudaProfilerHelper(int dev_id, raf::DevType dev_type, void* stream, std::string name,
                      std::string categories, std::vector<std::string> args = {});
 
   void start() {
@@ -121,4 +107,4 @@ class CudaProfiler {
 };
 
 }  // namespace profiler
-}  // namespace mnm
+}  // namespace raf

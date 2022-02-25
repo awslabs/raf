@@ -1,45 +1,31 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file enforce_sync.cc
  * \brief Enforce synchronization between ops in multiple streams.
  */
-#include "mnm/device.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/dist_context.h"
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
+#include "raf/device.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/dist_context.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
 #include "./common.h"
-#include "mnm/stream_pool.h"
+#include "raf/stream_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace enforce_sync {
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
-using mnm::distributed::DistContext;
-using namespace mnm::analysis;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
+using raf::distributed::DistContext;
+using namespace raf::analysis;
 using stream_pool::StreamTagEnum;
 
 using OpSet = std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual>;
@@ -402,27 +388,27 @@ class SyncEnforcer : ExprVisitor {
    *    Corresponding IR:
    *
    *      fn (%x: Tensor[(64, 128), float32]) {
-   *        let %a1 = mnm.op.atan(%x);
+   *        let %a1 = raf.op.atan(%x);
    *        let %a2 = (%a1,);
-   *        let %a3 = mnm.op._allreduce(%a2, str"sum");
-   *        let %a4 = mnm.op.atan(%a3);
+   *        let %a3 = raf.op._allreduce(%a2, str"sum");
+   *        let %a4 = raf.op.atan(%a3);
    *        %a4
    *      }
    *
    *    After Transformation:
    *
    *      fn (%x: Tensor[(64, 128), float32]) {
-   *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
-   *        let %a1 = mnm.op.atan(%x);
+   *        let %set_stream_comp = raf.op.set_stream(int64(0), int64(1));
+   *        let %a1 = raf.op.atan(%x);
    *        let %a2 = (%a1,);
-   *        let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
-   *        let %set_stream_comm = mnm.op.set_stream(int64(0), int64(5));
-   *        let %wait_for_comp = mnm.op.wait_event(int64(1), int64(5));
-   *        let %a3 = mnm.op._allreduce(%a2, str"sum");
-   *        let %add_event_comm = mnm.op.add_event(int64(2), int64(5));
-   *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
-   *        let %wait_for_comm = mnm.op.wait_event(int64(2), int64(1));
-   *        let %a4 = mnm.op.atan(%a3);
+   *        let %add_event_comp = raf.op.add_event(int64(1), int64(1));
+   *        let %set_stream_comm = raf.op.set_stream(int64(0), int64(5));
+   *        let %wait_for_comp = raf.op.wait_event(int64(1), int64(5));
+   *        let %a3 = raf.op._allreduce(%a2, str"sum");
+   *        let %add_event_comm = raf.op.add_event(int64(2), int64(5));
+   *        let %set_stream_comp = raf.op.set_stream(int64(0), int64(1));
+   *        let %wait_for_comm = raf.op.wait_event(int64(2), int64(1));
+   *        let %a4 = raf.op.atan(%a3);
    *        %a4
    *      }
    *
@@ -441,39 +427,39 @@ class SyncEnforcer : ExprVisitor {
    *    Corresponding IR:
    *
    *      fn (%x: Tensor[(64, 128), float32]) {
-   *        let %v = mnm.op.atan(%x);
+   *        let %v = raf.op.atan(%x);
    *        let %v1 = (%v,);
-   *        let %v2 = mnm.op.atan(%v);
+   *        let %v2 = raf.op.atan(%v);
    *        let %v3 = (%v2,);
-   *        let %v4 = mnm.op._allreduce(%v3, str"sum");
-   *        let %v5 = mnm.op._allreduce(%v1, str"sum");
-   *        let %v6 = mnm.op.atan(%v4);
+   *        let %v4 = raf.op._allreduce(%v3, str"sum");
+   *        let %v5 = raf.op._allreduce(%v1, str"sum");
+   *        let %v6 = raf.op.atan(%v4);
    *        let %v7 = (%v6, %v5);
-   *        let %v8 = mnm.op.concatenate(%v7, int64(0));
+   *        let %v8 = raf.op.concatenate(%v7, int64(0));
    *        %v8
    *      }
    *
    *    After Transformation:
    *
    *      fn (%x: Tensor[(64, 128), float32]) {
-   *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
-   *        let %v = mnm.op.atan(%x);
+   *        let %set_stream_comp = raf.op.set_stream(int64(0), int64(1));
+   *        let %v = raf.op.atan(%x);
    *        let %v1 = (%v,);
-   *        let %v2 = mnm.op.atan(%v);
+   *        let %v2 = raf.op.atan(%v);
    *        let %v3 = (%v2,);
-   *        let %add_event_comp = mnm.op.add_event(int64(1), int64(1));
-   *        let %set_stream_comm = mnm.op.set_stream(int64(0), int64(5));
-   *        let %wait_for_comp = mnm.op.wait_event(int64(1), int64(5));
-   *        let %v4 = mnm.op._allreduce(%v3, str"sum");
-   *        let %add_event_comm = mnm.op.add_event(int64(2), int64(5));
-   *        let %v5 = mnm.op._allreduce(%v1, str"sum");
-   *        let %add_event_comm1 = mnm.op.add_event(int64(3), int64(5));
-   *        let %set_stream_comp = mnm.op.set_stream(int64(0), int64(1));
-   *        let %wait_for_comm = mnm.op.wait_event(int64(2), int64(1));
-   *        let %v6 = mnm.op.atan(%v4);
-   *        let %wait_for_comm1 = mnm.op.wait_event(int64(3), int64(1));
+   *        let %add_event_comp = raf.op.add_event(int64(1), int64(1));
+   *        let %set_stream_comm = raf.op.set_stream(int64(0), int64(5));
+   *        let %wait_for_comp = raf.op.wait_event(int64(1), int64(5));
+   *        let %v4 = raf.op._allreduce(%v3, str"sum");
+   *        let %add_event_comm = raf.op.add_event(int64(2), int64(5));
+   *        let %v5 = raf.op._allreduce(%v1, str"sum");
+   *        let %add_event_comm1 = raf.op.add_event(int64(3), int64(5));
+   *        let %set_stream_comp = raf.op.set_stream(int64(0), int64(1));
+   *        let %wait_for_comm = raf.op.wait_event(int64(2), int64(1));
+   *        let %v6 = raf.op.atan(%v4);
+   *        let %wait_for_comm1 = raf.op.wait_event(int64(3), int64(1));
    *        let %v7 = (%v6, %v5);
-   *        let %v8 = mnm.op.concatenate(%v7, int64(0));
+   *        let %v8 = raf.op.concatenate(%v7, int64(0));
    *        %v8
    *      }
    */
@@ -512,17 +498,17 @@ class SyncEnforcer : ExprVisitor {
 
  protected:
   Expr CreateSetStreamOp(int64_t device_id, int64_t stream_id) {
-    static Op set_stream_op = Op::Get("mnm.op.set_stream");
+    static Op set_stream_op = Op::Get("raf.op.set_stream");
     return CreateSetStreamOrEventOp_(set_stream_op, device_id, stream_id);
   }
 
   Expr CreateAddEventOp(int64_t event_id, int64_t stream_id) {
-    static Op add_event_op = Op::Get("mnm.op.add_event");
+    static Op add_event_op = Op::Get("raf.op.add_event");
     return CreateSetStreamOrEventOp_(add_event_op, event_id, stream_id);
   }
 
   Expr CreateWaitEventOp(int64_t event_id, int64_t stream_id) {
-    static Op wait_event_op = Op::Get("mnm.op.wait_event");
+    static Op wait_event_op = Op::Get("raf.op.wait_event");
     return CreateSetStreamOrEventOp_(wait_event_op, event_id, stream_id);
   }
 
@@ -531,7 +517,7 @@ class SyncEnforcer : ExprVisitor {
       int stream = analyzer_.idx_stream_map[idx];
       std::string add_event_var_name = stream_name_hint[stream] + "_add_event";
       for (auto event_id : analyzer_.add_event_after_op[idx]) {
-        Var add_event_var = mnm::ir::MakeVar(add_event_var_name, {});
+        Var add_event_var = raf::ir::MakeVar(add_event_var_name, {});
         Expr add_event_value = CreateAddEventOp(event_id, stream);
         ell_->Push(add_event_var, add_event_value);
       }
@@ -543,14 +529,14 @@ class SyncEnforcer : ExprVisitor {
     std::string var_name_hint = stream_name_hint[stream];
     if (analyzer_.set_stream_before_op[idx]) {
       std::string set_stream_var_name = var_name_hint + "_set_stream";
-      Var set_stream_var = mnm::ir::MakeVar(set_stream_var_name, {});
+      Var set_stream_var = raf::ir::MakeVar(set_stream_var_name, {});
       Expr set_stream_value = CreateSetStreamOp(device_id_, stream);
       ell_->Push(set_stream_var, set_stream_value);
     }
     if (analyzer_.wait_event_before_op.count(idx)) {
       std::string wait_event_var_name = var_name_hint + "_wait_event";
       for (auto event_id : analyzer_.wait_event_before_op[idx]) {
-        Var wait_event_var = mnm::ir::MakeVar(wait_event_var_name, {});
+        Var wait_event_var = raf::ir::MakeVar(wait_event_var_name, {});
         Expr wait_event_value = CreateWaitEventOp(event_id, stream);
         ell_->Push(wait_event_var, wait_event_value);
       }
@@ -577,12 +563,12 @@ Pass EnforceSync() {
                                                                              PassContext pc) {
     return enforce_sync::SyncEnforcer(f.operator->()).Run();
   };
-  auto func_pass = CreateMNMFunctionPass(pass_func, 0, "EnforceSync", {});
+  auto func_pass = CreateRAFFunctionPass(pass_func, 0, "EnforceSync", {});
   PassInfo pass_info(0, "EnforceSync", {});
-  return MNMSequential({InferType(), func_pass, EraseType()}, pass_info);
+  return RAFSequential({InferType(), func_pass, EraseType()}, pass_info);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.EnforceSync").set_body_typed(EnforceSync);
+RAF_REGISTER_GLOBAL("raf.pass_.EnforceSync").set_body_typed(EnforceSync);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

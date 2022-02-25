@@ -1,26 +1,12 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access
 import pytest
-import mnm
-from mnm._op import sym
-from mnm._ffi.pass_ import AutoDiff, InferType
-from mnm.testing import check_type, run_infer_type, randn
+import raf
+from raf._op import sym
+from raf._ffi.pass_ import AutoDiff, InferType
+from raf.testing import check_type, run_infer_type, randn
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -48,12 +34,12 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize("dtype", ["float32", "uint32", "int32", "int64", "uint8", "int16"])
 def test_binary(op, shape, dtype):
     # pylint: disable=too-many-locals
-    class Binary(mnm.Model):
+    class Binary(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
             return op(x, y)
 
@@ -99,12 +85,12 @@ def test_binary(op, shape, dtype):
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_logiacal(op, shape, dtype):
     # pylint: disable=too-many-locals
-    class Binary(mnm.Model):
+    class Binary(raf.Model):
         def build(self):
             pass
 
         # pylint: disable=no-self-use
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
             return op(x, y)
 

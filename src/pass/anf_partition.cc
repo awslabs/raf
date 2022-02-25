@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,17 +10,17 @@
  * We will introduce more partition strategies (e.g., optimize memory, etc) in the future.
  * e.g.,
  * fn(%x: Tensor[(10, 10), float32]) {
- *   let %a1 = mnm.op.relu(%x);
- *   let %a2 = mnm.op.abs(%a1);
- *   let %a3 = mnm.op.tanh(%a1);
- *   let %a4 = mnm.op.add(%a2, %a3, None, None);
+ *   let %a1 = raf.op.relu(%x);
+ *   let %a2 = raf.op.abs(%a1);
+ *   let %a3 = raf.op.tanh(%a1);
+ *   let %a4 = raf.op.add(%a2, %a3, None, None);
  *   %a4
  * }
  * After partition with partition size 2:
  * fn(%x) {
  *   let %func_partition_0 = fn () {
- *     let %a1 = mnm.op.relu(%x);
- *     let %a2 = mnm.op.abs(%a1);
+ *     let %a1 = raf.op.relu(%x);
+ *     let %a2 = raf.op.abs(%a1);
  *     let %func_partition_0_outs = (%a1, %a2);
  *     %func_partition_0_outs
  *   };
@@ -42,31 +28,31 @@
  *   let %func_partition_0_ret_0 = %func_partition_0_ret.0;
  *   let %func_partition_0_ret_1 = %func_partition_0_ret.1;
  *   let %func_partition_1 = fn () {
- *     let %a3 = mnm.op.tanh(%func_partition_0_ret_0);
- *     let %a4 = mnm.op.add(%func_partition_0_ret_1, %a3, None, None);
+ *     let %a3 = raf.op.tanh(%func_partition_0_ret_0);
+ *     let %a4 = raf.op.add(%func_partition_0_ret_1, %a3, None, None);
  *     %a4
  *   };
  *   let %func_partition_1_ret = %func_partition_1();
  *   %func_partition_1_ret
  * }
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/binding.h"
-#include "mnm/pass.h"
-#include "mnm/ir_ext.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/binding.h"
+#include "raf/pass.h"
+#include "raf/ir_ext.h"
 #include <utility>
 #include <vector>
 #include "./common.h"
 #include "./liveness_analysis.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace anf_partition {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::binding;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::binding;
 using binding::BindingEntry;
 using binding::BindNDArray;
 using binding::LookupBinding;
@@ -343,10 +329,10 @@ Pass PartitionANF(int max_num_ops) {
     anf_partition::Partitioner partitioner(max_num_ops, boundary, analyzer);
     return Downcast<Function>(partitioner(f));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "PartitionANF", {});
+  return CreateRAFFunctionPass(pass_func, 0, "PartitionANF", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.PartitionANF").set_body_typed(PartitionANF);
+RAF_REGISTER_GLOBAL("raf.pass_.PartitionANF").set_body_typed(PartitionANF);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

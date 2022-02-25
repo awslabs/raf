@@ -1,31 +1,17 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file dataflow_matcher.cc
  * \brief The auxiliary data structure for dataflow matcher.
  */
-#include <mnm/registry.h>
+#include <raf/registry.h>
 
 #include "dataflow_matcher_impl.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
 // Pattern Matcher
@@ -37,7 +23,7 @@ Array<DFPattern> reverse(const Array<DFPattern>& args) {
   return new_args;
 }
 
-bool MNMDFPatternMatcher::VisitDFPattern_(const CallPatternNode* op, const Expr& expr) {
+bool RAFDFPatternMatcher::VisitDFPattern_(const CallPatternNode* op, const Expr& expr) {
   // utilities
   auto get_op_node = [](const CallPatternNode* op) -> const tvm::OpNode* {
     if (op) {
@@ -105,11 +91,11 @@ bool MNMDFPatternMatcher::VisitDFPattern_(const CallPatternNode* op, const Expr&
       if (const OpNode* op_node = get_op_node(op)) {
         auto base_op = GetRef<Op>(op_node);
         base_op = op::IsDialectOp(base_op) ? op::GetBaseOp(base_op) : base_op;
-        if (base_op->name == "mnm.op.multiply") {
+        if (base_op->name == "raf.op.multiply") {
           if (match_args(reverse(op->args), call_node->args)) {
             return true;
           }
-        } else if (base_op->name == "mnm.op.add") {
+        } else if (base_op->name == "raf.op.add") {
           Array<DFPattern> new_args{op->args[1], op->args[0], op->args[2], op->args[3]};
           if (match_args(new_args, call_node->args)) {
             return true;
@@ -119,11 +105,11 @@ bool MNMDFPatternMatcher::VisitDFPattern_(const CallPatternNode* op, const Expr&
     } else {
       ClearMap(watermark);
       // associate divide/multiply, make pattern ((a * b) / c) matchs (a * (b / c)) or ((a / c) * b)
-      if (is_pattern_op(op, "mnm.op.divide")) {
+      if (is_pattern_op(op, "raf.op.divide")) {
         if (const auto* arg_node = op->args[0].as<CallPatternNode>()) {
-          if (is_pattern_op(arg_node, "mnm.op.multiply") && is_expr_op(expr, "mnm.op.multiply") &&
-              (is_expr_op(call_node->args[0], "mnm.op.divide") ||
-               is_expr_op(call_node->args[1], "mnm.op.divide"))) {
+          if (is_pattern_op(arg_node, "raf.op.multiply") && is_expr_op(expr, "raf.op.multiply") &&
+              (is_expr_op(call_node->args[0], "raf.op.divide") ||
+               is_expr_op(call_node->args[1], "raf.op.divide"))) {
             bool out = false;
             for (size_t arg_id = 0; arg_id < 2; ++arg_id) {
               auto div = CallPattern(op->op, {arg_node->args[arg_id], op->args[1]});
@@ -139,14 +125,14 @@ bool MNMDFPatternMatcher::VisitDFPattern_(const CallPatternNode* op, const Expr&
           }
         }
       }
-      if (is_pattern_op(op, "mnm.op.multiply")) {
+      if (is_pattern_op(op, "raf.op.multiply")) {
         // associate multiply/divide, make pattern (a * (b / c)) or ((b / c) * a) matchs
         // ((a * b) / c)
         for (size_t arg_id = 0; arg_id < 2; ++arg_id) {
           if (auto* arg_node = op->args[arg_id].as<CallPatternNode>()) {
-            if (is_pattern_op(arg_node, "mnm.op.divide") && is_expr_op(expr, "mnm.op.divide") &&
-                (is_expr_op(call_node->args[0], "mnm.op.multiply") ||
-                 is_expr_op(call_node->args[1], "mnm.op.multiply"))) {
+            if (is_pattern_op(arg_node, "raf.op.divide") && is_expr_op(expr, "raf.op.divide") &&
+                (is_expr_op(call_node->args[0], "raf.op.multiply") ||
+                 is_expr_op(call_node->args[1], "raf.op.multiply"))) {
               auto mul = CallPattern(op->op, {arg_node->args[0], op->args[(arg_id + 1) % 2]});
               auto div = CallPattern(arg_node->op, {mul, arg_node->args[1]});
               return VisitDFPattern(div, expr);
@@ -159,18 +145,18 @@ bool MNMDFPatternMatcher::VisitDFPattern_(const CallPatternNode* op, const Expr&
   return false;
 }
 
-bool MNMDFPatternMatcher::VisitDFPattern_(const RelayConstantPatternNode* op, const Expr& expr) {
+bool RAFDFPatternMatcher::VisitDFPattern_(const RelayConstantPatternNode* op, const Expr& expr) {
   const ConstantPatternNode* node = static_cast<const ConstantPatternNode*>(op);
   auto konst = expr.as<ConstantNode>();
   return konst != nullptr && tvm::StructuralEqual()(konst->value, node->value);
 }
 
-bool MNMDFPatternMatcher::VisitDFPattern_(const TypePatternNode* op, const Expr& expr) {
+bool RAFDFPatternMatcher::VisitDFPattern_(const TypePatternNode* op, const Expr& expr) {
   auto expr_type = InferType(expr).as<ExprNode>()->checked_type();
   return (tvm::StructuralEqual()(op->type, expr_type)) && VisitDFPattern(op->pattern, expr);
 }
 
-bool MNMDFPatternMatcher::VisitDFPattern_(const ShapePatternNode* op, const Expr& expr) {
+bool RAFDFPatternMatcher::VisitDFPattern_(const ShapePatternNode* op, const Expr& expr) {
   auto expr_type = InferType(expr).as<ExprNode>()->checked_type();
   if (const TensorTypeNode* tensor_type = expr_type.as<TensorTypeNode>()) {
     return (tvm::StructuralEqual()(op->shape, tensor_type->shape)) &&
@@ -179,7 +165,7 @@ bool MNMDFPatternMatcher::VisitDFPattern_(const ShapePatternNode* op, const Expr
   return false;
 }
 
-bool MNMDFPatternMatcher::VisitDFPattern_(const DataTypePatternNode* op, const Expr& expr) {
+bool RAFDFPatternMatcher::VisitDFPattern_(const DataTypePatternNode* op, const Expr& expr) {
   auto expr_type = InferType(expr).as<ExprNode>()->checked_type();
   if (const TensorTypeNode* tensor_type = expr_type.as<TensorTypeNode>()) {
     return (tvm::StructuralEqual()(op->dtype, tensor_type->dtype)) &&
@@ -189,21 +175,21 @@ bool MNMDFPatternMatcher::VisitDFPattern_(const DataTypePatternNode* op, const E
 }
 
 // Pattern Grouper
-const std::unordered_map<int, MNMPatternGrouper::Group>& MNMPatternGrouper::GroupMatches(
+const std::unordered_map<int, RAFPatternGrouper::Group>& RAFPatternGrouper::GroupMatches(
     const DFPattern& pattern, const Expr& pre) {
   groups_.clear();
   gid_assignments_.clear();
 
   pattern_ = pattern;
   pattern_graph_ = CreateIndexedGraph(pattern_);
-  auto matcher = MNMDFPatternMatcher(pre);
+  auto matcher = RAFDFPatternMatcher(pre);
   matcher_ = &matcher;
   this->VisitExprs();
   return this->groups_;
 }
 
 // Pattern Rewriter
-Expr MNMPatternRewriter::Rewrite(const Array<DFPatternCallback>& callbacks, const Expr& pre) {
+Expr RAFPatternRewriter::Rewrite(const Array<DFPatternCallback>& callbacks, const Expr& pre) {
   auto post = pre;
   auto last = post;
   // rewrite the graph until it stops changing to make sure all rewrites are complete
@@ -218,7 +204,7 @@ Expr MNMPatternRewriter::Rewrite(const Array<DFPatternCallback>& callbacks, cons
       if (callback_->require_type) {
         post = InferTypeWithModule(post, mod_);
       }
-      auto grouper = MNMPatternGrouper();
+      auto grouper = RAFPatternGrouper();
       groups_ = grouper.GroupMatches(callback_->pattern, post);
       gid_assignments_ = grouper.GetGIDAssignments();
       memo_.clear();
@@ -234,7 +220,7 @@ Expr MNMPatternRewriter::Rewrite(const Array<DFPatternCallback>& callbacks, cons
 }
 
 // Pattern Partitioner
-class MNMPatternPartitioner : protected MixedModeMutator {
+class RAFPatternPartitioner : protected MixedModeMutator {
  public:
   Expr Partition(const DFPattern& pattern, const Expr& pre, const Map<String, ObjectRef>& attrs,
                  PackedFunc check) {
@@ -243,7 +229,7 @@ class MNMPatternPartitioner : protected MixedModeMutator {
                    << pattern;
       return pre;
     }
-    auto grouper = MNMPatternGrouper();
+    auto grouper = RAFPatternGrouper();
     groups_ = grouper.GroupMatches(pattern, pre);
     gid_assignments_ = grouper.GetGIDAssignments();
     attrs_ = attrs;
@@ -252,7 +238,7 @@ class MNMPatternPartitioner : protected MixedModeMutator {
   }
 
  protected:
-  Expr RewritePartition(const MNMPatternGrouper::Group& group) {
+  Expr RewritePartition(const RAFPatternGrouper::Group& group) {
     Array<Expr> args;
     for (size_t i = 0; i < group.args.size(); ++i) {
       args.push_back(memo_[group.args[i]]);
@@ -276,7 +262,7 @@ class MNMPatternPartitioner : protected MixedModeMutator {
   }
 
   Map<String, ObjectRef> attrs_;
-  std::unordered_map<int, MNMPatternGrouper::Group> groups_;
+  std::unordered_map<int, RAFPatternGrouper::Group> groups_;
   std::unordered_map<Expr, int, ObjectPtrHash, ObjectPtrEqual> gid_assignments_;
   PackedFunc check_;
 };
@@ -287,23 +273,23 @@ namespace ir {
 
 using namespace pass;
 
-bool MNMMatchPattern(DFPattern pattern, Expr expr) {
-  return MNMDFPatternMatcher(expr).Match(pattern, expr);
+bool RAFMatchPattern(DFPattern pattern, Expr expr) {
+  return RAFDFPatternMatcher(expr).Match(pattern, expr);
 }
 
-Expr MNMRewritePatterns(Array<DFPatternCallback> callbacks, Expr expr, IRModule mod) {
-  return MNMPatternRewriter(mod).Rewrite(callbacks, expr);
+Expr RAFRewritePatterns(Array<DFPatternCallback> callbacks, Expr expr, IRModule mod) {
+  return RAFPatternRewriter(mod).Rewrite(callbacks, expr);
 }
 
-Expr MNMPartitionPattern(DFPattern pattern, Expr expr, Map<String, ObjectRef> attrs,
+Expr RAFPartitionPattern(DFPattern pattern, Expr expr, Map<String, ObjectRef> attrs,
                          PackedFunc check) {
-  return MNMPatternPartitioner().Partition(pattern, expr, attrs, check);
+  return RAFPatternPartitioner().Partition(pattern, expr, attrs, check);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.dataflow_pattern_match").set_body_typed(MNMMatchPattern);
-MNM_REGISTER_GLOBAL("mnm.pass_.dataflow_pattern_rewrite").set_body_typed(MNMRewritePatterns);
-MNM_REGISTER_GLOBAL("mnm.pass_.dataflow_pattern_partition").set_body_typed(MNMPartitionPattern);
+RAF_REGISTER_GLOBAL("raf.pass_.dataflow_pattern_match").set_body_typed(RAFMatchPattern);
+RAF_REGISTER_GLOBAL("raf.pass_.dataflow_pattern_rewrite").set_body_typed(RAFRewritePatterns);
+RAF_REGISTER_GLOBAL("raf.pass_.dataflow_pattern_partition").set_body_typed(RAFPartitionPattern);
 
 }  // namespace ir
 
-}  // namespace mnm
+}  // namespace raf

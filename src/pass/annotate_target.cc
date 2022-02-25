@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,19 +10,19 @@
 #include <tvm/ir/transform.h>
 #include <tvm/relay/transform.h>
 
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./common.h"
 #include "../op/dialect/tvm/tvm_attrs.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace annotate_target {
 
-using namespace mnm::ir;
-using mnm::op::FMNMAnnotateTarget;
-using mnm::op::tvm_dialect::CompilerAttrs;
+using namespace raf::ir;
+using raf::op::FRAFAnnotateTarget;
+using raf::op::tvm_dialect::CompilerAttrs;
 
 static const Op& begin_op = CompilerBeginOp();
 static const Op& end_op = CompilerEndOp();
@@ -66,7 +52,7 @@ class AnnotateTargetRewriter : public ExprRewriter {
     CHECK_NE(pre->op, CompilerBeginOp()) << "ValueError: this ir has been annotated already";
     CHECK_NE(pre->op, CompilerEndOp()) << "ValueError: this ir has been annotated already";
 
-    // Rewrite the Meta op CallNode.
+    // Rewrite the RAF op CallNode.
     // Check which targets this op can be offloaded
     if (op_node) {
       // Check target specific op and add to supported_targets if it is supported.
@@ -76,18 +62,18 @@ class AnnotateTargetRewriter : public ExprRewriter {
         if (!Op::HasAttrMap("target." + std::string(target))) {
           continue;
         }
-        auto fannotate = Op::GetAttrMap<FMNMAnnotateTarget>("target." + std::string(target));
+        auto fannotate = Op::GetAttrMap<FRAFAnnotateTarget>("target." + std::string(target));
         if (fannotate.count(op) && fannotate[op](pre->attrs, pre->args)) {
           supported_targets.push_back(target);
         }
       }
     } else if (pre->op->IsInstance<FunctionNode>()) {
-      // Composite Function Not Supported in Meta.
+      // Composite Function Not Supported in RAF.
       Function func = Downcast<Function>(pre->op);
       CHECK(func.defined());
 
       CHECK(func->GetAttr<String>(attr::kComposite))
-          << "NotImplementedError: Composite Function Not Supported in Meta";
+          << "NotImplementedError: Composite Function Not Supported in RAF";
     }
     supported_targets.push_back("default");  // Make default as the last option.
 
@@ -99,7 +85,7 @@ class AnnotateTargetRewriter : public ExprRewriter {
     // Visit and mutate arguments after the target of this op has been determined.
     Call post_call = Downcast<Call>(post);
 
-    // Add compiler_begin to the arguments of the Meta op CallNode
+    // Add compiler_begin to the arguments of the RAF op CallNode
     Array<Expr> new_args;
     for (auto& arg : post_call->args) {
       Expr new_arg = InsertAnnotation(arg, target, begin_op);
@@ -144,7 +130,7 @@ class AnnotateTargetRewriter : public ExprRewriter {
                   continue;
                 }
                 auto fannotate =
-                    Op::GetAttrMap<FMNMAnnotateTarget>("target." + std::string(target));
+                    Op::GetAttrMap<FRAFAnnotateTarget>("target." + std::string(target));
                 if (fannotate.count(op) && fannotate[op](call->attrs, call->args)) {
                   supported_targets.push_back(target);
                 }
@@ -196,10 +182,10 @@ Pass AnnotateTarget(Array<ir::String> targets) {
                                                                              PassContext pc) {
     return Downcast<Function>(annotate_target::AnnotateTarget(f, targets));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "AnnotateTargetFunc", {"mnm.pass_.InferType"});
+  return CreateRAFFunctionPass(pass_func, 0, "AnnotateTargetFunc", {"raf.pass_.InferType"});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AnnotateTarget").set_body_typed(AnnotateTarget);
+RAF_REGISTER_GLOBAL("raf.pass_.AnnotateTarget").set_body_typed(AnnotateTarget);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

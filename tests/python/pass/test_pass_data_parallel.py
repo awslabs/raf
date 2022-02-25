@@ -1,36 +1,22 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements
 import pytest
 import numpy as np
 
-import mnm
-from mnm import distributed as dist
-from mnm.testing import randn, run_infer_type
-from mnm._ffi.pass_ import InferType, AutoDiff, AutoDataParallel
-from mnm.ir import MNMSequential
+import raf
+from raf import distributed as dist
+from raf.testing import randn, run_infer_type
+from raf._ffi.pass_ import InferType, AutoDiff, AutoDataParallel
+from raf.ir import RAFSequential
 import tvm
 from tvm import relay
 
 
 def one_hot(batch_size, num_classes, device="cuda"):
     targets = np.random.randint(0, num_classes, size=batch_size)
-    m_x = mnm.array(targets, device=device)
+    m_x = raf.array(targets, device=device)
     assert list(m_x.shape) == [
         batch_size,
     ]
@@ -38,7 +24,7 @@ def one_hot(batch_size, num_classes, device="cuda"):
 
 
 # pylint: disable=unused-variable
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "config",
     [
@@ -50,24 +36,24 @@ def test_dp(config):
     dctx.enable_data_parallel = True
     device = f"cuda({dctx.local_rank})"
     const, _ = randn([config[0], config[1]], device=device)
-    nccl_version = mnm.build.with_nccl()
+    nccl_version = raf.build.with_nccl()
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             self.c = const
 
         # pylint: enable=attribute-defined-outside-init
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y_true):
             y_pred = self.forward_infer(x)
-            loss = mnm.nll_loss(y_true=y_true, y_pred=y_pred)
+            loss = raf.nll_loss(y_true=y_true, y_pred=y_pred)
             return loss
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward_infer(self, x):
-            out = mnm.matmul(x, self.c)
+            out = raf.matmul(x, self.c)
             return out
 
     def expected():
@@ -87,10 +73,10 @@ def test_dp(config):
         )
 
         # Forward IR components
-        expr_a1 = mnm.ir.op.matmul(x, c)
+        expr_a1 = raf.ir.op.matmul(x, c)
         var_a1 = relay.var("a1")
 
-        expr_a2 = mnm.ir.op.nll_loss(y_true, var_a1)
+        expr_a2 = raf.ir.op.nll_loss(y_true, var_a1)
         var_a2 = relay.var("a2")
 
         # Backward IR components
@@ -105,53 +91,53 @@ def test_dp(config):
         )
         var_closure = relay.var("closure")
 
-        expr_x1 = mnm.ir.op.nll_loss_dpred(dy, y_true, var_a1)
+        expr_x1 = raf.ir.op.nll_loss_dpred(dy, y_true, var_a1)
         var_x0 = relay.var("x0")
 
-        expr_x2 = mnm.ir.op.matmul_nt(var_x0, c)
+        expr_x2 = raf.ir.op.matmul_nt(var_x0, c)
         var_x1 = relay.var("x1")
 
         allreduce_in = relay.var("allreduce_in")
         expr_t = relay.Tuple([var_x1])
 
-        expr_x3 = mnm.ir.op.matmul_tn(x, var_x0)
+        expr_x3 = raf.ir.op.matmul_tn(x, var_x0)
         var_x2 = relay.var("x2")
 
         allreduce_in1 = relay.var("allreduce_in1")
         expr_t1 = relay.Tuple([var_x2])
 
-        expr_x4 = mnm.ir.op.zeros_like(y_true)
+        expr_x4 = raf.ir.op.zeros_like(y_true)
         var_x3 = relay.var("x3")
 
         allreduce_in2 = relay.var("allreduce_in2")
         expr_t2 = relay.Tuple([var_x3])
 
         if nccl_version > 21000:
-            expr_g = mnm.ir.op._allreduce(allreduce_in, "avg")
+            expr_g = raf.ir.op._allreduce(allreduce_in, "avg")
             var_g = relay.var("g")
 
-            expr_g1 = mnm.ir.op._allreduce(allreduce_in1, "avg")
+            expr_g1 = raf.ir.op._allreduce(allreduce_in1, "avg")
             var_g1 = relay.var("g1")
 
-            expr_g2 = mnm.ir.op._allreduce(allreduce_in2, "avg")
+            expr_g2 = raf.ir.op._allreduce(allreduce_in2, "avg")
             var_g2 = relay.var("g2")
         else:
-            fdeno = mnm.ir.const(float(dctx.size), dtype="float32")
-            ideno = mnm.ir.const(dctx.size, dtype="int64")
+            fdeno = raf.ir.const(float(dctx.size), dtype="float32")
+            ideno = raf.ir.const(dctx.size, dtype="int64")
 
-            expr_g = mnm.ir.op._allreduce(allreduce_in)
+            expr_g = raf.ir.op._allreduce(allreduce_in)
             var_g_sum = relay.var("g_sum")
-            expr_avg = mnm.ir.op.divide(var_g_sum, fdeno)
+            expr_avg = raf.ir.op.divide(var_g_sum, fdeno)
             var_g = relay.var("g")
 
-            expr_g1 = mnm.ir.op._allreduce(allreduce_in1)
+            expr_g1 = raf.ir.op._allreduce(allreduce_in1)
             var_g1_sum = relay.var("g_sum1")
-            expr_avg1 = mnm.ir.op.divide(var_g1_sum, fdeno)
+            expr_avg1 = raf.ir.op.divide(var_g1_sum, fdeno)
             var_g1 = relay.var("g1")
 
-            expr_g2 = mnm.ir.op._allreduce(allreduce_in2)
+            expr_g2 = raf.ir.op._allreduce(allreduce_in2)
             var_g2_sum = relay.var("g_sum2")
-            expr_avg2 = mnm.ir.op.divide(var_g2_sum, ideno)
+            expr_avg2 = raf.ir.op.divide(var_g2_sum, ideno)
             var_g2 = relay.var("g2")
 
         expr_x5 = relay.Tuple([var_g, var_g2, var_g1])
@@ -219,13 +205,13 @@ def test_dp(config):
         AutoDataParallel(),
         InferType(),
     ]
-    seq = MNMSequential(passes)
+    seq = RAFSequential(passes)
     mod = seq(mod_before)
     func_after = mod["main"]
     func_expected = expected()
     func_expected = run_infer_type(func_expected)
     text = func_after.astext()
-    assert "mnm.op._allreduce" in text
+    assert "raf.op._allreduce" in text
     assert tvm.ir.structural_equal(func_after, func_expected)
     dctx.enable_data_parallel = False
 

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,29 +9,29 @@
  */
 #include "../../schema/ufunc.h"
 #include "./cudnn_utils.h"
-#include "mnm/ir.h"
-#include "mnm/op_utils.h"
+#include "raf/ir.h"
+#include "raf/op_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cudnn {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 
-static auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
-class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
+class ReluImplementedByCUDNNActivationForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnActivationDescriptor_t activationDesc;
 
   explicit ReluImplementedByCUDNNActivationForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.relu");
+    auto op = Op::Get("raf.op.relu");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     auto xDesc_tt = SquashTensorShape(x, {0, x->ndim});
@@ -65,11 +51,11 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.relu"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.relu"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
@@ -91,10 +77,10 @@ class ReluImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, relu, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.relu", ReluImplementedByCUDNNActivationForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, relu, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.relu", ReluImplementedByCUDNNActivationForward::make);
 
-class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
+class ReluDxImplementedByCUDNNActivationBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -102,13 +88,13 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   cudnnActivationDescriptor_t activationDesc;
 
   explicit ReluDxImplementedByCUDNNActivationBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.relu_dx");
+    auto op = Op::Get("raf.op.relu_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryDxArgs>();
     (void)args;
     CHECK(args->x.defined());
     DLTensor* x = args->x.value();
@@ -139,11 +125,11 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.relu_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.relu_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryDxArgs>();
     CHECK(args->x.defined());
     DLTensor* x = args->x.value();
     CHECK(args->y.defined());
@@ -173,20 +159,20 @@ class ReluDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, relu_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.relu_dx", ReluDxImplementedByCUDNNActivationBackward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, relu_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.relu_dx", ReluDxImplementedByCUDNNActivationBackward::make);
 
-class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
+class SigmoidImplementedByCUDNNActivationForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnActivationDescriptor_t activationDesc;
 
   explicit SigmoidImplementedByCUDNNActivationForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.sigmoid");
+    auto op = Op::Get("raf.op.sigmoid");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     auto xDesc_tt = SquashTensorShape(x, {0, x->ndim});
@@ -206,11 +192,11 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.sigmoid"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.sigmoid"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
@@ -232,10 +218,10 @@ class SigmoidImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, sigmoid, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.sigmoid", SigmoidImplementedByCUDNNActivationForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, sigmoid, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.sigmoid", SigmoidImplementedByCUDNNActivationForward::make);
 
-class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
+class SigmoidDxImplementedByCUDNNActivationBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -243,13 +229,13 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   cudnnActivationDescriptor_t activationDesc;
 
   explicit SigmoidDxImplementedByCUDNNActivationBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.sigmoid_dx");
+    auto op = Op::Get("raf.op.sigmoid_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryDxArgs>();
     CHECK(args->x.defined());
     DLTensor* x = args->x.value();
     CHECK(args->y.defined());
@@ -279,11 +265,11 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.sigmoid_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.sigmoid_dx"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryDxArgs>();
     (void)args;
     CHECK(args->x.defined());
     DLTensor* x = args->x.value();
@@ -319,20 +305,20 @@ class SigmoidDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, sigmoid_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.sigmoid_dx", SigmoidDxImplementedByCUDNNActivationBackward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, sigmoid_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.sigmoid_dx", SigmoidDxImplementedByCUDNNActivationBackward::make);
 
-class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
+class TanhImplementedByCUDNNActivationForward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnActivationDescriptor_t activationDesc;
 
   explicit TanhImplementedByCUDNNActivationForward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.tanh");
+    auto op = Op::Get("raf.op.tanh");
     this->arg_indices = {
         fschema_index[op]("x"),
     };
-    auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     auto xDesc_tt = SquashTensorShape(x, {0, x->ndim});
@@ -352,11 +338,11 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.tanh"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.tanh"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::UnaryArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryArgs>();
     DLTensor* x = args->x;
     DLTensor* out = cv->out;
     CUDNN_CALL(cudnnActivationForward(CUDNNThreadEntry::ThreadLocal()->handle, activationDesc,
@@ -378,10 +364,10 @@ class TanhImplementedByCUDNNActivationForward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, tanh, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.tanh", TanhImplementedByCUDNNActivationForward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, tanh, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.tanh", TanhImplementedByCUDNNActivationForward::make);
 
-class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
+class TanhDxImplementedByCUDNNActivationBackward : public raf::op::OpEnv {
   cudnnTensorDescriptor_t xDesc;
   cudnnTensorDescriptor_t yDesc;
   cudnnTensorDescriptor_t dyDesc;
@@ -389,13 +375,13 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   cudnnActivationDescriptor_t activationDesc;
 
   explicit TanhDxImplementedByCUDNNActivationBackward(const CallValues& cv) {
-    auto op = Op::Get("mnm.op.tanh_dx");
+    auto op = Op::Get("raf.op.tanh_dx");
     this->arg_indices = {
         fschema_index[op]("x"),
         fschema_index[op]("y"),
         fschema_index[op]("dy"),
     };
-    auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryDxArgs>();
     CHECK(args->x.defined());
     DLTensor* x = args->x.value();
     CHECK(args->y.defined());
@@ -425,7 +411,7 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::UnaryDxArgs>();
+    auto args = cv->args.as<raf::op::schema::UnaryDxArgs>();
     CHECK(args->x.defined());
     DLTensor* x = args->x.value();
     CHECK(args->y.defined());
@@ -451,7 +437,7 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cudnn.tanh_dx"));
+    return TruncateName(GetUniqueName("raf.op.cudnn.tanh_dx"));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -459,9 +445,9 @@ class TanhDxImplementedByCUDNNActivationBackward : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cudnn, tanh_dx, 15);
-MNM_OP_ENV_MAKER("mnm.op.cudnn.tanh_dx", TanhDxImplementedByCUDNNActivationBackward::make);
+RAF_REGISTER_DIALECT_OP(cudnn, tanh_dx, 15);
+RAF_OP_ENV_MAKER("raf.op.cudnn.tanh_dx", TanhDxImplementedByCUDNNActivationBackward::make);
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

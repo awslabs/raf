@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,32 +10,32 @@
 #pragma once
 #include <unordered_map>
 #include <algorithm>
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/dist_context.h"
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/dist_context.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
 #include "./common.h"
-#include "mnm/stream_pool.h"
+#include "raf/stream_pool.h"
 #include "../op/ty/utils.h"
 #include "../op/schema/memory.h"
 #include "../op/schema/communication.h"
 #include "../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace memory_op_utils {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
-using namespace mnm::op::schema;
-using namespace mnm::analysis;
-using namespace mnm::common::shape_utils;
-using mnm::distributed::DistContext;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
+using namespace raf::op::schema;
+using namespace raf::analysis;
+using namespace raf::common::shape_utils;
 using op::IsMemcpyOp;
+using raf::distributed::DistContext;
 
 enum class FuseOp { kFuse, kFuseReorder, kNone };
 enum class DefuseOp { kDefuse, kNone };
@@ -69,13 +55,13 @@ using FuseAndDefuseOpToAddMap =
  * Other collective ops do not need any memory copy ops.
  */
 static FuseAndDefuseOpToAddMap fuse_and_defuse_op_to_add_map = {
-    {Op::Get("mnm.op._allreduce"), {FuseOp::kFuse, DefuseOp::kDefuse}},
-    {Op::Get("mnm.op._allgather"), {FuseOp::kNone, DefuseOp::kNone}},
-    {Op::Get("mnm.op._reduce_scatter"), {FuseOp::kNone, DefuseOp::kNone}},
-    {Op::Get("mnm.op._broadcast"), {FuseOp::kFuse, DefuseOp::kDefuse}},
-    {Op::Get("mnm.op._reduce"), {FuseOp::kFuse, DefuseOp::kDefuse}},
-    {Op::Get("mnm.op._send"), {FuseOp::kNone, DefuseOp::kNone}},
-    {Op::Get("mnm.op._recv"), {FuseOp::kNone, DefuseOp::kNone}},
+    {Op::Get("raf.op._allreduce"), {FuseOp::kFuse, DefuseOp::kDefuse}},
+    {Op::Get("raf.op._allgather"), {FuseOp::kNone, DefuseOp::kNone}},
+    {Op::Get("raf.op._reduce_scatter"), {FuseOp::kNone, DefuseOp::kNone}},
+    {Op::Get("raf.op._broadcast"), {FuseOp::kFuse, DefuseOp::kDefuse}},
+    {Op::Get("raf.op._reduce"), {FuseOp::kFuse, DefuseOp::kDefuse}},
+    {Op::Get("raf.op._send"), {FuseOp::kNone, DefuseOp::kNone}},
+    {Op::Get("raf.op._recv"), {FuseOp::kNone, DefuseOp::kNone}},
 };
 
 /*!
@@ -128,4 +114,4 @@ DefuseTensorArgs GetDefuseTensorArgs(const CallNode* call) {
 
 }  // namespace memory_op_utils
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

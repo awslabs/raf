@@ -1,38 +1,24 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint:disable=invalid-name, superfluous-parens,too-many-locals,line-too-long
 import pytest
 from mxnet import gluon
 import mxnet as mx
 import gluoncv
-import mnm
-from mnm._op import sym
-from mnm.testing import randn_mxnet, one_hot_mxnet, get_testable_devices, check
+import raf
+from raf._op import sym
+from raf.testing import randn_mxnet, one_hot_mxnet, get_testable_devices, check
 
 
 param_map_list = []
 
 
-def check_params(mx_model, mnm_model):
+def check_params(mx_model, raf_model):
     for param in param_map_list:
-        mx_value = mnm_model.state()[param]
-        mnm_value = mx_model.collect_params()[param].data()
-        check(mx_value, mnm_value, rtol=1e-3, atol=1e-3)
+        mx_value = raf_model.state()[param]
+        raf_value = mx_model.collect_params()[param].data()
+        check(mx_value, raf_value, rtol=1e-3, atol=1e-3)
 
 
 @pytest.mark.parametrize(
@@ -51,19 +37,19 @@ def test_backward_check(device, mx_model):
     mx_model[1].hybridize(static_alloc=True, static_shape=True)
     x, mx_x = randn_mxnet((5, 3, 224, 224), requires_grad=True, device=device)
     m_ytrue, mx_ytrue = one_hot_mxnet(batch_size=5, num_classes=1000, device=device)
-    mnm_model = mnm.frontend.from_mxnet(mx_model[1], ["x"])
+    raf_model = raf.frontend.from_mxnet(mx_model[1], ["x"])
 
-    out = mnm_model.record(x)
+    out = raf_model.record(x)
     y_pred = sym.log_softmax(out)
     loss = sym.nll_loss(m_ytrue, y_pred)
-    mnm_model = mnm_model + loss
+    raf_model = raf_model + loss
 
-    for i in mnm_model.state().keys():
+    for i in raf_model.state().keys():
         if i.find("running") == -1:
             param_map_list.append(i)
 
-    mnm_model.train_mode()
-    mnm_model.to(device=device)
+    raf_model.train_mode()
+    raf_model.to(device=device)
 
     with mx.autograd.record():
         mx_out = mx_model[1](mx_x)
@@ -72,10 +58,10 @@ def test_backward_check(device, mx_model):
         mx_loss_v = mx_loss.mean().asscalar()
         mx_loss.backward()
 
-    mnm_loss_v = mnm_model(x, m_ytrue)
-    mnm_loss_v.backward()
-    check(mx_loss_v, mnm_loss_v, rtol=1e-3, atol=1e-3)
-    check_params(mx_model[1], mnm_model)
+    raf_loss_v = raf_model(x, m_ytrue)
+    raf_loss_v.backward()
+    check(mx_loss_v, raf_loss_v, rtol=1e-3, atol=1e-3)
+    check_params(mx_model[1], raf_model)
     param_map_list.clear()
 
 
@@ -93,19 +79,19 @@ def test_forward_check(device, mx_model):
     x, mx_x = randn_mxnet((5, 3, 224, 224), requires_grad=True, device=device)
     m_ytrue, _ = one_hot_mxnet(batch_size=5, num_classes=1000, device=device)
 
-    mnm_model = mnm.frontend.from_mxnet(mx_model[1], ["x"])
-    mnm_model.train_mode()
-    mnm_model.to(device=device)
+    raf_model = raf.frontend.from_mxnet(mx_model[1], ["x"])
+    raf_model.train_mode()
+    raf_model.to(device=device)
 
     with mx.autograd.record():
         mx_model[1](mx_x)
 
-    mnm_model(x, m_ytrue)
+    raf_model(x, m_ytrue)
 
-    for i in mnm_model.state().keys():
+    for i in raf_model.state().keys():
         if i.find("running") == -1:
             param_map_list.append(i)
-    check_params(mx_model[1], mnm_model)
+    check_params(mx_model[1], raf_model)
     param_map_list.clear()
 
 

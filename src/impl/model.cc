@@ -1,39 +1,25 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file model.cc
  * \brief Helpers for running models.
  */
-#include "mnm/binding.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/executor.h"
-#include "mnm/pass.h"
-#include "mnm/dist_context.h"
+#include "raf/binding.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/executor.h"
+#include "raf/pass.h"
+#include "raf/dist_context.h"
 
-namespace mnm {
+namespace raf {
 namespace model {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using binding::DeStruct;
 using binding::DeTuple;
 using binding::GradTape;
@@ -72,7 +58,7 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
   if (!requires_grad) {
     // TODO(haibin): add simplify inference pass - simplify the compute of
     // BN, LN, Dropout, GN, etc.
-    mnm::pass::MNMSequential seq({CanonicalizeOps(), FoldConstant()});
+    raf::pass::RAFSequential seq({CanonicalizeOps(), FoldConstant()});
     updated_mod = seq(updated_mod);
     func = Downcast<Function>(updated_mod->Lookup("main"));
     auto call_node = Call(func, args);
@@ -95,7 +81,7 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
 
   // run const folding pass
   passes.push_back(FoldConstant());
-  mnm::pass::MNMSequential seq(passes);
+  raf::pass::RAFSequential seq(passes);
   updated_mod = seq(updated_mod);
   func = Downcast<Function>(updated_mod->Lookup("main"));
   TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args), updated_mod));
@@ -105,7 +91,7 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
                   /*prev_tapes=*/{grads.begin(), grads.end()});
 }
 
-MNM_REGISTER_GLOBAL("mnm.model.RunModel").set_body_typed(RunModel);
+RAF_REGISTER_GLOBAL("raf.model.RunModel").set_body_typed(RunModel);
 
 }  // namespace model
-}  // namespace mnm
+}  // namespace raf

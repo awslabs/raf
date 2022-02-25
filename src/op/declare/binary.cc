@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,21 +8,21 @@
  * \brief Declaration of binary operators
  */
 #include <tvm/arith/analyzer.h>
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/ufunc.h"
 #include "../ty/utils.h"
 #include "./declare_utils.h"
 #include <cmath>
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-#define MNM_SWITCH_SCALAR(var, value, body)                     \
+#define RAF_SWITCH_SCALAR(var, value, body)                     \
   do {                                                          \
     if (const auto* var = (value).as<IntValueObj>()) {          \
       body;                                                     \
@@ -47,14 +33,14 @@ using namespace mnm::value;
     }                                                           \
   } while (0);
 
-#define MNM_BINARY_SCALAR(op, x1, x2)                                        \
-  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {                      \
+#define RAF_BINARY_SCALAR(op, x1, x2)                                        \
+  RAF_SWITCH_SCALAR(v1, x1, RAF_SWITCH_SCALAR(v2, x2, {                      \
                       call->callee = ir::NullValue<OpValue>();               \
                       call->out = ScalarValue::make(v1->value op v2->value); \
                       return;                                                \
                     }));
 
-#define MNM_BINARY_TENSOR(x1, x2)                                             \
+#define RAF_BINARY_TENSOR(x1, x2)                                             \
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
     const TensorValue& tv = MakeBinaryTensor(x1, x2);                         \
     call->out = tv;                                                           \
@@ -62,7 +48,7 @@ using namespace mnm::value;
     return;                                                                   \
   }
 
-#define MNM_BINARY_INPLACE_TENSOR(x1, x2, out)                                                   \
+#define RAF_BINARY_INPLACE_TENSOR(x1, x2, out)                                                   \
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>() && (out).defined()) { \
     TensorValue tv_out = ir::Downcast<TensorValue>(out);                                         \
     call->out = tv_out;                                                                          \
@@ -70,7 +56,7 @@ using namespace mnm::value;
     return;                                                                                      \
   }
 
-#define MNM_LOGICAL_BINARY_TENSOR(x1, x2)                                     \
+#define RAF_LOGICAL_BINARY_TENSOR(x1, x2)                                     \
   if (x1->IsInstance<TensorValueObj>() && x2->IsInstance<TensorValueObj>()) { \
     const TensorValue& tv = MakeBinaryTensor(x1, x2, true);                   \
     call->out = tv;                                                           \
@@ -107,51 +93,51 @@ TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false
   return TensorValue::Assemble(x1->device, x1->dtype, oshape);
 }
 
-MNM_OP_DECLARE("mnm.op.add", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.add", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   const Value& out = args->out;
   if (!args->where.defined()) {
-    MNM_BINARY_SCALAR(+, x1, x2);
-    MNM_BINARY_TENSOR(x1, x2);
-    MNM_BINARY_INPLACE_TENSOR(x1, x2, out);
+    RAF_BINARY_SCALAR(+, x1, x2);
+    RAF_BINARY_TENSOR(x1, x2);
+    RAF_BINARY_INPLACE_TENSOR(x1, x2, out);
   }
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.subtract", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.subtract", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryUfuncArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
   const Value& out = args->out;
   if (!args->where.defined()) {
-    MNM_BINARY_SCALAR(-, x1, x2);
-    MNM_BINARY_TENSOR(x1, x2);
-    MNM_BINARY_INPLACE_TENSOR(x1, x2, out);
+    RAF_BINARY_SCALAR(-, x1, x2);
+    RAF_BINARY_TENSOR(x1, x2);
+    RAF_BINARY_INPLACE_TENSOR(x1, x2, out);
   }
   LOG(FATAL) << "NotImplementedError";
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.multiply", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.multiply", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(*, x1, x2);
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(*, x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.power", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.power", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+  RAF_SWITCH_SCALAR(v1, x1, RAF_SWITCH_SCALAR(v2, x2, {
                       call->callee = ir::NullValue<OpValue>();
                       double a1 = v1->value;
                       double a2 = v2->value;
@@ -159,15 +145,15 @@ MNM_OP_DECLARE("mnm.op.power", [](const CallValues& call) {
                       call->out = ScalarValue::make(result);
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.divide", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.divide", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+  RAF_SWITCH_SCALAR(s1, x1, RAF_SWITCH_SCALAR(s2, x2, {
                       if (s2->value == 0) {
                         LOG(FATAL) << "ZeroDivisionError: division by zero";
                         throw;
@@ -176,15 +162,15 @@ MNM_OP_DECLARE("mnm.op.divide", [](const CallValues& call) {
                       call->out = ScalarValue::make(s1->value / s2->value);
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.floor_divide", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.floor_divide", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+  RAF_SWITCH_SCALAR(s1, x1, RAF_SWITCH_SCALAR(s2, x2, {
                       if (s2->value == 0) {
                         LOG(FATAL) << "ZeroDivisionError: division by zero";
                         throw;
@@ -193,16 +179,16 @@ MNM_OP_DECLARE("mnm.op.floor_divide", [](const CallValues& call) {
                       call->out = ScalarValue::make(floor(s1->value / s2->value));
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.mod", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.mod", [](const CallValues& call) {
   // TODO(@junrushao1994): python-style Euclidean division modulo
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+  RAF_SWITCH_SCALAR(s1, x1, RAF_SWITCH_SCALAR(s2, x2, {
                       if (s2->value == 0) {
                         LOG(FATAL) << "ZeroDivisionError: division by zero";
                         throw;
@@ -223,31 +209,31 @@ MNM_OP_DECLARE("mnm.op.mod", [](const CallValues& call) {
                     }));
 });
 
-MNM_OP_DECLARE("mnm.op.less", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.less", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(<, x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(<, x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.greater", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.greater", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(>, x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(>, x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.right_shift", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.right_shift", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+  RAF_SWITCH_SCALAR(s1, x1, RAF_SWITCH_SCALAR(s2, x2, {
                       if (!s1->IsInstance<IntValueObj>() || !s2->IsInstance<IntValueObj>()) {
                         LOG(FATAL) << "func 'right_shift' not supported for the input types";
                         throw;
@@ -259,78 +245,78 @@ MNM_OP_DECLARE("mnm.op.right_shift", [](const CallValues& call) {
                       call->out = ScalarValue::make(result);
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.less_equal", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.less_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(<=, x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(<=, x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.greater_equal", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.greater_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(>=, x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(>=, x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.equal", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(==, x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(==, x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.not_equal", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.not_equal", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(!=, x1, x2);
-  MNM_LOGICAL_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(!=, x1, x2);
+  RAF_LOGICAL_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.maximum", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.maximum", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+  RAF_SWITCH_SCALAR(v1, x1, RAF_SWITCH_SCALAR(v2, x2, {
                       call->callee = ir::NullValue<OpValue>();
                       call->out = ScalarValue::make(v1->value > v2->value ? v1->value : v2->value);
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.minimum", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.minimum", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(v1, x1, MNM_SWITCH_SCALAR(v2, x2, {
+  RAF_SWITCH_SCALAR(v1, x1, RAF_SWITCH_SCALAR(v2, x2, {
                       call->callee = ir::NullValue<OpValue>();
                       call->out = ScalarValue::make(v1->value < v2->value ? v1->value : v2->value);
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.logical_and", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.logical_and", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_BINARY_SCALAR(&&, x1, x2);
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_SCALAR(&&, x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
 void CollapseAxis(const CallValues& call) {
@@ -366,12 +352,12 @@ void CollapseAxis(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op.left_shift", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.left_shift", [](const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
   const Value& x1 = args->x1;
   const Value& x2 = args->x2;
-  MNM_SWITCH_SCALAR(s1, x1, MNM_SWITCH_SCALAR(s2, x2, {
+  RAF_SWITCH_SCALAR(s1, x1, RAF_SWITCH_SCALAR(s2, x2, {
                       if (s2->value < 0) {
                         LOG(FATAL) << "ValueError: Negative shift count";
                         throw;
@@ -389,10 +375,10 @@ MNM_OP_DECLARE("mnm.op.left_shift", [](const CallValues& call) {
                       }
                       return;
                     }));
-  MNM_BINARY_TENSOR(x1, x2);
+  RAF_BINARY_TENSOR(x1, x2);
 });
 
-MNM_OP_DECLARE("mnm.op.get_reduce_axis", CollapseAxis);
+RAF_OP_DECLARE("raf.op.get_reduce_axis", CollapseAxis);
 
 void CollapseKeep(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
@@ -426,8 +412,8 @@ void CollapseKeep(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op.get_kept_dims", CollapseKeep);
+RAF_OP_DECLARE("raf.op.get_kept_dims", CollapseKeep);
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

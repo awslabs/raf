@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,21 +9,21 @@
  */
 #include "./conv.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
-using mnm::op::regs::value2schema::TupleInt;
-using mnm::registry::PackedFunc;
-using mnm::registry::TypedPackedFunc;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
+using raf::op::regs::value2schema::TupleInt;
+using raf::registry::PackedFunc;
+using raf::registry::TypedPackedFunc;
 
 bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
   Expr expr = Downcast<ClosureValue>(cv->callee)->func->body;
-  const static std::vector<std::string> conv_ops = {"mnm.op.cutlass.conv2d"};
-  const static std::vector<std::string> epilogue_ops = {"mnm.op.cutlass.relu"};
+  const static std::vector<std::string> conv_ops = {"raf.op.cutlass.conv2d"};
+  const static std::vector<std::string> epilogue_ops = {"raf.op.cutlass.relu"};
   auto conv2d = IsOps(conv_ops);
   auto epilogue = IsOps(epilogue_ops);
   auto x = IsVar("");
@@ -57,11 +43,11 @@ bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
   DFPattern with_epilogue = epilogue({pat});
   pat = with_epilogue || pat;
 
-  if (!MNMMatchPattern(pat, expr)) {
+  if (!RAFMatchPattern(pat, expr)) {
     return false;
   }
 
-  // MNMRewritePatterns serves as a visitor here: it does not rewrite, instead information
+  // RAFRewritePatterns serves as a visitor here: it does not rewrite, instead information
   // is recorded for later process.
   TypedPackedFunc<Expr(const Expr&, const Expr&, const Map<DFPattern, Array<Expr>>&)> func(
       [&](const Expr& pre, const Expr& post, const Map<DFPattern, Array<Expr>>& node_map) {
@@ -81,7 +67,7 @@ bool CutlassConv2dOpEnv::Pattern(const CallValues& cv) {
         return post;
       });
   DFPatternCallback cb(pat, func.operator PackedFunc(), false);
-  MNMRewritePatterns({cb}, expr);
+  RAFRewritePatterns({cb}, expr);
   return true;
 }
 
@@ -131,8 +117,8 @@ void CutlassConv2dOpEnv::Execute(const std::vector<Value>& inputs, Value output)
 }
 
 // TODO(@hzfan): Using plevel 0 due to lack of OpEnvMaker
-MNM_REGISTER_DIALECT_OP(cutlass, conv2d, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, conv2d, 0);
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

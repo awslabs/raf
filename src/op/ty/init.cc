@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,17 +8,17 @@
  * \brief Typing of init operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/op_utils.h"
-#include "mnm/type.h"
+#include "raf/op_utils.h"
+#include "raf/type.h"
 #include "../schema/init.h"
 #include "../declare/declare_utils.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using namespace schema;
 
 Type InitOpInfer(const CallValues& value) {
@@ -43,8 +29,8 @@ Type InitOpInfer(const CallValues& value) {
   return TensorType(shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.zeros", "Zeros", InitOpInfer);
-MNM_OP_TYPE("mnm.op.ones", "Ones", InitOpInfer);
+RAF_OP_TYPE("raf.op.zeros", "Zeros", InitOpInfer);
+RAF_OP_TYPE("raf.op.ones", "Ones", InitOpInfer);
 
 Type OneHotInfer(const CallValues& value) {
   const auto* args = value->args.as<OneHotArgs>();
@@ -57,7 +43,7 @@ Type OneHotInfer(const CallValues& value) {
   return TensorType(shape, dtype);
 }
 
-MNM_OP_TYPE("mnm.op.one_hot", "OneHot", OneHotInfer);
+RAF_OP_TYPE("raf.op.one_hot", "OneHot", OneHotInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -1,40 +1,26 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file const_fold.cc
  * \brief Folding constants
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/pass.h"
-#include "mnm/executor.h"
-#include "mnm/binding.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/pass.h"
+#include "raf/executor.h"
+#include "raf/binding.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace fold_const {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
 
 class ConstantChecker : private ExprVisitor {
  public:
@@ -141,8 +127,8 @@ class ConstantFolder : public ExprMutator {
     if (const auto* tuple = op->tuple.as<TupleNode>()) {
       return tuple->fields[op->index];
     } else if (const auto* relay_const = op->tuple.as<RelayConstantNode>()) {
-      const auto* mnm_const = static_cast<const ConstantNode*>(relay_const);
-      auto value = Downcast<TupleValue>(mnm_const->value);
+      const auto* raf_const = static_cast<const ConstantNode*>(relay_const);
+      auto value = Downcast<TupleValue>(raf_const->value);
       return MakeConstant(value->fields[op->index]);
     } else {
       return res;
@@ -241,12 +227,12 @@ Pass FoldConstant() {
                                                                              PassContext pc) {
     return Downcast<Function>(fold_const::ConstantFolder().Mutate(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "FoldConstant", {});
+  return CreateRAFFunctionPass(pass_func, 1, "FoldConstant", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.is_constant").set_body_typed(IsConstant);
-MNM_REGISTER_GLOBAL("mnm.pass_.FoldConstant").set_body_typed(FoldConstant);
-MNM_REGISTER_GLOBAL("mnm.pass_.BindParam").set_body_typed(BindParam);
+RAF_REGISTER_GLOBAL("raf.pass_.is_constant").set_body_typed(IsConstant);
+RAF_REGISTER_GLOBAL("raf.pass_.FoldConstant").set_body_typed(FoldConstant);
+RAF_REGISTER_GLOBAL("raf.pass_.BindParam").set_body_typed(BindParam);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

@@ -1,36 +1,22 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/declare/gemm.cc
  * \brief Declaration of genmm-related operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/ufunc.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
 template <bool transpose_a, bool transpose_b>
 void MatmulDecl(const CallValues& call) {
@@ -68,10 +54,10 @@ auto MatmulNT = MatmulDecl<false, true>;
 auto MatmulTN = MatmulDecl<true, false>;
 auto MatmulTT = MatmulDecl<true, true>;
 
-MNM_OP_DECLARE("mnm.op.matmul", MatmulNN);
-MNM_OP_DECLARE("mnm.op.matmul_nt", MatmulNT);
-MNM_OP_DECLARE("mnm.op.matmul_tn", MatmulTN);
-MNM_OP_DECLARE("mnm.op.matmul_tt", MatmulTT);
+RAF_OP_DECLARE("raf.op.matmul", MatmulNN);
+RAF_OP_DECLARE("raf.op.matmul_nt", MatmulNT);
+RAF_OP_DECLARE("raf.op.matmul_tn", MatmulTN);
+RAF_OP_DECLARE("raf.op.matmul_tt", MatmulTT);
 
 template <bool transpose_a, bool transpose_b>
 void BatchMatmulDecl(const CallValues& call) {
@@ -117,12 +103,12 @@ auto BatchMatmulNT = BatchMatmulDecl<false, true>;
 auto BatchMatmulTN = BatchMatmulDecl<true, false>;
 auto BatchMatmulTT = BatchMatmulDecl<true, true>;
 
-MNM_OP_DECLARE("mnm.op.batch_matmul", BatchMatmulNN);
-MNM_OP_DECLARE("mnm.op.batch_matmul_nt", BatchMatmulNT);
-MNM_OP_DECLARE("mnm.op.batch_matmul_tn", BatchMatmulTN);
-MNM_OP_DECLARE("mnm.op.batch_matmul_tt", BatchMatmulTT);
+RAF_OP_DECLARE("raf.op.batch_matmul", BatchMatmulNN);
+RAF_OP_DECLARE("raf.op.batch_matmul_nt", BatchMatmulNT);
+RAF_OP_DECLARE("raf.op.batch_matmul_tn", BatchMatmulTN);
+RAF_OP_DECLARE("raf.op.batch_matmul_tt", BatchMatmulTT);
 
-MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.dense", [](const CallValues& call) {
   const auto* args = call->args.as<schema::BinaryArgs>();
   CHECK(args != nullptr);
   const DLTensor* a = args->x1;
@@ -144,4 +130,4 @@ MNM_OP_DECLARE("mnm.op.dense", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

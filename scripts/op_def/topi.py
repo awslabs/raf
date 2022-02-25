@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Operator definition for TOPI (TVM Operator Inventory)."""
@@ -24,136 +10,136 @@ __all__ = ["OP_MAP"]
 # pylint: disable=line-too-long
 
 OP_MAP = {
-    "mnm.op.tvm.abs": ["abs", "", "kElemWise"],
-    "mnm.op.tvm.add": ["add", "", "kBroadcast"],
-    "mnm.op.tvm.all": ["all", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.any": ["any", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.arange": ["arange", "relay.attrs.ArangeAttrs", "kOpaque"],
-    "mnm.op.tvm.argmax": ["argmax", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.argmin": ["argmin", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.argsort": ["argsort", "relay.attrs.ArgsortAttrs", "kOpaque"],
-    "mnm.op.tvm.atan": ["atan", "", "kElemWise"],
-    "mnm.op.tvm.broadcast_to": ["broadcast_to", "", "kBroadcast"],
-    "mnm.op.tvm.broadcast_to_like": ["broadcast_to_like", "", "kBroadcast"],
-    "mnm.op.tvm.cast": ["cast", "relay.attrs.CastAttrs", "kElemWise"],
-    "mnm.op.tvm.cast_like": ["cast_like", "", "kElemWise"],
-    "mnm.op.tvm.ceil": ["ceil", "", "kElemWise"],
-    "mnm.op.tvm.clip": ["clip", "relay.attrs.ClipAttrs", "kElemWise"],
-    "mnm.op.tvm.collapse_sum_like": ["collapse_sum_like", "", "kCommReduce"],
-    "mnm.op.tvm.cumsum": ["cumsum", "relay.attrs.ScanopAttrs", "kOpaque"],
-    "mnm.op.tvm.concatenate": ["concatenate", "relay.attrs.ConcatenateAttrs", "kInjective"],
-    "mnm.op.tvm.copy": ["copy", "", "kElemWise"],
-    "mnm.op.tvm.cos": ["cos", "", "kElemWise"],
-    "mnm.op.tvm.divide": ["divide", "", "kBroadcast"],
-    "mnm.op.tvm.equal": ["equal", "", "kBroadcast"],
-    "mnm.op.tvm.erf": ["erf", "", "kElemWise"],
-    "mnm.op.tvm.exp": ["exp", "", "kElemWise"],
-    "mnm.op.tvm.expand_dims": ["expand_dims", "relay.attrs.ExpandDimsAttrs", "kBroadcast"],
-    "mnm.op.tvm.floor": ["floor", "", "kElemWise"],
-    "mnm.op.tvm.floor_divide": ["floor_divide", "", "kBroadcast"],
-    "mnm.op.tvm.floor_mod": ["floor_mod", "", "kBroadcast"],
-    "mnm.op.tvm.gather": ["gather", "", "kInjective"],
-    "mnm.op.tvm.gather_nd": ["gather_nd", "", "kInjective"],
-    "mnm.op.tvm.greater": ["greater", "", "kBroadcast"],
-    "mnm.op.tvm.greater_equal": ["greater_equal", "", "kBroadcast"],
-    "mnm.op.tvm.layout_transform": [
+    "raf.op.tvm.abs": ["abs", "", "kElemWise"],
+    "raf.op.tvm.add": ["add", "", "kBroadcast"],
+    "raf.op.tvm.all": ["all", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.any": ["any", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.arange": ["arange", "relay.attrs.ArangeAttrs", "kOpaque"],
+    "raf.op.tvm.argmax": ["argmax", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.argmin": ["argmin", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.argsort": ["argsort", "relay.attrs.ArgsortAttrs", "kOpaque"],
+    "raf.op.tvm.atan": ["atan", "", "kElemWise"],
+    "raf.op.tvm.broadcast_to": ["broadcast_to", "", "kBroadcast"],
+    "raf.op.tvm.broadcast_to_like": ["broadcast_to_like", "", "kBroadcast"],
+    "raf.op.tvm.cast": ["cast", "relay.attrs.CastAttrs", "kElemWise"],
+    "raf.op.tvm.cast_like": ["cast_like", "", "kElemWise"],
+    "raf.op.tvm.ceil": ["ceil", "", "kElemWise"],
+    "raf.op.tvm.clip": ["clip", "relay.attrs.ClipAttrs", "kElemWise"],
+    "raf.op.tvm.collapse_sum_like": ["collapse_sum_like", "", "kCommReduce"],
+    "raf.op.tvm.cumsum": ["cumsum", "relay.attrs.ScanopAttrs", "kOpaque"],
+    "raf.op.tvm.concatenate": ["concatenate", "relay.attrs.ConcatenateAttrs", "kInjective"],
+    "raf.op.tvm.copy": ["copy", "", "kElemWise"],
+    "raf.op.tvm.cos": ["cos", "", "kElemWise"],
+    "raf.op.tvm.divide": ["divide", "", "kBroadcast"],
+    "raf.op.tvm.equal": ["equal", "", "kBroadcast"],
+    "raf.op.tvm.erf": ["erf", "", "kElemWise"],
+    "raf.op.tvm.exp": ["exp", "", "kElemWise"],
+    "raf.op.tvm.expand_dims": ["expand_dims", "relay.attrs.ExpandDimsAttrs", "kBroadcast"],
+    "raf.op.tvm.floor": ["floor", "", "kElemWise"],
+    "raf.op.tvm.floor_divide": ["floor_divide", "", "kBroadcast"],
+    "raf.op.tvm.floor_mod": ["floor_mod", "", "kBroadcast"],
+    "raf.op.tvm.gather": ["gather", "", "kInjective"],
+    "raf.op.tvm.gather_nd": ["gather_nd", "", "kInjective"],
+    "raf.op.tvm.greater": ["greater", "", "kBroadcast"],
+    "raf.op.tvm.greater_equal": ["greater_equal", "", "kBroadcast"],
+    "raf.op.tvm.layout_transform": [
         "layout_transform",
         "relay.attrs.LayoutTransformAttrs",
         "kInjective",
     ],
-    "mnm.op.tvm.left_shift": ["left_shift", "", "kBroadcast"],
-    "mnm.op.tvm.less": ["less", "", "kBroadcast"],
-    "mnm.op.tvm.less_equal": ["less_equal", "", "kBroadcast"],
-    "mnm.op.tvm.log": ["log", "", "kElemWise"],
-    "mnm.op.tvm.log2": ["log2", "", "kElemWise"],
-    "mnm.op.tvm.log_softmax": ["nn.log_softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
-    "mnm.op.tvm.logical_and": ["logical_and", "", "kBroadcast"],
-    "mnm.op.tvm.logical_not": ["logical_not", "", "kElemWise"],
-    "mnm.op.tvm.logical_or": ["logical_or", "", "kBroadcast"],
-    "mnm.op.tvm.max": ["max", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.maximum": ["maximum", "", "kBroadcast"],
-    "mnm.op.tvm.mean": ["mean", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.min": ["min", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.minimum": ["minimum", "", "kBroadcast"],
-    "mnm.op.tvm.mod": ["mod", "", "kBroadcast"],
-    "mnm.op.tvm.multiply": ["multiply", "", "kBroadcast"],
-    "mnm.op.tvm.negative": ["negative", "", "kElemWise"],
-    "mnm.op.tvm.bias_add": ["nn.bias_add", "relay.attrs.BiasAddAttrs", "kBroadcast"],
-    "mnm.op.tvm.not_equal": ["not_equal", "", "kBroadcast"],
-    "mnm.op.tvm.one_hot": ["one_hot", "relay.attrs.OneHotAttrs", "kOutEWiseFusable"],
-    "mnm.op.tvm.ones": ["ones", "relay.attrs.InitOpAttrs", "kElemWise"],
-    "mnm.op.tvm.ones_like": ["ones_like", "", "kElemWise"],
-    "mnm.op.tvm.power": ["power", "", "kBroadcast"],
-    "mnm.op.tvm.prod": ["prod", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.reinterpret": ["reinterpret", "relay.attrs.CastAttrs", "kElemWise"],
-    "mnm.op.tvm.repeat": ["repeat", "relay.attrs.RepeatAttrs", "kBroadcast"],
-    "mnm.op.tvm.reverse": ["reverse", "relay.attrs.ReverseAttrs", "kInjective"],
-    "mnm.op.tvm.right_shift": ["right_shift", "", "kBroadcast"],
-    "mnm.op.tvm.round": ["round", "", "kElemWise"],
-    "mnm.op.tvm.rsqrt": ["rsqrt", "", "kElemWise"],
-    "mnm.op.tvm.reshape": ["reshape", "relay.attrs.ReshapeAttrs", "kInjective"],
-    "mnm.op.tvm.sequence_mask": ["sequence_mask", "relay.attrs.SequenceMaskAttrs", "kInjective"],
-    "mnm.op.tvm.reverse_sequence": [
+    "raf.op.tvm.left_shift": ["left_shift", "", "kBroadcast"],
+    "raf.op.tvm.less": ["less", "", "kBroadcast"],
+    "raf.op.tvm.less_equal": ["less_equal", "", "kBroadcast"],
+    "raf.op.tvm.log": ["log", "", "kElemWise"],
+    "raf.op.tvm.log2": ["log2", "", "kElemWise"],
+    "raf.op.tvm.log_softmax": ["nn.log_softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
+    "raf.op.tvm.logical_and": ["logical_and", "", "kBroadcast"],
+    "raf.op.tvm.logical_not": ["logical_not", "", "kElemWise"],
+    "raf.op.tvm.logical_or": ["logical_or", "", "kBroadcast"],
+    "raf.op.tvm.max": ["max", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.maximum": ["maximum", "", "kBroadcast"],
+    "raf.op.tvm.mean": ["mean", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.min": ["min", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.minimum": ["minimum", "", "kBroadcast"],
+    "raf.op.tvm.mod": ["mod", "", "kBroadcast"],
+    "raf.op.tvm.multiply": ["multiply", "", "kBroadcast"],
+    "raf.op.tvm.negative": ["negative", "", "kElemWise"],
+    "raf.op.tvm.bias_add": ["nn.bias_add", "relay.attrs.BiasAddAttrs", "kBroadcast"],
+    "raf.op.tvm.not_equal": ["not_equal", "", "kBroadcast"],
+    "raf.op.tvm.one_hot": ["one_hot", "relay.attrs.OneHotAttrs", "kOutEWiseFusable"],
+    "raf.op.tvm.ones": ["ones", "relay.attrs.InitOpAttrs", "kElemWise"],
+    "raf.op.tvm.ones_like": ["ones_like", "", "kElemWise"],
+    "raf.op.tvm.power": ["power", "", "kBroadcast"],
+    "raf.op.tvm.prod": ["prod", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.reinterpret": ["reinterpret", "relay.attrs.CastAttrs", "kElemWise"],
+    "raf.op.tvm.repeat": ["repeat", "relay.attrs.RepeatAttrs", "kBroadcast"],
+    "raf.op.tvm.reverse": ["reverse", "relay.attrs.ReverseAttrs", "kInjective"],
+    "raf.op.tvm.right_shift": ["right_shift", "", "kBroadcast"],
+    "raf.op.tvm.round": ["round", "", "kElemWise"],
+    "raf.op.tvm.rsqrt": ["rsqrt", "", "kElemWise"],
+    "raf.op.tvm.reshape": ["reshape", "relay.attrs.ReshapeAttrs", "kInjective"],
+    "raf.op.tvm.sequence_mask": ["sequence_mask", "relay.attrs.SequenceMaskAttrs", "kInjective"],
+    "raf.op.tvm.reverse_sequence": [
         "reverse_sequence",
         "relay.attrs.ReverseSequenceAttrs",
         "kInjective",
     ],
-    "mnm.op.tvm.scatter": ["scatter", "relay.attrs.ScstterAttrs", "kOpaque"],
-    "mnm.op.tvm.sigmoid": ["sigmoid", "", "kElemWise"],
-    "mnm.op.tvm.sign": ["sign", "", "kElemWise"],
-    "mnm.op.tvm.sin": ["sin", "", "kElemWise"],
-    "mnm.op.tvm.slice_like": ["slice_like", "relay.attrs.SliceLikeAttrs", "kInjective"],
-    "mnm.op.tvm.split": ["split", "relay.attrs.SplitAttrs", "kInjective"],
-    "mnm.op.tvm.sqrt": ["sqrt", "", "kElemWise"],
-    "mnm.op.tvm.squeeze": ["squeeze", "relay.attrs.SqueezeAttrs", "kInjective"],
-    "mnm.op.tvm.stack": ["stack", "relay.attrs.StackAttrs", "kInjective"],
-    "mnm.op.tvm.strided_slice": ["strided_slice", "relay.attrs.StridedSliceAttrs", "kInjective"],
-    "mnm.op.tvm.subtract": ["subtract", "", "kBroadcast"],
-    "mnm.op.tvm.take": ["take", "relay.attrs.TakeAttrs", "kInjective"],
-    "mnm.op.tvm.tanh": ["tanh", "", "kElemWise"],
-    "mnm.op.tvm.tile": ["tile", "relay.attrs.TileAttrs", "kBroadcast"],
-    "mnm.op.tvm.topk": ["topk", "relay.attrs.TopkAttrs", "kOpaque"],
-    "mnm.op.tvm.transpose": ["transpose", "relay.attrs.TransposeAttrs", "kInjective"],
-    "mnm.op.tvm.trunc": ["trunc", "", "kElemWise"],
-    "mnm.op.tvm.threefry_generate": [
+    "raf.op.tvm.scatter": ["scatter", "relay.attrs.ScstterAttrs", "kOpaque"],
+    "raf.op.tvm.sigmoid": ["sigmoid", "", "kElemWise"],
+    "raf.op.tvm.sign": ["sign", "", "kElemWise"],
+    "raf.op.tvm.sin": ["sin", "", "kElemWise"],
+    "raf.op.tvm.slice_like": ["slice_like", "relay.attrs.SliceLikeAttrs", "kInjective"],
+    "raf.op.tvm.split": ["split", "relay.attrs.SplitAttrs", "kInjective"],
+    "raf.op.tvm.sqrt": ["sqrt", "", "kElemWise"],
+    "raf.op.tvm.squeeze": ["squeeze", "relay.attrs.SqueezeAttrs", "kInjective"],
+    "raf.op.tvm.stack": ["stack", "relay.attrs.StackAttrs", "kInjective"],
+    "raf.op.tvm.strided_slice": ["strided_slice", "relay.attrs.StridedSliceAttrs", "kInjective"],
+    "raf.op.tvm.subtract": ["subtract", "", "kBroadcast"],
+    "raf.op.tvm.take": ["take", "relay.attrs.TakeAttrs", "kInjective"],
+    "raf.op.tvm.tanh": ["tanh", "", "kElemWise"],
+    "raf.op.tvm.tile": ["tile", "relay.attrs.TileAttrs", "kBroadcast"],
+    "raf.op.tvm.topk": ["topk", "relay.attrs.TopkAttrs", "kOpaque"],
+    "raf.op.tvm.transpose": ["transpose", "relay.attrs.TransposeAttrs", "kInjective"],
+    "raf.op.tvm.trunc": ["trunc", "", "kElemWise"],
+    "raf.op.tvm.threefry_generate": [
         "random.threefry_generate",
         "relay.attrs.ThreefryGenerateAttrs",
         "kOpaque",
     ],
-    "mnm.op.tvm.threefry_split": ["random.threefry_split", "", "kOpaque"],
-    "mnm.op.tvm.variance": ["variance", "relay.attrs.ReduceAttrs", "kCommReduce"],
-    "mnm.op.tvm.where": ["where", "", "kBroadcast"],
-    "mnm.op.tvm.zeros": ["zeros", "relay.attrs.InitOpAttrs", "kElemWise"],
-    "mnm.op.tvm.zeros_like": ["zeros_like", "", "kElemWise"],
-    "mnm.op.tvm.batch_matmul_nt": ["nn.batch_matmul", "", "kOpaque"],
-    "mnm.op.tvm.dense": ["nn.dense", "", "kOpaque"],
-    "mnm.op.tvm.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
-    "mnm.op.tvm.relu": ["nn.relu", "", "kInjective"],
-    "mnm.op.tvm.avg_pool2d": ["nn.avg_pool2d", "", "kOpaque"],
-    "mnm.op.tvm.avg_pool2d_dx": ["nn.avg_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
-    "mnm.op.tvm.max_pool2d": ["nn.max_pool2d", "", "kOpaque"],
-    "mnm.op.tvm.max_pool2d_dx": ["nn.max_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
-    "mnm.op.tvm.adaptive_avg_pool2d": ["nn.adaptive_avg_pool2d", "", "kOpaque"],
-    "mnm.op.tvm.adaptive_avg_pool2d_dx": [
+    "raf.op.tvm.threefry_split": ["random.threefry_split", "", "kOpaque"],
+    "raf.op.tvm.variance": ["variance", "relay.attrs.ReduceAttrs", "kCommReduce"],
+    "raf.op.tvm.where": ["where", "", "kBroadcast"],
+    "raf.op.tvm.zeros": ["zeros", "relay.attrs.InitOpAttrs", "kElemWise"],
+    "raf.op.tvm.zeros_like": ["zeros_like", "", "kElemWise"],
+    "raf.op.tvm.batch_matmul_nt": ["nn.batch_matmul", "", "kOpaque"],
+    "raf.op.tvm.dense": ["nn.dense", "", "kOpaque"],
+    "raf.op.tvm.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
+    "raf.op.tvm.relu": ["nn.relu", "", "kInjective"],
+    "raf.op.tvm.avg_pool2d": ["nn.avg_pool2d", "", "kOpaque"],
+    "raf.op.tvm.avg_pool2d_dx": ["nn.avg_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
+    "raf.op.tvm.max_pool2d": ["nn.max_pool2d", "", "kOpaque"],
+    "raf.op.tvm.max_pool2d_dx": ["nn.max_pool2d_grad", "relay.attrs.MaxPool2DAttrs", "kOpaque"],
+    "raf.op.tvm.adaptive_avg_pool2d": ["nn.adaptive_avg_pool2d", "", "kOpaque"],
+    "raf.op.tvm.adaptive_avg_pool2d_dx": [
         "nn.avg_pool2d_grad",
         "relay.attrs.MaxPool2DAttrs",
         "kOpaque",
     ],
-    "mnm.op.tvm.adaptive_max_pool2d": ["nn.adaptive_max_pool2d", "", "kOpaque"],
-    "mnm.op.tvm.adaptive_max_pool2d_dx": [
+    "raf.op.tvm.adaptive_max_pool2d": ["nn.adaptive_max_pool2d", "", "kOpaque"],
+    "raf.op.tvm.adaptive_max_pool2d_dx": [
         "nn.max_pool2d_grad",
         "relay.attrs.MaxPool2DAttrs",
         "kOpaque",
     ],
-    "mnm.op.tvm.get_valid_counts": ["get_valid_counts", "", "kInjective"],
-    "mnm.op.tvm.non_max_suppression": [
+    "raf.op.tvm.get_valid_counts": ["get_valid_counts", "", "kInjective"],
+    "raf.op.tvm.non_max_suppression": [
         "non_max_suppression",
         "relay.attrs.NonMaxSuppressionAttrs",
         "kInjective",
     ],
-    "mnm.op.tvm.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
-    "mnm.op.tvm.device_copy": ["device_copy", "relay.attrs.DeviceCopyAttrs", "kOpaque"],
-    "mnm.op.tvm.roi_align": ["vision.roi_align", "relay.attrs.ROIAlignAttrs", "kOutEWiseFusable"],
+    "raf.op.tvm.batch_flatten": ["nn.batch_flatten", "", "kInjective"],
+    "raf.op.tvm.device_copy": ["device_copy", "relay.attrs.DeviceCopyAttrs", "kOpaque"],
+    "raf.op.tvm.roi_align": ["vision.roi_align", "relay.attrs.ROIAlignAttrs", "kOutEWiseFusable"],
 }
 
 # pylint: enable=line-too-long
@@ -178,8 +164,8 @@ WHILTE_LIST = {
     "nn.bias_add",
 }
 
-MNM_OP_NAME = {
-    "nn.bias_add": "mnm.op.tvm.bias_add",
+RAF_OP_NAME = {
+    "nn.bias_add": "raf.op.tvm.bias_add",
 }
 
 
@@ -201,7 +187,7 @@ def collect_op():
     get_op = tvm.get_global_func("relay.op._GetOp")
 
     def is_black_listed(op_name):
-        if op_name.startswith("mnm."):
+        if op_name.startswith("raf."):
             return True
         if op_name in WHILTE_LIST:
             assert op_name not in BLACK_LIST
@@ -248,7 +234,7 @@ def main():
     print("# pylint: disable=line-too-long\n")
     print("OP_MAP = {")
     for op_name, attrs, pattern in ops:
-        mnm_op_name = MNM_OP_NAME.get(op_name, "mnm.op.tvm." + op_name)
-        print(f'    "{mnm_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
+        raf_op_name = RAF_OP_NAME.get(op_name, "raf.op.tvm." + op_name)
+        print(f'    "{raf_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
     print("}\n")
     print("# pylint: enable=line-too-long\n")

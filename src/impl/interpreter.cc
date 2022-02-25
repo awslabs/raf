@@ -1,37 +1,23 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/impl/interpreter.cc
- * \brief MNM interpreter, a naive implementation of executor
+ * \brief RAF interpreter, a naive implementation of executor
  */
-#include "mnm/executor.h"
-#include "mnm/ir.h"
-#include "mnm/memory_pool.h"
-#include "mnm/op.h"
-#include "mnm/pass.h"
-#include "mnm/registry.h"
-#include "mnm/tensor.h"
-#include "mnm/value.h"
-#include "mnm/binding.h"
-#include "mnm/profiler.h"
-#include "mnm/communicator.h"
+#include "raf/executor.h"
+#include "raf/ir.h"
+#include "raf/memory_pool.h"
+#include "raf/op.h"
+#include "raf/pass.h"
+#include "raf/registry.h"
+#include "raf/tensor.h"
+#include "raf/value.h"
+#include "raf/binding.h"
+#include "raf/profiler.h"
+#include "raf/communicator.h"
 #include "dmlc/thread_local.h"
 #include "../common/shape_utils.h"
 #include "../requests.h"
@@ -39,7 +25,7 @@
 
 #include <list>
 
-namespace mnm {
+namespace raf {
 namespace executor {
 namespace interpreter {
 
@@ -175,7 +161,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   Value VisitExpr_(const CallNode* node) override {
-    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+    static auto fschema = Op::GetAttrMap<op::FRAFSchema>("FRAFSchema");
     const Call& call = GetRef<Call>(node);
     Array<Value> args;
     for (auto arg : call->args) {
@@ -261,7 +247,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   Value InvokePrimitive(const CallValues& call) {
     const Op& op = Downcast<OpValue>(call->callee)->op;
     bool use_upper_bound = false;
-    static auto upper_bound_map = Op::GetAttrMap<Op>("TMNMUpperBoundOp");
+    static auto upper_bound_map = Op::GetAttrMap<Op>("TRAFUpperBoundOp");
     if (upper_bound_map.count(op)) {
       call->callee = OpValue::make(upper_bound_map[op]);
       use_upper_bound = true;
@@ -284,7 +270,7 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
   }
 
   void RunDeclare(const CallValues& call) {
-    static const auto f_op_make_output = Op::GetAttrMap<FMNMDeclare>("FMNMDeclare");
+    static const auto f_op_make_output = Op::GetAttrMap<FRAFDeclare>("FRAFDeclare");
     const Op& op = Downcast<OpValue>(call->callee)->op;
     const auto& f = f_op_make_output[op];
     f(call);
@@ -481,7 +467,7 @@ ObjectRef _Interpret(Expr expr, Optional<IRModule> mod) {
   return DeTuple(Interpret(expr, mod));
 }
 
-MNM_REGISTER_GLOBAL("mnm.executor.Interpret").set_body_typed(_Interpret);
+RAF_REGISTER_GLOBAL("raf.executor.Interpret").set_body_typed(_Interpret);
 }  // namespace interpreter
 }  // namespace executor
-}  // namespace mnm
+}  // namespace raf

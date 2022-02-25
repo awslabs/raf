@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,15 +8,15 @@
  * \brief Declaration of unary operators
  */
 #include <numeric>
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/reduce.h"
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
 void GenerateReduceShape(const ReduceArgs* args, const DLTensor* x, std::vector<int64_t>* shape) {
   CHECK(args != nullptr);
@@ -117,16 +103,16 @@ void MeanDxDecl(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op.argmax", ReduceOutInt);
-MNM_OP_DECLARE("mnm.op.argmin", ReduceOutInt);
-MNM_OP_DECLARE("mnm.op.max", ReduceOutSame);
-MNM_OP_DECLARE("mnm.op.min", ReduceOutSame);
-MNM_OP_DECLARE("mnm.op.all", ReduceOutSame);
-MNM_OP_DECLARE("mnm.op.any", ReduceOutSame);
-MNM_OP_DECLARE("mnm.op.mean", ReduceOutSame);
-MNM_OP_DECLARE("mnm.op.prod", ReduceOutSame);
-MNM_OP_DECLARE("mnm.op.mean_dx", MeanDxDecl);
-MNM_OP_DECLARE("mnm.op.prod_dx", ProdDxOutSame);
+RAF_OP_DECLARE("raf.op.argmax", ReduceOutInt);
+RAF_OP_DECLARE("raf.op.argmin", ReduceOutInt);
+RAF_OP_DECLARE("raf.op.max", ReduceOutSame);
+RAF_OP_DECLARE("raf.op.min", ReduceOutSame);
+RAF_OP_DECLARE("raf.op.all", ReduceOutSame);
+RAF_OP_DECLARE("raf.op.any", ReduceOutSame);
+RAF_OP_DECLARE("raf.op.mean", ReduceOutSame);
+RAF_OP_DECLARE("raf.op.prod", ReduceOutSame);
+RAF_OP_DECLARE("raf.op.mean_dx", MeanDxDecl);
+RAF_OP_DECLARE("raf.op.prod_dx", ProdDxOutSame);
 
 void L2Norm(const CallValues& call) {
   const auto* args = call->args.as<L2NormArgs>();
@@ -136,8 +122,8 @@ void L2Norm(const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-MNM_OP_DECLARE("mnm.op.l2norm", L2Norm);
+RAF_OP_DECLARE("raf.op.l2norm", L2Norm);
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

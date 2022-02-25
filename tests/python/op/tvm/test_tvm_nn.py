@@ -1,27 +1,13 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=too-many-locals, no-self-use, line-too-long, attribute-defined-outside-init
 import numpy as np
 import pytest
 import torch
 import torch.nn.functional as F
-import mnm
-from mnm.testing import (
+import raf
+from raf.testing import (
     randint,
     randn,
     numpy,
@@ -32,7 +18,7 @@ from mnm.testing import (
     run_vm_model,
     with_dialect,
 )
-from mnm.model.trace import trace_mutate_attr
+from raf.model.trace import trace_mutate_attr
 
 
 @with_dialect("tvm")
@@ -47,18 +33,18 @@ from mnm.model.trace import trace_mutate_attr
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments, invalid-name
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = [
-                [mnm.batch_matmul, mnm.batch_matmul_nt],
-                [mnm.batch_matmul_tn, mnm.batch_matmul_tt],
+            raf_op = [
+                [raf.batch_matmul, raf.batch_matmul_nt],
+                [raf.batch_matmul_tn, raf.batch_matmul_tt],
             ]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
+            raf_op = raf_op[transpose_a][transpose_b]
+            return raf_op(m_a, m_b)
 
     b1 = b
     b2 = b
@@ -103,13 +89,13 @@ def test_batch_matmul(device, dtype, b, n, k, m, broadcast, transpose_a, transpo
 @pytest.mark.parametrize("k", [1, 4])
 def test_dense(n, m, k, device):
     # pylint: disable=no-member
-    class Dense(mnm.Model):
+    class Dense(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):
-            return mnm.dense(m_a, m_b)
+            return raf.dense(m_a, m_b)
 
     # check forward
     model = Dense()
@@ -148,19 +134,19 @@ def test_dense(n, m, k, device):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.softmax, torch.softmax],
+        [raf._op.sym.softmax, torch.softmax],
     ],
 )
 def test_unary_with_axis(device, dtype, shape, axis, funcs):
-    mnm_fwd, torch_fwd = funcs
+    raf_fwd, torch_fwd = funcs
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, axis=axis)
+            return raf_fwd(x, axis=axis)
 
     model = TestModel()
     # forward
@@ -184,13 +170,13 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [[3, 2], [1, 3]])
 def test_log_softmax(device, dtype, shape):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm._op.sym.log_softmax(x)
+            return raf._op.sym.log_softmax(x)
 
     model = TestModel()
     # forward
@@ -220,14 +206,14 @@ def test_layer_norm(device, shape, axis, eps, dtype, learnable_affine_transform)
     # pylint: disable=import-outside-toplevel
     import mxnet as mx
 
-    class LayerNorm(mnm.Model):
+    class LayerNorm(raf.Model):
         def build(self, axis, eps):
             self._axis = axis
             self._eps = eps
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, *inputs):
-            return mnm.layer_norm(*inputs, axis=self._axis, eps=self._eps)
+            return raf.layer_norm(*inputs, axis=self._axis, eps=self._eps)
 
     m_model = LayerNorm(axis, eps)
     m_model.to(device=device, dtype=dtype)
@@ -292,13 +278,13 @@ def test_conv2d(device, dtype, shapes, stride, dilation, padding):
     # pylint: disable=too-many-arguments
     # N.B.: NCHW + OIHW
     # forward
-    class Conv2D(mnm.Model):
+    class Conv2D(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+            return raf.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
 
     model = Conv2D()
     # forward
@@ -341,13 +327,13 @@ def test_conv2d_trans(device, dtype, shapes, stride_output_padding, dilation, pa
     # pylint: disable=too-many-arguments
     # N.B.: NCHW + OIHW
     # forward
-    class Conv2DTrans(mnm.Model):
+    class Conv2DTrans(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            return mnm.conv2d_transpose(
+            return raf.conv2d_transpose(
                 x,
                 w,
                 stride=stride,
@@ -393,15 +379,15 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
     # pylint: disable=too-many-arguments
     # N.B.: NHWC + HWIO
     # forward
-    class Conv2D(mnm.Model):
+    class Conv2D(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
-            w = mnm.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
-            conv = mnm.conv2d(
+            x = raf.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
+            w = raf.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
+            conv = raf.conv2d(
                 x,
                 w,
                 stride=stride,
@@ -413,7 +399,7 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
                 out_layout="NHWC",
             )
             # NHWC -> NCHW
-            return mnm.transpose(conv, (0, 3, 1, 2))
+            return raf.transpose(conv, (0, 3, 1, 2))
 
     model = Conv2D()
     m_x, t_x = randn_torch(xshape, std=0.001, device=device, dtype=dtype)
@@ -430,13 +416,13 @@ def test_conv2d_nhwc(device, dtype, xshape, wshape, stride, dilation, padding):
 @pytest.mark.parametrize("xshape", [(3, 3, 4, 4), (8, 3, 32, 32)])
 @pytest.mark.parametrize("axis", [-1, 1])
 def test_bias_add(xshape, dtype, device, axis):
-    class BiasAdd(mnm.Model):
+    class BiasAdd(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, bias):
-            return mnm.bias_add(x, bias, axis=axis)
+            return raf.bias_add(x, bias, axis=axis)
 
     model = BiasAdd()
     bshape = (xshape[axis],)
@@ -471,8 +457,8 @@ def test_bias_add(xshape, dtype, device, axis):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
-        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+        [raf._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [raf._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
     ],
 )
 def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs, ceil):
@@ -482,17 +468,17 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs, ceil)
                     stride can not fully divide the after padding shape on ceilling mode"""
         )
     # TODO(@XIAO-XIA): complement test case when device=cuda
-    mnm_fwd, torch_fwd = funcs
+    raf_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, ceil_mode=ceil)
+            return raf_fwd(x, kernel=kernel, stride=stride, padding=padding, ceil_mode=ceil)
 
     model = TestModel()
     # forward
@@ -512,20 +498,20 @@ def test_pool2d(device, dtype, data_shape, kernel, stride, padding, funcs, ceil)
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.adaptive_max_pool2d, torch.nn.functional.adaptive_max_pool2d],
-        [mnm._op.sym.adaptive_avg_pool2d, torch.nn.functional.adaptive_avg_pool2d],
+        [raf._op.sym.adaptive_max_pool2d, torch.nn.functional.adaptive_max_pool2d],
+        [raf._op.sym.adaptive_avg_pool2d, torch.nn.functional.adaptive_avg_pool2d],
     ],
 )
 def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
-    mnm_fwd, torch_fwd = funcs
+    raf_fwd, torch_fwd = funcs
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, out_shape)
+            return raf_fwd(x, out_shape)
 
     model = TestModel()
     # forward
@@ -552,27 +538,27 @@ def test_adaptive_pool2d(device, dtype, data_shape, out_shape, funcs):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
-        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+        [raf._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [raf._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
     ],
 )
 def test_pool2d_nhwc(device, dtype, data_shape, kernel, stride, padding, funcs):
     # TODO(yzhliu): complement test case when device=cuda
     # pylint: disable=too-many-locals, too-many-arguments
-    mnm_fwd, torch_fwd = funcs
+    raf_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
-            pool = mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, layout="NHWC")
+            x = raf.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
+            pool = raf_fwd(x, kernel=kernel, stride=stride, padding=padding, layout="NHWC")
             # NHWC -> NCHW
-            return mnm.transpose(pool, (0, 3, 1, 2))
+            return raf.transpose(pool, (0, 3, 1, 2))
 
     model = TestModel()
     m_x, t_x = randn_torch(data_shape, dtype=dtype, device=device, requires_grad=False)
@@ -592,15 +578,15 @@ def test_pool2d_nhwc(device, dtype, data_shape, kernel, stride, padding, funcs):
 @pytest.mark.parametrize("transpose_b", [True, False])
 def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
     # pylint: disable=too-many-arguments
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_a, m_b):
-            mnm_op = [[mnm.matmul, mnm.matmul_nt], [mnm.matmul_tn, mnm.matmul_tt]]
-            mnm_op = mnm_op[transpose_a][transpose_b]
-            return mnm_op(m_a, m_b)
+            raf_op = [[raf.matmul, raf.matmul_nt], [raf.matmul_tn, raf.matmul_tt]]
+            raf_op = raf_op[transpose_a][transpose_b]
+            return raf_op(m_a, m_b)
 
     # forward
     model = TestModel()
@@ -630,7 +616,7 @@ def test_matmul(device, dtype, n, k, m, transpose_a, transpose_b):
 @pytest.mark.parametrize("shape", [[8, 8, 8, 8], [8, 8, 8, 8, 8]])
 @pytest.mark.parametrize("momentum", [0.1, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-6])
-def test_mnm_batch_norm_infer(shape, momentum, eps, device):
+def test_raf_batch_norm_infer(shape, momentum, eps, device):
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, device=device)
     m_m, t_m = randn_torch(stats_shape, device=device)
@@ -638,13 +624,13 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
     m_w, t_w = randn_torch(stats_shape, device=device)
     m_b, t_b = randn_torch(stats_shape, device=device)
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_m, m_v, m_w, m_b):  # pylint: disable=too-many-arguments
-            return mnm.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            return raf.batch_norm_infer(m_x, m_m, m_v, m_w, m_b, momentum, eps)
 
     model = TestModel()
     m_y = model(m_x, m_m, m_v, m_w, m_b)
@@ -660,7 +646,7 @@ def test_mnm_batch_norm_infer(shape, momentum, eps, device):
 @pytest.mark.parametrize("momentum", [0.1, 0.4])
 @pytest.mark.parametrize("eps", [1e-3, 1e-6])
 @with_seed(0)
-def test_mnm_batch_norm_train(shape, momentum, eps, device):
+def test_raf_batch_norm_train(shape, momentum, eps, device):
     stats_shape = [shape[1]]
     m_x, t_x = randn_torch(shape, device=device, requires_grad=True)
     m_m, t_m = randn_torch(stats_shape, device=device)
@@ -670,14 +656,14 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
     np_m = m_m.numpy()
     np_v = m_v.numpy()
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self, m_m, m_v):
             self.m_m = m_m
             self.m_v = m_v
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_w, m_b):  # pylint: disable=too-many-arguments
-            result = mnm.batch_norm_train(m_x, self.m_m, self.m_v, m_w, m_b, momentum, eps)
+            result = raf.batch_norm_train(m_x, self.m_m, self.m_v, m_w, m_b, momentum, eps)
             trace_mutate_attr(self, "m_m", result[1])
             trace_mutate_attr(self, "m_v", result[2])
             return result[0]
@@ -690,8 +676,8 @@ def test_mnm_batch_norm_train(shape, momentum, eps, device):
     check(m_m, t_m, rtol=1e-4, atol=1e-4)
     check(m_v, t_v, rtol=1e-4, atol=1e-4)
     # forward vm
-    model.m_m = mnm.array(np_m, device=device)
-    model.m_v = mnm.array(np_v, device=device)
+    model.m_m = raf.array(np_m, device=device)
+    model.m_v = raf.array(np_v, device=device)
     v_y = run_vm_model(model, device, [m_x, m_w, m_b], disable_fusion=True)[0]
     check(v_y, t_y, rtol=1e-4, atol=1e-4)
     check(model.m_m, t_m, rtol=1e-4, atol=1e-4)
@@ -721,13 +707,13 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-arguments
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x):
-            return mnm.pad(m_x, pad_width, pad_value, pad_mode)
+            return raf.pad(m_x, pad_width, pad_value, pad_mode)
 
     m_x, t_x = randn_torch(shape, device=device, dtype=dtype)
     model = TestModel()
@@ -742,14 +728,14 @@ def test_pad(device, dtype, dimension, pad_value, pad_mode):
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_threshold_with_grad(hyperparam, shape, dtype, device):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self, threshold, value):
             self.threshold = threshold
             self.value = value
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm._op.sym.threshold(x, self.threshold, self.value)
+            return raf._op.sym.threshold(x, self.threshold, self.value)
 
     m_x, t_x = randn_torch(shape, dtype=dtype, device=device, requires_grad=True)
     threshold, value = hyperparam
@@ -775,7 +761,7 @@ def test_threshold_with_grad(hyperparam, shape, dtype, device):
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", ["cpu"])
 @pytest.mark.parametrize("dropout", [0.6])
-def test_mnm_dropout(dropout, device):
+def test_raf_dropout(dropout, device):
     def check_dropout(x, y, dx=None, dy=None):
         x, y = x.numpy(), y.numpy()
         mask = y != 0
@@ -788,13 +774,13 @@ def test_mnm_dropout(dropout, device):
             expected = mask / (1 - dropout) * dy
             check(expected, dx)
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             self.dropout = dropout
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm._contrib_dropout(x, dropout)
+            return raf._contrib_dropout(x, dropout)
 
     shape, dtype = [128, 128], "float32"
     x, _ = randint(shape, low=10, high=20, dtype=dtype, device=device)

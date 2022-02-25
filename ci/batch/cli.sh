@@ -1,24 +1,10 @@
 #!/usr/bin/env bash
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # The CLI scripts for running CI tasks. This is supposed to be used by
 # automated CI so it assumes
-#   1. The script is run in the Meta folder.
+#   1. The script is run in the RAF folder.
 #   2. The repo has been wekll-configured.
 # Example usages:
 #   bash batch-cli.sh config_cmake GPU
@@ -35,23 +21,23 @@ function config_cmake() {
     mkdir -p build
     cd build
     cp ../cmake/config.cmake .
-    echo "set(MNM_USE_LLVM llvm-config-8)" >> config.cmake
-    echo "set(MNM_USE_GTEST ON)" >> config.cmake
+    echo "set(RAF_USE_LLVM llvm-config-8)" >> config.cmake
+    echo "set(RAF_USE_GTEST ON)" >> config.cmake
     echo "set(CMAKE_BUILD_TYPE Release)" >> config.cmake
 
     if [[ $PLATFORM == "CPU" ]]; then
-        echo "set(MNM_USE_CUDA OFF)" >> config.cmake
-        echo "set(MNM_USE_CUDNN OFF)" >> config.cmake
-        echo "set(MNM_USE_CUBLAS OFF)" >> config.cmake
+        echo "set(RAF_USE_CUDA OFF)" >> config.cmake
+        echo "set(RAF_USE_CUDNN OFF)" >> config.cmake
+        echo "set(RAF_USE_CUBLAS OFF)" >> config.cmake
     elif [[ $PLATFORM == "GPU" ]]; then
         CUDA_ARCH=$2 # 75 (T4), 70 (V100), etc
-        echo "set(MNM_USE_CUDA ON)" >> config.cmake
-        echo "set(MNM_CUDA_ARCH $CUDA_ARCH)" >> config.cmake
-        echo "set(MNM_USE_CUDNN ON)" >> config.cmake
-        echo "set(MNM_USE_CUBLAS ON)" >> config.cmake
-        echo "set(MNM_USE_MPI ON)" >> config.cmake
-        echo "set(MNM_USE_NCCL ON)" >> config.cmake
-        echo "set(MNM_USE_CUTLASS ON)" >> config.cmake
+        echo "set(RAF_USE_CUDA ON)" >> config.cmake
+        echo "set(RAF_CUDA_ARCH $CUDA_ARCH)" >> config.cmake
+        echo "set(RAF_USE_CUDNN ON)" >> config.cmake
+        echo "set(RAF_USE_CUBLAS ON)" >> config.cmake
+        echo "set(RAF_USE_MPI ON)" >> config.cmake
+        echo "set(RAF_USE_NCCL ON)" >> config.cmake
+        echo "set(RAF_USE_CUTLASS ON)" >> config.cmake
     else
         echo "Unrecognized platform: $PLATFORM"
         return 1

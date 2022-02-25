@@ -1,30 +1,16 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/distributed/context.cc
  * \brief Context of Distributed Settings.
  */
-#include "mnm/registry.h"
-#include "mnm/dist_context.h"
+#include "raf/registry.h"
+#include "raf/dist_context.h"
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 
 using communicator::Communicator;
@@ -72,18 +58,18 @@ void AutoDPProfilingEndIter(int auto_dp_profiling_end_iter) {
   DistContext::Global()->auto_dp_profiling_end_iter = auto_dp_profiling_end_iter;
 }
 
-MNM_REGISTER_GLOBAL("mnm.distributed._make.DistContext").set_body_typed(DistContext::make);
-MNM_REGISTER_GLOBAL("mnm.distributed.Global").set_body_typed(DistContext::Global);
-MNM_REGISTER_GLOBAL("mnm.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
-MNM_REGISTER_GLOBAL("mnm.distributed.ZeroOpt").set_body_typed(ZeroOpt);
-MNM_REGISTER_GLOBAL("mnm.distributed.SetGlobalRank").set_body_typed(SetGlobalRank);
-MNM_REGISTER_GLOBAL("mnm.distributed.SetGlobalSize").set_body_typed(SetGlobalSize);
-MNM_REGISTER_GLOBAL("mnm.distributed.AutoDPProfilingStartIter")
+RAF_REGISTER_GLOBAL("raf.distributed._make.DistContext").set_body_typed(DistContext::make);
+RAF_REGISTER_GLOBAL("raf.distributed.Global").set_body_typed(DistContext::Global);
+RAF_REGISTER_GLOBAL("raf.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
+RAF_REGISTER_GLOBAL("raf.distributed.ZeroOpt").set_body_typed(ZeroOpt);
+RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalRank").set_body_typed(SetGlobalRank);
+RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalSize").set_body_typed(SetGlobalSize);
+RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingStartIter")
     .set_body_typed(AutoDPProfilingStartIter);
-MNM_REGISTER_GLOBAL("mnm.distributed.AutoDPProfilingEndIter")
+RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingEndIter")
     .set_body_typed(AutoDPProfilingEndIter);
 
-MNM_REGISTER_OBJECT_REFLECT(DistContextObj);
+RAF_REGISTER_OBJECT_REFLECT(DistContextObj);
 
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

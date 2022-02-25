@@ -1,36 +1,22 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access, no-self-use, too-many-locals
 import pytest
-import mnm
-from mnm._core.ir_ext import extended_var
-from mnm._core.ndarray import array
-from mnm._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm, InferType
-from mnm.ir import MNMSequential, ScopeBuilder
-from mnm.testing import randn
+import raf
+from raf._core.ir_ext import extended_var
+from raf._core.ndarray import array
+from raf._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm, InferType
+from raf.ir import RAFSequential, ScopeBuilder
+from raf.testing import randn
 
 import tvm
 from tvm import relay
 
 
 def simplify(mod, device):
-    with mnm.Device(device):
-        seq = MNMSequential([ToGraphNormalForm(), ToBasicBlockNormalForm(), SimplifyExpr()])
+    with raf.Device(device):
+        seq = RAFSequential([ToGraphNormalForm(), ToBasicBlockNormalForm(), SimplifyExpr()])
         return seq(mod)
 
 
@@ -39,20 +25,20 @@ def test_unary_like(op):
     device = "cpu"
     shape = (10, 5)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return getattr(mnm._op.sym, op)(x)
+            return getattr(raf._op.sym, op)(x)
 
     model = Model()
     m_x, _ = randn(shape, device=device, dtype="float32")
 
     mod = model._internal(m_x).mod
     mod = simplify(mod, device)
-    text = mnm.ir.AsText(mod["main"])
+    text = raf.ir.AsText(mod["main"])
     assert "like" not in text, text
 
 
@@ -64,13 +50,13 @@ def test_binary_like(params):
     device = "cpu"
     shape = (10, 1)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return getattr(mnm._op.sym, op)(x, y)
+            return getattr(raf._op.sym, op)(x, y)
 
     model = Model()
     m_x, _ = randn(shape, device=device, dtype="float32")
@@ -78,7 +64,7 @@ def test_binary_like(params):
 
     mod = model._internal(m_x, m_y).mod
     mod = simplify(mod, device)
-    text = mnm.ir.AsText(mod["main"])
+    text = raf.ir.AsText(mod["main"])
     assert "like" not in text, text
 
 
@@ -86,24 +72,24 @@ def test_cast():
     device = "cpu"
     shape = (10, 5)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.cast(x, "float16")
-            y = mnm.cast(y, "float32")
-            y = mnm.cast(y, "float16")
-            y = mnm.cast(y, "float32")
+            y = raf.cast(x, "float16")
+            y = raf.cast(y, "float32")
+            y = raf.cast(y, "float16")
+            y = raf.cast(y, "float32")
             return y
 
     model = Model()
     m_x, _ = randn(shape, device=device, dtype="float32")
     mod = model._internal(m_x).mod
     mod = simplify(mod, device)
-    text = mnm.ir.AsText(mod["main"])
-    assert "mnm.op.cast" not in text, text
+    text = raf.ir.AsText(mod["main"])
+    assert "raf.op.cast" not in text, text
 
 
 @pytest.mark.parametrize("t_endpoints", ["float32", "int32", "uint64", "bool"])
@@ -115,48 +101,48 @@ def test_cast_across_type(t_endpoints, t_middle):
     cast_level_map = {"bool": 4, "uint64": 3, "int32": 2, "float32": 1}
     should_simplify = cast_level_map[t_endpoints] >= cast_level_map[t_middle]
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.cast(x, t_middle)
-            x = mnm.cast(x, t_endpoints)
+            x = raf.cast(x, t_middle)
+            x = raf.cast(x, t_endpoints)
             return x
 
     model = Model()
     m_x, _ = randn(shape, device=device, dtype=t_endpoints)
     mod = model._internal(m_x).mod
     mod = simplify(mod, device)
-    text = mnm.ir.AsText(mod["main"])
+    text = raf.ir.AsText(mod["main"])
     if should_simplify:
-        assert "mnm.op.cast" not in text, text
+        assert "raf.op.cast" not in text, text
     else:
-        assert "mnm.op.cast" in text, text
+        assert "raf.op.cast" in text, text
 
 
 def test_reshape():
     device = "cpu"
     shape = (10, 5)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.reshape(x, (shape[0] * shape[1],))
-            y = mnm.reshape(y, (shape[1], shape[0]))
-            y = mnm.reshape(y, shape)
+            y = raf.reshape(x, (shape[0] * shape[1],))
+            y = raf.reshape(y, (shape[1], shape[0]))
+            y = raf.reshape(y, shape)
             return y
 
     model = Model()
     m_x, _ = randn(shape, device=device, dtype="float32")
     mod = model._internal(m_x).mod
     mod = simplify(mod, device)
-    text = mnm.ir.AsText(mod["main"])
-    assert "mnm.op.reshape" not in text, text
+    text = raf.ir.AsText(mod["main"])
+    assert "raf.op.reshape" not in text, text
 
 
 @pytest.mark.parametrize("ndim", [2, 3])
@@ -167,18 +153,18 @@ def test_matmul_reshape_bias(ndim, act, shape_compatible):
     xshape = (10, 10) if ndim == 2 else (1, 10, 10)
     b2shape = (2, 5, 10)
     bshape = (10,) if shape_compatible else (2, 5, 10)
-    matmul_op = getattr(mnm._op.sym, "matmul" if ndim == 2 else "batch_matmul")
+    matmul_op = getattr(raf._op.sym, "matmul" if ndim == 2 else "batch_matmul")
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w, b):
             y = matmul_op(x, w)
-            y = mnm.reshape(y, b2shape)
-            y = mnm.add(y, b)
-            y = mnm.gelu(y) if act else y
+            y = raf.reshape(y, b2shape)
+            y = raf.add(y, b)
+            y = raf.gelu(y) if act else y
             return y
 
     model = Model()
@@ -189,39 +175,39 @@ def test_matmul_reshape_bias(ndim, act, shape_compatible):
     mod = simplify(mod, device)
 
     def expected():
-        matmul_op = mnm._ffi.op.GetOp("mnm.op.%s" % ("matmul" if ndim == 2 else "batch_matmul"))
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        gelu_op = mnm._ffi.op.GetOp("mnm.op.gelu")
-        reshape_op = mnm._ffi.op.GetOp("mnm.op.reshape")
-        null = mnm.ir.const(None)
+        matmul_op = raf._ffi.op.GetOp("raf.op.%s" % ("matmul" if ndim == 2 else "batch_matmul"))
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        gelu_op = raf._ffi.op.GetOp("raf.op.gelu")
+        reshape_op = raf._ffi.op.GetOp("raf.op.reshape")
+        null = raf.ir.const(None)
 
         x = extended_var("x", shape=xshape, dtype="float32")
         w = extended_var("w", shape=xshape, dtype="float32")
         b = extended_var("b", shape=bshape, dtype="float32")
         y = relay.Call(matmul_op, [x, w])
         if not shape_compatible:
-            y = relay.Call(reshape_op, [y, mnm.ir.const(b2shape), mnm.ir.const(False)])
+            y = relay.Call(reshape_op, [y, raf.ir.const(b2shape), raf.ir.const(False)])
         y = relay.Call(add_op, [y, b, null, null])
         if act:
             y = relay.Call(gelu_op, [y])
         if shape_compatible:
-            y = relay.Call(reshape_op, [y, mnm.ir.const(b2shape), mnm.ir.const(False)])
+            y = relay.Call(reshape_op, [y, raf.ir.const(b2shape), raf.ir.const(False)])
         mod = tvm.IRModule.from_expr(relay.Function([x, w, b], y))
         return InferType()(mod)["main"]
 
-    assert tvm.ir.structural_equal(mod["main"], expected()), mnm.ir.AsText(mod["main"])
+    assert tvm.ir.structural_equal(mod["main"], expected()), raf.ir.AsText(mod["main"])
 
 
 def test_multiply():
     device = "cpu"
     shape = (10, 5)
-    mul_op = mnm._ffi.op.GetOp("mnm.op.multiply")
+    mul_op = raf._ffi.op.GetOp("raf.op.multiply")
 
-    data_x = mnm.ir.var("x", shape=shape, dtype="float32")
-    const_1 = mnm.ir.const(1.0, dtype="float32")
-    const_0 = mnm.ir.const(0.0, dtype="float32")
-    tensor_1 = mnm.ir.const(array(1, dtype="float32", device=device))
-    tensor_0 = mnm.ir.const(array(0, dtype="float32", device=device))
+    data_x = raf.ir.var("x", shape=shape, dtype="float32")
+    const_1 = raf.ir.const(1.0, dtype="float32")
+    const_0 = raf.ir.const(0.0, dtype="float32")
+    tensor_1 = raf.ir.const(array(1, dtype="float32", device=device))
+    tensor_0 = raf.ir.const(array(0, dtype="float32", device=device))
 
     sb = ScopeBuilder()
     a_1 = sb.let("a1", relay.Call(mul_op, [data_x, const_1]))
@@ -234,25 +220,25 @@ def test_multiply():
     mod = simplify(mod, device)
 
     def expected():
-        zeros_op = mnm._ffi.op.GetOp("mnm.op.zeros")
+        zeros_op = raf._ffi.op.GetOp("raf.op.zeros")
         x = extended_var("x", shape=shape, dtype="float32")
-        y = relay.Call(zeros_op, [mnm.ir.const(shape), mnm.ir.const("float32")])
+        y = relay.Call(zeros_op, [raf.ir.const(shape), raf.ir.const("float32")])
         mod = tvm.IRModule.from_expr(relay.Function([x], y))
         return InferType()(mod)["main"]
 
-    assert tvm.ir.structural_equal(mod["main"], expected()), mnm.ir.AsText(mod["main"])
+    assert tvm.ir.structural_equal(mod["main"], expected()), raf.ir.AsText(mod["main"])
 
 
 def test_add_sub():
     device = "cpu"
     shape = (10, 5)
-    add_op = mnm._ffi.op.GetOp("mnm.op.add")
-    sub_op = mnm._ffi.op.GetOp("mnm.op.subtract")
+    add_op = raf._ffi.op.GetOp("raf.op.add")
+    sub_op = raf._ffi.op.GetOp("raf.op.subtract")
 
-    data_x = mnm.ir.var("x", shape=shape, dtype="float32")
-    const_0 = mnm.ir.const(0.0, dtype="float32")
-    tensor_0 = mnm.ir.const(array(0, dtype="float32", device=device))
-    null = mnm.ir.const(None)
+    data_x = raf.ir.var("x", shape=shape, dtype="float32")
+    const_0 = raf.ir.const(0.0, dtype="float32")
+    tensor_0 = raf.ir.const(array(0, dtype="float32", device=device))
+    null = raf.ir.const(None)
 
     sb = ScopeBuilder()
     a_1 = sb.let("a1", relay.Call(sub_op, [const_0, data_x, null, null]))
@@ -271,7 +257,7 @@ def test_add_sub():
         mod = tvm.IRModule.from_expr(relay.Function([x], y))
         return InferType()(mod)["main"]
 
-    assert tvm.ir.structural_equal(mod["main"], expected()), mnm.ir.AsText(mod["main"])
+    assert tvm.ir.structural_equal(mod["main"], expected()), raf.ir.AsText(mod["main"])
 
 
 if __name__ == "__main__":

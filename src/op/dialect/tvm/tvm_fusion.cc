@@ -1,32 +1,18 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file ./src/op/dialect/tvm/tvm_fusion.cc
  * \brief Implementation of tvm dispatch for fused functions
  */
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/pass.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/pass.h"
 #include "tvm/ir/type_functor.h"
 #include "tvm/auto_scheduler/compute_dag.h"
 #include "relay/backend/te_compiler.h"
@@ -34,12 +20,12 @@
 #include "./tvm_utils.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::value;
+using namespace raf::ir;
 
 class FakeValueCreator : public tvm::TypeFunctor<Value(const Type& n)> {
  public:
@@ -108,11 +94,11 @@ class CallValuesGetter : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) override {
     const Op& op = Downcast<Op>(node->op);
-    auto fschema = GetOpAttr<op::FMNMSchema>(op, "FMNMSchema");
+    auto fschema = GetOpAttr<op::FRAFSchema>(op, "FRAFSchema");
     Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
     std::vector<Value> fake_args;
     std::string op_name = op->name;
-    if (!op_name.compare(0, 11, "mnm.op.tvm.")) {
+    if (!op_name.compare(0, 11, "raf.op.tvm.")) {
       op_name = op_name.substr(11);
     }
     readable_name_stream << "_" << op_name;
@@ -184,7 +170,7 @@ class Cast2TVMDialect : public ExprMutator {
 };
 
 /*!
- * \brief Converter from meta style (all inputs are arguments) to
+ * \brief Converter from raf style (all inputs are arguments) to
  *        tvm style (inputs are explicitly marked as arguments or attrs)
  */
 class Meta2TVM : public ExprMutator {
@@ -217,8 +203,8 @@ class Meta2TVM : public ExprMutator {
     const Op& op = Downcast<Op>(node->op);
     ICHECK_EQ(GetDialect(op), "tvm")
         << "Encountered a non-TVM op in fused TVM closure: " << op->name;
-    auto farg_indices = GetOpAttr<FMNMArgIndices>(op, "FMNMArgIndices");
-    auto fattr = GetOpAttr<FMNMAttr>(op, "FMNMAttr");
+    auto farg_indices = GetOpAttr<FRAFArgIndices>(op, "FRAFArgIndices");
+    auto fattr = GetOpAttr<FRAFAttr>(op, "FRAFAttr");
     Attrs op_tvm_attr = fattr(op_call_values);
     Array<IntImm> arg_indices = farg_indices(op_call_values);
     std::vector<Expr> inputs;
@@ -274,7 +260,7 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
       << "NotImplementedError: target is not supported " << dev.device_type().c_str();
   Meta2TVM meta_to_tvm(call, dev.device_type());
   Function func = Downcast<Function>(meta_to_tvm());
-  // TODO(@hzfan): add cache for meta
+  // TODO(@hzfan): add cache for raf
   te_compiler->Clear();
   env->env_name = TruncateName(GetUniqueName(meta_to_tvm.func_name));
   try {
@@ -323,14 +309,14 @@ float CalcFuncGFLOPS(const op::CallValues& call, const Array<Type>& param_types,
     auto dag = tvm::auto_scheduler::ComputeDAG(tensors);
     return dag->flop_ct / 1e9;
   } catch (dmlc::Error& e) {
-    LOG(WARNING) << "Failed to create ComputeDAG for " << mnm::ir::AsText(tvm_func) << "\n"
+    LOG(WARNING) << "Failed to create ComputeDAG for " << raf::ir::AsText(tvm_func) << "\n"
                  << e.what();
   }
   return -1;
 }
 
-MNM_OP_ENV_MAKER("mnm.op.tvm._fused_op", FusedFuncBuild);
+RAF_OP_ENV_MAKER("raf.op.tvm._fused_op", FusedFuncBuild);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

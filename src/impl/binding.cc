@@ -1,39 +1,25 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/impl/binding.cc
  * \brief Frontend-defined varioble-expression-value bindings
  */
-#include "mnm/binding.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/executor.h"
-#include "mnm/tensor.h"
+#include "raf/binding.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/executor.h"
+#include "raf/tensor.h"
 #include "../op/ty/utils.h"
-#include "mnm/pass.h"
+#include "raf/pass.h"
 
-namespace mnm {
+namespace raf {
 namespace binding {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using executor::interpreter::InvokeClosure;
 using op::CallValues;
 using op::MakeListArgs;
@@ -233,9 +219,9 @@ ObjectRef DeStruct(Value value, ClosureValue bp, Array<ObjectRef> prev_tapes) {
   if (const auto* tuple = value.as<TupleValueObj>()) {
     Array<ObjectRef> result;
     int n = static_cast<int>(tuple->fields.size());
-    Var dy = mnm::ir::Var("dy", {});
+    Var dy = raf::ir::Var("dy", {});
     Map<ir::Var, Value> env;
-    Var tuple_bp = mnm::ir::Var("tuple_bp", {});
+    Var tuple_bp = raf::ir::Var("tuple_bp", {});
     env.Set(tuple_bp, bp);
     for (int i = 0; i < n; ++i) {
       Value sub_value = tuple->fields[i];
@@ -324,20 +310,20 @@ void Backward(Var var, Var dy_var) {
   }
 }
 
-MNM_REGISTER_GLOBAL("mnm.binding.BindNDArray").set_body_typed(BindNDArray);
-MNM_REGISTER_GLOBAL("mnm.binding.BindSymbol").set_body_typed(BindSymbol);
-MNM_REGISTER_GLOBAL("mnm.binding.RebindNDArray").set_body_typed(RebindNDArray);
-MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundValue").set_body_typed(LookupBoundValue);
-MNM_REGISTER_GLOBAL("mnm.binding.LookupBoundExpr").set_body_typed(LookupBoundExpr);
-MNM_REGISTER_GLOBAL("mnm.binding.SetRequiresGrad").set_body_typed(SetRequiresGrad);
-MNM_REGISTER_GLOBAL("mnm.binding.Backward").set_body_typed(Backward);
-MNM_REGISTER_GLOBAL("mnm.binding.LookupGrad").set_body_typed(LookupGrad);
+RAF_REGISTER_GLOBAL("raf.binding.BindNDArray").set_body_typed(BindNDArray);
+RAF_REGISTER_GLOBAL("raf.binding.BindSymbol").set_body_typed(BindSymbol);
+RAF_REGISTER_GLOBAL("raf.binding.RebindNDArray").set_body_typed(RebindNDArray);
+RAF_REGISTER_GLOBAL("raf.binding.LookupBoundValue").set_body_typed(LookupBoundValue);
+RAF_REGISTER_GLOBAL("raf.binding.LookupBoundExpr").set_body_typed(LookupBoundExpr);
+RAF_REGISTER_GLOBAL("raf.binding.SetRequiresGrad").set_body_typed(SetRequiresGrad);
+RAF_REGISTER_GLOBAL("raf.binding.Backward").set_body_typed(Backward);
+RAF_REGISTER_GLOBAL("raf.binding.LookupGrad").set_body_typed(LookupGrad);
 
 namespace {
-MNM_REGISTER_OBJECT_NO_REFLECT(GradTapeObj);
-MNM_REGISTER_OBJECT_NO_REFLECT(BindingEntryObj);
-MNM_REGISTER_OBJECT_NO_REFLECT(NDArrayBindingObj);
-MNM_REGISTER_OBJECT_NO_REFLECT(SymbolBindingObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(GradTapeObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(BindingEntryObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(NDArrayBindingObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(SymbolBindingObj);
 }  // namespace
 }  // namespace binding
-}  // namespace mnm
+}  // namespace raf

@@ -1,23 +1,9 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!--- SPDX-License-Identifier: Apache-2.0  -->
 
 # Memory Pool
 
-This document introduces the Memory Pool of Meta.
+This document introduces the Memory Pool of RAF.
 
 ## Strategies
 
@@ -40,7 +26,7 @@ The default memory pool strategy is page_unit_pool. If you want to use no_pool, 
 
 ``` python
 # Using default strategy
-import mnm
+import raf
 
 device = 'cuda'
 
@@ -56,9 +42,9 @@ loss.backward()
 
 ``` python
 # Changing to no_pool strategy
-import mnm
-from mnm._ffi.memory_pool import InitPool, RemovePool
-from mnm._core.core_utils import str2dev
+import raf
+from raf._ffi.memory_pool import InitPool, RemovePool
+from raf._core.core_utils import str2dev
 
 device = 'cuda'
 pool_name = 'no_pool'
@@ -79,9 +65,9 @@ if you want to change back to default memorpy strategy (page_unit_pool), you can
 
 ``` python
 # Changing back to default strategy
-import mnm
-from mnm._ffi.memory_pool import InitPool, RemovePool
-from mnm._core.core_utils import str2dev
+import raf
+from raf._ffi.memory_pool import InitPool, RemovePool
+from raf._core.core_utils import str2dev
 
 device = 'cuda'
 # Start with no_pool
@@ -119,14 +105,14 @@ You should create a new folder under $META_HOME/src/memory_pool, and create a ne
 
 ### Step2 Implement your pool
 
-To begin, you need include `"mnm/device_api.h"`,`"mnm/memory_pool.h"`, `"mnm/registry.h"`, and wrapper your code with namespace `mnm->memory_pool->your_pool`.
-You will first need a memory wrapper that holds the actual memory. It must derived from `mnm::memory_pool::Memory`.
+To begin, you need include `"raf/device_api.h"`,`"raf/memory_pool.h"`, `"raf/registry.h"`, and wrapper your code with namespace `raf->memory_pool->your_pool`.
+You will first need a memory wrapper that holds the actual memory. It must derived from `raf::memory_pool::Memory`.
 
-Then you can create the Pool Class that derived from `mnm::memory_pool::MemoryPool`.
+Then you can create the Pool Class that derived from `raf::memory_pool::MemoryPool`.
 
 ### Step3 Register your pool
 
 Remember to register your pool in the cpp file you created, the code should be like:
-`MNM_REGISTER_GLOBAL("mnm.memory_pool._make.your_pool").set_body_typed(YourPool::make);`
+`RAF_REGISTER_GLOBAL("raf.memory_pool._make.your_pool").set_body_typed(YourPool::make);`
 
 After re-make meta, you can enable your pool by calling `InitPool(contxt, pool_name)`.

@@ -1,36 +1,22 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=no-self-use,wrong-import-order,protected-access
 import numpy as np
 import random
 import pytest
 import torch
-import mnm
+import raf
 import mxnet as mx
-from mnm.testing import get_testable_devices, randn, randn_torch, check, run_vm_model, to_torch_dev
+from raf.testing import get_testable_devices, randn, randn_torch, check, run_vm_model, to_torch_dev
 
 
-class TestModel(mnm.Model):
+class TestModel(raf.Model):
     def build(self, op, **kwargs):
         self.op = op  # pylint: disable=attribute-defined-outside-init
         self.attrs = kwargs  # pylint: disable=attribute-defined-outside-init
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, *args):
         return self.op(*args, **self.attrs)
 
@@ -47,7 +33,7 @@ class TestModel(mnm.Model):
 @pytest.mark.parametrize("dtype", ["int32", "float32"])
 def test_argsort(device, shape, axis, dtype):
     m_x, n_x = randn(shape, device=device)
-    model = TestModel(mnm._op.sym.argsort, axis=axis, dtype=dtype)
+    model = TestModel(raf._op.sym.argsort, axis=axis, dtype=dtype)
     m_out = model(m_x)
     v_out = run_vm_model(model, device, [m_x])
     np_out = np.argsort(n_x, axis).astype(dtype)
@@ -71,7 +57,7 @@ def test_argsort(device, shape, axis, dtype):
 def test_sort(device, shape, axis, dtype):
     m_x, n_x = randn(shape, device=device, dtype=dtype)
     m_x.requires_grad = True
-    model = TestModel(mnm._op.sym.sort, axis=axis)
+    model = TestModel(raf._op.sym.sort, axis=axis)
     m_out = model(m_x)
     v_out = run_vm_model(model, device, [m_x])
     np_out = np.sort(n_x, axis)
@@ -110,11 +96,11 @@ def test_topk(shape, k, axis, ret_type, is_ascend, dtype, device):
     x = np.arange(size)
     random.shuffle(x)
     x = x.reshape(shape)
-    m_x = mnm.array(x, dtype=dtype, device=device)
+    m_x = raf.array(x, dtype=dtype, device=device)
     n_x = mx.nd.array(x, dtype=dtype)
 
     model = TestModel(
-        mnm._op.sym.topk,
+        raf._op.sym.topk,
         k=k,
         axis=axis,
         ret_type=ret_type,
@@ -167,12 +153,12 @@ def test_topk_dx(shape, k, axis, ret_type, is_ascend, dtype, device):  # pylint:
     if dtype == "float16" and size >= 2048:
         pytest.skip("""For float16, shape is too big to produce non-duplicated array""")
 
-    m_x = mnm.array(n_x, dtype=dtype, device=device)
+    m_x = raf.array(n_x, dtype=dtype, device=device)
     m_x.requires_grad = True
     t_x = torch.tensor(n_x, requires_grad=True, device=to_torch_dev(device))
 
     model = TestModel(
-        mnm._op.sym.topk, k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype
+        raf._op.sym.topk, k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype
     )
     m_y = model(m_x)
     m_dy, t_dy = randn_torch(m_y[0].shape, dtype=dtype, device=device, requires_grad=True)

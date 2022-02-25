@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -28,13 +14,13 @@
 #include <tvm/node/structural_hash.h>
 #include <sstream>
 #include <utility>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./let_list.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 /*
   Lambda lifting pass lifts the closures into the global variables, but as of now it keeps the
@@ -46,9 +32,9 @@ namespace pass {
   ###############
   def @main(%y: Tensor[(1, 100), float32], %z: Tensor[(1, 100), float32]) {
     let %a1 = fn (%x: Tensor[(1, 100), float32]) {
-      let %a2 = mnm.op.tanh(%x);
-      let %a3 = mnm.op.tanh(%y);
-      let %a4 = mnm.op.add(%a3, %a4, nullptr, nullptr);
+      let %a2 = raf.op.tanh(%x);
+      let %a3 = raf.op.tanh(%y);
+      let %a4 = raf.op.add(%a3, %a4, nullptr, nullptr);
       %a4
     };
     let %a5 = %a1; <-- This may be caused by Relay ToANF pass to avoid nested let bindings
@@ -69,9 +55,9 @@ namespace pass {
   // Lambda is lifted, but the closure is preserved to keep the semantic of using %y.
   def @lifted_name17350894363744824019(%y, Closure=1) {
     fn (%x: Tensor[(1, 100), float32]) {
-        let %a2 = mnm.op.tanh(%x);
-        let %a3 = mnm.op.tanh(%y);
-        let %a4 = mnm.op.add(%a2, %a3, nullptr, nullptr);
+        let %a2 = raf.op.tanh(%x);
+        let %a3 = raf.op.tanh(%y);
+        let %a4 = raf.op.add(%a2, %a3, nullptr, nullptr);
         %a5
       }
   }
@@ -88,16 +74,16 @@ namespace pass {
 
   // The lifted function is flattened to have only the func body.
   def @lifted_name17350894363744824019(%x: Tensor[(1, 100), float32], %y) {
-    let %a3 = mnm.op.tanh(%x);
-    let %a4 = mnm.op.tanh(%y);
-    let %a5 = mnm.op.add(%a3, %a4, -114514, -114514);
+    let %a3 = raf.op.tanh(%x);
+    let %a4 = raf.op.tanh(%y);
+    let %a5 = raf.op.add(%a3, %a4, -114514, -114514);
     %a5
   }
 */
 namespace flatten_closure {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 template <typename T>
 using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
@@ -217,7 +203,7 @@ Pass FlattenClosure() {
   return CreateModulePass(pass_func, 1, "FlattenClosure", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FlattenClosure").set_body_typed(FlattenClosure);
+RAF_REGISTER_GLOBAL("raf.pass_.FlattenClosure").set_body_typed(FlattenClosure);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

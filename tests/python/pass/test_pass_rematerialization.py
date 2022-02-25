@@ -1,32 +1,18 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access, attribute-defined-outside-init, too-many-locals
 # pylint: disable=too-many-statements, no-self-use, too-many-arguments
 import numpy as np
 import pytest
-import mnm
-from mnm._core.device import Device
-from mnm._core.executor import VMExecutor
-from mnm._ffi.memory_pool import InitPool
-from mnm.ir import ScopeBuilder
-from mnm.model import Conv2d
-from mnm.model.trace import _get_func_inputs
-from mnm.testing import run_infer_type, randn
+import raf
+from raf._core.device import Device
+from raf._core.executor import VMExecutor
+from raf._ffi.memory_pool import InitPool
+from raf.ir import ScopeBuilder
+from raf.model import Conv2d
+from raf.model.trace import _get_func_inputs
+from raf.testing import run_infer_type, randn
 
 import tvm
 from tvm import relay
@@ -37,9 +23,9 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
 
     Parameters
     ----------
-    model_or_mod: Union[IRModule, mnm.Model]
+    model_or_mod: Union[IRModule, raf.Model]
         The given model or module.
-    args: List[mnm.ndarray]
+    args: List[raf.ndarray]
         The input arguments.
     budget_in_mbs: int
         The user-specified budget in MBs.
@@ -57,17 +43,17 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
 
     ir_mod = mod
     with Device("cpu"):
-        with mnm.ir.PassContext(
+        with raf.ir.PassContext(
             config={
-                "mnm.memory_budget": int(budget_in_mbs * 1048576),
-                "mnm.remat.use_gflops_cost": True,
+                "raf.memory_budget": int(budget_in_mbs * 1048576),
+                "raf.remat.use_gflops_cost": True,
             }
         ):
-            ir_mod = mnm._ffi.pass_.InferType()(ir_mod)
-            ir_mod = mnm._ffi.pass_.InlinePrimitives()(ir_mod)
-            ir_mod = mnm._ffi.pass_.InplaceUpdate()(ir_mod)
+            ir_mod = raf._ffi.pass_.InferType()(ir_mod)
+            ir_mod = raf._ffi.pass_.InlinePrimitives()(ir_mod)
+            ir_mod = raf._ffi.pass_.InplaceUpdate()(ir_mod)
             try:
-                ir_mod = mnm._ffi.pass_.Rematerialization()(ir_mod)
+                ir_mod = raf._ffi.pass_.Rematerialization()(ir_mod)
             except Exception as err:  # pylint: disable=broad-except
                 assert expected_ir is None, "Unexpected rematerialization failure: %s" % str(err)
                 return
@@ -75,8 +61,8 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
     if expected_ir is not None:
         expected_ir = run_infer_type(expected_ir)
         assert tvm.ir.structural_equal(expected_ir, ir_mod["main"]), "\nExpected:\n%s\nGot\n%s" % (
-            mnm.ir.AsText(expected_ir),
-            mnm.ir.AsText(ir_mod["main"]),
+            raf.ir.AsText(expected_ir),
+            raf.ir.AsText(ir_mod["main"]),
         )
 
     # Use CPU to avoid workspace memory.
@@ -89,17 +75,17 @@ def verify_remat(model_or_mod, args, budget_in_mbs, expected_ir, expected_peaks)
             opt_level=3,
             disabled_pass=["FuseTVM", "FuseDialect"],
             config={
-                "mnm.memory_budget": int(budget * 1048576),
+                "raf.memory_budget": int(budget * 1048576),
                 # Use GFLOPS cost to avoid flaky behavior in tests
-                "mnm.remat.use_gflops_cost": True,
+                "raf.remat.use_gflops_cost": True,
             },
         ):
-            mnm.utils.memory_profiler.reset()
-            mnm.utils.memory_profiler.start()
+            raf.utils.memory_profiler.reset()
+            raf.utils.memory_profiler.start()
             VMExecutor(mod, device).make_executor()(*args)
-            mnm.utils.memory_profiler.stop()
+            raf.utils.memory_profiler.stop()
 
-        ret_map = mnm.utils.memory_profiler.get_max_memory_info(mnm.Device(device))
+        ret_map = raf.utils.memory_profiler.get_max_memory_info(raf.Device(device))
         # Comparing with the max used memory here since the max allocated memory will be larger
         # The model will not crash as long as the max used memory is below the device memory budget
         peak_memory = ret_map["max_used"].value + param_size
@@ -130,22 +116,22 @@ def test_simple(budget_type):
     budget = to_mbs(budget)
     before_peak = to_mbs(before_peak)
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.conv = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             a_1 = self.conv(x)
-            a_2 = mnm.softmax(a_1)
-            a_3 = mnm.softmax(a_2)
-            a_4 = mnm.softmax(a_3)
+            a_2 = raf.softmax(a_1)
+            a_3 = raf.softmax(a_2)
+            a_4 = raf.softmax(a_3)
 
-            a_5 = mnm.softmax_dx(a_3, a_4, a_4)
-            a_6 = mnm.softmax_dx(a_2, a_3, a_5)
-            a_7 = mnm.softmax_dx(a_1, a_2, a_6)
-            a_8 = mnm.conv2d_dx(x, a_1, a_7, shape, 1, 1, 1, 1)
-            a_9 = mnm.softmax(a_8)
+            a_5 = raf.softmax_dx(a_3, a_4, a_4)
+            a_6 = raf.softmax_dx(a_2, a_3, a_5)
+            a_7 = raf.softmax_dx(a_1, a_2, a_6)
+            a_8 = raf.conv2d_dx(x, a_1, a_7, shape, 1, 1, 1, 1)
+            a_9 = raf.softmax(a_8)
             return a_9
 
     model = Model()
@@ -155,41 +141,41 @@ def test_simple(budget_type):
         if budget_type == "low":
             return None
 
-        conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
+        conv2d_op = raf._ffi.op.GetOp("raf.op.conv2d")
         conv2d_call = lambda x, w: relay.Call(
             conv2d_op,
             [
                 x,
                 w,
-                mnm.ir.const([1]),
-                mnm.ir.const([1]),
-                mnm.ir.const([1]),
-                mnm.ir.const(1),
-                mnm.ir.const("NCHW"),
-                mnm.ir.const("OIHW"),
-                mnm.ir.const("NCHW"),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(1),
+                raf.ir.const("NCHW"),
+                raf.ir.const("OIHW"),
+                raf.ir.const("NCHW"),
             ],
         )
-        conv2d_dx_op = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
+        conv2d_dx_op = raf._ffi.op.GetOp("raf.op.conv2d_dx")
         conv2d_dx_call = lambda x, y, dy: relay.Call(
             conv2d_dx_op,
             [
                 x,
                 y,
                 dy,
-                mnm.ir.const([16, 16, 64, 64]),
-                mnm.ir.const([1]),
-                mnm.ir.const([1]),
-                mnm.ir.const([1]),
-                mnm.ir.const(1),
+                raf.ir.const([16, 16, 64, 64]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(1),
             ],
         )
-        softmax_op = mnm._ffi.op.GetOp("mnm.op.softmax")
-        softmax_dx_op = mnm._ffi.op.GetOp("mnm.op.softmax_dx")
-        minus_one = mnm.ir.const(-1)
+        softmax_op = raf._ffi.op.GetOp("raf.op.softmax")
+        softmax_dx_op = raf._ffi.op.GetOp("raf.op.softmax_dx")
+        minus_one = raf.ir.const(-1)
 
-        data = mnm.ir.var("x", shape=shape)
-        weight = mnm.ir.var("w", shape=(16, 16, 3, 3))
+        data = raf.ir.var("x", shape=shape)
+        weight = raf.ir.var("w", shape=(16, 16, 3, 3))
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", conv2d_call(data, weight))
@@ -234,30 +220,30 @@ def test_closure():
         """This function includes a closure and has the peak memory 28.0088 MBs. We set
         the budget to 28 to enforce remating the tensor generated by the closure.
         """
-        conv2d_op = mnm._ffi.op.GetOp("mnm.op.conv2d")
+        conv2d_op = raf._ffi.op.GetOp("raf.op.conv2d")
         conv2d_call = lambda x, w: relay.Call(
             conv2d_op,
             [
                 x,
                 w,
-                mnm.ir.const([1]),
-                mnm.ir.const([1]),
-                mnm.ir.const([1]),
-                mnm.ir.const(1),
-                mnm.ir.const("NCHW"),
-                mnm.ir.const("OIHW"),
-                mnm.ir.const("NCHW"),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(1),
+                raf.ir.const("NCHW"),
+                raf.ir.const("OIHW"),
+                raf.ir.const("NCHW"),
             ],
         )
-        conv2d_dx_op = mnm._ffi.op.GetOp("mnm.op.conv2d_dx")
-        softmax_op = mnm._ffi.op.GetOp("mnm.op.softmax")
-        softmax_dx_op = mnm._ffi.op.GetOp("mnm.op.softmax_dx")
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        null = mnm.ir.const(None)
+        conv2d_dx_op = raf._ffi.op.GetOp("raf.op.conv2d_dx")
+        softmax_op = raf._ffi.op.GetOp("raf.op.softmax")
+        softmax_dx_op = raf._ffi.op.GetOp("raf.op.softmax_dx")
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        null = raf.ir.const(None)
 
-        data = mnm.ir.var("x", shape=shape)
-        weight = mnm.ir.var("w", shape=(16, 16, 3, 3))
-        dy = mnm.ir.var("dy", shape=shape)
+        data = raf.ir.var("x", shape=shape)
+        weight = raf.ir.var("w", shape=(16, 16, 3, 3))
+        dy = raf.ir.var("dy", shape=shape)
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", conv2d_call(data, weight))
@@ -265,9 +251,9 @@ def test_closure():
         a_3 = sb.let("a3", relay.Call(softmax_op, [a_2]))
 
         # Closure
-        p_0 = mnm.ir.var("p0", shape=shape)
-        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.tvm.relu"), [p_0])
-        out = relay.Call(mnm._ffi.op.GetOp("mnm.op.tvm.softmax"), [out])
+        p_0 = raf.ir.var("p0", shape=shape)
+        out = relay.Call(raf._ffi.op.GetOp("raf.op.tvm.relu"), [p_0])
+        out = relay.Call(raf._ffi.op.GetOp("raf.op.tvm.softmax"), [out])
         closure = relay.Function([p_0], out)
         closure = closure.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
         closure = closure.with_attr("Dialect", "tvm")
@@ -288,11 +274,11 @@ def test_closure():
                     data,
                     weight,
                     a_6,
-                    mnm.ir.const([16, 16, 64, 64]),
-                    mnm.ir.const([1]),
-                    mnm.ir.const([1]),
-                    mnm.ir.const([1]),
-                    mnm.ir.const(1),
+                    raf.ir.const([16, 16, 64, 64]),
+                    raf.ir.const([1]),
+                    raf.ir.const([1]),
+                    raf.ir.const([1]),
+                    raf.ir.const(1),
                 ],
             ),
         )
@@ -318,18 +304,18 @@ def test_closure():
 
 @pytest.mark.parametrize("share", [False, True])
 def test_inplace(share):
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, param_0, param_1, param_2):
-            a_1 = mnm.add(param_0, param_0)
-            a_2 = mnm.add(a_1, param_1, out=a_1) if share else mnm.add(a_1, param_1)
-            a_3 = mnm.add(a_2, param_2)
-            a_4 = mnm.softmax(a_3)
-            a_5 = mnm.softmax(a_4)
-            a_6 = mnm.add(a_5, a_1, out=a_5)
+            a_1 = raf.add(param_0, param_0)
+            a_2 = raf.add(a_1, param_1, out=a_1) if share else raf.add(a_1, param_1)
+            a_3 = raf.add(a_2, param_2)
+            a_4 = raf.softmax(a_3)
+            a_5 = raf.softmax(a_4)
+            a_6 = raf.add(a_5, a_1, out=a_5)
             return a_6
 
     device = "cpu"
@@ -342,14 +328,14 @@ def test_inplace(share):
 
     def expected():
         """The expected result of non-sharing a_1 and a_2"""
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        softmax_op = mnm._ffi.op.GetOp("mnm.op.softmax")
-        minus_one = mnm.ir.const(-1)
-        null = mnm.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        softmax_op = raf._ffi.op.GetOp("raf.op.softmax")
+        minus_one = raf.ir.const(-1)
+        null = raf.ir.const(None)
 
-        p_0 = mnm.ir.var("p0", shape=shape)
-        p_1 = mnm.ir.var("p1", shape=shape)
-        p_2 = mnm.ir.var("p2", shape=shape)
+        p_0 = raf.ir.var("p0", shape=shape)
+        p_1 = raf.ir.var("p1", shape=shape)
+        p_2 = raf.ir.var("p2", shape=shape)
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", relay.Call(add_op, [p_0, p_0, null, null]))
@@ -370,20 +356,20 @@ def test_inplace(share):
 
 
 def test_tuple():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self, num_features, eps=1e-5, momentum=0.1, affine=True):
-            self.batch_norm = mnm.model.nn.BatchNorm(num_features, eps, momentum, affine)
+            self.batch_norm = raf.model.nn.BatchNorm(num_features, eps, momentum, affine)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             # Note that BatchNorm model will mutate IR. See the expected IR for details.
-            a_1 = mnm.relu(x)
+            a_1 = raf.relu(x)
             a_2 = self.batch_norm(x)
-            a_4 = mnm.add(a_1, a_2)
-            a_5 = mnm.relu(a_4)
-            a_6 = mnm.add(a_4, a_5)
-            a_7 = mnm.add(a_2, a_6)
-            a_8 = mnm.add(a_1, a_7)
+            a_4 = raf.add(a_1, a_2)
+            a_5 = raf.relu(a_4)
+            a_6 = raf.add(a_4, a_5)
+            a_7 = raf.add(a_2, a_6)
+            a_8 = raf.add(a_1, a_7)
             return a_8
 
     device = "cpu"
@@ -398,18 +384,18 @@ def test_tuple():
         a tuple and two of its tensors are still alive, we should free a1 (i.e., ReLU) and
         remat later.
         """
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
-        bn_op = mnm._ffi.op.GetOp("mnm.op.batch_norm_train")
-        momentum = mnm.ir.const(0.1)
-        eps = mnm.ir.const(1e-5)
-        null = mnm.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        relu_op = raf._ffi.op.GetOp("raf.op.relu")
+        bn_op = raf._ffi.op.GetOp("raf.op.batch_norm_train")
+        momentum = raf.ir.const(0.1)
+        eps = raf.ir.const(1e-5)
+        null = raf.ir.const(None)
 
-        p_0 = mnm.ir.var("p0", shape=shape)
-        bn_b = mnm.ir.var("bn_b", shape=stats_shape)
-        bn_m = mnm.ir.var("bn_m", shape=stats_shape)
-        bn_v = mnm.ir.var("bn_v", shape=stats_shape)
-        bn_w = mnm.ir.var("bn_w", shape=stats_shape)
+        p_0 = raf.ir.var("p0", shape=shape)
+        bn_b = raf.ir.var("bn_b", shape=stats_shape)
+        bn_m = raf.ir.var("bn_m", shape=stats_shape)
+        bn_v = raf.ir.var("bn_v", shape=stats_shape)
+        bn_w = raf.ir.var("bn_w", shape=stats_shape)
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", relay.Call(relu_op, [p_0]))
@@ -440,14 +426,14 @@ def test_reshape():
     device = "cpu"
     shape = (512, 512)  # 1 MB.
 
-    add_op = mnm._ffi.op.GetOp("mnm.op.add")
-    relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
-    reshape_op = mnm._ffi.op.GetOp("mnm.op.reshape")
-    null = mnm.ir.const(None)
-    new_shape = mnm.ir.const((262144,), dtype="int32")
+    add_op = raf._ffi.op.GetOp("raf.op.add")
+    relu_op = raf._ffi.op.GetOp("raf.op.relu")
+    reshape_op = raf._ffi.op.GetOp("raf.op.reshape")
+    null = raf.ir.const(None)
+    new_shape = raf.ir.const((262144,), dtype="int32")
 
     def get_mod():
-        p_0 = mnm.ir.var("x", shape=shape)
+        p_0 = raf.ir.var("x", shape=shape)
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", relay.Call(relu_op, [p_0]))
@@ -468,7 +454,7 @@ def test_reshape():
         """Tuple and TupleGetItem are simplified when generating reshapes (x_0, x_1).
         Meanwhile, x_2, x_3 are rematerialized.
         """
-        p_0 = mnm.ir.var("x", shape=shape)
+        p_0 = raf.ir.var("x", shape=shape)
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", relay.Call(relu_op, [p_0]))
@@ -494,19 +480,19 @@ def test_not_call():
     shape = (512, 512)  # 1 MB.
     stats_shape = [shape[1]]
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, bn_m, bn_v, bn_w, bn_b):
-            a_1 = mnm.relu(x)
-            a_2 = mnm.batch_norm_train(x, bn_m, bn_v, bn_w, bn_b, 0.1, 1e-5)
+            a_1 = raf.relu(x)
+            a_2 = raf.batch_norm_train(x, bn_m, bn_v, bn_w, bn_b, 0.1, 1e-5)
             a_3 = a_2[0]
-            a_4 = mnm.add(a_1, a_3)
-            a_5 = mnm.relu(x)
-            a_6 = mnm.add(a_4, a_5)
-            a_7 = mnm.add(a_3, a_6)
+            a_4 = raf.add(a_1, a_3)
+            a_5 = raf.relu(x)
+            a_6 = raf.add(a_4, a_5)
+            a_7 = raf.add(a_3, a_6)
             return a_7
 
     model = Model()
@@ -519,18 +505,18 @@ def test_not_call():
 
     def expected():
         """Need to remat TupleGetItem as well."""
-        add_op = mnm._ffi.op.GetOp("mnm.op.add")
-        relu_op = mnm._ffi.op.GetOp("mnm.op.relu")
-        bn_op = mnm._ffi.op.GetOp("mnm.op.batch_norm_train")
-        momentum = mnm.ir.const(0.1)
-        eps = mnm.ir.const(1e-5)
-        null = mnm.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        relu_op = raf._ffi.op.GetOp("raf.op.relu")
+        bn_op = raf._ffi.op.GetOp("raf.op.batch_norm_train")
+        momentum = raf.ir.const(0.1)
+        eps = raf.ir.const(1e-5)
+        null = raf.ir.const(None)
 
-        p_x = mnm.ir.var("x", shape=shape)
-        p_m = mnm.ir.var("m", shape=stats_shape)
-        p_v = mnm.ir.var("v", shape=stats_shape)
-        p_w = mnm.ir.var("w", shape=stats_shape)
-        p_b = mnm.ir.var("b", shape=stats_shape)
+        p_x = raf.ir.var("x", shape=shape)
+        p_m = raf.ir.var("m", shape=stats_shape)
+        p_v = raf.ir.var("v", shape=stats_shape)
+        p_w = raf.ir.var("w", shape=stats_shape)
+        p_b = raf.ir.var("b", shape=stats_shape)
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", relay.Call(relu_op, [p_x]))

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,19 +8,19 @@
  * \brief Random operators bridged from TVM.
  */
 #include <vector>
-#include "mnm/value.h"
+#include "raf/value.h"
 #include "./tvm_attrs.h"
 #include "./tvm_utils.h"
 #include "../../schema/random.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::tensor;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::tensor;
+using namespace raf::op::schema;
 
 std::vector<Value> ThreefryGenerateSchema2Args(const ThreefryGenerateArgs* args) {
   return {args->key};
@@ -62,7 +48,7 @@ HashKey ThreefryGenerateHasher(const std::vector<Type>& param_types, const Type&
   return key;
 }
 
-MNM_TVM(threefry_generate, ThreefryGenerate, ThreefryGenerateArgs, ThreefryGenerateSchema2Args,
+RAF_TVM(threefry_generate, ThreefryGenerate, ThreefryGenerateArgs, ThreefryGenerateSchema2Args,
         ThreefryGenerateSchemaArgNames, ThreefryGenerateSchema2Attrs, ThreefryGenerateHasher,
         kOpaque);
 
@@ -74,9 +60,9 @@ std::vector<std::string> ThreefrySplitSchemaArgNames(const op::CallValues& call)
   return {"key"};
 }
 
-MNM_TVM(threefry_split, ThreefrySplit, ThreefrySplitArgs, ThreefrySplitSchema2Args,
+RAF_TVM(threefry_split, ThreefrySplit, ThreefrySplitArgs, ThreefrySplitSchema2Args,
         ThreefrySplitSchemaArgNames, GenericAttrs, GenericHasher, kOpaque);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

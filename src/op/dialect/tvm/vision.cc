@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,7 +8,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <tvm/relay/attrs/vision.h>
-#include <mnm/value.h>
+#include <raf/value.h>
 #include <array>
 #include "./tvm_utils.h"
 #include "./tvm_attrs.h"
@@ -31,13 +17,13 @@
 #include "../../schema/vision.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
 using namespace ::tvm::relay;
 
 std::vector<Value> GetValidCountSchema2Args(const GetValidCountsArgs* args) {
@@ -66,7 +52,7 @@ HashKey GetValidCountsHasher(const std::vector<Type>& param_types, const Type& y
   return key;
 }
 
-MNM_TVM(get_valid_counts, GetValidCounts, GetValidCountsArgs, GetValidCountSchema2Args,
+RAF_TVM(get_valid_counts, GetValidCounts, GetValidCountsArgs, GetValidCountSchema2Args,
         GetValidCountSchemaArgNames, GetValidCountsSchema2Attrs, GetValidCountsHasher, kOpaque);
 
 std::vector<Value> NonMaxSuppressionSchema2Args(const NonMaxSuppressionArgs* args) {
@@ -103,7 +89,7 @@ HashKey NonMaxSuppressionHasher(const std::vector<Type>& param_types, const Type
   return key;
 }
 
-MNM_TVM(non_max_suppression, NonMaxSuppression, NonMaxSuppressionArgs, NonMaxSuppressionSchema2Args,
+RAF_TVM(non_max_suppression, NonMaxSuppression, NonMaxSuppressionArgs, NonMaxSuppressionSchema2Args,
         NonMaxSuppressionSchemaArgNames, NonMaxSuppressionSchema2Attrs, NonMaxSuppressionHasher,
         kOpaque);
 
@@ -139,7 +125,7 @@ HashKey RoiAlignHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(roi_align, RoiAlign, RoiAlignArgs, RoiAlignSchema2Args, RoiAlignSchemaArgNames,
+RAF_TVM(roi_align, RoiAlign, RoiAlignArgs, RoiAlignSchema2Args, RoiAlignSchemaArgNames,
         RoiAlignSchema2Attrs, RoiAlignHasher, kOutEWiseFusable);
 
 std::vector<Value> RoiAlignDxSchema2Args(const RoiAlignDxArgs* args) {
@@ -174,9 +160,9 @@ HashKey RoiAlignDxHasher(const std::vector<Type>& param_types, const Type& y_typ
   return key;
 }
 
-MNM_TVM(roi_align_dx, RoiAlignDx, RoiAlignDxArgs, RoiAlignDxSchema2Args, RoiAlignDxSchemaArgNames,
+RAF_TVM(roi_align_dx, RoiAlignDx, RoiAlignDxArgs, RoiAlignDxSchema2Args, RoiAlignDxSchemaArgNames,
         RoiAlignDxSchema2Attrs, RoiAlignDxHasher, kOutEWiseFusable);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

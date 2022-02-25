@@ -1,38 +1,24 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/impl/memory_pool.cc
- * \brief MNM memory pool manager
+ * \brief RAF memory pool manager
  */
 #include <unordered_map>
-#include "mnm/device.h"
-#include "mnm/memory_pool.h"
-#include "mnm/registry.h"
+#include "raf/device.h"
+#include "raf/memory_pool.h"
+#include "raf/registry.h"
 
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 #include <cuda.h>
 #else
 #define CUDA_VERSION 0
 #endif
 
-namespace mnm {
+namespace raf {
 namespace memory_pool {
 
 using registry::GetPackedFunc;
@@ -69,7 +55,7 @@ class MemoryPoolManager {
       if (result == nullptr) {
         // ok, it is truly a nullptr
         std::string pool_name = (name == "") ? default_strategies[dev.device_type()] : name;
-        snprintf(maker_name, sizeof(maker_name), "mnm.memory_pool._make.%s", pool_name.c_str());
+        snprintf(maker_name, sizeof(maker_name), "raf.memory_pool._make.%s", pool_name.c_str());
         void* ret = GetPackedFunc(maker_name)(dev);
         result.reset(static_cast<MemoryPool*>(ret));
         return result.get();
@@ -170,18 +156,18 @@ void InitPool(const Device& dev, std::string pool_name) {
   Memory::InitPool(dev, pool_name);
 }
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool.InitPool")
+RAF_REGISTER_GLOBAL("raf.memory_pool.InitPool")
     .set_body_typed([](const Device& dev, const std::string pool_name) {
       return InitPool(dev, pool_name);
     });
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool.RemovePool").set_body_typed([](const Device& dev) {
+RAF_REGISTER_GLOBAL("raf.memory_pool.RemovePool").set_body_typed([](const Device& dev) {
   return RemovePool(dev);
 });
 
-MNM_REGISTER_GLOBAL("mnm.memory_pool.ResetPool").set_body_typed([](const Device& dev) {
+RAF_REGISTER_GLOBAL("raf.memory_pool.ResetPool").set_body_typed([](const Device& dev) {
   return ResetPool(dev);
 });
 
 }  // namespace memory_pool
-}  // namespace mnm
+}  // namespace raf

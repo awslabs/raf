@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -25,9 +11,9 @@
 #include <functional>
 #include <numeric>
 
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/tensor.h"
 #include "./declare_utils.h"
 #include "../ty/utils.h"
 #include "../schema/ufunc.h"
@@ -36,17 +22,17 @@
 #include "../schema/transform.h"
 #include "../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
-using namespace mnm::ir;
+using namespace raf::op::schema;
+using namespace raf::value;
+using namespace raf::ir;
 using common::shape_utils::IsCompact;
 using tensor::Tensor;
 
-MNM_OP_DECLARE("mnm.op.arange", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.arange", [](const CallValues& call) {
   const auto* args = call->args.as<ArangeArgs>();
   CHECK(args != nullptr);
   const DLTensor* start = args->start;
@@ -62,14 +48,14 @@ MNM_OP_DECLARE("mnm.op.arange", [](const CallValues& call) {
   } else {
     LOG(FATAL) << "Do not support type: " << args->dtype;
   }
-  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  const auto* f = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
   tvm::Device tvm_dev = (*f)(args->device);
   Device device(tvm_dev);
   call->out = TensorValue::Assemble(device, String2DLDataType(args->dtype), {size});
   call->device = device;
 });
 
-MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.adv_index", [](const CallValues& call) {
   const auto* args = call->args.as<AdvIndexArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->inputs[0];
@@ -97,7 +83,7 @@ MNM_OP_DECLARE("mnm.op.adv_index", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.adv_index_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.adv_index_dx", [](const CallValues& call) {
   const auto* args = call->args.as<AdvIndexDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->inputs[0];
@@ -107,7 +93,7 @@ MNM_OP_DECLARE("mnm.op.adv_index_dx", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.batch_flatten", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -129,7 +115,7 @@ MNM_OP_DECLARE("mnm.op.batch_flatten", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.reshape", [](const CallValues& call) {
   const auto* args = call->args.as<ReshapeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -175,7 +161,7 @@ MNM_OP_DECLARE("mnm.op.reshape", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.resize2d", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.resize2d", [](const CallValues& call) {
   const auto* args = call->args.as<Resize2DArgs>();
   CHECK(args != nullptr);
 
@@ -215,7 +201,7 @@ MNM_OP_DECLARE("mnm.op.resize2d", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.resize2d_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.resize2d_dx", [](const CallValues& call) {
   const auto* args = call->args.as<Resize2DDxArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -248,9 +234,9 @@ void TakeFunc(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.take", TakeFunc);
+RAF_OP_DECLARE("raf.op.take", TakeFunc);
 
-MNM_OP_DECLARE("mnm.op.take_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.take_dx", [](const CallValues& call) {
   const auto* args = call->args.as<TakeDxArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -275,9 +261,9 @@ void EmbeddingFunc(const CallValues& call) {
   call->device = x->device;
 }
 
-MNM_OP_DECLARE("mnm.op.embedding", EmbeddingFunc);
+RAF_OP_DECLARE("raf.op.embedding", EmbeddingFunc);
 
-MNM_OP_DECLARE("mnm.op.embedding_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.embedding_dx", [](const CallValues& call) {
   const auto* args = call->args.as<EmbeddingDxArgs>();
   CHECK(args != nullptr);
   DLTensor* dy = args->dy;
@@ -287,7 +273,7 @@ MNM_OP_DECLARE("mnm.op.embedding_dx", [](const CallValues& call) {
   call->device = dy->device;
 });
 
-MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.expand_dims", [](const CallValues& call) {
   const auto* args = call->args.as<ExpandDimsArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -308,7 +294,7 @@ MNM_OP_DECLARE("mnm.op.expand_dims", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.strided_slice", [](const CallValues& call) {
   const auto* args = call->args.as<StridedSliceArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->x;
@@ -407,7 +393,7 @@ MNM_OP_DECLARE("mnm.op.strided_slice", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.strided_slice_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.strided_slice_dx", [](const CallValues& call) {
   const auto* args = call->args.as<StridedSliceDxArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->dy;
@@ -434,7 +420,7 @@ MNM_OP_DECLARE("mnm.op.strided_slice_dx", [](const CallValues& call) {
   throw;
 });
 
-MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.sequence_mask", [](const CallValues& call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -446,7 +432,7 @@ MNM_OP_DECLARE("mnm.op.sequence_mask", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.reverse", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.reverse", [](const CallValues& call) {
   const auto* args = call->args.as<ReverseArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -457,7 +443,7 @@ MNM_OP_DECLARE("mnm.op.reverse", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.reverse_sequence", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.reverse_sequence", [](const CallValues& call) {
   const auto* args = call->args.as<ReverseSequenceArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -475,7 +461,7 @@ MNM_OP_DECLARE("mnm.op.reverse_sequence", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.broadcast_to", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToArgs>();
   DLTensor* x = args->x;
   std::vector<int64_t> shape = args->shape;
@@ -485,7 +471,7 @@ MNM_OP_DECLARE("mnm.op.broadcast_to", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.repeat", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.repeat", [](const CallValues& call) {
   const auto* args = call->args.as<RepeatArgs>();
   CHECK(args != nullptr);
   CHECK(args->axis.defined());
@@ -516,7 +502,7 @@ MNM_OP_DECLARE("mnm.op.repeat", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.transpose", [](const CallValues& call) {
   const auto* args = call->args.as<TransposeArgs>();
   CHECK(args != nullptr);
   const std::vector<int64_t>& axes = args->axes;
@@ -540,7 +526,7 @@ MNM_OP_DECLARE("mnm.op.transpose", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.transpose_dx", [](const CallValues& call) {
   const auto* args = call->args.as<TransposeDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* dy = args->dy;
@@ -551,7 +537,7 @@ MNM_OP_DECLARE("mnm.op.transpose_dx", [](const CallValues& call) {
   call->device = dy->device;
 });
 
-MNM_OP_DECLARE("mnm.op.repeat_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.repeat_dx", [](const CallValues& call) {
   const auto* args = call->args.as<RepeatDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* dy = args->dy;
@@ -563,7 +549,7 @@ MNM_OP_DECLARE("mnm.op.repeat_dx", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.swap_axis", [](const CallValues& call) {
   const auto* args = call->args.as<SwapAxisArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -586,7 +572,7 @@ MNM_OP_DECLARE("mnm.op.swap_axis", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.broadcast_to_like", [](const CallValues& call) {
   const auto* args = call->args.as<BroadcastToLikeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -598,7 +584,7 @@ MNM_OP_DECLARE("mnm.op.broadcast_to_like", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.stack", [](const CallValues& call) {
   const auto* args = call->args.as<StackArgs>();
   CHECK(args != nullptr);
   const std::vector<BaseTensorValue>& x = args->x;
@@ -635,7 +621,7 @@ MNM_OP_DECLARE("mnm.op.stack", [](const CallValues& call) {
   call->device = y0->device;
 });
 
-MNM_OP_DECLARE("mnm.op.mesh_grid", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.mesh_grid", [](const CallValues& call) {
   const auto* args = call->args.as<MeshGridArgs>();
   CHECK(args != nullptr);
   const std::vector<BaseTensorValue>& x = args->x;
@@ -658,7 +644,7 @@ MNM_OP_DECLARE("mnm.op.mesh_grid", [](const CallValues& call) {
   call->device = y0->device;
 });
 
-MNM_OP_DECLARE("mnm.op.concatenate", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.concatenate", [](const CallValues& call) {
   const auto* args = call->args.as<ConcatenateArgs>();
   CHECK(args != nullptr);
   const std::vector<BaseTensorValue>& x = args->x;
@@ -709,9 +695,9 @@ void ConcatenateDx(const CallValues& call) {
   call->out = TupleValue::make(res);
 }
 
-MNM_OP_DECLARE("mnm.op.concatenate_dx", ConcatenateDx);
+RAF_OP_DECLARE("raf.op.concatenate_dx", ConcatenateDx);
 
-MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.split", [](const CallValues& call) {
   const auto* args = call->args.as<SplitArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -759,7 +745,7 @@ MNM_OP_DECLARE("mnm.op.split", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.scatter", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.scatter", [](const CallValues& call) {
   const auto* args = call->args.as<ScatterArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -789,7 +775,7 @@ MNM_OP_DECLARE("mnm.op.scatter", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.scatter_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.scatter_dx", [](const CallValues& call) {
   const auto* args = call->args.as<ScatterDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -800,7 +786,7 @@ MNM_OP_DECLARE("mnm.op.scatter_dx", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.clip", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.clip", [](const CallValues& call) {
   const auto* args = call->args.as<ClipArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -811,7 +797,7 @@ MNM_OP_DECLARE("mnm.op.clip", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.clip_dx", [](const CallValues& call) {
   const auto* args = call->args.as<ClipDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
@@ -822,7 +808,7 @@ MNM_OP_DECLARE("mnm.op.clip_dx", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.cast", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.cast", [](const CallValues& call) {
   const auto* args = call->args.as<CastArgs>();
   CHECK(args != nullptr);
   DLTensor* data = args->data;
@@ -834,7 +820,7 @@ MNM_OP_DECLARE("mnm.op.cast", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.cast_like", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.cast_like", [](const CallValues& call) {
   const auto* args = call->args.as<CastLikeArgs>();
   CHECK(args != nullptr);
   DLTensor* dtype_like = args->dtype_like;
@@ -845,7 +831,7 @@ MNM_OP_DECLARE("mnm.op.cast_like", [](const CallValues& call) {
   call->device = dtype_like->device;
 });
 
-MNM_OP_DECLARE("mnm.op.gather", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.gather", [](const CallValues& call) {
   const auto* args = call->args.as<GatherArgs>();
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
@@ -863,7 +849,7 @@ MNM_OP_DECLARE("mnm.op.gather", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.gather_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.gather_dx", [](const CallValues& call) {
   const auto* args = call->args.as<GatherDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
@@ -874,7 +860,7 @@ MNM_OP_DECLARE("mnm.op.gather_dx", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.gather_nd", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.gather_nd", [](const CallValues& call) {
   const auto* args = call->args.as<GatherNdArgs>();
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
@@ -898,7 +884,7 @@ MNM_OP_DECLARE("mnm.op.gather_nd", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.gather_nd_dx", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.gather_nd_dx", [](const CallValues& call) {
   const auto* args = call->args.as<GatherNdDxArgs>();
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
@@ -909,7 +895,7 @@ MNM_OP_DECLARE("mnm.op.gather_nd_dx", [](const CallValues& call) {
   call->device = data->device;
 });
 
-MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.squeeze", [](const CallValues& call) {
   const auto* args = call->args.as<SqueezeArgs>();
   CHECK(args != nullptr);
   const std::vector<int64_t>& axis = args->axis;
@@ -949,7 +935,7 @@ MNM_OP_DECLARE("mnm.op.squeeze", [](const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, oshape);
 });
 
-MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.full", [](const CallValues& call) {
   const auto* args = call->args.as<FullArgs>();
   CHECK(args != nullptr);
   const std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
@@ -958,7 +944,7 @@ MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
     CHECK_GE(shape[i], 0);
   }
 
-  const auto* f = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+  const auto* f = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
   tvm::Device tvm_dev = (*f)(args->device);
   Device device(tvm_dev);
 
@@ -966,7 +952,7 @@ MNM_OP_DECLARE("mnm.op.full", [](const CallValues& call) {
   call->out = TensorValue::Assemble(call->device, String2DLDataType(args->dtype), shape);
 });
 
-MNM_OP_DECLARE("mnm.op.full_like", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.full_like", [](const CallValues& call) {
   const auto* args = call->args.as<FullLikeArgs>();
   CHECK(args != nullptr);
   const DLTensor* data = args->data;
@@ -980,7 +966,7 @@ MNM_OP_DECLARE("mnm.op.full_like", [](const CallValues& call) {
   call->out = TensorValue::Assemble(call->device, data->dtype, shape);
 });
 
-MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.where", [](const CallValues& call) {
   const auto* args = call->args.as<WhereArgs>();
   CHECK(args != nullptr);
   const DLTensor* condition = args->condition;
@@ -999,7 +985,7 @@ MNM_OP_DECLARE("mnm.op.where", [](const CallValues& call) {
   call->device = x->device;
 });
 
-MNM_OP_DECLARE("mnm.op.upper_bound.argwhere", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.upper_bound.argwhere", [](const CallValues& call) {
   // alloc tensor for possible maximum data size and actual shape
   const auto* args = call->args.as<ArgwhereArgs>();
   CHECK(args != nullptr);
@@ -1019,11 +1005,11 @@ MNM_OP_DECLARE("mnm.op.upper_bound.argwhere", [](const CallValues& call) {
   call->device = condition->device;
 });
 
-MNM_REGISTER_OP("mnm.op.argwhere")
+RAF_REGISTER_OP("raf.op.argwhere")
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<Op>("TMNMUpperBoundOp", Op::Get("mnm.op.upper_bound.argwhere"));
+    .set_attr<Op>("TRAFUpperBoundOp", Op::Get("raf.op.upper_bound.argwhere"));
 
-MNM_OP_DECLARE("mnm.op.cumsum", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.cumsum", [](const CallValues& call) {
   const auto* args = call->args.as<CumsumArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
@@ -1034,7 +1020,7 @@ MNM_OP_DECLARE("mnm.op.cumsum", [](const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 });
 
-MNM_OP_DECLARE("mnm.op.size", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.size", [](const CallValues& call) {
   const auto* args = call->args.as<SizeArgs>();
   CHECK(args != nullptr);
 
@@ -1060,4 +1046,4 @@ MNM_OP_DECLARE("mnm.op.size", [](const CallValues& call) {
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

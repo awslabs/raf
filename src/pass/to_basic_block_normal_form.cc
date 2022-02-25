@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,16 +8,16 @@
  * \brief Convert dataflow graph to A-normal form.
  */
 #include <vector>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
 #include "./convert_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using mnm::analysis::CreateDependencyGraph;
+using raf::analysis::CreateDependencyGraph;
 using tvm::relay::CalcScope;
 
 // For basic block normal form, bind expressions only if the original expression's scope
@@ -64,10 +50,10 @@ Pass ToBasicBlockNormalForm() {
         << ir::AsText(ret) << "should not has free vars: " << FreeVars(ret);
     return Downcast<Function>(ret);
   };
-  return CreateMNMFunctionPass(pass_func, 1, "ToBasicBlockNormalForm", {});
+  return CreateRAFFunctionPass(pass_func, 1, "ToBasicBlockNormalForm", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ToBasicBlockNormalForm").set_body_typed(ToBasicBlockNormalForm);
+RAF_REGISTER_GLOBAL("raf.pass_.ToBasicBlockNormalForm").set_body_typed(ToBasicBlockNormalForm);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

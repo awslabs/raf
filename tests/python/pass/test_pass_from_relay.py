@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access, too-many-locals, attribute-defined-outside-init, no-self-use
 # pylint: disable=too-many-arguments, missing-module-docstring, missing-function-docstring
@@ -22,15 +8,15 @@ from operator import attrgetter
 
 import pytest
 import numpy as np
-import mnm
+import raf
 import tvm
-from mnm.frontend import FrameworkModel
-from mnm.ir import AsText, ScopeBuilder
-from mnm.testing import get_testable_devices, randint, randn, check, utils, randn_torch
-from mnm._ffi.pass_ import FromRelay, InferType
-from mnm._core.module import IRModule
-from mnm._lib import tvm as _tvm
-from mnm._lib import relay as _relay
+from raf.frontend import FrameworkModel
+from raf.ir import AsText, ScopeBuilder
+from raf.testing import get_testable_devices, randint, randn, check, utils, randn_torch
+from raf._ffi.pass_ import FromRelay, InferType
+from raf._core.module import IRModule
+from raf._lib import tvm as _tvm
+from raf._lib import relay as _relay
 
 
 def check_from_relay(
@@ -85,13 +71,13 @@ def check_from_relay(
             check(ref_out, out)
 
 
-def test_mnm_constant():
-    data = mnm.array(1)
+def test_raf_constant():
+    data = raf.array(1)
 
     def expected():
         a1 = _relay.var("a1")  # pylint: disable=invalid-name
-        t_value = mnm._core.value.TensorValue.from_numpy(data.numpy())
-        constant = mnm._ffi.ir._make.Constant(t_value)
+        t_value = raf._core.value.TensorValue.from_numpy(data.numpy())
+        constant = raf._ffi.ir._make.Constant(t_value)
         let = _relay.Let(a1, constant, a1)
         return _relay.Function([], let)
 
@@ -104,7 +90,7 @@ def test_mnm_constant():
 
 
 @pytest.mark.parametrize("use_kwargs", [False, True])
-def test_mnm_module(use_kwargs):
+def test_raf_module(use_kwargs):
     f1 = _relay.GlobalVar("f1")  # pylint: disable=invalid-name
 
     def get_tvm_mod():
@@ -124,7 +110,7 @@ def test_mnm_module(use_kwargs):
     def expected():
         a1 = _relay.var("a1")  # pylint: disable=invalid-name
         x = _relay.var("x", shape=(1, 100))
-        let = _relay.Let(a1, mnm.ir.op.tanh(x), a1)
+        let = _relay.Let(a1, raf.ir.op.tanh(x), a1)
         f1_out = _relay.Function([x], let)
         mod = IRModule({f1: f1_out})
 
@@ -177,14 +163,14 @@ def test_mnm_module(use_kwargs):
     ],
 )
 @pytest.mark.parametrize("shape", [(2, 2)])
-def test_mnm_unary_op(op_name, shape):
-    class TestModel(mnm.Model):
+def test_raf_unary_op(op_name, shape):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            return attrgetter(op_name)(mnm)(x)
+            return attrgetter(op_name)(raf)(x)
 
     model = TestModel()
     m_x, _ = randn(shape)
@@ -214,15 +200,15 @@ def test_mnm_unary_op(op_name, shape):
     ],
 )
 @pytest.mark.parametrize("shape", [(2, 2)])
-def test_mnm_binary_tensor_op(op_name, shape):
-    # meta ir
-    class TestModel(mnm.Model):
+def test_raf_binary_tensor_op(op_name, shape):
+    # raf ir
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return attrgetter(op_name)(mnm)(x, y)
+            return attrgetter(op_name)(raf)(x, y)
 
     model = TestModel()
     m_x, _ = randn(shape)
@@ -243,13 +229,13 @@ def test_mnm_binary_tensor_op(op_name, shape):
 @pytest.mark.parametrize("ret_type", ["values", "both", "indices"])
 @pytest.mark.parametrize("is_ascend", [True, False])
 def test_topk(shape, k, axis, dtype, ret_type, is_ascend):
-    class Topk(mnm.Model):
+    class Topk(raf.Model):
         def build(self, **kwargs):
             self._attrs = kwargs
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.topk(x, **self._attrs)
+            return raf.topk(x, **self._attrs)
 
     model = Topk(k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
     m_x, _ = randn(shape, dtype=dtype)
@@ -267,14 +253,14 @@ def test_topk(shape, k, axis, dtype, ret_type, is_ascend):
 @pytest.mark.parametrize("repeats", [2])
 @pytest.mark.parametrize("axis", [-1])
 def test_repeat(shape, repeats, axis, dtype):
-    class Repeat(mnm.Model):
+    class Repeat(raf.Model):
         def build(self, repeats, axis=0):
             self._repeats = repeats
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.repeat(x, repeats=self._repeats, axis=self._axis)
+            return raf.repeat(x, repeats=self._repeats, axis=self._axis)
 
     model = Repeat(repeats, axis)
     m_x, _ = randn(shape, dtype=dtype)
@@ -294,14 +280,14 @@ def test_take(shape, axis, dtype, mode):
     from functools import reduce
     import operator
 
-    class Take(mnm.Model):
+    class Take(raf.Model):
         def build(self, axis, mode):
             self._axis = axis
             self._mode = mode
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, indices):
-            return mnm.take(x, indices=indices, axis=self._axis, mode=self._mode)
+            return raf.take(x, indices=indices, axis=self._axis, mode=self._mode)
 
     size = reduce(operator.mul, shape[0], 1) if axis is None else shape[0][axis]
     m_x, _ = randn(shape[0], dtype=dtype)
@@ -323,14 +309,14 @@ def test_take(shape, axis, dtype, mode):
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_sequence_mask(max_length, batch_size, other_feature_dims, axis, dtype):
-    class SequenceMask(mnm.Model):
+    class SequenceMask(raf.Model):
         def build(self, mask_value, axis=0):
             self._axis = axis
             self._mask_value = mask_value
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, sequence_length):
-            return mnm.sequence_mask(
+            return raf.sequence_mask(
                 x, sequence_length, mask_value=self._mask_value, axis=self._axis
             )
 
@@ -352,13 +338,13 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims, axis, dtype):
 @pytest.mark.parametrize("shape", [[10, 10, 10], [6, 8, 9, 10]])
 @pytest.mark.parametrize("axis", [0, 1])
 def test_reverse(shape, axis, dtype):
-    class Reverse(mnm.Model):
+    class Reverse(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.reverse(x, self._axis)
+            return raf.reverse(x, self._axis)
 
     m_x, _ = randn(shape, dtype=dtype)
     model = Reverse(axis=axis)
@@ -373,17 +359,17 @@ def test_reverse(shape, axis, dtype):
 @pytest.mark.parametrize("inputs", [{"shape": (5, 5, 5), "seq_length": [1, 2, 3, 4, 5]}])
 @pytest.mark.parametrize("axes", [[0, 1]])
 def test_reverse_sequence(inputs, axes, dtype):
-    class ReverseSequence(mnm.Model):
+    class ReverseSequence(raf.Model):
         def build(self, seq_axis, batch_axis):
             self._seq_axis = seq_axis
             self._batch_axis = batch_axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, seq_length):
-            return mnm.reverse_sequence(x, seq_length, self._seq_axis, self._batch_axis)
+            return raf.reverse_sequence(x, seq_length, self._seq_axis, self._batch_axis)
 
     shape = inputs["shape"]
-    m_seq_length = mnm.array(inputs["seq_length"], dtype="int64")
+    m_seq_length = raf.array(inputs["seq_length"], dtype="int64")
     seq_axis = axes[0]
     batch_axis = axes[1]
     m_x, _ = randn(shape, dtype=dtype)
@@ -401,13 +387,13 @@ def test_reverse_sequence(inputs, axes, dtype):
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 2, 4, 1]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to(shape, dtype):
-    class BroadcastTo(mnm.Model):
+    class BroadcastTo(raf.Model):
         def build(self, shape=None):
             self._shape = shape
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.broadcast_to(x, self._shape)
+            return raf.broadcast_to(x, self._shape)
 
     model = BroadcastTo(shape[1])
     m_x, _ = randn(shape[0], dtype=dtype)
@@ -422,13 +408,13 @@ def test_broadcast_to(shape, dtype):
 @pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 2, 4, 1]]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_broadcast_to_like(shape, dtype):
-    class BroadcastToLike(mnm.Model):
+    class BroadcastToLike(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, broadcast_type):  # pylint: disable=no-self-use
-            return mnm.broadcast_to_like(x, broadcast_type)
+            return raf.broadcast_to_like(x, broadcast_type)
 
     model = BroadcastToLike()
     m_x, _ = randn(shape[0], dtype=dtype)
@@ -444,13 +430,13 @@ def test_broadcast_to_like(shape, dtype):
 @pytest.mark.parametrize("shape", [[(2, 2), (1, 0)], [(2, 2), None]])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_transpose(shape, dtype):
-    class Transpose(mnm.Model):
+    class Transpose(raf.Model):
         def build(self, axes=None):
             self._axes = axes
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            ret = mnm.transpose(x, self._axes)
+            ret = raf.transpose(x, self._axes)
             return ret
 
     axes = shape[1]
@@ -468,14 +454,14 @@ def test_transpose(shape, dtype):
 @pytest.mark.parametrize("indices_or_sections", [(2, 4), 2, (2,)])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_split(shape, axis, indices_or_sections, dtype):
-    class Split(mnm.Model):
+    class Split(raf.Model):
         def build(self, indices_or_sections, axis):
             self._indices_or_sections = indices_or_sections
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            ret = mnm.split(x, self._indices_or_sections, self._axis)
+            ret = raf.split(x, self._indices_or_sections, self._axis)
             return ret
 
     model = Split(indices_or_sections, axis)
@@ -493,13 +479,13 @@ def test_split(shape, axis, indices_or_sections, dtype):
 @pytest.mark.parametrize("axis", [-2])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_concatenate(shapes, axis, dtype):
-    class Concatenate(mnm.Model):
+    class Concatenate(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c):
-            return mnm.concatenate([a, b, c], axis=self._axis)
+            return raf.concatenate([a, b, c], axis=self._axis)
 
     args = [randn(shape, dtype=dtype)[0] for shape in shapes]
     model = Concatenate(axis)
@@ -514,13 +500,13 @@ def test_concatenate(shapes, axis, dtype):
 @pytest.mark.parametrize("axis", [-1])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_stack(shapes, axis, dtype):
-    class Stack(mnm.Model):
+    class Stack(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b, c):
-            return mnm.stack([a, b, c], axis=self._axis)
+            return raf.stack([a, b, c], axis=self._axis)
 
     args = [randn(shape, dtype=dtype)[0] for shape in shapes]
     model = Stack(axis)
@@ -535,13 +521,13 @@ def test_stack(shapes, axis, dtype):
 @pytest.mark.parametrize("axis", [[0], None])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_squeeze(shape, axis, dtype):
-    class Squeeze(mnm.Model):
+    class Squeeze(raf.Model):
         def build(self, axis):
             self._axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.squeeze(x, self._axis)
+            return raf.squeeze(x, self._axis)
 
     model = Squeeze(axis)
     m_x, _ = randn(shape, dtype=dtype)
@@ -557,13 +543,13 @@ def test_squeeze(shape, axis, dtype):
 @pytest.mark.parametrize("a_max", [0.7])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_clip(shape, a_min, a_max, dtype):
-    class Clip(mnm.Model):
+    class Clip(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.clip(x, a_min, a_max)
+            return raf.clip(x, a_min, a_max)
 
     model = Clip()
 
@@ -579,21 +565,21 @@ def test_clip(shape, a_min, a_max, dtype):
 @pytest.mark.parametrize("itype", ["float32"])
 @pytest.mark.parametrize("otype", ["float16"])
 def test_cast_n_cast_like(shape, itype, otype):
-    class Cast(mnm.Model):
+    class Cast(raf.Model):
         def build(self, otype=None):
             self._otype = otype
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.cast(data, self._otype)
+            return raf.cast(data, self._otype)
 
-    class CastLike(mnm.Model):
+    class CastLike(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, dtype_like):
-            return mnm.cast_like(data, dtype_like)
+            return raf.cast_like(data, dtype_like)
 
     m_x, _ = randn(shape, dtype=itype)
     cast_model = Cast(otype)
@@ -614,13 +600,13 @@ def test_cast_n_cast_like(shape, itype, otype):
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_gather(dshape, axis, dtype):
-    class Gather(mnm.Model):
+    class Gather(raf.Model):
         def build(self, axis):
             self.axis = axis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, indices):
-            return mnm.gather(data, self.axis, indices)
+            return raf.gather(data, self.axis, indices)
 
     m_x, _ = randn(dshape, dtype=dtype)
     m_i, _ = randint(dshape, high=dshape[axis])
@@ -637,13 +623,13 @@ def test_gather(dshape, axis, dtype):
 @pytest.mark.parametrize("dshape", [[10, 11, 12]])
 @pytest.mark.parametrize("ishape", [[3, 2]])
 def test_gather_nd(dshape, dtype, ishape):
-    class GatherNd(mnm.Model):
+    class GatherNd(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, indices):
-            return mnm.gather_nd(data, indices)
+            return raf.gather_nd(data, indices)
 
     m_x, _ = randn(dshape, dtype=dtype)
     m_i, _ = randint(ishape, high=dshape[0 : ishape[-1]], dtype="int64")
@@ -666,14 +652,14 @@ def test_gather_nd(dshape, dtype, ishape):
 @pytest.mark.parametrize("reverse", [False])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_reshape(params, reverse, dtype):
-    class Reshape(mnm.Model):
+    class Reshape(raf.Model):
         def build(self, shape, reverse=False):
             self._shape = shape
             self._reverse = reverse
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.reshape(x, shape=self._shape, reverse=self._reverse)
+            return raf.reshape(x, shape=self._shape, reverse=self._reverse)
 
     orig_shape, to_shape = params["orig_shape"], params["to_shape"]
     model = Reshape(shape=to_shape, reverse=reverse)
@@ -690,14 +676,14 @@ def test_reshape(params, reverse, dtype):
 @pytest.mark.parametrize("axis", [2])
 @pytest.mark.parametrize("num_newaxis", [5])
 def test_expand_dims(shape, dtype, axis, num_newaxis):
-    class ExpandDims(mnm.Model):
+    class ExpandDims(raf.Model):
         def build(self, axis, num_newaxis):
             self.axis = axis
             self.num_newaxis = num_newaxis
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.expand_dims(x, axis=self.axis, num_newaxis=self.num_newaxis)
+            return raf.expand_dims(x, axis=self.axis, num_newaxis=self.num_newaxis)
 
     m_x, _ = randn(shape, dtype=dtype)
     model = ExpandDims(axis, num_newaxis)
@@ -711,14 +697,14 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
 @pytest.mark.parametrize("shape", [[3, 2]])
 @pytest.mark.parametrize("val", [1])
 def test_full(shape, val):
-    class Full(mnm.Model):
+    class Full(raf.Model):
         def build(self, shape, val):
             self.shape = shape
             self.val = val
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self):
-            return mnm.full(self.val, self.shape, "int64")
+            return raf.full(self.val, self.shape, "int64")
 
     model = Full(shape, val)
 
@@ -732,13 +718,13 @@ def test_full(shape, val):
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("val", [1])
 def test_full_like(shape, dtype, val):
-    class FullLike(mnm.Model):
+    class FullLike(raf.Model):
         def build(self, val):
             self.val = val
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.full_like(x, self.val)
+            return raf.full_like(x, self.val)
 
     m_x, _ = randn(shape, dtype=dtype)
     model = FullLike(val)
@@ -752,15 +738,15 @@ def test_full_like(shape, dtype, val):
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("params", [((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2])])
 def test_strided_slice(dtype, params):
-    class StridedSlice(mnm.Model):
+    class StridedSlice(raf.Model):
         def build(self, begin, end, strides):
             self.begin = begin
             self.end = end
             self.strides = strides
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            return mnm.strided_slice(data, self.begin, self.end, self.strides)
+            return raf.strided_slice(data, self.begin, self.end, self.strides)
 
     shape, begin, end, strides = params
     model = StridedSlice(begin, end, strides)
@@ -774,13 +760,13 @@ def test_strided_slice(dtype, params):
 
 @pytest.mark.parametrize("shape", [(1, 4, 1), (3, 4, 2, 2)])
 def test_where(shape):
-    class Where(mnm.Model):
+    class Where(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, condition, x, y):
-            return mnm.where(condition, x, y)
+            return raf.where(condition, x, y)
 
     model = Where()
     m_cond, _ = randint(shape, low=0, high=1, dtype="bool")
@@ -800,15 +786,15 @@ def test_where(shape):
 @pytest.mark.parametrize("stride", [1, 2])
 @pytest.mark.parametrize("dilation", [1, 2])
 @pytest.mark.parametrize("padding", [0, 1])
-def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
-    # meta ir
-    class TestModel(mnm.Model):
+def test_raf_conv2d(xshape, wshape, stride, dilation, padding):
+    # raf ir
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            return mnm.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
+            return raf.conv2d(x, w, stride=stride, padding=padding, dilation=dilation, groups=1)
 
     model = TestModel()
     m_x, _ = randn(xshape)
@@ -828,14 +814,14 @@ def test_mnm_conv2d(xshape, wshape, stride, dilation, padding):
 @pytest.mark.parametrize("stride_output_padding", [(1, 0), (2, 1)])
 @pytest.mark.parametrize("dilation", [(1, 1)])
 @pytest.mark.parametrize("padding", [0, 1])
-def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, padding):
-    class TestModel(mnm.Model):
+def test_raf_conv2d_trans(xshape, wshape, stride_output_padding, dilation, padding):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):
-            return mnm.conv2d_transpose(
+            return raf.conv2d_transpose(
                 x,
                 w,
                 stride=stride,
@@ -868,13 +854,13 @@ def test_mnm_conv2d_trans(xshape, wshape, stride_output_padding, dilation, paddi
 @pytest.mark.parametrize("p", [0.3, 0.7])
 def test_contrib_dropout(device, shape, p):
     # pylint: disable=invalid-name,no-member
-    class ContribDropout(mnm.Model):
+    class ContribDropout(raf.Model):
         def build(self, p):
             self.p = p
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm._contrib_dropout(x, self.p)[0]
+            return raf._contrib_dropout(x, self.p)[0]
 
     model = ContribDropout(p)
     m_x, _ = randn(shape)
@@ -893,22 +879,22 @@ def test_contrib_dropout(device, shape, p):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.max_pool2d, _relay.nn.max_pool2d],
-        [mnm._op.sym.avg_pool2d, _relay.nn.avg_pool2d],
+        [raf._op.sym.max_pool2d, _relay.nn.max_pool2d],
+        [raf._op.sym.avg_pool2d, _relay.nn.avg_pool2d],
     ],
 )
-def test_mnm_pool2d(kernel, stride, padding, funcs):
-    mnm_fwd, relay_fwd = funcs
+def test_raf_pool2d(kernel, stride, padding, funcs):
+    raf_fwd, relay_fwd = funcs
     if padding > kernel // 2:
         return
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding)
+            return raf_fwd(x, kernel=kernel, stride=stride, padding=padding)
 
     model = TestModel()
     m_x, _ = randn([8, 3, 32, 32])
@@ -926,20 +912,20 @@ def test_mnm_pool2d(kernel, stride, padding, funcs):
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.adaptive_max_pool2d, _relay.nn.adaptive_max_pool2d],
-        [mnm._op.sym.adaptive_avg_pool2d, _relay.nn.adaptive_avg_pool2d],
+        [raf._op.sym.adaptive_max_pool2d, _relay.nn.adaptive_max_pool2d],
+        [raf._op.sym.adaptive_avg_pool2d, _relay.nn.adaptive_avg_pool2d],
     ],
 )
-def test_mnm_adaptive_pool2d(out_shape, layout, funcs):
-    mnm_fwd, relay_fwd = funcs
+def test_raf_adaptive_pool2d(out_shape, layout, funcs):
+    raf_fwd, relay_fwd = funcs
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, shape=out_shape, layout=layout)
+            return raf_fwd(x, shape=out_shape, layout=layout)
 
     model = TestModel()
     m_x, _ = randn([8, 3, 32, 32])
@@ -956,15 +942,15 @@ def test_mnm_adaptive_pool2d(out_shape, layout, funcs):
 @pytest.mark.parametrize("axis", [2])
 @pytest.mark.parametrize("eps", [1e-05])
 @pytest.mark.parametrize("dtype", ["float32"])
-def test_mnm_layer_norm(shape, axis, eps, dtype):
-    class LayerNorm(mnm.Model):
+def test_raf_layer_norm(shape, axis, eps, dtype):
+    class LayerNorm(raf.Model):
         def build(self, axis, eps):
             self._axis = axis
             self._eps = eps
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w, b):
-            return mnm.layer_norm(x, w, b, axis=self._axis, eps=self._eps)
+            return raf.layer_norm(x, w, b, axis=self._axis, eps=self._eps)
 
     model = LayerNorm(axis, eps)
     m_x, _ = randn(shape, dtype=dtype)
@@ -982,7 +968,7 @@ def test_mnm_layer_norm(shape, axis, eps, dtype):
 
 
 @pytest.mark.parametrize("shape", [[32, 3, 224, 224]])
-def test_mnm_batch_norm_train(shape):
+def test_raf_batch_norm_train(shape):
     momentum = 0.1
     eps = 1e-5
     stats_shape = [shape[1]]
@@ -992,13 +978,13 @@ def test_mnm_batch_norm_train(shape):
     m_w, _ = randn(stats_shape)
     m_b, _ = randn(stats_shape)
 
-    class BatchNorm(mnm.Model):
+    class BatchNorm(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_w, m_b, m_m, m_v):
-            res = mnm.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
+            res = raf.batch_norm_train(m_x, m_m, m_v, m_w, m_b, momentum, eps)
             y = res[0]
             new_m = res[1]
             new_v = res[2]
@@ -1025,17 +1011,17 @@ def test_mnm_batch_norm_train(shape):
 @pytest.mark.parametrize("pad_mode", ["constant"])
 def test_pad(dtype, dimension, pad_value, pad_mode):
     shape, pad_width = dimension
-    mnm_pad_width = []
+    raf_pad_width = []
     for width in pad_width:
-        mnm_pad_width += width
+        raf_pad_width += width
 
-    class Pad(mnm.Model):
+    class Pad(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x):
-            return mnm.pad(m_x, mnm_pad_width, pad_value, pad_mode)
+            return raf.pad(m_x, raf_pad_width, pad_value, pad_mode)
 
     m_x, _ = randn(shape, dtype=dtype)
     model = Pad()
@@ -1048,7 +1034,7 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
 
 @pytest.mark.parametrize("trans", [[False, False], [False, True], [True, False], [True, True]])
 def test_dense_pattern(trans):
-    class TransposeDense(mnm.Model):
+    class TransposeDense(raf.Model):
         def build(self, trans):
             self.op_name = "matmul"
             if trans[0] or not trans[1]:
@@ -1057,10 +1043,10 @@ def test_dense_pattern(trans):
                 # dense is matmul_nt so the second input is already transposed
                 self.op_name += "n" if trans[1] else "t"
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x, m_y):
-            x = mnm.relu(m_x)
-            return getattr(mnm, self.op_name)(x, m_y)
+            x = raf.relu(m_x)
+            return getattr(raf, self.op_name)(x, m_y)
 
     model = TransposeDense(trans)
     m_x, _ = randn((10, 10), dtype="float32")
@@ -1080,14 +1066,14 @@ def test_dense_pattern(trans):
 @pytest.mark.parametrize("shape", [(), (1,), (2, 2), (1, 2, 3), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float64", "float32"])
 def test_gelu_pattern(shape, dtype):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, bias):  # pylint: disable=no-self-use
-            x = mnm.add(x, bias)
-            return attrgetter("gelu")(mnm)(x)
+            x = raf.add(x, bias)
+            return attrgetter("gelu")(raf)(x)
 
     model = TestModel()
     m_x, _ = randn(shape, dtype=dtype)
@@ -1112,17 +1098,17 @@ def test_embedding_pattern():
     indices_shape = (512, 768)
 
     def get_mod():
-        x = mnm.ir.var("x", shape=data_shape)
-        indices = mnm.ir.var("i", shape=indices_shape, dtype="int64")
-        indices2 = mnm.ir.var("i2", shape=(), dtype="int64")
+        x = raf.ir.var("x", shape=data_shape)
+        indices = raf.ir.var("i", shape=indices_shape, dtype="int64")
+        indices2 = raf.ir.var("i2", shape=(), dtype="int64")
 
         sb = ScopeBuilder()
-        a_1 = sb.let("a1", mnm.ir.op.embedding(x, indices))
-        ones = mnm.ir.const(np.ones(shape=indices_shape, dtype="int32"))
-        fp64_ones = sb.let("x", mnm.ir.op.cast(ones, "int64"))
-        a_2 = sb.let("a2", mnm.ir.op.embedding(x, fp64_ones))
-        a_3 = sb.let("a3", mnm.ir.op.add(a_1, a_2))
-        a_4 = sb.let("a4", mnm.ir.op.take(a_3, indices2, axis=1, mode="wrap"))
+        a_1 = sb.let("a1", raf.ir.op.embedding(x, indices))
+        ones = raf.ir.const(np.ones(shape=indices_shape, dtype="int32"))
+        fp64_ones = sb.let("x", raf.ir.op.cast(ones, "int64"))
+        a_2 = sb.let("a2", raf.ir.op.embedding(x, fp64_ones))
+        a_3 = sb.let("a3", raf.ir.op.add(a_1, a_2))
+        a_4 = sb.let("a4", raf.ir.op.take(a_3, indices2, axis=1, mode="wrap"))
         a_5 = sb.let("a5", _relay.Tuple([a_3, a_4]))
         sb.ret(a_5)
         func = _relay.Function([x, indices, indices2], sb.get())
@@ -1130,7 +1116,7 @@ def test_embedding_pattern():
 
     m_x, _ = randn_torch(data_shape)
     m_i, _ = randint(indices_shape, high=10000)
-    m_i2 = mnm.array(0, dtype="int64")
+    m_i2 = raf.array(0, dtype="int64")
 
     r_x = _relay.var("x", shape=data_shape, dtype="float32")
     r_i = _relay.var("i", shape=indices_shape, dtype="int64")
@@ -1153,14 +1139,14 @@ def test_embedding_pattern():
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("keep", [0, 1])
 def test_sum(shape, axis, keep):
-    class Sum(mnm.Model):
+    class Sum(raf.Model):
         def build(self, axis, keep):
             self.axis = axis
             self.keep = keep
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.sum(x, self.axis, self.keep)
+            return raf.sum(x, self.axis, self.keep)
 
     model = Sum(axis, keep)
     m_x, _ = randn(shape)
@@ -1174,19 +1160,19 @@ def test_sum(shape, axis, keep):
 def test_arange(data):
     start, stop, step = data
 
-    class Arange(mnm.Model):
+    class Arange(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, start, stop, step):
-            return mnm.arange(start, stop, step)
+            return raf.arange(start, stop, step)
 
     model = Arange()
     dtype = "float32"
-    m_start = mnm.array(start, dtype=dtype)
-    m_stop = mnm.array(stop, dtype=dtype)
-    m_step = mnm.array(step, dtype=dtype)
+    m_start = raf.array(start, dtype=dtype)
+    m_stop = raf.array(stop, dtype=dtype)
+    m_step = raf.array(step, dtype=dtype)
     r_start = _relay.var("start", shape=[], dtype=dtype)
     r_stop = _relay.var("stop", shape=[], dtype=dtype)
     r_step = _relay.var("step", shape=[], dtype=dtype)
@@ -1199,13 +1185,13 @@ def test_arange(data):
     "data_shape, index_shapes", [((10, 5), [(3, 4), (3, 1)]), ((10, 5, 4), [(1, 2, 3), (1, 2, 3)])]
 )
 def test_adv_index(data_shape, index_shapes):
-    class Index(mnm.Model):
+    class Index(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, index0, index1):
-            return mnm.adv_index([x, index0, index1])
+            return raf.adv_index([x, index0, index1])
 
     dtype = "float32"
     m_x, _ = randn(data_shape)
@@ -1215,7 +1201,7 @@ def test_adv_index(data_shape, index_shapes):
     for i, index_shape in enumerate(index_shapes):
         limit = data_shape[i]
         index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
-        m_indices.append(mnm.array(index))
+        m_indices.append(raf.array(index))
         inputs.append(_relay.var("index_{}".format(i), _relay.TensorType(index_shape, "int64")))
 
     out = _relay.op.adv_index(inputs)
@@ -1243,15 +1229,15 @@ def test_full_fusion(dtype):
 
 @pytest.mark.parametrize("shape", [(100,), (4, 4), (16, 3)])
 def test_threefry_generate(shape):
-    class ThreefryGenerate(mnm.Model):
+    class ThreefryGenerate(raf.Model):
         def build(self, shape):
             self.shape = shape
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, key):
-            return mnm.threefry_generate(key, self.shape)
+            return raf.threefry_generate(key, self.shape)
 
-    m_key = mnm.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
+    m_key = raf.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
     model = ThreefryGenerate(shape)
 
     r_key = _relay.var("key", shape=(10,), dtype="uint64")
@@ -1261,15 +1247,15 @@ def test_threefry_generate(shape):
 
 
 def test_threefry_split():
-    class ThreefrySplit(mnm.Model):
+    class ThreefrySplit(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, key):
-            return mnm.threefry_split(key)
+            return raf.threefry_split(key)
 
-    m_key = mnm.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
+    m_key = raf.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
     model = ThreefrySplit()
 
     r_key = _relay.var("key", shape=(10,), dtype="uint64")
@@ -1282,14 +1268,14 @@ def test_threefry_split():
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("keep", [0, 1])
 def test_mean(shape, axis, keep):
-    class Mean(mnm.Model):
+    class Mean(raf.Model):
         def build(self, axis, keep):
             self.axis = axis
             self.keep = keep
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.mean(x, self.axis, self.keep)
+            return raf.mean(x, self.axis, self.keep)
 
     model = Mean(axis, keep)
     m_x, _ = randn(shape)
@@ -1301,13 +1287,13 @@ def test_mean(shape, axis, keep):
 
 @pytest.mark.parametrize("shape", [(4, 4, 2), (3, 4, 2, 2)])
 def test_argwhere(shape):
-    class ArgWhere(mnm.Model):
+    class ArgWhere(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.argwhere(x)
+            return raf.argwhere(x)
 
     model = ArgWhere()
     m_x, _ = randn(shape)
@@ -1318,7 +1304,7 @@ def test_argwhere(shape):
 
 
 def test_roi_align():
-    class RoiAlign(mnm.Model):
+    class RoiAlign(raf.Model):
         def build(self, pooled_size, spatial_scale, sample_ratio, layout, mode):
             self.pooled_size = pooled_size
             self.spatial_scale = spatial_scale
@@ -1326,9 +1312,9 @@ def test_roi_align():
             self.layout = layout
             self.mode = mode
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data, rois):
-            return mnm.roi_align(
+            return raf.roi_align(
                 data,
                 rois,
                 self.pooled_size,
@@ -1340,8 +1326,8 @@ def test_roi_align():
 
     np_data = np.random.uniform(size=(1, 4, 16, 16)).astype("float32")
     np_rois = np.random.uniform(size=(32, 5)).astype("float32")
-    m_data = mnm.array(np_data)
-    m_rois = mnm.array(np_rois)
+    m_data = raf.array(np_data)
+    m_rois = raf.array(np_rois)
     model = RoiAlign((7, 7), 1.0, -1, "NCHW", "avg")
 
     r_data = _relay.var("data", shape=(1, 4, 16, 16), dtype="float32")
@@ -1360,13 +1346,13 @@ def test_roi_align():
 def test_cumsum(shape, axis, exclusive):
     dtype = "float32"
 
-    class Cumsum(mnm.Model):
+    class Cumsum(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.cumsum(x, axis, dtype, exclusive)
+            return raf.cumsum(x, axis, dtype, exclusive)
 
     m_x, _ = randn_torch(shape, dtype=dtype)
     m_model = Cumsum()

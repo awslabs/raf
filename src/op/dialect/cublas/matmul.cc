@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,7 +8,7 @@
  * \brief Helper functions for cuBLAS
  */
 #include <cublas.h>
-#include "mnm/op.h"
+#include "raf/op.h"
 
 #include "./cublas_utils.h"
 #include "../../schema/ufunc.h"
@@ -30,12 +16,12 @@
 #include "../../../common/shape_utils.h"
 #include "../../../profiler/cuda/cuda_profiler.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cublas {
 namespace manual {
 
-using namespace mnm::value;
+using namespace raf::value;
 
 void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTensor* c) {
   auto handle = CUBlasThreadEntry::ThreadLocal()->handle;
@@ -88,20 +74,20 @@ void GemmImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTe
 }
 
 template <bool transpose_a, bool transpose_b>
-class MatmulImpl : public mnm::op::OpEnv {
+class MatmulImpl : public raf::op::OpEnv {
   std::string env_name_;
 
  public:
   explicit MatmulImpl(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op.matmul");
-    static auto fschema_index = op::GetOpAttr<op::FMNMSchemaFieldIndex>(op, "FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op.matmul");
+    static auto fschema_index = op::GetOpAttr<op::FRAFSchemaFieldIndex>(op, "FRAFSchemaFieldIndex");
     this->arg_indices = {
         fschema_index("x1"),
         fschema_index("x2"),
     };
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
-    std::string op_name = "mnm.op.cublas.matmul";
+    std::string op_name = "raf.op.cublas.matmul";
     if (transpose_a || transpose_b) {
       op_name += "_";
       op_name += (transpose_a) ? "t" : "n";
@@ -137,18 +123,18 @@ using MatmulNT = MatmulImpl<false, true>;
 using MatmulTN = MatmulImpl<true, false>;
 using MatmulTT = MatmulImpl<true, true>;
 
-MNM_REGISTER_DIALECT_OP(cublas, matmul, 15);
-MNM_REGISTER_DIALECT_OP(cublas, matmul_nt, 15);
-MNM_REGISTER_DIALECT_OP(cublas, matmul_tn, 15);
-MNM_REGISTER_DIALECT_OP(cublas, matmul_tt, 15);
-MNM_REGISTER_DIALECT_OP(cublas, dense, 15);
-MNM_OP_ENV_MAKER("mnm.op.cublas.matmul", MatmulNN::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.matmul_nt", MatmulNT::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.matmul_tn", MatmulTN::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.matmul_tt", MatmulTT::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.dense", MatmulNT::make);
+RAF_REGISTER_DIALECT_OP(cublas, matmul, 15);
+RAF_REGISTER_DIALECT_OP(cublas, matmul_nt, 15);
+RAF_REGISTER_DIALECT_OP(cublas, matmul_tn, 15);
+RAF_REGISTER_DIALECT_OP(cublas, matmul_tt, 15);
+RAF_REGISTER_DIALECT_OP(cublas, dense, 15);
+RAF_OP_ENV_MAKER("raf.op.cublas.matmul", MatmulNN::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.matmul_nt", MatmulNT::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.matmul_tn", MatmulTN::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.matmul_tt", MatmulTT::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.dense", MatmulNT::make);
 
 }  // namespace manual
 }  // namespace cublas
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

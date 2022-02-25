@@ -1,30 +1,16 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import pytest
 import torch
 import torch.nn.functional as F
 
-import mnm
-from mnm.testing import check, randn_torch  # pylint: disable=E0401
+import raf
+from raf.testing import check, randn_torch  # pylint: disable=E0401
 
 
 # TODO(@were): allow affine=False
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("num_features", [1, 16])
 @pytest.mark.parametrize("affine", [True])
 @pytest.mark.parametrize("is_train", [False, True])
@@ -40,7 +26,7 @@ def test_model_batch_norm(num_features, affine, is_train):
         m_b, _ = randn_torch(
             [num_features], mean=1e-5, requires_grad=True, positive=True, device=device
         )
-    model = mnm.model.nn.BatchNorm(num_features=num_features, affine=affine)
+    model = raf.model.nn.BatchNorm(num_features=num_features, affine=affine)
     model.running_mean = m_m
     model.running_var = m_v
     if affine:
@@ -72,7 +58,7 @@ def test_model_batch_norm(num_features, affine, is_train):
         check(model.b, t_model.bias)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("stride", [1, 2, 3])
 @pytest.mark.parametrize("dilation", [1, 2, 3, 4])
 @pytest.mark.parametrize("padding", [0, 1])
@@ -84,7 +70,7 @@ def test_model_conv2d(stride, dilation, padding, bias):
     if bias:
         m_b, t_b = randn_torch([16], std=0.001, requires_grad=True, device=device)
         t_b = t_b.unsqueeze(1).unsqueeze(2)
-    model = mnm.model.Conv2d(
+    model = raf.model.Conv2d(
         in_channels=3,
         out_channels=16,
         kernel_size=3,
@@ -105,7 +91,7 @@ def test_model_conv2d(stride, dilation, padding, bias):
     check(m_y, t_y, rtol=1e-4, atol=1e-4)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("batch_size", [1, 15])
 @pytest.mark.parametrize("in_features", [1, 2, 4, 8, 16, 32])
 @pytest.mark.parametrize("out_features", [1, 2, 4, 8, 16, 32])
@@ -123,7 +109,7 @@ def test_model_dense(batch_size, in_features, out_features, bias):
     if bias:
         t_model.bias.data[:] = torch.from_numpy(m_b.numpy())
     # pylint: enable=no-member
-    model = mnm.model.Linear(in_features=in_features, out_features=out_features, bias=bias)
+    model = raf.model.Linear(in_features=in_features, out_features=out_features, bias=bias)
     model.w = m_w
     if bias:
         model.b = m_b
@@ -137,20 +123,20 @@ def test_model_dense(batch_size, in_features, out_features, bias):
 def _fake_test_relu():
     m_x, _ = randn_torch([1, 2, 3, 4], device="cpu", requires_grad=True)
 
-    class ReLU(mnm.Model):
+    class ReLU(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):  # pylint: disable=no-self-use
-            return mnm.relu(x)
+            return raf.relu(x)
 
     model = ReLU()
     model(m_x)
 
 
 def _fake_test_conv2d():
-    model = mnm.model.Conv2d(
+    model = raf.model.Conv2d(
         in_channels=3,
         out_channels=16,
         kernel_size=3,
@@ -166,7 +152,7 @@ def _fake_test_conv2d():
 
 def _fake_test_batch_norm():
     num_features = 128
-    model = mnm.model.BatchNorm(num_features=num_features, eps=1e-5, momentum=0.1, affine=True)
+    model = raf.model.BatchNorm(num_features=num_features, eps=1e-5, momentum=0.1, affine=True)
     m_x, _ = randn_torch([5, num_features, 3, 3], device="cpu", requires_grad=True)
     model(m_x)
 
@@ -175,13 +161,13 @@ def _fake_test_binary_add():
     m_x1, _ = randn_torch([1, 2, 3], device="cpu", requires_grad=True)
     m_x2, _ = randn_torch([2, 2, 3], device="cpu", requires_grad=True)
 
-    class Add(mnm.Model):
+    class Add(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x1, x2):  # pylint: disable=no-self-use
-            return mnm.add(x1, x2)
+            return raf.add(x1, x2)
 
     model = Add()
     model(m_x1, m_x2)

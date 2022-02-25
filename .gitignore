@@ -1,3 +1,13 @@
+# Auto generated files.
+src/op/schema/
+!src/op/schema/list_args.h
+src/op/regs/regs.cc
+src/op/regs/tvm_op_regs.cc
+python/raf/_op/sym.py
+python/raf/_op/imp.py
+python/raf/ir/op.py
+python/raf/_ffi
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

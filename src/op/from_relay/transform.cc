@@ -1,279 +1,265 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file ./src/op/from_relay/transfrom.cc
  * \brief Operators bridged from Relay.
  */
-#include "mnm/op_utils.h"
+#include "raf/op_utils.h"
 #include "tvm/relay/attrs/transform.h"
 #include "./from_relay_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace from_relay {
 
-MNM_OP_FROM_RELAY("arange", "mnm.op.arange",
+RAF_OP_FROM_RELAY("arange", "raf.op.arange",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ArangeAttrs>();
-                    mnm_args.push_back(
+                    raf_args.push_back(
                         MakeConstant(StringValue::make(DLDataType2String(relay_attrs->dtype))));
-                    return mnm_args;
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("adv_index", "mnm.op.adv_index",
+RAF_OP_FROM_RELAY("adv_index", "raf.op.adv_index",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     return args;
                   });
 
-MNM_OP_FROM_RELAY("repeat", "mnm.op.repeat",
+RAF_OP_FROM_RELAY("repeat", "raf.op.repeat",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<RepeatAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->repeats)));
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->repeats)));
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("take", "mnm.op.take",
+RAF_OP_FROM_RELAY("take", "raf.op.take",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<TakeAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->mode)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(MakeConstant(StringValue::make(relay_attrs->mode)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("sequence_mask", "mnm.op.sequence_mask",
+RAF_OP_FROM_RELAY("sequence_mask", "raf.op.sequence_mask",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<SequenceMaskAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->mask_value)));
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->mask_value)));
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("reverse", "mnm.op.reverse",
+RAF_OP_FROM_RELAY("reverse", "raf.op.reverse",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ReverseAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("reverse_sequence", "mnm.op.reverse_sequence",
+RAF_OP_FROM_RELAY("reverse_sequence", "raf.op.reverse_sequence",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ReverseSequenceAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->seq_axis)));
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->batch_axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->seq_axis)));
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->batch_axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("broadcast_to", "mnm.op.broadcast_to",
+RAF_OP_FROM_RELAY("broadcast_to", "raf.op.broadcast_to",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<InitOpAttrs>();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
+                    return raf_args;
                   });
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("broadcast_to_like", "mnm.op.broadcast_to_like");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("broadcast_to_like", "raf.op.broadcast_to_like");
 
-MNM_OP_FROM_RELAY("transpose", "mnm.op.transpose",
+RAF_OP_FROM_RELAY("transpose", "raf.op.transpose",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<TransposeAttrs>();
                     if (relay_attrs->axes.defined()) {
-                      mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->axes)));
+                      raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->axes)));
                     } else {
                       Array<Integer> empty;
-                      mnm_args.push_back(MakeConstant(ArrayToIntTuple(empty)));
+                      raf_args.push_back(MakeConstant(ArrayToIntTuple(empty)));
                     }
-                    return mnm_args;
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("split", "mnm.op.split",
+RAF_OP_FROM_RELAY("split", "raf.op.split",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<SplitAttrs>();
                     auto indices_or_sections = relay_attrs->indices_or_sections;
                     if (const auto* scalar = indices_or_sections.as<IntImmNode>()) {
                       auto val = scalar->value;
-                      mnm_args.push_back(MakeConstant(ScalarValue::make(val)));
+                      raf_args.push_back(MakeConstant(ScalarValue::make(val)));
                     } else if (const auto* arr = indices_or_sections.as<ArrayNode>()) {
-                      mnm_args.push_back(MakeConstant(ArrayToIntTuple(*arr)));
+                      raf_args.push_back(MakeConstant(ArrayToIntTuple(*arr)));
                     } else {
                       CHECK(false) << "Fail to convert split: Unknown indices_or_sections type";
                     }
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("concatenate", "mnm.op.concatenate",
+RAF_OP_FROM_RELAY("concatenate", "raf.op.concatenate",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ConcatenateAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("stack", "mnm.op.stack",
+RAF_OP_FROM_RELAY("stack", "raf.op.stack",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<StackAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("clip", "mnm.op.clip",
+RAF_OP_FROM_RELAY("clip", "raf.op.clip",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ClipAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->a_min)));
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->a_max)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->a_min)));
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->a_max)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("cast", "mnm.op.cast",
+RAF_OP_FROM_RELAY("cast", "raf.op.cast",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<CastAttrs>();
-                    mnm_args.push_back(MakeConstant(
+                    raf_args.push_back(MakeConstant(
                         StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
-                    return mnm_args;
+                    return raf_args;
                   });
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("cast_like", "mnm.op.cast_like");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("cast_like", "raf.op.cast_like");
 
-MNM_OP_FROM_RELAY("gather", "mnm.op.gather",
+RAF_OP_FROM_RELAY("gather", "raf.op.gather",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args;
+                    Array<Expr> raf_args;
                     const auto* relay_attrs = attrs.as<GatherAttrs>();
 
-                    // Relay args are (data, indices) and Meta args are (data, axis, indices).
-                    mnm_args.push_back(args[0]);
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    mnm_args.push_back(args[1]);
-                    return mnm_args;
+                    // Relay args are (data, indices) and RAF args are (data, axis, indices).
+                    raf_args.push_back(args[0]);
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(args[1]);
+                    return raf_args;
                   });
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("gather_nd", "mnm.op.gather_nd");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("gather_nd", "raf.op.gather_nd");
 
-MNM_OP_FROM_RELAY("squeeze", "mnm.op.squeeze",
+RAF_OP_FROM_RELAY("squeeze", "raf.op.squeeze",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<SqueezeAttrs>();
                     if (relay_attrs->axis.defined()) {
-                      mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->axis)));
+                      raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->axis)));
                     } else {
                       Array<Integer> empty;
-                      mnm_args.push_back(MakeConstant(ArrayToIntTuple(empty)));
+                      raf_args.push_back(MakeConstant(ArrayToIntTuple(empty)));
                     }
-                    return mnm_args;
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("reshape", "mnm.op.reshape",
+RAF_OP_FROM_RELAY("reshape", "raf.op.reshape",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ReshapeAttrs>();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->newshape)));
-                    mnm_args.push_back(MakeConstant(BoolValue::make(false)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->newshape)));
+                    raf_args.push_back(MakeConstant(BoolValue::make(false)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("expand_dims", "mnm.op.expand_dims",
+RAF_OP_FROM_RELAY("expand_dims", "raf.op.expand_dims",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ExpandDimsAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->num_newaxis)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->num_newaxis)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("ones", "mnm.op.ones",
+RAF_OP_FROM_RELAY("ones", "raf.op.ones",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args;
+                    Array<Expr> raf_args;
                     const auto* relay_attrs = attrs.as<InitOpAttrs>();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
-                    mnm_args.push_back(MakeConstant(
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
+                    raf_args.push_back(MakeConstant(
                         StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
-                    mnm_args.push_back(MakeConstant(StringValue::make("cpu")));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(StringValue::make("cpu")));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("full", "mnm.op.full",
+RAF_OP_FROM_RELAY("full", "raf.op.full",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args;
+                    Array<Expr> raf_args;
                     const auto* konst = GetKonstFromValueMap(args[0], val_map);
                     CHECK(konst) << "'fill_value' must be a const tensor.";
-                    mnm_args.push_back(MakeConstant(Constant2ScalarValue<double>(konst)));
+                    raf_args.push_back(MakeConstant(Constant2ScalarValue<double>(konst)));
 
                     const auto* relay_attrs = attrs.as<InitOpAttrs>();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
-                    mnm_args.push_back(MakeConstant(
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->shape.value())));
+                    raf_args.push_back(MakeConstant(
                         StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
-                    return mnm_args;
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("full_like", "mnm.op.full_like",
+RAF_OP_FROM_RELAY("full_like", "raf.op.full_like",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args;
-                    mnm_args.push_back(args[0]);
+                    Array<Expr> raf_args;
+                    raf_args.push_back(args[0]);
                     const auto* konst = GetKonstFromValueMap(args[1], val_map);
                     CHECK(konst) << "'fill_value' must be a const tensor.";
-                    mnm_args.push_back(MakeConstant(Constant2ScalarValue<double>(konst)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(Constant2ScalarValue<double>(konst)));
+                    return raf_args;
                   });
 
-MNM_OP_FROM_RELAY("strided_slice", "mnm.op.strided_slice",
+RAF_OP_FROM_RELAY("strided_slice", "raf.op.strided_slice",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<StridedSliceAttrs>();
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->begin.value())));
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->end.value())));
-                    mnm_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->strides.value())));
-                    mnm_args.push_back(MakeConstant(StringValue::make(relay_attrs->slice_mode)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->begin.value())));
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->end.value())));
+                    raf_args.push_back(MakeConstant(ArrayToIntTuple(relay_attrs->strides.value())));
+                    raf_args.push_back(MakeConstant(StringValue::make(relay_attrs->slice_mode)));
+                    return raf_args;
                   });
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("where", "mnm.op.where");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("where", "raf.op.where");
 
-MNM_GENERIC_ATTR_OP_FROM_RELAY("argwhere", "mnm.op.argwhere");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("argwhere", "raf.op.argwhere");
 
-MNM_OP_FROM_RELAY("cumsum", "mnm.op.cumsum",
+RAF_OP_FROM_RELAY("cumsum", "raf.op.cumsum",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-                    Array<Expr> mnm_args = args;
+                    Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ScanopAttrs>();
-                    mnm_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
-                    mnm_args.push_back(MakeConstant(
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(MakeConstant(
                         StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
 
                     bool exclusive = false;
                     if (relay_attrs->exclusive.defined()) {
                       exclusive = bool(relay_attrs->exclusive);
                     }
-                    mnm_args.push_back(MakeConstant(BoolValue::make(exclusive)));
-                    return mnm_args;
+                    raf_args.push_back(MakeConstant(BoolValue::make(exclusive)));
+                    return raf_args;
                   });
 
 }  // namespace from_relay
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

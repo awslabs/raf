@@ -1,39 +1,25 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/declare/nn.cc
  * \brief Declaration of nn-specific operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/optimizer.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
-MNM_OP_DECLARE("mnm.op.sgd", [](const CallValues& call) {
+RAF_OP_DECLARE("raf.op.sgd", [](const CallValues& call) {
   const auto* args = call->args.as<SgdArgs>();
   CHECK(args != nullptr);
   const DLTensor* x0 = args->x;
@@ -71,9 +57,9 @@ void LansDecl(const CallValues& call) {
   call->out = TupleValue::make(output);
 }
 
-MNM_OP_DECLARE("mnm.op.lans", LansDecl)
+RAF_OP_DECLARE("raf.op.lans", LansDecl)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{0, 0}});
+    .set_attr<TRAFInplaceUpdate>("TRAFInplaceUpdate", {{0, 0}});
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

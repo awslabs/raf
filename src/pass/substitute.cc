@@ -1,36 +1,22 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file bind.cc
  * \brief substitue variables in an expression
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
+#include "raf/op.h"
+#include "raf/ir.h"
 #include "support/arena.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace bind {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 class SubstitueMutator : public ExprMutator {
  public:
@@ -126,13 +112,13 @@ ir::Expr Substitute(ir::Expr expr, const tvm::Map<ir::Var, ir::Expr>& args_map) 
   return bind::SubstitueMutator(args_map).VisitExpr(expr);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.Substitute").set_body_typed(Substitute);
+RAF_REGISTER_GLOBAL("raf.pass_.Substitute").set_body_typed(Substitute);
 
 ir::Expr ExprAppend(const ir::Expr& first, const ir::Expr& second) {
   return bind::ExprAppendMutator(second).VisitExpr(first);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ExprAppend").set_body_typed(ExprAppend);
+RAF_REGISTER_GLOBAL("raf.pass_.ExprAppend").set_body_typed(ExprAppend);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

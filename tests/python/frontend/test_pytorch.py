@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint:disable=missing-module-docstring,missing-function-docstring,missing-class-docstring
 # pylint:disable=not-callable,abstract-method,too-many-locals,invalid-name,protected-access
@@ -24,10 +10,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import mnm
-from mnm._op import sym
-from mnm.frontend import from_pytorch
-from mnm.testing import randn_torch, check, one_hot_torch, run_vm_model, with_seed
+import raf
+from raf._op import sym
+from raf.frontend import from_pytorch
+from raf.testing import randn_torch, check, one_hot_torch, run_vm_model, with_seed
 
 
 class TorchLeNet(nn.Module):
@@ -53,7 +39,7 @@ class TorchLeNet(nn.Module):
         return out
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "shape_dict",
     [{"input0": ((32, 3, 28, 28), "float32")}, {"input0": ((32, 3, 28, 28), "float16")}],
@@ -121,7 +107,7 @@ def test_lenet(shape_dict, mode):
         m_model.train_mode()
         m_model.to(device=device)
 
-        m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+        m_trainer = raf.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
         m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue])[0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
@@ -150,7 +136,7 @@ class TorchConvBn(nn.Module):
         return x
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
 @pytest.mark.parametrize("mode", ["backward", "sgd"])
 @pytest.mark.parametrize("fuse", [False, True])
@@ -212,7 +198,7 @@ def test_conv_bn(shape_dict, mode, fuse):
         m_model.train_mode()
         m_model.to(device=device)
 
-        m_trainer = mnm.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
+        m_trainer = raf.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
         m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue], disable_fusion=not fuse)[0][
             0
         ]
@@ -229,7 +215,7 @@ def test_conv_bn(shape_dict, mode, fuse):
         check(m_loss, t_loss, rtol=1e-4, atol=1e-4)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape_dict", [{"input0": ((32, 3, 28, 28), "float32")}])
 @with_seed(0)
 def test_batch_norm_train(shape_dict):
@@ -292,7 +278,7 @@ def test_save_and_load_model(shape_dict):
     input_shape = list(shape_dict.values())[0][0]
 
     t_model = TorchLeNet(input_shape[2])
-    with tempfile.TemporaryDirectory(prefix="mnm_test_") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="raf_test_") as temp_dir:
         model_path = temp_dir + "/test.pt"
         hash_path = temp_dir + "/test.hash"
 

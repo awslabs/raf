@@ -1,40 +1,26 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/declare/collective_comm.cc
  * \brief Declaration of collective communication operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
-#include "mnm/communicator.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
+#include "raf/communicator.h"
 #include "../schema/communication.h"
 #include "../schema/ufunc.h"
 #include "./declare_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
-using namespace mnm::distributed::communicator;
+using namespace raf::op::schema;
+using namespace raf::value;
+using namespace raf::distributed::communicator;
 using tensor::Tensor;
 
 void AllReduce(const CallValues& call) {
@@ -59,10 +45,10 @@ void AllReduce(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._allreduce", AllReduce)
+RAF_OP_DECLARE("raf.op._allreduce", AllReduce)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true)
-    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{0, 0}});
+    .set_attr<TRAFCollective>("TRAFCollective", true)
+    .set_attr<TRAFInplaceUpdate>("TRAFInplaceUpdate", {{0, 0}});
 
 void Reduce(const CallValues& call) {
   const auto* args = call->args.as<CommReduceArgs>();
@@ -87,10 +73,10 @@ void Reduce(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._reduce", Reduce)
+RAF_OP_DECLARE("raf.op._reduce", Reduce)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true)
-    .set_attr<TMNMInplaceUpdate>("TMNMInplaceUpdate", {{0, 0}});
+    .set_attr<TRAFCollective>("TRAFCollective", true)
+    .set_attr<TRAFInplaceUpdate>("TRAFInplaceUpdate", {{0, 0}});
 
 void AllGather(const CallValues& call) {
   const auto* args = call->args.as<AllgatherArgs>();
@@ -105,9 +91,9 @@ void AllGather(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op._allgather", AllGather)
+RAF_OP_DECLARE("raf.op._allgather", AllGather)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TRAFCollective>("TRAFCollective", true);
 
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
@@ -126,9 +112,9 @@ void ReduceScatter(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-MNM_OP_DECLARE("mnm.op._reduce_scatter", ReduceScatter)
+RAF_OP_DECLARE("raf.op._reduce_scatter", ReduceScatter)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TRAFCollective>("TRAFCollective", true);
 
 void Broadcast(const CallValues& call) {
   const auto* args = call->args.as<BroadcastArgs>();
@@ -152,9 +138,9 @@ void Broadcast(const CallValues& call) {
   }
 }
 
-MNM_OP_DECLARE("mnm.op._broadcast", Broadcast)
+RAF_OP_DECLARE("raf.op._broadcast", Broadcast)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TRAFCollective>("TRAFCollective", true);
 
 void Send(const CallValues& call) {
   const auto* args = call->args.as<SendArgs>();
@@ -166,9 +152,9 @@ void Send(const CallValues& call) {
                                     /*shape=*/std::vector<int64_t>{});
 }
 
-MNM_OP_DECLARE("mnm.op._send", Send)
+RAF_OP_DECLARE("raf.op._send", Send)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TRAFCollective>("TRAFCollective", true);
 
 void Recv(const CallValues& call) {
   const auto* args = call->args.as<RecvArgs>();
@@ -180,10 +166,10 @@ void Recv(const CallValues& call) {
                                     /*shape=*/args->shape);
 }
 
-MNM_OP_DECLARE("mnm.op._recv", Recv)
+RAF_OP_DECLARE("raf.op._recv", Recv)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
-    .set_attr<TMNMCollective>("TMNMCollective", true);
+    .set_attr<TRAFCollective>("TRAFCollective", true);
 
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

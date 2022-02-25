@@ -1,31 +1,17 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=no-self-use, protected-access, unused-variable, too-many-locals, too-many-statements
 from typing import Dict, List
 import pytest
 import tvm
 import tvm.relay
-import mnm
-from mnm.testing import randn
-from mnm.ir.pass_manager import MNMSequential
-from mnm._ffi.pass_ import ToGraphNormalForm, WavefrontStreamSchedule
-from mnm._core.ir_ext import extended_var
-from mnm.ir import ScopeBuilder
+import raf
+from raf.testing import randn
+from raf.ir.pass_manager import RAFSequential
+from raf._ffi.pass_ import ToGraphNormalForm, WavefrontStreamSchedule
+from raf._core.ir_ext import extended_var
+from raf.ir import ScopeBuilder
 
 
 class ANFBuilder:
@@ -35,7 +21,7 @@ class ANFBuilder:
 
     def get_operator(self, op_name: str) -> tvm.ir.Op:
         if op_name not in self.operators:
-            self.operators[op_name] = tvm.relay.op.get(f"mnm.op.{op_name}")
+            self.operators[op_name] = tvm.relay.op.get(f"raf.op.{op_name}")
         return self.operators[op_name]
 
     def make_tuple(self, fields: List[tvm.relay.Expr]) -> tvm.relay.Var:
@@ -45,13 +31,13 @@ class ANFBuilder:
         return self.scope_builder.let("", tvm.relay.Call(self.get_operator(op_name), args))
 
     def set_stream(self, device_id: int, stream_id: int) -> tvm.relay.Var:
-        return self.call("set_stream", [mnm.ir.const(device_id), mnm.ir.const(stream_id)])
+        return self.call("set_stream", [raf.ir.const(device_id), raf.ir.const(stream_id)])
 
     def add_event(self, event_id: int) -> tvm.relay.Var:
-        return self.call("add_event", [mnm.ir.const(event_id)])
+        return self.call("add_event", [raf.ir.const(event_id)])
 
     def wait_event(self, event_id: int) -> tvm.relay.Var:
-        return self.call("wait_event", [mnm.ir.const(event_id)])
+        return self.call("wait_event", [raf.ir.const(event_id)])
 
     def stream_barrier(self) -> tvm.relay.Var:
         return self.call("stream_barrier", [])
@@ -60,16 +46,16 @@ class ANFBuilder:
         return self.call("atan", [x])
 
     def concatenate(self, x: tvm.ir.RelayExpr, axis: int) -> tvm.relay.Var:
-        return self.call("concatenate", [x, mnm.ir.const(axis)])
+        return self.call("concatenate", [x, raf.ir.const(axis)])
 
     def ret(self, body: tvm.relay.Expr) -> tvm.relay.Expr:
         self.scope_builder.ret(body)
         return self.scope_builder.get()
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_wavefront_schedule_three_simple_branches():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # wavefront schedule:
         # wave 1
         #   chain 1: op 1
@@ -80,42 +66,42 @@ def test_wavefront_schedule_three_simple_branches():
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)  # op 1
+            p_0 = raf.atan(x)  # op 1
 
-            p_1 = mnm.atan(x)  # op 2
-            p_1 = mnm.atan(p_1)  # op 3
+            p_1 = raf.atan(x)  # op 2
+            p_1 = raf.atan(p_1)  # op 3
 
-            p_2 = mnm.atan(x)  # op 4
-            p_2 = mnm.atan(p_2)  # op 5
-            p_2 = mnm.atan(p_2)  # op 6
-            return mnm.concatenate([p_0, p_1, p_2])  # op 7
+            p_2 = raf.atan(x)  # op 4
+            p_2 = raf.atan(p_2)  # op 5
+            p_2 = raf.atan(p_2)  # op 6
+            return raf.concatenate([p_0, p_1, p_2])  # op 7
 
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": "wavefront"}):
-        mod = MNMSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
+    with raf.ir.PassContext(opt_level=2, config={"raf.stream_schedule.policy": "wavefront"}):
+        mod = RAFSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
 
     def expected():
         """
         def @main(%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_1 = mnm.op.atan(%x);
-          let %x_2 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_3 = mnm.op.atan(%x);
-          let %x_4 = mnm.op.atan(%x_3);
-          let %x_5 = mnm.op.set_stream(int64(0), int64(2));
-          let %x_6 = mnm.op.atan(%x);
-          let %x_7 = mnm.op.atan(%x_6);
-          let %x_8 = mnm.op.atan(%x_7);
-          let %x_9 = mnm.op.stream_barrier();
-          let %x_10 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_0 = raf.op.set_stream(int64(0), int64(0));
+          let %x_1 = raf.op.atan(%x);
+          let %x_2 = raf.op.set_stream(int64(0), int64(1));
+          let %x_3 = raf.op.atan(%x);
+          let %x_4 = raf.op.atan(%x_3);
+          let %x_5 = raf.op.set_stream(int64(0), int64(2));
+          let %x_6 = raf.op.atan(%x);
+          let %x_7 = raf.op.atan(%x_6);
+          let %x_8 = raf.op.atan(%x_7);
+          let %x_9 = raf.op.stream_barrier();
+          let %x_10 = raf.op.set_stream(int64(0), int64(0));
           let %x_11 = (%x_1, %x_4, %x_8);
-          let %x_12 = mnm.op.concatenate(%x_11, int64(0));
+          let %x_12 = raf.op.concatenate(%x_11, int64(0));
           %x_12
         }
         """
@@ -137,14 +123,14 @@ def test_wavefront_schedule_three_simple_branches():
         return tvm.relay.Function([x], sb.ret(x_12))
 
     # We verify the correctness of the pass by structural_equal here, but it does not check the
-    # equivalence of meta's extended constant. See issue #700.
-    print(mnm.ir.AsText(mod))
+    # equivalence of raf's extended constant. See issue #700.
+    print(raf.ir.AsText(mod))
     assert tvm.ir.structural_equal(mod["main"], expected())
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_wavefront_schedule_branch_in_branch():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # wavefront schedule
         # wave 1
         #   chain 1: op 1
@@ -158,52 +144,52 @@ def test_wavefront_schedule_branch_in_branch():
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)  # op 1
+            p_0 = raf.atan(x)  # op 1
 
-            p_1 = mnm.atan(x)  # op 2
-            p_1 = mnm.atan(p_1)  # op 3
-            p_1a = mnm.atan(p_1)  # op 4
-            p_1b = mnm.atan(p_1)  # op 5
-            p_1 = mnm.concatenate([p_1a, p_1b])  # op 6
+            p_1 = raf.atan(x)  # op 2
+            p_1 = raf.atan(p_1)  # op 3
+            p_1a = raf.atan(p_1)  # op 4
+            p_1b = raf.atan(p_1)  # op 5
+            p_1 = raf.concatenate([p_1a, p_1b])  # op 6
 
-            p_2 = mnm.atan(x)  # op 7
-            p_2 = mnm.atan(p_2)  # op 8
-            p_2 = mnm.atan(p_2)  # op 9
-            return mnm.concatenate([p_0, p_1, p_2])  # op 10
+            p_2 = raf.atan(x)  # op 7
+            p_2 = raf.atan(p_2)  # op 8
+            p_2 = raf.atan(p_2)  # op 9
+            return raf.concatenate([p_0, p_1, p_2])  # op 10
 
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": "wavefront"}):
-        mod = MNMSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
+    with raf.ir.PassContext(opt_level=2, config={"raf.stream_schedule.policy": "wavefront"}):
+        mod = RAFSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
 
     def expected():
         """
         def @main(%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_1 = mnm.op.atan(%x);
-          let %x_2 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_3 = mnm.op.atan(%x);
-          let %x_4 = mnm.op.atan(%x_3);
-          let %x_5 = mnm.op.set_stream(int64(0), int64(2));
-          let %x_6 = mnm.op.atan(%x);
-          let %x_7 = mnm.op.atan(%x_6);
-          let %x_8 = mnm.op.atan(%x_7);
-          let %x_9 = mnm.op.stream_barrier();
-          let %x_10 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_11 = mnm.op.atan(%x_4);
-          let %x_12 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_13 = mnm.op.atan(%x_4);
-          let %x_14 = mnm.op.stream_barrier();
-          let %x_15 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_0 = raf.op.set_stream(int64(0), int64(0));
+          let %x_1 = raf.op.atan(%x);
+          let %x_2 = raf.op.set_stream(int64(0), int64(1));
+          let %x_3 = raf.op.atan(%x);
+          let %x_4 = raf.op.atan(%x_3);
+          let %x_5 = raf.op.set_stream(int64(0), int64(2));
+          let %x_6 = raf.op.atan(%x);
+          let %x_7 = raf.op.atan(%x_6);
+          let %x_8 = raf.op.atan(%x_7);
+          let %x_9 = raf.op.stream_barrier();
+          let %x_10 = raf.op.set_stream(int64(0), int64(0));
+          let %x_11 = raf.op.atan(%x_4);
+          let %x_12 = raf.op.set_stream(int64(0), int64(1));
+          let %x_13 = raf.op.atan(%x_4);
+          let %x_14 = raf.op.stream_barrier();
+          let %x_15 = raf.op.set_stream(int64(0), int64(0));
           let %x_16 = (%x_11, %x_13);
-          let %x_17 = mnm.op.concatenate(%x_16, int64(0));
+          let %x_17 = raf.op.concatenate(%x_16, int64(0));
           let %x_18 = (%x_1, %x_17, %x_8);
-          let %x_19 = mnm.op.concatenate(%x_18, int64(0));
+          let %x_19 = raf.op.concatenate(%x_18, int64(0));
           %x_19
         }
         """
@@ -234,9 +220,9 @@ def test_wavefront_schedule_branch_in_branch():
     assert tvm.ir.structural_equal(mod["main"], expected())
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_wavefront_schedule_stacked_blocks():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         # wavefront schedule
         # wave 1
         #   chain 1: op 1
@@ -253,53 +239,53 @@ def test_wavefront_schedule_stacked_blocks():
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            p_0 = mnm.atan(x)  # op 1
-            p_1 = mnm.atan(x)  # op 2
-            p_2 = mnm.atan(x)  # op 3
-            p_2 = mnm.atan(p_2)  # op 4
-            x = mnm.concatenate([p_0, p_1, p_2])  # op 5
-            p_0 = mnm.atan(x)  # op 6
-            p_1 = mnm.atan(x)  # op 7
-            p_2 = mnm.atan(x)  # op 8
-            p_2 = mnm.atan(p_2)  # op 9
-            return mnm.concatenate([p_0, p_1, p_2])  # op 10
+            p_0 = raf.atan(x)  # op 1
+            p_1 = raf.atan(x)  # op 2
+            p_2 = raf.atan(x)  # op 3
+            p_2 = raf.atan(p_2)  # op 4
+            x = raf.concatenate([p_0, p_1, p_2])  # op 5
+            p_0 = raf.atan(x)  # op 6
+            p_1 = raf.atan(x)  # op 7
+            p_2 = raf.atan(x)  # op 8
+            p_2 = raf.atan(p_2)  # op 9
+            return raf.concatenate([p_0, p_1, p_2])  # op 10
 
     model = Model()
     input_shape = [2, 2]
     x, _ = randn(input_shape)
     mod = model._internal(x).mod
 
-    with mnm.ir.PassContext(opt_level=2, config={"mnm.stream_schedule.policy": "wavefront"}):
-        mod = MNMSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
+    with raf.ir.PassContext(opt_level=2, config={"raf.stream_schedule.policy": "wavefront"}):
+        mod = RAFSequential([ToGraphNormalForm(), WavefrontStreamSchedule()])(mod)
 
     def expected():
         """
         def @main(%x: Tensor[(2, 2), float32]) {
-          let %x_0 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_1 = mnm.op.atan(%x);
-          let %x_2 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_3 = mnm.op.atan(%x);
-          let %x_4 = mnm.op.set_stream(int64(0), int64(2));
-          let %x_5 = mnm.op.atan(%x);
-          let %x_6 = mnm.op.atan(%x_5);
-          let %x_7 = mnm.op.stream_barrier();
-          let %x_8 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_0 = raf.op.set_stream(int64(0), int64(0));
+          let %x_1 = raf.op.atan(%x);
+          let %x_2 = raf.op.set_stream(int64(0), int64(1));
+          let %x_3 = raf.op.atan(%x);
+          let %x_4 = raf.op.set_stream(int64(0), int64(2));
+          let %x_5 = raf.op.atan(%x);
+          let %x_6 = raf.op.atan(%x_5);
+          let %x_7 = raf.op.stream_barrier();
+          let %x_8 = raf.op.set_stream(int64(0), int64(0));
           let %x_9 = (%x_1, %x_3, %x_6);
-          let %x_10 = mnm.op.concatenate(%x_9, int64(0));
-          let %x_11 = mnm.op.stream_barrier();
-          let %x_12 = mnm.op.set_stream(int64(0), int64(0));
-          let %x_13 = mnm.op.atan(%x_10);
-          let %x_14 = mnm.op.set_stream(int64(0), int64(1));
-          let %x_15 = mnm.op.atan(%x_10);
-          let %x_16 = mnm.op.set_stream(int64(0), int64(2));
-          let %x_17 = mnm.op.atan(%x_10);
-          let %x_18 = mnm.op.atan(%x_17);
-          let %x_19 = mnm.op.stream_barrier();
-          let %x_20 = mnm.op.set_stream(int64(0), int64(0));
+          let %x_10 = raf.op.concatenate(%x_9, int64(0));
+          let %x_11 = raf.op.stream_barrier();
+          let %x_12 = raf.op.set_stream(int64(0), int64(0));
+          let %x_13 = raf.op.atan(%x_10);
+          let %x_14 = raf.op.set_stream(int64(0), int64(1));
+          let %x_15 = raf.op.atan(%x_10);
+          let %x_16 = raf.op.set_stream(int64(0), int64(2));
+          let %x_17 = raf.op.atan(%x_10);
+          let %x_18 = raf.op.atan(%x_17);
+          let %x_19 = raf.op.stream_barrier();
+          let %x_20 = raf.op.set_stream(int64(0), int64(0));
           let %x_21 = (%x_13, %x_15, %x_18);
-          let %x_22 = mnm.op.concatenate(%x_21, int64(0));
+          let %x_22 = raf.op.concatenate(%x_21, int64(0));
           %x_22
         }
         """

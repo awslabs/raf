@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -28,11 +14,11 @@
 #include <vector>
 #include <functional>
 #include <numeric>
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/enum_base.h"
-#include "mnm/ir.h"
-#include "mnm/value.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/enum_base.h"
+#include "raf/ir.h"
+#include "raf/value.h"
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 #include "../tvm/tvm_utils.h"
@@ -43,7 +29,7 @@
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   } while (false)
 
-namespace mnm {
+namespace raf {
 
 template <>
 inline DType::operator cudnnDataType_t() const {
@@ -414,4 +400,4 @@ inline size_t ComputeStorageInBytes(const ir::TensorType& type) {
 
 }  // namespace cudnn
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

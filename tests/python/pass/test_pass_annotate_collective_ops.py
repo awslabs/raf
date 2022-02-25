@@ -1,41 +1,27 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements,no-self-use,too-many-arguments
 import pytest
 import tvm
 
-import mnm
-from mnm.ir import PassContext
-from mnm._ffi.pass_ import AnnotateCollectiveOps
-from mnm.testing import with_dialect
-from mnm._core.ir_ext import extended_var
-from mnm.ir import ANFBuilder
+import raf
+from raf.ir import PassContext
+from raf._ffi.pass_ import AnnotateCollectiveOps
+from raf.testing import with_dialect
+from raf._core.ir_ext import extended_var
+from raf.ir import ANFBuilder
 
 
 @with_dialect(["tvm", "cuda"])
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("use_memory_copy_ops", [True, False])
 @pytest.mark.parametrize(
     "comm_op,comm_args",
     [
-        ["_allreduce", [mnm.ir.const("sum")]],
-        ["_reduce", [mnm.ir.const(0), mnm.ir.const("sum")]],
-        ["_broadcast", [mnm.ir.const(0)]],
+        ["_allreduce", [raf.ir.const("sum")]],
+        ["_reduce", [raf.ir.const(0), raf.ir.const("sum")]],
+        ["_broadcast", [raf.ir.const(0)]],
     ],
 )
 @pytest.mark.parametrize("shape", [[128, 128], [64, 64], [32, 64, 128]])
@@ -66,12 +52,12 @@ def test_annotate_collective(use_memory_copy_ops, comm_op, comm_args, shape, dty
         x_2 = builder.call(comm_op, [x_1] + comm_args)
         x_2 = builder.call(
             "defuse_tensor",
-            [x_2, mnm.ir.const(sizes), mnm.ir.const(shapes), mnm.ir.const(shape_indices)],
+            [x_2, raf.ir.const(sizes), raf.ir.const(shapes), raf.ir.const(shape_indices)],
         )
         x_3 = builder.get_tuple_item(x_2, 0)
         return tvm.relay.Function([x], builder.ret(x_3))
 
-    config = {"mnm.annotate_collective_ops.use_memory_copy_ops": use_memory_copy_ops}
+    config = {"raf.annotate_collective_ops.use_memory_copy_ops": use_memory_copy_ops}
     with PassContext(config=config):
         mod = tvm.IRModule()
         mod["main"] = construct_model_func()

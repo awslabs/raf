@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import os
 from numbers import Number
@@ -24,25 +10,6 @@ from .codegen_utils import snake_to_pascal, write_to_file
 
 def gen_file(schemas, filename):
     FILE = """
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 /*!
  * Auto generated. Do not touch.
  * \\file {FILENAME}
@@ -51,15 +18,15 @@ def gen_file(schemas, filename):
 #pragma once
 #include <vector>
 #include <string>
-#include "mnm/op.h"
-#include "mnm/value.h"
-namespace mnm {{
+#include "raf/op.h"
+#include "raf/value.h"
+namespace raf {{
 namespace op {{
 namespace schema {{
 {CLASSES}
 }}  // namespace schema
 }}  // namespace op
-}}  // namespace mnm
+}}  // namespace raf
 """.strip()
     result = []
     for name in sorted(schemas.keys()):
@@ -76,11 +43,11 @@ def gen_class(name, schema):
 class {CLASS_NAME} : public ir::AttrsNode<{CLASS_NAME}> {{
  public:
 {ARGS}
-  MNM_OP_SCHEMA({CLASS_NAME}, "{SCHEMA_NAME}");
+  RAF_OP_SCHEMA({CLASS_NAME}, "{SCHEMA_NAME}");
 }};
 """.strip()
     class_name = snake_to_pascal(name) + "Args"
-    schema_name = "mnm.args." + name
+    schema_name = "raf.args." + name
     args = "\n".join(gen_arg(entry) for entry in schema)
     return CLASS.format(CLASS_NAME=class_name, SCHEMA_NAME=schema_name, ARGS=args)
 

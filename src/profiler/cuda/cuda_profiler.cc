@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,13 +10,13 @@
 #include "./cuda_profiler.h"
 #include "../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace profiler {
 
 std::shared_ptr<device_api::DeviceAPI> CudaProfilerHelper::cuda_api =
     device_api::DeviceAPI::Get(DevType::kCUDA());
 
-CudaProfilerHelper::CudaProfilerHelper(int dev_id, mnm::DevType dev_type, void* stream,
+CudaProfilerHelper::CudaProfilerHelper(int dev_id, raf::DevType dev_type, void* stream,
                                        std::string name, std::string categories,
                                        std::vector<std::string> args)
     : ProfilerHelper(dev_id, dev_type, std::move(name), std::move(categories), std::move(args)),
@@ -103,7 +89,7 @@ void CollectCudaProfile() {
   CudaProfiler::Get()->CollectCudaStat();
 }
 
-MNM_REGISTER_GLOBAL("mnm.profiler.CollectCudaProfile").set_body_typed(CollectCudaProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.CollectCudaProfile").set_body_typed(CollectCudaProfile);
 
 }  // namespace profiler
-}  // namespace mnm
+}  // namespace raf

@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 """Unit tests for relay pass manager."""
 # pylint: disable=missing-function-docstring, invalid-name, missing-class-docstring
@@ -26,9 +12,9 @@ from tvm import relay
 from tvm.ir.transform import ModulePass, PassContext
 from tvm.ir.transform import module_pass
 from tvm.relay.transform import function_pass, FunctionPass
-from mnm._ffi import pass_
-from mnm._ffi.pass_ import FromRelay
-from mnm.ir import MNMSequential
+from raf._ffi import pass_
+from raf._ffi.pass_ import FromRelay
+from raf.ir import RAFSequential
 
 
 def get_var_func():
@@ -163,7 +149,7 @@ def test_sequential_pass():
     mod = tvm.IRModule({v_sub: sub, v_log: log})
     tvm_mod = FromRelay()(mod)
     passes = [pass_.InferType(), pass_.InferType()]
-    sequential = MNMSequential(passes=passes, opt_level=1, name="seq")
+    sequential = RAFSequential(passes=passes, opt_level=1, name="seq")
     with PassContext():
         ret_mod = sequential(tvm_mod)
 

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,18 +9,18 @@
  */
 #include <tvm/topi/nn.h>
 #include <vector>
-#include "mnm/op_utils.h"
+#include "raf/op_utils.h"
 #include "./tvm_utils.h"
 #include "./tvm_attrs.h"
 #include "../../schema/ufunc.h"
 #include "../../schema/nn.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using namespace schema;
 
 Attrs BinarySchema2DenseAttrs(const BinaryArgs* args) {
@@ -51,23 +37,23 @@ Attrs BinarySchema2BatchMatmulAttrs(const BinaryArgs* args) {
   return Attrs(attrs);
 }
 
-MNM_TVM(matmul, Matmul, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(matmul, Matmul, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
-MNM_TVM(matmul_tn, MatmulTN, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(matmul_tn, MatmulTN, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
-MNM_TVM(matmul_nt, MatmulNT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(matmul_nt, MatmulNT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
-MNM_TVM(matmul_tt, MatmulTT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(matmul_tt, MatmulTT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         BinarySchema2DenseAttrs, GenericHasher, kOutEWiseFusable);
-MNM_TVM(dense, Dense, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, BinarySchema2DenseAttrs,
+RAF_TVM(dense, Dense, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames, BinarySchema2DenseAttrs,
         GenericHasher, kOutEWiseFusable);
-MNM_TVM(batch_matmul, BatchMatmul, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(batch_matmul, BatchMatmul, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         (BinarySchema2BatchMatmulAttrs<false, false>), GenericHasher, kOutEWiseFusable);
-MNM_TVM(batch_matmul_nt, BatchMatmulNT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(batch_matmul_nt, BatchMatmulNT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         (BinarySchema2BatchMatmulAttrs<false, true>), GenericHasher, kOutEWiseFusable);
-MNM_TVM(batch_matmul_tn, BatchMatmulTN, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(batch_matmul_tn, BatchMatmulTN, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         (BinarySchema2BatchMatmulAttrs<true, false>), GenericHasher, kOutEWiseFusable);
-MNM_TVM(batch_matmul_tt, BatchMatmulTT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
+RAF_TVM(batch_matmul_tt, BatchMatmulTT, BinaryArgs, BinarySchema2Args, BinarySchemaArgNames,
         (BinarySchema2BatchMatmulAttrs<true, true>), GenericHasher, kOutEWiseFusable);
 
 std::vector<Value> ConvSchema2Args(const ConvArgs* args) {
@@ -112,7 +98,7 @@ HashKey Conv2dHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(conv2d, Conv2d, ConvArgs, ConvSchema2Args, ConvSchemaArgNames, ConvSchema2Attrs,
+RAF_TVM(conv2d, Conv2d, ConvArgs, ConvSchema2Args, ConvSchemaArgNames, ConvSchema2Attrs,
         Conv2dHasher, kOutEWiseFusable);
 
 std::vector<Value> ConvTransSchema2Args(const ConvTransArgs* args) {
@@ -163,7 +149,7 @@ HashKey Conv2dTransHasher(const std::vector<Type>& param_types, const Type& y_ty
   return key;
 }
 
-MNM_TVM(conv2d_transpose, Conv2dTrans, ConvTransArgs, ConvTransSchema2Args, ConvTransSchemaArgNames,
+RAF_TVM(conv2d_transpose, Conv2dTrans, ConvTransArgs, ConvTransSchema2Args, ConvTransSchemaArgNames,
         ConvTransSchema2Attrs, Conv2dTransHasher, kOutEWiseFusable);
 
 std::vector<Value> ConvDxwSchema2Args(const ConvDxwArgs* args) {
@@ -231,9 +217,9 @@ HashKey Conv2dDxwHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVM_PLEVEL(conv2d_dx, Conv2dDx, ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
+RAF_TVM_PLEVEL(conv2d_dx, Conv2dDx, ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
                ConvDxwSchema2Attrs, Conv2dDxwHasher, kOutEWiseFusable, 9);
-MNM_TVM_PLEVEL(conv2d_dw, Conv2dDw, ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
+RAF_TVM_PLEVEL(conv2d_dw, Conv2dDw, ConvDxwArgs, ConvDxwSchema2Args, ConvDxwSchemaArgNames,
                ConvDxwSchema2Attrs, Conv2dDxwHasher, kOutEWiseFusable, 9);
 
 std::vector<Value> ConvTransposeDxwSchema2Args(const ConvTransposeDxwArgs* args) {
@@ -306,10 +292,10 @@ HashKey Conv2dTransposeDxwHasher(const std::vector<Type>& param_types, const Typ
   return key;
 }
 
-MNM_TVM_PLEVEL(conv2d_transpose_dx, Conv2dTransposeDx, ConvTransposeDxwArgs,
+RAF_TVM_PLEVEL(conv2d_transpose_dx, Conv2dTransposeDx, ConvTransposeDxwArgs,
                ConvTransposeDxwSchema2Args, ConvTransposeDxwSchemaArgNames,
                ConvTransposeDxwSchema2Attrs, Conv2dTransposeDxwHasher, kOutEWiseFusable, 9);
-MNM_TVM_PLEVEL(conv2d_transpose_dw, Conv2dTransposeDw, ConvTransposeDxwArgs,
+RAF_TVM_PLEVEL(conv2d_transpose_dw, Conv2dTransposeDw, ConvTransposeDxwArgs,
                ConvTransposeDxwSchema2Args, ConvTransposeDxwSchemaArgNames,
                ConvTransposeDxwSchema2Attrs, Conv2dTransposeDxwHasher, kOutEWiseFusable, 9);
 
@@ -355,13 +341,13 @@ HashKey SoftmaxDxHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVM(softmax, Softmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
+RAF_TVM(softmax, Softmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
         SoftmaxSchema2Attrs, SoftmaxHasher, kOpaque);
-MNM_TVM(softmax_dx, SoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
+RAF_TVM(softmax_dx, SoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
         SoftmaxDxSchema2Attrs, SoftmaxDxHasher, kOpaque);
-MNM_TVM(log_softmax, LogSoftmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
+RAF_TVM(log_softmax, LogSoftmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
         SoftmaxSchema2Attrs, SoftmaxHasher, kOpaque);
-MNM_TVM(log_softmax_dx, LogSoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
+RAF_TVM(log_softmax_dx, LogSoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
         SoftmaxDxSchema2Attrs, SoftmaxDxHasher, kOpaque);
 
 std::vector<Value> BiasAddSchema2Args(const BiasAddArgs* args) {
@@ -385,7 +371,7 @@ HashKey BiasAddHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(bias_add, BiasAdd, BiasAddArgs, BiasAddSchema2Args, BiasAddSchemaArgNames,
+RAF_TVM(bias_add, BiasAdd, BiasAddArgs, BiasAddSchema2Args, BiasAddSchemaArgNames,
         BiasAddSchema2Attrs, BiasAddHasher, kBroadcast);
 
 std::vector<Value> ContribDropoutSchema2Args(const DropoutArgs* args) {
@@ -421,7 +407,7 @@ HashKey ContribDropoutHasher(const std::vector<Type>& param_types, const Type& y
   return key;
 }
 
-MNM_TVM(_contrib_dropout, Dropout, DropoutArgs, ContribDropoutSchema2Args,
+RAF_TVM(_contrib_dropout, Dropout, DropoutArgs, ContribDropoutSchema2Args,
         ContribDropoutSchemaArgNames, ContribDropoutSchema2Attrs, ContribDropoutHasher, kOpaque);
 
 std::vector<Value> ContribDropoutDxSchema2Args(const DropoutDxArgs* args) {
@@ -445,7 +431,7 @@ HashKey ContribDropoutDxHasher(const std::vector<Type>& param_types, const Type&
   return key;
 }
 
-MNM_TVM(_contrib_dropout_dx, DropoutDx, DropoutDxArgs, ContribDropoutDxSchema2Args,
+RAF_TVM(_contrib_dropout_dx, DropoutDx, DropoutDxArgs, ContribDropoutDxSchema2Args,
         ContribDropoutDxSchemaArgNames, ContribDropoutDxSchema2Attrs, ContribDropoutDxHasher,
         kOpaque);
 
@@ -519,9 +505,9 @@ HashKey PoolHasher(const std::vector<Type>& param_types, const Type& y_type, con
   return key;
 }
 
-MNM_TVM(max_pool2d, MaxPool2D, PoolArgs, PoolSchema2Args<PoolArgs>, PoolSchemaArgNames,
+RAF_TVM(max_pool2d, MaxPool2D, PoolArgs, PoolSchema2Args<PoolArgs>, PoolSchemaArgNames,
         MaxPoolSchema2Attrs, PoolHasher, kOutEWiseFusable);
-MNM_TVM(avg_pool2d, AvgPool2D, PoolArgs, PoolSchema2Args<PoolArgs>, PoolSchemaArgNames,
+RAF_TVM(avg_pool2d, AvgPool2D, PoolArgs, PoolSchema2Args<PoolArgs>, PoolSchemaArgNames,
         AvgPoolSchema2Attrs, PoolHasher, kOutEWiseFusable);
 
 Attrs AdaptivePoolSchema2Attrs(const AdaptivePoolArgs* args) {
@@ -541,9 +527,9 @@ HashKey AdaptivePoolHasher(const std::vector<Type>& param_types, const Type& y_t
   return key;
 }
 
-MNM_TVM(adaptive_max_pool2d, AdaptiveMaxPool2D, AdaptivePoolArgs, PoolSchema2Args<AdaptivePoolArgs>,
+RAF_TVM(adaptive_max_pool2d, AdaptiveMaxPool2D, AdaptivePoolArgs, PoolSchema2Args<AdaptivePoolArgs>,
         PoolSchemaArgNames, AdaptivePoolSchema2Attrs, AdaptivePoolHasher, kOutEWiseFusable);
-MNM_TVM(adaptive_avg_pool2d, AdaptiveAvgPool2D, AdaptivePoolArgs, PoolSchema2Args<AdaptivePoolArgs>,
+RAF_TVM(adaptive_avg_pool2d, AdaptiveAvgPool2D, AdaptivePoolArgs, PoolSchema2Args<AdaptivePoolArgs>,
         PoolSchemaArgNames, AdaptivePoolSchema2Attrs, AdaptivePoolHasher, kOutEWiseFusable);
 
 template <typename T>
@@ -606,9 +592,9 @@ HashKey PoolDxHasher(const std::vector<Type>& param_types, const Type& y_type,
   return key;
 }
 
-MNM_TVM(avg_pool2d_dx, AvgPool2DDx, PoolDxArgs, PoolDxSchema2Args<PoolDxArgs>, PoolDxSchemaArgNames,
+RAF_TVM(avg_pool2d_dx, AvgPool2DDx, PoolDxArgs, PoolDxSchema2Args<PoolDxArgs>, PoolDxSchemaArgNames,
         AvgPoolDxSchema2Attrs, PoolDxHasher, kOutEWiseFusable);
-MNM_TVM(max_pool2d_dx, MaxPool2DDx, PoolDxArgs, PoolDxSchema2Args<PoolDxArgs>, PoolDxSchemaArgNames,
+RAF_TVM(max_pool2d_dx, MaxPool2DDx, PoolDxArgs, PoolDxSchema2Args<PoolDxArgs>, PoolDxSchemaArgNames,
         MaxPoolDxSchema2Attrs, PoolDxHasher, kOutEWiseFusable);
 
 Attrs AdaptiveAvgPoolDxSchema2Attrs(const AdaptivePoolDxArgs* args) {
@@ -659,10 +645,10 @@ HashKey AdaptivePoolDxHasher(const std::vector<Type>& param_types, const Type& y
 // with others without tuning. To avoid the tuning overhead we now use kOpaque to avoid
 // fusion. After fixing the schedule to really support fusing output elementwise ops, we should
 // change their fusion pattern back to kOutEWiseFusable.
-MNM_TVM(adaptive_avg_pool2d_dx, AdaptiveAvgPool2DDx, AdaptivePoolDxArgs,
+RAF_TVM(adaptive_avg_pool2d_dx, AdaptiveAvgPool2DDx, AdaptivePoolDxArgs,
         PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames, AdaptiveAvgPoolDxSchema2Attrs,
         AdaptivePoolDxHasher, kOpaque);
-MNM_TVM(adaptive_max_pool2d_dx, AdaptiveMaxPool2DDx, AdaptivePoolDxArgs,
+RAF_TVM(adaptive_max_pool2d_dx, AdaptiveMaxPool2DDx, AdaptivePoolDxArgs,
         PoolDxSchema2Args<AdaptivePoolDxArgs>, PoolDxSchemaArgNames, AdaptiveMaxPoolDxSchema2Attrs,
         AdaptivePoolDxHasher, kOpaque);
 
@@ -712,7 +698,7 @@ HashKey LayerNormHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVM(layer_norm, LayerNorm, LayerNormArgs, LayerNormSchema2Args, LayerNormSchemaArgNames,
+RAF_TVM(layer_norm, LayerNorm, LayerNormArgs, LayerNormSchema2Args, LayerNormSchemaArgNames,
         LayerNormSchema2Attrs, LayerNormHasher, kOpaque);
 
 std::vector<Value> LayerNormDxSchema2Args(const LayerNormDxArgs* args) {
@@ -757,7 +743,7 @@ HashKey LayerNormDxHasher(const std::vector<Type>& param_types, const Type& y_ty
   return key;
 }
 
-MNM_TVM(layer_norm_dx, LayerNormDx, LayerNormDxArgs, LayerNormDxSchema2Args,
+RAF_TVM(layer_norm_dx, LayerNormDx, LayerNormDxArgs, LayerNormDxSchema2Args,
         LayerNormDxSchemaArgNames, LayerNormDxSchema2Attrs, LayerNormDxHasher, kOpaque);
 
 std::vector<Value> BatchNormSchema2Args(const BatchNormArgs* args) {
@@ -783,9 +769,9 @@ HashKey BatchNormHasher(const std::vector<Type>& param_types, const Type& ret_ty
   return key;
 }
 
-MNM_TVM(batch_norm_train, BatchNormTrain, BatchNormArgs, BatchNormSchema2Args,
+RAF_TVM(batch_norm_train, BatchNormTrain, BatchNormArgs, BatchNormSchema2Args,
         BatchNormSchemaArgNames, BatchNormSchema2Attrs, BatchNormHasher, kOpaque);
-MNM_TVM(batch_norm_infer, BatchNormInfer, BatchNormArgs, BatchNormSchema2Args,
+RAF_TVM(batch_norm_infer, BatchNormInfer, BatchNormArgs, BatchNormSchema2Args,
         BatchNormSchemaArgNames, BatchNormSchema2Attrs, BatchNormHasher, kOpaque);
 
 std::vector<Value> BatchNormTrainDxwbSchema2Args(const BatchNormTrainDxwbArgs* args) {
@@ -810,7 +796,7 @@ HashKey BatchNormTrainDxwbHasher(const std::vector<Type>& param_types, const Typ
   return key;
 }
 
-MNM_TVM(batch_norm_train_dxwb, BatchNormTrainDxwb, BatchNormTrainDxwbArgs,
+RAF_TVM(batch_norm_train_dxwb, BatchNormTrainDxwb, BatchNormTrainDxwbArgs,
         BatchNormTrainDxwbSchema2Args, BatchNormTrainDxwbSchemaArgNames,
         BatchNormTrainDxwbSchema2Attrs, BatchNormTrainDxwbHasher, kOpaque);
 
@@ -838,7 +824,7 @@ HashKey ThresholdHasher(const std::vector<Type>& param_types, const Type& y_type
   return key;
 }
 
-MNM_TVM(threshold, Threshold, ThresholdArgs, ThresholdSchema2Args, ThresholdSchemaArgNames,
+RAF_TVM(threshold, Threshold, ThresholdArgs, ThresholdSchema2Args, ThresholdSchemaArgNames,
         ThresholdSchema2Attrs, ThresholdHasher, kElemWise);
 
 std::vector<Value> ThresholdDxSchema2Args(const ThresholdDxArgs* args) {
@@ -869,7 +855,7 @@ HashKey ThresholdDxHasher(const std::vector<Type>& param_types, const Type& y_ty
   return key;
 }
 
-MNM_TVM(threshold_dx, ThresholdDx, ThresholdDxArgs, ThresholdDxSchema2Args,
+RAF_TVM(threshold_dx, ThresholdDx, ThresholdDxArgs, ThresholdDxSchema2Args,
         ThresholdDxSchemaArgNames, ThresholdDxSchema2Attrs, ThresholdDxHasher, kElemWise);
 
 std::vector<Value> PadSchema2Args(const PadArgs* args) {
@@ -902,7 +888,7 @@ HashKey PadHasher(const std::vector<Type>& param_types, const Type& y_type, cons
   return key;
 }
 
-MNM_TVM(pad, Pad, PadArgs, PadSchema2Args, PadSchemaArgNames, PadSchema2Attrs, PadHasher,
+RAF_TVM(pad, Pad, PadArgs, PadSchema2Args, PadSchemaArgNames, PadSchema2Attrs, PadHasher,
         kInjective);
 
 Array<tvm::te::Tensor> PadCompute(const Attrs& attrs, const Array<tvm::te::Tensor>& inputs,
@@ -924,8 +910,8 @@ Array<tvm::te::Tensor> PadCompute(const Attrs& attrs, const Array<tvm::te::Tenso
       "T_pad", tvm::topi::kElementWise, param->pad_mode)};
 }
 
-MNM_REGISTER_OP("mnm.op.tvm.pad").set_attr<tvm::relay::FTVMCompute>("FTVMCompute", PadCompute);
+RAF_REGISTER_OP("raf.op.tvm.pad").set_attr<tvm::relay::FTVMCompute>("FTVMCompute", PadCompute);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

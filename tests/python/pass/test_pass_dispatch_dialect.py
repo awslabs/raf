@@ -1,59 +1,45 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access
 # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,no-self-use
 import pytest
-import mnm
-from mnm.model import Conv2d
-from mnm.testing import run_infer_type, randn, with_dialect
+import raf
+from raf.model import Conv2d
+from raf.testing import run_infer_type, randn, with_dialect
 import tvm
 from tvm import relay
 
 
 def optimize(mod, device="cuda"):
-    with mnm.device(device):
-        mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-        mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-        mod = mnm._ffi.pass_.DispatchDialect()(mod)
-        mod = mnm._ffi.pass_.InferType()(mod)
+    with raf.device(device):
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.DispatchDialect()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
     return mod
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_simple():
     konst, _ = randn((1,), device="cpu")
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.c = konst
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.add(x, self.c)
-            y = mnm.relu(y)
-            y = mnm.log(y)
+            y = raf.add(x, self.c)
+            y = raf.relu(y)
+            y = raf.log(y)
             return y
 
     def expected(shape):
-        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
-        relu_op = mnm._ffi.op.GetOp("mnm.op.cudnn.relu")
-        log_op = mnm._ffi.op.GetOp("mnm.op.tvm.log")
-        null = mnm.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.tvm.add")
+        relu_op = raf._ffi.op.GetOp("raf.op.cudnn.relu")
+        log_op = raf._ffi.op.GetOp("raf.op.tvm.log")
+        null = raf.ir.const(None)
 
         x = relay.var("x", shape=shape)
         y = relay.var("c", shape=(1,))
@@ -69,33 +55,33 @@ def test_simple():
     assert tvm.ir.structural_equal(mod["main"], func_expected)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_conv2d():
     rand, _ = randn((1,), device="cpu")
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.c = rand
             self.conv = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             y = self.conv(x)
-            y = mnm.add(y, self.c)
+            y = raf.add(y, self.c)
             return y
 
     def expected():
-        vec_one = mnm.ir.const([1])
-        one = mnm.ir.const(1)
-        nchw = mnm.ir.const("NCHW")
-        oihw = mnm.ir.const("OIHW")
-        null = mnm.ir.const(None)
-        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
-        conv2d_op = mnm._ffi.op.GetOp("mnm.op.cudnn.conv2d")
+        vec_one = raf.ir.const([1])
+        one = raf.ir.const(1)
+        nchw = raf.ir.const("NCHW")
+        oihw = raf.ir.const("OIHW")
+        null = raf.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.tvm.add")
+        conv2d_op = raf._ffi.op.GetOp("raf.op.cudnn.conv2d")
 
-        x = mnm.ir.var("x", shape=(1, 16, 64, 64))
-        c = mnm.ir.var("c", shape=(1,))
-        w = mnm.ir.var("conv.w", shape=(16, 16, 3, 3))
+        x = raf.ir.var("x", shape=(1, 16, 64, 64))
+        c = raf.ir.var("c", shape=(1,))
+        w = raf.ir.var("conv.w", shape=(16, 16, 3, 3))
         y = relay.Call(conv2d_op, [x, w, vec_one, vec_one, vec_one, one, nchw, oihw, nchw])
         y = relay.Call(add_op, [y, c, null, null])
         return relay.Function([x, c, w], y)
@@ -108,34 +94,34 @@ def test_conv2d():
     assert tvm.ir.structural_equal(mod["main"], func_expected)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @with_dialect(["tvm", "cudnn"])
 def test_dialect_pref():
     rand, _ = randn((1,), device="cpu")
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.c = rand
             self.conv = Conv2d(16, 16, kernel_size=(3, 3), padding=1, bias=False)
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
             y = self.conv(x)
-            y = mnm.add(y, self.c)
+            y = raf.add(y, self.c)
             return y
 
     def expected():
-        vec_one = mnm.ir.const([1])
-        one = mnm.ir.const(1)
-        nchw = mnm.ir.const("NCHW")
-        oihw = mnm.ir.const("OIHW")
-        null = mnm.ir.const(None)
-        add_op = mnm._ffi.op.GetOp("mnm.op.tvm.add")
-        conv2d_op = mnm._ffi.op.GetOp("mnm.op.tvm.conv2d")
+        vec_one = raf.ir.const([1])
+        one = raf.ir.const(1)
+        nchw = raf.ir.const("NCHW")
+        oihw = raf.ir.const("OIHW")
+        null = raf.ir.const(None)
+        add_op = raf._ffi.op.GetOp("raf.op.tvm.add")
+        conv2d_op = raf._ffi.op.GetOp("raf.op.tvm.conv2d")
 
-        x = mnm.ir.var("x", shape=(1, 16, 64, 64))
-        c = mnm.ir.var("c", shape=(1,))
-        w = mnm.ir.var("conv.w", shape=(16, 16, 3, 3))
+        x = raf.ir.var("x", shape=(1, 16, 64, 64))
+        c = raf.ir.var("c", shape=(1,))
+        w = raf.ir.var("conv.w", shape=(16, 16, 3, 3))
         y = relay.Call(conv2d_op, [x, w, vec_one, vec_one, vec_one, one, nchw, oihw, nchw])
         y = relay.Call(add_op, [y, c, null, null])
         return relay.Function([x, c, w], y)

@@ -1,90 +1,76 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/impl/value.cc
- * \brief MNM value underlying implementation
+ * \brief RAF value underlying implementation
  */
 #include <tvm/runtime/data_type.h>
 #include <tvm/runtime/ndarray.h>
 #include <tvm/node/functor.h>
 #include <tvm/ir/module.h>
-#include "mnm/executor.h"
-#include "mnm/ir.h"
-#include "mnm/registry.h"
-#include "mnm/tensor.h"
-#include "mnm/value.h"
+#include "raf/executor.h"
+#include "raf/ir.h"
+#include "raf/registry.h"
+#include "raf/tensor.h"
+#include "raf/value.h"
 #include "../common/shape_utils.h"
 
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 #include "../../src/common/cuda_utils.h"
 #include "../../src/op/dialect/cudnn/cudnn_utils.h"
 #include "../../src/op/dialect/cublas/cublas_utils.h"
 #endif
 
-namespace mnm {
+namespace raf {
 namespace value {
 
 using common::shape_utils::GetShape;
 using common::shape_utils::MakeShape;
 using executor::Executor;
 using tensor::Tensor;
-using namespace mnm::ir;
+using namespace raf::ir;
 
 ValueType TypeKey2ValueType(const char* type_key) {
-  if (strcmp(type_key, "mnm.value.IntValue") == 0) {
+  if (strcmp(type_key, "raf.value.IntValue") == 0) {
     return kIntValue;
   }
-  if (strcmp(type_key, "mnm.value.FloatValue") == 0) {
+  if (strcmp(type_key, "raf.value.FloatValue") == 0) {
     return kFloatValue;
   }
-  if (strcmp(type_key, "mnm.value.BoolValue") == 0) {
+  if (strcmp(type_key, "raf.value.BoolValue") == 0) {
     return kBoolValue;
   }
-  if (strcmp(type_key, "mnm.value.StringValue") == 0) {
+  if (strcmp(type_key, "raf.value.StringValue") == 0) {
     return kStringValue;
   }
-  if (strcmp(type_key, "mnm.value.TensorValue") == 0) {
+  if (strcmp(type_key, "raf.value.TensorValue") == 0) {
     return kTensorValue;
   }
-  if (strcmp(type_key, "mnm.value.TenorTypeValue") == 0) {
+  if (strcmp(type_key, "raf.value.TenorTypeValue") == 0) {
     return kTensorTypeValue;
   }
-  if (strcmp(type_key, "mnm.value.TupleValue") == 0) {
+  if (strcmp(type_key, "raf.value.TupleValue") == 0) {
     return kTupleValue;
   }
-  if (strcmp(type_key, "mnm.value.ClosureValue") == 0) {
+  if (strcmp(type_key, "raf.value.ClosureValue") == 0) {
     return kClosureValue;
   }
-  if (strcmp(type_key, "mnm.value.RefValue") == 0) {
+  if (strcmp(type_key, "raf.value.RefValue") == 0) {
     return kRefValue;
   }
-  if (strcmp(type_key, "mnm.value.OpValue") == 0) {
+  if (strcmp(type_key, "raf.value.OpValue") == 0) {
     return kOpValue;
   }
-  if (strcmp(type_key, "mnm.value.OpaqueValue") == 0) {
+  if (strcmp(type_key, "raf.value.OpaqueValue") == 0) {
     return kOpaqueValue;
   }
-  if (strcmp(type_key, "mnm.value.NoGradValue") == 0) {
+  if (strcmp(type_key, "raf.value.NoGradValue") == 0) {
     return kNoGradValue;
   }
-  if (strcmp(type_key, "mnm.value.VoidValue") == 0) {
+  if (strcmp(type_key, "raf.value.VoidValue") == 0) {
     return kVoidValue;
   }
   LOG(FATAL) << "Unknown value type key: " << type_key;
@@ -412,10 +398,10 @@ Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
     DLDataType data_type = tensor_type->dtype;
 
     // Set integer values to zeros to avoid memory errors in certain ops
-    // E.g., mnm.op.tvm.nll_loss would have CUDA memory errors because the class
+    // E.g., raf.op.tvm.nll_loss would have CUDA memory errors because the class
     // index is out of range
     if ((data_type.code == kDLInt) || (data_type.code == kDLUInt)) {
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
       if (device.device_type() == DevType::kCUDA())
         CUDA_CALL(cudaMemset(memory->data, 0, nbytes));
       else
@@ -434,38 +420,38 @@ Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
   }
 }
 
-MNM_REGISTER_GLOBAL("mnm.value.AssembleTensorValue")
+RAF_REGISTER_GLOBAL("raf.value.AssembleTensorValue")
     .set_body_typed([](const tvm::Device& dev, DLDataType dtype, Array<Integer> shape,
                        Array<Integer> strides, void* data) {
       return AssembleTensorValue(Device(dev), dtype, shape, strides, data);
     });
-MNM_REGISTER_GLOBAL("mnm.value.DeTuple").set_body_typed(DeTuple);
-MNM_REGISTER_GLOBAL("mnm.value.FromTVM").set_body_typed(FromTVM);
-MNM_REGISTER_GLOBAL("mnm.value.ToTVM").set_body_typed(ToTVM);
-MNM_REGISTER_GLOBAL("mnm.value._make.TupleValue").set_body_typed(TupleValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.IntValue").set_body_typed(IntValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.FloatValue").set_body_typed(FloatValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.BoolValue").set_body_typed(BoolValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.StringValue").set_body_typed(StringValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.ClosureValue").set_body_typed(ClosureValue::make);
-MNM_REGISTER_GLOBAL("mnm.value._make.NoGradValue").set_body_typed(NoGradValue::make);
+RAF_REGISTER_GLOBAL("raf.value.DeTuple").set_body_typed(DeTuple);
+RAF_REGISTER_GLOBAL("raf.value.FromTVM").set_body_typed(FromTVM);
+RAF_REGISTER_GLOBAL("raf.value.ToTVM").set_body_typed(ToTVM);
+RAF_REGISTER_GLOBAL("raf.value._make.TupleValue").set_body_typed(TupleValue::make);
+RAF_REGISTER_GLOBAL("raf.value._make.IntValue").set_body_typed(IntValue::make);
+RAF_REGISTER_GLOBAL("raf.value._make.FloatValue").set_body_typed(FloatValue::make);
+RAF_REGISTER_GLOBAL("raf.value._make.BoolValue").set_body_typed(BoolValue::make);
+RAF_REGISTER_GLOBAL("raf.value._make.StringValue").set_body_typed(StringValue::make);
+RAF_REGISTER_GLOBAL("raf.value._make.ClosureValue").set_body_typed(ClosureValue::make);
+RAF_REGISTER_GLOBAL("raf.value._make.NoGradValue").set_body_typed(NoGradValue::make);
 
-MNM_REGISTER_OBJECT_NO_REFLECT(ValueObj);
-MNM_REGISTER_OBJECT_NO_REFLECT(BaseTensorValueObj);
-MNM_REGISTER_OBJECT_NO_REFLECT(ScalarValueObj);
-MNM_REGISTER_OBJECT_NO_REFLECT(OpaqueValueObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(ValueObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(BaseTensorValueObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(ScalarValueObj);
+RAF_REGISTER_OBJECT_NO_REFLECT(OpaqueValueObj);
 
-MNM_REGISTER_OBJECT_REFLECT(TensorValueObj);
-MNM_REGISTER_OBJECT_REFLECT(TupleValueObj);
-MNM_REGISTER_OBJECT_REFLECT(ClosureValueObj);
-MNM_REGISTER_OBJECT_REFLECT(RefValueObj);
-MNM_REGISTER_OBJECT_REFLECT(OpValueObj);
-MNM_REGISTER_OBJECT_REFLECT(IntValueObj);
-MNM_REGISTER_OBJECT_REFLECT(FloatValueObj);
-MNM_REGISTER_OBJECT_REFLECT(BoolValueObj);
-MNM_REGISTER_OBJECT_REFLECT(StringValueObj);
-MNM_REGISTER_OBJECT_REFLECT(TensorTypeValueObj);
-MNM_REGISTER_OBJECT_REFLECT(NoGradValueObj);
+RAF_REGISTER_OBJECT_REFLECT(TensorValueObj);
+RAF_REGISTER_OBJECT_REFLECT(TupleValueObj);
+RAF_REGISTER_OBJECT_REFLECT(ClosureValueObj);
+RAF_REGISTER_OBJECT_REFLECT(RefValueObj);
+RAF_REGISTER_OBJECT_REFLECT(OpValueObj);
+RAF_REGISTER_OBJECT_REFLECT(IntValueObj);
+RAF_REGISTER_OBJECT_REFLECT(FloatValueObj);
+RAF_REGISTER_OBJECT_REFLECT(BoolValueObj);
+RAF_REGISTER_OBJECT_REFLECT(StringValueObj);
+RAF_REGISTER_OBJECT_REFLECT(TensorTypeValueObj);
+RAF_REGISTER_OBJECT_REFLECT(NoGradValueObj);
 
 using tvm::ReprPrinter;
 using tvm::runtime::ObjectRef;
@@ -501,7 +487,7 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
 
 TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     .set_dispatch<TensorValueObj>([](const ObjectRef& ref, ReprPrinter* p) {
-      static auto* dev2str = tvm::runtime::Registry::Get("mnm._core.core_utils.dev2str");
+      static auto* dev2str = tvm::runtime::Registry::Get("raf._core.core_utils.dev2str");
       auto* node = static_cast<const TensorValueObj*>(ref.get());
       p->stream << "tensor(";
       for (int i = 0; i < node->tensor->ndim; ++i) {
@@ -520,4 +506,4 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
     });
 
 }  // namespace value
-}  // namespace mnm
+}  // namespace raf

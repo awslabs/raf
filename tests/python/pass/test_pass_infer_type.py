@@ -1,32 +1,18 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access, invalid-name, attribute-defined-outside-init, no-self-use
 # pylint: disable=too-many-locals
 import numpy as np
 import pytest
 import tvm
-import mnm
-from mnm._core.ndarray import Symbol
-from mnm._core.module import IRModule
-from mnm._core.ir_ext import extended_var
-from mnm._ffi.pass_ import AutoDiff, ExtractBinding, FromRelay, InferType, LambdaLift
-from mnm._op import sym as op
-from mnm.testing import check, randn, run_infer_type
+import raf
+from raf._core.ndarray import Symbol
+from raf._core.module import IRModule
+from raf._core.ir_ext import extended_var
+from raf._ffi.pass_ import AutoDiff, ExtractBinding, FromRelay, InferType, LambdaLift
+from raf._op import sym as op
+from raf.testing import check, randn, run_infer_type
 from tvm import relay
 
 
@@ -36,7 +22,7 @@ def assert_has_type(expr, typ):
         raise RuntimeError(f"Type mismatch {checked_type} vs {typ}")
 
 
-def test_mnm_module():
+def test_raf_module():
     f1 = relay.GlobalVar("f1")
     main = relay.GlobalVar("main")
 
@@ -65,12 +51,12 @@ def test_mnm_module():
     assert mod[main].checked_type == expected_ty
 
 
-def test_mnm_recursive_function():
+def test_raf_recursive_function():
     f1 = relay.GlobalVar("f1")
     main = relay.GlobalVar("main")
 
     def get_recursive_mod():
-        sb = mnm.ir.ScopeBuilder()
+        sb = raf.ir.ScopeBuilder()
         mod = tvm.IRModule()
 
         # Recursive function f
@@ -103,7 +89,7 @@ def test_mnm_recursive_function():
     assert mod[main].checked_type == expected_ty
 
 
-def test_mnm_return_function():
+def test_raf_return_function():
     f = relay.GlobalVar("f")
     main = relay.GlobalVar("main")
 
@@ -134,15 +120,15 @@ def test_mnm_return_function():
 
 
 def test_model_params():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
-            self.b = mnm.array(np.arange(4).reshape([2, 1, 2]), dtype="float32")
+            self.b = raf.array(np.arange(4).reshape([2, 1, 2]), dtype="float32")
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a):
-            c = mnm.add(a, self.b)
-            x = mnm.cos(c)
-            y = mnm.transpose(x, (0, 2, 1))
+            c = raf.add(a, self.b)
+            x = raf.cos(c)
+            y = raf.transpose(x, (0, 2, 1))
             return y
 
     model = Model()
@@ -157,15 +143,15 @@ def test_model_params():
 
 
 def test_any():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b):
-            c = mnm.add(a, b)
-            x = mnm.cos(c)
-            y = mnm.transpose(x, (0, 2, 1))
+            c = raf.add(a, b)
+            x = raf.cos(c)
+            y = raf.transpose(x, (0, 2, 1))
             return y
 
     def check_any(shape_a, shape_b, shape_c):
@@ -187,15 +173,15 @@ def test_any():
 
 
 def test_incomplete_call():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, a, b):
-            c = mnm.add(a, b)
-            x = mnm.cos(c)
-            y = mnm.transpose(x, (0, 2, 1))
+            c = raf.add(a, b)
+            x = raf.cos(c)
+            y = raf.transpose(x, (0, 2, 1))
             return y
 
     def inc_ty():
@@ -214,13 +200,13 @@ def test_incomplete_call():
 
 
 def test_gradient_closure():
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.transpose(x, (0, 2, 1))
+            y = raf.transpose(x, (0, 2, 1))
             return y
 
     def check_backward(shape_x, shape_y):
@@ -272,8 +258,8 @@ def test_shape_op():
 
     def check_conv2d_dx():
         tmp0 = relay.var("tmp0")
-        c = mnm.ir.op.shape(x)
-        let_node = relay.Let(tmp0, mnm.ir.op.conv2d_dx(w, y, dy, c, 1, 0, 1, 1), tmp0)
+        c = raf.ir.op.shape(x)
+        let_node = relay.Let(tmp0, raf.ir.op.conv2d_dx(w, y, dy, c, 1, 0, 1, 1), tmp0)
         func = relay.Function([x, w, dy, y], let_node)
         func = run_infer_type(func)
         expected_ty = relay.FuncType([x_ty, w_ty, y_ty, y_ty], x_ty)
@@ -284,12 +270,12 @@ def test_shape_op():
 
 # pylint: disable=import-outside-toplevel
 def test_constant_tensor():
-    from mnm._ffi.ir.constant import ExtractValue
-    from mnm._ffi.value import ToTVM
+    from raf._ffi.ir.constant import ExtractValue
+    from raf._ffi.value import ToTVM
 
     m_c, n_c = randn((2, 2))
-    const_value = mnm._core.value.TensorValue.from_numpy(n_c)
-    const_value = mnm._ffi.ir._make.Constant(const_value)
+    const_value = raf._core.value.TensorValue.from_numpy(n_c)
+    const_value = raf._ffi.ir._make.Constant(const_value)
     func = relay.Function([], const_value)
     func = run_infer_type(func)
 
@@ -299,15 +285,15 @@ def test_constant_tensor():
 
 
 def test_constant_tensor_tuple():
-    from mnm._ffi.ir.constant import ExtractValue
-    from mnm._ffi.value import ToTVM
+    from raf._ffi.ir.constant import ExtractValue
+    from raf._ffi.value import ToTVM
 
     m_c1, n_c1 = randn((2, 2))
     m_c2, n_c2 = randn((3, 3))
-    c1_value = mnm._core.value.TensorValue.from_numpy(n_c1)
-    c2_value = mnm._core.value.TensorValue.from_numpy(n_c2)
-    const_value = mnm._core.value.TupleValue([c1_value, c2_value])
-    const_value = mnm._ffi.ir._make.Constant(const_value)
+    c1_value = raf._core.value.TensorValue.from_numpy(n_c1)
+    c2_value = raf._core.value.TensorValue.from_numpy(n_c2)
+    const_value = raf._core.value.TupleValue([c1_value, c2_value])
+    const_value = raf._ffi.ir._make.Constant(const_value)
     func = relay.Function([], const_value)
     func = run_infer_type(func)
 
@@ -320,67 +306,67 @@ def test_constant_tensor_tuple():
 def test_closure_with_const_args1():
     rand, _ = randn((1,), device="cpu")
 
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             self.c = rand
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            pooled = mnm.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
-            return (mnm.add(pooled, self.c), x)
+            pooled = raf.max_pool2d(x, kernel=(3, 3), stride=1, padding=1)
+            return (raf.add(pooled, self.c), x)
 
     model = Model()
     m_x, _ = randn((1, 16, 64, 64), device="cpu")
     mod = model._internal(m_x).mod
-    mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.FuseTVM()(mod)
-    mod = mnm._ffi.pass_.InferType()(mod)
-    mod = mnm._ffi.pass_.ManifestAlloc()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.FuseTVM()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.ManifestAlloc()(mod)
     # pylint: disable=line-too-long
     #   let %x_2 = fn (%p0: Tensor[(1, 16, 64, 64), float32], %p1: (int32, int32), %p2: (int64,),
     #                  %p3: (int64,), %p4: (int64,), %p5: bool, %p6: bool, %p7: int64,
     #                  %p8: Tensor[(1), float32], Primitive=1) -> Tensor[(1, 16, 64, 64), float32] {
-    #     %0 = mnm.op.max_pool2d(%p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7) /* ty=Tensor[(1, 16, 64, 64), float32] */;
-    #     mnm.op.add(%0, %p8, nullptr /* ty=() */, nullptr /* ty=() */) /* ty=Tensor[(1, 16, 64, 64), float32] */
+    #     %0 = raf.op.max_pool2d(%p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7) /* ty=Tensor[(1, 16, 64, 64), float32] */;
+    #     raf.op.add(%0, %p8, nullptr /* ty=() */, nullptr /* ty=() */) /* ty=Tensor[(1, 16, 64, 64), float32] */
     #   };
     #   let %x_3 = (%x, TupleValue([int32(3), int32(3)]) /* ty=(int32, int32) */, TupleValue([int64(1)]) /* ty=(int64,) */, TupleValue([int64(1)]) /* ty=(int64,) */, TupleValue([int64(1)]) /* ty=(int64,) */, bool(0) /* ty=bool */, bool(1) /* ty=bool */, str"NCHW" /* ty=int64 */, %c);
     #   let %x_4 = (%x_1,);
-    #   let %x_5 = mnm.op.vm.invoke_op(%x_2, %x_3, %x_4);
+    #   let %x_5 = raf.op.vm.invoke_op(%x_2, %x_3, %x_4);
     # }
     # pylint: enable=line-too-long
-    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
 
 
 def test_closure_with_const_args2():
     # pylint: disable=no-self-use
     # Test ANF before ManifestAlloc.
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm.relu(x + x)
+            return raf.relu(x + x)
 
     model = Model()
     m_x, _ = randn((3, 4))
     mod = model._internal(m_x).mod
-    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-    mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-    mod = mnm._ffi.pass_.FuseTVM()(mod)
-    mod = mnm._ffi.pass_.ToANormalForm()(mod)
-    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+    mod = raf._ffi.pass_.FuseTVM()(mod)
+    mod = raf._ffi.pass_.ToANormalForm()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
 
 
 def test_multi_functions():
     # Create a symbolic model and run it
-    class Add(mnm.Model):
+    class Add(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     # Get a Relay func
     shape = [3, 3]
@@ -392,10 +378,10 @@ def test_multi_functions():
 
     # Run AutoDiff to get nested functions
     # The backward function will be lifted
-    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
     mod = AutoDiff(record.requires_grads)(mod)
 
-    # Call Lambda lift pass on the Meta module
+    # Call Lambda lift pass on the RAF module
     lifted_mod = LambdaLift()(mod)
     assert len(lifted_mod.functions) == 2
 
@@ -444,7 +430,7 @@ def test_multi_functions():
     # pylint: enable=bad-continuation
     func = relay.Function([x, y, dy], body)
     mod = IRModule({fwd_var: fwd, bwd_var: bwd, relay.GlobalVar("main"): func})
-    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
     expected_ty = relay.FuncType(
         [relay.TensorType((3, 3)), relay.TensorType((3, 3)), relay.TensorType((3, 3))],
         relay.TupleType(

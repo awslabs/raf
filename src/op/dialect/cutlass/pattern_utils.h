@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -29,31 +15,31 @@
 #include <cutlass/library/operation_table.h>
 #include <cutlass_ext/library/library_ext.h>
 
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/registry.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/memory_pool.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/registry.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/memory_pool.h"
 
 #include "../../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
 using namespace ::cutlass;
 using namespace ::cutlass::library;
 
-static const char add[] = "mnm.op.cutlass.add";
-static const char subtract[] = "mnm.op.cutlass.subtract";
-static const char multiply[] = "mnm.op.cutlass.multiply";
-static const char divide[] = "mnm.op.cutlass.divide";
+static const char add[] = "raf.op.cutlass.add";
+static const char subtract[] = "raf.op.cutlass.subtract";
+static const char multiply[] = "raf.op.cutlass.multiply";
+static const char divide[] = "raf.op.cutlass.divide";
 
 template <const char* Binary>
 struct BinaryOp {
   ir::DFPattern operator()(ir::DFPattern x1, ir::DFPattern x2) {
-    using namespace mnm::ir;
+    using namespace raf::ir;
     auto op = IsOp(Binary);
     return op({x1, x2});
   }
@@ -62,7 +48,7 @@ struct BinaryOp {
 template <const char* Binary>
 struct BinaryUfuncOp {
   ir::DFPattern operator()(ir::DFPattern x1, ir::DFPattern x2) {
-    using namespace mnm::ir;
+    using namespace raf::ir;
     auto op = IsOp(Binary);
     return op({x1, x2, IsWildcard(), IsWildcard()});
   }
@@ -79,4 +65,4 @@ EpilogueKindExt GetEpilogueKind(const ir::Op& op);
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

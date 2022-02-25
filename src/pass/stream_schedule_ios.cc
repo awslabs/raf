@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -27,17 +13,17 @@
 #include <thread>
 #include <relay/transforms/pass_utils.h>
 #include <tvm/runtime/device_api.h>
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
-#include "mnm/op.h"
-#include "mnm/op_profiler.h"
-#include "mnm/op_utils.h"
-#include "mnm/profiler.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
+#include "raf/op.h"
+#include "raf/op_profiler.h"
+#include "raf/op_utils.h"
+#include "raf/profiler.h"
 #include "./stream_schedule.h"
 #include "../requests.h"
 #include "../analysis/dependency_graph.h"
 
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 #include "../common/cuda_utils.h"
 #include "../op/dialect/cudnn/cudnn_utils.h"
 #include "../op/dialect/cublas/cublas_utils.h"
@@ -50,13 +36,13 @@
     LOG(INFO) << buf;                              \
   } while (0)
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace ios_stream_schedule {
 
-using namespace mnm::analysis;
-using namespace mnm::op;
-using namespace mnm::memory_pool;
+using namespace raf::analysis;
+using namespace raf::op;
+using namespace raf::memory_pool;
 using requests::Requests;
 using stream_schedule::StreamSchedulerBase;
 using Node = DependencyGraph::Node;
@@ -87,12 +73,12 @@ inline int CountOneBits(uint64_t v) {
   return c;
 }
 
-#ifdef MNM_USE_CUDA
+#ifdef RAF_USE_CUDA
 /*!
  * \brief The cost model of IOS scheduler. It profile the latency of IOS proposed stage on device.
  *
  * [Decision choice]
- * Because the purpose of this cost model it to get the latency of the proposed stage on meta
+ * Because the purpose of this cost model it to get the latency of the proposed stage on raf
  * virtual machine, the ideal way of profiling is to convert the stage into a VM program and
  * measure the latency in VM. However, there is a major issue prevent us to do so. The VM caches
  * OpEnv for each program, and the cache would be released when we remove the VM for that program.
@@ -917,7 +903,7 @@ class IOSScheduler : public StreamSchedulerBase {
         total_states += block.state_decision_candidates.size();
         ss << block.state_decision_candidates.size() << " ";
       }
-      start_time_stamp = prev_time_stamp = mnm::profiler::ProfileStat::NowInMicrosec() / 1000;
+      start_time_stamp = prev_time_stamp = raf::profiler::ProfileStat::NowInMicrosec() / 1000;
       LOG_PRINTF("Total states: %zu", total_states);
     }
     inline void UpdateProgress() {
@@ -928,7 +914,7 @@ class IOSScheduler : public StreamSchedulerBase {
       for (auto& block : scheduler->blocks_) {
         finished_states += block.state_latency.size();
       }
-      uint64_t time_stamp = mnm::profiler::ProfileStat::NowInMicrosec() / 1000;
+      uint64_t time_stamp = raf::profiler::ProfileStat::NowInMicrosec() / 1000;
       if (finished_states == total_states || time_stamp - prev_time_stamp > msg_interval) {
         uint64_t percent = finished_states * 100 / total_states;
         double states_per_min =
@@ -973,12 +959,12 @@ Pass IOSStreamSchedule() {
   pass::PassContext ctx = pass::PassContext::Current();
   std::unordered_map<std::string, tvm::runtime::TVMArgValue> config;
   auto get_int_config = [&](const std::string& name, int default_value) {
-    std::string key = "mnm.stream_schedule.ios." + name;
+    std::string key = "raf.stream_schedule.ios." + name;
     int64_t val = ctx->GetConfig<tvm::Integer>(key, tvm::Integer(default_value)).value()->value;
     return int(val);
   };
   auto get_bool_config = [&](const std::string& name, bool default_value) {
-    std::string key = "mnm.stream_schedule.ios." + name;
+    std::string key = "raf.stream_schedule.ios." + name;
     return ctx->GetConfig<tvm::Bool>(key, tvm::Bool(default_value)).value()->value;
   };
 
@@ -991,14 +977,14 @@ Pass IOSStreamSchedule() {
   int repeat = get_int_config("repeat", 8);
   bool verbose = get_bool_config("verbose", true);
   Array<Array<Op>> schedule_units =
-      ctx->GetConfig<Array<Array<Op>>>("mnm.stream_schedule.ios.schedule_units", Array<Array<Op>>())
+      ctx->GetConfig<Array<Array<Op>>>("raf.stream_schedule.ios.schedule_units", Array<Array<Op>>())
           .value();
   // Add default schedule units at the end of user-provided units: Conv-Bn-Relu, Conv-Bn, Conv-Relu
   // Please add more here when needed.
   schedule_units.push_back(
-      {Op::Get("mnm.op.conv2d"), Op::Get("mnm.op.batch_norm_infer"), Op::Get("mnm.op.relu")});
-  schedule_units.push_back({Op::Get("mnm.op.conv2d"), Op::Get("mnm.op.batch_norm_infer")});
-  schedule_units.push_back({Op::Get("mnm.op.conv2d"), Op::Get("mnm.op.relu")});
+      {Op::Get("raf.op.conv2d"), Op::Get("raf.op.batch_norm_infer"), Op::Get("raf.op.relu")});
+  schedule_units.push_back({Op::Get("raf.op.conv2d"), Op::Get("raf.op.batch_norm_infer")});
+  schedule_units.push_back({Op::Get("raf.op.conv2d"), Op::Get("raf.op.relu")});
 
   tvm::TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
       [=](Function f, IRModule m, PassContext pc) {
@@ -1009,18 +995,18 @@ Pass IOSStreamSchedule() {
         };
         return Downcast<Function>(tvm::relay::TransformF(transform, f));
       };
-  return CreateMNMFunctionPass(pass_func, 1, "IOSStreamSchedule", {});
+  return CreateRAFFunctionPass(pass_func, 1, "IOSStreamSchedule", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.IOSStreamSchedule").set_body_typed(IOSStreamSchedule);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.block_max_size", tvm::Integer);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.max_stream_num", tvm::Integer);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.max_stage_ops", tvm::Integer);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.search_group_combination", tvm::Bool);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.warmup", tvm::Integer);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.number", tvm::Integer);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.repeat", tvm::Integer);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.verbose", tvm::Bool);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.stream_schedule.ios.schedule_units", Array<Array<Op>>);
+RAF_REGISTER_GLOBAL("raf.pass_.IOSStreamSchedule").set_body_typed(IOSStreamSchedule);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.block_max_size", tvm::Integer);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.max_stream_num", tvm::Integer);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.max_stage_ops", tvm::Integer);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.search_group_combination", tvm::Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.warmup", tvm::Integer);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.number", tvm::Integer);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.repeat", tvm::Integer);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.verbose", tvm::Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.stream_schedule.ios.schedule_units", Array<Array<Op>>);
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

@@ -1,31 +1,17 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=attribute-defined-outside-init,invalid-name,protected-access,too-many-locals,too-many-statements,no-self-use
 from typing import Dict, List
 import pytest
 import tvm
 
-import mnm
-from mnm.ir.pass_manager import MNMSequential
-from mnm._ffi.pass_ import DataParallelSchedule, ToGraphNormalForm
-from mnm.testing import randn
-from mnm._core.ir_ext import extended_var
-from mnm.ir import ScopeBuilder
+import raf
+from raf.ir.pass_manager import RAFSequential
+from raf._ffi.pass_ import DataParallelSchedule, ToGraphNormalForm
+from raf.testing import randn
+from raf._core.ir_ext import extended_var
+from raf.ir import ScopeBuilder
 
 
 class ANFBuilder:
@@ -35,11 +21,11 @@ class ANFBuilder:
 
     def get_operator(self, op_name: str) -> tvm.ir.Op:
         if op_name not in self.operators:
-            self.operators[op_name] = mnm._ffi.op.GetOp(f"mnm.op.{op_name}")
+            self.operators[op_name] = raf._ffi.op.GetOp(f"raf.op.{op_name}")
         return self.operators[op_name]
 
     def const(self, value):
-        return mnm.ir.const(value)
+        return raf.ir.const(value)
 
     def make_tuple(self, fields):
         return self.scope_builder.let("", tvm.relay.Tuple(fields))
@@ -55,7 +41,7 @@ class ANFBuilder:
         return self.scope_builder.get()
 
 
-class TwoBranchModel(mnm.Model):
+class TwoBranchModel(raf.Model):
     #        /-> atan -> allreduce -> mul -\
     #  -> mul                               concat ->
     #        \-> atan -> allreduce -> mul -/
@@ -63,24 +49,24 @@ class TwoBranchModel(mnm.Model):
         self.shape = shape
         self.c, _ = randn(shape, device="cuda", requires_grad=True)
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        a0 = mnm.multiply(x, self.c)
-        a1_a = mnm.atan(a0)
-        a1_b = mnm.atan(a0)
-        a2_a = mnm.allreduce(a1_a)
-        a2_b = mnm.allreduce(a1_b)
-        a3_a = mnm.multiply(a2_a, self.c)
-        a3_b = mnm.multiply(a2_b, self.c)
-        a4 = mnm.concatenate([a3_a, a3_b])
+        a0 = raf.multiply(x, self.c)
+        a1_a = raf.atan(a0)
+        a1_b = raf.atan(a0)
+        a2_a = raf.allreduce(a1_a)
+        a2_b = raf.allreduce(a1_b)
+        a3_a = raf.multiply(a2_a, self.c)
+        a3_b = raf.multiply(a2_b, self.c)
+        a4 = raf.concatenate([a3_a, a3_b])
         return a4
 
     def fifo_expected(self):
         """
         fn (%x: Tensor[(64, 128), float32], %c: Tensor[(64, 128), float32]) {
-            let %v = mnm.op.multiply(%x, %c);
-            let %v1 = mnm.op.atan(%v);
-            let %v2 = mnm.op.atan(%v);
+            let %v = raf.op.multiply(%x, %c);
+            let %v1 = raf.op.atan(%v);
+            let %v2 = raf.op.atan(%v);
             let %v3 = (%v1,);
             let %v4 = (%v2,);
             let %v5 = mnm.op._allreduce(%v3, str"sum", TupleValue([]));
@@ -88,7 +74,7 @@ class TwoBranchModel(mnm.Model):
             let %v7 = mnm.op.multiply(%v5, %c);
             let %v8 = mnm.op.multiply(%v6, %c);
             let %v9 = (%v7, %v8);
-            let %v10 = mnm.op.concatenate(%v9, int64(0));
+            let %v10 = raf.op.concatenate(%v9, int64(0));
             %v10
         }
         """
@@ -118,7 +104,7 @@ class TwoBranchModel(mnm.Model):
         return [tvm.relay.Function([x, c], builder.ret(x_6))]
 
 
-class UnbalancedModel(mnm.Model):
+class UnbalancedModel(raf.Model):
     #        /-> atan -> atan -> atan -> atan -> allreduce -> mul -\
     #  -> mul                                                       concat ->
     #        \-> atan -> allreduce -> mul -------------------------/
@@ -126,30 +112,30 @@ class UnbalancedModel(mnm.Model):
         self.shape = shape
         self.c, _ = randn(shape, device="cuda", requires_grad=True)
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        a0 = mnm.multiply(x, self.c)
-        a1_a = mnm.atan(a0)
-        a2_a = mnm.atan(a1_a)
-        a3_a = mnm.atan(a2_a)
-        a4_a = mnm.atan(a3_a)
-        a5_a = mnm.allreduce(a4_a)
-        a6_a = mnm.multiply(a5_a, self.c)
+        a0 = raf.multiply(x, self.c)
+        a1_a = raf.atan(a0)
+        a2_a = raf.atan(a1_a)
+        a3_a = raf.atan(a2_a)
+        a4_a = raf.atan(a3_a)
+        a5_a = raf.allreduce(a4_a)
+        a6_a = raf.multiply(a5_a, self.c)
 
-        a1_b = mnm.atan(a0)
-        a2_b = mnm.allreduce(a1_b)
-        a3_b = mnm.multiply(a2_b, self.c)
+        a1_b = raf.atan(a0)
+        a2_b = raf.allreduce(a1_b)
+        a3_b = raf.multiply(a2_b, self.c)
 
-        a4 = mnm.concatenate([a6_a, a3_b])
+        a4 = raf.concatenate([a6_a, a3_b])
         return a4
 
     def fifo_expected(self):
         """(version 1)
         fn (%x: Tensor[(64, 128), float32], %c: Tensor[(64, 128), float32]) {
-            let %v = mnm.op.multiply(%x, %c);
-            let %v1 = mnm.op.atan(%v);
-            let %v2 = mnm.op.atan(%v);
-            let %v3 = mnm.op.atan(%v1);
+            let %v = raf.op.multiply(%x, %c);
+            let %v1 = raf.op.atan(%v);
+            let %v2 = raf.op.atan(%v);
+            let %v3 = raf.op.atan(%v1);
             let %v4 = (%v2,);
             let %v5 = mnm.op.atan(%v3);
             let %v6 = mnm.op._allreduce(%v4, str"sum", TupleValue([]));
@@ -159,7 +145,7 @@ class UnbalancedModel(mnm.Model):
             let %v10 = mnm.op.multiply(%v6, %c);
             let %v11 = mnm.op.multiply(%v9, %c);
             let %v12 = (%v11, %v10);
-            let %v13 = mnm.op.concatenate(%v12, int64(0));
+            let %v13 = raf.op.concatenate(%v12, int64(0));
             %v13
         }
         """
@@ -233,29 +219,29 @@ class UnbalancedModel(mnm.Model):
         return [version1(), version2()]
 
 
-class ExampleModel(mnm.Model):
+class ExampleModel(raf.Model):
     # the example model where ToANF can generate bad schedule:
     #         /-> allreduce -> atan -\
     #  -> atan ->    atan   -> atan -> mul
     def build(self, shape):
         self.shape = shape
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        a0 = mnm.atan(x)
-        a1_a = mnm.allreduce(a0)
-        a2_a = mnm.atan(a1_a)
+        a0 = raf.atan(x)
+        a1_a = raf.allreduce(a0)
+        a2_a = raf.atan(a1_a)
 
-        a1_b = mnm.atan(a0)
-        a2_b = mnm.atan(a1_b)
+        a1_b = raf.atan(a0)
+        a2_b = raf.atan(a1_b)
 
-        a3 = mnm.multiply(a2_a, a2_b)
+        a3 = raf.multiply(a2_a, a2_b)
         return a3
 
     def fifo_expected(self):
         """(version 1)
         fn (%x: Tensor[(64, 128), float32]) {
-            let %v = mnm.op.atan(%x);
+            let %v = raf.op.atan(%x);
             let %v1 = (%v,);
             let %v2 = mnm.op.atan(%v);
             let %v3 = mnm.op._allreduce(%v1, str"sum", TupleValue([]));
@@ -305,32 +291,32 @@ class ExampleModel(mnm.Model):
         return [version1(), version2()]
 
 
-class DelayedSuccessorModel(mnm.Model):
+class DelayedSuccessorModel(raf.Model):
     #         /-> allreduce -> relu -> relu -----------------\
     #  -> atan ->    atan   -> atan -> atan -> atan -> atan -> mul
     def build(self, shape):
         self.shape = shape
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        a0 = mnm.atan(x)
-        a1_a = mnm.allreduce(a0)
-        a2_a = mnm.relu(a1_a)
-        a3_a = mnm.relu(a2_a)
+        a0 = raf.atan(x)
+        a1_a = raf.allreduce(a0)
+        a2_a = raf.relu(a1_a)
+        a3_a = raf.relu(a2_a)
 
-        a1_b = mnm.atan(a0)
-        a2_b = mnm.atan(a1_b)
-        a3_b = mnm.atan(a2_b)
-        a4_b = mnm.atan(a3_b)
-        a5_b = mnm.atan(a4_b)
+        a1_b = raf.atan(a0)
+        a2_b = raf.atan(a1_b)
+        a3_b = raf.atan(a2_b)
+        a4_b = raf.atan(a3_b)
+        a5_b = raf.atan(a4_b)
 
-        a6 = mnm.multiply(a3_a, a5_b)
+        a6 = raf.multiply(a3_a, a5_b)
         return a6
 
     def fifo_expected(self):
         """(version 1)
         fn (%x: Tensor[(64, 128), float32]) {
-            let %x_0 = mnm.op.atan(%x);
+            let %x_0 = raf.op.atan(%x);
             let %x_1 = (%x_0,);
             let %x_2 = mnm.op.atan(%x_0);
             let %x_3 = mnm.op._allreduce(%x_1, str"sum", TupleValue([]));
@@ -394,7 +380,7 @@ class DelayedSuccessorModel(mnm.Model):
         return [version1(), version2()]
 
 
-class NestedBranchModel(mnm.Model):
+class NestedBranchModel(raf.Model):
     #                           /-> atan -\
     #        /-> atan -> atan ->           mul--> mul ->
     #  -> mul                   \-> atan -/    /
@@ -403,37 +389,37 @@ class NestedBranchModel(mnm.Model):
         self.shape = shape
         self.c, _ = randn(shape, device="cuda", requires_grad=True)
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        a0 = mnm.multiply(x, self.c)
+        a0 = raf.multiply(x, self.c)
 
-        a1_a = mnm.atan(a0)
-        a2_a = mnm.atan(a1_a)
+        a1_a = raf.atan(a0)
+        a2_a = raf.atan(a1_a)
 
-        a3_a = mnm.atan(a2_a)
-        a4_a = mnm.atan(a2_a)
-        a5_a = mnm.multiply(a3_a, a4_a)
+        a3_a = raf.atan(a2_a)
+        a4_a = raf.atan(a2_a)
+        a5_a = raf.multiply(a3_a, a4_a)
 
-        a1_b = mnm.atan(a0)
-        a2_b = mnm.atan(a1_b)
-        a3_b = mnm.atan(a2_b)
+        a1_b = raf.atan(a0)
+        a2_b = raf.atan(a1_b)
+        a3_b = raf.atan(a2_b)
 
-        a6 = mnm.multiply(a5_a, a3_b)
+        a6 = raf.multiply(a5_a, a3_b)
         return a6
 
     def fifo_expected(self):
         """(version 1)
         fn (%x: Tensor[(64, 128), float32], %c: Tensor[(64, 128), float32]) {
-            let %v = mnm.op.multiply(%x, %c);
-            let %v1 = mnm.op.atan(%v);
-            let %v2 = mnm.op.atan(%v);
-            let %v3 = mnm.op.atan(%v1);
-            let %v4 = mnm.op.atan(%v2);
-            let %v5 = mnm.op.atan(%v3);
-            let %v6 = mnm.op.atan(%v3);
-            let %v7 = mnm.op.atan(%v4);
-            let %v8 = mnm.op.multiply(%v5, %v6);
-            let %v9 = mnm.op.multiply(%v8, %v7);
+            let %v = raf.op.multiply(%x, %c);
+            let %v1 = raf.op.atan(%v);
+            let %v2 = raf.op.atan(%v);
+            let %v3 = raf.op.atan(%v1);
+            let %v4 = raf.op.atan(%v2);
+            let %v5 = raf.op.atan(%v3);
+            let %v6 = raf.op.atan(%v3);
+            let %v7 = raf.op.atan(%v4);
+            let %v8 = raf.op.multiply(%v5, %v6);
+            let %v9 = raf.op.multiply(%v8, %v7);
             %v9
         }
         """
@@ -483,40 +469,40 @@ class NestedBranchModel(mnm.Model):
         return [version1(), version2()]
 
 
-class CascadingCollectiveModel(mnm.Model):
+class CascadingCollectiveModel(raf.Model):
     #        /-> allreduce -> relu ---------\     /-> allreduce -> relu ---------\
     #  -> mul ->    atan   -> atan -> atan -> mul  ->    atan   -> atan -> atan -> mul
     def build(self, shape):
         self.shape = shape
         self.c, _ = randn(shape, device="cuda", requires_grad=True)
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
-        a0 = mnm.multiply(x, self.c)
+        a0 = raf.multiply(x, self.c)
 
-        a1_a = mnm.allreduce(a0)
-        a2_a = mnm.relu(a1_a)
+        a1_a = raf.allreduce(a0)
+        a2_a = raf.relu(a1_a)
 
-        a1_b = mnm.atan(a0)
-        a2_b = mnm.atan(a1_b)
-        a3_b = mnm.atan(a2_b)
+        a1_b = raf.atan(a0)
+        a2_b = raf.atan(a1_b)
+        a3_b = raf.atan(a2_b)
 
-        a4 = mnm.multiply(a2_a, a3_b)
+        a4 = raf.multiply(a2_a, a3_b)
 
-        a5_a = mnm.allreduce(a4)
-        a6_a = mnm.relu(a5_a)
+        a5_a = raf.allreduce(a4)
+        a6_a = raf.relu(a5_a)
 
-        a5_b = mnm.atan(a4)
-        a6_b = mnm.atan(a5_b)
-        a7_b = mnm.atan(a6_b)
+        a5_b = raf.atan(a4)
+        a6_b = raf.atan(a5_b)
+        a7_b = raf.atan(a6_b)
 
-        a8 = mnm.multiply(a6_a, a7_b)
+        a8 = raf.multiply(a6_a, a7_b)
         return a8
 
     def fifo_expected(self):
         """(version 1, version 1)
         fn (%x: Tensor[(64, 128), float32], %c: Tensor[(64, 128), float32]) {
-            let %v = mnm.op.multiply(%x, %c);
+            let %v = raf.op.multiply(%x, %c);
             let %v1 = (%v,);
             let %v2 = mnm.op.atan(%v);
             let %v3 = mnm.op._allreduce(%v1, str"sum", TupleValue([]));
@@ -581,7 +567,7 @@ class CascadingCollectiveModel(mnm.Model):
         return candidate_irs
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "model_class,shape",
     [
@@ -598,18 +584,18 @@ def test_fifo_schedule(model_class, shape):
     x, _ = randn(shape)
     mod = model._internal(x).mod
 
-    mod = MNMSequential([ToGraphNormalForm(), DataParallelSchedule()])(mod)
+    mod = RAFSequential([ToGraphNormalForm(), DataParallelSchedule()])(mod)
 
     err_msgs = []
     err_msgs.append("Actual" + "<<" * 20)
-    err_msgs.append(mnm.ir.AsText(mod["main"]))
+    err_msgs.append(raf.ir.AsText(mod["main"]))
 
     equal_to_any = False
     for expected in model.fifo_expected():
         result = tvm.ir.structural_equal(mod["main"], expected)
         equal_to_any = equal_to_any or result
         err_msgs.append("Expected Candidate" + "<<" * 20)
-        err_msgs.append(mnm.ir.AsText(expected))
+        err_msgs.append(raf.ir.AsText(expected))
     assert equal_to_any, "\n".join(err_msgs)
 
 

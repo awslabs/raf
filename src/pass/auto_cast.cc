@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,22 +10,22 @@
 #include <tvm/ir/transform.h>
 
 #include <stack>
-#include "mnm/op.h"
-#include "mnm/cache.h"
-#include "mnm/ir.h"
-#include "mnm/type.h"
-#include "mnm/value.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/cache.h"
+#include "raf/ir.h"
+#include "raf/type.h"
+#include "raf/value.h"
+#include "raf/pass.h"
 #include "./let_list.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace auto_cast {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
 
 using TypeHint = Type;
 using TypeHints = Array<TypeHint>;
@@ -75,7 +61,7 @@ inline TypeHint GetDontTouchTypeHint() {
 
 /*! \brief Generate a cast call that casts the given expr to the target dtype. */
 inline Expr GenCastCall(Expr expr, DataType dtype) {
-  static const Op& op = Op::Get("mnm.op.cast");
+  static const Op& op = Op::Get("raf.op.cast");
   const auto old_type = Downcast<TensorType>(expr->checked_type());
   std::string target_dtype;
   switch (dtype.code()) {
@@ -100,7 +86,7 @@ inline Expr GenCastCall(Expr expr, DataType dtype) {
 
 /*! \brief Infer the return type of the given call. */
 Type InferRetType(const Call& call) {
-  static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
+  static auto fschema = Op::GetAttrMap<op::FRAFSchema>("FRAFSchema");
   auto op_node = call->op.as<OpNode>();
   CHECK(op_node != nullptr) << "Not support closure or global function yet";
 
@@ -249,7 +235,7 @@ class AutoCastMutator : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) {
-    static const Op& cast_op = Op::Get("mnm.op.cast");
+    static const Op& cast_op = Op::Get("raf.op.cast");
 
     // If the argument is a cast, then we use the uncasted one to generate the type hints,
     // so that the infer cast ops can follow the uncasted argument and minimize the cast op.
@@ -431,9 +417,9 @@ class AutoCastMutator : public ExprMutator {
   /*! \brief Generate the type hints of an op by looking at its type hint rules. */
   TypeHints GenTypeHints(const Array<Expr>& args, const Type& ret_type, const DataType target_dtype,
                          const Expr op_node) {
-    static auto frule = Op::GetAttrMap<op::FMNMCastRule>("FMNMCastRule");
+    static auto frule = Op::GetAttrMap<op::FRAFCastRule>("FRAFCastRule");
     CHECK(op_node.as<OpNode>() != nullptr)
-        << "AutoCast does not support closure yet: " << mnm::ir::AsText(op_node);
+        << "AutoCast does not support closure yet: " << raf::ir::AsText(op_node);
     const Op op = Downcast<Op>(op_node);
 
     if (frule.count(op)) {
@@ -472,7 +458,7 @@ class AutoCastMutator : public ExprMutator {
         << curr_call_n_arg_str_ << " has an illegal tuple type hint: Expected "
         << tuple_type->fields.size() << " fields for the following expression, but got "
         << tuple_type_hint->fields.size() << "\n"
-        << mnm::ir::AsText(expr);
+        << raf::ir::AsText(expr);
 
     // Find the root tuple in case the expr has a tuple type but in a nested tuple.
     while (auto tgi = expr.as<TupleGetItemNode>()) {
@@ -553,7 +539,7 @@ class AutoCastMutator : public ExprMutator {
   /*! \brief Cast the expr based on the given type hint. */
   Expr CastExpr(const Expr expr, const TypeHint& type_hint, bool use_cache = true) {
     auto scope = scopes_.back().get();
-    CHECK(expr->checked_type_.defined()) << "Missing type:\n" << mnm::ir::AsText(expr);
+    CHECK(expr->checked_type_.defined()) << "Missing type:\n" << raf::ir::AsText(expr);
 
     auto expr_type = expr->checked_type();
     if (expr_type->IsInstance<TupleTypeNode>()) {
@@ -633,13 +619,13 @@ class AutoCastMutator : public ExprMutator {
 };
 }  // namespace auto_cast
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.amp.dtype", String);
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.amp.out_dtype", String);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.amp.dtype", String);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.amp.out_dtype", String);
 
 Pass AutoCast() {
   PassContext pass_ctx = PassContext::Current();
-  String amp_dtype = pass_ctx->GetConfig("mnm.amp.dtype", String("float16")).value();
-  String out_dtype = pass_ctx->GetConfig("mnm.amp.out_dtype", String("float16")).value();
+  String amp_dtype = pass_ctx->GetConfig("raf.amp.dtype", String("float16")).value();
+  String out_dtype = pass_ctx->GetConfig("raf.amp.out_dtype", String("float16")).value();
   DLOG(INFO) << "AMP dtype: " << amp_dtype << ", output dtype: " << out_dtype;
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
@@ -652,10 +638,10 @@ Pass AutoCast() {
     }
     return Downcast<Function>(ret);
   };
-  auto insert_cast = CreateMNMFunctionPass(pass_func, 0, "AutoCastFunc", {});
-  return MNMSequential({InferType(), insert_cast, InferType(), DeadCodeElimination()}, "AutoCast");
+  auto insert_cast = CreateRAFFunctionPass(pass_func, 0, "AutoCastFunc", {});
+  return RAFSequential({InferType(), insert_cast, InferType(), DeadCodeElimination()}, "AutoCast");
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AutoCast").set_body_typed(AutoCast);
+RAF_REGISTER_GLOBAL("raf.pass_.AutoCast").set_body_typed(AutoCast);
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

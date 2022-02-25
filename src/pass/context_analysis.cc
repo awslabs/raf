@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -49,32 +35,32 @@
  * context will fallback to the specified device.
  */
 
-#include <mnm/binding.h>
-#include <mnm/ir.h>
-#include <mnm/op.h>
-#include <mnm/pass.h>
-#include <mnm/value.h>
+#include <raf/binding.h>
+#include <raf/ir.h>
+#include <raf/op.h>
+#include <raf/pass.h>
+#include <raf/value.h>
 #include <tvm/relay/attrs/memory.h>
 #include <tvm/relay/op_attr_types.h>
 
 #include "../op/schema/memory.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using namespace mnm::ir;
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op::schema;
+using namespace raf::value;
 
 using AnalysisResultMap = Map<Expr, Device>;
 
 namespace context_analysis {
 
 // Cache ops
-static const Op& device_copy_op = Op::Get("mnm.op.device_copy");
-static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
-static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
-static const Op& invoke_op = Op::Get("mnm.op.vm.invoke_op");
+static const Op& device_copy_op = Op::Get("raf.op.device_copy");
+static const Op& alloc_storage_op = Op::Get("raf.op.vm.alloc_storage");
+static const Op& alloc_tensor_op = Op::Get("raf.op.vm.alloc_tensor");
+static const Op& invoke_op = Op::Get("raf.op.vm.invoke_op");
 
 class DeviceDomain;
 using DeviceDomainPtr = std::shared_ptr<DeviceDomain>;
@@ -427,7 +413,7 @@ class ContextAnalyzer : public MixedModeVisitor {
   inline Device ToDevice(const ObjectRef& val) {
     const auto* str_val = val.as<StringValueObj>();
     CHECK(str_val != nullptr);
-    const auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+    const auto* str2dev = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
     return Device((tvm::Device)(*str2dev)(str_val->value));
   }
 
@@ -644,7 +630,7 @@ AnalysisResultMap ContextAnalysis(const IRModule& mod, const Device& default_dev
   return ca.Results();
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ContextAnalysis").set_body_typed(ContextAnalysis);
+RAF_REGISTER_GLOBAL("raf.pass_.ContextAnalysis").set_body_typed(ContextAnalysis);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

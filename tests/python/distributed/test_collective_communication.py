@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals, too-many-branches
 """Test collective communication operators in a cluster with 2 GPUs.
@@ -26,10 +12,10 @@ import sys
 import pytest
 import numpy as np
 
-import mnm
-from mnm import distributed as dist
-from mnm._core.ndarray import Symbol
-from mnm.testing import check, get_dist_info, skip_dist_test, run_vm_model, run_model
+import raf
+from raf import distributed as dist
+from raf._core.ndarray import Symbol
+from raf.testing import check, get_dist_info, skip_dist_test, run_vm_model, run_model
 
 dctx = dist.get_context()
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
@@ -41,29 +27,29 @@ SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 def test_allreduce_with_tensor(dtype, computation):
     print("Testing allreduce with a single tensor as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.allreduce(x, computation=computation)
+            x = raf.allreduce(x, computation=computation)
             return x
 
-    if computation == "avg" and mnm.build.with_nccl() < 21000:
+    if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype=dtype) * (rank + 1)
-    x = mnm.array(x, device=device)
+    x = raf.array(x, device=device)
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
     y = model(x)
     vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    vx = mnm.array(vx, device=device)
+    vx = raf.array(vx, device=device)
     run_vm_model(model, device, [vx])
     check(y, vx)
     if rank == 0:
@@ -91,18 +77,18 @@ def test_allreduce_with_tensor(dtype, computation):
 def test_allreduce_with_tensor_list(computation):
     print("Testing allreduce with a list of tensors as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x1, x2):
-            x = mnm.allreduce([x1, x2], computation=computation)
+            x = raf.allreduce([x1, x2], computation=computation)
             a = x[0]
             b = x[1]
-            return mnm.concatenate((a, b))
+            return raf.concatenate((a, b))
 
-    if computation == "avg" and mnm.build.with_nccl() < 21000:
+    if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
@@ -110,16 +96,16 @@ def test_allreduce_with_tensor_list(computation):
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    x1 = mnm.array(x1, device=device)
-    x2 = mnm.array(x2, device=device)
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
     y = model(x1, x2)
     vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    vx1 = mnm.array(vx1, device=device)
-    vx2 = mnm.array(vx2, device=device)
+    vx1 = raf.array(vx1, device=device)
+    vx2 = raf.array(vx2, device=device)
     run_vm_model(model, device, [vx1, vx2])
     y = run_model(model, [x1, x2], device)
     if rank == 0:
@@ -194,20 +180,20 @@ def test_allreduce_with_subcomm(dtype, rank_list):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
 def test_allgather(axis):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.allgather(x, axis=axis)
+            x = raf.allgather(x, axis=axis)
             return x
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    x = mnm.array(x, device=device)
+    x = raf.array(x, device=device)
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
@@ -224,22 +210,22 @@ def test_allgather(axis):
 def test_allgather_with_tensor_list(axis):
     print("Testing allgather with a list of tensors as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x1, x2):
-            x = mnm.allgather([x1, x2], axis=axis)
-            return mnm.concatenate(x)
+            x = raf.allgather([x1, x2], axis=axis)
+            return raf.concatenate(x)
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    x1 = mnm.array(x1, device=device)
-    x2 = mnm.array(x2, device=device)
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
@@ -295,17 +281,17 @@ def test_allgather_with_subcomm(axis, rank_list):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_reduce_scatter(computation):
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
             z = Symbol.make_tuple([x, y])
-            out = mnm.reduce_scatter(z, computation=computation)
+            out = raf.reduce_scatter(z, computation=computation)
             return out
 
-    if computation == "avg" and mnm.build.with_nccl() < 21000:
+    if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
@@ -314,7 +300,7 @@ def test_reduce_scatter(computation):
     n_ones = np.ones(shape=(4, 4), dtype="float32")
     n_x = n_ones * (rank + 1)
     n_y = -n_ones * (rank + 1)
-    m_x, m_y = mnm.array(n_x, device=device), mnm.array(n_y, device=device)
+    m_x, m_y = raf.array(n_x, device=device), raf.array(n_y, device=device)
     model.to(device=device)
     m_out = run_model(model, [m_x, m_y], device)
     if rank == 0:
@@ -352,26 +338,26 @@ def test_send_recv():
     shape = [2, 2]
     dtype = "float32"
 
-    class TestModel_0(mnm.Model):
+    class TestModel_0(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            t = mnm.send(x, peer=1)
-            y = mnm.recv(peer=1, shape=shape, dtype=dtype, token=t)
-            out = mnm.add(x, y)
+            t = raf.send(x, peer=1)
+            y = raf.recv(peer=1, shape=shape, dtype=dtype, token=t)
+            out = raf.add(x, y)
             return Symbol.make_tuple([out, t])
 
-    class TestModel_1(mnm.Model):
+    class TestModel_1(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            y = mnm.recv(peer=0, shape=shape, dtype=dtype)
-            t = mnm.send(x, peer=0, token=y)
-            out = mnm.add(x, y)
+            y = raf.recv(peer=0, shape=shape, dtype=dtype)
+            t = raf.send(x, peer=0, token=y)
+            out = raf.add(x, y)
             return Symbol.make_tuple([out, t])
 
     total_rank, rank, local_rank = get_dist_info(verbose=True)
@@ -381,7 +367,7 @@ def test_send_recv():
     model = TestModel_0() if rank == 0 else TestModel_1()
     n_ones = np.ones(shape=shape, dtype=dtype)
     n_x = n_ones * (rank + 1)
-    m_x = mnm.array(n_x, device=device)
+    m_x = raf.array(n_x, device=device)
     model.to(device=device)
     out1 = model(m_x)
     out2 = run_vm_model(model, device, [m_x])
@@ -395,28 +381,28 @@ def test_send_recv():
 def test_reduce(computation):
     print("Testing reduce")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.reduce(x, 0, computation=computation)
+            x = raf.reduce(x, 0, computation=computation)
             return x
 
-    if computation == "avg" and mnm.build.with_nccl() < 21000:
+    if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    x = mnm.array(x, device=device)
+    x = raf.array(x, device=device)
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
     y = model(x)
     vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    vx = mnm.array(vx, device=device)
+    vx = raf.array(vx, device=device)
     vy = run_vm_model(model, device, [vx])
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
@@ -444,30 +430,30 @@ def test_reduce(computation):
 def test_reduce_list(computation):
     print("Testing reduce with list of tensor")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x1, x2):
-            x = mnm.reduce([x1, x2], 0, computation=computation)
+            x = raf.reduce([x1, x2], 0, computation=computation)
             a = x[0]
             b = x[1]
-            return mnm.concatenate((a, b))
+            return raf.concatenate((a, b))
 
-    if computation == "avg" and mnm.build.with_nccl() < 21000:
+    if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
     total_rank, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    x1 = mnm.array(x1, device=device)
-    x2 = mnm.array(x2, device=device)
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
     vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    vx1 = mnm.array(vx1, device=device)
-    vx2 = mnm.array(vx2, device=device)
+    vx1 = raf.array(vx1, device=device)
+    vx2 = raf.array(vx2, device=device)
     run_vm_model(model, device, [vx1, vx2])
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
@@ -510,20 +496,20 @@ def test_broadcast():
     print("Testing broadcast with a list of tensors.")
 
     # pylint: disable=attribute-defined-outside-init
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self, root):
             self.root = root
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            res = mnm.broadcast(x, self.root)
+            res = raf.broadcast(x, self.root)
             return res
 
     model = TestModel(root=0)
     _, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    x = mnm.array(x, device=device)
+    x = raf.array(x, device=device)
     print(f"{rank} - X: ", x)
     model.to(device=device)
     y = run_model(model, [x], device)

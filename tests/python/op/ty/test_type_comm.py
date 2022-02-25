@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=no-member, no-self-use, protected-access, too-many-locals
 """Test collective communication operators in a cluster with 2 GPUs.
@@ -23,9 +9,9 @@ To test collective_communication, you should run:
 """
 import pytest
 import numpy as np
-import mnm
-from mnm import distributed as dist
-from mnm.testing import check_type, run_infer_type, skip_dist_test, get_dist_info
+import raf
+from raf import distributed as dist
+from raf.testing import check_type, run_infer_type, skip_dist_test, get_dist_info
 from tvm.relay import TensorType, FuncType, TupleType
 
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
@@ -36,13 +22,13 @@ SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 def test_allreduce_with_tensor(computation):
     print("Testing allreduce with a single tensor as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.allreduce(x, computation=computation)
+            x = raf.allreduce(x, computation=computation)
             return x
 
     shape = (4, 4)
@@ -51,7 +37,7 @@ def test_allreduce_with_tensor(computation):
     _, rank, local_rank = get_dist_info()
     device = f"cuda({local_rank})"
     x = np.ones(shape=shape, dtype=dtype) * (rank + 1)
-    x = mnm.array(x, device=device)
+    x = raf.array(x, device=device)
     m_func = model._internal(x).mod["main"]
     m_func = run_infer_type(m_func)
     t_a = TensorType(shape, dtype=dtype)
@@ -65,13 +51,13 @@ def test_allreduce_with_tensor(computation):
 def test_allreduce_with_tensor_list(computation):
     print("Testing allreduce with a list of tensors as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x1, x2):
-            x = mnm.allreduce([x1, x2], computation=computation)
+            x = raf.allreduce([x1, x2], computation=computation)
             return x
 
     shape1 = (4, 4)
@@ -82,8 +68,8 @@ def test_allreduce_with_tensor_list(computation):
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=shape1, dtype=dtype) * (rank + 1)
     x2 = np.ones(shape=shape2, dtype=dtype) * (-rank - 1)
-    x1 = mnm.array(x1, device=device)
-    x2 = mnm.array(x2, device=device)
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
     # infertype test for list of input
     m_func = model._internal(x1, x2).mod["main"]
     m_func = run_infer_type(m_func)

@@ -1,26 +1,12 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!--- SPDX-License-Identifier: Apache-2.0  -->
 
 # Developmenet and Pull Request
 
-This tutorial introduces the developmenet flow and the way of filing a pull request to let your contribution be a part of Meta.
+This tutorial introduces the developmenet flow and the way of filing a pull request to let your contribution be a part of RAF.
 
 ## Step 0. 🍽 Fork me @ GitHub
-The very initial step is to click the the "Fork" button on the upper right corner of [MNM](http://github.com/dmlc/mnm)'s GitHub homepage like below:
+The very initial step is to click the the "Fork" button on the upper right corner of [RAF](http://github.com/dmlc/raf)'s GitHub homepage like below:
 
 ![Fork](https://user-images.githubusercontent.com/22515877/68988345-a29a8a00-07ea-11ea-9061-fcf001a1fff3.png)
 

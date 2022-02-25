@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,24 +10,24 @@
 #include <algorithm>
 #include <vector>
 
-#include "mnm/device.h"
-#include "mnm/op.h"
-#include "mnm/op_utils.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/value.h"
-#include "mnm/pass.h"
+#include "raf/device.h"
+#include "raf/op.h"
+#include "raf/op_utils.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/value.h"
+#include "raf/pass.h"
 #include "./common.h"
 #include "./let_list.h"
 #include "../common/shape_utils.h"
 #include "tvm/relay/attrs/memory.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace manifest_alloc {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using common::shape_utils::BytesCompactTensor;
 
 class InplaceVisitor : public MixedModeVisitor {
@@ -141,9 +127,9 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr VisitExpr_(const CallNode* node) {
     static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> exclude_ops{
-        Op::Get("mnm.op.set_stream"), Op::Get("mnm.op.wait_event"), Op::Get("mnm.op.add_event"),
-        Op::Get("mnm.op.stream_barrier")};
-    static auto vm_set_shape_op = Op::Get("mnm.op.vm.set_shape");
+        Op::Get("raf.op.set_stream"), Op::Get("raf.op.wait_event"), Op::Get("raf.op.add_event"),
+        Op::Get("raf.op.stream_barrier")};
+    static auto vm_set_shape_op = Op::Get("raf.op.vm.set_shape");
 
     const auto* op = node->op.as<OpNode>();
     const auto* func = node->op.as<FunctionNode>();
@@ -152,7 +138,7 @@ class ManifestAllocMutator : public ExprMutator {
       Call call = GetRef<Call>(node);
       // change the op which uses upper-bound memory to its upper-bound dialect op
       bool use_upper_bound = false;
-      static auto upper_bound_map = Op::GetAttrMap<Op>("TMNMUpperBoundOp");
+      static auto upper_bound_map = Op::GetAttrMap<Op>("TRAFUpperBoundOp");
       if (op && upper_bound_map.count(GetRef<Op>(op))) {
         call = Call(upper_bound_map[GetRef<Op>(op)], node->args);
         call = Downcast<Call>(pass::InferType(call));
@@ -179,7 +165,7 @@ class ManifestAllocMutator : public ExprMutator {
           }
           auto ins = scope->Push(Tuple(new_args));
           auto op_var = scope->Push(call->op);
-          auto infer_type = Call(Op::Get("mnm.op.vm.infer_type"), Array<Expr>{op_var, ins});
+          auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
           auto out_type_exprs = scope->Push(infer_type);
           auto out_type_expr = scope->Push(TupleGetItem(out_type_exprs, 1));
           auto shape = scope->Push(TupleGetItem(out_type_expr, 0));
@@ -239,7 +225,7 @@ class ManifestAllocMutator : public ExprMutator {
 
   Expr MakeAllocStorage(const Array<Expr>& args, int device_type, int device_id,
                         const DataType& dtype) {
-    static const Op& op = Op::Get("mnm.op.vm.alloc_storage");
+    static const Op& op = Op::Get("raf.op.vm.alloc_storage");
     Array<Expr> new_args = args;
     new_args.push_back(MakeConstant(ScalarValue::make(device_type)));
     new_args.push_back(MakeConstant(ScalarValue::make(device_id)));
@@ -248,7 +234,7 @@ class ManifestAllocMutator : public ExprMutator {
   }
 
   Expr MakeAllocTensor(const Array<Expr>& args, const Expr& assert_shape, const DataType& dtype) {
-    static const Op& op = Op::Get("mnm.op.vm.alloc_tensor");
+    static const Op& op = Op::Get("raf.op.vm.alloc_tensor");
     Array<Expr> new_args = args;
     new_args.push_back(MakeConstant(StringValue::make(DLDataType2String(dtype))));
     new_args.push_back(assert_shape);
@@ -289,7 +275,7 @@ class ManifestAllocMutator : public ExprMutator {
                                   const std::vector<TensorType>& out_types, const Device& device) {
     auto ins = scope->Push(Tuple(new_args));
     auto op_var = scope->Push(op);
-    auto infer_type = Call(Op::Get("mnm.op.vm.infer_type"), Array<Expr>{op_var, ins});
+    auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
     auto out_type_exprs = scope->Push(infer_type);
     std::vector<Expr> outs;
     auto it = inplace_.var_share_map.find(bind_var);
@@ -316,11 +302,11 @@ class ManifestAllocMutator : public ExprMutator {
     }
     Call invoke_op;
     if (op->IsInstance<OpNode>()) {
-      invoke_op = Call(Op::Get("mnm.op.vm.invoke_op"),
+      invoke_op = Call(Op::Get("raf.op.vm.invoke_op"),
                        Array<Expr>{op_var, ins, scope->Push(Tuple(Array<Expr>(outs)))});
     } else {
       ICHECK(op->IsInstance<FunctionNode>());
-      invoke_op = Call(Op::Get("mnm.op.vm.invoke_op"),
+      invoke_op = Call(Op::Get("raf.op.vm.invoke_op"),
                        Array<Expr>{scope->Push(TupleGetItem(out_type_exprs, 0)), ins,
                                    scope->Push(Tuple(Array<Expr>(outs)))});
     }
@@ -350,7 +336,7 @@ class ManifestAllocMutator : public ExprMutator {
         outs.push_back(MakeStaticAllocation(scope, out_types[i].as<TensorTypeNode>(), device));
       }
     }
-    auto invoke = Call(Op::Get("mnm.op.vm.invoke_op"),
+    auto invoke = Call(Op::Get("raf.op.vm.invoke_op"),
                        Array<Expr>{scope->Push(op), scope->Push(Tuple(new_args)),
                                    scope->Push(Tuple(Array<Expr>(outs)))});
     scope->Push(invoke);
@@ -372,10 +358,10 @@ Pass ManifestAlloc() {
                                                                              PassContext pc) {
     return Downcast<ir::Function>(manifest_alloc::ManifestAllocMutator()(f));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "ManifestAlloc", {});
+  return CreateRAFFunctionPass(pass_func, 0, "ManifestAlloc", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.ManifestAlloc").set_body_typed(ManifestAlloc);
+RAF_REGISTER_GLOBAL("raf.pass_.ManifestAlloc").set_body_typed(ManifestAlloc);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

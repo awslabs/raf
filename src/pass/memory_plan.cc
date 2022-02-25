@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -25,22 +11,22 @@
 #include <random>
 #include <vector>
 
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/ir_ext.h"
-#include "mnm/value.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/ir_ext.h"
+#include "raf/value.h"
+#include "raf/pass.h"
 #include "./let_list.h"
 #include "./liveness_analysis.h"
 #include "tvm/relay/attrs/memory.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
 namespace memory_plan {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 
 template <typename T>
 using StdMap = std::unordered_map<Var, T, ObjectPtrHash, ObjectPtrEqual>;
@@ -238,7 +224,7 @@ class MemoryPlanner : public ExprMutator {
   }
 
   Expr VisitExpr_(const LetNode* node) {
-    static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
+    static const Op& alloc_storage_op = Op::Get("raf.op.vm.alloc_storage");
     scopes_.emplace_back(new LetList);
     auto scope = scopes_.back().get();
     Expr body;
@@ -298,9 +284,9 @@ class MemoryPlanner : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) final {
-    static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
-    static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
-    static const Op& reshape_tensor_op = Op::Get("mnm.op.vm.set_shape");
+    static const Op& alloc_storage_op = Op::Get("raf.op.vm.alloc_storage");
+    static const Op& alloc_tensor_op = Op::Get("raf.op.vm.alloc_tensor");
+    static const Op& reshape_tensor_op = Op::Get("raf.op.vm.set_shape");
     const auto* op_node = node->op.as<OpNode>();
 
     auto call = GetRef<Call>(node);
@@ -361,7 +347,7 @@ class MemoryPlanner : public ExprMutator {
   TensorGroups Group();
 
   inline Expr MakeFreeMemory(const Var& memory_var) {
-    static const Op& op = Op::Get("mnm.op.vm.free");
+    static const Op& op = Op::Get("raf.op.vm.free");
     return Call(op, {memory_var});
   }
 
@@ -417,9 +403,9 @@ class MemoryPlanner::TensorGrouper : public ExprVisitor {
   }
 
   void VisitExpr_(const CallNode* node) override {
-    static const Op& alloc_storage_op = Op::Get("mnm.op.vm.alloc_storage");
-    static const Op& alloc_tensor_op = Op::Get("mnm.op.vm.alloc_tensor");
-    static const Op& reshape_tensor_op = Op::Get("mnm.op.vm.set_shape");
+    static const Op& alloc_storage_op = Op::Get("raf.op.vm.alloc_storage");
+    static const Op& alloc_tensor_op = Op::Get("raf.op.vm.alloc_tensor");
+    static const Op& reshape_tensor_op = Op::Get("raf.op.vm.set_shape");
     const auto* op_node = node->op.as<OpNode>();
 
     if (GetRef<Op>(op_node) == alloc_tensor_op) {
@@ -491,11 +477,11 @@ TensorGroups MemoryPlanner::Group() {
 
 }  // namespace memory_plan
 
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.memory_plan.dump_liveness_stat", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.memory_plan.dump_liveness_stat", Bool);
 
 Pass MemoryPlan() {
   PassContext pass_ctx = PassContext::Current();
-  Bool dump_stat = pass_ctx->GetConfig("mnm.memory_plan.dump_liveness_stat", Bool(false)).value();
+  Bool dump_stat = pass_ctx->GetConfig("raf.memory_plan.dump_liveness_stat", Bool(false)).value();
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
     auto analyzer = liveness_analysis::LivenessAnalyzer(f);
@@ -509,12 +495,12 @@ Pass MemoryPlan() {
     }
     return Downcast<ir::Function>(memory_plan::MemoryPlanner(f, &analyzer).Run());
   };
-  auto func_pass = CreateMNMFunctionPass(pass_func, 3, "MemoryPlan", {});
+  auto func_pass = CreateRAFFunctionPass(pass_func, 3, "MemoryPlan", {});
   PassInfo pass_info(3, "MemoryPlan", {});
-  return MNMSequential({InferType(), func_pass}, pass_info);
+  return RAFSequential({InferType(), func_pass}, pass_info);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.MemoryPlan").set_body_typed(MemoryPlan);
+RAF_REGISTER_GLOBAL("raf.pass_.MemoryPlan").set_body_typed(MemoryPlan);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

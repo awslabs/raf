@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,17 +10,17 @@
 #include "./schema/memory.h"
 #include "./schema/transform.h"
 #include "./schema/ufunc.h"
-#include "mnm/op.h"
-#include "mnm/device_api.h"
-#include "mnm/value.h"
-#include "mnm/stream_pool.h"
+#include "raf/op.h"
+#include "raf/device_api.h"
+#include "raf/value.h"
+#include "raf/stream_pool.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::tensor;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::tensor;
+using namespace raf::value;
 
 void SizeImpl(const DLTensor* x, const Value& axis, Value& out) {
   if (axis.defined()) {
@@ -55,14 +41,14 @@ void SizeImpl(const DLTensor* x, const Value& axis, Value& out) {
   }
 }
 
-class SizeOpEnv : public mnm::op::OpEnv {
+class SizeOpEnv : public raf::op::OpEnv {
   std::string env_name_;
 
  public:
   explicit SizeOpEnv(const CallValues& cv) {
     static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    static const std::string op_name = "mnm.op.size";
+        ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    static const std::string op_name = "raf.op.size";
     static const auto op = ir::Op::Get(op_name);
     this->arg_indices = {
         fschema_index[op]("x"),
@@ -90,7 +76,7 @@ class SizeOpEnv : public mnm::op::OpEnv {
   }
 };
 
-MNM_OP_ENV_MAKER("mnm.op.size", SizeOpEnv::make);
+RAF_OP_ENV_MAKER("raf.op.size", SizeOpEnv::make);
 
 void NumelImpl(const DLTensor* x, DLTensor* y) {
   ICHECK_EQ(y->device.device_type, kDLCPU);
@@ -102,14 +88,14 @@ void NumelImpl(const DLTensor* x, DLTensor* y) {
   *y_ptr = num_elems;
 }
 
-class NumelOpEnv : public mnm::op::OpEnv {
+class NumelOpEnv : public raf::op::OpEnv {
   std::string env_name_;
 
  public:
   explicit NumelOpEnv(const CallValues& cv) {
     static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    static const std::string op_name = "mnm.op.numel";
+        ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    static const std::string op_name = "raf.op.numel";
     static const auto op = ir::Op::Get(op_name);
     this->arg_indices = {fschema_index[op]("x")};
     env_name_ = TruncateName(GetUniqueName(op_name));
@@ -134,7 +120,7 @@ class NumelOpEnv : public mnm::op::OpEnv {
   }
 };
 
-MNM_OP_ENV_MAKER("mnm.op.numel", NumelOpEnv::make);
+RAF_OP_ENV_MAKER("raf.op.numel", NumelOpEnv::make);
 
 void ShapeAsTensorImpl(const DLTensor* x, DLTensor* y) {
   ICHECK_EQ(y->device.device_type, kDLCPU);
@@ -144,14 +130,14 @@ void ShapeAsTensorImpl(const DLTensor* x, DLTensor* y) {
   }
 }
 
-class ShapeAsTensorOpEnv : public mnm::op::OpEnv {
+class ShapeAsTensorOpEnv : public raf::op::OpEnv {
   std::string env_name_;
 
  public:
   explicit ShapeAsTensorOpEnv(const CallValues& cv) {
     static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    static const std::string op_name = "mnm.op.shape_as_tensor";
+        ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    static const std::string op_name = "raf.op.shape_as_tensor";
     static const auto op = ir::Op::Get(op_name);
     this->arg_indices = {fschema_index[op]("x")};
     env_name_ = TruncateName(GetUniqueName(op_name));
@@ -176,14 +162,14 @@ class ShapeAsTensorOpEnv : public mnm::op::OpEnv {
   }
 };
 
-MNM_OP_ENV_MAKER("mnm.op.shape_as_tensor", ShapeAsTensorOpEnv::make);
+RAF_OP_ENV_MAKER("raf.op.shape_as_tensor", ShapeAsTensorOpEnv::make);
 
-class DeviceCopyOpEnv : public mnm::op::OpEnv {
+class DeviceCopyOpEnv : public raf::op::OpEnv {
  public:
   explicit DeviceCopyOpEnv(const CallValues& cv) {
     static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    static const std::string op_name = "mnm.op.device_copy";
+        ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    static const std::string op_name = "raf.op.device_copy";
     static const auto op = ir::Op::Get(op_name);
     this->arg_indices = {fschema_index[op]("data")};
     env_name_ = TruncateName(GetUniqueName(op_name));
@@ -213,7 +199,7 @@ class DeviceCopyOpEnv : public mnm::op::OpEnv {
   std::string env_name_;
 };
 
-MNM_OP_ENV_MAKER("mnm.op.device_copy", DeviceCopyOpEnv::make);
+RAF_OP_ENV_MAKER("raf.op.device_copy", DeviceCopyOpEnv::make);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

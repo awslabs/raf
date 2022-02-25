@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,32 +8,32 @@
  * \brief Symbolic gradient pass
  */
 #include <sstream>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/op_utils.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/op_utils.h"
+#include "raf/pass.h"
 #include "./let_list.h"
 #include "./common.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace gradient {
 
-#define MNM_NODE_NOT_SUPPORT(NodeType)                                  \
+#define RAF_NODE_NOT_SUPPORT(NodeType)                                  \
   void VisitExpr_(const NodeType* node) final {                         \
     LOG(FATAL) << "ValueError: feature is not supported:" << #NodeType; \
     throw;                                                              \
   }
 
-#define MNM_NODE_NOT_IMPL(NodeType)                     \
+#define RAF_NODE_NOT_IMPL(NodeType)                     \
   void VisitExpr_(const NodeType* node) final {         \
     LOG(FATAL) << "NotImplementedError: " << #NodeType; \
     throw;                                              \
   }
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::op;
+using namespace raf::value;
 
 class ANFNormalizer : public ExprMutator {
  public:
@@ -94,18 +80,18 @@ class ANFNormalizer : public ExprMutator {
 struct ReverseAD : public ExprVisitor {
  public:
   // Closures are not supported
-  MNM_NODE_NOT_SUPPORT(FunctionNode);
-  MNM_NODE_NOT_SUPPORT(LetNode);
+  RAF_NODE_NOT_SUPPORT(FunctionNode);
+  RAF_NODE_NOT_SUPPORT(LetNode);
   // The algorithm shouldn't generate or deal with references
-  MNM_NODE_NOT_SUPPORT(RefCreateNode);
-  MNM_NODE_NOT_SUPPORT(RefReadNode);
-  MNM_NODE_NOT_SUPPORT(RefWriteNode);
-  // MNM has not started to take care of ADTs yet
-  MNM_NODE_NOT_SUPPORT(tvm::relay::ConstructorNode);
-  MNM_NODE_NOT_SUPPORT(tvm::relay::MatchNode);
+  RAF_NODE_NOT_SUPPORT(RefCreateNode);
+  RAF_NODE_NOT_SUPPORT(RefReadNode);
+  RAF_NODE_NOT_SUPPORT(RefWriteNode);
+  // RAF has not started to take care of ADTs yet
+  RAF_NODE_NOT_SUPPORT(tvm::relay::ConstructorNode);
+  RAF_NODE_NOT_SUPPORT(tvm::relay::MatchNode);
   // TODO(@junrushao1994): implement them
   // TODO(@junrushao1994): nested tuples are still problematic
-  MNM_NODE_NOT_IMPL(OpNode);  // replace OpNode with its corresponding GlobalVar's adjoint
+  RAF_NODE_NOT_IMPL(OpNode);  // replace OpNode with its corresponding GlobalVar's adjoint
 
  public:
   explicit ReverseAD(std::unordered_map<const VarNode*, bool>& requires_grads_main_map)
@@ -473,23 +459,23 @@ struct ReverseAD : public ExprVisitor {
 
         if (auto ttype = expr_type.as<TensorTypeNode>()) {
           if (tvm::relay::IsDynamic(expr_type)) {
-            static auto zeros_like = Op::Get("mnm.op.zeros_like");
+            static auto zeros_like = Op::Get("raf.op.zeros_like");
             return adjoint_ll_->Push(Call(zeros_like, {var}));
           }
-          static auto zeros = Op::Get("mnm.op.zeros");
+          static auto zeros = Op::Get("raf.op.zeros");
           return adjoint_ll_->Push(
               Call(zeros, {MakeConstant(ArrayToIntTuple(ttype->shape)),
                            MakeConstant(StringValue::make(DLDataType2String(ttype->dtype)))}));
         } else {
           LOG(FATAL) << "Unsupported expression or type for making zeros: "
-                     << mnm::ir::AsText(expr);
+                     << raf::ir::AsText(expr);
           throw;
         }
       }
     }
 
     // Otherwise use zeros_like op.
-    static auto zeros_like = Op::Get("mnm.op.zeros_like");
+    static auto zeros_like = Op::Get("raf.op.zeros_like");
     return adjoint_ll_->Push(Call(zeros_like, {var}));
   }
 
@@ -566,7 +552,7 @@ struct ReverseAD : public ExprVisitor {
   }
 
   Expr AddTensor(const Expr& x1, const Expr& x2) {
-    static Op op = Op::Get("mnm.op.add");
+    static Op op = Op::Get("raf.op.add");
     if (!x1.defined() && !x2.defined()) {
       return NullValue<Var>();
     }
@@ -604,7 +590,7 @@ struct ReverseAD : public ExprVisitor {
     } else {
       LOG(WARNING) << "InferType is not run before AutoDiff pass";
     }
-    return mnm::ir::MakeVar("dy", annotation);
+    return raf::ir::MakeVar("dy", annotation);
   }
 
   /*!
@@ -747,13 +733,13 @@ struct ReverseAD : public ExprVisitor {
 
     // Now lets add the final reverse AD adjoint_closure into the primal_adjoint_ell_
     // let adjoint_closure = fn(dy) {};
-    Var adjoint_closure = mnm::ir::MakeVar("adjoint_closure", {});
+    Var adjoint_closure = raf::ir::MakeVar("adjoint_closure", {});
     primal_adjoint_ell_->vars.push_back(adjoint_closure);
     primal_adjoint_ell_->exprs.push_back(Function({dy}, adjoint_body, {}, {}));
 
     // Now lets add the return value which is a tuple of primal and adjoint closure
     // let ret = tuple(y, adjoint_closure)
-    Var ret = mnm::ir::MakeVar("ret", {});
+    Var ret = raf::ir::MakeVar("ret", {});
     primal_adjoint_ell_->vars.push_back(ret);
     primal_adjoint_ell_->exprs.push_back(Tuple({primal_ell_->ret, adjoint_closure}));
 
@@ -872,7 +858,7 @@ struct ReverseAD : public ExprVisitor {
   Function Run(ir::Function func) {
     auto body = func->body;
     if (body.as<RelayConstantNode>()) {
-      Var var = mnm::ir::MakeVar("v1", {});
+      Var var = raf::ir::MakeVar("v1", {});
       body = Let(var, body, var);
     }
     current_func_node_ = func.get();
@@ -915,13 +901,13 @@ struct ReverseAD : public ExprVisitor {
 /*! \brief A helper to canonicalize the IR with AutoDiff if its backward is going to be inlined.
  * Specifically, it removes direct let assignment (i.e., let %a = %b;) and the sum ops with
  * empty keepdims axis. The sum op used to calculate the gradient of certain ops (e.g., add/sub/etc)
- * may use "mnm.op.get_kept_dims" to get the keep dims. InferType pass can infer the real keep
- * dims and simplify the "mnm.op.get_kept_dims" op. If the keep dims are empty after InferType,
+ * may use "raf.op.get_kept_dims" to get the keep dims. InferType pass can infer the real keep
+ * dims and simplify the "raf.op.get_kept_dims" op. If the keep dims are empty after InferType,
  * then the sum op has no effect and can be simplified.
  */
 class Canonicalizer : public ExprMutator {
  public:
-  explicit Canonicalizer() : sum_op_(Op::Get("mnm.op.sum")) {
+  explicit Canonicalizer() : sum_op_(Op::Get("raf.op.sum")) {
   }
 
  private:
@@ -1072,7 +1058,7 @@ Pass AutoDiff(ir::Array<tvm::Bool> requires_grads) {
   return CreateModulePass(pass_func, 1, "AutoDiff", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AutoDiff").set_body_typed(AutoDiff);
+RAF_REGISTER_GLOBAL("raf.pass_.AutoDiff").set_body_typed(AutoDiff);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

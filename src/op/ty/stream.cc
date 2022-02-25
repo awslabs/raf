@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,16 +10,16 @@
 #include <tvm/relay/type.h>
 #include <tvm/ir/attrs.h>
 #include <tvm/ir/env_func.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/stream.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
 
 Type StreamEventInfer(const CallValues& value) {
   return TupleType::Empty();
@@ -45,11 +31,11 @@ Type StreamInfer(const CallValues& value) {
   return GetType(args->x);
 }
 
-MNM_OP_TYPE("mnm.op.set_stream", "StreamSwitch", StreamEventInfer);
-MNM_OP_TYPE("mnm.op.add_event", "EventAdd", StreamEventInfer);
-MNM_OP_TYPE("mnm.op.wait_event", "EventWait", StreamEventInfer);
-MNM_OP_TYPE("mnm.op.stream_barrier", "StreamBarrier", StreamEventInfer);
-MNM_OP_TYPE("mnm.op.stream_sync", "StreamSync", StreamInfer);
+RAF_OP_TYPE("raf.op.set_stream", "StreamSwitch", StreamEventInfer);
+RAF_OP_TYPE("raf.op.add_event", "EventAdd", StreamEventInfer);
+RAF_OP_TYPE("raf.op.wait_event", "EventWait", StreamEventInfer);
+RAF_OP_TYPE("raf.op.stream_barrier", "StreamBarrier", StreamEventInfer);
+RAF_OP_TYPE("raf.op.stream_sync", "StreamSync", StreamInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

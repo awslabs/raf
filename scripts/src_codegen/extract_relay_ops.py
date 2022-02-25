@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import sys
 
@@ -40,8 +26,8 @@ WHILTE_LIST = {
     "nn.bias_add",
 }
 
-MNM_OP_NAME = {
-    "nn.bias_add": "mnm.op.bias_add",
+RAF_OP_NAME = {
+    "nn.bias_add": "raf.op.bias_add",
 }
 
 
@@ -59,7 +45,7 @@ def collect_op():
     get_op = tvm.get_global_func("relay.op._GetOp")
 
     def is_black_listed(op_name):
-        if op_name.startswith("mnm."):
+        if op_name.startswith("raf."):
             return True
         if op_name in WHILTE_LIST:
             assert op_name not in BLACK_LIST
@@ -105,11 +91,11 @@ def main():
     ops = collect_op()
     print("OP_MAP = {")
     for op_name, attrs, pattern in ops:
-        if op_name in MNM_OP_NAME:
-            mnm_op_name = MNM_OP_NAME[op_name]
+        if op_name in RAF_OP_NAME:
+            raf_op_name = RAF_OP_NAME[op_name]
         else:
-            mnm_op_name = "mnm.op." + op_name
-        print(f'    "{mnm_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
+            raf_op_name = "raf.op." + op_name
+        print(f'    "{raf_op_name}": ["{op_name}", "{attrs}", "{pattern}"],')
     print("}")
 
 

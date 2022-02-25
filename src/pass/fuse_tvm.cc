@@ -1,40 +1,26 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/pass/tvm_fuse.cc
  * \brief Fuse the operators using TVM op patterns.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/binding.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/binding.h"
+#include "raf/pass.h"
 #include "support/arena.h"
 #include "tvm/relay/op_attr_types.h"
 #include "./graph_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace fuse_tvm {
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 using namespace tvm::support;
 
 /*
@@ -614,7 +600,7 @@ class FuseMutator : private ExprMutator {
     func = WithAttr(std::move(func), attr::kDialect, String("tvm"));
 
     // If the identical function has been created before, reuse it.
-    std::string func_cache_key = mnm::ir::AsText(func);
+    std::string func_cache_key = raf::ir::AsText(func);
     if (func_cache_.count(func_cache_key)) {
       func = func_cache_.at(func_cache_key);
     } else {
@@ -678,12 +664,12 @@ Pass FuseTVM() {
     return Downcast<Function>(fuse_tvm::FuseMutator().Transform(f));
   };
 
-  Pass func_pass = CreateMNMFunctionPass(pass_func, 2, "FuseTVM", {});
+  Pass func_pass = CreateRAFFunctionPass(pass_func, 2, "FuseTVM", {});
   PassInfo pass_info(2, "FuseTVM", {});
-  return MNMSequential({InferType(), func_pass}, pass_info);
+  return RAFSequential({InferType(), func_pass}, pass_info);
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.FuseTVM").set_body_typed(FuseTVM);
+RAF_REGISTER_GLOBAL("raf.pass_.FuseTVM").set_body_typed(FuseTVM);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

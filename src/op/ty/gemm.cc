@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,15 +8,15 @@
  * \brief Typing of gemm operators
  */
 #include <tvm/relay/type.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/ufunc.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 using schema::BinaryArgs;
 
 template <bool transpose_a, bool transpose_b>
@@ -85,15 +71,15 @@ Type BatchMatmulInfer(const CallValues& value) {
   return TensorType(oshape, x->dtype);
 }
 
-MNM_OP_TYPE("mnm.op.matmul", "Matmul", (MatmulInfer<false, false>));
-MNM_OP_TYPE("mnm.op.matmul_nt", "MatmulNT", (MatmulInfer<false, true>));
-MNM_OP_TYPE("mnm.op.matmul_tn", "MatmulTN", (MatmulInfer<true, false>));
-MNM_OP_TYPE("mnm.op.matmul_tt", "MatmulTT", (MatmulInfer<true, true>));
-MNM_OP_TYPE("mnm.op.dense", "DenseInfer", (MatmulInfer<false, true>));
-MNM_OP_TYPE("mnm.op.batch_matmul", "BatchMatmulNN", (BatchMatmulInfer<false, false>));
-MNM_OP_TYPE("mnm.op.batch_matmul_nt", "BatchMatmulNT", (BatchMatmulInfer<false, true>));
-MNM_OP_TYPE("mnm.op.batch_matmul_tn", "BatchMatmulTN", (BatchMatmulInfer<true, false>));
-MNM_OP_TYPE("mnm.op.batch_matmul_tt", "BatchMatmulTT", (BatchMatmulInfer<true, true>));
+RAF_OP_TYPE("raf.op.matmul", "Matmul", (MatmulInfer<false, false>));
+RAF_OP_TYPE("raf.op.matmul_nt", "MatmulNT", (MatmulInfer<false, true>));
+RAF_OP_TYPE("raf.op.matmul_tn", "MatmulTN", (MatmulInfer<true, false>));
+RAF_OP_TYPE("raf.op.matmul_tt", "MatmulTT", (MatmulInfer<true, true>));
+RAF_OP_TYPE("raf.op.dense", "DenseInfer", (MatmulInfer<false, true>));
+RAF_OP_TYPE("raf.op.batch_matmul", "BatchMatmulNN", (BatchMatmulInfer<false, false>));
+RAF_OP_TYPE("raf.op.batch_matmul_nt", "BatchMatmulNT", (BatchMatmulInfer<false, true>));
+RAF_OP_TYPE("raf.op.batch_matmul_tn", "BatchMatmulTN", (BatchMatmulInfer<true, false>));
+RAF_OP_TYPE("raf.op.batch_matmul_tt", "BatchMatmulTT", (BatchMatmulInfer<true, true>));
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

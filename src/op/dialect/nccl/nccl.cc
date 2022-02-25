@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -30,7 +16,7 @@
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace communication {
 namespace nccl {
@@ -39,9 +25,9 @@ using namespace distributed::communicator;
 using common::shape_utils::BytesCompactTensor;
 using stream_pool::StreamTagEnum;
 
-MNM_REGISTER_DIALECT("nccl").set_enable(DevType::kCUDA());
+RAF_REGISTER_DIALECT("nccl").set_enable(DevType::kCUDA());
 
-class NCCLAllReduce : public mnm::op::OpEnv {
+class NCCLAllReduce : public raf::op::OpEnv {
   void* stream;
   Communicator communicator;
   void* fused_data;
@@ -51,8 +37,8 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   ncclRedOp_t compute;
 
   explicit NCCLAllReduce(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op._allreduce");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op._allreduce");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
@@ -97,11 +83,11 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._allreduce"));
+    return TruncateName(GetUniqueName("raf.op.nccl._allreduce"));
   }
 
   void Execute(const CallValues& cv) override {
-    auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
+    auto args = cv->args.as<raf::op::schema::AllreduceArgs>();
     Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
   }
 
@@ -157,10 +143,10 @@ class NCCLAllReduce : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _allreduce, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._allreduce", NCCLAllReduce::make);
+RAF_REGISTER_DIALECT_OP(nccl, _allreduce, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._allreduce", NCCLAllReduce::make);
 
-class NCCLAllGather : public mnm::op::OpEnv {
+class NCCLAllGather : public raf::op::OpEnv {
   void* stream;
   Communicator communicator;
   explicit NCCLAllGather(const CallValues& cv) {
@@ -178,11 +164,11 @@ class NCCLAllGather : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._allgather"));
+    return TruncateName(GetUniqueName("raf.op.nccl._allgather"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::AllgatherArgs>();
+    auto args = cv->args.as<raf::op::schema::AllgatherArgs>();
     Execute({args->x}, cv->out);
   }
 
@@ -203,10 +189,10 @@ class NCCLAllGather : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _allgather, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._allgather", NCCLAllGather::make);
+RAF_REGISTER_DIALECT_OP(nccl, _allgather, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._allgather", NCCLAllGather::make);
 
-class NCCLReduceScatter : public mnm::op::OpEnv {
+class NCCLReduceScatter : public raf::op::OpEnv {
   void* stream;
   void* communicator;
   void* in_buffer;
@@ -215,12 +201,12 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   ncclRedOp_t compute;
 
   explicit NCCLReduceScatter(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op._reduce_scatter");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op._reduce_scatter");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
-    auto args = cv->args.as<mnm::op::schema::ReduceScatterArgs>();
+    auto args = cv->args.as<raf::op::schema::ReduceScatterArgs>();
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
     } else if (args->computation.compare("prod") == 0) {
@@ -250,11 +236,11 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._reduce_scatter"));
+    return TruncateName(GetUniqueName("raf.op.nccl._reduce_scatter"));
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<mnm::op::schema::ReduceScatterArgs>();
+    auto args = cv->args.as<raf::op::schema::ReduceScatterArgs>();
     Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
   }
 
@@ -289,10 +275,10 @@ class NCCLReduceScatter : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _reduce_scatter, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._reduce_scatter", NCCLReduceScatter::make);
+RAF_REGISTER_DIALECT_OP(nccl, _reduce_scatter, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._reduce_scatter", NCCLReduceScatter::make);
 
-class NCCLBroadcast : public mnm::op::OpEnv {
+class NCCLBroadcast : public raf::op::OpEnv {
   void* stream;
   void* communicator;
   void* fused_data;
@@ -302,10 +288,10 @@ class NCCLBroadcast : public mnm::op::OpEnv {
   int root;
 
   explicit NCCLBroadcast(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op._broadcast");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op._broadcast");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
-    auto args = cv->args.as<mnm::op::schema::BroadcastArgs>();
+    auto args = cv->args.as<raf::op::schema::BroadcastArgs>();
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
     auto& tv = args->x;
@@ -327,11 +313,11 @@ class NCCLBroadcast : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._broadcast"));
+    return TruncateName(GetUniqueName("raf.op.nccl._broadcast"));
   }
 
   void Execute(const CallValues& cv) override {
-    auto args = cv->args.as<mnm::op::schema::BroadcastArgs>();
+    auto args = cv->args.as<raf::op::schema::BroadcastArgs>();
     Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
   }
 
@@ -381,21 +367,21 @@ class NCCLBroadcast : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _broadcast, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._broadcast", NCCLBroadcast::make);
+RAF_REGISTER_DIALECT_OP(nccl, _broadcast, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._broadcast", NCCLBroadcast::make);
 
-class NCCLSend : public mnm::op::OpEnv {
+class NCCLSend : public raf::op::OpEnv {
   void* stream;
   void* communicator;
   int peer;
 
   explicit NCCLSend(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op._send");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op._send");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
-    const auto* args = cv->args.as<mnm::op::schema::SendArgs>();
+    const auto* args = cv->args.as<raf::op::schema::SendArgs>();
     CHECK(args);
     peer = args->peer;
   }
@@ -405,11 +391,11 @@ class NCCLSend : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._send"));
+    return TruncateName(GetUniqueName("raf.op.nccl._send"));
   }
 
   void Execute(const CallValues& cv) {
-    const auto* args = cv->args.as<mnm::op::schema::SendArgs>();
+    const auto* args = cv->args.as<raf::op::schema::SendArgs>();
     CHECK(args);
     Execute({args->x}, cv->out);
   }
@@ -427,10 +413,10 @@ class NCCLSend : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _send, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._send", NCCLSend::make);
+RAF_REGISTER_DIALECT_OP(nccl, _send, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._send", NCCLSend::make);
 
-class NCCLRecv : public mnm::op::OpEnv {
+class NCCLRecv : public raf::op::OpEnv {
   void* stream;
   void* communicator;
   int peer;
@@ -440,7 +426,7 @@ class NCCLRecv : public mnm::op::OpEnv {
   explicit NCCLRecv(const CallValues& cv) {
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
-    const auto* args = cv->args.as<mnm::op::schema::RecvArgs>();
+    const auto* args = cv->args.as<raf::op::schema::RecvArgs>();
     CHECK(args);
     peer = args->peer;
     shape = args->shape;
@@ -452,7 +438,7 @@ class NCCLRecv : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._recv"));
+    return TruncateName(GetUniqueName("raf.op.nccl._recv"));
   }
 
   void Execute(const CallValues& cv) {
@@ -472,10 +458,10 @@ class NCCLRecv : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _recv, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._recv", NCCLRecv::make);
+RAF_REGISTER_DIALECT_OP(nccl, _recv, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._recv", NCCLRecv::make);
 
-class NCCLReduce : public mnm::op::OpEnv {
+class NCCLReduce : public raf::op::OpEnv {
   void* stream;
   void* communicator;
   ncclRedOp_t compute;
@@ -486,12 +472,12 @@ class NCCLReduce : public mnm::op::OpEnv {
   void* fused_data;
 
   explicit NCCLReduce(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op._reduce");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op._reduce");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator);
-    auto args = cv->args.as<mnm::op::schema::CommReduceArgs>();
+    auto args = cv->args.as<raf::op::schema::CommReduceArgs>();
     root = args->root;
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
@@ -529,11 +515,11 @@ class NCCLReduce : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.nccl._reduce"));
+    return TruncateName(GetUniqueName("raf.op.nccl._reduce"));
   }
 
   void Execute(const CallValues& cv) override {
-    auto args = cv->args.as<mnm::op::schema::CommReduceArgs>();
+    auto args = cv->args.as<raf::op::schema::CommReduceArgs>();
     Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
   }
 
@@ -581,10 +567,10 @@ class NCCLReduce : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(nccl, _reduce, 10);
-MNM_OP_ENV_MAKER("mnm.op.nccl._reduce", NCCLReduce::make);
+RAF_REGISTER_DIALECT_OP(nccl, _reduce, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._reduce", NCCLReduce::make);
 
 }  // namespace nccl
 }  // namespace communication
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

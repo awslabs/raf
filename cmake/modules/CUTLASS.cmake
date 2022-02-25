@@ -1,27 +1,13 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 ##############################################################################
 # Provide:
-#  - MNM_CUTLASS_LIBRARY
+#  - RAF_CUTLASS_LIBRARY
 message("########## Configuring CUTLASS ##########")
 
 # meta customized kernels
-function(mnm_customized_cutlass_kernels)
+function(raf_customized_cutlass_kernels)
   find_package(Python3 3.5 COMPONENTS Interpreter REQUIRED)
   include(${PROJECT_SOURCE_DIR}/3rdparty/cutlass/CUDA.cmake)
   set(CUTLASS_GENERATOR_CUDA_COMPILER_VERSION ${CMAKE_CUDA_COMPILER_VERSION})
@@ -74,12 +60,12 @@ function(mnm_customized_cutlass_kernels)
   )
 endfunction()
 
-if (${MNM_USE_CUTLASS} STREQUAL "OFF")
+if (${RAF_USE_CUTLASS} STREQUAL "OFF")
   message(STATUS "Build without CUTLASS support")
-  set(MNM_CUTLASS_LIBRARY "")
+  set(RAF_CUTLASS_LIBRARY "")
 else()
-  set(CUTLASS_NVCC_ARCHS ${MNM_CUDA_ARCH} CACHE STRING "The SM architectures requested.")
-  if (${MNM_USE_CUDA} STREQUAL "OFF")
+  set(CUTLASS_NVCC_ARCHS ${RAF_CUDA_ARCH} CACHE STRING "The SM architectures requested.")
+  if (${RAF_USE_CUDA} STREQUAL "OFF")
     message(FATAL_ERROR "Cannot enable CUTLASS without using CUDA.")
   endif()
 
@@ -93,14 +79,14 @@ else()
   add_subdirectory(${PROJECT_SOURCE_DIR}/3rdparty/cutlass/)
   message(STATUS "Set CUTLASS_NVCC_ARCHS=${CUTLASS_NVCC_ARCHS}")
   unset(CUTLASS_LIBRARY_KERNELS)
-  mnm_customized_cutlass_kernels()
+  raf_customized_cutlass_kernels()
 
   set_target_properties(cutlass_lib PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
-  set(MNM_CUTLASS_LIBRARY "cutlass_lib")
+  set(RAF_CUTLASS_LIBRARY "cutlass_lib")
 endif()
 
 message("########## Done Configuring CUTLASS ##########")

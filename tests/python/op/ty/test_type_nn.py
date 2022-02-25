@@ -1,26 +1,12 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import pytest
 import torch
-import mnm
-from mnm._lib import _TVMError
-from mnm._ffi.pass_ import AutoDiff, InferType
-from mnm.testing import check_type, run_infer_type, randn, randn_torch
+import raf
+from raf._lib import _TVMError
+from raf._ffi.pass_ import AutoDiff, InferType
+from raf.testing import check_type, run_infer_type, randn, randn_torch
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -37,20 +23,20 @@ from tvm.relay import TensorType, FuncType, TupleType
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.softmax, torch.softmax],
-        [mnm._op.sym.log_softmax, torch.log_softmax],
+        [raf._op.sym.softmax, torch.softmax],
+        [raf._op.sym.log_softmax, torch.log_softmax],
     ],
 )
 def test_unary_with_axis(dtype, shape, axis, funcs):
-    mnm_fwd, torch_fwd = funcs
+    raf_fwd, torch_fwd = funcs
 
-    class Softmax(mnm.Model):
+    class Softmax(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, axis=axis)
+            return raf_fwd(x, axis=axis)
 
     model = Softmax()
     # forward
@@ -87,13 +73,13 @@ def test_unary_with_axis(dtype, shape, axis, funcs):
 @pytest.mark.parametrize("eps", [1e-05, 2e-05])
 @pytest.mark.parametrize("dtype", ["float32"])
 def test_batch_norm_train_dxwb(shape, eps, dtype):
-    class BatchNormTrainDxwb(mnm.Model):
+    class BatchNormTrainDxwb(raf.Model):
         def build(self, eps):
             self._eps = eps
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, dy, x, w, b):
-            return mnm.batch_norm_train_dxwb(dy, x, w, b, self._eps)
+            return raf.batch_norm_train_dxwb(dy, x, w, b, self._eps)
 
     model = BatchNormTrainDxwb(eps)
     # forward
@@ -117,14 +103,14 @@ def test_batch_norm_train_dxwb(shape, eps, dtype):
 def test_layer_norm(shape, axis, eps, dtype):
     import mxnet as mx
 
-    class LayerNorm(mnm.Model):
+    class LayerNorm(raf.Model):
         def build(self, axis, eps):
             self._axis = axis
             self._eps = eps
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, scale, bias):
-            return mnm.layer_norm(x, scale, bias, axis=self._axis, eps=self._eps)
+            return raf.layer_norm(x, scale, bias, axis=self._axis, eps=self._eps)
 
     model = LayerNorm(axis, eps)
     mx_model = mx.gluon.nn.LayerNorm(axis=axis, epsilon=eps)
@@ -176,17 +162,17 @@ def test_conv2d(
     # N.B.: NCHW + OIHW
     import torch.nn.functional as F
 
-    class Conv2D(mnm.Model):
+    class Conv2D(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, w):  # pylint: disable=no-self-use
             layout, kernel_layout = ("NCHW", "OIHW") if not is_nhwc else ("NHWC", "HWIO")
             if is_nhwc:
-                x = mnm.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
-                w = mnm.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
-            ret = mnm.conv2d(
+                x = raf.transpose(x, (0, 2, 3, 1))  # NCHW -> NHWC
+                w = raf.transpose(w, (2, 3, 1, 0))  # OIHW -> HWIO
+            ret = raf.conv2d(
                 x,
                 w,
                 stride=stride,
@@ -198,17 +184,17 @@ def test_conv2d(
                 out_layout=layout,
             )
             if is_nhwc:
-                ret = mnm.transpose(ret, (0, 3, 1, 2))  # NHWC -> NCHW
+                ret = raf.transpose(ret, (0, 3, 1, 2))  # NHWC -> NCHW
             return ret
 
-    class Conv2DGrad(mnm.Model):
+    class Conv2DGrad(raf.Model):
         def build(self, grad_mode):
             self._grad_mode = grad_mode
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x_or_w, y, dy):  # pylint: disable=inconsistent-return-statements
             if self._grad_mode == "dx":
-                return mnm.conv2d_dx(
+                return raf.conv2d_dx(
                     x_or_w,
                     y,
                     dy,
@@ -219,7 +205,7 @@ def test_conv2d(
                     groups=1,
                 )
             if self._grad_mode == "dw":
-                return mnm.conv2d_dw(
+                return raf.conv2d_dw(
                     x_or_w,
                     y,
                     dy,
@@ -270,8 +256,8 @@ def test_conv2d(
 @pytest.mark.parametrize(
     "funcs",
     [
-        [mnm._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
-        [mnm._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
+        [raf._op.sym.max_pool2d, torch.nn.functional.max_pool2d],
+        [raf._op.sym.avg_pool2d, torch.nn.functional.avg_pool2d],
     ],
 )
 def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
@@ -280,17 +266,17 @@ def test_pool2d(dtype, data_shape, kernel, stride, padding, funcs, ceil):
             """pytorch have different implementation to tvm on one side padding when the
                     stride can not fully divide the after padding shape on ceilling mode"""
         )
-    mnm_fwd, torch_fwd = funcs
+    raf_fwd, torch_fwd = funcs
     if padding > kernel // 2:
         return
 
-    class Pool2D(mnm.Model):
+    class Pool2D(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            return mnm_fwd(x, kernel=kernel, stride=stride, padding=padding, ceil_mode=ceil)
+            return raf_fwd(x, kernel=kernel, stride=stride, padding=padding, ceil_mode=ceil)
 
     model = Pool2D()
     # forward
@@ -332,13 +318,13 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-arguments
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, m_x):  # pylint: disable=no-self-use
-            return mnm.pad(m_x, pad_width, pad_value, pad_mode)
+            return raf.pad(m_x, pad_width, pad_value, pad_mode)
 
     m_x, t_x = randn_torch(shape, dtype=dtype)
     model = TestModel()

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -29,12 +15,12 @@
 #include "../../../common/shape_utils.h"
 #include "../../schema/likes.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::op::schema;
 using common::shape_utils::GetNumel;
 
 std::vector<Value> ReduceSchema2Args(const ReduceArgs* args) {
@@ -76,16 +62,16 @@ HashKey ReduceHasher(const std::vector<Type>& param_types, const Type& ret_type,
   return key;
 }
 
-#define MNM_TVM_REDUCE(OP, FUNC)                                                             \
-  MNM_TVM(OP, FUNC, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames, ReduceSchema2Attrs, \
+#define RAF_TVM_REDUCE(OP, FUNC)                                                             \
+  RAF_TVM(OP, FUNC, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames, ReduceSchema2Attrs, \
           ReduceHasher, kCommReduce)
 
-MNM_TVM_REDUCE(max, Max);
-MNM_TVM_REDUCE(min, Min);
-MNM_TVM_REDUCE(all, All);
-MNM_TVM_REDUCE(any, Any);
-MNM_TVM_REDUCE(mean, Mean);
-MNM_TVM_REDUCE(prod, Prod);
+RAF_TVM_REDUCE(max, Max);
+RAF_TVM_REDUCE(min, Min);
+RAF_TVM_REDUCE(all, All);
+RAF_TVM_REDUCE(any, Any);
+RAF_TVM_REDUCE(mean, Mean);
+RAF_TVM_REDUCE(prod, Prod);
 
 Attrs ReduceSchema2ArgReduceAttrs(const ReduceArgs* args) {
   auto attrs = make_object<ArgReduceAttrs>();
@@ -108,9 +94,9 @@ Attrs ReduceSchema2ArgReduceAttrs(const ReduceArgs* args) {
   return Attrs(attrs);
 }
 
-MNM_TVM(argmax, Argmax, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
+RAF_TVM(argmax, Argmax, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
         ReduceSchema2ArgReduceAttrs, ReduceHasher, kCommReduce);
-MNM_TVM(argmin, Argmin, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
+RAF_TVM(argmin, Argmin, ReduceArgs, ReduceSchema2Args, ReduceSchemaArgNames,
         ReduceSchema2ArgReduceAttrs, ReduceHasher, kCommReduce)
 
 std::vector<Value> ProdDxSchema2Args(const ProdDxArgs* args) {
@@ -152,7 +138,7 @@ HashKey ProdDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
   return key;
 }
 
-MNM_TVM(prod_dx, ProdDx, ProdDxArgs, ProdDxSchema2Args, ProdDxSchemaArgNames, ProdDxSchema2Attrs,
+RAF_TVM(prod_dx, ProdDx, ProdDxArgs, ProdDxSchema2Args, ProdDxSchemaArgNames, ProdDxSchema2Attrs,
         ProdDxHasher, kBroadcast);
 
 std::vector<Value> SumSchema2Args(const SumArgs* args) {
@@ -221,10 +207,10 @@ HashKey SumDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
   return key;
 }
 
-MNM_TVM(sum, Sum, SumArgs, SumSchema2Args, SumSchemaArgNames, SumSchema2Attrs, SumHasher,
+RAF_TVM(sum, Sum, SumArgs, SumSchema2Args, SumSchemaArgNames, SumSchema2Attrs, SumHasher,
         kCommReduce);
 
-MNM_TVM(sum_dx, SumDx, SumDxArgs, SumDxSchema2Args, SumDxSchemaArgNames, SumDxSchema2Attrs,
+RAF_TVM(sum_dx, SumDx, SumDxArgs, SumDxSchema2Args, SumDxSchemaArgNames, SumDxSchema2Attrs,
         SumDxHasher, kBroadcast);
 
 std::vector<Value> MeanDxSchema2Args(const MeanDxArgs* args) {
@@ -267,7 +253,7 @@ HashKey MeanDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
   return key;
 }
 
-MNM_TVM(mean_dx, MeanDx, MeanDxArgs, MeanDxSchema2Args, MeanDxSchemaArgNames, MeanDxSchema2Attrs,
+RAF_TVM(mean_dx, MeanDx, MeanDxArgs, MeanDxSchema2Args, MeanDxSchemaArgNames, MeanDxSchema2Attrs,
         MeanDxHasher, kBroadcast);
 
 std::vector<Value> L2NormSchema2Args(const L2NormArgs* args) {
@@ -278,9 +264,9 @@ std::vector<std::string> L2NormSchemaArgNames(const op::CallValues& call) {
   return {"x"};
 }
 
-MNM_TVM(l2norm, L2Norm, L2NormArgs, L2NormSchema2Args, L2NormSchemaArgNames, GenericAttrs,
+RAF_TVM(l2norm, L2Norm, L2NormArgs, L2NormSchema2Args, L2NormSchemaArgNames, GenericAttrs,
         GenericHasher, kCommReduce);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

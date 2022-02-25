@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 from . import def_schema
 from .codegen_utils import Op
@@ -205,7 +191,7 @@ OPS = [
     Op(name="stream_barrier", schema_name="stream_barrier"),
     # Communication ops
     # Using underscore before the op name is because these ops won't be directly used in the
-    # frontend and the wrapper ops are defined in python/mnm/distributed/op.py
+    # frontend and the wrapper ops are defined in python/raf/distributed/op.py
     Op(name="_allreduce", schema_name="allreduce"),
     Op(name="_allgather", schema_name="allgather"),
     Op(name="_reduce", schema_name="comm_reduce"),

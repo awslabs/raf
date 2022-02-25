@@ -1,27 +1,13 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import pytest
 import torch.nn as nn
 import torch.nn.functional as F
 
-import mnm
-from mnm.model import Linear
-from mnm.testing import check, one_hot_torch, randn_torch, t2m_param
+import raf
+from raf.model import Linear
+from raf.testing import check, one_hot_torch, randn_torch, t2m_param
 
 
 class TorchMlp(nn.Module):  # pylint: disable=abstract-method
@@ -40,24 +26,24 @@ class TorchMlp(nn.Module):  # pylint: disable=abstract-method
         return x
 
 
-class MNMMlp(mnm.Model):
+class RAFMlp(raf.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, num_inputs, num_outputs, num_hiddens1, num_hiddens2):
         self.fc1 = Linear(num_inputs, num_hiddens1)
         self.fc2 = Linear(num_hiddens1, num_hiddens2)
         self.fc3 = Linear(num_hiddens2, num_outputs)
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
         x = self.fc1(x)
-        x = mnm.relu(x)
+        x = raf.relu(x)
         x = self.fc2(x)
-        x = mnm.relu(x)
+        x = raf.relu(x)
         x = self.fc3(x)
         return x
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "config",
     [
@@ -68,7 +54,7 @@ class MNMMlp(mnm.Model):
 )
 @pytest.mark.parametrize("is_train", [True, False])
 def test_mlp(config, is_train):
-    m_model = MNMMlp(*config)
+    m_model = RAFMlp(*config)
     m_model.to(device="cuda")
     t_model = TorchMlp(*config)
     t_model.to(device="cuda")

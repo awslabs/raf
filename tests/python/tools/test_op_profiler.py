@@ -1,35 +1,21 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=no-self-use,protected-access
 import pytest
 
-import mnm
-from mnm._ffi.op_profiler import Profile, ProfileGroup, ResetCache, GetCacheSize
-from mnm.testing import get_testable_devices, run_infer_type, randn
+import raf
+from raf._ffi.op_profiler import Profile, ProfileGroup, ResetCache, GetCacheSize
+from raf.testing import get_testable_devices, run_infer_type, randn
 
 
 @pytest.mark.parametrize("device_str", get_testable_devices())
 def test_single_op(device_str):
-    data = mnm.ir.var("x", shape=(16, 16))
-    expr = mnm.ir.op.softmax(data)
+    data = raf.ir.var("x", shape=(16, 16))
+    expr = raf.ir.op.softmax(data)
     expr = run_infer_type(expr).body
 
-    device = mnm.Device(device_str)
+    device = raf.Device(device_str)
 
     ResetCache(device)
     assert GetCacheSize(device) == 0
@@ -55,9 +41,9 @@ def test_single_op(device_str):
 
 
 def test_no_compute_op():
-    data = mnm.ir.var("x", shape=(16, 16))
+    data = raf.ir.var("x", shape=(16, 16))
     expr = run_infer_type(data)  # expr is a var so no way to profile it.
-    res = Profile(expr, mnm.Device("cpu"))
+    res = Profile(expr, raf.Device("cpu"))
     lat, ws_size = res["latency"], res["workspace_size"]
     # Unprofilable op has a workspace size of 0
     assert len(lat) == 1 and lat[0].value == 0.0
@@ -66,25 +52,25 @@ def test_no_compute_op():
 
 @pytest.mark.parametrize("device_str", get_testable_devices())
 def test_closure(device_str):
-    class Model(mnm.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, data):
-            out = mnm.relu(data)
-            out = mnm.log(out)
+            out = raf.relu(data)
+            out = raf.log(out)
             return out
 
     model = Model()
     m_x, _ = randn((10, 20), device=device_str)
     mod = model._internal(m_x).mod
-    mod = mnm._ffi.pass_.ToGraphNormalForm()(mod)
-    mod = mnm._ffi.pass_.ToBasicBlockNormalForm()(mod)
-    mod = mnm._ffi.pass_.FuseTVM()(mod)
-    mod = mnm._ffi.pass_.InferType()(mod)
+    mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+    mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+    mod = raf._ffi.pass_.FuseTVM()(mod)
+    mod = raf._ffi.pass_.InferType()(mod)
 
-    device = mnm.Device(device_str)
+    device = raf.Device(device_str)
 
     ResetCache(device)
     assert GetCacheSize(device) == 0
@@ -101,13 +87,13 @@ def test_closure(device_str):
     assert GetCacheSize(device) == 1
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_workspace():
-    data = mnm.ir.var("x", shape=(2, 3, 14, 14))
-    weight = mnm.ir.var("w", shape=(3, 3, 3, 3))
-    expr = mnm.ir.op.conv2d(data, weight)
+    data = raf.ir.var("x", shape=(2, 3, 14, 14))
+    weight = raf.ir.var("w", shape=(3, 3, 3, 3))
+    expr = raf.ir.op.conv2d(data, weight)
     expr = run_infer_type(expr).body
-    res = Profile(expr, mnm.Device("cuda"))
+    res = Profile(expr, raf.Device("cuda"))
     lat, ws_size = res["latency"], res["workspace_size"]
     assert len(lat) == 1 and lat[0].value > 0
     # This op is expected to have non-zero workspace size but I'm not sure.
@@ -115,11 +101,11 @@ def test_workspace():
     assert ws_size.value >= 0
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_multi_stream():
-    device = mnm.Device("cuda")
-    data = mnm.ir.var("x", shape=(16, 16))
-    expr = mnm.ir.op.softmax(data)
+    device = raf.Device("cuda")
+    data = raf.ir.var("x", shape=(16, 16))
+    expr = raf.ir.op.softmax(data)
     expr = run_infer_type(expr).body
 
     ResetCache(device)

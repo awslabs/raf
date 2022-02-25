@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <cassert>
@@ -22,22 +8,22 @@
 
 #include <gtest/gtest.h>
 
-#include <mnm/device.h>
-#include <mnm/op.h>
+#include <raf/device.h>
+#include <raf/op.h>
 
-using mnm::DevType;
-using mnm::ir::Array;
-using mnm::ir::Attrs;
-using mnm::ir::Op;
-using mnm::op::CallValues;
-using mnm::op::GetDialect;
-using mnm::op::IsDialectOp;
-using mnm::op::OpDialect;
-using mnm::op::OpEnv;
-using mnm::op::OpEnvMaker;
-using mnm::value::Value;
+using raf::DevType;
+using raf::ir::Array;
+using raf::ir::Attrs;
+using raf::ir::Op;
+using raf::op::CallValues;
+using raf::op::GetDialect;
+using raf::op::IsDialectOp;
+using raf::op::OpDialect;
+using raf::op::OpEnv;
+using raf::op::OpEnvMaker;
+using raf::value::Value;
 
-MNM_REGISTER_OP("mnm.op.cpptest.conv2d");
+RAF_REGISTER_OP("raf.op.cpptest.conv2d");
 
 class Conv2d : public OpEnv {
  public:
@@ -53,7 +39,7 @@ class Conv2d : public OpEnv {
   }
 };
 
-// Implement 0 of "mnm.cpptest.conv2d"
+// Implement 0 of "raf.cpptest.conv2d"
 class Conv2dX : public Conv2d {
  public:
   Conv2dX() {
@@ -64,11 +50,11 @@ class Conv2dX : public Conv2d {
     return new Conv2dX();
   }
 };
-MNM_REGISTER_DIALECT("mklShallowNN").set_enable(DevType::kCPU());
-MNM_REGISTER_DIALECT_OP(mklShallowNN, cpptest.conv2d, 10);
-MNM_OP_ENV_MAKER("mnm.op.mklShallowNN.cpptest.conv2d", Conv2dX::make);
+RAF_REGISTER_DIALECT("mklShallowNN").set_enable(DevType::kCPU());
+RAF_REGISTER_DIALECT_OP(mklShallowNN, cpptest.conv2d, 10);
+RAF_OP_ENV_MAKER("raf.op.mklShallowNN.cpptest.conv2d", Conv2dX::make);
 
-// Implement 1 of "mnm.cpptest.conv2d"
+// Implement 1 of "raf.cpptest.conv2d"
 class Conv2dY : public Conv2d {
  public:
   Conv2dY() {
@@ -79,13 +65,13 @@ class Conv2dY : public Conv2d {
     return new Conv2dY();
   }
 };
-MNM_REGISTER_DIALECT("sshadow").set_enable(DevType::kCPU());
-MNM_REGISTER_DIALECT_OP(sshadow, cpptest.conv2d, 12);
-MNM_OP_ENV_MAKER("mnm.op.sshadow.cpptest.conv2d", Conv2dY::make);
+RAF_REGISTER_DIALECT("sshadow").set_enable(DevType::kCPU());
+RAF_REGISTER_DIALECT_OP(sshadow, cpptest.conv2d, 12);
+RAF_OP_ENV_MAKER("raf.op.sshadow.cpptest.conv2d", Conv2dY::make);
 
 TEST(OpDialect, Registry) {
   auto dispatch_list =
-      OpDialect::GetDispatchList(Op::Get("mnm.op.cpptest.conv2d"), DevType::kCPU());
+      OpDialect::GetDispatchList(Op::Get("raf.op.cpptest.conv2d"), DevType::kCPU());
   ASSERT_EQ(dispatch_list.size(), 2);
   CallValues call;
   for (const auto e : dispatch_list) {
@@ -98,10 +84,10 @@ TEST(OpDialect, Registry) {
     const auto* env = static_cast<Conv2d*>((*maker)(call));
     ASSERT_NE(env, nullptr);
     if (e.dialect == "mklShallowNN") {
-      ASSERT_EQ(dialect_op->name, "mnm.op.mklShallowNN.cpptest.conv2d");
+      ASSERT_EQ(dialect_op->name, "raf.op.mklShallowNN.cpptest.conv2d");
       ASSERT_EQ(env->type, 0);
     } else if (e.dialect == "sshadow") {
-      ASSERT_EQ(dialect_op->name, "mnm.op.sshadow.cpptest.conv2d");
+      ASSERT_EQ(dialect_op->name, "raf.op.sshadow.cpptest.conv2d");
       ASSERT_EQ(env->type, 1);
     } else {
       ASSERT_TRUE(false);

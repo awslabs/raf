@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,10 +9,10 @@
  */
 #include "./graph_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 
 std::string IndexedForwardGraph::Node::DebugDump() const {
   std::ostringstream os;
@@ -128,9 +114,9 @@ class IndexedForwardGraph::Creator : private ExprVisitor {
     ICHECK(graph_.node_map.count(call));
     Node* node = graph_.node_map.at(call);
     static auto fpattern = Op::GetAttrMap<TOpPattern>("TOpPattern");
-    static auto finplace = Op::GetAttrMap<TMNMInplaceUpdate>("TMNMInplaceUpdate");
-    static auto add_op = Op::Get("mnm.op.add");
-    static auto subtract_op = Op::Get("mnm.op.subtract");
+    static auto finplace = Op::GetAttrMap<TRAFInplaceUpdate>("TRAFInplaceUpdate");
+    static auto add_op = Op::Get("raf.op.add");
+    static auto subtract_op = Op::Get("raf.op.subtract");
 
     // Now we set the pattern of this call.
     //
@@ -371,4 +357,4 @@ DominatorTree::Node* DominatorTree::GetNode(Arena* arena, IndexedForwardGraph::N
 }
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

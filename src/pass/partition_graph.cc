@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -27,18 +13,18 @@
  * Each of these paritioned functions, a.k.a regions, will be viewed as
  * external functions, and they will use the provided compiler for codegen.
  */
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
 #include "./common.h"
 #include "../op/dialect/tvm/tvm_attrs.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace partition_graph {
 
-using namespace mnm::ir;
-using mnm::op::tvm_dialect::CompilerAttrs;
+using namespace raf::ir;
+using raf::op::tvm_dialect::CompilerAttrs;
 
 static const Op& begin_op = CompilerBeginOp();
 static const Op& end_op = CompilerEndOp();
@@ -358,10 +344,10 @@ Pass PartitionGraph() {
                                                                              PassContext pc) {
     return Downcast<Function>(partition_graph::PartitionGraph(f));
   };
-  return CreateMNMFunctionPass(pass_func, 0, "PartitionGraph", {});
+  return CreateRAFFunctionPass(pass_func, 0, "PartitionGraph", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.PartitionGraph").set_body_typed(PartitionGraph);
+RAF_REGISTER_GLOBAL("raf.pass_.PartitionGraph").set_body_typed(PartitionGraph);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

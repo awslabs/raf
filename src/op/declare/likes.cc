@@ -1,37 +1,23 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file src/op/declare/unary.cc
  * \brief Declaration of unary operators
  */
-#include "mnm/op.h"
-#include "mnm/tensor.h"
+#include "raf/op.h"
+#include "raf/tensor.h"
 #include "../schema/likes.h"
 #include <numeric>
 #include <algorithm>
-namespace mnm {
+namespace raf {
 namespace op {
 namespace declare {
 
-using namespace mnm::op::schema;
-using namespace mnm::value;
+using namespace raf::op::schema;
+using namespace raf::value;
 
 void Sum(const CallValues& call) {
   const auto* args = call->args.as<SumArgs>();
@@ -96,7 +82,7 @@ void Sum(const CallValues& call) {
   call->out = TensorValue::Assemble(x->device, x->dtype, shape);
 }
 
-MNM_OP_DECLARE("mnm.op.sum", Sum);
+RAF_OP_DECLARE("raf.op.sum", Sum);
 
 void SumDx(const CallValues& call) {
   // the shape of the output of reduce_dx op is same as input x
@@ -109,7 +95,7 @@ void SumDx(const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
 }
-MNM_OP_DECLARE("mnm.op.sum_dx", SumDx);
+RAF_OP_DECLARE("raf.op.sum_dx", SumDx);
 }  // namespace declare
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

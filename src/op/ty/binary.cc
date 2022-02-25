@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,16 +9,16 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
-#include "mnm/type.h"
+#include "raf/type.h"
 #include "../schema/ufunc.h"
 #include "./utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
 
 Type BroadcastInfer(const CallValues& value) {
   const auto* args = value->args.as<BinaryArgs>();
@@ -66,24 +52,24 @@ Type LogicalBroadcastInfer(const CallValues& value) {
   return TensorType(oshape, DataType::Bool(x1->dtype.lanes()));
 }
 
-MNM_OP_TYPE("mnm.op.add", "BroadcastUfunc", BroadcastUfuncInfer);
-MNM_OP_TYPE("mnm.op.subtract", "BroadcastUfunc", BroadcastUfuncInfer);
-MNM_OP_TYPE("mnm.op.multiply", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.divide", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.floor_divide", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.mod", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.maximum", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.minimum", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.power", "Power", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.right_shift", "Broadcast", BroadcastInfer);
-MNM_OP_TYPE("mnm.op.less", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.greater", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.less_equal", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.greater_equal", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.equal", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.not_equal", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.logical_and", "LogicalBroadcast", LogicalBroadcastInfer);
-MNM_OP_TYPE("mnm.op.left_shift", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.add", "BroadcastUfunc", BroadcastUfuncInfer);
+RAF_OP_TYPE("raf.op.subtract", "BroadcastUfunc", BroadcastUfuncInfer);
+RAF_OP_TYPE("raf.op.multiply", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.divide", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.floor_divide", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.mod", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.maximum", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.minimum", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.power", "Power", BroadcastInfer);
+RAF_OP_TYPE("raf.op.right_shift", "Broadcast", BroadcastInfer);
+RAF_OP_TYPE("raf.op.less", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.greater", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.less_equal", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.greater_equal", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.equal", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.not_equal", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.logical_and", "LogicalBroadcast", LogicalBroadcastInfer);
+RAF_OP_TYPE("raf.op.left_shift", "Broadcast", BroadcastInfer);
 
 Type AxisTypeInfer(const CallValues& value) {
   const auto* args = value->args.as<BinaryArgs>();
@@ -100,8 +86,8 @@ Type AxisTypeInfer(const CallValues& value) {
   }
 }
 
-MNM_OP_TYPE("mnm.op.get_reduce_axis", "ReduceAxis", AxisTypeInfer);
-MNM_OP_TYPE("mnm.op.get_kept_dims", "KeptDims", AxisTypeInfer);
+RAF_OP_TYPE("raf.op.get_reduce_axis", "ReduceAxis", AxisTypeInfer);
+RAF_OP_TYPE("raf.op.get_kept_dims", "KeptDims", AxisTypeInfer);
 
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

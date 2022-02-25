@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -25,35 +11,35 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "mnm/ir.h"
-#include "mnm/value.h"
-#include "mnm/registry.h"
+#include "raf/ir.h"
+#include "raf/value.h"
+#include "raf/registry.h"
 #include "./regs_utils.h"
 #include "tvm/runtime/c_runtime_api.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace regs {
 namespace ffi2expr {
 
-#define MNM_PRELUDE()                                             \
-  using namespace mnm::ir;                                        \
-  using namespace mnm::value;                                     \
-  using mnm::tensor::Tensor;                                      \
+#define RAF_PRELUDE()                                             \
+  using namespace raf::ir;                                        \
+  using namespace raf::value;                                     \
+  using raf::tensor::Tensor;                                      \
   int type_code = a.type_code();                                  \
   if (type_code == kTVMObjectHandle && (a).IsObjectRef<Expr>()) { \
     return a.AsObjectRef<Expr>();                                 \
   }
 
-#define MNM_CONST(type, value) MakeConstant(type::make(value))
+#define RAF_CONST(type, value) MakeConstant(type::make(value))
 
 inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(ScalarValue, a.operator int64_t());
+    return RAF_CONST(ScalarValue, a.operator int64_t());
   }
   if (type_code == kDLFloat) {
-    return MNM_CONST(ScalarValue, a.operator double());
+    return RAF_CONST(ScalarValue, a.operator double());
   }
   if (type_code == kTVMNullptr) {
     return MakeConstant(NullValue<Value>());
@@ -73,7 +59,7 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
                  << i->GetTypeKey() << '"';
       throw;
     }
-    return MNM_CONST(TupleValue, std::move(fields));
+    return RAF_CONST(TupleValue, std::move(fields));
   }
 
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
@@ -86,9 +72,9 @@ inline ir::Expr OptionalArrayLike(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr Tensor(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMNDArrayHandle) {
-    return MNM_CONST(TensorValue, a.operator tvm::runtime::NDArray());
+    return RAF_CONST(TensorValue, a.operator tvm::runtime::NDArray());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not a tensor";
@@ -103,9 +89,9 @@ inline ir::Expr OptionalTensor(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr Int(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(ScalarValue, a.operator int64_t());
+    return RAF_CONST(ScalarValue, a.operator int64_t());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not an integer";
@@ -113,11 +99,11 @@ inline ir::Expr Int(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr Bool(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
     int64_t value = a.operator int64_t();
     if (value == 0 || value == 1) {
-      return MNM_CONST(BoolValue, static_cast<bool>(value));
+      return RAF_CONST(BoolValue, static_cast<bool>(value));
     }
     LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
                << "\" is not boolean. Its value is " << value;
@@ -129,7 +115,7 @@ inline ir::Expr Bool(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr Double(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
     return MakeConstant(FloatValue::make(DataType::Float(64), a.operator int64_t()));
   }
@@ -142,9 +128,9 @@ inline ir::Expr Double(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr String(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kTVMStr) {
-    return MNM_CONST(StringValue, a.operator std::string());
+    return RAF_CONST(StringValue, a.operator std::string());
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is a string";
@@ -152,7 +138,7 @@ inline ir::Expr String(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
@@ -167,7 +153,7 @@ inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
                  << i->GetTypeKey() << '"';
       throw;
     }
-    return MNM_CONST(TupleValue, std::move(ret));
+    return RAF_CONST(TupleValue, std::move(ret));
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
              << "\" is not tuple of integers";
@@ -175,9 +161,9 @@ inline ir::Expr TupleInt(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(TupleValue, tvm::Array<Value>({ScalarValue::make(a.operator int64_t())}));
+    return RAF_CONST(TupleValue, tvm::Array<Value>({ScalarValue::make(a.operator int64_t())}));
   }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
@@ -201,9 +187,9 @@ inline ir::Expr IntOrTupleInt(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr IntArray(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   if (type_code == kDLInt) {
-    return MNM_CONST(TupleValue, tvm::Array<Value>({ScalarValue::make(a.operator int64_t())}));
+    return RAF_CONST(TupleValue, tvm::Array<Value>({ScalarValue::make(a.operator int64_t())}));
   }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
@@ -227,7 +213,7 @@ inline ir::Expr IntArray(const registry::TVMArgValue& a) {
 }
 
 inline ir::Expr TupleTensor(const registry::TVMArgValue& a) {
-  MNM_PRELUDE();
+  RAF_PRELUDE();
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
@@ -249,10 +235,10 @@ inline ir::Expr TupleTensor(const registry::TVMArgValue& a) {
   throw;
 }
 
-#undef MNM_MAKE_CONST
-#undef MNM_PRELUDE
+#undef RAF_MAKE_CONST
+#undef RAF_PRELUDE
 
 }  // namespace ffi2expr
 }  // namespace regs
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

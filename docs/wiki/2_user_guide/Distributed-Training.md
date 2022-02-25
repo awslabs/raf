@@ -1,24 +1,10 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
+<!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!--- SPDX-License-Identifier: Apache-2.0  -->
 
 # Distributed Training
 
 This tutorial introduces how to train your model with multiple GPUs.
-To enable distributed training, you need to turn `MNM_USE_CUDA`, `MNM_USE_MPI`, and `MNM_USE_NCCL` on in `${MNM_HOME}/build/config.cmake` before cmake.
+To enable distributed training, you need to turn `RAF_USE_CUDA`, `RAF_USE_MPI`, and `RAF_USE_NCCL` on in `${RAF_HOME}/build/config.cmake` before cmake.
 
 For implementation details of collective communication operators, data parallel and ZeRO optimizations, please see []().
 
@@ -27,8 +13,8 @@ For implementation details of collective communication operators, data parallel 
 To enable distributed training, you need to set the corresponding flags in the distributed context. For example:
 
 ```python
-import mnm
-from mnm import distributed as dist
+import raf
+from raf import distributed as dist
 dctx = dist.get_context()
 dctx.enable_data_parallel = True
 ```

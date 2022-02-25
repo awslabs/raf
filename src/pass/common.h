@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -25,8 +11,8 @@
 
 #include <vector>
 #include <tvm/ir/type_functor.h>
-#include "mnm/ir.h"
-#include "mnm/value.h"
+#include "raf/ir.h"
+#include "raf/value.h"
 #include "../op/schema/init.h"
 #include "../op/schema/memory.h"
 #include "../op/schema/transform.h"
@@ -34,7 +20,7 @@
 using tvm::kType;
 using tvm::TypeFunctor;
 
-namespace mnm {
+namespace raf {
 namespace pass {
 
 using namespace ir;
@@ -95,7 +81,7 @@ struct ExplicitLetList {
  * \return compiler_begin op
  */
 inline const Op& CompilerBeginOp() {
-  static auto op = Op::Get("mnm.op.compiler_begin");
+  static auto op = Op::Get("raf.op.compiler_begin");
   return op;
 }
 
@@ -105,7 +91,7 @@ inline const Op& CompilerBeginOp() {
  * \return compiler_end op
  */
 inline const Op& CompilerEndOp() {
-  static auto op = Op::Get("mnm.op.compiler_end");
+  static auto op = Op::Get("raf.op.compiler_end");
   return op;
 }
 
@@ -357,21 +343,21 @@ inline Device GetOutputDevice(const Call& call) {
 
   Device device = Device::Current();
   if (auto op_node = call->op.as<OpNode>()) {
-    static auto fschema = Op::GetAttrMap<op::FMNMSchema>("FMNMSchema");
-    static auto* str2dev = tvm::runtime::Registry::Get("mnm._core.core_utils.str2dev");
+    static auto fschema = Op::GetAttrMap<op::FRAFSchema>("FRAFSchema");
+    static auto* str2dev = tvm::runtime::Registry::Get("raf._core.core_utils.str2dev");
 
     Op op = GetRef<Op>(op_node);
     Op base_op = op::IsDialectOp(op) ? op::GetBaseOp(op) : op;
-    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.zeros", call->args, op::schema::InitOpArgs, device);
-    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.ones", call->args, op::schema::InitOpArgs, device);
-    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.full", call->args, op::schema::FullArgs, device);
-    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.arange", call->args, op::schema::ArangeArgs, device);
-    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.one_hot", call->args, op::schema::OneHotArgs, device);
-    GET_DEVICE_FROM_SCHEMA(base_op, "mnm.op.device_copy", call->args, op::schema::DeviceCopyArgs,
+    GET_DEVICE_FROM_SCHEMA(base_op, "raf.op.zeros", call->args, op::schema::InitOpArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "raf.op.ones", call->args, op::schema::InitOpArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "raf.op.full", call->args, op::schema::FullArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "raf.op.arange", call->args, op::schema::ArangeArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "raf.op.one_hot", call->args, op::schema::OneHotArgs, device);
+    GET_DEVICE_FROM_SCHEMA(base_op, "raf.op.device_copy", call->args, op::schema::DeviceCopyArgs,
                            dst_device);
   }
   return device;
 }
 
 };  // namespace pass
-};  // namespace mnm
+};  // namespace raf

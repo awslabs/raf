@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -26,21 +12,21 @@
 #include <stdint.h>
 #include <numeric>
 
-#include "mnm/op.h"
-#include "mnm/device_api.h"
+#include "raf/op.h"
+#include "raf/device_api.h"
 #include "./cublas_utils.h"
 #include "../../schema/ufunc.h"
 #include "../../../common/cuda_utils.h"
 #include "../../../common/shape_utils.h"
 #include "../../../profiler/cuda/cuda_profiler.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cublas {
 namespace manual {
 
-using namespace mnm::value;
-using namespace mnm::device_api;
+using namespace raf::value;
+using namespace raf::device_api;
 
 void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_b, DLTensor* c) {
   Device dev(DevType::kCUDA(), 0);
@@ -108,21 +94,21 @@ void GemmBatchedImpl(DLTensor* a, bool transpose_a, DLTensor* b, bool transpose_
 }
 
 template <bool transpose_a, bool transpose_b>
-class BatchMatmulImpl : public mnm::op::OpEnv {
+class BatchMatmulImpl : public raf::op::OpEnv {
   std::string env_name_;
 
  public:
   explicit BatchMatmulImpl(const CallValues& cv) {
     static auto fschema_index =
-        ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    auto op = ir::Op::Get("mnm.op.batch_matmul");
+        ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op.batch_matmul");
     this->arg_indices = {
         fschema_index[op]("x1"),
         fschema_index[op]("x2"),
     };
     auto args = cv->args.as<op::schema::BinaryArgs>();
     CHECK(args != nullptr);
-    std::string op_name = "mnm.op.cublas.batch_matmul";
+    std::string op_name = "raf.op.cublas.batch_matmul";
     if (transpose_a || transpose_b) {
       op_name += "_";
       op_name += (transpose_a) ? "t" : "n";
@@ -157,16 +143,16 @@ using BatchMatmulNT = BatchMatmulImpl<false, true>;
 using BatchMatmulTN = BatchMatmulImpl<true, false>;
 using BatchMatmulTT = BatchMatmulImpl<true, true>;
 
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul, 15);
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_nt, 15);
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_tn, 15);
-MNM_REGISTER_DIALECT_OP(cublas, batch_matmul_tt, 15);
-MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul", BatchMatmulNN::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul_nt", BatchMatmulNT::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul_tn", BatchMatmulTN::make);
-MNM_OP_ENV_MAKER("mnm.op.cublas.batch_matmul_tt", BatchMatmulTT::make);
+RAF_REGISTER_DIALECT_OP(cublas, batch_matmul, 15);
+RAF_REGISTER_DIALECT_OP(cublas, batch_matmul_nt, 15);
+RAF_REGISTER_DIALECT_OP(cublas, batch_matmul_tn, 15);
+RAF_REGISTER_DIALECT_OP(cublas, batch_matmul_tt, 15);
+RAF_OP_ENV_MAKER("raf.op.cublas.batch_matmul", BatchMatmulNN::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.batch_matmul_nt", BatchMatmulNT::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.batch_matmul_tn", BatchMatmulTN::make);
+RAF_OP_ENV_MAKER("raf.op.cublas.batch_matmul_tt", BatchMatmulTT::make);
 
 }  // namespace manual
 }  // namespace cublas
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -22,16 +8,16 @@
  * \brief Wavefront stream scheduler.
  */
 #include <relay/transforms/pass_utils.h>
-#include "mnm/pass.h"
-#include "mnm/analysis.h"
+#include "raf/pass.h"
+#include "raf/analysis.h"
 #include "./stream_schedule.h"
 #include "../analysis/dependency_graph.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace wavefront_stream_schedule {
 
-using namespace mnm::analysis;
+using namespace raf::analysis;
 using stream_schedule::StreamSchedulerBase;
 using Node = DependencyGraph::Node;
 using NodeExprMap = std::unordered_map<const Node*, Expr>;
@@ -132,8 +118,8 @@ class WavefrontScheduler : public StreamSchedulerBase {
    * step, the remaining nodes in the dataflow graph are CallNode, TupleNode, TupleGetItemNode.
    *
    *  step 2. Use the dataflow graph got in step 1 to issue the operator call in a schedule-specific
-   *          order. Meanwhile, it would inject mnm.op.set_stream, mnm.op.add_event, and
-   *          mnm.op.wait_event operators to manage the synchronization.
+   *          order. Meanwhile, it would inject raf.op.set_stream, raf.op.add_event, and
+   *          raf.op.wait_event operators to manage the synchronization.
    *
    *  When we finish the above two steps, we get the ANF of the scheduled computation graph.
    *
@@ -185,10 +171,10 @@ Pass WavefrontStreamSchedule() {
         auto transform = wavefront_stream_schedule::WavefrontScheduleTransform;
         return Downcast<Function>(tvm::relay::TransformF(transform, f));
       };
-  return CreateMNMFunctionPass(pass_func, 1, "WavefrontStreamSchedule", {});
+  return CreateRAFFunctionPass(pass_func, 1, "WavefrontStreamSchedule", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.WavefrontStreamSchedule").set_body_typed(WavefrontStreamSchedule);
+RAF_REGISTER_GLOBAL("raf.pass_.WavefrontStreamSchedule").set_body_typed(WavefrontStreamSchedule);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

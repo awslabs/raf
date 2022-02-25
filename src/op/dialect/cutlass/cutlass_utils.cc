@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,19 +10,19 @@
 #include <sstream>
 
 #include "cutlass/library/singleton.h"
-#include "mnm/memory_pool.h"
-#include "mnm/value.h"
+#include "raf/memory_pool.h"
+#include "raf/value.h"
 
 #include "./cutlass_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cutlass {
 
-using namespace mnm::ir;
-using namespace mnm::value;
+using namespace raf::ir;
+using namespace raf::value;
 
-MNM_REGISTER_DIALECT("cutlass").set_enable(DevType::kCUDA());
+RAF_REGISTER_DIALECT("cutlass").set_enable(DevType::kCUDA());
 
 CutlassOpEnv::CutlassOpEnv(const CallValues& call) : device_(call->device) {
   CUDA_CALL(cudaGetDeviceProperties(&device_prop_, device_.device_id()));
@@ -125,13 +111,13 @@ DType GetAccumulationDType(DType dtype) {
 }
 
 // Register auxilary ops
-MNM_REGISTER_DIALECT_OP(cutlass, add, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, subtract, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, multiply, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, divide, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, relu, 0);
-MNM_REGISTER_DIALECT_OP(cutlass, gelu, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, add, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, subtract, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, multiply, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, divide, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, relu, 0);
+RAF_REGISTER_DIALECT_OP(cutlass, gelu, 0);
 
 }  // namespace cutlass
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

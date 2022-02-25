@@ -1,37 +1,23 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access,invalid-name,attribute-defined-outside-init,no-self-use
 import pytest
 import tvm
 from tvm import relay
-import mnm
-from mnm.ir import MNMSequential
-from mnm.testing import randn
+import raf
+from raf.ir import RAFSequential
+from raf.testing import randn
 
 
 def test_basic():
-    class Add(mnm.Model):
+    class Add(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     def expected(shape):
         # pylint: disable=too-many-locals
@@ -44,10 +30,10 @@ def test_basic():
 
         let3 = relay.Let(ret, relay.Tuple([a1, gradient]), ret)
         let2 = relay.Let(gradient, relay.Tuple([dy, dy]), let3)
-        let1 = relay.Let(a1, mnm.ir.op.add(x, y), let2)
+        let1 = relay.Let(a1, raf.ir.op.add(x, y), let2)
         func = relay.Function([x, y, dy], let1)
         mod = tvm.IRModule.from_expr(func)
-        mod = mnm._ffi.pass_.InferType()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
         return mod["main"]
 
     shape = (4, 5)
@@ -59,12 +45,12 @@ def test_basic():
     m_y.requires_grad = True
     record = model._internal(m_x, m_y)
     mod = record.mod
-    seq = MNMSequential(
+    seq = RAFSequential(
         [
-            mnm._ffi.pass_.InferType(),
-            mnm._ffi.pass_.AutoDiff(record.requires_grads),
-            mnm._ffi.pass_.InlineBackward(),
-            mnm._ffi.pass_.InferType(),
+            raf._ffi.pass_.InferType(),
+            raf._ffi.pass_.AutoDiff(record.requires_grads),
+            raf._ffi.pass_.InlineBackward(),
+            raf._ffi.pass_.InferType(),
         ]
     )
     mod = seq(mod)
@@ -73,22 +59,22 @@ def test_basic():
 
 
 def test_no_backward():
-    class Model1(mnm.Model):
+    class Model1(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     # model that returns a tuple
-    class Model2(mnm.Model):
+    class Model2(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):
-            return mnm.split(mnm.add(x, y), 2)
+            return raf.split(raf.add(x, y), 2)
 
     # Get a Relay func
     shape = (4, 5)
@@ -98,13 +84,13 @@ def test_no_backward():
     model1 = Model1()
     mod = model1._internal(m_x, m_y).mod
     func = mod["main"]
-    inlined_func = mnm._ffi.pass_.InlineBackward()(mod)["main"]
+    inlined_func = raf._ffi.pass_.InlineBackward()(mod)["main"]
     assert tvm.ir.structural_equal(inlined_func, func)
 
     model2 = Model2()
     mod = model2._internal(m_x, m_y).mod
     func = mod["main"]
-    inlined_func = mnm._ffi.pass_.InlineBackward()(mod)["main"]
+    inlined_func = raf._ffi.pass_.InlineBackward()(mod)["main"]
     assert tvm.ir.structural_equal(inlined_func, func)
 
 

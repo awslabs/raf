@@ -1,25 +1,11 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 import pytest
 import tvm
-import mnm
-from mnm.testing import randn, get_testable_devices
-from mnm._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody, InferType
+import raf
+from raf.testing import randn, get_testable_devices
+from raf._ffi.pass_ import AutoDiff, LambdaLift, FromRelay, LiftBranchBody, InferType
 from tvm import relay
 
 
@@ -28,14 +14,14 @@ from tvm import relay
 def test_basic(device, shape):
     # pylint: disable=protected-access
     # Create a symbolic model and run it
-    class Add(mnm.Model):
+    class Add(raf.Model):
         # pylint: disable=attribute-defined-outside-init
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x, y):  # pylint: disable=no-self-use
-            return mnm.add(x, y)
+            return raf.add(x, y)
 
     # Get a Relay func
     model = Add()
@@ -48,7 +34,7 @@ def test_basic(device, shape):
     # The backward function will be lifted
     mod = AutoDiff(record.requires_grads)(InferType()(mod))
 
-    # Call Lambda lift pass on the Meta module
+    # Call Lambda lift pass on the RAF module
     lifted_mod = LambdaLift()(mod)
 
     assert len(lifted_mod.functions) == 2
@@ -75,7 +61,7 @@ def test_while_loop():
     """
 
     def get_recursive_mod():
-        sb = mnm.ir.ScopeBuilder()
+        sb = raf.ir.ScopeBuilder()
         mod = tvm.IRModule()
 
         loop = relay.var("loop")

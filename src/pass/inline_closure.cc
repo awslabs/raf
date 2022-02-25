@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -24,14 +10,14 @@
 #include <unordered_map>
 #include <tvm/node/structural_equal.h>
 #include <tvm/node/structural_hash.h>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/binding.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/binding.h"
 #include "./common.h"
 #include "./let_list.h"
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace inline_closure {
 
@@ -56,7 +42,7 @@ namespace inline_closure {
  * }
  *
  * def @fwd(%x2, %y) {
- *   let %a1 = mnm.op.add(%x2, %y, -114514, -114514)
+ *   let %a1 = raf.op.add(%x2, %y, -114514, -114514)
  *   let %adjoint_closure = @lifted_name5429879841773454120(%x2, %y);
  *   let %ret = (%a1, %adjoint_closure);
  *   %ret
@@ -64,8 +50,8 @@ namespace inline_closure {
  *
  * def @lifted_name5429879841773454120(%x3, %y1, Closure=1) {
  *   fn (%dy1) {
- *     let %x_2 = mnm.op.sum(%dy1, -114514, -114514, -114514);
- *     let %x_5 = mnm.op.sum(%dy1, -114514, -114514, -114514);
+ *     let %x_2 = raf.op.sum(%dy1, -114514, -114514, -114514);
+ *     let %x_5 = raf.op.sum(%dy1, -114514, -114514, -114514);
  *     let %x_6 = (%x_2, %x_5);
  *     %x_6
  *   }
@@ -74,9 +60,9 @@ namespace inline_closure {
  * After inlining, it is simplified into a single function:
  *
  * def @main(%x, %x1, %dy) {
- *   let %x_1 = mnm.op.add(%x, %x1, -114514, -114514);
- *   let %x_4 = mnm.op.sum(%dy, -114514, -114514, -114514);
- *   let %x_5 = mnm.op.sum(%dy, -114514, -114514, -114514);
+ *   let %x_1 = raf.op.add(%x, %x1, -114514, -114514);
+ *   let %x_4 = raf.op.sum(%dy, -114514, -114514, -114514);
+ *   let %x_5 = raf.op.sum(%dy, -114514, -114514, -114514);
  *   let %x_7 = (%x_4, %x_5);
  *   let %x_8 = (%x_1, %x_7);
  *   %x_8
@@ -85,8 +71,8 @@ namespace inline_closure {
  * Note: this pass assumes LambdaLift has been run beforehand.
  */
 
-using namespace mnm::ir;
-using namespace mnm::op;
+using namespace raf::ir;
+using namespace raf::op;
 
 class ClosureInliner : public MixedModeMutator {
  public:
@@ -224,10 +210,10 @@ Pass InlineClosure() {
                                                                              PassContext pc) {
     return Downcast<Function>(inline_closure::ClosureInliner(m)(f));
   };
-  return CreateMNMFunctionPass(pass_func, 1, "InlineClosure", {});
+  return CreateRAFFunctionPass(pass_func, 1, "InlineClosure", {});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.InlineClosure").set_body_typed(InlineClosure);
+RAF_REGISTER_GLOBAL("raf.pass_.InlineClosure").set_body_typed(InlineClosure);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

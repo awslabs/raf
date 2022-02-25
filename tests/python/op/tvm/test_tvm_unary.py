@@ -1,19 +1,5 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=protected-access,attribute-defined-outside-init, no-member, no-self-use
 # pylint: disable=too-many-arguments
@@ -22,15 +8,15 @@ import pytest
 from scipy import special
 import torch
 
-import mnm
-from mnm.testing import get_testable_devices, randn, randn_torch, run_vm_model, check
+import raf
+from raf.testing import get_testable_devices, randn, randn_torch, run_vm_model, check
 
 
-class UnaryModel(mnm.Model):
+class UnaryModel(raf.Model):
     def build(self, op):
         self.op = op
 
-    @mnm.model.trace
+    @raf.model.trace
     def forward(self, x):
         return self.op(x)
 
@@ -58,22 +44,22 @@ def verify_unify_op(m_op, m_arg, device, ref_fwd_out, m_dy=None, ref_grad=None):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.copy, mnm._op.sym.copy),
-        (np.ceil, mnm._op.sym.ceil),
-        (np.floor, mnm._op.sym.floor),
-        (np.cos, mnm._op.sym.cos),
-        (np.sin, mnm._op.sym.sin),
-        (np.sign, mnm._op.sym.sign),
-        (np.round, mnm._op.sym.round),
-        (np.abs, mnm._op.sym.abs),
-        (np.exp, mnm._op.sym.exp),
-        (np.arctan, mnm._op.sym.atan),
-        (special.erf, mnm._op.sym.erf),
-        (np.negative, mnm._op.sym.negative),
-        (np.cos, mnm._op.sym.cos),
-        (np.zeros_like, mnm._op.sym.zeros_like),
-        (np.ones_like, mnm._op.sym.ones_like),
-        (np.trunc, mnm._op.sym.trunc),
+        (np.copy, raf._op.sym.copy),
+        (np.ceil, raf._op.sym.ceil),
+        (np.floor, raf._op.sym.floor),
+        (np.cos, raf._op.sym.cos),
+        (np.sin, raf._op.sym.sin),
+        (np.sign, raf._op.sym.sign),
+        (np.round, raf._op.sym.round),
+        (np.abs, raf._op.sym.abs),
+        (np.exp, raf._op.sym.exp),
+        (np.arctan, raf._op.sym.atan),
+        (special.erf, raf._op.sym.erf),
+        (np.negative, raf._op.sym.negative),
+        (np.cos, raf._op.sym.cos),
+        (np.zeros_like, raf._op.sym.zeros_like),
+        (np.ones_like, raf._op.sym.ones_like),
+        (np.trunc, raf._op.sym.trunc),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
@@ -90,16 +76,16 @@ def test_common_unary_ops(ops, shape, dtype, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.erf, mnm._op.sym.erf),
-        (torch.nn.ReLU(), mnm._op.sym.relu),
-        (torch.nn.GELU(), mnm._op.sym.gelu),
-        (torch.rsqrt, mnm._op.sym.rsqrt),
-        (torch.cos, mnm._op.sym.cos),
-        (torch.sin, mnm._op.sym.sin),
-        (torch.exp, mnm._op.sym.exp),
-        (torch.atan, mnm._op.sym.atan),
-        (torch.trunc, mnm._op.sym.trunc),
-        (torch.tanh, mnm._op.sym.tanh),
+        (torch.erf, raf._op.sym.erf),
+        (torch.nn.ReLU(), raf._op.sym.relu),
+        (torch.nn.GELU(), raf._op.sym.gelu),
+        (torch.rsqrt, raf._op.sym.rsqrt),
+        (torch.cos, raf._op.sym.cos),
+        (torch.sin, raf._op.sym.sin),
+        (torch.exp, raf._op.sym.exp),
+        (torch.atan, raf._op.sym.atan),
+        (torch.trunc, raf._op.sym.trunc),
+        (torch.tanh, raf._op.sym.tanh),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
@@ -114,15 +100,15 @@ def test_unary_ops_with_grad(ops, shape, dtype, device):
     verify_unify_op(m_op, m_x, device, t_y, m_dy, t_x.grad)
 
 
-@pytest.mark.skipif(not mnm.build.with_cuda(), reason="CUDA is not enabled")
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.cos, mnm._op.sym.cos),
-        (torch.sin, mnm._op.sym.sin),
-        (torch.exp, mnm._op.sym.exp),
-        (torch.trunc, mnm._op.sym.trunc),
-        (torch.nn.ReLU(), mnm._op.sym.relu),
+        (torch.cos, raf._op.sym.cos),
+        (torch.sin, raf._op.sym.sin),
+        (torch.exp, raf._op.sym.exp),
+        (torch.trunc, raf._op.sym.trunc),
+        (torch.nn.ReLU(), raf._op.sym.relu),
     ],
 )
 def test_unary_fp16_ops_with_grad(ops):
@@ -143,9 +129,9 @@ def test_unary_fp16_ops_with_grad(ops):
 @pytest.mark.parametrize(
     "ops",
     [
-        (torch.log2, mnm._op.sym.log2),
-        (torch.log, mnm._op.sym.log),
-        (torch.sqrt, mnm._op.sym.sqrt),
+        (torch.log2, raf._op.sym.log2),
+        (torch.log, raf._op.sym.log),
+        (torch.sqrt, raf._op.sym.sqrt),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
@@ -164,9 +150,9 @@ def test_pos_unary_ops_with_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize(
     "ops",
     [
-        (np.log, mnm._op.sym.log),
-        (np.sqrt, mnm._op.sym.sqrt),
-        (np.log2, mnm._op.sym.log2),
+        (np.log, raf._op.sym.log),
+        (np.sqrt, raf._op.sym.sqrt),
+        (np.log2, raf._op.sym.log2),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
@@ -187,8 +173,8 @@ def test_pos_unary_ops_without_grad(ops, shape, dtype, device):
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_shape(device):
     shape = (3, 6, 9)
-    m_x = mnm.array(np.random.randn(*shape).astype("float32"), device=device)
-    m_shape = mnm.shape(m_x)
+    m_x = raf.array(np.random.randn(*shape).astype("float32"), device=device)
+    m_shape = raf.shape(m_x)
     assert tuple(m_shape) == shape
 
 

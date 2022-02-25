@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,28 +9,28 @@
  */
 #include <set>
 #include <sstream>
-#include "mnm/op.h"
-#include "mnm/ir.h"
-#include "mnm/pass.h"
-#include "mnm/dist_context.h"
-#include "mnm/profiler.h"
-#include "mnm/stream_pool.h"
+#include "raf/op.h"
+#include "raf/ir.h"
+#include "raf/pass.h"
+#include "raf/dist_context.h"
+#include "raf/profiler.h"
+#include "raf/stream_pool.h"
 #include "./common.h"
 
-#ifdef MNM_USE_NCCL
+#ifdef RAF_USE_NCCL
 #include "../op/dialect/nccl/communication_utils.h"
 #endif
 
-namespace mnm {
+namespace raf {
 namespace pass {
 namespace data_parallel {
 
-using namespace mnm::ir;
-using namespace mnm::op;
-using mnm::distributed::DistContext;
-using mnm::value::NoGradValue;
+using namespace raf::ir;
+using namespace raf::op;
 using profiler::Profiler;
 using profiler::ProfileStat;
+using raf::distributed::DistContext;
+using raf::value::NoGradValue;
 using stream_pool::StreamTagEnum;
 
 struct DataParallel {
@@ -58,17 +44,17 @@ struct DataParallel {
         Backward closure before DataParallel Pass:
         ```
         let %closure = fn (%dy) {
-            let %x1 = mnm.op.nll_loss_dtrue(%y_true, %a4);
-            let %x2 = mnm.op.nll_loss_dpred(%y_true, %a4);
-            %0 = mnm.op.get_reduce_axis(%x2, %a3);
-            %1 = mnm.op.get_kept_dims(%x2, %a3);
-            let %x3 = mnm.op.sum(%x2, %0, %1);
-            %2 = mnm.op.get_reduce_axis(%x2, %linear1.b);
-            %3 = mnm.op.get_kept_dims(%x2, %linear1.b);
-            let %x4 = mnm.op.sum(%x2, %2, %3);
-            let %x5 = mnm.op.matmul(%x3, %linear1.w);
-            let %x6 = mnm.op.matmul_tn(%x3, %a2);
-            %4 = mnm.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
+            let %x1 = raf.op.nll_loss_dtrue(%y_true, %a4);
+            let %x2 = raf.op.nll_loss_dpred(%y_true, %a4);
+            %0 = raf.op.get_reduce_axis(%x2, %a3);
+            %1 = raf.op.get_kept_dims(%x2, %a3);
+            let %x3 = raf.op.sum(%x2, %0, %1);
+            %2 = raf.op.get_reduce_axis(%x2, %linear1.b);
+            %3 = raf.op.get_kept_dims(%x2, %linear1.b);
+            let %x4 = raf.op.sum(%x2, %2, %3);
+            let %x5 = raf.op.matmul(%x3, %linear1.w);
+            let %x6 = raf.op.matmul_tn(%x3, %a2);
+            %4 = raf.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
             let %x7 = %4.0;
             let %x8 = %4.1;
             let %x9 = %4.2;
@@ -79,33 +65,33 @@ struct DataParallel {
         Backward closure after DataParallel Pass:
         ```
         let %closure = fn (%dy) {
-            let %x1 = mnm.op.nll_loss_dtrue(%y_true, %a4);
+            let %x1 = raf.op.nll_loss_dtrue(%y_true, %a4);
             %0 = (%x1,);
-            let %g = mnm.op._allreduce(%0, -114514);
-            let %x2 = mnm.op.nll_loss_dpred(%y_true, %a4);
-            %1 = mnm.op.get_reduce_axis(%x2, %a3);
-            %2 = mnm.op.get_kept_dims(%x2, %a3);
-            let %x3 = mnm.op.sum(%x2, %1, %2);
-            %3 = mnm.op.get_reduce_axis(%x2, %linear1.b);
-            %4 = mnm.op.get_kept_dims(%x2, %linear1.b);
-            let %x4 = mnm.op.sum(%x2, %3, %4);
+            let %g = raf.op._allreduce(%0, -114514);
+            let %x2 = raf.op.nll_loss_dpred(%y_true, %a4);
+            %1 = raf.op.get_reduce_axis(%x2, %a3);
+            %2 = raf.op.get_kept_dims(%x2, %a3);
+            let %x3 = raf.op.sum(%x2, %1, %2);
+            %3 = raf.op.get_reduce_axis(%x2, %linear1.b);
+            %4 = raf.op.get_kept_dims(%x2, %linear1.b);
+            let %x4 = raf.op.sum(%x2, %3, %4);
             %5 = (%x4,);
-            let %g1 = mnm.op._allreduce(%5, -114514);
-            let %x5 = mnm.op.matmul(%x3, %linear1.w);
-            let %x6 = mnm.op.matmul_tn(%x3, %a2);
+            let %g1 = raf.op._allreduce(%5, -114514);
+            let %x5 = raf.op.matmul(%x3, %linear1.w);
+            let %x6 = raf.op.matmul_tn(%x3, %a2);
             %6 = (%x6,);
-            let %g2 = mnm.op._allreduce(%6, -114514);
-            %7 = mnm.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
+            let %g2 = raf.op._allreduce(%6, -114514);
+            %7 = raf.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
             let %x7 = %7.0;
             %8 = (%x7,);
-            let %g3 = mnm.op._allreduce(%8, -114514);
+            let %g3 = raf.op._allreduce(%8, -114514);
             let %x8 = %7.1;
             %9 = (%x8,);
-            let %g4 = mnm.op._allreduce(%9, -114514);
+            let %g4 = raf.op._allreduce(%9, -114514);
             let %x9 = %7.2;
             %10 = (%x9,);
-            let %g5 = mnm.op._allreduce(%10, -114514);
-            let %null = mnm.op.stream_sync(%g5, -114514);
+            let %g5 = raf.op._allreduce(%10, -114514);
+            let %null = raf.op.stream_sync(%g5, -114514);
             let %x10 = (%g3, %g, %g5, -114514, -114514, %g4, %g1, %g2);
             %x10
         };
@@ -114,33 +100,33 @@ struct DataParallel {
         Backward closure after DataParallel Pass:
         ```
         let %closure = fn (%dy) {
-            let %x1 = mnm.op.nll_loss_dtrue(%y_true, %a4);
+            let %x1 = raf.op.nll_loss_dtrue(%y_true, %a4);
             %0 = (%x1,);
-            let %g = mnm.op._allreduce(%0, -114514);
-            let %x2 = mnm.op.nll_loss_dpred(%y_true, %a4);
-            %1 = mnm.op.get_reduce_axis(%x2, %a3);
-            %2 = mnm.op.get_kept_dims(%x2, %a3);
-            let %x3 = mnm.op.sum(%x2, %1, %2);
-            %3 = mnm.op.get_reduce_axis(%x2, %linear1.b);
-            %4 = mnm.op.get_kept_dims(%x2, %linear1.b);
-            let %x4 = mnm.op.sum(%x2, %3, %4);
+            let %g = raf.op._allreduce(%0, -114514);
+            let %x2 = raf.op.nll_loss_dpred(%y_true, %a4);
+            %1 = raf.op.get_reduce_axis(%x2, %a3);
+            %2 = raf.op.get_kept_dims(%x2, %a3);
+            let %x3 = raf.op.sum(%x2, %1, %2);
+            %3 = raf.op.get_reduce_axis(%x2, %linear1.b);
+            %4 = raf.op.get_kept_dims(%x2, %linear1.b);
+            let %x4 = raf.op.sum(%x2, %3, %4);
             %5 = (%x4,);
-            let %g1 = mnm.op._allreduce(%5, -114514);
-            let %x5 = mnm.op.matmul(%x3, %linear1.w);
-            let %x6 = mnm.op.matmul_tn(%x3, %a2);
-            %7 = mnm.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
+            let %g1 = raf.op._allreduce(%5, -114514);
+            let %x5 = raf.op.matmul(%x3, %linear1.w);
+            let %x6 = raf.op.matmul_tn(%x3, %a2);
+            %7 = raf.op.batch_norm_train_dxwb(%x5, %x, %bn1.w, %bn1.b, -114514);
             let %x7 = %7.0;
             let %x8 = %7.1;
             let %x9 = %7.2;
             %8 = (%x9,);
-            let %g3 = mnm.op._allreduce(%8, -114514);
+            let %g3 = raf.op._allreduce(%8, -114514);
             %9 = (%x8,);
-            let %g4 = mnm.op._allreduce(%9, -114514);
+            let %g4 = raf.op._allreduce(%9, -114514);
             %10 = (%x7,);
-            let %g5 = mnm.op._allreduce(%10, -114514);
+            let %g5 = raf.op._allreduce(%10, -114514);
             %11 = (%x6,);
-            let %g2 = mnm.op._allreduce(%11, -114514);
-            let %null = mnm.op.stream_sync(%g5, -114514);
+            let %g2 = raf.op._allreduce(%11, -114514);
+            let %null = raf.op.stream_sync(%g5, -114514);
             let %x10 = (%g3, %g, %g5, -114514, -114514, %g4, %g1, %g2);
             %x10
         };
@@ -253,7 +239,7 @@ struct DataParallel {
       return Function(func->params, fp_ell->AsExpr(), {}, {});
     }
     // The map from original local gradient to aggregated global gradient.
-    std::map<mnm::ir::Expr, mnm::ir::Var> var_var_map;
+    std::map<raf::ir::Expr, raf::ir::Var> var_var_map;
     // Enlarge the size of bp_ell to fit the allreduce ops.
     // p1 tracks the processing var/expr (from end to begin)
     // p2 tracks the next vacant position to paste the processing var/expr or allreduce op.
@@ -263,7 +249,7 @@ struct DataParallel {
     // So for NCCL version less than 2.10, the let list size is one more item(i.e. divide op)
     // for each gradient
 
-#if defined MNM_USE_NCCL && NCCL_VERSION_CODE >= 21000
+#if defined RAF_USE_NCCL && NCCL_VERSION_CODE >= 21000
     bp_ell->vars.resize(bp_n + 2 * gradset.size());
     bp_ell->exprs.resize(bp_n + 2 * gradset.size());
     int p2 = bp_n - 1 + 2 * gradset.size();
@@ -286,7 +272,7 @@ struct DataParallel {
         auto input_var = mnm::ir::MakeVar("allreduce_in", {});
         auto rank_list = MakeConstant(TupleValue::make(Array<Value>({})));
 
-#if defined MNM_USE_NCCL && NCCL_VERSION_CODE >= 21000
+#if defined RAF_USE_NCCL && NCCL_VERSION_CODE >= 21000
         bp_ell->vars[p2 - 1] = input_var;
         bp_ell->exprs[p2 - 1] = Tuple({bp_ell->vars[i]});
         // Here we name the var as 'g'(global gradient), to help us identify it easier.
@@ -296,10 +282,10 @@ struct DataParallel {
         var_var_map.insert({bp_ell->vars[i], bp_ell->vars[p2]});
         p2 -= 2;
 #else
-        static Op op_div = Op::Get("mnm.op.divide");
+        static Op op_div = Op::Get("raf.op.divide");
         bp_ell->vars[p2 - 2] = input_var;
         bp_ell->exprs[p2 - 2] = Tuple({bp_ell->vars[i]});
-        bp_ell->vars[p2 - 1] = mnm::ir::MakeVar("g_sum", {});
+        bp_ell->vars[p2 - 1] = raf::ir::MakeVar("g_sum", {});
         bp_ell->exprs[p2 - 1] =
             Call(op_allreduce,
                  {bp_ell->vars[p2 - 2], MakeConstant(StringValue::make("sum")), rank_list});
@@ -360,7 +346,7 @@ struct DataParallel {
   // initialized in Run
   std::unique_ptr<ExplicitLetList> bp_ell{nullptr};
   // The comminication operators whose profiling will be collected for scheduling.
-  const std::set<std::string> scheduled_communication_ops = {"mnm.op._allreduce"};
+  const std::set<std::string> scheduled_communication_ops = {"raf.op._allreduce"};
   // The global gradient set
   std::unordered_set<Var, ObjectPtrHash, ObjectPtrEqual> global_grad;
 };
@@ -372,10 +358,10 @@ Pass AutoDataParallel() {
                                                                              PassContext pc) {
     return data_parallel::DataParallel(f.operator->()).Run();
   };
-  return CreateMNMFunctionPass(pass_func, 0, "AutoDataParallel", {"InferType"});
+  return CreateRAFFunctionPass(pass_func, 0, "AutoDataParallel", {"InferType"});
 }
 
-MNM_REGISTER_GLOBAL("mnm.pass_.AutoDataParallel").set_body_typed(AutoDataParallel);
+RAF_REGISTER_GLOBAL("raf.pass_.AutoDataParallel").set_body_typed(AutoDataParallel);
 
 }  // namespace pass
-}  // namespace mnm
+}  // namespace raf

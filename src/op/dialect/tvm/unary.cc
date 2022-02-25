@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -27,11 +13,11 @@
 #include "../../schema/ufunc.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::ir;
+using namespace raf::ir;
 using common::shape_utils::GetNumel;
 using schema::UnaryArgs;
 using schema::UnaryDxArgs;
@@ -85,46 +71,46 @@ Attrs UnaryDxSchema2Attrs(const UnaryDxArgs* args) {
   return Attrs(attrs);
 }
 
-#define MNM_TVM_UNARY(OP, FUNC)                                                                    \
-  MNM_TVM(OP, FUNC, UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs, GenericHasher, \
+#define RAF_TVM_UNARY(OP, FUNC)                                                                    \
+  RAF_TVM(OP, FUNC, UnaryArgs, UnarySchema2Args, UnarySchemaArgNames, GenericAttrs, GenericHasher, \
           kElemWise)
 
-#define MNM_TVM_UNARY_DX(OP, FUNC)                                                               \
-  MNM_TVM(OP, FUNC, UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames, UnaryDxSchema2Attrs, \
+#define RAF_TVM_UNARY_DX(OP, FUNC)                                                               \
+  RAF_TVM(OP, FUNC, UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames, UnaryDxSchema2Attrs, \
           GenericHasher, kElemWise)
 
-MNM_TVM_UNARY(copy, Copy);
-MNM_TVM_UNARY(abs, Abs);
-MNM_TVM_UNARY(ceil, Ceil);
-MNM_TVM_UNARY(floor, Floor);
-MNM_TVM_UNARY(log, Log);
-MNM_TVM_UNARY(log2, Log2);
-MNM_TVM_UNARY(exp, Exp);
-MNM_TVM_UNARY(cos, Cos);
-MNM_TVM_UNARY(sin, Sin);
-MNM_TVM_UNARY(sign, Sign);
-MNM_TVM_UNARY(round, Round);
-MNM_TVM_UNARY(relu, Relu);
-MNM_TVM_UNARY(gelu, Gelu);
-MNM_TVM_UNARY(erf, Erf);
-MNM_TVM_UNARY(sqrt, Sqrt);
-MNM_TVM_UNARY(rsqrt, Rsqrt);
-MNM_TVM_UNARY(atan, Atan);
-MNM_TVM_UNARY(negative, Negative);
-MNM_TVM_UNARY(sigmoid, Sigmoid);
-MNM_TVM_UNARY(tanh, Tanh);
-MNM_TVM_UNARY(batch_flatten, BatchFlatten);
-MNM_TVM_UNARY(zeros_like, ZerosLike);
-MNM_TVM_UNARY(ones_like, OnesLike);
-MNM_TVM_UNARY(trunc, Trunc);
+RAF_TVM_UNARY(copy, Copy);
+RAF_TVM_UNARY(abs, Abs);
+RAF_TVM_UNARY(ceil, Ceil);
+RAF_TVM_UNARY(floor, Floor);
+RAF_TVM_UNARY(log, Log);
+RAF_TVM_UNARY(log2, Log2);
+RAF_TVM_UNARY(exp, Exp);
+RAF_TVM_UNARY(cos, Cos);
+RAF_TVM_UNARY(sin, Sin);
+RAF_TVM_UNARY(sign, Sign);
+RAF_TVM_UNARY(round, Round);
+RAF_TVM_UNARY(relu, Relu);
+RAF_TVM_UNARY(gelu, Gelu);
+RAF_TVM_UNARY(erf, Erf);
+RAF_TVM_UNARY(sqrt, Sqrt);
+RAF_TVM_UNARY(rsqrt, Rsqrt);
+RAF_TVM_UNARY(atan, Atan);
+RAF_TVM_UNARY(negative, Negative);
+RAF_TVM_UNARY(sigmoid, Sigmoid);
+RAF_TVM_UNARY(tanh, Tanh);
+RAF_TVM_UNARY(batch_flatten, BatchFlatten);
+RAF_TVM_UNARY(zeros_like, ZerosLike);
+RAF_TVM_UNARY(ones_like, OnesLike);
+RAF_TVM_UNARY(trunc, Trunc);
 
-MNM_TVM_UNARY_DX(gelu_dx, GeluDx);
-MNM_TVM_UNARY_DX(erf_dx, ErfDx);
-MNM_TVM_UNARY_DX(sqrt_dx, SqrtDx);
-MNM_TVM_UNARY_DX(tanh_dx, TanhDx);
-MNM_TVM_PLEVEL(relu_dx, ReluDx, UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
+RAF_TVM_UNARY_DX(gelu_dx, GeluDx);
+RAF_TVM_UNARY_DX(erf_dx, ErfDx);
+RAF_TVM_UNARY_DX(sqrt_dx, SqrtDx);
+RAF_TVM_UNARY_DX(tanh_dx, TanhDx);
+RAF_TVM_PLEVEL(relu_dx, ReluDx, UnaryDxArgs, UnaryDxSchema2Args, UnaryDxSchemaArgNames,
                UnaryDxSchema2Attrs, GenericHasher, kElemWise, 20);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

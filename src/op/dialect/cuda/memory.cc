@@ -1,20 +1,6 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
@@ -23,27 +9,27 @@
  */
 #include <cuda_runtime.h>
 #include <vector>
-#include "mnm/op_utils.h"
-#include "mnm/stream_pool.h"
+#include "raf/op_utils.h"
+#include "raf/stream_pool.h"
 #include "../../schema/memory.h"
 #include "../../../common/shape_utils.h"
 #include "../../../common/cuda_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace cuda {
 
-using namespace mnm::op::schema;
-using mnm::common::shape_utils::BytesCompactTensor;
-using mnm::stream_pool::StreamTagEnum;
+using namespace raf::op::schema;
+using raf::common::shape_utils::BytesCompactTensor;
+using raf::stream_pool::StreamTagEnum;
 
-class CudaFuseTensor : public mnm::op::OpEnv {
+class CudaFuseTensor : public raf::op::OpEnv {
   void* stream;
   std::vector<int64_t> tuple_sizes;
 
   explicit CudaFuseTensor(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op.fuse_tensor");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op.fuse_tensor");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("data")};
     RequestStream(&stream, cv->device, StreamTagEnum::MemCudaToCuda1());
 
@@ -62,7 +48,7 @@ class CudaFuseTensor : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cuda.fuse_tensor"));
+    return TruncateName(GetUniqueName("raf.op.cuda.fuse_tensor"));
   }
 
   void Execute(const CallValues& cv) override {
@@ -89,16 +75,16 @@ class CudaFuseTensor : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cuda, fuse_tensor, 10);
-MNM_OP_ENV_MAKER("mnm.op.cuda.fuse_tensor", CudaFuseTensor::make);
+RAF_REGISTER_DIALECT_OP(cuda, fuse_tensor, 10);
+RAF_OP_ENV_MAKER("raf.op.cuda.fuse_tensor", CudaFuseTensor::make);
 
-class CudaDefuseTensor : public mnm::op::OpEnv {
+class CudaDefuseTensor : public raf::op::OpEnv {
   void* stream;
   std::vector<int64_t> tuple_sizes;
 
   explicit CudaDefuseTensor(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op.defuse_tensor");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
+    auto op = ir::Op::Get("raf.op.defuse_tensor");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("data")};
     RequestStream(&stream, cv->device, StreamTagEnum::MemCudaToCuda2());
 
@@ -116,7 +102,7 @@ class CudaDefuseTensor : public mnm::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("mnm.op.cuda.defuse_tensor"));
+    return TruncateName(GetUniqueName("raf.op.cuda.defuse_tensor"));
   }
 
   void Execute(const CallValues& cv) {
@@ -144,9 +130,9 @@ class CudaDefuseTensor : public mnm::op::OpEnv {
   }
 };
 
-MNM_REGISTER_DIALECT_OP(cuda, defuse_tensor, 10);
-MNM_OP_ENV_MAKER("mnm.op.cuda.defuse_tensor", CudaDefuseTensor::make);
+RAF_REGISTER_DIALECT_OP(cuda, defuse_tensor, 10);
+RAF_OP_ENV_MAKER("raf.op.cuda.defuse_tensor", CudaDefuseTensor::make);
 
 }  // namespace cuda
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf

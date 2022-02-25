@@ -1,38 +1,24 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /*!
  * \file ./src/op/dialect/tvm/tvm_utils.cc
  * \brief Implementation of utility methods for TVM dialect.
  */
-#include "mnm/value.h"
-#include "mnm/registry.h"
+#include "raf/value.h"
+#include "raf/registry.h"
 #include "./tvm_utils.h"
 #include "../../../common/shape_utils.h"
 
-namespace mnm {
+namespace raf {
 namespace op {
 namespace tvm_dialect {
 
-using namespace mnm::value;
-using namespace mnm::ir;
-using namespace mnm::registry;
+using namespace raf::value;
+using namespace raf::ir;
+using namespace raf::registry;
 using common::shape_utils::BytesCompactTensor;
 using common::shape_utils::GetShape;
 
@@ -73,7 +59,7 @@ Function LowerOp(const Op& op, const Attrs& attrs, const std::vector<Type>& para
   Function func;
   std::vector<Var> params;
   for (int i = 0, n = param_types.size(); i < n; ++i) {
-    auto var = mnm::ir::MakeVar("", param_types[i]);
+    auto var = raf::ir::MakeVar("", param_types[i]);
     var->checked_type_ = param_types[i];
     params.push_back(var);
   }
@@ -162,11 +148,11 @@ PackedMetricMap DumpTVMCacheMetric(const std::string& cache_name) {
   return ret;
 }
 
-MNM_REGISTER_GLOBAL("mnm.cache.DumpTVMCacheMetric").set_body_typed(DumpTVMCacheMetric);
+RAF_REGISTER_GLOBAL("raf.cache.DumpTVMCacheMetric").set_body_typed(DumpTVMCacheMetric);
 
-MNM_REGISTER_DIALECT("tvm").set_enable(DevType::kCPU()).set_enable(DevType::kCUDA());
-TVM_REGISTER_PASS_CONFIG_OPTION("mnm.tvm.allow_jit_failure", tvm::Bool);
+RAF_REGISTER_DIALECT("tvm").set_enable(DevType::kCPU()).set_enable(DevType::kCUDA());
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.tvm.allow_jit_failure", tvm::Bool);
 
 }  // namespace tvm_dialect
 }  // namespace op
-}  // namespace mnm
+}  // namespace raf
