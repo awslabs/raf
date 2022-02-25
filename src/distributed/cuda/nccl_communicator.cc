@@ -59,3 +59,5 @@ RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.nccl")
     .set_body_typed(NCCLCommunicator::make);
 
 }  // namespace communicator
+}  // namespace distributed
+}  // namespace raf
