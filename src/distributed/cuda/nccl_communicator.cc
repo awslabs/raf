@@ -8,7 +8,7 @@
  * \brief NCCL Communicator.
  */
 
-#include "mnm/nccl_communicator.h"
+#include "raf/nccl_communicator.h"
 
 namespace raf {
 namespace distributed {
@@ -55,9 +55,7 @@ NCCLCommunicator NCCLCommunicator::make(value::TupleValue rank_list) {
   return NCCLCommunicator(obj);
 }
 
-MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.nccl")
+RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.nccl")
     .set_body_typed(NCCLCommunicator::make);
 
 }  // namespace communicator
-}  // namespace distributed
-}  // namespace raf

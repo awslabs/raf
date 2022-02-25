@@ -9,19 +9,19 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
-#include "mnm/dist_context.h"
-#include "mnm/communicator.h"
-#include "mnm/type.h"
+#include "raf/dist_context.h"
+#include "raf/communicator.h"
+#include "raf/type.h"
 #include "../schema/communication.h"
 #include "./utils.h"
 
 namespace raf {
 namespace op {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op::schema;
-using namespace mnm::distributed::communicator;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op::schema;
+using namespace raf::distributed::communicator;
 
 template <typename T>
 Type IdentityType(const CallValues& value) {

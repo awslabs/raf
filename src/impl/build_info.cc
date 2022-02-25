@@ -40,7 +40,7 @@ std::string UseLLVM() {
 }
 
 bool UseMPI() {
-#ifdef MNM_USE_MPI
+#ifdef RAF_USE_MPI
   return true;
 #else
   return false;

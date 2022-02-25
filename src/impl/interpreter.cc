@@ -29,10 +29,10 @@ namespace raf {
 namespace executor {
 namespace interpreter {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op;
-using namespace mnm::distributed::communicator;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op;
+using namespace raf::distributed::communicator;
 using binding::BindingEntry;
 using binding::BindNDArray;
 using binding::DeTuple;

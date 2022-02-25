@@ -22,9 +22,9 @@
  * \brief MPI Communicator.
  */
 
-#include "mnm/mpi_communicator.h"
+#include "raf/mpi_communicator.h"
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 namespace communicator {
 
@@ -73,8 +73,8 @@ MPICommunicator MPICommunicator::make(TupleValue rank_list) {
   return MPICommunicator(obj);
 }
 
-MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.mpi").set_body_typed(MPICommunicator::make);
+RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.mpi").set_body_typed(MPICommunicator::make);
 
 }  // namespace communicator
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

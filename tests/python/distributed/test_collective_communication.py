@@ -146,26 +146,26 @@ def test_allreduce_with_tensor_list(computation):
 def test_allreduce_with_subcomm(dtype, rank_list):
     print("Testing allreduce with a single tensor as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x):
-            x = mnm.allreduce(x, "sum", rank_list)
+            x = raf.allreduce(x, "sum", rank_list)
             return x
 
     model = TestModel()
     _, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype=dtype) * (rank + 1)
-    x = mnm.array(x, device=device)
+    x = raf.array(x, device=device)
     if rank == 0:
         print(f"{rank} - X: ", x)
     model.to(device=device)
     y = model(x)
     vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    vx = mnm.array(vx, device=device)
+    vx = raf.array(vx, device=device)
     run_vm_model(model, device, [vx])
     check(y, vx)
     if rank in rank_list:
@@ -247,22 +247,22 @@ def test_allgather_with_tensor_list(axis):
 def test_allgather_with_subcomm(axis, rank_list):
     print("Testing allgather with a list of tensors as input.")
 
-    class TestModel(mnm.Model):
+    class TestModel(raf.Model):
         def build(self):
             pass
 
-        @mnm.model.trace
+        @raf.model.trace
         def forward(self, x1, x2):
-            x = mnm.allgather([x1, x2], axis=axis, rank_list=rank_list)
-            return mnm.concatenate(x)
+            x = raf.allgather([x1, x2], axis=axis, rank_list=rank_list)
+            return raf.concatenate(x)
 
     model = TestModel()
     _, rank, local_rank = get_dist_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    x1 = mnm.array(x1, device=device)
-    x2 = mnm.array(x2, device=device)
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
     if rank == 0:
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)

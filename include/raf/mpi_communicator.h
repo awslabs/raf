@@ -9,7 +9,7 @@
  */
 #pragma once
 #include <mpi.h>
-#include "mnm/communicator.h"
+#include "raf/communicator.h"
 #include <string>
 #include <functional>
 
@@ -20,15 +20,15 @@ namespace communicator {
 class MPICommunicatorObj final : public CommunicatorObj {
  public:
   const MPI_Comm mpi_comm = MPI_COMM_WORLD;
-  static constexpr const char* _type_key = "mnm.distributed.MPICommunicator";
+  static constexpr const char* _type_key = "raf.distributed.MPICommunicator";
   virtual ~MPICommunicatorObj();
-  MNM_FINAL_OBJECT(MPICommunicatorObj, CommunicatorObj);
+  RAF_FINAL_OBJECT(MPICommunicatorObj, CommunicatorObj);
 };
 
 class MPICommunicator final : public Communicator {
  public:
   static MPICommunicator make(TupleValue rank_list);
-  MNM_OBJECT_REF(MPICommunicator, Communicator, MPICommunicatorObj);
+  RAF_OBJECT_REF(MPICommunicator, Communicator, MPICommunicatorObj);
 };
 
 }  // namespace communicator

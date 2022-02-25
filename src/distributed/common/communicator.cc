@@ -22,9 +22,9 @@
  * \brief Implementation of Communicator.
  */
 
-#include "mnm/communicator.h"
+#include "raf/communicator.h"
 
-namespace mnm {
+namespace raf {
 namespace distributed {
 namespace communicator {
 
@@ -109,13 +109,13 @@ VoidCommunicator VoidCommunicator::make(TupleValue rank_list) {
   return VoidCommunicator(obj);
 }
 
-MNM_REGISTER_GLOBAL("mnm.distributed.communicator._make.void")
+RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.void")
     .set_body_typed(VoidCommunicator::make);
 
-MNM_REGISTER_GLOBAL("mnm.distributed.RemoveCommunicator").set_body_typed([]() {
+RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
   CommunicatorPool::Get()->Remove();
 });
 
 }  // namespace communicator
 }  // namespace distributed
-}  // namespace mnm
+}  // namespace raf

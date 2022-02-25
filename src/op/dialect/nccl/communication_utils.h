@@ -26,7 +26,7 @@
 #include "raf/communicator.h"
 #include "raf/stream_pool.h"
 #include "../../../common/shape_utils.h"
-namespace mnm {
+namespace raf {
 
 template <>
 inline DType::operator ncclDataType_t() const {

@@ -69,10 +69,10 @@ class TwoBranchModel(raf.Model):
             let %v2 = raf.op.atan(%v);
             let %v3 = (%v1,);
             let %v4 = (%v2,);
-            let %v5 = mnm.op._allreduce(%v3, str"sum", TupleValue([]));
-            let %v6 = mnm.op._allreduce(%v4, str"sum", TupleValue([]));
-            let %v7 = mnm.op.multiply(%v5, %c);
-            let %v8 = mnm.op.multiply(%v6, %c);
+            let %v5 = raf.op._allreduce(%v3, str"sum", TupleValue([]));
+            let %v6 = raf.op._allreduce(%v4, str"sum", TupleValue([]));
+            let %v7 = raf.op.multiply(%v5, %c);
+            let %v8 = raf.op.multiply(%v6, %c);
             let %v9 = (%v7, %v8);
             let %v10 = raf.op.concatenate(%v9, int64(0));
             %v10
@@ -137,13 +137,13 @@ class UnbalancedModel(raf.Model):
             let %v2 = raf.op.atan(%v);
             let %v3 = raf.op.atan(%v1);
             let %v4 = (%v2,);
-            let %v5 = mnm.op.atan(%v3);
-            let %v6 = mnm.op._allreduce(%v4, str"sum", TupleValue([]));
-            let %v7 = mnm.op.atan(%v5);
+            let %v5 = raf.op.atan(%v3);
+            let %v6 = raf.op._allreduce(%v4, str"sum", TupleValue([]));
+            let %v7 = raf.op.atan(%v5);
             let %v8 = (%v7,);
-            let %v9 = mnm.op._allreduce(%v8, str"sum", TupleValue([]));
-            let %v10 = mnm.op.multiply(%v6, %c);
-            let %v11 = mnm.op.multiply(%v9, %c);
+            let %v9 = raf.op._allreduce(%v8, str"sum", TupleValue([]));
+            let %v10 = raf.op.multiply(%v6, %c);
+            let %v11 = raf.op.multiply(%v9, %c);
             let %v12 = (%v11, %v10);
             let %v13 = raf.op.concatenate(%v12, int64(0));
             %v13
@@ -243,11 +243,11 @@ class ExampleModel(raf.Model):
         fn (%x: Tensor[(64, 128), float32]) {
             let %v = raf.op.atan(%x);
             let %v1 = (%v,);
-            let %v2 = mnm.op.atan(%v);
-            let %v3 = mnm.op._allreduce(%v1, str"sum", TupleValue([]));
-            let %v4 = mnm.op.atan(%v2);
-            let %v5 = mnm.op.atan(%v3);
-            let %v6 = mnm.op.multiply(%v5, %v4);
+            let %v2 = raf.op.atan(%v);
+            let %v3 = raf.op._allreduce(%v1, str"sum", TupleValue([])););
+            let %v4 = raf.op.atan(%v2);
+            let %v5 = raf.op.atan(%v3);
+            let %v6 = raf.op.multiply(%v5, %v4);
             %v6
         }
         """
@@ -318,15 +318,15 @@ class DelayedSuccessorModel(raf.Model):
         fn (%x: Tensor[(64, 128), float32]) {
             let %x_0 = raf.op.atan(%x);
             let %x_1 = (%x_0,);
-            let %x_2 = mnm.op.atan(%x_0);
-            let %x_3 = mnm.op._allreduce(%x_1, str"sum", TupleValue([]));
-            let %x_4 = mnm.op.atan(%x_2);
-            let %x_5 = mnm.op.atan(%x_4);
-            let %x_6 = mnm.op.atan(%x_5);
-            let %x_7 = mnm.op.atan(%x_6);
-            let %x_8 = mnm.op.relu(%x_3);
-            let %x_9 = mnm.op.relu(%x_8);
-            let %x_10 = mnm.op.multiply(%x_9, %x_7);
+            let %x_2 = raf.op.atan(%x_0);
+            let %x_3 = raf.op._allreduce(%x_1, str"sum", TupleValue([])););
+            let %x_4 = raf.op.atan(%x_2);
+            let %x_5 = raf.op.atan(%x_4);
+            let %x_6 = raf.op.atan(%x_5);
+            let %x_7 = raf.op.atan(%x_6);
+            let %x_8 = raf.op.relu(%x_3);
+            let %x_9 = raf.op.relu(%x_8);
+            let %x_10 = raf.op.multiply(%x_9, %x_7);
             %x_10
         }
         """
@@ -504,19 +504,19 @@ class CascadingCollectiveModel(raf.Model):
         fn (%x: Tensor[(64, 128), float32], %c: Tensor[(64, 128), float32]) {
             let %v = raf.op.multiply(%x, %c);
             let %v1 = (%v,);
-            let %v2 = mnm.op.atan(%v);
-            let %v3 = mnm.op._allreduce(%v1, str"sum", TupleValue([]));
-            let %v4 = mnm.op.atan(%v2);
-            let %v5 = mnm.op.atan(%v4);
-            let %v6 = mnm.op.relu(%v3);
-            let %v7 = mnm.op.multiply(%v6, %v5);
+            let %v2 = raf.op.atan(%v);
+            let %v3 = raf.op._allreduce(%v1, str"sum", TupleValue([])););
+            let %v4 = raf.op.atan(%v2);
+            let %v5 = raf.op.atan(%v4);
+            let %v6 = raf.op.relu(%v3);
+            let %v7 = raf.op.multiply(%v6, %v5);
             let %v8 = (%v7,);
-            let %v9 = mnm.op.atan(%v7);
-            let %v10 = mnm.op._allreduce(%v8, str"sum", TupleValue([]));
-            let %v11 = mnm.op.atan(%v9);
-            let %v12 = mnm.op.atan(%v11);
-            let %v13 = mnm.op.relu(%v10);
-            let %v14 = mnm.op.multiply(%v13, %v12);
+            let %v9 = raf.op.atan(%v7);
+            let %v10 = raf.op._allreduce(%v8, str"sum", TupleValue([]));
+            let %v11 = raf.op.atan(%v9);
+            let %v12 = raf.op.atan(%v11);
+            let %v13 = raf.op.relu(%v10);
+            let %v14 = raf.op.multiply(%v13, %v12);
             %v14
         }
         """

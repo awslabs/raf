@@ -14,9 +14,9 @@
 #include <string>
 #include <memory>
 #include "dmlc/logging.h"
-#include "mnm/registry.h"
-#include "mnm/value.h"
-#include "mnm/op_utils.h"
+#include "raf/registry.h"
+#include "raf/value.h"
+#include "raf/op_utils.h"
 
 typedef std::pair<std::string, std::vector<int64_t>> CommunicatorID;
 
@@ -25,9 +25,9 @@ namespace distributed {
 namespace communicator {
 
 using registry::GetPackedFunc;
-using namespace mnm::value;
+using namespace raf::value;
 
-#ifdef MNM_USE_MPI
+#ifdef RAF_USE_MPI
 #include <mpi.h>
 #define MPI_CALL(cmd)                                                         \
   do {                                                                        \
@@ -38,7 +38,7 @@ using namespace mnm::value;
   } while (0)
 #endif
 
-#ifdef MNM_USE_NCCL
+#ifdef RAF_USE_NCCL
 #define NCCL_CALL(cmd)                                                                            \
   do {                                                                                            \
     ncclResult_t e = cmd;                                                                         \
@@ -72,8 +72,8 @@ class CommunicatorObj : public Object {
 
   virtual ~CommunicatorObj() = default;
 
-  static constexpr const char* _type_key = "mnm.distributed.Communicator";
-  MNM_BASE_OBJECT(CommunicatorObj, Object);
+  static constexpr const char* _type_key = "raf.distributed.Communicator";
+  RAF_BASE_OBJECT(CommunicatorObj, Object);
 };
 
 class Communicator : public ObjectRef {
@@ -83,20 +83,20 @@ class Communicator : public ObjectRef {
                                   const Communicator global_comm);
   static uint64_t GetHostID();
 
-  MNM_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
+  RAF_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
 };
 
 class VoidCommunicatorObj final : public CommunicatorObj {
  public:
-  static constexpr const char* _type_key = "mnm.distributed.VoidCommunicator";
+  static constexpr const char* _type_key = "raf.distributed.VoidCommunicator";
   virtual ~VoidCommunicatorObj() = default;
-  MNM_FINAL_OBJECT(VoidCommunicatorObj, CommunicatorObj);
+  RAF_FINAL_OBJECT(VoidCommunicatorObj, CommunicatorObj);
 };
 
 class VoidCommunicator final : public Communicator {
  public:
   static VoidCommunicator make(TupleValue rank_list);
-  MNM_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
+  RAF_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
 };
 
 class CommunicatorPool {
@@ -111,7 +111,7 @@ class CommunicatorPool {
 
   Communicator GetCommunicator(const std::string& name = "",
                                const std::vector<int64_t>& rank_list = {}) {
-#ifdef MNM_USE_NCCL
+#ifdef RAF_USE_NCCL
     auto default_name = "nccl";
 #else
     auto default_name = "void";
@@ -120,7 +120,7 @@ class CommunicatorPool {
     auto id = CommunicatorID(comm_name, rank_list);
 
     if (comm_.count(id) == 0) {
-      const std::string prefix = "mnm.distributed.communicator._make.";
+      const std::string prefix = "raf.distributed.communicator._make.";
       auto func_name = prefix + comm_name;
       Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
       comm_[id] = std::move(comm);

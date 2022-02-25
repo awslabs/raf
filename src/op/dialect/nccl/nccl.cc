@@ -10,9 +10,9 @@
 #include <vector>
 #include <chrono>
 #include <thread>
-#include "mnm/op_utils.h"
-#include "mnm/dist_context.h"
-#include "mnm/nccl_communicator.h"
+#include "raf/op_utils.h"
+#include "raf/dist_context.h"
+#include "raf/nccl_communicator.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
@@ -41,7 +41,7 @@ class NCCLAllReduce : public raf::op::OpEnv {
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    auto args = cv->args.as<mnm::op::schema::AllreduceArgs>();
+    auto args = cv->args.as<raf::op::schema::AllreduceArgs>();
     auto& tv = args->x;
 
     if (args->computation.compare("sum") == 0) {
@@ -150,9 +150,9 @@ class NCCLAllGather : public raf::op::OpEnv {
   void* stream;
   Communicator communicator;
   explicit NCCLAllGather(const CallValues& cv) {
-    auto op = ir::Op::Get("mnm.op._allgather");
-    auto fschema_index = ir::Op::GetAttrMap<op::FMNMSchemaFieldIndex>("FMNMSchemaFieldIndex");
-    auto args = cv->args.as<mnm::op::schema::AllgatherArgs>();
+    auto op = ir::Op::Get("raf.op._allgather");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    auto args = cv->args.as<raf::op::schema::AllgatherArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     // RequestDistributed(&communicator);

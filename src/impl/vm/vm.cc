@@ -53,14 +53,14 @@ namespace raf {
 namespace executor {
 namespace vm {
 
-using namespace mnm::ir;
-using namespace mnm::value;
-using namespace mnm::op;
-using namespace mnm::registry;
-using namespace mnm::requests;
-using namespace mnm::device_api;
-using namespace mnm::stream_pool;
-using namespace mnm::distributed::communicator;
+using namespace raf::ir;
+using namespace raf::value;
+using namespace raf::op;
+using namespace raf::registry;
+using namespace raf::requests;
+using namespace raf::device_api;
+using namespace raf::stream_pool;
+using namespace raf::distributed::communicator;
 
 namespace utils {
 inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id, Index event_id) {
