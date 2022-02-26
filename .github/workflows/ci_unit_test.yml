@@ -205,3 +205,34 @@ jobs:
             --command "bash ./ci/batch/cli.sh config_cmake GPU 75 &&
               bash ./ci/batch/cli.sh compile build multi-GPU ${{ needs.check_status.outputs.job_tag }} &&
               bash ./ci/batch/cli.sh unit_test multi-GPU"
+
+  update_ci_badge:
+    needs: [test_on_cpu, test_on_gpu, test_on_multi_gpu]
+    if: github.repository == 'meta-project/meta'
+    runs-on: self-hosted
+    steps:
+      - uses: haya14busa/action-workflow_run-status@v1
+      - name: Checkout repository
+        # No need to checkout submodules because we only need to get the HEAD commit hash.
+      - name: Generate CI badge
+        id: badge
+        run: |
+          # env vars are unavailable in job.if so we have to implement it here.
+          if [ "${{ needs.check_status.outputs.pr }}" != "" ]; then
+            echo "No need to update badge for PR CI. Skip."
+            exit 0
+          fi
+          head_commit=$(git rev-parse --short HEAD)
+          echo "::set-output name=gist_id::630a36600930c8d68e6b15f16333b532"
+          echo "::set-output name=message::${head_commit}"
+      - name: Update CI badge
+        # Intentionally fail this step with empty gist_id.
+        uses: schneegans/dynamic-badges-action@v1.1.0
+        continue-on-error: true
+        with:
+          auth: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
+          gistID: ${{ steps.badge.outputs.gist_id }}
+          filename: raf-ci-badge-last-pass.json
+          label: CI-Last-Success
+          message: ${{ steps.badge.outputs.message }}
+          color: blue
