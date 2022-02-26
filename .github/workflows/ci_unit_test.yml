@@ -214,6 +214,7 @@ jobs:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: Checkout repository
         # No need to checkout submodules because we only need to get the HEAD commit hash.
+        uses: actions/checkout@v2
       - name: Generate CI badge
         id: badge
         run: |
