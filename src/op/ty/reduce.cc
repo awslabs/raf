@@ -7,14 +7,15 @@
  * \file src/op/ty/reduce.cc
  * \brief Typing of reduction operators
  */
-#include <tvm/relay/type.h>
+#include <iostream>
+#include <algorithm>
 #include <numeric>
+#include <tvm/relay/type.h>
+#include "raf/op_utils.h"
 #include "raf/type.h"
 #include "../schema/likes.h"
 #include "../schema/reduce.h"
 #include "./utils.h"
-#include <iostream>
-#include <algorithm>
 
 namespace raf {
 namespace op {
@@ -168,10 +169,7 @@ Type MeanDxInfer(const CallValues& value) {
   const auto* args = value->args.as<schema::MeanDxArgs>();
   CHECK(args != nullptr);
   TensorType dy = Downcast<TensorType>(GetType(args->dy));
-  Array<tvm::PrimExpr> oshape;
-  for (int s : args->x_shape) {
-    oshape.push_back(PrimExpr(s));
-  }
+  Array<tvm::PrimExpr> oshape = GetShapeExprFromValue(args->shape);
   return TensorType(oshape, dy->dtype);
 }
 

@@ -35,7 +35,7 @@ jobs:
         with:
           context: docker
           file: docker/Dockerfile.${{ github.event.inputs.type }}
-          tags: metaprojdev/meta:${{ github.event.inputs.type }}-${{ github.event.inputs.tag }}
+          tags: metaprojdev/raf:${{ github.event.inputs.type }}-${{ github.event.inputs.tag }}
           push: true
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

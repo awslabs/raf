@@ -9,6 +9,7 @@
  */
 #include <numeric>
 #include "raf/op.h"
+#include "raf/op_utils.h"
 #include "raf/tensor.h"
 #include "../schema/reduce.h"
 namespace raf {
@@ -96,7 +97,7 @@ void MeanDxDecl(const CallValues& call) {
   const auto* args = call->args.as<MeanDxArgs>();
   CHECK(args != nullptr);
   DLTensor* dy = args->dy;
-  std::vector<int64_t> shape = args->x_shape;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   call->device = dy->device;
   call->out = TensorValue::Assemble(/*dev=*/dy->device,
                                     /*dtype=*/dy->dtype,

@@ -77,37 +77,28 @@ Array<Expr> BatchMatmulGradImpl(const Expr& orig_call, const Array<Expr> orig_ar
   const Expr& a = call->args[0];
   const Expr& b = call->args[1];
 
-  auto f = [](const Expr& dx, const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dx, x});
-    Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep, MakeConstant(BoolValue::make(false))});
-  };
-
   if (!transpose_a) {
     if (!transpose_b) {
       return {
-          f(Call(op_nt, {dy, b}), a),
-          f(Call(op_tn, {a, dy}), b),
+          GetCollapseSumLike(Call(op_nt, {dy, b}), a),
+          GetCollapseSumLike(Call(op_tn, {a, dy}), b),
       };
     } else {
       return {
-          f(Call(op_nn, {dy, b}), a),
-          f(Call(op_tn, {dy, a}), b),
+          GetCollapseSumLike(Call(op_nn, {dy, b}), a),
+          GetCollapseSumLike(Call(op_tn, {dy, a}), b),
       };
     }
   } else {
     if (!transpose_b) {
       return {
-          f(Call(op_nt, {b, dy}), a),
-          f(Call(op_nn, {a, dy}), b),
+          GetCollapseSumLike(Call(op_nt, {b, dy}), a),
+          GetCollapseSumLike(Call(op_nn, {a, dy}), b),
       };
     } else {
       return {
-          f(Call(op_tt, {b, dy}), a),
-          f(Call(op_tt, {dy, a}), b),
+          GetCollapseSumLike(Call(op_tt, {b, dy}), a),
+          GetCollapseSumLike(Call(op_tt, {dy, a}), b),
       };
     }
   }

@@ -83,6 +83,10 @@ RAF_OP_FROM_RELAY("broadcast_to", "raf.op.broadcast_to",
 
 RAF_GENERIC_ATTR_OP_FROM_RELAY("broadcast_to_like", "raf.op.broadcast_to_like");
 
+RAF_GENERIC_ATTR_OP_FROM_RELAY("collapse_sum_like", "raf.op.collapse_sum_like");
+
+RAF_GENERIC_ATTR_OP_FROM_RELAY("reshape_like", "raf.op.reshape_like");
+
 RAF_OP_FROM_RELAY("transpose", "raf.op.transpose",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;

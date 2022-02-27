@@ -281,6 +281,32 @@ def test_broadcast_to_like(shape, device):
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("shape", [[[4, 5], [3, 4, 5]], [[4, 2, 2], [3, 4, 2, 2]]])
+def test_collapse_sum_like(shape, device):
+    model = TestModel(raf._op.sym.collapse_sum_like)
+    m_x, n_x = randn(shape[1], device=device)
+    m_like_type, _ = randn(shape[0], device=device)
+    m_y = model(m_x, m_like_type)
+    v_y = run_vm_model(model, device, [m_x, m_like_type])
+    n_y = np.sum(n_x, 0)
+    check(m_y, n_y)
+    check(v_y, n_y)
+
+
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("shape", [[[4, 5], [5, 2, 2]], [[4, 2, 2], [2, 8]]])
+def test_reshape_like(shape, device):
+    model = TestModel(raf._op.sym.reshape_like)
+    m_x, n_x = randn(shape[1], device=device)
+    m_like_type, _ = randn(shape[0], device=device)
+    m_y = model(m_x, m_like_type)
+    v_y = run_vm_model(model, device, [m_x, m_like_type])
+    n_y = np.reshape(n_x, m_y.shape)
+    check(m_y, n_y)
+    check(v_y, n_y)
+
+
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [[10, 20, 30]])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(

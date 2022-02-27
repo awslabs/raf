@@ -121,7 +121,7 @@ inline bool IsInOpSet(const Expr& op, const OpSet& op_set) {
 inline bool IsReshapeOp(const Op& op) {
   static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> reshape_ops{
       Op::Get("raf.op.reshape"), Op::Get("raf.op.expand_dims"), Op::Get("raf.op.squeeze"),
-      Op::Get("raf.op.batch_flatten")};
+      Op::Get("raf.op.batch_flatten"), Op::Get("raf.op.reshape_like")};
   return IsInOpSet(op, reshape_ops);
 }
 
@@ -179,8 +179,9 @@ inline Array<tvm::PrimExpr> GetShapeExprFromValue(const Value& value) {
   ICHECK(value.defined());
   Array<tvm::PrimExpr> shape;
   if (auto ttv = value.as<TensorTypeValueObj>()) {
-    auto ndim = ttv->type->shape.size();
-    for (size_t i = 0; i < ndim; ++i) {
+    auto ndim = ttv->type->shape[0].as<ir::IntImmNode>();
+    ICHECK(ndim) << "Expected IntImm, but got " << ttv->type->shape[0]->GetTypeKey();
+    for (size_t i = 0; i < ndim->value; ++i) {
       shape.push_back(Any());
     }
   } else {

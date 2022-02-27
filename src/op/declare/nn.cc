@@ -310,9 +310,10 @@ void Conv2dDxw(const CallValues& call) {
   CHECK(args != nullptr);
   CHECK(args->shape.defined());
   const DLTensor* x_or_w = args->x_or_w;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   call->out = TensorValue::Assemble(/*dev=*/x_or_w->device,
                                     /*dtype=*/x_or_w->dtype,
-                                    /*shape=*/args->shape.value());
+                                    /*shape=*/shape);
   call->device = x_or_w->device;
 }
 
@@ -324,9 +325,10 @@ void Conv2dTransposeDxw(const CallValues& call) {
   CHECK(args != nullptr);
   CHECK(args->shape.defined());
   const DLTensor* x_or_w = args->x_or_w;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   call->out = TensorValue::Assemble(/*dev=*/x_or_w->device,
                                     /*dtype=*/x_or_w->dtype,
-                                    /*shape=*/args->shape.value());
+                                    /*shape=*/shape);
   call->device = x_or_w->device;
 }
 

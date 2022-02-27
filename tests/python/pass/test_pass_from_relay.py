@@ -404,27 +404,31 @@ def test_broadcast_to(shape, dtype):
     check_from_relay(model, r_func, [m_x])
 
 
-@pytest.mark.xfail(reason="broadcast_to_like with static shape will be simplified to broadcast_to")
-@pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 2, 4, 1]]])
+@pytest.mark.xfail(reason="binary shape like ops with static shape will be simplified")
+@pytest.mark.parametrize("op", ["broadcast_to_like", "collapse_sum_like", "reshape_like"])
+@pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 4, 1]]])
 @pytest.mark.parametrize("dtype", ["float32"])
-def test_broadcast_to_like(shape, dtype):
-    class BroadcastToLike(raf.Model):
+def test_binary_shape_like(op, shape, dtype):
+    m_op = getattr(raf._op.sym, op)
+    r_op = getattr(_relay, op)
+
+    class BinaryShapeLike(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
-        def forward(self, x, broadcast_type):  # pylint: disable=no-self-use
-            return raf.broadcast_to_like(x, broadcast_type)
+        def forward(self, x, like_type):  # pylint: disable=no-self-use
+            return m_op(x, like_type)
 
-    model = BroadcastToLike()
+    model = BinaryShapeLike()
     m_x, _ = randn(shape[0], dtype=dtype)
-    broadcast_type, _ = randn(shape[1], dtype=dtype)
+    like_type, _ = randn(shape[1], dtype=dtype)
 
     r_x = _relay.var("x", shape=shape[0])
     r_b = _relay.var("b", shape=shape[1])
-    r_func = _relay.Function(params=[r_x, r_b], body=_relay.broadcast_to_like(r_x, r_b))
+    r_func = _relay.Function(params=[r_x, r_b], body=r_op(r_x, r_b))
 
-    check_from_relay(model, r_func, [m_x, broadcast_type])
+    check_from_relay(model, r_func, [m_x, like_type])
 
 
 @pytest.mark.parametrize("shape", [[(2, 2), (1, 0)], [(2, 2), None]])

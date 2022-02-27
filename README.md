@@ -1,14 +1,10 @@
 <!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!--- SPDX-License-Identifier: Apache-2.0  -->
 
-RAF
-===
+RAF: RAF Accelerates deep learning Frameworks
+=============================================
 
-[![CI-Lint](https://github.com/meta-project/meta/actions/workflows/ci_lint.yml/badge.svg)](https://github.com/meta-project/meta/actions/workflows/ci_lint.yml)
-[![CI-UnitTest](https://github.com/meta-project/meta/actions/workflows/ci_unit_test.yml/badge.svg)](https://github.com/meta-project/meta/actions/workflows/ci_unit_test.yml)
-
+![CI-Lass-Pass](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/aire-meta-bot/630a36600930c8d68e6b15f16333b532/raw/raf-ci-badge-last-pass.json)
 
 
 Please refer to our [wiki](docs/wiki) for more information.
-
-

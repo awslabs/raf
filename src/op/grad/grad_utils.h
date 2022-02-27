@@ -15,6 +15,12 @@ namespace raf {
 namespace op {
 namespace grad {
 
+Expr GetShape(const Expr& expr);
+
+Expr GetReshapeLike(const Expr& x, const Expr& like_type);
+
+ir::Expr GetCollapseSumLike(const ir::Expr& x, const ir::Expr& like_type);
+
 ir::Array<ir::Expr> AsTupleExpr(const ir::Expr& expr, int numel);
 
 template <size_t n>

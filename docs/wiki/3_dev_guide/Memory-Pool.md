@@ -7,7 +7,7 @@ This document introduces the Memory Pool of RAF.
 
 ## Strategies
 
-Currently, there are two types of memory pool in meta: (1) no_pool, (2) page_unit_pool.
+Currently, there are two types of memory pool in RAF: (1) no_pool, (2) page_unit_pool.
 By default, we choose page_unit_pool as our memory pool, which could bring down the running time by almost 50% for rn50/vgg/etc compared with no_pool. 
 
 The memory usage of these two strategies are similar. Here is an experiment on ResNet50 with Tesla T4 (15109MB)
@@ -115,4 +115,4 @@ Then you can create the Pool Class that derived from `raf::memory_pool::MemoryPo
 Remember to register your pool in the cpp file you created, the code should be like:
 `RAF_REGISTER_GLOBAL("raf.memory_pool._make.your_pool").set_body_typed(YourPool::make);`
 
-After re-make meta, you can enable your pool by calling `InitPool(contxt, pool_name)`.
+After re-make RAF, you can enable your pool by calling `InitPool(contxt, pool_name)`.

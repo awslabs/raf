@@ -222,6 +222,50 @@ def test_broadcast_to_like(shape, dtype):
     check_type(m_func, expected_type)
 
 
+@pytest.mark.parametrize("shape", [[[1, 4, 1], [1, 4, 1]], [[4, 1, 1], [3, 4, 2, 2]]])
+def test_collapse_sum_like(shape):
+    class CollapseSumLikeModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x, like_type):  # pylint: disable=no-self-use
+            return raf.collapse_sum_like(x, like_type)
+
+    model = CollapseSumLikeModel()
+    m_x, _ = randn(shape[0])
+    like_type, _ = randn(shape[1])
+    m_func = model._internal(m_x, like_type).mod["main"]
+    m_func = run_infer_type(m_func)
+    x_ty = TensorType(shape[0])
+    like_ty = TensorType(shape[1])
+    y_ty = TensorType(shape[1])
+    expected_type = FuncType([x_ty, like_ty], y_ty)
+    check_type(m_func, expected_type)
+
+
+@pytest.mark.parametrize("shape", [[[1, 4, 1], [2, 2]], [[4, 1, 1], [1, 2, 2]]])
+def test_reshape_like(shape):
+    class ReshapeLikeModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x, like_type):  # pylint: disable=no-self-use
+            return raf.reshape_like(x, like_type)
+
+    model = ReshapeLikeModel()
+    m_x, _ = randn(shape[0])
+    like_type, _ = randn(shape[1])
+    m_func = model._internal(m_x, like_type).mod["main"]
+    m_func = run_infer_type(m_func)
+    x_ty = TensorType(shape[0])
+    like_ty = TensorType(shape[1])
+    y_ty = TensorType(shape[1])
+    expected_type = FuncType([x_ty, like_ty], y_ty)
+    check_type(m_func, expected_type)
+
+
 @pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize(
     "shape",

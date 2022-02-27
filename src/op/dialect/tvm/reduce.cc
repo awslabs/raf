@@ -223,7 +223,7 @@ std::vector<std::string> MeanDxSchemaArgNames(const op::CallValues& call) {
 
 Attrs MeanDxSchema2Attrs(const MeanDxArgs* args) {
   auto attrs = make_object<MeanDxAttrs>();
-  std::vector<int64_t> shape = args->x_shape;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
   auto ndim = shape.size();
   for (int64_t s : shape) {
     attrs->shape.push_back(s);
@@ -246,7 +246,6 @@ Attrs MeanDxSchema2Attrs(const MeanDxArgs* args) {
 HashKey MeanDxHasher(const std::vector<Type>& param_types, const Type& ret_type,
                      const MeanDxArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, ret_type, nullptr);
-  key << args->x_shape;
   key << args->axis;
   key << args->keepdims;
   key << args->exclude;

@@ -161,6 +161,22 @@ RAF_OP_DECLARE("raf.op.reshape", [](const CallValues& call) {
   throw;
 });
 
+RAF_OP_DECLARE("raf.op.reshape_like", [](const CallValues& call) {
+  const auto* args = call->args.as<BinaryLikeArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* like_type = args->like_type;
+  std::vector<int64_t> shape(like_type->shape, like_type->shape + like_type->ndim);
+  call->device = x->device;
+  call->callee = ir::NullValue<OpValue>();
+  CHECK(IsCompact(*x))
+      << "NotImplementedError: for now we only support reshape on contiguous tensor";
+  int64_t origin = std::accumulate(x->shape, x->shape + x->ndim, 1LL, std::multiplies<int64_t>());
+  int64_t reshaped = std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
+  CHECK_EQ(origin, reshaped) << "ValueError: Number of elements mismatch after reshaping!";
+  call->out = Downcast<TensorValue>(args->x).CreateView(shape);
+});
+
 RAF_OP_DECLARE("raf.op.resize2d", [](const CallValues& call) {
   const auto* args = call->args.as<Resize2DArgs>();
   CHECK(args != nullptr);
@@ -267,9 +283,10 @@ RAF_OP_DECLARE("raf.op.embedding_dx", [](const CallValues& call) {
   const auto* args = call->args.as<EmbeddingDxArgs>();
   CHECK(args != nullptr);
   DLTensor* dy = args->dy;
+  std::vector<int64_t> shape = GetShapeVecFromValue(args->num_weight);
   call->out = TensorValue::Assemble(/*dev=*/dy->device,
                                     /*dtype=*/dy->dtype,
-                                    /*shape=*/args->num_weight);
+                                    /*shape=*/shape);
   call->device = dy->device;
 });
 
@@ -410,7 +427,7 @@ RAF_OP_DECLARE("raf.op.strided_slice_dx", [](const CallValues& call) {
   std::vector<int64_t> stride_vec(num_axis, 1);
   if (IsCompact(*data)) {
     call->device = data->device;
-    std::vector<int64_t> shape = args->primal_shape;
+    std::vector<int64_t> shape = GetShapeVecFromValue(args->shape);
     call->out = TensorValue::Assemble(/*dev=*/data->device,
                                       /*dtype=*/data->dtype,
                                       /*shape=*/shape);
@@ -462,7 +479,7 @@ RAF_OP_DECLARE("raf.op.reverse_sequence", [](const CallValues& call) {
 });
 
 RAF_OP_DECLARE("raf.op.broadcast_to", [](const CallValues& call) {
-  const auto* args = call->args.as<BroadcastToArgs>();
+  const auto* args = call->args.as<BinaryToArgs>();
   DLTensor* x = args->x;
   std::vector<int64_t> shape = args->shape;
   call->out = TensorValue::Assemble(/*dev=*/x->device,
@@ -527,13 +544,31 @@ RAF_OP_DECLARE("raf.op.transpose", [](const CallValues& call) {
 });
 
 RAF_OP_DECLARE("raf.op.transpose_dx", [](const CallValues& call) {
-  const auto* args = call->args.as<TransposeDxArgs>();
+  const auto* args = call->args.as<TransposeArgs>();
   CHECK(args != nullptr);
-  const DLTensor* dy = args->dy;
-  std::vector<int64_t> shape = args->primal_shape;
+  std::vector<int64_t> axes(args->axes.size(), -1);
+  const DLTensor* dy = args->x;
+  int64_t* ishape = dy->shape;
+  int ndim = dy->ndim;
+
+  std::vector<int64_t> oshape(ndim, -1);
+  if (axes.size() != 0) {
+    for (size_t i = 0; i < ndim; ++i) {
+      axes[args->axes[i]] = i;
+    }
+    CHECK_EQ(ndim, axes.size());
+    for (size_t i = 0; i < ndim; ++i) {
+      int axis = axes[i] >= 0 ? axes[i] : axes[i] + ndim;
+      oshape[i] = ishape[axis];
+    }
+  } else {
+    for (int i = 0; i < ndim; ++i) {
+      oshape[i] = ishape[ndim - i - 1];
+    }
+  }
   call->out = TensorValue::Assemble(/*dev=*/dy->device,
                                     /*dtype=*/dy->dtype,
-                                    /*shape=*/shape);
+                                    /*shape=*/oshape);
   call->device = dy->device;
 });
 
@@ -572,17 +607,21 @@ RAF_OP_DECLARE("raf.op.swap_axis", [](const CallValues& call) {
   call->device = x->device;
 });
 
-RAF_OP_DECLARE("raf.op.broadcast_to_like", [](const CallValues& call) {
-  const auto* args = call->args.as<BroadcastToLikeArgs>();
+void BinaryShapeLike(const CallValues& call) {
+  const auto* args = call->args.as<BinaryLikeArgs>();
   CHECK(args != nullptr);
   DLTensor* x = args->x;
-  DLTensor* broadcast_type = args->broadcast_type;
-  std::vector<int64_t> shape(broadcast_type->shape, broadcast_type->shape + broadcast_type->ndim);
+  DLTensor* like_type = args->like_type;
+  std::vector<int64_t> shape(like_type->shape, like_type->shape + like_type->ndim);
   call->out = TensorValue::Assemble(/*dev=*/x->device,
-                                    /*dtype=*/broadcast_type->dtype,
+                                    /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->device = x->device;
-});
+}
+
+RAF_OP_DECLARE("raf.op.broadcast_to_like", BinaryShapeLike);
+
+RAF_OP_DECLARE("raf.op.collapse_sum_like", BinaryShapeLike);
 
 RAF_OP_DECLARE("raf.op.stack", [](const CallValues& call) {
   const auto* args = call->args.as<StackArgs>();
@@ -821,14 +860,15 @@ RAF_OP_DECLARE("raf.op.cast", [](const CallValues& call) {
 });
 
 RAF_OP_DECLARE("raf.op.cast_like", [](const CallValues& call) {
-  const auto* args = call->args.as<CastLikeArgs>();
+  const auto* args = call->args.as<BinaryLikeArgs>();
   CHECK(args != nullptr);
-  DLTensor* dtype_like = args->dtype_like;
-  std::vector<int64_t> shape(dtype_like->shape, dtype_like->shape + dtype_like->ndim);
-  call->out = TensorValue::Assemble(/*dev=*/dtype_like->device,
-                                    /*dtype=*/dtype_like->dtype,
+  DLTensor* x = args->x;
+  DLTensor* like_type = args->like_type;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/like_type->dtype,
                                     /*shape=*/shape);
-  call->device = dtype_like->device;
+  call->device = x->device;
 });
 
 RAF_OP_DECLARE("raf.op.gather", [](const CallValues& call) {

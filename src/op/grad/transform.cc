@@ -43,25 +43,23 @@ Array<Expr> AdvIndexGrad(const Expr& orig_call, const Array<Expr> orig_args, con
 
 RAF_OP_GRAD("raf.op.adv_index", AdvIndexGrad);
 
-Array<Expr> BatchFlattenGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                             const Expr& dy) {
-  static auto reshape = Op::Get("raf.op.reshape");
-  static auto shape = Op::Get("raf.op.shape");
+Array<Expr> ReshapeOpGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                          const Expr& dy) {
   const CallNode* call = orig_call.as<CallNode>();
-  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
+  CHECK(call != nullptr);
+  const Expr& x = call->args[0];
+  return {GetReshapeLike(dy, x)};
 }
 
-RAF_OP_GRAD("raf.op.batch_flatten", BatchFlattenGrad);
+RAF_OP_GRAD("raf.op.batch_flatten", ReshapeOpGrad);
 
 Array<Expr> TransposeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                           const Expr& dy) {
   static auto transpose_dx = Op::Get("raf.op.transpose_dx");
-  static auto shape = Op::Get("raf.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& axes = call->args[1];
-  const Expr& primal_shape = Call(shape, {call->args[0]});
-  return {Call(transpose_dx, {dy, axes, primal_shape})};
+  return {Call(transpose_dx, {dy, axes})};
 }
 
 RAF_OP_GRAD("raf.op.transpose", TransposeGrad);
@@ -96,16 +94,7 @@ Array<Expr> BroadcastToGrad(const Expr& orig_call, const Array<Expr> orig_args, 
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& x = call->args[0];
-  auto f = [&dy](const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dy, x});
-    Call keep = Call(collapse_keep, {dy, x});
-    return Call(sum, {dy, axes, keep, MakeConstant(value::BoolValue::make(false))});
-  };
-
-  return {f(x)};
+  return {GetCollapseSumLike(dy, x)};
 }
 
 RAF_OP_GRAD("raf.op.broadcast_to", BroadcastToGrad);
@@ -228,35 +217,11 @@ Array<Expr> ClipGrad(const Expr& orig_call, const Array<Expr> orig_args, const V
 
 RAF_OP_GRAD("raf.op.clip", ClipGrad);
 
-Array<Expr> ExpandDimsGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                           const Expr& dy) {
-  static auto reshape = Op::Get("raf.op.reshape");
-  static auto shape = Op::Get("raf.op.shape");
-  const CallNode* call = orig_call.as<CallNode>();
-  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
-}
+RAF_OP_GRAD("raf.op.expand_dims", ReshapeOpGrad);
 
-RAF_OP_GRAD("raf.op.expand_dims", ExpandDimsGrad);
+RAF_OP_GRAD("raf.op.reshape", ReshapeOpGrad);
 
-Array<Expr> ReshapeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                        const Expr& dy) {
-  static auto reshape = Op::Get("raf.op.reshape");
-  static auto shape = Op::Get("raf.op.shape");
-  const CallNode* call = orig_call.as<CallNode>();
-  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
-}
-
-RAF_OP_GRAD("raf.op.reshape", ReshapeGrad);
-
-Array<Expr> SqueezeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
-                        const Expr& dy) {
-  static auto reshape = Op::Get("raf.op.reshape");
-  static auto shape = Op::Get("raf.op.shape");
-  const CallNode* call = orig_call.as<CallNode>();
-  return {Call(reshape, {dy, Call(shape, {call->args[0]})})};
-}
-
-RAF_OP_GRAD("raf.op.squeeze", SqueezeGrad);
+RAF_OP_GRAD("raf.op.squeeze", ReshapeOpGrad);
 
 Array<Expr> TakeGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                      const Expr& dy) {
@@ -275,13 +240,11 @@ RAF_OP_GRAD("raf.op.take", TakeGrad);
 Array<Expr> EmbeddingGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                           const Expr& dy) {
   static auto op_dx = Op::Get("raf.op.embedding_dx");
-  static auto shape = Op::Get("raf.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_EQ(call->args.size(), 2);
   const Expr& x = call->args[0];
   const Expr& indices = call->args[1];
-  const Expr& x_shape = Call(shape, {x});
-  return {Call(op_dx, {dy, indices, x_shape})};
+  return {Call(op_dx, {dy, indices, GetShape(x)})};
 }
 
 RAF_OP_GRAD("raf.op.embedding", EmbeddingGrad);
@@ -351,15 +314,13 @@ RAF_OP_GRAD("raf.op.full_like", NoGrads<1>);
 Array<Expr> StridedSliceGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                              const Expr& dy) {
   static auto op_slice_dx = Op::Get("raf.op.strided_slice_dx");
-  static auto shape = Op::Get("raf.op.shape");
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
   const Expr& begin = call->args[1];
   const Expr& end = call->args[2];
   const Expr& strides = call->args[3];
   const Expr& mode = call->args[4];
-  const Expr& primal_shape = Call(shape, {call->args[0]});
-  return {Call(op_slice_dx, {dy, primal_shape, begin, end, strides, mode})};
+  return {Call(op_slice_dx, {dy, GetShape(call->args[0]), begin, end, strides, mode})};
 }
 
 RAF_OP_GRAD("raf.op.strided_slice", StridedSliceGrad);
@@ -377,15 +338,7 @@ Array<Expr> WhereGrad(const Expr& orig_call, const Array<Expr> orig_args, const 
 
   const Expr& dx1 = Call(where, {cond, dy, zero});
   const Expr& dx2 = Call(where, {cond, zero, dy});
-  auto f = [](const Expr& dx, const Expr& x) {
-    static auto collapse_axis = Op::Get("raf.op.get_reduce_axis");
-    static auto collapse_keep = Op::Get("raf.op.get_kept_dims");
-    static auto sum = Op::Get("raf.op.sum");
-    Call axes = Call(collapse_axis, {dx, x});
-    Call keep = Call(collapse_keep, {dx, x});
-    return Call(sum, {dx, axes, keep, MakeConstant(value::BoolValue::make(false))});
-  };
-  return {NullValue<Expr>(), f(dx1, x1), f(dx2, x2)};
+  return {NullValue<Expr>(), GetCollapseSumLike(dx1, x1), GetCollapseSumLike(dx2, x2)};
 }
 
 RAF_OP_GRAD("raf.op.where", WhereGrad);
