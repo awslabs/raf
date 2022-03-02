@@ -240,7 +240,7 @@ Pass CreateRAFFunctionPass(
   return RAFFunctionPass(pass_func, pass_info);
 }
 
-TVM_REGISTER_NODE_TYPE(RAFFunctionPassNode);
+RAF_REGISTER_OBJECT_REFLECT(RAFFunctionPassNode);
 
 TVM_REGISTER_GLOBAL("raf.pass_.MakeRAFFunctionPass")
     .set_body_typed([](TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func,

@@ -25,7 +25,7 @@ namespace serialization {
 class ConstantNode : public ir::ConstantNode {
  public:
   static constexpr const char* _type_key = "raf.ir.serialization.Constant";
-  RAF_FINAL_OBJECT(ConstantNode, ir::ConstantNode);
+  RAF_FINAL_OBJECT_NOCHECK(ConstantNode, ir::ConstantNode);
 };
 
 /*!

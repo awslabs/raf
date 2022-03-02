@@ -195,57 +195,44 @@ constexpr const char* kPatternName = "PatternName";
 }  // namespace ir
 }  // namespace raf
 
-#define RAF_BASE_OBJECT(TypeName, ParentType)                                                  \
+#define RAF_BASE_OBJECT(TypeName, ParentType) TVM_DECLARE_BASE_OBJECT_INFO(TypeName, ParentType)
+
+#define RAF_FINAL_OBJECT(TypeName, ParentType) TVM_DECLARE_FINAL_OBJECT_INFO(TypeName, ParentType)
+
+#define RAF_FINAL_OBJECT_NOCHECK(TypeName, ParentType)                                         \
+  static const constexpr bool _type_final = true;                                              \
+  static const constexpr int _type_child_slots = 0;                                            \
   static uint32_t RuntimeTypeIndex() {                                                         \
+    static_assert(TypeName::_type_child_slots == 0 || ParentType::_type_child_slots == 0 ||    \
+                      TypeName::_type_child_slots < ParentType::_type_child_slots,             \
+                  "Need to set _type_child_slots when parent specifies it.");                  \
     if (TypeName::_type_index != ::tvm::runtime::TypeIndex::kDynamic) {                        \
       return TypeName::_type_index;                                                            \
     }                                                                                          \
     return _GetOrAllocRuntimeTypeIndex();                                                      \
   }                                                                                            \
   static uint32_t _GetOrAllocRuntimeTypeIndex() {                                              \
-    static uint32_t tidx = GetOrAllocRuntimeTypeIndex(                                         \
+    static uint32_t tindex = Object::GetOrAllocRuntimeTypeIndex(                               \
         TypeName::_type_key, TypeName::_type_index, ParentType::_GetOrAllocRuntimeTypeIndex(), \
         TypeName::_type_child_slots, TypeName::_type_child_slots_can_overflow);                \
-    return tidx;                                                                               \
+    return tindex;                                                                             \
   }
 
-#define RAF_FINAL_OBJECT(TypeName, ParentType)      \
-  static const constexpr bool _type_final = true;   \
-  static const constexpr int _type_child_slots = 0; \
-  RAF_BASE_OBJECT(TypeName, ParentType)
+#define RAF_OBJECT_REF(TypeName, ParentType, ObjectName) \
+  TVM_DEFINE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)
 
-#define RAF_OBJECT_REF(TypeName, ParentType, ObjectName)                                   \
-  TypeName() {                                                                             \
-  }                                                                                        \
-  explicit TypeName(::tvm::runtime::ObjectPtr<::tvm::runtime::Object> n) : ParentType(n) { \
-  }                                                                                        \
-  ObjectName* operator->() const {                                                         \
-    return static_cast<ObjectName*>(data_.get());                                          \
-  }                                                                                        \
-  using ContainerType = ObjectName;
+#define RAF_MUTABLE_OBJECT_REF(TypeName, ParentType, ObjectName) \
+  TVM_DEFINE_MUTABLE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)
 
-#define RAF_NOTNULLABLE_OBJECT_REF(TypeName, ParentType, ObjectName)                       \
-  explicit TypeName(::tvm::runtime::ObjectPtr<::tvm::runtime::Object> n) : ParentType(n) { \
-  }                                                                                        \
-  ObjectName* operator->() const {                                                         \
-    return static_cast<ObjectName*>(data_.get());                                          \
-  }                                                                                        \
-  static constexpr bool _type_is_nullable = false;                                         \
-  using ContainerType = ObjectName;
+#define RAF_NOTNULLABLE_OBJECT_REF(TypeName, ParentType, ObjectName) \
+  TVM_DEFINE_NOTNULLABLE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)
 
-#define RAF_REGISTER_OBJECT_NO_REFLECT(TypeName)                              \
-  static DMLC_ATTRIBUTE_UNUSED uint32_t __make_Object_tidx##_##TypeName##__ = \
-      TypeName::_GetOrAllocRuntimeTypeIndex()
+#define RAF_MUTABLE_NOTNULLABLE_OBJECT_REF(TypeName, ParentType, ObjectName) \
+  TVM_DEFINE_MUTABLE_NOTNULLABLE_OBJECT_REF_METHODS(TypeName, ParentType, ObjectName)
 
-#define RAF_REGISTER_OBJECT_REFLECT(TypeName)                                                    \
-  RAF_REGISTER_OBJECT_NO_REFLECT(TypeName);                                                      \
-  static DMLC_ATTRIBUTE_UNUSED ::tvm::ReflectionVTable::Registry& __make_Node##_##TypeName##__ = \
-      ::tvm::ReflectionVTable::Global()                                                          \
-          ->Register<TypeName, ::tvm::detail::ReflectionTrait<TypeName>>()                       \
-          .set_creator(                                                                          \
-              [](const std::string&) -> ::tvm::runtime::ObjectPtr<::tvm::runtime::Object> {      \
-                return ::tvm::runtime::make_object<TypeName>();                                  \
-              })
+#define RAF_REGISTER_OBJECT_NO_REFLECT(TypeName) TVM_REGISTER_OBJECT_TYPE(TypeName)
+
+#define RAF_REGISTER_OBJECT_REFLECT(TypeName) TVM_REGISTER_NODE_TYPE(TypeName)
 
 #include "./ir_ext.h"
 #include "./dataflow_pattern.h"

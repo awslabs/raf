@@ -275,5 +275,7 @@ Op GetOp(const std::string& op_name) {
 
 RAF_REGISTER_GLOBAL("raf.op.GetOp").set_body_typed(GetOp);
 
+RAF_REGISTER_OBJECT_REFLECT(CallValuesNode);
+
 }  // namespace op
 }  // namespace raf

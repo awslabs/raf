@@ -134,7 +134,7 @@ Now let’s declare the behavior of the operator. There are two major behaviors 
 
 1. The shape of the output (inferred from the inputs’ shapes).
 2. The output value, or the method to produce the value,
-    1. If this operator is compute intensive (e.g., `softmax`) and has to be offloaded to a 
+    1. If this operator is compute intensive (e.g., `softmax`) and has to be offloaded to a
 backend (CUDA, CuBLAS, CuDNN, TVM, LLVM, etc), then we only need to assign a tensor placeholder (with inferred shape, data type and device context) to `CallValues->out` to let RAF know how its output should be. Here is how we declare `softmax`, for example:
 
     ```c++
@@ -264,7 +264,7 @@ We now have a well-defined `softmax`. Let’s build RAF and run the operator:
 ValueError: Cannot dispatch raf.op.softmax@cpu(0)
 ```
 
-Oops, we still get an error...Recall that we attempt to offload this operator to a backend when implementing its declare, so we put a placeholder to its `call->out`. When RAF sees a placeholder in `call->out`, it tries to dispatch this operator to one of the available backends as the callee for execution. However, since we have not defined any backend for this operator, the dispatching was failed. 
+Oops, we still get an error...Recall that we attempt to offload this operator to a backend when implementing its declare, so we put a placeholder to its `call->out`. When RAF sees a placeholder in `call->out`, it tries to dispatch this operator to one of the available backends as the callee for execution. However, since we have not defined any backend for this operator, the dispatching was failed.
 
 Formally, the operator we just defined is named **base operator** in RAF, which includes backend independent scheme and attributes. Meanwhile, the backend-specific operators are named **dialect operators**. One base operator can be associated with multiple dialect operators, and each of them is in charge of one backend execution. For example, the base operator `raf.op.softmax` has the following dialect operators in RAF:
 
@@ -282,7 +282,7 @@ Every base operator should have a Relay/TVM dialect operator implementation as t
 
 ##### The operator has an implementation in Relay
 
-If an operator has a corresponding implementation in Relay, then we can simply add one line to [scripts/op_def/topi.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/scripts/op_def/topi.py):
+If an operator has a corresponding implementation in Relay, then we can simply add one line to [scripts/src_codegen/def_topi_map.py](https://github.com/meta-project/meta/blob/main/scripts/src_codegen/def_topi_map.py):
 
 ```python
 OP_MAP = [
@@ -524,7 +524,7 @@ RAF_OP_FROM_RELAY("nn.softmax", "raf.op.softmax",                               
     })
 ```
 
-The first argument (`nn.softmax`) is the Relay op name; the second argument (`raf.op.softmax`) is the RAF op name. The third argument is a converter function, and its purpose is to map Relay arguments and attributes to the RAF arguments. In the case of `softmax`, we have: 
+The first argument (`nn.softmax`) is the Relay op name; the second argument (`raf.op.softmax`) is the RAF op name. The third argument is a converter function, and its purpose is to map Relay arguments and attributes to the RAF arguments. In the case of `softmax`, we have:
 
 * Relay
     * Arguments: x.

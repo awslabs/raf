@@ -41,7 +41,13 @@ class CallValuesNode : public ir::Object {
   mutable value::Value out;
   mutable Device device;
 
- public:
+  void VisitAttrs(tvm::AttrVisitor* v) {
+    v->Visit("callee", &callee);
+    v->Visit("args", &args);
+    v->Visit("out", &out);
+    v->Visit("device", &device);
+  }
+  static constexpr const uint32_t _type_index = ir::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "raf.op.CallValues";
   RAF_FINAL_OBJECT(CallValuesNode, ir::Object);
 };
