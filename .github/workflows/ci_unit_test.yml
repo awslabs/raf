@@ -208,7 +208,8 @@ jobs:
 
   update_ci_badge:
     needs: [test_on_cpu, test_on_gpu, test_on_multi_gpu]
-    if: github.repository == 'meta-project/meta'
+    # Run this job whatever the unit tests were success or not.
+    if: ${{ always() && github.repository == 'meta-project/meta' }}
     runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
@@ -223,9 +224,17 @@ jobs:
             echo "No need to update badge for PR CI. Skip."
             exit 0
           fi
-          head_commit=$(git rev-parse --short HEAD)
           echo "::set-output name=gist_id::630a36600930c8d68e6b15f16333b532"
-          echo "::set-output name=message::${head_commit}"
+          head_commit=$(git rev-parse --short HEAD)
+          if [[ "${{ needs.test_on_cpu.result }}" == "success" &&
+                "${{ needs.test_on_gpu.result }}" == "success" &&
+                "${{ needs.test_on_multi_gpu.result }}" == "success" ]]; then
+            echo "::set-output name=message::passing (${head_commit})"
+            echo "::set-output name=color::green"
+          else
+            echo "::set-output name=message::failed (${head_commit})"
+            echo "::set-output name=color::red"
+          fi
       - name: Update CI badge
         # Intentionally fail this step with empty gist_id.
         uses: schneegans/dynamic-badges-action@v1.1.0
@@ -234,6 +243,6 @@ jobs:
           auth: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
           gistID: ${{ steps.badge.outputs.gist_id }}
           filename: raf-ci-badge-last-pass.json
-          label: CI-Last-Success
+          label: CI-UnitTests
           message: ${{ steps.badge.outputs.message }}
-          color: blue
+          color: ${{ steps.badge.outputs.color }}

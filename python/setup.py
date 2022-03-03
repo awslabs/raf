@@ -1,12 +1,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Setup raf package."""
+"""Setup RAF package."""
 import os
 import shutil
+import subprocess
 import sys
-import sysconfig
-import platform
 
 from setuptools import find_packages
 from setuptools.dist import Distribution
@@ -19,19 +18,23 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
 
-CURRENT_DIR = os.path.dirname(__file__)
+SCRIPT_DIR = os.path.dirname(__file__)
+
+
+def get_env_flag(name, default=""):
+    """Get environment bololean flag by all means."""
+    return os.getenv(name, default).upper() in ["ON", "1", "YES", "TRUE", "Y"]
 
 
 def get_lib_path():
     """Get library path, name and version"""
     # We can not import `libinfo.py` in setup.py directly since __init__.py
     # Will be invoked which introduces dependences
-    libinfo_py = os.path.join(CURRENT_DIR, "./raf/_lib.py")
+    libinfo_py = os.path.join(SCRIPT_DIR, "./raf/_lib.py")
     libinfo = {"__file__": libinfo_py}
     with open(libinfo_py, "rb") as f:
         ss = f.read()
     exec(compile(ss, libinfo_py, "exec"), libinfo, libinfo)
-    version = "0.0.2.dev"
     if not os.getenv("CONDA_BUILD"):
         lib_path = libinfo["find_lib_path"]()
         libs = [lib_path[0]]
@@ -42,10 +45,24 @@ def get_lib_path():
                     break
     else:
         libs = None
-    return libs, version
+    return libs
 
 
-LIB_LIST, __version__ = get_lib_path()
+def get_build_version():
+    """Generate the build version."""
+    git_sha = (
+        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=SCRIPT_DIR)
+        .decode("ascii")
+        .strip()
+    )
+    version = os.getenv("RAF_VERSION", default="0.1")
+    if not get_env_flag("RELEASE_VERSION", default="0"):
+        version += "+git" + git_sha
+    return version
+
+
+LIB_LIST = get_lib_path()
+__version__ = get_build_version()
 
 
 class BinaryDistribution(Distribution):
@@ -68,12 +85,12 @@ setup_kwargs = {}
 
 # For bdist_wheel only
 if wheel_include_libs:
-    with open("MANIFEST.in", "w") as fo:
+    with open(os.path.join(SCRIPT_DIR, "MANIFEST.in"), "w") as fo:
         for path in LIB_LIST:
             if os.path.normpath(path) != os.path.normpath(
-                os.path.join(CURRENT_DIR, "raf/libraf.so")
+                os.path.join(SCRIPT_DIR, "raf/libraf.so")
             ):
-                shutil.copy(path, os.path.join(CURRENT_DIR, "raf"))
+                shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
             _, libname = os.path.split(path)
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
@@ -85,16 +102,18 @@ if include_libs:
     setup_kwargs = {"include_package_data": True, "data_files": [("raf", LIB_LIST)]}
 
 # Local change: Write out version to file and include in package
-os.makedirs("../build/private/raf/version", exist_ok=True)
-with open("../build/private/raf/version/__init__.py", "w") as fd:
+os.makedirs(os.path.join(SCRIPT_DIR, "../build/private/raf/version"), exist_ok=True)
+with open(os.path.join(SCRIPT_DIR, "../build/private/raf/version/__init__.py"), "w") as fd:
     fd.write("__version__ = '" + __version__ + "'")
-setup_kwargs["package_dir"] = {"raf.version": "../build/private/raf/version"}
+setup_kwargs["package_dir"] = {
+    "raf.version": os.path.join(SCRIPT_DIR, "../build/private/raf/version")
+}
 # End local change
 
 setup(
     name="raf",
     version=__version__,
-    description="An End to End Compiler for Deep Learning Systems",
+    description="RAF Accelerates deep learning Frameworks",
     zip_safe=False,
     install_requires=[
         "tvm",
@@ -104,7 +123,7 @@ setup(
         "test": ["torch==1.6.0", "pytest"],
     },
     packages=find_packages() + ["raf.version"],
-    package_data={"raf": [os.path.join(CURRENT_DIR, "../build/lib/libraf.so")]},
+    package_data={"raf": [os.path.join(SCRIPT_DIR, "../build/lib/libraf.so")]},
     distclass=BinaryDistribution,
     url="https://github.com/meta-project/meta",
     python_requires=">=3.6",
@@ -113,7 +132,7 @@ setup(
 
 if wheel_include_libs:
     # Wheel cleanup
-    os.remove("MANIFEST.in")
+    os.remove(os.path.join(SCRIPT_DIR, "MANIFEST.in"))
     for path in LIB_LIST:
         _, libname = os.path.split(path)
         os.remove("raf/%s" % libname)
