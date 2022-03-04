@@ -50,8 +50,9 @@ def get_lib_path():
 
 def get_build_version():
     """Generate the build version."""
+    cwd = os.path.abspath(SCRIPT_DIR)
     git_sha = (
-        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=SCRIPT_DIR)
+        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=cwd)
         .decode("ascii")
         .strip()
     )
