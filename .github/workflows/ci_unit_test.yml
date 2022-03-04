@@ -230,10 +230,10 @@ jobs:
                 "${{ needs.test_on_gpu.result }}" == "success" &&
                 "${{ needs.test_on_multi_gpu.result }}" == "success" ]]; then
             echo "::set-output name=message::passing (${head_commit})"
-            echo "::set-output name=color::green"
+            echo "::set-output name=color::success"
           else
-            echo "::set-output name=message::failed (${head_commit})"
-            echo "::set-output name=color::red"
+            echo "::set-output name=message::failing (${head_commit})"
+            echo "::set-output name=color::critical"
           fi
       - name: Update CI badge
         # Intentionally fail this step with empty gist_id.

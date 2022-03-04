@@ -170,6 +170,7 @@ std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
 }
 
 std::shared_ptr<OpEnv> DispatchFusedOp(const CallValues& call) {
+  dispatch_error_msgs.clear();
   auto clo = Downcast<ClosureValue>(call->callee);
   auto func = clo->func;
   ICHECK(func->HasNonzeroAttr(attr::kPrimitive))
@@ -179,7 +180,18 @@ std::shared_ptr<OpEnv> DispatchFusedOp(const CallValues& call) {
                             << ir::AsText(func);
   std::ostringstream os;
   os << "raf.op." << dialect.value() << "._fused_op";
-  return OpEnvMaker::Make(os.str(), call);
+  auto op_env = OpEnvMaker::Make(os.str(), call);
+  if (op_env == nullptr && !dispatch_error_msgs.empty()) {
+    std::stringstream ss;
+    ss << "Failed to dispatch fused op:";
+    for (auto msg : dispatch_error_msgs) {
+      ss << "\n\t" << msg;
+    }
+    ss << "\nName: " << os.str() << "\n" << ir::AsText(func);
+    LOG(FATAL) << ss.str();
+    dispatch_error_msgs.clear();
+  }
+  return op_env;
 }
 
 std::shared_ptr<OpEnv> Dispatch(const CallValues& call) {
