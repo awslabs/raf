@@ -18,7 +18,7 @@ Communicator Communicator::Get(const std::string& name, const std::vector<int64_
   return CommunicatorPool::Get()->GetCommunicator(name, rank_list);
 }
 
-void Communicator::InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list,
+void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const TupleValue rank_list,
                                        const Communicator global_comm) {
   std::vector<int64_t> rank_list_;
   for (auto i : rank_list->fields) {
@@ -89,7 +89,7 @@ VoidCommunicator VoidCommunicator::make(TupleValue rank_list) {
     obj->root_rank = 0;
     obj->host_ids.push_back(GetHostID());
   } else {
-    InitSubCommunicator(VoidCommunicator(obj), rank_list, Communicator::Get("void"));
+    InitSubCommunicator(obj.get(), rank_list, Communicator::Get("void"));
   }
 
   return VoidCommunicator(obj);

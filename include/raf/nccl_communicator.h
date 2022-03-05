@@ -23,7 +23,7 @@ class NCCLCommunicatorObj final : public CommunicatorObj {
   ncclComm_t nccl_comm;
   Communicator parent_comm;  // Prevent MPI Communicator from releasing in advanced
   static constexpr const char* _type_key = "raf.distributed.NCCLCommunicator";
-  virtual ~NCCLCommunicatorObj();
+  ~NCCLCommunicatorObj();
   RAF_FINAL_OBJECT(NCCLCommunicatorObj, CommunicatorObj);
 };
 

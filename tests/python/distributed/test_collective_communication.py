@@ -25,7 +25,7 @@ SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_allreduce_with_tensor(dtype, computation):
-    print("Testing allreduce with a single tensor as input.")
+    """Testing allreduce with a single tensor as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -75,7 +75,7 @@ def test_allreduce_with_tensor(dtype, computation):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_allreduce_with_tensor_list(computation):
-    print("Testing allreduce with a list of tensors as input.")
+    """Testing allreduce with a list of tensors as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -144,7 +144,7 @@ def test_allreduce_with_tensor_list(computation):
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("rank_list", [[0], [1, 2]])
 def test_allreduce_with_subcomm(dtype, rank_list):
-    print("Testing allreduce with a single tensor as input.")
+    """Testing allreduce with a single tensor as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -208,7 +208,7 @@ def test_allgather(axis):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
 def test_allgather_with_tensor_list(axis):
-    print("Testing allgather with a list of tensors as input.")
+    """Testing allgather with a list of tensors as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -245,7 +245,7 @@ def test_allgather_with_tensor_list(axis):
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("rank_list", [[0, 1], [1, 2, 3]])
 def test_allgather_with_subcomm(axis, rank_list):
-    print("Testing allgather with a list of tensors as input.")
+    """Testing allgather with a list of tensors as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -379,7 +379,7 @@ def test_send_recv():
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce(computation):
-    print("Testing reduce")
+    """Testing reduce"""
 
     class TestModel(raf.Model):
         def build(self):
@@ -428,7 +428,7 @@ def test_reduce(computation):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce_list(computation):
-    print("Testing reduce with list of tensor")
+    """Testing reduce with list of tensor"""
 
     class TestModel(raf.Model):
         def build(self):
@@ -493,7 +493,7 @@ def test_reduce_list(computation):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 def test_broadcast():
-    print("Testing broadcast with a list of tensors.")
+    """Testing broadcast with a list of tensors."""
 
     # pylint: disable=attribute-defined-outside-init
     class TestModel(raf.Model):

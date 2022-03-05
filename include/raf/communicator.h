@@ -79,7 +79,7 @@ class CommunicatorObj : public Object {
 class Communicator : public ObjectRef {
  public:
   static Communicator Get(const std::string& name = "", const std::vector<int64_t>& rank_list = {});
-  static void InitSubCommunicator(Communicator sub_comm, const TupleValue rank_list,
+  static void InitSubCommunicator(CommunicatorObj* sub_comm, const TupleValue rank_list,
                                   const Communicator global_comm);
   static uint64_t GetHostID();
 
@@ -89,7 +89,6 @@ class Communicator : public ObjectRef {
 class VoidCommunicatorObj final : public CommunicatorObj {
  public:
   static constexpr const char* _type_key = "raf.distributed.VoidCommunicator";
-  virtual ~VoidCommunicatorObj() = default;
   RAF_FINAL_OBJECT(VoidCommunicatorObj, CommunicatorObj);
 };
 

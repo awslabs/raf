@@ -45,7 +45,7 @@ NCCLCommunicator NCCLCommunicator::make(value::TupleValue rank_list) {
     // ALL the nodes including nodes not in the rank_list MUST join the process of creating this
     // sub-communicator due to MPI_Bcast. If this rank is not in rank_list, this communicator will
     // run in standalone mode.
-    InitSubCommunicator(NCCLCommunicator(obj), rank_list, mpi);
+    InitSubCommunicator(obj.get(), rank_list, mpi);
     obj->parent_comm = mpi;
     MPI_CALL(MPI_Bcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), MPI_BYTE, obj->root_rank,
                        MPI_COMM_WORLD));
