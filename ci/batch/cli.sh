@@ -48,22 +48,25 @@ function config_cmake() {
 
 # Compile for the given path.
 function compile() {
+    set +e # Disable exit on error for this function.
     BUILD_DIR=$1
     PLATFORM=$2
     JOB_TAG=$3
 
     # Load ccache if available.
-    bash ./ci/batch/backup-ccache.sh download $PLATFORM $JOB_TAG || true
+    bash ./ci/batch/backup-ccache.sh download $PLATFORM $JOB_TAG
 
-    # Compile. Note that compilation errors will not result in crash in this function.
-    # We use return exit code to let the caller decide the action.
+    # Compile. Note that compilation errors will not result in crash in this function
+    # so that we could still upload ccache. This function instead returns the exit code
+    # to let the caller handle the error.
     bash ./ci/task_clean.sh $BUILD_DIR
-    bash ./ci/task_build.sh $BUILD_DIR -j$(($(nproc) - 1)) || true
+    bash ./ci/task_build.sh $BUILD_DIR -j$(($(nproc) - 1))
     RET=$?
     echo "[CLI] Compiled at $BUILD_DIR"
 
     # Backup the ccache.
-    bash ./ci/batch/backup-ccache.sh upload $PLATFORM $JOB_TAG || true
+    bash ./ci/batch/backup-ccache.sh upload $PLATFORM $JOB_TAG
+    set -e
     return $RET
 }
 

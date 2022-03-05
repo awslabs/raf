@@ -61,7 +61,7 @@ class StorageValue final : public Value {
  public:
   static StorageValue make(std::shared_ptr<memory_pool::Memory> buffer);
 
-  RAF_OBJECT_REF(StorageValue, Value, StorageValueObj);
+  RAF_MUTABLE_OBJECT_REF(StorageValue, Value, StorageValueObj);
 };
 
 }  // namespace vm

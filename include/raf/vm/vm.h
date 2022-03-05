@@ -152,7 +152,7 @@ class VMContextObj : public ValueObj {
   }
   static constexpr const uint32_t _type_index = ir::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "raf.vm.VMContext";
-  RAF_BASE_OBJECT(VMContextObj, ValueObj);
+  RAF_FINAL_OBJECT(VMContextObj, ValueObj);
 };
 
 /*!
@@ -207,7 +207,7 @@ class VMContext : public Value {
    */
   inline Index PopFrame();
 
-  RAF_OBJECT_REF(VMContext, Value, VMContextObj);
+  RAF_MUTABLE_OBJECT_REF(VMContext, Value, VMContextObj);
 };
 
 using OpEnvCache = MetaCache<OpEnvPtr>;

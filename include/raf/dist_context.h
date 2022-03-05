@@ -53,7 +53,7 @@ class DistContext : public ir::ObjectRef {
  public:
   static DistContext make();
   static DistContext Global();
-  RAF_OBJECT_REF(DistContext, ir::ObjectRef, DistContextObj);
+  RAF_MUTABLE_OBJECT_REF(DistContext, ir::ObjectRef, DistContextObj);
 };
 
 }  // namespace distributed

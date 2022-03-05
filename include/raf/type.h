@@ -64,7 +64,7 @@ class TypeInferenceNode : public tvm::TypeConstraintNode {
   }
 
   static constexpr const char* _type_key = "TypeInference";
-  TVM_DECLARE_FINAL_OBJECT_INFO(TypeInferenceNode, TypeConstraintNode);
+  RAF_FINAL_OBJECT(TypeInferenceNode, TypeConstraintNode);
 };
 
 /*!
@@ -74,7 +74,7 @@ class TypeInferenceNode : public tvm::TypeConstraintNode {
 class TypeInference : public tvm::TypeConstraint {
  public:
   explicit TypeInference(TypeInferenceFn func);
-  TVM_DEFINE_OBJECT_REF_METHODS(TypeInference, TypeConstraint, TypeInferenceNode);
+  RAF_OBJECT_REF(TypeInference, TypeConstraint, TypeInferenceNode);
 };
 
 OpType MakeOpType(const std::string& op_name, const std::string& fn_name,

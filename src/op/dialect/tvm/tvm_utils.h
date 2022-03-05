@@ -274,8 +274,11 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
     } catch (const dmlc::Error& e) {                                                               \
       /* Invalid implementation. Return nullptr to let dispatcher select the next one */           \
       if (!AllowJitFailure()) {                                                                    \
-        dispatch_error_msgs.push_back(e.what());                                                   \
-        DLOG(WARNING) << "Failed to JIT " << env->env_name << ": " << e.what();                    \
+        std::stringstream ss;                                                                      \
+        ss << "[TVM] Failed to JIT: " << env->env_name << ": " << e.what();                        \
+        auto msg = ss.str();                                                                       \
+        dispatch_error_msgs.push_back(msg);                                                        \
+        DLOG(WARNING) << msg;                                                                      \
         return nullptr;                                                                            \
       }                                                                                            \
     }                                                                                              \

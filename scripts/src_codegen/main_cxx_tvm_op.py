@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .codegen_utils import write_to_file
-from ..op_def import topi
+from . import def_topi_map as topi
 
 
 def gen_file(filename):

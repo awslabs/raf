@@ -156,7 +156,7 @@ class Device : public ObjectRef {
   static Device Current(bool allow_default = true);
 
  public:
-  RAF_NOTNULLABLE_OBJECT_REF(Device, ir::ObjectRef, DeviceObj);
+  RAF_MUTABLE_NOTNULLABLE_OBJECT_REF(Device, ir::ObjectRef, DeviceObj);
 
  private:
   inline DeviceObj* self() const {

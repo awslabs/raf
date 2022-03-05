@@ -223,7 +223,7 @@ DLManagedTensor* Tensor::ToDLPack() const {
   return ret;
 }
 
-TVM_REGISTER_OBJECT_TYPE(Tensor::TensorContainer);
+RAF_REGISTER_OBJECT_NO_REFLECT(Tensor::TensorContainer);
 
 RAF_REGISTER_GLOBAL("raf.tensor.MarkNumpy").set_body_typed(Tensor::Impl::MarkNumpy);
 

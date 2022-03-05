@@ -465,7 +465,8 @@ T GetScalarValueData(const Value& value) {
     return ivo->value;
   } else if (const auto* tvo = value.as<TensorValueObj>()) {
     tensor::Tensor tensor = tvo->tensor;
-    CHECK_EQ(tensor->ndim, 0U) << "Value is not a scalar";
+    CHECK(tensor->ndim == 0U || (tensor->ndim == 1U && tensor->shape[0] == 1))
+        << "Value is not a scalar";
 
     DataType dtype = DataType(tensor->dtype);
     NDArray nd_array;

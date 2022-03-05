@@ -110,6 +110,19 @@ bool CutlassMatmulOpEnv::Pattern(const CallValues& cv) {
       });
   DFPatternCallback cb(pat, func.operator PackedFunc(), false);
   RAFRewritePatterns({cb}, expr);
+
+  // Since multiply has commutative property, it might match beta * bias or bias * beta.
+  // Here we check the first var and assign to beta is it is a scalar. Otherwise we assign
+  // the second var to beta. In case the second var is not a scalar either (should be a bug
+  // in the fusion pass), IsValid will return false.
+  if (bias_.defined() && beta_.defined()) {
+    DLTensor* dl_beta = GetValue<TensorValue>(cv, beta_);
+    if (dl_beta->ndim != 0 && (dl_beta->ndim != 1 || dl_beta->shape[0] > 1)) {
+      auto temp = beta_;
+      beta_ = bias_;
+      bias_ = temp;
+    }
+  }
   return true;
 }
 
@@ -173,10 +186,22 @@ void CutlassMatmulOpEnv::Init(const CallValues& cv) {
 
 OpEnv* CutlassMatmulOpEnv::make(const CallValues& cv) {
   std::unique_ptr<CutlassMatmulOpEnv> op_env(std::make_unique<CutlassMatmulOpEnv>(cv));
-  if (!op_env->Pattern(cv) || !op_env->IsValid(cv)) {
+  auto matched_pattern = op_env->Pattern(cv);
+  auto valid = op_env->IsValid(cv);
+  if (!matched_pattern || !valid) {
+    std::stringstream ss;
+    ss << "[CUTLASS] Cannot JIT: matched pattern? " << matched_pattern << ", valid? " << valid;
+    dispatch_error_msgs.push_back(ss.str());
     return nullptr;
   }
-  op_env->Init(cv);
+  try {
+    op_env->Init(cv);
+  } catch (const dmlc::Error& e) {
+    std::stringstream ss;
+    ss << "[CUTLASS] Failed to JIT: " << e.what();
+    dispatch_error_msgs.push_back(ss.str());
+    return nullptr;
+  }
   return op_env.release();
 }
 

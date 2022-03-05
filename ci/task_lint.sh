@@ -24,8 +24,8 @@ echo "Check Python formats using black..."
 ./scripts/lint/git-black.sh HEAD~1
 ./scripts/lint/git-black.sh origin/main
 
-echo "Running pylint on python/raf and scripts/op_def"
-python3 -m pylint python/raf scripts/op_def --rcfile=./scripts/lint/pylintrc
+echo "Running pylint on python/raf"
+python3 -m pylint python/raf --rcfile=./scripts/lint/pylintrc
 
 echo "Running pylint on tests/python"
 python3 -m pylint tests/python --rcfile=./scripts/lint/pytestlintrc
