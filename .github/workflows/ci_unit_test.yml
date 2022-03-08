@@ -207,7 +207,7 @@ jobs:
               bash ./ci/batch/cli.sh unit_test multi-GPU"
 
   update_ci_badge:
-    needs: [test_on_cpu, test_on_gpu, test_on_multi_gpu]
+    needs: [check_status, test_on_cpu, test_on_gpu, test_on_multi_gpu]
     # Run this job whatever the unit tests were success or not.
     if: ${{ always() && github.repository == 'meta-project/meta' }}
     runs-on: self-hosted
