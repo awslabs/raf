@@ -270,7 +270,7 @@ struct DataParallel {
         // we should add a allreduce op after it.
         static Op op_allreduce = Op::Get("raf.op._allreduce");
         auto input_var = raf::ir::MakeVar("allreduce_in", {});
-        auto rank_list = MakeConstant(TupleValue::make(Array<Value>({})));
+        auto rank_list = MakeConstant(NullValue<Value>());
 
 #if defined RAF_USE_NCCL && NCCL_VERSION_CODE >= 21000
         bp_ell->vars[p2 - 1] = input_var;

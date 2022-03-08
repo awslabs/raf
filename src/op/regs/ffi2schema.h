@@ -45,7 +45,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
-    std::function<value::Value(const ArrayNode*)> ConvertArray = [&](const ArrayNode* n) {
+    std::function<Value(const ArrayNode*)> ConvertArray = [&](const ArrayNode* n) {
       ir::Array<Value> fields;
       for (const ObjectRef& i : *n) {
         if (const auto* e = i.as<IntImmNode>()) {
@@ -61,7 +61,7 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
             << i->GetTypeKey() << '"';
         throw;
       }
-      return value::TupleValue::make(std::move(fields));
+      return TupleValue::make(std::move(fields));
     };
     return std::move(ConvertArray(n));
   }

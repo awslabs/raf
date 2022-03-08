@@ -670,13 +670,7 @@ SCHEMAS = {
     "communication.h::allreduce": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
-        Arg(
-            name="rank_list",
-            cxx_type="std::vector<int64_t>",
-            cxx_normalizer="IntTuple",
-            cxx_default="{}",
-            py_default="None",
-        ),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::comm_reduce": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
@@ -686,13 +680,7 @@ SCHEMAS = {
     "communication.h::allgather": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int"),
-        Arg(
-            name="rank_list",
-            cxx_type="std::vector<int64_t>",
-            cxx_normalizer="IntTuple",
-            cxx_default="{}",
-            py_default="None",
-        ),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::reduce_scatter": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),

@@ -18,9 +18,8 @@ MPICommunicatorObj::~MPICommunicatorObj() {
   MPI_CALL(MPI_Finalize());
 }
 
-MPICommunicator MPICommunicator::make(TupleValue rank_list) {
-  CHECK(rank_list->fields.empty())
-      << "MPICommunicator doesn't support creating a sub-communicator yet.";
+MPICommunicator MPICommunicator::make(Value rank_list) {
+  CHECK(!rank_list.defined()) << "MPICommunicator doesn't support creating sub-communicators yet.";
   auto obj = make_object<MPICommunicatorObj>();
 
   int initialized = 0;
@@ -56,6 +55,8 @@ MPICommunicator MPICommunicator::make(TupleValue rank_list) {
   obj->world_size = size;
   obj->world_rank = rank;
   obj->root_rank = 0;
+  obj->group_id = -1;
+  obj->group_size = 0;
   return MPICommunicator(obj);
 }
 

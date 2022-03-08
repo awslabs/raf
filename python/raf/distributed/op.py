@@ -44,8 +44,10 @@ def allgather(x, axis, rank_list=None):
 
     dctx = get_context()
     if rank_list:
-        if dctx.rank in rank_list:
-            size = len(rank_list)
+        for group in rank_list:
+            if dctx.rank in group:
+                size = len(group)
+                break
         else:
             size = 1
     else:

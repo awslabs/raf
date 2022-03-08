@@ -18,7 +18,7 @@
 #include "raf/value.h"
 #include "raf/op_utils.h"
 
-typedef std::pair<std::string, std::vector<int64_t>> CommunicatorID;
+typedef std::pair<std::string, std::vector<std::vector<int64_t>>> CommunicatorID;
 
 namespace raf {
 namespace distributed {
@@ -58,6 +58,8 @@ class CommunicatorObj : public Object {
   int world_size;
   int world_rank;
   int root_rank;
+  int group_id;
+  int group_size;
   std::vector<uint64_t> host_ids;
 
   void VisitAttrs(tvm::AttrVisitor* v) {
@@ -68,6 +70,8 @@ class CommunicatorObj : public Object {
     v->Visit("world_size", &world_size);
     v->Visit("world_rank", &world_rank);
     v->Visit("root_rank", &root_rank);
+    v->Visit("group_id", &group_id);
+    v->Visit("group_size", &group_size);
   }
 
   virtual ~CommunicatorObj() = default;
@@ -78,8 +82,8 @@ class CommunicatorObj : public Object {
 
 class Communicator : public ObjectRef {
  public:
-  static Communicator Get(const std::string& name = "", const std::vector<int64_t>& rank_list = {});
-  static void InitSubCommunicator(CommunicatorObj* sub_comm, const TupleValue rank_list,
+  static Communicator Get(const std::string& name = "", const Value rank_list = NullValue<Value>());
+  static void InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
                                   const Communicator global_comm);
   static uint64_t GetHostID();
 
@@ -94,7 +98,7 @@ class VoidCommunicatorObj final : public CommunicatorObj {
 
 class VoidCommunicator final : public Communicator {
  public:
-  static VoidCommunicator make(TupleValue rank_list);
+  static VoidCommunicator make(Value rank_list);
   RAF_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
 };
 
@@ -108,20 +112,31 @@ class CommunicatorPool {
     return instance;
   }
 
-  Communicator GetCommunicator(const std::string& name = "",
-                               const std::vector<int64_t>& rank_list = {}) {
+  Communicator GetCommunicator(const std::string& name, const Value rank_list) {
 #ifdef RAF_USE_NCCL
     auto default_name = "nccl";
 #else
     auto default_name = "void";
 #endif
     auto comm_name = name.empty() ? default_name : name;
-    auto id = CommunicatorID(comm_name, rank_list);
+
+    std::vector<std::vector<int64_t>> rank_list_;
+    if (rank_list.defined()) {
+      for (auto group : Downcast<TupleValue>(rank_list)->fields) {
+        std::vector<int64_t> group_;
+        for (auto rank : Downcast<TupleValue>(group)->fields) {
+          group_.push_back(Downcast<IntValue>(rank)->value);
+        }
+        rank_list_.push_back(group_);
+      }
+    }
+
+    CommunicatorID id(comm_name, rank_list_);
 
     if (comm_.count(id) == 0) {
       const std::string prefix = "raf.distributed.communicator._make.";
       auto func_name = prefix + comm_name;
-      Communicator comm = GetPackedFunc(func_name)(op::ArrayToIntTuple(rank_list));
+      Communicator comm = GetPackedFunc(func_name)(rank_list);
       comm_[id] = std::move(comm);
     }
     return comm_[id];

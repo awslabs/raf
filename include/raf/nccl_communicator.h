@@ -29,7 +29,7 @@ class NCCLCommunicatorObj final : public CommunicatorObj {
 
 class NCCLCommunicator final : public Communicator {
  public:
-  static NCCLCommunicator make(value::TupleValue rank_list);
+  static NCCLCommunicator make(Value rank_list);
   RAF_OBJECT_REF(NCCLCommunicator, Communicator, NCCLCommunicatorObj);
 };
 

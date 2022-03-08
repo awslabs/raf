@@ -27,7 +27,7 @@ class MPICommunicatorObj final : public CommunicatorObj {
 
 class MPICommunicator final : public Communicator {
  public:
-  static MPICommunicator make(TupleValue rank_list);
+  static MPICommunicator make(Value rank_list);
   RAF_OBJECT_REF(MPICommunicator, Communicator, MPICommunicatorObj);
 };
 

@@ -14,25 +14,37 @@ namespace raf {
 namespace distributed {
 namespace communicator {
 
-Communicator Communicator::Get(const std::string& name, const std::vector<int64_t>& rank_list) {
+Communicator Communicator::Get(const std::string& name, const Value rank_list) {
   return CommunicatorPool::Get()->GetCommunicator(name, rank_list);
 }
 
-void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const TupleValue rank_list,
+void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
                                        const Communicator global_comm) {
-  std::vector<int64_t> rank_list_;
-  for (auto i : rank_list->fields) {
-    auto val = Downcast<value::IntValue>(i);
-    rank_list_.push_back(val->value);
+  std::vector<std::vector<int64_t>> rank_list_;
+  if (rank_list.defined()) {
+    for (auto group : Downcast<TupleValue>(rank_list)->fields) {
+      std::vector<int64_t> group_;
+      for (auto rank : Downcast<TupleValue>(group)->fields) {
+        group_.push_back(Downcast<IntValue>(rank)->value);
+      }
+      rank_list_.push_back(group_);
+    }
   }
 
-  int size = rank_list_.size();
-  int rank;
-  CHECK_LE(size, global_comm->size);
-  for (rank = 0; rank < size; ++rank) {
-    if (rank_list_[rank] == global_comm->rank) break;
+  int group_size = rank_list_.size();
+  int group_id;
+  int rank, size;
+
+  for (group_id = 0; group_id < group_size; ++group_id) {
+    auto& group = rank_list_[group_id];
+    size = group.size();
+    for (rank = 0; rank < size; ++rank) {
+      if (group[rank] == global_comm->rank) break;
+    }
+    if (rank != size) break;
   }
-  if (rank == size) {
+
+  if (rank == size && group_id == group_size) {
     // This rank is not in rank_list
     sub_comm->local_size = 1;
     sub_comm->local_rank = 0;
@@ -41,12 +53,15 @@ void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const TupleVal
     sub_comm->world_size = global_comm->size;
     sub_comm->world_rank = global_comm->rank;
     sub_comm->root_rank = global_comm->rank;
+    sub_comm->group_id = -1;
+    sub_comm->group_size = group_size;
     sub_comm->host_ids.push_back(global_comm->host_ids[global_comm->rank]);
   } else {
     // This rank is in rank_list
+    auto& group = rank_list_[group_id];
     int local_size = 0;
     int local_rank = 0;
-    for (auto i : rank_list_) {
+    for (auto i : group) {
       sub_comm->host_ids.push_back(global_comm->host_ids[i]);
     }
     for (int p = 0; p < size; ++p) {
@@ -62,7 +77,9 @@ void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const TupleVal
     sub_comm->rank = rank;
     sub_comm->world_size = global_comm->size;
     sub_comm->world_rank = global_comm->rank;
-    sub_comm->root_rank = rank_list_[0];
+    sub_comm->root_rank = group[0];
+    sub_comm->group_id = group_id;
+    sub_comm->group_size = group_size;
   }
 }
 
@@ -76,10 +93,10 @@ uint64_t Communicator::GetHostID() {
   return hash;
 }
 
-VoidCommunicator VoidCommunicator::make(TupleValue rank_list) {
+VoidCommunicator VoidCommunicator::make(Value rank_list) {
   auto obj = make_object<VoidCommunicatorObj>();
 
-  if (rank_list->fields.empty()) {
+  if (!rank_list.defined()) {
     obj->local_size = 1;
     obj->local_rank = 0;
     obj->size = 1;
@@ -87,6 +104,8 @@ VoidCommunicator VoidCommunicator::make(TupleValue rank_list) {
     obj->world_size = 1;
     obj->world_rank = 0;
     obj->root_rank = 0;
+    obj->group_id = -1;
+    obj->group_size = 0;
     obj->host_ids.push_back(GetHostID());
   } else {
     InitSubCommunicator(obj.get(), rank_list, Communicator::Get("void"));

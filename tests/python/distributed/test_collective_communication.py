@@ -142,7 +142,7 @@ def test_allreduce_with_tensor_list(computation):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-@pytest.mark.parametrize("rank_list", [[0], [1, 2]])
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]], [[1, 2, 3]]])
 def test_allreduce_with_subcomm(dtype, rank_list):
     """Testing allreduce with a single tensor as input."""
 
@@ -168,13 +168,14 @@ def test_allreduce_with_subcomm(dtype, rank_list):
     vx = raf.array(vx, device=device)
     run_vm_model(model, device, [vx])
     check(y, vx)
-    if rank in rank_list:
-        ones = np.ones(shape=(4, 4), dtype=dtype)
-        target_y = ones * sum(np.array(rank_list) + 1)
-        if rank == 0:
-            print(f"{rank} - Y: ", y)
-            print(f"{rank} - T: ", target_y)
-        check(y, target_y)
+    for group in rank_list:
+        if rank in group:
+            ones = np.ones(shape=(4, 4), dtype=dtype)
+            target_y = ones * sum(np.array(group) + 1)
+            if rank == 0:
+                print(f"{rank} - Y: ", y)
+                print(f"{rank} - T: ", target_y)
+            check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
@@ -243,7 +244,7 @@ def test_allgather_with_tensor_list(axis):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("rank_list", [[0, 1], [1, 2, 3]])
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]], [[1, 2, 3]]])
 def test_allgather_with_subcomm(axis, rank_list):
     """Testing allgather with a list of tensors as input."""
 
@@ -267,15 +268,16 @@ def test_allgather_with_subcomm(axis, rank_list):
         print(f"{rank} - X: ", [x1, x2])
     model.to(device=device)
     y = run_model(model, [x1, x2], device)
-    if rank in rank_list:
-        x1 = np.ones(shape=(4, 4), dtype="float32")
-        x2 = np.ones(shape=(4, 4), dtype="float32") * -1
-        target_y1 = np.concatenate([x1 * (r + 1) for r in rank_list], axis=axis)
-        target_y2 = np.concatenate([x2 * (r + 1) for r in rank_list], axis=axis)
-        target_y = np.concatenate([target_y1, target_y2])
-        print(f"{rank} - Y: ", y)
-        print(f"{rank} - T: ", target_y)
-        check(y, target_y)
+    for group in rank_list:
+        if rank in group:
+            x1 = np.ones(shape=(4, 4), dtype="float32")
+            x2 = np.ones(shape=(4, 4), dtype="float32") * -1
+            target_y1 = np.concatenate([x1 * (r + 1) for r in group], axis=axis)
+            target_y2 = np.concatenate([x2 * (r + 1) for r in group], axis=axis)
+            target_y = np.concatenate([target_y1, target_y2])
+            print(f"{rank} - Y: ", y)
+            print(f"{rank} - T: ", target_y)
+            check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
