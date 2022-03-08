@@ -51,6 +51,8 @@ def to_int_tuple(a):
     for item in a:
         if isinstance(item, Number) and int(item) == item:
             result.append(int(item))
+        elif isinstance(item, (tuple, list)):
+            result.append(to_int_tuple(item))
         else:
             raise ValueError("Cannot convert to List[int]")
     return result
