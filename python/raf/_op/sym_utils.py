@@ -22,7 +22,7 @@ def to_any(a):
         return a
 
     if isinstance(a, (list, tuple)):
-        if all(isinstance(i, int, list, tuple) for i in a):
+        if all(isinstance(i, (int, list, tuple)) for i in a):
             return to_int_tuple(a)
         tup = (i if isinstance(i, Symbol) else Value.as_const_expr(i) for i in a)
         return Symbol.make_tuple(tup)._Symbol__handle  # pylint: disable=protected-access
