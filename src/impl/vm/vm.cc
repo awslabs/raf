@@ -1074,7 +1074,8 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     for (size_t i = 0; i < requests->distributed.size(); i++) {
       Requests::DistributedRequest& entry = requests->distributed[i];
       *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
-      // TODO: forcing type conversion here is dirty
+      // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
+      // ncclComm_t handler instead?
     }
 #ifdef RAF_USE_CUDA
     // prepare cuda stream requests

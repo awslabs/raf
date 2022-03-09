@@ -23,13 +23,14 @@ def allgather(x, axis, rank_list=None):
         The tensor(s) to be concatenated across replicas
     axis : int
         The axis over which concatenation is to be performed
-    rank_list: [int]
-        The list of ranks to communicate. If the rank list leaves empty,
-        all the nodes will perform the calculation. Note that this operator
-        should be invoked by all machines at the first time, including the nodes
-        that is not in the rank list since creating a new sub-communicator will
-        invoke MPI_Bcast(MPI_COMM_WORLD) for now.
-
+    rank_list: [[int]]
+        The list of ranks to communicate. This parameter will split the ranks
+        (MPI / NCCL processes) into multiple groups as specified by the user,
+        and each rank will only communicate within the group. If the rank list
+        leaves empty, the ranks won't get split. Note that this operator is
+        collective, which means ranks, whether they are in the rank_list or not,
+        must invoke this along with other ranks. The rank not in the rank_list
+        will run in standalone mode.
 
     Returns
     -------

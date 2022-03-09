@@ -62,7 +62,7 @@ class NCCLAllReduce : public raf::op::OpEnv {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
 
-    // RequestDistributed(&communicator);
+    // TODO(@Tonny-Gu): Should be replaced with RequestDistributed in next PR.
     communicator = Communicator::Get("nccl", args->rank_list);
 
     for (int i = 0; i < tv.size(); ++i) {
@@ -155,7 +155,7 @@ class NCCLAllGather : public raf::op::OpEnv {
     auto args = cv->args.as<raf::op::schema::AllgatherArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    // RequestDistributed(&communicator);
+    // TODO(@Tonny-Gu): Should be replaced with RequestDistributed in next PR.
     communicator = Communicator::Get("nccl", args->rank_list);
   }
 
