@@ -45,11 +45,27 @@ function(raf_customized_cutlass_kernels)
     PRIVATE ${PROJECT_SOURCE_DIR}/include/
   )
 
+  # Force O3 and no debug info to avoid undefined symbol error
+  # in Debug build.
+  target_compile_options(
+    cutlass_library_objs
+    PRIVATE
+    -O3 -DNODEBUG
+  )
+
   target_include_directories(
     cutlass_lib
     PRIVATE
     ${PROJECT_SOURCE_DIR}/include/
     ${PROJECT_SOURCE_DIR}/3rdparty/cutlass/tools/library/src
+  )
+
+  # Force O3 and no debug info to avoid undefined symbol error
+  # in Debug build.
+  target_compile_options(
+    cutlass_lib
+    PRIVATE
+    -O3 -DNODEBUG
   )
 
   cutlass_target_sources(
