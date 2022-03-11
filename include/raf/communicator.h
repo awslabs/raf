@@ -146,7 +146,7 @@ class CommunicatorPool {
     comm_.clear();
   }
 
- public:
+ private:
   std::map<CommunicatorID, Communicator> comm_;
 };
 

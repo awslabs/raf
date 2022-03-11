@@ -121,6 +121,8 @@ RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
   CommunicatorPool::Get()->Remove();
 });
 
+RAF_REGISTER_OBJECT_REFLECT(VoidCommunicatorObj);
+
 }  // namespace communicator
 }  // namespace distributed
 }  // namespace raf

@@ -79,6 +79,8 @@ NCCLCommunicator NCCLCommunicator::make(Value rank_list) {
 RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.nccl")
     .set_body_typed(NCCLCommunicator::make);
 
+RAF_REGISTER_OBJECT_REFLECT(NCCLCommunicatorObj);
+
 }  // namespace communicator
 }  // namespace distributed
 }  // namespace raf

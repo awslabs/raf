@@ -62,6 +62,8 @@ MPICommunicator MPICommunicator::make(Value rank_list) {
 
 RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.mpi").set_body_typed(MPICommunicator::make);
 
+RAF_REGISTER_OBJECT_REFLECT(MPICommunicatorObj);
+
 }  // namespace communicator
 }  // namespace distributed
 }  // namespace raf
