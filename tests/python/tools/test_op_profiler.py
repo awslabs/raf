@@ -133,5 +133,24 @@ def test_multi_stream():
     assert GetCacheSize(device) == 3
 
 
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
+def test_default_stream():
+    device = raf.Device("cuda")
+    data = raf.ir.var("x", shape=(16, 16))
+    expr = raf.ir.op.softmax(data)
+    expr = run_infer_type(expr).body
+
+    ResetCache(device)
+    assert GetCacheSize(device) == 0
+
+    # Should use default stream when not assigning any stream.
+    ProfileGroup([expr, expr], device, [], 2, 1, 5)
+    assert GetCacheSize(device) == 1
+
+    # Should hit the cache.
+    ProfileGroup([expr, expr], device, [-1, -1], 2, 1, 5)
+    assert GetCacheSize(device) == 1
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
