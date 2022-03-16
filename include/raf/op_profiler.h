@@ -177,7 +177,7 @@ class OpProfiler {
         // For non-call nodes, we simply hash their type.
         key << raf::ir::AsText(op->checked_type(), false);
       }
-      key << stream_ids[i];
+      key << processed_stream_ids[i];
     }
     return key;
   }
