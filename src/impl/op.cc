@@ -73,9 +73,9 @@ void OpEnv::RequestStream(void** dest, const Device& dev, int tag_idx) {
   }
 }
 
-void OpEnv::RequestDistributed(void** dest) {
+void OpEnv::RequestDistributed(void** dest, const std::string& name, const value::Value rank_list) {
   int index = impl->distributed.size();
-  impl->distributed.push_back({dest});
+  impl->distributed.push_back({dest, name, rank_list});
   if (impl->executor != nullptr) {
     impl->executor->RequestDistributed(impl.get(), index);
   }
