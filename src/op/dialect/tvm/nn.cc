@@ -319,11 +319,11 @@ HashKey SoftmaxHasher(const std::vector<Type>& param_types, const Type& y_type,
 }
 
 std::vector<Value> SoftmaxDxSchema2Args(const SoftmaxDxArgs* args) {
-  return {args->x, args->y, args->dy};
+  return {args->y, args->dy};
 }
 
 std::vector<std::string> SoftmaxDxSchemaArgNames(const op::CallValues& call) {
-  return {"x", "y", "dy"};
+  return {"y", "dy"};
 }
 
 Attrs SoftmaxDxSchema2Attrs(const SoftmaxDxArgs* args) {

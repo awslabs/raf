@@ -199,7 +199,6 @@ SCHEMAS = {
         Arg(name="shape", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
     ],
     "nn.h::softmax_dx": [
-        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="y", cxx_type="value::BaseTensorValue"),
         Arg(name="dy", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int", cxx_default=-1),

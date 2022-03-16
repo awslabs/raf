@@ -1,8 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-module-docstring
+# pylint: disable=missing-function-docstring, missing-module-docstring
+# pylint: disable=unused-argument, invalid-name
 from functools import reduce
 import operator
 
@@ -14,7 +14,7 @@ from .._lib import _reg
 from .._lib import strategy
 from .._lib import random
 
-_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
+_topi = _tvm.topi  # pylint: disable=no-member
 
 _reg.register_injective_schedule("raf.op.tvm.pad")
 
@@ -22,7 +22,6 @@ _reg.register_strategy("raf.op.tvm.dense", strategy.dense_strategy)
 
 
 def compute_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=False):
-    # pylint: disable=unused-argument
     if len(inputs) == 2:
         data, weight = inputs[0], inputs[1]
     else:
@@ -58,7 +57,6 @@ _reg.register_injective_schedule("raf.op.tvm.matmul_tt")
 
 
 def compute_batch_matmul_general(attr, inputs, output_type, transpose_a=False, transpose_b=False):
-    # pylint: disable=unused-argument
     assert len(inputs) == 2, "Expected 2 inputs, but got {}".format(len(inputs))
     data, weight = inputs[0], inputs[1]
     assert len(data.shape) == 3 and len(weight.shape) == 3, "only support 3-dim batch matmul"
@@ -103,14 +101,57 @@ _reg.register_strategy("raf.op.tvm.softmax", strategy.softmax_strategy)
 
 @register_compute("raf.op.tvm.softmax_dx")
 def compute_softmax_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument, unused-variable, invalid-name
-    x, y, dy = inputs[0], inputs[1], inputs[2]
+    y, dy = inputs[0], inputs[1]
     axis = attr.axis
     return [(dy - _topi.sum(dy * y, axis, True)) * y]
 
 
-# TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
-_reg.register_injective_schedule("raf.op.tvm.softmax_dx")
+@generic_func
+def schedule_softmax_dx(attrs, outs, target):
+    # FIXME: softmax_dx is not an injective op so we should not use inject schedule.
+    with target:
+        return _topi.generic.schedule_injective(outs)
+
+
+@schedule_softmax_dx.register(["cuda", "gpu"])
+def schedule_softmax_dx_cuda(attrs, outs, _):
+    mul2 = outs[0]
+    sub, _ = mul2.op.input_tensors  # input_tensors[1] = dy
+    _, red = sub.op.input_tensors  # input_tensors[0] = y
+    mul1 = red.op.input_tensors[0]
+
+    axis = attrs.axis
+    ndim = len(mul2.shape)
+    axis = int(axis) if axis is not None else ndim - 1
+    if axis >= ndim:
+        axis %= ndim
+    while axis < 0:
+        axis += ndim
+
+    sch = _tvm.te.create_schedule([mul2.op])
+    thd_x = _tvm.te.thread_axis("threadIdx.x")
+    blk_x = _tvm.te.thread_axis("blockIdx.x")
+
+    sch[sub].compute_inline()
+    sch[mul1].compute_inline()
+    _, mul2_r_i = sch[mul2].split(mul2.op.axis[axis], factor=32)
+    sch[mul2].bind(mul2_r_i, thd_x)
+
+    _, red_r_i = sch[red].split(red.op.reduce_axis[0], factor=32)
+    sch[red].bind(red_r_i, thd_x)
+
+    # This is a more aggressive optimzation that only works for limited workloads.
+    if ndim > 1 and axis in [0, ndim - 1]:
+        sch[red].compute_at(sch[mul2], mul2.op.axis[axis - 1])
+        fused = sch[mul2].fuse(*mul2.op.axis[0:axis])
+        sch[mul2].bind(fused, blk_x)
+
+    sch[red].pragma(red.op.axis[0], "auto_unroll_max_step", 64)
+    sch[red].pragma(red.op.axis[0], "unroll_explicit", True)
+    return sch
+
+
+_reg.register_schedule("raf.op.tvm.softmax_dx", schedule_softmax_dx)
 
 _reg.register_schedule("raf.op.tvm.avg_pool2d", strategy.schedule_pool)
 # TODO(@XIAO-XIA): cuda schedule should be complemented after the implementation of auto schedule
@@ -132,21 +173,20 @@ _reg.register_strategy("raf.op.tvm.log_softmax", strategy.log_softmax_strategy)
 
 @register_compute("raf.op.tvm.log_softmax_dx")
 def compute_log_softmax_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument, unused-variable, invalid-name
-    x, y, dy = inputs[0], inputs[1], inputs[2]
+    # The grad function of log_softmax decomposes log_softmax_dx to a series of RAF IR ops
+    # so this function is not used. It only kept in case we want to have a powerful schedule
+    # especially for this op in the future.
+    y, dy = inputs[0], inputs[1]
     axis = attr.axis
-    sm = _topi.nn.softmax(x, axis=axis)
-    grad = dy / sm
-    return [(grad - _topi.sum(grad * sm, axis, True)) * sm]
+    return [dy - _topi.exp(y) * _topi.sum(dy, axis, False)]
 
 
-# TODO(@XIAO-XIA): complete the cuda schedule after the implementation of auto schedule
 _reg.register_injective_schedule("raf.op.tvm.log_softmax_dx")
 
 
 @register_compute("raf.op.tvm._contrib_dropout")
 def compute_contrib_dropout(attr, inputs, output_type):
-    # pylint: disable=invalid-name, unused-argument, import-outside-toplevel
+    # pylint: disable=import-outside-toplevel
     x = inputs[0]
     p = attr.rate
     if x.dtype != "float32" and x.dtype != "float64":
@@ -191,7 +231,6 @@ _reg.register_injective_schedule("raf.op.tvm._contrib_dropout")
 
 @register_compute("raf.op.tvm._contrib_dropout_dx")
 def compute_contrib_dropout_dx(attr, inputs, output_type):
-    # pylint: disable=invalid-name, unused-argument
     dy = inputs[0]
     mask = inputs[1]
     assert _topi.utils.get_const_tuple(dy.shape) == _topi.utils.get_const_tuple(
@@ -207,9 +246,6 @@ _reg.register_injective_schedule("raf.op.tvm._contrib_dropout_dx")
 @register_compute("raf.op.tvm.relu_dx")
 @_tvm.te.tag_scope(tag=_tvm.topi.tag.ELEMWISE)
 def compute_relu_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
-    # pylint: disable=unused-variable
     grad_mode = attr.grad_mode
     if grad_mode == "both":
         data, dy = inputs[0], inputs[2]
@@ -231,7 +267,6 @@ _reg.register_injective_schedule("raf.op.tvm.relu_dx")
 
 @register_compute("raf.op.tvm.threshold")
 def compute_threshold(attr, inputs, output_type):
-    # pylint: disable=unused-argument
     x = inputs[0]
     threshold = _tvm.tir.const(attr.threshold, x.dtype)
     value = _tvm.tir.const(attr.value, x.dtype)
@@ -249,7 +284,6 @@ _reg.register_injective_schedule("raf.op.tvm.threshold")
 
 @register_compute("raf.op.tvm.threshold_dx")
 def compute_threshold_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument
     x, dy = inputs[0], inputs[1]
     threshold = _tvm.tir.const(attr.threshold, x.dtype)
     return [
@@ -268,7 +302,6 @@ _reg.register_injective_schedule("raf.op.tvm.threshold_dx")
 
 @register_compute("raf.op.tvm.layer_norm")
 def compute_layer_norm(attr, inputs, output_type):
-    # pylint: disable=unused-argument
     # pylint: disable=too-many-locals
     set_scale = attr.set_scale_bias
     x = inputs[0]
@@ -306,15 +339,12 @@ def compute_layer_norm(attr, inputs, output_type):
 
 @generic_func
 def schedule_generic(attrs, outs, target):
-    # pylint: disable=unused-argument
     with target:
         return _topi.generic.schedule_injective(outs)
 
 
 @schedule_generic.register(["cuda", "gpu"])
 def schedule_generic_cuda(attrs, outs, target):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
     with target:
         out = outs[0]
         s = cuda.injective.schedule_injective(outs)
@@ -346,9 +376,7 @@ _reg.register_schedule("raf.op.tvm.layer_norm", schedule_generic)
 
 @register_compute("raf.op.tvm.layer_norm_dx")
 def compute_layer_norm_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument
     # pylint: disable=too-many-locals
-    # pylint: disable=unused-variable
     set_scale = attr.set_scale_bias
     if set_scale:
         x, scale, dy = inputs
@@ -389,9 +417,7 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     dx = _topi.subtract(w, mean_w)
     dx = _topi.subtract(dx, _topi.multiply(bar_x, mean_w_times_bar_x))
     if set_scale:
-        shape = _topi.utils.get_const_tuple(x.shape)
         reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
-        reduce_shape = [shape[i] for i in reduce_axes]
         dw = _topi.sum(dy * (x - x_mean) / denominator, axis=reduce_axes)
         db = _topi.sum(dy, axis=reduce_axes)
         return [dx, dw, db]
@@ -405,58 +431,9 @@ _reg.register_strategy("raf.op.tvm.conv2d", strategy.conv2d_strategy)
 _reg.register_strategy("raf.op.tvm.conv2d_transpose", strategy.conv2d_transpose_strategy)
 
 
-def _get_pad_tuple(padding, kernel):
-    """Common code to get the pad option
-
-    Parameters
-    ----------
-    padding : int or str
-        Padding size, or ['VALID', 'SAME']
-
-    kernel : tuple of int
-        Conv kernel size
-    Returns
-    -------
-    pad_top : int
-        Padding size on top
-
-    pad_left : int
-        Padding size on left
-
-    pad_down : int
-        Padding size on down.
-
-    pad_right : int
-        Padding size on right.
-    """
-    # compute the padding size
-    if isinstance(padding, (tuple, list)):
-        if len(padding) == 2:
-            pad_h = padding[0] * 2
-            pad_w = padding[1] * 2
-        elif len(padding) == 4:
-            return padding[0], padding[1], padding[2], padding[3]
-        else:
-            raise ValueError("Size of padding can only be 2 or 4")
-    elif isinstance(padding, int):
-        pad_h = pad_w = padding * 2
-    elif padding == "VALID":
-        pad_h = 0
-        pad_w = 0
-    elif padding == "SAME":
-        pad_h = kernel[0] - 1
-        pad_w = kernel[1] - 1
-    else:
-        raise ValueError("Unknown padding option %s" % padding)
-    pad_top = (pad_h + 1) // 2
-    pad_left = (pad_w + 1) // 2
-    return pad_top, pad_left, pad_h - pad_top, pad_w - pad_left
-
-
 def declaration_conv2d_transpose_impl(data, kernel, strides, padding, out_dtype, output_padding):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
-    # pylint: disable=invalid-name
     """Implementation of conv2d transpose"""
     data_pad, kernel_transform = _topi.nn.conv2d_transpose_nchw_preprocess(
         data, kernel, strides, padding, out_dtype, (0, 0)
@@ -485,10 +462,7 @@ def declaration_conv2d_transpose_impl(data, kernel, strides, padding, out_dtype,
 
 @register_compute("raf.op.tvm.conv2d_dx")
 def compute_conv2d_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=unused-variable
     # pylint: disable=too-many-locals
-    # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
     strides, padding, dilation, layout = (
         _topi.utils.get_const_tuple(attr.strides),
@@ -515,10 +489,7 @@ _reg.register_schedule("raf.op.tvm.conv2d_dx", schedule_generic)
 
 @register_compute("raf.op.tvm.conv2d_dw")
 def compute_conv2d_dw(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=unused-variable
     # pylint: disable=too-many-locals
-    # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
     strides, padding, dilation, layout = (
         _topi.utils.get_const_tuple(attr.strides),
@@ -547,10 +518,7 @@ _reg.register_schedule("raf.op.tvm.conv2d_dw", schedule_generic)
 
 @register_compute("raf.op.tvm.conv2d_transpose_dx")
 def compute_conv2d_transpose_dx(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=unused-variable
     # pylint: disable=too-many-locals
-    # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
     strides, padding, output_padding, dilation, layout = (
         _topi.utils.get_const_tuple(attr.strides),
@@ -582,10 +550,7 @@ _reg.register_schedule("raf.op.tvm.conv2d_transpose_dx", schedule_generic)
 
 @register_compute("raf.op.tvm.conv2d_transpose_dw")
 def compute_conv2d_transpose_dw(attr, inputs, output_type):
-    # pylint: disable=unused-argument
-    # pylint: disable=unused-variable
     # pylint: disable=too-many-locals
-    # pylint: disable=invalid-name
     # pylint: disable=unbalanced-tuple-unpacking
     strides, padding, output_padding, dilation, layout = (
         _topi.utils.get_const_tuple(attr.strides),
@@ -623,9 +588,7 @@ def average(data, axis):
 
 
 @register_compute("raf.op.tvm.batch_norm_train")
-def batch_norm_train_compute(
-    attrs, inputs, output_type
-):  # pylint: disable=unused-argument, too-many-locals
+def batch_norm_train_compute(attrs, inputs, output_type):  # pylint: disable=too-many-locals
     x, running_m0, running_v0, w, b = inputs
     momentum, eps = attrs.momentum, attrs.eps
     shape = _topi.utils.get_const_tuple(x.shape)
@@ -660,9 +623,7 @@ _reg.register_reduce_schedule("raf.op.tvm.batch_norm_train")
 
 
 @register_compute("raf.op.tvm.batch_norm_infer")
-def batch_norm_infer_compute(
-    attrs, inputs, output_type
-):  # pylint: disable=unused-argument, too-many-locals
+def batch_norm_infer_compute(attrs, inputs, output_type):  # pylint: disable=too-many-locals
     x, running_m, running_v, w, b = inputs
     eps = attrs.eps
     shape = _topi.utils.get_const_tuple(x.shape)
@@ -687,9 +648,7 @@ _reg.register_injective_schedule("raf.op.tvm.batch_norm_infer")
 
 
 @register_compute("raf.op.tvm.batch_norm_train_dxwb")
-def batch_norm_train_dxwb_compute(
-    attrs, inputs, output_type
-):  # pylint: disable=unused-argument, too-many-locals
+def batch_norm_train_dxwb_compute(attrs, inputs, output_type):  # pylint: disable=too-many-locals
     dy, x, w, _ = inputs
     eps = attrs.eps
     shape = _topi.utils.get_const_tuple(x.shape)

@@ -102,10 +102,10 @@ def test_raf_unary(shape, funcs):
     "shape",
     [
         [3],
-        [3, 2, 5, 8, 4, 7],
+        [3, 2, 5, 8, 4],
     ],
 )
-@pytest.mark.parametrize("axis", range(-8, 8))
+@pytest.mark.parametrize("axis", range(-5, 5))
 @pytest.mark.parametrize(
     "funcs",
     [

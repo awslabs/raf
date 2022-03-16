@@ -81,7 +81,7 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fusion=False, pass_se
             config={"relay.backend.use_auto_scheduler": True, "raf.tvm.allow_jit_failure": True},
             disabled_pass={"AutoSchedulerLayoutRewrite"},
         ):
-            executor.make_executor()(*args)
+            executor.vm.run(*args)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
     auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context

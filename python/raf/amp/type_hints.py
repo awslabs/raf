@@ -46,21 +46,21 @@ def register_op_cast_rule(op_name, cast_rule=None, level=10):
     return tvm.ir.register_op_attr(op_name, "FRAFCastRule", cast_rule, level)
 
 
-def gen_hint_helper(etype, cast_to_amp, amp_dtype):
+def gen_hint_helper(etype, target_dtype):
     """A helper function to generate a type hint for the given type."""
     if isinstance(etype, tvm.ir.TensorType):
-        return PrimType(amp_dtype) if cast_to_amp else PrimType(None)
+        return PrimType(target_dtype)
     if isinstance(etype, tvm.ir.TupleType):
-        return TupleType([gen_hint_helper(field, cast_to_amp, amp_dtype) for field in etype.fields])
+        return TupleType([gen_hint_helper(field, target_dtype) for field in etype.fields])
     raise ValueError("Unsupported input type: %s" % str(etype))
 
 
-def check_amp_dtype(ttype, amp_dtype):
-    """Check whether the given type has AMP dtype."""
+def check_dtype(ttype, dtype):
+    """Check whether the given type has the target dtype."""
     if isinstance(ttype, tvm.ir.TupleType):
-        return all([check_amp_dtype(field, amp_dtype) for field in ttype.fields])
+        return all([check_dtype(field, dtype) for field in ttype.fields])
     assert isinstance(ttype, tvm.ir.TensorType)
-    return ttype.dtype == amp_dtype
+    return ttype.dtype == dtype
 
 
 def generic_cast(cast_to_amp, input_num):
@@ -69,9 +69,8 @@ def generic_cast(cast_to_amp, input_num):
     """
 
     def _gen(args, ret_type, amp_dtype):
-        ret = [
-            gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype) for arg in args[:input_num]
-        ]
+        target_dtype = amp_dtype if cast_to_amp else None
+        ret = [gen_hint_helper(arg.checked_type, target_dtype) for arg in args[:input_num]]
         ret += [PrimType(None) for _ in range(len(args) - input_num)]
         return ret
 
@@ -137,20 +136,22 @@ register_op_cast_rule("raf.op.gather_nd_dx", generic_cast(False, 3))
 def infer_cast(input_num):
     """The cast rule is inferred by the dtype of current arguments and output:
     1. If the original output dtype is not float32 (e.g., int32/bool/tuple), then do not touch.
-    2. If some arguments are casted to the AMP dtype, then cast all arguments to the AMP dtype.
+    2. If more than a half args are casted to the AMP dtype, then cast all args to the AMP dtype.
     3. Otherwise keep all arguments untouched.
     """
 
     def _gen(args, ret_type, amp_dtype):
-        cast_to_amp = not isinstance(ret_type, tvm.ir.TupleType) and ret_type.dtype == "float32"
-        if cast_to_amp:
-            cast_to_amp = any(
-                [check_amp_dtype(arg.checked_type, amp_dtype) for arg in args[:input_num]]
-            )
+        if input_num == 0 or isinstance(ret_type, tvm.ir.TupleType):
+            # Not castable or just follow the current input dtype.
+            target_dtype = None
+        else:
+            n_amp = sum([check_dtype(arg.checked_type, amp_dtype) for arg in args[:input_num]])
+            n_fp32 = sum([check_dtype(arg.checked_type, "float32") for arg in args[:input_num]])
+            target_dtype = "float32" if n_fp32 > n_amp else amp_dtype
 
         ret = []
         for arg in args[:input_num]:
-            ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
+            ret.append(gen_hint_helper(arg.checked_type, target_dtype))
         ret += [PrimType(None) for _ in range(len(args) - input_num)]
         return ret
 
@@ -253,7 +254,6 @@ register_op_cast_rule("raf.op.argsort", infer_cast(1))
 register_op_cast_rule("raf.op.sort", infer_cast(1))
 register_op_cast_rule("raf.op.full", infer_cast(0))
 register_op_cast_rule("raf.op.full_like", infer_cast(1))
-register_op_cast_rule("raf.op.where", infer_cast(3))
 register_op_cast_rule("raf.op.logical_and", infer_cast(2))
 register_op_cast_rule("raf.op.topk", infer_cast(1))
 register_op_cast_rule("raf.op.zeros", infer_cast(0))
@@ -300,7 +300,7 @@ def op_cast_binary_ufunc(args, ret_type, amp_dtype):
     ret_dtype = ret_type.dtype
     cast_to_amp = ret_dtype == "float32"
     if cast_to_amp:
-        cast_to_amp = any([check_amp_dtype(arg.checked_type, amp_dtype) for arg in args[:2]])
+        cast_to_amp = any([check_dtype(arg.checked_type, amp_dtype) for arg in args[:2]])
 
     # This op inplace updates an existing tensor, so the type hints must align to it.
     if not isinstance(args[2], relay.Constant):
@@ -308,9 +308,11 @@ def op_cast_binary_ufunc(args, ret_type, amp_dtype):
         cast_to_amp = args[2].checked_type.dtype == amp_dtype
         ret_dtype = args[2].checked_type.dtype
 
+    target_dtype = amp_dtype if cast_to_amp else None
+
     ret = []
     for arg in args[:2]:
-        ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
+        ret.append(gen_hint_helper(arg.checked_type, target_dtype))
 
     # out: same as the return type.
     ret.append(PrimType(None) if isinstance(args[2], relay.Constant) else PrimType(ret_dtype))
@@ -368,7 +370,7 @@ def op_cast_concatenate(args, ret_type, amp_dtype):
     float16 if it has too many inputs.
     """
     in_types = args[0].checked_type.fields
-    cast_to_amp = sum([check_amp_dtype(t, amp_dtype) for t in in_types]) > len(in_types) // 2
+    cast_to_amp = sum([check_dtype(t, amp_dtype) for t in in_types]) > len(in_types) // 2
     cast_to_amp &= len(in_types) <= 5
     target_dtype = amp_dtype if cast_to_amp else "float32"
 
@@ -391,18 +393,16 @@ def op_cast_with_indices(float_input_num, index_input_idx, infer_mode=True):
     def _gen(args, ret_type, amp_dtype):
         ret = []
         if not infer_mode:
-            ret = [
-                gen_hint_helper(arg.checked_type, False, amp_dtype)
-                for arg in args[:float_input_num]
-            ]
+            ret = [gen_hint_helper(arg.checked_type, None) for arg in args[:float_input_num]]
         else:
             cast_to_amp = not isinstance(ret_type, tvm.ir.TupleType) and ret_type.dtype == "float32"
             if cast_to_amp:
                 cast_to_amp = any(
-                    [check_amp_dtype(arg.checked_type, amp_dtype) for arg in args[:float_input_num]]
+                    [check_dtype(arg.checked_type, amp_dtype) for arg in args[:float_input_num]]
                 )
+            target_dtype = amp_dtype if cast_to_amp else None
             for arg in args[:float_input_num]:
-                ret.append(gen_hint_helper(arg.checked_type, cast_to_amp, amp_dtype))
+                ret.append(gen_hint_helper(arg.checked_type, target_dtype))
 
         ret += [PrimType(None) for _ in range(len(args) - float_input_num)]
         ret[index_input_idx] = PrimType("int64")
@@ -424,11 +424,24 @@ def op_cast_split(args, ret_type, amp_dtype):
     """Split generates a tuple output but its behavior is quite simple, so it is safe
     to always let it follow the argument dtype.
     """
-    cast_to_amp = check_amp_dtype(args[0].checked_type, amp_dtype)
+    target_dtype = amp_dtype if check_dtype(args[0].checked_type, amp_dtype) else None
 
-    ret = [gen_hint_helper(args[0].checked_type, cast_to_amp, amp_dtype)]
+    ret = [gen_hint_helper(args[0].checked_type, target_dtype)]
     ret += [PrimType(None) for _ in range(len(args) - 1)]
     return ret
 
 
 register_op_cast_rule("raf.op.split", op_cast_split)
+
+
+def op_cast_where(args, ret_type, amp_dtype):
+    """The first arg in where is boolean type and has to be skipped."""
+    n_amp = sum([check_dtype(arg.checked_type, amp_dtype) for arg in args[1:3]])
+    target_dtype = amp_dtype if n_amp > 0 else "float32"
+
+    ret = [PrimType(None)]
+    ret += [PrimType(target_dtype) for _ in range(2)]
+    return ret
+
+
+register_op_cast_rule("raf.op.where", op_cast_where)
