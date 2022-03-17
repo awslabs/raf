@@ -255,7 +255,7 @@ inline void ProfilerHelper::collect() {
  * \brief A helper class and macro to profile the execution time of a scope (e.g., function).
  * This is used for debugging purpose. For example:
  * void some_func() {
- *   RAF_TIMED("some_func")
+ *   RAF_TIMED_SEC("some_func")
  *   // do something;
  * }
  * The profiled time is then the life time of the created TimeSection object, and will be
@@ -263,19 +263,26 @@ inline void ProfilerHelper::collect() {
  */
 class TimedSection {
  public:
-  explicit TimedSection(std::string name) : name_(name), start_(ProfileStat::NowInMicrosec()) {
+  explicit TimedSection(std::string name, bool in_us = false)
+      : name_(name), start_(ProfileStat::NowInMicrosec()), in_us_(in_us) {
   }
 
   ~TimedSection() {
-    uint64_t now = ProfileStat::NowInMicrosec();
-    LOG(WARNING) << "Timed " << name_ << ": " << (now - start_) << " ms";
+    auto timed = ProfileStat::NowInMicrosec() - start_;
+    if (in_us_) {
+      LOG(INFO) << "Timed " << name_ << ": " << timed << "us";
+    } else {
+      LOG(INFO) << "Timed " << name_ << ": " << std::setprecision(2) << timed / 1000000.0 << "s";
+    }
   }
 
  private:
   std::string name_;
   uint64_t start_;
+  bool in_us_;
 };
-#define RAF_TIMED(name) raf::profiler::TimedSection timed_section(name);
+#define RAF_TIMED_SEC(name) raf::profiler::TimedSection timed_section(name);
+#define RAF_TIMED_US(name) raf::profiler::TimedSection timed_section(name, true);
 
 }  // namespace profiler
 }  // namespace raf

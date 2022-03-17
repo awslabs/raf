@@ -344,7 +344,7 @@ RAF_TVM(softmax, Softmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames
 RAF_TVM(softmax_dx, SoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
         SoftmaxDxSchema2Attrs, SoftmaxDxHasher, kOpaque);
 RAF_TVM(log_softmax, LogSoftmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
-        SoftmaxSchema2Attrs, SoftmaxHasher, kOpaque);
+        SoftmaxSchema2Attrs, SoftmaxHasher, kCommReduce);
 RAF_TVM(log_softmax_dx, LogSoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
         SoftmaxDxSchema2Attrs, SoftmaxDxHasher, kOpaque);
 

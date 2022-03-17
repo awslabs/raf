@@ -80,7 +80,7 @@ class LogSoftmaxImplementedByCUDNNSoftmaxForward : public raf::op::OpEnv {
   }
 };
 
-RAF_REGISTER_DIALECT_OP(cudnn, log_softmax, 15);
+RAF_REGISTER_DIALECT_OP(cudnn, log_softmax, 7);
 RAF_OP_ENV_MAKER("raf.op.cudnn.log_softmax", LogSoftmaxImplementedByCUDNNSoftmaxForward::make);
 
 class SoftmaxImplementedByCUDNNSoftmaxForward : public raf::op::OpEnv {

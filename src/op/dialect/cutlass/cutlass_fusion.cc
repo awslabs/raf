@@ -10,6 +10,7 @@
 #include <limits>
 
 #include "raf/value.h"
+#include "raf/profiler.h"
 #include "raf/registry.h"
 #include "raf/op.h"
 #include "raf/ir.h"

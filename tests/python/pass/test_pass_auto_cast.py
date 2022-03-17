@@ -409,7 +409,7 @@ def test_where():
     args = [m_cond, m_x, m_y, m_w]
 
     with raf.ir.PassContext(config={"raf.amp.out_dtype": "float16"}):
-        verify_cast_num(model, args, 3)
+        verify_cast_num(model, args, 4)
         # matmul is executed with fp16, so skip checking the correctness but just the execution.
         verify_correctness(model, "cpu", args, tol=1)
 

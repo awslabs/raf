@@ -254,6 +254,7 @@ register_op_cast_rule("raf.op.argsort", infer_cast(1))
 register_op_cast_rule("raf.op.sort", infer_cast(1))
 register_op_cast_rule("raf.op.full", infer_cast(0))
 register_op_cast_rule("raf.op.full_like", infer_cast(1))
+register_op_cast_rule("raf.op.where", infer_cast(3))
 register_op_cast_rule("raf.op.logical_and", infer_cast(2))
 register_op_cast_rule("raf.op.topk", infer_cast(1))
 register_op_cast_rule("raf.op.zeros", infer_cast(0))
@@ -432,16 +433,3 @@ def op_cast_split(args, ret_type, amp_dtype):
 
 
 register_op_cast_rule("raf.op.split", op_cast_split)
-
-
-def op_cast_where(args, ret_type, amp_dtype):
-    """The first arg in where is boolean type and has to be skipped."""
-    n_amp = sum([check_dtype(arg.checked_type, amp_dtype) for arg in args[1:3]])
-    target_dtype = amp_dtype if n_amp > 0 else "float32"
-
-    ret = [PrimType(None)]
-    ret += [PrimType(target_dtype) for _ in range(2)]
-    return ret
-
-
-register_op_cast_rule("raf.op.where", op_cast_where)

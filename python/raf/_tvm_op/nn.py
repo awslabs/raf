@@ -168,7 +168,63 @@ _reg.register_schedule("raf.op.tvm.adaptive_avg_pool2d_dx", strategy.schedule_po
 _reg.register_schedule("raf.op.tvm.adaptive_max_pool2d", strategy.schedule_adaptive_pool)
 _reg.register_schedule("raf.op.tvm.adaptive_max_pool2d_dx", strategy.schedule_pool_grad)
 
-_reg.register_strategy("raf.op.tvm.log_softmax", strategy.log_softmax_strategy)
+
+@generic_func
+def schedule_log_softmax(attrs, outs, target):
+    # Use the TVM schedules for other targets.
+    with target:
+        return _topi.generic.schedule_softmax(outs)
+
+
+@schedule_log_softmax.register(["cuda", "gpu"])
+def schedule_log_softmax_cuda(attrs, outs, _):
+    """Override the CUDA schedule for better performance and fusion support."""
+    out = outs[0]
+
+    axis = attrs.axis
+    ndim = len(out.shape)
+    assert ndim == 2, "Only support 2-D log_softmax"
+    axis = int(axis) if axis is not None else 1
+    if axis >= ndim:
+        axis %= ndim
+    while axis < 0:
+        axis += ndim
+
+    sch = _tvm.te.create_schedule([out.op])
+    thd_x = _tvm.te.thread_axis("threadIdx.x")
+    blk_x = _tvm.te.thread_axis("blockIdx.x")
+
+    inp, maxelem, expsum = out.op.input_tensors
+
+    (out_local,) = sch.cache_write([out], "local")
+    sch[out_local].compute_inline()
+
+    _, out_j_i = sch[out].split(out.op.axis[1], factor=32)
+    sch[out].bind(out_j_i, thd_x)
+
+    _, maxelem_k_i = sch[maxelem].split(maxelem.op.reduce_axis[0], factor=32)
+    sch[maxelem].bind(maxelem_k_i, thd_x)
+    sch[maxelem].compute_at(sch[out], out.op.axis[0])
+
+    _, expsum_k_i = sch[expsum].split(expsum.op.reduce_axis[0], factor=32)
+    sch[expsum].bind(expsum_k_i, thd_x)
+    sch[expsum].compute_at(sch[out], out.op.axis[0])
+
+    sch[out].bind(out.op.axis[0], blk_x)
+    sch[maxelem].pragma(maxelem.op.axis[0], "auto_unroll_max_step", 64)
+    sch[maxelem].pragma(maxelem.op.axis[0], "unroll_explicit", True)
+    sch[expsum].pragma(expsum.op.axis[0], "auto_unroll_max_step", 64)
+    sch[expsum].pragma(expsum.op.axis[0], "unroll_explicit", True)
+
+    # If input is fused with another op, then try to inline it.
+    # In case the fused input op cannot be inlined (e.g., not elementwise),
+    # this function simply throw exception and let the dispatcher handle it.
+    if isinstance(inp.op, _tvm.te.tensor.ComputeOp):
+        sch[inp].compute_inline()
+    return sch
+
+
+_reg.register_schedule("raf.op.tvm.log_softmax", schedule_log_softmax)
 
 
 @register_compute("raf.op.tvm.log_softmax_dx")
