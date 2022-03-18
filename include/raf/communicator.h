@@ -10,8 +10,8 @@
 #pragma once
 #include <unistd.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string>
+#include <set>
 #include <memory>
 #include "dmlc/logging.h"
 #include "raf/registry.h"
@@ -121,11 +121,15 @@ class CommunicatorPool {
     auto comm_name = name.empty() ? default_name : name;
 
     std::vector<std::vector<int64_t>> rank_list_;
+    std::set<int64_t> rank_set_;
     if (rank_list.defined()) {
       for (auto group : Downcast<TupleValue>(rank_list)->fields) {
         std::vector<int64_t> group_;
         for (auto rank : Downcast<TupleValue>(group)->fields) {
-          group_.push_back(Downcast<IntValue>(rank)->value);
+          auto rank_val = Downcast<IntValue>(rank)->value;
+          CHECK(rank_set_.count(rank_val) == 0) << "Each rank can only appear on rank_list once";
+          group_.push_back(rank_val);
+          rank_set_.insert(rank_val);
         }
         rank_list_.push_back(group_);
       }
