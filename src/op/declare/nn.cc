@@ -339,8 +339,21 @@ RAF_OP_DECLARE("raf.op.max_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
 RAF_OP_DECLARE("raf.op.avg_pool2d_dx", DeclareGeneralDx<PoolDxArgs>);
 RAF_OP_DECLARE("raf.op.adaptive_max_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
 RAF_OP_DECLARE("raf.op.adaptive_avg_pool2d_dx", DeclareGeneralDx<AdaptivePoolDxArgs>);
-RAF_OP_DECLARE("raf.op.softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
-RAF_OP_DECLARE("raf.op.log_softmax_dx", DeclareGeneralDx<SoftmaxDxArgs>);
+
+inline void DeclareSoftmaxDx(const CallValues& call) {
+  using namespace raf::value;
+  const auto* args = call->args.as<SoftmaxDxArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* y = args->y;
+  std::vector<int64_t> shape(y->shape, y->shape + y->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/y->device,
+                                    /*dtype=*/y->dtype,
+                                    /*shape=*/shape);
+  call->device = y->device;
+}
+
+RAF_OP_DECLARE("raf.op.softmax_dx", DeclareSoftmaxDx);
+RAF_OP_DECLARE("raf.op.log_softmax_dx", DeclareSoftmaxDx);
 
 RAF_OP_DECLARE("raf.op.batch_norm_train_dxwb", [](const CallValues& call) {
   const auto* args = call->args.as<BatchNormTrainDxwbArgs>();

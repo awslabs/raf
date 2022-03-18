@@ -81,7 +81,7 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fusion=False, pass_se
             config={"relay.backend.use_auto_scheduler": True, "raf.tvm.allow_jit_failure": True},
             disabled_pass={"AutoSchedulerLayoutRewrite"},
         ):
-            executor.make_executor()(*args)
+            executor.vm.run(*args)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
     auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context
@@ -124,7 +124,7 @@ def tune_tasks(tasks, weights, log_file, n_trials):
         An integer of total number of measurement trials, or a function that determines
         the total number of measurement trials by taking the task number.
     """
-    measure_device = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=10)
+    measure_device = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=400, timeout=20)
 
     # FIXME(comaniac): Remove this custom objective function after
     # https://github.com/apache/tvm/pull/8984

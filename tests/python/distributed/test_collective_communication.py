@@ -166,7 +166,7 @@ def test_allreduce_with_subcomm(dtype, rank_list):
     y = model(x)
     vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     vx = raf.array(vx, device=device)
-    run_vm_model(model, device, [vx])
+    run_model(model, [vx], device)
     check(y, vx)
     for group in rank_list:
         if rank in group:
@@ -176,6 +176,13 @@ def test_allreduce_with_subcomm(dtype, rank_list):
                 print(f"{rank} - Y: ", y)
                 print(f"{rank} - T: ", target_y)
             check(y, target_y)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+@pytest.mark.parametrize("rank_list", [[[0], [1]], [[0, 1]]])
+def test_allreduce_with_subcomm_dual_gpu(dtype, rank_list):
+    test_allreduce_with_subcomm(dtype, rank_list)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
@@ -278,6 +285,13 @@ def test_allgather_with_subcomm(axis, rank_list):
             print(f"{rank} - Y: ", y)
             print(f"{rank} - T: ", target_y)
             check(y, target_y)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("rank_list", [[[0], [1]], [[0, 1]]])
+def test_allgather_with_subcomm_dual_gpu(axis, rank_list):
+    test_allgather_with_subcomm(axis, rank_list)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)

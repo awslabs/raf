@@ -14,6 +14,7 @@
 #include "raf/ir.h"
 #include "raf/memory_pool.h"
 #include "raf/op_utils.h"
+#include "raf/profiler.h"
 
 namespace raf {
 namespace op {

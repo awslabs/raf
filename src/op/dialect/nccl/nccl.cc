@@ -106,7 +106,7 @@ class NCCLAllReduce : public raf::op::OpEnv {
       DLTensor* out = output;
       dtype_size = GetSizeInBytes(x->dtype);
       NCCL_CALL(ncclAllReduce(x->data, out->data, total_size / dtype_size, dtype, compute,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+                              nccl_comm, (cudaStream_t)stream));
 
     } else {
       size_t offset = 0;
@@ -124,7 +124,7 @@ class NCCLAllReduce : public raf::op::OpEnv {
 
       // Allreduce
       NCCL_CALL(ncclAllReduce(fused_data, fused_data, total_size / dtype_size, dtype, compute,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+                              nccl_comm, (cudaStream_t)stream));
       // UnFuse Tensor
       value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
       auto& of = out->fields;
@@ -180,8 +180,8 @@ class NCCLAllGather : public raf::op::OpEnv {
     for (int i = 0; i < x->ndim; ++i) {
       size *= x->shape[i];
     }
-    NCCL_CALL(ncclAllGather(x->data, out->data, size, DType(x->dtype), (ncclComm_t)nccl_comm,
-                            (cudaStream_t)stream));
+    NCCL_CALL(
+        ncclAllGather(x->data, out->data, size, DType(x->dtype), nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -255,7 +255,7 @@ class NCCLReduceScatter : public raf::op::OpEnv {
     if (tv->fields.size() == 1) {
       DLTensor* x = tv->fields[0];
       dtype = x->dtype;
-      NCCL_CALL(ncclReduceScatter(x->data, out->data, size, dtype, compute, (ncclComm_t)nccl_comm,
+      NCCL_CALL(ncclReduceScatter(x->data, out->data, size, dtype, compute, nccl_comm,
                                   (cudaStream_t)stream));
     } else {
       for (int i = 0; i < tv->fields.size(); ++i) {
@@ -265,7 +265,7 @@ class NCCLReduceScatter : public raf::op::OpEnv {
                         (cudaStream_t)stream);
         dtype = x->dtype;
       }
-      NCCL_CALL(ncclReduceScatter(in_buffer, out->data, size, dtype, compute, (ncclComm_t)nccl_comm,
+      NCCL_CALL(ncclReduceScatter(in_buffer, out->data, size, dtype, compute, nccl_comm,
                                   (cudaStream_t)stream));
     }
   }
@@ -330,8 +330,8 @@ class NCCLBroadcast : public raf::op::OpEnv {
       DLTensor* x = tv->fields[0];
       DLTensor* out = output;
       dtype_size = GetSizeInBytes(x->dtype);
-      NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, dtype, root,
-                              (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+      NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, dtype, root, nccl_comm,
+                              (cudaStream_t)stream));
       return;
     }
 
@@ -347,8 +347,8 @@ class NCCLBroadcast : public raf::op::OpEnv {
       dtype_size = GetSizeInBytes(x->dtype);
     }
 
-    NCCL_CALL(ncclBroadcast(fused_data, fused_data, total_size / dtype_size, dtype, root,
-                            (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+    NCCL_CALL(ncclBroadcast(fused_data, fused_data, total_size / dtype_size, dtype, root, nccl_comm,
+                            (cudaStream_t)stream));
 
     // UnFuse Tensor
     value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
@@ -405,7 +405,7 @@ class NCCLSend : public raf::op::OpEnv {
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
     const DLTensor* x = inputs[0];
     NCCL_CALL(ncclSend(x->data, BytesCompactTensor(*x) / (x->dtype.bits / 8), DType(x->dtype), peer,
-                       (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+                       nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -450,7 +450,7 @@ class NCCLRecv : public raf::op::OpEnv {
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
     DLTensor* out = output;
     NCCL_CALL(ncclRecv(out->data, BytesCompactTensor(*out) / (out->dtype.bits / 8),
-                       DType(out->dtype), peer, (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+                       DType(out->dtype), peer, nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -535,7 +535,7 @@ class NCCLReduce : public raf::op::OpEnv {
 
       size_t dtype_size = GetSizeInBytes(x->dtype);
       NCCL_CALL(ncclReduce(x->data, out->data, total_size / dtype_size, dtype, compute, root,
-                           (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+                           nccl_comm, (cudaStream_t)stream));
     } else {
       size_t offset = 0;
       for (int i = 0; i < input_x->fields.size(); ++i) {
@@ -548,7 +548,7 @@ class NCCLReduce : public raf::op::OpEnv {
       }
 
       NCCL_CALL(ncclReduce(fused_data, fused_data, total_size / dtype_size, dtype, compute, root,
-                           (ncclComm_t)nccl_comm, (cudaStream_t)stream));
+                           nccl_comm, (cudaStream_t)stream));
       // UnFuse Tensor
       value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
       auto& of = out->fields;

@@ -98,8 +98,7 @@ template <typename T>
 tvm::Type GeneralDxInfer(const CallValues& value) {
   const auto* args = value->args.as<T>();
   CHECK(args != nullptr);
-  tvm::TensorType x = tvm::Downcast<tvm::TensorType>(GetType(args->x));
-  return x;
+  return tvm::Downcast<tvm::TensorType>(GetType(args->x));
 }
 
 inline Array<PrimExpr> BroadcastShape(const TensorType& x1, const TensorType& x2) {
