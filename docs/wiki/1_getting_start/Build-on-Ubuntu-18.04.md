@@ -15,6 +15,10 @@ sudo snap install cmake --classic # hmm, cmake is required to run cmake
                                   # the cmake version installed by apt is too old
 ```
 
+On the other hand, if you encounter any library missing errors during the compilation,
+you could consider running the Ubuntu setup script here: `docker/install/ubuntu_install_core.sh`.
+It makes sure all essential packages are installed.
+
 Note that if you are using Ubuntu 20.10 or below, the ccache version via apt is 3.7-.
 Since ccache 4.0- does not support nvcc (CUDA compiler) well, it will result in
 cache miss for CUDA source files (e.g., CUTLASS). It means you may need to rebuild
@@ -109,6 +113,8 @@ Below we introduce an environment variable that indicates where RAF is.
 git clone https://github.com/meta-project/meta --recursive && cd meta
 export RAF_HOME=$(pwd)
 mkdir $RAF_HOME/build && cd $RAF_HOME/build
+# Run the codegen for auto-generated source code
+bash ./scripts/src_codegen/run_all.sh
 # Configuration file for CMake
 cp ../cmake/config.cmake .
 # Edit the configuration file
@@ -154,7 +160,7 @@ vim $HOME/.bashrc
 vim $HOME/.zshrc
 # Adding the export commands to the end of those RC files
 export RAF_HOME=PATH-TO-RAF
-export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python
 export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 ```
 
