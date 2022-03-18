@@ -266,8 +266,6 @@ register_op_cast_rule("raf.op.argwhere", infer_cast(1))
 register_op_cast_rule("raf.op.upper_bound.argwhere", infer_cast(1))
 register_op_cast_rule("raf.op.roi_align", infer_cast(2))
 register_op_cast_rule("raf.op.roi_align_dx", infer_cast(2))
-register_op_cast_rule("raf.op.layer_norm", infer_cast(3))
-register_op_cast_rule("raf.op.layer_norm_dx", infer_cast(3))
 register_op_cast_rule("raf.op.gather", infer_cast(1))
 register_op_cast_rule("raf.op.divide", infer_cast(2))
 register_op_cast_rule("raf.op.cumsum", infer_cast(1))
@@ -363,6 +361,17 @@ register_op_cast_rule("raf.op.batch_norm_train", op_cast_norm(1, 3))
 # and we have not figured out the reason. However, it does not affect the convergence of AMP models
 # so we still cast it.
 register_op_cast_rule("raf.op.batch_norm_train_dxwb", op_cast_norm(2, 3))
+
+
+def op_cast_layer_norm_dx(args, ret_type, amp_dtype):
+    """It has args in order (x, weight, dy)."""
+    ret = [PrimType(arg.checked_type.dtype) for arg in args[:3]]
+    ret += [PrimType(None) for _ in range(len(args) - 3)]
+    return ret
+
+
+register_op_cast_rule("raf.op.layer_norm", infer_cast(1))
+register_op_cast_rule("raf.op.layer_norm_dx", op_cast_layer_norm_dx)
 
 
 def op_cast_concatenate(args, ret_type, amp_dtype):

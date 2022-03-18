@@ -359,12 +359,26 @@ _reg.register_injective_schedule("raf.op.tvm.threshold_dx")
 @register_compute("raf.op.tvm.layer_norm")
 def compute_layer_norm(attr, inputs, output_type):
     # pylint: disable=too-many-locals
-    set_scale = attr.set_scale_bias
     x = inputs[0]
-    if set_scale:
-        scale = inputs[1]
-        bias = inputs[2]
-    axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
+
+    # Determine the compute dtype. There are several cases:
+    # 1) FP32 model: all inputs are FP32. dtyp3=FP32.
+    # 2) FP16 model: all inputs are FP16. dtype=FP16.
+    # 3) AMP model: x is FP16 but weight/bias are FP32. dtype=FP32.
+    # In conclusion, the compute dtype should follow weight/bias dtype.
+    # If weight/bias are None, then follow x dtype.
+    orig_dtype = x.dtype
+    dtype = x.dtype
+    if attr.set_scale_bias:
+        scale, bias = inputs[1], inputs[2]
+        assert scale.dtype == bias.dtype
+        dtype = scale.dtype
+
+    if x.dtype != dtype:
+        x = _topi.cast(x, dtype)
+
+    eps = _tvm.tir.const(attr.epsilon, dtype=dtype)
+    axis = _topi.utils.get_const_int(attr.axis)
     ndim = len(x.shape)
     if axis < 0:
         axis = ndim + axis
@@ -376,7 +390,7 @@ def compute_layer_norm(attr, inputs, output_type):
                 newaxis.append(i)
         return _topi.expand_like(data, target, newaxis)
 
-    count = _tvm.tir.const(1, dtype=x.dtype)
+    count = _tvm.tir.const(1, dtype=dtype)
     count *= x.shape[axis]
     reduce_axes = [axis]
     x_sum = _topi.sum(x, reduce_axes, keepdims=True)
@@ -386,10 +400,15 @@ def compute_layer_norm(attr, inputs, output_type):
     x_var = _topi.divide(sq_diff_sum, count)
     denominator = _topi.sqrt(_topi.add(x_var, eps))
     out = _topi.divide(_topi.subtract(x, x_mean), denominator)
-    if set_scale:
+
+    if attr.set_scale_bias:
+        scale, bias = inputs[1], inputs[2]
         pscale = pad(scale, out)
         out = _topi.multiply(pscale, out)
         out = _topi.add(out, pad(bias, out))
+
+    if out.dtype != orig_dtype:
+        out = _topi.cast(out, orig_dtype)
     return [out]
 
 
@@ -427,7 +446,52 @@ def schedule_generic_cuda(attrs, outs, target):
         return s
 
 
-_reg.register_schedule("raf.op.tvm.layer_norm", schedule_generic)
+@generic_func
+def schedule_layer_norm(attrs, outs, target):
+    with target:
+        return _topi.generic.schedule_injective(outs)
+
+
+@schedule_layer_norm.register(["cuda", "gpu"])
+def schedule_layer_norm_cuda(attrs, outs, target):
+    out = outs[0]
+    num_thread = target.max_num_threads
+    sch = _tvm.te.create_schedule([out.op])
+
+    axis = _topi.utils.get_const_int(attrs.axis)
+    axis = len(out.shape) + axis if axis < 0 else axis
+
+    # Schedule ops except for the final one.
+    visited = set([out.op])
+
+    def schedule(curr):
+        """A helper to traverse the compute DAG and 1) inline element-wise ops,
+        2) fuse reduction ops.
+        """
+        if isinstance(curr.op, _tvm.te.ComputeOp) and curr.op not in visited:
+            visited.add(curr.op)
+            if isinstance(curr.op.body[0], _tvm.tir.expr.Reduce):
+                _, inner = sch[curr].split(curr.op.reduce_axis[0], factor=num_thread)
+                sch[curr].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+                if axis > 0:
+                    sch[curr].compute_at(sch[out], out.op.axis[axis - 1])
+                sch[curr].pragma(curr.op.axis[0], "auto_unroll_max_step", 32)
+                sch[curr].pragma(curr.op.axis[0], "unroll_explicit", True)
+            else:
+                sch[curr].compute_inline()
+        for inp in curr.op.input_tensors:
+            schedule(inp)
+
+    schedule(out)
+
+    _, inner = sch[out].split(out.op.axis[axis], factor=num_thread)
+    sch[out].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+    fused = sch[out].fuse(*out.op.axis[:axis])
+    sch[out].bind(fused, _tvm.te.thread_axis("blockIdx.x"))
+    return sch
+
+
+_reg.register_schedule("raf.op.tvm.layer_norm", schedule_layer_norm)
 
 
 @register_compute("raf.op.tvm.layer_norm_dx")
@@ -437,8 +501,21 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     if set_scale:
         x, scale, dy = inputs
     else:
+        scale = None
         x, dy = inputs[0], inputs[1]
-    axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=x.dtype)
+
+    orig_dtype = x.dtype
+    dtype = x.dtype
+    if scale is not None:
+        dtype = scale.dtype
+
+    # In the case of AMP model with FP32 scale, cast x and dy to FP32 to maintain the accuracy.
+    if x.dtype != dtype:
+        x = _topi.cast(x, dtype)
+    if dy.dtype != dtype:
+        dy = _topi.cast(dy, dtype)
+
+    axis, eps = _topi.utils.get_const_int(attr.axis), _tvm.tir.const(attr.epsilon, dtype=dtype)
     ndim = len(x.shape)
     if axis < 0:
         axis = ndim + axis
@@ -472,6 +549,9 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     mean_w_times_bar_x = _topi.divide(w_times_bar_x_sum, count)
     dx = _topi.subtract(w, mean_w)
     dx = _topi.subtract(dx, _topi.multiply(bar_x, mean_w_times_bar_x))
+    if dx.dtype != orig_dtype:
+        dx = _topi.cast(dx, orig_dtype)
+
     if set_scale:
         reduce_axes = list(range(axis)) + list(range(axis + 1, ndim))
         dw = _topi.sum(dy * (x - x_mean) / denominator, axis=reduce_axes)
