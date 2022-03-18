@@ -265,10 +265,16 @@ Type GeneralAxisInfer(const CallValues& value) {
   return x;
 }
 
+tvm::Type SoftmaxDxInfer(const CallValues& value) {
+  const auto* args = value->args.as<SoftmaxDxArgs>();
+  CHECK(args != nullptr);
+  return tvm::Downcast<tvm::TensorType>(GetType(args->y));
+}
+
 RAF_OP_TYPE("raf.op.softmax", "Softmax", GeneralAxisInfer<SoftmaxArgs>);
 RAF_OP_TYPE("raf.op.log_softmax", "LogSoftmax", GeneralAxisInfer<SoftmaxArgs>);
-RAF_OP_TYPE("raf.op.softmax_dx", "SoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
-RAF_OP_TYPE("raf.op.log_softmax_dx", "LogSoftmaxDx", GeneralDxInfer<SoftmaxDxArgs>);
+RAF_OP_TYPE("raf.op.softmax_dx", "SoftmaxDx", SoftmaxDxInfer);
+RAF_OP_TYPE("raf.op.log_softmax_dx", "LogSoftmaxDx", SoftmaxDxInfer);
 
 Type BatchNormTrainDxwbInfer(const CallValues& value) {
   const auto* args = value->args.as<BatchNormTrainDxwbArgs>();

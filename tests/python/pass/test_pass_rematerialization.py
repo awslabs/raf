@@ -123,13 +123,13 @@ def test_simple(budget_type):
         @raf.model.trace
         def forward(self, x):
             a_1 = self.conv(x)
-            a_2 = raf.softmax(a_1)
-            a_3 = raf.softmax(a_2)
-            a_4 = raf.softmax(a_3)
+            a_2 = raf.max_pool2d(a_1, (3, 3), 1, 1)
+            a_3 = raf.max_pool2d(a_2, (3, 3), 1, 1)
+            a_4 = raf.max_pool2d(a_3, (3, 3), 1, 1)
 
-            a_5 = raf.softmax_dx(a_3, a_4, a_4)
-            a_6 = raf.softmax_dx(a_2, a_3, a_5)
-            a_7 = raf.softmax_dx(a_1, a_2, a_6)
+            a_5 = raf.max_pool2d_dx(a_3, a_4, a_4, (3, 3), 1, 1, 1, False, True)
+            a_6 = raf.max_pool2d_dx(a_2, a_3, a_5, (3, 3), 1, 1, 1, False, True)
+            a_7 = raf.max_pool2d_dx(a_1, a_2, a_6, (3, 3), 1, 1, 1, False, True)
             a_8 = raf.conv2d_dx(x, a_1, a_7, shape, 1, 1, 1, 1)
             a_9 = raf.softmax(a_8)
             return a_9
@@ -171,32 +171,62 @@ def test_simple(budget_type):
             ],
         )
         softmax_op = raf._ffi.op.GetOp("raf.op.softmax")
-        softmax_dx_op = raf._ffi.op.GetOp("raf.op.softmax_dx")
-        minus_one = raf.ir.const(-1)
+        max_pool2d_op = raf._ffi.op.GetOp("raf.op.max_pool2d")
+        max_pool2d_call = lambda x: relay.Call(
+            max_pool2d_op,
+            [
+                x,
+                raf.ir.const((3, 3)),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(False),
+                raf.ir.const(True),
+                raf.ir.const("NCHW"),
+            ],
+        )
+        max_pool2d_dx_op = raf._ffi.op.GetOp("raf.op.max_pool2d_dx")
+        max_pool2d_dx_call = lambda x, y, dy: relay.Call(
+            max_pool2d_dx_op,
+            [
+                x,
+                y,
+                dy,
+                raf.ir.const((3, 3)),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(False),
+                raf.ir.const(True),
+            ],
+        )
 
         data = raf.ir.var("x", shape=shape)
         weight = raf.ir.var("w", shape=(16, 16, 3, 3))
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", conv2d_call(data, weight))
-        a_2 = sb.let("a2", relay.Call(softmax_op, [a_1, minus_one]))
-        a_3 = sb.let("a3", relay.Call(softmax_op, [a_2, minus_one]))
-        a_4 = sb.let("a4", relay.Call(softmax_op, [a_3, minus_one]))
-        a_5 = sb.let("a5", relay.Call(softmax_dx_op, [a_3, a_4, a_4, minus_one]))
+        a_2 = sb.let("a2", max_pool2d_call(a_1))
+        a_3 = sb.let("a3", max_pool2d_call(a_2))
+        a_4 = sb.let("a4", max_pool2d_call(a_3))
+        a_5 = sb.let("a5", max_pool2d_dx_call(a_3, a_4, a_4))
 
         # Rematerialize x_* tensors for a lower budget.
         if budget_type == "remat":
-            x_0 = sb.let("x_1", relay.Call(softmax_op, [a_1, minus_one]))
+            x_0 = sb.let("x_1", max_pool2d_call(a_1))
         else:
             x_0 = a_2
-        a_6 = sb.let("a6", relay.Call(softmax_dx_op, [x_0, a_3, a_5, minus_one]))
+        a_6 = sb.let(
+            "a6",
+            max_pool2d_dx_call(x_0, a_3, a_5),
+        )
 
         # In the case os consecutive uses, we can reuse the rematerialized tensors.
         if budget_type == "remat":
             x_1 = sb.let("x_0", conv2d_call(data, weight))
         else:
             x_1 = a_1
-        a_7 = sb.let("a7", relay.Call(softmax_dx_op, [x_1, x_0, a_6, minus_one]))
+        a_7 = sb.let("a7", max_pool2d_dx_call(x_1, x_0, a_6))
 
         # In the case os consecutive uses, we can reuse the rematerialized tensors.
         if budget_type == "remat":
@@ -204,7 +234,7 @@ def test_simple(budget_type):
         else:
             x_2 = a_1
         a_8 = sb.let("a8", conv2d_dx_call(data, x_2, a_7))
-        a_9 = sb.let("a9", relay.Call(softmax_op, [a_8, minus_one]))
+        a_9 = sb.let("a9", relay.Call(softmax_op, [a_8, raf.ir.const(-1)]))
 
         sb.ret(a_9)
         return relay.Function([data, weight], sb.get())
@@ -236,8 +266,35 @@ def test_closure():
             ],
         )
         conv2d_dx_op = raf._ffi.op.GetOp("raf.op.conv2d_dx")
-        softmax_op = raf._ffi.op.GetOp("raf.op.softmax")
-        softmax_dx_op = raf._ffi.op.GetOp("raf.op.softmax_dx")
+        max_pool2d_op = raf._ffi.op.GetOp("raf.op.max_pool2d")
+        max_pool2d_call = lambda x: relay.Call(
+            max_pool2d_op,
+            [
+                x,
+                raf.ir.const((3, 3)),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(False),
+                raf.ir.const(True),
+                raf.ir.const("NCHW"),
+            ],
+        )
+        max_pool2d_dx_op = raf._ffi.op.GetOp("raf.op.max_pool2d_dx")
+        max_pool2d_dx_call = lambda x, y, dy: relay.Call(
+            max_pool2d_dx_op,
+            [
+                x,
+                y,
+                dy,
+                raf.ir.const((3, 3)),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const([1]),
+                raf.ir.const(False),
+                raf.ir.const(True),
+            ],
+        )
         add_op = raf._ffi.op.GetOp("raf.op.add")
         null = raf.ir.const(None)
 
@@ -247,8 +304,8 @@ def test_closure():
 
         sb = ScopeBuilder()
         a_1 = sb.let("a1", conv2d_call(data, weight))
-        a_2 = sb.let("a2", relay.Call(softmax_op, [a_1]))
-        a_3 = sb.let("a3", relay.Call(softmax_op, [a_2]))
+        a_2 = sb.let("a2", max_pool2d_call(a_1))
+        a_3 = sb.let("a3", max_pool2d_call(a_2))
 
         # Closure
         p_0 = raf.ir.var("p0", shape=shape)
@@ -259,13 +316,13 @@ def test_closure():
         closure = closure.with_attr("Dialect", "tvm")
 
         a_4 = sb.let("a4", relay.Call(closure, [a_3]))
-        a_5 = sb.let("a5", relay.Call(softmax_dx_op, [a_2, a_3, a_4]))
-        z_0 = sb.let("z0", relay.Call(softmax_dx_op, [a_2, a_3, a_5]))  # Can only kill a_4.
+        a_5 = sb.let("a5", max_pool2d_dx_call(a_2, a_3, a_4))
+        z_0 = sb.let("z0", max_pool2d_dx_call(a_2, a_3, a_5))  # Can only kill a_4.
         if with_remat:
             x_0 = sb.let("x_0", relay.Call(closure, [a_3]))
         else:
             x_0 = a_4
-        a_6 = sb.let("a6", relay.Call(softmax_dx_op, [a_3, x_0, z_0]))
+        a_6 = sb.let("a6", max_pool2d_dx_call(a_3, x_0, z_0))
         a_7 = sb.let(
             "a7",
             relay.Call(
@@ -289,7 +346,7 @@ def test_closure():
         else:
             x_4 = a_4
         a_8 = sb.let("a8", relay.Call(add_op, [x_4, a_7, null, null]))
-        a_9 = sb.let("a9", relay.Call(softmax_op, [a_8]))
+        a_9 = sb.let("a9", max_pool2d_call(a_8))
         sb.ret(a_9)
         func = relay.Function([data, weight, dy], sb.get())
         return tvm.IRModule.from_expr(func)

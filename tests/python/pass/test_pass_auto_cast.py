@@ -178,6 +178,29 @@ def test_existing_cast_with_infer_op(out_dtype):
         verify_cast_num(model, args, 0 if out_dtype == "float16" else 1)
 
 
+def test_infer_op_cast_num():
+    """The args of infer ops should be casted to the majority."""
+    shape = (5, 5)
+
+    class Model(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x, w):
+            out = raf.matmul(x, w)
+            ones = raf.full(1, shape, dtype="float32")
+            return raf.less_equal(out, ones)
+
+    model = Model()
+    m_x, _ = randn(shape, dtype="float32")
+    m_w, _ = randn(shape, dtype="float32")
+    args = [m_x, m_w]
+
+    with raf.ir.PassContext(config={"raf.amp.out_dtype": "float16"}):
+        verify_cast_num(model, args, 3)
+
+
 def test_inplace():
     xshape = (10, 10)
     wshape = (10, 10)
@@ -363,6 +386,32 @@ def test_mean_dx(device):
     m_x, _ = randn((), dtype="float32", device=device)
     model = Model()
     verify_correctness(model, device, [m_x])
+
+
+def test_where():
+    """The args of infer ops should be casted to the majority."""
+    shape = (5, 5)
+
+    class Model(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, cond, x, y, w):
+            out = raf.matmul(x, w)
+            return raf.where(cond, out, y)
+
+    model = Model()
+    m_cond, _ = randn(shape, dtype="bool")
+    m_x, _ = randn(shape, dtype="float32")
+    m_y, _ = randn(shape, dtype="float32")
+    m_w, _ = randn(shape, dtype="float32")
+    args = [m_cond, m_x, m_y, m_w]
+
+    with raf.ir.PassContext(config={"raf.amp.out_dtype": "float16"}):
+        verify_cast_num(model, args, 4)
+        # matmul is executed with fp16, so skip checking the correctness but just the execution.
+        verify_correctness(model, "cpu", args, tol=1)
 
 
 if __name__ == "__main__":
