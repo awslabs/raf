@@ -167,27 +167,41 @@ def test_unary_with_axis(device, dtype, shape, axis, funcs):
 # pylint: disable=protected-access
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [[3, 2], [1, 3]])
-def test_log_softmax(device, dtype, shape):
+@pytest.mark.parametrize("disable_fusion", [True, False])
+def test_log_softmax(device, shape, disable_fusion):
     class TestModel(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
-        def forward(self, x):
-            return raf._op.sym.log_softmax(x)
+        def forward(self, x, b):
+            b = raf.cast(b, "float16")
+            y = raf.bias_add(x, b, -1)
+            y = raf.cast(y, "float32")
+            return raf._op.sym.log_softmax(y)
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
-    m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
-    t_y = torch.log_softmax(t_x, dim=-1)
+    m_x, t_x = randn_torch(shape, device=device, dtype="float16", requires_grad=True)
+    m_b, t_b = randn_torch((shape[-1],), device=device, dtype="float32", requires_grad=True)
+    m_y = model(m_x, m_b)
+    v_y = run_vm_model(model, device, [m_x, m_b], disable_fusion=disable_fusion)
+
+    # Fusion will inline the cast to bias_add and result in numerical errors.
+    # As this pattern usually happens at AMP, this error should be acceptable.
+    tol = 1e-3 if not disable_fusion else 1e-5
+
+    check(m_y, v_y, rtol=tol, atol=tol)
+
+    t_b = t_b.to(dtype=torch.float16)
+    t_y = torch.add(t_x, t_b)
+    t_y = t_y.to(dtype=torch.float32)
+    t_y = torch.log_softmax(t_y, dim=-1)
     check(m_y, t_y)
-    check(v_y, t_y)
+
     # backward
-    m_dy, t_dy = randn_torch(shape, device=device, dtype=dtype)
+    m_dy, t_dy = randn_torch(shape, device=device, dtype="float32")
     t_y.backward(t_dy)
     m_y.backward(m_dy)
     check(m_x.grad, t_x.grad)

@@ -194,33 +194,36 @@ def schedule_log_softmax_cuda(attrs, outs, _):
     thd_x = _tvm.te.thread_axis("threadIdx.x")
     blk_x = _tvm.te.thread_axis("blockIdx.x")
 
-    inp, maxelem, expsum = out.op.input_tensors
-
+    # Schedule the final stage.
     (out_local,) = sch.cache_write([out], "local")
     sch[out_local].compute_inline()
 
     _, out_j_i = sch[out].split(out.op.axis[1], factor=32)
     sch[out].bind(out_j_i, thd_x)
-
-    _, maxelem_k_i = sch[maxelem].split(maxelem.op.reduce_axis[0], factor=32)
-    sch[maxelem].bind(maxelem_k_i, thd_x)
-    sch[maxelem].compute_at(sch[out], out.op.axis[0])
-
-    _, expsum_k_i = sch[expsum].split(expsum.op.reduce_axis[0], factor=32)
-    sch[expsum].bind(expsum_k_i, thd_x)
-    sch[expsum].compute_at(sch[out], out.op.axis[0])
-
     sch[out].bind(out.op.axis[0], blk_x)
-    sch[maxelem].pragma(maxelem.op.axis[0], "auto_unroll_max_step", 64)
-    sch[maxelem].pragma(maxelem.op.axis[0], "unroll_explicit", True)
-    sch[expsum].pragma(expsum.op.axis[0], "auto_unroll_max_step", 64)
-    sch[expsum].pragma(expsum.op.axis[0], "unroll_explicit", True)
 
-    # If input is fused with another op, then try to inline it.
-    # In case the fused input op cannot be inlined (e.g., not elementwise),
-    # this function simply throw exception and let the dispatcher handle it.
-    if isinstance(inp.op, _tvm.te.tensor.ComputeOp):
-        sch[inp].compute_inline()
+    # Schedule the intermediate stages.
+    visited = set([out.op])
+
+    def schedule_dag(curr):
+        if curr.op not in visited:
+            visited.add(curr.op)
+            if isinstance(curr.op, _tvm.te.tensor.ComputeOp):
+                if isinstance(curr.op.body[0], _tvm.tir.expr.Reduce):
+                    # Compute at reduce stage (e.g., max)
+                    _, inner = sch[curr].split(curr.op.reduce_axis[0], factor=32)
+                    sch[curr].bind(inner, thd_x)
+                    sch[curr].compute_at(sch[out], out.op.axis[0])
+                    sch[curr].pragma(curr.op.axis[0], "auto_unroll_max_step", 64)
+                    sch[curr].pragma(curr.op.axis[0], "unroll_explicit", True)
+                else:
+                    # Inline elementwise stage (e.g., cast, exp).
+                    sch[curr].compute_inline()
+
+        for _inp in curr.op.input_tensors:
+            schedule_dag(_inp)
+
+    schedule_dag(out)
     return sch
 
 
