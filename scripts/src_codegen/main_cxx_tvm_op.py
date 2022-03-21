@@ -47,12 +47,10 @@ using tvm::relay::FTVMSchedule;
 }}  // namespace op
 }}  // namespace raf
 """.strip()
-    regs = []
-    for raf_op_name in sorted(topi.OP_MAP.keys()):
-        relay_op_name, _, _ = topi.OP_MAP[raf_op_name]
-        regs.append(gen_reg(raf_op_name, relay_op_name))
-    regs = "\n".join(regs)
-    return FILE.format(REGS=regs, FILENAME=filename)
+    regs = [
+        gen_reg(raf_op_name, topi.OP_MAP[raf_op_name]) for raf_op_name in sorted(topi.OP_MAP.keys())
+    ]
+    return FILE.format(REGS="\n".join(regs), FILENAME=filename)
 
 
 def gen_reg(raf_op_name, relay_op_name):

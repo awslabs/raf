@@ -287,12 +287,12 @@ If an operator has a corresponding implementation in Relay, then we can simply a
 ```python
 OP_MAP = [
     ...
-    "raf.op.tvm.softmax": ["nn.softmax", "relay.attrs.SoftmaxAttrs", "kOpaque"],
+    "raf.op.tvm.softmax": "nn.softmax",
     ...
 ]
 ```
 
-In this line, we map `raf.op.tvm.softmax` to `relay.nn.softmax`, which has a Relay attribute `relay.attrs.SoftmaxAttrs` and its fusion pattern is `kOpaque`.
+In this line, we map `raf.op.tvm.softmax` to `relay.nn.softmax.
 
 In addition, some Relay operators have "op strategy" registered (see https://tvm.apache.org/docs/dev/relay_op_strategy.html for details.) In short, Relay op strategy is a set of rules that determine how to lower a Relay operator. If the Relay operator has defined a strategy, we just simply register it to the RAF operator in [python/raf/_tvm_op/nn.py](https://github.com/meta-project/meta/blob/3977c035cd6571a4c2504be88701c39550b56d11/python/raf/_tvm_op/nn.py):
 
