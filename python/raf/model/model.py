@@ -4,9 +4,11 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Interactive interface for training & inference."""
 from collections import OrderedDict
+import re
 
 from raf._core import cacher
 from raf._core.core_utils import bfs, get_attr, get_named_attr, set_module
+from raf._core.device import Device
 from raf._core.ndarray import ndarray
 from raf.model.trace import _get_trace_record
 
@@ -213,6 +215,40 @@ def _extract_methods(model):
     if not fwd_infer:
         fwd_infer = fwd_train
     return build, fwd_train, fwd_infer
+
+
+def get_param_size(model):
+    """A utility function to get the total parameter size in MBs."""
+
+    total_size = 0.0
+    for param in model.state().values():
+        # Ignore non-parameters (i.e., not learnable model states)
+        if not param.requires_grad or "float" not in param.dtype:
+            continue
+        try:
+            token = re.search(r"float(\d+)", param.dtype)
+            nbytes = int(token.group(1)) / 8
+        except Exception:  # pylint: disable=broad-except
+            raise ValueError("Unrecognized parameter dtype: %s" % param.dtype)
+
+        nsize = 1
+        for shape in param.shape:
+            nsize *= shape
+        total_size += nsize * nbytes / 1048576.0
+
+    return total_size
+
+
+def calc_model_gflops(model, device, args):
+    """A utility function to calculate the compute GFLOPS of the model."""
+    # pylint: disable=import-outside-toplevel
+    from raf._ffi.pass_ import EstimateGFLOPS, InferType
+
+    record = model._internal(*args)
+    mod = record.mod
+    with Device(device):
+        total_gflops = sum([gf.value for gf in EstimateGFLOPS(InferType()(mod)).values()])
+    return total_gflops
 
 
 # pylint: enable=protected-access
