@@ -179,8 +179,7 @@ std::vector<float> CPUOpProfiler::RunOp(const OpWithDataPtr& op_with_data, int32
     m_endtime = std::chrono::system_clock::now();
     float elapsed_time =
         std::chrono::duration_cast<std::chrono::microseconds>(m_endtime - m_starttime).count();
-    // Convert to microseconds
-    elapsed_times.push_back(elapsed_time / exec_number * 1000.0f);
+    elapsed_times.push_back(elapsed_time / exec_number);
   }
   return elapsed_times;
 }
@@ -211,8 +210,7 @@ std::vector<float> CPUOpProfiler::RunOpGroup(const std::vector<OpWithDataPtr>& o
     m_endtime = std::chrono::system_clock::now();
     float elapsed_time =
         std::chrono::duration_cast<std::chrono::microseconds>(m_endtime - m_starttime).count();
-    // Convert to microseconds
-    elapsed_times.push_back(elapsed_time / exec_number * 1000.0f);
+    elapsed_times.push_back(elapsed_time / exec_number);
   }
   return elapsed_times;
 }

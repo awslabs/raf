@@ -300,6 +300,7 @@ class Rematerializer : public ExprMutator {
       : analyzer_(analyzer),
         func_(func),
         budget_(budget),
+        profiler_(profiler),
         tensor_infos_(AnalyzeTensors(device, func, mod, analyzer, profiler)) {
     scopes_.emplace_back(new LetList);
     VERBOSE_LOG << "Tensor infos:\n" << tensor_infos_.DebugDump();
@@ -335,9 +336,14 @@ class Rematerializer : public ExprMutator {
       }
     }
     auto ret = this->Mutate(func_);
-    LOG(INFO) << "Estimated peak memory after rematerialization is " << peak_memory_ / kMegaBytes
-              << " MBs; while the budget is " << budget_ / kMegaBytes << " MBs. "
-              << n_recompute_ops_ << " more ops were inserted";
+    std::stringstream ss;
+    ss << "Estimated peak memory after rematerialization is " << peak_memory_ / kMegaBytes
+       << " MBs; while the budget is " << budget_ / kMegaBytes << " MBs. " << n_recompute_ops_
+       << " more ops were inserted";
+    if (profiler_) {
+      ss << " with " << std::setw(2) << (total_recompute_cost_ / 1000.0) << " ms latency overhead";
+    }
+    LOG(INFO) << ss.str();
     return ret;
   }
 
@@ -699,7 +705,15 @@ class Rematerializer : public ExprMutator {
     remat_var->checked_type_ = call_node->checked_type();
     remat_call->checked_type_ = call_node->checked_type();
     let_vars_.emplace(remat_var, remat_call);
+
+    // Record for final report.
     n_recompute_ops_++;
+    if (profiler_) {
+      auto exec_time_and_ws_size = profiler_->ProfileOp(remat_call);
+      // Default is to repeat once, so we take the first element
+      auto compute_cost = exec_time_and_ws_size.first[0];
+      total_recompute_cost_ += compute_cost;
+    }
 
     // Update the let_var to be the rematerialized one and mark the tensor as live again.
     // It can be reused by future executions directly if no OOM happens in between;
@@ -816,6 +830,8 @@ class Rematerializer : public ExprMutator {
   StdMap<Expr> let_vars_;
   /*! \brief The liveness analyzer, including liveness analysis results. */
   liveness_analysis::LivenessAnalyzer* analyzer_;
+  /*! \brief The profiler used in rematerialization. */
+  op_profiler::OpProfiler* profiler_;
   /*! \brief The memory budget in bytes. */
   int64_t budget_;
   /*! \brief The current memory consumption in bytes. */
@@ -824,6 +840,8 @@ class Rematerializer : public ExprMutator {
   int64_t peak_memory_ = 0;
   /*! \brief The number of cloned recompute ops. */
   int64_t n_recompute_ops_ = 0;
+  /*! \brief The total recompute cost. */
+  float total_recompute_cost_ = 0;
   /*! \brief A set of rematerialized tensors before each call. */
   VSet newly_remat_tensors_;
 };
@@ -838,7 +856,9 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
                  liveness_analysis::LivenessAnalyzer* analyzer, op_profiler::OpProfiler* profiler)
       : func_(func), analyzer_(analyzer), ell_(ExplicitLetList::make(func)), profiler_(profiler) {
     CHECK(analyzer_->IsSuccess());
-    op_flops_estimater_.Run(device, func, mod);
+    if (!profiler_) {
+      op_flops_estimater_.Run(device, func, mod);
+    }
   }
 
   ~TensorAnalyzer() {
