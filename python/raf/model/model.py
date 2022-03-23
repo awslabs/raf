@@ -217,24 +217,48 @@ def _extract_methods(model):
     return build, fwd_train, fwd_infer
 
 
-def get_param_size(model):
-    """A utility function to get the total parameter size in MBs."""
+def get_param_size(model, mbs=False):
+    """A utility function to get the total parameter size.
+
+    Parameters
+    ----------
+    model: raf.model.BaseModel
+        The target model.
+
+    mbs: Optional[bool]
+        If True, return the total parameter size in MBs;
+        otherwise return the parameter number (default).
+
+    Returns
+    -------
+    size: float
+        The total parameter size.
+    """
 
     total_size = 0.0
     for param in model.state().values():
         # Ignore non-parameters (i.e., not learnable model states)
         if not param.requires_grad or "float" not in param.dtype:
             continue
-        try:
-            token = re.search(r"float(\d+)", param.dtype)
-            nbytes = int(token.group(1)) / 8
-        except Exception:  # pylint: disable=broad-except
-            raise ValueError("Unrecognized parameter dtype: %s" % param.dtype)
+        if mbs:
+            try:
+                token = re.search(r"float(\d+)", param.dtype)
+                n_megabytes = int(token.group(1)) / 8 / 1048576.0
+            except Exception:  # pylint: disable=broad-except
+                raise ValueError("Unrecognized parameter dtype: %s" % param.dtype)
+        else:
+            n_megabytes = 1
 
         nsize = 1
         for shape in param.shape:
             nsize *= shape
-        total_size += nsize * nbytes / 1048576.0
+        total_size += nsize * n_megabytes
+
+    if total_size == 0:
+        print(
+            "WARNING: The parameter size is zero. Please make sure "
+            "you call model.train_mode() in advance if you believe this result is incorrect"
+        )
 
     return total_size
 

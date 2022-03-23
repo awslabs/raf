@@ -18,16 +18,11 @@ def test_param_size():
                 name="attn",
                 device="cpu",
             )
-            # Note that attention does not require gradient, but it may be set incorrectly
-            # by the AutoDiff pass (see python/raf/optim/sgd.py#L187).
-            self.attn.requires_grad = True
-
             self.weight = ndarray(
                 np.ones(((128, 4)), dtype="float32"),
                 name="weight",
                 device="cpu",
             )
-            self.weight.requires_grad = True
 
         @raf.model.trace
         def forward(self, data):
@@ -36,8 +31,14 @@ def test_param_size():
             a_3 = raf.matmul(a_2, self.weight)
             return a_3
 
-    param_size = get_param_size(Model())
-    check(param_size, 128 * 4 * 4 / 1048576, rtol=1e-5, atol=1e-5)
+    model = Model()
+
+    # Infer mode should return 0
+    assert get_param_size(model) == 0
+
+    # Parameter size should be 128 * 4 (excluding attn with int64 dtype).
+    model.train_mode()
+    assert get_param_size(model) == 512
 
 
 def test_calc_gflops():
