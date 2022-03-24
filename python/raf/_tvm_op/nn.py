@@ -96,7 +96,65 @@ _reg.register_injective_schedule("raf.op.tvm.batch_matmul_tt")
 
 _reg.register_strategy("raf.op.tvm.batch_matmul_nt", strategy.batch_matmul_strategy)
 
-_reg.register_strategy("raf.op.tvm.softmax", strategy.softmax_strategy)
+
+@register_compute("raf.op.tvm.softmax", level=15)
+def compute_softmax(attr, inputs, output_type):
+    return [_topi.nn.softmax(inputs[0])]
+
+
+@generic_func
+def schedule_softmax(attrs, outs, target):
+    # FIXME: softmax is not an injective op so we should not use inject schedule.
+    with target:
+        return _topi.generic.schedule_injective(outs)
+
+
+@schedule_softmax.register(["cuda", "gpu"])
+def schedule_softmax_cuda(attrs, outs, _):
+    out = outs[0]
+    ndim = len(out.shape)
+    sch = _tvm.te.create_schedule([out.op])
+    num_thread = 64
+
+    axis = attrs.axis
+    axis = int(axis) if axis is not None else ndim - 1
+    if axis >= ndim:
+        axis %= ndim
+    while axis < 0:
+        axis += ndim
+
+    if axis == 0:
+        raise ValueError(
+            "Internal error: softmax schedule does not support axis=0. "
+            "This op should be dispatched to CuDNN dialect"
+        )
+
+    visited = set([out.op])
+
+    def schedule(curr):
+        if isinstance(curr.op, _tvm.te.ComputeOp) and curr.op not in visited:
+            visited.add(curr.op)
+            if isinstance(curr.op.body[0], _tvm.tir.expr.Reduce) and curr != out:
+                _, inner = sch[curr].split(curr.op.reduce_axis[0], factor=num_thread)
+                sch[curr].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+                sch[curr].compute_at(sch[out], out.op.axis[axis - 1])
+                sch[curr].pragma(curr.op.axis[0], "auto_unroll_max_step", num_thread)
+                sch[curr].pragma(curr.op.axis[0], "unroll_explicit", True)
+            else:
+                sch[curr].compute_inline()
+        for inp in curr.op.input_tensors:
+            schedule(inp)
+
+    schedule(out)
+
+    _, inner = sch[out].split(out.op.axis[axis], factor=num_thread)
+    sch[out].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+    fused = sch[out].fuse(*out.op.axis[:axis])
+    sch[out].bind(fused, _tvm.te.thread_axis("blockIdx.x"))
+    return sch
+
+
+_reg.register_schedule("raf.op.tvm.softmax", schedule_softmax)
 
 
 @register_compute("raf.op.tvm.softmax_dx")
@@ -115,39 +173,59 @@ def schedule_softmax_dx(attrs, outs, target):
 
 @schedule_softmax_dx.register(["cuda", "gpu"])
 def schedule_softmax_dx_cuda(attrs, outs, _):
-    mul2 = outs[0]
-    sub, _ = mul2.op.input_tensors  # input_tensors[1] = dy
-    _, red = sub.op.input_tensors  # input_tensors[0] = y
-    mul1 = red.op.input_tensors[0]
+    out = outs[0]
+    ndim = len(out.shape)
+    sch = _tvm.te.create_schedule([out.op])
+    num_thread = 64
 
     axis = attrs.axis
-    ndim = len(mul2.shape)
     axis = int(axis) if axis is not None else ndim - 1
     if axis >= ndim:
         axis %= ndim
     while axis < 0:
         axis += ndim
 
-    sch = _tvm.te.create_schedule([mul2.op])
-    thd_x = _tvm.te.thread_axis("threadIdx.x")
-    blk_x = _tvm.te.thread_axis("blockIdx.x")
+    visited = set([out.op])
 
-    sch[sub].compute_inline()
-    sch[mul1].compute_inline()
-    _, mul2_r_i = sch[mul2].split(mul2.op.axis[axis], factor=32)
-    sch[mul2].bind(mul2_r_i, thd_x)
+    def schedule(curr):
+        if isinstance(curr.op, _tvm.te.ComputeOp) and curr.op not in visited:
+            visited.add(curr.op)
+            if isinstance(curr.op.body[0], _tvm.tir.expr.Reduce) and curr != out:
+                if ndim > 1 and axis == ndim - 1:
+                    # Cross-thread reduction schedule is applicable only for the last axis.
+                    _, inner = sch[curr].split(curr.op.reduce_axis[0], factor=num_thread)
+                    sch[curr].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+                    sch[curr].compute_at(sch[out], out.op.axis[axis - 1])
+                    sch[curr].pragma(curr.op.axis[0], "auto_unroll_max_step", num_thread)
+                    sch[curr].pragma(curr.op.axis[0], "unroll_explicit", True)
+                else:
+                    # General schedule for rest cases.
+                    fused = sch[curr].fuse(*curr.op.axis)
+                    outer, inner = sch[curr].split(fused, factor=num_thread)
+                    sch[curr].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+                    sch[curr].bind(outer, _tvm.te.thread_axis("blockIdx.x"))
+                    sch[curr].pragma(outer, "auto_unroll_max_step", num_thread)
+                    sch[curr].pragma(outer, "unroll_explicit", True)
+            else:
+                sch[curr].compute_inline()
+        for inp in curr.op.input_tensors:
+            schedule(inp)
 
-    _, red_r_i = sch[red].split(red.op.reduce_axis[0], factor=32)
-    sch[red].bind(red_r_i, thd_x)
+    schedule(out)
 
-    # This is a more aggressive optimzation that only works for limited workloads.
-    if ndim > 1 and axis in [0, ndim - 1]:
-        sch[red].compute_at(sch[mul2], mul2.op.axis[axis - 1])
-        fused = sch[mul2].fuse(*mul2.op.axis[0:axis])
-        sch[mul2].bind(fused, blk_x)
+    if ndim > 1 and axis == ndim - 1:
+        # Cross-thread reduction schedule is applicable only for the last axis.
+        _, inner = sch[out].split(out.op.axis[axis], factor=num_thread)
+        sch[out].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+        fused = sch[out].fuse(*out.op.axis[:axis])
+        sch[out].bind(fused, _tvm.te.thread_axis("blockIdx.x"))
+    else:
+        # General schedule for rest cases.
+        fused = sch[out].fuse(*out.op.axis)
+        outer, inner = sch[out].split(fused, factor=num_thread)
+        sch[out].bind(inner, _tvm.te.thread_axis("threadIdx.x"))
+        sch[out].bind(outer, _tvm.te.thread_axis("blockIdx.x"))
 
-    sch[red].pragma(red.op.axis[0], "auto_unroll_max_step", 64)
-    sch[red].pragma(red.op.axis[0], "unroll_explicit", True)
     return sch
 
 

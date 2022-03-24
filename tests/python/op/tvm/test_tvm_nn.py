@@ -118,49 +118,51 @@ def test_dense(n, m, k, device):
 
 # pylint: disable=no-member
 # pylint: disable=protected-access
-# TODO: Currently TVM fails to schedule softmax or softmax_dx in certain cases
-@pytest.mark.skip
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("dtype", ["float32"])
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize(
     "shape",
     [
-        [3],
-        [3, 2, 5, 8, 4, 7],
+        [3, 2],
+        [3, 2, 5, 8],
     ],
 )
-@pytest.mark.parametrize("axis", [0, -1])
-@pytest.mark.parametrize(
-    "funcs",
-    [
-        [raf._op.sym.softmax, torch.softmax],
-    ],
-)
-def test_unary_with_axis(device, dtype, shape, axis, funcs):
-    raf_fwd, torch_fwd = funcs
+def test_softmax(device, dtype, shape):
+    axis = -1  # axis=0 should be on CuDNN.
+    tol = 1e-5
+    if dtype == "float16":
+        tol = 1e-3
+        if device != "cuda":
+            pytest.skip("float16 is not supported on cpu")
 
-    class TestModel(raf.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
         def forward(self, x):
-            return raf_fwd(x, axis=axis)
+            return raf._op.sym.softmax(x, axis=axis)
 
-    model = TestModel()
+    model = Model()
+
     # forward
     m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
+    if dtype == "float16":
+        model = raf.amp.autocast(model, [m_x])
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
-    t_y = torch_fwd(t_x, dim=axis)
-    check(m_y, t_y)
-    check(v_y, t_y)
+    v_y = run_vm_model(model, device, [m_x])
+    check(m_y, v_y)
+
+    with torch.cuda.amp.autocast(dtype == "float16"):
+        t_y = torch.softmax(t_x, dim=axis)
+    check(m_y, t_y, rtol=tol, atol=tol)
+
     # backward
     m_dy, t_dy = randn_torch(shape, device=device, dtype=dtype)
     t_y.backward(t_dy)
     m_y.backward(m_dy)
-    check(m_x.grad, t_x.grad)
+    check(m_x.grad, t_x.grad, rtol=tol, atol=tol)
 
 
 # pylint: disable=no-member
