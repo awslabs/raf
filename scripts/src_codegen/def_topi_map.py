@@ -94,7 +94,6 @@ OP_MAP = {
     "raf.op.tvm.threefry_generate": "random.threefry_generate",
     "raf.op.tvm.threefry_split": "random.threefry_split",
     "raf.op.tvm.variance": "variance",
-    "raf.op.tvm.where": "where",
     "raf.op.tvm.zeros": "zeros",
     "raf.op.tvm.zeros_like": "zeros_like",
     "raf.op.tvm.batch_matmul_nt": "nn.batch_matmul",

@@ -897,7 +897,7 @@ def test_where(shape, device, broadcast):
             return raf.where(condition, x, y)
 
     m_model = WhereModel()
-    m_condition, n_condition = randint(shape, low=0, high=1, device=device, dtype="bool")
+    m_condition, n_condition = randint(shape, low=0, high=2, device=device, dtype="bool")
     t_condition = torch.tensor(n_condition, device=device)
     m_x, t_x = randn_torch(shape, device=device, requires_grad=True)
     if broadcast:
@@ -905,8 +905,12 @@ def test_where(shape, device, broadcast):
     else:
         m_y, t_y = randn_torch(shape, device=device, requires_grad=True)
     m_res = m_model(m_condition, m_x, m_y)
+    v_res = run_vm_model(m_model, device, [m_condition, m_x, m_y])
+    check(m_res, v_res)
+
     t_res = torch.where(t_condition, t_x, t_y)
     check(m_res, t_res)
+
     m_dy, t_dy = randn_torch(m_res.shape, device=device)
     m_res.backward(m_dy)
     t_res.backward(t_dy)

@@ -79,14 +79,6 @@ RAF_OP_DECLARE("raf.op.rsqrt", [](const CallValues& call) {
   throw;
 });
 
-RAF_OP_DECLARE("raf.op.logical_not", [](const CallValues& call) {
-  const auto* args = call->args.as<UnaryArgs>();
-  CHECK(args != nullptr);
-  RAF_UNARY_SCALAR(!, args->x);
-  LOG(FATAL) << "NotImplementedError";
-  throw;
-});
-
 void Unary(const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
@@ -103,6 +95,13 @@ void Unary(const CallValues& call) {
     }
   }
 }
+
+RAF_OP_DECLARE("raf.op.logical_not", [](const CallValues& call) {
+  const auto* args = call->args.as<UnaryArgs>();
+  CHECK(args != nullptr);
+  RAF_UNARY_SCALAR(!, args->x);
+  Unary(call);
+});
 
 RAF_OP_DECLARE("raf.op.relu", Unary);
 RAF_OP_DECLARE("raf.op.gelu", Unary);

@@ -95,6 +95,7 @@ RAF_TVM_UNARY(gelu, Gelu);
 RAF_TVM_UNARY(erf, Erf);
 RAF_TVM_UNARY(sqrt, Sqrt);
 RAF_TVM_UNARY(rsqrt, Rsqrt);
+RAF_TVM_UNARY(logical_not, LogicalNot);
 RAF_TVM_UNARY(atan, Atan);
 RAF_TVM_UNARY(negative, Negative);
 RAF_TVM_UNARY(sigmoid, Sigmoid);
