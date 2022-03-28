@@ -69,8 +69,8 @@ class TwoBranchModel(raf.Model):
             let %v2 = raf.op.atan(%v);
             let %v3 = (%v1,);
             let %v4 = (%v2,);
-            let %v5 = raf.op._allreduce(%v3, str"sum");
-            let %v6 = raf.op._allreduce(%v4, str"sum");
+            let %v5 = raf.op._allreduce(%v3, str"sum", nullptr);
+            let %v6 = raf.op._allreduce(%v4, str"sum", nullptr);
             let %v7 = raf.op.multiply(%v5, %c);
             let %v8 = raf.op.multiply(%v6, %c);
             let %v9 = (%v7, %v8);
@@ -90,9 +90,9 @@ class TwoBranchModel(raf.Model):
         x_2b = builder.make_tuple((x_1b,))
 
         x_2a1 = builder.const("sum")
-        x_3a = builder.call("_allreduce", [x_2a, x_2a1])
+        x_3a = builder.call("_allreduce", [x_2a, x_2a1, builder.const(None)])
         x_2a2 = builder.const("sum")
-        x_3b = builder.call("_allreduce", [x_2b, x_2a2])
+        x_3b = builder.call("_allreduce", [x_2b, x_2a2, builder.const(None)])
 
         x_4a = builder.call("multiply", [x_3a, c])
         x_4b = builder.call("multiply", [x_3b, c])
@@ -138,10 +138,10 @@ class UnbalancedModel(raf.Model):
             let %v3 = raf.op.atan(%v1);
             let %v4 = (%v2,);
             let %v5 = raf.op.atan(%v3);
-            let %v6 = raf.op._allreduce(%v4, str"sum");
+            let %v6 = raf.op._allreduce(%v4, str"sum", nullptr);
             let %v7 = raf.op.atan(%v5);
             let %v8 = (%v7,);
-            let %v9 = raf.op._allreduce(%v8, str"sum");
+            let %v9 = raf.op._allreduce(%v8, str"sum", nullptr);
             let %v10 = raf.op.multiply(%v6, %c);
             let %v11 = raf.op.multiply(%v9, %c);
             let %v12 = (%v11, %v10);
@@ -165,13 +165,13 @@ class UnbalancedModel(raf.Model):
 
             x_3a = builder.call("atan", [x_2a])
             x_2b1 = builder.const("sum")
-            x_3b = builder.call("_allreduce", [x_2b, x_2b1])
+            x_3b = builder.call("_allreduce", [x_2b, x_2b1, builder.const(None)])
 
             x_4a = builder.call("atan", [x_3a])
             # branch b is delayed since mul depdends on allreduce
             x_5a = builder.make_tuple((x_4a,))
             x_5a1 = builder.const("sum")
-            x_6a = builder.call("_allreduce", [x_5a, x_5a1])
+            x_6a = builder.call("_allreduce", [x_5a, x_5a1, builder.const(None)])
 
             # now launch update ops, branch b first
             x_4b = builder.call("multiply", [x_3b, c])
@@ -197,14 +197,14 @@ class UnbalancedModel(raf.Model):
             x_2a = builder.call("atan", [x_1a])
 
             x_2b1 = builder.const("sum")
-            x_3b = builder.call("_allreduce", [x_2b, x_2b1])
+            x_3b = builder.call("_allreduce", [x_2b, x_2b1, builder.const(None)])
             x_3a = builder.call("atan", [x_2a])
 
             # branch b is delayed since mul depdends on allreduce
             x_4a = builder.call("atan", [x_3a])
             x_5a = builder.make_tuple((x_4a,))
             x_5a1 = builder.const("sum")
-            x_6a = builder.call("_allreduce", [x_5a, x_5a1])
+            x_6a = builder.call("_allreduce", [x_5a, x_5a1, builder.const(None)])
 
             # now launch update ops, branch b first
             x_4b = builder.call("multiply", [x_3b, c])
@@ -244,7 +244,7 @@ class ExampleModel(raf.Model):
             let %v = raf.op.atan(%x);
             let %v1 = (%v,);
             let %v2 = raf.op.atan(%v);
-            let %v3 = raf.op._allreduce(%v1, str"sum");
+            let %v3 = raf.op._allreduce(%v1, str"sum", nullptr);
             let %v4 = raf.op.atan(%v2);
             let %v5 = raf.op.atan(%v3);
             let %v6 = raf.op.multiply(%v5, %v4);
@@ -262,7 +262,7 @@ class ExampleModel(raf.Model):
             a1_b = builder.call("atan", [a0])
 
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const(None)])
             a2_b = builder.call("atan", [a1_b])
 
             a2_a = builder.call("atan", [a1_a])
@@ -281,7 +281,7 @@ class ExampleModel(raf.Model):
 
             a2_b = builder.call("atan", [a1_b])
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const(None)])
 
             a2_a = builder.call("atan", [a1_a])
 
@@ -319,7 +319,7 @@ class DelayedSuccessorModel(raf.Model):
             let %x_0 = raf.op.atan(%x);
             let %x_1 = (%x_0,);
             let %x_2 = raf.op.atan(%x_0);
-            let %x_3 = raf.op._allreduce(%x_1, str"sum");
+            let %x_3 = raf.op._allreduce(%x_1, str"sum", nullptr);
             let %x_4 = raf.op.atan(%x_2);
             let %x_5 = raf.op.atan(%x_4);
             let %x_6 = raf.op.atan(%x_5);
@@ -341,7 +341,7 @@ class DelayedSuccessorModel(raf.Model):
             a1_b = builder.call("atan", [a0])
 
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const(None)])
             a2_b = builder.call("atan", [a1_b])
 
             a3_b = builder.call("atan", [a2_b])
@@ -365,7 +365,7 @@ class DelayedSuccessorModel(raf.Model):
 
             a2_b = builder.call("atan", [a1_b])
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const(None)])
 
             a3_b = builder.call("atan", [a2_b])
             a4_b = builder.call("atan", [a3_b])
@@ -505,14 +505,14 @@ class CascadingCollectiveModel(raf.Model):
             let %v = raf.op.multiply(%x, %c);
             let %v1 = (%v,);
             let %v2 = raf.op.atan(%v);
-            let %v3 = raf.op._allreduce(%v1, str"sum");
+            let %v3 = raf.op._allreduce(%v1, str"sum", nullptr);
             let %v4 = raf.op.atan(%v2);
             let %v5 = raf.op.atan(%v4);
             let %v6 = raf.op.relu(%v3);
             let %v7 = raf.op.multiply(%v6, %v5);
             let %v8 = (%v7,);
             let %v9 = raf.op.atan(%v7);
-            let %v10 = raf.op._allreduce(%v8, str"sum");
+            let %v10 = raf.op._allreduce(%v8, str"sum", nullptr);
             let %v11 = raf.op.atan(%v9);
             let %v12 = raf.op.atan(%v11);
             let %v13 = raf.op.relu(%v10);
@@ -528,7 +528,7 @@ class CascadingCollectiveModel(raf.Model):
             a1_b = builder.call("atan", [a0])
 
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const(None)])
             a2_b = builder.call("atan", [a1_b])
 
             # a2_a is delayed after a3_b
@@ -545,7 +545,7 @@ class CascadingCollectiveModel(raf.Model):
 
             a2_b = builder.call("atan", [a1_b])
             a1_aii = builder.const("sum")
-            a1_a = builder.call("_allreduce", [a1_ai, a1_aii])
+            a1_a = builder.call("_allreduce", [a1_ai, a1_aii, builder.const(None)])
 
             # a2_a is delayed after a3_b
             a3_b = builder.call("atan", [a2_b])

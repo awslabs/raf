@@ -25,7 +25,7 @@ SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_allreduce_with_tensor(dtype, computation):
-    print("Testing allreduce with a single tensor as input.")
+    """Testing allreduce with a single tensor as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -75,7 +75,7 @@ def test_allreduce_with_tensor(dtype, computation):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_allreduce_with_tensor_list(computation):
-    print("Testing allreduce with a list of tensors as input.")
+    """Testing allreduce with a list of tensors as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -140,6 +140,44 @@ def test_allreduce_with_tensor_list(computation):
         check(vy, target_y)
 
 
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]], [[1, 2, 3]]])
+def test_allreduce_with_subcomm(dtype, rank_list):
+    """Testing allreduce with a single tensor as input."""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            x = raf.allreduce(x, "sum", rank_list)
+            return x
+
+    model = TestModel()
+    _, rank, local_rank = get_dist_info(verbose=True)
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype=dtype) * (rank + 1)
+    x = raf.array(x, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", x)
+    model.to(device=device)
+    y = model(x)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    vx = raf.array(vx, device=device)
+    run_model(model, [vx], device)
+    check(y, vx)
+    for group in rank_list:
+        if rank in group:
+            ones = np.ones(shape=(4, 4), dtype=dtype)
+            target_y = ones * sum(np.array(group) + 1)
+            if rank == 0:
+                print(f"{rank} - Y: ", y)
+                print(f"{rank} - T: ", target_y)
+            check(y, target_y)
+
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
 def test_allgather(axis):
@@ -171,7 +209,7 @@ def test_allgather(axis):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
 def test_allgather_with_tensor_list(axis):
-    print("Testing allgather with a list of tensors as input.")
+    """Testing allgather with a list of tensors as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -202,6 +240,44 @@ def test_allgather_with_tensor_list(axis):
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]], [[1, 2, 3]]])
+def test_allgather_with_subcomm(axis, rank_list):
+    """Testing allgather with a list of tensors as input."""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x1, x2):
+            x = raf.allgather([x1, x2], axis=axis, rank_list=rank_list)
+            return raf.concatenate(x)
+
+    model = TestModel()
+    _, rank, local_rank = get_dist_info(verbose=True)
+    device = f"cuda({local_rank})"
+    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", [x1, x2])
+    model.to(device=device)
+    y = run_model(model, [x1, x2], device)
+    for group in rank_list:
+        if rank in group:
+            x1 = np.ones(shape=(4, 4), dtype="float32")
+            x2 = np.ones(shape=(4, 4), dtype="float32") * -1
+            target_y1 = np.concatenate([x1 * (r + 1) for r in group], axis=axis)
+            target_y2 = np.concatenate([x2 * (r + 1) for r in group], axis=axis)
+            target_y = np.concatenate([target_y1, target_y2])
+            print(f"{rank} - Y: ", y)
+            print(f"{rank} - T: ", target_y)
+            check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
@@ -305,7 +381,7 @@ def test_send_recv():
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce(computation):
-    print("Testing reduce")
+    """Testing reduce"""
 
     class TestModel(raf.Model):
         def build(self):
@@ -354,7 +430,7 @@ def test_reduce(computation):
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce_list(computation):
-    print("Testing reduce with list of tensor")
+    """Testing reduce with list of tensor"""
 
     class TestModel(raf.Model):
         def build(self):
@@ -419,7 +495,7 @@ def test_reduce_list(computation):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 def test_broadcast():
-    print("Testing broadcast with a list of tensors.")
+    """Testing broadcast with a list of tensors."""
 
     # pylint: disable=attribute-defined-outside-init
     class TestModel(raf.Model):

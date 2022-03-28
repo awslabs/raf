@@ -10,113 +10,148 @@
 #pragma once
 #include <unistd.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string>
+#include <set>
 #include <memory>
 #include "dmlc/logging.h"
 #include "raf/registry.h"
 #include "raf/value.h"
-#include "./connector.h"
+#include "raf/op_utils.h"
+
+typedef std::pair<std::string, std::vector<std::vector<int64_t>>> CommunicatorID;
 
 namespace raf {
 namespace distributed {
 namespace communicator {
 
-using connector::Connector;
-using connector::ConnectorManager;
 using registry::GetPackedFunc;
+using namespace raf::value;
 
-class Communicator {
+#ifdef RAF_USE_MPI
+#include <mpi.h>
+#define MPI_CALL(cmd)                                                         \
+  do {                                                                        \
+    int e = cmd;                                                              \
+    if (e != MPI_SUCCESS) {                                                   \
+      LOG(FATAL) << "Failed: MPI error " << __FILE__ << ":" << __LINE__ << e; \
+    }                                                                         \
+  } while (0)
+#endif
+
+#ifdef RAF_USE_NCCL
+#define NCCL_CALL(cmd)                                                                            \
+  do {                                                                                            \
+    ncclResult_t e = cmd;                                                                         \
+    if (e != ncclSuccess) {                                                                       \
+      LOG(INFO) << "Failed: NCCL error " << __FILE__ << ":" << __LINE__ << ncclGetErrorString(e); \
+      exit(EXIT_FAILURE);                                                                         \
+    }                                                                                             \
+  } while (0)
+#endif
+
+class CommunicatorObj : public Object {
  public:
-  Communicator() {
-  }
-  virtual ~Communicator() {
-  }
-  int GetLocalSize() {
-    return connector_->local_size;
-  }
-  int GetLocalRank() {
-    return connector_->local_rank;
-  }
-  int GetSize() {
-    return connector_->size;
-  }
-  int GetRank() {
-    return connector_->rank;
-  }
-  int GetRootRank() {
-    return root_rank;
-  }
-  bool IsRoot() {
-    return GetRank() == GetRootRank();
-  }
-  virtual void* GetCommHandle() = 0;
+  int local_size;
+  int local_rank;
+  int size;
+  int rank;
+  int world_size;
+  int world_rank;
+  int root_rank;
+  int group_id;
+  int group_size;
+  std::vector<uint64_t> host_ids;
 
- protected:
-  virtual void Init() = 0;
-  virtual void Finalize() = 0;
-  void GetConnector(const std::string& name = "mpi") {
-    connector_.reset(ConnectorManager::Get()->GetConnector(name));
+  void VisitAttrs(tvm::AttrVisitor* v) {
+    v->Visit("local_size", &local_size);
+    v->Visit("local_rank", &local_rank);
+    v->Visit("size", &size);
+    v->Visit("rank", &rank);
+    v->Visit("world_size", &world_size);
+    v->Visit("world_rank", &world_rank);
+    v->Visit("root_rank", &root_rank);
+    v->Visit("group_id", &group_id);
+    v->Visit("group_size", &group_size);
   }
 
- public:
-  std::string type;
-  int root_rank = 0;
-  std::shared_ptr<Connector> connector_;
+  virtual ~CommunicatorObj() = default;
+
+  static constexpr const char* _type_key = "raf.distributed.Communicator";
+  RAF_BASE_OBJECT(CommunicatorObj, Object);
 };
 
-class CommunicatorManager {
+class Communicator : public ObjectRef {
  public:
-  // TODO: support multiple communicators.
-  CommunicatorManager() {
-    comm_ = nullptr;
+  static Communicator Get(const std::string& name = "", const Value rank_list = NullValue<Value>());
+  static void InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
+                                  const Communicator global_comm);
+  static uint64_t GetHostID();
+
+  RAF_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
+};
+
+class VoidCommunicatorObj final : public CommunicatorObj {
+ public:
+  static constexpr const char* _type_key = "raf.distributed.VoidCommunicator";
+  RAF_FINAL_OBJECT(VoidCommunicatorObj, CommunicatorObj);
+};
+
+class VoidCommunicator final : public Communicator {
+ public:
+  static VoidCommunicator make(Value rank_list);
+  RAF_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
+};
+
+class CommunicatorPool {
+ public:
+  CommunicatorPool() {
   }
-  static CommunicatorManager* Get() {
-    static CommunicatorManager* instance = new CommunicatorManager();
+
+  static CommunicatorPool* Get() {
+    static CommunicatorPool* instance = new CommunicatorPool();
     return instance;
   }
 
-  Communicator* GetCommunicator(const std::string& name = "") {
-    CHECK_LT(name.size(), 128) << "There is no such communicator: " << name;
-    thread_local char maker_name[128];
+  Communicator GetCommunicator(const std::string& name, const Value rank_list) {
+#ifdef RAF_USE_NCCL
+    auto default_name = "nccl";
+#else
+    auto default_name = "void";
+#endif
+    auto comm_name = name.empty() ? default_name : name;
 
-    std::string default_name = "nccl";
-    snprintf(maker_name, sizeof(maker_name), "raf.distributed.communicator._make.%s",
-             default_name.c_str());
-    const registry::PackedFunc* pf = registry::Registry::Get(maker_name);
-    if (pf == nullptr) default_name = "void";
-
-    if (comm_ == nullptr) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (comm_ == nullptr) {
-        // ok, it is truly a nullptr
-        if (name == "") {
-          snprintf(maker_name, sizeof(maker_name), "raf.distributed.communicator._make.%s",
-                   default_name.c_str());
-        } else {
-          if (name != "void") CHECK_EQ(name, "nccl") << "Unsupported communicator: " << name;
-          snprintf(maker_name, sizeof(maker_name), "raf.distributed.communicator._make.%s",
-                   name.c_str());
+    std::vector<std::vector<int64_t>> rank_list_;
+    std::set<int64_t> rank_set_;
+    if (rank_list.defined()) {
+      for (auto group : Downcast<TupleValue>(rank_list)->fields) {
+        std::vector<int64_t> group_;
+        for (auto rank : Downcast<TupleValue>(group)->fields) {
+          auto rank_val = Downcast<IntValue>(rank)->value;
+          CHECK(rank_set_.count(rank_val) == 0) << "Each rank can only appear on rank_list once";
+          group_.push_back(rank_val);
+          rank_set_.insert(rank_val);
         }
-        void* ret = GetPackedFunc(maker_name)();
-        comm_.reset(static_cast<Communicator*>(ret));
-        return comm_.get();
+        rank_list_.push_back(group_);
       }
     }
-    // otherwise this is not nullptr
-    CHECK_EQ(name, "") << "You have already initialized a communicator [" << comm_->type
-                       << "], and currently we do not support multiple communicators";
-    return comm_.get();
+
+    CommunicatorID id(comm_name, rank_list_);
+
+    if (comm_.count(id) == 0) {
+      const std::string prefix = "raf.distributed.communicator._make.";
+      auto func_name = prefix + comm_name;
+      Communicator comm = GetPackedFunc(func_name)(rank_list);
+      comm_[id] = std::move(comm);
+    }
+    return comm_[id];
   }
 
   void Remove() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    comm_ = nullptr;
+    comm_.clear();
   }
 
- public:
-  std::shared_ptr<Communicator> comm_;
-  std::mutex mutex_;
+ private:
+  std::map<CommunicatorID, Communicator> comm_;
 };
 
 }  // namespace communicator

@@ -14,16 +14,17 @@ namespace raf {
 namespace distributed {
 
 using communicator::Communicator;
-using communicator::CommunicatorManager;
+using communicator::CommunicatorPool;
 
 DistContext DistContext::make() {
+  /* Legacy Support */
   ir::ObjectPtr<DistContextObj> n = ir::make_object<DistContextObj>();
-  Communicator* comm = CommunicatorManager::Get()->GetCommunicator();
-  n->root_rank = comm->GetRootRank();
-  n->rank = comm->GetRank();
-  n->size = comm->GetSize();
-  n->local_rank = comm->GetLocalRank();
-  n->local_size = comm->GetLocalSize();
+  Communicator comm = Communicator::Get();
+  n->root_rank = comm->root_rank;
+  n->rank = comm->rank;
+  n->size = comm->size;
+  n->local_rank = comm->local_rank;
+  n->local_size = comm->local_size;
 
   return DistContext(n);
 }

@@ -50,7 +50,7 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp = raf.op.add_event(int64(1), int64(1));
                 let %set_stream_comp1 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comp = raf.op.wait_event(int64(1), int64(4));
-                let %a3 = raf.op._allreduce(%a2, str"sum");
+                let %a3 = raf.op._allreduce(%a2, str"sum", nullptr);
                 let %add_event_comm = raf.op.add_event(int64(2), int64(4));
                 let %set_stream_comp2 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = raf.op.wait_event(int64(2), int64(1));
@@ -66,7 +66,7 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_2 = builder.call("_allreduce", [x_2, raf.ir.const("sum")])
+            x_2 = builder.call("_allreduce", [x_2, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(2, comp_stream)
@@ -120,7 +120,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp = raf.op.add_event(int64(1), int64(1));
                 let %set_stream_comm = raf.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp = raf.op.wait_event(int64(1), int64(4));
-                let %a4 = raf.op._allreduce(%a3, str"sum");
+                let %a4 = raf.op._allreduce(%a3, str"sum", nullptr);
                 let %add_event_comm = raf.op.add_event(int64(3), int64(4));
                 let %set_stream_comp1 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = raf.op.wait_event(int64(3), int64(1));
@@ -130,7 +130,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp1 = raf.op.add_event(int64(2), int64(1));
                 let %set_stream_comm1 = raf.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp1 = raf.op.wait_event(int64(2), int64(4));
-                let %a8 = raf.op._allreduce(%a7, str"sum");
+                let %a8 = raf.op._allreduce(%a7, str"sum", nullptr);
                 let %add_event_comm1 = raf.op.add_event(int64(4), int64(4));
                 let %set_stream_comp2 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm1 = raf.op.wait_event(int64(4), int64(1));
@@ -151,7 +151,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_3i, raf.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_3i, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(2, comp_stream)
@@ -162,7 +162,7 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(3, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(3, comm_stream)
-            x_6 = builder.call("_allreduce", [x_6i, raf.ir.const("sum")])
+            x_6 = builder.call("_allreduce", [x_6i, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(4, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(4, comp_stream)
@@ -193,10 +193,10 @@ def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
             x = extended_var("x", shape=shape)
             x_1 = builder.call("atan", [x])
             x_2i = builder.make_tuple([x_1])
-            x_2 = builder.call("_allreduce", [x_2i, raf.ir.const("sum")])
+            x_2 = builder.call("_allreduce", [x_2i, raf.ir.const("sum"), raf.ir.const(None)])
             x_3 = builder.call("atan", [x_1])
             x_4i = builder.make_tuple([x_3])
-            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum")])
+            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum"), raf.ir.const(None)])
             x_5 = builder.call("atan", [x_4])
             x_6i = builder.make_tuple([x_5, x_2])
             x_6 = builder.call("concatenate", [x_6i, raf.ir.const(0)])
@@ -216,14 +216,14 @@ def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
                 let %add_event_comp = raf.op.add_event(int64(1), int64(1));
                 let %set_stream_comm = raf.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp = raf.op.wait_event(int64(1), int64(4));
-                let %v2 = raf.op._allreduce(%v1, str"sum");
+                let %v2 = raf.op._allreduce(%v1, str"sum", nullptr);
                 let %set_stream_comp1 = raf.op.set_stream(int64(0), int64(1));
                 let %v3 = raf.op.atan(%v);
                 let %v4 = (%v3,);
                 let %add_event_comp1 = raf.op.add_event(int64(2), int64(1));
                 let %set_stream_comm1 = raf.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp1 = raf.op.wait_event(int64(2), int64(4));
-                let %v5 = raf.op._allreduce(%v4, str"sum");
+                let %v5 = raf.op._allreduce(%v4, str"sum", nullptr);
                 let %add_event_comm = raf.op.add_event(int64(3), int64(4));
                 let %set_stream_comp2 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = raf.op.wait_event(int64(3), int64(1));
@@ -241,14 +241,14 @@ def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_2 = builder.call("_allreduce", [x_2i, raf.ir.const("sum")])
+            x_2 = builder.call("_allreduce", [x_2i, raf.ir.const("sum"), raf.ir.const(None)])
             builder.set_stream(0, comp_stream)
             x_3 = builder.call("atan", [x_1])
             x_4i = builder.make_tuple([x_3])
             builder.add_event(2, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(2, comm_stream)
-            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum")])
+            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(3, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(3, comp_stream)
@@ -280,8 +280,8 @@ def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
             x_4i = builder.make_tuple([x_1])
             x_2 = builder.call("atan", [x_1])
             x_3i = builder.make_tuple([x_2])
-            x_3 = builder.call("_allreduce", [x_3i, raf.ir.const("sum")])
-            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_3i, raf.ir.const("sum"), raf.ir.const(None)])
+            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum"), raf.ir.const(None)])
             x_5 = builder.call("atan", [x_3])
             x_6i = builder.make_tuple([x_5, x_4])
             x_6 = builder.call("concatenate", [x_6i, raf.ir.const(0)])
@@ -303,9 +303,9 @@ def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
                 let %add_event_comp = raf.op.add_event(int64(1), int64(1));
                 let %set_stream_comm = raf.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp = raf.op.wait_event(int64(1), int64(4));
-                let %v4 = raf.op._allreduce(%v3, str"sum");
+                let %v4 = raf.op._allreduce(%v3, str"sum", nullptr);
                 let %add_event_comm = raf.op.add_event(int64(2), int64(4));
-                let %v5 = raf.op._allreduce(%v1, str"sum");
+                let %v5 = raf.op._allreduce(%v1, str"sum", nullptr);
                 let %add_event_comm1 = raf.op.add_event(int64(3), int64(4));
                 let %set_stream_comp1 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = raf.op.wait_event(int64(2), int64(1));
@@ -326,9 +326,9 @@ def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_3i, raf.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_3i, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(2, comm_stream)
-            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum")])
+            x_4 = builder.call("_allreduce", [x_4i, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(3, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(3, comp_stream)
@@ -383,7 +383,7 @@ def test_multi_input_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_2, raf.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_2, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(2, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(2, comp_stream)
@@ -435,7 +435,7 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
                 let %add_event_comp = raf.op.add_event(int64(1), int64(1));
                 let %set_stream_comm = raf.op.set_stream(int64(0), int64(4));
                 let %wait_for_comp = raf.op.wait_event(int64(1), int64(4));
-                let %a3 = raf.op._allreduce(%a2, str"sum");
+                let %a3 = raf.op._allreduce(%a2, str"sum", nullptr);
                 let %add_event_comm = raf.op.add_event(int64(2), int64(4));
                 let %set_stream_comp1 = raf.op.set_stream(int64(0), int64(1));
                 let %wait_for_comm = raf.op.wait_event(int64(2), int64(1));
@@ -454,7 +454,7 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
             builder.add_event(1, comp_stream)
             builder.set_stream(0, comm_stream)
             builder.wait_event(1, comm_stream)
-            x_3 = builder.call("_allreduce", [x_2, raf.ir.const("sum")])
+            x_3 = builder.call("_allreduce", [x_2, raf.ir.const("sum"), raf.ir.const(None)])
             builder.add_event(4, comm_stream)
             builder.set_stream(0, comp_stream)
             builder.wait_event(4, comp_stream)

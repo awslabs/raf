@@ -169,6 +169,10 @@ else ()
   )
 endif()
 
+if (${RAF_USE_MPI} STREQUAL "ON")
+  set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_MPI)
+endif()
+
 set(RAF_SOURCE_FILES
   ${RAF_CXX_SOURCE_FILES}
   ${RAF_CUDA_SOURCE_FILES}

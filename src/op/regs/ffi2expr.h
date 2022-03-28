@@ -47,19 +47,25 @@ inline ir::Expr ArrayLike(const registry::TVMArgValue& a) {
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
-    ir::Array<Value> fields;
-    for (const ObjectRef& i : *n) {
-      if (const auto* e = i.as<IntImmNode>()) {
-        int64_t val = e->value;
-        fields.push_back(IntValue::make(e->dtype, val));
-        continue;
+    std::function<TupleValue(const ArrayNode*)> ConvertArray = [&](const ArrayNode* n) {
+      ir::Array<Value> fields;
+      for (const ObjectRef& i : *n) {
+        if (const auto* e = i.as<IntImmNode>()) {
+          fields.push_back(IntValue::make(e->dtype, e->value));
+          continue;
+        } else if (const auto* e = i.as<ArrayNode>()) {
+          fields.push_back(std::move(ConvertArray(e)));
+          continue;
+        }
+        LOG(FATAL)
+            << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
+            << "because the " << ToOrdinal(fields.size()) << " member is of type \""
+            << i->GetTypeKey() << '"';
+        throw;
       }
-      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of integers, "
-                 << "because the " << ToOrdinal(fields.size()) << " member is of type \""
-                 << i->GetTypeKey() << '"';
-      throw;
-    }
-    return RAF_CONST(TupleValue, std::move(fields));
+      return TupleValue::make(std::move(fields));
+    };
+    return RAF_CONST(TupleValue, std::move(ConvertArray(n)->fields));
   }
 
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)

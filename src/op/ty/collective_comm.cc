@@ -10,6 +10,7 @@
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
 #include "raf/dist_context.h"
+#include "raf/communicator.h"
 #include "raf/type.h"
 #include "../schema/communication.h"
 #include "./utils.h"
@@ -20,7 +21,7 @@ namespace op {
 using namespace raf::ir;
 using namespace raf::value;
 using namespace raf::op::schema;
-using raf::distributed::DistContext;
+using namespace raf::distributed::communicator;
 
 template <typename T>
 Type IdentityType(const CallValues& value) {
@@ -80,10 +81,10 @@ RAF_OP_TYPE("raf.op._recv", "NCCLRecv", RecvInfer);
 Type AllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<AllgatherArgs>();
   CHECK(args != nullptr);
-  auto dctx = DistContext::Global();
+  auto size = Communicator::Get("nccl", args->rank_list)->size;
   auto ttype = GetType(args->x).as<TensorTypeNode>();
   auto shape = ttype->shape;
-  auto new_size = shape[args->axis].as<IntImmNode>()->value * dctx->size;
+  auto new_size = shape[args->axis].as<IntImmNode>()->value * size;
   shape.Set(args->axis, Integer(new_size));
   return TensorType(shape, DataType(ttype->dtype));
 }

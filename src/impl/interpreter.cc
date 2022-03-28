@@ -32,6 +32,7 @@ namespace interpreter {
 using namespace raf::ir;
 using namespace raf::value;
 using namespace raf::op;
+using namespace raf::distributed::communicator;
 using binding::BindingEntry;
 using binding::BindNDArray;
 using binding::DeTuple;
@@ -389,7 +390,9 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
   void RequestDistributed(Requests* req, int index) override {
     Requests::DistributedRequest& entry = req->distributed[index];
-    *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
+    *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+    // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
+    // ncclComm_t handler instead?
   }
 
  private:

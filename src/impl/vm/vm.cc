@@ -60,6 +60,7 @@ using namespace raf::registry;
 using namespace raf::requests;
 using namespace raf::device_api;
 using namespace raf::stream_pool;
+using namespace raf::distributed::communicator;
 
 namespace utils {
 inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id, Index event_id) {
@@ -1072,7 +1073,9 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     // prepare distributed requests
     for (size_t i = 0; i < requests->distributed.size(); i++) {
       Requests::DistributedRequest& entry = requests->distributed[i];
-      *entry.dest = distributed::communicator::CommunicatorManager::Get()->GetCommunicator();
+      *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+      // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
+      // ncclComm_t handler instead?
     }
 #ifdef RAF_USE_CUDA
     // prepare cuda stream requests

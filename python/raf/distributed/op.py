@@ -7,14 +7,14 @@ from .._op import sym
 from .context import get_context
 
 
-def allreduce(x, computation="sum"):
+def allreduce(x, computation="sum", rank_list=None):
     """General allreduce operators, take tensor or list of tensors as input."""
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._allreduce(x, computation)
+    return sym._allreduce(x, computation, rank_list)
 
 
-def allgather(x, axis):
+def allgather(x, axis, rank_list=None):
     """It performs concatenation across replicas.
 
     Parameters
@@ -23,6 +23,14 @@ def allgather(x, axis):
         The tensor(s) to be concatenated across replicas
     axis : int
         The axis over which concatenation is to be performed
+    rank_list: [[int]]
+        The list of ranks to communicate. This parameter will split the ranks
+        (MPI / NCCL processes) into multiple groups as specified by the user,
+        and each rank will only communicate within the group. If the rank list
+        leaves empty, the ranks won't get split. Note that this operator is
+        collective, which means ranks, whether they are in the rank_list or not,
+        must invoke this along with other ranks. The rank not in the rank_list
+        will run in standalone mode.
 
     Returns
     -------
@@ -34,7 +42,18 @@ def allgather(x, axis):
         return x if axis == 0 else sym.swap_axis(x, axis1=0, axis2=axis)
 
     is_list = isinstance(x, (tuple, list))
+
     dctx = get_context()
+    if rank_list:
+        for group in rank_list:
+            if dctx.rank in group:
+                size = len(group)
+                break
+        else:
+            size = 1
+    else:
+        size = dctx.size
+
     if not is_list:
         x = [x]
     l = len(x)
@@ -42,7 +61,7 @@ def allgather(x, axis):
     # pack the list of tensors into a single tensor
     x = [swap_axis(i) for i in x]
     if l > 1:
-        sx = [sym.shape(sym.repeat(i, axis=0, repeats=dctx.size)) for i in x]
+        sx = [sym.shape(sym.repeat(i, axis=0, repeats=size)) for i in x]
         x = [sym.reshape(i, (-1,)) for i in x]
         indices_or_sections = sym.concatenate_dx(x, axis=0)
         x = sym.concatenate(x, axis=0)
@@ -50,11 +69,11 @@ def allgather(x, axis):
         x = x[0]
 
     # broadcast the packed tensor
-    x = sym._allgather(x, axis=0)
+    x = sym._allgather(x, 0, rank_list)
 
     # unpack the tensor
     if l > 1:
-        x = sym.reshape(x, (dctx.size, -1))
+        x = sym.reshape(x, (size, -1))
         x = sym.split(x, indices_or_sections=indices_or_sections, axis=1)
         x = [sym.reshape(x[i], sx[i]) for i in range(l)]
     else:

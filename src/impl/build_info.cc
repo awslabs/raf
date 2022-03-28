@@ -39,8 +39,12 @@ std::string UseLLVM() {
   return RAF_USE_LLVM;
 }
 
-std::string UseMPI() {
-  return RAF_USE_MPI;
+bool UseMPI() {
+#ifdef RAF_USE_MPI
+  return true;
+#else
+  return false;
+#endif
 }
 
 bool UseNCCL() {
