@@ -9,8 +9,7 @@ This article introduces how to build RAF using CMake.
 <details>
 
 ```bash
-sudo apt-get install ccache      # ccache is used to accelerate build
-                     git
+sudo apt-get install git ccache   # ccache is used to accelerate build                    
 sudo snap install cmake --classic # hmm, cmake is required to run cmake
                                   # the cmake version installed by apt is too old
 ```
@@ -75,15 +74,7 @@ export PATH=$PATH:$CUDA_HOME/bin
 </details>
 
 **(Optional) cuDNN.** NVIDIA provides cuDNN separately on its website, which requires additional account registration. Please follow the [link](https://developer.nvidia.com/rdp/cudnn-download).
-One can either download the tar ball file for Linux and use the following command to decompress cuDNN and specify the path, or download the `.deb` file to install.
-
-<details>
-
-```bash
-tar zxvf cudnn-SOME-SUFFIX.tgz
-```
-
-</details>
+One can either download the tar ball file for Linux and use the following command to decompress cuDNN and specify the path, or download the `.deb` file to install. Please see the [link](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html) for detailed instructions on installing cuDNN.
 
 **(Optional) NCCL** NCCL is required for distributed training.
 Like cuDNN, NVIDIA requires account registration to download NCCL. The detailed download and installation steps can be found from this [link](https://docs.nvidia.com/deeplearning/nccl/install-guide/index.html#down).
@@ -138,10 +129,10 @@ Again, the `export` commands can be put in `.bashrc` for auto loading (see bonus
 <details>
 
 ```bash
-export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python
 export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 # The following commands can verify if the environments are set up correctly.
-python -c "import raf"
+python3 -c "import raf"
 ```
 
 </details>
