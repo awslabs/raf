@@ -112,10 +112,11 @@ Below we introduce an environment variable that indicates where RAF is.
 # Create the build directory
 git clone https://github.com/meta-project/meta --recursive && cd meta
 export RAF_HOME=$(pwd)
-mkdir $RAF_HOME/build && cd $RAF_HOME/build
+mkdir $RAF_HOME/build
 # Run the codegen for auto-generated source code
 bash ./scripts/src_codegen/run_all.sh
 # Configuration file for CMake
+cd $RAF_HOME/build
 cp ../cmake/config.cmake .
 # Edit the configuration file
 vim config.cmake
