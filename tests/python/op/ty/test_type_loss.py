@@ -44,14 +44,15 @@ def test_sgd(shape, dtype, learning_rate, mu):
         [3, 7],
     ],
 )
-def test_nll_loss(shape, dtype):
+@pytest.mark.parametrize("loss_type", ["nll_loss", "cross_entropy"])
+def test_nll_loss(loss_type, shape, dtype):
     class TestModel(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
         def forward(self, y_true, y_pred):  # pylint: disable=no-self-use
-            return raf.nll_loss(y_true=y_true, y_pred=y_pred)
+            return getattr(raf, loss_type)(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
     n, c = shape
@@ -85,7 +86,7 @@ def test_nll_loss(shape, dtype):
         [2, 3, 7],
     ],
 )
-@pytest.mark.parametrize("loss_type", ["cross_entropy", "smooth_l1_loss"])
+@pytest.mark.parametrize("loss_type", ["smooth_l1_loss"])
 def test_other_losses(loss_type, shape, dtype):
     class TestModel(raf.Model):
         def build(self):
@@ -93,10 +94,7 @@ def test_other_losses(loss_type, shape, dtype):
 
         @raf.model.trace
         def forward(self, y_true, y_pred):  # pylint: disable=no-self-use
-            if loss_type == "cross_entropy":
-                loss = raf.cross_entropy(y_true=y_true, y_pred=y_pred)
-            elif loss_type == "smooth_l1_loss":
-                loss = raf.smooth_l1_loss(y_true=y_true, y_pred=y_pred)
+            loss = getattr(raf, loss_type)(y_true=y_true, y_pred=y_pred)
             return loss
 
     model = TestModel()

@@ -58,10 +58,10 @@ RAF_TVM(nll_loss_dtrue, NllLossDtrue, LossDtpArgs, LossDtpSchema2Args, LossDtpSc
         GenericAttrs, GenericHasher, kElemWise);
 RAF_TVM(cross_entropy, CrossEntropy, LossArgs, LossSchema2Args, LossSchemaArgNames, GenericAttrs,
         LossHasher, kCommReduce);
-RAF_TVM(cross_entropy_dpred, CrossEntropyDpred, LossArgs, LossSchema2Args, LossSchemaArgNames,
-        GenericAttrs, LossHasher, kCommReduce);
-RAF_TVM(cross_entropy_dtrue, CrossEntropyDtrue, LossArgs, LossSchema2Args, LossSchemaArgNames,
-        GenericAttrs, LossHasher, kCommReduce);
+RAF_TVM(cross_entropy_dpred, CrossEntropyDpred, LossDtpArgs, LossDtpSchema2Args,
+        LossDtpSchemaArgNames, GenericAttrs, GenericHasher, kElemWise);
+RAF_TVM(cross_entropy_dtrue, CrossEntropyDtrue, LossDtpArgs, LossDtpSchema2Args,
+        LossDtpSchemaArgNames, GenericAttrs, GenericHasher, kElemWise);
 
 }  // namespace tvm_dialect
 }  // namespace op

@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 
 import raf
-from raf.testing import get_testable_devices, randn_torch, check, run_vm_model, one_hot_torch
+from raf.testing import get_testable_devices, randn_torch, check, run_vm_model, randint
 
 
 def one_hot(batch_size, num_classes, device="cpu", dtype="float32"):
@@ -67,7 +67,8 @@ def test_nll_loss(device, n, c):
 
     model = TestModel()
     m_pred, t_pred = randn_torch((n, c), device=device, requires_grad=True)
-    m_true, t_true = one_hot_torch(n, c, device=device)
+    m_true, np_true = randint((n,), low=0, high=c, device=device, dtype="int64")
+    t_true = torch.tensor(np_true, device=device)
     # forward
     t_loss = F.nll_loss(t_pred, t_true)
     m_loss = model(y_true=m_true, y_pred=m_pred)
@@ -95,7 +96,8 @@ def test_cross_entropy(device, n, c):
 
     model = TestModel()
     m_pred, t_pred = randn_torch((n, c), device=device, requires_grad=True)
-    m_true, t_true = one_hot(n, c, device=device)
+    m_true, np_true = randint((n,), low=0, high=c, device=device, dtype="int64")
+    t_true = torch.tensor(np_true, device=device)
     # forward
     t_loss = F.cross_entropy(t_pred, t_true)
     m_loss = model(y_true=m_true, y_pred=m_pred)
@@ -103,8 +105,9 @@ def test_cross_entropy(device, n, c):
     check(m_loss, t_loss)
     check(v_loss, t_loss)
     # backward
-    t_loss.backward()
-    m_loss.backward()
+    m_dy, t_dy = randn_torch((), device=device)
+    t_loss.backward(t_dy)
+    m_loss.backward(m_dy)
     check(m_pred.grad, t_pred.grad)
 
 

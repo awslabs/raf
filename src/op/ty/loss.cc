@@ -70,9 +70,9 @@ RAF_OP_TYPE("raf.op.nll_loss_dtrue", "NLLLossDtrue", NLLLossBack);
 RAF_OP_TYPE("raf.op.smooth_l1_loss", "SmoothL1", SmoothL1Infer);
 RAF_OP_TYPE("raf.op.smooth_l1_loss_dpred", "SmoothL1Dpred", SmoothL1Back);
 RAF_OP_TYPE("raf.op.smooth_l1_loss_dtrue", "SmoothL1Dtrue", SmoothL1Back);
-RAF_OP_TYPE("raf.op.cross_entropy", "CrossEntropy", SmoothL1Infer);
-RAF_OP_TYPE("raf.op.cross_entropy_dpred", "CrossEntropyDpred", SmoothL1Back);
-RAF_OP_TYPE("raf.op.cross_entropy_dtrue", "CrossEntropyDtrue", SmoothL1Back);
+RAF_OP_TYPE("raf.op.cross_entropy", "CrossEntropy", NLLLossInfer);
+RAF_OP_TYPE("raf.op.cross_entropy_dpred", "CrossEntropyDpred", NLLLossBack);
+RAF_OP_TYPE("raf.op.cross_entropy_dtrue", "CrossEntropyDtrue", NLLLossBack);
 
 }  // namespace op
 }  // namespace raf
