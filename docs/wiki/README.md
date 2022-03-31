@@ -34,6 +34,8 @@
     - [IR Format](3_dev_guide/IR-Format.md)
     - [Memory Pool](3_dev_guide/Memory-Pool.md)
     - [Profile Model](3_dev_guide/Profile-Model.md)
+    - [Passes](3_dev_guide/pass/)
+      - [Rematerialization](3_dev_guide/pass/Rematerialization.md)
 - Contrib Guide
     - [Code Review](4_contrib_guide/Code-Review.md)
     - [Development And Pull Request](4_contrib_guide/Development-And-Pull-Request.md)
