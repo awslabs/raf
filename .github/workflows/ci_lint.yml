@@ -21,7 +21,7 @@ jobs:
     if: github.repository == 'meta-project/meta'
     runs-on: self-hosted
     container:
-        image: metaprojdev/raf:ci_cpu-v0.18
+        image: metaprojdev/raf:ci_cpu-v0.19
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
