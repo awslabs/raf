@@ -82,12 +82,13 @@ class CommunicatorObj : public Object {
 
 class Communicator : public ObjectRef {
  public:
-  static Communicator Get(const std::string& name = "", const Value rank_list = NullValue<Value>());
+  static Communicator Get(const std::string& name, const Value rank_list = NullValue<Value>());
+  static Communicator Get(const Value rank_list = NullValue<Value>());
   static void InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
                                   const Communicator global_comm);
   static uint64_t GetHostID();
 
-  RAF_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
+  RAF_MUTABLE_OBJECT_REF(Communicator, ObjectRef, CommunicatorObj);
 };
 
 class VoidCommunicatorObj final : public CommunicatorObj {
@@ -99,7 +100,7 @@ class VoidCommunicatorObj final : public CommunicatorObj {
 class VoidCommunicator final : public Communicator {
  public:
   static VoidCommunicator make(Value rank_list);
-  RAF_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
+  RAF_MUTABLE_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
 };
 
 class CommunicatorPool {
@@ -113,13 +114,6 @@ class CommunicatorPool {
   }
 
   Communicator GetCommunicator(const std::string& name, const Value rank_list) {
-#ifdef RAF_USE_NCCL
-    auto default_name = "nccl";
-#else
-    auto default_name = "void";
-#endif
-    auto comm_name = name.empty() ? default_name : name;
-
     std::vector<std::vector<int64_t>> rank_list_;
     std::set<int64_t> rank_set_;
     if (rank_list.defined()) {
@@ -135,11 +129,11 @@ class CommunicatorPool {
       }
     }
 
-    CommunicatorID id(comm_name, rank_list_);
+    CommunicatorID id(name, rank_list_);
 
     if (comm_.count(id) == 0) {
       const std::string prefix = "raf.distributed.communicator._make.";
-      auto func_name = prefix + comm_name;
+      auto func_name = prefix + name;
       Communicator comm = GetPackedFunc(func_name)(rank_list);
       comm_[id] = std::move(comm);
     }
