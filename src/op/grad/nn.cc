@@ -426,6 +426,30 @@ Array<Expr> ThresholdGrad(const Expr& orig_call, const Array<Expr> orig_args, co
 
 RAF_OP_GRAD("raf.op.threshold", ThresholdGrad);
 
+Array<Expr> LayerNormTrainGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                               const Expr& dymv) {
+  static auto op_dx = Op::Get("raf.op.layer_norm_train_dx");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK(call != nullptr);
+  const Expr& dy = AsTupleExpr(dymv, 3)[0];
+  const Expr& x = call->args[0];
+  const Expr& scale = call->args[1];
+  const Expr& axis = call->args[3];
+  const Expr& eps = call->args[4];
+  auto mean = TupleGetItem(y, 1);
+  auto invvar = TupleGetItem(y, 2);
+  const Expr& ret = Call(op_dx, {x, scale, dy, mean, invvar, axis, eps});
+  const auto* kscale = scale.as<tvm::relay::ConstantNode>();
+  if (kscale && !static_cast<const ConstantNode*>(kscale)->value.defined()) {
+    // scale and bias are not learnable parameters.
+    return {ret, NullValue<Expr>(), NullValue<Expr>()};
+  }
+  return {TupleGetItem(ret, 0), TupleGetItem(ret, 1), TupleGetItem(ret, 2), NullValue<Expr>(),
+          NullValue<Expr>()};
+}
+
+RAF_OP_GRAD("raf.op.layer_norm_train", LayerNormTrainGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace raf

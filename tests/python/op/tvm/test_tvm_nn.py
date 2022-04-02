@@ -19,6 +19,12 @@ from raf.testing import (
     with_dialect,
 )
 from raf.model.trace import trace_mutate_attr
+from raf.optim.optim import with_autodiff
+
+try:
+    from apex.normalization import FusedLayerNorm as ApLayerNorm
+except ImportError:
+    ApLayerNorm = None
 
 
 @with_dialect("tvm")
@@ -817,6 +823,61 @@ def test_raf_dropout(dropout, device):
     dy, _ = randn_torch(shape, dtype=dtype)
     m_y.backward(dy)
     check_dropout(x, m_y, x.grad, dy)
+
+
+@with_seed(0)
+@pytest.mark.parametrize("shape", [(1, 2, 4)])
+@pytest.mark.parametrize("dtype", ["float32"])
+@pytest.mark.skipif(
+    not raf.build.with_cuda() or ApLayerNorm is None, reason="CUDA or Apex is not enabled"
+)
+def test_layer_norm_train(shape, dtype):
+    class LayerNorm(raf.Model):
+        def build(self, axis, eps):
+            self._axis = axis
+            self._eps = eps
+
+        @raf.model.trace
+        def forward(self, *inputs):
+            return raf.layer_norm_train(*inputs, axis=self._axis, eps=self._eps)
+
+    class TorchLN(torch.nn.Module):
+        def __init__(self):
+            super(TorchLN, self).__init__()
+            self.layer_norm = ApLayerNorm(shape[-1], eps=1e-12)
+
+        def forward(self, x):
+            return self.layer_norm(x)
+
+    device = "cuda"
+    scale_shape = [shape[-1]]
+    m_model = LayerNorm(-1, 1e-12)
+    m_model.to(device=device, dtype=dtype)
+    m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
+    m_dy, t_dy = randn_torch(shape, device=device, dtype=dtype)
+    m_scale, t_scale = randn_torch(scale_shape, device=device, dtype=dtype, requires_grad=True)
+    m_bias, t_bias = randn_torch(scale_shape, device=device, dtype=dtype, requires_grad=True)
+    m_model = with_autodiff(m_model)
+
+    m_y = run_vm_model(m_model, device, [m_dy, m_x, m_scale, m_bias])
+    m_out = m_y[0][0]
+    m_dx = m_y[1][0]
+    m_dw = m_y[1][1]
+    m_db = m_y[1][2]
+
+    t_model = TorchLN()
+    t_model = t_model.to(device=device)
+    t_model.eval()
+
+    t_model.layer_norm.weight = torch.nn.Parameter(t_scale, requires_grad=True)
+    t_model.layer_norm.bias = torch.nn.Parameter(t_bias, requires_grad=True)
+    t_out = t_model(t_x)
+
+    check(m_out, t_out, rtol=1e-4, atol=1e-4)
+    t_out.backward(t_dy)
+    check(m_dx, t_x.grad, rtol=1e-4, atol=1e-4)
+    check(m_dw, t_model.layer_norm.weight.grad, rtol=1e-4, atol=1e-4)
+    check(m_db, t_model.layer_norm.bias.grad, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":
