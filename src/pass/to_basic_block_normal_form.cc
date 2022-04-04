@@ -4,8 +4,8 @@
  */
 
 /*!
- * \file src/pass/to_a_normal_form.cc
- * \brief Convert dataflow graph to A-normal form.
+ * \file src/pass/to_basic_block_normal_form.cc
+ * \brief Convert dataflow graph to Basic Block Normal Form (BBNF).
  */
 #include <vector>
 #include "raf/op.h"
