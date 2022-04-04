@@ -275,4 +275,28 @@ def calc_model_gflops(model, device, args):
     return total_gflops
 
 
+def trace_memory(model, device, args, include_param=True):
+    """A utility function to trace memory footprint of the model."""
+    # pylint: disable=import-outside-toplevel
+    import tvm
+    from raf._core.vm import VMCompiler
+    from raf._ffi.pass_ import EstimateMemory, InferType
+
+    record = model._internal(*args)
+    mod = record.mod
+
+    compiler = VMCompiler()
+    with tvm.transform.PassContext(opt_level=3):
+        mod, _ = compiler.optimize(mod, device)
+    mod = InferType()(mod)
+    trace = [(name, mem.value) for name, mem in EstimateMemory(mod, Device(device), include_param)]
+    return trace
+
+
+def get_peak_memory(model, device, args, include_param=True):
+    """A utility function to estimate the peak memory consumption."""
+    trace = trace_memory(model, device, args, include_param)
+    return max(trace, key=lambda x: x[1])[1]
+
+
 # pylint: enable=protected-access

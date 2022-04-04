@@ -94,6 +94,17 @@ OpWithData::~OpWithData() {
   inputs.clear();
 }
 
+OpEnvPtr OpProfiler::GetOpEnv(const Expr& op) {
+  if (auto call_node = op.as<CallNode>()) {
+    auto call = GetRef<Call>(call_node);
+    auto call_hash_key = HashKeyToStr(HashCall(call));
+    if (op_env_cache_.count(call_hash_key)) {
+      return op_env_cache_[call_hash_key];
+    }
+  }
+  return nullptr;
+}
+
 std::pair<std::vector<float>, float> OpProfiler::ProfileOpGroup(const std::vector<Expr>& ops,
                                                                 const std::vector<int>& stream_ids,
                                                                 int32_t warmup, int32_t exec_number,
@@ -133,15 +144,23 @@ std::pair<std::vector<float>, float> OpProfiler::ProfileOp(const Expr& op, int32
                                                            int32_t exec_number, int32_t repeat) {
   if (auto call_node = op.as<CallNode>()) {
     auto call = GetRef<Call>(call_node);
-    auto key = HashKeyToStr(HashCall(call) << warmup << exec_number << repeat);
+    auto call_hash_key = HashCall(call);
+    auto call_key_str = HashKeyToStr(call_hash_key);
+    auto key = HashKeyToStr(call_hash_key << warmup << exec_number << repeat);
 
     // Directly return the profiled latency if cache hit.
     if (latency_and_workspace_size_cache_.count(key) > 0) {
       return latency_and_workspace_size_cache_[key];
     }
 
-    // Profile the op
+    // Build the op and generate dummy input data for profiling.
     OpWithDataPtr op_with_data = std::make_shared<OpWithData>(device_, op);
+
+    // Only catch the built OpEnv for other use cases. Note that op_with_data cannot be cached
+    // and must be released in this function; otherwise we may encounter OOM during profiling.
+    op_env_cache_[call_key_str] = op_with_data->op_env;
+
+    // Profile the op.
     std::vector<float> cost = RunOp(op_with_data, warmup, exec_number, repeat);
     int64_t workspace_size = op_with_data->workspace_size;
 
