@@ -97,6 +97,15 @@ def get_vm_executor(mod, device, opt_level=2, disable_fusion=False, **options):
     return executor.make_executor(sch_file=options.get("sch_file", None))
 
 
+def run_vm_executor(executor, record, args, device):
+    """Form VM inputs with inputs and paramters and run the executor."""
+    tvm_device = tvm.nd.device(device)
+    vm_inputs = _get_func_inputs(record, args, {}, get_handle=False)
+    out = executor(*vm_inputs)
+    tvm_device.sync()
+    return out
+
+
 def get_vm_profiler(
     mod, device, opt_level=2, disable_fusion=False, warmup=5, number=10, repeat=10, **options
 ):
