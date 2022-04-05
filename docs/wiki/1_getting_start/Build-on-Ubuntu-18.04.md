@@ -5,6 +5,14 @@ This article introduces how to build RAF using CMake.
 
 ## Step 1. Install dependencies
 
+If you don't want to spend time on setting up the environment, you could directly create a docker container with RAF docker images, which are mainly used by our CI. If you choose to do so, you could directly go to step 2.
+
+```bash
+# You could refer to gpu_image version in .github/workflows/ci_unit_test.yml
+docker pull metaprojdev/raf:ci_gpu-v0.20
+docker run --name work -it --gpus all metaprojdev/raf:ci_gpu-v0.20 /bin/bash
+```
+
 **(Required) Build dependency**
 <details>
 
@@ -101,7 +109,7 @@ Below we introduce an environment variable that indicates where RAF is.
 
 ```bash
 # Create the build directory
-git clone https://github.com/meta-project/meta --recursive && cd meta
+git clone https://github.com/awslabs/raf --recursive && cd raf
 export RAF_HOME=$(pwd)
 mkdir $RAF_HOME/build
 # Run the codegen for auto-generated source code

@@ -6,7 +6,7 @@
 This tutorial introduces the developmenet flow and the way of filing a pull request to let your contribution be a part of RAF.
 
 ## Step 0. 🍽 Fork me @ GitHub
-The very initial step is to click the the "Fork" button on the upper right corner of [RAF](http://github.com/dmlc/raf)'s GitHub homepage like below:
+The very initial step is to click the the "Fork" button on the upper right corner of [RAF](http://github.com/awslabs/raf) like below:
 
 ![Fork](https://user-images.githubusercontent.com/22515877/68988345-a29a8a00-07ea-11ea-9061-fcf001a1fff3.png)
 
@@ -16,9 +16,9 @@ This will create a mirror repository at your own account, on which you have all 
 **Download from GitHub.** You may download the project using the following command:
 ```bash
 # HTTPS
-git clone git@github.com:YourAccount/meta.git --recursive
+git clone git@github.com:YourAccount/raf.git --recursive
 # SSH
-git clone https://github.com/YourAccount/meta.git --recursive
+git clone https://github.com/YourAccount/raf.git --recursive
 ```
 
 **Create a new branch.** To avoid possible mess-ups, it is suggested to work on a new branch, instead of `main`. You may create a new branch using the following commands.
@@ -56,15 +56,13 @@ Last but not least, as a community, the most important thing is to be happy toge
 ## Step 3. 🕙 Keep up to date
 **Conflicts.** Sometimes, your fork might conflict with our repositories, because both of them change over time. In this case, when you submitting a pull request, it is possible that Git/GitHub says they are unable to automatically test the code, because of these conflicts.
 
-<img src="https://user-images.githubusercontent.com/22515877/68990487-91607600-0808-11ea-97a5-5a65ddce57de.png" width=300/>
-
 **Rebase is required.** In this case, sad it is, you may have to manually "rebase" to our most recent commit. During rebase, git will replay all your commits on top of our latest commit, forcing you to make every decision on the conflict part of the code.
 
 ```bash
 # Adding a remote git address called `upstream`.
 # You may actually call it anything.
 # `git remote -v` will list all known remotes
-git remote add upstream https://github.com/meta-project/meta
+git remote add upstream https://github.com/awslabs/raf
 # Fetch the latest information from all remotes
 git fetch --all
 # And...Do the rebase.
