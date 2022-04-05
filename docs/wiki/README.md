@@ -37,6 +37,7 @@
     - [Passes](3_dev_guide/pass/)
       - [Rematerialization](3_dev_guide/pass/Rematerialization.md)
       - [AutoDataParallel](3_dev_guide/pass/AutoDataParallel.md)
+      - [Multi CUDA Stream Schedule](3_dev_guide/pass/Multi-CUDA-Stream-Schedule.md)
 - Contrib Guide
     - [Development And Pull Request](4_contrib_guide/Development-And-Pull-Request.md)
     - [RFC Collections](4_contrib_guide/RFC-Collections.md)
