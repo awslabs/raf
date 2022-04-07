@@ -21,11 +21,6 @@ from raf.testing import (
 from raf.model.trace import trace_mutate_attr
 from raf.optim.optim import with_autodiff
 
-try:
-    from apex.normalization import FusedLayerNorm as ApLayerNorm
-except ImportError:
-    ApLayerNorm = None
-
 
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_testable_devices())
@@ -827,11 +822,9 @@ def test_raf_dropout(dropout, device):
 
 @with_seed(0)
 @pytest.mark.parametrize("shape", [(1, 2, 4)])
+@pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("dtype", ["float32"])
-@pytest.mark.skipif(
-    not raf.build.with_cuda() or ApLayerNorm is None, reason="CUDA or Apex is not enabled"
-)
-def test_layer_norm_train(shape, dtype):
+def test_layer_norm_train(shape, device, dtype):
     class LayerNorm(raf.Model):
         def build(self, axis, eps):
             self._axis = axis
@@ -844,12 +837,11 @@ def test_layer_norm_train(shape, dtype):
     class TorchLN(torch.nn.Module):
         def __init__(self):
             super(TorchLN, self).__init__()
-            self.layer_norm = ApLayerNorm(shape[-1], eps=1e-12)
+            self.layer_norm = torch.nn.LayerNorm(shape[-1], eps=1e-12)
 
         def forward(self, x):
             return self.layer_norm(x)
 
-    device = "cuda"
     scale_shape = [shape[-1]]
     m_model = LayerNorm(-1, 1e-12)
     m_model.to(device=device, dtype=dtype)

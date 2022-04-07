@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=missing-function-docstring, missing-module-docstring
-# pylint: disable=unused-argument, invalid-name
+# pylint: disable=unused-argument, invalid-name, too-many-statements
 from functools import reduce
 import operator
 
@@ -437,8 +437,8 @@ def compute_threshold_dx(attr, inputs, output_type):
 _reg.register_injective_schedule("raf.op.tvm.threshold_dx")
 
 
-@register_compute("raf.op.tvm.layer_norm")
-def compute_layer_norm(attr, inputs, output_type):
+@register_compute("raf.op.tvm.layer_norm_train")
+def compute_layer_norm_train(attr, inputs, output_type):
     # pylint: disable=too-many-locals
     x = inputs[0]
 
@@ -454,6 +454,8 @@ def compute_layer_norm(attr, inputs, output_type):
         scale, bias = inputs[1], inputs[2]
         assert scale.dtype == bias.dtype
         dtype = scale.dtype
+    else:
+        scale, bias = None, None
 
     if x.dtype != dtype:
         x = _topi.cast(x, dtype)
@@ -482,15 +484,30 @@ def compute_layer_norm(attr, inputs, output_type):
     denominator = _topi.sqrt(_topi.add(x_var, eps))
     out = _topi.divide(_topi.subtract(x, x_mean), denominator)
 
-    if attr.set_scale_bias:
-        scale, bias = inputs[1], inputs[2]
+    if scale is not None:
         pscale = pad(scale, out)
         out = _topi.multiply(pscale, out)
         out = _topi.add(out, pad(bias, out))
 
     if out.dtype != orig_dtype:
         out = _topi.cast(out, orig_dtype)
-    return [out]
+
+    # Calculate the shape of mean and var, which dimensions are the same as x but
+    # are required to be 1-D when being outputs.
+    idiff = ndim - 1 if scale is None else ndim - len(scale.shape)
+    mean_var_shape = 1
+    for i in x.shape[:idiff]:
+        mean_var_shape *= i
+
+    out_mean = _topi.reshape(x_mean, [mean_var_shape])
+    out_var = _topi.reshape(x_var, [mean_var_shape])
+    return [out, out_mean, out_var]
+
+
+@register_compute("raf.op.tvm.layer_norm")
+def compute_layer_norm(attr, inputs, output_type):
+    outs = compute_layer_norm_train(attr, inputs, output_type)
+    return [outs[0]]
 
 
 @generic_func
@@ -572,18 +589,21 @@ def schedule_layer_norm_cuda(attrs, outs, target):
     return sch
 
 
+# Layer norm train is currently being offloaded to the CUDA kernel, so we don't craft
+# an efficient schedule for it now.
+_reg.register_schedule("raf.op.tvm.layer_norm_train", schedule_generic)
+
 _reg.register_schedule("raf.op.tvm.layer_norm", schedule_layer_norm)
 
 
-@register_compute("raf.op.tvm.layer_norm_dx")
-def compute_layer_norm_dx(attr, inputs, output_type):
+def compute_layer_norm_dx_common(attr, inputs, recompute_mean_var=True):
     # pylint: disable=too-many-locals
     set_scale = attr.set_scale_bias
     if set_scale:
-        x, scale, dy = inputs
+        x, scale, dy = inputs[:3]
     else:
         scale = None
-        x, dy = inputs[0], inputs[1]
+        x, dy = inputs[:2]
 
     orig_dtype = x.dtype
     dtype = x.dtype
@@ -603,11 +623,22 @@ def compute_layer_norm_dx(attr, inputs, output_type):
 
     count = x.shape[axis]
     reduce_axes = [axis]
-    x_sum = _topi.sum(x, reduce_axes, keepdims=True)
-    x_mean = _topi.divide(x_sum, count)
-    sq_diff = _topi.power(_topi.subtract(x, x_mean), 2)
-    sq_diff_sum = _topi.sum(sq_diff, reduce_axes, keepdims=True)
-    x_var = _topi.divide(sq_diff_sum, count)
+    if recompute_mean_var:
+        x_sum = _topi.sum(x, reduce_axes, keepdims=True)
+        x_mean = _topi.divide(x_sum, count)
+
+        sq_diff = _topi.power(_topi.subtract(x, x_mean), 2)
+        sq_diff_sum = _topi.sum(sq_diff, reduce_axes, keepdims=True)
+        x_var = _topi.divide(sq_diff_sum, count)
+    else:
+        # Calculate the shape of mean and var, which are 1-D from inputs but should match
+        # the shape of x for broadcasting.
+        idiff = ndim - 1 if scale is None else ndim - len(scale.shape)
+        mean_var_shape = x.shape[:idiff] + [1 for _ in range(ndim - idiff)]
+        in_mean, in_var = inputs[-2], inputs[-1]
+        x_mean = _topi.reshape(in_mean, mean_var_shape)
+        x_var = _topi.reshape(in_var, mean_var_shape)
+
     denominator = _topi.sqrt(_topi.add(x_var, eps))
     xmu = _topi.subtract(x, x_mean)
 
@@ -641,7 +672,20 @@ def compute_layer_norm_dx(attr, inputs, output_type):
     return [dx]
 
 
+@register_compute("raf.op.tvm.layer_norm_dx")
+def compute_layer_norm_dx(attr, inputs, output_type):
+    return compute_layer_norm_dx_common(attr, inputs, recompute_mean_var=True)
+
+
 _reg.register_schedule("raf.op.tvm.layer_norm_dx", schedule_generic)
+
+
+@register_compute("raf.op.tvm.layer_norm_train_dx")
+def compute_layer_norm_train_dx(attr, inputs, output_type):
+    return compute_layer_norm_dx_common(attr, inputs, recompute_mean_var=False)
+
+
+_reg.register_schedule("raf.op.tvm.layer_norm_train_dx", schedule_generic)
 
 _reg.register_strategy("raf.op.tvm.conv2d", strategy.conv2d_strategy)
 

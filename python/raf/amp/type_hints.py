@@ -416,17 +416,36 @@ register_op_cast_rule("raf.op.batch_norm_train", op_cast_norm(1))
 register_op_cast_rule("raf.op.batch_norm_train_dxwb", op_cast_norm(2))
 
 
-def op_cast_layer_norm_dx(args, ret_type, amp_dtype):
-    """It has args in order (x, weight, dy)."""
-    ret = [PrimType(arg.checked_type.dtype) for arg in args[:3]]
-    ret += [PrimType(None) for _ in range(len(args) - 3)]
+register_op_cast_rule("raf.op.layer_norm", infer_cast(1))
+register_op_cast_rule("raf.op.layer_norm_dx", infer_cast(3))
+
+
+def op_cast_layer_norm_train(args, ret_type, amp_dtype):
+    """Always follow the dtype for the 1st arg because the latency of taking FP16 and FP32
+    are basically the same."""
+    return [
+        PrimType(args[0].checked_type.dtype),
+        PrimType("float32"),
+        PrimType("float32"),
+        PrimType(None),
+        PrimType(None),
+    ]
+
+
+def op_cast_layer_norm_train_dx(args, ret_type, amp_dtype):
+    """It has args in order (x, scale, dy, mean, invvar, axis, eps)."""
+    ret = [
+        PrimType(args[0].checked_type.dtype),
+        PrimType("float32"),
+        PrimType(None),
+        PrimType("float32"),
+    ]
+    ret += [PrimType(None) for _ in range(len(args) - 4)]
     return ret
 
 
-register_op_cast_rule("raf.op.layer_norm", infer_cast(1))
-# FIXME: Enable this rule once Apex kernel is available.
-# register_op_cast_rule("raf.op.layer_norm_dx", op_cast_layer_norm_dx)
-register_op_cast_rule("raf.op.layer_norm_dx", infer_cast(3))
+register_op_cast_rule("raf.op.layer_norm_train", op_cast_layer_norm_train)
+register_op_cast_rule("raf.op.layer_norm_train_dx", op_cast_layer_norm_train_dx)
 
 
 def op_cast_concatenate(args, ret_type, amp_dtype):
