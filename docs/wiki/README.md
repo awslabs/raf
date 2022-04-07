@@ -34,6 +34,7 @@
     - [Distributed Training](3_dev_guide/Distributed-Training.md)
     - [IR Format](3_dev_guide/IR-Format.md)
     - [Memory Pool](3_dev_guide/Memory-Pool.md)
+    - [Op Dialect](3_dev_guide/Op-Dialect.md)
     - Pass
         - [AutoDataParallel](3_dev_guide/pass/AutoDataParallel.md)
         - [Multi CUDA Stream Schedule](3_dev_guide/pass/Multi-CUDA-Stream-Schedule.md)
