@@ -45,7 +45,7 @@ git push
 ## Step 2. 🎉 Upstreaming your change
 Here we come to the most exiting time: you have completed the coding on your fork. So please let us know - we are happy to review and potentially merge your awesome change into our latest codebase! 😊
 
-On Git/GitHub, the process is called "pull request", which means "requesting maintainers to pull your branch into the mainline". So, please jump to the [Pull Request](https://github.com/meta-project/meta/pulls) page, and click the little green button.
+On Git/GitHub, the process is called "pull request", which means "requesting maintainers to pull your branch into the mainline". So, please jump to the [Pull Request](https://github.com/awslabs/raf/pulls) page, and click the little green button.
 
 <img src="https://user-images.githubusercontent.com/22515877/68989884-83f3bd80-0801-11ea-9580-4f0a87fbd6b6.png" width=180/>
 

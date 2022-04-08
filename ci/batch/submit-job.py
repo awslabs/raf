@@ -58,7 +58,7 @@ def create_config():
     parser.add_argument(
         "--source-ref", help="e.g. main, refs/pull/500/head", type=str, default="main"
     )
-    parser.add_argument("--repo", help="e.g. user_name/meta", type=str, default="meta-project/meta")
+    parser.add_argument("--repo", help="e.g. user_name/raf", type=str, default="awslabs/raf")
     parser.add_argument(
         "--save-output",
         help="output to be saved, relative to working directory. "

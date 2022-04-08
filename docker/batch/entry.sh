@@ -36,7 +36,7 @@ fi;
 
 # Checkout the repo.
 git clone https://$GITHUB_TOKEN:x-oauth-basic@github.com/$REPO --recursive
-cd meta
+cd raf
 
 # Config the repo
 git fetch origin $SOURCE_REF:working

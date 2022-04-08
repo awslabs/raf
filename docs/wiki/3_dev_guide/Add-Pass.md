@@ -175,7 +175,7 @@ If the var/value has been mutated in pre_visit, when we use Mutate/VisitExpr, we
 4. in `post_visit`, if a visitor, add 1 to the counter
 5. in `post_visit`, if a mutator, put the return value to cache
 
-**Examples(see https://github.com/meta-project/meta/pull/441):**
+**Examples(see https://github.com/awslabs/raf/commit/1dbc22b904a26d9bc0a5306c2d4a0c70530cbc4c):**
 
 1. a simple example, note that `ExprVisitor::VisitExpr_(op)` is equal to visit `op->var`+`op->value`+`op->body`
 
