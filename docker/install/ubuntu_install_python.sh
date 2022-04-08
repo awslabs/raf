@@ -11,7 +11,7 @@ apt-get install -y python-pip python3-pip
 pip3 install pip --upgrade
 pip3 install cmake
 pip3 install scikit-build==0.11.1
-pip3 install pylint==2.4.3 cpplint black==20.8b1
+pip3 install pylint==2.4.3 cpplint black==22.3.0
 pip3 install six numpy pytest cython decorator scipy tornado typed_ast pytest mypy orderedset \
              antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser \
              pydot
@@ -21,6 +21,7 @@ pip3 install mxnet==1.6.0
 pip3 install gluoncv==0.10.1
 
 if [[ "$1" == "gpu" ]]; then
+    apt-get install -y ninja-build
     git clone https://github.com/szhengac/apex --branch lans
     cd apex
     pip3 install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
