@@ -11,8 +11,6 @@ from raf.frontend.model import FrameworkModel
 def autocast(model, args=None):
     """Convert a model running in single precison to half precision.
 
-    Should run the origin model or run function `get_relay_func` once before.
-
     Parameters
     ----------
     model : raf.model.Model

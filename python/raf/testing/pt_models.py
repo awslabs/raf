@@ -71,9 +71,36 @@ def get_transformer_model(name, batch_size=8, seq_length=128, dtype="float32"):
     """
     import transformers
 
+    config = transformers.AutoConfig.from_pretrained(name)
+    return get_transformer_model_by_config(config, batch_size, seq_length, dtype)
+
+
+def get_transformer_model_by_config(config, batch_size=8, seq_length=128, dtype="float32"):
+    """Load a Huggingface transformer model and convert to RAF.
+
+    Parameters
+    ----------
+    config: transformers.configuration_utils.PretrainedConfig
+        Model configuration.
+
+    batch_size: int
+        Batch size. Default 8.
+
+    seq_length: int
+        Sequence length. Default 128.
+
+    dtype: str
+        Data type. Default "float32".
+
+    Returns
+    -------
+    model_n_shape: Tuple[raf.model, Tuple[int, ...]]
+        The converted RAF model and forward output shape.
+    """
+    import transformers
+
     # Load the PyTorch model.
     with ConvertNLPContext():
-        config = transformers.AutoConfig.from_pretrained(name)
         assert hasattr(config, "architectures"), '"architectures" is missing in the config'
         model_cls = config.architectures[0]
         config.use_cache = False  # Disable model cache to avoid unnecessary model outputs.

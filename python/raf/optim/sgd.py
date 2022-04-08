@@ -115,9 +115,6 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 # additional buffers in SGD status.
                 self.has_sgd_w = False
 
-                # TODO(issue 758): Remove this and in-place update parameters.
-                self.zero = array(0, dtype=self.dtype)
-
                 dctx = dist.get_context()
                 self.params = {}
                 for name, param in self.model.state().items():
@@ -175,6 +172,10 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         )
                         setattr(self, f"{name}.sgd_v", v_i)
                         self.params[param._ndarray__handle] = (name, param, v_w, v_i)
+
+                if self.has_sgd_w:
+                    # TODO(issue 758): Remove this and in-place update parameters.
+                    self.zero = array(0, dtype=self.dtype)
 
             @trace
             def forward(self, dy, *args, **kwargs):

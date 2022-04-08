@@ -8,10 +8,11 @@ In this article, we introduce useful profiling tools in RAF to let you monitor t
 The latency and memory profiler in RAF are implemented as global status. It means you only need to add a few line in your Python code to make the profiling happen. In this article, we use BERT-base as an example to illustrate how profiler works.
 
 ```python
+import json
 import raf
 from raf.testing import get_transformer_model, append_loss_n_optimizer
 from raf.testing import randn_torch, one_hot_torch
-from raf.testing import run_vm_model
+from raf.testing import run_vm_model, get_vm_executor, run_vm_executor
 
 def setup_model():
   # Load a transformer model. Note that transformers package has to be available.
@@ -35,28 +36,32 @@ def setup_model():
 # Setup model.
 optimizer, args = setup_model()
 
-# Run the model.
+# Initialize a VM executor and run the model.
 run_vm_model(optimizer, "cuda", args)
 ```
 
 ## Profile Latency
 
-To profile latency of each operator execution, we can simply wrap the model execution with the RAF profiler APIs:
+To profile latency of each operator execution, we simply wrap the model execution with the RAF profiler APIs:
 
 ```python
 # Setup model.
 optimizer, args = setup_model()
 
+# Initialize a VM executor once.
+record = optimizer._internal(*args)
+executor = get_vm_executor(record.mod, "cuda")
+
 # Run a few time to warmup to exclude the JITing overheads.
 for _ in range(10):
-    run_vm_model(optimizer, "cuda", args)
+    run_vm_executor(executor, record, args, "cuda")
 
 # Clean the existing profiled stats and enable latency profiler.
 raf.utils.profiler.get()
 raf.utils.profiler.start()
 
-# Run the model.
-run_vm_model(optimizer, "cuda", args)
+# Run the model with profiler.
+run_vm_executor(executor, record, args, "cuda")
 
 # Disable latency profiler.
 raf.utils.profiler.stop()
