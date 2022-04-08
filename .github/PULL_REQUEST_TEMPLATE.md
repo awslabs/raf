@@ -11,4 +11,4 @@
 - [ ] All changes have test coverage
 - [ ] Code is well-documented
 
-cc @meta-project/meta-reviewer
+cc @awslabs/raf-reviewer

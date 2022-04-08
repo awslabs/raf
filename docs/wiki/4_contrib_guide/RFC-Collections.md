@@ -37,7 +37,7 @@ When you have an awesome idea that could make RAF better, the first step is to o
 - **Milestones:** A checklist of milestones that specify what we could expect at each stage.
 - **Progress Tracking:** A checklist of progress tasks, including investigation, PR sending, evaluation, etc.
 
-At the end of the issue, please tag meta-project/meta-reviewer.
+At the end of the issue, please tag awslabs/raf-reviewer.
 
 
 ### Step 2. Review (A2)

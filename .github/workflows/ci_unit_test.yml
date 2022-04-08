@@ -17,8 +17,8 @@ defaults:
 
 jobs:
   check_status:
-    if: github.repository == 'meta-project/meta'
-    runs-on: self-hosted
+    if: github.repository == 'awslabs/raf'
+    runs-on: ubuntu-latest
     outputs:
       cpu_image: "metaprojdev/raf:ci_cpu-v0.19"
       gpu_image: "metaprojdev/raf:ci_gpu-v0.21"
@@ -70,7 +70,7 @@ jobs:
 
   test_on_cpu:
     needs: [check_status]
-    if: github.repository == 'meta-project/meta'
+    if: github.repository == 'awslabs/raf'
     runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
@@ -116,7 +116,7 @@ jobs:
 
   test_on_gpu:
     needs: [check_status]
-    if: github.repository == 'meta-project/meta'
+    if: github.repository == 'awslabs/raf'
     runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
@@ -162,7 +162,7 @@ jobs:
 
   test_on_multi_gpu:
     needs: [check_status]
-    if: github.repository == 'meta-project/meta'
+    if: github.repository == 'awslabs/raf'
     runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
@@ -209,7 +209,7 @@ jobs:
   update_ci_badge:
     needs: [test_on_cpu, test_on_gpu, test_on_multi_gpu]
     # Run this job whatever the unit tests were success or not.
-    if: ${{ always() && github.repository == 'meta-project/meta' }}
+    if: ${{ always() && github.repository == 'awslabs/raf' }}
     runs-on: self-hosted
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
@@ -252,7 +252,7 @@ jobs:
         uses: schneegans/dynamic-badges-action@v1.1.0
         continue-on-error: true
         with:
-          auth: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
+          auth: ${{ secrets.BOT_TOKEN }}
           gistID: ${{ steps.badge.outputs.gist_id }}
           filename: raf-ci-badge-last-pass.json
           label: CI-UnitTests

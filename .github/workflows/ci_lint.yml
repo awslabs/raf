@@ -18,8 +18,8 @@ defaults:
 
 jobs:
   lint:
-    if: github.repository == 'meta-project/meta'
-    runs-on: self-hosted
+    if: github.repository == 'awslabs/raf'
+    runs-on: ubuntu-latest
     container:
         image: metaprojdev/raf:ci_cpu-v0.19
     steps:

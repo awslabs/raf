@@ -6,7 +6,7 @@
 #  - RAF_CUTLASS_LIBRARY
 message("########## Configuring CUTLASS ##########")
 
-# meta customized kernels
+# raf customized kernels
 function(raf_customized_cutlass_kernels)
   find_package(Python3 3.5 COMPONENTS Interpreter REQUIRED)
   include(${PROJECT_SOURCE_DIR}/3rdparty/cutlass/CUDA.cmake)

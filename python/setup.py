@@ -126,7 +126,7 @@ setup(
     packages=find_packages() + ["raf.version"],
     package_data={"raf": [os.path.join(SCRIPT_DIR, "../build/lib/libraf.so")]},
     distclass=BinaryDistribution,
-    url="https://github.com/meta-project/meta",
+    url="https://github.com/awslabs/raf",
     python_requires=">=3.6",
     **setup_kwargs
 )
