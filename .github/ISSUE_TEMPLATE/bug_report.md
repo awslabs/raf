@@ -1,34 +1,38 @@
-<!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
-<!--- SPDX-License-Identifier: Apache-2.0  -->
-
 ---
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: 'bug, needs triage'
+labels: ''
 assignees: ''
 
 ---
-## Description
-(A clear and concise description of what the bug is.)
 
-### Error Message
-(Paste the complete error message.)
+**Describe the bug**
+A clear and concise description of what the bug is.
 
-### Environment
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
 
-Any environment details, such as: Operating System, RAF version, etc
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-## To Reproduce
-(If you developed your own code, please provide a short script that reproduces the error. For existing examples, please provide link.)
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
 
-### Steps to reproduce
-(Paste the commands you ran that produced the error.)
+**Desktop (please complete the following information):**
+ - OS: [e.g. iOS]
+ - Browser [e.g. chrome, safari]
+ - Version [e.g. 22]
 
-1.
-2.
+**Smartphone (please complete the following information):**
+ - Device: [e.g. iPhone6]
+ - OS: [e.g. iOS8.1]
+ - Browser [e.g. stock browser, safari]
+ - Version [e.g. 22]
 
-## What have you tried to solve it?
-
-1.
-2.
+**Additional context**
+Add any other context about the problem here.
