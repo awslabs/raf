@@ -71,7 +71,7 @@ jobs:
   test_on_cpu:
     needs: [check_status]
     if: github.repository == 'awslabs/raf'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -117,7 +117,7 @@ jobs:
   test_on_gpu:
     needs: [check_status]
     if: github.repository == 'awslabs/raf'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -163,7 +163,7 @@ jobs:
   test_on_multi_gpu:
     needs: [check_status]
     if: github.repository == 'awslabs/raf'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -210,7 +210,7 @@ jobs:
     needs: [test_on_cpu, test_on_gpu, test_on_multi_gpu]
     # Run this job whatever the unit tests were success or not.
     if: ${{ always() && github.repository == 'awslabs/raf' }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: Checkout repository
