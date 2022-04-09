@@ -304,6 +304,13 @@ PackedFunc VirtualMachine::GetFunction(const std::string& name,
       VMContext ctx = args[0];
       *rv = Run(ctx);
     });
+  } else if (name == "dryrun") {
+    return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
+      VMContext ctx = args[0];
+      dryrun_ = true;
+      Run(ctx);
+      dryrun_ = false;
+    });
   } else if (name == "profile") {
     return PackedFunc([sptr_to_self, this](registry::TVMArgs args, registry::TVMRetValue* rv) {
       VMContext ctx = args[0];
@@ -831,19 +838,19 @@ void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
       WITH_BASE_PROFILER(devices_[0], op_env->name(), "ComputationOperator", {op_env_cache_key},
                          { op_env->Execute(inputs, output); });
     }
-  }
-  PROFILE_MEMORY(devices_[0], op_env->name());
+    PROFILE_MEMORY(devices_[0], op_env->name());
 
-  // Release workspace memory.
-  // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
-  //   kernel. Because the kernel may be in the executing status at this point due to
-  //   asynchronous execution. This would cause problem for multi-stream execution.
-  std::shared_ptr<Requests> requests = op_env->GetRequests();
-  for (size_t i = 0; i < requests->workspace.size(); ++i) {
-    Requests::WorkspaceRequest& entry = requests->workspace[i];
-    if (entry.nbytes > 0 && entry.memory != nullptr) {
-      *entry.dest = nullptr;
-      entry.memory.reset();
+    // Release workspace memory.
+    // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
+    //   kernel. Because the kernel may be in the executing status at this point due to
+    //   asynchronous execution. This would cause problem for multi-stream execution.
+    std::shared_ptr<Requests> requests = op_env->GetRequests();
+    for (size_t i = 0; i < requests->workspace.size(); ++i) {
+      Requests::WorkspaceRequest& entry = requests->workspace[i];
+      if (entry.nbytes > 0 && entry.memory != nullptr) {
+        *entry.dest = nullptr;
+        entry.memory.reset();
+      }
     }
   }
   ctx->pc++;
@@ -1065,32 +1072,42 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     }
     call_values->device = devices_[0];
     call_values->out = output;
-    op_env = Dispatch(call_values);
-    CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
-                             << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
-                             << call_values->device.c_str();
-    std::shared_ptr<Requests> requests = op_env->GetRequests();
-    // prepare distributed requests
-    for (size_t i = 0; i < requests->distributed.size(); i++) {
-      Requests::DistributedRequest& entry = requests->distributed[i];
-      *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
-      // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
-      // ncclComm_t handler instead?
-    }
+
+    if (dryrun_) {
+      // defer the OpEnv creation to enable parallelism.
+      // FIXME: Not implemented yet. See ParallelDispatch for details.
+      return std::make_tuple(nullptr, std::vector<Value>(), Value(), op_env_cache_key);
+    } else {
+      {
+        RAF_TIMED_SEC("Dispatch " + (op ? op->op->name : PrettyPrint(closure->func)));
+        op_env = Dispatch(call_values);
+      }
+      CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
+                               << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
+                               << call_values->device.c_str();
+      std::shared_ptr<Requests> requests = op_env->GetRequests();
+      // prepare distributed requests
+      for (size_t i = 0; i < requests->distributed.size(); i++) {
+        Requests::DistributedRequest& entry = requests->distributed[i];
+        *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+        // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef
+        // or ncclComm_t handler instead?
+      }
 #ifdef RAF_USE_CUDA
-    // prepare cuda stream requests
-    for (size_t i = 0; i < requests->stream.size(); i++) {
-      Requests::StreamRequest& entry = requests->stream[i];
-      // currently ignores the stream_idx field in requests, all requests with the same tag_idx will
-      // get the same cuda stream in vm
-      std::shared_ptr<Stream> stream =
-          utils::GetStreamById(ctx, entry.device.device_id(), entry.tag_idx);
-      *entry.dest = stream->data();
-      entry.stream = stream;
-    }
+      // prepare cuda stream requests
+      for (size_t i = 0; i < requests->stream.size(); i++) {
+        Requests::StreamRequest& entry = requests->stream[i];
+        // currently ignores the stream_idx field in requests, all requests with the same tag_idx
+        // will get the same cuda stream in vm
+        std::shared_ptr<Stream> stream =
+            utils::GetStreamById(ctx, entry.device.device_id(), entry.tag_idx);
+        *entry.dest = stream->data();
+        entry.stream = stream;
+      }
 #endif
-    // add to cache
-    op_env_cache->Set(op_env_cache_key, op_env);
+      // add to cache
+      op_env_cache->Set(op_env_cache_key, op_env);
+    }
   }
 
   std::shared_ptr<Requests> requests = op_env->GetRequests();
@@ -1109,9 +1126,8 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
   return std::make_tuple(op_env, std::move(inputs), std::move(output), op_env_cache_key);
 }
 
-tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph,
-                                          bool dryrun) {
-  auto vm = make_object<VirtualMachine>(enable_cuda_graph, dryrun);
+tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cuda_graph) {
+  auto vm = make_object<VirtualMachine>(enable_cuda_graph);
   vm->LoadExecutable(exec);
   return tvm::runtime::Module(vm);
 }
@@ -1119,10 +1135,9 @@ tvm::runtime::Module CreateVirtualMachine(const Executable* exec, bool enable_cu
 RAF_REGISTER_GLOBAL("raf.vm.VirtualMachine").set_body([](tvm::TVMArgs args, tvm::TVMRetValue* rv) {
   tvm::runtime::Module mod = args[0];
   bool enable_cuda_graph = args[1];
-  bool dryrun = args[2];
   const auto* exec = dynamic_cast<Executable*>(mod.operator->());
   CHECK(exec) << "The virtual machine executable has not been defined yet.";
-  *rv = CreateVirtualMachine(exec, enable_cuda_graph, dryrun);
+  *rv = CreateVirtualMachine(exec, enable_cuda_graph);
 });
 
 }  // namespace vm

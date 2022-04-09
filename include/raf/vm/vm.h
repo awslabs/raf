@@ -247,8 +247,7 @@ class VMFuncOpEnvCache {
  */
 class VirtualMachine : public tvm::runtime::ModuleNode {
  public:
-  VirtualMachine(bool enable_cuda_graph, bool dryrun)
-      : exec_(nullptr), dryrun_(dryrun), enable_cuda_graph_(enable_cuda_graph) {
+  VirtualMachine(bool enable_cuda_graph) : exec_(nullptr), enable_cuda_graph_(enable_cuda_graph) {
 #ifndef RAF_USE_CUDA
     if (enable_cuda_graph) {
       LOG(WARNING) << "Because CUDA is not enabled in RAF, CUDA graph will be disabled in the VM.";
@@ -416,7 +415,7 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * corresponding VM function. It's a map from pc to the OpEnv cache.
    */
   std::vector<std::shared_ptr<VMFuncOpEnvCache>> op_env_cache_;
-  /*! \brief Indicates whether to dryrun (skip op execution). */
+  /*! \brief Indicates whether to dryrun (dispatch ops in parallel and skip op execution). */
   bool dryrun_ = false;
   /*! \brief Indicates whether CUDA is used. */
   bool use_cuda_ = false;

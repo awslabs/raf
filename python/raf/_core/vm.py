@@ -433,21 +433,19 @@ class VirtualMachine:
 
     enable_cuda_graph : bool
         Whether use CUDA graph.
-
-    dryrun: bool
-        Whether to create a dryrun VM that skips the op execution.
     """
 
-    def __init__(self, exe, device, enable_cuda_graph=False, dryrun=False):
+    def __init__(self, exe, device, enable_cuda_graph=False):
         if not isinstance(exe, Executable):
             raise TypeError(
                 "mod is expected to be the type of Executable, but received {}".format(type(exe))
             )
-        self.module = _ffi.vm.VirtualMachine(exe.module, enable_cuda_graph, dryrun)
+        self.module = _ffi.vm.VirtualMachine(exe.module, enable_cuda_graph)
         self._exec = exe
         self._set_devices = self.module["set_devices"]
         self._prepare_context = self.module["prepare_context"]
         self._run = self.module["run"]
+        self._dryrun = self.module["dryrun"]
         self._profile = self.module["profile"]
         self._set_devices(device)
 
@@ -507,6 +505,24 @@ class VirtualMachine:
         """
         ctx = self.prepare_context(func_name, *args, **kwargs)
         return self._run(ctx)
+
+    def dryrun(self, *args, func_name="main", **kwargs):
+        """Dry run the virtual machine.
+
+        Parameters
+        ----------
+        args : list[raf.ndarray] or list[np.ndarray]
+            The arguments to the function.
+
+        func_name : str
+            The name of function to run.
+
+        kwargs: dict of str to raf.ndarray or np.ndarray
+            Named arguments to the function.
+        """
+        ctx = self.prepare_context(func_name, *args, **kwargs)
+        self._dryrun(ctx)
+
 
     def profile(self, *args, func_name="main", warmup=5, number=10, repeat=10, **kwargs):
         """Profile the virtual machine.

@@ -66,7 +66,7 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fusion=False, pass_se
             # Use dry run to skip the op execution; otherwise it becomes a chicken-egg problem:
             # we need to run through every ops to collect tuning tasks, but we cannot execute ops
             # without schedules.
-            executor = VMExecutor(mod, device, dryrun=True)
+            executor = VMExecutor(mod, device)
 
     old_auto_scheduler_fallback_context = auto_scheduler.DispatchContext.current
     auto_scheduler.DispatchContext.current = MetaFallbackContext(verbose=0)
@@ -81,7 +81,7 @@ def extract_tuning_tasks(mod_or_executor, args, device, *, fusion=False, pass_se
             config={"relay.backend.use_auto_scheduler": True, "raf.tvm.allow_jit_failure": True},
             disabled_pass={"AutoSchedulerLayoutRewrite"},
         ):
-            executor.vm.run(*args)
+            executor.vm.dryrun(*args)
 
     autotvm.GLOBAL_SCOPE.silent = old_autotvm_silent
     auto_scheduler.DispatchContext.current = old_auto_scheduler_fallback_context

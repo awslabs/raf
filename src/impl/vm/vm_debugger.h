@@ -22,7 +22,7 @@ namespace vm {
 
 class VMDebugger : public VirtualMachine {
  public:
-  VMDebugger() : VirtualMachine(false, false) {
+  VMDebugger() : VirtualMachine(false) {
   }
 
   PackedFunc GetFunction(const std::string& name, const ObjectPtr<Object>& sptr_to_self) final;

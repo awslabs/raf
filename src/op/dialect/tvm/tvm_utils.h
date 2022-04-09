@@ -277,9 +277,9 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
         std::stringstream ss;                                                                      \
         ss << "[TVM] Failed to JIT: " << env->env_name << ": " << e.what();                        \
         auto msg = ss.str();                                                                       \
-        dispatch_error_msgs.push_back(msg);                                                        \
+        env->error_msgs.push_back(msg);                                                            \
         DLOG(WARNING) << msg;                                                                      \
-        return nullptr;                                                                            \
+        return env;                                                                                \
       }                                                                                            \
     }                                                                                              \
     return env;                                                                                    \

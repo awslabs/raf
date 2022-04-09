@@ -116,12 +116,9 @@ class VMExecutor:
 
     enable_cuda_graph : bool
         Whether to use CUDA graph.
-
-    dryrun: bool
-        Whether to create a dryrun VM that skips the op execution.
     """
 
-    def __init__(self, mod, device, enable_cuda_graph=False, dryrun=False):
+    def __init__(self, mod, device, enable_cuda_graph=False):
         if mod is None:
             raise RuntimeError("Must provide module to get VM executor.")
         if "gpu" not in device and "cuda" not in device:
@@ -129,7 +126,7 @@ class VMExecutor:
         self.device = Device(device)
         self.executable = vm.compile(mod, self.device)
         self.vm = vm.VirtualMachine(
-            self.executable, self.device, enable_cuda_graph=enable_cuda_graph, dryrun=dryrun
+            self.executable, self.device, enable_cuda_graph=enable_cuda_graph
         )
 
     @staticmethod
@@ -241,5 +238,24 @@ class VMExecutor:
 
         def _maker(*args, **kwargs):
             return self.vm.run(*args, **kwargs)
+
+        return self._make_vm_helper(_maker, sch_file)
+
+    def make_dryrunner(self, sch_file=None):
+        """Create a VM executor with dryrun.
+
+        Parameters
+        ----------
+        sch_file: Optional[str]
+            The tuned schedule file path.
+
+        Returns
+        -------
+        executor: Callable
+            The VM executor
+        """
+
+        def _maker(*args, **kwargs):
+            return self.vm.dryrun(*args, **kwargs)
 
         return self._make_vm_helper(_maker, sch_file)
