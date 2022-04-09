@@ -79,7 +79,9 @@ class OpEnv {
 
   /*! \brief Whether this OpEnv is valid. */
   std::vector<std::string> error_msgs;
-  bool HasError() { return !error_msgs.empty(); }
+  bool HasError() {
+    return !error_msgs.empty();
+  }
 
   void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
   void RequestStream(void** dest, const Device& device, int tag_idx);
@@ -191,7 +193,6 @@ inline T GetOpAttrOrDefault(const ir::Op& op, const std::string attr_name, T def
  * \return The created OpEnv.
  */
 std::shared_ptr<OpEnv> Dispatch(const CallValues& call);
-
 
 std::vector<OpEnvPtr> ParallelDispatch(const std::vector<CallValues>& calls);
 
