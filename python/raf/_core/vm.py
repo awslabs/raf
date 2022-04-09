@@ -523,7 +523,6 @@ class VirtualMachine:
         ctx = self.prepare_context(func_name, *args, **kwargs)
         self._dryrun(ctx)
 
-
     def profile(self, *args, func_name="main", warmup=5, number=10, repeat=10, **kwargs):
         """Profile the virtual machine.
 
