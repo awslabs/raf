@@ -17,7 +17,7 @@ on:
 
 jobs:
   build_and_push:
-    if: github.repository == 'meta-project/meta'
+    if: github.repository == 'awslabs/raf'
     name: Build and push
     runs-on: ubuntu-latest
     steps:

@@ -36,7 +36,7 @@ class CUDAHostDeviceAPI final : public DeviceAPI {
   }
 
   void FreeMemory(void* ptr) override {
-    CUDA_CALL(cudaFreeHost(ptr));
+    CUDA_CALL_IF_DRIVER_IS_LOADED(cudaFreeHost(ptr));
   }
 
   void SetDevice(const int dev_id) override {

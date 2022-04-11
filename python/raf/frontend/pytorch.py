@@ -11,7 +11,7 @@ import torch
 from raf import distributed as dist
 from .._core.ndarray import ndarray
 from .._lib import relay
-from .._ffi.pass_ import FromRelay, validate_relay_param_name
+from .._ffi.pass_ import FromRelay, SwitchTrainOp, validate_relay_param_name
 from ..frontend.model import FrameworkModel
 
 
@@ -161,4 +161,4 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
             meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].numpy())
     # relay_params may contain unused parameters, which are not present in meta_params
     assert len(meta_params) <= len(relay_params)
-    return FrameworkModel(meta_mod, meta_mod, meta_params, {})
+    return FrameworkModel(SwitchTrainOp(True)(meta_mod), meta_mod, meta_params, {})

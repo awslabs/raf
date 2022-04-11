@@ -25,6 +25,7 @@ using namespace raf::op;
 RAF_OP_GRAD_SKIP_INPUTS("raf.op.relu_dx", "x");
 RAF_OP_GRAD_SKIP_INPUTS("raf.op.gelu_dx", "y");
 RAF_OP_GRAD_SKIP_INPUTS("raf.op.sqrt_dx", "x");
+RAF_OP_GRAD_SKIP_INPUTS("raf.op.tanh_dx", "x");
 RAF_OP_GRAD_SKIP_INPUTS("raf.op.conv2d_dx", "y");
 RAF_OP_GRAD_SKIP_INPUTS("raf.op.conv2d_dw", "y");
 

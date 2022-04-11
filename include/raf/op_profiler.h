@@ -29,6 +29,7 @@ using namespace raf::value;
 
 using LatencyAndWorkspaceMapT =
     std::unordered_map<std::string, std::pair<std::vector<float>, int64_t>>;
+using OpEnvMapT = std::unordered_map<std::string, OpEnvPtr>;
 
 /*! \brief A class to JIT op, create dummy input data, and allocate memory buffers for profiling. */
 class OpWithData {
@@ -96,6 +97,13 @@ class OpProfiler {
                                                       int32_t repeat = 1);
 
   /*!
+   * \brief Return the OpEnv of the given op if it has been profiled.
+   * \param op The op to be queried.
+   * \return The OpEnv pointer of the given op if it has been profiled; otherwise nullptr.
+   */
+  OpEnvPtr GetOpEnv(const Expr& op);
+
+  /*!
    * \brief Get the current size of latency cache.
    */
   int GetLatencyCacheSize() {
@@ -107,6 +115,7 @@ class OpProfiler {
    */
   void Reset() {
     latency_and_workspace_size_cache_.clear();
+    op_env_cache_.clear();
   }
 
  protected:
@@ -118,6 +127,8 @@ class OpProfiler {
   /*! \brief A cache to store the latency of profiled ops in microseconds. Cache key is
    * the byte string hash of a call node. */
   LatencyAndWorkspaceMapT latency_and_workspace_size_cache_;
+  /*! \brief A cache to store built OpEnv. */
+  OpEnvMapT op_env_cache_;
 
  private:
   /*!

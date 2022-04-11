@@ -68,6 +68,21 @@ class DistContext(Object):
         self.auto_dp_profiling_end_iter_ = value
         ffi.AutoDPProfilingEndIter(value)
 
+    def dumps(self):
+        attr_keys = [
+            "enable_data_parallel",
+            "size",
+            "rank",
+            "zero_opt_level",
+            "auto_dp_profiling_start_iter",
+            "auto_dp_profiling_end_iter",
+        ]
+        return {attr: getattr(self, attr) for attr in attr_keys}
+
+    def loads(self, context_dict):
+        for attr in context_dict:
+            setattr(self, attr, context_dict[attr])
+
 
 def get_context():
     return ffi.Global()

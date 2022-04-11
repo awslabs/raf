@@ -340,9 +340,9 @@ HashKey SoftmaxDxHasher(const std::vector<Type>& param_types, const Type& y_type
 }
 
 RAF_TVM(softmax, Softmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
-        SoftmaxSchema2Attrs, SoftmaxHasher, kOpaque);
+        SoftmaxSchema2Attrs, SoftmaxHasher, kCommReduce);
 RAF_TVM(softmax_dx, SoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
-        SoftmaxDxSchema2Attrs, SoftmaxDxHasher, kOpaque);
+        SoftmaxDxSchema2Attrs, SoftmaxDxHasher, kCommReduce);
 RAF_TVM(log_softmax, LogSoftmax, SoftmaxArgs, SoftmaxSchema2Args, SoftmaxSchemaArgNames,
         SoftmaxSchema2Attrs, SoftmaxHasher, kCommReduce);
 RAF_TVM(log_softmax_dx, LogSoftmaxDx, SoftmaxDxArgs, SoftmaxDxSchema2Args, SoftmaxDxSchemaArgNames,
@@ -698,6 +698,8 @@ HashKey LayerNormHasher(const std::vector<Type>& param_types, const Type& y_type
 
 RAF_TVM(layer_norm, LayerNorm, LayerNormArgs, LayerNormSchema2Args, LayerNormSchemaArgNames,
         LayerNormSchema2Attrs, LayerNormHasher, kOpaque);
+RAF_TVM(layer_norm_train, LayerNormTrain, LayerNormArgs, LayerNormSchema2Args,
+        LayerNormSchemaArgNames, LayerNormSchema2Attrs, LayerNormHasher, kOpaque);
 
 std::vector<Value> LayerNormDxSchema2Args(const LayerNormDxArgs* args) {
   std::vector<Value> re;
@@ -743,6 +745,56 @@ HashKey LayerNormDxHasher(const std::vector<Type>& param_types, const Type& y_ty
 
 RAF_TVM(layer_norm_dx, LayerNormDx, LayerNormDxArgs, LayerNormDxSchema2Args,
         LayerNormDxSchemaArgNames, LayerNormDxSchema2Attrs, LayerNormDxHasher, kOpaque);
+
+std::vector<Value> LayerNormTrainDxSchema2Args(const LayerNormTrainDxArgs* args) {
+  std::vector<Value> re;
+  re.push_back(args->x);
+  if (args->scale.defined()) {
+    re.push_back(args->scale.value());
+  }
+  re.push_back(args->dy);
+  re.push_back(args->mean);
+  re.push_back(args->invvar);
+  return re;
+}
+
+std::vector<std::string> LayerNormTrainDxSchemaArgNames(const op::CallValues& call) {
+  const auto* args = call->args.as<LayerNormTrainDxArgs>();
+  std::vector<std::string> ret;
+  ret.push_back("x");
+  if (args->scale.defined()) {
+    ret.push_back("scale");
+  }
+  ret.push_back("dy");
+  ret.push_back("mean");
+  ret.push_back("invvar");
+  return ret;
+}
+
+Attrs LayerNormTrainDxSchema2Attrs(const LayerNormTrainDxArgs* args) {
+  // attrs will be later passed to compute & schedule functions
+  auto attrs = make_object<LayerNormAttrs>();
+  attrs->axis = args->axis;
+  attrs->epsilon = args->eps;
+  if (args->scale.defined()) {
+    attrs->set_scale_bias = true;
+  } else {
+    attrs->set_scale_bias = false;
+  }
+  return Attrs(attrs);
+}
+
+HashKey LayerNormTrainDxHasher(const std::vector<Type>& param_types, const Type& y_type,
+                               const LayerNormTrainDxArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->axis;
+  key << args->eps;
+  return key;
+}
+
+RAF_TVM(layer_norm_train_dx, LayerNormTrainDx, LayerNormTrainDxArgs, LayerNormTrainDxSchema2Args,
+        LayerNormTrainDxSchemaArgNames, LayerNormTrainDxSchema2Attrs, LayerNormTrainDxHasher,
+        kOpaque);
 
 std::vector<Value> BatchNormSchema2Args(const BatchNormArgs* args) {
   return {args->x, args->running_mean, args->running_var, args->w, args->b};

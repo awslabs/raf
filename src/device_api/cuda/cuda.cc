@@ -43,7 +43,7 @@ class CUDADeviceAPI final : public DeviceAPI {
   }
 
   void FreeMemory(void* ptr) override {
-    CUDA_CALL(cudaFree(ptr));
+    CUDA_CALL_IF_DRIVER_IS_LOADED(cudaFree(ptr));
   }
 
 #if CUDA_VERSION >= 11030
@@ -91,7 +91,7 @@ class CUDADeviceAPI final : public DeviceAPI {
   }
 
   void FreeMemoryAsync(void* ptr, void* stream) {
-    CUDA_CALL(cudaFreeAsync(ptr, static_cast<cudaStream_t>(stream)));
+    CUDA_CALL_IF_DRIVER_IS_LOADED(cudaFreeAsync(ptr, static_cast<cudaStream_t>(stream)));
   }
 #else
   void SetDevice(const int dev_id) override {

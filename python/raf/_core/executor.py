@@ -77,7 +77,7 @@ class MetaFallbackContext(ApplyHistoryBest):
 
         # Print the message due to no valid schedule.
         if has_complex_op and self.verbose >= 2:
-            msg = f"Cannot find tuned schdule for op={func_name}, target={target}"
+            msg = f"Cannot find tuned schedule for op={func_name}, target={target}"
             if self.verbose == 3:
                 msg += (
                     f", workload_key={workload_key}\n"
@@ -94,7 +94,7 @@ class MetaFallbackContext(ApplyHistoryBest):
 
 def init_auto_scheduler_dispatch_context():
     """Initialize auto scheduler dispatch context."""
-    verbose = int(os.environ["RAF_SCH_VERBOSE"]) if "RAF_SCH_VERBOSE" in os.environ else 2
+    verbose = int(os.environ["RAF_SCH_VERBOSE"]) if "RAF_SCH_VERBOSE" in os.environ else 0
     env = MetaFallbackContext(verbose=verbose)
     env.__enter__()
 

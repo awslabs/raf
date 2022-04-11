@@ -15,10 +15,23 @@
 
 #include "raf/device.h"
 
-#define CUDA_CALL(func)                                           \
-  do {                                                            \
-    cudaError_t e = (func);                                       \
-    CHECK(e == cudaSuccess) << "CUDA: " << cudaGetErrorString(e); \
+// Wrap CUDA runtime API calls with error checking.
+#define CUDA_CALL(func)                                                             \
+  do {                                                                              \
+    cudaError_t e = (func);                                                         \
+    CHECK(e == cudaSuccess) << "CUDA error " << e << ": " << cudaGetErrorString(e); \
+  } while (false)
+
+// Wrap CUDA runtime API calls with error checking, but ignore the CUDA driver shutdown error.
+// Since we maintain CUDADeviceAPI in a static instance, the order of calling its deconstructor
+// is uncertain. Thus, it is possible that the CUDA driver shutdown error is thrown when calling
+// CUDA runtime APIs (i.e., cudaFree) in other object's deconstruction (i.e., Memory).
+// We use this macro in such case to avoid the error.
+#define CUDA_CALL_IF_DRIVER_IS_LOADED(func)                     \
+  do {                                                          \
+    cudaError_t e = (func);                                     \
+    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)    \
+        << "CUDA error " << e << ": " << cudaGetErrorString(e); \
   } while (false)
 
 template <typename T, int value,

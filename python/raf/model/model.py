@@ -4,9 +4,11 @@
 # pylint: disable=missing-class-docstring,missing-function-docstring
 """Interactive interface for training & inference."""
 from collections import OrderedDict
+import re
 
 from raf._core import cacher
 from raf._core.core_utils import bfs, get_attr, get_named_attr, set_module
+from raf._core.device import Device
 from raf._core.ndarray import ndarray
 from raf.model.trace import _get_trace_record
 
@@ -213,6 +215,88 @@ def _extract_methods(model):
     if not fwd_infer:
         fwd_infer = fwd_train
     return build, fwd_train, fwd_infer
+
+
+def get_param_size(model, mbs=False):
+    """A utility function to get the total parameter size.
+
+    Parameters
+    ----------
+    model: raf.model.BaseModel
+        The target model.
+
+    mbs: Optional[bool]
+        If True, return the total parameter size in MBs;
+        otherwise return the parameter number (default).
+
+    Returns
+    -------
+    size: float
+        The total parameter size.
+    """
+
+    total_size = 0.0
+    for param in model.state().values():
+        # Ignore non-parameters (i.e., not learnable model states)
+        if not param.requires_grad or "float" not in param.dtype:
+            continue
+        if mbs:
+            try:
+                token = re.search(r"float(\d+)", param.dtype)
+                n_megabytes = int(token.group(1)) / 8 / 1048576.0
+            except Exception:  # pylint: disable=broad-except
+                raise ValueError("Unrecognized parameter dtype: %s" % param.dtype)
+        else:
+            n_megabytes = 1
+
+        nsize = 1
+        for shape in param.shape:
+            nsize *= shape
+        total_size += nsize * n_megabytes
+
+    if total_size == 0:
+        print(
+            "WARNING: The parameter size is zero. Please make sure "
+            "you call model.train_mode() in advance if you believe this result is incorrect"
+        )
+
+    return total_size
+
+
+def calc_model_gflops(model, device, args):
+    """A utility function to calculate the compute GFLOPS of the model."""
+    # pylint: disable=import-outside-toplevel
+    from raf._ffi.pass_ import EstimateGFLOPS, InferType
+
+    record = model._internal(*args)
+    mod = record.mod
+    with Device(device):
+        total_gflops = sum([gf.value for gf in EstimateGFLOPS(InferType()(mod)).values()])
+    return total_gflops
+
+
+def trace_memory(model, device, args, include_param=True):
+    """A utility function to trace memory footprint of the model."""
+    # pylint: disable=import-outside-toplevel
+    import tvm
+    from raf._core.vm import VMCompiler
+    from raf._ffi.pass_ import EstimateMemory, InferType
+
+    record = model._internal(*args)
+    mod = record.mod
+
+    compiler = VMCompiler()
+    with tvm.transform.PassContext(opt_level=3):
+        mod, _ = compiler.optimize(mod, device)
+    mod = InferType()(mod)
+    trace = [(name, mem.value) for name, mem in EstimateMemory(mod, Device(device), include_param)]
+    return trace
+
+
+def get_peak_memory(model, device, args, include_param=True):
+    """A utility function to estimate the peak memory consumption."""
+    trace = trace_memory(model, device, args, include_param)
+    return max(trace, key=lambda x: x[1])[1]
 
 
 # pylint: enable=protected-access

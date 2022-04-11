@@ -19,6 +19,7 @@ from raf.testing import (
     with_dialect,
 )
 from raf.model.trace import trace_mutate_attr
+from raf.optim.optim import with_autodiff
 
 
 @with_dialect("tvm")
@@ -118,76 +119,92 @@ def test_dense(n, m, k, device):
 
 # pylint: disable=no-member
 # pylint: disable=protected-access
-# TODO: Currently TVM fails to schedule softmax or softmax_dx in certain cases
-@pytest.mark.skip
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("dtype", ["float32"])
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize(
     "shape",
     [
-        [3],
-        [3, 2, 5, 8, 4, 7],
+        [3, 2],
+        [3, 2, 5, 8],
     ],
 )
-@pytest.mark.parametrize("axis", [0, -1])
-@pytest.mark.parametrize(
-    "funcs",
-    [
-        [raf._op.sym.softmax, torch.softmax],
-    ],
-)
-def test_unary_with_axis(device, dtype, shape, axis, funcs):
-    raf_fwd, torch_fwd = funcs
+def test_softmax(device, dtype, shape):
+    axis = -1  # axis=0 should be on CuDNN.
+    tol = 1e-5
+    if dtype == "float16":
+        tol = 1e-3
+        if device != "cuda":
+            pytest.skip("float16 is not supported on cpu")
 
-    class TestModel(raf.Model):
+    class Model(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
         def forward(self, x):
-            return raf_fwd(x, axis=axis)
+            return raf._op.sym.softmax(x, axis=axis)
 
-    model = TestModel()
+    model = Model()
+
     # forward
     m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
+    if dtype == "float16":
+        model = raf.amp.autocast(model, [m_x])
     m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
-    t_y = torch_fwd(t_x, dim=axis)
-    check(m_y, t_y)
-    check(v_y, t_y)
+    v_y = run_vm_model(model, device, [m_x])
+    check(m_y, v_y)
+
+    with torch.cuda.amp.autocast(dtype == "float16"):
+        t_y = torch.softmax(t_x, dim=axis)
+    check(m_y, t_y, rtol=tol, atol=tol)
+
     # backward
     m_dy, t_dy = randn_torch(shape, device=device, dtype=dtype)
     t_y.backward(t_dy)
     m_y.backward(m_dy)
-    check(m_x.grad, t_x.grad)
+    check(m_x.grad, t_x.grad, rtol=tol, atol=tol)
 
 
 # pylint: disable=no-member
 # pylint: disable=protected-access
 @with_dialect("tvm")
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("dtype", ["float32"])
 @pytest.mark.parametrize("shape", [[3, 2], [1, 3]])
-def test_log_softmax(device, dtype, shape):
+@pytest.mark.parametrize("disable_fusion", [True, False])
+def test_log_softmax(device, shape, disable_fusion):
     class TestModel(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
-        def forward(self, x):
-            return raf._op.sym.log_softmax(x)
+        def forward(self, x, b):
+            b = raf.cast(b, "float16")
+            y = raf.bias_add(x, b, -1)
+            y = raf.cast(y, "float32")
+            return raf._op.sym.log_softmax(y)
 
     model = TestModel()
     # forward
-    m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
-    m_y = model(m_x)
-    v_y = run_vm_model(model, device, [m_x], disable_fusion=True)
-    t_y = torch.log_softmax(t_x, dim=-1)
+    m_x, t_x = randn_torch(shape, device=device, dtype="float16", requires_grad=True)
+    m_b, t_b = randn_torch((shape[-1],), device=device, dtype="float32", requires_grad=True)
+    m_y = model(m_x, m_b)
+    v_y = run_vm_model(model, device, [m_x, m_b], disable_fusion=disable_fusion)
+
+    # Fusion will inline the cast to bias_add and result in numerical errors.
+    # As this pattern usually happens at AMP, this error should be acceptable.
+    tol = 1e-3 if not disable_fusion else 1e-5
+
+    check(m_y, v_y, rtol=tol, atol=tol)
+
+    t_b = t_b.to(dtype=torch.float16)
+    t_y = torch.add(t_x, t_b)
+    t_y = t_y.to(dtype=torch.float32)
+    t_y = torch.log_softmax(t_y, dim=-1)
     check(m_y, t_y)
-    check(v_y, t_y)
+
     # backward
-    m_dy, t_dy = randn_torch(shape, device=device, dtype=dtype)
+    m_dy, t_dy = randn_torch(shape, device=device, dtype="float32")
     t_y.backward(t_dy)
     m_y.backward(m_dy)
     check(m_x.grad, t_x.grad)
@@ -801,6 +818,58 @@ def test_raf_dropout(dropout, device):
     dy, _ = randn_torch(shape, dtype=dtype)
     m_y.backward(dy)
     check_dropout(x, m_y, x.grad, dy)
+
+
+@with_seed(0)
+@pytest.mark.parametrize("shape", [(1, 2, 4)])
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("dtype", ["float32"])
+def test_layer_norm_train(shape, device, dtype):
+    class LayerNorm(raf.Model):
+        def build(self, axis, eps):
+            self._axis = axis
+            self._eps = eps
+
+        @raf.model.trace
+        def forward(self, *inputs):
+            return raf.layer_norm_train(*inputs, axis=self._axis, eps=self._eps)
+
+    class TorchLN(torch.nn.Module):
+        def __init__(self):
+            super(TorchLN, self).__init__()
+            self.layer_norm = torch.nn.LayerNorm(shape[-1], eps=1e-12)
+
+        def forward(self, x):
+            return self.layer_norm(x)
+
+    scale_shape = [shape[-1]]
+    m_model = LayerNorm(-1, 1e-12)
+    m_model.to(device=device, dtype=dtype)
+    m_x, t_x = randn_torch(shape, device=device, dtype=dtype, requires_grad=True)
+    m_dy, t_dy = randn_torch(shape, device=device, dtype=dtype)
+    m_scale, t_scale = randn_torch(scale_shape, device=device, dtype=dtype, requires_grad=True)
+    m_bias, t_bias = randn_torch(scale_shape, device=device, dtype=dtype, requires_grad=True)
+    m_model = with_autodiff(m_model)
+
+    m_y = run_vm_model(m_model, device, [m_dy, m_x, m_scale, m_bias])
+    m_out = m_y[0][0]
+    m_dx = m_y[1][0]
+    m_dw = m_y[1][1]
+    m_db = m_y[1][2]
+
+    t_model = TorchLN()
+    t_model = t_model.to(device=device)
+    t_model.eval()
+
+    t_model.layer_norm.weight = torch.nn.Parameter(t_scale, requires_grad=True)
+    t_model.layer_norm.bias = torch.nn.Parameter(t_bias, requires_grad=True)
+    t_out = t_model(t_x)
+
+    check(m_out, t_out, rtol=1e-4, atol=1e-4)
+    t_out.backward(t_dy)
+    check(m_dx, t_x.grad, rtol=1e-4, atol=1e-4)
+    check(m_dw, t_model.layer_norm.weight.grad, rtol=1e-4, atol=1e-4)
+    check(m_db, t_model.layer_norm.bias.grad, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

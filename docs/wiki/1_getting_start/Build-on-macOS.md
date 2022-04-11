@@ -37,7 +37,7 @@ Below we introduce an environment variable that indicates where RAF is.
 
 ```bash
 # Create the build directory
-git clone https://github.com/meta-project/meta --recursive && cd meta
+git clone https://github.com/awslabs/raf --recursive && cd raf
 export RAF_HOME=$(pwd)
 mkdir $RAF_HOME/build && cd $RAF_HOME/build
 # Configuration file for CMake

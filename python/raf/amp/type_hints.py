@@ -49,7 +49,7 @@ def register_op_cast_rule(op_name, cast_rule=None, level=10):
 def gen_hint_helper(etype, target_dtype):
     """A helper function to generate a type hint for the given type."""
     if isinstance(etype, tvm.ir.TensorType):
-        return PrimType(target_dtype)
+        return PrimType(target_dtype if "float" in etype.dtype else etype.dtype)
     if isinstance(etype, tvm.ir.TupleType):
         return TupleType([gen_hint_helper(field, target_dtype) for field in etype.fields])
     raise ValueError("Unsupported input type: %s" % str(etype))
@@ -63,15 +63,39 @@ def check_dtype(ttype, dtype):
     return ttype.dtype == dtype
 
 
-def generic_cast(cast_to_amp, input_num):
+def generic_cast(cast_to_amp, castable_arg_num_or_list):
     """The generic cast function that generates AMP type hints for inputs, and generates
     don't touch type hints for rest arguments.
+
+    Parameters
+    ----------
+    cast_to_amp : bool
+        Whether to cast all arguments to the AMP dtype.
+
+    castable_arg_num_or_list : Union[int, List[int]]
+        The first number or list of arguments that can be casted to the AMP dtype.
+
+    Returns
+    -------
+    gen: Callable[[List[Expr], Type], List[Type]]
+        The cast rule function.
     """
+    if isinstance(castable_arg_num_or_list, int):
+        castable_arg_list = range(castable_arg_num_or_list)
+    else:
+        assert isinstance(castable_arg_num_or_list, list), "Expected int or list, but got %s" % (
+            type(castable_arg_num_or_list)
+        )
+        castable_arg_list = castable_arg_num_or_list
 
     def _gen(args, ret_type, amp_dtype):
         target_dtype = amp_dtype if cast_to_amp else None
-        ret = [gen_hint_helper(arg.checked_type, target_dtype) for arg in args[:input_num]]
-        ret += [PrimType(None) for _ in range(len(args) - input_num)]
+        ret = []
+        for idx, arg in enumerate(args):
+            if idx in castable_arg_list:
+                ret.append(gen_hint_helper(arg.checked_type, target_dtype))
+            else:
+                ret.append(PrimType(None))
         return ret
 
     return _gen
@@ -117,6 +141,11 @@ register_op_cast_rule("raf.op.cross_entropy", generic_cast(False, 2))
 register_op_cast_rule("raf.op.cross_entropy_dpred", generic_cast(False, 2))
 register_op_cast_rule("raf.op.cross_entropy_dtrue", generic_cast(False, 2))
 
+# embedding_dx/take_dx has accuracy issue and its performance does not improve significantly
+# over float32, so never cast.
+register_op_cast_rule("raf.op.take_dx", generic_cast(3, False))
+register_op_cast_rule("raf.op.embedding_dx", generic_cast(2, False))
+
 # FIXME: These ops should support float16, but the current TVM code results in
 # either runtime error or mismatch outputs.
 register_op_cast_rule("raf.op.atan", generic_cast(False, 1))
@@ -133,26 +162,48 @@ register_op_cast_rule("raf.op.gather_nd", generic_cast(False, 1))
 register_op_cast_rule("raf.op.gather_nd_dx", generic_cast(False, 3))
 
 
-def infer_cast(input_num):
+def infer_cast(castable_arg_num_or_list):
     """The cast rule is inferred by the dtype of current arguments and output:
     1. If the original output dtype is not float32 (e.g., int32/bool/tuple), then do not touch.
     2. If more than a half args are casted to the AMP dtype, then cast all args to the AMP dtype.
     3. Otherwise keep all arguments untouched.
+
+    Parameters
+    ----------
+    castable_arg_num_or_list : Union[int, List[int]]
+        The first number or list of arguments that can be casted to the AMP dtype.
+
+    Returns
+    -------
+    gen: Callable[[List[Expr], Type], List[Type]]
+        The cast rule function.
     """
+    if isinstance(castable_arg_num_or_list, int):
+        castable_arg_list = range(castable_arg_num_or_list)
+    else:
+        assert isinstance(castable_arg_num_or_list, list), "Expected int or list, but got %s" % (
+            type(castable_arg_num_or_list)
+        )
+        castable_arg_list = castable_arg_num_or_list
 
     def _gen(args, ret_type, amp_dtype):
-        if input_num == 0 or isinstance(ret_type, tvm.ir.TupleType):
+        if not castable_arg_list or isinstance(ret_type, tvm.ir.TupleType):
             # Not castable or just follow the current input dtype.
             target_dtype = None
         else:
-            n_amp = sum([check_dtype(arg.checked_type, amp_dtype) for arg in args[:input_num]])
-            n_fp32 = sum([check_dtype(arg.checked_type, "float32") for arg in args[:input_num]])
+            n_amp = 0
+            n_fp32 = 0
+            for idx in castable_arg_list:
+                n_amp += 1 if check_dtype(args[idx].checked_type, amp_dtype) else 0
+                n_fp32 += 1 if check_dtype(args[idx].checked_type, "float32") else 0
             target_dtype = "float32" if n_fp32 > n_amp else amp_dtype
 
         ret = []
-        for arg in args[:input_num]:
-            ret.append(gen_hint_helper(arg.checked_type, target_dtype))
-        ret += [PrimType(None) for _ in range(len(args) - input_num)]
+        for idx, arg in enumerate(args):
+            if idx in castable_arg_list:
+                ret.append(gen_hint_helper(arg.checked_type, target_dtype))
+            else:
+                ret.append(PrimType(None))
         return ret
 
     return _gen
@@ -266,14 +317,14 @@ register_op_cast_rule("raf.op.argwhere", infer_cast(1))
 register_op_cast_rule("raf.op.upper_bound.argwhere", infer_cast(1))
 register_op_cast_rule("raf.op.roi_align", infer_cast(2))
 register_op_cast_rule("raf.op.roi_align_dx", infer_cast(2))
-register_op_cast_rule("raf.op.layer_norm", infer_cast(3))
-register_op_cast_rule("raf.op.layer_norm_dx", infer_cast(3))
 register_op_cast_rule("raf.op.gather", infer_cast(1))
 register_op_cast_rule("raf.op.divide", infer_cast(2))
 register_op_cast_rule("raf.op.cumsum", infer_cast(1))
 register_op_cast_rule("raf.op.size", infer_cast(1))
 register_op_cast_rule("raf.op.numel", infer_cast(1))
 register_op_cast_rule("raf.op.shape_as_tensor", infer_cast(1))
+register_op_cast_rule("raf.op.embedding", infer_cast(2))
+register_op_cast_rule("raf.op.take", infer_cast(2))
 
 # Special cases.
 
@@ -345,7 +396,7 @@ def op_cast_adv_index_dx(args, ret_type, amp_dtype):
 register_op_cast_rule("raf.op.adv_index_dx", op_cast_adv_index_dx)
 
 
-def op_cast_norm(data_num, out_num):
+def op_cast_norm(data_num):
     """Scale/bias tensors of normalization layers have to be in float32."""
 
     def _gen_rules(args, ret_type, amp_dtype):
@@ -356,13 +407,45 @@ def op_cast_norm(data_num, out_num):
     return _gen_rules
 
 
-register_op_cast_rule("raf.op.batch_norm_infer", op_cast_norm(1, 1))
-register_op_cast_rule("raf.op.batch_norm_train", op_cast_norm(1, 3))
+register_op_cast_rule("raf.op.batch_norm_infer", op_cast_norm(1))
+register_op_cast_rule("raf.op.batch_norm_train", op_cast_norm(1))
 
 # TODO(@comaniac): batch_norm_train_dxwb produces different results as PyTorch BatchNorm backward
 # and we have not figured out the reason. However, it does not affect the convergence of AMP models
 # so we still cast it.
-register_op_cast_rule("raf.op.batch_norm_train_dxwb", op_cast_norm(2, 3))
+register_op_cast_rule("raf.op.batch_norm_train_dxwb", op_cast_norm(2))
+
+
+register_op_cast_rule("raf.op.layer_norm", infer_cast(1))
+register_op_cast_rule("raf.op.layer_norm_dx", infer_cast(3))
+
+
+def op_cast_layer_norm_train(args, ret_type, amp_dtype):
+    """Always follow the dtype for the 1st arg because the latency of taking FP16 and FP32
+    are basically the same."""
+    return [
+        PrimType(args[0].checked_type.dtype),
+        PrimType("float32"),
+        PrimType("float32"),
+        PrimType(None),
+        PrimType(None),
+    ]
+
+
+def op_cast_layer_norm_train_dx(args, ret_type, amp_dtype):
+    """It has args in order (x, scale, dy, mean, invvar, axis, eps)."""
+    ret = [
+        PrimType(args[0].checked_type.dtype),
+        PrimType("float32"),
+        PrimType(None),
+        PrimType("float32"),
+    ]
+    ret += [PrimType(None) for _ in range(len(args) - 4)]
+    return ret
+
+
+register_op_cast_rule("raf.op.layer_norm_train", op_cast_layer_norm_train)
+register_op_cast_rule("raf.op.layer_norm_train_dx", op_cast_layer_norm_train_dx)
 
 
 def op_cast_concatenate(args, ret_type, amp_dtype):
@@ -383,42 +466,6 @@ def op_cast_concatenate(args, ret_type, amp_dtype):
 
 register_op_cast_rule("raf.op.concatenate", op_cast_concatenate)
 register_op_cast_rule("raf.op.concatenate_dx", op_cast_concatenate)
-
-
-def op_cast_with_indices(float_input_num, index_input_idx, infer_mode=True):
-    """For the ops that takes indices as an input (e.g., embedding, take, etc), their indices
-    must be in the integer type, even it may be generated by another op that produces floating
-    types.
-    """
-
-    def _gen(args, ret_type, amp_dtype):
-        ret = []
-        if not infer_mode:
-            ret = [gen_hint_helper(arg.checked_type, None) for arg in args[:float_input_num]]
-        else:
-            cast_to_amp = not isinstance(ret_type, tvm.ir.TupleType) and ret_type.dtype == "float32"
-            if cast_to_amp:
-                cast_to_amp = any(
-                    [check_dtype(arg.checked_type, amp_dtype) for arg in args[:float_input_num]]
-                )
-            target_dtype = amp_dtype if cast_to_amp else None
-            for arg in args[:float_input_num]:
-                ret.append(gen_hint_helper(arg.checked_type, target_dtype))
-
-        ret += [PrimType(None) for _ in range(len(args) - float_input_num)]
-        ret[index_input_idx] = PrimType("int64")
-        return ret
-
-    return _gen
-
-
-register_op_cast_rule("raf.op.embedding", op_cast_with_indices(1, 1))
-register_op_cast_rule("raf.op.take", op_cast_with_indices(1, 1))
-
-# embedding_dx/take_dx has accuracy issue and its performance does not improve significantly
-# over float32, so never cast.
-register_op_cast_rule("raf.op.take_dx", op_cast_with_indices(2, 2, False))
-register_op_cast_rule("raf.op.embedding_dx", op_cast_with_indices(1, 1, False))
 
 
 def op_cast_split(args, ret_type, amp_dtype):

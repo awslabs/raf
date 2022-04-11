@@ -4,7 +4,7 @@
 """Define dialect fusion patterns."""
 from .dialect import register_pattern
 from ..ir.dataflow_pattern import is_op, wildcard, is_constant, has_dtype, has_shape
-from .._core.value import StringValue
+from .._core.value import StringValue, IntValue
 
 MATMUL_OPS = [
     "raf.op.dense",
@@ -92,6 +92,12 @@ def _call_conv2d_dxw(dtype=None):
     return is_ops(ops)(x_or_w, y, dy, *n_wildcards(5))
 
 
+def _call_softmax():
+    # Only offload softmax with axis=0 to CuDNN because other cases can be handled by TVM well.
+    x = wildcard()
+    return is_ops(["raf.op.softmax"])(x, is_constant(IntValue(0)))
+
+
 def _cutlass_conv2d_fusion():
     act_ops = ["raf.op.relu"]
     conv = is_op("raf.op.conv2d")(
@@ -111,6 +117,9 @@ def _call_pool2d_dx():
     pool_ops = ["raf.op.max_pool2d_dx", "raf.op.avg_pool2d_dx"]
     return is_ops(pool_ops)(*n_wildcards(9))
 
+
+# softmax
+register_pattern(_call_softmax(), "cudnn", 55, "softmax")
 
 # pool2d_dx
 register_pattern(_call_pool2d_dx(), "cudnn", 50, "pool2d_dx")

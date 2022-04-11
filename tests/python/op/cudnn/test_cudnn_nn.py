@@ -102,10 +102,11 @@ def test_raf_unary(shape, funcs):
     "shape",
     [
         [3],
-        [3, 2, 5, 8, 4],
+        [3, 2],
+        [3, 2, 5, 8],
     ],
 )
-@pytest.mark.parametrize("axis", range(-5, 5))
+@pytest.mark.parametrize("axis", range(-4, 4))
 @pytest.mark.parametrize(
     "funcs",
     [
@@ -116,7 +117,10 @@ def test_raf_unary(shape, funcs):
 def test_raf_softmax(shape, axis, funcs):
     raf_fwd, torch_fwd = funcs
 
-    class TestModel(raf.Model):
+    if not -len(shape) <= axis < len(shape):
+        pytest.skip("axis out of range")
+
+    class Model(raf.Model):
         def build(self):
             pass
 
@@ -124,18 +128,16 @@ def test_raf_softmax(shape, axis, funcs):
         def forward(self, x):
             return raf_fwd(x, axis=axis)
 
-    model = TestModel()
+    model = Model()
+
     # forward
     m_x, t_x = randn_torch(shape, device="cuda", requires_grad=True)
-    if not -len(shape) <= axis < len(shape):
-        with pytest.raises(ValueError):
-            m_y = model(m_x)
-        return
     m_y = model(m_x)
     v_y = run_vm_model(model, "cuda", [m_x])
     t_y = torch_fwd(t_x, dim=axis)
     check(m_y, t_y)
     check(v_y, t_y)
+
     # backward
     m_dy, t_dy = randn_torch(shape, device="cuda")
     t_y.backward(t_dy)

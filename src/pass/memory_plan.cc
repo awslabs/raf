@@ -484,20 +484,30 @@ Pass MemoryPlan() {
   Bool dump_stat = pass_ctx->GetConfig("raf.memory_plan.dump_liveness_stat", Bool(false)).value();
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    auto analyzer = liveness_analysis::LivenessAnalyzer(f);
-    auto live_in = analyzer.Run();
-    if (!analyzer.IsSuccess()) {
-      LOG(WARNING) << "Memory planning is disabled because liveness analysis was failed";
+    auto func = f;
+    try {
+      func = Downcast<Function>(pass::InferType(f));
+    } catch (const dmlc::Error& e) {
+      LOG(WARNING) << "Memory planning is disabled because infer type was failed";
       return f;
     }
-    if (dump_stat) {
-      liveness_analysis::DumpLivenessStat(live_in);
+
+    auto analyzer = liveness_analysis::LivenessAnalyzer(func);
+    try {
+      auto live_in = analyzer.Run();
+      if (!analyzer.IsSuccess()) {
+        throw;
+      }
+      if (dump_stat) {
+        liveness_analysis::DumpLivenessStat(live_in);
+      }
+    } catch (const dmlc::Error& e) {
+      LOG(WARNING) << "Memory planning is disabled because liveness analysis was failed";
+      return func;
     }
-    return Downcast<ir::Function>(memory_plan::MemoryPlanner(f, &analyzer).Run());
+    return Downcast<ir::Function>(memory_plan::MemoryPlanner(func, &analyzer).Run());
   };
-  auto func_pass = CreateRAFFunctionPass(pass_func, 3, "MemoryPlan", {});
-  PassInfo pass_info(3, "MemoryPlan", {});
-  return RAFSequential({InferType(), func_pass}, pass_info);
+  return CreateRAFFunctionPass(pass_func, 2, "MemoryPlan", {});
 }
 
 RAF_REGISTER_GLOBAL("raf.pass_.MemoryPlan").set_body_typed(MemoryPlan);

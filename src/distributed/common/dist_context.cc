@@ -8,6 +8,7 @@
  * \brief Context of Distributed Settings.
  */
 #include "raf/registry.h"
+#include "raf/communicator.h"
 #include "raf/dist_context.h"
 
 namespace raf {
@@ -43,11 +44,17 @@ void ZeroOpt(int opt_level) {
 }
 
 void SetGlobalRank(int rank) {
+  CHECK(Communicator::Get()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
   DistContext::Global()->rank = rank;
+  Communicator::Get()->rank = rank;
 }
 
 void SetGlobalSize(int size) {
+  CHECK(Communicator::Get()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
   DistContext::Global()->size = size;
+  Communicator::Get()->size = size;
 }
 
 void AutoDPProfilingStartIter(int auto_dp_profiling_start_iter) {

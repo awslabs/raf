@@ -4,7 +4,7 @@
 RAF: RAF Accelerates deep learning Frameworks
 =============================================
 
-![CI-Lass-Pass](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/aire-meta-bot/630a36600930c8d68e6b15f16333b532/raw/raf-ci-badge-last-pass.json)
+![CI-Lass-Pass](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/aire-meta-bot/a3f4a76704e40ddba1b73fb0ad072eb9/raw/awslabs-raf-ci-badge-last-pass.json)
 
 
 Please refer to our [wiki](docs/wiki) for more information.

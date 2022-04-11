@@ -390,9 +390,9 @@ class Interpreter final : public ExprFunctor<Value(const Expr& n)>, public Execu
 
   void RequestDistributed(Requests* req, int index) override {
     Requests::DistributedRequest& entry = req->distributed[index];
-    Communicator comm = Communicator::Get(entry.name, entry.rank_list);
-    *entry.dest = reinterpret_cast<void*>(&comm);
-    // TODO(@Tonny-Gu): Can we return a ObjectRef or ncclComm_t handler instead?
+    *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+    // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
+    // ncclComm_t handler instead?
   }
 
  private:

@@ -5,15 +5,26 @@ This article introduces how to build RAF using CMake.
 
 ## Step 1. Install dependencies
 
+If you don't want to spend time on setting up the environment, you could directly create a docker container with RAF docker images, which are mainly used by our CI. If you choose to do so, you could directly go to step 2.
+
+```bash
+# You could refer to gpu_image version in .github/workflows/ci_unit_test.yml
+docker pull metaprojdev/raf:ci_gpu-v0.20
+docker run --name work -it --gpus all metaprojdev/raf:ci_gpu-v0.20 /bin/bash
+```
+
 **(Required) Build dependency**
 <details>
 
 ```bash
-sudo apt-get install ccache      # ccache is used to accelerate build
-                     git
+sudo apt-get install git ccache   # ccache is used to accelerate build                    
 sudo snap install cmake --classic # hmm, cmake is required to run cmake
                                   # the cmake version installed by apt is too old
 ```
+
+On the other hand, if you encounter any library missing errors during the compilation,
+you could consider running the Ubuntu setup script here: `docker/install/ubuntu_install_core.sh`.
+It makes sure all essential packages are installed.
 
 Note that if you are using Ubuntu 20.10 or below, the ccache version via apt is 3.7-.
 Since ccache 4.0- does not support nvcc (CUDA compiler) well, it will result in
@@ -71,15 +82,7 @@ export PATH=$PATH:$CUDA_HOME/bin
 </details>
 
 **(Optional) cuDNN.** NVIDIA provides cuDNN separately on its website, which requires additional account registration. Please follow the [link](https://developer.nvidia.com/rdp/cudnn-download).
-One can either download the tar ball file for Linux and use the following command to decompress cuDNN and specify the path, or download the `.deb` file to install.
-
-<details>
-
-```bash
-tar zxvf cudnn-SOME-SUFFIX.tgz
-```
-
-</details>
+One can either download the tar ball file for Linux and use the following command to decompress cuDNN and specify the path, or download the `.deb` file to install. Please see the [link](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html) for detailed instructions on installing cuDNN.
 
 **(Optional) NCCL** NCCL is required for distributed training.
 Like cuDNN, NVIDIA requires account registration to download NCCL. The detailed download and installation steps can be found from this [link](https://docs.nvidia.com/deeplearning/nccl/install-guide/index.html#down).
@@ -106,10 +109,13 @@ Below we introduce an environment variable that indicates where RAF is.
 
 ```bash
 # Create the build directory
-git clone https://github.com/meta-project/meta --recursive && cd meta
+git clone https://github.com/awslabs/raf --recursive && cd raf
 export RAF_HOME=$(pwd)
-mkdir $RAF_HOME/build && cd $RAF_HOME/build
+mkdir $RAF_HOME/build
+# Run the codegen for auto-generated source code
+bash ./scripts/src_codegen/run_all.sh
 # Configuration file for CMake
+cd $RAF_HOME/build
 cp ../cmake/config.cmake .
 # Edit the configuration file
 vim config.cmake
@@ -131,10 +137,10 @@ Again, the `export` commands can be put in `.bashrc` for auto loading (see bonus
 <details>
 
 ```bash
-export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python
 export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 # The following commands can verify if the environments are set up correctly.
-python -c "import raf"
+python3 -c "import raf"
 ```
 
 </details>
@@ -154,7 +160,7 @@ vim $HOME/.bashrc
 vim $HOME/.zshrc
 # Adding the export commands to the end of those RC files
 export RAF_HOME=PATH-TO-RAF
-export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/topi/python:$RAF_HOME/3rdparty/tvm/python
+export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python
 export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 ```
 

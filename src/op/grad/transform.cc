@@ -327,17 +327,48 @@ RAF_OP_GRAD("raf.op.strided_slice", StridedSliceGrad);
 
 Array<Expr> WhereGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                       const Expr& dy) {
-  static auto where = Op::Get("raf.op.where");
+  static auto multiply = Op::Get("raf.op.multiply");
+  static auto cast = Op::Get("raf.op.cast");
+  static auto logical_not = Op::Get("raf.op.logical_not");
+
   const CallNode* call = orig_call.as<CallNode>();
   CHECK(call != nullptr);
-  const Expr& cond = call->args[0];
+
+  // Note that sum_like with x1 and x2 should be simplified if their shapes are static.
   const Expr& x1 = call->args[1];
   const Expr& x2 = call->args[2];
-  static auto zeros_like = Op::Get("raf.op.zeros_like");
-  auto zero = Call(zeros_like, {dy});
 
-  const Expr& dx1 = Call(where, {cond, dy, zero});
-  const Expr& dx2 = Call(where, {cond, zero, dy});
+  // Cast condition to align x1, x2, dy dtype for multiply.
+  const Expr& cond = call->args[0];
+  std::string dtype = "float32";
+  if (x1->checked_type_.defined()) {
+    auto ttype = x1->checked_type().as<TensorTypeNode>();
+    CHECK(ttype != nullptr);
+    auto dl_dtype = ttype->dtype.operator DLDataType();
+    dtype = tvm::runtime::DLDataType2String(dl_dtype);
+  }
+  auto casted_cond = Call(cast, {cond, MakeConstant(raf::value::StringValue::make(dtype))});
+
+  // Generate not condition. Note that logical_not in TVM only accepts bool dtype,
+  // so we have to cast condition to bool if it is not.
+  auto bool_cond = cond;
+  bool cast_to_bool = true;
+  if (cond->checked_type_.defined()) {
+    auto ttype = cond->checked_type().as<TensorTypeNode>();
+    CHECK(ttype != nullptr);
+    auto dl_dtype = ttype->dtype.operator DLDataType();
+    if (tvm::runtime::DLDataType2String(dl_dtype) == "bool") {
+      cast_to_bool = false;
+    }
+  }
+  if (cast_to_bool) {
+    bool_cond = Call(cast, {cond, MakeConstant(raf::value::StringValue::make("bool"))});
+  }
+  auto not_cond = Call(logical_not, {bool_cond});
+  auto casted_not_cond = Call(cast, {not_cond, MakeConstant(raf::value::StringValue::make(dtype))});
+
+  const Expr& dx1 = Call(multiply, {dy, casted_cond});
+  const Expr& dx2 = Call(multiply, {dy, casted_not_cond});
   return {NullValue<Expr>(), GetCollapseSumLike(dx1, x1), GetCollapseSumLike(dx2, x2)};
 }
 

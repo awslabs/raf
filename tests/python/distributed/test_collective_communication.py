@@ -178,13 +178,6 @@ def test_allreduce_with_subcomm(dtype, rank_list):
             check(y, target_y)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-@pytest.mark.parametrize("dtype", ["float32", "float16"])
-@pytest.mark.parametrize("rank_list", [[[0], [1]], [[0, 1]]])
-def test_allreduce_with_subcomm_dual_gpu(dtype, rank_list):
-    test_allreduce_with_subcomm(dtype, rank_list)
-
-
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0, 1])
 def test_allgather(axis):
@@ -285,13 +278,6 @@ def test_allgather_with_subcomm(axis, rank_list):
             print(f"{rank} - Y: ", y)
             print(f"{rank} - T: ", target_y)
             check(y, target_y)
-
-
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-@pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("rank_list", [[[0], [1]], [[0, 1]]])
-def test_allgather_with_subcomm_dual_gpu(axis, rank_list):
-    test_allgather_with_subcomm(axis, rank_list)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)

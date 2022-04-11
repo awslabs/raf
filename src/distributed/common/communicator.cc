@@ -18,6 +18,14 @@ Communicator Communicator::Get(const std::string& name, const Value rank_list) {
   return CommunicatorPool::Get()->GetCommunicator(name, rank_list);
 }
 
+Communicator Communicator::Get(const Value rank_list) {
+#ifdef RAF_USE_NCCL
+  return CommunicatorPool::Get()->GetCommunicator("nccl", rank_list);
+#else
+  return CommunicatorPool::Get()->GetCommunicator("void", rank_list);
+#endif
+}
+
 void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
                                        const Communicator global_comm) {
   std::vector<std::vector<int64_t>> rank_list_;
@@ -121,7 +129,6 @@ RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
   CommunicatorPool::Get()->Remove();
 });
 
-RAF_REGISTER_OBJECT_NO_REFLECT(CommunicatorObj);
 RAF_REGISTER_OBJECT_REFLECT(VoidCommunicatorObj);
 
 }  // namespace communicator

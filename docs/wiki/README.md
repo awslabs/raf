@@ -30,12 +30,16 @@
 - Dev Guide
     - [Add Operator](3_dev_guide/Add-Operator.md)
     - [Add Pass](3_dev_guide/Add-Pass.md)
+    - [Analyze Model](3_dev_guide/Analyze-Model.md)
     - [Distributed Training](3_dev_guide/Distributed-Training.md)
     - [IR Format](3_dev_guide/IR-Format.md)
     - [Memory Pool](3_dev_guide/Memory-Pool.md)
+    - [Op Dialect](3_dev_guide/Op-Dialect.md)
+    - Pass
+        - [AutoDataParallel](3_dev_guide/pass/AutoDataParallel.md)
+        - [Multi CUDA Stream Schedule](3_dev_guide/pass/Multi-CUDA-Stream-Schedule.md)
+        - [Rematerialization](3_dev_guide/pass/Rematerialization.md)
     - [Profile Model](3_dev_guide/Profile-Model.md)
 - Contrib Guide
-    - [Code Review](4_contrib_guide/Code-Review.md)
     - [Development And Pull Request](4_contrib_guide/Development-And-Pull-Request.md)
-    - [Docker](4_contrib_guide/Docker.md)
     - [RFC Collections](4_contrib_guide/RFC-Collections.md)

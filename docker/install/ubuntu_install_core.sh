@@ -1,8 +1,6 @@
 #!/bin/bash
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-
 set -e
 set -u
 set -o pipefail
@@ -31,4 +29,3 @@ cmake -DZSTD_FROM_INTERNET=ON -DCMAKE_BUILD_TYPE=Release ..
 make -j
 make install
 popd
-

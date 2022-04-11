@@ -142,7 +142,6 @@ class TorchConvBn(nn.Module):
 @pytest.mark.parametrize("fuse", [False, True])
 @with_seed(0)
 def test_conv_bn(shape_dict, mode, fuse):
-    # Fix https://github.com/meta-project/meta/issues/463
     device = "cuda"
     input_shape = list(shape_dict.values())[0][0]
     batch_size = input_shape[0]

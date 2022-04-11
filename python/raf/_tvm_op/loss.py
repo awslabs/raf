@@ -124,17 +124,8 @@ _reg.register_broadcast_schedule("raf.op.tvm.nll_loss_dtrue")
 @register_compute("raf.op.tvm.cross_entropy")
 def cross_entropy_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs
-    n, c = pred.shape
-    redn = _tvm.te.reduce_axis((0, n), name="rn")
-    redc = _tvm.te.reduce_axis((0, c), name="rc")
-
-    pred_log_sm = _topi.nn.log_softmax(pred)
-
-    def fcompute(x):  # pylint: disable=unused-argument
-        return _tvm.te.sum(-pred_log_sm[redn, redc] * true[redn, redc] / n, axis=[redc, redn])
-
-    loss = _tvm.te.compute((1,), fcompute)
-    return [loss]
+    log_pred = _topi.nn.log_softmax(pred)
+    return nll_loss_compute(attr, [true, log_pred], output_type)
 
 
 _reg.register_broadcast_schedule("raf.op.tvm.cross_entropy")
@@ -142,11 +133,13 @@ _reg.register_broadcast_schedule("raf.op.tvm.cross_entropy")
 
 @register_compute("raf.op.tvm.cross_entropy_dpred")
 def cross_entropy_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    true, pred = inputs
-    n, c = true.shape
-    pred_sm = _topi.nn.softmax(pred)
-
-    return [_tvm.te.compute((n, c), lambda x, y: (-true[x, y] + pred_sm[x, y]) / n)]
+    # The grad function of cross_entropy decomposes cross_entropy_dpred to a series of RAF IR ops
+    # so this function is not used. It only kept in case we want to have a powerful schedule
+    # especially for this op in the future.
+    _, _, pred = inputs
+    log_pred = _topi.nn.log_softmax(pred)
+    dpred = nllloss_dpred_compute(attr, inputs, output_type)[0]
+    return [dpred - _topi.exp(log_pred) * _topi.sum(dpred, -1, True)]
 
 
 _reg.register_broadcast_schedule("raf.op.tvm.cross_entropy_dpred")
@@ -154,10 +147,7 @@ _reg.register_broadcast_schedule("raf.op.tvm.cross_entropy_dpred")
 
 @register_compute("raf.op.tvm.cross_entropy_dtrue")
 def cross_entropy_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    _, pred = inputs
-    n, c = pred.shape
-    pred_log_sm = _topi.nn.log_softmax(pred)
-    return [_tvm.te.compute((n, c), lambda x, y: -pred_log_sm[x, y] / n)]
+    return nllloss_dtrue_compute(attr, inputs, output_type)
 
 
 _reg.register_broadcast_schedule("raf.op.tvm.cross_entropy_dtrue")

@@ -237,8 +237,8 @@ class AutoCastMutator : public ExprMutator {
   Expr VisitExpr_(const CallNode* node) {
     static const Op& cast_op = Op::Get("raf.op.cast");
 
-    // If the argument is a cast, then we use the uncasted one to generate the type hints,
-    // so that the infer cast ops can follow the uncasted argument and minimize the cast op.
+    // If the argument a cast with float type, then we use the uncasted one to generate
+    // the type hints, so that the existing cast op can be reused when possible.
     Array<Expr> uncasted_call_args;
     for (size_t i = 0; i < node->args.size(); ++i) {
       auto arg_var = node->args[i].as<VarNode>();
@@ -247,8 +247,11 @@ class AutoCastMutator : public ExprMutator {
         if (arg_call && arg_call->op->IsInstance<OpNode>()) {
           auto arg_op = arg_call->op.as<OpNode>();
           if (GetRef<Op>(arg_op) == cast_op) {
-            uncasted_call_args.push_back(arg_call->args[0]);
-            continue;
+            auto orig_dtype = arg_call->args[0]->checked_type().as<TensorTypeNode>()->dtype.code();
+            if (orig_dtype == DataType::kFloat) {
+              uncasted_call_args.push_back(arg_call->args[0]);
+              continue;
+            }
           }
         }
       }

@@ -17,11 +17,11 @@ defaults:
 
 jobs:
   check_status:
-    if: github.repository == 'meta-project/meta'
-    runs-on: self-hosted
+    if: github.repository == 'awslabs/raf'
+    runs-on: ubuntu-latest
     outputs:
-      cpu_image: "metaprojdev/raf:ci_cpu-v0.18"
-      gpu_image: "metaprojdev/raf:ci_gpu-v0.20"
+      cpu_image: "metaprojdev/raf:ci_cpu-v0.20"
+      gpu_image: "metaprojdev/raf:ci_gpu-v0.22"
       skip_ci: ${{ steps.job_info.outputs.skip_ci }}
       ref: ${{ steps.job_info.outputs.ref }}
       repo: ${{ steps.job_info.outputs.repo }}
@@ -70,8 +70,8 @@ jobs:
 
   test_on_cpu:
     needs: [check_status]
-    if: github.repository == 'meta-project/meta'
-    runs-on: self-hosted
+    if: github.repository == 'awslabs/raf'
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -116,8 +116,8 @@ jobs:
 
   test_on_gpu:
     needs: [check_status]
-    if: github.repository == 'meta-project/meta'
-    runs-on: self-hosted
+    if: github.repository == 'awslabs/raf'
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -162,8 +162,8 @@ jobs:
 
   test_on_multi_gpu:
     needs: [check_status]
-    if: github.repository == 'meta-project/meta'
-    runs-on: self-hosted
+    if: github.repository == 'awslabs/raf'
+    runs-on: ubuntu-latest
     steps:
       - uses: haya14busa/action-workflow_run-status@v1
       - name: List environments
@@ -206,43 +206,55 @@ jobs:
               bash ./ci/batch/cli.sh compile build multi-GPU ${{ needs.check_status.outputs.job_tag }} &&
               bash ./ci/batch/cli.sh unit_test multi-GPU"
 
-  update_ci_badge:
-    needs: [check_status, test_on_cpu, test_on_gpu, test_on_multi_gpu]
-    # Run this job whatever the unit tests were success or not.
-    if: ${{ always() && github.repository == 'meta-project/meta' }}
-    runs-on: self-hosted
-    steps:
-      - uses: haya14busa/action-workflow_run-status@v1
-      - name: Checkout repository
-        # No need to checkout submodules because we only need to get the HEAD commit hash.
-        uses: actions/checkout@v2
-      - name: Generate CI badge
-        id: badge
-        run: |
-          # env vars are unavailable in job.if so we have to implement it here.
-          if [ "${{ needs.check_status.outputs.pr }}" != "" ]; then
-            echo "No need to update badge for PR CI. Skip."
-            exit 0
-          fi
-          echo "::set-output name=gist_id::630a36600930c8d68e6b15f16333b532"
-          head_commit=$(git rev-parse --short HEAD)
-          if [[ "${{ needs.test_on_cpu.result }}" == "success" &&
-                "${{ needs.test_on_gpu.result }}" == "success" &&
-                "${{ needs.test_on_multi_gpu.result }}" == "success" ]]; then
-            echo "::set-output name=message::passing (${head_commit})"
-            echo "::set-output name=color::success"
-          else
-            echo "::set-output name=message::failing (${head_commit})"
-            echo "::set-output name=color::critical"
-          fi
-      - name: Update CI badge
-        # Intentionally fail this step with empty gist_id.
-        uses: schneegans/dynamic-badges-action@v1.1.0
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
-          gistID: ${{ steps.badge.outputs.gist_id }}
-          filename: raf-ci-badge-last-pass.json
-          label: CI-UnitTests
-          message: ${{ steps.badge.outputs.message }}
-          color: ${{ steps.badge.outputs.color }}
+  # update_ci_badge:
+  #   needs: [test_on_cpu, test_on_gpu, test_on_multi_gpu]
+  #   # Run this job whatever the unit tests were success or not.
+  #   if: ${{ always() && github.repository == 'awslabs/raf' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: haya14busa/action-workflow_run-status@v1
+  #     - name: Checkout repository
+  #       # No need to checkout submodules because we only need to get the HEAD commit hash.
+  #       uses: actions/checkout@v2
+  #     - name: Download artifact
+  #       uses: dawidd6/action-download-artifact@v2
+  #       with:
+  #         workflow: ci_lint.yml
+  #         run_id: ${{ github.event.workflow_run.id }}
+  #     - name: Parse PR job info
+  #       id: pr_job_info
+  #       continue-on-error: true
+  #       # Note that pr and sha only available for pull request, and will be empty for push events.
+  #       run: |
+  #         pr=$(head -n 1 artifact/pr.txt)
+  #         echo "::set-output name=pr::${pr}"       
+  #     - name: Generate CI badge
+  #       id: badge
+  #       run: |
+  #         # env vars are unavailable in job.if so we have to implement it here.
+  #         if [ "${{ steps.pr_job_info.outputs.pr }}" != "" ]; then
+  #           echo "No need to update badge for PR CI. Skip."
+  #           exit 0
+  #         fi
+  #         echo "::set-output name=gist_id::a3f4a76704e40ddba1b73fb0ad072eb9"
+  #         head_commit=$(git rev-parse --short HEAD)
+  #         if [[ "${{ needs.test_on_cpu.result }}" == "success" &&
+  #               "${{ needs.test_on_gpu.result }}" == "success" &&
+  #               "${{ needs.test_on_multi_gpu.result }}" == "success" ]]; then
+  #           echo "::set-output name=message::passing (${head_commit})"
+  #           echo "::set-output name=color::success"
+  #         else
+  #           echo "::set-output name=message::failing (${head_commit})"
+  #           echo "::set-output name=color::critical"
+  #         fi
+  #     - name: Update CI badge
+  #       # Intentionally fail this step with empty gist_id.
+  #       uses: schneegans/dynamic-badges-action@v1.1.0
+  #       continue-on-error: true
+  #       with:
+  #         auth: ${{ secrets.BOT_TOKEN }}
+  #         gistID: ${{ steps.badge.outputs.gist_id }}
+  #         filename: awslabs-raf-ci-badge-last-pass.json
+  #         label: CI-UnitTests
+  #         message: ${{ steps.badge.outputs.message }}
+  #         color: ${{ steps.badge.outputs.color }}

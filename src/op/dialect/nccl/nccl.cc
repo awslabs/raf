@@ -29,7 +29,7 @@ RAF_REGISTER_DIALECT("nccl").set_enable(DevType::kCUDA());
 
 class NCCLAllReduce : public raf::op::OpEnv {
   void* stream;
-  void* communicator;
+  Communicator communicator;
   void* fused_data;
   size_t total_size = 0;
   std::vector<size_t> tuple_sizes;
@@ -62,7 +62,8 @@ class NCCLAllReduce : public raf::op::OpEnv {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
 
-    RequestDistributed(&communicator, "nccl", args->rank_list);    
+    // TODO(@Tonny-Gu): Should be replaced with RequestDistributed in next PR.
+    communicator = Communicator::Get("nccl", args->rank_list);
 
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
@@ -95,8 +96,7 @@ class NCCLAllReduce : public raf::op::OpEnv {
     // using namespace std::this_thread;
     // using namespace std::chrono;
     // sleep_until(system_clock::now() + nanoseconds(200));
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(communicator)->nccl_comm;
 
     // Fuse Tensor
     auto tv = Downcast<value::TupleValue>(inputs[0]);
@@ -148,14 +148,15 @@ RAF_OP_ENV_MAKER("raf.op.nccl._allreduce", NCCLAllReduce::make);
 
 class NCCLAllGather : public raf::op::OpEnv {
   void* stream;
-  void* communicator;
+  Communicator communicator;
   explicit NCCLAllGather(const CallValues& cv) {
     auto op = ir::Op::Get("raf.op._allgather");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     auto args = cv->args.as<raf::op::schema::AllgatherArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator, "nccl", args->rank_list);
+    // TODO(@Tonny-Gu): Should be replaced with RequestDistributed in next PR.
+    communicator = Communicator::Get("nccl", args->rank_list);
   }
 
  public:
@@ -172,8 +173,7 @@ class NCCLAllGather : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(communicator)->nccl_comm;
     DLTensor* x = inputs[0];
     DLTensor* out = output;
     int64_t size = 1;
@@ -245,8 +245,8 @@ class NCCLReduceScatter : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     size_t offset = 0;
     DLTensor* out = output;
     DType dtype;
@@ -322,8 +322,8 @@ class NCCLBroadcast : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     auto tv = Downcast<value::TupleValue>(inputs[0]);
     size_t dtype_size = 0;
     if (tv->fields.size() == 1) {
@@ -401,8 +401,8 @@ class NCCLSend : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     const DLTensor* x = inputs[0];
     NCCL_CALL(ncclSend(x->data, BytesCompactTensor(*x) / (x->dtype.bits / 8), DType(x->dtype), peer,
                        nccl_comm, (cudaStream_t)stream));
@@ -446,8 +446,8 @@ class NCCLRecv : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     DLTensor* out = output;
     NCCL_CALL(ncclRecv(out->data, BytesCompactTensor(*out) / (out->dtype.bits / 8),
                        DType(out->dtype), peer, nccl_comm, (cudaStream_t)stream));
@@ -524,8 +524,8 @@ class NCCLReduce : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
-    auto comm_ptr = reinterpret_cast<Communicator*>(communicator);
-    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(*comm_ptr)->nccl_comm;
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
     auto input_x = Downcast<value::TupleValue>(inputs[0]);
     size_t dtype_size = 0;
     if (input_x->fields.size() == 1) {

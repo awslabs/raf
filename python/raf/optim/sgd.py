@@ -115,15 +115,15 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 # additional buffers in SGD status.
                 self.has_sgd_w = False
 
-                # TODO(issue 758): Remove this and in-place update parameters.
-                self.zero = array(0, dtype=self.dtype)
-
                 dctx = dist.get_context()
                 self.params = {}
                 for name, param in self.model.state().items():
                     # For each tensor "param" that requires gradient (i.e., training weights),
                     # create a tensor "param.sgd_v" to be its SGD variant.
-                    if param.requires_grad is True:
+                    # TODO(@anijain2305): We might mark requires_grad to non-float parameters
+                    # which is incorrect. We should improve the gradient pass for better
+                    # has_grad results.
+                    if param.requires_grad and "float" in param.dtype:
                         assert isinstance(param, ndarray), "Only `raf.ndarray` can be optimized!"
 
                         # By default we directly use the model parameter as the SGD weight.
@@ -173,6 +173,10 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         setattr(self, f"{name}.sgd_v", v_i)
                         self.params[param._ndarray__handle] = (name, param, v_w, v_i)
 
+                if self.has_sgd_w:
+                    # TODO(issue 758): Remove this and in-place update parameters.
+                    self.zero = array(0, dtype=self.dtype)
+
             @trace
             def forward(self, dy, *args, **kwargs):
                 y, dxs = self.ad_model(dy, *args, **kwargs)
@@ -184,9 +188,7 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                     dxi = dxs[i] if len(inputs) > 1 else dxs
                     if param in self.params and has_grad(dxi):
                         name, weight, sgd_w, sgd_v = self.params[param]
-                        # TODO(@anijain2305): Improve the gradient pass for better has_grad results.
-                        if "float" not in sgd_w.dtype:
-                            continue
+                        assert "float" in sgd_w.dtype, "Non-float parameter is not learnable"
 
                         # Cast gradient to float32 if necessary.
                         if self.dtype != "float32":

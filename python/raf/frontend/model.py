@@ -10,7 +10,7 @@ from raf.model.model import BaseModel
 from raf.model.trace import _unwrap, _TraceRecord
 from raf._core.ir_ext import extended_var
 from raf._core.ndarray import ndarray, Symbol
-from raf._ffi.pass_ import AssignDevice, Substitute, ExtractBinding, ExprAppend, InferType
+from raf._ffi.pass_ import AssignDevice, ExprAppend, ExtractBinding, InferType, Substitute
 from raf._core.module import IRModule
 
 

@@ -283,6 +283,15 @@ SCHEMAS = {
         Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
         Arg(name="eps", cxx_type="double", cxx_default=1e-5),
     ],
+    "nn.h::layer_norm_train_dx": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="scale", cxx_type=OptionalTensor),
+        Arg(name="dy", cxx_type="value::BaseTensorValue"),
+        Arg(name="mean", cxx_type="value::BaseTensorValue"),
+        Arg(name="invvar", cxx_type="value::BaseTensorValue"),
+        Arg(name="axis", cxx_type="int64_t", cxx_default=-1),
+        Arg(name="eps", cxx_type="double", cxx_default=1e-5),
+    ],
     "nn.h::split": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="indices_or_sections", cxx_type="value::Value", cxx_default="nullptr"),

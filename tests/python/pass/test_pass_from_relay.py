@@ -35,6 +35,7 @@ def check_from_relay(
         m_mod = model_or_mod._internal(*args).mod
         m_model = model_or_mod
 
+    m_model.infer_mode()
     ref_outs = m_model(*args)
     ref_outs = ref_outs if isinstance(ref_outs, (tuple, list)) else (ref_outs,)
     m_func = m_mod["main"]
@@ -60,6 +61,7 @@ def check_from_relay(
     assert InferType()(new_mod), "Type error of the model from Relay"
 
     new_model = FrameworkModel(new_mod, new_mod, {}, {})
+    new_model.infer_mode()
     if device == "cuda":
         args = [arg.to(device=device) for arg in args]
         new_model.to(device=device)
