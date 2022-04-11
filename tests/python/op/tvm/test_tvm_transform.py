@@ -12,7 +12,15 @@ import pytest
 import torch
 import mxnet as mx
 import raf
-from raf.testing import get_testable_devices, randn, randn_torch, randint, check, run_vm_model
+from raf.testing import (
+    get_testable_devices,
+    randn,
+    randn_torch,
+    randint,
+    check,
+    run_vm_model,
+    scatter_strided_slice_python,
+)
 import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 
 
@@ -222,6 +230,34 @@ def test_scatter(shape, axis, device):
     t_y.backward(t_dy)
     m_y.backward(m_dy)
     check(m_x.grad, t_x.grad)
+
+
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize(
+    "params",
+    [
+        ((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2]),
+        ((3, 4, 3), [1, 1, 0], [4, 4, 3], [2, 1, 1]),
+        ((3, 4, 3), [1, -1, 0], [2, -3, 3], [1, -1, 1]),
+    ],
+)
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+def test_scatter_strided_slice(device, params, dtype):
+    # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
+    if dtype == "float16" and device == "cpu":
+        pytest.skip("float16 is not supported on CPU")
+    shape, begin, end, strides = params
+    m_x, n_x = randn(shape, device=device, dtype=dtype)
+    n_slice = npx.strided_slice_python(n_x, begin, end, strides)
+    m_src, n_src = randn(n_slice.shape, device=device, dtype=dtype)
+
+    model = TestModel(raf._op.sym.scatter_strided_slice, begin=begin, end=end, strides=strides)
+    m_y = model(m_x, m_src)
+    n_y = scatter_strided_slice_python(n_x, n_src, begin, end, strides)
+    v_y = run_vm_model(model, device, [m_x, m_src])
+
+    check(m_y, n_y)
+    check(v_y, n_y)
 
 
 @pytest.mark.parametrize(

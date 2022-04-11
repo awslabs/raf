@@ -459,6 +459,15 @@ Type ScatterDxInfer(const CallValues& value) {
 
 RAF_OP_TYPE("raf.op.scatter_dx", "ScatterDx", ScatterDxInfer);
 
+Type ScatterStridedSliceInfer(const CallValues& value) {
+  const auto* args = value->args.as<ScatterStridedSliceArgs>();
+  CHECK(args != nullptr);
+  TensorType x = Downcast<TensorType>(GetType(args->x));
+  return x;
+}
+
+RAF_OP_TYPE("raf.op.scatter_strided_slice", "ScaterStridedSlice", ScatterStridedSliceInfer);
+
 Type CastInfer(const CallValues& value) {
   const auto* args = value->args.as<CastArgs>();
   CHECK(args != nullptr);

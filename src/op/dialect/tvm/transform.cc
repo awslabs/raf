@@ -494,6 +494,45 @@ HashKey ScatterDxHasher(const std::vector<Type>& param_types, const Type& y_type
 RAF_TVM(scatter_dx, ScatterDx, ScatterDxArgs, ScatterDxSchema2Args, ScatterDxSchemaArgNames,
         ScatterDxSchema2Attrs, ScatterDxHasher, kInjective);
 
+std::vector<Value> ScatterStridedSliceSchema2Args(const ScatterStridedSliceArgs* args) {
+  return {args->x, args->src};
+}
+
+std::vector<std::string> ScatterStridedSliceSchemaArgNames(const op::CallValues& call) {
+  return {"x", "src"};
+}
+
+Attrs ScatterStridedSliceSchema2Attrs(const ScatterStridedSliceArgs* args) {
+  auto attrs = make_object<StridedSliceAttrs>();
+  CHECK_EQ(args->begin.size(), args->end.size());
+  CHECK_EQ(args->begin.size(), args->strides.size());
+  std::vector<Integer> begin, end, strides;
+  for (int i = 0; i < args->begin.size(); ++i) {
+    begin.emplace_back(args->begin[i]);
+    end.emplace_back(args->end[i]);
+    strides.emplace_back(args->strides[i]);
+  }
+  attrs->begin = Array<Integer>(begin.begin(), begin.end());
+  attrs->end = Array<Integer>(end.begin(), end.end());
+  attrs->strides = Array<Integer>(strides.begin(), strides.end());
+  attrs->slice_mode = args->slice_mode;
+  return Attrs(attrs);
+}
+
+HashKey ScatterStridedSliceHasher(const std::vector<Type>& param_types, const Type& y_type,
+                                  const ScatterStridedSliceArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->begin;
+  key << args->end;
+  key << args->strides;
+  key << args->slice_mode;
+  return key;
+}
+
+RAF_TVM(scatter_strided_slice, ScatterStridedSlice, ScatterStridedSliceArgs,
+        ScatterStridedSliceSchema2Args, ScatterStridedSliceSchemaArgNames,
+        ScatterStridedSliceSchema2Attrs, ScatterStridedSliceHasher, kInjective);
+
 std::vector<Value> ConcatenateSchema2Args(const ConcatenateArgs* args) {
   std::vector<Value> ret;
   for (auto v : args->x) {
