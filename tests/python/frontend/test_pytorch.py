@@ -319,9 +319,7 @@ def test_mm_dropout(shape_dict, p, device, mode):
         m_model.to(device=device)
 
         m_trainer = raf.optim.sgd.with_sgd(learning_rate=0.1, momentum=0.01)(m_model)
-        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue], disable_fusion=True)[
-            0
-        ]
+        m_loss = run_vm_model(m_trainer, device, [m_dy, m_x, m_ytrue], disable_fusion=True)[0]
 
         t_trainer = torch.optim.SGD(t_model.parameters(), lr=0.1, momentum=0.01)
         t_model.train()
