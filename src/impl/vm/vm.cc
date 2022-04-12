@@ -1078,10 +1078,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
       // FIXME: Not implemented yet. See ParallelDispatch for details.
       return std::make_tuple(nullptr, std::vector<Value>(), Value(), op_env_cache_key);
     } else {
-      {
-        RAF_TIMED_SEC("Dispatch " + (op ? op->op->name : PrettyPrint(closure->func)));
-        op_env = Dispatch(call_values);
-      }
+      op_env = Dispatch(call_values);
       CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
                                << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
                                << call_values->device.c_str();

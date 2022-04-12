@@ -133,10 +133,10 @@ OpEnvPtr DispatchSingleOp(const CallValues& call) {
   auto maker = OpEnvMaker::Get(op->name);
   if (maker != nullptr) {
     auto env = OpEnvPtr((*maker)(call));
-    if (!env->HasError()) {
+    if (env && !env->HasError()) {
       DLOG(INFO) << "Dispatch to " << op->name;
       return env;
-    } else {
+    } else if (env) {
       for (auto msg : env->error_msgs) {
         dispatch_error_msgs.push_back(msg);
       }
@@ -159,10 +159,10 @@ OpEnvPtr DispatchSingleOp(const CallValues& call) {
     auto maker = OpEnvMaker::Get(dialect_op->name);
     if (maker != nullptr) {
       auto env = OpEnvPtr((*maker)(call));
-      if (!env->HasError()) {
+      if (env && !env->HasError()) {
         DLOG(INFO) << "Dispatch to " << dialect_op->name;
         return env;
-      } else {
+      } else if (env) {
         for (auto msg : env->error_msgs) {
           dispatch_error_msgs.push_back(msg);
         }
@@ -190,11 +190,13 @@ OpEnvPtr DispatchFusedOp(const CallValues& call) {
   std::ostringstream os;
   os << "raf.op." << dialect.value() << "._fused_op";
   auto op_env = OpEnvMaker::Make(os.str(), call);
-  if (op_env->HasError()) {
+  if (!op_env || op_env->HasError()) {
     std::stringstream ss;
     ss << "Failed to dispatch fused op:";
-    for (auto msg : op_env->error_msgs) {
-      ss << "\n\t" << msg;
+    if (op_env) {
+      for (auto msg : op_env->error_msgs) {
+        ss << "\n\t" << msg;
+      }
     }
     ss << "\nName: " << os.str() << "\n" << ir::AsText(func);
     LOG(FATAL) << ss.str();
