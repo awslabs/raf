@@ -84,7 +84,11 @@ void AllGather(const CallValues& call) {
   ir::Array<Value> ret;
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  shape[args->axis] *= Communicator::Get(args->rank_list)->size;
+  if (args->rank_list.defined()) {
+    shape[args->axis] *= Communicator::Get("void", args->rank_list)->size;
+  } else {
+    shape[args->axis] *= GetGlobalCommunicator()->size;
+  }
   call->device = x->device;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
                                     /*dtype=*/x->dtype,
@@ -205,7 +209,7 @@ RAF_OP_DECLARE("raf.op._send", Send)
 void Recv(const CallValues& call) {
   const auto* args = call->args.as<RecvArgs>();
   CHECK(args != nullptr);
-  Device dev(DevType::kCUDA(), Communicator::Get()->rank);
+  Device dev(DevType::kCUDA(), GetGlobalCommunicator()->rank);
   call->device = dev;
   call->out = TensorValue::Assemble(/*ctx=*/dev,
                                     /*dtype=*/ir::String2DLDataType(args->dtype),

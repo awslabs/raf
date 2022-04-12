@@ -18,15 +18,7 @@ using communicator::Communicator;
 using communicator::CommunicatorPool;
 
 DistContext DistContext::make() {
-  /* Legacy Support */
   ir::ObjectPtr<DistContextObj> n = ir::make_object<DistContextObj>();
-  Communicator comm = Communicator::Get();
-  n->root_rank = comm->root_rank;
-  n->rank = comm->rank;
-  n->size = comm->size;
-  n->local_rank = comm->local_rank;
-  n->local_size = comm->local_size;
-
   return DistContext(n);
 }
 
@@ -43,20 +35,6 @@ void ZeroOpt(int opt_level) {
   DistContext::Global()->zero_opt_level = opt_level;
 }
 
-void SetGlobalRank(int rank) {
-  CHECK(Communicator::Get()->IsInstance<communicator::VoidCommunicatorObj>())
-      << "Only VoidCommunicator is mutable";
-  DistContext::Global()->rank = rank;
-  Communicator::Get()->rank = rank;
-}
-
-void SetGlobalSize(int size) {
-  CHECK(Communicator::Get()->IsInstance<communicator::VoidCommunicatorObj>())
-      << "Only VoidCommunicator is mutable";
-  DistContext::Global()->size = size;
-  Communicator::Get()->size = size;
-}
-
 void AutoDPProfilingStartIter(int auto_dp_profiling_start_iter) {
   DistContext::Global()->auto_dp_profiling_start_iter = auto_dp_profiling_start_iter;
 }
@@ -66,11 +44,9 @@ void AutoDPProfilingEndIter(int auto_dp_profiling_end_iter) {
 }
 
 RAF_REGISTER_GLOBAL("raf.distributed._make.DistContext").set_body_typed(DistContext::make);
-RAF_REGISTER_GLOBAL("raf.distributed.Global").set_body_typed(DistContext::Global);
+RAF_REGISTER_GLOBAL("raf.distributed.GlobalDistContext").set_body_typed(DistContext::Global);
 RAF_REGISTER_GLOBAL("raf.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
 RAF_REGISTER_GLOBAL("raf.distributed.ZeroOpt").set_body_typed(ZeroOpt);
-RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalRank").set_body_typed(SetGlobalRank);
-RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalSize").set_body_typed(SetGlobalSize);
 RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingStartIter")
     .set_body_typed(AutoDPProfilingStartIter);
 RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingEndIter")

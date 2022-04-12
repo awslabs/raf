@@ -15,3 +15,4 @@ from .op import (
     group_reduce_scatter,
 )
 from .context import DistContext, get_context
+from .communicator import get_communicator, use_void_communicator

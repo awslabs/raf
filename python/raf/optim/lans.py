@@ -180,6 +180,7 @@ def with_lans(
                 # mutable params: global step, and running averages
                 device = None
                 dctx = dist.get_context()
+                comm = dist.get_communicator()
                 self.params = {}
                 for name, param in self.model.state().items():
                     if param.requires_grad is True:
@@ -197,7 +198,7 @@ def with_lans(
                             param_nd = param.to(device="cpu")
                             if "float" in param.dtype and param.dtype != "float32":
                                 param_nd = param_nd.to(dtype="float32")
-                            slice_param = split_ndarray_with_padding(param_nd, dctx.size)[dctx.rank]
+                            slice_param = split_ndarray_with_padding(param_nd, comm.size)[comm.rank]
                             param_part = ndarray(
                                 slice_param,
                                 device=param.device,
@@ -229,6 +230,7 @@ def with_lans(
             @trace
             def forward(self, dy, *args, **kwargs):
                 dctx = dist.get_context()
+                comm = dist.get_communicator()
                 y, dxs = self.ad_model(dy, *args, **kwargs)
                 record = self.ad_model._internal(dy, *args, **kwargs)
                 inputs = _get_func_inputs(record, [dy, *args], kwargs)
@@ -290,7 +292,7 @@ def with_lans(
                             if dctx.zero_opt_level > 0:
                                 new_weight = allgather(new_w, axis=0)
                                 # Slice to remove the zero-padding if needed.
-                                if w.shape[0] * dctx.size > p.shape[0]:
+                                if w.shape[0] * comm.size > p.shape[0]:
                                     new_weight = _op.strided_slice(
                                         new_weight, [0], [p.shape[0]], [1]
                                     )

@@ -64,7 +64,8 @@ def run_model(device):
 def test_data_parallel():
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
-    device = f"cuda({dctx.local_rank})"
+    comm = dist.get_communicator()
+    device = f"cuda({comm.local_rank})"
 
     run_model(device)
 
@@ -80,7 +81,8 @@ def test_zero_opt_1():
     dctx = dist.get_context()
     dctx.enable_data_parallel = True
     dctx.zero_opt_level = 1
-    device = f"cuda({dctx.local_rank})"
+    comm = dist.get_communicator()
+    device = f"cuda({comm.local_rank})"
 
     run_model(device)
 

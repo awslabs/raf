@@ -101,7 +101,12 @@ RAF_OP_TYPE("raf.op._recv", "NCCLRecv", RecvInfer);
 Type AllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<AllgatherArgs>();
   CHECK(args != nullptr);
-  auto size = Communicator::Get(args->rank_list)->size;
+  int size;
+  if (args->rank_list.defined()) {
+    size = Communicator::Get("void", args->rank_list)->size;
+  } else {
+    size = GetGlobalCommunicator()->size;
+  }
   auto ttype = GetType(args->x).as<TensorTypeNode>();
   auto shape = ttype->shape;
   auto new_size = shape[args->axis].as<IntImmNode>()->value * size;

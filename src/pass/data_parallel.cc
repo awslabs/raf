@@ -12,6 +12,7 @@
 #include "raf/op.h"
 #include "raf/ir.h"
 #include "raf/pass.h"
+#include "raf/communicator.h"
 #include "raf/dist_context.h"
 #include "raf/profiler.h"
 #include "raf/stream_pool.h"
@@ -27,6 +28,7 @@ namespace data_parallel {
 
 using namespace raf::ir;
 using namespace raf::op;
+using namespace raf::distributed::communicator;
 using profiler::Profiler;
 using profiler::ProfileStat;
 using raf::distributed::DistContext;
@@ -208,6 +210,7 @@ struct DataParallel {
 
   Function Run() {
     auto dctx = DistContext::Global();
+    auto comm = GetGlobalCommunicator();
 
     // If we want to overlap communication and forward pass,
     // we need to analyze the running time of Ops
@@ -293,10 +296,10 @@ struct DataParallel {
         auto tt = bp_ell->vars[i]->checked_type().as<TensorTypeNode>();
         if (tt->dtype.code() == kDLFloat) {
           bp_ell->exprs[p2] = Call(
-              op_div, {bp_ell->vars[p2 - 1], MakeConstant(ScalarValue::make(float(dctx->size)))});
+              op_div, {bp_ell->vars[p2 - 1], MakeConstant(ScalarValue::make(float(comm->size)))});
         } else if (tt->dtype.code() == kDLInt) {
           bp_ell->exprs[p2] = Call(
-              op_div, {bp_ell->vars[p2 - 1], MakeConstant(ScalarValue::make(int64_t(dctx->size)))});
+              op_div, {bp_ell->vars[p2 - 1], MakeConstant(ScalarValue::make(int64_t(comm->size)))});
         } else {
           LOG(FATAL) << "Do not support type other than KDLFloat  and KDLInt. \n";
         }

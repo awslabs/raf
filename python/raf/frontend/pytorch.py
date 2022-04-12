@@ -77,8 +77,8 @@ def trace_model(model, input_type, input_shape):
         if model.dtype != torch.float32:
             if not torch.cuda.is_available():
                 raise RuntimeError("Trace PyTorch model with dtype %s requires GPU" % model.dtype)
-            dctx = dist.get_context()
-            device = "cuda:" + str(dctx.local_rank)
+            comm = dist.get_communicator()
+            device = "cuda:" + str(comm.local_rank)
 
         if input_type.startswith("float"):
             input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)

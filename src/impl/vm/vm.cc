@@ -1076,7 +1076,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     // prepare distributed requests
     for (size_t i = 0; i < requests->distributed.size(); i++) {
       Requests::DistributedRequest& entry = requests->distributed[i];
-      *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+      *entry.dest = (void*)(Communicator::Get("nccl").as<CommunicatorObj>());
       // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
       // ncclComm_t handler instead?
     }

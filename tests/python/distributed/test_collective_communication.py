@@ -17,7 +17,6 @@ from raf import distributed as dist
 from raf._core.ndarray import Symbol
 from raf.testing import check, get_dist_info, skip_dist_test, run_vm_model, run_model
 
-dctx = dist.get_context()
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 
 

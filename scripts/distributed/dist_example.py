@@ -55,8 +55,8 @@ def init_ref_model(device):
 
 
 def print_at_rank_0(msg):
-    dctx = dist.get_context()
-    if dctx.rank == 0:
+    comm = dist.get_communicator()
+    if comm.rank == 0:
         print(msg, flush=True)
 
 
@@ -96,14 +96,15 @@ def run(train_config, meta_dist_config):
 
     # Process distribution configs. Note that data parallel is always on.
     dctx = dist.get_context()
+    comm = dist.get_communicator()
     dctx.enable_data_parallel = meta_dist_config.get("enable_data_parallel", False)
     dctx.zero_opt_level = meta_dist_config.get("zero_opt_level", 0)
-    device = f"cuda({dctx.local_rank})"
+    device = f"cuda({comm.local_rank})"
 
     total_data_size = (np.prod(shape) + (batch_size * num_classes)) * n_mini_batch
     print_at_rank_0(
         "Training Config: #epoch: %d, total data set: %.2f MBs, batch: %d, shape: %s"
-        % (n_epoch, (total_data_size * 4 * dctx.size) / 1e6, batch_size, shape)
+        % (n_epoch, (total_data_size * 4 * comm.size) / 1e6, batch_size, shape)
     )
     print_at_rank_0(
         "Distribution Config: data_parallel: %s, zero_opt_level: %d"

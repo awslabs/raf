@@ -282,7 +282,7 @@ class NCCLReduceScatter : public raf::op::OpEnv {
     const DLTensor* out = cv->out;
     size_in_bytes = BytesCompactTensor(*out);
     size = size_in_bytes / (out->dtype.bits / 8);
-    RequestWorkspace(&in_buffer, cv->device, size_in_bytes * DistContext::Global()->size);
+    RequestWorkspace(&in_buffer, cv->device, size_in_bytes * GetGlobalCommunicator()->size);
   }
 
  public:
