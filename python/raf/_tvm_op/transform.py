@@ -109,9 +109,9 @@ def scatter_strided_slice_compute(attrs, inputs, output_type):
 
     ones = _tvm.topi.full_like(src, _tvm.tir.const(1.0, x.dtype))
     var = _tvm.te.placeholder(shape=x.shape, dtype=x.dtype)
-    slice = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
-    matched_slices = _tvm.te.gradient(slice, [var], head=ones)[0]
-    matched_slices_value = _tvm.te.gradient(slice, [var], head=src)[0]
+    slices = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
+    matched_slices = _tvm.te.gradient(slices, [var], head=ones)[0]
+    matched_slices_value = _tvm.te.gradient(slices, [var], head=src)[0]
 
     out = _tvm.te.compute(
         x.shape,
