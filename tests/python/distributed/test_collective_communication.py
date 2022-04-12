@@ -549,7 +549,7 @@ def test_group_allgather(axis):
     y2 = raf.array(y2, device=device)
 
     model.to(device=device)
-    y = run_model(model, [x1, x2, y1, y2], device)
+    run_model(model, [x1, x2, y1, y2], device)
 
     if rank == 0:
         x1 = x1.numpy()

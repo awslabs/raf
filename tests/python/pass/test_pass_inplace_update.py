@@ -372,8 +372,8 @@ def test_group_allgather():
             pass
 
         @raf.model.trace
-        def forward(self, x1, x2, y1, y2):
-            out = raf.group_allgather([x1, x2], 0, [y1, y2])
+        def forward(self, x1, x2, out1, out2):
+            out = raf.group_allgather([x1, x2], 0, [out1, out2])
             return out[0], out[1]
 
     model = TestModel()
@@ -383,12 +383,12 @@ def test_group_allgather():
     x2 = np.ones(shape=(4, 4), dtype="float32")
     x1 = raf.array(x1, device=device)
     x2 = raf.array(x2, device=device)
-    y1 = np.ones(shape=(8, 4), dtype="float32")
-    y2 = np.ones(shape=(8, 4), dtype="float32")
-    y1 = raf.array(y1, device=device)
-    y2 = raf.array(y2, device=device)
+    out1 = np.ones(shape=(8, 4), dtype="float32")
+    out2 = np.ones(shape=(8, 4), dtype="float32")
+    out1 = raf.array(out1, device=device)
+    out2 = raf.array(out2, device=device)
 
-    bytecode = compile_vm_model(model, device, [x1, x2, y1, y2])
+    bytecode = compile_vm_model(model, device, [x1, x2, out1, out2])
     assert bytecode.count("alloc_tensor") == 0
 
 

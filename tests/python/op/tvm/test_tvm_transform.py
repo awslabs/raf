@@ -1091,7 +1091,7 @@ def test_group_cast(shape, device, itype, otype):
         def forward(self, tensors):  # pylint: disable=no-self-use
             return raf.group_cast(tensors, otype)
 
-    class TestModel(raf.Model):
+    class TestCastModel(raf.Model):
         def build(self):
             pass
 
@@ -1103,7 +1103,7 @@ def test_group_cast(shape, device, itype, otype):
             return out0, out1, out2
 
     group_m = TestGroupModel()
-    cast_m = TestModel()
+    cast_m = TestCastModel()
     m1, _ = randn(shape, device=device)
     m2, _ = randn(shape, device=device)
     m3, _ = randn(shape, device=device)
