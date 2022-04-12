@@ -59,10 +59,9 @@ RAF_OP_TYPE("raf.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
 Type GroupReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<GroupReduceScatterArgs>();
   CHECK(args != nullptr);
-  int size =Communicator::Get()->size;
+  int size = Communicator::Get()->size;
   Array<Type> ret;
-  for (const auto& tv: args->tensor_list)
-  {
+  for (const auto& tv : args->tensor_list) {
     const auto& ty = GetType(tv);
     auto tpn = ty.as<TensorTypeNode>();
     auto shape = tpn->shape;
@@ -76,7 +75,6 @@ Type GroupReduceScatterInfer(const CallValues& value) {
 }
 
 RAF_OP_TYPE("raf.op._group_reduce_scatter", "NCCLGroupReduceScatter", GroupReduceScatterInfer);
-
 
 Type SendInfer(const CallValues& value) {
   const auto* args = value->args.as<SendArgs>();
@@ -118,8 +116,7 @@ Type GroupAllGatherInfer(const CallValues& value) {
   CHECK(args != nullptr);
   int size = Communicator::Get()->size;
   Array<Type> ret;
-  for(const auto& tv: args->tensor_list)
-  {
+  for (const auto& tv : args->tensor_list) {
     auto ttype = GetType(tv).as<TensorTypeNode>();
     auto shape = ttype->shape;
     auto new_size = shape[args->axis].as<IntImmNode>()->value * size;

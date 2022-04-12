@@ -219,10 +219,9 @@ class NCCLGroupAllGather : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
-
     auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
-    ncclComm_t nccl_comm = comm_ptr->nccl_comm;  
-	value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
+    value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
     auto tv = Downcast<value::TupleValue>(inputs[0]);
 
     NCCL_CALL(ncclGroupStart());
@@ -235,8 +234,8 @@ class NCCLGroupAllGather : public raf::op::OpEnv {
       }
       NCCL_CALL(ncclAllGather(it->data, ot->data, size, DType(it->dtype), nccl_comm,
                               (cudaStream_t)stream));
-      }
-      NCCL_CALL(ncclGroupEnd());
+    }
+    NCCL_CALL(ncclGroupEnd());
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -246,7 +245,6 @@ class NCCLGroupAllGather : public raf::op::OpEnv {
 
 RAF_REGISTER_DIALECT_OP(nccl, _group_allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._group_allgather", NCCLGroupAllGather::make);
-
 
 class NCCLReduceScatter : public raf::op::OpEnv {
   void* stream;
@@ -341,7 +339,6 @@ class NCCLGroupReduceScatter : public raf::op::OpEnv {
   ncclRedOp_t compute;
 
   explicit NCCLGroupReduceScatter(const CallValues& cv) {
-    
     auto op = ir::Op::Get("raf.op._group_reduce_scatter");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("tensor_list")};
@@ -387,21 +384,23 @@ class NCCLGroupReduceScatter : public raf::op::OpEnv {
 
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<raf::op::schema::GroupReduceScatterArgs>();
-    Execute({TupleValue::make(ir::Array<Value>(args->tensor_list.begin(), args->tensor_list.end()))}, cv->out);
+    Execute(
+        {TupleValue::make(ir::Array<Value>(args->tensor_list.begin(), args->tensor_list.end()))},
+        cv->out);
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
     auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
     ncclComm_t nccl_comm = comm_ptr->nccl_comm;
-	auto tv = Downcast<value::TupleValue>(inputs[0]);
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
     auto out = Downcast<value::TupleValue>(output);
     size_t offset = 0;
-    //DLTensor* out = output;
+    // DLTensor* out = output;
     DType dtype;
     NCCL_CALL(ncclGroupStart());
     for (int ti = 0; ti < tv->fields.size(); ++ti) {
       DLTensor* x = tv->fields[ti];
-      DLTensor* ot= out->fields[ti];
+      DLTensor* ot = out->fields[ti];
       dtype = x->dtype;
       NCCL_CALL(ncclReduceScatter(x->data, ot->data, sizes[ti], dtype, compute, nccl_comm,
                                   (cudaStream_t)stream));

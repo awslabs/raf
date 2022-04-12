@@ -644,7 +644,7 @@ RAF_TVM(cast_like, CastLike, BinaryLikeArgs, BinaryLikeSchema2Args, BinaryLikeSc
 
 std::vector<Value> GroupCastSchema2Args(const GroupCastArgs* args) {
   std::vector<Value> ret;
-  for (auto i: args->tensor_list){
+  for (auto i : args->tensor_list) {
     ret.push_back(i);
   }
   return ret;
@@ -660,7 +660,8 @@ Attrs GroupCastSchema2Attrs(const GroupCastArgs* args) {
   return Attrs(attrs);
 }
 
-HashKey GroupCastHasher(const std::vector<Type>& param_types, const Type& y_type, const GroupCastArgs* args) {
+HashKey GroupCastHasher(const std::vector<Type>& param_types, const Type& y_type,
+                        const GroupCastArgs* args) {
   HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
   key << ir::String2DLDataType(args->dtype);
   return key;

@@ -366,5 +366,31 @@ def test_simplify():
     assert tvm.ir.structural_equal(mod["main"], expected()["main"])
 
 
+def test_group_allgather():
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x1, x2, y1, y2):
+            out = raf.group_allgather([x1, x2], 0, [y1, y2])
+            return out[0], out[1]
+
+    model = TestModel()
+
+    device = "cpu"
+    x1 = np.ones(shape=(4, 4), dtype="float32")
+    x2 = np.ones(shape=(4, 4), dtype="float32")
+    x1 = raf.array(x1, device=device)
+    x2 = raf.array(x2, device=device)
+    y1 = np.ones(shape=(8, 4), dtype="float32")
+    y2 = np.ones(shape=(8, 4), dtype="float32")
+    y1 = raf.array(y1, device=device)
+    y2 = raf.array(y2, device=device)
+
+    bytecode = compile_vm_model(model, device, [x1, x2, y1, y2])
+    assert bytecode.count("alloc_tensor") == 0
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

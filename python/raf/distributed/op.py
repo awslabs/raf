@@ -85,6 +85,25 @@ def allgather(x, axis, rank_list=None):
     return x
 
 
+def group_allgather(tensor_list, axis, out):
+    """It performs allgather on each tensor in the tensor list.
+
+    Parameters
+    ----------
+    tensor_list: List[Tensor]
+        A list of tensors to perform allgather 
+    axis: int
+        The axis over which concatenation is to be performed
+    out: List[Tensor]
+        The ouptut of the allgather for each tensor 
+    Returns
+    -------
+    ret: Tensor | [Tensor]
+        Concatenation results of each tensor
+    """
+    return sym._group_allgather(tensor_list, axis, out)
+
+
 def reduce(x, root, computation="sum"):
     """Performs reduce operation. Collect data to root rank
 
@@ -125,6 +144,25 @@ def reduce_scatter(x, computation="sum"):
         where rank represents rank number of the current process
     """
     return sym._reduce_scatter(x, computation)
+
+
+def group_reduce_scatter(tensor_list, computation="sum"):
+    """Performs reduction then scatter for each tensor in the list
+
+    Parameters
+    ----------
+    tensor_list: List[Tensor]
+        A list of tensors to perform reduce scatter
+    computation: string
+        The reduction operation, default is sum
+
+    Returns
+    -------
+    ret: List[Tensor]
+        reduction result of each tensor[rank] over all replicas,
+        where rank represents rank number of the current process
+    """
+    return sym._group_reduce_scatter(tensor_list, computation)
 
 
 def broadcast(x, root):

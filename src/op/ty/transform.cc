@@ -484,9 +484,9 @@ Type GroupCastInfer(const CallValues& value) {
   CHECK(args != nullptr);
   Array<Type> ret;
   DataType dtype = DataType(ir::String2DLDataType(args->dtype));
-  for (int i =0; i<args->tensor_list.size(); ++i){
-  TensorType data = Downcast<TensorType>(GetType(args->tensor_list[i]));
-  ret.push_back(TensorType(data->shape, dtype));
+  for (int i = 0; i < args->tensor_list.size(); ++i) {
+    TensorType data = Downcast<TensorType>(GetType(args->tensor_list[i]));
+    ret.push_back(TensorType(data->shape, dtype));
   }
   return TupleType(ret);
 }
