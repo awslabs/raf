@@ -91,11 +91,11 @@ def group_allgather(tensor_list, axis, out):
     Parameters
     ----------
     tensor_list: List[Tensor]
-        A list of tensors to perform allgather 
+        A list of tensors to perform allgather
     axis: int
         The axis over which concatenation is to be performed
     out: List[Tensor]
-        The ouptut of the allgather for each tensor 
+        The ouptut of the allgather for each tensor
     Returns
     -------
     ret: Tensor | [Tensor]

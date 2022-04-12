@@ -1081,9 +1081,8 @@ def test_group_cast(shape, device, itype, otype):
     # TODO(hgt312): The TVM JIT cast kernel in LLVM crashed for float16. See:
     # https://discuss.tvm.apache.org/t/cast-from-float64-to-float16-cause-segmentation-fault
     if (itype, otype, device) == ("float64", "float16", "cpu"):
-        pytest.skip(
-            "The TVM JIT cast kernel in LLVM crashed for float16."
-        )
+        pytest.skip("The TVM JIT cast kernel in LLVM crashed for float16.")
+
     class TestGroupModel(raf.Model):
         def build(self):
             pass

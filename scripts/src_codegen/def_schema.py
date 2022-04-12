@@ -699,16 +699,26 @@ SCHEMAS = {
         Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::group_allgather": [
-        Arg(name="tensor_list", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
         Arg(name="axis", cxx_type="int"),
-        Arg(name="out", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
-    ], 
+        Arg(
+            name="out", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"
+        ),
+    ],
     "communication.h::reduce_scatter": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
     ],
-       "communication.h::group_reduce_scatter": [
-        Arg(name="tensor_list", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+    "communication.h::group_reduce_scatter": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
     ],
     "communication.h::broadcast": [

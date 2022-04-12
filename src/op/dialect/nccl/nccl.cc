@@ -395,7 +395,6 @@ class NCCLGroupReduceScatter : public raf::op::OpEnv {
     auto tv = Downcast<value::TupleValue>(inputs[0]);
     auto out = Downcast<value::TupleValue>(output);
     size_t offset = 0;
-    // DLTensor* out = output;
     DType dtype;
     NCCL_CALL(ncclGroupStart());
     for (int ti = 0; ti < tv->fields.size(); ++ti) {

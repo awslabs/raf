@@ -550,7 +550,7 @@ def test_group_allgather(axis):
 
     model.to(device=device)
     y = run_model(model, [x1, x2, y1, y2], device)
-    
+
     if rank == 0:
         x1 = x1.numpy()
         x2 = x2.numpy()
@@ -569,7 +569,7 @@ def test_group_reduce_scatter(computation):
 
         @raf.model.trace
         def forward(self, x, y):
-            out = raf.group_reduce_scatter([x,y], computation)
+            out = raf.group_reduce_scatter([x, y], computation)
             return out
 
     if computation == "avg" and raf.build.with_nccl() < 21000:
