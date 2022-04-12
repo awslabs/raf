@@ -103,24 +103,17 @@ class VoidCommunicator final : public Communicator {
   RAF_MUTABLE_OBJECT_REF(VoidCommunicator, Communicator, VoidCommunicatorObj);
 };
 
-struct CommPoolThreadLocalEntry {
-  std::map<CommunicatorID, Communicator> comm_;
-};
-
-using CommPoolThreadLocalStore = dmlc::ThreadLocalStore<CommPoolThreadLocalEntry>;
-
 class CommunicatorPool {
  public:
   CommunicatorPool() {
   }
 
   static CommunicatorPool* Get() {
-    static CommunicatorPool* instance = new CommunicatorPool();
+    static CommunicatorPool* instance = dmlc::ThreadLocalStore<CommunicatorPool>::Get();
     return instance;
   }
 
   Communicator GetCommunicator(const std::string& name, const Value rank_list) {
-    auto& comm_ = CommPoolThreadLocalStore::Get()->comm_;
     std::vector<std::vector<int64_t>> rank_list_;
     std::set<int64_t> rank_set_;
     if (rank_list.defined()) {
@@ -148,11 +141,11 @@ class CommunicatorPool {
   }
 
   void Remove() {
-    auto& comm_ = CommPoolThreadLocalStore::Get()->comm_;
     comm_.clear();
   }
 
  private:
+  std::map<CommunicatorID, Communicator> comm_;
 };
 
 }  // namespace communicator
