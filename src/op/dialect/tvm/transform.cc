@@ -642,6 +642,33 @@ RAF_TVM(cast, Cast, CastArgs, CastSchema2Args, CastSchemaArgNames, CastSchema2At
 RAF_TVM(cast_like, CastLike, BinaryLikeArgs, BinaryLikeSchema2Args, BinaryLikeSchemaArgNames,
         GenericAttrs, GenericHasher, kElemWise);
 
+std::vector<Value> GroupCastSchema2Args(const GroupCastArgs* args) {
+  std::vector<Value> ret;
+  for (auto i: args->tensor_list){
+    ret.push_back(i);
+  }
+  return ret;
+}
+
+std::vector<std::string> GroupCastSchemaArgNames(const op::CallValues& call) {
+  return {"tensor_list"};
+}
+
+Attrs GroupCastSchema2Attrs(const GroupCastArgs* args) {
+  auto attrs = make_object<CastAttrs>();
+  attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
+  return Attrs(attrs);
+}
+
+HashKey GroupCastHasher(const std::vector<Type>& param_types, const Type& y_type, const GroupCastArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << ir::String2DLDataType(args->dtype);
+  return key;
+}
+
+RAF_TVM(group_cast, GroupCast, GroupCastArgs, GroupCastSchema2Args, GroupCastSchemaArgNames,
+        GroupCastSchema2Attrs, GroupCastHasher, kElemWise);
+
 std::vector<Value> GatherSchema2Args(const GatherArgs* args) {
   return {args->data, args->indices};
 }

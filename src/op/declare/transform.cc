@@ -871,6 +871,25 @@ RAF_OP_DECLARE("raf.op.cast_like", [](const CallValues& call) {
   call->device = x->device;
 });
 
+RAF_OP_DECLARE("raf.op.group_cast", [](const CallValues& call) {
+  const auto* args = call->args.as<GroupCastArgs>();
+  CHECK(args != nullptr);
+   
+  const DLTensor* first_tensor = args->tensor_list[0];
+
+  std::vector<TensorValue> ret;
+  std::string dtype = args->dtype;
+  for (int i =0; i< args->tensor_list.size(); ++i){
+    DLTensor* x = args->tensor_list[i];
+    std::vector<int64_t> oshape(x->shape, x->shape + x->ndim);
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/String2DLDataType(dtype),
+                                        /*shape=*/oshape));
+  } 
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  call->device = first_tensor->device;
+});
+
 RAF_OP_DECLARE("raf.op.gather", [](const CallValues& call) {
   const auto* args = call->args.as<GatherArgs>();
   CHECK(args != nullptr);

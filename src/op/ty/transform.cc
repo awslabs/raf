@@ -479,6 +479,20 @@ Type CastLikeInfer(const CallValues& value) {
 
 RAF_OP_TYPE("raf.op.cast_like", "CastLike", CastLikeInfer);
 
+Type GroupCastInfer(const CallValues& value) {
+  const auto* args = value->args.as<GroupCastArgs>();
+  CHECK(args != nullptr);
+  Array<Type> ret;
+  DataType dtype = DataType(ir::String2DLDataType(args->dtype));
+  for (int i =0; i<args->tensor_list.size(); ++i){
+  TensorType data = Downcast<TensorType>(GetType(args->tensor_list[i]));
+  ret.push_back(TensorType(data->shape, dtype));
+  }
+  return TupleType(ret);
+}
+
+RAF_OP_TYPE("raf.op.group_cast", "GroupCast", GroupCastInfer);
+
 Type ExpandDimsInfer(const CallValues& value) {
   const auto* args = value->args.as<ExpandDimsArgs>();
   CHECK(args);
