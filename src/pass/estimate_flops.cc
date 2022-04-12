@@ -56,12 +56,14 @@ void FLOPSEstimater::VisitExpr_(const LetNode* op) {
 }
 
 void FLOPSEstimater::VisitExpr_(const CallNode* call) {
-  const Op& op = Downcast<Op>(call->op);
-  auto base_op = IsDialectOp(op) ? GetBaseOp(op) : op;
-  auto tvm_op = OpDialect::Lower(base_op, "tvm");
-  // skip this op if it does not have a TVM dialect
-  if (!tvm_op.defined()) {
-    return;
+  if (call->op.as<OpNode>()) {
+    const Op& op = Downcast<Op>(call->op);
+    auto base_op = IsDialectOp(op) ? GetBaseOp(op) : op;
+    auto tvm_op = OpDialect::Lower(base_op, "tvm");
+    // skip this op if it does not have a TVM dialect
+    if (!tvm_op.defined()) {
+      return;
+    }
   }
   Array<Type> param_types;
   for (auto arg : call->args) {
