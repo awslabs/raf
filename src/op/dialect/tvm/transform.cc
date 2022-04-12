@@ -8,6 +8,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <vector>
+#include <tvm/tir/expr.h>
 #include <raf/op_utils.h>
 #include <raf/cache.h>
 #include <raf/value.h>
@@ -17,6 +18,7 @@
 #include "../../schema/likes.h"
 #include "../../schema/nn.h"
 #include "../../../common/shape_utils.h"
+#include "../../ty/utils.h"
 
 namespace raf {
 namespace op {
@@ -507,10 +509,17 @@ Attrs ScatterStridedSliceSchema2Attrs(const ScatterStridedSliceArgs* args) {
   CHECK_EQ(args->begin.size(), args->end.size());
   CHECK_EQ(args->begin.size(), args->strides.size());
   std::vector<Integer> begin, end, strides;
-  for (int i = 0; i < args->begin.size(); ++i) {
+  TensorType x_type = Downcast<TensorType>(GetType(args->x));
+  int i;
+  for (i = 0; i < args->begin.size(); i++) {
     begin.emplace_back(args->begin[i]);
     end.emplace_back(args->end[i]);
     strides.emplace_back(args->strides[i]);
+  }
+  for (; i < x_type->shape.size(); i++) {
+    begin.emplace_back(0);
+    end.emplace_back(x_type->shape[i].as<tvm::tir::IntImmNode>()->value);
+    strides.emplace_back(1);
   }
   attrs->begin = Array<Integer>(begin.begin(), begin.end());
   attrs->end = Array<Integer>(end.begin(), end.end());
