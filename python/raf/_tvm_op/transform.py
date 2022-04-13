@@ -102,8 +102,24 @@ def scatter_dx_like_compute(attrs, inputs, output_type):
     return [out]
 
 
+@register_compute("raf.op.tvm.scatter_strided_slice")
+def scatter_strided_slice_compute(attrs, inputs, output_type):
+    x, src = inputs
+    begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
+
+    ones = _tvm.topi.full_like(src, _tvm.tir.const(1.0, x.dtype))
+    var = _tvm.te.placeholder(shape=x.shape, dtype=x.dtype)
+    slices = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
+    matched_slices = _tvm.te.gradient(slices, [var], head=ones)[0]
+    matched_slices_value = _tvm.te.gradient(slices, [var], head=src)[0]
+
+    out = matched_slices_value * matched_slices + x * (1 - matched_slices)
+    return [out]
+
+
 _reg.register_strategy("raf.op.tvm.scatter", strategy.scatter_strategy)
 _reg.register_injective_schedule("raf.op.tvm.scatter_dx")
+_reg.register_injective_schedule("raf.op.tvm.scatter_strided_slice")
 _reg.register_injective_schedule("raf.op.tvm.transpose_dx")
 _reg.register_injective_schedule("raf.op.tvm.transpose")
 _reg.register_injective_schedule("raf.op.tvm.swap_axis")

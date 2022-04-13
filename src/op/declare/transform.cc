@@ -825,6 +825,24 @@ RAF_OP_DECLARE("raf.op.scatter_dx", [](const CallValues& call) {
   call->device = x->device;
 });
 
+RAF_OP_DECLARE("raf.op.scatter_strided_slice", [](const CallValues& call) {
+  const auto* args = call->args.as<ScatterStridedSliceArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* src_tensor = args->src;
+
+  CHECK(!args->begin.empty()) << "scatter_strided_slice received invalid begin";
+  CHECK(!args->end.empty()) << "scatter_strided_slice received invalid end";
+  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+  CHECK_EQ(x->ndim, src_tensor->ndim);
+
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+});
+
 RAF_OP_DECLARE("raf.op.clip", [](const CallValues& call) {
   const auto* args = call->args.as<ClipArgs>();
   CHECK(args != nullptr);
