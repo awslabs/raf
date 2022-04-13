@@ -351,10 +351,42 @@ Var LivenessAnalyzer::CreateTensorVar(const Type& type) {
   return VarCreator(this).Run(type);
 }
 
-/*! \brief Calculate the byte compact size of the given type. If the type is a tuple,
+/*! 
+ * \brief Calculate the byte compact size of the given type. If the type is a tuple,
  * then the size of each tensor in the tuple will be returned. Note that size 0 means
- * a tensor with dynamic shape.
+ * a tensor with dynamic shape. If the input type contains nested tuples, the nested
+ * tuples are flattened and a flat vector of sizes is returned at the end. The order
+ * of the fields is preserved. 
  */
+std::vector<int64_t> CalcBytesCompactSizes(const Type& type) {
+  std::vector<const Type> ty_stack;
+  std::vector<const TensorTypeNode*> ttypes;
+  ty_stack.push_back(type);
+  while (!ty_stack.empty()) {
+    auto ty = ty_stack.back();
+    ty_stack.pop_back();
+    if (auto tuple_ty_node = ty.as<TupleTypeNode>()) {
+      // If the current type corresponds to a tuple, process the type of each field later
+      for (auto field : tuple_ty_node->fields)
+        ty_stack.push_back(field);
+    } else if (auto tensor_ty_node = ty.as<TensorTypeNode>()) {
+      // Tensor types are added to the final list and sizes will be calculated
+      ttypes.push_back(tensor_ty_node);
+    } else {
+      // Other types are not supported
+      LOG(FATAL) << "Unsupported type: " << ty->GetTypeKey();
+      throw;
+    }
+  }
+ 
+  std::vector<int64_t> sizes;
+  for (auto ttype : ttypes) {
+    sizes.push_back(common::shape_utils::BytesCompactTensor(ttype));
+  }
+  return sizes;
+}
+
+/*
 std::vector<int64_t> CalcBytesCompactSizes(const Type& type) {
   std::vector<const TensorTypeNode*> ttypes;
   std::vector<int64_t> sizes;
@@ -376,6 +408,7 @@ std::vector<int64_t> CalcBytesCompactSizes(const Type& type) {
   }
   return sizes;
 }
+*/
 
 /*! \brief Dump liveness analysis result statistics. */
 void DumpLivenessStat(const MapVSet& live_in) {

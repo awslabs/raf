@@ -32,7 +32,7 @@ constexpr float kMegaBytes = 1048576;
 constexpr float kGigaBytes = 1073741824;
 
 // Whether to display verbose logging.
-#define SHOW_VERBOSE_LOG 0
+#define SHOW_VERBOSE_LOG 1
 
 // Whether to update tensor index when rematerialization. If defined, then
 // the rematerialized tensors are less likely to be freed and rematerialized again.
@@ -864,8 +864,39 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
   ~TensorAnalyzer() {
   }
 
+  /*! 
+   * \brief Get a list of liveness vars for the current let var. This function uses a DFS to handle
+   * nested tuples. The returned array contains a flat list of vars. The relative order of tuple
+   * fields is preserved. 
+   */
+  tvm::Array<Var> GetLivenessVars(const Var& curr_let) {
+    tvm::Array<Var> result_vars;
+    tvm::Array<Var> var_stack;
+    var_stack.push_back(curr_let);
+    while (!var_stack.empty()) {
+      auto v = var_stack.back();
+      var_stack.pop_back();
+      auto liveness_vars = analyzer_->GetTensorVars(v);
+      CHECK_GT(liveness_vars.size(), 0U);
+      if (liveness_vars.size() > 1) {
+        // If the current let var corresponds to a tuple, the tuple fields should be processed later
+        for (auto next_v : liveness_vars)
+          var_stack.push_back(next_v);
+      } else if (let_var_set_.count(liveness_vars[0])) {
+        // If this "liveness var" points to a real var rather than an actual liveness var
+        // it should also be processed later
+        var_stack.push_back(liveness_vars[0]);
+      } else {
+        // Otherwise, add this var to the result
+        result_vars.push_back(liveness_vars[0]);
+      }
+    }
+    return result_vars;
+  }
+
   /*! \brief Visit each let statement and return the analyzed information of each tensor. */
   TensorInfos Run() {
+    LOG(INFO) << "Function: " << ir::AsText(func_);
     // Analyze parameters.
     for (const auto& var : func_->params) {
       auto liveness_vars = analyzer_->GetTensorVars(var);
@@ -876,26 +907,28 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
     const auto& exprs = ell_->exprs;
     CHECK_EQ(vars.size(), exprs.size());
 
-    VSet let_var_set;
     for (auto var : vars) {
-      let_var_set.insert(var);
+      let_var_set_.insert(var);
     }
 
     size_t n = exprs.size();
     for (int i = 0; i < n; ++i) {
       curr_let_ = vars[i];
+      auto liveness_vars = GetLivenessVars(curr_let_);
+      /* 
       auto liveness_vars = analyzer_->GetTensorVars(curr_let_);
 
       // In the case of tuple with may_share, liveness vars may point to the real tensor.
       for (size_t i = 0; i < liveness_vars.size(); ++i) {
         auto real_liveness_var = liveness_vars[i];
-        while (let_var_set.find(real_liveness_var) != let_var_set.end()) {
+        while (let_var_set_.find(real_liveness_var) != let_var_set_.end()) {
           auto cand_liveness_vars = analyzer_->GetTensorVars(real_liveness_var);
           CHECK_EQ(cand_liveness_vars.size(), 1U);
           real_liveness_var = cand_liveness_vars[0];
         }
         liveness_vars.Set(i, real_liveness_var);
       }
+      */
 
       // Visit the expression to analyze the use count
       ExprVisitor::VisitExpr(exprs[i]);
@@ -945,6 +978,8 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
   TensorInfos tensor_infos_;
   /*! \brief The profiler used in rematerialization. */
   op_profiler::OpProfiler* profiler_;
+  /*! \brief A set of all let vars in the function. */
+  VSet let_var_set_;
 };
 
 TensorInfos Rematerializer::AnalyzeTensors(const Device& device, const Function& func,
