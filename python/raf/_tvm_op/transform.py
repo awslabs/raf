@@ -113,14 +113,7 @@ def scatter_strided_slice_compute(attrs, inputs, output_type):
     matched_slices = _tvm.te.gradient(slices, [var], head=ones)[0]
     matched_slices_value = _tvm.te.gradient(slices, [var], head=src)[0]
 
-    out = _tvm.te.compute(
-        x.shape,
-        lambda *idx: _tvm.tir.if_then_else(
-            matched_slices[idx] == _tvm.tir.const(1.0, x.dtype),
-            matched_slices_value[idx],
-            x[idx],
-        ),
-    )
+    out = matched_slices_value * matched_slices + x * (1 - matched_slices)
     return [out]
 
 
