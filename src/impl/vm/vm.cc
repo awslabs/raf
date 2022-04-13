@@ -1073,38 +1073,34 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     call_values->device = devices_[0];
     call_values->out = output;
 
-    if (dryrun_) {
-      // defer the OpEnv creation to enable parallelism.
-      // FIXME: Not implemented yet. See ParallelDispatch for details.
-      return std::make_tuple(nullptr, std::vector<Value>(), Value(), op_env_cache_key);
-    } else {
-      op_env = Dispatch(call_values);
-      CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
-                               << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
-                               << call_values->device.c_str();
-      std::shared_ptr<Requests> requests = op_env->GetRequests();
-      // prepare distributed requests
-      for (size_t i = 0; i < requests->distributed.size(); i++) {
-        Requests::DistributedRequest& entry = requests->distributed[i];
-        *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
-        // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef
-        // or ncclComm_t handler instead?
-      }
-#ifdef RAF_USE_CUDA
-      // prepare cuda stream requests
-      for (size_t i = 0; i < requests->stream.size(); i++) {
-        Requests::StreamRequest& entry = requests->stream[i];
-        // currently ignores the stream_idx field in requests, all requests with the same tag_idx
-        // will get the same cuda stream in vm
-        std::shared_ptr<Stream> stream =
-            utils::GetStreamById(ctx, entry.device.device_id(), entry.tag_idx);
-        *entry.dest = stream->data();
-        entry.stream = stream;
-      }
-#endif
-      // add to cache
-      op_env_cache->Set(op_env_cache_key, op_env);
+    // TODO: When dryrun, defer the OpEnv creation to enable parallelism.
+    // See ParallelDispatch for details.
+    op_env = Dispatch(call_values);
+    CHECK(op_env != nullptr) << "ValueError: Cannot dispatch "
+                             << (op ? op->op->name : PrettyPrint(closure->func)) << " @"
+                             << call_values->device.c_str();
+    std::shared_ptr<Requests> requests = op_env->GetRequests();
+    // prepare distributed requests
+    for (size_t i = 0; i < requests->distributed.size(); i++) {
+      Requests::DistributedRequest& entry = requests->distributed[i];
+      *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
+      // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef
+      // or ncclComm_t handler instead?
     }
+#ifdef RAF_USE_CUDA
+    // prepare cuda stream requests
+    for (size_t i = 0; i < requests->stream.size(); i++) {
+      Requests::StreamRequest& entry = requests->stream[i];
+      // currently ignores the stream_idx field in requests, all requests with the same tag_idx
+      // will get the same cuda stream in vm
+      std::shared_ptr<Stream> stream =
+          utils::GetStreamById(ctx, entry.device.device_id(), entry.tag_idx);
+      *entry.dest = stream->data();
+      entry.stream = stream;
+    }
+#endif
+    // add to cache
+    op_env_cache->Set(op_env_cache_key, op_env);
   }
 
   std::shared_ptr<Requests> requests = op_env->GetRequests();
