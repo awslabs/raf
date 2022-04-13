@@ -839,11 +839,13 @@ void VirtualMachine::HandleInvokeJit(VMContext& ctx, const Instruction& instr) {
                          { op_env->Execute(inputs, output); });
     }
     PROFILE_MEMORY(devices_[0], op_env->name());
+  }
 
-    // Release workspace memory.
-    // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
-    //   kernel. Because the kernel may be in the executing status at this point due to
-    //   asynchronous execution. This would cause problem for multi-stream execution.
+  // Release workspace memory.
+  // TODO(yaoyaoding): It seems that we can not release the workspace once we launched the
+  //   kernel. Because the kernel may be in the executing status at this point due to
+  //   asynchronous execution. This would cause problem for multi-stream execution.
+  if (op_env) {
     std::shared_ptr<Requests> requests = op_env->GetRequests();
     for (size_t i = 0; i < requests->workspace.size(); ++i) {
       Requests::WorkspaceRequest& entry = requests->workspace[i];
@@ -1103,6 +1105,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     op_env_cache->Set(op_env_cache_key, op_env);
   }
 
+  // Allocate workspace memory.
   std::shared_ptr<Requests> requests = op_env->GetRequests();
   for (size_t i = 0; i < requests->workspace.size(); i++) {
     Requests::WorkspaceRequest& entry = requests->workspace[i];
