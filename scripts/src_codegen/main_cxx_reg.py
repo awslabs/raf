@@ -19,7 +19,7 @@ NORM_CONVERTER = {
     "ToDouble": "Double",
     "ToIntTuple": "IntOrTupleInt",
     "ToIntArray": "IntArray",
-    "ToTensorTuple": "TupleTensor",
+    "ToTensorTuple": "TensorOrTupleTensor",
 }
 
 

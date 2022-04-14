@@ -730,7 +730,7 @@ def test_expand_dims(device, shape, axis, num_newaxis):
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
+@pytest.mark.parametrize("shape", [(3, 4, 2), (2, 0)])
 @pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
 def test_cast(shape, device, itype, otype):
