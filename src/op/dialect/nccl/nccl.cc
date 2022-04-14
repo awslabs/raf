@@ -200,7 +200,7 @@ class NCCLGroupAllGather : public raf::op::OpEnv {
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("tensor_list")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator);
+    RequestDistributed(&communicator, "nccl", NullValue<Value>());
   }
 
  public:
@@ -343,7 +343,7 @@ class NCCLGroupReduceScatter : public raf::op::OpEnv {
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("tensor_list")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator);
+    RequestDistributed(&communicator, "nccl", NullValue<Value>());
     auto args = cv->args.as<raf::op::schema::GroupReduceScatterArgs>();
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
