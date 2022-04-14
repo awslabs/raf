@@ -164,6 +164,7 @@ OPS = [
     Op(name="defuse_tensor", schema_name="defuse_tensor"),
     Op(name="cast", schema_name="cast"),
     Op(name="cast_like", schema_name="binary_like"),
+    Op(name="group_cast", schema_name="group_cast"),
     Op(name="gather", schema_name="gather"),
     Op(name="gather_dx", schema_name="gather_dx"),
     Op(name="gather_nd", schema_name="gather_nd"),
@@ -198,8 +199,10 @@ OPS = [
     # frontend and the wrapper ops are defined in python/raf/distributed/op.py
     Op(name="_allreduce", schema_name="allreduce"),
     Op(name="_allgather", schema_name="allgather"),
+    Op(name="_group_allgather", schema_name="group_allgather"),
     Op(name="_reduce", schema_name="comm_reduce"),
     Op(name="_reduce_scatter", schema_name="reduce_scatter"),
+    Op(name="_group_reduce_scatter", schema_name="group_reduce_scatter"),
     Op(name="_broadcast", schema_name="broadcast"),
     Op(name="_send", schema_name="send"),
     Op(name="_recv", schema_name="recv"),

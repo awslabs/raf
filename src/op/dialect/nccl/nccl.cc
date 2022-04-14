@@ -192,6 +192,60 @@ class NCCLAllGather : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._allgather", NCCLAllGather::make);
 
+class NCCLGroupAllGather : public raf::op::OpEnv {
+  void* stream;
+  void* communicator;
+  explicit NCCLGroupAllGather(const CallValues& cv) {
+    auto op = ir::Op::Get("raf.op._group_allgather");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("tensor_list")};
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+  }
+
+ public:
+  ~NCCLGroupAllGather() {
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("raf.op.nccl._group_allgather"));
+  }
+
+  void Execute(const CallValues& cv) override {
+    auto args = cv->args.as<raf::op::schema::GroupAllgatherArgs>();
+    Execute(
+        {TupleValue::make(ir::Array<Value>(args->tensor_list.begin(), args->tensor_list.end()))},
+        cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
+    value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
+
+    NCCL_CALL(ncclGroupStart());
+    for (int ti = 0; ti < tv->fields.size(); ++ti) {
+      DLTensor* it = tv->fields[ti];
+      DLTensor* ot = out->fields[ti];
+      int64_t size = 1;
+      for (int i = 0; i < it->ndim; ++i) {
+        size *= it->shape[i];
+      }
+      NCCL_CALL(ncclAllGather(it->data, ot->data, size, DType(it->dtype), nccl_comm,
+                              (cudaStream_t)stream));
+    }
+    NCCL_CALL(ncclGroupEnd());
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLGroupAllGather(cv);
+  }
+};
+
+RAF_REGISTER_DIALECT_OP(nccl, _group_allgather, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._group_allgather", NCCLGroupAllGather::make);
+
 class NCCLReduceScatter : public raf::op::OpEnv {
   void* stream;
   void* communicator;
@@ -277,6 +331,89 @@ class NCCLReduceScatter : public raf::op::OpEnv {
 
 RAF_REGISTER_DIALECT_OP(nccl, _reduce_scatter, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._reduce_scatter", NCCLReduceScatter::make);
+
+class NCCLGroupReduceScatter : public raf::op::OpEnv {
+  void* stream;
+  void* communicator;
+  std::vector<size_t> sizes;
+  ncclRedOp_t compute;
+
+  explicit NCCLGroupReduceScatter(const CallValues& cv) {
+    auto op = ir::Op::Get("raf.op._group_reduce_scatter");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    this->arg_indices = {fschema_index[op]("tensor_list")};
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator);
+    auto args = cv->args.as<raf::op::schema::GroupReduceScatterArgs>();
+    if (args->computation.compare("sum") == 0) {
+      compute = ncclSum;
+    } else if (args->computation.compare("prod") == 0) {
+      compute = ncclProd;
+    } else if (args->computation.compare("min") == 0) {
+      compute = ncclMin;
+    } else if (args->computation.compare("max") == 0) {
+      compute = ncclMax;
+    } else if (args->computation.compare("avg") == 0) {
+#if NCCL_VERSION_CODE >= 21000
+      compute = ncclAvg;
+#else
+      LOG(FATAL) << "ReduceScatter with avg is not supported in NCCL < 2.10";
+#endif
+    } else {
+      LOG(FATAL) << "Invalid computation " << args->computation;
+    }
+
+    auto out = Downcast<value::TupleValue>(cv->out);
+    for (auto tv : out->fields) {
+      const DLTensor* ot = tv;
+      size_t size = 1;
+      for (int i = 0; i < ot->ndim; ++i) {
+        size *= ot->shape[i];
+      }
+      sizes.push_back(size);
+    }
+  }
+
+ public:
+  ~NCCLGroupReduceScatter() {
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("raf.op.nccl._group_reduce_scatter"));
+  }
+
+  void Execute(const CallValues& cv) override {
+    auto args = cv->args.as<raf::op::schema::GroupReduceScatterArgs>();
+    Execute(
+        {TupleValue::make(ir::Array<Value>(args->tensor_list.begin(), args->tensor_list.end()))},
+        cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
+    auto comm_ptr = reinterpret_cast<NCCLCommunicatorObj*>(communicator);
+    ncclComm_t nccl_comm = comm_ptr->nccl_comm;
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
+    auto out = Downcast<value::TupleValue>(output);
+    size_t offset = 0;
+    DType dtype;
+    NCCL_CALL(ncclGroupStart());
+    for (int ti = 0; ti < tv->fields.size(); ++ti) {
+      DLTensor* x = tv->fields[ti];
+      DLTensor* ot = out->fields[ti];
+      dtype = x->dtype;
+      NCCL_CALL(ncclReduceScatter(x->data, ot->data, sizes[ti], dtype, compute, nccl_comm,
+                                  (cudaStream_t)stream));
+    }
+    NCCL_CALL(ncclGroupEnd());
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLGroupReduceScatter(cv);
+  }
+};
+
+RAF_REGISTER_DIALECT_OP(nccl, _group_reduce_scatter, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._group_reduce_scatter", NCCLGroupReduceScatter::make);
 
 class NCCLBroadcast : public raf::op::OpEnv {
   void* stream;

@@ -540,6 +540,14 @@ SCHEMAS = {
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="dtype", cxx_type="std::string"),
     ],
+    "transform.h::group_cast": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
+        Arg(name="dtype", cxx_type="std::string"),
+    ],
     "transform.h::strided_slice": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="begin", cxx_type="value::Value"),
@@ -704,8 +712,27 @@ SCHEMAS = {
         Arg(name="axis", cxx_type="int"),
         Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
+    "communication.h::group_allgather": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
+        Arg(name="axis", cxx_type="int"),
+        Arg(
+            name="out", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"
+        ),
+    ],
     "communication.h::reduce_scatter": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
+    ],
+    "communication.h::group_reduce_scatter": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
     ],
     "communication.h::broadcast": [

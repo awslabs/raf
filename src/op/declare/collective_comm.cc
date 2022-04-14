@@ -95,6 +95,28 @@ RAF_OP_DECLARE("raf.op._allgather", AllGather)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
+void GroupAllGather(const CallValues& call) {
+  const auto* args = call->args.as<GroupAllgatherArgs>();
+  CHECK(args != nullptr);
+  std::vector<TensorValue> ret;
+  const DLTensor* first_tensor = args->tensor_list[0];
+  for (int i = 0; i < args->tensor_list.size(); ++i) {
+    const DLTensor* x = args->tensor_list[i];
+    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+    shape[args->axis] *= Communicator::Get()->size;
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
+  }
+  call->device = first_tensor->device;
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+}
+
+RAF_OP_DECLARE("raf.op._group_allgather", GroupAllGather)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TRAFCollective>("TRAFCollective", true)
+    .set_attr<TRAFInplaceUpdate>("TRAFInplaceUpdate", {{2, 0}});
+
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
@@ -113,6 +135,30 @@ void ReduceScatter(const CallValues& call) {
 }
 
 RAF_OP_DECLARE("raf.op._reduce_scatter", ReduceScatter)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TRAFCollective>("TRAFCollective", true);
+
+void GroupReduceScatter(const CallValues& call) {
+  const auto* args = call->args.as<GroupReduceScatterArgs>();
+  CHECK(args != nullptr);
+  std::vector<BaseTensorValue> tvs = args->tensor_list;
+  const DLTensor* first_tensor = tvs[0];
+  std::vector<TensorValue> ret;
+  int size = Communicator::Get()->size;
+  for (const auto& tv : tvs) {
+    const DLTensor* x = tv;
+    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+    CHECK(shape[0] % size == 0);
+    shape[0] = shape[0] / size;
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
+  }
+  call->device = first_tensor->device;
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+}
+
+RAF_OP_DECLARE("raf.op._group_reduce_scatter", GroupReduceScatter)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 

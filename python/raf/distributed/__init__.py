@@ -3,5 +3,15 @@
 
 """Utils for distributed training, e.g., collective communication operators."""
 from raf._ffi.distributed import RemoveCommunicator
-from .op import allreduce, allgather, reduce, reduce_scatter, broadcast, send, recv
+from .op import (
+    allreduce,
+    allgather,
+    reduce,
+    reduce_scatter,
+    broadcast,
+    send,
+    recv,
+    group_allgather,
+    group_reduce_scatter,
+)
 from .context import DistContext, get_context

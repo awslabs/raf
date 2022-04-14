@@ -1109,5 +1109,47 @@ def test_cumsum(device, shape, axis, dtype, exclusive):
         check(m_x.grad, t_x.grad, rtol=tol, atol=tol)
 
 
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("shape", [(3, 4, 2)])
+@pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
+@pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
+def test_group_cast(shape, device, itype, otype):
+    # TODO(hgt312): The TVM JIT cast kernel in LLVM crashed for float16. See:
+    # https://discuss.tvm.apache.org/t/cast-from-float64-to-float16-cause-segmentation-fault
+    if (itype, otype, device) == ("float64", "float16", "cpu"):
+        pytest.skip("The TVM JIT cast kernel in LLVM crashed for float16.")
+
+    class TestGroupModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, tensors):  # pylint: disable=no-self-use
+            return raf.group_cast(tensors, otype)
+
+    class TestCastModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, in0, in1, in2):  # pylint: disable=no-self-use
+            out0 = raf.cast(in0, otype)
+            out1 = raf.cast(in1, otype)
+            out2 = raf.cast(in2, otype)
+            return out0, out1, out2
+
+    group_m = TestGroupModel()
+    cast_m = TestCastModel()
+    m1, _ = randn(shape, device=device)
+    m2, _ = randn(shape, device=device)
+    m3, _ = randn(shape, device=device)
+
+    group_out = run_vm_model(group_m, device, [[m1, m2, m3]])
+    out = run_vm_model(cast_m, device, [m1, m2, m3])
+    check(group_out[0], out[0])
+    check(group_out[1], out[1])
+    check(group_out[2], out[2])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
