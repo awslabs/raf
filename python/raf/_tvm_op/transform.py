@@ -439,12 +439,8 @@ _reg.register_strategy("raf.op.tvm.cumsum", strategy.cumsum_strategy)
 
 @register_compute("raf.op.tvm.group_cast")
 def group_cast_compute(attrs, inputs, output_type):
-    tensor_list = inputs
     dtype = attrs.dtype
-    out = []
-    for item in tensor_list:
-        out.append(_topi.cast(item, dtype))
-    return out
+    return [_topi.cast(item, dtype) for item in inputs]
 
 
 _reg.register_injective_schedule("raf.op.tvm.group_cast")

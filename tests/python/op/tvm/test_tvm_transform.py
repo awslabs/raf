@@ -1119,7 +1119,7 @@ def test_group_cast(shape, device, itype, otype):
     if (itype, otype, device) == ("float64", "float16", "cpu"):
         pytest.skip("The TVM JIT cast kernel in LLVM crashed for float16.")
 
-    class TestGroupModel(raf.Model):
+    class GroupModel(raf.Model):
         def build(self):
             pass
 
@@ -1127,7 +1127,7 @@ def test_group_cast(shape, device, itype, otype):
         def forward(self, tensors):  # pylint: disable=no-self-use
             return raf.group_cast(tensors, otype)
 
-    class TestCastModel(raf.Model):
+    class CastModel(raf.Model):
         def build(self):
             pass
 
@@ -1138,8 +1138,8 @@ def test_group_cast(shape, device, itype, otype):
             out2 = raf.cast(in2, otype)
             return out0, out1, out2
 
-    group_m = TestGroupModel()
-    cast_m = TestCastModel()
+    group_m = GroupModel()
+    cast_m = CastModel()
     m1, _ = randn(shape, device=device)
     m2, _ = randn(shape, device=device)
     m3, _ = randn(shape, device=device)
