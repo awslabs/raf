@@ -81,7 +81,7 @@ class OpEnv {
 
   void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
   void RequestStream(void** dest, const Device& device, int tag_idx);
-  void RequestDistributed(void** dest);
+  void RequestDistributed(void** dest, const std::string& name, const value::Value rank_list);
 
   void BindExecutor(executor::Executor* executor);
   std::shared_ptr<requests::Requests> GetRequests() const;
