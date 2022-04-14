@@ -13,7 +13,7 @@
 #include "raf/ir.h"
 #include "raf/pass.h"
 #include "raf/communicator.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/profiler.h"
 #include "raf/stream_pool.h"
 #include "./common.h"
@@ -31,7 +31,7 @@ using namespace raf::op;
 using namespace raf::distributed::communicator;
 using profiler::Profiler;
 using profiler::ProfileStat;
-using raf::distributed::DistContext;
+using raf::distributed::DistConfig;
 using raf::value::NoGradValue;
 using stream_pool::StreamTagEnum;
 
@@ -139,15 +139,15 @@ struct DataParallel {
       : func(func), fp_ell(ExplicitLetList::make(func->body)) {
   }
 
-  // Compute the dctx->scheduling_param according to the analysis of op profiling.
+  // Compute the dcfg->scheduling_param according to the analysis of op profiling.
   void GetSchedulingParameters() {
-    auto dctx = DistContext::Global();
+    auto dcfg = DistConfig::Global();
     static int prof_level = Profiler::Get()->profile_level();  // Store user's config
     // Store the running time of all ops.
     static std::vector<std::pair<std::string, int64_t> > op_running_time;
-    if (dctx->iteration < dctx->auto_dp_profiling_start_iter) {
+    if (dcfg->iteration < dcfg->auto_dp_profiling_start_iter) {
       Profiler::Get()->set_profile_level(0);  // Disable profiling to warm up
-    } else if (dctx->iteration <= dctx->auto_dp_profiling_end_iter) {
+    } else if (dcfg->iteration <= dcfg->auto_dp_profiling_end_iter) {
       Profiler::Get()->set_profile_level(1);  // Profiling the execution
       if (op_running_time.empty()) {
         for (auto& item : Profiler::Get()->GetProfileStats()) {
@@ -174,7 +174,7 @@ struct DataParallel {
           }
         }
       }
-    } else if (dctx->iteration == dctx->auto_dp_profiling_end_iter + 1) {
+    } else if (dcfg->iteration == dcfg->auto_dp_profiling_end_iter + 1) {
       Profiler::Get()->set_profile_level(prof_level);  // Enbale user's config
       // Analyse the profiling result of iter2-iter4,
       // and figure out a scheduling strategy.
@@ -201,7 +201,7 @@ struct DataParallel {
         }
       }
       // Currently we only have one scheduling parameter, set it here.
-      dctx->scheduling_param = bp_order_grad_count;
+      dcfg->scheduling_param = bp_order_grad_count;
 
       // clear the cached profiling analysis.
       op_running_time.clear();
@@ -209,12 +209,12 @@ struct DataParallel {
   }
 
   Function Run() {
-    auto dctx = DistContext::Global();
+    auto dcfg = DistConfig::Global();
     auto comm = GetGlobalCommunicator();
 
     // If we want to overlap communication and forward pass,
     // we need to analyze the running time of Ops
-    if (dctx->iteration <= dctx->auto_dp_profiling_end_iter + 1) {
+    if (dcfg->iteration <= dcfg->auto_dp_profiling_end_iter + 1) {
       GetSchedulingParameters();
     }
     size_t fp_n = fp_ell->vars.size();
@@ -329,7 +329,7 @@ struct DataParallel {
       LOG(FATAL) << "Return of backward IR must be Var or tuple of Vars in Data Parallel Pass.";
     }
 
-    dctx->iteration++;
+    dcfg->iteration++;
 
     bp_n = bp_ell->vars.size();
     if (new_bp_rt.size() == 1) {

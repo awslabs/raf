@@ -11,7 +11,7 @@
 #include <chrono>
 #include <thread>
 #include "raf/op_utils.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/nccl_communicator.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"

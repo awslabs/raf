@@ -15,8 +15,8 @@ To enable distributed training, you need to set the corresponding flags in the d
 ```python
 import raf
 from raf import distributed as dist
-dctx = dist.get_context()
-dctx.enable_data_parallel = True
+dcfg = dist.get_config()
+dcfg.enable_data_parallel = True
 ```
 
 Note that if you are using the provided script (i.e., `dist_example.py`), you can simply change the values in `meta_dist_config`. We will introduce each configure in the following subsections along with the distribution methodologies.

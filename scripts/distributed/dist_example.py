@@ -95,10 +95,10 @@ def run(train_config, meta_dist_config):
     shape = [batch_size, num_channels, input_shape, input_shape]
 
     # Process distribution configs. Note that data parallel is always on.
-    dctx = dist.get_context()
+    dcfg = dist.get_config()
     comm = dist.get_communicator()
-    dctx.enable_data_parallel = meta_dist_config.get("enable_data_parallel", False)
-    dctx.zero_opt_level = meta_dist_config.get("zero_opt_level", 0)
+    dcfg.enable_data_parallel = meta_dist_config.get("enable_data_parallel", False)
+    dcfg.zero_opt_level = meta_dist_config.get("zero_opt_level", 0)
     device = f"cuda({comm.local_rank})"
 
     total_data_size = (np.prod(shape) + (batch_size * num_classes)) * n_mini_batch
@@ -108,7 +108,7 @@ def run(train_config, meta_dist_config):
     )
     print_at_rank_0(
         "Distribution Config: data_parallel: %s, zero_opt_level: %d"
-        % (dctx.enable_data_parallel, dctx.zero_opt_level)
+        % (dcfg.enable_data_parallel, dcfg.zero_opt_level)
     )
 
     # Fake a training data set with N mini-batches using a reference model.
@@ -150,8 +150,8 @@ def run(train_config, meta_dist_config):
             losses.append(testing.numpy(loss))
         print_at_rank_0("  [Epoch %2d] avg. loss: %.6f" % (epoch + 1, np.mean(losses)))
 
-    dctx.enable_data_parallel = False
-    dctx.zero_opt_level = 0
+    dcfg.enable_data_parallel = False
+    dcfg.zero_opt_level = 0
     dist.RemoveCommunicator()
 
 

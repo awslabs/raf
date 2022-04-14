@@ -107,7 +107,7 @@ void GroupAllGather(const CallValues& call) {
   for (int i = 0; i < args->tensor_list.size(); ++i) {
     const DLTensor* x = args->tensor_list[i];
     std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-    shape[args->axis] *= Communicator::Get()->size;
+    shape[args->axis] *= GetGlobalCommunicator()->size;
     ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape));
@@ -148,7 +148,7 @@ void GroupReduceScatter(const CallValues& call) {
   std::vector<BaseTensorValue> tvs = args->tensor_list;
   const DLTensor* first_tensor = tvs[0];
   std::vector<TensorValue> ret;
-  int size = Communicator::Get()->size;
+  int size = GetGlobalCommunicator()->size;
   for (const auto& tv : tvs) {
     const DLTensor* x = tv;
     std::vector<int64_t> shape(x->shape, x->shape + x->ndim);

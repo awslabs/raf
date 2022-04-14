@@ -9,7 +9,7 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/communicator.h"
 #include "raf/type.h"
 #include "../schema/communication.h"
@@ -59,7 +59,7 @@ RAF_OP_TYPE("raf.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
 Type GroupReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<GroupReduceScatterArgs>();
   CHECK(args != nullptr);
-  int size = Communicator::Get()->size;
+  int size = GetGlobalCommunicator()->size;
   Array<Type> ret;
   for (const auto& tv : args->tensor_list) {
     const auto& ty = GetType(tv);
@@ -119,7 +119,7 @@ RAF_OP_TYPE("raf.op._allgather", "NCCLAllGather", AllGatherInfer);
 Type GroupAllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<GroupAllgatherArgs>();
   CHECK(args != nullptr);
-  int size = Communicator::Get()->size;
+  int size = GetGlobalCommunicator()->size;
   Array<Type> ret;
   for (const auto& tv : args->tensor_list) {
     auto ttype = GetType(tv).as<TensorTypeNode>();

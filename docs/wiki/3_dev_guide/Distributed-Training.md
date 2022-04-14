@@ -55,9 +55,9 @@ MPI rank 3: cuda(1) @ node 1
 
 Like many other multi-GPU MPI applications, a number of RAF processes will spawn, and each process will be assigned with an index `rank` and a GPU in order.
 
-To figure out which GPU this process binds to, we could obtain this information at `DistContext`. 
+To figure out which GPU this process binds to, we could obtain this information at `DistConfig`.
 
-**Deprecation Notice.** Some attributes in `DistContext`, including `rank` and `size`, will be deprecated soon, and user should get these from `Communicator` in the future instead. 
+**Deprecation Notice.** Some attributes in `DistConfig`, including `rank` and `size`, will be deprecated soon, and user should get these from `Communicator` in the future instead.
 
 
 ``` python
@@ -65,12 +65,12 @@ import numpy as np
 import raf
 from raf import distributed as dist
 
-dctx = dist.get_context()
-root_rank = dctx.root_rank     # The root rank.
-size = dctx.size               # The number of total MPI processes.
-rank = dctx.rank               # The rank of this process, ranging from 0 to (size - 1).
-local_rank = dctx.local_rank   # The local rank of this process on this machine.
-local_size = dctx.local_size   # The number of local MPI processes onthis machine.
+dcfg = dist.get_config()
+root_rank = dcfg.root_rank     # The root rank.
+size = dcfg.size               # The number of total MPI processes.
+rank = dcfg.rank               # The rank of this process, ranging from 0 to (size - 1).
+local_rank = dcfg.local_rank   # The local rank of this process on this machine.
+local_size = dcfg.local_size   # The number of local MPI processes onthis machine.
 
 device = f'cuda({local_rank})' # the rank-th GPU on this machine that this process binds to.
 ```
@@ -101,12 +101,12 @@ A portion of RAF collective operators allow users to partition compute resources
 - `raf.allreduce`
 - `raf.allgather`
 
-These operators accept an additional parameter `rank_list`, which is a list of rank subsets, and the process will only talk to ranks in the same subset, and its syntax is straightforward. 
+These operators accept an additional parameter `rank_list`, which is a list of rank subsets, and the process will only talk to ranks in the same subset, and its syntax is straightforward.
 
 Continue with the example above. If we want to let rank 0 talk to rank 1 only, and let rank 2 talk to rank 3, we could simply set the `rank_list` to,
 
 ```python
-x = raf.allreduce([x], "sum", rank_list=[[0, 1], [2, 3]]) 
+x = raf.allreduce([x], "sum", rank_list=[[0, 1], [2, 3]])
 ```
 
 To help you better understand this syntax, we provide more examples in the following table for comparison. Note that AR is short for AllReduce.
@@ -134,7 +134,7 @@ There are several RAF passes that help user convert IR for single machine into d
 Of course, a correct handwritten distributed IR that manually manipulates data shards is also valid.
 ### Communicator
 
-The term *Communicator* may refer to various things in different contexts. To disambiguate, we will use the following phrases to make a distinction. 
+The term *Communicator* may refer to various things in different contexts. To disambiguate, we will use the following phrases to make a distinction.
 
 - Communicator / Sub-Communicator / Global Communicator: Refers to RAF Communicator, a TVM object / class that stores some runtime data of the distributed context.
 - NCCLCommunicator / MPICommunicator: Refers to a derived class from Communicator.
@@ -142,7 +142,7 @@ The term *Communicator* may refer to various things in different contexts. To di
 
 NCCL / MPI Communicator establishes connections between workers, provides each machine an identity and important information (e.g., machine's rank, world size, the handler of NCCL / MPI Communicator, etc.), and exchange data among workers. Thus, we consider each NCCL / MPI Communicator defines a distributed context. To support numerous collective communication libraries and manage multiple communicators, we propose a unified data structure *Communicator* to assist them and record the key information including,
 
-- `local_rank`: local rank ID related to physical hardware location, from this communicator's perspective. 
+- `local_rank`: local rank ID related to physical hardware location, from this communicator's perspective.
 - `local_size`: The amount of processes on the same physical machine, from this communicator's perspective.
 - `rank`: rank ID of this process from this communicator's perspective.
 - `size`: The amount of processes from this communicator's perspective.
@@ -161,7 +161,7 @@ You might get confused about the three types of `rank`, and why we need multiple
 If we execute the code below,
 
 ```python
-x = raf.allreduce([x], "sum", rank_list=[[1, 2, 3], [0]]) 
+x = raf.allreduce([x], "sum", rank_list=[[1, 2, 3], [0]])
 ```
 
 then the execution flow will look like this,

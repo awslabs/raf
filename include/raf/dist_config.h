@@ -4,8 +4,8 @@
  */
 
 /*!
- * \file dist_context.h
- * \brief Context of Distributed Settings.
+ * \file dist_config.h
+ * \brief Config of Distributed Settings.
  */
 #pragma once
 #include "./ir.h"
@@ -14,9 +14,7 @@
 namespace raf {
 namespace distributed {
 
-class DistContext;
-
-class DistContextObj : public ir::Object {
+class DistConfigObj : public ir::Object {
  public:
   int scheduling_param = 0;
   int iteration = 0;
@@ -33,17 +31,15 @@ class DistContextObj : public ir::Object {
   }
 
  public:
-  static constexpr const char* _type_key = "raf.distributed.DistContext";
-  RAF_FINAL_OBJECT(DistContextObj, ir::Object);
-
-  friend class DistContext;
+  static constexpr const char* _type_key = "raf.distributed.DistConfig";
+  RAF_FINAL_OBJECT(DistConfigObj, ir::Object);
 };
 
-class DistContext : public ir::ObjectRef {
+class DistConfig : public ir::ObjectRef {
  public:
-  static DistContext make();
-  static DistContext Global();
-  RAF_MUTABLE_OBJECT_REF(DistContext, ir::ObjectRef, DistContextObj);
+  static DistConfig make();
+  static DistConfig Global();
+  RAF_MUTABLE_OBJECT_REF(DistConfig, ir::ObjectRef, DistConfigObj);
 };
 
 }  // namespace distributed

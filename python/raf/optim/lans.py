@@ -179,7 +179,7 @@ def with_lans(
                 self.one = array(1.0, dtype="float32")
                 # mutable params: global step, and running averages
                 device = None
-                dctx = dist.get_context()
+                dcfg = dist.get_config()
                 comm = dist.get_communicator()
                 self.params = {}
                 for name, param in self.model.state().items():
@@ -193,7 +193,7 @@ def with_lans(
                         # variant and weight is partitioned to 1/n. Accordingly, we have to
                         # also keep a param.w (size 1/n) locally.
                         part_shape = param.shape
-                        if dctx.zero_opt_level:
+                        if dcfg.zero_opt_level:
                             # Pad and copy a slice of weight.
                             param_nd = param.to(device="cpu")
                             if "float" in param.dtype and param.dtype != "float32":
@@ -229,7 +229,7 @@ def with_lans(
 
             @trace
             def forward(self, dy, *args, **kwargs):
-                dctx = dist.get_context()
+                dcfg = dist.get_config()
                 comm = dist.get_communicator()
                 y, dxs = self.ad_model(dy, *args, **kwargs)
                 record = self.ad_model._internal(dy, *args, **kwargs)
@@ -289,7 +289,7 @@ def with_lans(
                             next_m = output_list[out_idx + 2 * ntensor]
                             next_v = output_list[out_idx + 3 * ntensor]
                             param_model = get_chained_attr(self.model, name.split(".")[:-1])
-                            if dctx.zero_opt_level > 0:
+                            if dcfg.zero_opt_level > 0:
                                 new_weight = allgather(new_w, axis=0)
                                 # Slice to remove the zero-padding if needed.
                                 if w.shape[0] * comm.size > p.shape[0]:

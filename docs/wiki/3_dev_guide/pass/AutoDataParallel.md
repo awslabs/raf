@@ -1,7 +1,7 @@
 <!--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!--- SPDX-License-Identifier: Apache-2.0  -->
 
-# Automatic Data Parallelism 
+# Automatic Data Parallelism
 
 This article aims to explain how RAF does data parallel automatically and how to enable it. In short, RAF accepts single device IR from user models, and applies the AutoDataParallel Pass to generate Data Parallel IR.
 
@@ -71,7 +71,7 @@ In the AutoDataParallel pass, NCCL version will be checked. If the NCCL version 
 Before triggering AutoDataParallel pass, we need to enable it first. Then we can manually apply the pass:
 
 ``` python
-raf.distributed.get_context().enable_data_parallel = True
+raf.distributed.get_config().enable_data_parallel = True
 record = model._internal(*args, **kwargs)
 mod = record.mod
 
@@ -87,11 +87,11 @@ mod = seq(mod)
 Another way to triger the AutoDataParallel pass is just invoking: `with_data_parallel`:
 
 ```python
-raf.distributed.get_context().enable_data_parallel = True
+raf.distributed.get_config().enable_data_parallel = True
 model = raf.optim.data_parallel.with_data_parallel(model)
 ```
 
-## Run 
+## Run
 Data parallel training assumes using multiple devices. Currently, RAF uses MPI to organize the different training processes. If we want to run two training processes the command should look like:
 
 ```bash

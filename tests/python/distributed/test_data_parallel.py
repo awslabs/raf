@@ -62,14 +62,14 @@ def run_model(device):
 )
 @with_seed(0)
 def test_data_parallel():
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
     comm = dist.get_communicator()
     device = f"cuda({comm.local_rank})"
 
     run_model(device)
 
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(
@@ -78,16 +78,16 @@ def test_data_parallel():
 )
 @with_seed(0)
 def test_zero_opt_1():
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
-    dctx.zero_opt_level = 1
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
+    dcfg.zero_opt_level = 1
     comm = dist.get_communicator()
     device = f"cuda({comm.local_rank})"
 
     run_model(device)
 
-    dctx.enable_data_parallel = False
-    dctx.zero_opt_level = 0
+    dcfg.enable_data_parallel = False
+    dcfg.zero_opt_level = 0
 
 
 if __name__ == "__main__":

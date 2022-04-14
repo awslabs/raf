@@ -4,12 +4,12 @@
  */
 
 /*!
- * \file src/distributed/context.cc
- * \brief Context of Distributed Settings.
+ * \file src/distributed/dist_config.cc
+ * \brief Config of Distributed Settings.
  */
 #include "raf/registry.h"
 #include "raf/communicator.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 
 namespace raf {
 namespace distributed {
@@ -17,34 +17,33 @@ namespace distributed {
 using communicator::Communicator;
 using communicator::CommunicatorPool;
 
-DistContext DistContext::make() {
-  ir::ObjectPtr<DistContextObj> n = ir::make_object<DistContextObj>();
-  return DistContext(n);
+DistConfig DistConfig::make() {
+  ir::ObjectPtr<DistConfigObj> n = ir::make_object<DistConfigObj>();
+  return DistConfig(n);
 }
 
-DistContext DistContext::Global() {
-  static DistContext inst = DistContext::make();
+DistConfig DistConfig::Global() {
+  static DistConfig inst = DistConfig::make();
   return inst;
 }
 
 void EnableDataParallel(bool enable) {
-  DistContext::Global()->enable_data_parallel = enable;
+  DistConfig::Global()->enable_data_parallel = enable;
 }
 
 void ZeroOpt(int opt_level) {
-  DistContext::Global()->zero_opt_level = opt_level;
+  DistConfig::Global()->zero_opt_level = opt_level;
 }
 
 void AutoDPProfilingStartIter(int auto_dp_profiling_start_iter) {
-  DistContext::Global()->auto_dp_profiling_start_iter = auto_dp_profiling_start_iter;
+  DistConfig::Global()->auto_dp_profiling_start_iter = auto_dp_profiling_start_iter;
 }
 
 void AutoDPProfilingEndIter(int auto_dp_profiling_end_iter) {
-  DistContext::Global()->auto_dp_profiling_end_iter = auto_dp_profiling_end_iter;
+  DistConfig::Global()->auto_dp_profiling_end_iter = auto_dp_profiling_end_iter;
 }
 
-RAF_REGISTER_GLOBAL("raf.distributed._make.DistContext").set_body_typed(DistContext::make);
-RAF_REGISTER_GLOBAL("raf.distributed.GlobalDistContext").set_body_typed(DistContext::Global);
+RAF_REGISTER_GLOBAL("raf.distributed.GlobalDistConfig").set_body_typed(DistConfig::Global);
 RAF_REGISTER_GLOBAL("raf.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
 RAF_REGISTER_GLOBAL("raf.distributed.ZeroOpt").set_body_typed(ZeroOpt);
 RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingStartIter")
@@ -52,7 +51,7 @@ RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingStartIter")
 RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingEndIter")
     .set_body_typed(AutoDPProfilingEndIter);
 
-RAF_REGISTER_OBJECT_REFLECT(DistContextObj);
+RAF_REGISTER_OBJECT_REFLECT(DistConfigObj);
 
 }  // namespace distributed
 }  // namespace raf

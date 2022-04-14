@@ -32,8 +32,8 @@ def one_hot(batch_size, num_classes, device="cuda"):
     ],
 )
 def test_dp(config):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
     comm = dist.get_communicator()
     device = f"cuda({comm.local_rank})"
     const, _ = randn([config[0], config[1]], device=device)
@@ -214,7 +214,7 @@ def test_dp(config):
     text = func_after.astext()
     assert "raf.op._allreduce" in text
     assert tvm.ir.structural_equal(func_after, func_expected)
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@
 #include "raf/binding.h"
 #include "raf/type.h"
 #include "raf/pass.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "./compiler.h"
 
 namespace tvm {
@@ -39,7 +39,7 @@ using namespace raf::op;
 using namespace raf::value;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
-using raf::distributed::DistContext;
+using raf::distributed::DistConfig;
 using tvm::relay::Shape;
 
 /*!
@@ -866,7 +866,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
 
     // optimization passes that transform BBNF into ANF
     if ((*it).second.device_type() == DevType::kCUDA()) {
-      if (DistContext::Global()->enable_data_parallel) {
+      if (DistConfig::Global()->enable_data_parallel) {
         // The current design of EnforceSync assumes ops are executed on multiple CUDA streams:
         // all computation ops are executed on a computation stream, and all communication
         // collectives are executed on another communication stream. Memory copy ops added in
