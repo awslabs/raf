@@ -359,7 +359,7 @@ Var LivenessAnalyzer::CreateTensorVar(const Type& type) {
  * of the fields is preserved. 
  */
 std::vector<int64_t> CalcBytesCompactSizes(const Type& type) {
-  std::vector<const Type> ty_stack;
+  tvm::Array<Type> ty_stack;
   std::vector<const TensorTypeNode*> ttypes;
   ty_stack.push_back(type);
   while (!ty_stack.empty()) {
@@ -367,8 +367,8 @@ std::vector<int64_t> CalcBytesCompactSizes(const Type& type) {
     ty_stack.pop_back();
     if (auto tuple_ty_node = ty.as<TupleTypeNode>()) {
       // If the current type corresponds to a tuple, process the type of each field later
-      for (auto field : tuple_ty_node->fields)
-        ty_stack.push_back(field);
+      for (auto it = tuple_ty_node->fields.rbegin(); it != tuple_ty_node->fields.rend(); it ++)
+        ty_stack.push_back(*it);
     } else if (auto tensor_ty_node = ty.as<TensorTypeNode>()) {
       // Tensor types are added to the final list and sizes will be calculated
       ttypes.push_back(tensor_ty_node);

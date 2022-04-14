@@ -32,7 +32,7 @@ constexpr float kMegaBytes = 1048576;
 constexpr float kGigaBytes = 1073741824;
 
 // Whether to display verbose logging.
-#define SHOW_VERBOSE_LOG 1
+#define SHOW_VERBOSE_LOG 0
 
 // Whether to update tensor index when rematerialization. If defined, then
 // the rematerialized tensors are less likely to be freed and rematerialized again.
@@ -880,8 +880,8 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
       CHECK_GT(liveness_vars.size(), 0U);
       if (liveness_vars.size() > 1) {
         // If the current let var corresponds to a tuple, the tuple fields should be processed later
-        for (auto next_v : liveness_vars)
-          var_stack.push_back(next_v);
+        for (auto it = liveness_vars.rbegin(); it != liveness_vars.rend(); it ++)
+          var_stack.push_back(*it);
       } else if (let_var_set_.count(liveness_vars[0])) {
         // If this "liveness var" points to a real var rather than an actual liveness var
         // it should also be processed later
@@ -915,20 +915,6 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
     for (int i = 0; i < n; ++i) {
       curr_let_ = vars[i];
       auto liveness_vars = GetLivenessVars(curr_let_);
-      /* 
-      auto liveness_vars = analyzer_->GetTensorVars(curr_let_);
-
-      // In the case of tuple with may_share, liveness vars may point to the real tensor.
-      for (size_t i = 0; i < liveness_vars.size(); ++i) {
-        auto real_liveness_var = liveness_vars[i];
-        while (let_var_set_.find(real_liveness_var) != let_var_set_.end()) {
-          auto cand_liveness_vars = analyzer_->GetTensorVars(real_liveness_var);
-          CHECK_EQ(cand_liveness_vars.size(), 1U);
-          real_liveness_var = cand_liveness_vars[0];
-        }
-        liveness_vars.Set(i, real_liveness_var);
-      }
-      */
 
       // Visit the expression to analyze the use count
       ExprVisitor::VisitExpr(exprs[i]);
