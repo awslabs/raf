@@ -864,10 +864,10 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
   ~TensorAnalyzer() {
   }
 
-  /*! 
+  /*!
    * \brief Get a list of liveness vars for the current let var. This function uses a DFS to handle
    * nested tuples. The returned array contains a flat list of vars. The relative order of tuple
-   * fields is preserved. 
+   * fields is preserved.
    */
   tvm::Array<Var> GetLivenessVars(const Var& curr_let) {
     tvm::Array<Var> result_vars;
@@ -880,7 +880,7 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
       CHECK_GT(liveness_vars.size(), 0U);
       if (liveness_vars.size() > 1) {
         // If the current let var corresponds to a tuple, the tuple fields should be processed later
-        for (auto it = liveness_vars.rbegin(); it != liveness_vars.rend(); it ++)
+        for (auto it = liveness_vars.rbegin(); it != liveness_vars.rend(); it++)
           var_stack.push_back(*it);
       } else if (let_var_set_.count(liveness_vars[0])) {
         // If this "liveness var" points to a real var rather than an actual liveness var
