@@ -62,6 +62,8 @@ void FLOPSEstimater::VisitExpr_(const CallNode* call) {
     auto tvm_op = OpDialect::Lower(base_op, "tvm");
     // skip this op if it does not have a TVM dialect
     if (!tvm_op.defined()) {
+      var_flops_map_[curr_let_] = std::numeric_limits<float>::infinity();
+      LOG(WARNING) << "Op " << base_op->name << " doesn't have TVM dialect, skip estimating FLOPS";
       return;
     }
   }
