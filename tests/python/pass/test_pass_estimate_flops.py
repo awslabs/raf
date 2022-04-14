@@ -20,6 +20,8 @@ def verify_flops(mod, expected_map):
 
     for var_name, expected_flops in expected_map.items():
         assert var_name in ret, "Missing %s" % var_name
+        if ret[var_name] == float("inf"):
+            continue
         assert abs(expected_flops / 1e9 - ret[var_name]) <= 1e-2, "%s GFLOPS mismatch" % var_name
 
 
@@ -101,6 +103,21 @@ def test_multi_func():
         return mod
 
     verify_flops(get_mod(), {"b1": 10 * 5 * 2})
+
+
+def test_comm():
+    shape = (10, 5)
+
+    def get_mod():
+        sb = ScopeBuilder()
+        data = raf.ir.var("x", shape=shape)
+        ret = sb.let("ret", raf.ir.op._send(data, peer=1))
+        sb.ret(ret)
+
+        func = relay.Function([data], sb.get())
+        return tvm.IRModule.from_expr(func)
+
+    verify_flops(get_mod(), {"ret": float("inf")})
 
 
 if __name__ == "__main__":
