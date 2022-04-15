@@ -151,7 +151,8 @@ RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
 });
 
 RAF_REGISTER_GLOBAL("raf.distributed.GetGlobalCommunicator").set_body_typed(GetGlobalCommunicator);
-RAF_REGISTER_GLOBAL("raf.distributed.SetDefaultCommunicator").set_body_typed(SetDefaultCommunicator);
+RAF_REGISTER_GLOBAL("raf.distributed.SetDefaultCommunicator")
+    .set_body_typed(SetDefaultCommunicator);
 
 #define SetGlobalCommunicator(Attr, attr)                                           \
   void SetGlobal##Attr(int attr) {                                                  \
