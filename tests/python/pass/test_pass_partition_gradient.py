@@ -110,12 +110,14 @@ def test_basic(mock_get_config, mock_get_comm, opt_level, batch):
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = opt_level
+
     mock_get_config.return_value = MockConfig()
 
     class MockComm:
         def __init__(self):
             self.size = 4
             self.rank = 3
+
     mock_get_comm.return_value = MockComm()
     if opt_level == 2 and raf.build.with_nccl() is None:
         pytest.skip("NCCL is not supported")

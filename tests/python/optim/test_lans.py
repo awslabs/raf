@@ -218,12 +218,14 @@ def test_state_partition(mock_get_config, mock_get_comm):
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = 2
+
     mock_get_config.return_value = MockConfig()
 
     class MockComm:
         def __init__(self):
             self.size = 4
             self.rank = 3
+
     mock_get_comm.return_value = MockComm()
 
     shape, n_classes = 28, 10

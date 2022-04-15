@@ -15,6 +15,7 @@ class Communicator(Object):
 
 
 if with_mpi():
+
     @register_node("raf.distributed.MPICommunicator")
     class MPICommunicator(Object):
         pass
