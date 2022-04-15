@@ -79,6 +79,16 @@ class TensorGroups {
     return dummy_out_vars_.find(target_var) != dummy_out_vars_.end();
   }
 
+  /*! \brief Check whether the group has a final output tensor. */
+  bool HasOutputTensor(size_t group_id) {
+    for (const auto& member : groups[group_id].members) {
+      if (IsOutputTensor(member.second.first)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /*! \brief Find the group ID that the target var belongs to, or -1 if not found. */
   int FindGroupIdByMember(const Var& let_var) {
     const Var target_var = GetTensorVar(let_var);
@@ -295,11 +305,19 @@ class MemoryPlanner : public ExprMutator {
 
       auto group_id = tensor_groups_.FindGroupIdByStorageVar(curr_let_);
       if (group_id != -1 && tensor_groups_.groups[group_id].size > 0) {
+        bool sync = tensor_groups_.HasOutputTensor(group_id);
+
         Array<Expr> new_args;
         for (auto& arg : call->args) {
           new_args.push_back(VisitExpr(arg));
         }
         new_args.Set(0, MakeConstant(ScalarValue::make(tensor_groups_.groups[group_id].size)));
+        if (new_args.size() == 5) {
+          new_args.push_back(MakeConstant(BoolValue::make(sync)));
+        } else {
+          CHECK_EQ(new_args.size(), 6U);
+          new_args.Set(5, MakeConstant(BoolValue::make(sync)));
+        }
         return Call(alloc_storage_op, new_args);
       }
     } else if (op_node && GetRef<Op>(op_node) == alloc_tensor_op) {

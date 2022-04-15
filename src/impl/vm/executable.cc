@@ -327,6 +327,7 @@ VMInstructionSerializer SerializeInstruction(const Instruction& instr) {
       fields.push_back(instr.alloc_storage.device_type);
       fields.push_back(instr.alloc_storage.device_id);
       fields.push_back(instr.dst);
+      fields.push_back(instr.alloc_storage.sync);
       break;
     }
     case Opcode::Free: {
@@ -634,7 +635,7 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       return Instruction::AllocClosure(func_index, free_vars, dst);
     }
     case Opcode::AllocStorage: {
-      DCHECK_GE(instr.fields.size(), 6U);
+      DCHECK_GE(instr.fields.size(), 7U);
       Index allocation_size = instr.fields[0];
       Index alignment = instr.fields[1];
 
@@ -646,9 +647,10 @@ Instruction DeserializeInstruction(const VMInstructionSerializer& instr) {
       DevType device_type = instr.fields[5];
       Index device_id = instr.fields[6];
       RegName dst = instr.fields[7];
+      bool sync = instr.fields[8];
 
       return Instruction::AllocStorage(allocation_size, alignment, dtype, device_type, device_id,
-                                       dst);
+                                       dst, sync);
     }
     case Opcode::Free: {
       DCHECK_EQ(instr.fields.size(), 1U);

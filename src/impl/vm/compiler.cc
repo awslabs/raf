@@ -456,7 +456,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                  })
           .Match("raf.op.vm.alloc_storage",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 5);
+                   CHECK(args.size() == 5 || args.size() == 6);
                    // Compute the size of the allocation.
                    this->VisitExpr(args[0]);
                    auto size_register = last_register_;
@@ -486,8 +486,17 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    std::string dtype_s = dtype_val.as<StringValueObj>()->value;
                    DataType dtype(String2DLDataType(dtype_s));
 
+                   // sync
+                   bool sync = false;
+                   if (args.size() == 6) {
+                     CHECK(args[5]->IsInstance<ConstantNode>());
+                     auto persist_val = args[5].as<ConstantNode>()->value;
+                     CHECK(persist_val->IsInstance<BoolValueObj>());
+                     sync = persist_val.as<BoolValueObj>()->value;
+                   }
+
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
-                                                  device_id, NewRegister()));
+                                                  device_id, NewRegister(), sync));
                  })
           .Match("raf.op.vm.free",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {

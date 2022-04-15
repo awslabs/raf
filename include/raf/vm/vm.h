@@ -348,7 +348,8 @@ class VirtualMachine : public tvm::runtime::ModuleNode {
    * \return The allocated memory.
    */
   inline std::shared_ptr<Memory> Alloc(const VMContext& ctx, Device dev, int64_t nbytes,
-                                       int64_t alignment = kDefaultMemoryAlignment) const;
+                                       int64_t alignment = kDefaultMemoryAlignment,
+                                       bool async = true) const;
   /*! \brief Run VM dispatch loop. */
   virtual void RunLoop(VMContext& ctx);
   /*! \brief Prepare an OpEnv with its inputs and output */
