@@ -376,7 +376,8 @@ Instruction Instruction::AllocTensorReg(RegName storage, Index offset, RegName s
 }
 
 Instruction Instruction::AllocStorage(RegName size, Index alignment, DLDataType dtype_hint,
-                                      DevType device_type, Index device_id, Index dst, bool async) {
+                                      DevType device_type, Index device_id, Index dst,
+                                      bool alloc_async) {
   Instruction instr;
   instr.op = Opcode::AllocStorage;
   instr.dst = dst;
@@ -385,7 +386,7 @@ Instruction Instruction::AllocStorage(RegName size, Index alignment, DLDataType 
   instr.alloc_storage.dtype_hint = dtype_hint;
   instr.alloc_storage.device_type = device_type;
   instr.alloc_storage.device_id = device_id;
-  instr.alloc_storage.async = async;
+  instr.alloc_storage.alloc_async = alloc_async;
   return instr;
 }
 
@@ -696,7 +697,7 @@ void InstructionPrint(std::ostream& os, const Instruction& instr) {
       os << "alloc_storage $" << instr.dst << " $" << instr.alloc_storage.allocation_size << " "
          << instr.alloc_storage.alignment << " "
          << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint);
-      if (instr.alloc_storage.async) {
+      if (instr.alloc_storage.alloc_async) {
         os << "(async)";
       }
       break;

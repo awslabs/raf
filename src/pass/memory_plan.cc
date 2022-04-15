@@ -305,7 +305,7 @@ class MemoryPlanner : public ExprMutator {
 
       auto group_id = tensor_groups_.FindGroupIdByStorageVar(curr_let_);
       if (group_id != -1 && tensor_groups_.groups[group_id].size > 0) {
-        bool async = !tensor_groups_.HasOutputTensor(group_id);
+        bool alloc_async = !tensor_groups_.HasOutputTensor(group_id);
 
         Array<Expr> new_args;
         for (auto& arg : call->args) {
@@ -313,10 +313,10 @@ class MemoryPlanner : public ExprMutator {
         }
         new_args.Set(0, MakeConstant(ScalarValue::make(tensor_groups_.groups[group_id].size)));
         if (new_args.size() == 5) {
-          new_args.push_back(MakeConstant(BoolValue::make(async)));
+          new_args.push_back(MakeConstant(BoolValue::make(alloc_async)));
         } else {
           CHECK_EQ(new_args.size(), 6U);
-          new_args.Set(5, MakeConstant(BoolValue::make(async)));
+          new_args.Set(5, MakeConstant(BoolValue::make(alloc_async)));
         }
         return Call(alloc_storage_op, new_args);
       }

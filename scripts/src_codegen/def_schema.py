@@ -867,7 +867,7 @@ SCHEMAS = {
         Arg(name="device_type", cxx_type="int"),
         Arg(name="device_id", cxx_type="int"),
         Arg(name="dtype", cxx_type="std::string", cxx_default='"float32"', py_default='"float32"'),
-        Arg(name="async", cxx_type="bool", cxx_default=True),
+        Arg(name="alloc_async", cxx_type="bool", cxx_default=True),
     ],
     "vm.h::alloc_tensor": [
         Arg(name="storage", cxx_type="value::BaseTensorValue"),
