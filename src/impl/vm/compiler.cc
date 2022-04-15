@@ -486,17 +486,17 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    std::string dtype_s = dtype_val.as<StringValueObj>()->value;
                    DataType dtype(String2DLDataType(dtype_s));
 
-                   // sync
-                   bool sync = false;
+                   // async
+                   bool async = true;
                    if (args.size() == 6) {
                      CHECK(args[5]->IsInstance<ConstantNode>());
-                     auto persist_val = args[5].as<ConstantNode>()->value;
-                     CHECK(persist_val->IsInstance<BoolValueObj>());
-                     sync = persist_val.as<BoolValueObj>()->value;
+                     auto async_val = args[5].as<ConstantNode>()->value;
+                     CHECK(async_val->IsInstance<BoolValueObj>());
+                     async = async_val.as<BoolValueObj>()->value;
                    }
 
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
-                                                  device_id, NewRegister(), sync));
+                                                  device_id, NewRegister(), async));
                  })
           .Match("raf.op.vm.free",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {

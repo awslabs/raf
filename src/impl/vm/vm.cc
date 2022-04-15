@@ -498,10 +498,10 @@ void VirtualMachine::SetDevices(const std::vector<Device>& devices) {
 
 inline std::shared_ptr<Memory> VirtualMachine::Alloc(const VMContext& ctx, Device dev,
                                                      int64_t nbytes, int64_t alignment,
-                                                     bool sync) const {
+                                                     bool async) const {
   if (dev.device_type() == DevType::kCUDA()) {
 #if CUDA_VERSION >= 11030
-    if (enable_cuda_graph_ || sync) {
+    if (enable_cuda_graph_ || !async) {
       // We can not use async memory allocation in cuda graph tracing mode
       return memory_pool::Memory::Alloc(dev, nbytes, alignment);
     } else {
@@ -708,14 +708,14 @@ void VirtualMachine::HandleIf(VMContext& ctx, const Instruction& instr) {
 void VirtualMachine::HandleAllocStorage(VMContext& ctx, const Instruction& instr) {
   auto size = ctx.LoadScalarInt(instr.alloc_storage.allocation_size);
   auto alignment = instr.alloc_storage.alignment;
-  bool sync = instr.alloc_storage.sync;
+  bool async = instr.alloc_storage.async;
 
   DLOG(INFO) << "AllocStorage: allocation_size=" << size << " alignment=" << alignment
              << " dtype_hint=" << tvm::runtime::DLDataType2String(instr.alloc_storage.dtype_hint)
-             << " sync=" << sync;
+             << " async=" << async;
 
   auto dev = Device(instr.alloc_storage.device_type, instr.alloc_storage.device_id);
-  auto buffer = Alloc(ctx, dev, size, alignment, sync);
+  auto buffer = Alloc(ctx, dev, size, alignment, async);
   auto storage = StorageValue::make(buffer);
   ctx.WriteRegister(instr.dst, storage);
   ctx->pc++;
