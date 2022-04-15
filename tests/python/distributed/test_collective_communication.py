@@ -8,6 +8,7 @@ To test collective_communication, you should run:
 `mpirun -np 2 python3 tests/python/distributed/test_collective_communication.py`
 (in ci/tash_python_unittest.sh)
 """
+import os
 import sys
 import pytest
 import numpy as np
@@ -602,6 +603,15 @@ def test_group_reduce_scatter(computation):
 
 
 if __name__ == "__main__":
+    if os.environ.get("RAF_FILE_STORE_PATH", None):
+        dist.set_default_communicator("void")
+        comm = dist.get_communicator()
+        size = int(os.environ.get("OMPI_COMM_WORLD_SIZE"))
+        rank = int(os.environ.get("OMPI_COMM_WORLD_RANK"))
+        comm.size = size
+        comm.rank = rank
+        comm.local_size = size
+        comm.local_rank = rank
     exit_code = pytest.main([__file__])
     dist.RemoveCommunicator()
     sys.exit(exit_code)

@@ -7,6 +7,7 @@ As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
 `mpirun -np 2 python3 tests/python/op/ty/test_type_comm.py`
 """
+import os
 import pytest
 import numpy as np
 import raf
@@ -80,5 +81,14 @@ def test_allreduce_with_tensor_list(computation):
 
 
 if __name__ == "__main__":
+    if os.environ.get("RAF_FILE_STORE_PATH", None):
+        dist.set_default_communicator("void")
+        comm = dist.get_communicator()
+        size = int(os.environ.get("OMPI_COMM_WORLD_SIZE"))
+        rank = int(os.environ.get("OMPI_COMM_WORLD_RANK"))
+        comm.size = size
+        comm.rank = rank
+        comm.local_size = size
+        comm.local_rank = rank
     pytest.main([__file__])
     dist.RemoveCommunicator()

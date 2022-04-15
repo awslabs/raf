@@ -3,6 +3,7 @@
 
 # pylint: disable=attribute-defined-outside-init,protected-access,too-many-locals
 # pylint: disable=too-many-statements,invalid-name
+import os
 import sys
 import pytest
 
@@ -91,6 +92,15 @@ def test_zero_opt_1():
 
 
 if __name__ == "__main__":
+    if os.environ.get("RAF_FILE_STORE_PATH", None):
+        dist.set_default_communicator("void")
+        comm = dist.get_communicator()
+        size = int(os.environ.get("OMPI_COMM_WORLD_SIZE"))
+        rank = int(os.environ.get("OMPI_COMM_WORLD_RANK"))
+        comm.size = size
+        comm.rank = rank
+        comm.local_size = size
+        comm.local_rank = rank
     exit_code = pytest.main([__file__])
     dist.RemoveCommunicator()
     sys.exit(exit_code)
